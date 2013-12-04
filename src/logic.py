@@ -17,6 +17,9 @@ def operate(operator, operands):
 
 def atomic(index, subscript):
     return Vocabulary.AtomicSentence(index, subscript)
+
+def arity(operator):
+    return operators[operator]
     
 class argument:
 
@@ -30,6 +33,9 @@ def tableau(logic, arg):
 class Vocabulary:
     
     class Sentence:
+        def is_sentence(self):
+            return self.is_atomic() or self.is_molecular()
+            
         def is_atomic(self):
             return (hasattr(self, 'index') and hasattr(self, 'subscript'))
 
@@ -44,6 +50,7 @@ class Vocabulary:
             self.operator = None
             
         def __eq__(self, other):
+            assert Vocabulary.Sentence.is_sentence(other)
             return (other.is_atomic() and
                     self.index == other.index and
                     self.subscript == other.subscript)
@@ -57,6 +64,7 @@ class Vocabulary:
             self.operands = operands
             
         def __eq__(self, other):
+            assert Vocabulary.Sentence.is_sentence(other)
             return (other.is_molecular() and
                     self.operator == other.operator and
                     self.operands == other.operands)
@@ -106,20 +114,20 @@ class TableauxSystem:
     class Branch:
         
         def __init__(self):
-            self._nodes = []
+            self.nodes = []
             self.ticked_nodes = set()
             self.closed = False
 
         def has(self, props, ticked=None):
-            for node in self.nodes():
-                if ((ticked == None or 
-                     ticked == (node in self.ticked_nodes)) and
-                    node.has_props(props)):
+            for node in self.get_nodes(ticked=ticked):
+                if node.has_props(props):
                     return True
             return False
  
         def add(self, node):
-            self._nodes.append(node)
+            if not isinstance(node, TableauxSystem.Node):
+                node = TableauxSystem.Node(props=node)
+            self.nodes.append(node)
             return self
             
         def tick(self, node):
@@ -130,15 +138,15 @@ class TableauxSystem:
             self.closed = True
             return self
             
-        def nodes(self, ticked=None):
+        def get_nodes(self, ticked=None):
             if ticked == None:
-                return self._nodes
-            return [node for node in self._nodes if ticked == (node in self.ticked_nodes)]
+                return self.nodes
+            return [node for node in self.nodes if ticked == (node in self.ticked_nodes)]
         
         def branch(self, node, tableau):
-            branch = Branch()
-            branch._nodes = self._nodes.copy()
-            branch.ticked_nodes = self.ticked_nodes.copy()
+            branch = TableauxSystem.Branch()
+            branch.nodes = list(self.nodes)
+            branch.ticked_nodes = set(self.ticked_nodes)
             branch.add(node)
             tableau.branches.add(branch)
             return branch
@@ -150,8 +158,7 @@ class TableauxSystem:
         
         def has_props(self, props):
             for prop in props:
-                if (hasattr(self.props, prop) and 
-                    props[prop] == self.props):
+                if prop not in self.props or not props[prop] == self.props[prop]:
                     return False
             return True
 
@@ -188,14 +195,14 @@ class TableauxSystem:
     class NodeRule(BranchRule):
 
         def applies_to_branch(self, branch):
-            for node in branch.nodes(False):
-                if self.applies_to_node(node):
+            for node in branch.get_nodes(ticked=False):
+                if self.applies_to_node(node, branch):
                     return True
             return False
 
         def apply_to_branch(self, branch):
-            for node in branch.nodes(False):
-                if self.applies_to_node(node):
+            for node in branch.get_nodes(ticked=False):
+                if self.applies_to_node(node, branch):
                     return self.apply_to_node(node, branch)
 
         def applies_to_node(self, node, branch):
@@ -211,13 +218,16 @@ class TableauxSystem:
 
 class Parser:
     
-    ochars = {}
-    achars = []
+    class ParseError(Exception):
+        pass
+    Error = ParseError
     
-    whitespace_chars = set([' '])
+    achars = []
+    ochars = {}
+    wschars = set([' '])
         
     def chomp(self):
-        while (self.has_next(0) and self.current() in self.whitespace_chars):
+        while (self.has_next(0) and self.current() in self.wschars):
             self.pos += 1
     
     def current(self):
@@ -227,16 +237,19 @@ class Parser:
     
     def assert_current(self):
         if not self.has_next(0):
-            raise Exception('Unexpected end of input at position ' + str(self.pos))
-            
+            raise Error('Unexpected end of input at position ' + str(self.real_pos()))
+    
+    def real_pos(self):
+        return self.pos + self.parent_pos
+        
     def has_next(self, n=1):
         return (len(self.s) > self.pos + n)
-        
+            
     def next(self, n=1):
         if self.has_next(n):
             return self.s[self.pos+n]
         return None
-    
+        
     def advance(self, n=1):
         self.pos += n  
         self.chomp()
@@ -244,17 +257,18 @@ class Parser:
     def argument(self, premises, conclusion):
         return argument([self.parse(s) for s in premises], self.parse(conclusion))
     
-    def parse(self, string):
+    def parse(self, string, parent_pos=0):
         self.s = list(string)
         self.pos = 0
+        self.parent_pos = parent_pos
         self.chomp()
         s = self.read()
         self.chomp()
         if self.has_next(0):
-            raise Exception('Unexpected character: "' + self.current() + '" at position ' + str(self.pos + 1))
+            raise Error('Unexpected character: "' + self.current() + '" at position ' + str(self.real_pos() + 1))
         return s
         
-    def read(self):
+    def read_atomic(self):
         self.assert_current()
         if self.current() in self.achars:
             achar = self.current()
@@ -264,7 +278,10 @@ class Parser:
                 sub.append(self.current())
                 self.advance()
             return atomic(self.achars.index(achar), int(''.join(sub)))
-        raise Exception('Unexpected character: "' + self.current() + '" at position ' + str(self.pos))
+        raise Error('Unexpected character: "' + self.current() + '" at position ' + str(self.real_pos()))
+    
+    def read(self):
+        return self.read_atomic()
         
 def main():
     test()
@@ -277,9 +294,18 @@ def test():
     for logic in logics:
         print logic.name
         print '  validities'
-        for arg in logic.example_validities:
-            print '    ', arg, '...',
-            assert tableau(logic, parser.argument(*logic.example_validities[arg])).build().valid()
-            print 'pass'
+        test_arguments(logic, logic.example_validities(), True, parser)
+        print '  invalidities'
+        test_arguments(logic, logic.example_invalidities(), False, parser)
+        
+
+def test_arguments(logic, args, valid, parser):
+    for name in args:
+        print '    ', name, '...',
+        test_argument(logic, args[name][0], args[name][1], valid, parser)
+        print 'pass'
+
+def test_argument(logic, premises, conclusion, valid, parser):
+    assert valid == tableau(logic, parser.argument(premises, conclusion)).build().valid()
     
 if  __name__ =='__main__':main()

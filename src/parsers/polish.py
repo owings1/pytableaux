@@ -2,26 +2,23 @@ import logic
 
 class Parser(logic.Parser):
     
+    achars = ['a', 'b', 'c', 'd', 'e']
     ochars = {
         'N': 'Negation',
         'K': 'Conjunction',
-		'A': 'Disjunction',
-		'C': 'Material Conditional',
-		'E': 'Material Biconditional',
-		'U': 'Conditional',
-		'M': 'Possibility',
-		'L': 'Necessity'
+        'A': 'Disjunction',
+        'C': 'Material Conditional',
+        'E': 'Material Biconditional',
+        'U': 'Conditional',
+        'M': 'Possibility',
+        'L': 'Necessity'
     }
-    
-    achars = ['a', 'b', 'c', 'd', 'e']
     
     def read(self):
         self.assert_current()
         if self.current() in self.ochars:
             operator = self.ochars[self.current()]
             self.advance()
-            operands = []
-            for x in range(logic.operators[operator]):
-                operands.append(self.read())
+            operands = [self.read() for x in range(logic.arity(operator))]
             return logic.operate(operator, operands)
-        return logic.Parser.read(self)
+        return self.read_atomic()
