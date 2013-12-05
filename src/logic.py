@@ -29,7 +29,7 @@ class argument:
 
 def tableau(logic, arg):
     return TableauxSystem.Tableau(logic, arg)
-            
+
 class Vocabulary:
     
     class Sentence:
@@ -41,7 +41,7 @@ class Vocabulary:
 
         def is_molecular(self):
             return (hasattr(self, 'operator') and hasattr(self, 'operands'))
-            
+    
     class AtomicSentence(Sentence):
         
         def __init__(self, index, subscript):
@@ -54,6 +54,10 @@ class Vocabulary:
             return (other.is_atomic() and
                     self.index == other.index and
                     self.subscript == other.subscript)
+        
+        def __repr__(self):
+            import parsers.polish
+            return parsers.polish.Parser.achars[self.index] + str(self.subscript)
         
     class MolecularSentence(Sentence):
         
@@ -68,6 +72,13 @@ class Vocabulary:
             return (other.is_molecular() and
                     self.operator == other.operator and
                     self.operands == other.operands)
+        
+        def __repr__(self):
+            import parsers.polish
+            s = parsers.polish.Parser.ochars[self.operator]
+            for operand in self.operands:
+                s += operand.__str__()
+            return s
 
 class TableauxSystem:
     
@@ -85,13 +96,17 @@ class TableauxSystem:
         def open_branches(self):
             return {branch for branch in self.branches if not branch.closed}
             
-        def branch(self):
-            branch = TableauxSystem.Branch()
+        def branch(self, other_branch=None):
+            if not other_branch:
+                branch = TableauxSystem.Branch()
+            else:
+                branch = other_branch.copy()
+                self.branches.discard(other_branch)
             self.branches.add(branch)
             return branch
             
         def build_trunk(self):
-            return self.logic.TableauxSystem.build_trunk(self)
+            return self.logic.TableauxSystem.build_trunk(self, self.argument)
             
         def step(self):
             if self.finished:
@@ -129,6 +144,11 @@ class TableauxSystem:
                 node = TableauxSystem.Node(props=node)
             self.nodes.append(node)
             return self
+        
+        def update(self, nodes):
+            for node in nodes:
+                self.add(node)
+            return self
             
         def tick(self, node):
             self.ticked_nodes.add(node)
@@ -143,13 +163,14 @@ class TableauxSystem:
                 return self.nodes
             return [node for node in self.nodes if ticked == (node in self.ticked_nodes)]
         
-        def branch(self, node, tableau):
+        def copy(self):
             branch = TableauxSystem.Branch()
             branch.nodes = list(self.nodes)
             branch.ticked_nodes = set(self.ticked_nodes)
-            branch.add(node)
-            tableau.branches.add(branch)
             return branch
+        
+        def __repr__(self):
+            return self.nodes.__repr__()
                         
     class Node:
         
@@ -161,7 +182,10 @@ class TableauxSystem:
                 if prop not in self.props or not props[prop] == self.props[prop]:
                     return False
             return True
-
+        
+        def __repr__(self):
+            return self.props.__repr__()
+        
     class Rule:
         
         def __init__(self, tableau):
@@ -283,12 +307,16 @@ class Parser:
     def read(self):
         return self.read_atomic()
         
+
+
+
 def main():
     test()
     
 def test():
-    import logics.cpl, parsers.polish
-    logics = [logics.cpl]
+    import parsers.polish
+    import logics.fde, logics.cpl
+    logics = [logics.cpl, logics.fde]
     parser = parsers.polish.Parser()
     
     for logic in logics:
@@ -309,3 +337,10 @@ def test_argument(logic, premises, conclusion, valid, parser):
     assert valid == tableau(logic, parser.argument(premises, conclusion)).build().valid()
     
 if  __name__ =='__main__':main()
+
+def t1():
+    import parsers.polish
+    import logics.fde
+    a = parsers.polish.Parser().argument(['a'],'a')
+    t = tableau(logics.fde, a).build()
+    return t

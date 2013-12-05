@@ -38,11 +38,11 @@ from logic import negate
 class TableauxSystem(logic.TableauxSystem):
         
     @staticmethod
-    def build_trunk(tableau):
+    def build_trunk(tableau, argument):
         branch = tableau.branch()
-        for sentence in tableau.argument.premises:
-            branch.add({ 'sentence': sentence })
-        branch.add({ 'sentence': negate(tableau.argument.conclusion) })
+        for premise in argument.premises:
+            branch.add({ 'sentence': premise })
+        branch.add({ 'sentence': negate(argument.conclusion) })
         
 class TableauxRules:
     
@@ -73,8 +73,7 @@ class TableauxRules:
             
         def apply_to_node(self, node, branch):
             for sentence in node.props['sentence'].operands:
-                branch.branch({ 'sentence': sentence }, self.tableau).tick(node)
-            self.tableau.branches.discard(branch)
+                self.tableau.branch(branch).add({ 'sentence': sentence }).tick(node)
     
     class MaterialConditional(NodeRule):
         
@@ -83,9 +82,8 @@ class TableauxRules:
             
         def apply_to_node(self, node, branch):
             operands = node.props['sentence'].operands
-            branch.branch({ 'sentence': negate(operands[0]) }, self.tableau).tick(node)
-            branch.branch({ 'sentence': operands[1] }, self.tableau).tick(node)
-            self.tableau.branches.discard(branch)
+            self.tableau.branch(branch).add({ 'sentence': negate(operands[0]) }).tick(node)
+            self.tableau.branch(branch).add({ 'sentence': operands[1] }).tick(node)
             
     class MaterialBiconditional(NodeRule):
 
@@ -94,15 +92,19 @@ class TableauxRules:
             
         def apply_to_node(self, node, branch):
             operands = node.props['sentence'].operands
-            branch.branch({ 'sentence': negate(operands[0]) }, self.tableau).add({ 'sentence': negate(operands[1]) }).tick(node)
-            branch.branch({ 'sentence': operands[1] }, self.tableau).add({ 'sentence': operands[0] }).tick(node)
-            self.tableau.branches.discard(branch)
+            self.tableau.branch(branch).update([
+                { 'sentence': negate(operands[0]) }, 
+                { 'sentence': negate(operands[1]) }]).tick(node)
+            self.tableau.branch(branch).update([
+                { 'sentence': operands[1] }, 
+                { 'sentence': operands[0] }]).tick(node)
     
     class DoubleNegation(NodeRule):
 
         def applies_to_node(self, node, branch):
             sentence = node.props['sentence']
-            return sentence.operator == 'Negation' and sentence.operands[0].operator == 'Negation'
+            return (sentence.operator == 'Negation' and 
+                    sentence.operands[0].operator == 'Negation')
 
         def apply_to_node(self, node, branch):
             branch.add({ 'sentence': node.props['sentence'].operands[0].operands[0] }).tick(node)
@@ -111,18 +113,19 @@ class TableauxRules:
         
         def applies_to_node(self, node, branch):
             sentence = node.props['sentence']
-            return sentence.operator == 'Negation' and sentence.operands[0].operator == 'Conjunction'
+            return (sentence.operator == 'Negation' and 
+                    sentence.operands[0].operator == 'Conjunction')
                     
         def apply_to_node(self, node, branch):
             for sentence in node.props['sentence'].operands[0].operands:
-                branch.branch({ 'sentence': negate(sentence) }, self.tableau).tick(node)
-            self.tableau.branches.discard(branch)
+                self.tableau.branch(branch).add({ 'sentence': negate(sentence) }).tick(node)
             
     class NegatedDisjunction(NodeRule):
         
         def applies_to_node(self, node, branch):
             sentence = node.props['sentence']
-            return sentence.operator == 'Negation' and sentence.operands[0].operator == 'Disjunction'
+            return (sentence.operator == 'Negation' and 
+                    sentence.operands[0].operator == 'Disjunction')
         
         def apply_to_node(self, node, branch):
             for sentence in node.props['sentence'].operands[0].operands:
@@ -133,23 +136,33 @@ class TableauxRules:
         
         def applies_to_node(self, node, branch):
             sentence = node.props['sentence']
-            return sentence.operator == 'Negation' and sentence.operands[0].operator == 'Material Conditional'
+            return (sentence.operator == 'Negation' and 
+                    sentence.operands[0].operator == 'Material Conditional')
                     
         def apply_to_node(self, node, branch):
             operands = node.props['sentence'].operands[0].operands
-            branch.add({ 'sentence': operands[0] }).add({ 'sentence': negate(operands[1]) }).tick(node)
+            branch.update([
+                { 'sentence': operands[0] }, 
+                { 'sentence': negate(operands[1]) }
+            ]).tick(node)
                   
     class NegatedMaterialBiconditional(NodeRule):
 
         def applies_to_node(self, node, branch):
             sentence = node.props['sentence']
-            return sentence.operator == 'Negation' and sentence.operands[0].operator == 'Material Biconditional'
+            return (sentence.operator == 'Negation' and 
+                    sentence.operands[0].operator == 'Material Biconditional')
 
         def apply_to_node(self, node, branch):
             operands = node.props['sentence'].operands[0].operands
-            branch.branch({ 'sentence': operands[0] }, self.tableau).add({ 'sentence': negate(operands[1]) }).tick(node)
-            branch.branch({ 'sentence': negate(operands[1]) }, self.tableau).add({ 'sentence': operands[0] }).tick(node)
-            self.tableau.branches.discard(branch)
+            self.tableau.branch(branch).update([
+                { 'sentence': operands[0] },
+                { 'sentence': negate(operands[1]) }
+            ]).tick(node)
+            self.tableau.branch(branch).update([
+                { 'sentence': negate(operands[1]) },
+                { 'sentence': operands[0] }
+            ]).tick(node)
     
     rules = [
         Closure,
