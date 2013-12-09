@@ -1,5 +1,3 @@
-import logic
-
 name = 'FDE'
 description = 'First Degree Entailment 4-valued logic'
 links = {
@@ -21,6 +19,8 @@ def example_invalidities():
     import cpl
     return cpl.example_invalidities()
     
+import logic
+from logic import negate
 
 class TableauxSystem(logic.TableauxSystem):
 
@@ -42,7 +42,7 @@ class TableauxRules:
                 if branch.has({ 
                     'sentence': node.props['sentence'], 
                     'designated': not node.props['designated'] 
-                }): return True
+                }): return branch
             return False
 
     class ConjunctionDesignated(NodeRule):
@@ -76,13 +76,13 @@ class TableauxRules:
                     node.props['sentence'].operator == 'Material Conditional')
             
         def apply_to_node(self, node, branch):
-            operands = node.props['sentence'].operands
+            sentence = node.props['sentence']
             self.tableau.branch(branch).add({ 
-                'sentence': negate(operands[0]), 
+                'sentence': negate(sentence.lhs), 
                 'designated': True 
             }).tick(node)
             self.tableau.branch(branch).add({ 
-                'sentence': operands[1], 
+                'sentence': sentence.rhs, 
                 'designated': True 
             }).tick(node)
             
@@ -93,14 +93,14 @@ class TableauxRules:
                     node.props['sentence'].operator == 'Material Biconditional')
             
         def apply_to_node(self, node, branch):
-            operands = node.props['sentence'].operands
+            sentence = node.props['sentence']
             self.tableau.branch(branch).update([
-                { 'sentence': negate(operands[0]), 'designated': True },
-                { 'sentence': negate(operands[1]), 'designated': True }
+                { 'sentence': negate(sentence.lhs), 'designated': True },
+                { 'sentence': negate(sentence.rhs), 'designated': True }
             ]).tick(node)
             self.tableau.branch(branch).update([
-                { 'sentence': operands[1], 'designated': True },
-                { 'sentence': operands[0], 'designated': True }
+                { 'sentence': sentence.rhs, 'designated': True },
+                { 'sentence': sentence.lhs, 'designated': True }
             ]).tick(node)
 
     class ConjunctionUndesignated(NodeRule):
@@ -134,10 +134,10 @@ class TableauxRules:
                     node.props['sentence'].operator == 'Material Conditional')
             
         def apply_to_node(self, node, branch):
-            operands = node.props['sentence'].operands
+            sentence = node.props['sentence']
             branch.update([
-                { 'sentence': negate(operands[0]), 'designated': False },
-                { 'sentence': operands[1], 'designated': False }
+                { 'sentence': negate(sentence.lhs), 'designated': False },
+                { 'sentence': sentence.rhs, 'designated': False }
             ]).tick(node)
             
     class MaterialBiconditionalUndesignated(NodeRule):
@@ -147,14 +147,14 @@ class TableauxRules:
                     node.props['sentence'].operator == 'Material Biconditional')
             
         def apply_to_node(self, node, branch):
-            operands = node.props['sentence'].operands
+            sentence = node.props['sentence']
             self.tableau.branch(branch).update([
-                { 'sentence': negate(operands[0]), 'designated': False },
-                { 'sentence': operands[1], 'designated': False }
+                { 'sentence': negate(sentence.lhs), 'designated': False },
+                { 'sentence': sentence.rhs, 'designated': False }
             ]).tick(node)
             self.tableau.branch(branch).update([
-                { 'sentence': negate(operands[1]), 'designated': False },
-                { 'sentence': operands[0], 'designated': False }
+                { 'sentence': negate(sentence.rhs), 'designated': False },
+                { 'sentence': sentence.lhs, 'designated': False }
             ]).tick(node)
             
     class NegatedConjunctionDesignated(NodeRule):
@@ -163,10 +163,10 @@ class TableauxRules:
             sentence = node.props['sentence']
             return (node.props['designated'] and 
                     sentence.operator == 'Negation' and 
-                    sentence.operands[0].operator == 'Conjunction')
+                    sentence.operand.operator == 'Conjunction')
                 
         def apply_to_node(self, node, branch):
-            for operand in node.props['sentence'].operands[0].operands:
+            for operand in node.props['sentence'].operand.operands:
                 self.tableau.branch(branch).add({ 
                     'sentence': negate(operand), 
                     'designated': True 
@@ -178,10 +178,10 @@ class TableauxRules:
             sentence = node.props['sentence']
             return (node.props['designated'] and 
                     sentence.operator == 'Negation' and 
-                    sentence.operands[0].operator == 'Disjunction')
+                    sentence.operand.operator == 'Disjunction')
             
         def apply_to_node(self, node, branch):
-            for operand in node.props['sentence'].operands[0].operands:
+            for operand in node.props['sentence'].operand.operands:
                 branch.add({ 'sentence': negate(operand), 'designated': True })
             branch.tick(node)
     
@@ -191,13 +191,13 @@ class TableauxRules:
             sentence = node.props['sentence']
             return (node.props['designated'] and 
                     sentence.operator == 'Negation' and 
-                    sentence.operands[0].operator == 'Material Conditional')
+                    sentence.operand.operator == 'Material Conditional')
             
         def apply_to_node(self, node, branch):
-            operands = node.props['sentence'].operands[0].operands
+            sentence = node.props['sentence'].operand
             branch.update([
-                { 'sentence': operands[0], 'designated': True },
-                { 'sentence': negate(operands[1]), 'designated': True }
+                { 'sentence': sentence.lhs, 'designated': True },
+                { 'sentence': negate(sentence.rhs), 'designated': True }
             ]).tick(node)
             
     class NegatedMaterialBiconditionalDesignated(NodeRule):
@@ -206,17 +206,17 @@ class TableauxRules:
             sentence = node.props['sentence']
             return (node.props['designated'] and 
                     sentence.operator == 'Negation' and 
-                    sentence.operands[0].operator == 'Material Biconditional')
+                    sentence.operand.operator == 'Material Biconditional')
             
         def apply_to_node(self, node, branch):
-            operands = node.props['sentence'].operands[0].operands
+            sentence = node.props['sentence'].operand
             self.tableau.branch(branch).update([
-                { 'sentence': negate(operands[0]), 'designated': True },
-                { 'sentence': negate(operands[1]), 'designated': True }
+                { 'sentence': sentence.lhs, 'designated': True },
+                { 'sentence': negate(sentence.rhs), 'designated': True }
             ]).tick(node)
             self.tableau.branch(branch).update([
-                { 'sentence': operands[1], 'designated': True },
-                { 'sentence': operands[0], 'designated': True }
+                { 'sentence': sentence.rhs, 'designated': True },
+                { 'sentence': negate(sentence.lhs), 'designated': True }
             ]).tick(node)
 
     class DoubleNegationDesignated(NodeRule):
@@ -225,11 +225,11 @@ class TableauxRules:
             sentence = node.props['sentence']
             return (node.props['designated'] and 
                     sentence.operator == 'Negation' and 
-                    sentence.operands[0].operator == 'Negation')
+                    sentence.operand.operator == 'Negation')
                     
         def apply_to_node(self, node, branch):
             branch.add({ 
-                'sentence': node.props['sentence'].operands[0].operands[0],
+                'sentence': node.props['sentence'].operand.operand,
                 'designated': True
             }).tick(node)
             
@@ -239,12 +239,12 @@ class TableauxRules:
             sentence = node.props['sentence']
             return (not node.props['designated'] and 
                     sentence.operator == 'Negation' and 
-                    sentence.operands[0].operator == 'Conjunction')
+                    sentence.operand.operator == 'Conjunction')
                 
         def apply_to_node(self, node, branch):
-            for operand in node.props['sentence'].operands[0].operands:
-                self.tableau.branch(branch).add({ 
-                    'sentence': operand, 
+            for operand in node.props['sentence'].operand.operands:
+                branch.add({ 
+                    'sentence': negate(operand), 
                     'designated': False 
                 }).tick(node)
 
@@ -254,12 +254,14 @@ class TableauxRules:
             sentence = node.props['sentence']
             return (not node.props['designated'] and 
                     sentence.operator == 'Negation' and 
-                    sentence.operands[0].operator == 'Disjunction')
+                    sentence.operand.operator == 'Disjunction')
             
         def apply_to_node(self, node, branch):
-            for operand in node.props['sentence'].operands[0].operands:
-                branch.add({ 'sentence': operand, 'designated': False })
-            branch.tick(node)
+            for operand in node.props['sentence'].operand.operands:
+                self.tableau.branch(branch).add({ 
+                    'sentence': negate(operand), 
+                    'designated': False 
+                }).tick(node)
     
     class NegatedMaterialConditionalUndesignated(NodeRule):
         
@@ -267,14 +269,18 @@ class TableauxRules:
             sentence = node.props['sentence']
             return (not node.props['designated'] and 
                     sentence.operator == 'Negation' and 
-                    sentence.operands[0].operator == 'Material Conditional')
+                    sentence.operand.operator == 'Material Conditional')
             
         def apply_to_node(self, node, branch):
-            operands = node.props['sentence'].operands[0].operands
-            branch.update([
-                { 'sentence': negate(operands[0]), 'designated': False },
-                { 'sentence': operands[1], 'designated': False }
-            ]).tick(node)
+            sentence = node.props['sentence'].operand
+            self.tableau.branch(branch).add({ 
+                'sentence': sentence.lhs, 
+                'designated': False 
+            }).tick(node)
+            self.tableau.branch(branch).add({ 
+                'sentence': negate(sentence.rhs), 
+                'designated': False
+            }).tick(node)
             
     class NegatedMaterialBiconditionalUndesignated(NodeRule):
 
@@ -282,17 +288,17 @@ class TableauxRules:
             sentence = node.props['sentence']
             return (not node.props['designated'] and 
                     sentence.operator == 'Negation' and 
-                    sentence.operands[0].operator == 'Material Biconditional')
+                    sentence.operand.operator == 'Material Biconditional')
             
         def apply_to_node(self, node, branch):
-            operands = node.props['sentence'].operands[0].operands
+            sentence = node.props['sentence'].operand
             self.tableau.branch(branch).update([
-                { 'sentence': negate(operands[0]), 'designated': False },
-                { 'sentence': operands[1], 'designated': False }
+                { 'sentence': negate(sentence.lhs), 'designated': False },
+                { 'sentence': negate(sentence.rhs), 'designated': False }
             ]).tick(node)
-            self.tableau.branch(branch).updateh([
-                { 'sentence': negate(operands[1]), 'designated': False },
-                { 'sentence': operands[0], 'designated': False }
+            self.tableau.branch(branch).update([
+                { 'sentence': sentence.rhs, 'designated': False },
+                { 'sentence': sentence.lhs, 'designated': False }
             ]).tick(node)
             
     class DoubleNegationUndesignated(NodeRule):
@@ -301,11 +307,11 @@ class TableauxRules:
             sentence = node.props['sentence']
             return (not node.props['designated'] and 
                     sentence.operator == 'Negation' and 
-                    sentence.operands[0].operator == 'Negation')
+                    sentence.operand.operator == 'Negation')
 
         def apply_to_node(self, node, branch):
             branch.add({ 
-                'sentence': node.props['sentence'].operands[0].operands[0],
+                'sentence': node.props['sentence'].operand.operand,
                 'designated': False
         }).tick(node)
         

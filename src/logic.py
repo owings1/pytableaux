@@ -63,9 +63,14 @@ class Vocabulary:
         
         def __init__(self, operator, operands):
             assert operator in operators
-            assert len(operands) == operators[operator]
+            assert len(operands) == arity(operator)
             self.operator = operator
             self.operands = operands
+            if len(operands) == 1:
+                self.operand = operands[0]
+            elif len(operands) > 1:
+                self.lhs = operands[0]
+                self.rhs = operands[-1]
             
         def __eq__(self, other):
             assert Vocabulary.Sentence.is_sentence(other)
@@ -75,10 +80,9 @@ class Vocabulary:
         
         def __repr__(self):
             import parsers.polish
-            s = parsers.polish.Parser.ochars[self.operator]
-            for operand in self.operands:
-                s += operand.__str__()
-            return s
+            chars = parsers.polish.Parser.ochars
+            s = chars.keys()[chars.values().index(self.operator)]
+            return s + ''.join([operand.__repr__() for operand in self.operands])
 
 class TableauxSystem:
     
@@ -90,6 +94,7 @@ class TableauxSystem:
             self.branches = set()
             self.finished = False
             self.rules = []
+            self.history = []
             for Rule in logic.TableauxRules.rules:
                 self.rules.append(Rule(self))
             
@@ -112,10 +117,14 @@ class TableauxSystem:
             if self.finished:
                 return False
             for rule in self.rules:
-                if rule.applies():
-                    rule.apply()
-                    return True
+                target = rule.applies()
+                if target:
+                    rule.apply(target)
+                    application = { 'rule': rule, 'target': target }
+                    self.history.append(application)
+                    return application
             self.finished = True
+            return False
         
         def build(self):
             self.build_trunk()
@@ -194,40 +203,31 @@ class TableauxSystem:
         def applies(self):
             return False
             
-        def apply(self):
+        def apply(self, target):
             pass
 
     class BranchRule(Rule):
         
         def applies(self):
             for branch in self.tableau.open_branches():
-                if self.applies_to_branch(branch):
-                    return True
+                target = self.applies_to_branch(branch)
+                if target:
+                    return target
             return False
-            
-        def apply(self):
-            for branch in self.tableau.open_branches():
-                if self.applies_to_branch(branch):
-                    return self.apply_to_branch(branch)
                     
         def applies_to_branch(self, branch):
             return False
-            
-        def apply_to_branch(self, branch):
-            pass
 
     class NodeRule(BranchRule):
 
-        def applies_to_branch(self, branch):
-            for node in branch.get_nodes(ticked=False):
-                if self.applies_to_node(node, branch):
-                    return True
-            return False
-
-        def apply_to_branch(self, branch):
-            for node in branch.get_nodes(ticked=False):
-                if self.applies_to_node(node, branch):
-                    return self.apply_to_node(node, branch)
+        def applies(self):
+            for branch in self.tableau.open_branches():
+                for node in branch.get_nodes(ticked=False):
+                    if self.applies_to_node(node, branch):
+                        return { 'node': node, 'branch': branch }
+            
+        def apply(self, target):
+            return self.apply_to_node(target['node'], target['branch'])
 
         def applies_to_node(self, node, branch):
             return False
@@ -237,14 +237,16 @@ class TableauxSystem:
 
     class ClosureRule(BranchRule):
 
-        def apply_to_branch(self, branch):
+        def applies_to_branch(self, branch):
+            pass
+        
+        def apply(self, branch):
             branch.close()
 
 class Parser:
     
     class ParseError(Exception):
         pass
-    Error = ParseError
     
     achars = []
     ochars = {}
@@ -261,7 +263,7 @@ class Parser:
     
     def assert_current(self):
         if not self.has_next(0):
-            raise Error('Unexpected end of input at position ' + str(self.real_pos()))
+            raise Parser.ParseError('Unexpected end of input at position ' + str(self.real_pos()))
     
     def real_pos(self):
         return self.pos + self.parent_pos
@@ -289,7 +291,7 @@ class Parser:
         s = self.read()
         self.chomp()
         if self.has_next(0):
-            raise Error('Unexpected character: "' + self.current() + '" at position ' + str(self.real_pos() + 1))
+            raise Parser.ParseError('Unexpected character: "' + self.current() + '" at position ' + str(self.real_pos() + 1))
         return s
         
     def read_atomic(self):
@@ -302,21 +304,18 @@ class Parser:
                 sub.append(self.current())
                 self.advance()
             return atomic(self.achars.index(achar), int(''.join(sub)))
-        raise Error('Unexpected character: "' + self.current() + '" at position ' + str(self.real_pos()))
+        raise Parser.ParseError('Unexpected character: "' + self.current() + '" at position ' + str(self.real_pos()))
     
     def read(self):
         return self.read_atomic()
         
-
-
-
 def main():
     test()
     
 def test():
     import parsers.polish
-    import logics.fde, logics.cpl
-    logics = [logics.cpl, logics.fde]
+    import logics.fde, logics.cpl, logics.k, logics.t
+    logics = [logics.cpl, logics.fde, logics.k, logics.t]
     parser = parsers.polish.Parser()
     
     for logic in logics:
@@ -340,7 +339,7 @@ if  __name__ =='__main__':main()
 
 def t1():
     import parsers.polish
-    import logics.fde
-    a = parsers.polish.Parser().argument(['a'],'a')
-    t = tableau(logics.fde, a).build()
+    import logics.k
+    a = parsers.polish.Parser().argument(['Cab', 'a'], 'b')
+    t = tableau(logics.k, a)
     return t
