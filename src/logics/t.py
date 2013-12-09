@@ -4,15 +4,13 @@ links = {
     'Stanford Encyclopedia': 'http://plato.stanford.edu/entries/logic-modal/'
 }
 
-import k
-
 def example_validities():
-    args = k.example_validities()
+    import d
+    args = d.example_validities()
     args.update({
-    	'Reflexive Inference 1': [[], 'CLaa'],
-    	'Possibility Addition': [['a'], 'Ma'],
-    	'Necessity Elimination': [['La'], 'a'],
-    	'Serial Inference 1': [[], 'CLaMa']
+    	'Serial Inference 1': [[], 'CLaMa'],
+        'Possibility Addition': [['a'], 'Ma'],
+        'Necessity Elimination': [['La'], 'a']
     })
     return args
     
@@ -23,13 +21,13 @@ def example_invalidities():
 	    'Possibility distribution': [['KMaMb'], 'MKab']
     })
     return args
+
+import logic, k
     
 class TableauxSystem(k.TableauxSystem):
     pass
 
-import logic
-
-class TableauxRules(k.TableauxRules):
+class TableauxRules:
 
     class Reflexive(logic.TableauxSystem.BranchRule):
                     
