@@ -16,7 +16,9 @@ def example_invalidities():
     import t
     args = t.example_invalidities()
     args.update({
-    	'Reflexive Inference 1': [[], 'CLaa']
+    	'Reflexive Inference 1': [[], 'CLaa'],
+        'Possibility Addition': [['a'], 'Ma'],
+        'Necessity Elimination': [['La'], 'a']
     })
     return args
     

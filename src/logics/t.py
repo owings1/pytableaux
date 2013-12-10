@@ -8,17 +8,17 @@ def example_validities():
     import d
     args = d.example_validities()
     args.update({
-    	'Serial Inference 1': [[], 'CLaMa'],
         'Possibility Addition': [['a'], 'Ma'],
-        'Necessity Elimination': [['La'], 'a']
+        'Necessity Elimination': [['La'], 'a'],
+    	'NP Collapse 1': [['LMa'], 'Ma']
     })
     return args
     
 def example_invalidities():
-    import cpl
-    args = cpl.example_invalidities()
+    import s4
+    args = s4.example_invalidities()
     args.update({
-	    'Possibility distribution': [['KMaMb'], 'MKab']
+		'S4 Inference 1': [[], 'CLaLLa']
     })
     return args
 

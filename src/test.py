@@ -5,13 +5,14 @@ def main():
     
 def test():
     import parsers.polish
-    import logics.fde, logics.cpl, logics.k, logics.t, logics.d
+    from logics import fde, cpl, k, d, t, s4
     logics = [
-        logics.cpl, 
-        logics.fde, 
-        logics.k, 
-        logics.t, 
-        logics.d
+        fde,
+        cpl,
+        k,
+        d,
+        t,
+        s4
     ]
     parser = parsers.polish.Parser()
     
@@ -26,11 +27,15 @@ def test():
 def test_arguments(logic, args, valid, parser):
     for name in args:
         print '    ', name, '...',
-        test_argument(logic, args[name][0], args[name][1], valid, parser)
+        try:
+            t = tableau(logic, parser.argument(args[name][0], args[name][1])).build()
+            assert valid == t.valid()
+        except AssertionError as e:
+            import json
+            print 'FAIL'
+            print t
+            raise e
         print 'pass'
-
-def test_argument(logic, premises, conclusion, valid, parser):
-    assert valid == tableau(logic, parser.argument(premises, conclusion)).build().valid()
     
 if  __name__ =='__main__':main()
 

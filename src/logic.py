@@ -26,6 +26,9 @@ class argument:
     def __init__(self, premises, conclusion):
         self.premises = premises
         self.conclusion = conclusion
+    
+    def __repr__(self):
+        return [self.premises, self.conclusion].__repr__()
 
 def tableau(logic, arg):
     return TableauxSystem.Tableau(logic, arg)
@@ -135,6 +138,23 @@ class TableauxSystem:
         def valid(self):
             return (self.finished and len(self.open_branches()) == 0)
             
+        def __repr__(self):
+            branches = list(self.branches)
+            history = []
+            for application in self.history:
+                a = dict(application)
+                try:
+                    if 'branch' in a['target']:
+                        a['target']['branch'] = branches.index(a['target']['branch'])
+                except TypeError:
+                    pass
+                history.append(a)
+            return {
+                'argument': self.argument,
+                'branches': branches,
+                'history': history
+            }.__repr__()
+            
     class Branch:
         
         def __init__(self):
@@ -205,6 +225,9 @@ class TableauxSystem:
             
         def apply(self, target):
             pass
+        
+        def __repr__(self):
+            return self.__class__.__name__
 
     class BranchRule(Rule):
         
