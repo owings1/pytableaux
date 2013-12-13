@@ -1,0 +1,36 @@
+[a, b, c, d, e, f] X
+[a, d, c] X
+[a, b, c, d, a]
+
+
+  d - c (X)
+ /
+a           e - f (X)
+ \         /
+  b - c - d
+           \ 
+            a
+            
+
+
+--------------------
+         e - f - a
+        /
+   d - c
+  /     \ 
+ /       f - a - b
+a           
+ \           e - f (X)
+  \         /
+   b - c - d
+            \ 
+             a
+             
+
+a
+ d - c
+      e - f - a
+      f - a - b
+ b - c - d
+          e - f (X)
+          a

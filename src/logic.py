@@ -45,6 +45,10 @@ class Vocabulary:
         def is_molecular(self):
             return (hasattr(self, 'operator') and hasattr(self, 'operands'))
     
+        def __repr__(self):
+            from notations import polish
+            return polish.write(self)
+            
     class AtomicSentence(Sentence):
         
         def __init__(self, index, subscript):
@@ -57,10 +61,6 @@ class Vocabulary:
             return (other.is_atomic() and
                     self.index == other.index and
                     self.subscript == other.subscript)
-        
-        def __repr__(self):
-            import parsers.polish
-            return parsers.polish.Parser.achars[self.index] + str(self.subscript)
         
     class MolecularSentence(Sentence):
         
@@ -80,12 +80,6 @@ class Vocabulary:
             return (other.is_molecular() and
                     self.operator == other.operator and
                     self.operands == other.operands)
-        
-        def __repr__(self):
-            import parsers.polish
-            chars = parsers.polish.Parser.ochars
-            s = chars.keys()[chars.values().index(self.operator)]
-            return s + ''.join([operand.__repr__() for operand in self.operands])
 
 class TableauxSystem:
     
@@ -96,10 +90,8 @@ class TableauxSystem:
             self.argument = argument
             self.branches = set()
             self.finished = False
-            self.rules = []
+            self.rules = [Rule(self) for Rule in logic.TableauxRules.rules]
             self.history = []
-            for Rule in logic.TableauxRules.rules:
-                self.rules.append(Rule(self))
             
         def open_branches(self):
             return {branch for branch in self.branches if not branch.closed}
@@ -126,7 +118,7 @@ class TableauxSystem:
                     application = { 'rule': rule, 'target': target }
                     self.history.append(application)
                     return application
-            self.finished = True
+            self.finish()
             return False
         
         def build(self):
@@ -135,24 +127,36 @@ class TableauxSystem:
                 self.step()
             return self
         
+        def finish(self):
+            self.finished = True
+            self.tree = self.structure(self.branches)
+            
         def valid(self):
             return (self.finished and len(self.open_branches()) == 0)
             
+        def structure(self, branches, depth=0):
+            structure = { 'nodes': [], 'children': [], 'closed': False }
+            while True:
+                B = {branch for branch in branches if len(branch.nodes) > depth}
+                distinct_nodes = {branch.nodes[depth] for branch in B}
+                if len(distinct_nodes) == 1:
+                    structure['nodes'].append(list(B)[0].nodes[depth])
+                    depth += 1
+                    continue
+                break
+            for node in distinct_nodes:
+                child_branches = {branch for branch in branches if branch.nodes[depth] == node}
+                structure['children'].append(self.structure(child_branches, depth))
+            if len(branches) == 1:
+                structure['closed'] = list(branches)[0].closed
+            return structure
+            
         def __repr__(self):
-            branches = list(self.branches)
-            history = []
-            for application in self.history:
-                a = dict(application)
-                try:
-                    if 'branch' in a['target']:
-                        a['target']['branch'] = branches.index(a['target']['branch'])
-                except TypeError:
-                    pass
-                history.append(a)
             return {
                 'argument': self.argument,
-                'branches': branches,
-                'history': history
+                'branches': len(branches),
+                'rules_applied': len(history),
+                'finished': self.finished
             }.__repr__()
             
     class Branch:
@@ -181,6 +185,7 @@ class TableauxSystem:
             
         def tick(self, node):
             self.ticked_nodes.add(node)
+            node.ticked = True
             return self
         
         def close(self):
@@ -205,6 +210,7 @@ class TableauxSystem:
         
         def __init__(self, props={}):
             self.props = props
+            self.ticked = False
         
         def has_props(self, props):
             for prop in props:
@@ -213,7 +219,7 @@ class TableauxSystem:
             return True
         
         def __repr__(self):
-            return self.props.__repr__()
+            return self.__dict__.__repr__()
         
     class Rule:
         
@@ -253,15 +259,15 @@ class TableauxSystem:
             return self.apply_to_node(target['node'], target['branch'])
 
         def applies_to_node(self, node, branch):
-            return False
+            raise NotImplemented
 
         def apply_to_node(self, node, branch):
-            pass
+            raise NotImplemented
 
     class ClosureRule(BranchRule):
 
         def applies_to_branch(self, branch):
-            pass
+            raise NotImplemented
         
         def apply(self, branch):
             branch.close()
@@ -286,10 +292,7 @@ class Parser:
     
     def assert_current(self):
         if not self.has_next(0):
-            raise Parser.ParseError('Unexpected end of input at position ' + str(self.real_pos()))
-    
-    def real_pos(self):
-        return self.pos + self.parent_pos
+            raise Parser.ParseError('Unexpected end of input at position ' + str(self.pos))
         
     def has_next(self, n=1):
         return (len(self.s) > self.pos + n)
@@ -306,15 +309,14 @@ class Parser:
     def argument(self, premises, conclusion):
         return argument([self.parse(s) for s in premises], self.parse(conclusion))
     
-    def parse(self, string, parent_pos=0):
+    def parse(self, string):
         self.s = list(string)
         self.pos = 0
-        self.parent_pos = parent_pos
         self.chomp()
         s = self.read()
         self.chomp()
         if self.has_next(0):
-            raise Parser.ParseError('Unexpected character: "' + self.current() + '" at position ' + str(self.real_pos() + 1))
+            raise Parser.ParseError('Unexpected character: "' + self.current() + '" at position ' + str(self.pos + 1))
         return s
         
     def read_atomic(self):
@@ -327,7 +329,7 @@ class Parser:
                 sub.append(self.current())
                 self.advance()
             return atomic(self.achars.index(achar), int(''.join(sub)))
-        raise Parser.ParseError('Unexpected character: "' + self.current() + '" at position ' + str(self.real_pos()))
+        raise Parser.ParseError('Unexpected character: "' + self.current() + '" at position ' + str(self.pos))
     
     def read(self):
         return self.read_atomic()

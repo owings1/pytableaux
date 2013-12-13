@@ -4,7 +4,7 @@ def main():
     test()
     
 def test():
-    import parsers.polish
+    from notations import polish
     from logics import fde, cpl, k, d, t, s4
     logics = [
         fde,
@@ -14,7 +14,7 @@ def test():
         t,
         s4
     ]
-    parser = parsers.polish.Parser()
+    parser = polish.Parser()
     
     for logic in logics:
         print logic.name
@@ -40,8 +40,8 @@ def test_arguments(logic, args, valid, parser):
 if  __name__ =='__main__':main()
 
 def t1():
-    import parsers.polish
-    import logics.k
-    a = parsers.polish.Parser().argument(['Cab', 'a'], 'b')
-    t = tableau(logics.k, a)
+    from notations import polish
+    from logics import k
+    arg = polish.Parser().argument(['Cab', 'a'], 'b')
+    t = tableau(k, arg)
     return t
