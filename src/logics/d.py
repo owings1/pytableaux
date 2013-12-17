@@ -8,7 +8,7 @@ def example_validities():
     import k
     args = k.example_validities()
     args.update({
-        'Serial Inference 1': [[], 'CLaMa']
+        'Serial Inference 1': 'CLaMa'
     })
     return args
     
@@ -16,7 +16,7 @@ def example_invalidities():
     import t
     args = t.example_invalidities()
     args.update({
-    	'Reflexive Inference 1': [[], 'CLaa'],
+    	'Reflexive Inference 1': 'CLaa',
         'Possibility Addition': [['a'], 'Ma'],
         'Necessity Elimination': [['La'], 'a']
     })

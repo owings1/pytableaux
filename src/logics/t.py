@@ -18,7 +18,7 @@ def example_invalidities():
     import s4
     args = s4.example_invalidities()
     args.update({
-		'S4 Inference 1': [[], 'CLaLLa']
+		'S4 Inference 1': 'CLaLLa'
     })
     return args
 

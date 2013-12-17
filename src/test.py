@@ -27,8 +27,15 @@ def test():
 def test_arguments(logic, args, valid, parser):
     for name in args:
         print '    ', name, '...',
+        arg = args[name]
+        if isinstance(arg, list):
+            premises = arg[0]
+            conclusion = arg[1]
+        else:
+            premises = []
+            conclusion = arg
         try:
-            t = tableau(logic, parser.argument(args[name][0], args[name][1])).build()
+            t = tableau(logic, parser.argument(conclusion, premises)).build()
             assert valid == t.valid()
         except AssertionError as e:
             import json

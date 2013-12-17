@@ -6,12 +6,12 @@ def example_validities():
     args = fde.example_validities()
     args.update({
         'Disjunctive Syllogism'       : [['Aab', 'Nb'], 'a'],
-        'Law of Excluded Middle'      : [[], 'AaNa'],
+        'Law of Excluded Middle'      : 'AaNa',
         'Law of Non-contradiction'    : [['KaNa'], 'b'],
-        'Identity'                    : [[], 'Caa'],
+        'Identity'                    : 'Caa',
         'Modus Ponens'                : [['Cab', 'a'], 'b'],
         'Modus Tollens'               : [['Cab', 'Nb'], 'Na'],
-        'Pseudo Contraction'          : [[], 'CCaCabCab'],
+        'Pseudo Contraction'          : 'CCaCabCab',
         'Biconditional Elimination'   : [['Eab', 'a'], 'b'],
         'Biconditional Elimination 2' : [['Eab', 'Na'], 'Nb']
     })
@@ -20,7 +20,7 @@ def example_validities():
 def example_invalidities():
     return {
         'Triviality 1'				: [['a'], 'b'],
-        'Triviality 2'				: [[], 'a'],
+        'Triviality 2'				: 'a',
         'Affirming the Consequent'	: [['Cab', 'b'], 'a'],
         'Affirming a Disjunct 1'	: [['Aab', 'a'], 'b'],
         'Affirming a Disjunct 2'	: [['Aab', 'a'], 'Nb'],

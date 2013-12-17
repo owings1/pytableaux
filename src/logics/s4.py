@@ -5,7 +5,7 @@ def example_validities():
     import t
     args = t.example_validities()
     args.update({
-		'S4 Inference 1': [[], 'CLaLLa']
+		'S4 Inference 1': 'CLaLLa'
     })
     return args
     
@@ -14,7 +14,7 @@ def example_invalidities():
     args = cpl.example_invalidities()
     args.update({
 	    'Possibility distribution': [['KMaMb'], 'MKab'],
-		'S5 Inference 1': [[], 'CaLMa']
+		'S5 Inference 1': 'CaLMa'
     })
     return args
     

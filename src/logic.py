@@ -23,7 +23,7 @@ def arity(operator):
     
 class argument:
 
-    def __init__(self, premises, conclusion):
+    def __init__(self, conclusion=None, premises=[]):
         self.premises = premises
         self.conclusion = conclusion
     
@@ -306,8 +306,8 @@ class Parser:
         self.pos += n  
         self.chomp()
     
-    def argument(self, premises, conclusion):
-        return argument([self.parse(s) for s in premises], self.parse(conclusion))
+    def argument(self, conclusion=None, premises=[]):
+        return argument(self.parse(conclusion), [self.parse(s) for s in premises])
     
     def parse(self, string):
         self.s = list(string)
@@ -333,3 +333,9 @@ class Parser:
     
     def read(self):
         return self.read_atomic()
+
+def main():
+    import cherrypy, web
+    cherrypy.quickstart(web.Server())
+    
+if  __name__ =='__main__':main()

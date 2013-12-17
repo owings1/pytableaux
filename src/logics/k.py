@@ -15,7 +15,7 @@ def example_validities():
 		'Modal Transformation 2': [['NMNa'], 'La'],
 		'Modal Transformation 3': [['NLa'], 'MNa'],
 		'Modal Transformation 4': [['MNa'], 'NLa'],
-        'Necessity Distribution': [[], 'CLCabCLaLb']
+        'Necessity Distribution': 'CLCabCLaLb'
     })
     return args
     
@@ -25,8 +25,8 @@ def example_invalidities():
     args.update({
         'Possibility Addition': [['a'], 'Ma'],
     	'Necessity Elimination': [['La'], 'a'],
-    	'Reflexive Inference 1': [[], 'CLaa'],
-    	'Serial Inference 1': [[], 'CLaMa']
+    	'Reflexive Inference 1': 'CLaa',
+    	'Serial Inference 1': 'CLaMa'
     })
     return args
 
