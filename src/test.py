@@ -36,7 +36,7 @@ def test_arguments(logic, args, valid, parser):
             conclusion = arg
         try:
             t = tableau(logic, parser.argument(conclusion, premises)).build()
-            assert valid == t.valid()
+            assert valid == t.valid
         except AssertionError as e:
             import json
             print 'FAIL'

@@ -130,10 +130,8 @@ class TableauxSystem:
         def finish(self):
             self.finished = True
             self.tree = self.structure(self.branches)
-            
-        def valid(self):
-            return (self.finished and len(self.open_branches()) == 0)
-            
+            self.valid = (self.finished and len(self.open_branches()) == 0)
+
         def structure(self, branches, depth=0):
             structure = { 'nodes': [], 'children': [], 'closed': False }
             while True:
@@ -333,9 +331,3 @@ class Parser:
     
     def read(self):
         return self.read_atomic()
-
-def main():
-    import cherrypy, web
-    cherrypy.quickstart(web.Server())
-    
-if  __name__ =='__main__':main()
