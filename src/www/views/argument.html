@@ -1,0 +1,79 @@
+{% extends 'layout.html' %}
+{% import 'helper.html' as helper %}
+{% block content %}
+    <script type="text/template" id="premiseTemplate">
+        {{ helper.premise('{n}') }}
+    </script>
+    <form class="argument" action="/" method="post">
+        <div class="input select">
+            <label for="notation">Notation</label>
+            <select id="notation" name="notation">
+                {% for module in notation_modules %}
+                    <option value="{{ module }}" {{ helper.select_opt(form_data, 'notation', module) }}>
+                        {{ notations[module].name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="premises">
+            {% if 'premises[]' in form_data %}
+                {% set i = 1 %}
+                {% for premise in form_data['premises[]'] %}
+                    {% set error_label = 'Premise ' ~ i %}
+                    {% if error_label in errors %}
+                        {{ helper.premise(i, premise, 'bad', errors[error_label].message) }}
+                    {% else %}
+                        {{ helper.premise(i, premise, 'good') }}
+                    {% endif %}
+                    {% set i = i+1 %}
+                {% endfor %}
+            {% endif %}
+        </div>
+        <div class="sentence input conclusion">
+            <label for="conclusion">Conclusion</label>
+            <input id="conclusion" type="text" name="conclusion" value="{{ form_data['conclusion'] }}" />
+            {% set status = '' %}
+            {% set message = '' %}
+            {% if 'Conclusion' in errors %}
+                {% set status = 'bad' %}
+                {% set message = errors['Conclusion'].message %}
+            {% elif 'conclusion' in form_data %}
+                {% set status = 'good' %}
+            {% endif %}
+            <span class="status {{ status }}" title="{{ message }}"></span>
+        </div>
+        <div class="input select">
+            <label for="logic">Logic</label>
+            <select id="logic" name="logic">
+                {% for module in logic_modules %}
+                    <option value="{{ module }}" {{ helper.select_opt(form_data, 'logic', module) }}>
+                        {{ logics[module].name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="input select">
+            <label for="writer">Writer</label>
+            <select id="writer" name="writer">
+                {% for module in writer_modules %}
+                    <option value="{{ module }}" {{ helper.select_opt(form_data, 'writer', module) }}>
+                        {{ writers[module].name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <input type="submit" value="prove"/>
+    </form>
+    {% if errors %}
+        <div class="errors">
+            <h3>Errors</h3>
+            Please correct the following errors:
+            <dl>
+                {% for field in errors %}
+                    <dt>{{ field }}</dt>
+                    <dd>{{ errors[field].message|e }}</dd>
+                {% endfor %}
+            </dl>
+        </div>
+    {% endif %}
+{% endblock %}

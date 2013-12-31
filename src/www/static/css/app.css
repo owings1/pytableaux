@@ -1,0 +1,19 @@
+.input label {
+    width: 100px;
+    display: inline-block;
+    text-align: right;
+    background-color: #eee;
+}
+
+.sentence.input .status {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+}
+
+.sentence.input .status.good {
+    background: url(/static/img/accept.png);
+}
+.sentence.input .status.bad {
+    background: url(/static/img/exclamation.png);
+}

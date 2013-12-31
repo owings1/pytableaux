@@ -1,9 +1,0 @@
-{% extends "layout.html" %}
-{% block content %}
-    <form action="/prove" method="post">
-        <input type="text" name="premise"/>
-        <input type="text" name="conclusion"/>
-        <input type="hidden" name="logic_module" value="cpl"/>
-        <input type="submit" value="proove"/>
-    </form>
-{% endblock %}

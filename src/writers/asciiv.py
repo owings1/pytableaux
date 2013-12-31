@@ -1,5 +1,3 @@
-name = "ASCII"
-
 def write(tableau, notation):
     return write_structure(tableau.tree, notation)
     
@@ -24,5 +22,5 @@ def write_structure(structure, notation, indent=0):
         s += ' (X)'
     i = len(s) + 1
     for child in structure['children']:
-        s += "\n" + write_structure(child, notation, i)
+        s += "\n" + self.write_structure(child, notation, i)
     return s

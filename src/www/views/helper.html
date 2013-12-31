@@ -1,0 +1,11 @@
+{% macro premise(id, value='', status='', message='') -%}
+    <div class="sentence input premise">
+        <label for="premise{{id}}">Premise {{id}}</label>
+        <input class="premise" id="premise{{id}}" type="text" name="premises[]" value="{{value|e}}"/>
+        <span class="status {{ status }}" title="{{ message|e }}"></span>
+    </div>
+{%- endmacro %}
+
+{% macro select_opt(form_data, key, value) -%}
+    {% if key in form_data and form_data[key] == value %} selected="selected"{% endif %}
+{%- endmacro %}

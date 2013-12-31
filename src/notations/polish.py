@@ -1,6 +1,8 @@
 import logic
 from logic import operate, arity
 
+name = 'Polish'
+
 def write(sentence):
     if sentence.is_atomic():
         s = Parser.achars[sentence.index]
