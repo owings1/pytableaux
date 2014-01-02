@@ -1,7 +1,9 @@
+import logic
+
 available_module_names = {
     'logics': ['cpl', 'fde', 'k', 'd', 't', 's4'],
     'notations': ['polish'],
-    'writers': ['ascii']
+    'writers': ['ascii', 'html']
 }
 
 import importlib
@@ -10,7 +12,7 @@ for package in available_module_names:
     modules[package] = {}
     for name in available_module_names[package]:
         modules[package][name] = importlib.import_module(package + '.' + name)
-
+        
 import os.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 config = {
@@ -24,6 +26,7 @@ from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('logic', 'www/views'))
 
 import cherrypy as server
+import json
 class App:
     
     @server.expose
@@ -38,21 +41,19 @@ class App:
             'form_data': kw
         }
         if len(kw) and ('errors' not in kw or not len(kw['errors'])):
-            import logic
-        
-            ParseError = logic.Parser.ParseError
-        
+            if not isinstance(kw['logic'], list):
+                kw['logic'] = [kw['logic']]
+                
             notation = modules['notations'][kw['notation']]
             writer = modules['writers'][kw['writer']]
-            chosen_logic = modules['logics'][kw['logic']]
-        
+            
             try:
                 premiseStrs = [premise for premise in kw['premises[]'] if len(premise) > 0]
             except:
                 premiseStrs = None
-            data['form_data']['premises[]'] = premiseStrs
+            kw['premises[]'] = premiseStrs
+            
             parser = notation.Parser()
-        
             errors = {}
             premises = []
             i = 1
@@ -64,18 +65,17 @@ class App:
                 i += 1
             try:
                 conclusion = parser.parse(kw['conclusion'])
-            except ParseError as e:
+            except logic.Parser.ParseError as e:
                 errors['Conclusion'] = e
             if len(errors) > 0:
                 kw['errors'] = errors
                 return self.index(*args, **kw)
             
             argument = logic.argument(conclusion, premises)
-            tableau = logic.tableau(chosen_logic, argument).build()
+            tableaux = [logic.tableau(modules['logics'][chosen_logic], argument).build() for chosen_logic in kw['logic']]
 
             data.update({
-                'tableau': tableau,
-                'logic': chosen_logic,
+                'tableaux': tableaux,
                 'notation': notation,
                 'writer': writer,
                 'argument': {
@@ -89,7 +89,16 @@ class App:
         if 'errors' in kw:
             data['errors'] = kw['errors']
         return self.render('argument', data)
-            
+    
+    @server.expose
+    def parse(self, *args, **kw):
+        notation = modules['notations'][kw['notation']]
+        try:
+            sentence = notation.Parser().parse(kw['sentence'])
+        except logic.Parser.ParseError as e:
+            return self.render('error', { 'error': e })
+        return ''
+        
     def render(self, view, data={}):
         return env.get_template(view + '.html').render(data)
         

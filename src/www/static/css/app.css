@@ -1,19 +1,162 @@
-.input label {
-    width: 100px;
-    display: inline-block;
-    text-align: right;
-    background-color: #eee;
+body {
+    font-family: 'lucida grande',verdana,helvetica,arial,sans-serif;
+    font-size: 13px;
+    margin: 0;
+    padding: 0;
 }
 
-.sentence.input .status {
+.header {
+    background-color: #003d4c;
+    color: white;
+    padding: 10px 20px;
+}
+
+.header a {
+    color: white;
+    text-decoration: none;
+}
+
+.header a:hover {
+    text-decoration: underline;
+}
+
+.content {
+    padding: 20px;
+}
+
+form.argument {
+    min-width: 1040px;
+}
+
+form.argument fieldset {
+    float: left;
+    width: 35%;
+    border-color: #eee;
+}
+
+form.argument fieldset.lexicon {
+    width: 20%;
+}
+
+select[name=logic] {
+    width: 200px;
+    height: 125px;
+    padding: 3px 0 0 3px;
+}
+input {
+    font-size: 14px;
+}
+
+select, input[type=submit] {
+    font-size: 16px;
+}
+
+.input label {
+    border: 1px solid white;
+    width: 100px;
+    text-align: right;
+    display: inline-block;
+    background-color: #eee;
+    padding: 10px;
+    vertical-align: top;
+}
+
+.lexicon .label {
+    border: 1px solid #ccc;
+    display: inline-block;
+    padding: 6px;
+    margin: 8px 0 5px 1px;
+    min-width: 150px;
+}
+
+.lexicon dl {
+    margin: 0 0 0 3px;
+}
+
+.lexicon dd {
+    padding: 2px 0;
+    margin: 0px 0 4px 24px;
+}
+
+.lexicon dt {
+    float: left;
+    background-color: #eee;
+    padding: 2px 3px;
+    display: inline-block;
+    clear: both;
+    min-width: 12px;
+}
+
+.input.submit input[type=submit] {
+    margin: 10px 0 0 127px;
+}
+
+.input.sentence .status {
     width: 16px;
     height: 16px;
     display: inline-block;
 }
 
-.sentence.input .status.good {
+.input.sentence .status.good {
     background: url(/static/img/accept.png);
 }
-.sentence.input .status.bad {
+
+.input.sentence .status.bad {
     background: url(/static/img/exclamation.png);
+}
+
+ul.atomic-symbols {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+ul.atomic-symbols li {
+    display: inline-block;
+    padding: 2px 3px;
+    background-color: #eee;
+    margin: 0 3px;
+}
+
+.valid {
+    color: green;
+}
+
+.invalid {
+    color: red;
+}
+
+.evaluation {
+    border: 1px solid black;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.evaluation .summary {
+    padding: 0 0 5px 0;
+    border-bottom: 1px solid black;
+}
+
+.evaluation .argument {
+    float: right;
+}
+
+.evaluation .result {
+    float: left;
+}
+
+.proof {
+    margin-top: 10px;
+}
+
+.errors h3 {
+    color: red;
+}
+
+.hidden {
+    display: none;
+}
+
+.clear {
+    clear: both;
 }

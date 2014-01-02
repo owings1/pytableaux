@@ -311,10 +311,12 @@ class Parser:
         self.s = list(string)
         self.pos = 0
         self.chomp()
+        if not self.has_next(0):
+            raise Parser.ParseError('Input cannot be empty')
         s = self.read()
         self.chomp()
         if self.has_next(0):
-            raise Parser.ParseError('Unexpected character: "' + self.current() + '" at position ' + str(self.pos + 1))
+            raise Parser.ParseError('Unexpected character "' + self.current() + '" at position ' + str(self.pos + 1))
         return s
         
     def read_atomic(self):
@@ -327,7 +329,7 @@ class Parser:
                 sub.append(self.current())
                 self.advance()
             return atomic(self.achars.index(achar), int(''.join(sub)))
-        raise Parser.ParseError('Unexpected character: "' + self.current() + '" at position ' + str(self.pos))
+        raise Parser.ParseError('Unexpected character "' + self.current() + '" at position ' + str(self.pos))
     
     def read(self):
         return self.read_atomic()

@@ -1,20 +1,30 @@
 {% extends "argument.html" %}
 {% block content %}
     {{ super() }}
-    <dl>
-        <dt>Argument</dt>
-        <dd>
-            {{ argument.premises|join(', ') }} : {{ argument.conclusion }}
-        </dd>
-        <dt>Result</dt>
-        <dd>
-            {% if tableau.valid %}
-                Valid
-            {% else %}
-                Invalid
-            {% endif %}
-        </dd>
-    </dl>
-    <h2>Tableau</h2>
-    <pre>{{ writer.write(tableau, notation)|e }}</pre>
+    <hr>
+    {% for tableau in tableaux %}
+        <div class="evaluation">
+            <div class="summary">
+                <div class="argument">
+                    Argument: {{ argument.premises|join(', ') }} : {{ argument.conclusion }}
+                </div>
+                <div class="result">
+                    {% if tableau.valid %}
+                        <span class="valid">Valid</span>
+                    {% else %}
+                        <span class="invalid">Invalid</span>
+                    {% endif %}
+                    in {{ tableau.logic.name }} &ndash; {{ tableau.logic.description|e }}
+                </div>
+                <div class="clear"></div>
+            </div>
+            <div class="proof">
+                {% if writer.name == 'HTML' %}
+                    {{ writer.write(tableau, notation ) }}
+                {% else %}
+                    <pre>{{ writer.write(tableau, notation)|e }}</pre>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
 {% endblock %}

@@ -5,64 +5,91 @@
         {{ helper.premise('{n}') }}
     </script>
     <form class="argument" action="/" method="post">
-        <div class="input select">
-            <label for="notation">Notation</label>
-            <select id="notation" name="notation">
-                {% for module in notation_modules %}
-                    <option value="{{ module }}" {{ helper.select_opt(form_data, 'notation', module) }}>
-                        {{ notations[module].name }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="premises">
-            {% if 'premises[]' in form_data %}
-                {% set i = 1 %}
-                {% for premise in form_data['premises[]'] %}
-                    {% set error_label = 'Premise ' ~ i %}
-                    {% if error_label in errors %}
-                        {{ helper.premise(i, premise, 'bad', errors[error_label].message) }}
-                    {% else %}
-                        {{ helper.premise(i, premise, 'good') }}
-                    {% endif %}
-                    {% set i = i+1 %}
-                {% endfor %}
-            {% endif %}
-        </div>
-        <div class="sentence input conclusion">
-            <label for="conclusion">Conclusion</label>
-            <input id="conclusion" type="text" name="conclusion" value="{{ form_data['conclusion'] }}" />
-            {% set status = '' %}
-            {% set message = '' %}
-            {% if 'Conclusion' in errors %}
-                {% set status = 'bad' %}
-                {% set message = errors['Conclusion'].message %}
-            {% elif 'conclusion' in form_data %}
-                {% set status = 'good' %}
-            {% endif %}
-            <span class="status {{ status }}" title="{{ message }}"></span>
-        </div>
-        <div class="input select">
-            <label for="logic">Logic</label>
-            <select id="logic" name="logic">
-                {% for module in logic_modules %}
-                    <option value="{{ module }}" {{ helper.select_opt(form_data, 'logic', module) }}>
-                        {{ logics[module].name }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="input select">
-            <label for="writer">Writer</label>
-            <select id="writer" name="writer">
-                {% for module in writer_modules %}
-                    <option value="{{ module }}" {{ helper.select_opt(form_data, 'writer', module) }}>
-                        {{ writers[module].name }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-        <input type="submit" value="prove"/>
+        <fieldset class="options">
+            <legend>Options</legend>
+            <div class="input select">
+                <label for="notation">Notation</label>
+                <select id="notation" name="notation">
+                    {% for module in notation_modules %}
+                        <option value="{{ module }}" {{ helper.select_opt(form_data, 'notation', module) }}>
+                            {{ notations[module].name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="input select">
+                <label for="logic">Logic</label>
+                <select id="logic" name="logic" multiple="multiple">
+                    {% for module in logic_modules %}
+                        <option value="{{ module }}" {{ helper.select_opt_multi(form_data, 'logic', module) }}>
+                            {{ logics[module].name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="input select">
+                <label for="writer">Output</label>
+                <select id="writer" name="writer">
+                    {% for module in writer_modules %}
+                        <option value="{{ module }}" {{ helper.select_opt(form_data, 'writer', module) }}>
+                            {{ writers[module].name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </fieldset>
+        <fieldset class="lexicon">
+            <legend>Lexicon</legend>
+            <div class="lexicons">
+            {% for module in notation_modules %}
+                <div class="lexicon hidden" id="Lexicon_{{ module }}">
+                    <span class="label">Atomic Symbols</span>
+                    <ul class="atomic-symbols">
+                        {% for char in notations[module].Parser.achars %}
+                            <li>{{ char|e }}</li>
+                        {% endfor %}
+                    </ul>
+                    <span class="label">Operator Symbols</span>
+                    <dl class="operator-symbols">
+                        {% for char, operator in notations[module].Parser.ochars.iteritems() %}
+                            <dt>{{ char|e }}</dt>
+                            <dd>{{ operator }}</dd>
+                        {% endfor %}
+                    </dl>
+                </div>
+            {% endfor %}
+        </fieldset>
+        <fieldset class="argument">
+            <legend>Argument</legend>
+            <div class="premises">
+                {% if 'premises[]' in form_data %}
+                    {% for premise in form_data['premises[]'] %}
+                        {% set error_label = 'Premise ' ~ loop.index %}
+                        {% if error_label in errors %}
+                            {{ helper.premise(loop.index, premise, 'bad', errors[error_label].message) }}
+                        {% else %}
+                            {{ helper.premise(loop.index, premise, 'good') }}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <div class="sentence input conclusion">
+                <label for="conclusion">Conclusion</label>
+                <input id="conclusion" class="sentence conclusion" type="text" name="conclusion" value="{{ form_data['conclusion'] }}" />
+                {% set status = '' %}
+                {% set message = '' %}
+                {% if 'Conclusion' in errors %}
+                    {% set status = 'bad' %}
+                    {% set message = errors['Conclusion'].message %}
+                {% elif 'conclusion' in form_data %}
+                    {% set status = 'good' %}
+                {% endif %}
+                <span class="status {{ status }}" title="{{ message|e }}"></span>
+            </div>    
+            <div class="input submit">
+                <input type="submit" value="Go"/>
+            </div>
+        </fieldset>
     </form>
     {% if errors %}
         <div class="errors">
@@ -76,4 +103,5 @@
             </dl>
         </div>
     {% endif %}
+    <div class="clear"></div>
 {% endblock %}
