@@ -18,7 +18,9 @@ def test_logics():
         s4
     ]
     parser = polish.Parser()
-    
+    predicate(0, 0, 1)
+    predicate(1, 0, 1)
+    predicate(2, 0, 1)
     for logic in logics:
         print logic.name
         print '  validities'

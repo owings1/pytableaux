@@ -1,5 +1,5 @@
 name = 'K'
-description = 'Kripke Normal Modal Logic'
+description = 'Kripke Normal Modal Logic (Fixed Domain)'
 links = {
     'Stanford Encyclopedia': 'http://plato.stanford.edu/entries/logic-modal/'
 }
@@ -264,6 +264,41 @@ class TableauxRules:
                 'sentence': operate('Possibility', [negate(node.props['sentence'].operand.operand)]),
                 'world': node.props['world']
             }).tick(node)
+    
+    class NegatedExistential(NodeRule):
+
+        def applies_to_node(self, node, branch):
+            if 'sentence' not in node.props:
+                return False
+            sentence = node.props['sentence']
+            return (sentence.operator == 'Negation' and
+                    sentence.operand.quantifier == 'Existential')
+
+        def apply_to_node(self, node, branch):
+            sentence = node.props['sentence'].operand.sentence
+            variable = node.props['sentence'].operand.variable
+            branch.add({ 
+                'sentence': quantify('Universal', variable, negate(sentence)),
+                'world': node.props['world']
+            }).tick(node)
+
+    class NegatedUniversal(NodeRule):
+
+        def applies_to_node(self, node, branch):
+            if 'sentence' not in node.props:
+                return False
+            sentence = node.props['sentence']
+            return (sentence.operator == 'Negation' and
+                    sentence.operand.quantifier == 'Universal')
+
+        def apply_to_node(self, node, branch):
+            sentence = node.props['sentence'].operand.sentence
+            variable = node.props['sentence'].operand.variable
+            branch.add({ 
+                'sentence': quantify('Existential', variable, negate(sentence)),
+                'world': node.props['world']
+            }).tick(node)
+            
         
     rules = [
         Closure,

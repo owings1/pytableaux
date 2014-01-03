@@ -13,7 +13,8 @@ def example_validities():
         'Modus Tollens'               : [['Cab', 'Nb'], 'Na'],
         'Pseudo Contraction'          : 'CCaCabCab',
         'Biconditional Elimination'   : [['Eab', 'a'], 'b'],
-        'Biconditional Elimination 2' : [['Eab', 'Na'], 'Nb']
+        'Biconditional Elimination 2' : [['Eab', 'Na'], 'Nb'],
+        'Syllogism'                   : [['VxCFxGx', 'VxCGxHx'], 'VxCFxHx']
     })
     return args
     
