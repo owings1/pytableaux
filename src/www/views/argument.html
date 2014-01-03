@@ -4,6 +4,18 @@
     <script type="text/template" id="premiseTemplate">
         {{ helper.premise('{n}') }}
     </script>
+    {% if errors %}
+        <div class="errors">
+            <h3>Please correct the following errors:</h3>
+            <dl>
+                {% for field in errors %}
+                    <dt>{{ field }}:</dt>
+                    <dd>{{ errors[field].message|e }}</dd>
+                {% endfor %}
+            </dl>
+            <div class="clear"></div>
+        </div>
+    {% endif %}
     <form class="argument" action="/" method="post">
         <fieldset class="options">
             <legend>Options</legend>
@@ -91,17 +103,5 @@
             </div>
         </fieldset>
     </form>
-    {% if errors %}
-        <div class="errors">
-            <h3>Errors</h3>
-            Please correct the following errors:
-            <dl>
-                {% for field in errors %}
-                    <dt>{{ field }}</dt>
-                    <dd>{{ errors[field].message|e }}</dd>
-                {% endfor %}
-            </dl>
-        </div>
-    {% endif %}
     <div class="clear"></div>
 {% endblock %}

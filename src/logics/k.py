@@ -41,25 +41,6 @@ class TableauxSystem(logic.TableauxSystem):
         for premise in argument.premises:
             branch.add({ 'sentence': premise, 'world': 0 })
         branch.add({ 'sentence': negate(argument.conclusion), 'world': 0 })
-           
-    @staticmethod
-    def get_worlds_on_branch(branch):
-        worlds = set()
-        for node in branch.get_nodes():
-            if 'world' in node.props:
-                worlds.add(node.props['world'])
-            if 'world1' in node.props:
-                worlds.add(node.props['world1'])
-            if 'world2' in node.props:
-                worlds.add(node.props['world2'])
-        return worlds
-
-    @staticmethod
-    def get_new_world(branch):
-        worlds = TableauxSystem.get_worlds_on_branch(branch)
-        if not len(worlds):
-            return 0
-        return max(worlds) + 1
 
 class TableauxRules:
     
@@ -227,7 +208,7 @@ class TableauxRules:
                     node.props['sentence'].operator == 'Possibility')
             
         def apply_to_node(self, node, branch):
-            world = TableauxSystem.get_new_world(branch)
+            world = branch.new_world()
             branch.update([
                 { 'sentence': node.props['sentence'].operand, 'world': world },
                 { 'world1': node.props['world'], 'world2': world }
@@ -236,8 +217,8 @@ class TableauxRules:
     class Necessity(BranchRule):
         
         def applies_to_branch(self, branch):
-            worlds = TableauxSystem.get_worlds_on_branch(branch)
-            for node in branch.get_nodes(ticked=False):
+            worlds = branch.worlds()
+            for node in branch.get_nodes():
                 if 'sentence' not in node.props:
                     continue
                 sentence = node.props['sentence']

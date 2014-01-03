@@ -35,7 +35,7 @@ class TableauxRules:
             if len(self.tableau.history) and self.tableau.history[-1]['rule'] == self:
                 return False
             serial_worlds = {node.props['world1'] for node in branch.get_nodes() if 'world1' in node.props}
-            worlds = TableauxSystem.get_worlds_on_branch(branch) - serial_worlds
+            worlds = branch.worlds() - serial_worlds
             if len(worlds):
                 return { 'branch': branch, 'world': worlds.pop() }
             return False
@@ -43,7 +43,7 @@ class TableauxRules:
         def apply(self, target):
             target['branch'].add({ 
                 'world1': target['world'], 
-                'world2': TableauxSystem.get_new_world(target['branch'])
+                'world2': target['branch'].new_world()
             })
 
     krules = k.TableauxRules

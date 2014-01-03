@@ -3,7 +3,7 @@ import logic
 available_module_names = {
     'logics': ['cpl', 'fde', 'k', 'd', 't', 's4'],
     'notations': ['polish'],
-    'writers': ['ascii', 'html']
+    'writers': ['html', 'ascii']
 }
 
 import importlib
@@ -25,6 +25,11 @@ config = {
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('logic', 'www/views'))
 
+
+logic.predicate(0, 0, 1)
+logic.predicate(1, 0, 1)
+logic.predicate(2, 0, 1)
+
 import cherrypy as server
 import json
 class App:
@@ -41,9 +46,7 @@ class App:
             'form_data': kw
         }
         if len(kw) and ('errors' not in kw or not len(kw['errors'])):
-            if not isinstance(kw['logic'], list):
-                kw['logic'] = [kw['logic']]
-                
+            
             notation = modules['notations'][kw['notation']]
             writer = modules['writers'][kw['writer']]
             
@@ -60,13 +63,22 @@ class App:
             for premiseStr in premiseStrs:
                 try:
                     premises.append(parser.parse(premiseStr))
-                except ParseError as e:
+                except logic.Parser.ParseError as e:
                     errors['Premise ' + str(i)] = e
+                    import traceback
+                    traceback.print_exc()
                 i += 1
             try:
                 conclusion = parser.parse(kw['conclusion'])
             except logic.Parser.ParseError as e:
                 errors['Conclusion'] = e
+                
+            try:
+                if not isinstance(kw['logic'], list):
+                    kw['logic'] = [kw['logic']]
+            except:
+                errors['Logic'] = Exception('Please select a logic')
+                
             if len(errors) > 0:
                 kw['errors'] = errors
                 return self.index(*args, **kw)

@@ -16,6 +16,8 @@ def write_structure(structure, notation, indent=0):
                 s += ' +'
             else:
                 s += ' -'
+        if 'world1' in node.props and 'world2' in node.props:
+            s += 'w' + str(node.props['world1']) + 'R' + 'w' + str(node.props['world2'])
         if node.ticked:
             s += ' *'
         node_strs.append(s)

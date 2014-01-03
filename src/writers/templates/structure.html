@@ -17,6 +17,9 @@
                             {% if node.props['designated'] %} +{% else %} -{% endif %}
                         </span>
                     {% endif %}
+                    {% if 'world1' in node.props and 'world2' in node.props %}
+                        <span class="access">w<span class="subscript">{{ node.props['world1'] }}</span>Rw<span class="subscript">{{ node.props['world2'] }}</span></span>
+                    {% endif %}
                 </span>
             </div>
         {% endfor %}

@@ -1,9 +1,12 @@
 from logic import *
 
 def main():
-    test()
+    test_all()
     
-def test():
+def test_all():
+    test_logics()
+    
+def test_logics():
     from notations import polish
     from logics import fde, cpl, k, d, t, s4
     logics = [

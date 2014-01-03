@@ -149,8 +149,34 @@ ul.atomic-symbols li {
     margin-top: 10px;
 }
 
+.errors {
+    background-color: rgb(255, 190, 202);
+    padding: 5px 10px;
+    border: 1px solid red;
+    margin-bottom: 10px;
+}
+
 .errors h3 {
     color: red;
+    margin: 0;
+}
+
+.errors dt {
+    display: inline-block;
+    float: left;
+    width: 100px;
+    text-align: right;
+    padding: 10px;
+    clear: both;
+    font-style: italic;
+}
+
+.errors dd {
+    display: inline-block;
+    margin: 0;
+    padding: 10px;
+    float: left;
+    font-weight: bold;
 }
 
 .hidden {

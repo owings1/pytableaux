@@ -28,24 +28,21 @@ class TableauxRules:
     class Transitive(logic.TableauxSystem.BranchRule):
         
         def applies_to_branch(self, branch):
-            for node in branch.get_nodes():
-                if 'world1' in node.props:
-                    for other_node in branch.get_nodes():
-                        if ('world1' in other_node.props and 
-                            node.props['world2'] == other_node.props['world1'] and
-                            not branch.has({ 
-                                'world1': node.props['world1'], 
-                                'world2': other_node.props['world2']
-                            })):
-                                return { 
-                                    'world1': node.props['world1'],
-                                    'world2': other_node.props['world2'],
-                                    'branch': branch
-                                }
+            nodes = {node for node in branch.get_nodes() if 'world1' in node.props}
+            for node in nodes:
+                for other_node in nodes:
+                    if (node.props['world2'] == other_node.props['world1'] and
+                        not branch.has({ 
+                            'world1': node.props['world1'], 
+                            'world2': other_node.props['world2']
+                        })):
+                            return { 
+                                'world1': node.props['world1'],
+                                'world2': other_node.props['world2'],
+                                'branch': branch
+                            }
             return False
-                            
-                
-            
+
         def apply(self, target):
             target['branch'].add({
                 'world1': target['world1'],

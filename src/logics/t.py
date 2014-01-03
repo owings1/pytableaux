@@ -32,7 +32,7 @@ class TableauxRules:
     class Reflexive(logic.TableauxSystem.BranchRule):
                     
         def applies_to_branch(self, branch):
-            for world in TableauxSystem.get_worlds_on_branch(branch):
+            for world in branch.worlds():
                 if not branch.has({ 'world1': world, 'world2': world }):
                     return { 'world': world, 'branch': branch }
             return False
