@@ -450,7 +450,7 @@ class TableauxSystem(object):
         index = 0
         subscript = 0
         c = constant(index, subscript)
-        while c not in constants:
+        while c not in list(constants):
             index += 1
             if index == TableauxSystem.num_constant_chars:
                 index = 0
@@ -521,7 +521,6 @@ class Parser(object):
         s = self.read()
         self.chomp()
         if self.has_next(0):
-            print s
             raise Parser.ParseError('Unexpected character "' + self.current() + '" at position ' + str(self.pos))
         return s
         
@@ -565,7 +564,6 @@ class Parser(object):
     def read_predicate_sentence(self):
         predicate = self.read_predicate()
         parameters = []
-        print predicate.arity
         while len(parameters) < predicate.arity:
             self.assert_current_in(self.cchars + self.vchars)
             if self.current() in self.cchars:
@@ -573,8 +571,6 @@ class Parser(object):
             else:
                 variable = self.read_variable()
                 if variable not in list(self.bound_vars):
-                    print variable
-                    print self.bound_vars
                     raise Parser.UnboundVariableError(self.vchars[variable.index] + str(variable.subscript) + ' at position ' + str(self.pos))
                 parameters.append(variable)
         return predicate_sentence(predicate, parameters)

@@ -107,7 +107,8 @@ class TableauxRules:
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence'].sentence
             variable = node.props['sentence'].variable
-            branch.add({ 'sentence': sentence.substitute(branch.new_constant(), variable) }).tick(node)
+            new_sentence = sentence.substitute(branch.new_constant(), variable)
+            branch.add({ 'sentence': new_sentence }).tick(node)
             
     class Universal(logic.TableauxSystem.BranchRule):
         

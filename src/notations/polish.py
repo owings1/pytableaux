@@ -54,6 +54,7 @@ class Parser(logic.Parser):
         'S': 'Existential'
     }
     pchars = ['F', 'G', 'H']
+    
     def read(self):
         self.assert_current()
         if self.current() in self.ochars:
