@@ -1,7 +1,7 @@
 import logic
 
 available_module_names = {
-    'logics': ['cpl', 'fde', 'k', 'd', 't', 's4'],
+    'logics': ['cfol', 'k3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
     'notations': ['polish'],
     'writers': ['html', 'ascii']
 }
@@ -25,28 +25,33 @@ config = {
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('logic', 'www/views'))
 
+logic.declare_predicate('Predicate 1', 0, 0, 1)
+logic.declare_predicate('Predicate 2', 1, 0, 1)
+logic.declare_predicate('Predicate 3', 2, 0, 1)
+logic.declare_predicate('Predicate 4', 0, 1, 2)
+logic.declare_predicate('Predicate 5', 1, 1, 2)
+logic.declare_predicate('Predicate 6', 2, 1, 2)
 
-logic.predicate(0, 0, 1)
-logic.predicate(1, 0, 1)
-logic.predicate(2, 0, 1)
-
+print logic.Vocabulary.predicates
 import cherrypy as server
-import json
+
 class App:
     
     @server.expose
     def index(self, *args, **kw):
         data = {
+            'operators_list': logic.operators_list,
             'logic_modules': available_module_names['logics'],
             'logics': modules['logics'],
             'writer_modules': available_module_names['writers'],
             'writers': modules['writers'],
             'notation_modules': available_module_names['notations'],
             'notations': modules['notations'],
-            'form_data': kw
+            'form_data': kw,
+            'predicates': logic.Vocabulary.predicates
         }
         if len(kw) and ('errors' not in kw or not len(kw['errors'])):
-            
+            view = 'prove'
             notation = modules['notations'][kw['notation']]
             writer = modules['writers'][kw['writer']]
             
@@ -56,6 +61,8 @@ class App:
                 premiseStrs = None
             kw['premises[]'] = premiseStrs
             
+            # declare predicates
+            
             parser = notation.Parser()
             errors = {}
             premises = []
@@ -63,14 +70,12 @@ class App:
             for premiseStr in premiseStrs:
                 try:
                     premises.append(parser.parse(premiseStr))
-                except logic.Parser.ParseError as e:
+                except Exception as e:
                     errors['Premise ' + str(i)] = e
-                    import traceback
-                    traceback.print_exc()
                 i += 1
             try:
                 conclusion = parser.parse(kw['conclusion'])
-            except logic.Parser.ParseError as e:
+            except Exception as e:
                 errors['Conclusion'] = e
                 
             try:
@@ -95,12 +100,15 @@ class App:
                     'conclusion': notation.write(argument.conclusion)
                 }
             })
-        
-            return self.render('prove', data)
-        
+        else:
+            view = 'argument'
+        data.update({
+            'predicates': logic.Vocabulary.predicates,
+            'predicates_list': logic.Vocabulary.predicates_list
+        })
         if 'errors' in kw:
             data['errors'] = kw['errors']
-        return self.render('argument', data)
+        return self.render(view, data)
     
     @server.expose
     def parse(self, *args, **kw):

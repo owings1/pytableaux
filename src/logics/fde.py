@@ -16,11 +16,13 @@ def example_validities():
     }
 
 def example_invalidities():
-    import cpl
-    return cpl.example_invalidities()
+    import k3, lp
+    args = k3.example_invalidities()
+    args.update(lp.example_invalidities())
+    return args
     
 import logic
-from logic import negate
+from logic import negate, quantify
 
 class TableauxSystem(logic.TableauxSystem):
 
@@ -103,6 +105,53 @@ class TableauxRules:
                 { 'sentence': sentence.lhs, 'designated': True }
             ]).tick(node)
 
+    class ConditionalDesignated(MaterialConditionalDesignated):
+        
+        def applies_to_node(self, node, branch):
+            return (node.props['designated'] and
+                    node.props['sentence'].operator == 'Conditional')
+                    
+    class BiconditionalDesignated(MaterialBiconditionalDesignated):
+        
+        def applies_to_node(self, node, branch):
+            return (node.props['designated'] and
+                    node.props['sentence'].operator == 'Biconditional')
+                    
+    class UniversalDesignated(logic.TableauxSystem.BranchRule):
+
+        def applies_to_branch(self, branch):
+            constants = branch.constants()
+            for node in branch.get_nodes():
+                if node.props['sentence'].quantifier == 'Universal' and node.props['designated']:
+                    variable = node.props['sentence'].variable
+                    if len(constants):
+                        for constant in constants:
+                            sentence = node.props['sentence'].sentence.substitute(constant, variable)
+                            if not branch.has({ 'sentence': sentence, 'designated': True }):
+                                return { 'branch': branch, 'sentence': sentence }
+                    else:
+                        constant = branch.new_constant()
+                        sentence = node.props['sentence'].sentence.substitute(constant, variable)
+                        return { 'branch': branch, 'sentence': sentence }
+            return False
+
+        def apply(self, target):
+            target['branch'].add({ 'sentence': target['sentence'], 'designated': True })
+            
+    class ExistentialDesignated(NodeRule):
+
+        def applies_to_node(self, node, branch):
+            return (node.props['designated'] and
+                    node.props['sentence'].quantifier == 'Existential')
+
+        def apply_to_node(self, node, branch):
+            sentence = node.props['sentence'].sentence
+            variable = node.props['sentence'].variable
+            branch.add({ 
+                'sentence': sentence.substitute(branch.new_constant(), variable),
+                'designated': True 
+            }).tick(node)
+                    
     class ConjunctionUndesignated(NodeRule):
         
         def applies_to_node(self, node, branch):
@@ -156,7 +205,54 @@ class TableauxRules:
                 { 'sentence': negate(sentence.rhs), 'designated': False },
                 { 'sentence': sentence.lhs, 'designated': False }
             ]).tick(node)
+    
+    class ConditionalUndesignated(MaterialConditionalUndesignated):
+        
+        def applies_to_node(self, node, branch):
+            return (not node.props['designated'] and
+                    node.props['sentence'].operator == 'Conditional')
+                    
+    class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
+        
+        def applies_to_node(self, node, branch):
+            return (not node.props['designated'] and
+                    node.props['sentence'].operator == 'Biconditional')
+                    
+    class UniversalUndesignated(NodeRule):
+        
+        def applies_to_node(self, node, branch):
+            return (not node.props['designated'] and
+                    node.props['sentence'].quantifier == 'Universal')
+                    
+        def apply_to_node(self, node, branch):
+            sentence = node.props['sentence'].sentence
+            variable = node.props['sentence'].variable
+            branch.add({
+                'sentence': sentence.substitute(branch.new_constant(), variable),
+                'designated': False
+            }).tick(node)
             
+    class ExistentialUndesignated(logic.TableauxSystem.BranchRule):
+        
+        def applies_to_branch(self, branch):
+            constants = branch.constants()
+            for node in branch.get_nodes():
+                if node.props['sentence'].quantifier == 'Existential' and not node.props['designated']:
+                    variable = node.props['sentence'].variable
+                    if len(constants):
+                        for constant in constants:
+                            sentence = node.props['sentence'].sentence.substitute(constant, variable)
+                            if not branch.has({ 'sentence': sentence, 'designated': False }):
+                                return { 'branch': branch, 'sentence': sentence }
+                    else:
+                        constant = branch.new_constant()
+                        sentence = node.props['sentence'].sentence.substitute(constant, variable)
+                        return { 'branch': branch, 'sentence': sentence }
+            return False
+
+        def apply(self, target):
+            target['branch'].add({ 'sentence': target['sentence'], 'designated': False })
+                
     class NegatedConjunctionDesignated(NodeRule):
         
         def applies_to_node(self, node, branch):
@@ -219,6 +315,22 @@ class TableauxRules:
                 { 'sentence': negate(sentence.lhs), 'designated': True }
             ]).tick(node)
 
+    class NegatedConditionalDesignated(NegatedMaterialConditionalDesignated):
+        
+        def applies_to_node(self, node, branch):
+            sentence = node.props['sentence']
+            return (node.props['designated'] and
+                    sentence.operator == 'Negation' and
+                    sentence.operand.operator == 'Conditional')
+                    
+    class NegatedBiconditionalDesignated(NegatedMaterialBiconditionalDesignated):
+        
+        def applies_to_node(self, node, branch):
+            sentence = node.props['sentence']
+            return (node.props['sentence'] and
+                    sentence.operator == 'Negation' and
+                    sentence.operand.operator == 'Biconditional')
+                    
     class DoubleNegationDesignated(NodeRule):
     
         def applies_to_node(self, node, branch):
@@ -301,6 +413,22 @@ class TableauxRules:
                 { 'sentence': sentence.lhs, 'designated': False }
             ]).tick(node)
             
+    class NegatedConditionalUndesignated(NegatedMaterialConditionalUndesignated):
+
+        def applies_to_node(self, node, branch):
+            sentence = node.props['sentence']
+            return (not node.props['designated'] and 
+                    sentence.operator == 'Negation' and 
+                    sentence.operand.operator == 'Conditional')
+                    
+    class NegatedBiconditionalUndesignated(NegatedMaterialBiconditionalUndesignated):
+
+        def applies_to_node(self, node, branch):
+            sentence = node.props['sentence']
+            return (not node.props['designated'] and 
+                    sentence.operator == 'Negation' and 
+                    sentence.operand.operator == 'Biconditional')
+                    
     class DoubleNegationUndesignated(NodeRule):
 
         def applies_to_node(self, node, branch):
@@ -314,19 +442,72 @@ class TableauxRules:
                 'sentence': node.props['sentence'].operand.operand,
                 'designated': False
         }).tick(node)
+    
+    class NegatedUniversal(NodeRule):
+        
+        def applies_to_node(self, node, branch):
+            sentence = node.props['sentence']
+            return (sentence.operator == 'Negation' and
+                    sentence.operand.quantifier == 'Universal')
+                    
+        def apply_to_node(self, node, branch):
+            sentence = node.props['sentence'].operand.sentence
+            variable = node.props['sentence'].operand.variable
+            branch.add({ 
+                'sentence': quantify('Existential', variable, negate(sentence)),
+                'designated': node.props['designated'] 
+            }).tick(node)
+    
+    class NegatedExistential(NodeRule):
+        
+        def applies_to_node(self, node, branch):
+            sentence = node.props['sentence']
+            return (sentence.operator == 'Negation' and
+                    sentence.operand.quantifier == 'Existential')
+        
+        def apply_to_node(self, node, branch):
+            sentence = node.props['sentence'].operand.sentence
+            variable = node.props['sentence'].operand.variable
+            branch.add({ 
+                'sentence': quantify('Universal', variable, negate(sentence)),
+                'designated': node.props['designated'] 
+            }).tick(node)
         
     rules = [
         Closure,
         # non-branching rules
-        ConjunctionDesignated, DoubleNegationUndesignated, 
-        MaterialConditionalUndesignated, NegatedDisjunctionDesignated,
-        NegatedMaterialConditionalDesignated, DoubleNegationDesignated,
-        NegatedDisjunctionUndesignated, NegatedMaterialConditionalUndesignated,
-        DoubleNegationUndesignated, DisjunctionUndesignated,
+        ConjunctionDesignated, 
+        DoubleNegationUndesignated, 
+        MaterialConditionalUndesignated,
+        ConditionalUndesignated, 
+        NegatedDisjunctionDesignated,
+        NegatedMaterialConditionalDesignated, 
+        NegatedConditionalDesignated,
+        DoubleNegationDesignated,
+        NegatedDisjunctionUndesignated, 
+        NegatedMaterialConditionalUndesignated,
+        NegatedConditionalUndesignated,
+        DoubleNegationUndesignated, 
+        DisjunctionUndesignated,
+        NegatedUniversal, 
+        NegatedExistential, 
+        ExistentialDesignated, 
+        UniversalUndesignated,
+        ExistentialUndesignated, 
+        UniversalDesignated,
         # branching rules
-        DisjunctionDesignated, MaterialConditionalDesignated, 
-        MaterialBiconditionalDesignated, ConjunctionUndesignated, 
-        MaterialBiconditionalUndesignated, NegatedConjunctionDesignated,
-        NegatedMaterialBiconditionalDesignated, NegatedConjunctionUndesignated,
-        NegatedMaterialBiconditionalUndesignated
+        DisjunctionDesignated, 
+        MaterialConditionalDesignated, 
+        ConditionalDesignated,
+        MaterialBiconditionalDesignated, 
+        BiconditionalDesignated,
+        ConjunctionUndesignated, 
+        MaterialBiconditionalUndesignated, 
+        BiconditionalUndesignated,
+        NegatedConjunctionDesignated,
+        NegatedMaterialBiconditionalDesignated, 
+        NegatedBiconditionalDesignated,
+        NegatedConjunctionUndesignated,
+        NegatedMaterialBiconditionalUndesignated,
+        NegatedBiconditionalUndesignated
     ]

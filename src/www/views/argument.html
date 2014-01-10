@@ -53,23 +53,60 @@
         <fieldset class="lexicon">
             <legend>Lexicon</legend>
             <div class="lexicons">
-            {% for module in notation_modules %}
-                <div class="lexicon hidden" id="Lexicon_{{ module }}">
-                    <span class="label">Atomic Symbols</span>
-                    <ul class="atomic-symbols">
-                        {% for char in notations[module].Parser.achars %}
-                            <li>{{ char|e }}</li>
+                {% for module in notation_modules %}
+                    <div class="lexicon hidden" id="Lexicon_{{ module }}">
+                        <span class="label">Atomic Symbols</span>
+                        <ul class="atomic-symbols">
+                            {% for char in notations[module].Parser.achars %}
+                                <li>{{ char|e }}</li>
+                            {% endfor %}
+                        </ul>
+                        <span class="label">Operator Symbols</span>
+                        <dl class="operator-symbols">
+                            {% for operator in operators_list %}
+                            {% set ochars = notations[module].Parser.ochars %}
+                                <dt>{{ ochars.keys()[ochars.values().index(operator)]|e }}</dt>
+                                <dd>{{ operator|e }}</dd>
+                            {% endfor %}
+                        </dl>
+                        <div class="clear"></div>
+                    </div>
+                {% endfor %}
+        </fieldset>
+        <fieldset class="predicates">
+            <legend>Predicates</legend>
+            <div class="predicates">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Name</th>
+                            <th>Arity</th>
+                        </th>
+                    </thead>
+                    <tbody>
+                        {% for name in predicates_list %}
+                            {% set predicate = predicates[name] %}
+                            <tr>
+                                <td>
+                                    {% for module in notation_modules %}
+                                        {% if predicate.index == None and predicate.subscript == None %}
+                                            {% set idx = notations[module].Parser.pnames[name] %}
+                                        {% else %}
+                                            {% set idx = [notations[module].Parser.pchars[predicate.index], predicate.subscript] %}
+                                        {% endif %}
+                                        <span class="operator notation-{{module}}">
+                                            {{ idx[0]|e }}{% if idx[1] > 0 %}<span class="subscript">{{ idx[1] }}</span>{% endif %}
+                                        </span>
+                                    {% endfor %}
+                                </td>
+                                <td>{{ name|e }}</td>
+                                <td>{{ predicate.arity }}</td>
+                            </tr>
                         {% endfor %}
-                    </ul>
-                    <span class="label">Operator Symbols</span>
-                    <dl class="operator-symbols">
-                        {% for char, operator in notations[module].Parser.ochars.iteritems() %}
-                            <dt>{{ char|e }}</dt>
-                            <dd>{{ operator }}</dd>
-                        {% endfor %}
-                    </dl>
-                </div>
-            {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </fieldset>
         <fieldset class="argument">
             <legend>Argument</legend>

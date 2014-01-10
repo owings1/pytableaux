@@ -30,7 +30,7 @@ form.argument {
 
 form.argument fieldset {
     float: left;
-    width: 35%;
+    width: 22%;
     border-color: #eee;
 }
 
@@ -39,7 +39,7 @@ form.argument fieldset.lexicon {
 }
 
 select[name=logic] {
-    width: 200px;
+    width: 130px;
     height: 125px;
     padding: 3px 0 0 3px;
 }

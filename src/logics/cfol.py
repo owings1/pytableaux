@@ -1,5 +1,5 @@
-name = 'CPL'
-description = 'Classical Propositional Logic'
+name = 'CFOL'
+description = 'Classical First Order Logic'
 
 def example_validities():
     import fde
@@ -30,14 +30,15 @@ def example_invalidities():
         'Extracting the Antecedent' : [['Cab'], 'a'],
         'Extracting as Disjunct 1'	: [['Aab'], 'b'],
         'Extracting as Disjunct 2'	: [['AaNb'], 'Na'],
-        'Denying the Antecedent' 	: [['Cab', 'Na'], 'b']
+        'Denying the Antecedent' 	: [['Cab', 'Na'], 'b'],
+        'Existential from Universal': [['SxFx'], 'VxFx']
     }
 
 import logic
-from logic import negate, quantify
+from logic import negate, operate, quantify
 
 class TableauxSystem(logic.TableauxSystem):
-        
+    
     @staticmethod
     def build_trunk(tableau, argument):
         branch = tableau.branch()
@@ -76,20 +77,20 @@ class TableauxRules:
             for operand in node.props['sentence'].operands:
                 self.tableau.branch(branch).add({ 'sentence': operand }).tick(node)
     
-    class MaterialConditional(NodeRule):
+    class Conditionals(NodeRule):
         
         def applies_to_node(self, node, branch):
-            return node.props['sentence'].operator == 'Material Conditional'
+            return node.props['sentence'].operator in logic.conditional_operators
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence']
             self.tableau.branch(branch).add({ 'sentence': negate(sentence.lhs) }).tick(node)
             self.tableau.branch(branch).add({ 'sentence': sentence.rhs }).tick(node)
             
-    class MaterialBiconditional(NodeRule):
+    class Biconditionals(NodeRule):
 
         def applies_to_node(self, node, branch):
-            return node.props['sentence'].operator == 'Material Biconditional'
+            return node.props['sentence'].operator in logic.biconditional_operators
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence']
@@ -108,8 +109,7 @@ class TableauxRules:
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence'].sentence
             variable = node.props['sentence'].variable
-            new_sentence = sentence.substitute(branch.new_constant(), variable)
-            branch.add({ 'sentence': new_sentence }).tick(node)
+            branch.add({ 'sentence': sentence.substitute(branch.new_constant(), variable) }).tick(node)
             
     class Universal(logic.TableauxSystem.BranchRule):
         
@@ -165,12 +165,12 @@ class TableauxRules:
                 branch.add({ 'sentence' : negate(operand) })
             branch.tick(node)
             
-    class NegatedMaterialConditional(NodeRule):
+    class NegatedConditionals(NodeRule):
         
         def applies_to_node(self, node, branch):
             sentence = node.props['sentence']
             return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Material Conditional')
+                    sentence.operand.operator in logic.conditional_operators)
                     
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence'].operand
@@ -179,12 +179,12 @@ class TableauxRules:
                 { 'sentence': negate(sentence.rhs) }
             ]).tick(node)
                   
-    class NegatedMaterialBiconditional(NodeRule):
+    class NegatedBiconditionals(NodeRule):
 
         def applies_to_node(self, node, branch):
             sentence = node.props['sentence']
             return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Material Biconditional')
+                    sentence.operand.operator in logic.biconditional_operators)
 
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence'].operand
@@ -224,9 +224,9 @@ class TableauxRules:
     rules = [
         Closure,
         # non-branching rules
-        DoubleNegation, Conjunction, NegatedDisjunction, NegatedMaterialConditional,
+        DoubleNegation, Conjunction, NegatedDisjunction, NegatedConditionals,
         NegatedUniversal, NegatedExistential, Universal, Existential,
         # branching rules
-        Disjunction, MaterialConditional, MaterialBiconditional, NegatedConjunction, 
-        NegatedMaterialBiconditional
+        Disjunction, Conditionals, Biconditionals, NegatedConjunction, 
+        NegatedBiconditionals
     ]

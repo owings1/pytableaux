@@ -5,11 +5,25 @@ operators = {
     'Material Conditional': 2,
     'Material Biconditional': 2,
     'Conditional': 2,
+    'Biconditional': 2,
     'Possibility': 1,
     'Necessity': 1
 }
 
+operators_list = ['Negation', 'Conjunction', 'Disjunction', 'Material Conditional', 'Material Biconditional',
+                  'Conditional', 'Biconditional', 'Possibility', 'Necessity']
+                  
+conditional_operators = {'Conditional', 'Material Conditional'}
+biconditional_operators = {'Biconditional', 'Material Biconditional'}
+modal_operators = {'Possibility', 'Necessity'}
+
 quantifiers = {'Universal', 'Existential'}
+
+system_predicates = {
+    'Identity': 2,
+    'Existence': 1
+}
+system_predicates_list = ['Identity', 'Existence']
 
 def negate(sentence):
     return Vocabulary.MolecularSentence('Negation', [sentence])
@@ -23,8 +37,11 @@ def atomic(index, subscript):
 def arity(operator):
     return operators[operator]
 
-def predicate(index, subscript, arity):
-    return Vocabulary.Predicate(index, subscript, arity)
+def declare_predicate(name, index, subscript, arity):
+    return Vocabulary.declare_predicate(name, index, subscript, arity)
+    
+def get_predicate(name):
+    return Vocabulary.get_predicate(name=name)
 
 def predicate_sentence(predicate, parameters):
     return Vocabulary.PredicateSentence(predicate, parameters)
@@ -37,12 +54,6 @@ def constant(index, subscript):
     
 def variable(index, subscript):
     return Vocabulary.Variable(index, subscript)
-    
-def p_arity(index, subscript):
-    return Vocabulary.predicates[index][subscript]
-    
-def is_predicate(index, subscript):
-    return (index in Vocabulary.predicates and subscript in Vocabulary.predicates[index])
     
 def is_constant(obj):
     return isinstance(obj, Vocabulary.Constant)
@@ -64,34 +75,67 @@ def tableau(logic, arg):
 
 class Vocabulary(object):
     
-    predicates = {}
-    
-    class NoSuchPredicateError(Exception):
-        pass
-    
-    class PredicateArityMismatchError(Exception):
-        pass
-            
     class Predicate(object):
         
-        def __init__(self, index, subscript, arity):
-            if is_predicate(index, subscript):
-                if not p_arity(index, subscript) == arity:
-                    raise Vocabulary.PredicateArityMismatchError(
-                        'Expecting ' + p_arity(index, subscript) + ' for ' + 
-                        str([index, subscript]) + ', got ' + arity + ' instead.'
-                    )
-            else:
-                if index not in Vocabulary.predicates:
-                    Vocabulary.predicates[index] = {}
-                Vocabulary.predicates[index][subscript] = arity
+        def __init__(self, name, index, subscript, arity):
+            self.name = name
             self.index = index
             self.subscript = subscript
             self.arity = arity
-            
-        def __eq__(self, other):
-            return self.__dict__ == other.__dict__
+
+    predicates = {}
+    for name in system_predicates:
+        predicates[name] = Predicate(name, None, None, system_predicates[name])
+    predicates_list = list(system_predicates_list)
+    _predicates_index = {}
     
+    class PredicateError(Exception):
+        pass
+        
+    class NoSuchPredicateError(PredicateError):
+        pass
+            
+    class PredicateArityMismatchError(PredicateError):
+        pass
+        
+    class PredicateIndexMismatchError(PredicateError):
+        pass
+    
+    @staticmethod        
+    def get_predicate(name=None, index=None, subscript=None):
+        if name != None:
+            if name not in Vocabulary.predicates:
+                raise Vocabulary.NoSuchPredicateError(name)
+            return Vocabulary.predicates[name]
+        if index != None and subscript != None:
+            idx = str([index, subscript])
+            if idx not in Vocabulary._predicates_index:
+                raise Vocabulary.NoSuchPredicateError(idx)
+            return Vocabulary._predicates_index[idx]
+        raise Exception()
+
+    @staticmethod
+    def declare_predicate(name, index, subscript, arity):
+        try:
+            if index != None and subscript != None:
+                try:
+                    predicate = Vocabulary.get_predicate(index=index, subscript=subscript)
+                    if predicate.name != name:
+                        raise Vocabulary.PredicateIndexMismatchError(predicate.name + ' is already using ' + str([index, subscript]))
+                except Vocabulary.NoSuchPredicateError:
+                    pass
+            predicate = Vocabulary.get_predicate(name=name)
+            if predicate.arity != arity:
+                raise Vocabulary.PredicateArityMismatchError(name + ' already declared with arity ' + 
+                    str(predicate.arity) + ' not ' + str(arity))
+        except Vocabulary.NoSuchPredicateError:
+            predicate = Vocabulary.Predicate(name, index, subscript, arity)
+            Vocabulary.predicates[name] = predicate
+            Vocabulary.predicates_list.append(name)
+            if index != None and subscript != None:
+                Vocabulary._predicates_index[str([index, subscript])] = predicate
+        return predicate
+
     class Constant(object):
         
         def __init__(self, index, subscript):
@@ -132,10 +176,13 @@ class Vocabulary(object):
             return isinstance(self, Vocabulary.MolecularSentence)
     
         def substitute(self, constant, variable):
-            raise NotImplemented
+            raise Exception(NotImplemented)
             
         def constants(self):
-            raise NotImplemented
+            raise Exception(NotImplemented)
+            
+        def variables(self):
+            raise Exception(NotImplemented)
             
         def __eq__(self, other):
             return self.__dict__ == other.__dict__
@@ -149,18 +196,21 @@ class Vocabulary(object):
         def __init__(self, index, subscript):
             self.index = index
             self.subscript = subscript
-            
+
         def substitute(self, constant, variable):
             return self
             
         def constants(self):
             return set()
             
+        def variables(self):
+            return set()
+            
     class PredicateSentence(Sentence):
         
         def __init__(self, predicate, parameters):
             if len(parameters) != predicate.arity:
-                raise Vocabulary.PredicateArityMismatchError('Expecting ' + p_arity(index, subscript) + ' for ' + 
+                raise Vocabulary.PredicateArityMismatchError('Expecting ' + predicate.arity + ' parameters for predicate ' + 
                 str([index, subscript]) + ', got ' + arity + ' instead.')
             self.predicate = predicate
             self.parameters = parameters
@@ -176,6 +226,9 @@ class Vocabulary(object):
             
         def constants(self):
             return {param for param in self.parameters if is_constant(param)}
+            
+        def variables(self):
+            return {param for param in self.parameters if is_variable(param)}
     
     class QuantifiedSentence(Sentence):
         
@@ -189,6 +242,9 @@ class Vocabulary(object):
             
         def constants(self):
             return self.sentence.constants()
+            
+        def variables(self):
+            return self.sentence.variables()
                       
     class MolecularSentence(Sentence):
         
@@ -211,8 +267,13 @@ class Vocabulary(object):
             for operand in self.operands:
                 c.update(operand.constants())
             return c
-                
-                        
+            
+        def variables(self):
+            v = set()
+            for operand in self.operands:
+                v.update(operand.variables())
+            return v
+
 class TableauxSystem(object):
     
     class Tableau(object):
@@ -284,8 +345,8 @@ class TableauxSystem(object):
         def __repr__(self):
             return {
                 'argument': self.argument,
-                'branches': len(branches),
-                'rules_applied': len(history),
+                'branches': len(self.branches),
+                'rules_applied': len(self.history),
                 'finished': self.finished
             }.__repr__()
             
@@ -401,15 +462,15 @@ class TableauxSystem(object):
             return self.apply_to_node(target['node'], target['branch'])
 
         def applies_to_node(self, node, branch):
-            raise NotImplemented
+            raise Exception(NotImplemented)
 
         def apply_to_node(self, node, branch):
-            raise NotImplemented
+            raise Exception(NotImplemented)
 
     class ClosureRule(BranchRule):
 
         def applies_to_branch(self, branch):
-            raise NotImplemented
+            raise Exception(NotImplemented)
         
         def apply(self, branch):
             branch.close()
@@ -441,16 +502,16 @@ class TableauxSystem(object):
                 constants.update(node.props['sentence'].constants())
         return constants
         
-    num_constant_chars = 3
+    num_constant_chars = 4
     @staticmethod
     def get_new_constant(branch):
-        constants = TableauxSystem.get_constants_on_branch(branch)
+        constants = list(TableauxSystem.get_constants_on_branch(branch))
         if not len(constants):
             return constant(0, 0)
         index = 0
         subscript = 0
         c = constant(index, subscript)
-        while c not in list(constants):
+        while c in constants:
             index += 1
             if index == TableauxSystem.num_constant_chars:
                 index = 0
@@ -523,14 +584,14 @@ class Parser(object):
         if self.has_next(0):
             raise Parser.ParseError('Unexpected character "' + self.current() + '" at position ' + str(self.pos))
         return s
-        
-    def read_atomic(self):
-        self.assert_current_in(self.achars)
-        index = self.achars.index(self.current())
+    
+    def read_item(self, chars):
+        self.assert_current_in(chars)
+        index = chars.index(self.current())
         self.advance()
         subscript = self.read_subscript()
-        return atomic(index, subscript)
-    
+        return [index, subscript]
+        
     def read_subscript(self):
         sub = ['0']
         while (self.current() and self.current().isdigit()):
@@ -538,42 +599,45 @@ class Parser(object):
             self.advance()
         return int(''.join(sub))
         
+    def read_atomic(self):
+        return atomic(*self.read_item(self.achars))
+
     def read_variable(self):
-        self.assert_current_in(self.vchars)
-        index = self.vchars.index(self.current())
-        self.advance()
-        subscript = self.read_subscript()
-        return variable(index, subscript)
+        return variable(*self.read_item(self.vchars))
 
     def read_constant(self):
-        self.assert_current_in(self.cchars)
-        index = self.cchars.index(self.current())
-        self.advance()
-        subscript = self.read_subscript()
-        return constant(index, subscript)
-    
+        return constant(*self.read_item(self.cchars))
+
     def read_predicate(self):
-        self.assert_current_in(self.pchars)
-        index = self.pchars.index(self.current())
-        self.advance()
-        subscript = self.read_subscript()
-        if not is_predicate(index, subscript):
-            raise Parser.ParseError('Undefined predicate symbol "' + self.current() + '" at position ' + str(self.pos))
-        return predicate(index, subscript, p_arity(index, subscript))
-            
-    def read_predicate_sentence(self):
-        predicate = self.read_predicate()
+        pchar = self.current()
+        cpos = self.pos
+        index, subscript = self.read_item(self.pchars)
+        try:
+            if pchar in self.pindex and subscript in self.pindex[pchar]:
+                return Vocabulary.get_predicate(name=self.pindex[pchar][subscript])
+            else:
+                return Vocabulary.get_predicate(index=index, subscript=subscript)
+        except Vocabulary.NoSuchPredicateError:
+            raise Parser.ParseError('Undefined predicate symbol "' + pchar + '" at position ' + str(cpos))
+
+    def read_parameters(self, num):
         parameters = []
-        while len(parameters) < predicate.arity:
+        while len(parameters) < num:
             self.assert_current_in(self.cchars + self.vchars)
+            cpos = self.pos
             if self.current() in self.cchars:
                 parameters.append(self.read_constant())
             else:
-                variable = self.read_variable()
-                if variable not in list(self.bound_vars):
-                    raise Parser.UnboundVariableError(self.vchars[variable.index] + str(variable.subscript) + ' at position ' + str(self.pos))
-                parameters.append(variable)
-        return predicate_sentence(predicate, parameters)
-            
+                v = self.read_variable()
+                if v not in list(self.bound_vars):
+                    sub = str(v.subscript) if v.subscript > 0 else ''
+                    raise Parser.ParseError("Unbound variable " + self.vchars[v.index] + sub + ' at position ' + str(cpos))
+                parameters.append(v)
+        return parameters
+
+    def read_predicate_sentence(self):
+        predicate = self.read_predicate()
+        return predicate_sentence(predicate, self.read_parameters(predicate.arity))
+        
     def read(self):
         return self.read_atomic()

@@ -5,8 +5,8 @@ links = {
 }
 
 def example_validities():
-    import cpl
-    args = cpl.example_validities()
+    import cfol
+    args = cfol.example_validities()
     args.update({
         'Modal Platitude 1': [['Ma'], 'Ma'],
 		'Modal Platitude 2': [['La'], 'La'],
@@ -31,7 +31,7 @@ def example_invalidities():
     return args
 
 import logic
-from logic import negate, operate
+from logic import negate, operate, quantify
 
 class TableauxSystem(logic.TableauxSystem):
         
@@ -42,7 +42,7 @@ class TableauxSystem(logic.TableauxSystem):
             branch.add({ 'sentence': premise, 'world': 0 })
         branch.add({ 'sentence': negate(argument.conclusion), 'world': 0 })
 
-class TableauxRules:
+class TableauxRules(object):
     
     NodeRule = logic.TableauxSystem.NodeRule
     BranchRule = logic.TableauxSystem.BranchRule
@@ -116,6 +116,42 @@ class TableauxRules:
                 { 'sentence': sentence.rhs, 'world': world }, 
                 { 'sentence': sentence.lhs, 'world': world }
             ]).tick(node)
+    
+    class Existential(NodeRule):
+
+        def applies_to_node(self, node, branch):
+            if 'sentence' not in node.props:
+                return False
+            return node.props['sentence'].quantifier == 'Existential'
+
+        def apply_to_node(self, node, branch):
+            sentence = node.props['sentence'].sentence
+            variable = node.props['sentence'].variable
+            branch.add({ 
+                'sentence': sentence.substitute(branch.new_constant(), variable),
+                'world': node.props['world']
+            }).tick(node)
+
+    class Universal(logic.TableauxSystem.BranchRule):
+
+        def applies_to_branch(self, branch):
+            constants = branch.constants()
+            for node in branch.get_nodes():
+                if 'sentence' in node.props and node.props['sentence'].quantifier == 'Universal':
+                    variable = node.props['sentence'].variable
+                    if len(constants):
+                        for constant in constants:
+                            sentence = node.props['sentence'].sentence.substitute(constant, variable)
+                            if not branch.has({ 'sentence': sentence }):
+                                return { 'branch': branch, 'sentence': sentence, 'world': node.props['world'] }
+                    else:
+                        constant = branch.new_constant()
+                        sentence = node.props['sentence'].sentence.substitute(constant, variable)
+                        return { 'branch': branch, 'sentence': sentence, 'world': node.props['world'] }
+            return False
+
+        def apply(self, target):
+            target['branch'].add({ 'sentence': target['sentence'], 'world': target['world'] })
     
     class DoubleNegation(NodeRule):
 
@@ -304,7 +340,8 @@ class TableauxRules:
         Closure,
         # non-branching rules
         DoubleNegation, Conjunction, NegatedDisjunction, NegatedMaterialConditional,
-        NegatedPossibility, NegatedNecessity,
+        NegatedPossibility, NegatedNecessity, NegatedUniversal, NegatedExistential,
+        Universal, Existential,
         # branching rules
         Disjunction, MaterialConditional, MaterialBiconditional, NegatedConjunction, 
         NegatedMaterialBiconditional,

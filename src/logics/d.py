@@ -53,7 +53,8 @@ class TableauxRules:
         # non-branching rules
         krules.DoubleNegation, krules.Conjunction, krules.NegatedDisjunction,
         krules.NegatedMaterialConditional, krules.NegatedPossibility, 
-        krules.NegatedNecessity,
+        krules.NegatedNecessity, krules.NegatedUniversal, krules.NegatedExistential,
+        krules.Universal, krules.Existential,
         # branching rules
         krules.Disjunction, krules.MaterialConditional, krules.MaterialBiconditional, 
         krules.NegatedConjunction, krules.NegatedMaterialBiconditional,

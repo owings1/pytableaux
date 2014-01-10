@@ -15,16 +15,22 @@ def write(sentence):
         s += write_item(sentence.variable, Parser.vchars)
         s += write(sentence.sentence)
     elif sentence.is_predicate():
-        s = write_item(sentence.predicate, Parser.pchars)
+        if sentence.predicate.name in Parser.pnames:
+            idx = Parser.pnames[sentence.predicate.name]
+            s = idx[0]
+            if idx[1] > 0:
+                s += idx[1]
+        else:
+            s = write_item(sentence.predicate, Parser.pchars)
         for param in sentence.parameters:
             if is_constant(param):
                 s += write_item(param, Parser.cchars)
             elif is_variable(param):
                 s += write_item(param, Parser.vchars)
             else:
-                raise NotImplemented
+                raise Exception(NotImplemented)
     else:
-        raise NotImplemented
+        raise Exception(NotImplemented)
     return s
     
 def write_item(item, chars):
@@ -43,17 +49,26 @@ class Parser(logic.Parser):
         'C': 'Material Conditional',
         'E': 'Material Biconditional',
         'U': 'Conditional',
+        'B': 'Biconditional',
         'M': 'Possibility',
         'L': 'Necessity'
     }
     
-    vchars = ['x', 'y', 'z']
-    cchars = ['m', 'n', 'o']
+    vchars = ['v', 'x', 'y', 'z']
+    cchars = ['m', 'n', 'o', 's']
     qchars = {
         'V': 'Universal',
         'S': 'Existential'
     }
-    pchars = ['F', 'G', 'H']
+    pchars = ['F', 'G', 'H', 'I', 'J', 'K']
+    pnames = {
+        'Identity': ['I', 0],
+        'Existence': ['J', 0]
+    }
+    pindex = {
+        'I': { 0: 'Identity' },
+        'J': { 0: 'Existence' }
+    }
     
     def read(self):
         self.assert_current()
@@ -69,10 +84,13 @@ class Parser(logic.Parser):
             self.advance()
             variable = self.read_variable()
             if variable in list(self.bound_vars):
-                raise logic.Parser.BoundVariableException('Cannot rebind variable ' + 
-                        self.vchars[variable.index] + str(variable.subscript) + ' at position ' + str(self.pos))
+                raise logic.Parser.ParseError('Cannot rebind variable ' + 
+                        write_item(variable, self.vchars) + ' at position ' + str(self.pos))
             self.bound_vars.add(variable)
             sentence = self.read()
+            if variable not in list(sentence.variables()):
+                raise logic.Parser.ParseError('Unused bound variable ' +
+                        write_item(variable, self.vchars) + ' at position ' + str(self.pos))
             self.bound_vars.remove(variable)
             return quantify(quantifier, variable, sentence)
         return self.read_atomic()

@@ -8,19 +8,22 @@ def test_all():
     
 def test_logics():
     from notations import polish
-    from logics import fde, cpl, k, d, t, s4
+    from logics import fde, k3, lp, go, cfol, k, d, t, s4
     logics = [
         fde,
-        cpl,
+        k3,
+        lp,
+        go,
+        cfol,
         k,
         d,
         t,
         s4
     ]
     parser = polish.Parser()
-    predicate(0, 0, 1)
-    predicate(1, 0, 1)
-    predicate(2, 0, 1)
+    declare_predicate('is F', 0, 0, 1)
+    declare_predicate('is G', 1, 0, 1)
+    declare_predicate('is H', 2, 0, 1)
     for logic in logics:
         print logic.name
         print '  validities'
