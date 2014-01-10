@@ -49,6 +49,8 @@ class TableauxSystem(logic.TableauxSystem):
 class TableauxRules:
     
     NodeRule = logic.TableauxSystem.NodeRule
+    OperatorRule = logic.TableauxSystem.OperatorRule
+    DoubleOperatorRule = logic.TableauxSystem.DoubleOperatorRule
     
     class Closure(logic.TableauxSystem.ClosureRule):
     
@@ -58,20 +60,18 @@ class TableauxRules:
                     return branch
             return False
 
-    class Conjunction(NodeRule):
+    class Conjunction(OperatorRule):
         
-        def applies_to_node(self, node, branch):
-            return node.props['sentence'].operator == 'Conjunction'
+        operator = 'Conjunction'
                 
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operands:
                 branch.add({ 'sentence': operand })
             branch.tick(node)
     
-    class Disjunction(NodeRule):
+    class Disjunction(OperatorRule):
         
-        def applies_to_node(self, node, branch):
-            return node.props['sentence'].operator == 'Disjunction'
+        operator = 'Disjunction'
             
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operands:
@@ -132,40 +132,31 @@ class TableauxRules:
         def apply(self, target):
             target['branch'].add({ 'sentence': target['sentence'] })
                 
-    class DoubleNegation(NodeRule):
+    class DoubleNegation(DoubleOperatorRule):
 
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Negation')
+        operators = ('Negation', 'Negation')
 
         def apply_to_node(self, node, branch):
             branch.add({ 'sentence': node.props['sentence'].operand.operand }).tick(node)
 
-    class NegatedConjunction(NodeRule):
+    class NegatedConjunction(DoubleOperatorRule):
         
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Conjunction')
+        operators = ('Negation', 'Conjunction')
                     
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operand.operands:
                 self.tableau.branch(branch).add({ 'sentence': negate(operand) }).tick(node)
             
-    class NegatedDisjunction(NodeRule):
+    class NegatedDisjunction(DoubleOperatorRule):
         
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Disjunction')
+        operators = ('Negation', 'Disjunction')
         
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operand.operands:
                 branch.add({ 'sentence' : negate(operand) })
             branch.tick(node)
             
-    class NegatedConditionals(NodeRule):
+    class NegatedConditionals(DoubleOperatorRule):
         
         def applies_to_node(self, node, branch):
             sentence = node.props['sentence']

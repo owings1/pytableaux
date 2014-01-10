@@ -16,10 +16,10 @@ def write(sentence):
         s += write(sentence.sentence)
     elif sentence.is_predicate():
         if sentence.predicate.name in Parser.pnames:
-            idx = Parser.pnames[sentence.predicate.name]
-            s = idx[0]
-            if idx[1] > 0:
-                s += idx[1]
+            char, subscript = Parser.pnames[sentence.predicate.name]
+            s = char
+            if subscript > 0:
+                s += subscript
         else:
             s = write_item(sentence.predicate, Parser.pchars)
         for param in sentence.parameters:

@@ -449,7 +449,15 @@ class TableauxSystem(object):
                     
         def applies_to_branch(self, branch):
             return False
+            
+    class ClosureRule(BranchRule):
 
+        def applies_to_branch(self, branch):
+            raise Exception(NotImplemented)
+
+        def apply(self, branch):
+            branch.close()
+            
     class NodeRule(BranchRule):
 
         def applies(self):
@@ -466,14 +474,42 @@ class TableauxSystem(object):
 
         def apply_to_node(self, node, branch):
             raise Exception(NotImplemented)
-
-    class ClosureRule(BranchRule):
-
-        def applies_to_branch(self, branch):
-            raise Exception(NotImplemented)
         
-        def apply(self, branch):
-            branch.close()
+    class OperatorRule(NodeRule):
+        
+        operator = None
+        
+        def applies_to_node(self, node, branch):
+            return (self.operator != None and 'sentence' in node.props and 
+                    node.props['sentence'].operator == self.operator)
+    
+    class DoubleOperatorRule(NodeRule):
+        
+        operators = None
+        
+        def applies_to_node(self, node, branch):
+            return (self.operators != None and 'sentence' in node.props and
+                    node.props['sentence'].operator == self.operators[0] and
+                    node.props['sentence'].operand.operator == self.operators[1])
+                    
+    class OperatorDesignationRule(NodeRule):
+        
+        conditions = None
+        
+        def applies_to_node(self, node, branch):
+            return (self.conditions != None and 'sentence' in node.props and
+                    'designated' in node.props and node.props['sentence'].operator == self.conditions[0] and
+                    node.props['designated'] == self.conditions[1])
+                    
+    class DoubleOperatorDesignationRule(NodeRule):
+        
+        conditions = None
+        
+        def applies_to_node(self, node, branch):
+            return (self.conditions != None and 'sentence' in node.props and
+                    node.props['sentence'].operator == self.conditions[0][0] and
+                    node.props['sentence'].operand.operator == self.conditions[0][1] and
+                    node.props['designated'] == self.conditions[1])
 
     @staticmethod
     def get_worlds_on_branch(branch):

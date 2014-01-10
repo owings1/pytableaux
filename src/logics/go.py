@@ -28,6 +28,8 @@ class TableauxSystem(fde.TableauxSystem):
 class TableauxRules(object):
     
     NodeRule = logic.TableauxSystem.NodeRule
+    OperatorDesignationRule = logic.TableauxSystem.OperatorDesignationRule
+    DoubleOperatorDesignationRule = logic.TableauxSystem.DoubleOperatorDesignationRule
     
     class UndesignatedCollapseRule(NodeRule):
         

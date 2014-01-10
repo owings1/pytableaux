@@ -36,6 +36,8 @@ class TableauxSystem(logic.TableauxSystem):
 class TableauxRules:
 
     NodeRule = logic.TableauxSystem.NodeRule
+    OperatorDesignationRule = logic.TableauxSystem.OperatorDesignationRule
+    DoubleOperatorDesignationRule = logic.TableauxSystem.DoubleOperatorDesignationRule
     
     class Closure(logic.TableauxSystem.ClosureRule):
     
@@ -47,22 +49,18 @@ class TableauxRules:
                 }): return branch
             return False
 
-    class ConjunctionDesignated(NodeRule):
+    class ConjunctionDesignated(OperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            return (node.props['designated'] and
-                    node.props['sentence'].operator == 'Conjunction')
+        conditions = ('Conjunction', True)
                 
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operands:
                 branch.add({ 'sentence': operand, 'designated': True })
             branch.tick(node)
 
-    class DisjunctionDesignated(NodeRule):
+    class DisjunctionDesignated(OperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            return (node.props['designated'] and 
-                    node.props['sentence'].operator == 'Disjunction')
+        conditions = ('Disjunction', True)
             
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operands:
@@ -71,11 +69,9 @@ class TableauxRules:
                     'designated': True 
                 }).tick(node)
     
-    class MaterialConditionalDesignated(NodeRule):
+    class MaterialConditionalDesignated(OperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            return (node.props['designated'] and 
-                    node.props['sentence'].operator == 'Material Conditional')
+        conditions = ('Material Conditional', True)
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence']
@@ -88,11 +84,9 @@ class TableauxRules:
                 'designated': True 
             }).tick(node)
             
-    class MaterialBiconditionalDesignated(NodeRule):
+    class MaterialBiconditionalDesignated(OperatorDesignationRule):
 
-        def applies_to_node(self, node, branch):
-            return (node.props['designated'] and 
-                    node.props['sentence'].operator == 'Material Biconditional')
+        conditions = ('Material Biconditional', True)
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence']
@@ -107,15 +101,11 @@ class TableauxRules:
 
     class ConditionalDesignated(MaterialConditionalDesignated):
         
-        def applies_to_node(self, node, branch):
-            return (node.props['designated'] and
-                    node.props['sentence'].operator == 'Conditional')
+        conditions = ('Conditional', True)
                     
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         
-        def applies_to_node(self, node, branch):
-            return (node.props['designated'] and
-                    node.props['sentence'].operator == 'Biconditional')
+        conditions = ('Biconditional', True)
                     
     class UniversalDesignated(logic.TableauxSystem.BranchRule):
 
@@ -152,11 +142,9 @@ class TableauxRules:
                 'designated': True 
             }).tick(node)
                     
-    class ConjunctionUndesignated(NodeRule):
+    class ConjunctionUndesignated(OperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            return (not node.props['designated'] and 
-                    node.props['sentence'].operator == 'Conjunction')
+        conditions = ('Conjunction', False)
                 
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operands:
@@ -165,22 +153,18 @@ class TableauxRules:
                     'designated': False 
                 }).tick(node)
 
-    class DisjunctionUndesignated(NodeRule):
+    class DisjunctionUndesignated(OperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            return (not node.props['designated'] and 
-                    node.props['sentence'].operator == 'Disjunction')
+        conditions = ('Disjunction', False)
             
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operands:
                 branch.add({ 'sentence': operand, 'designated': False })
             branch.tick(node)
     
-    class MaterialConditionalUndesignated(NodeRule):
+    class MaterialConditionalUndesignated(OperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            return (not node.props['designated'] and 
-                    node.props['sentence'].operator == 'Material Conditional')
+        conditions = ('Material Conditional', False)
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence']
@@ -189,11 +173,9 @@ class TableauxRules:
                 { 'sentence': sentence.rhs, 'designated': False }
             ]).tick(node)
             
-    class MaterialBiconditionalUndesignated(NodeRule):
+    class MaterialBiconditionalUndesignated(OperatorDesignationRule):
 
-        def applies_to_node(self, node, branch):
-            return (not node.props['designated'] and 
-                    node.props['sentence'].operator == 'Material Biconditional')
+        conditions = ('Material Biconditional', False)
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence']
@@ -208,15 +190,11 @@ class TableauxRules:
     
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         
-        def applies_to_node(self, node, branch):
-            return (not node.props['designated'] and
-                    node.props['sentence'].operator == 'Conditional')
+        conditions = ('Conditional', False)
                     
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
         
-        def applies_to_node(self, node, branch):
-            return (not node.props['designated'] and
-                    node.props['sentence'].operator == 'Biconditional')
+        conditions = ('Biconditional', False)
                     
     class UniversalUndesignated(NodeRule):
         
@@ -253,13 +231,9 @@ class TableauxRules:
         def apply(self, target):
             target['branch'].add({ 'sentence': target['sentence'], 'designated': False })
                 
-    class NegatedConjunctionDesignated(NodeRule):
+    class NegatedConjunctionDesignated(DoubleOperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Conjunction')
+        conditions = (('Negation', 'Conjunction'), True)
                 
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operand.operands:
@@ -268,26 +242,18 @@ class TableauxRules:
                     'designated': True 
                 }).tick(node)
 
-    class NegatedDisjunctionDesignated(NodeRule):
+    class NegatedDisjunctionDesignated(DoubleOperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Disjunction')
+        conditions = (('Negation', 'Disjunction'), True)
             
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operand.operands:
                 branch.add({ 'sentence': negate(operand), 'designated': True })
             branch.tick(node)
     
-    class NegatedMaterialConditionalDesignated(NodeRule):
+    class NegatedMaterialConditionalDesignated(DoubleOperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Material Conditional')
+        conditions = (('Negation', 'Material Conditional'), True)
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence'].operand
@@ -296,13 +262,9 @@ class TableauxRules:
                 { 'sentence': negate(sentence.rhs), 'designated': True }
             ]).tick(node)
             
-    class NegatedMaterialBiconditionalDesignated(NodeRule):
+    class NegatedMaterialBiconditionalDesignated(DoubleOperatorDesignationRule):
 
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Material Biconditional')
+        conditions = (('Negation', 'Material Biconditional'), True)
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence'].operand
@@ -317,27 +279,15 @@ class TableauxRules:
 
     class NegatedConditionalDesignated(NegatedMaterialConditionalDesignated):
         
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (node.props['designated'] and
-                    sentence.operator == 'Negation' and
-                    sentence.operand.operator == 'Conditional')
+        conditions = (('Negation', 'Conditional'), True)
                     
     class NegatedBiconditionalDesignated(NegatedMaterialBiconditionalDesignated):
         
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (node.props['sentence'] and
-                    sentence.operator == 'Negation' and
-                    sentence.operand.operator == 'Biconditional')
+        conditions = (('Negation', 'Biconditional'), True)
                     
-    class DoubleNegationDesignated(NodeRule):
+    class DoubleNegationDesignated(DoubleOperatorDesignationRule):
     
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Negation')
+        conditions = (('Negation', 'Negation'), True)
                     
         def apply_to_node(self, node, branch):
             branch.add({ 
@@ -345,13 +295,9 @@ class TableauxRules:
                 'designated': True
             }).tick(node)
             
-    class NegatedConjunctionUndesignated(NodeRule):
+    class NegatedConjunctionUndesignated(DoubleOperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (not node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Conjunction')
+        conditions = (('Negation', 'Conjunction'), False)
                 
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operand.operands:
@@ -360,13 +306,9 @@ class TableauxRules:
                     'designated': False 
                 }).tick(node)
 
-    class NegatedDisjunctionUndesignated(NodeRule):
+    class NegatedDisjunctionUndesignated(DoubleOperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (not node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Disjunction')
+        conditions = (('Negation', 'Disjunction'), False)
             
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operand.operands:
@@ -375,13 +317,9 @@ class TableauxRules:
                     'designated': False 
                 }).tick(node)
     
-    class NegatedMaterialConditionalUndesignated(NodeRule):
+    class NegatedMaterialConditionalUndesignated(DoubleOperatorDesignationRule):
         
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (not node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Material Conditional')
+        conditions = (('Negation', 'Material Conditional'), False)
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence'].operand
@@ -394,13 +332,9 @@ class TableauxRules:
                 'designated': False
             }).tick(node)
             
-    class NegatedMaterialBiconditionalUndesignated(NodeRule):
+    class NegatedMaterialBiconditionalUndesignated(DoubleOperatorDesignationRule):
 
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (not node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Material Biconditional')
+        conditions = (('Negation', 'Material Biconditional'), False)
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence'].operand
@@ -415,27 +349,15 @@ class TableauxRules:
             
     class NegatedConditionalUndesignated(NegatedMaterialConditionalUndesignated):
 
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (not node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Conditional')
+        conditions = (('Negation', 'Conditional'), False)
                     
     class NegatedBiconditionalUndesignated(NegatedMaterialBiconditionalUndesignated):
 
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (not node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Biconditional')
+        conditions = (('Negation', 'Biconditional'), False)
                     
-    class DoubleNegationUndesignated(NodeRule):
+    class DoubleNegationUndesignated(DoubleOperatorDesignationRule):
 
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (not node.props['designated'] and 
-                    sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Negation')
+        conditions = (('Negation', 'Negation'), False)
 
         def apply_to_node(self, node, branch):
             branch.add({ 
