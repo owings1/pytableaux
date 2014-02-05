@@ -46,18 +46,5 @@ class TableauxRules:
                 'world2': target['branch'].new_world()
             })
 
-    krules = k.TableauxRules
-    
-    rules = [
-        krules.Closure,
-        # non-branching rules
-        krules.DoubleNegation, krules.Conjunction, krules.NegatedDisjunction,
-        krules.NegatedMaterialConditional, krules.NegatedPossibility, 
-        krules.NegatedNecessity, krules.NegatedUniversal, krules.NegatedExistential,
-        krules.Universal, krules.Existential,
-        # branching rules
-        krules.Disjunction, krules.MaterialConditional, krules.MaterialBiconditional, 
-        krules.NegatedConjunction, krules.NegatedMaterialBiconditional,
-        # modal rules
-        krules.Possibility, krules.Necessity, Serial
-    ]
+    rules = list(k.TableauxRules.rules)
+    rules.append(Serial)

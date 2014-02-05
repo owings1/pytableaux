@@ -50,21 +50,5 @@ class TableauxRules:
             })
             pass
     
-    krules = k.TableauxRules
-    trules = t.TableauxRules
-    
-    rules = [
-        krules.Closure,
-        trules.Reflexive,
-        Transitive,
-        # non-branching rules
-        krules.DoubleNegation, krules.Conjunction, krules.NegatedDisjunction,
-        krules.NegatedMaterialConditional, krules.NegatedPossibility, 
-        krules.NegatedNecessity, krules.NegatedUniversal, krules.NegatedExistential,
-        krules.Universal, krules.Existential,
-        # branching rules
-        krules.Disjunction, krules.MaterialConditional, krules.MaterialBiconditional, 
-        krules.NegatedConjunction, krules.NegatedMaterialBiconditional,
-        # modal rules
-        krules.Possibility, krules.Necessity
-    ]
+    rules = list(t.TableauxRules.rules)
+    rules.insert(2, Transitive)

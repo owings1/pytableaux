@@ -46,6 +46,8 @@ class TableauxRules(object):
     
     NodeRule = logic.TableauxSystem.NodeRule
     BranchRule = logic.TableauxSystem.BranchRule
+    OperatorRule = logic.TableauxSystem.OperatorRule
+    DoubleOperatorRule = logic.TableauxSystem.DoubleOperatorRule
     
     class Closure(logic.TableauxSystem.ClosureRule):
     
@@ -57,22 +59,18 @@ class TableauxRules(object):
                 }): return branch
             return False
 
-    class Conjunction(NodeRule):
+    class Conjunction(OperatorRule):
         
-        def applies_to_node(self, node, branch):
-            return ('sentence' in node.props and 
-                    node.props['sentence'].operator == 'Conjunction')
+        operator = 'Conjunction'
                 
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operands:
                 branch.add({ 'sentence': operand, 'world': node.props['world'] })
             branch.tick(node)
     
-    class Disjunction(NodeRule):
+    class Disjunction(OperatorRule):
         
-        def applies_to_node(self, node, branch):
-            return ('sentence' in node.props and 
-                    node.props['sentence'].operator == 'Disjunction')
+        operator = 'Disjunction'
             
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operands:
@@ -81,11 +79,9 @@ class TableauxRules(object):
                     'world': node.props['world'] 
                 }).tick(node)
     
-    class MaterialConditional(NodeRule):
+    class MaterialConditional(OperatorRule):
         
-        def applies_to_node(self, node, branch):
-            return ('sentence' in node.props and 
-                    node.props['sentence'].operator == 'Material Conditional')
+        operator = 'Material Conditional'
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence']
@@ -99,11 +95,9 @@ class TableauxRules(object):
                 'world': world
             }).tick(node)
             
-    class MaterialBiconditional(NodeRule):
+    class MaterialBiconditional(OperatorRule):
 
-        def applies_to_node(self, node, branch):
-            return ('sentence' in node.props and 
-                    node.props['sentence'].operator == 'Material Biconditional')
+        operator = 'Material Biconditional'
             
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence']
@@ -153,14 +147,9 @@ class TableauxRules(object):
         def apply(self, target):
             target['branch'].add({ 'sentence': target['sentence'], 'world': target['world'] })
     
-    class DoubleNegation(NodeRule):
+    class DoubleNegation(DoubleOperatorRule):
 
-        def applies_to_node(self, node, branch):
-            if 'sentence' not in node.props:
-                return False
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Negation')
+        operators = ('Negation', 'Negation')
 
         def apply_to_node(self, node, branch):
             branch.add({ 
@@ -168,14 +157,9 @@ class TableauxRules(object):
                 'world': node.props['world']
             }).tick(node)
 
-    class NegatedConjunction(NodeRule):
+    class NegatedConjunction(DoubleOperatorRule):
         
-        def applies_to_node(self, node, branch):
-            if 'sentence' not in node.props:
-                return False
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Conjunction')
+        operators = ('Negation', 'Conjunction')
                     
         def apply_to_node(self, node, branch):
             for operand in node.props['sentence'].operand.operands:
@@ -184,14 +168,9 @@ class TableauxRules(object):
                     'world': node.props['world']
                 }).tick(node)
             
-    class NegatedDisjunction(NodeRule):
+    class NegatedDisjunction(DoubleOperatorRule):
         
-        def applies_to_node(self, node, branch):
-            if 'sentence' not in node.props:
-                return False
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Disjunction')
+        operators = ('Negation', 'Disjunction')
         
         def apply_to_node(self, node, branch):
             world = node.props['world']
@@ -199,14 +178,9 @@ class TableauxRules(object):
                 branch.add({ 'sentence' : negate(operand), 'world': world })
             branch.tick(node)
             
-    class NegatedMaterialConditional(NodeRule):
+    class NegatedMaterialConditional(DoubleOperatorRule):
         
-        def applies_to_node(self, node, branch):
-            if 'sentence' not in node.props:
-                return False
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Material Conditional')
+        operators = ('Negation', 'Material Conditional')
                     
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence'].operand
@@ -216,14 +190,9 @@ class TableauxRules(object):
                 { 'sentence': negate(sentence.rhs), 'world': world }
             ]).tick(node)
                   
-    class NegatedMaterialBiconditional(NodeRule):
+    class NegatedMaterialBiconditional(DoubleOperatorRule):
 
-        def applies_to_node(self, node, branch):
-            if 'sentence' not in node.props:
-                return False
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Material Biconditional')
+        operators = ('Negation', 'Material Biconditional')
 
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence'].operand
@@ -237,11 +206,9 @@ class TableauxRules(object):
                 { 'sentence': sentence.lhs, 'world': world }
             ]).tick(node)
     
-    class Possibility(NodeRule):
+    class Possibility(OperatorRule):
         
-        def applies_to_node(self, node, branch):
-            return ('sentence' in node.props and
-                    node.props['sentence'].operator == 'Possibility')
+        operator = 'Possibility'
             
         def apply_to_node(self, node, branch):
             world = branch.new_world()
@@ -271,14 +238,9 @@ class TableauxRules(object):
                 'world': target['world'] 
             })
             
-    class NegatedPossibility(NodeRule):
+    class NegatedPossibility(DoubleOperatorRule):
         
-        def applies_to_node(self, node, branch):
-            if 'sentence' not in node.props:
-                return False
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Possibility')
+        operators = ('Negation', 'Possibility')
         
         def apply_to_node(self, node, branch):
             branch.add({
@@ -286,14 +248,9 @@ class TableauxRules(object):
                 'world': node.props['world']
             }).tick(node)
         
-    class NegatedNecessity(NodeRule):
+    class NegatedNecessity(DoubleOperatorRule):
         
-        def applies_to_node(self, node, branch):
-            if 'sentence' not in node.props:
-                return False
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and 
-                    sentence.operand.operator == 'Necessity')
+        operators = ('Negation', 'Necessity')
         
         def apply_to_node(self, node, branch):
             branch.add({
