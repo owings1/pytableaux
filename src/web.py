@@ -1,4 +1,4 @@
-import logic
+import logic, json
 
 available_module_names = {
     'logics': ['cfol', 'k3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
@@ -13,6 +13,11 @@ for package in available_module_names:
     for name in available_module_names[package]:
         modules[package][name] = importlib.import_module(package + '.' + name)
         
+notation_user_predicate_symbols = {}
+for notation_name in modules['notations']:
+    notation = modules['notations'][notation_name]
+    notation_user_predicate_symbols[notation_name] = list(notation.Parser.upchars)
+        
 import os.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 config = {
@@ -25,14 +30,13 @@ config = {
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('logic', 'www/views'))
 
-logic.declare_predicate('Predicate 1', 0, 0, 1)
-logic.declare_predicate('Predicate 2', 1, 0, 1)
-logic.declare_predicate('Predicate 3', 2, 0, 1)
-logic.declare_predicate('Predicate 4', 0, 1, 2)
-logic.declare_predicate('Predicate 5', 1, 1, 2)
-logic.declare_predicate('Predicate 6', 2, 1, 2)
+# logic.declare_predicate('Predicate 1', 0, 0, 1)
+# logic.declare_predicate('Predicate 2', 1, 0, 1)
+# logic.declare_predicate('Predicate 3', 2, 0, 1)
+# logic.declare_predicate('Predicate 4', 3, 0, 2)
+# logic.declare_predicate('Predicate 5', 0, 1, 2)
+# logic.declare_predicate('Predicate 6', 1, 1, 2)
 
-print logic.Vocabulary.predicates
 import cherrypy as server
 
 class App:
@@ -48,7 +52,12 @@ class App:
             'notation_modules': available_module_names['notations'],
             'notations': modules['notations'],
             'form_data': kw,
-            'predicates': logic.Vocabulary.predicates
+            'system_predicates': logic.system_predicates,
+            'quantifiers': logic.quantifiers,
+            'app' : json.dumps({
+                'notation_user_predicate_symbols' : notation_user_predicate_symbols,
+                'num_user_predicate_symbols': logic.num_user_predicate_symbols
+            })
         }
         if len(kw) and ('errors' not in kw or not len(kw['errors'])):
             view = 'prove'
@@ -61,18 +70,30 @@ class App:
                 premiseStrs = None
             kw['premises[]'] = premiseStrs
             
-            # declare predicates
-            
-            parser = notation.Parser()
             errors = {}
+            
+            # declare user predicates
+            for i, name in enumerate(kw['user_predicate_names[]']):
+                arity = kw['user_predicate_arities[]'][i]
+                print kw
+                if len(arity):
+                    if len(name):
+                        index, subscript = kw['user_predicate_symbols[]'][i].split('.')
+                        try:
+                            logic.declare_predicate(name, int(index), int(subscript), int(arity))
+                        except Exception as e:
+                            errors['Predicate ' + str(i)] = e
+                    else:
+                        errors['Predicate ' + str(i)] = Exception('Name cannot be empty')
+                                
+            parser = notation.Parser()
+            
             premises = []
-            i = 1
-            for premiseStr in premiseStrs:
+            for i, premiseStr in enumerate(premiseStrs):
                 try:
                     premises.append(parser.parse(premiseStr))
                 except Exception as e:
                     errors['Premise ' + str(i)] = e
-                i += 1
             try:
                 conclusion = parser.parse(kw['conclusion'])
             except Exception as e:

@@ -21,7 +21,7 @@ def write(sentence):
             if subscript > 0:
                 s += subscript
         else:
-            s = write_item(sentence.predicate, Parser.pchars)
+            s = write_item(sentence.predicate, Parser.upchars)
         for param in sentence.parameters:
             if is_constant(param):
                 s += write_item(param, Parser.cchars)
@@ -60,7 +60,7 @@ class Parser(logic.Parser):
         'V': 'Universal',
         'S': 'Existential'
     }
-    pchars = ['F', 'G', 'H', 'I', 'J', 'K']
+    upchars = ['F', 'G', 'H', 'K']
     pnames = {
         'Identity': ['I', 0],
         'Existence': ['J', 0]
@@ -77,7 +77,7 @@ class Parser(logic.Parser):
             self.advance()
             operands = [self.read() for x in range(arity(operator))]
             return operate(operator, operands)
-        if self.current() in self.pchars:
+        if self.current() in self.upchars + self.pindex.keys():
             return self.read_predicate_sentence()
         if self.current() in self.qchars:
             quantifier = self.qchars[self.current()]

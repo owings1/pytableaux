@@ -4,6 +4,11 @@
     <script type="text/template" id="premiseTemplate">
         {{ helper.premise('{n}') }}
     </script>
+    <script type="text/template" id="predicateRowTemplate">
+        {% call helper.predicate_row('{index}', '{subscript}', '{name}', '{arity}') %}
+            {symbol_html}
+        {% endcall %}
+    </script>
     {% if errors %}
         <div class="errors">
             <h3>Please correct the following errors:</h3>
@@ -55,18 +60,38 @@
             <div class="lexicons">
                 {% for module in notation_modules %}
                     <div class="lexicon hidden" id="Lexicon_{{ module }}">
-                        <span class="label">Atomic Symbols</span>
-                        <ul class="atomic-symbols">
+                        <span class="label">Atomics</span>
+                        <ul class="item-symbols">
                             {% for char in notations[module].Parser.achars %}
                                 <li>{{ char|e }}</li>
                             {% endfor %}
                         </ul>
-                        <span class="label">Operator Symbols</span>
+                        <span class="label">Constants</span>
+                        <ul class="item-symbols">
+                            {% for char in notations[module].Parser.cchars %}
+                                <li>{{ char|e }}</li>
+                            {% endfor %}
+                        </ul>
+                        <span class="label">Variables</span>
+                        <ul class="item-symbols">
+                            {% for char in notations[module].Parser.vchars %}
+                                <li>{{ char|e }}</li>
+                            {% endfor %}
+                        </ul>
+                        <span class="label">Operators</span>
                         <dl class="operator-symbols">
                             {% for operator in operators_list %}
                             {% set ochars = notations[module].Parser.ochars %}
                                 <dt>{{ ochars.keys()[ochars.values().index(operator)]|e }}</dt>
                                 <dd>{{ operator|e }}</dd>
+                            {% endfor %}
+                        </dl>
+                        <span class="label">Quantifiers</span>
+                        <dl class="operator-symbols">
+                            {% for quantifier in quantifiers %}
+                            {% set qchars = notations[module].Parser.qchars %}
+                                <dt>{{ qchars.keys()[qchars.values().index(quantifier)]|e }}</dt>
+                                <dd>{{ quantifier|e }}</dd>
                             {% endfor %}
                         </dl>
                         <div class="clear"></div>
@@ -76,7 +101,7 @@
         <fieldset class="predicates">
             <legend>Predicates</legend>
             <div class="predicates">
-                <table>
+                <table class="predicates">
                     <thead>
                         <tr>
                             <th>Symbol</th>
@@ -87,22 +112,26 @@
                     <tbody>
                         {% for name in predicates_list %}
                             {% set predicate = predicates[name] %}
-                            <tr>
-                                <td>
+                            {% if name in system_predicates %}
+                                <tr>
+                                    <td>
+                                        {% for module in notation_modules %}
+                                            {% set symbol, subscript = notations[module].Parser.pnames[name] %}
+                                            <span class="predicateSymbol notation-{{module}} hidden">
+                                                {{ symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript }}</span>{% endif %}
+                                            </span>
+                                        {% endfor %}
+                                    </td>
+                                    <td>{{ name|e }}</td>
+                                    <td>{{ predicate.arity }}</td>
+                                </tr>
+                            {% else %}
+                                {% call helper.predicate_row(predicate.index, predicate.subscript, predicate.name, predicate.arity) %}
                                     {% for module in notation_modules %}
-                                        {% if predicate.index == None and predicate.subscript == None %}
-                                            {% set idx = notations[module].Parser.pnames[name] %}
-                                        {% else %}
-                                            {% set idx = [notations[module].Parser.pchars[predicate.index], predicate.subscript] %}
-                                        {% endif %}
-                                        <span class="operator notation-{{module}}">
-                                            {{ idx[0]|e }}{% if idx[1] > 0 %}<span class="subscript">{{ idx[1] }}</span>{% endif %}
-                                        </span>
+                                        {{ helper.predicate_symbol(module, notations[module].Parser.upchars[predicate.index], predicate.subscript) }}
                                     {% endfor %}
-                                </td>
-                                <td>{{ name|e }}</td>
-                                <td>{{ predicate.arity }}</td>
-                            </tr>
+                                {% endcall %}
+                            {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>

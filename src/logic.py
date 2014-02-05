@@ -17,13 +17,14 @@ conditional_operators = {'Conditional', 'Material Conditional'}
 biconditional_operators = {'Biconditional', 'Material Biconditional'}
 modal_operators = {'Possibility', 'Necessity'}
 
-quantifiers = {'Universal', 'Existential'}
+quantifiers = ['Universal', 'Existential']
 
 system_predicates = {
     'Identity': 2,
     'Existence': 1
 }
 system_predicates_list = ['Identity', 'Existence']
+num_user_predicate_symbols = 4
 
 def negate(sentence):
     return Vocabulary.MolecularSentence('Negation', [sentence])
@@ -644,15 +645,17 @@ class Parser(object):
     def read_constant(self):
         return constant(*self.read_item(self.cchars))
 
-    def read_predicate(self):
+    def read_predicate(self):    
+        self.assert_current_in(self.upchars + self.pindex.keys())
         pchar = self.current()
         cpos = self.pos
-        index, subscript = self.read_item(self.pchars)
         try:
-            if pchar in self.pindex and subscript in self.pindex[pchar]:
-                return Vocabulary.get_predicate(name=self.pindex[pchar][subscript])
-            else:
+            if pchar in self.upchars:
+                index, subscript = self.read_item(self.upchars)
                 return Vocabulary.get_predicate(index=index, subscript=subscript)
+            else:
+                index, subscript = self.read_item(self.pindex.keys())
+                return Vocabulary.get_predicate(name=self.pindex[pchar][subscript])
         except Vocabulary.NoSuchPredicateError:
             raise Parser.ParseError('Undefined predicate symbol "' + pchar + '" at position ' + str(cpos))
 
@@ -677,3 +680,11 @@ class Parser(object):
         
     def read(self):
         return self.read_atomic()
+        
+    def user_predicate_indexes(self):
+        indexes = []
+        for index, symbol in self.pchars:
+            if symbol not in self.pindex:
+                indexes.append(index)
+        return indexes
+        

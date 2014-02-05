@@ -6,6 +6,27 @@
     </div>
 {%- endmacro %}
 
+{% macro predicate_symbol(module, symbol, subscript) -%}
+    <span class="predicateSymbol notation-{{module}} hidden">
+        {{ symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript }}</span>{% endif %}
+    </span>
+{%- endmacro %}
+
+{% macro predicate_row(index, subscript, name='', arity='') -%}
+    <tr>
+        <td>
+            {{ caller() }}
+            <input type="hidden" class="predicateSymbol" name="user_predicate_symbols[]" value="{{ index }}.{{ subscript }}" />
+        </td>
+        <td>
+            <input type="text" class="predicateName" name="user_predicate_names[]" value="{{ name }}" />
+        </td>
+        <td>
+            <input type="text" class="arity" name="user_predicate_arities[]" value="{{ arity }}"/>
+        </td>
+    </tr>
+{% endmacro %}
+
 {% macro select_opt(form_data, key, value) -%}
     {% if key in form_data and form_data[key] == value %} selected="selected"{% endif %}
 {%- endmacro %}
