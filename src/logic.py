@@ -19,11 +19,12 @@ modal_operators = {'Possibility', 'Necessity'}
 
 quantifiers = ['Universal', 'Existential']
 
-system_predicates = {
-    'Identity': 2,
-    'Existence': 1
-}
 system_predicates_list = ['Identity', 'Existence']
+
+system_predicates_index = {
+    -1: { 0: 'Identity'},
+    -2: { 0: 'Existence'}
+}
 num_user_predicate_symbols = 4
 
 def negate(sentence):
@@ -37,12 +38,6 @@ def atomic(index, subscript):
 
 def arity(operator):
     return operators[operator]
-
-def declare_predicate(name, index, subscript, arity):
-    return Vocabulary.declare_predicate(name, index, subscript, arity)
-    
-def get_predicate(name):
-    return Vocabulary.get_predicate(name=name)
 
 def predicate_sentence(predicate, parameters):
     return Vocabulary.PredicateSentence(predicate, parameters)
@@ -75,7 +70,7 @@ def tableau(logic, arg):
     return TableauxSystem.Tableau(logic, arg)
 
 class Vocabulary(object):
-    
+        
     class Predicate(object):
         
         def __init__(self, name, index, subscript, arity):
@@ -84,12 +79,6 @@ class Vocabulary(object):
             self.subscript = subscript
             self.arity = arity
 
-    predicates = {}
-    for name in system_predicates:
-        predicates[name] = Predicate(name, None, None, system_predicates[name])
-    predicates_list = list(system_predicates_list)
-    _predicates_index = {}
-    
     class PredicateError(Exception):
         pass
         
@@ -101,40 +90,40 @@ class Vocabulary(object):
         
     class PredicateIndexMismatchError(PredicateError):
         pass
-    
-    @staticmethod        
-    def get_predicate(name=None, index=None, subscript=None):
+        
+    def __init__(self):
+        self.user_predicates_list = []
+        self.user_predicates = {}
+        self.user_predicates_index = {}
+        
+    def get_predicate(self, name=None, index=None, subscript=None):
         if name != None:
-            if name not in Vocabulary.predicates:
-                raise Vocabulary.NoSuchPredicateError(name)
-            return Vocabulary.predicates[name]
+            if name in self.system_predicates:
+                return self.system_predicates[name]
+            if name in self.user_predicates:
+                return self.user_predicates[name]
+            raise Vocabulary.NoSuchPredicateError(name)
         if index != None and subscript != None:
             idx = str([index, subscript])
-            if idx not in Vocabulary._predicates_index:
+            if index < 0:
+                if subscript not in system_predicates_index[index]:
+                    raise Vocabulary.NoSuchPredicateError(idx)
+                return system_predicates[system_predicates_index[index][subscript]]
+            if idx not in self.user_predicates_index:
                 raise Vocabulary.NoSuchPredicateError(idx)
-            return Vocabulary._predicates_index[idx]
-        raise Exception()
+            return self.user_predicates_index[idx]
+        raise Exception('Not enough information to get predicate')
 
-    @staticmethod
-    def declare_predicate(name, index, subscript, arity):
-        try:
-            if index != None and subscript != None:
-                try:
-                    predicate = Vocabulary.get_predicate(index=index, subscript=subscript)
-                    if predicate.name != name:
-                        raise Vocabulary.PredicateIndexMismatchError(predicate.name + ' is already using ' + str([index, subscript]))
-                except Vocabulary.NoSuchPredicateError:
-                    pass
-            predicate = Vocabulary.get_predicate(name=name)
-            if predicate.arity != arity:
-                raise Vocabulary.PredicateArityMismatchError(name + ' already declared with arity ' + 
-                    str(predicate.arity) + ' not ' + str(arity))
-        except Vocabulary.NoSuchPredicateError:
-            predicate = Vocabulary.Predicate(name, index, subscript, arity)
-            Vocabulary.predicates[name] = predicate
-            Vocabulary.predicates_list.append(name)
-            if index != None and subscript != None:
-                Vocabulary._predicates_index[str([index, subscript])] = predicate
+    def declare_predicate(self, name, index, subscript, arity):
+        if name in system_predicates:
+            raise Vocabulary.PredicateError('Cannot declare system predicate: ' + name)
+        if name in self.user_predicates:
+            raise Vocabulary.PredicateError('Predicate already declared: ' + name)
+        predicate = Vocabulary.Predicate(name, index, subscript, arity)
+        self.user_predicates[name] = predicate
+        self.user_predicates_list.append(name)
+        if index >= 0:
+            self.user_predicates_index[str([index, subscript])] = predicate    
         return predicate
 
     class Constant(object):
@@ -275,6 +264,11 @@ class Vocabulary(object):
                 v.update(operand.variables())
             return v
 
+system_predicates = {
+    'Identity': Vocabulary.Predicate('Identity', -1, 0, 2),
+    'Existence': Vocabulary.Predicate('Existence', -2, 0, 1)
+}
+            
 class TableauxSystem(object):
     
     class Tableau(object):
@@ -572,10 +566,14 @@ class Parser(object):
     cchars = []
     vchars = []
     qchars = {}
-    pchars = []
+    upchars = []
+    spchars = ['I', 'J']
     
     wschars = set([' '])
     
+    def __init__(self, vocabulary):
+        self.vocabulary = vocabulary
+        
     def chomp(self):
         while (self.has_next(0) and self.current() in self.wschars):
             self.pos += 1
@@ -646,16 +644,18 @@ class Parser(object):
         return constant(*self.read_item(self.cchars))
 
     def read_predicate(self):    
-        self.assert_current_in(self.upchars + self.pindex.keys())
+        self.assert_current_in(self.upchars + self.spchars)
         pchar = self.current()
         cpos = self.pos
         try:
             if pchar in self.upchars:
                 index, subscript = self.read_item(self.upchars)
-                return Vocabulary.get_predicate(index=index, subscript=subscript)
             else:
-                index, subscript = self.read_item(self.pindex.keys())
-                return Vocabulary.get_predicate(name=self.pindex[pchar][subscript])
+                index, subscript = self.read_item(self.spchars)
+                index = (index + 1) * -1
+                if index not in system_predicates_index or subscript not in system_predicates_index[index]:
+                    raise Vocabulary.NoSuchPredicateError()
+            return self.vocabulary.get_predicate(index=index, subscript=subscript)
         except Vocabulary.NoSuchPredicateError:
             raise Parser.ParseError('Undefined predicate symbol "' + pchar + '" at position ' + str(cpos))
 
@@ -688,3 +688,7 @@ class Parser(object):
                 indexes.append(index)
         return indexes
         
+    @staticmethod
+    def spchar(index):
+        index = index * -1 - 1
+        return Parser.spchars[index]

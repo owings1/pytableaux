@@ -87,6 +87,21 @@ select, input[type=submit] {
     min-width: 12px;
 }
 
+table.predicates {
+    width: 100%;
+}
+
+table.predicates th {
+    font-weight: normal;
+    text-align: left;
+    background-color: #eee;
+}
+
+table.predicates td, table.predicates th {
+    border: 1px solid #eee;
+    padding: 5px;
+}
+
 .input.submit input[type=submit] {
     margin: 10px 0 0 127px;
 }

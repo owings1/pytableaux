@@ -20,10 +20,11 @@ def test_logics():
         t,
         s4
     ]
-    parser = polish.Parser()
-    declare_predicate('is F', 0, 0, 1)
-    declare_predicate('is G', 1, 0, 1)
-    declare_predicate('is H', 2, 0, 1)
+    vocabulary = Vocabulary()
+    vocabulary.declare_predicate('is F', 0, 0, 1)
+    vocabulary.declare_predicate('is G', 1, 0, 1)
+    vocabulary.declare_predicate('is H', 2, 0, 1)
+    parser = polish.Parser(vocabulary)
     for logic in logics:
         print logic.name
         print '  validities'

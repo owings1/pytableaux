@@ -30,19 +30,14 @@ config = {
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('logic', 'www/views'))
 
-# logic.declare_predicate('Predicate 1', 0, 0, 1)
-# logic.declare_predicate('Predicate 2', 1, 0, 1)
-# logic.declare_predicate('Predicate 3', 2, 0, 1)
-# logic.declare_predicate('Predicate 4', 3, 0, 2)
-# logic.declare_predicate('Predicate 5', 0, 1, 2)
-# logic.declare_predicate('Predicate 6', 1, 1, 2)
-
 import cherrypy as server
 
 class App:
-    
+                
     @server.expose
     def index(self, *args, **kw):
+        App.fix_kw(kw)
+        print kw
         data = {
             'operators_list': logic.operators_list,
             'logic_modules': available_module_names['logics'],
@@ -59,41 +54,27 @@ class App:
                 'num_user_predicate_symbols': logic.num_user_predicate_symbols
             })
         }
+        vocabulary = logic.Vocabulary()
+        view = 'argument'
         if len(kw) and ('errors' not in kw or not len(kw['errors'])):
-            view = 'prove'
             notation = modules['notations'][kw['notation']]
             writer = modules['writers'][kw['writer']]
             
+            errors = {}
+            App.declare_user_predicates(kw, vocabulary, errors)
+            parser = notation.Parser(vocabulary)
+                       
             try:
                 premiseStrs = [premise for premise in kw['premises[]'] if len(premise) > 0]
             except:
                 premiseStrs = None
             kw['premises[]'] = premiseStrs
-            
-            errors = {}
-            
-            # declare user predicates
-            for i, name in enumerate(kw['user_predicate_names[]']):
-                arity = kw['user_predicate_arities[]'][i]
-                print kw
-                if len(arity):
-                    if len(name):
-                        index, subscript = kw['user_predicate_symbols[]'][i].split('.')
-                        try:
-                            logic.declare_predicate(name, int(index), int(subscript), int(arity))
-                        except Exception as e:
-                            errors['Predicate ' + str(i)] = e
-                    else:
-                        errors['Predicate ' + str(i)] = Exception('Name cannot be empty')
-                                
-            parser = notation.Parser()
-            
             premises = []
             for i, premiseStr in enumerate(premiseStrs):
                 try:
                     premises.append(parser.parse(premiseStr))
                 except Exception as e:
-                    errors['Premise ' + str(i)] = e
+                    errors['Premise ' + str(i + 1)] = e
             try:
                 conclusion = parser.parse(kw['conclusion'])
             except Exception as e:
@@ -107,25 +88,22 @@ class App:
                 
             if len(errors) > 0:
                 kw['errors'] = errors
-                return self.index(*args, **kw)
-            
-            argument = logic.argument(conclusion, premises)
-            tableaux = [logic.tableau(modules['logics'][chosen_logic], argument).build() for chosen_logic in kw['logic']]
-
-            data.update({
-                'tableaux': tableaux,
-                'notation': notation,
-                'writer': writer,
-                'argument': {
-                    'premises': [notation.write(premise) for premise in argument.premises],
-                    'conclusion': notation.write(argument.conclusion)
-                }
-            })
-        else:
-            view = 'argument'
+            else:
+                view = 'prove'
+                argument = logic.argument(conclusion, premises)
+                tableaux = [logic.tableau(modules['logics'][chosen_logic], argument).build() for chosen_logic in kw['logic']]
+                data.update({
+                    'tableaux': tableaux,
+                    'notation': notation,
+                    'writer': writer,
+                    'argument': {
+                        'premises': [notation.write(premise) for premise in argument.premises],
+                        'conclusion': notation.write(argument.conclusion)
+                    }
+                })
         data.update({
-            'predicates': logic.Vocabulary.predicates,
-            'predicates_list': logic.Vocabulary.predicates_list
+            'user_predicates': vocabulary.user_predicates,
+            'user_predicates_list': vocabulary.user_predicates_list
         })
         if 'errors' in kw:
             data['errors'] = kw['errors']
@@ -134,14 +112,39 @@ class App:
     @server.expose
     def parse(self, *args, **kw):
         notation = modules['notations'][kw['notation']]
+        vocabulary = logic.Vocabulary()
+        errors = {}
+        App.declare_user_predicates(kw, vocabulary, errors)
         try:
-            sentence = notation.Parser().parse(kw['sentence'])
+            sentence = notation.Parser(vocabulary).parse(kw['sentence'])
         except logic.Parser.ParseError as e:
             return self.render('error', { 'error': e })
         return ''
         
     def render(self, view, data={}):
         return env.get_template(view + '.html').render(data)
+        
+    @staticmethod
+    def fix_kw(kw):
+        if len(kw):
+            for param in kw:
+                if param.endswith('[]'):
+                    if isinstance(kw[param], basestring):
+                        kw[param] = [kw[param]]
+    @staticmethod
+    def declare_user_predicates(kw, vocabulary, errors={}):
+        App.fix_kw(kw)
+        arities = kw['user_predicate_arities[]']
+        for i, name in enumerate(kw['user_predicate_names[]']):
+            if i < len(arities) and len(arities[i]):
+                if len(name):
+                    index, subscript = kw['user_predicate_symbols[]'][i].split('.')
+                    try:
+                        vocabulary.declare_predicate(name, int(index), int(subscript), int(arities[i]))
+                    except Exception as e:
+                        errors['Predicate ' + str(i + 1)] = e
+                else:
+                    errors['Predicate ' + str(i + 1)] = Exception('Name cannot be empty')
         
 def main():
     server.quickstart(App(), '/', config)

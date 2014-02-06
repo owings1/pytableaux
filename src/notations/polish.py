@@ -1,5 +1,5 @@
 import logic
-from logic import operate, arity, quantify, is_constant, is_variable
+from logic import operate, arity, quantify, is_constant, is_variable, system_predicates, system_predicates_index
 
 name = 'Polish'
 
@@ -15,11 +15,11 @@ def write(sentence):
         s += write_item(sentence.variable, Parser.vchars)
         s += write(sentence.sentence)
     elif sentence.is_predicate():
-        if sentence.predicate.name in Parser.pnames:
-            char, subscript = Parser.pnames[sentence.predicate.name]
+        if sentence.predicate.name in system_predicates:
+            char = Parser.spchar(sentence.predicate.index)
             s = char
-            if subscript > 0:
-                s += subscript
+            if sentence.predicate.subscript > 0:
+                s += sentence.predicate.subscript
         else:
             s = write_item(sentence.predicate, Parser.upchars)
         for param in sentence.parameters:
@@ -61,15 +61,8 @@ class Parser(logic.Parser):
         'S': 'Existential'
     }
     upchars = ['F', 'G', 'H', 'K']
-    pnames = {
-        'Identity': ['I', 0],
-        'Existence': ['J', 0]
-    }
-    pindex = {
-        'I': { 0: 'Identity' },
-        'J': { 0: 'Existence' }
-    }
-    
+    spchars = ['I', 'J']
+
     def read(self):
         self.assert_current()
         if self.current() in self.ochars:
@@ -77,7 +70,7 @@ class Parser(logic.Parser):
             self.advance()
             operands = [self.read() for x in range(arity(operator))]
             return operate(operator, operands)
-        if self.current() in self.upchars + self.pindex.keys():
+        if self.current() in self.upchars + self.spchars:
             return self.read_predicate_sentence()
         if self.current() in self.qchars:
             quantifier = self.qchars[self.current()]

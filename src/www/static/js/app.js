@@ -33,7 +33,6 @@
             var currentNotation = $('#notation').val()
             $.each(app.notation_user_predicate_symbols, function(notation, symbols) {
                 html += '<span class="predicateSymbol notation-' + notation + (notation == currentNotation ? '' : ' hidden') + '">'
-                console.log(symbols[next[0]])
                 html += $('<div/>').text(symbols[next[0]]).html()
                 if (next[1])
                     html += '<span class="subscript">' + next[1] + '</span>'
@@ -86,9 +85,13 @@
             if (str || $(this).hasClass('conclusion')) {
                 $.ajax({
                     url: '/parse',
+                    type: 'post',
                     data: {
                         sentence: str,
-                        notation: $('#notation').val()
+                        notation: $('#notation').val(),
+                        user_predicate_names: $('input.predicateName').map(function() { return $(this).val() }).get(),
+                        user_predicate_arities: $('input.arity').map(function() { return $(this).val() }).get(),
+                        user_predicate_symbols: $('input.predicateSymbol').map(function() { return $(this).val() }).get()
                     },
                     success: function(err) {
                         if (err) {
