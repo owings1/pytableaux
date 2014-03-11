@@ -116,7 +116,7 @@ class App:
         errors = {}
         App.declare_user_predicates(kw, vocabulary, errors)
         try:
-            sentence = notation.Parser(vocabulary).parse(kw['sentence'])
+            logic.parse(kw['sentence'], vocabulary, notation)
         except logic.Parser.ParseError as e:
             return self.render('error', { 'error': e })
         return ''

@@ -1,3 +1,18 @@
+import importlib, notations
+from types import ModuleType
+
+# Operators
+operators_list = [
+    'Negation', 
+    'Conjunction', 
+    'Disjunction', 
+    'Material Conditional', 
+    'Material Biconditional',
+    'Conditional', 
+    'Biconditional', 
+    'Possibility', 
+    'Necessity'
+]
 operators = {
     'Negation': 1,
     'Conjunction': 2,
@@ -9,68 +24,185 @@ operators = {
     'Possibility': 1,
     'Necessity': 1
 }
-
-operators_list = ['Negation', 'Conjunction', 'Disjunction', 'Material Conditional', 'Material Biconditional',
-                  'Conditional', 'Biconditional', 'Possibility', 'Necessity']
-                  
 conditional_operators = {'Conditional', 'Material Conditional'}
 biconditional_operators = {'Biconditional', 'Material Biconditional'}
 modal_operators = {'Possibility', 'Necessity'}
 
+# Quantifiers
 quantifiers = ['Universal', 'Existential']
 
+# System Predicates
 system_predicates_list = ['Identity', 'Existence']
-
 system_predicates_index = {
     -1: { 0: 'Identity'},
     -2: { 0: 'Existence'}
 }
+
+# The number of symbols is fixed to allow multiple notations.
 num_user_predicate_symbols = 4
+num_var_symbols = 4
+num_const_symbols = 4
+num_atomic_symbols = 5
 
-def negate(sentence):
-    return Vocabulary.MolecularSentence('Negation', [sentence])
+def parse(string, vocabulary=None, notation='polish'):
+    """
+    Parse a string and return a sentence. If *vocabulary* is passed, the parser will
+    use its user-defined predicates. The *notation* parameter can be either a notation 
+    module or a string of the module name. Example::
+        
+        sentence = parse('Kab')
+        
+    """
+    if vocabulary is None:
+        vocabulary = Vocabulary()
+    if isinstance(notation, str):
+        notation = importlib.import_module('notations.' + notation)
+    assert isinstance(notation, ModuleType), "notation parameter must be a module or string"
+    return notation.Parser(vocabulary).parse(string)
 
-def operate(operator, operands):
-    return Vocabulary.MolecularSentence(operator, operands)
-
-def atomic(index, subscript):
-    return Vocabulary.AtomicSentence(index, subscript)
-
-def arity(operator):
-    return operators[operator]
-
-def predicate_sentence(predicate, parameters):
-    return Vocabulary.PredicateSentence(predicate, parameters)
-    
-def quantify(quantifier, variable, sentence):
-    return Vocabulary.QuantifiedSentence(quantifier, variable, sentence)
-    
-def constant(index, subscript):
-    return Vocabulary.Constant(index, subscript)
-    
-def variable(index, subscript):
-    return Vocabulary.Variable(index, subscript)
-    
-def is_constant(obj):
-    return isinstance(obj, Vocabulary.Constant)
-
-def is_variable(obj):
-    return isinstance(obj, Vocabulary.Variable)
-    
 class argument(object):
+    """
+    Create an argument::
+
+        premises = [parse('Aab'), parse('Nb')]
+        conclusion = parse('a')
+        arg = argument(conslusion, premises)
+
+    """
 
     def __init__(self, conclusion=None, premises=[]):
         self.premises = premises
         self.conclusion = conclusion
-    
+
     def __repr__(self):
         return [self.premises, self.conclusion].__repr__()
 
 def tableau(logic, arg):
+    """
+    Create a tableau for the given logic and argument. Example::
+
+        from logics import cpl
+        proof = tableau(cpl, arg)
+        proof.build()
+        if proof.valid:
+            print "Valid"
+        else:
+            print "Invalid"
+
+    """
     return TableauxSystem.Tableau(logic, arg)
 
-class Vocabulary(object):
+def atomic(index, subscript):
+    """
+    Return an atomic sentence represented by the given index and subscript integers. Example::
+
+        sentence = atomic(0, 0)
+        assert sentence == parse('a')
+
+        sentence = atomic(2, 3)
+        assert sentence == parse('c3')
+
+    """
+    return Vocabulary.AtomicSentence(index, subscript)
         
+def constant(index, subscript):
+    """
+    Return a constant representend by the given index and subscript integers::
+
+        param = constant(0, 0)
+
+    """
+    return Vocabulary.Constant(index, subscript)
+
+def variable(index, subscript):
+    """
+    Return a variable representend by the given index and subscript integers::
+
+        param = variable(0, 0)
+
+    """
+    return Vocabulary.Variable(index, subscript)
+
+def predicate_sentence(predicate, parameters, vocabulary=None):
+    """
+    Return a predicate sentence for the given predicate and parameters. *predicate* can 
+    either be the name of a predicate or a predicate object. Example using system predicates::
+
+        param = constant(0, 0)
+        sentence = predicate_sentence('Existence', [param])
+
+    Using user-defined predicates::
+    
+        vocab = Vocabulary([('is tall', 0, 0, 1)])
+        param = constant(0, 0)
+        sentence = predicate_sentence('is tall', [param], vocab)
+        
+    """
+    return Vocabulary.PredicateSentence(predicate, parameters, vocabulary)
+                     
+def operate(operator, operands):
+    """
+    Apply an operator to a list of sentences (operands). Example::
+    
+        lhs = parse('a')
+        rhs = parse('b')
+        sentence = operate('Material Biconditional', [lhs, rhs])
+        
+    """
+    return Vocabulary.MolecularSentence(operator, operands)
+
+def negate(sentence):
+    """
+    Negate a sentence and return the negated sentence. This is shorthand for 
+    *operate('Negation', [sentence])*.
+    """
+    return Vocabulary.MolecularSentence('Negation', [sentence])
+
+def quantify(quantifier, variable, sentence):
+    """
+    Return a quanitified sentence for the given quantifier, bound variable and
+    inner sentence::
+
+        v = variable(0, 0)
+        sentence = quantify('Universal', v, predicate_sentence('Existence', [v]))
+        
+    """
+    return Vocabulary.QuantifiedSentence(quantifier, variable, sentence)
+        
+def arity(operator):
+    """
+    Get the arity of an operator. Example::
+    
+        assert arity('Conjunction') == 2
+        
+    """
+    return operators[operator]
+    
+def is_constant(obj):
+    """
+    Check whether a parameter is a constant.
+    """
+    return isinstance(obj, Vocabulary.Constant)
+
+def is_variable(obj):
+    """
+    Check whether a parameter is a variable.
+    """
+    return isinstance(obj, Vocabulary.Variable)
+    
+class Vocabulary(object):
+    """
+    Create a new vocabulary. *predicate_defs* is a list of tuples (name, index, subscript, arity)
+    defining user predicates. Example::
+        
+        vocab = Vocabulary([
+            ('is tall', 0, 0, 1),
+            ('is taller than', 0, 1, 2),
+            ('between', 1, 0, 3)
+        ])
+        
+    """
+    
     class Predicate(object):
         
         def __init__(self, name, index, subscript, arity):
@@ -91,12 +223,29 @@ class Vocabulary(object):
     class PredicateIndexMismatchError(PredicateError):
         pass
         
-    def __init__(self):
+    def __init__(self, predicate_defs=None):
         self.user_predicates_list = []
         self.user_predicates = {}
         self.user_predicates_index = {}
+        if predicate_defs:
+            for info in predicate_defs:
+                assert len(info) == 4, "Prediate declarations must contain 4 elements"
+                self.declare_predicate(*info)
         
     def get_predicate(self, name=None, index=None, subscript=None):
+        """
+        Get a defined predicate, either by name, or by index and subscript. This includes system
+        predicates::
+        
+            vocab = Vocabulary()
+            predicate = vocab.get_predicate('Identity')
+            
+        Or user-defined predicates::
+        
+            vocab = Vocabulary([('is tall', 0, 0, 1)])
+            assert vocab.get_predicate('is tall') == vocab.get_predicate(index=0, subscript=0)
+            
+        """
         if name != None:
             if name in self.system_predicates:
                 return self.system_predicates[name]
@@ -115,6 +264,13 @@ class Vocabulary(object):
         raise Exception('Not enough information to get predicate')
 
     def declare_predicate(self, name, index, subscript, arity):
+        """
+        Declare a user-defined predicate::
+        
+            vocab = Vocabulary()
+            vocab.declare_predicate('is tall', 0, 0, 1)
+            
+        """
         if name in system_predicates:
             raise Vocabulary.PredicateError('Cannot declare system predicate: ' + name)
         if name in self.user_predicates:
@@ -198,7 +354,14 @@ class Vocabulary(object):
             
     class PredicateSentence(Sentence):
         
-        def __init__(self, predicate, parameters):
+        def __init__(self, predicate, parameters, vocabulary=None):
+            if isinstance(predicate, str):
+                if predicate in system_predicates:
+                    predicate = system_predicates[predicate]
+                elif vocabulary is None:
+                    raise Vocabulary.PredicateError(predicate + " is not a system predicate, and no vocabulary was passed.")
+                else:
+                    predicate = vocabulary.get_predicate(predicate)    
             if len(parameters) != predicate.arity:
                 raise Vocabulary.PredicateArityMismatchError('Expecting ' + predicate.arity + ' parameters for predicate ' + 
                 str([index, subscript]) + ', got ' + arity + ' instead.')
@@ -273,30 +436,42 @@ class TableauxSystem(object):
     
     class Tableau(object):
         
+        #: Whether the proof is valid, set after the proof is finished.
+        valid = None
+
+        #: The branches on the tree.
+        branches = set()
+
+        #: A history of rule applications.
+        history = []
+
+        #: A tree structure of the tableau, generated after the proof is finished.
+        tree = dict()
+
+        #: Whether the proof is finished.
+        finished = False
+        
         def __init__(self, logic, argument):
             self.logic = logic
             self.argument = argument
-            self.branches = set()
-            self.finished = False
             self.rules = [Rule(self) for Rule in logic.TableauxRules.rules]
+            self.branches = set()
             self.history = []
+            self.finished = False
+            self.build_trunk()
             
-        def open_branches(self):
-            return {branch for branch in self.branches if not branch.closed}
-            
-        def branch(self, other_branch=None):
-            if not other_branch:
-                branch = TableauxSystem.Branch()
-            else:
-                branch = other_branch.copy()
-                self.branches.discard(other_branch)
-            self.branches.add(branch)
-            return branch
-            
-        def build_trunk(self):
-            return self.logic.TableauxSystem.build_trunk(self, self.argument)
-            
+        def build(self):
+            """
+            Build the tableau and return *self*.
+            """
+            while not self.finished:
+                self.step()
+            return self
+
         def step(self):
+            """
+            Perform the next rule application, if any.
+            """
             if self.finished:
                 return False
             for rule in self.rules:
@@ -308,18 +483,13 @@ class TableauxSystem(object):
                     return application
             self.finish()
             return False
-        
-        def build(self):
-            self.build_trunk()
-            while not self.finished:
-                self.step()
-            return self
-        
-        def finish(self):
-            self.finished = True
-            self.tree = self.structure(self.branches)
-            self.valid = (self.finished and len(self.open_branches()) == 0)
-
+                
+        def open_branches(self):
+            """
+            Return the set of open branches on the tableau.
+            """
+            return {branch for branch in self.branches if not branch.closed}
+                              
         def structure(self, branches, depth=0):
             structure = { 'nodes': [], 'children': [], 'closed': False }
             while True:
@@ -336,6 +506,23 @@ class TableauxSystem(object):
             if len(branches) == 1:
                 structure['closed'] = list(branches)[0].closed
             return structure
+            
+        def branch(self, other_branch=None):
+            if not other_branch:
+                branch = TableauxSystem.Branch()
+            else:
+                branch = other_branch.copy()
+                self.branches.discard(other_branch)
+            self.branches.add(branch)
+            return branch
+            
+        def build_trunk(self):
+            return self.logic.TableauxSystem.build_trunk(self, self.argument)
+                    
+        def finish(self):
+            self.finished = True
+            self.tree = self.structure(self.branches)
+            self.valid = (self.finished and len(self.open_branches()) == 0)
             
         def __repr__(self):
             return {
