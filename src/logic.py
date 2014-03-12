@@ -229,7 +229,7 @@ class Vocabulary(object):
         self.user_predicates_index = {}
         if predicate_defs:
             for info in predicate_defs:
-                assert len(info) == 4, "Prediate declarations must contain 4 elements"
+                assert len(info) == 4, "Prediate declarations must be 4-tuples (name, index, subscript, arity)"
                 self.declare_predicate(*info)
         
     def get_predicate(self, name=None, index=None, subscript=None):
@@ -445,7 +445,7 @@ class TableauxSystem(object):
         #: A history of rule applications.
         history = []
 
-        #: A tree structure of the tableau, generated after the proof is finished.
+        #: A tree-map structure of the tableau, generated after the proof is finished.
         tree = dict()
 
         #: Whether the proof is finished.
