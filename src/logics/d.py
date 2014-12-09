@@ -1,3 +1,6 @@
+"""
+D - Deonitic Normal Modal Logic
+"""
 name = 'D'
 description = 'Deontic Normal Modal Logic'
 links = {

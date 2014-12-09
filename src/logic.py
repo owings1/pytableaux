@@ -1,7 +1,6 @@
 import importlib, notations
 from types import ModuleType
 
-# Operators
 operators_list = [
     'Negation', 
     'Conjunction', 
@@ -435,6 +434,9 @@ system_predicates = {
 class TableauxSystem(object):
     
     class Tableau(object):
+        """
+        Represents a tableau proof of an argument for the given logic.
+        """
         
         #: Whether the proof is valid, set after the proof is finished.
         valid = None

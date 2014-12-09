@@ -1,3 +1,7 @@
+"""
+CFOL - Classical First Order Logic.
+"""
+
 name = 'CFOL'
 description = 'Classical First Order Logic'
 
