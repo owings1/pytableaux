@@ -42,6 +42,18 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             sentence = node.props['sentence']
             branch.add({ 'sentence': negate(sentence), 'designated': True }).tick(node)
+
+    class UndesignatedCollapseQRule(NodeRule):
+
+        quantifier = None
+
+        def applies_to_node(self, node, branch):
+            return (not node.props['designated'] and
+                    node.props['sentence'].quantifier == self.quantifier)
+
+        def apply_to_node(self, node, branch):
+            sentence = node.props['sentence']
+            branch.add({ 'sentence': negate(sentence), 'designated': True }).tick(node)
             
     class NegatedUndesignatedCollapseRule(NodeRule):
         
@@ -80,18 +92,24 @@ class TableauxRules(object):
         
     class NegatedMaterialBiconditionalUndesignated(NegatedUndesignatedCollapseRule):
         operator = 'Material Biconditional'
-        
+
     class ConditionalUndesignated(UndesignatedCollapseRule):
         operator = 'Conditional'
-    
+
     class NegatedConditionalUndesignated(NegatedUndesignatedCollapseRule):
         operator = 'Conditional'
-        
+
     class BiconditionalUndesignated(UndesignatedCollapseRule):
         operator = 'Biconditional'
-        
+
     class NegatedBiconditionalUndesignated(NegatedUndesignatedCollapseRule):
         operator = 'Biconditional'
+
+    class UniversalUndesignated(UndesignatedCollapseQRule):
+        quantifier = 'Universal'
+
+    class ExistentialUndesignated(UndesignatedCollapseQRule):
+        quantifier = 'Existential'
             
     class NegatedConjunctionDesignated(DoubleOperatorDesignationRule):
         
@@ -202,7 +220,8 @@ class TableauxRules(object):
                 'sentence': negate(operate('Conditional', [sentence.rhs, sentence.lhs])),
                 'designated': True
             }).tick(node)
-            
+
+
     fderules = fde.TableauxRules
     k3rules = k3.TableauxRules
     
@@ -225,6 +244,10 @@ class TableauxRules(object):
         BiconditionalUndesignated,
         NegatedBiconditionalUndesignated,
         BiconditionalDesignated,
+        fderules.UniversalDesignated,
+        fderules.ExistentialDesignated,
+        UniversalUndesignated,
+        ExistentialUndesignated,
         
         # branching rules
         fderules.DisjunctionDesignated,
