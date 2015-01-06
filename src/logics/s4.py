@@ -10,8 +10,8 @@ def example_validities():
     return args
     
 def example_invalidities():
-    import cpl
-    args = cpl.example_invalidities()
+    import cfol
+    args = cfol.example_invalidities()
     args.update({
 	    'Possibility distribution': [['KMaMb'], 'MKab'],
 		'S5 Inference 1': 'CaLMa'
