@@ -1,3 +1,7 @@
+"""
+Copyright (C) 2014, Doug Owings. All Rights Reserved.
+"""
+
 from logic import *
 
 def main():

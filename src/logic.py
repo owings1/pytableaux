@@ -1,3 +1,7 @@
+"""
+Copyright (C) 2014, Doug Owings. All Rights Reserved.
+"""
+
 import importlib, notations
 from types import ModuleType
 
@@ -13,15 +17,15 @@ operators_list = [
     'Necessity'
 ]
 operators = {
-    'Negation': 1,
-    'Conjunction': 2,
-    'Disjunction': 2,
-    'Material Conditional': 2,
-    'Material Biconditional': 2,
-    'Conditional': 2,
-    'Biconditional': 2,
-    'Possibility': 1,
-    'Necessity': 1
+    'Negation'               : 1,
+    'Conjunction'            : 2,
+    'Disjunction'            : 2,
+    'Material Conditional'   : 2,
+    'Material Biconditional' : 2,
+    'Conditional'            : 2,
+    'Biconditional'          : 2,
+    'Possibility'            : 1,
+    'Necessity'              : 1
 }
 conditional_operators = {'Conditional', 'Material Conditional'}
 biconditional_operators = {'Biconditional', 'Material Biconditional'}
@@ -427,8 +431,8 @@ class Vocabulary(object):
             return v
 
 system_predicates = {
-    'Identity': Vocabulary.Predicate('Identity', -1, 0, 2),
-    'Existence': Vocabulary.Predicate('Existence', -2, 0, 1)
+    'Identity'  : Vocabulary.Predicate('Identity', -1, 0, 2),
+    'Existence' : Vocabulary.Predicate('Existence', -2, 0, 1)
 }
             
 class TableauxSystem(object):

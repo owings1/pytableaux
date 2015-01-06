@@ -1,5 +1,8 @@
+"""
+Copyright (C) 2014, Doug Owings. All Rights Reserved.
+"""
+
 import logic
-from logic import operate, arity, quantify, is_constant, is_variable, system_predicates, system_predicates_index
 
 name = 'Polish'
 
@@ -15,7 +18,7 @@ def write(sentence):
         s += write_item(sentence.variable, Parser.vchars)
         s += write(sentence.sentence)
     elif sentence.is_predicate():
-        if sentence.predicate.name in system_predicates:
+        if sentence.predicate.name in logic.system_predicates:
             char = Parser.spchar(sentence.predicate.index)
             s = char
             if sentence.predicate.subscript > 0:
@@ -23,9 +26,9 @@ def write(sentence):
         else:
             s = write_item(sentence.predicate, Parser.upchars)
         for param in sentence.parameters:
-            if is_constant(param):
+            if logic.is_constant(param):
                 s += write_item(param, Parser.cchars)
-            elif is_variable(param):
+            elif logic.is_variable(param):
                 s += write_item(param, Parser.vchars)
             else:
                 raise Exception(NotImplemented)
@@ -43,22 +46,22 @@ class Parser(logic.Parser):
     
     achars = ['a', 'b', 'c', 'd', 'e']
     ochars = {
-        'N': 'Negation',
-        'K': 'Conjunction',
-        'A': 'Disjunction',
-        'C': 'Material Conditional',
-        'E': 'Material Biconditional',
-        'U': 'Conditional',
-        'B': 'Biconditional',
-        'M': 'Possibility',
-        'L': 'Necessity'
+        'N' : 'Negation',
+        'K' : 'Conjunction',
+        'A' : 'Disjunction',
+        'C' : 'Material Conditional',
+        'E' : 'Material Biconditional',
+        'U' : 'Conditional',
+        'B' : 'Biconditional',
+        'M' : 'Possibility',
+        'L' : 'Necessity'
     }
     
     vchars = ['v', 'x', 'y', 'z']
     cchars = ['m', 'n', 'o', 's']
     qchars = {
-        'V': 'Universal',
-        'S': 'Existential'
+        'V' : 'Universal',
+        'S' : 'Existential'
     }
     upchars = ['F', 'G', 'H', 'K']
     spchars = ['I', 'J']
@@ -68,8 +71,8 @@ class Parser(logic.Parser):
         if self.current() in self.ochars:
             operator = self.ochars[self.current()]
             self.advance()
-            operands = [self.read() for x in range(arity(operator))]
-            return operate(operator, operands)
+            operands = [self.read() for x in range(logic.arity(operator))]
+            return logic.operate(operator, operands)
         if self.current() in self.upchars + self.spchars:
             return self.read_predicate_sentence()
         if self.current() in self.qchars:
@@ -85,5 +88,5 @@ class Parser(logic.Parser):
                 raise logic.Parser.ParseError('Unused bound variable ' +
                         write_item(variable, self.vchars) + ' at position ' + str(self.pos))
             self.bound_vars.remove(variable)
-            return quantify(quantifier, variable, sentence)
+            return logic.quantify(quantifier, variable, sentence)
         return self.read_atomic()

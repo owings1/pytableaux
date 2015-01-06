@@ -24,6 +24,10 @@ body {
     padding: 20px;
 }
 
+.footer {
+    text-align: center;
+}
+
 form.argument {
     min-width: 1040px;
 }

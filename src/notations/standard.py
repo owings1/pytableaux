@@ -1,3 +1,7 @@
+"""
+Copyright (C) 2014, Doug Owings. All Rights Reserved.
+"""
+
 import logic
 
 class Parser(logic.Parser):

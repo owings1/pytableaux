@@ -1,9 +1,13 @@
+"""
+Copyright (C) 2014, Doug Owings. All Rights Reserved.
+"""
+
 import logic, json
 
 available_module_names = {
-    'logics': ['cfol', 'k3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
-    'notations': ['polish'],
-    'writers': ['html', 'ascii']
+    'logics'    : ['cfol', 'k3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
+    'notations' : ['polish'],
+    'writers'   : ['html', 'ascii']
 }
 
 import importlib
@@ -22,8 +26,8 @@ import os.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 config = {
     '/static' : {
-        'tools.staticdir.on': True,
-        'tools.staticdir.dir': os.path.join(current_dir, 'www', 'static')
+        'tools.staticdir.on'  : True,
+        'tools.staticdir.dir' : os.path.join(current_dir, 'www', 'static')
     }
 }
 
@@ -39,19 +43,19 @@ class App:
         App.fix_kw(kw)
         print kw
         data = {
-            'operators_list': logic.operators_list,
-            'logic_modules': available_module_names['logics'],
-            'logics': modules['logics'],
-            'writer_modules': available_module_names['writers'],
-            'writers': modules['writers'],
-            'notation_modules': available_module_names['notations'],
-            'notations': modules['notations'],
-            'form_data': kw,
-            'system_predicates': logic.system_predicates,
-            'quantifiers': logic.quantifiers,
+            'operators_list'    : logic.operators_list,
+            'logic_modules'     : available_module_names['logics'],
+            'logics'            : modules['logics'],
+            'writer_modules'    : available_module_names['writers'],
+            'writers'           : modules['writers'],
+            'notation_modules'  : available_module_names['notations'],
+            'notations'         : modules['notations'],
+            'form_data'         : kw,
+            'system_predicates' : logic.system_predicates,
+            'quantifiers'       : logic.quantifiers,
             'app' : json.dumps({
                 'notation_user_predicate_symbols' : notation_user_predicate_symbols,
-                'num_user_predicate_symbols': logic.num_user_predicate_symbols
+                'num_user_predicate_symbols'      : logic.num_user_predicate_symbols
             })
         }
         vocabulary = logic.Vocabulary()
@@ -93,17 +97,17 @@ class App:
                 argument = logic.argument(conclusion, premises)
                 tableaux = [logic.tableau(modules['logics'][chosen_logic], argument).build() for chosen_logic in kw['logic']]
                 data.update({
-                    'tableaux': tableaux,
-                    'notation': notation,
-                    'writer': writer,
-                    'argument': {
-                        'premises': [notation.write(premise) for premise in argument.premises],
-                        'conclusion': notation.write(argument.conclusion)
+                    'tableaux' : tableaux,
+                    'notation' : notation,
+                    'writer'   : writer,
+                    'argument' : {
+                        'premises'   : [notation.write(premise) for premise in argument.premises],
+                        'conclusion' : notation.write(argument.conclusion)
                     }
                 })
         data.update({
-            'user_predicates': vocabulary.user_predicates,
-            'user_predicates_list': vocabulary.user_predicates_list
+            'user_predicates'      : vocabulary.user_predicates,
+            'user_predicates_list' : vocabulary.user_predicates_list
         })
         if 'errors' in kw:
             data['errors'] = kw['errors']
@@ -131,6 +135,7 @@ class App:
                 if param.endswith('[]'):
                     if isinstance(kw[param], basestring):
                         kw[param] = [kw[param]]
+
     @staticmethod
     def declare_user_predicates(kw, vocabulary, errors={}):
         App.fix_kw(kw)
