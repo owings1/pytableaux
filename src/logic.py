@@ -16,6 +16,7 @@ operators_list = [
     'Possibility', 
     'Necessity'
 ]
+
 operators = {
     'Negation'               : 1,
     'Conjunction'            : 2,
@@ -27,25 +28,38 @@ operators = {
     'Possibility'            : 1,
     'Necessity'              : 1
 }
-conditional_operators = {'Conditional', 'Material Conditional'}
-biconditional_operators = {'Biconditional', 'Material Biconditional'}
-modal_operators = {'Possibility', 'Necessity'}
 
-# Quantifiers
-quantifiers = ['Universal', 'Existential']
+quantifiers = [
+    'Universal',
+    'Existential'
+]
 
-# System Predicates
-system_predicates_list = ['Identity', 'Existence']
+modal_operators = {
+    'Possibility',
+    'Necessity'
+}
+
+conditional_operators = {
+    'Conditional',
+    'Material Conditional'
+}
+
+biconditional_operators = {
+    'Biconditional',
+    'Material Biconditional'
+}
+
+system_predicates_list  = ['Identity', 'Existence']
 system_predicates_index = {
     -1: { 0: 'Identity'},
     -2: { 0: 'Existence'}
 }
 
 # The number of symbols is fixed to allow multiple notations.
+num_var_symbols            = 4
+num_const_symbols          = 4
+num_atomic_symbols         = 5
 num_user_predicate_symbols = 4
-num_var_symbols = 4
-num_const_symbols = 4
-num_atomic_symbols = 5
 
 def parse(string, vocabulary=None, notation='polish'):
     """
@@ -175,24 +189,34 @@ def quantify(quantifier, variable, sentence):
 def arity(operator):
     """
     Get the arity of an operator. Example::
-    
+
         assert arity('Conjunction') == 2
-        
+
     """
     return operators[operator]
-    
+
 def is_constant(obj):
     """
-    Check whether a parameter is a constant.
+    Check whether a parameter is a constant. Example::
+
+        assert is_constant(constant(0, 0))
+        assert not is_constant(variable(0, 0))
+        assert not is_constant([0, 0]) # must be an instance of Vocabulary.Constant
+
     """
     return isinstance(obj, Vocabulary.Constant)
 
 def is_variable(obj):
     """
-    Check whether a parameter is a variable.
+    Check whether a parameter is a variable. Example::
+
+        assert is_constant(variable(0, 0))
+        assert not is_constant(constant(0, 0))
+        assert not is_constant([0, 0]) # must be an instance of Vocabulary.Variable
+
     """
     return isinstance(obj, Vocabulary.Variable)
-    
+
 class Vocabulary(object):
     """
     Create a new vocabulary. *predicate_defs* is a list of tuples (name, index, subscript, arity)
@@ -209,10 +233,10 @@ class Vocabulary(object):
     class Predicate(object):
         
         def __init__(self, name, index, subscript, arity):
-            self.name = name
-            self.index = index
+            self.name      = name
+            self.index     = index
+            self.arity     = arity
             self.subscript = subscript
-            self.arity = arity
 
     class PredicateError(Exception):
         pass
@@ -227,8 +251,8 @@ class Vocabulary(object):
         pass
         
     def __init__(self, predicate_defs=None):
-        self.user_predicates_list = []
-        self.user_predicates = {}
+        self.user_predicates       = {}
+        self.user_predicates_list  = []
         self.user_predicates_index = {}
         if predicate_defs:
             for info in predicate_defs:
@@ -271,7 +295,7 @@ class Vocabulary(object):
         Declare a user-defined predicate::
         
             vocab = Vocabulary()
-            vocab.declare_predicate('is tall', 0, 0, 1)
+            vocab.declare_predicate(name='is tall', index=0, subscript=0, arity=1)
             
         """
         if name in system_predicates:
@@ -305,9 +329,9 @@ class Vocabulary(object):
                     
     class Sentence(object):
         
-        operator = None
+        operator   = None
         quantifier = None
-        predicate = None
+        predicate  = None
         
         def is_sentence(self):
             return isinstance(self, Vocabulary.Sentence)
@@ -343,7 +367,7 @@ class Vocabulary(object):
     class AtomicSentence(Sentence):
         
         def __init__(self, index, subscript):
-            self.index = index
+            self.index     = index
             self.subscript = subscript
 
         def substitute(self, constant, variable):
@@ -368,7 +392,7 @@ class Vocabulary(object):
             if len(parameters) != predicate.arity:
                 raise Vocabulary.PredicateArityMismatchError('Expecting ' + predicate.arity + ' parameters for predicate ' + 
                 str([index, subscript]) + ', got ' + arity + ' instead.')
-            self.predicate = predicate
+            self.predicate  = predicate
             self.parameters = parameters
         
         def substitute(self, constant, variable):
@@ -390,8 +414,8 @@ class Vocabulary(object):
         
         def __init__(self, quantifier, variable, sentence):
             self.quantifier = quantifier
-            self.variable = variable
-            self.sentence = sentence
+            self.variable   = variable
+            self.sentence   = sentence
             
         def substitute(self, constant, variable):
             return self.sentence.substitute(constant, variable)
@@ -512,6 +536,9 @@ class TableauxSystem(object):
             if len(branches) == 1:
                 structure['closed'] = list(branches)[0].closed
             return structure
+
+        def branch_multi(self, other_branch=None, num=1):
+            return [self.branch(other_branch) for x in range(num)]
             
         def branch(self, other_branch=None):
             if not other_branch:
@@ -532,10 +559,10 @@ class TableauxSystem(object):
             
         def __repr__(self):
             return {
-                'argument': self.argument,
-                'branches': len(self.branches),
-                'rules_applied': len(self.history),
-                'finished': self.finished
+                'argument'      : self.argument,
+                'branches'      : len(self.branches),
+                'rules_applied' : len(self.history),
+                'finished'      : self.finished
             }.__repr__()
             
     class Branch(object):
@@ -618,10 +645,10 @@ class TableauxSystem(object):
             self.tableau = tableau
             
         def applies(self):
-            return False
+            raise Exception(NotImplemented)
             
         def apply(self, target):
-            pass
+            raise Exception(NotImplemented)
         
         def __repr__(self):
             return self.__class__.__name__
@@ -636,7 +663,7 @@ class TableauxSystem(object):
             return False
                     
         def applies_to_branch(self, branch):
-            return False
+            raise Exception(NotImplemented)
             
     class ClosureRule(BranchRule):
 
@@ -670,7 +697,7 @@ class TableauxSystem(object):
         def applies_to_node(self, node, branch):
             return (self.operator != None and 'sentence' in node.props and 
                     node.props['sentence'].operator == self.operator)
-    
+
     class DoubleOperatorRule(NodeRule):
         
         operators = None
@@ -679,7 +706,16 @@ class TableauxSystem(object):
             return (self.operators != None and 'sentence' in node.props and
                     node.props['sentence'].operator == self.operators[0] and
                     node.props['sentence'].operand.operator == self.operators[1])
-                    
+
+    class OperatorQuantifierRule(NodeRule):
+
+        connectives = None
+
+        def applies_to_node(self, node, branch):
+            return (self.connectives != None and 'sentence' in node.props and
+                    node.props['sentence'].operator == self.connectives[0] and
+                    node.props['sentence'].operand.quantifier == self.connectives[1])
+
     class OperatorDesignationRule(NodeRule):
         
         conditions = None
@@ -699,6 +735,15 @@ class TableauxSystem(object):
                     node.props['sentence'].operand.operator == self.conditions[0][1] and
                     node.props['designated'] == self.conditions[1])
 
+    class QuantifierDesignationRule(NodeRule):
+
+        conditions = None
+
+        def applies_to_node(self, node, branch):
+            return (self.conditions != None and 'sentence' in node.props and
+                    'designated' in node.props and node.props['sentence'].quantifier == self.conditions[0] and
+                    node.props['designated'] == self.conditions[1])
+
     @staticmethod
     def get_worlds_on_branch(branch):
         worlds = set()
@@ -709,6 +754,8 @@ class TableauxSystem(object):
                 worlds.add(node.props['world1'])
             if 'world2' in node.props:
                 worlds.add(node.props['world2'])
+            if 'worlds' in node.props:
+                worlds.update(node.props['worlds'])
         return worlds
 
     @staticmethod
@@ -754,14 +801,13 @@ class Parser(object):
     class BoundVariableError(Exception):
         pass
             
-    achars = []
-    ochars = {}
-    cchars = []
-    vchars = []
-    qchars = {}
+    achars  = []
+    ochars  = {}
+    cchars  = []
+    vchars  = []
+    qchars  = {}
     upchars = []
     spchars = ['I', 'J']
-    
     wschars = set([' '])
     
     def __init__(self, vocabulary):
