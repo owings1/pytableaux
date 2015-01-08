@@ -47,7 +47,7 @@ class TableauxSystem(logic.TableauxSystem):
 
         def applies_to_branch(self, branch):
             if self.conditions == None:
-                return False
+                raise Exception(NotImplemented)
             q = self.conditions[0]
             d = self.conditions[1]
             constants = branch.constants()
@@ -234,8 +234,8 @@ class TableauxRules:
         def apply_to_node(self, node, branch):
             s = node.props['sentence']
             branch.update([
-                { 'sentence': negate(s.lhs), 'designated': False },
-                { 'sentence': s.rhs,         'designated': False }
+                { 'sentence' : negate(s.lhs), 'designated': False },
+                { 'sentence' : s.rhs,         'designated': False }
             ]).tick(node)
 
     class MaterialConditionalNegatedUndesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
@@ -271,12 +271,12 @@ class TableauxRules:
             newBranches = self.tableau.branch_multi(branch, 2)
             s = node.props['sentence']
             newBranches[0].update([
-                { 'sentence': negate(s.lhs), 'designated': True },
-                { 'sentence': negate(s.rhs), 'designated': True }
+                { 'sentence' : negate(s.lhs), 'designated' : True },
+                { 'sentence' : negate(s.rhs), 'designated' : True }
             ]).tick(node)
             newBranches[1].update([
-                { 'sentence': s.rhs, 'designated': True },
-                { 'sentence': s.lhs, 'designated': True }
+                { 'sentence' : s.rhs, 'designated' : True },
+                { 'sentence' : s.lhs, 'designated' : True }
             ]).tick(node)
 
     class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
@@ -294,12 +294,12 @@ class TableauxRules:
             newBranches = self.tableau.branch_multi(branch, 2)
             s = node.props['sentence'].operand
             newBranches[0].update([
-                { 'sentence': s.lhs,         'designated': True },
-                { 'sentence': negate(s.rhs), 'designated': True }
+                { 'sentence' : s.lhs,         'designated' : True },
+                { 'sentence' : negate(s.rhs), 'designated' : True }
             ]).tick(node)
             newBranches[1].update([
-                { 'sentence': negate(s.lhs), 'designated': True },
-                { 'sentence': s.rhs,         'designated': True }
+                { 'sentence' : negate(s.lhs), 'designated' : True },
+                { 'sentence' : s.rhs,         'designated' : True }
             ]).tick(node)
                     
     class MaterialBiconditionalUndesignated(logic.TableauxSystem.OperatorDesignationRule):
