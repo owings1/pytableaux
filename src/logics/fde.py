@@ -1,8 +1,93 @@
+# pytableaux - First Degree Entailment Logic
+#
+# Copyright (C) 2014, Doug Owings. All Rights Reserved.
+"""
+Semantics
+---------
+
+FDE is a 4-valued logic (True, False, Neither and Both). Two primitive operators, negation and
+disjunction, are defined via truth tables.
+
+**Negation**:
+
++------------+------------+
+| A          | not-A      |
++============+============+
+|  T         |  F         |
++------------+------------+
+|  B         |  B         |
++------------+------------+
+|  N         |  N         |
++------------+------------+
+|  F         |  T         |
++------------+------------+
+
+**Disjunction**:
+
++-----------+----------+-----------+-----------+---------+
+|  A or B   |          |           |           |         |
++===========+==========+===========+===========+=========+
+|           |  **T**   |   **B**   |   **N**   |  **F**  |
++-----------+----------+-----------+-----------+---------+
+|  **T**    |    T     |     T     |     T     |    T    |
++-----------+----------+-----------+-----------+---------+
+|  **B**    |    T     |     B     |     B     |    F    |
++-----------+----------+-----------+-----------+---------+
+|  **N**    |    T     |     B     |     N     |    F    |
++-----------+----------+-----------+-----------+---------+
+|  **F**    |    T     |     F     |     F     |    F    | 
++-----------+----------+-----------+-----------+---------+
+
+Other operators are defined via semantic equivalencies:
+
+- **Conjunction**: ``A and B := not (not-A or not-B)``
+
+- **Material Conditional**: ``if A then B := not-A or B``
+    
+- **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
+
+The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
+
+**Predicate Sentences** like *a is F* are handled via a predicate's *extension* and *anti-extension*:
+
+- *a is F* iff the object denoted by *a* is in the extension of *F*.
+
+- it's not the case that *a is F* iff the object denoted by *a* is in the anti-extension of *F*.
+
+There is no exclusivity or exhaustion constraint on a predicate's extension/anti-extension, so
+there can be cases where an object is in neither or both. Thus **Quantification** can be thought
+of along these lines:
+
+- **Universal Quantifier**: *for all x, x is F* has the value:
+
+    - **T** iff everything is in the extension of *F* and its anti-extension is empty.
+    - **B** iff everything is in the extension of *F* and its anti-extension is non-empty.
+    - **N** iff not everything is in the extension of *F* and its anti-extension is empty.
+    - **F** iff not everything is in the extension of *F* and its anti-extension is non-empty.
+
+- **Existential Quantifier**: ``there exists an x that is F := not (for all x, not (x is F))``
+
+*C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is either **T** or
+**B** (the *designated* values) are cases where *C* also has a *designated* value.
+
+Notes
+-----
+
+Some notable features of FDE include:
+
+* No logical truths. The means that the law of excluded middle, and the law of non-contradiction
+  fail, as well as conditional identity (if A then A).
+  
+* Failure of Modus Ponens, Modus Tollens, Disjunctive Syllogism, and other Classical validities.
+
+* DeMorgan laws are valid.
+
+For futher reading see:
+
+- `Stanford Encyclopedia entry on paraconsistent logic <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
+"""
 name = 'FDE'
-description = 'First Degree Entailment 4-valued logic'
-links = {
-    'Stanford Encyclopedia' : 'http://plato.stanford.edu/entries/logic-paraconsistent/'
-}
+description = 'First Degree Entailment Logic'
 
 def example_validities():
     return {
@@ -16,24 +101,28 @@ def example_validities():
     }
 
 def example_invalidities():
-    """
-    Everything invalid in K3 or LP is also invalid in FDE.
-    """
+    # Everything invalid in K3 or LP is also invalid in FDE.
     import k3, lp
     args = k3.example_invalidities()
     args.update(lp.example_invalidities())
     return args
 
 import logic
-from logic import negate, quantify
+from logic import negate, quantify, atomic, Vocabulary
 
 class TableauxSystem(logic.TableauxSystem):
+    """
+    Nodes for FDE have a boolean *designation* property, and a branch is closed iff
+    the same sentence appears on both a designated and undesignated node. This allows
+    for both a sentence and its negation to appear as designated (xor undesignated)
+    on an open branch.
+    """
 
     @staticmethod
     def build_trunk(tableau, argument):
         """
-        To build the trunk for an argument, write each premise with the *designated* marker,
-        followed by the conclusion with the *undesignated* marker.
+        To build the trunk for an argument, add a designated node for each premise, and
+        an undesignated node for the conclusion.
         """
 
         branch = tableau.branch()
@@ -41,33 +130,13 @@ class TableauxSystem(logic.TableauxSystem):
             branch.add({ 'sentence': premise, 'designated': True })
         branch.add({ 'sentence': argument.conclusion, 'designated': False })
 
-    class UniversalyDesignationRule(logic.TableauxSystem.BranchRule):
-
-        conditions = None
-
-        def applies_to_branch(self, branch):
-            if self.conditions == None:
-                raise Exception(NotImplemented)
-            q = self.conditions[0]
-            d = self.conditions[1]
-            constants = branch.constants()
-            for n in branch.get_nodes():
-                if n.props['sentence'].quantifier == q and n.props['designated'] == d:
-                    v = n.props['sentence'].variable
-                    s = n.props['sentence'].sentence
-                    if not len(constants):
-                        c = branch.new_constant()
-                        return { 'branch' : branch, 'sentence' : s.substitute(c, v), 'node' : n }
-                    for c in constants:
-                        r = s.substitute(c, v)
-                        if not branch.has({ 'sentence': r, 'designated' : d }):
-                            return { 'branch' : branch, 'sentence' : r, 'node' : n }
-            return False
-
-        def apply(self, target):
-            target['branch'].add({ 'sentence' : target['sentence'], 'designated' : target['node'].props['designated'] })
-
-class TableauxRules:
+class TableauxRules(object):
+    """
+    In general, rules for connectives consist of four rules per connective:
+    a designated rule, an undesignated rule, a negated designated rule, and a negated
+    undesignated rule. The special case of negation has a total of two rules which apply
+    to double negation only, one designated rule, and one undesignated rule.
+    """
 
     class Closure(logic.TableauxSystem.ClosureRule):
         """
@@ -81,116 +150,114 @@ class TableauxRules:
                     return branch
             return False
 
-    # Conjunction Rules
+        def example(self):
+            a = atomic(0, 0)
+            self.tableau.branch().update([
+                { 'sentence' : a, 'designated' : True  },
+                { 'sentence' : a, 'designated' : False }
+            ])
 
-    class ConjunctionDesignated(logic.TableauxSystem.OperatorDesignationRule):
+    class ConjunctionDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add a designated node with *c* to *b*, then tick *n*.
         """
 
-        conditions = ('Conjunction', True)
+        operator    = 'Conjunction'
+        designation = True
 
         def apply_to_node(self, node, branch):
-            for conjunct in node.props['sentence'].operands:
-                branch.add({ 'sentence' : conjunct, 'designated' : True })
+            for operand in node.props['sentence'].operands:
+                # allow disjunction inheritance below
+                branch.add({ 'sentence' : operand, 'designated' : self.designation })
             branch.tick(node)
 
-    class ConjunctionNegatedDesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
+    class ConjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated negated conjunction node *n* on a branch *b*, for each conjunct
         *c*, make a new branch *b'* from *b* and add a designated node with the negation of *c* to *b'*,
         then tick *n*.
         """
 
-        conditions = (('Negation', 'Conjunction'), True)
+        negated     = True
+        operator    = 'Conjunction'
+        designation = True
 
         def apply_to_node(self, node, branch):
             for conjunct in node.props['sentence'].operand.operands:
-                self.tableau.branch(branch).add({ 'sentence' : negate(conjunct), 'designated' : True }).tick(node)
+                # allow disjunction inheritance below
+                self.tableau.branch(branch).add({ 'sentence' : negate(conjunct), 'designated' : self.designation }).tick(node)
 
-    class ConjunctionUndesignated(logic.TableauxSystem.OperatorDesignationRule):
+    class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked undesignated conjunction node *n* on a branch *b*, for each conjunct
         *c*, make a new branch *b'* from *b* and add an undesignated node with *c* to *b'*,
         then tick *n*.
         """
 
-        conditions = ('Conjunction', False)
+        operator    = 'Conjunction'
+        designation = False
 
         def apply_to_node(self, node, branch):
-            for conjunct in node.props['sentence'].operands:
-                self.tableau.branch(branch).add({ 'sentence' : conjunct, 'designated' : False }).tick(node)
+            for operand in node.props['sentence'].operands:
+                # allow disjunction inheritance below
+                self.tableau.branch(branch).add({ 'sentence' : operand, 'designated' : self.designation }).tick(node)
 
-    class ConjunctionNegatedUndesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
+    class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked undesignated negated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add an undesignated node with the negation of *c* to *b*, then tick *n*.
         """
 
-        conditions = (('Negation', 'Conjunction'), False)
+        negated     = True
+        operator    = 'Conjunction'
+        designation = False
 
         def apply_to_node(self, node, branch):
-            for conjunct in node.props['sentence'].operand.operands:
-                branch.add({ 'sentence' : negate(conjunct), 'designated' : False }).tick(node)
+            for operand in node.props['sentence'].operand.operands:
+                # allow disjunction inheritance below
+                branch.add({ 'sentence' : negate(operand), 'designated' : self.designation })
+            branch.tick(node)
 
-    # Disjunction Rules
-
-    class DisjunctionDesignated(logic.TableauxSystem.OperatorDesignationRule):
+    class DisjunctionDesignated(ConjunctionUndesignated):
         """
         From an unticked designated disjunction node *n* on a branch *b*, for each disjunt
         *d*, make a new branch *b'* from *b* and add a designated node with *d* to *b'*,
         then tick *n*.
         """
 
-        conditions = ('Disjunction', True)
+        operator    = 'Disjunction'
+        designation = True
 
-        def apply_to_node(self, node, branch):
-            for disjunct in node.props['sentence'].operands:
-                self.tableau.branch(branch).add({ 'sentence' : disjunct, 'designated' : True }).tick(node)
-
-    class DisjunctionNegatedDesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
+    class DisjunctionNegatedDesignated(ConjunctionNegatedUndesignated):
         """
         From an unticked designated negated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add a designated node with the negation of *d* to *b*, then tick *n*.
         """
 
-        conditions = (('Negation', 'Disjunction'), True)
+        operator    = 'Disjunction'
+        designation = True
 
-        def apply_to_node(self, node, branch):
-            for disjunct in node.props['sentence'].operand.operands:
-                branch.add({ 'sentence': negate(disjunct), 'designated': True })
-            branch.tick(node)
-
-    class DisjunctionUndesignated(logic.TableauxSystem.OperatorDesignationRule):
+    class DisjunctionUndesignated(ConjunctionDesignated):
         """
         From an unticked undesignated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add an undesignated node with *d* to *b*, then tick *n*.
         """
 
-        conditions = ('Disjunction', False)
+        operator    = 'Disjunction'
+        designation = False
 
-        def apply_to_node(self, node, branch):
-            for disjunct in node.props['sentence'].operands:
-                branch.add({ 'sentence': disjunct, 'designated': False })
-            branch.tick(node)
-
-    class DisjunctionNegatedUndesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
+    class DisjunctionNegatedUndesignated(ConjunctionNegatedDesignated):
         """
         From an unticked undesignated negated disjunction node *n* on a branch *b*, for each disjunct
         *d*, make a new branch *b'* from *b* and add an undesignated node with the negation of *d* to
         *b'*, then tick *n*.
         """
 
-        conditions = (('Negation', 'Disjunction'), False)
+        operator    = 'Disjunction'
+        designation = False
 
-        def apply_to_node(self, node, branch):
-            for disjunct in node.props['sentence'].operand.operands:
-                self.tableau.branch(branch).add({ 'sentence' : negate(disjunct), 'designated' : False }).tick(node)
-
-    # Material Conditional Rules
-
-    class MaterialConditionalDesignated(logic.TableauxSystem.OperatorDesignationRule):
+    class MaterialConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated material conditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add a designated node with the negation
@@ -198,47 +265,51 @@ class TableauxRules:
         then tick *n*.
         """
 
-        conditions = ('Material Conditional', True)
+        operator    = 'Material Conditional'
+        designation = True
 
         def apply_to_node(self, node, branch):
             newBranches = self.tableau.branch_multi(branch, 2)
             s = node.props['sentence']
-            newBranches[0].add({ 'sentence' : negate(s.lhs), 'designated' : True }).tick(node)
-            newBranches[1].add({ 'sentence' : s.rhs,         'designated' : True }).tick(node)
+            newBranches[0].add({ 'sentence' : negate(s.lhs) , 'designated' : True }).tick(node)
+            newBranches[1].add({ 'sentence' :        s.rhs  , 'designated' : True }).tick(node)
 
-    class MaterialConditionalNegatedDesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
+    class MaterialConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated negated material conditional node *n* on a branch *b*, add
         a designated node with the antecedent, and a designated node with the negation of the
         consequent to *b*, then tick *n*.
         """
 
-        conditions = (('Negation', 'Material Conditional'), True)
+        negated     = True
+        operator    = 'Material Conditional'
+        designation = True
 
         def apply_to_node(self, node, branch):
             s = node.props['sentence'].operand
             branch.update([
-                { 'sentence' : s.lhs,         'designated' : True },
-                { 'sentence' : negate(s.rhs), 'designated' : True }
+                { 'sentence' :        s.lhs  , 'designated' : True },
+                { 'sentence' : negate(s.rhs) , 'designated' : True }
             ]).tick(node)
 
-    class MaterialConditionalUndesignated(logic.TableauxSystem.OperatorDesignationRule):
+    class MaterialConditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked undesignated material conditional node *n* on a branch *b*, add
         an undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
 
-        conditions = ('Material Conditional', False)
+        operator    = 'Material Conditional'
+        designation = False
 
         def apply_to_node(self, node, branch):
             s = node.props['sentence']
             branch.update([
-                { 'sentence' : negate(s.lhs), 'designated': False },
-                { 'sentence' : s.rhs,         'designated': False }
+                { 'sentence' : negate(s.lhs) , 'designated': False },
+                { 'sentence' :        s.rhs  , 'designated': False }
             ]).tick(node)
 
-    class MaterialConditionalNegatedUndesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
+    class MaterialConditionalNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked undesignated negated material conditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add an undesignated node with the antecedent to
@@ -246,17 +317,17 @@ class TableauxRules:
         tick *n*.
         """
 
-        conditions = (('Negation', 'Material Conditional'), False)
+        negated     = True
+        operator    = 'Material Conditional'
+        designation = False
 
         def apply_to_node(self, node, branch):
             newBranches = self.tableau.branch_multi(branch, 2)
             s  = node.props['sentence'].operand
-            newBranches[0].add({ 'sentence' : s.lhs,         'designated' : False }).tick(node)
-            newBranches[1].add({ 'sentence' : negate(s.rhs), 'designated' : False }).tick(node)
+            newBranches[0].add({ 'sentence' :        s.lhs  , 'designated' : False }).tick(node)
+            newBranches[1].add({ 'sentence' : negate(s.rhs) , 'designated' : False }).tick(node)
 
-    # Material Biconditional Rules
-
-    class MaterialBiconditionalDesignated(logic.TableauxSystem.OperatorDesignationRule):
+    class MaterialBiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated material biconditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add a designated node with the negation
@@ -265,21 +336,26 @@ class TableauxRules:
         consequent to *b''*, then tick *n*.
         """
 
-        conditions = ('Material Biconditional', True)
+        operator    = 'Material Biconditional'
+        designation = True
 
         def apply_to_node(self, node, branch):
             newBranches = self.tableau.branch_multi(branch, 2)
             s = node.props['sentence']
+            # allow for negation rule inheritance below
+            if self.negated:
+                s = s.operand
+            # keep designation neutral for inheritance below
             newBranches[0].update([
-                { 'sentence' : negate(s.lhs), 'designated' : True },
-                { 'sentence' : negate(s.rhs), 'designated' : True }
+                { 'sentence' : negate(s.lhs), 'designated' : self.designation },
+                { 'sentence' : negate(s.rhs), 'designated' : self.designation }
             ]).tick(node)
             newBranches[1].update([
-                { 'sentence' : s.rhs, 'designated' : True },
-                { 'sentence' : s.lhs, 'designated' : True }
+                { 'sentence' : s.rhs, 'designated' : self.designation },
+                { 'sentence' : s.lhs, 'designated' : self.designation }
             ]).tick(node)
 
-    class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
+    class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated negated material biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*, add a designated node with the antecedent and a
@@ -288,21 +364,27 @@ class TableauxRules:
         then tick *n*.
         """
 
-        conditions = (('Negation', 'Material Biconditional'), True)
+        negated     = True
+        operator    = 'Material Biconditional'
+        designation = True
 
         def apply_to_node(self, node, branch):
             newBranches = self.tableau.branch_multi(branch, 2)
-            s = node.props['sentence'].operand
+            s = node.props['sentence']
+            # allow for unnegated rule inheritance below
+            if self.negated:
+                s = s.operand
+            # keep designation neutral for inheritance below
             newBranches[0].update([
-                { 'sentence' : s.lhs,         'designated' : True },
-                { 'sentence' : negate(s.rhs), 'designated' : True }
+                { 'sentence' :        s.lhs  , 'designated' : self.designation },
+                { 'sentence' : negate(s.rhs) , 'designated' : self.designation }
             ]).tick(node)
             newBranches[1].update([
-                { 'sentence' : negate(s.lhs), 'designated' : True },
-                { 'sentence' : s.rhs,         'designated' : True }
+                { 'sentence' : negate(s.lhs) , 'designated' : self.designation },
+                { 'sentence' :        s.rhs  , 'designated' : self.designation }
             ]).tick(node)
                     
-    class MaterialBiconditionalUndesignated(logic.TableauxSystem.OperatorDesignationRule):
+    class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
         """
         From an unticked undesignated material biconditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add an undesignated node with the negation
@@ -311,21 +393,10 @@ class TableauxRules:
         the consequent to *b''*, then tick *n*.
         """
 
-        conditions = ('Material Biconditional', False)
+        negated     = False
+        designation = False
 
-        def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
-            s = node.props['sentence']
-            newBranches[0].update([
-                { 'sentence' : negate(s.lhs), 'designated' : False },
-                { 'sentence' : s.rhs,         'designated' : False }
-            ]).tick(node)
-            newBranches[1].update([
-                { 'sentence' : s.lhs,         'designated' : False },
-                { 'sentence' : negate(s.rhs), 'designated' : False }
-            ]).tick(node)
-
-    class MaterialBiconditionalNegatedUndesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
+    class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalDesignated):
         """
         From an undesignated negated material biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*, add an undesignated node with the negation of
@@ -334,21 +405,8 @@ class TableauxRules:
         consequent to *b''*, then tick *n*.
         """
 
-        conditions = (('Negation', 'Material Biconditional'), False)
-
-        def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
-            s = node.props['sentence'].operand
-            newBranches[0].update([
-                { 'sentence' : negate(s.lhs), 'designated' : False },
-                { 'sentence' : negate(s.rhs), 'designated' : False }
-            ]).tick(node)
-            newBranches[1].update([
-                { 'sentence' : s.lhs, 'designated' : False },
-                { 'sentence' : s.rhs, 'designated' : False }
-            ]).tick(node)
-
-    # Conditional Rules
+        negated     = True
+        designation = False
 
     class ConditionalDesignated(MaterialConditionalDesignated):
         """
@@ -360,7 +418,7 @@ class TableauxRules:
         then tick *n*.
         """
 
-        conditions = ('Conditional', True)
+        operator = 'Conditional'
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
         """
@@ -371,7 +429,7 @@ class TableauxRules:
         the consequent to *b*, then tick *n*.
         """
 
-        conditions = (('Negation', 'Conditional'), True)
+        operator = 'Conditional'
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         """
@@ -382,7 +440,7 @@ class TableauxRules:
         with the consequent to *b*, then tick *n*.
         """
 
-        conditions = ('Conditional', False)
+        operator = 'Conditional'
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
         """
@@ -394,9 +452,7 @@ class TableauxRules:
         tick *n*.
         """
 
-        conditions = (('Negation', 'Conditional'), False)
-
-    # Biconditional Rules
+        operator = 'Conditional'
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         """
@@ -409,7 +465,7 @@ class TableauxRules:
         consequent to *b''*, then tick *n*.
         """
 
-        conditions = ('Biconditional', True)
+        operator = 'Biconditional'
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
         """
@@ -422,7 +478,7 @@ class TableauxRules:
         then tick *n*.
         """
 
-        conditions = (('Negation', 'Biconditional'), True)
+        operator = 'Biconditional'
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
         """
@@ -435,7 +491,7 @@ class TableauxRules:
         the consequent to *b''*, then tick *n*.
         """
 
-        conditions = ('Biconditional', False)
+        operator = 'Biconditional'
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
         """
@@ -448,41 +504,44 @@ class TableauxRules:
         consequent to *b''*, then tick *n*.
         """
 
-        conditions = (('Negation', 'Biconditional'), False)
+        operator = 'Biconditional'
 
-    # Quantification Rules
-
-    class ExistentialDesignated(logic.TableauxSystem.QuantifierDesignationRule):
+    class ExistentialDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated existential node *n* on a branch *b* quantifying over
         variable *v* into sentence *s*, add a designated node to *b* with the substitution
         into *s* of a new constant not yet appearing on *b* for *v*, then tick *n*.
         """
 
-        conditions = ('Existential', True)
+        quantifier  = 'Existential'
+        designation = True
 
         def apply_to_node(self, node, branch):
             s = node.props['sentence'].sentence
             v = node.props['sentence'].variable
-            branch.add({ 'sentence' : s.substitute(branch.new_constant(), v), 'designated' : True }).tick(node)
+            # keep designation neutral for inheritance below
+            branch.add({ 'sentence' : s.substitute(branch.new_constant(), v), 'designated' : self.designation }).tick(node)
 
-    class ExistentialNegated(logic.TableauxSystem.OperatorQuantifierRule):
+    class ExistentialNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
-        From an unticked negated existential node *n* on a branch *b*, having desigation
-        *d* and quantifying over variable *v* into sentence *s*, add a node to *b* of
-        designation *d* that universally quantifies over *v* into the negation of *s*
-        (i.e. change 'not exists x: A' to 'for all x: not A'), then tick *n*.
+        From an unticked designated negated existential node *n* on a branch *b*,
+        quantifying over variable *v* into sentence *s*, add a designated node to *b*
+        that universally quantifies over *v* into the negation of *s* (i.e. change
+        'not exists x: A' to 'for all x: not A'), then tick *n*.
         """
 
-        connectives = ('Negation', 'Existential')
+        negated     = True
+        quantifier  = 'Existential'
+        convert_to  = 'Universal'
+        designation = True
 
         def apply_to_node(self, node, branch):
             s = node.props['sentence'].operand.sentence
             v = node.props['sentence'].operand.variable
-            d = node.props['designated']
-            branch.add({ 'sentence' : quantify('Universal', v, negate(s)), 'designated' : d }).tick(node)
+            # keep quantifier conversion neutral to allow inheritance below
+            branch.add({ 'sentence' : quantify(self.convert_to, v, negate(s)), 'designated' : self.designation }).tick(node)
 
-    class ExistentialUndesignated(TableauxSystem.UniversalyDesignationRule):
+    class ExistentialUndesignated(logic.TableauxSystem.BranchRule):
         """
         From an undesignated existential node *n* on a branch *b*, for any constant *c* on
         *b* such that the result *r* of substituting *c* for the variable bound by the
@@ -491,9 +550,46 @@ class TableauxRules:
         *n* is never ticked.
         """
 
-        conditions = ('Existential', False)
+        quantifier  = 'Existential'
+        designation = False
 
-    class UniversalDesignated(TableauxSystem.UniversalyDesignationRule):
+        def applies_to_branch(self, branch):
+            constants = branch.constants()
+            for n in branch.get_nodes():
+                # keep quantifier and designation neutral for inheritance below
+                if n.props['sentence'].quantifier == self.quantifier and n.props['designated'] == self.designation:
+                    v = n.props['sentence'].variable
+                    s = n.props['sentence'].sentence
+                    if not len(constants):
+                        return { 'branch' : branch, 'sentence' : s.substitute(branch.new_constant(), v), 'node' : n }
+                    for c in constants:
+                        r = s.substitute(c, v)
+                        if not branch.has({ 'sentence': r, 'designated' : self.designation }):
+                            return { 'branch' : branch, 'sentence' : r, 'node' : n }
+            return False
+
+        def apply(self, target):
+            # keep designation neutral for inheritance below
+            target['branch'].add({ 'sentence' : target['sentence'], 'designated' : self.designation })
+
+        def example(self):
+            # keep quantifier and designation neutral for inheritance below
+            s = Vocabulary.get_example_quantifier_sentence(self.quantifier)
+            self.tableau.branch().add({ 'sentence' : s, 'designated' : self.designation })
+
+    class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
+        """
+        From an unticked undesignated negated existential node *n* on a branch *b*,
+        quantifying over variable *v* into sentence *s*, add an undesignated node to *b*
+        that universally quantifies over *v* into the negation of *s* (i.e. change 'not
+        exists x: A' to 'for all x: not A'), then tick *n*.
+        """
+
+        quantifier  = 'Existential'
+        convert_to  = 'Universal'
+        designation = False
+
+    class UniversalDesignated(ExistentialUndesignated):
         """
         From a designated universal node *n* on a branch *b*, for any constant *c* on *b*
         such that the result *r* of substituting *c* for the variable bound by the sentence
@@ -502,62 +598,64 @@ class TableauxRules:
         never ticked.
         """
 
-        conditions = ('Universal', True)
+        quantifier  = 'Universal'
+        designation = True
 
-    class UniversalNegated(logic.TableauxSystem.OperatorQuantifierRule):
+    class UniversalNegatedDesignated(ExistentialNegatedDesignated):
         """
-        From an unticked negated universal node *n* on a branch *b*, having designation *d*
-        and quantifying over variable *v* into sentence *s*, add a node to *b* having
-        designation *d* with the existential quantifier over *v* into the negation of *s*
-        (i.e. change 'not all x: A' to 'exists x: not A'), then tick *n*.
+        From an unticked designated negated universal node *n* on a branch *b*,
+        quantifying over variable *v* into sentence *s*, add a designated node to *b*
+        with the existential quantifier over *v* into the negation of *s* (i.e. change
+        'not all x: A' to 'exists x: not A'), then tick *n*.
         """
 
-        connectives = ('Negation', 'Universal')
+        quantifier  = 'Universal'
+        convert_to  = 'Existential'
+        designation = True
 
-        def apply_to_node(self, node, branch):
-            s = node.props['sentence'].operand.sentence
-            v = node.props['sentence'].operand.variable
-            d = node.props['designated']
-            branch.add({ 'sentence' : quantify('Existential', v, negate(s)), 'designated' : d }).tick(node)
-
-    class UniversalUndesignated(logic.TableauxSystem.QuantifierDesignationRule):
+    class UniversalUndesignated(ExistentialDesignated):
         """
         From an unticked undesignated universal node *n* on a branch *b* quantifying over *v*
         into sentence *s*, add an undesignated node to *b* with the result of substituting into
         *s* a constant new to *b* for *v*, then tick *n*.
         """
 
-        conditions = ('Universal', False)
+        quantifier  = 'Universal'
+        designation = False
 
-        def apply_to_node(self, node, branch):
-            s = node.props['sentence'].sentence
-            v = node.props['sentence'].variable
-            r = s.substitute(branch.new_constant(), v)
-            branch.add({ 'sentence' : r, 'designated' : False }).tick(node)
+    class UniversalNegatedUndesignated(ExistentialNegatedDesignated):
+        """
+        From an unticked undesignated negated universal node *n* on a branch *b*,
+        quantifying over variable *v* into sentence *s*, add an undesignated node to *b*
+        with the existential quantifier over *v* into the negation of *s* (i.e. change
+        'not all x: A' to 'exists x: not A'), then tick *n*.
+        """
 
-    # Negation Rules
+        quantifier  = 'Universal'
+        convert_to  = 'Existential'
+        designation = False
 
-    class DoubleNegationDesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
+    class DoubleNegationDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated negated negation node *n* on a branch *b*, add a designated
         node to *b* with the double-negatum of *n*, then tick *n*.
         """
 
-        conditions = (('Negation', 'Negation'), True)
+        negated     = True
+        operator    = 'Negation'
+        designation = True
 
         def apply_to_node(self, node, branch):
-            branch.add({ 'sentence' : node.props['sentence'].operand.operand, 'designated' : True }).tick(node)
+            # designation is neutral to allow for inheritance below
+            branch.add({ 'sentence' : node.props['sentence'].operand.operand, 'designated' : self.designation }).tick(node)
 
-    class DoubleNegationUndesignated(logic.TableauxSystem.DoubleOperatorDesignationRule):
+    class DoubleNegationUndesignated(DoubleNegationDesignated):
         """
         From an unticked undesignated negated negation node *n* on a branch *b*, add an
         undesignated node to *b* with the double-negatum of *n*, then tick *n*.
         """
 
-        conditions = (('Negation', 'Negation'), False)
-
-        def apply_to_node(self, node, branch):
-            branch.add({ 'sentence' : node.props['sentence'].operand.operand, 'designated' : False }).tick(node)
+        designation = False
 
     rules = [
 
@@ -576,11 +674,13 @@ class TableauxRules:
         ConditionalNegatedDesignated,
         ConditionalNegatedUndesignated,
         ExistentialDesignated,
-        ExistentialNegated,
+        ExistentialNegatedDesignated,
         ExistentialUndesignated,
+        ExistentialNegatedUndesignated,
         UniversalDesignated,
-        UniversalNegated,
+        UniversalNegatedDesignated,
         UniversalUndesignated,
+        UniversalNegatedUndesignated,
         DoubleNegationDesignated,
         DoubleNegationUndesignated,
 

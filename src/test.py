@@ -54,6 +54,7 @@ def test_arguments(logic, args, valid, parser):
             import json
             print 'FAIL'
             print t
+            print list(t.branches)[0]
             raise e
         print 'pass'
     

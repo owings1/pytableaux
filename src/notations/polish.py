@@ -1,6 +1,6 @@
-"""
-Copyright (C) 2014, Doug Owings. All Rights Reserved.
-"""
+# pytableaux - Polish Notation
+#
+# Copyright (C) 2014, Doug Owings. All Rights Reserved.
 
 import logic
 
@@ -56,7 +56,7 @@ class Parser(logic.Parser):
         'M' : 'Possibility',
         'L' : 'Necessity'
     }
-    
+
     vchars = ['v', 'x', 'y', 'z']
     cchars = ['m', 'n', 'o', 's']
     qchars = {

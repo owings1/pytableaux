@@ -26,6 +26,7 @@ def example_invalidities():
     return args
     
 import logic, k
+from logic import atomic
 
 class TableauxSystem(k.TableauxSystem):
     pass
@@ -48,6 +49,8 @@ class TableauxRules:
                 'world1': target['world'], 
                 'world2': target['branch'].new_world()
             })
+        def example(self):
+            self.tableau.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
 
     rules = list(k.TableauxRules.rules)
     rules.append(Serial)

@@ -48,7 +48,12 @@ class TableauxRules:
                 'world1': target['world1'],
                 'world2': target['world2']
             })
-            pass
+
+        def example(self):
+            self.tableau.branch().update([
+                { 'world1' : 0, 'world2' : 1 },
+                { 'world1' : 1, 'world2' : 2 }
+            ])
     
     rules = list(t.TableauxRules.rules)
     rules.insert(2, Transitive)

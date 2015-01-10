@@ -8,300 +8,463 @@ def example_validities():
     import cfol
     args = cfol.example_validities()
     args.update({
-        'Modal Platitude 1': [['Ma'], 'Ma'],
-		'Modal Platitude 2': [['La'], 'La'],
-		'Modal Platitude 3': [['LMa'], 'LMa'],
-		'Modal Transformation 1': [['La'], 'NMNa'],
-		'Modal Transformation 2': [['NMNa'], 'La'],
-		'Modal Transformation 3': [['NLa'], 'MNa'],
-		'Modal Transformation 4': [['MNa'], 'NLa'],
-        'Necessity Distribution': 'CLCabCLaLb'
+        'Necessity Distribution' : 'CLCabCLaLb',
+        'Modal Platitude 1'      : [[ 'Ma'   ], 'Ma'   ],
+        'Modal Platitude 2'      : [[ 'La'   ], 'La'   ],
+        'Modal Platitude 3'      : [[ 'LMa'  ], 'LMa'  ],
+        'Modal Transformation 1' : [[ 'La'   ], 'NMNa' ],
+        'Modal Transformation 2' : [[ 'NMNa' ], 'La'   ],
+        'Modal Transformation 3' : [[ 'NLa'  ], 'MNa'  ],
+        'Modal Transformation 4' : [[ 'MNa'  ], 'NLa'  ]
     })
     return args
-    
+
 def example_invalidities():
     import t
     args = t.example_invalidities()
     args.update({
-        'Possibility Addition': [['a'], 'Ma'],
-    	'Necessity Elimination': [['La'], 'a'],
-    	'Reflexive Inference 1': 'CLaa',
-    	'Serial Inference 1': 'CLaMa'
+        'Reflexive Inference 1' : 'CLaa',
+        'Serial Inference 1'    : 'CLaMa',
+        'Possibility Addition'  : [[ 'a'  ], 'Ma' ],
+        'Necessity Elimination' : [[ 'La' ], 'a'  ]
     })
     return args
 
 import logic
-from logic import negate, operate, quantify
+from logic import negate, operate, quantify, atomic, variable, Vocabulary
 
 class TableauxSystem(logic.TableauxSystem):
-        
+    """
+    Modal tableaux are similar to classical tableaux, with the addition of a
+    *world* index for each sentence node, as well as *access* nodes representing
+    "visibility" of worlds. The worlds and access nodes come into play with
+    the rules for Possibility and Necessity. All other rules function equivalently
+    to their classical counterparts.
+    """
+
     @staticmethod
     def build_trunk(tableau, argument):
+        """
+        To build the trunk for an argument, add a node with each premise, with
+        world *w0*, following be a node with the negation of the conclusion
+        with world *w0*.
+        """
         branch = tableau.branch()
         for premise in argument.premises:
             branch.add({ 'sentence': premise, 'world': 0 })
         branch.add({ 'sentence': negate(argument.conclusion), 'world': 0 })
 
+    class ConditionalModalNodeRule(logic.TableauxSystem.ConditionalNodeRule):
+        modal = True
+
 class TableauxRules(object):
-    
-    NodeRule = logic.TableauxSystem.NodeRule
-    BranchRule = logic.TableauxSystem.BranchRule
-    OperatorRule = logic.TableauxSystem.OperatorRule
-    DoubleOperatorRule = logic.TableauxSystem.DoubleOperatorRule
-    
+    """
+    Rules for modal operators employ *world* indexes as well access-type
+    nodes. The world indexes are transparent for the rules for classical
+    connectives.
+    """
+
     class Closure(logic.TableauxSystem.ClosureRule):
-    
+        """
+        A branch closes when a sentence and its negation both appear on a node **with the
+        same world** on the branch.
+        """
+
         def applies_to_branch(self, branch):
             for node in branch.get_nodes():
-                if 'sentence' in node.props  and branch.has({ 
-                    'sentence': negate(node.props['sentence']), 
-                    'world': node.props['world'] 
-                }): return branch
+                if 'sentence' in node.props and 'world' in node.props:
+                    w = node.props['world']
+                    s = negate(node.props['sentence'])
+                    if branch.has({ 'sentence': s, 'world': w }):
+                        return branch
             return False
 
-    class Conjunction(OperatorRule):
-        
+        def example(self):
+            a = atomic(0, 0)
+            self.tableau.branch().update([
+                { 'sentence' :        a  , 'world' : 0 },
+                { 'sentence' : negate(a) , 'world' : 0 }
+            ])
+
+    class Conjunction(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked conjunction node *n* with world *w* on a branch *b*, for each conjunct,
+        add a node with world *w* to *b* with the conjunct, then tick *n*.
+        """
+
         operator = 'Conjunction'
-                
+
         def apply_to_node(self, node, branch):
-            for operand in node.props['sentence'].operands:
-                branch.add({ 'sentence': operand, 'world': node.props['world'] })
+            w = node.props['world']
+            for conjunct in node.props['sentence'].operands:
+                branch.add({ 'sentence' : conjunct, 'world' : w })
             branch.tick(node)
-    
-    class Disjunction(OperatorRule):
-        
+
+    class ConjunctionNegated(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked negated conjunction node *n* with world *w* on a branch *b*, for each
+        conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
+        the conjunct to *b*, then tick *n*.
+        """
+
+        negated  = True
+        operator = 'Conjunction'
+
+        def apply_to_node(self, node, branch):
+            w = node.props['world']
+            for conjunct in node.props['sentence'].operand.operands:
+                self.tableau.branch(branch).add({ 'sentence' : negate(conjunct), 'world' : w }).tick(node)
+
+    class Disjunction(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked disjunction node *n* with world *w* on a branch *b*, for each disjunct,
+        make a new branch *b'* from *b* and add a node with world *w* to *b'*, then tick *n*.
+        """
+
         operator = 'Disjunction'
-            
+
         def apply_to_node(self, node, branch):
-            for operand in node.props['sentence'].operands:
-                self.tableau.branch(branch).add({ 
-                    'sentence': operand, 
-                    'world': node.props['world'] 
-                }).tick(node)
-    
-    class MaterialConditional(OperatorRule):
-        
+            w = node.props['world']
+            for disjunct in node.props['sentence'].operands:
+                self.tableau.branch(branch).add({ 'sentence' : disjunct, 'world' : w }).tick(node)
+
+
+    class DisjunctionNegated(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked negated disjunction node *n* with world *w* on a branch *b*, for each
+        disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
+        """
+
+        negated  = True
+        operator = 'Disjunction'
+
+        def apply_to_node(self, node, branch):
+            w = node.props['world']
+            for disjunct in node.props['sentence'].operand.operands:
+                branch.add({ 'sentence' : negate(disjunct), 'world' : w })
+            branch.tick(node)
+
+    class MaterialConditional(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked material conditional node *n* with world *w* on a branch *b*, make two
+        new branches *b'* and *b''* from *b*, add a node with world *w* and the negation of the
+        antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
+        *n*.
+        """
+
         operator = 'Material Conditional'
-            
+
         def apply_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            world = node.props['world']
-            self.tableau.branch(branch).add({ 
-                'sentence': negate(sentence.lhs),
-                'world': world
-            }).tick(node)
-            self.tableau.branch(branch).add({ 
-                'sentence': sentence.rhs,
-                'world': world
-            }).tick(node)
-            
-    class MaterialBiconditional(OperatorRule):
+            newBranches = self.tableau.branch_multi(branch, 2)
+            s = node.props['sentence']
+            w = node.props['world']
+            newBranches[0].add({ 'sentence' : negate(s.lhs) , 'world' : w }).tick(node)
+            newBranches[1].add({ 'sentence' :        s.rhs  , 'world' : w }).tick(node)
+
+    class MaterialConditionalNegated(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked negated material conditional node *n* with world *w* on a branch *b*,
+        add two nodes with *w* to *b*, one with the antecedent and the other with the negation
+        of the consequent, then tick *n*.
+        """
+
+        negated  = True
+        operator = 'Material Conditional'
+
+        def apply_to_node(self, node, branch):
+            s = node.props['sentence'].operand
+            w = node.props['world']
+            branch.update([
+                { 'sentence' :        s.lhs  , 'world' : w }, 
+                { 'sentence' : negate(s.rhs) , 'world' : w }
+            ]).tick(node)
+
+    class MaterialBiconditional(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked material biconditional node *n* with world *w* on a branch *b*, make
+        two new branches *b'* and *b''* from *b*, add two nodes with world *w* to *b'*, one with
+        the negation of the antecedent and one with the negation of the consequent, and add two
+        nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
+        tick *n*.
+        """
 
         operator = 'Material Biconditional'
-            
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            world = node.props['world']
-            self.tableau.branch(branch).update([
-                { 'sentence': negate(sentence.lhs), 'world': world }, 
-                { 'sentence': negate(sentence.rhs), 'world': world }
-            ]).tick(node)
-            self.tableau.branch(branch).update([
-                { 'sentence': sentence.rhs, 'world': world }, 
-                { 'sentence': sentence.lhs, 'world': world }
-            ]).tick(node)
-    
-    class Existential(NodeRule):
-
-        def applies_to_node(self, node, branch):
-            if 'sentence' not in node.props:
-                return False
-            return node.props['sentence'].quantifier == 'Existential'
 
         def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].sentence
-            variable = node.props['sentence'].variable
-            branch.add({ 
-                'sentence': sentence.substitute(branch.new_constant(), variable),
-                'world': node.props['world']
-            }).tick(node)
+            s = node.props['sentence']
+            w = node.props['world']
+            newBranches = self.tableau.branch_multi(branch, 2)
+            newBranches[0].update([
+                { 'sentence' : negate(s.lhs), 'world' : w }, 
+                { 'sentence' : negate(s.rhs), 'world' : w }
+            ]).tick(node)
+            newBranches[1].update([
+                { 'sentence' : s.rhs, 'world' : w }, 
+                { 'sentence' : s.lhs, 'world' : w }
+            ]).tick(node)
+
+    class MaterialBiconditionalNegated(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked negated material biconditional node *n* with world *w* on a branch *b*,
+        make two new branches *b'* and *b''* from *b*, add two nodes with *w* to *b'*, one with
+        the antecedent and the other with the negation of the consequent, and add two nodes with
+        *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
+        then tick *n*.
+        """
+
+        negated  = True
+        operator = 'Material Biconditional'
+
+        def apply_to_node(self, node, branch):
+            newBranches = self.tableau.branch_multi(branch, 2)
+            s = node.props['sentence'].operand
+            w = node.props['world']
+            newBranches[0].update([
+                { 'sentence':        s.lhs  , 'world' : w },
+                { 'sentence': negate(s.rhs) , 'world' : w }
+            ]).tick(node)
+            newBranches[1].update([
+                { 'sentence': negate(s.rhs) , 'world' : w },
+                { 'sentence':        s.lhs  , 'world' : w }
+            ]).tick(node)
+
+    class Conditional(MaterialConditional):
+        """
+        The rule functions the same as the corresponding material conditional rule.
+
+        From an unticked conditional node *n* with world *w* on a branch *b*, make two
+        new branches *b'* and *b''* from *b*, add a node with world *w* and the negation of the
+        antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
+        *n*.
+        """
+
+        operator = 'Conditional'
+
+    class ConditionalNegated(MaterialConditionalNegated):
+        """
+        The rule functions the same as the corresponding material conditional rule.
+
+        From an unticked negated conditional node *n* with world *w* on a branch *b*,
+        add two nodes with *w* to *b*, one with the antecedent and the other with the negation
+        of the consequent, then tick *n*.
+        """
+
+        operator = 'Conditional'
+
+    class Biconditional(MaterialBiconditional):
+        """
+        The rule functions the same as the corresponding material biconditional rule.
+
+        From an unticked biconditional node *n* with world *w* on a branch *b*, make
+        two new branches *b'* and *b''* from *b*, add two nodes with world *w* to *b'*, one with
+        the negation of the antecedent and one with the negation of the consequent, and add two
+        nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
+        tick *n*.
+        """
+
+        operator = 'Biconditional'
+
+    class BiconditionalNegated(MaterialBiconditionalNegated):
+        """
+        The rule functions the same as the corresponding material biconditional rule.
+
+        From an unticked negated biconditional node *n* with world *w* on a branch *b*,
+        make two new branches *b'* and *b''* from *b*, add two nodes with *w* to *b'*, one with
+        the antecedent and the other with the negation of the consequent, and add two nodes with
+        *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
+        then tick *n*.
+        """
+
+        operator = 'Biconditional'
+
+    class Existential(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
+        variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
+        into *s* of *v* with a constant new to *b*, then tick *n*.
+        """
+
+        quantifier = 'Existential'
+
+        def apply_to_node(self, node, branch):
+            w = node.props['world']
+            s = node.props['sentence'].sentence
+            v = node.props['sentence'].variable
+            branch.add({ 'sentence' : s.substitute(branch.new_constant(), v), 'world': w }).tick(node)
+
+    class ExistentialNegated(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked negated existential node *n* with world *w* on a branch *b*,
+        quantifying over variable *v* into sentence *s*, add a universally quantified
+        node to *b* with world *w* over *v* into the negation of *s*, then tick *n*.
+        """
+
+        negated    = True
+        quantifier = 'Existential'
+        convert_to = 'Universal'
+
+        def apply_to_node(self, node, branch):
+            w = node.props['world']
+            v = node.props['sentence'].operand.variable
+            s = node.props['sentence'].operand.sentence
+            # keep conversion neutral for inheritance below
+            branch.add({ 'sentence' : quantify(self.convert_to, v, negate(s)), 'world' : w }).tick(node)
 
     class Universal(logic.TableauxSystem.BranchRule):
+        """
+        From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
+        sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
+        exists) for *v* into *s* does not appear at *w* on *b*, add a node with *w* and *r* to
+        *b*. The node *n* is never ticked.
+        """
+
+        quantifier = 'Universal'
 
         def applies_to_branch(self, branch):
             constants = branch.constants()
             for node in branch.get_nodes():
-                if 'sentence' in node.props and node.props['sentence'].quantifier == 'Universal':
-                    variable = node.props['sentence'].variable
+                if 'sentence' in node.props and 'world' in node.props and node.props['sentence'].quantifier == self.quantifier:
+                    w = node.props['world']
+                    v = node.props['sentence'].variable
+                    s = node.props['sentence'].sentence
                     if len(constants):
-                        for constant in constants:
-                            sentence = node.props['sentence'].sentence.substitute(constant, variable)
-                            if not branch.has({ 'sentence': sentence }):
-                                return { 'branch': branch, 'sentence': sentence, 'world': node.props['world'] }
-                    else:
-                        constant = branch.new_constant()
-                        sentence = node.props['sentence'].sentence.substitute(constant, variable)
-                        return { 'branch': branch, 'sentence': sentence, 'world': node.props['world'] }
+                        for c in constants:
+                            r = s.substitute(c, v)
+                            if not branch.has({ 'sentence' : r, 'world' : w }):
+                                return { 'branch' : branch, 'sentence' : r, 'node' : node, 'world' : w }
+                        return False
+                    return { 'branch' : branch, 'sentence' : s.substitute(branch.new_constant(), v), 'world' : w }
+
+        def apply(self, target):
+            target['branch'].add({ 'sentence' : target['sentence'], 'world' : target['world'] })
+
+        def example(self):
+            self.tableau.branch().add({ 'sentence' : Vocabulary.get_example_quantifier_sentence(self.quantifier), 'world' : 0 })
+
+    class UniversalNegated(ExistentialNegated):
+        """
+        From an unticked negated universal node *n* with world *w* on a branch *b*,
+        quantifying over variable *v* into sentence *s*, add an existentially
+        quantified node to *b* with world *w* over *v* into the negation of *s*,
+        then tick *n*.
+        """
+
+        quantifier = 'Universal'
+        convert_to = 'Existential'
+
+    class DoubleNegation(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked double negation node *n* with world *w* on a branch *b*, add a
+        node to *b* with *w* and the double-negatum of *n*, then tick *n*.
+        """
+
+        negated  = True
+        operator = 'Negation'
+
+        def apply_to_node(self, node, branch):
+            w = node.props['world']
+            branch.add({ 'sentence' : node.props['sentence'].operand.operand, 'world' : w }).tick(node)
+
+    class Possibility(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked possibility node with world *w* on a branch *b*, add a node with a
+        world *w'* new to *b* with the operand of *n*, and add an access-type node with
+        world1 *w* and world2 *w'* to *b*, then tick *n*.
+        """
+
+        operator = 'Possibility'
+
+        def apply_to_node(self, node, branch):
+            s  = node.props['sentence'].operand
+            w1 = node.props['world']
+            w2 = branch.new_world()
+            branch.update([{ 'sentence' : s, 'world' : w2 }, { 'world1' : w1, 'world2' : w2 }]).tick(node)
+
+    class PossibilityNegated(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked negated possibility node *n* with world *w* on a branch *b*, add a
+        necessity node to *b* with *w*, whose operand is the negation of the negated 
+        possibilium of *n*, then tick *n*.
+        """
+
+        negated    = True
+        operator   = 'Possibility'
+        convert_to = 'Necessity'
+
+        def apply_to_node(self, node, branch):
+            w = node.props['world']
+            s = operate(self.convert_to, [negate(node.props['sentence'].operand.operand)])
+            branch.add({ 'sentence' : s, 'world' : w }).tick(node)
+
+    class Necessity(logic.TableauxSystem.BranchRule):
+        """
+        From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
+        world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
+        with *s* at *w2*, add it to *b*. The node *n* is never ticked.
+        """
+
+        operator = 'Necessity'
+
+        def applies_to_branch(self, branch):
+            worlds = branch.worlds()
+            for node in branch.get_nodes():
+                if ('world' in node.props and
+                    'sentence' in node.props and
+                    node.props['sentence'].operator == self.operator):                    
+                    s = node.props['sentence'].operand
+                    w1 = node.props['world']
+                    for w2 in worlds:
+                        if (branch.has({ 'world1': w1, 'world2': w2 }) and
+                            not branch.has({ 'sentence': s, 'world': w2 })):
+                            return { 'node': node, 'sentence' : s, 'world': w2, 'branch': branch }
             return False
 
         def apply(self, target):
             target['branch'].add({ 'sentence': target['sentence'], 'world': target['world'] })
-    
-    class DoubleNegation(DoubleOperatorRule):
 
-        operators = ('Negation', 'Negation')
+        def example(self):
+            s = operate(self.operator, [atomic(0, 0)])
+            self.tableau.branch().update([{ 'sentence' : s, 'world' : 0 }, { 'world1' : 0, 'world2' : 1 }])
 
-        def apply_to_node(self, node, branch):
-            branch.add({ 
-                'sentence': node.props['sentence'].operand.operand,
-                'world': node.props['world']
-            }).tick(node)
+    class NecessityNegated(PossibilityNegated):
+        """
+        From an unticked negated necessity node *n* with world *w* on a branch *b*, add a
+        possibility node whose operand is the negation of the negated necessitatum of *n*,
+        then tick *n*.
+        """
 
-    class NegatedConjunction(DoubleOperatorRule):
-        
-        operators = ('Negation', 'Conjunction')
-                    
-        def apply_to_node(self, node, branch):
-            for operand in node.props['sentence'].operand.operands:
-                self.tableau.branch(branch).add({ 
-                    'sentence': negate(operand),
-                    'world': node.props['world']
-                }).tick(node)
-            
-    class NegatedDisjunction(DoubleOperatorRule):
-        
-        operators = ('Negation', 'Disjunction')
-        
-        def apply_to_node(self, node, branch):
-            world = node.props['world']
-            for operand in node.props['sentence'].operand.operands:
-                branch.add({ 'sentence' : negate(operand), 'world': world })
-            branch.tick(node)
-            
-    class NegatedMaterialConditional(DoubleOperatorRule):
-        
-        operators = ('Negation', 'Material Conditional')
-                    
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand
-            world = node.props['world']
-            branch.update([
-                { 'sentence': sentence.lhs, 'world': world }, 
-                { 'sentence': negate(sentence.rhs), 'world': world }
-            ]).tick(node)
-                  
-    class NegatedMaterialBiconditional(DoubleOperatorRule):
+        operator   = 'Necessity'
+        convert_to = 'Possibility'
 
-        operators = ('Negation', 'Material Biconditional')
-
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand
-            world = node.props['world']
-            self.tableau.branch(branch).update([
-                { 'sentence': sentence.lhs, 'world': world },
-                { 'sentence': negate(sentence.rhs), 'world': world }
-            ]).tick(node)
-            self.tableau.branch(branch).update([
-                { 'sentence': negate(sentence.rhs), 'world': world },
-                { 'sentence': sentence.lhs, 'world': world }
-            ]).tick(node)
-    
-    class Possibility(OperatorRule):
-        
-        operator = 'Possibility'
-            
-        def apply_to_node(self, node, branch):
-            world = branch.new_world()
-            branch.update([
-                { 'sentence': node.props['sentence'].operand, 'world': world },
-                { 'world1': node.props['world'], 'world2': world }
-            ]).tick(node)
-            
-    class Necessity(BranchRule):
-        
-        def applies_to_branch(self, branch):
-            worlds = branch.worlds()
-            for node in branch.get_nodes():
-                if 'sentence' not in node.props:
-                    continue
-                sentence = node.props['sentence']
-                if sentence.operator == 'Necessity':
-                    for world in worlds:
-                        if (branch.has({ 'world1': node.props['world'], 'world2': world }) and
-                            not branch.has({ 'sentence': sentence.operand, 'world': world })):
-                            return { 'node': node, 'world': world, 'branch': branch }
-            return False
-            
-        def apply(self, target):
-            target['branch'].add({ 
-                'sentence': target['node'].props['sentence'].operand, 
-                'world': target['world'] 
-            })
-            
-    class NegatedPossibility(DoubleOperatorRule):
-        
-        operators = ('Negation', 'Possibility')
-        
-        def apply_to_node(self, node, branch):
-            branch.add({
-                'sentence': operate('Necessity', [negate(node.props['sentence'].operand.operand)]),
-                'world': node.props['world']
-            }).tick(node)
-        
-    class NegatedNecessity(DoubleOperatorRule):
-        
-        operators = ('Negation', 'Necessity')
-        
-        def apply_to_node(self, node, branch):
-            branch.add({
-                'sentence': operate('Possibility', [negate(node.props['sentence'].operand.operand)]),
-                'world': node.props['world']
-            }).tick(node)
-    
-    class NegatedExistential(NodeRule):
-
-        def applies_to_node(self, node, branch):
-            if 'sentence' not in node.props:
-                return False
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and
-                    sentence.operand.quantifier == 'Existential')
-
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand.sentence
-            variable = node.props['sentence'].operand.variable
-            branch.add({ 
-                'sentence': quantify('Universal', variable, negate(sentence)),
-                'world': node.props['world']
-            }).tick(node)
-
-    class NegatedUniversal(NodeRule):
-
-        def applies_to_node(self, node, branch):
-            if 'sentence' not in node.props:
-                return False
-            sentence = node.props['sentence']
-            return (sentence.operator == 'Negation' and
-                    sentence.operand.quantifier == 'Universal')
-
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand.sentence
-            variable = node.props['sentence'].operand.variable
-            branch.add({ 
-                'sentence': quantify('Existential', variable, negate(sentence)),
-                'world': node.props['world']
-            }).tick(node)
-            
-        
     rules = [
+
         Closure,
+
         # non-branching rules
-        DoubleNegation, Conjunction, NegatedDisjunction, NegatedMaterialConditional,
-        NegatedPossibility, NegatedNecessity, NegatedUniversal, NegatedExistential,
-        Universal, Existential,
+        Conjunction, 
+        DisjunctionNegated, 
+        MaterialConditionalNegated,
+        ConditionalNegated,
+        Existential,
+        ExistentialNegated,
+        Universal,
+        UniversalNegated,
+        DoubleNegation,
+        PossibilityNegated,
+        NecessityNegated,
+
         # branching rules
-        Disjunction, MaterialConditional, MaterialBiconditional, NegatedConjunction, 
-        NegatedMaterialBiconditional,
-        # modal rules
-        Possibility, Necessity
+        ConjunctionNegated,
+        Disjunction, 
+        MaterialConditional, 
+        MaterialBiconditional,
+        MaterialBiconditionalNegated,
+        Conditional,
+        Biconditional,
+        BiconditionalNegated,
+
+        # world creation rules
+        Possibility,
+        Necessity
+
     ]

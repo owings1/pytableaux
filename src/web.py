@@ -52,10 +52,10 @@ class App:
             'notations'         : modules['notations'],
             'form_data'         : kw,
             'system_predicates' : logic.system_predicates,
-            'quantifiers'       : logic.quantifiers,
+            'quantifiers'       : logic.quantifiers_list,
             'app' : json.dumps({
                 'notation_user_predicate_symbols' : notation_user_predicate_symbols,
-                'num_user_predicate_symbols'      : logic.num_user_predicate_symbols
+                'num_predicate_symbols'           : logic.num_predicate_symbols
             })
         }
         vocabulary = logic.Vocabulary()
