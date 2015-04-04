@@ -5,13 +5,13 @@
 Semantics
 ---------
 
-CFOL is a 2-valued logic (True and False). Two primitive operators, negation and
+Classical First-Order Logic (CFOL) is the standard bivalent logic (True, False). Two primitive operators, negation and
 disjunction, are defined via truth tables.
 
 **Negation**:
 
 +------------+------------+
-| A          | not-A      |
+| A          | not A      |
 +============+============+
 |  T         |  F         |
 +------------+------------+
@@ -30,7 +30,7 @@ disjunction, are defined via truth tables.
 |  **F**    |    T     |    F    | 
 +-----------+----------+---------+
 
-Other operators are defined via semantic equivalencies:
+Other operators are defined via semantic equivalencies in the usual way:
 
 - **Conjunction**: ``A and B := not (not-A or not-B)``
 
@@ -39,10 +39,11 @@ Other operators are defined via semantic equivalencies:
 - **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
 
 The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
+In other logics (see, for example GO).
 
 **Predicate Sentences** like *a is F* are handled via a predicate's *extension*:
 
-- *a is F* iff the object denoted by *a* is in the extension of *F*.
+- *a is F* iff the object denoted by the constant *a* is in the extension of the predicate *F*.
 
 **Quantification** can be thought of along these lines:
 
@@ -112,8 +113,8 @@ class TableauxSystem(logic.TableauxSystem):
         """
         branch = tableau.branch()
         for premise in argument.premises:
-            branch.add({ 'sentence': premise })
-        branch.add({ 'sentence': negate(argument.conclusion) })
+            branch.add({ 'sentence' : premise })
+        branch.add({ 'sentence':  negate(argument.conclusion) })
 
 class TableauxRules(object):
     """
@@ -362,8 +363,9 @@ class TableauxRules(object):
                             r = s.substitute(c, v)
                             if not branch.has({ 'sentence': r }):
                                 return { 'branch' : branch, 'sentence' : r, 'node' : node }
-                        return False
+                        continue
                     return { 'branch' : branch, 'sentence' : s.substitute(branch.new_constant(), v), 'node' : node }
+            return False
 
         def apply(self, target):
             target['branch'].add({ 'sentence': target['sentence'] })

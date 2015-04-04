@@ -1,3 +1,7 @@
+"""
+Kripke Logic (K3) is the foundation of so-called normal modal logics. It is an extension of CFOL,
+adding the modal operators for possibility and necessity.
+"""
 name = 'K'
 description = 'Kripke Normal Modal Logic (Fixed Domain)'
 links = {
@@ -332,8 +336,9 @@ class TableauxRules(object):
                             r = s.substitute(c, v)
                             if not branch.has({ 'sentence' : r, 'world' : w }):
                                 return { 'branch' : branch, 'sentence' : r, 'node' : node, 'world' : w }
-                        return False
+                        continue
                     return { 'branch' : branch, 'sentence' : s.substitute(branch.new_constant(), v), 'world' : w }
+            return False
 
         def apply(self, target):
             target['branch'].add({ 'sentence' : target['sentence'], 'world' : target['world'] })

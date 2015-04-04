@@ -331,8 +331,8 @@ class Vocabulary(object):
 
         def __init__(self, name, index, subscript, arity):
             self.name      = name
-            self.index     = index
             self.arity     = arity
+            self.index     = index
             self.subscript = subscript
 
     class PredicateError(Exception):
@@ -388,7 +388,7 @@ class Vocabulary(object):
             if idx not in self.user_predicates_index:
                 raise Vocabulary.NoSuchPredicateError(idx)
             return self.user_predicates_index[idx]
-        raise Exception('Not enough information to get predicate')
+        raise Vocabulary.PredicateError('Not enough information to get predicate')
 
     def declare_predicate(self, name, index, subscript, arity):
         """
@@ -505,7 +505,7 @@ class Vocabulary(object):
                 if predicate in system_predicates:
                     predicate = system_predicates[predicate]
                 elif vocabulary is None:
-                    raise Vocabulary.PredicateError(predicate + " is not a system predicate, and no vocabulary was passed.")
+                    raise Vocabulary.NoSuchPredicateError(predicate + " is not a system predicate, and no vocabulary was passed.")
                 else:
                     predicate = vocabulary.get_predicate(predicate)    
             if len(parameters) != predicate.arity:
@@ -513,6 +513,7 @@ class Vocabulary(object):
                 str([index, subscript]) + ', got ' + arity + ' instead.')
             self.predicate  = predicate
             self.parameters = parameters
+            self.vocabulary = vocabulary
 
         def substitute(self, constant, variable):
             params = []
@@ -578,11 +579,11 @@ class Vocabulary(object):
         vocab = Vocabulary([('is F', 0, 0, 1), ('is G', 1, 0, 1)])
         x = variable(0, 0)
         x_is_f = predicate_sentence('is F', [x], vocab)
-        if quantifier != 'Universal':
-            return quantify(quantifier, x, x_is_f)
-        x_is_g = predicate_sentence('is G', [x], vocab)
-        s = operate('Material Conditional', [x_is_f, x_is_g])
-        return quantify(quantifier, x, s)
+        if quantifier == 'Universal':
+            x_is_g = predicate_sentence('is G', [x], vocab)
+            s = operate('Material Conditional', [x_is_f, x_is_g])
+            return quantify(quantifier, x, s)
+        return quantify(quantifier, x, x_is_f)
 
 system_predicates = {
     'Identity'  : Vocabulary.Predicate('Identity',  -1, 0, 2),
@@ -819,7 +820,7 @@ class TableauxSystem(object):
         """
 
         def __init__(self, props={}):
-            #: A dictionary of arbitrary properties for the node.
+            #: A dictionary of properties for the node.
             self.props = props
             self.ticked = False
 
@@ -845,17 +846,35 @@ class TableauxSystem(object):
             return self.__dict__.__repr__()
 
     class Rule(object):
+        """
+        Base interface class for a tableau rule. Rule classes are instantiated per tableau instance.
+        """
 
         def __init__(self, tableau):
+            """
+            Instantiate the rule for the tableau.
+            """
+            #: Reference to the tableau for which the rule is instantiated.
             self.tableau = tableau
 
         def applies(self):
+            """
+            Whether the rule applies to the tableau. Implementations should return true/false.
+            """
             raise Exception(NotImplemented)
 
         def apply(self, target):
+            """
+            Apply the rule to the tableau. Assumes that applies() has returned true. Implementations should
+            modify the tableau directly, with no return value.
+            """
             raise Exception(NotImplemented)
 
         def example(self):
+            """
+            Add example branches/nodes sufficient for applies() to return true. Implementations should modify
+            the tableau directly, with no return value. Used for building examples/documentation.
+            """
             raise Exception(NotImplemented)
 
         def __repr__(self):
@@ -969,60 +988,6 @@ class TableauxSystem(object):
             if sentence != None:
                 props['sentence'] = sentence
             return props
-      
-    class OperatorRule(NodeRule):
-
-        operator = None
-
-        def applies_to_node(self, node, branch):
-            return (self.operator != None and 'sentence' in node.props and 
-                    node.props['sentence'].operator == self.operator)
-
-    class DoubleOperatorRule(NodeRule):
-
-        operators = None
-
-        def applies_to_node(self, node, branch):
-            return (self.operators != None and 'sentence' in node.props and
-                    node.props['sentence'].operator == self.operators[0] and
-                    node.props['sentence'].operand.operator == self.operators[1])
-
-    class OperatorQuantifierRule(NodeRule):
-
-        connectives = None
-
-        def applies_to_node(self, node, branch):
-            return (self.connectives != None and 'sentence' in node.props and
-                    node.props['sentence'].operator == self.connectives[0] and
-                    node.props['sentence'].operand.quantifier == self.connectives[1])
-
-    class OperatorDesignationRule(NodeRule):
-
-        conditions = None
-
-        def applies_to_node(self, node, branch):
-            return (self.conditions != None and 'sentence' in node.props and
-                    'designated' in node.props and node.props['sentence'].operator == self.conditions[0] and
-                    node.props['designated'] == self.conditions[1])
-
-    class DoubleOperatorDesignationRule(NodeRule):
-
-        conditions = None
-
-        def applies_to_node(self, node, branch):
-            return (self.conditions != None and 'sentence' in node.props and
-                    node.props['sentence'].operator == self.conditions[0][0] and
-                    node.props['sentence'].operand.operator == self.conditions[0][1] and
-                    node.props['designated'] == self.conditions[1])
-
-    class QuantifierDesignationRule(NodeRule):
-
-        conditions = None
-
-        def applies_to_node(self, node, branch):
-            return (self.conditions != None and 'sentence' in node.props and
-                    'designated' in node.props and node.props['sentence'].quantifier == self.conditions[0] and
-                    node.props['designated'] == self.conditions[1])
 
 class Parser(object):
 

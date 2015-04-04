@@ -28,7 +28,7 @@ from logic import atomic
 class TableauxSystem(k.TableauxSystem):
     pass
 
-class TableauxRules:
+class TableauxRules(object):
 
     class Reflexive(logic.TableauxSystem.BranchRule):
                     

@@ -3,259 +3,247 @@ description = 'Gappy Object 3-valued Logic'
 
 def example_validities():
     return {
-        'Addition'       : [['a'], 'Aab'],
-        'Simplification' : [['Kab'], 'a'],
-        'DeMorgan 3'     : [['KNaNb'], 'NAab'],
-        'DeMorgan 4'     : [['ANaNb'], 'NKab'],
-        'Contraction'    : [['CaCab'], 'Cab'],
+        'Addition'       : [[ 'a'     ], 'Aab'  ],
+        'Simplification' : [[ 'Kab'   ], 'a'    ],
+        'DeMorgan 3'     : [[ 'KNaNb' ], 'NAab' ],
+        'DeMorgan 4'     : [[ 'ANaNb' ], 'NKab' ],
+        'Contraction'    : [[ 'CaCab' ], 'Cab'  ],
     }
-    
+
 def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
     args.update({
-        'DeMorgan 1'     : [['NAab'], 'KNaNb'],
-        'DeMorgan 2'     : [['NKab'], 'ANaNb'],
+        'DeMorgan 1' : [[ 'NAab' ], 'KNaNb' ],
+        'DeMorgan 2' : [[ 'NKab' ], 'ANaNb' ],
     })
     return args
-    
+
 import logic, fde, k3
 from logic import negate, operate
-    
+
 class TableauxSystem(fde.TableauxSystem):
     pass
-    
+
 class TableauxRules(object):
-    
-    NodeRule = logic.TableauxSystem.NodeRule
-    OperatorDesignationRule = logic.TableauxSystem.OperatorDesignationRule
-    DoubleOperatorDesignationRule = logic.TableauxSystem.DoubleOperatorDesignationRule
-    
-    class UndesignatedCollapseRule(NodeRule):
-        
-        operator = None
-        
-        def applies_to_node(self, node, branch):
-            return (not node.props['designated'] and
-                    node.props['sentence'].operator == self.operator)
-            
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            branch.add({ 'sentence': negate(sentence), 'designated': True }).tick(node)
 
-    class UndesignatedCollapseQRule(NodeRule):
+    class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
 
-        quantifier = None
-
-        def applies_to_node(self, node, branch):
-            return (not node.props['designated'] and
-                    node.props['sentence'].quantifier == self.quantifier)
+        operator    = 'Conjunction'
+        designation = False
 
         def apply_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            branch.add({ 'sentence': negate(sentence), 'designated': True }).tick(node)
-            
-    class NegatedUndesignatedCollapseRule(NodeRule):
-        
-        operator = None
-        
-        def applies_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            return (not node.props['designated'] and
-                    sentence.operator == 'Negation' and
-                    sentence.operand.operator == self.operator)
-                    
+            branch.add({ 'sentence': negate(node.props['sentence']), 'designated' : True }).tick(node)
+
+    class ConjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+
+        negated     = True
+        operator    = 'Conjunction'
+        designation = True
+
         def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand
-            branch.add({ 'sentence': sentence, 'designated': True }).tick(node)
-                
-    class ConjunctionUndesignated(UndesignatedCollapseRule):
-        operator = 'Conjunction'
-    
-    class NegatedConjunctionUndesignated(NegatedUndesignatedCollapseRule):
-        operator = 'Conjunction'
-        
-    class DisjunctionUndesignated(UndesignatedCollapseRule):
+            newBranches = self.tableau.branch_multi(branch, 2)
+            s = node.props['sentence'].operand
+            newBranches[0].add({ 'sentence' : s.lhs, 'designated' : False }).tick(node)
+            newBranches[1].add({ 'sentence' : s.rhs, 'designated' : False }).tick(node)
+
+    class ConjunctionNegatedUndesignated(ConjunctionUndesignated):
+
+        negated = True
+
+    class DisjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+
+        negated     = True
+        operator    = 'Disjunction'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            s = node.props['sentence'].operand
+            branch.update([
+                { 'sentence': s.lhs, 'designated' : False },
+                { 'sentence': s.rhs, 'designated' : False }
+            ]).tick(node)
+
+    class DisjunctionUndesignated(ConjunctionUndesignated):
+
         operator = 'Disjunction'
-    
-    class NegatedDisjunctionUndesignated(NegatedUndesignatedCollapseRule):
+
+    class DisjunctionNegatedUndesignated(ConjunctionNegatedUndesignated):
+
         operator = 'Disjunction'
-        
-    class MaterialConditionalUndesignated(UndesignatedCollapseRule):
+
+    class MaterialConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+
+        negated     = True
+        operator    = 'Material Conditional'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            s = node.props['sentence'].operand
+            branch.update([
+                { 'sentence' : negate(s.lhs) , 'designated' : False },
+                { 'sentence' :        s.rhs  , 'designated' : False }
+            ]).tick(node)
+
+    class MaterialConditionalUndesignated(ConjunctionUndesignated):
+
         operator = 'Material Conditional'
-        
-    class NegatedMaterialConditionalUndesignated(NegatedUndesignatedCollapseRule):
+
+    class MaterialConditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
+
         operator = 'Material Conditional'
-        
-    class MaterialBiconditionalUndesignated(UndesignatedCollapseRule):
-        operator = 'Material Biconditional'
-        
-    class NegatedMaterialBiconditionalUndesignated(NegatedUndesignatedCollapseRule):
+
+    class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+
+        negated     = True
+        operator    = 'Material Biconditional'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            newBranches = self.tableau.branch_multi(branch, 2)
+            s = node.props['sentence'].operand
+            newBranches[0].update([
+                { 'sentence' : negate(s.lhs) , 'designated' : False },
+                { 'sentence' :        s.rhs  , 'designated' : False },
+            ]).tick(node)
+            newBranches[1].update([
+                { 'sentence' : negate(s.rhs) , 'designated' : False },
+                { 'sentence' :        s.lhs  , 'designated' : False }
+            ]).tick(node)
+
+    class MaterialBiconditionalUndesignated(ConjunctionUndesignated):
+
         operator = 'Material Biconditional'
 
-    class ConditionalUndesignated(UndesignatedCollapseRule):
+    class MaterialBiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
+
+        operator = 'Material Biconditional'
+
+    class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+
+        operator    = 'Conditional'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            newBranches = self.tableau.branch_multi(branch, 2)
+            s = node.props['sentence']
+            disj = operate('Disjunction', [negate(s.lhs), s.rhs])
+            newBranches[0].add({ 'sentence' : disj, 'designated' : True }).tick(node)
+            newBranches[1].update([
+                { 'sentence' :        s.lhs  , 'designated' : False },
+                { 'sentence' :        s.rhs  , 'designated' : False },
+                { 'sentence' : negate(s.lhs) , 'designated' : False },
+                { 'sentence' : negate(s.rhs) , 'designated' : False }
+            ]).tick(node)
+
+    class ConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+
+        negated     = True
+        operator    = 'Conditional'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            newBranches = self.tableau.branch_multi(branch, 2)
+            s = node.props['sentence'].operand
+            newBranches[0].update([
+                { 'sentence' : s.lhs, 'designated' : True  },
+                { 'sentence' : s.rhs, 'designated' : False }
+            ]).tick(node)
+            newBranches[1].update([
+                { 'sentence' : negate(s.rhs), 'designated' : True  },
+                { 'sentence' : negate(s.lhs), 'designated' : False }
+            ]).tick(node)
+
+    class ConditionalUndesignated(ConjunctionUndesignated):
+
         operator = 'Conditional'
 
-    class NegatedConditionalUndesignated(NegatedUndesignatedCollapseRule):
+    class ConditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
+
         operator = 'Conditional'
 
-    class BiconditionalUndesignated(UndesignatedCollapseRule):
+    class BiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+
+        operator    = 'Biconditional'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            s = node.props['sentence']
+            branch.update([
+                { 'sentence' : operate('Conditional', [s.lhs, s.rhs]), 'designated' : True },
+                { 'sentence' : operate('Conditional', [s.rhs, s.lhs]), 'designated' : True }
+            ]).tick(node)
+
+    class BiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+
+        negated     = True
+        operator    = 'Biconditional'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            newBranches = self.tableau.branch_multi(branch, 2)
+            s = node.props['sentence'].operand
+            newBranches[0].add({ 'sentence' : negate(operate('Conditional', [s.lhs, s.rhs])), 'designated': True }).tick(node)
+            newBranches[1].add({ 'sentence' : negate(operate('Conditional', [s.rhs, s.lhs])), 'designated': True }).tick(node)
+
+    class BiconditionalUndesignated(ConjunctionUndesignated):
+
         operator = 'Biconditional'
 
-    class NegatedBiconditionalUndesignated(NegatedUndesignatedCollapseRule):
+    class BiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
+
         operator = 'Biconditional'
 
-    class UniversalUndesignated(UndesignatedCollapseQRule):
-        quantifier = 'Universal'
+    class ExistentialUndesignated(ConjunctionUndesignated):
 
-    class ExistentialUndesignated(UndesignatedCollapseQRule):
+        operator   = None
         quantifier = 'Existential'
-            
-    class NegatedConjunctionDesignated(DoubleOperatorDesignationRule):
-        
-        conditions = (('Negation', 'Conjunction'), True)
-        
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand
-            self.tableau.branch(branch).add({
-                'sentence': sentence.lhs,
-                'designated': False
-            }).tick(node)
-            self.tableau.branch(branch).add({
-                'sentence': sentence.rhs,
-                'designated': False
-            }).tick(node)
-        
-    class NegatedDisjunctionDesignated(DoubleOperatorDesignationRule):
-        
-        conditions = (('Negation', 'Disjunction'), True)
-                    
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand
-            branch.update([
-                { 'sentence': sentence.lhs, 'designated': False },
-                { 'sentence': sentence.rhs, 'designated': False }
-            ]).tick(node)
-    
-    class NegatedMaterialConditionalDesignated(DoubleOperatorDesignationRule):
 
-        conditions = (('Negation', 'Material Conditional'), True)
+    class UniversalUndesignated(ExistentialUndesignated):
 
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand
-            branch.update([
-                { 'sentence': negate(sentence.lhs), 'designated': False },
-                { 'sentence': sentence.rhs, 'designated': False }
-            ]).tick(node)
-            
-    class NegatedMaterialBiconditionalDesignated(DoubleOperatorDesignationRule):
-        
-        conditions = (('Negation', 'Material Biconditional'), True)
-                    
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand
-            self.tableau.branch(branch).update([
-                { 'sentence': negate(sentence.lhs), 'designated': False },
-                { 'sentence': sentence.rhs, 'designated': False },
-            ]).tick(node)
-            self.tableau.branch(branch).update([
-                { 'sentence': negate(sentence.rhs), 'designated': False },
-                { 'sentence': sentence.lhs, 'designated': False }
-            ]).tick(node)
-            
-    class ConditionalDesignated(OperatorDesignationRule):
-        
-        conditions = ('Conditional', True)
-                    
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            self.tableau.branch(branch).add({
-                'sentence': operate('Disjunction', [negate(sentence.lhs), sentence.rhs]),
-                'designated': True
-            }).tick(node)
-            self.tableau.branch(branch).update([
-                { 'sentence': sentence.lhs, 'designated': False },
-                { 'sentence': sentence.rhs, 'designated': False },
-                { 'sentence': negate(sentence.lhs), 'designated': False },
-                { 'sentence': negate(sentence.rhs), 'designated': False }
-            ]).tick(node)
-
-    class NegatedConditionalDesignated(DoubleOperatorDesignationRule):
-        
-        conditions = (('Negation', 'Conditional'), True)
-        
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand
-            self.tableau.branch(branch).update([
-                { 'sentence': sentence.lhs, 'designated': True },
-                { 'sentence': sentence.rhs, 'designated': False }
-            ]).tick(node)
-            self.tableau.branch(branch).update([
-                { 'sentence': negate(sentence.rhs), 'designated': True },
-                { 'sentence': negate(sentence.lhs), 'designated': False }
-            ]).tick(node)
-            
-    class BiconditionalDesignated(OperatorDesignationRule):
-        
-        conditions = ('Biconditional', True)
-                    
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence']
-            branch.update([
-                { 'sentence': operate('Conditional', [sentence.lhs, sentence.rhs]), 'designated': True },
-                { 'sentence': operate('Conditional', [sentence.rhs, sentence.lhs]), 'designated': True }
-            ]).tick(node)
-            
-    class NegatedBiconditionalDesignated(DoubleOperatorDesignationRule):
-        
-        conditions = (('Negation', 'Biconditional'), True)
-        
-        def apply_to_node(self, node, branch):
-            sentence = node.props['sentence'].operand
-            self.tableau.branch(branch).add({
-                'sentence': negate(operate('Conditional', [sentence.lhs, sentence.rhs])),
-                'designated': True
-            }).tick(node)
-            self.tableau.branch(branch).add({
-                'sentence': negate(operate('Conditional', [sentence.rhs, sentence.lhs])),
-                'designated': True
-            }).tick(node)
-
+        quantifier = 'Universal'
 
     fderules = fde.TableauxRules
     k3rules = k3.TableauxRules
-    
+
     rules = [
+
+        # closure rules
         fderules.Closure,
         k3rules.Closure,
+
+        # non-branching rules
         fderules.ConjunctionDesignated,
         ConjunctionUndesignated,
-        NegatedConjunctionUndesignated,
-        NegatedDisjunctionDesignated,
+        ConjunctionNegatedUndesignated,
+        DisjunctionNegatedDesignated,
         DisjunctionUndesignated,
-        NegatedDisjunctionUndesignated,
-        NegatedMaterialConditionalDesignated,
+        DisjunctionNegatedUndesignated,
+        MaterialConditionalNegatedDesignated,
         MaterialConditionalUndesignated,
-        NegatedMaterialConditionalUndesignated,
+        MaterialConditionalNegatedUndesignated,
         MaterialBiconditionalUndesignated,
-        NegatedMaterialBiconditionalUndesignated,
+        MaterialBiconditionalNegatedUndesignated,
         ConditionalUndesignated,
-        NegatedConditionalUndesignated,
+        ConditionalNegatedUndesignated,
         BiconditionalUndesignated,
-        NegatedBiconditionalUndesignated,
+        BiconditionalNegatedUndesignated,
         BiconditionalDesignated,
         fderules.UniversalDesignated,
         fderules.ExistentialDesignated,
         UniversalUndesignated,
         ExistentialUndesignated,
-        
+        fderules.DoubleNegationDesignated,
+        fderules.DoubleNegationUndesignated,
+
         # branching rules
         fderules.DisjunctionDesignated,
-        NegatedConjunctionDesignated,
+        ConjunctionNegatedDesignated,
         fderules.MaterialConditionalDesignated,
         fderules.MaterialBiconditionalDesignated,
-        NegatedMaterialBiconditionalDesignated,
+        MaterialBiconditionalNegatedDesignated,
         ConditionalDesignated,
-        NegatedConditionalDesignated,
-        NegatedBiconditionalDesignated
+        ConditionalNegatedDesignated,
+        BiconditionalNegatedDesignated
+
     ]

@@ -91,13 +91,14 @@ description = 'First Degree Entailment Logic'
 
 def example_validities():
     return {
-        'Addition'       : [[ 'a'     ], 'Aab'   ],
-        'Simplification' : [[ 'Kab'   ], 'a'     ],
-        'DeMorgan 1'     : [[ 'NAab'  ], 'KNaNb' ],
-        'DeMorgan 2'     : [[ 'NKab'  ], 'ANaNb' ],
-        'DeMorgan 3'     : [[ 'KNaNb' ], 'NAab'  ],
-        'DeMorgan 4'     : [[ 'ANaNb' ], 'NKab'  ],
-        'Contraction'    : [[ 'CaCab' ], 'Cab'   ],
+        'Addition'                : [[ 'a'     ], 'Aab'   ],
+        'Simplification'          : [[ 'Kab'   ], 'a'     ],
+        'DeMorgan 1'              : [[ 'NAab'  ], 'KNaNb' ],
+        'DeMorgan 2'              : [[ 'NKab'  ], 'ANaNb' ],
+        'DeMorgan 3'              : [[ 'KNaNb' ], 'NAab'  ],
+        'DeMorgan 4'              : [[ 'ANaNb' ], 'NKab'  ],
+        'Material Contraction'    : [[ 'CaCab' ], 'Cab'   ],
+        'Conditional Contraction' : [[ 'CaCab' ], 'Cab'   ]        
     }
 
 def example_invalidities():
@@ -127,8 +128,8 @@ class TableauxSystem(logic.TableauxSystem):
 
         branch = tableau.branch()
         for premise in argument.premises:
-            branch.add({ 'sentence': premise, 'designated': True })
-        branch.add({ 'sentence': argument.conclusion, 'designated': False })
+            branch.add({ 'sentence' : premise, 'designated' : True })
+        branch.add({ 'sentence' : argument.conclusion, 'designated' : False })
 
 class TableauxRules(object):
     """
@@ -305,8 +306,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = node.props['sentence']
             branch.update([
-                { 'sentence' : negate(s.lhs) , 'designated': False },
-                { 'sentence' :        s.rhs  , 'designated': False }
+                { 'sentence' : negate(s.lhs) , 'designated' : False },
+                { 'sentence' :        s.rhs  , 'designated' : False }
             ]).tick(node)
 
     class MaterialConditionalNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):

@@ -5,7 +5,8 @@ def example_validities():
     import t
     args = t.example_validities()
     args.update({
-		'S4 Inference 1': 'CLaLLa'
+		'S4 Material Inference 1'    : 'CLaLLa',
+		'S4 Conditional Inference 1' : 'ULaLLa'		
     })
     return args
     
@@ -13,8 +14,9 @@ def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
     args.update({
-	    'Possibility distribution': [['KMaMb'], 'MKab'],
-		'S5 Inference 1': 'CaLMa'
+	    'Possibility distribution'   : [['KMaMb'], 'MKab'],
+		'S5 Material Inference 1'    : 'CaLMa',
+		'S5 Conditional Inference 1' : 'UaLMa'
     })
     return args
     
@@ -23,7 +25,7 @@ import logic, k, t
 class TableauxSystem(k.TableauxSystem):
     pass
     
-class TableauxRules:
+class TableauxRules(object):
     
     class Transitive(logic.TableauxSystem.BranchRule):
         

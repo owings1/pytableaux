@@ -91,8 +91,10 @@ def example_validities():
     args.update({
         'Law of Non-contradiction'    : [[ 'KaNa' ], 'b' ],
         'Disjunctive Syllogism'       : [[ 'Aab', 'Nb' ], 'a'  ],
-        'Modus Ponens'                : [[ 'Cab', 'a'  ], 'b'  ],
-        'Modus Tollens'               : [[ 'Cab', 'Nb' ], 'Na' ]
+        'Material Modus Ponens'       : [[ 'Cab', 'a'  ], 'b'  ],
+        'Material Modus Tollens'      : [[ 'Cab', 'Nb' ], 'Na' ],
+        'Conditional Modus Ponens'    : [[ 'Uab', 'a'  ], 'b'  ],
+        'Conditional Modus Tollens'   : [[ 'Uab', 'Nb' ], 'Na' ]
     })
     return args
     
@@ -100,7 +102,8 @@ def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
     args.update({
-        'Identity'                    : 'Caa',
+        'Material Identity'           : 'Caa',
+        'Conditional Identity'        : 'Uaa',        
         'Law of Excluded Middle'      : 'AaNa'
     })
     return args
@@ -114,7 +117,7 @@ class TableauxSystem(fde.TableauxSystem):
     """
     pass
         
-class TableauxRules:
+class TableauxRules(object):
     """
     The Tableaux System for K3 contains all the rules from FDE, as well as an additional
     Closure rule below.
