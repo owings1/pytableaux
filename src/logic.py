@@ -613,13 +613,18 @@ class TableauxSystem(object):
             # A history of rule applications.
             self.history = []
 
+            #: A reference to the logic, if given
+            self.logic = None
+
+            #: The rule instances of the logic, if given
+            self.rules = []
+
+            #: The argument of the tableau, if given
+            self.argument = argument
+
             if logic != None:
                 self.logic = get_logic(logic)
                 self.rules = [Rule(self) for Rule in self.logic.TableauxRules.rules]
-            else:
-                self.logic = None
-                self.rules = []
-            self.argument = argument
             
             if argument != None:
                 self.build_trunk()
@@ -690,9 +695,14 @@ class TableauxSystem(object):
             return self.logic.TableauxSystem.build_trunk(self, self.argument)
 
         def finish(self):
+            """
+            Mark the tableau as finished. Computes the 'valid' property and builds the structure
+            into the 'tree' property. Returns self.
+            """
             self.finished = True
             self.valid    = len(self.open_branches()) == 0
             self.tree     = self.structure(self.branches)
+            return self
 
         def __repr__(self):
             return {
@@ -708,7 +718,7 @@ class TableauxSystem(object):
         """
 
         def __init__(self):
-            #: A branch is closed by a closure rule.
+            #: A branch is closed by a closure balls rule.
             self.closed = False
             self.ticked_nodes = set()
             self.nodes = []
@@ -859,7 +869,7 @@ class TableauxSystem(object):
 
         def applies(self):
             """
-            Whether the rule applies to the tableau. Implementations should return true/false.
+            Whether the rule applies to the tableau. Implementations should return true/false or a target object.
             """
             raise Exception(NotImplemented)
 
@@ -881,6 +891,11 @@ class TableauxSystem(object):
             return self.__class__.__name__
 
     class BranchRule(Rule):
+        """
+        A branch rule applies to an open branch on a tableau. This base class implements the applies() method
+        by finding the first open branch on the tableau to which the abstract method applies_to_branch() returns
+        a non-false value.
+        """
 
         def applies(self):
             for branch in self.tableau.open_branches():
@@ -890,9 +905,16 @@ class TableauxSystem(object):
             return False
 
         def applies_to_branch(self, branch):
+            """
+            Abstract method that must be implemented in sub-classes. Should return a target object.
+            """
             raise Exception(NotImplemented)
 
     class ClosureRule(BranchRule):
+        """
+        A closure rule has a fixed apply() method that marks the branch as closed. Sub-classes should
+        implement the applies_to_branch() method.
+        """
 
         def applies_to_branch(self, branch):
             raise Exception(NotImplemented)
@@ -901,6 +923,10 @@ class TableauxSystem(object):
             branch.close()
 
     class NodeRule(BranchRule):
+        """
+        A node rule has a fixed applies() method that searches open branches and queries the applies_to_node()
+        method. If it applies, return a target dict with props 'node' and 'branch'.
+        """
 
         def applies(self):
             for branch in self.tableau.open_branches():
