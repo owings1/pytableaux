@@ -34,7 +34,7 @@ form.argument {
 
 form.argument fieldset {
     float: left;
-    width: 22%;
+    min-width: 22%;
     border-color: #eee;
 }
 
