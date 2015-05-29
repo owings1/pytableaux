@@ -38,7 +38,7 @@
                 <label for="logic">Logic</label>
                 <select id="logic" name="logic" multiple="multiple">
                     {% for module in logic_modules %}
-                        <option value="{{ module }}" {{ helper.select_opt_multi(form_data, 'logic', module) }}>
+                        <option value="{{ module }}" {{ helper.select_opt_multi_default_select(form_data, 'logic', module) }}>
                             {{ logics[module].name }}
                         </option>
                     {% endfor %}
