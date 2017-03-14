@@ -18,7 +18,7 @@
 #
 # pytableaux - Web Interface
 
-import logic, json
+import logic, json, os
 
 available_module_names = {
     'logics'    : ['cfol', 'k3', 'l3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
@@ -40,6 +40,12 @@ for notation_name in modules['notations']:
         
 import os.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
+global_config = {
+    'global': {
+        'server.socket_host': os.environ['PY_HOST'] if 'PY_HOST' in os.environ else '127.0.0.1',
+        'server.socket_port': int(os.environ['PY_PORT']) if 'PY_PORT' in os.environ else 8080
+    }
+}
 config = {
     '/static' : {
         'tools.staticdir.on'  : True,
@@ -176,6 +182,7 @@ class App:
                     errors['Predicate ' + str(i + 1)] = Exception('Name cannot be empty')
         
 def main():
+    server.config.update(global_config)
     server.quickstart(App(), '/', config)
 
 if  __name__ =='__main__':main()
