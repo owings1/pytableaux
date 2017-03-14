@@ -19,11 +19,12 @@
 # pytableaux - First Degree Entailment Logic
 
 """
+FDE is a 4-valued logic (True, False, Neither and Both).
+
 Semantics
 ---------
 
-FDE is a 4-valued logic (True, False, Neither and Both). Two primitive operators, negation and
-disjunction, are defined via truth tables.
+Two primitive operators, negation and disjunction, are defined via truth tables.
 
 **Negation**:
 
@@ -63,6 +64,42 @@ Other operators are defined via semantic equivalencies:
     
 - **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
 
+The truth tables for some defined connectives are as follows:
+
+**Conjunction**:
+
++-----------+----------+-----------+-----------+---------+
+|  A and B  |          |           |           |         |
++===========+==========+===========+===========+=========+
+|           |  **T**   |   **B**   |   **N**   |  **F**  |
++-----------+----------+-----------+-----------+---------+
+|  **T**    |    T     |     T     |     N     |    F    |
++-----------+----------+-----------+-----------+---------+
+|  **B**    |    T     |     B     |     B     |    F    |
++-----------+----------+-----------+-----------+---------+
+|  **N**    |    N     |     B     |     N     |    F    |
++-----------+----------+-----------+-----------+---------+
+|  **F**    |    F     |     F     |     F     |    F    | 
++-----------+----------+-----------+-----------+---------+
+
+
+**Material Conditional**:
+
++-----------+----------+-----------+-----------+---------+
+|  if A, B  |          |           |           |         |
++===========+==========+===========+===========+=========+
+|           |  **T**   |   **B**   |   **N**   |  **F**  |
++-----------+----------+-----------+-----------+---------+
+|  **T**    |    T     |     F     |     N     |    F    |
++-----------+----------+-----------+-----------+---------+
+|  **B**    |    T     |     B     |     B     |    F    |
++-----------+----------+-----------+-----------+---------+
+|  **N**    |    T     |     B     |     N     |    N    |
++-----------+----------+-----------+-----------+---------+
+|  **F**    |    T     |     T     |     T     |    T    | 
++-----------+----------+-----------+-----------+---------+
+
+
 The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
 
 **Predicate Sentences** like *a is F* are handled via a predicate's *extension* and *anti-extension*:
@@ -97,11 +134,14 @@ Some notable features of FDE include:
   
 * Failure of Modus Ponens, Modus Tollens, Disjunctive Syllogism, and other Classical validities.
 
-* DeMorgan laws are valid.
+* DeMorgan laws are valid, as well as conditional contraction.
 
 For futher reading see:
 
-- `Stanford Encyclopedia entry on paraconsistent logic <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
+- `Stanford Encyclopedia on Paraconsistent Logic`_
+
+.. _Stanford Encyclopedia on Paraconsistent Logic: http://plato.stanford.edu/entries/logic-paraconsistent/
+
 """
 name = 'FDE'
 description = 'First Degree Entailment Logic'

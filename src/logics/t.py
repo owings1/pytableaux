@@ -17,7 +17,16 @@
 # ------------------
 #
 # pytableaux - Reflexive Normal Modal Logic
+"""
+Reflexive Modal Logic is an extension of K, with a *reflexive* accessibility relation,
+which states that for every world *w*, *w* accesses *w* (itself).
 
+Links
+-----
+
+- `Stanford Encyclopedia on Modal Logic`_
+
+"""
 name = 'T'
 description = 'Reflexive Normal Modal Logic'
 links = {
@@ -28,9 +37,9 @@ def example_validities():
     import d
     args = d.example_validities()
     args.update({
-        'Possibility Addition': [['a'], 'Ma'],
-        'Necessity Elimination': [['La'], 'a'],
-    	'NP Collapse 1': [['LMa'], 'Ma']
+        'Possibility Addition'  : [['a']  , 'Ma'],
+        'Necessity Elimination' : [['La'] , 'a' ],
+    	'NP Collapse 1'         : [['LMa'], 'Ma']
     })
     return args
     
@@ -46,11 +55,26 @@ import logic, k
 from logic import atomic
 
 class TableauxSystem(k.TableauxSystem):
+    """
+    T's Tableaux System inherits directly from K's.
+    """
     pass
 
 class TableauxRules(object):
+    """
+    The Tableaux Rules for T contain the rules for K, as well as an additional
+    Reflexive rule, which operates on the accessibility relation for worlds.
+    """
 
     class Reflexive(logic.TableauxSystem.BranchRule):
+        """
+        The Reflexive rule applies to an open branch *b* when there is a node *n*
+        on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
+
+        For a node *n* on an open branch *b* on which appears a world *w* for which there is
+        no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
+        is *w*.
+        """
                     
         def applies_to_branch(self, branch):
             for world in branch.worlds():

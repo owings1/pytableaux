@@ -19,13 +19,20 @@
 # pytableaux - Deonitic Normal Modal Logic
 
 """
-D - Deonitic Normal Modal Logic
+Deontic logic, also known as the Logic of Obligation, is an extension of K, with
+a *serial* accessibility relation, which states that for every world *w*, there is
+a world *w'* such that *w* accesses *w'*.
+
+Links
+-----
+
+- `Stanford Encyclopedia on Deontic Logic`_
+
+.. _Stanford Encyclopedia on Deontic Logic: http://plato.stanford.edu/entries/logic-deontic/
+
 """
 name = 'D'
 description = 'Deontic Normal Modal Logic'
-links = {
-    'Stanford Encyclopedia': 'http://plato.stanford.edu/entries/logic-deontic/'
-}
 
 def example_validities():
     import k
@@ -39,9 +46,9 @@ def example_invalidities():
     import t
     args = t.example_invalidities()
     args.update({
-    	'Reflexive Inference 1': 'CLaa',
-        'Possibility Addition': [['a'], 'Ma'],
-        'Necessity Elimination': [['La'], 'a']
+    	'Reflexive Inference 1' : 'CLaa',
+        'Possibility Addition'  : [['a'], 'Ma'],
+        'Necessity Elimination' : [['La'], 'a']
     })
     return args
     
@@ -49,11 +56,29 @@ import logic, k
 from logic import atomic
 
 class TableauxSystem(k.TableauxSystem):
+    """
+    D's Tableaux System inherits directly from K's.
+    """
     pass
 
 class TableauxRules:
-    
+    """
+    The Tableaux Rules for D contain the rules for K, as well as an additional
+    Serial rule, which operates on the accessibility relation for worlds.
+    """
     class Serial(logic.TableauxSystem.BranchRule):
+        """
+        The Serial rule applies to a an open branch *b* when there is a world *w* that
+        appears on *b*, but there is no world *w'* such that *w* accesses *w'*. The exception
+        to this is when the Serial rule was the last rule to apply to the branch. This
+        prevents infinite repetition of the Serial rule for open branches that are otherwise
+        finished. For this reason, even though the Serial rule is non-branching, it is ordered
+        last in the rules, so that all other rules are checked before it.
+
+        For a node *n* on an open branch *b* on which appears a world *w* for which there is
+        no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
+        and *w1* as world2, where *w1* does not yet appear on *b*.
+        """
         
         def applies_to_branch(self, branch):
             if len(self.tableau.history) and self.tableau.history[-1]['rule'] == self:
@@ -69,6 +94,7 @@ class TableauxRules:
                 'world1': target['world'], 
                 'world2': target['branch'].new_world()
             })
+
         def example(self):
             self.tableau.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
 

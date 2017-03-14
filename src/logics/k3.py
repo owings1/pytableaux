@@ -19,11 +19,14 @@
 # pytableaux - Strong Kleene Logic
 
 """
+K3 is a 3-valued logic (True, False, and Neither).
+
 Semantics
 ---------
 
-K3 is a 3-valued logic (True, False, and Neither). Two primitive operators, negation and
-disjunction, are defined via truth tables.
+The semantics of K3 can be thought of as the same as FDE, with the **B** value removed.
+
+Two primitive operators, negation and disjunction, are defined via truth tables.
 
 **Negation**:
 
@@ -59,7 +62,21 @@ Other operators are defined via semantic equivalencies:
     
 - **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
 
-The truth table for the material conditional is as follows:
+The truth table for some defined connectives are as follows:
+
+**Conjunction**:
+
++-----------+----------+-----------+---------+
+|  A and B  |          |           |         |
++===========+==========+===========+=========+
+|           |  **T**   |   **N**   |  **F**  |
++-----------+----------+-----------+---------+
+|  **T**    |    T     |     N     |    F    |
++-----------+----------+-----------+---------+
+|  **N**    |    N     |     N     |    F    |
++-----------+----------+-----------+---------+
+|  **F**    |    F     |     F     |    F    | 
++-----------+----------+-----------+---------+
 
 **Material Conditional**:
 

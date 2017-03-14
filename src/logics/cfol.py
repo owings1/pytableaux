@@ -19,11 +19,12 @@
 # pytableaux - Classical First-Order Logic
 
 """
+Classical First-Order Logic (CFOL) is the standard bivalent logic (True, False).
+
 Semantics
 ---------
 
-Classical First-Order Logic (CFOL) is the standard bivalent logic (True, False). Two primitive operators, negation and
-disjunction, are defined via truth tables.
+Two primitive operators, negation and disjunction, are defined via truth tables.
 
 **Negation**:
 
@@ -55,8 +56,45 @@ Other operators are defined via semantic equivalencies in the usual way:
 
 - **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
 
+The truth tables for defined connectives are as follows:
+
+**Conjunction**:
+
++-----------+----------+---------+
+|  A and B  |          |         |
++===========+==========+=========+
+|           |  **T**   |  **F**  |
++-----------+----------+---------+
+|  **T**    |    T     |    F    |
++-----------+----------+---------+
+|  **F**    |    F     |    F    | 
++-----------+----------+---------+
+
+**Material Conditional**:
+
++-----------+----------+---------+
+|  if A, B  |          |         |
++===========+==========+=========+
+|           |  **T**   |  **F**  |
++-----------+----------+---------+
+|  **T**    |    T     |    F    |
++-----------+----------+---------+
+|  **F**    |    T     |    T    | 
++-----------+----------+---------+
+
+**Material Biconditional**:
+
++-----------+----------+---------+
+|  A iff B  |          |         |
++===========+==========+=========+
+|           |  **T**   |  **F**  |
++-----------+----------+---------+
+|  **T**    |    T     |    F    |
++-----------+----------+---------+
+|  **F**    |    F     |    T    | 
++-----------+----------+---------+
+
 The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
-In other logics (see, for example GO).
 
 **Predicate Sentences** like *a is F* are handled via a predicate's *extension*:
 

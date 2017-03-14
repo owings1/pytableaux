@@ -21,12 +21,16 @@
 """
 Kripke Logic (K) is the foundation of so-called normal modal logics. It is an extension of CFOL,
 adding the modal operators for possibility and necessity.
+
+Links
+-----
+
+- `Stanford Encyclopedia on Modal Logic`_
+
+.. _Stanford Encyclopedia on Modal Logic: http://plato.stanford.edu/entries/logic-modal/
 """
 name = 'K'
 description = 'Kripke Normal Modal Logic (Fixed Domain)'
-links = {
-    'Stanford Encyclopedia': 'http://plato.stanford.edu/entries/logic-modal/'
-}
 
 def example_validities():
     import cfol

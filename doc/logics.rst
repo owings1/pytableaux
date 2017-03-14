@@ -30,27 +30,33 @@ K - Kripke Normal Modal Logic
     .. autoclass:: TableauxRules
         :members:
 
-
-
 D - Deontic Normal Modal Logic
 ==============================
 
-Logic of obligation.
+.. automodule:: logics.d
 
-Semantics
----------
+    Tableaux System
+    ---------------
 
-Tableaux
---------
+    .. autoclass:: TableauxSystem
+        :members:
+
+    .. autoclass:: TableauxRules
+        :members:
 
 T - Reflexive Normal Modal Logic
 ================================
 
-Semantics
----------
+.. automodule:: logics.t
 
-Tableaux
---------
+    Tableaux System
+    ---------------
+
+    .. autoclass:: TableauxSystem
+        :members:
+
+    .. autoclass:: TableauxRules
+        :members:
 
 S4 - S4 Normal Modal Logic
 ==========================
