@@ -561,6 +561,8 @@ class Vocabulary(object):
             self.sentence   = sentence
 
         def substitute(self, constant, variable):
+            if self.sentence.is_quantified():
+                return Vocabulary.QuantifiedSentence(self.sentence.quantifier, self.sentence.variable, self.sentence.substitute(constant, variable))
             return self.sentence.substitute(constant, variable)
 
         def constants(self):
@@ -1115,10 +1117,12 @@ class Parser(object):
         return [index, subscript]
 
     def read_subscript(self):
-        sub = ['0']
+        sub = []
         while (self.current() and self.current().isdigit()):
             sub.append(self.current())
             self.advance()
+        if not len(sub):
+            sub.append('0')
         return int(''.join(sub))
 
     def read_atomic(self):

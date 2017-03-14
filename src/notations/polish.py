@@ -79,7 +79,7 @@ class Parser(logic.Parser):
         'V' : 'Universal',
         'S' : 'Existential'
     }
-    upchars = ['F', 'G', 'H', 'K']
+    upchars = ['F', 'G', 'H', 'O']
     spchars = ['I', 'J']
 
     def read(self):

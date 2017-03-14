@@ -535,7 +535,7 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence'].sentence
+            s = node.props['sentence']
             v = node.props['sentence'].variable
             # keep designation neutral for inheritance below
             branch.add({ 'sentence' : s.substitute(branch.new_constant(), v), 'designated' : self.designation }).tick(node)
@@ -577,7 +577,7 @@ class TableauxRules(object):
                 # keep quantifier and designation neutral for inheritance below
                 if n.props['sentence'].quantifier == self.quantifier and n.props['designated'] == self.designation:
                     v = n.props['sentence'].variable
-                    s = n.props['sentence'].sentence
+                    s = n.props['sentence']
                     if not len(constants):
                         return { 'branch' : branch, 'sentence' : s.substitute(branch.new_constant(), v), 'node' : n }
                     for c in constants:

@@ -45,6 +45,8 @@ def test_logics():
     vocabulary.declare_predicate('is F', 0, 0, 1)
     vocabulary.declare_predicate('is G', 1, 0, 1)
     vocabulary.declare_predicate('is H', 2, 0, 1)
+    vocabulary.declare_predicate('O0s',  3, 0, 2)
+    vocabulary.declare_predicate('O1s',  3, 1, 2)
     parser = polish.Parser(vocabulary)
     for logic in logics:
         print logic.name

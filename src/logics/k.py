@@ -312,7 +312,7 @@ class TableauxRules(object):
 
         def apply_to_node(self, node, branch):
             w = node.props['world']
-            s = node.props['sentence'].sentence
+            s = node.props['sentence']
             v = node.props['sentence'].variable
             branch.add({ 'sentence' : s.substitute(branch.new_constant(), v), 'world': w }).tick(node)
 
@@ -350,7 +350,7 @@ class TableauxRules(object):
                 if 'sentence' in node.props and 'world' in node.props and node.props['sentence'].quantifier == self.quantifier:
                     w = node.props['world']
                     v = node.props['sentence'].variable
-                    s = node.props['sentence'].sentence
+                    s = node.props['sentence']
                     if len(constants):
                         for c in constants:
                             r = s.substitute(c, v)

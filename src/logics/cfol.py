@@ -93,7 +93,9 @@ def example_validities():
         'Modus Tollens'               : [[ 'Cab', 'Nb' ], 'Na' ],
         'Biconditional Elimination'   : [[ 'Eab', 'a'  ], 'b'  ],
         'Biconditional Elimination 2' : [[ 'Eab', 'Na' ], 'Nb' ],
-        'Syllogism'                   : [[ 'VxCFxGx', 'VxCGxHx' ], 'VxCFxHx']
+        'Syllogism'                   : [[ 'VxCFxGx', 'VxCGxHx' ], 'VxCFxHx'],
+        'Existential Syllogism'       : [[ 'VxCFxGx', 'Fn'     ],  'Gn'],
+        'Universal Predicate Syllogism' : [[ 'VxVyCO0xyO1xy', 'O0nm'], 'O1nm']
     })
     return args
 
@@ -339,7 +341,7 @@ class TableauxRules(object):
         quantifier = 'Existential'
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence'].sentence
+            s = node.props['sentence']
             v = node.props['sentence'].variable
             branch.add({ 'sentence': s.substitute(branch.new_constant(), v) }).tick(node)
 
@@ -374,7 +376,7 @@ class TableauxRules(object):
             for node in branch.get_nodes():
                 if 'sentence' in node.props and node.props['sentence'].quantifier == self.quantifier:
                     v = node.props['sentence'].variable
-                    s = node.props['sentence'].sentence
+                    s = node.props['sentence']
                     if len(constants):
                         for c in constants:
                             r = s.substitute(c, v)
