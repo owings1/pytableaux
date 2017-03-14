@@ -46,9 +46,9 @@ disjunction, are defined via truth tables.
 +-----------+----------+-----------+---------+
 |  **T**    |    T     |     T     |    T    |
 +-----------+----------+-----------+---------+
-|  **N**    |    T     |     N     |    F    |
+|  **N**    |    T     |     N     |    N    |
 +-----------+----------+-----------+---------+
-|  **F**    |    T     |     F     |    F    | 
+|  **F**    |    T     |     N     |    F    | 
 +-----------+----------+-----------+---------+
 
 Other operators are defined via semantic equivalencies:
@@ -58,6 +58,22 @@ Other operators are defined via semantic equivalencies:
 - **Material Conditional**: ``if A then B := not-A or B``
     
 - **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
+
+The truth table for the material conditional is as follows:
+
+**Material Conditional**:
+
++-----------+----------+-----------+---------+
+|  A or B   |          |           |         |
++===========+==========+===========+=========+
+|           |  **T**   |   **N**   |  **F**  |
++-----------+----------+-----------+---------+
+|  **T**    |    T     |     N     |    F    |
++-----------+----------+-----------+---------+
+|  **N**    |    T     |     N     |    N    |
++-----------+----------+-----------+---------+
+|  **F**    |    T     |     T     |    T    | 
++-----------+----------+-----------+---------+
 
 The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
 
