@@ -8,13 +8,13 @@
 </head>
 <body>
     <div class="header">
-        <a href="/">pytableaux</a> | <a href="/doc">documentation</a>
+        <a href="/">pytableaux {{ version }}</a> | <a href="/doc">documentation</a>
     </div>
     <div class="content">
         {% block content %}{% endblock %}
     </div>
     <div class="footer">
-        Copyright &copy; 2014-2015, Doug Owings. All Rights Reserved.
+        Copyright &copy; {{ copyright }}
     </div>
     <script type="text/json" class="app">{{ app }}</script>
 </body>

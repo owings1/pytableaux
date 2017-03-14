@@ -47,6 +47,12 @@ config = {
     }
 }
 
+config['/doc'] = {
+    'tools.staticdir.on'    : True,
+    'tools.staticdir.dir'   : os.path.join(current_dir, '..', 'doc', '_build', 'html'),
+    'tools.staticdir.index' : 'index.html'
+}
+
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('logic', 'www/views'))
 
