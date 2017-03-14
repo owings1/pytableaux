@@ -28,7 +28,7 @@ def test_all():
     
 def test_logics():
     from notations import polish
-    from logics import fde, k3, lp, go, cfol, k, d, t, s4
+    from logics import fde, k3, lp, go, cfol, k, d, t, s4, l3
     logics = [
         fde,
         k3,
@@ -38,7 +38,8 @@ def test_logics():
         k,
         d,
         t,
-        s4
+        s4,
+        l3
     ]
     vocabulary = Vocabulary()
     vocabulary.declare_predicate('is F', 0, 0, 1)

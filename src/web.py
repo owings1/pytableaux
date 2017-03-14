@@ -21,7 +21,7 @@
 import logic, json
 
 available_module_names = {
-    'logics'    : ['cfol', 'k3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
+    'logics'    : ['cfol', 'k3', 'l3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
     'notations' : ['polish'],
     'writers'   : ['html', 'ascii']
 }

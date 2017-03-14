@@ -119,9 +119,11 @@ def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
     args.update({
-        'Material Identity'           : 'Caa',
-        'Conditional Identity'        : 'Uaa',        
-        'Law of Excluded Middle'      : 'AaNa'
+        'Material Identity'               : 'Caa',
+        'Conditional Identity'            : 'Uaa',
+        'Material Biconditional Identity' : 'Eaa',
+        'Biconditional Identity'          : 'Baa',
+        'Law of Excluded Middle'          : 'AaNa'
     })
     return args
     
