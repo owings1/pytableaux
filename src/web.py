@@ -37,7 +37,12 @@ notation_user_predicate_symbols = {}
 for notation_name in modules['notations']:
     notation = modules['notations'][notation_name]
     notation_user_predicate_symbols[notation_name] = list(notation.Parser.upchars)
-        
+
+example_arguments = {}
+for lname in modules['logics']:
+    example_arguments.update(modules['logics'][lname].example_validities())
+    example_arguments.update(modules['logics'][lname].example_invalidities())
+
 import os.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 global_config = {
@@ -71,16 +76,19 @@ class App:
         App.fix_kw(kw)
         print kw
         data = {
-            'operators_list'    : logic.operators_list,
-            'logic_modules'     : available_module_names['logics'],
-            'logics'            : modules['logics'],
-            'writer_modules'    : available_module_names['writers'],
-            'writers'           : modules['writers'],
-            'notation_modules'  : available_module_names['notations'],
-            'notations'         : modules['notations'],
-            'form_data'         : kw,
-            'system_predicates' : logic.system_predicates,
-            'quantifiers'       : logic.quantifiers_list,
+            'operators_list'     : logic.operators_list,
+            'logic_modules'      : available_module_names['logics'],
+            'logics'             : modules['logics'],
+            'writer_modules'     : available_module_names['writers'],
+            'writers'            : modules['writers'],
+            'notation_modules'   : available_module_names['notations'],
+            'notations'          : modules['notations'],
+            'form_data'          : kw,
+            'system_predicates'  : logic.system_predicates,
+            'quantifiers'        : logic.quantifiers_list,
+            'example_args_list'  : sorted(example_arguments.keys()),
+            'example_arguments'  : example_arguments,
+            'example_predicates' : logic.test_pred_data,
             'app' : json.dumps({
                 'notation_user_predicate_symbols' : notation_user_predicate_symbols,
                 'num_predicate_symbols'           : logic.num_predicate_symbols
@@ -98,12 +106,12 @@ class App:
             errors = {}
             App.declare_user_predicates(kw, vocabulary, errors)
             parser = notation.Parser(vocabulary)
-                       
+
             try:
                 premiseStrs = [premise for premise in kw['premises[]'] if len(premise) > 0]
             except:
-                premiseStrs = None
-            kw['premises[]'] = premiseStrs
+                premiseStrs = []
+
             premises = []
             for i, premiseStr in enumerate(premiseStrs):
                 try:

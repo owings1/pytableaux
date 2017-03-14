@@ -77,6 +77,15 @@ num_const_symbols     = 4
 num_atomic_symbols    = 5
 num_predicate_symbols = 4
 
+# Test vocabulary predicate data for example_validities, etc.
+test_pred_data = [
+    ['is F', 0, 0, 1],
+    ['is G', 1, 0, 1],
+    ['is H', 2, 0, 1],
+    ['Os'  , 3, 0, 2],
+    ['O1s' , 3, 1, 2]
+]
+
 def atomic(index, subscript):
     """Return an atomic sentence represented by the given index and subscript integers.
     Examples::
@@ -337,6 +346,10 @@ def _get_module(package, arg):
             arg = package + '.' + arg
         return importlib.import_module(arg.lower())
     raise Exception("Argument must be module or string")
+
+
+def get_test_vocabulary():
+    return Vocabulary(test_pred_data)
 
 class Vocabulary(object):
     """

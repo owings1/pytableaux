@@ -171,7 +171,42 @@
             <div class="input submit">
                 <input type="submit" value="Go"/>
             </div>
+            <hr>
+            Or, load example:
+            <select id="example_argument">
+                <option value=""></option>
+                {% for argument_name in example_args_list %}
+                    <option value="{{ argument_name }}">{{ argument_name }}</option>
+                {% endfor %}
+            </select>
         </fieldset>
     </form>
     <div class="clear"></div>
+    <div class="hidden">
+        <h3>Example Argument Forms</h3>
+        {% for argument_name in example_args_list %}
+            <form action="/" method="post" data-argument-name="{{ argument_name }}">
+                <input type="hidden" name="notation" value="polish"/>
+                <input type="hidden" name="writer" value="html"/>
+                {% for module in logic_modules %}
+                    <input type="hidden" name="logic" value="{{ module }}"/>
+                {% endfor %}
+                {% set arg_data = example_arguments[argument_name] %}
+                {% if arg_data is string %}
+                    <input type="hidden" name="conclusion" value="{{ arg_data }}"/>
+                {% else %}
+                    {% for premise in arg_data[0] %}
+                        <input type="hidden" name="premises[]" value="{{ premise }}"/>
+                    {% endfor %}
+                    <input type="hidden" name="conclusion" value="{{ arg_data[1] }}"/>
+                {% endif %}
+                {% for pred in example_predicates %}
+                    <input type="hidden" name="user_predicate_symbols[]" value="{{ pred[1] }}.{{ pred[2] }}"/>
+                    <input type="hidden" name="user_predicate_names[]" value="{{ pred[0] }}"/>
+                    <input type="hidden" name="user_predicate_arities[]" value="{{ pred[3] }}"/>
+                {% endfor %}
+                <input type="submit" value="Go"/>
+            </form>
+        {% endfor %}
+    </div>
 {% endblock %}

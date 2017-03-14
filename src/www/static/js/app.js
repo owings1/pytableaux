@@ -115,5 +115,12 @@
             $('.predicateSymbol').hide()
             $('.predicateSymbol.notation-' + notation).show()
         }).trigger('change')
+
+        $('#example_argument').on('change', function() {
+            var $me = $(this)
+            if (!$me.val())
+                return
+            $('form[data-argument-name="' + $me.val() + '"]').trigger('submit')
+        })
     })
 })(jQuery);
