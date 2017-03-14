@@ -30,14 +30,24 @@ class Parser(logic.Parser):
 		'>': 'Material Conditional',
 		'<': 'Material Biconditional',
 		'$': 'Conditional',
+		'%': 'Biconditional',
 		'P': 'Possibility',
 		'N': 'Necessity'
     }
-    
+
+    vchars = ['v', 'x', 'y', 'z']
+    cchars = ['a', 'b', 'c', 'd']
+    qchars = {
+        'V' : 'Universal',
+        'S' : 'Existential'
+    }
+    upchars = ['F', 'G', 'H', 'O']
+    spchars = ['I', 'J']
+
     pochars = ['(']
     pcchars = [')']
     sepchars = [',']
-    
+
     def read(self):
         self.assert_current()
         if self.current() in self.achars:
@@ -48,8 +58,14 @@ class Parser(logic.Parser):
             length = 1
             while depth:
                 if not self.has_next(length):
-                    raise Error('Unterminated open parenthesis at position ' + str(self.real_pos()))
-                
+                    raise logic.Parser.ParseError('Unterminated open parenthesis at position ' + str(self.real_pos()))
+                if self.next(length) in self.pcchars:
+                    if length == 1:
+                        raise logic.Parser.ParseError('Empty parenthetical expression at position ' + str(self.real_pos()))
+                    depth -= 1
+                length += 1
+
+
             pass
         elif self.current() in self.ochars:
             operator = self.ochars[self.current()]
@@ -60,7 +76,7 @@ class Parser(logic.Parser):
                 operands.append(self.read())
                 if len(operands) < arity:
                     if self.current() not in self.sepchars:
-                        raise Error('Expecting separator character "' + self.sepchars[0] + '" at position ' + str(self.real_pos()))
+                        raise logic.Parser.ParseError('Expecting separator character "' + self.sepchars[0] + '" at position ' + str(self.real_pos()))
                     self.advance()
             return logic.operate(operator, operands)
         return logic.Parser.read(self)
