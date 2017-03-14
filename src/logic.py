@@ -1,9 +1,32 @@
-# pytableaux - logic base module
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2017 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright (C) 2014, Doug Owings. All Rights Reserved.
+# ------------------
+#
+# pytableaux - logic base module
 
-import importlib, notations
+import importlib, notations, os
 from types import ModuleType
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.abspath(os.path.join(current_dir, '..'))
+with open(os.path.join(base_dir, 'VERSION'), 'r') as f:
+    version = f.read().strip()
+
+copyright = '2014-2017, Doug Owings. Released under the GNU Affero General Public License v3 or later'
 
 # name : arity
 operators = {
