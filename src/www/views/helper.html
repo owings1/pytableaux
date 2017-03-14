@@ -38,3 +38,7 @@
 {% macro select_opt_multi_default_select(form_data, key, value) -%}
     {% if key not in form_data or (form_data[key] == value or value in form_data[key]) %} selected="selected"{% endif %}
 {%- endmacro %}
+
+{% macro checkbox_default(form_data, key, value) -%}
+    {% if key not in form_data or (form_data[key] == value or value in form_data[key]) %} checked="checked"{% endif %}
+{%- endmacro %}

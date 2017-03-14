@@ -86,7 +86,8 @@ class App:
                 'num_predicate_symbols'           : logic.num_predicate_symbols
             }),
             'version'           : logic.version,
-            'copyright'         : logic.copyright
+            'copyright'         : logic.copyright,
+            'source_href'       : logic.source_href
         }
         vocabulary = logic.Vocabulary()
         view = 'argument'

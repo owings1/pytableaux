@@ -27,6 +27,7 @@ with open(os.path.join(base_dir, 'VERSION'), 'r') as f:
     version = f.read().strip()
 
 copyright = '2014-2017, Doug Owings. Released under the GNU Affero General Public License v3 or later'
+source_href = 'https://bitbucket.org/owings1/pytableaux'
 
 # name : arity
 operators = {

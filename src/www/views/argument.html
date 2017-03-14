@@ -35,16 +35,6 @@
                 </select>
             </div>
             <div class="input select">
-                <label for="logic">Logic</label>
-                <select id="logic" name="logic" multiple="multiple">
-                    {% for module in logic_modules %}
-                        <option value="{{ module }}" {{ helper.select_opt_multi_default_select(form_data, 'logic', module) }}>
-                            {{ logics[module].name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="input select">
                 <label for="writer">Output</label>
                 <select id="writer" name="writer">
                     {% for module in writer_modules %}
@@ -53,6 +43,17 @@
                         </option>
                     {% endfor %}
                 </select>
+            </div>
+            <div class="input">
+                <label for="logic" class="left">Logics</label>
+                <div class="left">
+                {% for module in logic_modules %}
+                    <input type="checkbox" value="{{ module }}" name="logic" id="logic" {{ helper.checkbox_default(form_data, 'logic', module) }}/>
+                    <span class="logicName">{{ logics[module].name }}</span>
+                    <span class="logicHelp"><a href="/doc/logics.html#module-logics.{{ module.lower() }}" target="_pytableaux_logic"></a></span><br>
+                {% endfor %}
+                </div>
+                <div class="clear"></div>
             </div>
         </fieldset>
         <fieldset class="lexicon">
