@@ -19,10 +19,49 @@
 # pytableaux - Standard Notation
 
 import logic
+from logic import write_item
+
+name = 'Standard'
+
+def write(sentence):
+    if sentence.is_atomic():
+        s = write_item(sentence, Parser.achars)
+    elif sentence.is_molecular():
+        ostr = Parser.ochars.keys()[Parser.ochars.values().index(sentence.operator)]
+        if logic.arity(sentence.operator) == 1:
+            s = ostr
+            s += write(sentence.operand)
+        else:
+            assert logic.arity(sentence.operator) == 2
+            s = Parser.pochars[0]
+            s += list(Parser.wschars)[0].join([write(sentence.lhs), ostr, write(sentence.rhs)])
+            s += Parser.pcchars[0]
+    elif sentence.is_quantified():
+        s = Parser.qchars.keys()[Parser.qchars.values().index(sentence.quantifier)]
+        s += write_item(sentence.variable, Parser.vchars)
+        s += write(sentence.sentence)
+    elif sentence.is_predicate():
+        if sentence.predicate.name in logic.system_predicates:
+            s = write_item(sentence.predicate, Parser.spchars)
+        else:
+            s = write_item(sentence.predicate, Parser.upchars)
+        for param in sentence.parameters:
+            if logic.is_constant(param):
+                s += write_item(param, Parser.cchars)
+            elif logic.is_variable(param):
+                s += write_item(param, Parser.vchars)
+            else:
+                raise Exception(NotImplemented)
+    else:
+        raise Exception(NotImplemented)
+    return s
 
 class Parser(logic.Parser):
-    
+
+    # atomic sentence characters
     achars = ['A', 'B', 'C', 'D', 'E']
+
+    # operator characters
     ochars = {
         '~': 'Negation',
         '&': 'Conjunction',
@@ -35,8 +74,13 @@ class Parser(logic.Parser):
 		'N': 'Necessity'
     }
 
+    # variable characters
     vchars = ['v', 'x', 'y', 'z']
+
+    # constant characters
     cchars = ['a', 'b', 'c', 'd']
+
+    # quantifier characters
     qchars = {
         'V' : 'Universal',
         'S' : 'Existential'
@@ -46,37 +90,63 @@ class Parser(logic.Parser):
 
     pochars = ['(']
     pcchars = [')']
-    sepchars = [',']
 
     def read(self):
         self.assert_current()
-        if self.current() in self.achars:
-            pass
-        elif self.current() in self.pochars:
+        if self.current() in self.ochars:
+            operator = self.ochars[self.current()]
+            arity = logic.arity(operator)
+            # only unary operators can be prefix operators
+            if arity != 1:
+                raise logic.Parser.ParseError("Unexpected non-prefix operator symbol '{0}' at position {1}".format(self.current(), self.real_pos()))
+            self.advance()
+            operand = self.read()
+            return logic.operate(operator, [operand])
+
+        if self.current() in self.pochars:
+            # if we have an open parenthesis, then we demand a binary infix operator sentence.
+            # scan ahead to:
+            #   - find the corresponding close parenthesis position
+            #   - find the binary operator and its position
+            operator = None
+            operator_pos = None
             depth = 1
-            start = self.pos
             length = 1
             while depth:
                 if not self.has_next(length):
-                    raise logic.Parser.ParseError('Unterminated open parenthesis at position ' + str(self.real_pos()))
-                if self.next(length) in self.pcchars:
-                    if length == 1:
-                        raise logic.Parser.ParseError('Empty parenthetical expression at position ' + str(self.real_pos()))
+                    raise logic.Parser.ParseError('Unterminated open parenthesis at position {0}'.format(self.pos))
+                peek = self.next(length)
+                if peek in self.pcchars:
                     depth -= 1
+                elif peek in self.pochars:
+                    depth += 1
+                elif peek in self.ochars and logic.arity(self.ochars[peek]) == 2 and depth == 1:
+                    if operator != None:
+                        raise logic.Parser.ParseError('Unexpected binary operator at position {0}'.format(self.pos + length))
+                    operator_pos = self.pos + length
+                    operator = self.ochars[peek]
                 length += 1
-
-
-            pass
-        elif self.current() in self.ochars:
-            operator = self.ochars[self.current()]
+            if length == 1:
+                raise logic.Parser.ParseError('Empty parenthetical expression at position {0}'.format(self.pos))
+            if operator == None:
+                raise logic.Parser.ParseError('Parenthetical expression is missing binary operator at position {0}'.format(self.pos))
+            # now we can divide the string into lhs and rhs
+            lhs_start = self.pos + 1
+            # move past the open paren
             self.advance()
-            arity = logic.operators[operator]
-            operands = []
-            for x in range(arity):
-                operands.append(self.read())
-                if len(operands) < arity:
-                    if self.current() not in self.sepchars:
-                        raise logic.Parser.ParseError('Expecting separator character "' + self.sepchars[0] + '" at position ' + str(self.real_pos()))
-                    self.advance()
-            return logic.operate(operator, operands)
+            # read the lhs
+            lhs = self.read()
+            self.chomp()
+            if self.pos != operator_pos:
+                raise logic.Parser.ParseError('Invalid left expression start at position {0} and ending at position {1}, proceeds past operator at position {2}'.format(lhs_start, self.pos, operator_pos))
+            # move past the operator
+            self.advance()
+            # read the rhs
+            rhs = self.read()
+            self.chomp()
+            # now we should have a close paren
+            self.assert_current_in(self.pcchars)
+            # move past the close paren
+            self.advance()
+            return logic.operate(operator, [lhs, rhs])
         return logic.Parser.read(self)
