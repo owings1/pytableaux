@@ -351,6 +351,15 @@ def _get_module(package, arg):
 def get_test_vocabulary():
     return Vocabulary(test_pred_data)
 
+def write_item(item, chars):
+    if item.index < 0:
+        s = chars[-1 * item.index - 1]
+    else:
+        s = chars[item.index]
+    if item.subscript > 0:
+        s += str(item.subscript)
+    return s
+
 class Vocabulary(object):
     """
     Create a new vocabulary. *predicate_defs* is a list of tuples (name, index, subscript, arity)
@@ -1065,65 +1074,107 @@ class Parser(object):
     class BoundVariableError(Exception):
         pass
 
+    # atomic sentence characters
     achars  = []
+
+    # operator characters to operator name
     ochars  = {}
+
+    # constant characters
     cchars  = []
+
+    # variable characters
     vchars  = []
+
+    # quantifier characters to quantifier name
     qchars  = {}
+
+    # user predicate characters
     upchars = []
-    spchars = ['I', 'J']
+
+    # system predicate characters
+    spchars = []
+
+    # whitespace characters
     wschars = set([' '])
 
     def __init__(self, vocabulary):
         self.vocabulary = vocabulary
+        self.is_parsing = False
 
     def chomp(self):
+        # proceeed through whitepsace
         while (self.has_next(0) and self.current() in self.wschars):
             self.pos += 1
 
     def current(self):
-        if self.has_next(0):
-            return self.s[self.pos]
-        return None
+        # get the current character, or None if after last
+        return self.next(0)
 
     def assert_current(self):
-        if not self.has_next(0):
-            raise Parser.ParseError('Unexpected end of input at position ' + str(self.pos))
+        # raise a parse error if after last
+        if not self.has_current():
+            raise Parser.ParseError('Unexpected end of input at position {0}'.format(self.pos))
 
     def assert_current_in(self, collection):
+        # raise a parse error if the current character is not in the given collection
         self.assert_current()
         if not self.current() in collection:
             raise Parser.ParseError('Unexpected character "' + self.current() + '" at position ' + str(self.pos))
 
     def has_next(self, n=1):
+        # check whether there is n-many characters after the current. if n = 0,
+        # check whether there is a current character.
         return (len(self.s) > self.pos + n)
 
+    def has_current(self):
+        # check whether there is a current character, or return False if after last.
+        return self.has_next(0)
+
     def next(self, n=1):
+        # get the nth character after the current, of None if n is after last.
         if self.has_next(n):
             return self.s[self.pos+n]
         return None
 
     def advance(self, n=1):
+        # advance the current pointer n many characters, and then eat whitespace.
         self.pos += n  
         self.chomp()
 
     def argument(self, conclusion=None, premises=[]):
+        # parse a conclusion and premises, and return an argument.
         return argument(self.parse(conclusion), [self.parse(s) for s in premises])
 
     def parse(self, string):
+        # parse an input string, and return a sentence.
+        if self.is_parsing:
+            raise Exception('Parser is already parsing -- not thread safe.')
+        self.is_parsing = True
         self.bound_vars = set()
-        self.s = list(string)
-        self.pos = 0
-        self.chomp()
-        if not self.has_next(0):
-            raise Parser.ParseError('Input cannot be empty')
-        s = self.read()
-        self.chomp()
-        if self.has_next(0):
-            raise Parser.ParseError('Unexpected character "' + self.current() + '" at position ' + str(self.pos))
+        try:
+            self.s = list(string)
+            self.pos = 0
+            self.chomp()
+            if not self.has_current():
+                raise Parser.ParseError('Input cannot be empty')
+            s = self.read()
+            self.chomp()
+            if self.has_current():
+                raise Parser.ParseError("Unexpected character '{0}' at position {1}".format(self.current(), self.pos))
+            self.is_parsing = False
+            self.bound_vars = set()
+        except:
+            self.is_parsing = False
+            self.bound_vars = set()
+            raise
         return s
 
     def read_item(self, chars):
+        # read an item and its subscript starting from the current character, which must be
+        # in the list of characters given. returns a list containing the index of the current
+        # character in the chars list, and the subscript of that item. this is a generic way
+        # to read predicates, atomics, variables, constants, etc.
         self.assert_current_in(chars)
         index = chars.index(self.current())
         self.advance()
@@ -1131,6 +1182,10 @@ class Parser(object):
         return [index, subscript]
 
     def read_subscript(self):
+        # read the subscript starting from the current character. if the current character
+        # is not a digit, or we are after last, then the subscript is 0. otherwise, all
+        # consecutive digit characters are read (no whitepsace allowed), and then converted
+        # to an integer, which is then returned.
         sub = []
         while (self.current() and self.current().isdigit()):
             sub.append(self.current())
@@ -1140,15 +1195,19 @@ class Parser(object):
         return int(''.join(sub))
 
     def read_atomic(self):
+        # read an atomic sentence starting from the current character.
         return atomic(*self.read_item(self.achars))
 
     def read_variable(self):
+        # read a variable starting from the current character.
         return variable(*self.read_item(self.vchars))
 
     def read_constant(self):
+        # read a constant starting from the current character.
         return constant(*self.read_item(self.cchars))
 
-    def read_predicate(self):    
+    def read_predicate(self):
+        # read a predicate starting from the current character.
         self.assert_current_in(self.upchars + self.spchars)
         pchar = self.current()
         cpos = self.pos
@@ -1165,6 +1224,11 @@ class Parser(object):
             raise Parser.ParseError('Undefined predicate symbol "' + pchar + '" at position ' + str(cpos))
 
     def read_parameters(self, num):
+        # read the parameters (constants or variables) of a predicate sentence, starting
+        # from the current character. if the number of parameters is not equal to num (arity),
+        # then a parse error is raised. if variables appear that are not in self.bound_vars,
+        # then an unbound variable error is raised. return a list of parameter objects (either
+        # variables or constants).
         parameters = []
         while len(parameters) < num:
             self.assert_current_in(self.cchars + self.vchars)
@@ -1180,20 +1244,38 @@ class Parser(object):
         return parameters
 
     def read_predicate_sentence(self):
+        # read a predicate sentence.
         predicate = self.read_predicate()
-        return predicate_sentence(predicate, self.read_parameters(predicate.arity))
+        params = self.read_parameters(predicate.arity)
+        return predicate_sentence(predicate, params)
+
+    def read_quantified_sentence(self):
+        self.assert_current_in(self.qchars)
+        quantifier = self.qchars[self.current()]
+        self.advance()
+        v = self.read_variable()
+        if v in list(self.bound_vars):
+            var_str = write_item(v, self.vchars)
+            raise Parser.ParseError('Cannot rebind variable {0} at position {1}'.format(var_str, self.pos))
+        self.bound_vars.add(v)
+        sentence = self.read()
+        if v not in list(sentence.variables()):
+            var_str = write_item(v, self.vchars)
+            raise Parser.ParseError('Unused bound variable {0} at position {1}'.format(var_str, self.pos))
+        self.bound_vars.remove(v)
+        return quantify(quantifier, v, sentence)
 
     def read(self):
+        # read a sentence.
+        self.assert_current()
+        if self.current() in self.upchars or self.current() in self.spchars:
+            return self.read_predicate_sentence()
+        if self.current() in self.qchars:
+            return self.read_quantified_sentence()
         return self.read_atomic()
-
-    def user_predicate_indexes(self):
-        indexes = []
-        for index, symbol in self.pchars:
-            if symbol not in self.pindex:
-                indexes.append(index)
-        return indexes
 
     @staticmethod
     def spchar(index):
+        # get the system predicate character for the given index.
         index = index * -1 - 1
         return Parser.spchars[index]

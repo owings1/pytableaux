@@ -19,6 +19,7 @@
 # pytableaux - Polish Notation
 
 import logic
+from logic import write_item
 
 name = 'Polish'
 
@@ -35,10 +36,7 @@ def write(sentence):
         s += write(sentence.sentence)
     elif sentence.is_predicate():
         if sentence.predicate.name in logic.system_predicates:
-            char = Parser.spchar(sentence.predicate.index)
-            s = char
-            if sentence.predicate.subscript > 0:
-                s += sentence.predicate.subscript
+            s = write_item(sentence.predicate, Parser.spchars)
         else:
             s = write_item(sentence.predicate, Parser.upchars)
         for param in sentence.parameters:
@@ -52,15 +50,12 @@ def write(sentence):
         raise Exception(NotImplemented)
     return s
     
-def write_item(item, chars):
-    s = chars[item.index]
-    if item.subscript > 0:
-        s += str(item.subscript)
-    return s
-    
 class Parser(logic.Parser):
-    
+
+    # atomic sentence characters
     achars = ['a', 'b', 'c', 'd', 'e']
+
+    # operator characters
     ochars = {
         'N' : 'Negation',
         'K' : 'Conjunction',
@@ -73,13 +68,22 @@ class Parser(logic.Parser):
         'L' : 'Necessity'
     }
 
+    # variable characters
     vchars = ['v', 'x', 'y', 'z']
+
+    # constant characters
     cchars = ['m', 'n', 'o', 's']
+
+    # quantifier characters
     qchars = {
         'V' : 'Universal',
         'S' : 'Existential'
     }
+
+    # user predicate characters
     upchars = ['F', 'G', 'H', 'O']
+
+    # system predicate characters
     spchars = ['I', 'J']
 
     def read(self):
@@ -89,20 +93,4 @@ class Parser(logic.Parser):
             self.advance()
             operands = [self.read() for x in range(logic.arity(operator))]
             return logic.operate(operator, operands)
-        if self.current() in self.upchars + self.spchars:
-            return self.read_predicate_sentence()
-        if self.current() in self.qchars:
-            quantifier = self.qchars[self.current()]
-            self.advance()
-            variable = self.read_variable()
-            if variable in list(self.bound_vars):
-                raise logic.Parser.ParseError('Cannot rebind variable ' + 
-                        write_item(variable, self.vchars) + ' at position ' + str(self.pos))
-            self.bound_vars.add(variable)
-            sentence = self.read()
-            if variable not in list(sentence.variables()):
-                raise logic.Parser.ParseError('Unused bound variable ' +
-                        write_item(variable, self.vchars) + ' at position ' + str(self.pos))
-            self.bound_vars.remove(variable)
-            return logic.quantify(quantifier, variable, sentence)
-        return self.read_atomic()
+        return logic.Parser.read(self)
