@@ -455,9 +455,9 @@ class Vocabulary(object):
 
         """
         if name in system_predicates:
-            raise Vocabulary.PredicateAlreadyDeclaredError('Cannot declare system predicate: ' + name)
+            raise Vocabulary.PredicateAlreadyDeclaredError("Cannot declare system predicate '{0}'".format(name))
         if name in self.user_predicates:
-            raise Vocabulary.PredicateAlreadyDeclaredError('Predicate already declared: ' + name)
+            raise Vocabulary.PredicateAlreadyDeclaredError("Predicate '{0}' already declared".format(name))
         predicate = Vocabulary.Predicate(name, index, subscript, arity)
         self.user_predicates[name] = predicate
         self.user_predicates_list.append(name)
@@ -551,12 +551,15 @@ class Vocabulary(object):
                 if predicate in system_predicates:
                     predicate = system_predicates[predicate]
                 elif vocabulary is None:
-                    raise Vocabulary.NoSuchPredicateError(predicate + " is not a system predicate, and no vocabulary was passed.")
+                    raise Vocabulary.NoSuchPredicateError("'{0}' is not a system predicate, and no vocabulary was passed.".format(predicate))
                 else:
                     predicate = vocabulary.get_predicate(predicate)    
             if len(parameters) != predicate.arity:
-                raise Vocabulary.PredicateArityMismatchError('Expecting ' + predicate.arity + ' parameters for predicate ' + 
-                str([index, subscript]) + ', got ' + arity + ' instead.')
+                raise Vocabulary.PredicateArityMismatchError(
+                    'Expecting {0} parameters for predicate {1}, got {2} instead.'.format(
+                        predicate.arity, str([index, subscript]), arity
+                    )
+                )
             self.predicate  = predicate
             self.parameters = parameters
             self.vocabulary = vocabulary
@@ -1120,7 +1123,7 @@ class Parser(object):
         # raise a parse error if the current character is not in the given collection
         self.assert_current()
         if not self.current() in collection:
-            raise Parser.ParseError('Unexpected character "' + self.current() + '" at position ' + str(self.pos))
+            raise Parser.ParseError("Unexpected character '{0}' at position {1}".format(self.current(), self.pos))
 
     def has_next(self, n=1):
         # check whether there is n-many characters after the current. if n = 0,
@@ -1221,7 +1224,7 @@ class Parser(object):
                     raise Vocabulary.NoSuchPredicateError()
             return self.vocabulary.get_predicate(index=index, subscript=subscript)
         except Vocabulary.NoSuchPredicateError:
-            raise Parser.ParseError('Undefined predicate symbol "' + pchar + '" at position ' + str(cpos))
+            raise Parser.ParseError("Undefined predicate symbol '{0}' at position {1}".format(pchar, cpos))
 
     def read_parameters(self, num):
         # read the parameters (constants or variables) of a predicate sentence, starting
@@ -1238,8 +1241,8 @@ class Parser(object):
             else:
                 v = self.read_variable()
                 if v not in list(self.bound_vars):
-                    sub = str(v.subscript) if v.subscript > 0 else ''
-                    raise Parser.ParseError("Unbound variable " + self.vchars[v.index] + sub + ' at position ' + str(cpos))
+                    var_str = write_item(v, self.vchars)
+                    raise Parser.ParseError("Unbound variable '{0}' at position {1}".format(var_str, cpos))
                 parameters.append(v)
         return parameters
 
