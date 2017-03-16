@@ -274,6 +274,14 @@ writer = writers.html
 notation = notations.polish
 def make_tableau_examples(app, what, name, obj, options, lines):
     if what == 'class' and logic.TableauxSystem.Rule in inspect.getmro(obj):
+        if obj in [
+            logic.TableauxSystem.Rule,
+            logic.TableauxSystem.BranchRule,
+            logic.TableauxSystem.ClosureRule,
+            logic.TableauxSystem.NodeRule,
+            logic.TableauxSystem.ConditionalNodeRule
+        ]:
+            return
         try:
             proof = logic.tableau(importlib.import_module(obj.__module__), None)
             rule = next(r for r in proof.rules if r.__class__ == obj)

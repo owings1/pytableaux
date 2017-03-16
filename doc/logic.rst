@@ -13,4 +13,19 @@ The *logic* module is the base module for the pytableaux API.
   :members:
 
 .. autoclass:: logic::TableauxSystem.Node
- :members:
+  :members:
+
+.. autoclass:: logic::TableauxSystem.Rule
+  :members:
+
+.. autoclass:: logic::TableauxSystem.BranchRule
+  :members:
+
+.. autoclass:: logic::TableauxSystem.ClosureRule
+  :members:
+
+.. autoclass:: logic::TableauxSystem.NodeRule
+  :members:
+
+.. autoclass:: logic::TableauxSystem.ConditionalNodeRule
+  :members:
