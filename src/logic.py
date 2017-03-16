@@ -175,30 +175,30 @@ def variable(index, subscript):
     """
     return Vocabulary.Variable(index, subscript)
 
-def predicate_sentence(predicate, parameters, vocabulary=None):
+def predicated(predicate, parameters, vocabulary=None):
     """
     Return a predicate sentence for the given predicate and parameters. *predicate* can 
     either be the name of a predicate or a predicate object. Examples using system predicates
     (Existence, Identity)::
 
         m = constant(0, 0)
-        sentence = predicate_sentence('Existence', [m])
+        sentence = predicated('Existence', [m])
 
         n = constant(1, 0)
-        sentence2 = predicate_sentence('Identity', [m, n])
+        sentence2 = predicated('Identity', [m, n])
 
     Examples using a vocabulary of user-defined predicates::
 
         vocab = Vocabulary([('is tall', 0, 0, 1)])
         m = constant(0, 0)
         # m is tall
-        sentence = predicate_sentence('is tall', [m], vocab)
+        sentence = predicated('is tall', [m], vocab)
 
         vocab.declare_predicate(name='is between', index=1, subscript=0, arity=3)
         n = constant(1, 0)
         o = constant(2, 0)
         # m is between n and o
-        sentence2 = predicate_sentence('is between', [m, n, o], vocab)
+        sentence2 = predicated('is between', [m, n, o], vocab)
 
     """
     return Vocabulary.PredicateSentence(predicate, parameters, vocabulary)
@@ -210,7 +210,7 @@ def quantify(quantifier, variable, sentence):
 
         x = variable(0, 0)
         # x is identical to x
-        open_sentence = predicate_sentence('Identity', [x, x])
+        open_sentence = predicated('Identity', [x, x])
         # for all x, x is identical to x
         sentence = quantify('Universal', x, open_sentence)
 
@@ -222,12 +222,12 @@ def quantify(quantifier, variable, sentence):
         ])
         x = variable(0, 0)
         # x is a bachelor
-        open_sentence = predicate_sentence('is a bachelor', [x], vocab)
+        open_sentence = predicated('is a bachelor', [x], vocab)
         # there exists an x, such that x is a bachelor
         sentence = quantify('Existential', x, open_sentence)
 
         # x is unmarried
-        open_sentence2 = predicate_sentence('is unmarried', [x], vocab)
+        open_sentence2 = predicated('is unmarried', [x], vocab)
         # if x is a bachelor, then x is unmarried
         open_sentence3 = operate('Conditional', [open_sentence, open_sentence2])
         # for all x, if x is a bachelor then x is unmarried
@@ -251,7 +251,7 @@ def parse(string, vocabulary=None, notation='polish'):
         vocab = Vocabulary([('is tall', 0, 0, 1)])
         # m is tall
         sentence = parse('Fm', vocab, 'polish')
-        assert sentence == predicate_sentence(vocab.get_predicate('is tall'), [constant(0, 0)])
+        assert sentence == predicated(vocab.get_predicate('is tall'), [constant(0, 0)])
 
     """
     if vocabulary is None:
@@ -576,7 +576,7 @@ class Vocabulary(object):
                     params.append(constant)
                 else:
                     params.append(param)
-            return predicate_sentence(self.predicate, params)
+            return predicated(self.predicate, params)
 
         def constants(self):
             return {param for param in self.parameters if is_constant(param)}
@@ -634,9 +634,9 @@ class Vocabulary(object):
     def get_example_quantifier_sentence(quantifier):
         vocab = Vocabulary([('is F', 0, 0, 1), ('is G', 1, 0, 1)])
         x = variable(0, 0)
-        x_is_f = predicate_sentence('is F', [x], vocab)
+        x_is_f = predicated('is F', [x], vocab)
         if quantifier == 'Universal':
-            x_is_g = predicate_sentence('is G', [x], vocab)
+            x_is_g = predicated('is G', [x], vocab)
             s = operate('Material Conditional', [x_is_f, x_is_g])
             return quantify(quantifier, x, s)
         return quantify(quantifier, x, x_is_f)
@@ -1255,7 +1255,7 @@ class Parser(object):
         # read a predicate sentence.
         predicate = self.read_predicate()
         params = self.read_parameters(predicate.arity)
-        return predicate_sentence(predicate, params)
+        return predicated(predicate, params)
 
     def read_quantified_sentence(self):
         self.assert_current_in(self.qchars)
