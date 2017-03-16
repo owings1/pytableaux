@@ -23,19 +23,32 @@ description = 'Gappy Object 3-valued Logic'
 
 def example_validities():
     return {
-        'Addition'       : [[ 'a'     ], 'Aab'  ],
-        'Simplification' : [[ 'Kab'   ], 'a'    ],
-        'DeMorgan 3'     : [[ 'KNaNb' ], 'NAab' ],
-        'DeMorgan 4'     : [[ 'ANaNb' ], 'NKab' ],
-        'Contraction'    : [[ 'CaCab' ], 'Cab'  ],
+        'Addition'                   : [[ 'a'     ], 'Aab'  ],
+        'Simplification'             : [[ 'Kab'   ], 'a'    ],
+        'DeMorgan 3'                 : [[ 'KNaNb' ], 'NAab' ],
+        'DeMorgan 4'                 : [[ 'ANaNb' ], 'NKab' ],
+        'Material Contraction'       : [[ 'CaCab' ], 'Cab'  ],
+        'Conditional Contraction'    : [[ 'UaUab' ], 'Uab'  ],
+        'Conditional Identity'       : 'Uaa',
+        'Biconditional Identity'     : 'Baa',
+        'Law of Non-contradiction'   : [[ 'KaNa' ], 'b' ],
+        'Disjunctive Syllogism'      : [[ 'Aab', 'Nb' ], 'a'  ],
+        'Material Modus Ponens'      : [[ 'Cab', 'a'  ], 'b'  ],
+        'Material Modus Tollens'     : [[ 'Cab', 'Nb' ], 'Na' ],
+        'Conditional Modus Ponens'   : [[ 'Uab', 'a'  ], 'b'  ],
+        'Conditional Modus Tollens'  : [[ 'Uab', 'Nb' ], 'Na' ]
     }
 
 def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
     args.update({
-        'DeMorgan 1' : [[ 'NAab' ], 'KNaNb' ],
-        'DeMorgan 2' : [[ 'NKab' ], 'ANaNb' ],
+        'DeMorgan 1'                      : [[ 'NAab' ], 'KNaNb' ],
+        'DeMorgan 2'                      : [[ 'NKab' ], 'ANaNb' ],
+        'Material Identity'               : 'Caa',
+        'Law of Excluded Middle'          : 'AaNa',
+        'Material Identity'               : 'Caa',
+        'Material Biconditional Identity' : 'Eaa'
     })
     return args
 
