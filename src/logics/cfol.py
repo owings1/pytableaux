@@ -139,18 +139,18 @@ def example_validities():
 
 def example_invalidities():
     return {
-        'Triviality 1'				: 'a',
-        'Triviality 2'				: [[ 'a'    ], 'b'    ],
-        'Conditional Equivalence'	: [[ 'Cab'  ], 'Cba'  ],
-        'Extracting the Consequent' : [[ 'Cab'  ], 'b'    ],
-        'Extracting the Antecedent' : [[ 'Cab'  ], 'a'    ],
-        'Extracting as Disjunct 1'	: [[ 'Aab'  ], 'b'    ],
-        'Extracting as Disjunct 2'	: [[ 'AaNb' ], 'Na'   ],
-        'Existential from Universal': [[ 'SxFx' ], 'VxFx' ],
-        'Affirming the Consequent'	: [[ 'Cab', 'b'  ], 'a'  ],
-        'Affirming a Disjunct 1'	: [[ 'Aab', 'a'  ], 'b'  ],
-        'Affirming a Disjunct 2'	: [[ 'Aab', 'a'  ], 'Nb' ],
-        'Denying the Antecedent' 	: [[ 'Cab', 'Na' ], 'b'  ]
+        'Triviality 1'               : 'a',
+        'Triviality 2'               : [[ 'a'    ], 'b'    ],
+        'Conditional Equivalence'    : [[ 'Cab'  ], 'Cba'  ],
+        'Extracting the Consequent'  : [[ 'Cab'  ], 'b'    ],
+        'Extracting the Antecedent'  : [[ 'Cab'  ], 'a'    ],
+        'Extracting as Disjunct 1'   : [[ 'Aab'  ], 'b'    ],
+        'Extracting as Disjunct 2'   : [[ 'AaNb' ], 'Na'   ],
+        'Existential from Universal' : [[ 'SxFx' ], 'VxFx' ],
+        'Affirming the Consequent'   : [[ 'Cab', 'b'  ], 'a'  ],
+        'Affirming a Disjunct 1'     : [[ 'Aab', 'a'  ], 'b'  ],
+        'Affirming a Disjunct 2'     : [[ 'Aab', 'a'  ], 'Nb' ],
+        'Denying the Antecedent'     : [[ 'Cab', 'Na' ], 'b'  ]
     }
 
 import logic
