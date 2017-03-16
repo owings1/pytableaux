@@ -17,7 +17,10 @@
 # ------------------
 #
 # pytableaux - Polish Notation
-
+"""
+Polish notation is a fully *prefix* notation, meaning the operators occur before
+the operands.
+"""
 import logic
 from logic import write_item
 

@@ -29,9 +29,6 @@ Links
 """
 name = 'T'
 description = 'Reflexive Normal Modal Logic'
-links = {
-    'Stanford Encyclopedia': 'http://plato.stanford.edu/entries/logic-modal/'
-}
 
 def example_validities():
     import d

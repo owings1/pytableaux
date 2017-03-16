@@ -90,6 +90,11 @@ class TableauxRules(object):
     The Tableaux rules for L3 contain the rules for FDE, except for different
     rules for the conditional and biconditional operators. It also contains the
     additional K3 closure rule.
+
+    In this implementation, we have chosen rules for the defined biconditional
+    operator, that reduce a biconditional sentence to a conjunction of conditionals
+    (A iff B reduces to (if A then B) and (if B then A)). We then rely on the rules
+    for conjunction and the conditional to further break down these nodes.
     """
 
     class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):

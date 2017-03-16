@@ -288,8 +288,8 @@ def tableau(logic, arg):
     """
     Create a tableau for the given logic and argument. Example::
 
-        from logics import cpl
-        proof = tableau(cpl, arg)
+        from logics import cfol
+        proof = tableau(cfol, arg)
         proof.build()
         if proof.valid:
             print "Valid"
@@ -454,9 +454,9 @@ class Vocabulary(object):
             try:
                 vocab.declare_predicate('is tall', index=1, subscript=2, arity=3)
             except Vocabulary.PredicateAlreadyDeclaredError:
-                assert true
+                assert True
             else:
-                assert false
+                assert False
 
         """
         if name in system_predicates:
@@ -774,7 +774,7 @@ class TableauxSystem(object):
         """
 
         def __init__(self):
-            #: A branch is closed by a closure balls rule.
+            #: A branch is closed by a closure rule.
             self.closed = False
             self.ticked_nodes = set()
             self.nodes = []
@@ -925,7 +925,7 @@ class TableauxSystem(object):
 
         def applies(self):
             """
-            Whether the rule applies to the tableau. Implementations should return true/false or a target object.
+            Whether the rule applies to the tableau. Implementations should return True/False or a target object.
             """
             raise Exception(NotImplemented)
 
@@ -1006,6 +1006,38 @@ class TableauxSystem(object):
             raise Exception(NotImplemented)
 
     class ConditionalNodeRule(NodeRule):
+        """
+        A conditional node rule has a fixed applies_to_node() method that searches open branches for nodes
+        that match the attribute conditions of the implementing class. This allows implementations to merely
+        define their attributes and implement the apply_to_node() method. This is the most common type of
+        rule for operator rules.
+
+        The following attribute conditions can be defined. If a condition is set to None, then it
+        will be vacuously met::
+
+            # the ticked status of the node, default is False.
+            ticked      = False
+
+            # whether this rule applies to modal nodes, i.e. nodes that
+            # reference one or more worlds.
+            modal       = None
+
+            # the main operator of the node's sentence, if any.
+            operator    = None
+
+            # whether the sentence must be negated. if True, then nodes
+            # whose sentence's main connective is Negation will be checked,
+            # and if the negatum has the main connective defined in the
+            # 'operator' condition (above), then this condition will be met.
+            negated     = None
+
+            # the quantifier of the sentence, e.g. 'Universal' or 'Existential'.
+            quantifier  = None
+
+            # the designation status (True, False) of the node.
+            designation = None
+
+        """
 
         ticked      = False
         modal       = None
@@ -1072,6 +1104,26 @@ class TableauxSystem(object):
             return props
 
 class Parser(object):
+    """
+    The base Parser class handles parsing operations common to all notations (Polish and Standard).
+    This consists of all parsing except for operator expressions, as well as the following classes
+    of symbols:
+
+    - Whitespace symbols: the *space* character.
+    - Subscript symbols: digit characters.
+
+    Each specific notation defines its own characters for each of the following classes of symbols:
+
+    - Constant symbols
+    - Variable symbols
+    - Predicate symbols, including system-defined predicates, and user-defined predicate.
+    - Quanitfier symbols
+    - Operator symbols
+    - Atomic sentence (proposition) symbols
+
+    
+
+    """
 
     class ParseError(Exception):
         pass

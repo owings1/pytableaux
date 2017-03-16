@@ -17,7 +17,82 @@
 # ------------------
 #
 # pytableaux - Gappy Object 3-valued Logic
+"""
+GO is a 3-valued (True, False, Neither) logic, with non-standard readings of
+disjunction and conjunction. It has some similarities to K3, e.g. Material
+Identity and the Law of Excluded Middle fail, however, unlike K3, there are
+logical truths. It contains an additional conditional operator besides the
+material conditional, which is similar to L3. However, this conditional is
+*non-primitive*, and obeys contraction (if A and (if A then B) implies if A then B).
 
+Semantics
+---------
+
+Three primitive operators, negation, conjunction, and disjunction are defined
+via truth tables as follows:
+
+**Negation**:
+
++------------+------------+
+| A          | not-A      |
++============+============+
+|  T         |  F         |
++------------+------------+
+|  N         |  N         |
++------------+------------+
+|  F         |  T         |
++------------+------------+
+
+**Disjunction**:
+
++-----------+----------+-----------+---------+
+|  A or B   |          |           |         |
++===========+==========+===========+=========+
+|           |  **T**   |   **N**   |  **F**  |
++-----------+----------+-----------+---------+
+|  **T**    |    T     |     T     |    T    |
++-----------+----------+-----------+---------+
+|  **N**    |    T     |     F     |    F    |
++-----------+----------+-----------+---------+
+|  **F**    |    T     |     F     |    F    | 
++-----------+----------+-----------+---------+
+
+**Conjunction**:
+
++-----------+----------+-----------+---------+
+|  A and B  |          |           |         |
++===========+==========+===========+=========+
+|           |  **T**   |   **N**   |  **F**  |
++-----------+----------+-----------+---------+
+|  **T**    |    T     |     F     |    F    |
++-----------+----------+-----------+---------+
+|  **N**    |    F     |     F     |    F    |
++-----------+----------+-----------+---------+
+|  **F**    |    F     |     F     |    F    | 
++-----------+----------+-----------+---------+
+
+Note that, given the tables above, conjunctions and disjunctions always have a classical
+value (True or False). This means that only atomic sentences (with zero or more negations)
+can have the Neither value.
+
+This property of "classical containment" means, that we can define a conditional operator
+that satisfies Identity (if A then A). It also allows us to give a formal description of
+a subset of sentences that obey all principles of classical logic. For example, although
+the Law of Excluded Middle fails for atomic sentences (A or not-A), complex sentences -- those
+with at least one binary connective -- do obey the law: (A or A) or not-(A or A).
+
+References
+----------
+
+This logic was developed as part of my dissertation, `Indeterminacy and Logical Atoms`_
+at the University of Connecticut, under `Professor Jc Beall`_.
+
+
+.. _Professor Jc Beall: http://entailments.net
+
+.. _Indeterminacy and Logical Atoms: https://bitbucket.org/owings1/dissertation/raw/master/output/dissertation.pdf
+
+"""
 name = 'GO'
 description = 'Gappy Object 3-valued Logic'
 
@@ -56,6 +131,9 @@ import logic, fde, k3
 from logic import negate, operate
 
 class TableauxSystem(fde.TableauxSystem):
+    """
+    GO's Tableaux System inherits directly from FDE's.
+    """
     pass
 
 class TableauxRules(object):

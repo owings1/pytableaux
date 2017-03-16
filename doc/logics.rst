@@ -129,8 +129,13 @@ L3 - Lukasiewicz 3-valued Logic
 GO - Gappy Object Logic
 =======================
 
-Semantics
----------
+.. automodule:: logics.go
 
-Tableaux
---------
+    Tableaux System
+    ---------------
+
+    .. autoclass:: TableauxSystem
+        :members:
+
+    .. autoclass:: TableauxRules
+        :members:

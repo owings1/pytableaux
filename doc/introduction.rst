@@ -22,9 +22,11 @@ The goals of this project are:
 1. A tool for researchers in non-classical logics to quickly check inferences.
 
 2. Demonstrate the simplicity and parsimony of describing and conceptualizing 
-   various logics with only a few basic concepts. The module and class structure
-   of the code attempt to mirror the presentation of logical given in Beall's
-   *Possibilities and Paradox* and graduate lectures.
+   various logics with only a few basic concepts.
+   
+The module and class structure of the code attempt to mirror the presentation of
+logical given in Beall's and van Fraassen's `Possibilities and Paradox`_, as
+well as Beall's graduate lectures at the University of Connecticut.
 
 Language
 ========
@@ -150,7 +152,7 @@ The program contains the following interfaces:
     
     - A web interface with a built-in server, which runs on any machine with Python installed.
     
-    - [coming soon] A CLI for evaluating arguments from the command line.
+    - [in progress] A CLI for evaluating arguments from the command line.
     
 To install natively:
 
@@ -195,8 +197,7 @@ To install using docker:
 Parsing
 =======
 
-The default parsing is Polish notation. This is mainly because it is simple to implement.
-A standard notation parser (infix notation) is in progress.
+There are two parsers available: Polish notation, and Standard notation.
 
 Proof output
 ============
@@ -206,7 +207,13 @@ Currently the output formats are plain text (ASCII), and HTML.
 Contributing
 ============
 
-To contribute in any way (documentation, code, testing, suggestions, etc.), contact Doug Owings (me) at doug at dougowings dot net.
+To contribute in any way (documentation, code, testing, suggestions, etc.), contact
+Doug Owings at doug at dougowings dot net. You can also submit issues and merge requests
+on `Bitbucket`_.
 
 
 .. _dissertation: https://bytebucket.org/owings1/dissertation/raw/master/output/dissertation.pdf
+
+.. _Possibilities and Paradox: https://global.oup.com/academic/product/possibilities-and-paradox-9780199259878?q=Possibilities%20and%20Paradox
+
+.. _Bitbucket: https://bitbucket.org/owings1/pytableaux
