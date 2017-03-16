@@ -26,7 +26,7 @@
             else {
                 var last = $symbols.last().val().split('.')
                 next = [ +last[0] + 1, +last[1]]
-                if (next[0] == app.num_user_predicate_symbols)
+                if (next[0] == app.num_predicate_symbols)
                     next = [0, +last[1] + 1]
             }
             var html = ''
