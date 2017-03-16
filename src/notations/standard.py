@@ -65,7 +65,7 @@ class Parser(logic.Parser):
     ochars = {
         '~': 'Negation',
         '&': 'Conjunction',
-		'v': 'Disjunction',
+		'V': 'Disjunction',
 		'>': 'Material Conditional',
 		'<': 'Material Biconditional',
 		'$': 'Conditional',
@@ -82,11 +82,11 @@ class Parser(logic.Parser):
 
     # quantifier characters
     qchars = {
-        'V' : 'Universal',
-        'S' : 'Existential'
+        'L' : 'Universal',
+        'X' : 'Existential'
     }
     upchars = ['F', 'G', 'H', 'O']
-    spchars = ['I', 'J']
+    spchars = ['=', '!']
 
     pochars = ['(']
     pcchars = [')']

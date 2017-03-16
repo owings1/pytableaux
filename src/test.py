@@ -96,13 +96,13 @@ def test_standard_notation():
         assert False, 's5 should not pass'
     except Parser.ParseError as e:
         print '      pass: ' + e.message
-    s6 = p.parse('((A & B) v VxVy(Ixy > Ja))')
+    s6 = p.parse('((A & B) V XxXy(=xy > !a))')
     print '      pass: ' + standard.write(s6)
-    s7 = p.parse('((A&B0)vVxVy(Ixy>Ja))')
+    s7 = p.parse('((A&B0)VXxXy(=xy>!a))')
     print '      pass: ' + standard.write(s7)
     assert s6 == s7
     print '      pass: s6 == s7'
-    s8 = p.parse('(PVxJx v NIab)')
+    s8 = p.parse('(PXx!x V N=ab)')
     print '      pass: ' + standard.write(s8)
 
 def test_notation_translations():
