@@ -1277,8 +1277,8 @@ class Parser(object):
             return self.read_quantified_sentence()
         return self.read_atomic()
 
-    @staticmethod
-    def spchar(index):
+    @classmethod
+    def spchar(cls, index):
         # get the system predicate character for the given index.
         index = index * -1 - 1
-        return Parser.spchars[index]
+        return cls.spchars[index]
