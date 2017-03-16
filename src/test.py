@@ -19,6 +19,9 @@
 # pytableaux - Test script
 
 from logic import *
+from notations import polish, standard
+from logics import fde, k3, lp, go, cfol, k, d, t, s4, l3
+from writers import ascii
 
 def main():
     test_all()
@@ -29,8 +32,6 @@ def test_all():
     test_notation_translations()
     
 def test_logics():
-    from notations import polish
-    from logics import fde, k3, lp, go, cfol, k, d, t, s4, l3
     logics = [
         fde,
         k3,
@@ -71,11 +72,11 @@ def test_arguments(logic, args, valid, parser):
             print 'FAIL'
             print t
             print list(t.branches)[0]
+            print ascii.write(t, standard)
             raise e
         print 'pass'
 
 def test_standard_notation():
-    from notations import standard
     print "Standard notation"
     vocab = Vocabulary()
     p = standard.Parser(vocab)
@@ -105,8 +106,6 @@ def test_standard_notation():
     print '      pass: ' + standard.write(s8)
 
 def test_notation_translations():
-    from notations import standard, polish
-    from logics import fde, k3, lp, go, cfol, k, d, t, s4, l3
     print "Notation Translations"
     logics = [
         fde,

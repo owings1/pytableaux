@@ -155,7 +155,7 @@ def example_validities():
         'DeMorgan 3'              : [[ 'KNaNb' ], 'NAab'  ],
         'DeMorgan 4'              : [[ 'ANaNb' ], 'NKab'  ],
         'Material Contraction'    : [[ 'CaCab' ], 'Cab'   ],
-        'Conditional Contraction' : [[ 'CaCab' ], 'Cab'   ]        
+        'Conditional Contraction' : [[ 'UaUab' ], 'Uab'   ]
     }
 
 def example_invalidities():

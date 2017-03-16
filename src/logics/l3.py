@@ -61,6 +61,7 @@ from logic import operate, negate
 
 def example_validities():
     args = k3.example_validities()
+    del(args['Conditional Contraction'])
     args.update({
         'Conditional Identity'    : 'Uaa',
         'Biconditional Identity'  : 'Baa'
@@ -71,6 +72,7 @@ def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
     args.update({
+        'Conditional Contraction'         : [['UaUab'], 'Uab'],
         'Material Identity'               : 'Caa',
         'Material Biconditional Identity' : 'Eaa',
         'Law of Excluded Middle'          : 'AaNa'
@@ -105,22 +107,25 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             newBranches = self.tableau.branch_multi(branch, 2)
             s = node.props['sentence']
-            newBranches[0].add({ 'sentence' : operate('Material Conditional', s.operands), 'designated' : True })
+            newBranches[0].add(
+                { 'sentence' : operate('Material Conditional', s.operands), 'designated' : True }
+            ).tick(node)
             newBranches[1].update([
                 { 'sentence' :        s.lhs,  'designated' : False },
                 { 'sentence' : negate(s.lhs), 'designated' : False },
                 { 'sentence' :        s.rhs,  'designated' : False },
                 { 'sentence' : negate(s.rhs), 'designated' : False }
-            ])
-            branch.tick(node)
+            ]).tick(node)
 
     class ConditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked undesignated conditional node *n* on a branch *b*, add a
         material conditional undesignated node to *b* with the same operands as *n*,
         then make two new branches *b'* and *b''* from *b*, and add a designated node
-        to *b'* with the antecedent, and add a designated node to *b''* with the
-        negation of the consequent of *n*, then tick *n*.        
+        with the antecedent and an undesignated node with the consequent to *b'* ,
+        and add an undesignated node with the antecedent, an undesignated node with
+        the negation of the antecedent, and a designated node to *b''* with the
+        negation of the consequent to *b''*, then tick *n*.        
         """
 
         operator    = 'Conditional'
@@ -130,9 +135,15 @@ class TableauxRules(object):
             s = node.props['sentence']
             branch.add({ 'sentence' : operate('Material Conditional', s.operands), 'designated' : False })
             newBranches = self.tableau.branch_multi(branch, 2)
-            newBranches[0].add({ 'sentence' :        s.lhs,  'designated' : True })
-            newBranches[1].add({ 'sentence' : negate(s.rhs), 'designated' : True })
-            branch.tick(node)
+            newBranches[0].update([
+                { 'sentence' :        s.lhs,  'designated' : True  },
+                { 'sentence' :        s.rhs,  'designated' : False }
+            ]).tick(node)
+            newBranches[1].update([
+                { 'sentence' :        s.lhs,  'designated' : False },
+                { 'sentence' : negate(s.lhs), 'designated' : False },
+                { 'sentence' : negate(s.rhs), 'designated' : True  }
+            ]).tick(node)
 
     class BiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
