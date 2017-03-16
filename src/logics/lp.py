@@ -109,24 +109,24 @@ import fde
 
 def example_validities():
     args = fde.example_validities()
-    args.update({
-        'Material Identity'           : 'Caa',
-        'Conditional Identity'        : 'Uaa',
-        'Law of Excluded Middle'      : 'AaNa'
-    })
+    args.update([
+        'Material Identity'      ,
+        'Conditional Identity'   ,
+        'Law of Excluded Middle' ,
+    ])
     return args
     
 def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
-    args.update({
-        'Law of Non-contradiction'    : [[ 'KaNa' ], 'b' ],
-        'Disjunctive Syllogism'       : [[ 'Aab', 'Nb' ], 'a'  ],
-        'Material Modus Ponens'       : [[ 'Cab', 'a'  ], 'b'  ],
-        'Material Modus Tollens'      : [[ 'Cab', 'Nb' ], 'Na' ],
-        'Conditional Modus Ponens'    : [[ 'Uab', 'a'  ], 'b'  ],
-        'Conditional Modus Tollens'   : [[ 'Uab', 'Nb' ], 'Na' ]
-    })
+    args.update([
+        'Law of Non-contradiction'   ,
+        'Disjunctive Syllogism'      ,
+        'Material Modus Ponens'      ,
+        'Material Modus Tollens'     ,
+        'Conditional Modus Ponens'   ,
+        'Conditional Modus Tollens'  ,
+    ])
     return args
     
 import logic

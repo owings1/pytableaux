@@ -147,16 +147,16 @@ name = 'FDE'
 description = 'First Degree Entailment Logic'
 
 def example_validities():
-    return {
-        'Addition'                : [[ 'a'     ], 'Aab'   ],
-        'Simplification'          : [[ 'Kab'   ], 'a'     ],
-        'DeMorgan 1'              : [[ 'NAab'  ], 'KNaNb' ],
-        'DeMorgan 2'              : [[ 'NKab'  ], 'ANaNb' ],
-        'DeMorgan 3'              : [[ 'KNaNb' ], 'NAab'  ],
-        'DeMorgan 4'              : [[ 'ANaNb' ], 'NKab'  ],
-        'Material Contraction'    : [[ 'CaCab' ], 'Cab'   ],
-        'Conditional Contraction' : [[ 'UaUab' ], 'Uab'   ]
-    }
+    return set([
+        'Addition'                ,
+        'Simplification'          ,
+        'DeMorgan 1'              ,
+        'DeMorgan 2'              ,
+        'DeMorgan 3'              ,
+        'DeMorgan 4'              ,
+        'Material Contraction'    ,
+        'Conditional Contraction' ,
+    ])
 
 def example_invalidities():
     # Everything invalid in K3 or LP is also invalid in FDE.

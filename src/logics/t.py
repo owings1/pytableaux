@@ -36,19 +36,19 @@ links = {
 def example_validities():
     import d
     args = d.example_validities()
-    args.update({
-        'Possibility Addition'  : [['a']  , 'Ma'],
-        'Necessity Elimination' : [['La'] , 'a' ],
-    	'NP Collapse 1'         : [['LMa'], 'Ma']
-    })
+    args.update([
+        'Possibility Addition'  ,
+        'Necessity Elimination' ,
+    	'NP Collapse 1'         ,
+    ])
     return args
     
 def example_invalidities():
     import s4
     args = s4.example_invalidities()
-    args.update({
-		'S4 Inference 1': 'CLaLLa'
-    })
+    args.update([
+		'S4 Inference 1' ,
+    ])
     return args
 
 import logic, k

@@ -61,22 +61,22 @@ from logic import operate, negate
 
 def example_validities():
     args = k3.example_validities()
-    del(args['Conditional Contraction'])
-    args.update({
-        'Conditional Identity'    : 'Uaa',
-        'Biconditional Identity'  : 'Baa'
-    })
+    args.remove('Conditional Contraction')
+    args.update([
+        'Conditional Identity'   ,
+        'Biconditional Identity' ,
+    ])
     return args
 
 def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
-    args.update({
-        'Conditional Contraction'         : [['UaUab'], 'Uab'],
-        'Material Identity'               : 'Caa',
-        'Material Biconditional Identity' : 'Eaa',
-        'Law of Excluded Middle'          : 'AaNa'
-    })
+    args.update([
+        'Conditional Contraction'         ,
+        'Material Identity'               ,
+        'Material Biconditional Identity' ,
+        'Law of Excluded Middle'          ,
+    ])
     return args
 
 class TableauxSystem(fde.TableauxSystem):

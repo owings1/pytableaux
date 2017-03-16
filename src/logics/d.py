@@ -37,19 +37,19 @@ description = 'Deontic Normal Modal Logic'
 def example_validities():
     import k
     args = k.example_validities()
-    args.update({
-        'Serial Inference 1': 'CLaMa'
-    })
+    args.update([
+        'Serial Inference 1',
+    ])
     return args
     
 def example_invalidities():
     import t
     args = t.example_invalidities()
-    args.update({
-    	'Reflexive Inference 1' : 'CLaa',
-        'Possibility Addition'  : [['a'], 'Ma'],
-        'Necessity Elimination' : [['La'], 'a']
-    })
+    args.update([
+    	'Reflexive Inference 1' ,
+        'Possibility Addition'  ,
+        'Necessity Elimination' ,
+    ])
     return args
     
 import logic, k

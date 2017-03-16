@@ -121,37 +121,37 @@ def example_validities():
     import k3, lp
     args = k3.example_validities()
     args.update(lp.example_validities())
-    args.update({
-        'Law of Excluded Middle'      : 'AaNa',
-        'Identity'                    : 'Caa',
-        'Pseudo Contraction'          : 'CCaCabCab',
-        'Law of Non-contradiction'    : [[ 'KaNa' ], 'b'  ],
-        'Disjunctive Syllogism'       : [[ 'Aab', 'Nb' ], 'a'  ],
-        'Modus Ponens'                : [[ 'Cab', 'a'  ], 'b'  ],
-        'Modus Tollens'               : [[ 'Cab', 'Nb' ], 'Na' ],
-        'Biconditional Elimination'   : [[ 'Eab', 'a'  ], 'b'  ],
-        'Biconditional Elimination 2' : [[ 'Eab', 'Na' ], 'Nb' ],
-        'Syllogism'                   : [[ 'VxCFxGx', 'VxCGxHx' ], 'VxCFxHx'],
-        'Existential Syllogism'       : [[ 'VxCFxGx', 'Fn'     ],  'Gn'],
-        'Universal Predicate Syllogism' : [[ 'VxVyCO0xyO1xy', 'O0nm'], 'O1nm']
-    })
+    args.update([
+        'Law of Excluded Middle'        ,
+        'Material Identity'             ,
+        'Pseudo Contraction'            ,
+        'Law of Non-contradiction'      ,
+        'Disjunctive Syllogism'         ,
+        'Material Modus Ponens'         ,
+        'Material Modus Tollens'        ,
+        'Biconditional Elimination 1'   ,
+        'Biconditional Elimination 2'   ,
+        'Syllogism'                     ,
+        'Existential Syllogism'         ,
+        'Universal Predicate Syllogism' ,
+    ])
     return args
 
 def example_invalidities():
-    return {
-        'Triviality 1'               : 'a',
-        'Triviality 2'               : [[ 'a'    ], 'b'    ],
-        'Conditional Equivalence'    : [[ 'Cab'  ], 'Cba'  ],
-        'Extracting the Consequent'  : [[ 'Cab'  ], 'b'    ],
-        'Extracting the Antecedent'  : [[ 'Cab'  ], 'a'    ],
-        'Extracting as Disjunct 1'   : [[ 'Aab'  ], 'b'    ],
-        'Extracting as Disjunct 2'   : [[ 'AaNb' ], 'Na'   ],
-        'Existential from Universal' : [[ 'SxFx' ], 'VxFx' ],
-        'Affirming the Consequent'   : [[ 'Cab', 'b'  ], 'a'  ],
-        'Affirming a Disjunct 1'     : [[ 'Aab', 'a'  ], 'b'  ],
-        'Affirming a Disjunct 2'     : [[ 'Aab', 'a'  ], 'Nb' ],
-        'Denying the Antecedent'     : [[ 'Cab', 'Na' ], 'b'  ]
-    }
+    return set([
+        'Triviality 1'               ,
+        'Triviality 2'               ,
+        'Conditional Equivalence'    ,
+        'Extracting the Consequent'  ,
+        'Extracting the Antecedent'  ,
+        'Extracting a Disjunct 1'    ,
+        'Extracting a Disjunct 2'    ,
+        'Existential from Universal' ,
+        'Affirming the Consequent'   ,
+        'Affirming a Disjunct 1'     ,
+        'Affirming a Disjunct 2'     ,
+        'Denying the Antecedent'     ,
+    ])
 
 import logic
 from logic import negate, operate, quantify, Vocabulary

@@ -272,12 +272,17 @@ class argument(object):
 
     """
 
-    def __init__(self, conclusion=None, premises=[]):
+    def __init__(self, conclusion=None, premises=None, title=None):
+        if premises == None:
+            premises = []
         self.premises   = premises
         self.conclusion = conclusion
+        self.title      = title
 
     def __repr__(self):
-        return [self.premises, self.conclusion].__repr__()
+        if self.title is None:
+            return [self.premises, self.conclusion].__repr__()
+        return [self.premises, self.conclusion, {'title': self.title}].__repr__()
 
 def tableau(logic, arg):
     """
@@ -1145,9 +1150,9 @@ class Parser(object):
         self.pos += n  
         self.chomp()
 
-    def argument(self, conclusion=None, premises=[]):
+    def argument(self, conclusion=None, premises=[], title=None):
         # parse a conclusion and premises, and return an argument.
-        return argument(self.parse(conclusion), [self.parse(s) for s in premises])
+        return argument(conclusion=self.parse(conclusion), premises=[self.parse(s) for s in premises], title=title)
 
     def parse(self, string):
         # parse an input string, and return a sentence.

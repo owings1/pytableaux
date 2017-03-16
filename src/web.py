@@ -18,7 +18,7 @@
 #
 # pytableaux - Web Interface
 
-import logic, json, os
+import examples, logic, json, os
 
 available_module_names = {
     'logics'    : ['cfol', 'k3', 'l3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
@@ -37,11 +37,6 @@ notation_user_predicate_symbols = {}
 for notation_name in modules['notations']:
     notation = modules['notations'][notation_name]
     notation_user_predicate_symbols[notation_name] = list(notation.Parser.upchars)
-
-example_arguments = {}
-for lname in modules['logics']:
-    example_arguments.update(modules['logics'][lname].example_validities())
-    example_arguments.update(modules['logics'][lname].example_invalidities())
 
 import os.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -86,13 +81,23 @@ class App:
             'form_data'          : kw,
             'system_predicates'  : logic.system_predicates,
             'quantifiers'        : logic.quantifiers_list,
-            'example_args_list'  : sorted(example_arguments.keys()),
-            'example_arguments'  : example_arguments,
+            'example_args_list'  : examples.args_list,
+            'example_arguments'  : examples.args,
             'example_predicates' : logic.test_pred_data,
             'app' : json.dumps({
                 'notation_user_predicate_symbols' : notation_user_predicate_symbols,
-                'num_predicate_symbols'           : logic.num_predicate_symbols
-            }),
+                'num_predicate_symbols'           : logic.num_predicate_symbols,
+                'example_arguments' : {
+                    arg.title : {
+                        notation: {
+                            'premises'   : [modules['notations'][notation].write(premise) for premise in arg.premises],
+                            'conclusion' : modules['notations'][notation].write(arg.conclusion)
+                        }
+                        for notation in available_module_names['notations']
+                    }
+                    for arg in examples.arguments()
+                }
+            }, indent=2),
             'version'           : logic.version,
             'copyright'         : logic.copyright,
             'source_href'       : logic.source_href

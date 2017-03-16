@@ -22,34 +22,34 @@ name = 'GO'
 description = 'Gappy Object 3-valued Logic'
 
 def example_validities():
-    return {
-        'Addition'                   : [[ 'a'     ], 'Aab'  ],
-        'Simplification'             : [[ 'Kab'   ], 'a'    ],
-        'DeMorgan 3'                 : [[ 'KNaNb' ], 'NAab' ],
-        'DeMorgan 4'                 : [[ 'ANaNb' ], 'NKab' ],
-        'Material Contraction'       : [[ 'CaCab' ], 'Cab'  ],
-        'Conditional Contraction'    : [[ 'UaUab' ], 'Uab'  ],
-        'Conditional Identity'       : 'Uaa',
-        'Biconditional Identity'     : 'Baa',
-        'Law of Non-contradiction'   : [[ 'KaNa' ], 'b' ],
-        'Disjunctive Syllogism'      : [[ 'Aab', 'Nb' ], 'a'  ],
-        'Material Modus Ponens'      : [[ 'Cab', 'a'  ], 'b'  ],
-        'Material Modus Tollens'     : [[ 'Cab', 'Nb' ], 'Na' ],
-        'Conditional Modus Ponens'   : [[ 'Uab', 'a'  ], 'b'  ],
-        'Conditional Modus Tollens'  : [[ 'Uab', 'Nb' ], 'Na' ]
-    }
+    return set([
+        'Addition'                   ,
+        'Simplification'             ,
+        'DeMorgan 3'                 ,
+        'DeMorgan 4'                 ,
+        'Material Contraction'       ,
+        'Conditional Contraction'    ,
+        'Conditional Identity'       ,
+        'Biconditional Identity'     ,
+        'Law of Non-contradiction'   ,
+        'Disjunctive Syllogism'      ,
+        'Material Modus Ponens'      ,
+        'Material Modus Tollens'     ,
+        'Conditional Modus Ponens'   ,
+        'Conditional Modus Tollens'  ,
+    ])
 
 def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
-    args.update({
-        'DeMorgan 1'                      : [[ 'NAab' ], 'KNaNb' ],
-        'DeMorgan 2'                      : [[ 'NKab' ], 'ANaNb' ],
-        'Material Identity'               : 'Caa',
-        'Law of Excluded Middle'          : 'AaNa',
-        'Material Identity'               : 'Caa',
-        'Material Biconditional Identity' : 'Eaa'
-    })
+    args.update([
+        'DeMorgan 1'                      ,
+        'DeMorgan 2'                      ,
+        'Material Identity'               ,
+        'Law of Excluded Middle'          ,
+        'Material Identity'               ,
+        'Material Biconditional Identity' ,
+    ])
     return args
 
 import logic, fde, k3

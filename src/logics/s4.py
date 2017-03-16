@@ -24,20 +24,20 @@ description = 'S4 Normal Modal Logic'
 def example_validities():
     import t
     args = t.example_validities()
-    args.update({
-		'S4 Material Inference 1'    : 'CLaLLa',
-		'S4 Conditional Inference 1' : 'ULaLLa'		
-    })
+    args.update([
+		'S4 Material Inference 1'    ,
+		'S4 Conditional Inference 1' ,
+    ])
     return args
     
 def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
-    args.update({
-	    'Possibility distribution'   : [['KMaMb'], 'MKab'],
-		'S5 Material Inference 1'    : 'CaLMa',
-		'S5 Conditional Inference 1' : 'UaLMa'
-    })
+    args.update([
+	    'Possibility Distribution'   ,
+		'S5 Material Inference 1'    ,
+		'S5 Conditional Inference 1' ,
+    ])
     return args
     
 import logic, k, t

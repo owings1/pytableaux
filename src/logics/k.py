@@ -35,27 +35,27 @@ description = 'Kripke Normal Modal Logic (Fixed Domain)'
 def example_validities():
     import cfol
     args = cfol.example_validities()
-    args.update({
-        'Necessity Distribution' : 'CLCabCLaLb',
-        'Modal Platitude 1'      : [[ 'Ma'   ], 'Ma'   ],
-        'Modal Platitude 2'      : [[ 'La'   ], 'La'   ],
-        'Modal Platitude 3'      : [[ 'LMa'  ], 'LMa'  ],
-        'Modal Transformation 1' : [[ 'La'   ], 'NMNa' ],
-        'Modal Transformation 2' : [[ 'NMNa' ], 'La'   ],
-        'Modal Transformation 3' : [[ 'NLa'  ], 'MNa'  ],
-        'Modal Transformation 4' : [[ 'MNa'  ], 'NLa'  ]
-    })
+    args.update([
+        'Necessity Distribution' ,
+        'Modal Platitude 1'      ,
+        'Modal Platitude 2'      ,
+        'Modal Platitude 3'      ,
+        'Modal Transformation 1' ,
+        'Modal Transformation 2' ,
+        'Modal Transformation 3' ,
+        'Modal Transformation 4' ,
+    ])
     return args
 
 def example_invalidities():
     import t
     args = t.example_invalidities()
-    args.update({
-        'Reflexive Inference 1' : 'CLaa',
-        'Serial Inference 1'    : 'CLaMa',
-        'Possibility Addition'  : [[ 'a'  ], 'Ma' ],
-        'Necessity Elimination' : [[ 'La' ], 'a'  ]
-    })
+    args.update([
+        'Reflexive Inference 1' ,
+        'Serial Inference 1'    ,
+        'Possibility Addition'  ,
+        'Necessity Elimination' ,
+    ])
     return args
 
 import logic

@@ -18,6 +18,7 @@
 #
 # pytableaux - Test script
 
+import examples
 from logic import *
 from notations import polish, standard
 from logics import fde, k3, lp, go, cfol, k, d, t, s4, l3
@@ -44,28 +45,22 @@ def test_logics():
         s4,
         l3
     ]
-    vocabulary = get_test_vocabulary()
-    parser = polish.Parser(vocabulary)
     for logic in logics:
         print logic.name
         print '  validities'
-        test_arguments(logic, logic.example_validities(), True, parser)
+        validity_names = sorted(logic.example_validities())
+        test_arguments(logic, validity_names, True)
         print '  invalidities'
-        test_arguments(logic, logic.example_invalidities(), False, parser)
-        
+        invalidity_names = sorted(logic.example_invalidities())
+        test_arguments(logic, invalidity_names, False)
 
-def test_arguments(logic, args, valid, parser):
+
+def test_arguments(logic, args, valid):
     for name in args:
         print '    ', name, '...',
-        arg = args[name]
-        if isinstance(arg, list):
-            premises = arg[0]
-            conclusion = arg[1]
-        else:
-            premises = []
-            conclusion = arg
+        arg = examples.argument(name)
         try:
-            t = tableau(logic, parser.argument(conclusion, premises)).build()
+            t = tableau(logic, arg).build()
             assert valid == t.valid
         except AssertionError as e:
             import json
@@ -119,27 +114,19 @@ def test_notation_translations():
         s4,
         l3
     ]
-    vocabulary = get_test_vocabulary()
+    vocabulary = examples.vocabulary
     pol = polish.Parser(vocabulary)
     std = standard.Parser(vocabulary)
-    example_arguments = {}
-    for logic in logics:
-        example_arguments.update(logic.example_validities())
-        example_arguments.update(logic.example_invalidities())
-    args_list = sorted(list(example_arguments.keys()))
-    for arg_name in args_list:
-        arg = example_arguments[arg_name]
-        sentence_strs = []
-        if isinstance(arg, list):
-            sentence_strs += arg[0]
-            sentence_strs.append(arg[1])
-        else:
-            sentence_strs.append(arg)
+    args = examples.arguments()
+    for arg in args:
+        print '    ' + arg.title
+        sentence_strs = [polish.write(premise) for premise in arg.premises]
+        sentence_strs.append(polish.write(arg.conclusion))
         for sentence_str in sentence_strs:
             s_pol = pol.parse(sentence_str)
             s_std = std.parse(standard.write(s_pol))
             s_pol2 = pol.parse(polish.write(s_std))
             assert s_pol == s_std and s_std == s_pol2
-            print '      pass [' + arg_name + ']: ' + polish.write(s_pol) + ' = ' + standard.write(s_std) + ' = ' + polish.write(s_pol2)
+            print '      pass: ' + polish.write(s_pol) + ' = ' + standard.write(s_std) + ' = ' + polish.write(s_pol2)
     
 if  __name__ =='__main__':main()
