@@ -2,11 +2,16 @@
 {% block content %}
     {{ super() }}
     <hr>
+    {{ writer.document_header() }}
     {% for tableau in tableaux %}
         <div class="evaluation">
             <div class="summary">
                 <div class="argument">
-                    Argument: {{ argument.premises|join(', ') }} : {{ argument.conclusion }}
+                    {% if symbol_set == 'html' %}
+                        Argument: {{ argument.premises|join(', ') }} : {{ argument.conclusion }}
+                    {% else %}
+                        Argument: {{ argument.premises|join(', ')|e }} : {{ argument.conclusion|e }}
+                    {% endif %}
                 </div>
                 <div class="result">
                     {% if tableau.valid %}
@@ -20,9 +25,9 @@
             </div>
             <div class="proof">
                 {% if writer.name == 'HTML' %}
-                    {{ writer.write(tableau, notation ) }}
+                    {{ writer.write(tableau, notation, symbol_set=symbol_set) }}
                 {% else %}
-                    <pre>{{ writer.write(tableau, notation)|e }}</pre>
+                    <pre>{{ writer.write(tableau, notation, symbol_set=symbol_set)|e }}</pre>
                 {% endif %}
             </div>
         </div>

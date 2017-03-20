@@ -1,5 +1,5 @@
-{% macro write_structure(structure, is_child=False) -%}
-    <div class="structure">
+{% macro write_structure(structure, is_child = False, symbol_set = None) -%}
+    <div class="html-writer structure">
         {% if is_child %}
             <div class="vertical-line"></div>
         {% endif %}
@@ -7,14 +7,20 @@
             <div class="node {% if node.ticked %}ticked{% endif %}">
                 <span class="node-props">
                     {% if 'sentence' in node.props %}
-                        <span class="sentence">{{ notation.write(node.props['sentence'])|e }}</span>
+                        <span class="sentence">
+                            {% if symbol_set == 'html' %}
+                                {{ notation.write(node.props['sentence'], symbol_set = symbol_set) }}
+                            {% else %}
+                                {{ notation.write(node.props['sentence'], symbol_set = symbol_set)|e }}
+                            {% endif %}
+                        </span>
                         {% if 'world' in node.props %}
                             <span class="world">, w<span class="subscript">{{ node.props['world'] }}</span></span>
                         {% endif %}
                     {% endif %}
                     {% if 'designated' in node.props %}
                         <span class="designation {% if not node.props['designated'] %}un{% endif %}designated">
-                            {% if node.props['designated'] %} +{% else %} -{% endif %}
+                            {% if node.props['designated'] %} &oplus;{% else %} &ominus;{% endif %}
                         </span>
                     {% endif %}
                     {% if 'world1' in node.props and 'world2' in node.props %}
@@ -24,7 +30,7 @@
             </div>
         {% endfor %}
         {% if structure['closed'] %}
-            <div class="closeMark">X</div>
+            <div class="closeMark">&otimes;</div>
         {% endif %}
         {% if structure['children']|length %}
             <div class="vertical-line"></div>
@@ -32,46 +38,11 @@
             <div class="horizontal-line" style="width: {{ 100 - width }}%;"></div>
             {% for child in structure['children'] %}
                 <div class="child-wrapper" style="width: {{ width }}%;">
-                    {{ write_structure(child, True) }}
+                    {{ write_structure(child, is_child = True, symbol_set = symbol_set) }}
                 </div>
             {% endfor %}
         {% endif %}
     </div>
 {%- endmacro %}
-<style type="text/css">
-    .node, .closeMark {
-        text-align: center;
-        margin: 3px 0;
-    }
-    .node-props {
-        padding: 5px;
-        display: inline-block;
-    }
-    .node.ticked .node-props {
-        border: 1px solid black;
-    }
-    .child-wrapper {
-        float: left;
-    }
-    .vertical-line, .horizontal-line {
-        margin: 0 auto;
-    }
-    .horizontal-line {
-        border-bottom: 1px solid black;
-        margin-bottom: -1px;
-    }
-    .vertical-line {
-        border-right: 1px solid black;
-        height: 10px;
-        width: 1px;
-    }
-    .subscript {
-        vertical-align: sub;
-        font-size: 80%;
-    }
-    .world {
-        font-style: italic;
-    }
-</style>
-{{ write_structure(tableau.tree) }}
+{{ write_structure(tableau.tree, symbol_set = symbol_set) }}
 <div style="clear: both"></div>

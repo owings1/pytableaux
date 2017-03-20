@@ -22,7 +22,7 @@ import examples, logic, json, os
 
 available_module_names = {
     'logics'    : ['cfol', 'k3', 'l3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
-    'notations' : ['polish'],
+    'notations' : ['polish', 'standard'],
     'writers'   : ['html', 'ascii']
 }
 
@@ -36,7 +36,7 @@ for package in available_module_names:
 notation_user_predicate_symbols = {}
 for notation_name in modules['notations']:
     notation = modules['notations'][notation_name]
-    notation_user_predicate_symbols[notation_name] = list(notation.Parser.upchars)
+    notation_user_predicate_symbols[notation_name] = list(notation.symbol_sets['default'].chars('user_predicate'))
 
 import os.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -107,7 +107,7 @@ class App:
         view = 'argument'
         if len(kw) and ('errors' not in kw or not len(kw['errors'])):
             notation = modules['notations'][kw['notation']]
-            writer = modules['writers'][kw['writer']]
+            writer = modules['writers'][kw['writer']].Writer()
             
             errors = {}
             App.declare_user_predicates(kw, vocabulary, errors)
@@ -128,7 +128,15 @@ class App:
                 conclusion = parser.parse(kw['conclusion'])
             except Exception as e:
                 errors['Conclusion'] = e
-                
+
+            if 'symbol_set' in kw:
+                symbol_set = kw['symbol_set']
+            else:
+                if kw['writer'] == 'html' and 'html' in notation.symbol_sets:
+                    symbol_set = 'html'
+                else:
+                    symbol_set = 'default'
+
             try:
                 if not isinstance(kw['logic'], list):
                     kw['logic'] = [kw['logic']]
@@ -142,12 +150,13 @@ class App:
                 argument = logic.argument(conclusion, premises)
                 tableaux = [logic.tableau(modules['logics'][chosen_logic], argument).build() for chosen_logic in kw['logic']]
                 data.update({
-                    'tableaux' : tableaux,
-                    'notation' : notation,
-                    'writer'   : writer,
+                    'tableaux'   : tableaux,
+                    'notation'   : notation,
+                    'symbol_set' : symbol_set,
+                    'writer'     : writer,
                     'argument' : {
-                        'premises'   : [notation.write(premise) for premise in argument.premises],
-                        'conclusion' : notation.write(argument.conclusion)
+                        'premises'   : [notation.write(premise, symbol_set=symbol_set) for premise in argument.premises],
+                        'conclusion' : notation.write(argument.conclusion, symbol_set=symbol_set)
                     }
                 })
         data.update({

@@ -20,12 +20,27 @@
 
 name = 'HTML'
 
+import logic
 from jinja2 import Environment, PackageLoader
-env = Environment(loader=PackageLoader('writers', 'templates'), trim_blocks=True, lstrip_blocks=True)
-template = env.get_template('structure.html')
 
-def write(tableau, notation):
-    return template.render({
-        'tableau': tableau,
-        'notation': notation
-    })
+class Writer(logic.TableauxSystem.Writer):
+
+    name = name
+
+    env = Environment(
+        loader = PackageLoader('writers', 'templates'),
+        trim_blocks = True,
+        lstrip_blocks = True
+    )
+    template = env.get_template('structure.html')
+    header   = env.get_template('header.html')
+
+    def document_header(self):
+        return self.header.render()
+
+    def write(self, tableau, notation, symbol_set=None):
+        return self.template.render({
+            'tableau'    : tableau,
+            'notation'   : notation,
+            'symbol_set' : symbol_set
+        })

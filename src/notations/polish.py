@@ -21,32 +21,64 @@
 Polish notation is a fully *prefix* notation, meaning the operators occur before
 the operands.
 """
-import logic
-from logic import write_item
+import logic, string
 
 name = 'Polish'
 
-def write(sentence):
+symbol_sets = {
+    'default' : logic.Parser.SymbolSet({
+        'atomic'   : ['a', 'b', 'c', 'd', 'e'],
+        'operator' : {
+            'Negation'               : 'N',
+            'Conjunction'            : 'K',
+            'Disjunction'            : 'A',
+            'Material Conditional'   : 'C',
+            'Material Biconditional' : 'E',
+            'Conditional'            : 'U',
+            'Biconditional'          : 'B',
+            'Possibility'            : 'M',
+            'Necessity'              : 'L',
+        },
+        'variable'   : ['v', 'x', 'y', 'z'],
+        'constant'   : ['m', 'n', 'o', 's'],
+        'quantifier' : {
+            'Universal'   : 'V',
+            'Existential' : 'S',
+        },
+        'system_predicate'  : {
+            'Identity'  : 'I',
+            'Existence' : 'J',
+        },
+        'user_predicate' : ['F', 'G', 'H', 'O'],
+        'whitespace'     : [' '],
+        'digit' : list(string.digits)
+    })
+}
+
+def write(sentence, symbol_set = None):
+    if symbol_set == None:
+        symbol_set = symbol_sets['default']
+    if isinstance(symbol_set, str):
+        symbol_set = symbol_sets[symbol_set]
     if sentence.is_atomic():
-        s = write_item(sentence, Parser.achars)
+        s = symbol_set.charof('atomic', sentence.index, subscript = sentence.subscript)
     elif sentence.is_molecular():
-        s = Parser.ochars.keys()[Parser.ochars.values().index(sentence.operator)]
-        for operand in sentence.operands:
-            s += write(operand)
+        s = symbol_set.charof('operator', sentence.operator)
+        s += ''.join([write(operand, symbol_set = symbol_set) for operand in sentence.operands])
     elif sentence.is_quantified():
-        s = Parser.qchars.keys()[Parser.qchars.values().index(sentence.quantifier)]
-        s += write_item(sentence.variable, Parser.vchars)
-        s += write(sentence.sentence)
-    elif sentence.is_predicate():
+        s = symbol_set.charof('quantifier', sentence.quantifier)
+        s += symbol_set.charof('variable', sentence.variable.index, subscript = sentence.variable.subscript)
+        s += write(sentence.sentence, symbol_set = symbol_set)
+    elif sentence.is_predicated():
         if sentence.predicate.name in logic.system_predicates:
-            s = write_item(sentence.predicate, Parser.spchars)
+            s = symbol_set.charof('system_predicate', sentence.predicate.name, subscript = sentence.predicate.subscript)
         else:
-            s = write_item(sentence.predicate, Parser.upchars)
+            s = symbol_set.charof('user_predicate', sentence.predicate.index, subscript = sentence.predicate.subscript)
         for param in sentence.parameters:
-            if logic.is_constant(param):
-                s += write_item(param, Parser.cchars)
-            elif logic.is_variable(param):
-                s += write_item(param, Parser.vchars)
+            if param.is_constant():
+                s += symbol_set.charof('constant', param.index, subscript = param.subscript)
+            elif param.is_variable():
+                s += symbol_set.charof('variable', param.index, subscript = param.subscript)
             else:
                 raise Exception(NotImplemented)
     else:
@@ -55,45 +87,15 @@ def write(sentence):
     
 class Parser(logic.Parser):
 
-    # atomic sentence characters
-    achars = ['a', 'b', 'c', 'd', 'e']
-
-    # operator characters
-    ochars = {
-        'N' : 'Negation',
-        'K' : 'Conjunction',
-        'A' : 'Disjunction',
-        'C' : 'Material Conditional',
-        'E' : 'Material Biconditional',
-        'U' : 'Conditional',
-        'B' : 'Biconditional',
-        'M' : 'Possibility',
-        'L' : 'Necessity'
-    }
-
-    # variable characters
-    vchars = ['v', 'x', 'y', 'z']
-
-    # constant characters
-    cchars = ['m', 'n', 'o', 's']
-
-    # quantifier characters
-    qchars = {
-        'V' : 'Universal',
-        'S' : 'Existential'
-    }
-
-    # user predicate characters
-    upchars = ['F', 'G', 'H', 'O']
-
-    # system predicate characters
-    spchars = ['I', 'J']
+    symbol_sets = symbol_sets
 
     def read(self):
-        self.assert_current()
-        if self.current() in self.ochars:
-            operator = self.ochars[self.current()]
+        ctype = self.assert_current()
+        if ctype == 'operator':
+            operator = self.symbol_set.indexof('operator', self.current())
             self.advance()
             operands = [self.read() for x in range(logic.arity(operator))]
-            return logic.operate(operator, operands)
-        return logic.Parser.read(self)
+            s = logic.operate(operator, operands)
+        else:
+            s = super(Parser, self).read()
+        return s

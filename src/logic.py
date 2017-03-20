@@ -77,15 +77,6 @@ num_const_symbols     = 4
 num_atomic_symbols    = 5
 num_predicate_symbols = 4
 
-# Test vocabulary predicate data for example_validities, etc.
-test_pred_data = [
-    ['is F', 0, 0, 1],
-    ['is G', 1, 0, 1],
-    ['is H', 2, 0, 1],
-    ['Os'  , 3, 0, 2],
-    ['O1s' , 3, 1, 2]
-]
-
 def atomic(index, subscript):
     """Return an atomic sentence represented by the given index and subscript integers.
     Examples::
@@ -352,19 +343,6 @@ def _get_module(package, arg):
         return importlib.import_module(arg.lower())
     raise Exception("Argument must be module or string")
 
-
-def get_test_vocabulary():
-    return Vocabulary(test_pred_data)
-
-def write_item(item, chars):
-    if item.index < 0:
-        s = chars[-1 * item.index - 1]
-    else:
-        s = chars[item.index]
-    if item.subscript > 0:
-        s += str(item.subscript)
-    return s
-
 class Vocabulary(object):
     """
     Create a new vocabulary. *predicate_defs* is a list of tuples (name, index, subscript, arity)
@@ -407,7 +385,7 @@ class Vocabulary(object):
         self.user_predicates_index = {}
         if predicate_defs:
             for info in predicate_defs:
-                assert len(info) == 4, "Prediate declarations must be 4-tuples (name, index, subscript, arity)"
+                assert len(info) == 4, "Predicate declarations must be 4-tuples (name, index, subscript, arity)."
                 self.declare_predicate(*info)
 
     def get_predicate(self, name=None, index=None, subscript=None):
@@ -424,6 +402,12 @@ class Vocabulary(object):
             assert vocab.get_predicate('is tall') == vocab.get_predicate(index=0, subscript=0)
 
         """
+        if name == None and index != None and isinstance(index, str):
+            name = index
+            index = None
+        elif index == None and name != None and isinstance(name, int):
+            index = name
+            name = None
         if name != None:
             if name in system_predicates:
                 return system_predicates[name]
@@ -479,6 +463,12 @@ class Vocabulary(object):
         def __eq__(self, other):
             return isinstance(other, Vocabulary.Constant) and self.__dict__ == other.__dict__
 
+        def is_variable(self):
+            return False
+
+        def is_constant(self):
+            return True
+
     class Variable(object):
 
         def __init__(self, index, subscript):
@@ -487,6 +477,12 @@ class Vocabulary(object):
 
         def __eq__(self, other):
             return isinstance(other, Vocabulary.Variable) and self.__dict__ == other.__dict__
+
+        def is_variable(self):
+            return True
+
+        def is_constant(self):
+            return False
 
     class Sentence(object):
 
@@ -500,7 +496,7 @@ class Vocabulary(object):
         def is_atomic(self):
             return isinstance(self, Vocabulary.AtomicSentence)
 
-        def is_predicate(self):
+        def is_predicated(self):
             return isinstance(self, Vocabulary.PredicateSentence)
 
         def is_quantified(self):
@@ -1103,6 +1099,20 @@ class TableauxSystem(object):
                 props['sentence'] = sentence
             return props
 
+    class Writer(object):
+
+        def __init__(self):
+            pass
+
+        def document_header(self):
+            return ''
+
+        def document_footer(self):
+            return ''
+
+        def write(self, tableau, notation, symbol_set = None):
+            raise Exception(NotImplemented)
+
 class Parser(object):
     """
     The base Parser class handles parsing operations common to all notations (Polish and Standard).
@@ -1121,7 +1131,7 @@ class Parser(object):
     - Operator symbols
     - Atomic sentence (proposition) symbols
 
-    
+
 
     """
 
@@ -1134,37 +1144,59 @@ class Parser(object):
     class BoundVariableError(Exception):
         pass
 
-    # atomic sentence characters
-    achars  = []
+    class SymbolSet(object):
 
-    # operator characters to operator name
-    ochars  = {}
+        def __init__(self, m):
+            self.m = m
+            self.types = {}
+            self.index = {}
+            self.reverse = {}
+            
+            for ctype in m:
+                if isinstance(m[ctype], dict):
+                    self.types.update({c: ctype for c in m[ctype].values()})
+                    self.index[ctype] = dict(m[ctype])
+                    self.reverse[ctype] = {m[ctype][k]: k for k in m[ctype]}
+                else:
+                    self.types.update({c: ctype for c in m[ctype]})
+                    self.index[ctype] = {i: c for i, c in enumerate(m[ctype])}
+                    self.reverse[ctype] = {c: i for i, c in enumerate(m[ctype])}
 
-    # constant characters
-    cchars  = []
+        def typeof(self, c):
+            if c in self.types:
+                return self.types[c]
+            return None
 
-    # variable characters
-    vchars  = []
+        def charof(self, ctype, index, subscript = None, skip_zero = True):
+            s = self.index[ctype][index]
+            if subscript != None:
+                s += self.subfor(subscript, skip_zero = skip_zero)
+            return s
 
-    # quantifier characters to quantifier name
-    qchars  = {}
+        def indexof(self, ctype, ref):
+            return self.reverse[ctype][ref]
 
-    # user predicate characters
-    upchars = []
+        def subfor(self, subscript, skip_zero = True):
+            if skip_zero and subscript == 0:
+                return ''
+            return ''.join([self.charof('digit', int(d)) for d in list(str(subscript))])
 
-    # system predicate characters
-    spchars = []
+        def chars(self, ctype):
+            return self.m[ctype]
 
-    # whitespace characters
-    wschars = set([' '])
-
-    def __init__(self, vocabulary):
+    def __init__(self, vocabulary, symbol_set = None):
+        if symbol_set == None:
+            symbol_set = 'default'
+        if isinstance(symbol_set, Parser.SymbolSet):
+            self.symbol_set = symbol_set
+        else:
+            self.symbol_set = self.symbol_sets[symbol_set]
         self.vocabulary = vocabulary
         self.is_parsing = False
 
     def chomp(self):
         # proceeed through whitepsace
-        while (self.has_next(0) and self.current() in self.wschars):
+        while self.has_current() and self.typeof(self.current()) == 'whitespace':
             self.pos += 1
 
     def current(self):
@@ -1174,17 +1206,18 @@ class Parser(object):
     def assert_current(self):
         # raise a parse error if after last
         if not self.has_current():
-            raise Parser.ParseError('Unexpected end of input at position {0}'.format(self.pos))
+            raise Parser.ParseError('Unexpected end of input at position {0}.'.format(self.pos))
+        return self.typeof(self.current())
 
-    def assert_current_in(self, collection):
-        # raise a parse error if the current character is not in the given collection
+    def assert_current_is(self, *ctypes):
         self.assert_current()
-        if not self.current() in collection:
-            raise Parser.ParseError("Unexpected character '{0}' at position {1}".format(self.current(), self.pos))
+        ctype = self.typeof(self.current())
+        if ctype not in ctypes:
+            raise Parser.ParseError("Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos))
+        return ctype
 
     def has_next(self, n=1):
         # check whether there is n-many characters after the current. if n = 0,
-        # check whether there is a current character.
         return (len(self.s) > self.pos + n)
 
     def has_current(self):
@@ -1204,7 +1237,11 @@ class Parser(object):
 
     def argument(self, conclusion=None, premises=[], title=None):
         # parse a conclusion and premises, and return an argument.
-        return argument(conclusion=self.parse(conclusion), premises=[self.parse(s) for s in premises], title=title)
+        return argument(
+            conclusion = self.parse(conclusion),
+            premises = [self.parse(s) for s in premises],
+            title = title
+        )
 
     def parse(self, string):
         # parse an input string, and return a sentence.
@@ -1213,15 +1250,15 @@ class Parser(object):
         self.is_parsing = True
         self.bound_vars = set()
         try:
-            self.s = list(string)
+            self.s   = list(string)
             self.pos = 0
             self.chomp()
             if not self.has_current():
-                raise Parser.ParseError('Input cannot be empty')
+                raise Parser.ParseError('Input cannot be empty.')
             s = self.read()
             self.chomp()
             if self.has_current():
-                raise Parser.ParseError("Unexpected character '{0}' at position {1}".format(self.current(), self.pos))
+                raise Parser.ParseError("Unexpected character '{0}' at position {1}.".format(self.current(), self.pos))
             self.is_parsing = False
             self.bound_vars = set()
         except:
@@ -1230,24 +1267,27 @@ class Parser(object):
             raise
         return s
 
-    def read_item(self, chars):
+    def read_item(self, ctype = None):
         # read an item and its subscript starting from the current character, which must be
         # in the list of characters given. returns a list containing the index of the current
         # character in the chars list, and the subscript of that item. this is a generic way
         # to read predicates, atomics, variables, constants, etc.
-        self.assert_current_in(chars)
-        index = chars.index(self.current())
+        if ctype == None:
+            ctype = self.typeof(self.current())
+        else:
+            self.assert_current_is(ctype)
+        index = self.symbol_set.indexof(ctype, self.current())
         self.advance()
         subscript = self.read_subscript()
-        return [index, subscript]
+        return {'index': index, 'subscript': subscript}
 
     def read_subscript(self):
         # read the subscript starting from the current character. if the current character
         # is not a digit, or we are after last, then the subscript is 0. otherwise, all
-        # consecutive digit characters are read (no whitepsace allowed), and then converted
+        # consecutive digit characters are read (whitepsace allowed), and then converted
         # to an integer, which is then returned.
         sub = []
-        while (self.current() and self.current().isdigit()):
+        while self.current() and self.typeof(self.current()) == 'digit':
             sub.append(self.current())
             self.advance()
         if not len(sub):
@@ -1256,32 +1296,24 @@ class Parser(object):
 
     def read_atomic(self):
         # read an atomic sentence starting from the current character.
-        return atomic(*self.read_item(self.achars))
+        return atomic(**self.read_item())
 
     def read_variable(self):
         # read a variable starting from the current character.
-        return variable(*self.read_item(self.vchars))
+        return variable(**self.read_item())
 
     def read_constant(self):
         # read a constant starting from the current character.
-        return constant(*self.read_item(self.cchars))
+        return constant(**self.read_item())
 
     def read_predicate(self):
         # read a predicate starting from the current character.
-        self.assert_current_in(self.upchars + self.spchars)
         pchar = self.current()
         cpos = self.pos
         try:
-            if pchar in self.upchars:
-                index, subscript = self.read_item(self.upchars)
-            else:
-                index, subscript = self.read_item(self.spchars)
-                index = (index + 1) * -1
-                if index not in system_predicates_index or subscript not in system_predicates_index[index]:
-                    raise Vocabulary.NoSuchPredicateError()
-            return self.vocabulary.get_predicate(index=index, subscript=subscript)
+            return self.vocabulary.get_predicate(**self.read_item())
         except Vocabulary.NoSuchPredicateError:
-            raise Parser.ParseError("Undefined predicate symbol '{0}' at position {1}".format(pchar, cpos))
+            raise Parser.ParseError("Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos))
 
     def read_parameters(self, num):
         # read the parameters (constants or variables) of a predicate sentence, starting
@@ -1291,15 +1323,15 @@ class Parser(object):
         # variables or constants).
         parameters = []
         while len(parameters) < num:
-            self.assert_current_in(self.cchars + self.vchars)
+            ctype = self.assert_current_is('constant', 'variable')
             cpos = self.pos
-            if self.current() in self.cchars:
+            if ctype == 'constant':
                 parameters.append(self.read_constant())
             else:
                 v = self.read_variable()
                 if v not in list(self.bound_vars):
-                    var_str = write_item(v, self.vchars)
-                    raise Parser.ParseError("Unbound variable '{0}' at position {1}".format(var_str, cpos))
+                    var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
+                    raise Parser.ParseError("Unbound variable '{0}' at position {1}.".format(var_str, cpos))
                 parameters.append(v)
         return parameters
 
@@ -1310,32 +1342,33 @@ class Parser(object):
         return predicated(predicate, params)
 
     def read_quantified_sentence(self):
-        self.assert_current_in(self.qchars)
-        quantifier = self.qchars[self.current()]
+        self.assert_current_is('quantifier')
+        quantifier = self.symbol_set.indexof('quantifier', self.current())
         self.advance()
         v = self.read_variable()
         if v in list(self.bound_vars):
-            var_str = write_item(v, self.vchars)
-            raise Parser.ParseError('Cannot rebind variable {0} at position {1}'.format(var_str, self.pos))
+            var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
+            raise Parser.ParseError("Cannot rebind variable '{0}' at position {1}.".format(var_str, self.pos))
         self.bound_vars.add(v)
         sentence = self.read()
         if v not in list(sentence.variables()):
-            var_str = write_item(v, self.vchars)
-            raise Parser.ParseError('Unused bound variable {0} at position {1}'.format(var_str, self.pos))
+            var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
+            raise Parser.ParseError("Unused bound variable '{0}' at position {1}.".format(var_str, self.pos))
         self.bound_vars.remove(v)
         return quantify(quantifier, v, sentence)
 
     def read(self):
         # read a sentence.
-        self.assert_current()
-        if self.current() in self.upchars or self.current() in self.spchars:
-            return self.read_predicate_sentence()
-        if self.current() in self.qchars:
-            return self.read_quantified_sentence()
-        return self.read_atomic()
+        ctype = self.assert_current()
+        if ctype == 'user_predicate' or ctype == 'system_predicate':
+            s = self.read_predicate_sentence()
+        elif ctype == 'quantifier':
+            s = self.read_quantified_sentence()
+        elif ctype == 'atomic':
+            s = self.read_atomic()
+        else:
+            raise Parser.ParseError("Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos))
+        return s
 
-    @classmethod
-    def spchar(cls, index):
-        # get the system predicate character for the given index.
-        index = index * -1 - 1
-        return cls.spchars[index]
+    def typeof(self, c):
+        return self.symbol_set.typeof(c)

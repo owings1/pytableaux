@@ -266,13 +266,14 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 import logic, writers, notations
-import writers.html, notations.polish
+import writers.html, notations.polish, notations.standard
 import inspect
 import importlib
 copyright = logic.copyright
-writer = writers.html
-notation = notations.polish
+writer = writers.html.Writer()
+notation = notations.standard
 def make_tableau_examples(app, what, name, obj, options, lines):
+    header_written = False
     if what == 'class' and logic.TableauxSystem.Rule in inspect.getmro(obj):
         if obj in [
             logic.TableauxSystem.Rule,
@@ -283,6 +284,9 @@ def make_tableau_examples(app, what, name, obj, options, lines):
         ]:
             return
         try:
+            if not header_written:
+                lines += ['.. raw:: html', '', '    ' + writer.document_header(), '']
+                header_written = True
             proof = logic.tableau(importlib.import_module(obj.__module__), None)
             rule = next(r for r in proof.rules if r.__class__ == obj)
             rule.example()
@@ -294,7 +298,7 @@ def make_tableau_examples(app, what, name, obj, options, lines):
                 ''                                     ,
                 '.. raw:: html'                        ,
                 ''                                     ,
-                '    ' + writer.write(proof, notation)
+                '    ' + writer.write(proof, notation, symbol_set='html')
             ]
         except:    
             print 'No example generated for ' + str(obj)
@@ -308,12 +312,12 @@ def make_tableau_examples(app, what, name, obj, options, lines):
             proof.finish()
             lines += [
                 'Example:' ,
-                ''         ,
-                'Argument: *' + '*, *'.join([notation.write(p) for p in arg.premises]) + '* : *' + notation.write(arg.conclusion) + '*',
                 ''                                     ,
                 '.. raw:: html'                        ,
+                ''         ,
+                '    ' + 'Argument: <i>' + '</i>, <i>'.join([notation.write(p, symbol_set = 'html') for p in arg.premises]) + '</i> : <i>' + notation.write(arg.conclusion, symbol_set='html') + '</i>',
                 ''                                     ,
-                '    ' + writer.write(proof, notation)
+                '    ' + writer.write(proof, notation, symbol_set='html')
             ]
         except:
             print 'Error making example for ' + str(obj)

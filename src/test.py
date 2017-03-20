@@ -56,6 +56,7 @@ def test_logics():
 
 
 def test_arguments(logic, args, valid):
+    writer = ascii.Writer()
     for name in args:
         print '    ', name, '...',
         arg = examples.argument(name)
@@ -67,7 +68,7 @@ def test_arguments(logic, args, valid):
             print 'FAIL'
             print t
             print list(t.branches)[0]
-            print ascii.write(t, standard)
+            print writer.write(t, standard)
             raise e
         print 'pass'
 

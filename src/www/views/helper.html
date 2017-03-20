@@ -13,7 +13,7 @@
 {%- endmacro %}
 
 {% macro predicate_row(index, subscript, name='', arity='') -%}
-    <tr>
+    <tr class="userPredicate">
         <td>
             {{ caller() }}
             <input type="hidden" class="predicateSymbol" name="user_predicate_symbols[]" value="{{ index }}.{{ subscript }}" />
