@@ -139,6 +139,10 @@ class TableauxSystem(fde.TableauxSystem):
 class TableauxRules(object):
 
     class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, undesignated conjunction node *n* on a branch *b*, add a
+        designated node to *b* with the negation of the conjunction, then tick *n*.
+        """
 
         operator    = 'Conjunction'
         designation = False
@@ -147,6 +151,12 @@ class TableauxRules(object):
             branch.add({ 'sentence': negate(node.props['sentence']), 'designated' : True }).tick(node)
 
     class ConjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, negated conjunction node *n* on a branch *b*,
+        make two new branches *b'* and *b''* from *b*, add an undesignated node to
+        *b'* with one conjunct, and an undesignated node to *b''* with the other
+        conjunct, then tick *n*.
+        """
 
         negated     = True
         operator    = 'Conjunction'
@@ -159,10 +169,18 @@ class TableauxRules(object):
             newBranches[1].add({ 'sentence' : s.rhs, 'designated' : False }).tick(node)
 
     class ConjunctionNegatedUndesignated(ConjunctionUndesignated):
+        """
+        From an unticked, undesignated, negated conjunction node *n* on a branch *b*,
+        add an undesignated node to *b* with the negation of the conjuction, then tick *n*.
+        """
 
         negated = True
 
     class DisjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, negated disjunction node *n* on a branch *b*,
+        add an undesignated node to *b* for each disjunct, then tick *n*.
+        """
 
         negated     = True
         operator    = 'Disjunction'
@@ -176,6 +194,10 @@ class TableauxRules(object):
             ]).tick(node)
 
     class DisjunctionUndesignated(ConjunctionUndesignated):
+        """
+        From an unticked, undesignated disjunction node *n* on a branch *b*, add a
+        designated node to *b* with the negation of the disjunction, then tick *n*.
+        """
 
         operator = 'Disjunction'
 
