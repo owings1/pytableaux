@@ -82,9 +82,10 @@ class App:
             'system_predicates'  : logic.system_predicates,
             'quantifiers'        : logic.quantifiers_list,
             'example_args_list'  : examples.args_list,
-            'example_arguments'  : examples.args,
-            'example_predicates' : logic.test_pred_data,
+            #'example_arguments'  : examples.args,
+            #'example_predicates' : examples.test_pred_data,
             'app' : json.dumps({
+                'example_predicates'              : examples.test_pred_data,
                 'notation_user_predicate_symbols' : notation_user_predicate_symbols,
                 'num_predicate_symbols'           : logic.num_predicate_symbols,
                 'example_arguments' : {
