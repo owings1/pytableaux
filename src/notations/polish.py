@@ -26,7 +26,7 @@ import logic, string
 name = 'Polish'
 
 symbol_sets = {
-    'default' : logic.Parser.SymbolSet({
+    'default' : logic.Parser.SymbolSet('default', {
         'atomic'   : ['a', 'b', 'c', 'd', 'e'],
         'operator' : {
             'Negation'               : 'N',
@@ -39,7 +39,7 @@ symbol_sets = {
             'Possibility'            : 'M',
             'Necessity'              : 'L',
         },
-        'variable'   : ['v', 'x', 'y', 'z'],
+        'variable'   : ['x', 'y', 'z', 'v'],
         'constant'   : ['m', 'n', 'o', 's'],
         'quantifier' : {
             'Universal'   : 'V',
@@ -55,35 +55,18 @@ symbol_sets = {
     })
 }
 
-def write(sentence, symbol_set = None):
-    if symbol_set == None:
-        symbol_set = symbol_sets['default']
-    if isinstance(symbol_set, str):
-        symbol_set = symbol_sets[symbol_set]
-    if sentence.is_atomic():
-        s = symbol_set.charof('atomic', sentence.index, subscript = sentence.subscript)
-    elif sentence.is_molecular():
-        s = symbol_set.charof('operator', sentence.operator)
-        s += ''.join([write(operand, symbol_set = symbol_set) for operand in sentence.operands])
-    elif sentence.is_quantified():
-        s = symbol_set.charof('quantifier', sentence.quantifier)
-        s += symbol_set.charof('variable', sentence.variable.index, subscript = sentence.variable.subscript)
-        s += write(sentence.sentence, symbol_set = symbol_set)
-    elif sentence.is_predicated():
-        if sentence.predicate.name in logic.system_predicates:
-            s = symbol_set.charof('system_predicate', sentence.predicate.name, subscript = sentence.predicate.subscript)
-        else:
-            s = symbol_set.charof('user_predicate', sentence.predicate.index, subscript = sentence.predicate.subscript)
-        for param in sentence.parameters:
-            if param.is_constant():
-                s += symbol_set.charof('constant', param.index, subscript = param.subscript)
-            elif param.is_variable():
-                s += symbol_set.charof('variable', param.index, subscript = param.subscript)
-            else:
-                raise Exception(NotImplemented)
-    else:
-        raise Exception(NotImplemented)
-    return s
+class Writer(logic.Vocabulary.Writer):
+
+    symbol_sets = {
+        'default' : symbol_sets['default'],
+        'html'    : logic.Parser.SymbolSet('html', symbol_sets['default'].m)
+    }
+
+    def write_operated(self, sentence, symbol_set = None):
+        symset = self.symset(symbol_set)
+        return symset.charof('operator', sentence.operator) + ''.join([
+            self.write(operand, symbol_set = symbol_set) for operand in sentence.operands
+        ])
     
 class Parser(logic.Parser):
 
@@ -99,3 +82,7 @@ class Parser(logic.Parser):
         else:
             s = super(Parser, self).read()
         return s
+
+writer = Writer()
+def write(sentence, symbol_set = None):
+    return writer.write(sentence, symbol_set = symbol_set)

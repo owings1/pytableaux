@@ -38,9 +38,8 @@ class Writer(logic.TableauxSystem.Writer):
     def document_header(self):
         return self.header.render()
 
-    def write(self, tableau, notation, symbol_set=None):
+    def write_tableau(self, tableau, writer):
         return self.template.render({
-            'tableau'    : tableau,
-            'notation'   : notation,
-            'symbol_set' : symbol_set
+            'tableau'  : tableau,
+            'writer'   : writer
         })

@@ -22,7 +22,7 @@ import examples, logic, json, os
 
 available_module_names = {
     'logics'    : ['cfol', 'k3', 'l3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
-    'notations' : ['polish', 'standard'],
+    'notations' : ['standard', 'polish'],
     'writers'   : ['html', 'ascii']
 }
 
@@ -149,14 +149,15 @@ class App:
                 view = 'prove'
                 argument = logic.argument(conclusion, premises)
                 tableaux = [logic.tableau(modules['logics'][chosen_logic], argument).build() for chosen_logic in kw['logic']]
+                sw = notation.Writer(symbol_set)
                 data.update({
                     'tableaux'   : tableaux,
                     'notation'   : notation,
-                    'symbol_set' : symbol_set,
+                    'sw'         : sw,
                     'writer'     : writer,
                     'argument' : {
-                        'premises'   : [notation.write(premise, symbol_set=symbol_set) for premise in argument.premises],
-                        'conclusion' : notation.write(argument.conclusion, symbol_set=symbol_set)
+                        'premises'   : [sw.write(premise) for premise in argument.premises],
+                        'conclusion' : sw.write(argument.conclusion)
                     }
                 })
         data.update({

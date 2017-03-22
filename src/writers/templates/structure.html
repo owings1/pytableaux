@@ -1,4 +1,4 @@
-{% macro write_structure(structure, is_child = False, symbol_set = None) -%}
+{% macro write_structure(structure, is_child = False) -%}
     <div class="html-writer structure">
         {% if is_child %}
             <div class="vertical-line"></div>
@@ -8,10 +8,10 @@
                 <span class="node-props">
                     {% if 'sentence' in node.props %}
                         <span class="sentence">
-                            {% if symbol_set == 'html' %}
-                                {{ notation.write(node.props['sentence'], symbol_set = symbol_set) }}
+                            {% if writer.symbol_set.name == 'html' %}
+                                {{ writer.write(node.props['sentence']) }}
                             {% else %}
-                                {{ notation.write(node.props['sentence'], symbol_set = symbol_set)|e }}
+                                {{ writer.write(node.props['sentence'])|e }}
                             {% endif %}
                         </span>
                         {% if 'world' in node.props %}
@@ -38,11 +38,11 @@
             <div class="horizontal-line" style="width: {{ 100 - width }}%;"></div>
             {% for child in structure['children'] %}
                 <div class="child-wrapper" style="width: {{ width }}%;">
-                    {{ write_structure(child, is_child = True, symbol_set = symbol_set) }}
+                    {{ write_structure(child, is_child = True) }}
                 </div>
             {% endfor %}
         {% endif %}
     </div>
 {%- endmacro %}
-{{ write_structure(tableau.tree, symbol_set = symbol_set) }}
+{{ write_structure(tableau.tree) }}
 <div style="clear: both"></div>

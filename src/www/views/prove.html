@@ -7,10 +7,10 @@
         <div class="evaluation">
             <div class="summary">
                 <div class="argument">
-                    {% if symbol_set == 'html' %}
-                        Argument: {{ argument.premises|join(', ') }} : {{ argument.conclusion }}
+                    {% if sw.symbol_set.name == 'html' %}
+                        Argument: {{ argument.premises|join(', ') }} &there4; {{ argument.conclusion }}
                     {% else %}
-                        Argument: {{ argument.premises|join(', ')|e }} : {{ argument.conclusion|e }}
+                        Argument: {{ argument.premises|join(', ')|e }} &there4; {{ argument.conclusion|e }}
                     {% endif %}
                 </div>
                 <div class="result">
@@ -25,9 +25,9 @@
             </div>
             <div class="proof">
                 {% if writer.name == 'HTML' %}
-                    {{ writer.write(tableau, notation, symbol_set=symbol_set) }}
+                    {{ writer.write(tableau, writer=sw) }}
                 {% else %}
-                    <pre>{{ writer.write(tableau, notation, symbol_set=symbol_set)|e }}</pre>
+                    <pre>{{ writer.write(tableau, writer=sw)|e }}</pre>
                 {% endif %}
             </div>
         </div>

@@ -57,6 +57,7 @@ def test_logics():
 
 def test_arguments(logic, args, valid):
     writer = ascii.Writer()
+    sw = standard.Writer()
     for name in args:
         print '    ', name, '...',
         arg = examples.argument(name)
@@ -68,7 +69,7 @@ def test_arguments(logic, args, valid):
             print 'FAIL'
             print t
             print list(t.branches)[0]
-            print writer.write(t, standard)
+            print writer.write(t, writer=sw)
             raise e
         print 'pass'
 
@@ -76,12 +77,13 @@ def test_standard_notation():
     print "Standard notation"
     vocab = Vocabulary()
     p = standard.Parser(vocab)
+    w = standard.Writer()
     s1 = p.parse('A')
-    print '      pass: ' + standard.write(s1)
+    print '      pass: ' + w.write(s1)
     s2 = p.parse('~A')
-    print '      pass: ' + standard.write(s2)
+    print '      pass: ' + w.write(s2)
     s3 = p.parse('(A & B)')
-    print '      pass: ' + standard.write(s3)
+    print '      pass: ' + w.write(s3)
     try:
         s4 = p.parse('A & B')
         assert False, 's4 should not pass'
@@ -93,13 +95,13 @@ def test_standard_notation():
     except Parser.ParseError as e:
         print '      pass: ' + e.message
     s6 = p.parse('((A & B) V XxXy(=xy > !a))')
-    print '      pass: ' + standard.write(s6)
+    print '      pass: ' + w.write(s6)
     s7 = p.parse('((A&B0)VXxXy(=xy>!a))')
-    print '      pass: ' + standard.write(s7)
+    print '      pass: ' + w.write(s7)
     assert s6 == s7
     print '      pass: s6 == s7'
     s8 = p.parse('(PXx!x V N=ab)')
-    print '      pass: ' + standard.write(s8)
+    print '      pass: ' + w.write(s8)
 
 def test_notation_translations():
     print "Notation Translations"
@@ -118,16 +120,18 @@ def test_notation_translations():
     vocabulary = examples.vocabulary
     pol = polish.Parser(vocabulary)
     std = standard.Parser(vocabulary)
+    ws = standard.Writer()
+    wp = polish.Writer()
     args = examples.arguments()
     for arg in args:
         print '    ' + arg.title
-        sentence_strs = [polish.write(premise) for premise in arg.premises]
-        sentence_strs.append(polish.write(arg.conclusion))
+        sentence_strs = [wp.write(premise) for premise in arg.premises]
+        sentence_strs.append(wp.write(arg.conclusion))
         for sentence_str in sentence_strs:
             s_pol = pol.parse(sentence_str)
-            s_std = std.parse(standard.write(s_pol))
-            s_pol2 = pol.parse(polish.write(s_std))
+            s_std = std.parse(ws.write(s_pol))
+            s_pol2 = pol.parse(wp.write(s_std))
             assert s_pol == s_std and s_std == s_pol2
-            print '      pass: ' + polish.write(s_pol) + ' = ' + standard.write(s_std) + ' = ' + polish.write(s_pol2)
+            print '      pass: ' + wp.write(s_pol) + ' = ' + ws.write(s_std) + ' = ' + wp.write(s_pol2)
     
 if  __name__ =='__main__':main()

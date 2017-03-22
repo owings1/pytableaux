@@ -165,8 +165,8 @@ def example_invalidities():
     args.update(lp.example_invalidities())
     return args
 
-import logic
-from logic import negate, quantify, atomic, Vocabulary
+import logic, examples
+from logic import negate, quantify, atomic
 
 class TableauxSystem(logic.TableauxSystem):
     """
@@ -632,7 +632,7 @@ class TableauxRules(object):
 
         def example(self):
             # keep quantifier and designation neutral for inheritance below
-            s = Vocabulary.get_example_quantifier_sentence(self.quantifier)
+            s = examples.quantified(self.quantifier)
             self.tableau.branch().add({ 'sentence' : s, 'designated' : self.designation })
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):

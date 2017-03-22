@@ -103,7 +103,7 @@ def negate(sentence):
         sentence = negate(a)
 
     """
-    return Vocabulary.MolecularSentence('Negation', [sentence])
+    return Vocabulary.OperatedSentence('Negation', [sentence])
 
 def operate(operator, operands):
     """Apply an operator to a list of sentences (operands).
@@ -146,7 +146,7 @@ def operate(operator, operands):
     +------------------------+-------+
 
     """
-    return Vocabulary.MolecularSentence(operator, operands)
+    return Vocabulary.OperatedSentence(operator, operands)
 
 def constant(index, subscript):
     """Return a constant representend by the given index and subscript integers.
@@ -192,7 +192,7 @@ def predicated(predicate, parameters, vocabulary=None):
         sentence2 = predicated('is between', [m, n, o], vocab)
 
     """
-    return Vocabulary.PredicateSentence(predicate, parameters, vocabulary)
+    return Vocabulary.PredicatedSentence(predicate, parameters, vocabulary)
 
 def quantify(quantifier, variable, sentence):
     """
@@ -379,13 +379,23 @@ class Vocabulary(object):
     class PredicateIndexMismatchError(PredicateError):
         pass
 
+    class OperatorError(object):
+        pass
+
+    class NoSuchOperatorError(OperatorError):
+        pass
+
+    class OperatorArityMismatchError(OperatorError):
+        pass
+
     def __init__(self, predicate_defs=None):
         self.user_predicates       = {}
         self.user_predicates_list  = []
         self.user_predicates_index = {}
         if predicate_defs:
             for info in predicate_defs:
-                assert len(info) == 4, "Predicate declarations must be 4-tuples (name, index, subscript, arity)."
+                if len(info) != 4:
+                    raise Vocabulary.PredicateError("Predicate declarations must be 4-tuples (name, index, subscript, arity).")
                 self.declare_predicate(*info)
 
     def get_predicate(self, name=None, index=None, subscript=None):
@@ -497,13 +507,13 @@ class Vocabulary(object):
             return isinstance(self, Vocabulary.AtomicSentence)
 
         def is_predicated(self):
-            return isinstance(self, Vocabulary.PredicateSentence)
+            return isinstance(self, Vocabulary.PredicatedSentence)
 
         def is_quantified(self):
             return isinstance(self, Vocabulary.QuantifiedSentence)
 
-        def is_molecular(self):
-            return isinstance(self, Vocabulary.MolecularSentence)
+        def is_operated(self):
+            return isinstance(self, Vocabulary.OperatedSentence)
 
         def substitute(self, constant, variable):
             raise Exception(NotImplemented)
@@ -545,7 +555,7 @@ class Vocabulary(object):
                 subscript = self.subscript + 1
             return Vocabulary.AtomicSentence(index, subscript)
 
-    class PredicateSentence(Sentence):
+    class PredicatedSentence(Sentence):
 
         def __init__(self, predicate, parameters, vocabulary=None):
             if isinstance(predicate, str):
@@ -598,11 +608,17 @@ class Vocabulary(object):
         def variables(self):
             return self.sentence.variables()
 
-    class MolecularSentence(Sentence):
+    class OperatedSentence(Sentence):
 
         def __init__(self, operator, operands):
-            assert operator in operators
-            assert len(operands) == arity(operator)
+            if operator not in operators:
+                raise Vocabulary.NoSuchOperatorError("Unknown operator '{0}'.".format(operator))
+            if len(operands) != arity(operator):
+                raise Vocabulary.OperatorArityMismatchError(
+                    "Expecting {0} operands for operator '{1}', got {2}.".format(
+                        arity(operator), operator, len(operands)
+                    )
+                )
             self.operator = operator
             self.operands = operands
             if len(operands) == 1:
@@ -626,16 +642,101 @@ class Vocabulary(object):
                 v.update(operand.variables())
             return v
 
-    @staticmethod
-    def get_example_quantifier_sentence(quantifier):
-        vocab = Vocabulary([('is F', 0, 0, 1), ('is G', 1, 0, 1)])
-        x = variable(0, 0)
-        x_is_f = predicated('is F', [x], vocab)
-        if quantifier == 'Universal':
-            x_is_g = predicated('is G', [x], vocab)
-            s = operate('Material Conditional', [x_is_f, x_is_g])
-            return quantify(quantifier, x, s)
-        return quantify(quantifier, x, x_is_f)
+    class Writer(object):
+
+        symbol_sets = {}
+        symbol_set = None
+
+        def __init__(self, symbol_set = None):
+            self.symbol_set = self.symset(symbol_set)
+
+        def symset(self, symbol_set = None):
+            if symbol_set == None:
+                if self.symbol_set == None:
+                    symbol_set = 'default'
+                else:
+                    return self.symbol_set
+            if isinstance(symbol_set, str):
+                return self.symbol_sets[symbol_set]
+            else:
+                return symbol_set
+
+        def write(self, sentence, symbol_set = None):
+            if sentence.is_atomic():
+                return self.write_atomic(sentence, symbol_set = symbol_set)
+            elif sentence.is_quantified():
+                return self.write_quantified(sentence, symbol_set = symbol_set)
+            elif sentence.is_predicated():
+                return self.write_predicated(sentence, symbol_set = symbol_set)
+            elif sentence.is_operated():
+                return self.write_operated(sentence, symbol_set = symbol_set)
+            else:
+                raise Exception(NotImplemented)
+
+        def write_atomic(self, sentence, symbol_set = None):
+            symset = self.symset(symbol_set)
+            return symset.charof('atomic', sentence.index, subscript = sentence.subscript)
+
+        def write_quantified(self, sentence, symbol_set = None):
+            symset = self.symset(symbol_set)
+            return ''.join([
+                symset.charof('quantifier', sentence.quantifier),
+                symset.charof('variable', sentence.variable.index),
+                self.write_subscript(sentence.variable.subscript, symbol_set = symbol_set),
+                self.write(sentence.sentence, symbol_set = symbol_set)
+            ])
+
+        def write_predicated(self, sentence, symbol_set = None):
+            symset = self.symset(symbol_set)
+            s = self.write_predicate(sentence.predicate, symbol_set = symbol_set)
+            for param in sentence.parameters:
+                s += self.write_parameter(param, symbol_set = symbol_set)
+            return s
+
+        def write_operated(self, sentence, symbol_set = None):
+            raise Exception(NotImplemented)
+
+        def write_predicate(self, predicate, symbol_set = None):
+            symset = self.symset(symbol_set)
+            if predicate.name in system_predicates:
+                s = symset.charof('system_predicate', predicate.name)
+            else:
+                s = symset.charof('user_predicate', predicate.index)
+            s += self.write_subscript(predicate.subscript, symbol_set = symbol_set)
+            return s
+
+        def write_parameter(self, param, symbol_set = None):
+            if param.is_constant():
+                return self.write_constant(param, symbol_set = symbol_set)
+            elif param.is_variable():
+                return self.write_variable(param, symbol_set = symbol_set)
+            else:
+                raise Exception(NotImplemented)
+
+        def write_constant(self, constant, symbol_set = None):
+            symset = self.symset(symbol_set)
+            return ''.join([
+                symset.charof('constant', constant.index),
+                self.write_subscript(constant.subscript, symbol_set = symbol_set)
+            ])
+
+        def write_variable(self, variable, symbol_set = None):
+            symset = self.symset(symbol_set)
+            return ''.join([
+                symset.charof('variable', variable.index),
+                self.write_subscript(variable.subscript, symbol_set = symbol_set)
+            ])
+
+        def write_subscript(self, subscript, symbol_set = None):
+            symset = self.symset(symbol_set)
+            if symset.name == 'html':
+                return ''.join([
+                    '<span class="subscript">',
+                    symset.subfor(subscript, skip_zero = True),
+                    '</span>'
+                ])
+            else:
+                return symset.subfor(subscript, skip_zero = True)
 
 system_predicates = {
     'Identity'  : Vocabulary.Predicate('Identity',  -1, 0, 2),
@@ -1090,7 +1191,8 @@ class TableauxSystem(object):
                     params.append(params[-1].next())
                 sentence = operate(self.operator, params)
             elif self.quantifier != None:
-                sentence = Vocabulary.get_example_quantifier_sentence(self.quantifier)
+                import examples
+                sentence = examples.quantified(self.quantifier)
             if self.negated:
                 if sentence == None:
                     sentence = a
@@ -1110,7 +1212,14 @@ class TableauxSystem(object):
         def document_footer(self):
             return ''
 
-        def write(self, tableau, notation, symbol_set = None):
+        def write(self, tableau, notation = None, symbol_set = None, writer = None):
+            if writer == None:
+                if notation == None:
+                    raise Exception("Must specify either notation or writer.")
+                writer = notation.Writer(symbol_set)
+            return self.write_tableau(tableau, writer)
+
+        def write_tableau(self, tableau, writer):
             raise Exception(NotImplemented)
 
 class Parser(object):
@@ -1138,16 +1247,17 @@ class Parser(object):
     class ParseError(Exception):
         pass
 
-    class UnboundVariableError(Exception):
+    class UnboundVariableError(ParseError):
         pass
 
-    class BoundVariableError(Exception):
+    class BoundVariableError(ParseError):
         pass
 
     class SymbolSet(object):
 
-        def __init__(self, m):
+        def __init__(self, name, m):
             self.m = m
+            self.name = name
             self.types = {}
             self.index = {}
             self.reverse = {}
@@ -1323,17 +1433,20 @@ class Parser(object):
         # variables or constants).
         parameters = []
         while len(parameters) < num:
-            ctype = self.assert_current_is('constant', 'variable')
-            cpos = self.pos
-            if ctype == 'constant':
-                parameters.append(self.read_constant())
-            else:
-                v = self.read_variable()
-                if v not in list(self.bound_vars):
-                    var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
-                    raise Parser.ParseError("Unbound variable '{0}' at position {1}.".format(var_str, cpos))
-                parameters.append(v)
+            parameters.append(self.read_parameter())
         return parameters
+
+    def read_parameter(self):
+        ctype = self.assert_current_is('constant', 'variable')
+        if ctype == 'constant':
+            return self.read_constant()
+        else:
+            cpos = self.pos
+            v = self.read_variable()
+            if v not in list(self.bound_vars):
+                var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
+                raise Parser.UnboundVariableError("Unbound variable '{0}' at position {1}.".format(var_str, cpos))
+            return v
 
     def read_predicate_sentence(self):
         # read a predicate sentence.
@@ -1348,12 +1461,12 @@ class Parser(object):
         v = self.read_variable()
         if v in list(self.bound_vars):
             var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
-            raise Parser.ParseError("Cannot rebind variable '{0}' at position {1}.".format(var_str, self.pos))
+            raise Parser.BoundVariableError("Cannot rebind variable '{0}' at position {1}.".format(var_str, self.pos))
         self.bound_vars.add(v)
         sentence = self.read()
         if v not in list(sentence.variables()):
             var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
-            raise Parser.ParseError("Unused bound variable '{0}' at position {1}.".format(var_str, self.pos))
+            raise Parser.BoundVariableError("Unused bound variable '{0}' at position {1}.".format(var_str, self.pos))
         self.bound_vars.remove(v)
         return quantify(quantifier, v, sentence)
 

@@ -23,7 +23,7 @@ import logic, string
 name = 'Standard'
 
 symbol_sets = {
-    'default' : logic.Parser.SymbolSet({
+    'default' : logic.Parser.SymbolSet('default', {
         'atomic' : ['A', 'B', 'C', 'D', 'E'],
         'operator' : {
             'Negation'               :  '~',
@@ -36,7 +36,7 @@ symbol_sets = {
             'Possibility'            :  'P',
             'Necessity'              :  'N',
         },
-        'variable' : ['v', 'x', 'y', 'z'],
+        'variable' : ['x', 'y', 'z', 'v'],
         'constant' : ['a', 'b', 'c', 'd'],
         'quantifier' : {
             'Universal'   : 'L',
@@ -55,7 +55,7 @@ symbol_sets = {
     # see http://www.webstandards.org/learn/reference/charts/entities/symbol_entities/
     # and https://www.johndcook.com/blog/math_symbols/
     # and https://www.w3schools.com/charsets/ref_utf_geometric.asp
-    'html'    : logic.Parser.SymbolSet({
+    'html'    : logic.Parser.SymbolSet('html', {
         'atomic'   : ['A', 'B', 'C', 'D', 'E'],
         'operator' : {
             'Negation'               : '&not;'   ,
@@ -68,7 +68,7 @@ symbol_sets = {
             'Possibility'            : '&#9671;' ,
             'Necessity'              : '&#9723;' ,
         },
-        'variable'   : ['v', 'x', 'y', 'z'],
+        'variable'   : ['x', 'y', 'z', 'v'],
         'constant'   : ['a', 'b', 'c', 'd'],
         'quantifier' : {
             'Universal'   : '&forall;' ,
@@ -86,46 +86,43 @@ symbol_sets = {
     })
 }
 
-def write(sentence, symbol_set = None):
-    if symbol_set == None:
-        symbol_set = symbol_sets['default']
-    if isinstance(symbol_set, str):
-        symbol_set = symbol_sets[symbol_set]
-    if sentence.is_atomic():
-        s = symbol_set.charof('atomic', sentence.index, subscript = sentence.subscript)
-    elif sentence.is_molecular():
-        ostr = symbol_set.charof('operator', sentence.operator)
-        if logic.arity(sentence.operator) == 1:
-            s = ostr
-            s += write(sentence.operand, symbol_set=symbol_set)
+class Writer(logic.Vocabulary.Writer):
+
+    symbol_sets = symbol_sets
+
+    def write_predicated(self, sentence, symbol_set = None):
+        symset = self.symset(symbol_set)
+        if sentence.predicate.arity < 2:
+            return super(Writer, self).write_predicated(sentence, symbol_set = symbol_set)
+        return ''.join([
+            self.write_parameter(sentence.parameters[0], symbol_set = symbol_set),
+            self.write_predicate(sentence.predicate, symbol_set = symbol_set),
+            ''.join([
+                self.write_parameter(param, symbol_set = symbol_set) for param in sentence.parameters[1:]
+            ])
+        ])
+
+    def write_operated(self, sentence, symbol_set = None):
+        symset = self.symset(symbol_set)
+        arity = logic.arity(sentence.operator)
+        if arity == 1:
+            return symset.charof('operator', sentence.operator) + self.write(sentence.operand, symbol_set = symbol_set)
+        elif arity == 2:
+            return ''.join([
+                symset.charof('paren_open', 0),
+                symset.charof('whitespace', 0).join([
+                    self.write(sentence.lhs, symbol_set = symbol_set),
+                    symset.charof('operator', sentence.operator),
+                    self.write(sentence.rhs, symbol_set = symbol_set)
+                ]),
+                symset.charof('paren_close', 0)
+            ])
         else:
-            assert logic.arity(sentence.operator) == 2
-            s = symbol_set.charof('paren_open', 0)
-            s += symbol_set.charof('whitespace', 0).join([write(sentence.lhs, symbol_set=symbol_set), ostr, write(sentence.rhs, symbol_set=symbol_set)])
-            s += symbol_set.charof('paren_close', 0)
-    elif sentence.is_quantified():
-        s = symbol_set.charof('quantifier', sentence.quantifier)
-        s += symbol_set.charof('variable', sentence.variable.index, subscript = sentence.variable.subscript)
-        s += write(sentence.sentence, symbol_set = symbol_set)
-    elif sentence.is_predicated():
-        if sentence.predicate.name in logic.system_predicates:
-            s = symbol_set.charof('system_predicate', sentence.predicate.name, subscript = sentence.predicate.subscript)
-        else:
-            s = symbol_set.charof('user_predicate', sentence.predicate.index, subscript = sentence.predicate.subscript)
-        for param in sentence.parameters:
-            if param.is_constant():
-                s += symbol_set.charof('constant', param.index, subscript = param.subscript)
-            elif param.is_variable():
-                s += symbol_set.charof('variable', param.index, subscript = param.subscript)
-            else:
-                raise Exception(NotImplemented)
-    else:
-        raise Exception(NotImplemented)
-    return s
+            raise Exception(NotImplemented)
 
 class Parser(logic.Parser):
 
-    symbol_sets = symbol_sets
+    symbol_sets = {'default': symbol_sets['default']}
 
     def read(self):
         ctype = self.assert_current()
@@ -133,6 +130,8 @@ class Parser(logic.Parser):
             s = self.read_operator_sentence()
         elif ctype == 'paren_open':
             s = self.read_from_open_paren()
+        elif ctype == 'variable' or ctype == 'constant':
+            s = self.read_infix_predicate_sentence()
         else:
             s = super(Parser, self).read()
         return s
@@ -146,6 +145,16 @@ class Parser(logic.Parser):
         self.advance()
         operand = self.read()
         return logic.operate(operator, [operand])
+
+    def read_infix_predicate_sentence(self):
+        params = [self.read_parameter()]
+        self.assert_current_is('user_predicate', 'system_predicate')
+        ppos = self.pos
+        predicate = self.read_predicate()
+        if predicate.arity < 2:
+            raise logic.Parser.ParseError("Unexpected {0}-ary predicate at position {1}. Infix notation requires arity > 1.".format(predicate.arity, ppos))
+        params += self.read_parameters(predicate.arity - 1)
+        return logic.predicated(predicate, params)
 
     def read_from_open_paren(self):
         # if we have an open parenthesis, then we demand a binary infix operator sentence.
@@ -203,3 +212,7 @@ class Parser(logic.Parser):
         # move past the close paren
         self.advance()
         return logic.operate(operator, [lhs, rhs])
+
+writer = Writer()
+def write(sentence, symbol_set = None):
+    return writer.write(sentence, symbol_set = symbol_set)

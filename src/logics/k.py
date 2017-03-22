@@ -58,8 +58,8 @@ def example_invalidities():
     ])
     return args
 
-import logic
-from logic import negate, operate, quantify, atomic, variable, Vocabulary
+import logic, examples
+from logic import negate, operate, quantify, atomic
 
 class TableauxSystem(logic.TableauxSystem):
     """
@@ -368,7 +368,7 @@ class TableauxRules(object):
             target['branch'].add({ 'sentence' : target['sentence'], 'world' : target['world'] })
 
         def example(self):
-            self.tableau.branch().add({ 'sentence' : Vocabulary.get_example_quantifier_sentence(self.quantifier), 'world' : 0 })
+            self.tableau.branch().add({ 'sentence' : examples.quantified(self.quantifier), 'world' : 0 })
 
     class UniversalNegated(ExistentialNegated):
         """

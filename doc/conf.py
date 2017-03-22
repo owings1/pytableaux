@@ -265,15 +265,17 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-import logic, writers, notations
+import logic, writers, notations, examples
 import writers.html, notations.polish, notations.standard
 import inspect
 import importlib
 copyright = logic.copyright
 writer = writers.html.Writer()
 notation = notations.standard
+sw = notation.Writer('html')
 def make_tableau_examples(app, what, name, obj, options, lines):
     header_written = False
+    arg = examples.argument('Material Modus Ponens')
     if what == 'class' and logic.TableauxSystem.Rule in inspect.getmro(obj):
         if obj in [
             logic.TableauxSystem.Rule,
@@ -298,16 +300,13 @@ def make_tableau_examples(app, what, name, obj, options, lines):
                 ''                                     ,
                 '.. raw:: html'                        ,
                 ''                                     ,
-                '    ' + writer.write(proof, notation, symbol_set='html')
+                '    ' + writer.write(proof, writer=sw)
             ]
         except:    
             print 'No example generated for ' + str(obj)
             raise
     elif what == 'method' and obj.__name__ == 'build_trunk':
         try:
-            a = logic.atomic(0, 0)
-            b = a.next()
-            arg = logic.argument(conclusion=b, premises=[logic.operate('Material Conditional', [a, b]), a])
             proof = logic.tableau(importlib.import_module(obj.__module__), arg)
             proof.finish()
             lines += [
@@ -315,9 +314,9 @@ def make_tableau_examples(app, what, name, obj, options, lines):
                 ''                                     ,
                 '.. raw:: html'                        ,
                 ''         ,
-                '    ' + 'Argument: <i>' + '</i>, <i>'.join([notation.write(p, symbol_set = 'html') for p in arg.premises]) + '</i> : <i>' + notation.write(arg.conclusion, symbol_set='html') + '</i>',
+                '    ' + 'Argument: <i>' + '</i>, <i>'.join([sw.write(p) for p in arg.premises]) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>',
                 ''                                     ,
-                '    ' + writer.write(proof, notation, symbol_set='html')
+                '    ' + writer.write(proof, writer=sw)
             ]
         except:
             print 'Error making example for ' + str(obj)

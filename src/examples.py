@@ -109,3 +109,12 @@ def arguments(names=None):
     if names == None:
         names = args_list
     return [argument(name) for name in names]
+
+def quantified(quantifier):
+    x = logic.variable(0, 0)
+    x_is_f = logic.predicated('is F', [x], vocabulary)
+    if quantifier == 'Universal':
+        x_is_g = logic.predicated('is G', [x], vocabulary)
+        s = logic.operate('Material Conditional', [x_is_f, x_is_g])
+        return logic.quantify(quantifier, x, s)
+    return logic.quantify(quantifier, x, x_is_f)

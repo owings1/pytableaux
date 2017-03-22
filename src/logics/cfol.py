@@ -153,8 +153,8 @@ def example_invalidities():
         'Denying the Antecedent'     ,
     ])
 
-import logic
-from logic import negate, operate, quantify, Vocabulary
+import logic, examples
+from logic import negate, operate, quantify
 
 class TableauxSystem(logic.TableauxSystem):
     """
@@ -428,7 +428,7 @@ class TableauxRules(object):
             target['branch'].add({ 'sentence': target['sentence'] })
 
         def example(self):
-            self.tableau.branch().add({ 'sentence' : Vocabulary.get_example_quantifier_sentence(self.quantifier) })
+            self.tableau.branch().add({ 'sentence' : examples.quantified(self.quantifier) })
 
     class UniversalNegated(ExistentialNegated):
         """

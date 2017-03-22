@@ -26,15 +26,15 @@ class Writer(logic.TableauxSystem.Writer):
 
     name = name
 
-    def write(self, tableau, notation, symbol_set = None):
-        return self.write_structure(tableau.tree, notation, symbol_set = symbol_set)
+    def write_tableau(self, tableau, writer):
+        return self.write_structure(tableau.tree, writer)
 
-    def write_structure(self, structure, notation, indent = 0, symbol_set = None):
+    def write_structure(self, structure, writer, indent = 0):
         node_strs = []
         for node in structure['nodes']:
             s = ''
             if 'sentence' in node.props:
-                s += notation.write(node.props['sentence'], symbol_set = symbol_set)
+                s += writer.write(node.props['sentence'])
                 if 'world' in node.props:
                     s += ', w' + str(node.props['world'])
             if 'designated' in node.props:
@@ -52,5 +52,5 @@ class Writer(logic.TableauxSystem.Writer):
             s += ' (X)'
         i = len(s) + 1
         for child in structure['children']:
-            s += "\n" + self.write_structure(child, notation, indent = i, symbol_set = symbol_set)
+            s += "\n" + self.write_structure(child, writer, indent = i)
         return s
