@@ -30,10 +30,12 @@
         {% endif %}
         {% if structure['children']|length %}
             <div class="vertical-line"></div>
-            {% set width = 100 / (structure['children']|length) %}
-            <div class="horizontal-line" style="width: {{ 100 - width }}%;"></div>
+            {% set width = 100 * structure['balanced_line_width'] %}
+            {% set margin = 100 * structure['balanced_line_margin'] %}
+            <div class="horizontal-line" style="width: {{ width }}%; margin-left: {{ margin }}%;"></div>
             {% for child in structure['children'] %}
-                <div class="child-wrapper" style="width: {{ width }}%;">
+                {% set child_width = (100 / structure['width']) * child['width'] %}
+                <div class="child-wrapper" style="width: {{ child_width }}%;"  title="width: {{ child['width'] }}">
                     {{ write_structure(child, is_child = True) }}
                 </div>
             {% endfor %}

@@ -824,6 +824,14 @@ class TableauxSystem(object):
                 structure['children'].append(self.structure(child_branches, depth))
             if len(branches) == 1:
                 structure['closed'] = list(branches)[0].closed
+                structure['width'] = 1
+            if len(structure['children']):
+                structure['width'] = sum([child['width'] for child in structure['children']])
+                first_width = float(structure['children'][0]['width']) / 2
+                last_width = float(structure['children'][-1]['width']) / 2
+                inbetween_widths = sum([child['width'] for child in structure['children'][1:-1]])
+                structure['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / structure['width']
+                structure['balanced_line_margin'] = first_width / structure['width']
             return structure
 
         def branch(self, other_branch=None):
