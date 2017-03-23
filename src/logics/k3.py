@@ -81,7 +81,7 @@ The truth table for some defined connectives are as follows:
 **Material Conditional**:
 
 +-----------+----------+-----------+---------+
-|  A or B   |          |           |         |
+|  if A, B  |          |           |         |
 +===========+==========+===========+=========+
 |           |  **T**   |   **N**   |  **F**  |
 +-----------+----------+-----------+---------+
@@ -139,12 +139,17 @@ import fde
 def example_validities():
     args = fde.example_validities()
     args.update([
-        'Law of Non-contradiction'    ,
-        'Disjunctive Syllogism'       ,
-        'Material Modus Ponens'       ,
-        'Material Modus Tollens'      ,
-        'Conditional Modus Ponens'    ,
-        'Conditional Modus Tollens'   ,
+        'Biconditional Elimination 1'   ,
+        'Biconditional Elimination 2'   ,
+        'Conditional Modus Ponens'      ,
+        'Conditional Modus Tollens'     ,
+        'Disjunctive Syllogism'         ,
+        'Existential Syllogism'         ,
+        'Law of Non-contradiction'      ,
+        'Material Modus Ponens'         ,
+        'Material Modus Tollens'        ,
+        'Syllogism'                     ,
+        'Universal Predicate Syllogism' ,
     ])
     return args
     
@@ -152,11 +157,13 @@ def example_invalidities():
     import cfol
     args = cfol.example_invalidities()
     args.update([
-        'Material Identity'               ,
-        'Conditional Identity'            ,
-        'Material Biconditional Identity' ,
         'Biconditional Identity'          ,
+        'Conditional Identity'            ,
+        'Conditional Pseudo Contraction'  ,
         'Law of Excluded Middle'          ,
+        'Material Biconditional Identity' ,
+        'Material Identity'               ,
+        'Material Pseudo Contraction'     ,
     ])
     return args
     

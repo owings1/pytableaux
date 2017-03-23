@@ -34,9 +34,10 @@ def example_validities():
     import d
     args = d.example_validities()
     args.update([
-        'Possibility Addition'  ,
-        'Necessity Elimination' ,
     	'NP Collapse 1'         ,
+        'Necessity Elimination' ,
+        'Possibility Addition'  ,
+        'Reflexive Inference 1' ,
     ])
     return args
     
@@ -44,7 +45,9 @@ def example_invalidities():
     import s4
     args = s4.example_invalidities()
     args.update([
-		'S4 Inference 1' ,
+		'S4 Inference 1'             ,
+        'S4 Conditional Inference 1' ,
+        'S4 Material Inference 1'    ,
     ])
     return args
 

@@ -35,9 +35,9 @@ class Writer(logic.TableauxSystem.Writer):
             s = ''
             if 'sentence' in node.props:
                 s += writer.write(node.props['sentence'])
-                if 'world' in node.props:
+                if 'world' in node.props and node.props['world'] != None:
                     s += ', w' + str(node.props['world'])
-            if 'designated' in node.props:
+            if 'designated' in node.props and node.props['designated'] != None:
                 if node.props['designated']:
                     s += ' +'
                 else:

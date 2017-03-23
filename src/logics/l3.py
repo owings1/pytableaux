@@ -63,8 +63,8 @@ def example_validities():
     args = k3.example_validities()
     args.remove('Conditional Contraction')
     args.update([
-        'Conditional Identity'   ,
         'Biconditional Identity' ,
+        'Conditional Identity'   ,
     ])
     return args
 
@@ -73,9 +73,11 @@ def example_invalidities():
     args = cfol.example_invalidities()
     args.update([
         'Conditional Contraction'         ,
-        'Material Identity'               ,
-        'Material Biconditional Identity' ,
+        'Conditional Pseudo Contraction'  ,
         'Law of Excluded Middle'          ,
+        'Material Biconditional Identity' ,
+        'Material Identity'               ,
+        'Material Pseudo Contraction'     ,
     ])
     return args
 

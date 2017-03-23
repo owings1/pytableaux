@@ -19,86 +19,12 @@
 # pytableaux - Classical First-Order Logic
 
 """
-Classical First-Order Logic (CFOL) is the standard bivalent logic (True, False).
+Classical First-Order Logic (CFOL) augments CPL with the quantifiers: Universal and Existential.
 
 Semantics
 ---------
 
-Two primitive operators, negation and disjunction, are defined via truth tables.
-
-**Negation**:
-
-+------------+------------+
-| A          | not A      |
-+============+============+
-|  T         |  F         |
-+------------+------------+
-|  F         |  T         |
-+------------+------------+
-
-**Disjunction**:
-
-+-----------+----------+---------+
-|  A or B   |          |         |
-+===========+==========+=========+
-|           |  **T**   |  **F**  |
-+-----------+----------+---------+
-|  **T**    |    T     |    T    |
-+-----------+----------+---------+
-|  **F**    |    T     |    F    | 
-+-----------+----------+---------+
-
-Other operators are defined via semantic equivalencies in the usual way:
-
-- **Conjunction**: ``A and B := not (not-A or not-B)``
-
-- **Material Conditional**: ``if A then B := not-A or B``
-
-- **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
-
-The truth tables for defined connectives are as follows:
-
-**Conjunction**:
-
-+-----------+----------+---------+
-|  A and B  |          |         |
-+===========+==========+=========+
-|           |  **T**   |  **F**  |
-+-----------+----------+---------+
-|  **T**    |    T     |    F    |
-+-----------+----------+---------+
-|  **F**    |    F     |    F    | 
-+-----------+----------+---------+
-
-**Material Conditional**:
-
-+-----------+----------+---------+
-|  if A, B  |          |         |
-+===========+==========+=========+
-|           |  **T**   |  **F**  |
-+-----------+----------+---------+
-|  **T**    |    T     |    F    |
-+-----------+----------+---------+
-|  **F**    |    T     |    T    | 
-+-----------+----------+---------+
-
-**Material Biconditional**:
-
-+-----------+----------+---------+
-|  A iff B  |          |         |
-+===========+==========+=========+
-|           |  **T**   |  **F**  |
-+-----------+----------+---------+
-|  **T**    |    T     |    F    |
-+-----------+----------+---------+
-|  **F**    |    F     |    T    | 
-+-----------+----------+---------+
-
-The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
-
-**Predicate Sentences** like *a is F* are handled via a predicate's *extension*:
-
-- *a is F* iff the object denoted by the constant *a* is in the extension of the predicate *F*.
+The semantics for CFOL is the same as CPL, except we add two operators for quantification.
 
 **Quantification** can be thought of along these lines:
 
@@ -113,370 +39,72 @@ The **Conditional** and **Biconditional** operators are equivalent to their mate
 are cases where *C* also has the value **T**.
 """
 
+import k, cpl
+
 name = 'CFOL'
-description = 'Classical First Order Logic'
+description = 'Classical First Order Logic1'
 
 def example_validities():
-    # Everything valid in K3 or LP is valid in CFOL
-    import k3, lp
+    # Everything valid in CPL, K3, K3W, GO, or LP is valid in CFOL
+    import cpl, k3, k3w, go, lp
     args = k3.example_validities()
     args.update(lp.example_validities())
-    args.update([
-        'Law of Excluded Middle'        ,
-        'Material Identity'             ,
-        'Pseudo Contraction'            ,
-        'Law of Non-contradiction'      ,
-        'Disjunctive Syllogism'         ,
-        'Material Modus Ponens'         ,
-        'Material Modus Tollens'        ,
-        'Biconditional Elimination 1'   ,
-        'Biconditional Elimination 2'   ,
-        'Syllogism'                     ,
-        'Existential Syllogism'         ,
-        'Universal Predicate Syllogism' ,
-    ])
+    args.update(cpl.example_validities())
+    args.update(k3w.example_validities())
+    args.update(go.example_validities())
     return args
 
 def example_invalidities():
-    return set([
-        'Triviality 1'               ,
-        'Triviality 2'               ,
-        'Conditional Equivalence'    ,
-        'Extracting the Consequent'  ,
-        'Extracting the Antecedent'  ,
-        'Extracting a Disjunct 1'    ,
-        'Extracting a Disjunct 2'    ,
-        'Existential from Universal' ,
-        'Affirming the Consequent'   ,
-        'Affirming a Disjunct 1'     ,
-        'Affirming a Disjunct 2'     ,
-        'Denying the Antecedent'     ,
+    import k
+    args = k.example_invalidities()
+    args.update([
+        'Necessity Distribution'     ,
+        'Necessity Elimination'      ,
+        'Possibility Addition'       ,
+        'Possibility Distribution'   ,
+        'Reflexive Inference 1'      ,
     ])
+    return args
 
 import logic, examples
-from logic import negate, operate, quantify
+from logic import negate
 
-class TableauxSystem(logic.TableauxSystem):
+class TableauxSystem(cpl.TableauxSystem):
     """
-    A branch can be thought of as representing a case where each node's sentence
-    is true.
+    CFOL's Tableaux System inherits directly from CPL's.
     """
-
-    @staticmethod
-    def build_trunk(tableau, argument):
-        """
-        To build the trunk for an argument, add a node for each premise, and
-        a node with the negation of the conclusion.        
-        """
-        branch = tableau.branch()
-        for premise in argument.premises:
-            branch.add({ 'sentence' : premise })
-        branch.add({ 'sentence':  negate(argument.conclusion) })
 
 class TableauxRules(object):
     """
-    In general, there are two rules for each connectives: one regular, one negation.
-    The special case of negation has only a rule for double negation.
+    The Tableaux System for CFOL contains the closure rule from CPL, and all the operator
+    rules from K, except for the rules for the modal operators (Necessity, Possibility).
     """
-
-    class Closure(logic.TableauxSystem.ClosureRule):
-        """
-        A branch is closed iff a sentence and its negation appear on the branch.
-        """
-
-        def applies_to_branch(self, branch):
-            for node in branch.get_nodes():
-                if branch.has({ 'sentence' : negate(node.props['sentence']) }):
-                    return branch
-            return False
-
-        def example(self):
-            a = logic.atomic(0, 0)
-            self.tableau.branch().update([{ 'sentence' : a }, { 'sentence' : negate(a) }])
-
-    class Conjunction(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked conjunction node *n* on a branch *b*, add a node with each
-        conjunct to *b*, then tick *n*.
-        """
-
-        operator = 'Conjunction'
-
-        def apply_to_node(self, node, branch):
-            for conjunct in node.props['sentence'].operands:
-                branch.add({ 'sentence': conjunct })
-            branch.tick(node)
-
-    class ConjunctionNegated(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked negated conjunction node *n* on a branch *b*, for each conjunct,
-        make a new branch *b'* from *b* and add the negation of the conjunct to *b'*,
-        then tick *n*.
-        """
-
-        negated  = True
-        operator = 'Conjunction'
-
-        def apply_to_node(self, node, branch):
-            for conjunct in node.props['sentence'].operand.operands:
-                self.tableau.branch(branch).add({ 'sentence' : negate(conjunct) }).tick(node)
-
-    class Disjunction(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked disjunction node *n* on a branch *b*, for each disjunct, make a
-        new branch *b'* from *b* and add the disjunct to *b'*, then tick *n*.
-        """
-
-        operator = 'Disjunction'
-
-        def apply_to_node(self, node, branch):
-            for disjunct in node.props['sentence'].operands:
-                self.tableau.branch(branch).add({ 'sentence' : disjunct }).tick(node)
-
-    class DisjunctionNegated(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked negated disjunction node *n* on a branch *b*, for each disjunct,
-        add a node to *b* with the negation of the disjunct, then tick *n*.
-        """
-
-        negated  = True
-        operator = 'Disjunction'
-
-        def apply_to_node(self, node, branch):
-            for disjunct in node.props['sentence'].operand.operands:
-                branch.add({ 'sentence' : negate(disjunct) })
-            branch.tick(node)
-
-    class MaterialConditional(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked material conditional node *n* on a branch *b*, make two new
-        branches *b'* and *b''* from *b*, add a node with the negation of the antecedent
-        to *b'*, and add a node with the consequent to *b''*, then tick *n*.
-        """
-
-        operator = 'Material Conditional'
-
-        def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)            
-            s = node.props['sentence']
-            newBranches[0].add({ 'sentence': negate(s.lhs) }).tick(node)
-            newBranches[1].add({ 'sentence':        s.rhs  }).tick(node)
-
-    class MaterialConditionalNegated(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked negated material conditional node *n* on a branch *b*, add two
-        nodes to *b*, one with the antecedent, the other with the negation of the consequent,
-        then tick *n*.
-        """
-
-        negated  = True
-        operator = 'Material Conditional'
-
-        def apply_to_node(self, node, branch):
-            s = node.props['sentence'].operand
-            branch.update([
-                { 'sentence':        s.lhs  }, 
-                { 'sentence': negate(s.rhs) }
-            ]).tick(node)
-
-    class MaterialBiconditional(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked material biconditional node *n* on a branch *b*, make two new
-        branches *b'* and *b''* from *b*, add a node with the negation of the antecedent
-        and a node with the negation of the consequent to *b'*, and add a node with the
-        antecedent and a node with the consequent to *b''*, then tick *n*.
-        """
-
-        operator = 'Material Biconditional'
-
-        def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
-            s = node.props['sentence']
-            newBranches[0].update([
-                { 'sentence': negate(s.lhs) }, 
-                { 'sentence': negate(s.rhs) }
-            ]).tick(node)
-            newBranches[1].update([
-                { 'sentence': s.rhs }, 
-                { 'sentence': s.lhs }
-            ]).tick(node)
-
-    class MaterialBiconditionalNegated(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked negated material biconditional node *n* on a branch *b*, make two
-        new branches *b'* and *b''* from *b*, add a node with the antecedent and a node with
-        the negation of the consequent to *b'*, and add a node with the negation of the
-        antecendent and a node with the consequent to *b''*, then tick *n*.
-        """
-
-        negated  = True
-        operator = 'Material Biconditional'
-
-        def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
-            s = node.props['sentence'].operand
-            newBranches[0].update([
-                { 'sentence':        s.lhs  },
-                { 'sentence': negate(s.rhs) }
-            ]).tick(node)
-            newBranches[1].update([
-                { 'sentence': negate(s.rhs) },
-                { 'sentence':        s.lhs  }
-            ]).tick(node)
-
-    class Conditional(MaterialConditional):
-        """
-        This rule functions the same as the corresponding material conditional rule.
-
-        From an unticked conditional node *n* on a branch *b*, make two new branches *b'*
-        and *b''* from *b*, add a node with the negation of the antecedent to *b'*, and
-        add a node with the consequent to *b''*, then tick *n*.
-        """
-
-        operator = 'Conditional'
-
-    class ConditionalNegated(MaterialConditionalNegated):
-        """
-        This rule functions the same as the corresponding material conditional rule.
-
-        From an unticked negated conditional node *n* on a branch *b*, add two nodes to *b*,
-        one with the antecedent, the other with the negation of the consequent, then tick *n*.
-        """
-
-        operator = 'Conditional'
-
-    class Biconditional(MaterialBiconditional):
-        """
-        This rule functions the same as the corresponding material biconditional rule.
-
-        From an unticked biconditional node *n* on a branch *b*, make two new branches *b'*
-        and *b''* from *b*, add a node with the negation of the antecedent and a node with
-        the negation of the consequent to *b'*, and add a node with the antecedent and a
-        node with the consequent to *b''*, then tick *n*.
-        """
-
-        operator = 'Biconditional'
-
-    class BiconditionalNegated(MaterialBiconditionalNegated):
-        """
-        This rule functions the same as the corresponding material biconditional rule.
-
-        From an unticked negated biconditional node *n* on a branch *b*, make two new
-        branches *b'* and *b''* from *b*, add a node with the antecedent and a node with
-        the negation of the consequent to *b'*, and add a node with the negation of the
-        antecendent and a node with the consequent to *b''*, then tick *n*.
-        """
-
-        operator = 'Biconditional'
-
-    class Existential(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked existential node *n* on a branch *b* quantifying over variable
-        *v* into sentence *s*, add a node with the substituion of a new constant not
-        yet appearing on *b* for *v* into *s*, then tick *n*.
-        """
-
-        quantifier = 'Existential'
-
-        def apply_to_node(self, node, branch):
-            s = node.props['sentence']
-            v = node.props['sentence'].variable
-            branch.add({ 'sentence': s.substitute(branch.new_constant(), v) }).tick(node)
-
-    class ExistentialNegated(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked negated existential node *n* on a branch *b* quantifying over
-        variable *v* into sentence *s*, add a node that universally quantifies over
-        *v* into the negation of *s*, then tick *n*.
-        """
-
-        negated    = True
-        quantifier = 'Existential'
-        convert_to = 'Universal'
-
-        def apply_to_node(self, node, branch):
-            s = node.props['sentence'].operand.sentence
-            v = node.props['sentence'].operand.variable
-            branch.add({ 'sentence': quantify(self.convert_to, v, negate(s)) }).tick(node)
-
-    class Universal(logic.TableauxSystem.BranchRule):
-        """
-        From a universal node *n* on a branch *b* quantifying over variable *v* into
-        sentence *s*, for any constant *c* on *b*, or a new constant if none exists,
-        if the result *r* of susbtituting *c* for *v* into *s* does not appear on *b*,
-        add a node with *r* to *b*. The node *n* is never ticked.
-        """
-
-        quantifier = 'Universal'
-
-        def applies_to_branch(self, branch):
-            constants = branch.constants()
-            for node in branch.get_nodes():
-                if 'sentence' in node.props and node.props['sentence'].quantifier == self.quantifier:
-                    v = node.props['sentence'].variable
-                    s = node.props['sentence']
-                    if len(constants):
-                        for c in constants:
-                            r = s.substitute(c, v)
-                            if not branch.has({ 'sentence': r }):
-                                return { 'branch' : branch, 'sentence' : r, 'node' : node }
-                        continue
-                    return { 'branch' : branch, 'sentence' : s.substitute(branch.new_constant(), v), 'node' : node }
-            return False
-
-        def apply(self, target):
-            target['branch'].add({ 'sentence': target['sentence'] })
-
-        def example(self):
-            self.tableau.branch().add({ 'sentence' : examples.quantified(self.quantifier) })
-
-    class UniversalNegated(ExistentialNegated):
-        """
-        From an unticked negated universal node *n* on a branch *b* quantifying over
-        variable *v* into sentence *s*, add a node that existentially quantifies over
-        *v* into the negation of *s*, then tick *n*.
-        """
-
-        quantifier = 'Universal'
-        convert_to = 'Existential'
-
-    class DoubleNegation(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked double negation node *n* on a branch *b*, add a node with the
-        double-negatum to *b*, then tick *n*.
-        """
-
-        negated  = True
-        operator = 'Negation'
-
-        def apply_to_node(self, node, branch):
-            branch.add({ 'sentence': node.props['sentence'].operand.operand }).tick(node)
 
     rules = [
 
-        Closure,
+        cpl.TableauxRules.Closure,
 
         # non-branching rules
 
-        Conjunction,
-        DisjunctionNegated,
-        MaterialConditionalNegated,
-        ConditionalNegated,
-        Existential,
-        ExistentialNegated,
-        Universal,
-        UniversalNegated,
-        DoubleNegation,
+        k.TableauxRules.Conjunction,
+        k.TableauxRules.DisjunctionNegated,
+        k.TableauxRules.MaterialConditionalNegated,
+        k.TableauxRules.ConditionalNegated,
+        k.TableauxRules.Existential,
+        k.TableauxRules.ExistentialNegated,
+        k.TableauxRules.Universal,
+        k.TableauxRules.UniversalNegated,
+        k.TableauxRules.DoubleNegation,
 
         # branching rules
 
-        ConjunctionNegated,
-        Disjunction,
-        MaterialConditional,
-        MaterialBiconditional,
-        MaterialBiconditionalNegated,
-        Conditional,
-        Biconditional,
-        BiconditionalNegated
+        k.TableauxRules.ConjunctionNegated,
+        k.TableauxRules.Disjunction,
+        k.TableauxRules.MaterialConditional,
+        k.TableauxRules.MaterialBiconditional,
+        k.TableauxRules.MaterialBiconditionalNegated,
+        k.TableauxRules.Conditional,
+        k.TableauxRules.Biconditional,
+        k.TableauxRules.BiconditionalNegated
 
     ]

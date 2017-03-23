@@ -96,22 +96,32 @@ at the University of Connecticut, under `Professor Jc Beall`_.
 name = 'GO'
 description = 'Gappy Object 3-valued Logic'
 
+# Syllogism ?
+# Universal Predicate Syllogism ?
 def example_validities():
     return set([
-        'Addition'                   ,
-        'Simplification'             ,
-        'DeMorgan 3'                 ,
-        'DeMorgan 4'                 ,
-        'Material Contraction'       ,
-        'Conditional Contraction'    ,
-        'Conditional Identity'       ,
-        'Biconditional Identity'     ,
-        'Law of Non-contradiction'   ,
-        'Disjunctive Syllogism'      ,
-        'Material Modus Ponens'      ,
-        'Material Modus Tollens'     ,
-        'Conditional Modus Ponens'   ,
-        'Conditional Modus Tollens'  ,
+        'Addition'                       ,
+        'Biconditional Elimination 1'    ,
+        'Biconditional Elimination 2'    ,
+        'Biconditional Identity'         ,
+        'Conditional Contraction'        ,
+        'Conditional Identity'           ,
+        'Conditional Modus Ponens'       ,
+        'Conditional Modus Tollens'      ,
+        'Conditional Pseudo Contraction' ,
+        'DeMorgan 3'                     ,
+        'DeMorgan 4'                     ,
+        'Disjunctive Syllogism'          ,
+        'Existential Syllogism'          ,
+        'Law of Non-contradiction'       ,
+        'Material Contraction'           ,
+        'Material Modus Ponens'          ,
+        'Material Modus Tollens'         ,
+        'Material Pseudo Contraction'    ,
+        'Modal Platitude 1'              ,
+        'Modal Platitude 2'              ,
+        'Modal Platitude 3'              ,
+        'Simplification'                 ,
     ])
 
 def example_invalidities():
@@ -120,10 +130,10 @@ def example_invalidities():
     args.update([
         'DeMorgan 1'                      ,
         'DeMorgan 2'                      ,
-        'Material Identity'               ,
         'Law of Excluded Middle'          ,
-        'Material Identity'               ,
         'Material Biconditional Identity' ,
+        'Material Identity'               ,
+        'Material Identity'               ,
     ])
     return args
 
@@ -168,13 +178,19 @@ class TableauxRules(object):
             newBranches[0].add({ 'sentence' : s.lhs, 'designated' : False }).tick(node)
             newBranches[1].add({ 'sentence' : s.rhs, 'designated' : False }).tick(node)
 
-    class ConjunctionNegatedUndesignated(ConjunctionUndesignated):
+    class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*,
-        add an undesignated node to *b* with the negation of the conjuction, then tick *n*.
+        add a designated node to *b* with the (un-negated) conjuction, then tick *n*.
         """
 
-        negated = True
+        negated     = True
+        operator    = 'Conjunction'
+        designation = False
+
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            branch.add({ 'sentence' : s, 'designated' : True }).tick(node)
 
     class DisjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -202,10 +218,19 @@ class TableauxRules(object):
         operator = 'Disjunction'
 
     class DisjunctionNegatedUndesignated(ConjunctionNegatedUndesignated):
+        """
+        From an unticked, undesignated, negated disjunction node *n* on a branch *b*,
+        add a designated node to *b* with the (un-negated) disjunction, then tick *n*.
+        """
 
         operator = 'Disjunction'
 
     class MaterialConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, negated material conditional node *n* on a branch
+        *b*, add an undesignated node with the negation of the antecedent, and an
+        undesignated node with the consequent to *b*, then tick *n*.
+        """
 
         negated     = True
         operator    = 'Material Conditional'
@@ -219,14 +244,28 @@ class TableauxRules(object):
             ]).tick(node)
 
     class MaterialConditionalUndesignated(ConjunctionUndesignated):
+        """
+        From an unticked, undesignated, material conditional node *n* on a branch *b*,
+        add a designated node to *b* with the negation of the conditional, then tick *n*.
+        """
 
         operator = 'Material Conditional'
 
     class MaterialConditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
+        """
+        From an unticked, undesignated, negated material conditional node *n* on a branch
+        *b*, add a designated node with the (un-negated) conditional to *b*, then tick *n*.
+        """
 
         operator = 'Material Conditional'
 
     class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, negated, material biconditional node *n* on a branch
+        *b*, make two branches *b'* and *b''* from *b*. On *b'* add undesignated nodes for
+        the negation of the antecent, and for the consequent. On *b''* add undesignated
+        nodes for the antecedent, and for the negation of the consequent. Then tick *n*.
+        """
 
         negated     = True
         operator    = 'Material Biconditional'
@@ -240,19 +279,33 @@ class TableauxRules(object):
                 { 'sentence' :        s.rhs  , 'designated' : False },
             ]).tick(node)
             newBranches[1].update([
-                { 'sentence' : negate(s.rhs) , 'designated' : False },
-                { 'sentence' :        s.lhs  , 'designated' : False }
+                { 'sentence' :        s.lhs , 'designated' : False },
+                { 'sentence' : negate(s.rhs), 'designated' : False }
             ]).tick(node)
 
     class MaterialBiconditionalUndesignated(ConjunctionUndesignated):
+        """
+        From an unticked, undesignated, material biconditional node *n* on a branch *b*,
+        add a designated node to *b* with the negation of the biconditional, then tick *n*.
+        """
 
         operator = 'Material Biconditional'
 
     class MaterialBiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
+        """
+        From an unticked, undesignated, negated material biconditional node *n* on a branch
+        *b*, add a designated node to *b* with the (un-negated) biconditional, then tick *n*.
+        """
 
         operator = 'Material Biconditional'
 
     class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, conditional node *n* on a branch *b*, make two branches
+        *b'* and *b''* from *b*. On *b'* add a designated node with a disjunction of the
+        negated antecedent and the consequent. On *b''* add undesignated nodes for the
+        antecedent, consequent, and their negations. Then tick *n*.
+        """
 
         operator    = 'Conditional'
         designation = True
@@ -270,6 +323,13 @@ class TableauxRules(object):
             ]).tick(node)
 
     class ConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, negated conditional node *n* on a branch *b*, make
+        two branches *b'* and *b''* from *b*. On *b'* add a designated node with the
+        antecedent, and an undesignated node with the consequent. On *b''* add an
+        undesignated node with the negation of the antencedent, and a designated node
+        with the negation of the consequent. Then tick *n*.
+        """
 
         negated     = True
         operator    = 'Conditional'
@@ -283,19 +343,32 @@ class TableauxRules(object):
                 { 'sentence' : s.rhs, 'designated' : False }
             ]).tick(node)
             newBranches[1].update([
-                { 'sentence' : negate(s.rhs), 'designated' : True  },
-                { 'sentence' : negate(s.lhs), 'designated' : False }
+                { 'sentence' : negate(s.lhs), 'designated' : False  },
+                { 'sentence' : negate(s.rhs), 'designated' : True }
             ]).tick(node)
 
     class ConditionalUndesignated(ConjunctionUndesignated):
+        """
+        From an unticked, undesignated conditional node *n* on a branch *b*, add a
+        designated node to *b* with the negation of the conditional, then tick *n*.
+        """
 
         operator = 'Conditional'
 
     class ConditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
+        """
+        From an unticked, undesignated, negated conditional node *n* on a branch *b*,
+        add a designated node to *b* with the (un-negated) conditional, then tick *n*.
+        """
 
         operator = 'Conditional'
 
     class BiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated biconditional node *n* on a branch *b*, add two
+        designated conditional nodes to *b*, one with the operands of the biconditional,
+        and the other with the reversed operands. Then tick *n*.
+        """
 
         operator    = 'Biconditional'
         designation = True
@@ -308,6 +381,12 @@ class TableauxRules(object):
             ]).tick(node)
 
     class BiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, negated biconditional node *n* on a branch *b*, make
+        two branches *b'* and *b''* from *b*. On *b'* add a designated negated conditional
+        node with the operands of the biconditional. On *b''* add a designated negated
+        conditional node with the reversed operands of the biconditional. Then tick *n*.
+        """
 
         negated     = True
         operator    = 'Biconditional'
@@ -320,33 +399,47 @@ class TableauxRules(object):
             newBranches[1].add({ 'sentence' : negate(operate('Conditional', [s.rhs, s.lhs])), 'designated': True }).tick(node)
 
     class BiconditionalUndesignated(ConjunctionUndesignated):
+        """
+        From an unticked, undesignated biconditional node *n* on a branch *b*, add a
+        designated node to *b* with the negation of the biconditional, then tick *n*.
+        """
 
         operator = 'Biconditional'
 
     class BiconditionalNegatedUndesignated(ConjunctionNegatedUndesignated):
+        """
+        From an unticked, undesignated, negated biconditional node *n* on a branch *b*,
+        add a designated node to *b* with the (un-negated) biconditional, then tick *n*.
+        """
 
         operator = 'Biconditional'
 
     class ExistentialUndesignated(ConjunctionUndesignated):
+        """
+        From an unticked, undesignated existential node *n* on a branch *b*, add a designated
+        node to *b* with the negation of the existential sentence, then tick *n*.
+        """
 
         operator   = None
         quantifier = 'Existential'
 
     class UniversalUndesignated(ExistentialUndesignated):
+        """
+        From an unticked, undesignated universal node *n* on a branch *b*, add a designated
+        node to *b* with the negation of the universal sentence, then tick *n*.
+        """
 
         quantifier = 'Universal'
 
-    fderules = fde.TableauxRules
-    k3rules = k3.TableauxRules
 
     rules = [
 
         # closure rules
-        fderules.Closure,
-        k3rules.Closure,
+        fde.TableauxRules.Closure,
+        k3.TableauxRules.Closure,
 
         # non-branching rules
-        fderules.ConjunctionDesignated,
+        fde.TableauxRules.ConjunctionDesignated,
         ConjunctionUndesignated,
         ConjunctionNegatedUndesignated,
         DisjunctionNegatedDesignated,
@@ -362,18 +455,18 @@ class TableauxRules(object):
         BiconditionalUndesignated,
         BiconditionalNegatedUndesignated,
         BiconditionalDesignated,
-        fderules.UniversalDesignated,
-        fderules.ExistentialDesignated,
+        fde.TableauxRules.UniversalDesignated,
+        fde.TableauxRules.ExistentialDesignated,
         UniversalUndesignated,
         ExistentialUndesignated,
-        fderules.DoubleNegationDesignated,
-        fderules.DoubleNegationUndesignated,
+        fde.TableauxRules.DoubleNegationDesignated,
+        fde.TableauxRules.DoubleNegationUndesignated,
 
         # branching rules
-        fderules.DisjunctionDesignated,
+        fde.TableauxRules.DisjunctionDesignated,
         ConjunctionNegatedDesignated,
-        fderules.MaterialConditionalDesignated,
-        fderules.MaterialBiconditionalDesignated,
+        fde.TableauxRules.MaterialConditionalDesignated,
+        fde.TableauxRules.MaterialBiconditionalDesignated,
         MaterialBiconditionalNegatedDesignated,
         ConditionalDesignated,
         ConditionalNegatedDesignated,

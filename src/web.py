@@ -21,7 +21,7 @@
 import examples, logic, json, os
 
 available_module_names = {
-    'logics'    : ['cfol', 'k3', 'l3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
+    'logics'    : ['cpl', 'cfol', 'k3', 'k3w', 'l3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
     'notations' : ['standard', 'polish'],
     'writers'   : ['html', 'ascii']
 }
@@ -82,8 +82,6 @@ class App:
             'system_predicates'  : logic.system_predicates,
             'quantifiers'        : logic.quantifiers_list,
             'example_args_list'  : examples.args_list,
-            #'example_arguments'  : examples.args,
-            #'example_predicates' : examples.test_pred_data,
             'app' : json.dumps({
                 'example_predicates'              : examples.test_pred_data,
                 'notation_user_predicate_symbols' : notation_user_predicate_symbols,

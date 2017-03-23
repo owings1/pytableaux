@@ -2,6 +2,20 @@
 Logics
 ******
 
+CPL - Classical Predicate Logic
+===============================
+
+.. automodule:: logics.cpl
+
+    Tableaux System
+    ---------------
+
+    .. autoclass:: TableauxSystem
+        :members:
+
+    .. autoclass:: TableauxRules
+        :members:
+
 CFOL - Classical First-Order Logic
 ==================================
 
@@ -102,6 +116,20 @@ K3 - Strong Kleene Logic
 ========================
 
 .. automodule:: logics.k3
+
+    Tableaux System
+    ---------------
+
+    .. autoclass:: TableauxSystem
+        :members:
+
+    .. autoclass:: TableauxRules
+        :members:
+
+K3W - Weak Kleene Logic
+========================
+
+.. automodule:: logics.k3w
 
     Tableaux System
     ---------------

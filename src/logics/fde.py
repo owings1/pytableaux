@@ -149,13 +149,16 @@ description = 'First Degree Entailment Logic'
 def example_validities():
     return set([
         'Addition'                ,
-        'Simplification'          ,
+        'Conditional Contraction' ,
         'DeMorgan 1'              ,
         'DeMorgan 2'              ,
         'DeMorgan 3'              ,
         'DeMorgan 4'              ,
         'Material Contraction'    ,
-        'Conditional Contraction' ,
+        'Modal Platitude 1'       ,
+        'Modal Platitude 2'       ,
+        'Modal Platitude 3'       ,
+        'Simplification'          ,
     ])
 
 def example_invalidities():
@@ -185,8 +188,8 @@ class TableauxSystem(logic.TableauxSystem):
 
         branch = tableau.branch()
         for premise in argument.premises:
-            branch.add({ 'sentence' : premise, 'designated' : True })
-        branch.add({ 'sentence' : argument.conclusion, 'designated' : False })
+            branch.add({ 'sentence' : premise, 'designated' : True, 'world' : None })
+        branch.add({ 'sentence' : argument.conclusion, 'designated' : False, 'world': None })
 
 class TableauxRules(object):
     """
@@ -225,9 +228,10 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            for operand in node.props['sentence'].operands:
-                # allow disjunction inheritance below
-                branch.add({ 'sentence' : operand, 'designated' : self.designation })
+            s = self.sentence(node)
+            d = self.designation
+            for conjunct in s.operands:
+                branch.add({ 'sentence' : conjunct, 'designated' : d })
             branch.tick(node)
 
     class ConjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -242,9 +246,12 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            for conjunct in node.props['sentence'].operand.operands:
-                # allow disjunction inheritance below
-                self.tableau.branch(branch).add({ 'sentence' : negate(conjunct), 'designated' : self.designation }).tick(node)
+            s = self.sentence(node)
+            d = self.designation
+            for conjunct in s.operands:
+                self.tableau.branch(branch).add({
+                    'sentence' : negate(conjunct), 'designated' : d
+                }).tick(node)
 
     class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -257,9 +264,12 @@ class TableauxRules(object):
         designation = False
 
         def apply_to_node(self, node, branch):
-            for operand in node.props['sentence'].operands:
-                # allow disjunction inheritance below
-                self.tableau.branch(branch).add({ 'sentence' : operand, 'designated' : self.designation }).tick(node)
+            s = self.sentence(node)
+            d = self.designation
+            for conjunct in s.operands:
+                self.tableau.branch(branch).add({
+                    'sentence' : conjunct, 'designated' : d
+                }).tick(node)
 
     class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -272,9 +282,10 @@ class TableauxRules(object):
         designation = False
 
         def apply_to_node(self, node, branch):
-            for operand in node.props['sentence'].operand.operands:
-                # allow disjunction inheritance below
-                branch.add({ 'sentence' : negate(operand), 'designated' : self.designation })
+            s = self.sentence(node)
+            d = self.designation
+            for conjunct in s.operands:
+                branch.add({ 'sentence' : negate(conjunct), 'designated' : d })
             branch.tick(node)
 
     class DisjunctionDesignated(ConjunctionUndesignated):
@@ -327,10 +338,11 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
-            s = node.props['sentence']
-            newBranches[0].add({ 'sentence' : negate(s.lhs) , 'designated' : True }).tick(node)
-            newBranches[1].add({ 'sentence' :        s.rhs  , 'designated' : True }).tick(node)
+            s = self.sentence(node)
+            d = self.designation
+            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1.add({ 'sentence' : negate(s.lhs) , 'designated' : d }).tick(node)
+            b2.add({ 'sentence' :        s.rhs  , 'designated' : d }).tick(node)
 
     class MaterialConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -344,10 +356,11 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence'].operand
+            s = self.sentence(node)
+            d = self.designation
             branch.update([
-                { 'sentence' :        s.lhs  , 'designated' : True },
-                { 'sentence' : negate(s.rhs) , 'designated' : True }
+                { 'sentence' :        s.lhs  , 'designated' : d },
+                { 'sentence' : negate(s.rhs) , 'designated' : d }
             ]).tick(node)
 
     class MaterialConditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -361,10 +374,11 @@ class TableauxRules(object):
         designation = False
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence']
+            s = self.sentence(node)
+            d = self.designation
             branch.update([
-                { 'sentence' : negate(s.lhs) , 'designated' : False },
-                { 'sentence' :        s.rhs  , 'designated' : False }
+                { 'sentence' : negate(s.lhs) , 'designated' : d },
+                { 'sentence' :        s.rhs  , 'designated' : d }
             ]).tick(node)
 
     class MaterialConditionalNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -380,10 +394,11 @@ class TableauxRules(object):
         designation = False
 
         def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
-            s  = node.props['sentence'].operand
-            newBranches[0].add({ 'sentence' :        s.lhs  , 'designated' : False }).tick(node)
-            newBranches[1].add({ 'sentence' : negate(s.rhs) , 'designated' : False }).tick(node)
+            s = self.sentence(node)
+            d = self.designation
+            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1.add({ 'sentence' :        s.lhs  , 'designated' : d }).tick(node)
+            b2.add({ 'sentence' : negate(s.rhs) , 'designated' : d }).tick(node)
 
     class MaterialBiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -398,19 +413,16 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
-            s = node.props['sentence']
-            # allow for negation rule inheritance below
-            if self.negated:
-                s = s.operand
-            # keep designation neutral for inheritance below
-            newBranches[0].update([
-                { 'sentence' : negate(s.lhs), 'designated' : self.designation },
-                { 'sentence' : negate(s.rhs), 'designated' : self.designation }
+            s = self.sentence(node)
+            d = self.designation
+            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1.update([
+                { 'sentence' : negate(s.lhs), 'designated' : d },
+                { 'sentence' : negate(s.rhs), 'designated' : d }
             ]).tick(node)
-            newBranches[1].update([
-                { 'sentence' : s.rhs, 'designated' : self.designation },
-                { 'sentence' : s.lhs, 'designated' : self.designation }
+            b2.update([
+                { 'sentence' : s.rhs, 'designated' : d },
+                { 'sentence' : s.lhs, 'designated' : d }
             ]).tick(node)
 
     class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -427,19 +439,16 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
-            s = node.props['sentence']
-            # allow for unnegated rule inheritance below
-            if self.negated:
-                s = s.operand
-            # keep designation neutral for inheritance below
-            newBranches[0].update([
-                { 'sentence' :        s.lhs  , 'designated' : self.designation },
-                { 'sentence' : negate(s.rhs) , 'designated' : self.designation }
+            s = self.sentence(node)
+            d = self.designation
+            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1.update([
+                { 'sentence' :        s.lhs  , 'designated' : d },
+                { 'sentence' : negate(s.rhs) , 'designated' : d }
             ]).tick(node)
-            newBranches[1].update([
-                { 'sentence' : negate(s.lhs) , 'designated' : self.designation },
-                { 'sentence' :        s.rhs  , 'designated' : self.designation }
+            b2.update([
+                { 'sentence' : negate(s.lhs) , 'designated' : d },
+                { 'sentence' :        s.rhs  , 'designated' : d }
             ]).tick(node)
                     
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
@@ -575,10 +584,14 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence']
-            v = node.props['sentence'].variable
-            # keep designation neutral for inheritance below
-            branch.add({ 'sentence' : s.substitute(branch.new_constant(), v), 'designated' : self.designation }).tick(node)
+            s = self.sentence(node)
+            d = self.designation
+            v = s.variable
+            c = branch.new_constant()
+            branch.add({
+                'sentence'   : s.substitute(c, v),
+                'designated' : d
+            }).tick(node)
 
     class ExistentialNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -594,10 +607,13 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence'].operand.sentence
-            v = node.props['sentence'].operand.variable
-            # keep quantifier conversion neutral to allow inheritance below
-            branch.add({ 'sentence' : quantify(self.convert_to, v, negate(s)), 'designated' : self.designation }).tick(node)
+            s = self.sentence(node)
+            d = self.designation
+            v = s.variable
+            branch.add({
+                'sentence'   : quantify(self.convert_to, v, negate(s)),
+                'designated' : d
+            }).tick(node)
 
     class ExistentialUndesignated(logic.TableauxSystem.BranchRule):
         """
@@ -612,19 +628,30 @@ class TableauxRules(object):
         designation = False
 
         def applies_to_branch(self, branch):
+            target = False
+            d = self.designation
+            q = self.quantifier
             constants = branch.constants()
             for n in branch.get_nodes():
                 # keep quantifier and designation neutral for inheritance below
-                if n.props['sentence'].quantifier == self.quantifier and n.props['designated'] == self.designation:
-                    v = n.props['sentence'].variable
-                    s = n.props['sentence']
-                    if not len(constants):
-                        return { 'branch' : branch, 'sentence' : s.substitute(branch.new_constant(), v), 'node' : n }
+                if 'sentence' not in n.props or n.props['designated'] != d:
+                    continue
+                s = n.props['sentence']
+                if s.quantifier != q:
+                    continue
+                v = s.variable
+                if not len(constants):
+                    c = branch.new_constant()
+                    target = { 'branch' : branch, 'sentence' : s.substitute(c, v), 'node' : n }
+                else:
                     for c in constants:
                         r = s.substitute(c, v)
-                        if not branch.has({ 'sentence': r, 'designated' : self.designation }):
-                            return { 'branch' : branch, 'sentence' : r, 'node' : n }
-            return False
+                        if not branch.has({ 'sentence': r, 'designated' : d }):
+                            target = { 'branch' : branch, 'sentence' : r, 'node' : n }
+                            break
+                if target:
+                    break
+            return target
 
         def apply(self, target):
             # keep designation neutral for inheritance below
@@ -704,8 +731,9 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            # designation is neutral to allow for inheritance below
-            branch.add({ 'sentence' : node.props['sentence'].operand.operand, 'designated' : self.designation }).tick(node)
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
         """

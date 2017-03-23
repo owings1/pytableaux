@@ -8,17 +8,13 @@
                 <span class="node-props">
                     {% if 'sentence' in node.props %}
                         <span class="sentence">
-                            {% if writer.symbol_set.name == 'html' %}
-                                {{ writer.write(node.props['sentence']) }}
-                            {% else %}
-                                {{ writer.write(node.props['sentence'])|e }}
-                            {% endif %}
+                            {{ writer.write(node.props['sentence'], symbol_set = 'html') }}
                         </span>
-                        {% if 'world' in node.props %}
+                        {% if 'world' in node.props and node.props['world'] != None %}
                             <span class="world">, w<span class="subscript">{{ node.props['world'] }}</span></span>
                         {% endif %}
                     {% endif %}
-                    {% if 'designated' in node.props %}
+                    {% if 'designated' in node.props and node.props['designated'] != None %}
                         <span class="designation {% if not node.props['designated'] %}un{% endif %}designated">
                             {% if node.props['designated'] %} &oplus;{% else %} &ominus;{% endif %}
                         </span>

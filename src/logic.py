@@ -862,7 +862,8 @@ class TableauxSystem(object):
                 'argument'      : self.argument,
                 'branches'      : len(self.branches),
                 'rules_applied' : len(self.history),
-                'finished'      : self.finished
+                'finished'      : self.finished,
+                'valid'         : self.valid
             }.__repr__()
 
     class Branch(object):
@@ -875,6 +876,8 @@ class TableauxSystem(object):
             self.closed = False
             self.ticked_nodes = set()
             self.nodes = []
+            self.consts = set()
+            self.ws = set()
 
         def has(self, props, ticked=None):
             for node in self.get_nodes(ticked=ticked):
@@ -889,6 +892,8 @@ class TableauxSystem(object):
             if not isinstance(node, TableauxSystem.Node):
                 node = TableauxSystem.Node(props=node)
             self.nodes.append(node)
+            self.consts.update(node.constants())
+            self.ws.update(node.worlds())
             return self
 
         def update(self, nodes):
@@ -926,16 +931,15 @@ class TableauxSystem(object):
             branch = TableauxSystem.Branch()
             branch.nodes = list(self.nodes)
             branch.ticked_nodes = set(self.ticked_nodes)
+            branch.consts = set(self.consts)
+            branch.ws = set(self.ws)
             return branch
 
         def worlds(self):
             """
             Return the set of worlds that appear on the branch.
             """
-            worlds = set()
-            for node in self.nodes:
-                worlds.update(node.worlds())
-            return worlds
+            return self.ws
 
         def new_world(self):
             """
@@ -950,11 +954,7 @@ class TableauxSystem(object):
             """
             Return the set of constants that appear on the branch.
             """
-            constants = set()
-            for node in self.nodes:
-                if 'sentence' in node.props:
-                    constants.update(node.props['sentence'].constants())
-            return constants
+            return self.consts
 
         def new_constant(self):
             """
@@ -984,7 +984,11 @@ class TableauxSystem(object):
 
         def __init__(self, props={}):
             #: A dictionary of properties for the node.
-            self.props = props
+            self.props = {
+                'world'      : None,
+                'designated' : None,
+            }
+            self.props.update(props)
             self.ticked = False
 
         def has_props(self, props):
@@ -995,7 +999,7 @@ class TableauxSystem(object):
 
         def worlds(self):    
             worlds = set()
-            if 'world' in self.props:
+            if 'world' in self.props and self.props['world'] != None:
                 worlds.add(self.props['world'])
             if 'world1' in self.props:
                 worlds.add(self.props['world1'])
@@ -1004,7 +1008,12 @@ class TableauxSystem(object):
             if 'worlds' in self.props:
                 worlds.update(self.props['worlds'])
             return worlds
-            
+
+        def constants(self):
+            if 'sentence' in self.props:
+                return self.props['sentence'].constants()
+            return set()
+
         def __repr__(self):
             return self.__dict__.__repr__()
 
@@ -1173,6 +1182,14 @@ class TableauxSystem(object):
                 if 'designated' not in node.props or node.props['designated'] != self.designation:
                     return False
             return True
+
+        def sentence(self, node):
+            s = None
+            if 'sentence' in node.props:
+                s = node.props['sentence']
+                if self.negated:
+                    s = s.operand
+            return s
 
         def example_node(self):
             props = {}

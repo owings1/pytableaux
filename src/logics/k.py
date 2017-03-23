@@ -36,7 +36,6 @@ def example_validities():
     import cfol
     args = cfol.example_validities()
     args.update([
-        'Necessity Distribution' ,
         'Modal Platitude 1'      ,
         'Modal Platitude 2'      ,
         'Modal Platitude 3'      ,
@@ -44,6 +43,7 @@ def example_validities():
         'Modal Transformation 2' ,
         'Modal Transformation 3' ,
         'Modal Transformation 4' ,
+        'Necessity Distribution' ,
     ])
     return args
 
@@ -51,10 +51,10 @@ def example_invalidities():
     import t
     args = t.example_invalidities()
     args.update([
+        'Necessity Elimination' ,
+        'Possibility Addition'  ,
         'Reflexive Inference 1' ,
         'Serial Inference 1'    ,
-        'Possibility Addition'  ,
-        'Necessity Elimination' ,
     ])
     return args
 
@@ -83,7 +83,12 @@ class TableauxSystem(logic.TableauxSystem):
         branch.add({ 'sentence': negate(argument.conclusion), 'world': 0 })
 
     class ConditionalModalNodeRule(logic.TableauxSystem.ConditionalNodeRule):
-        modal = True
+
+        def example_node(self):
+            props = super(TableauxSystem.ConditionalModalNodeRule, self).example_node()
+            props['world'] = 0
+            return props
+        
 
 class TableauxRules(object):
     """

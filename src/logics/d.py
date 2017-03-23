@@ -47,8 +47,8 @@ def example_invalidities():
     args = t.example_invalidities()
     args.update([
     	'Reflexive Inference 1' ,
-        'Possibility Addition'  ,
         'Necessity Elimination' ,
+        'Possibility Addition'  ,
     ])
     return args
     

@@ -21,7 +21,7 @@
 import examples
 from logic import *
 from notations import polish, standard
-from logics import fde, k3, lp, go, cfol, k, d, t, s4, l3
+from logics import fde, k3, k3w, lp, go, cfol, cpl, k, d, t, s4, l3
 from writers import ascii
 
 def main():
@@ -34,44 +34,51 @@ def test_all():
     
 def test_logics():
     logics = [
-        fde,
-        k3,
-        lp,
-        go,
-        cfol,
-        k,
-        d,
-        t,
-        s4,
-        l3
+        'fde',
+        'k3',
+        'k3w',
+        'lp',
+        'go',
+        'cpl',
+        'cfol',
+        'k',
+        'd',
+        't',
+        's4',
+        'l3'
     ]
-    for logic in logics:
-        print logic.name
-        print '  validities'
-        validity_names = sorted(logic.example_validities())
-        test_arguments(logic, validity_names, True)
-        print '  invalidities'
-        invalidity_names = sorted(logic.example_invalidities())
-        test_arguments(logic, invalidity_names, False)
-
-
-def test_arguments(logic, args, valid):
     writer = ascii.Writer()
     sw = standard.Writer()
-    for name in args:
-        print '    ', name, '...',
+    for name in examples.args_list:
         arg = examples.argument(name)
-        try:
-            t = tableau(logic, arg).build()
-            assert valid == t.valid
-        except AssertionError as e:
-            import json
-            print 'FAIL'
-            print t
-            print list(t.branches)[0]
-            print writer.write(t, writer=sw)
-            raise e
-        print 'pass'
+        print(name)
+        for logic_name in logics:
+            logic = get_logic(logic_name)
+            if name in logic.example_validities():
+                expect = True
+            elif name in logic.example_invalidities():
+                expect = False
+            else:
+                expect = None
+            print '    {0: <6} : '.format(logic.name),
+            try:
+                t = tableau(logic, arg).build()
+            except:
+                print("Failed to evaluated '{0}' in {1}".format(name, logic.name))
+                raise
+            result_str = 'VALID' if t.valid else 'INVALID'
+            if expect != None:
+                pass_str = 'PASS' if expect == t.valid else 'FAIL'
+                ok = expect == t.valid
+            else:
+                pass_str = 'UNKNOWN'
+                ok = True
+            print('{0: <8} : {1}'.format(result_str, pass_str))
+            if not ok:
+                print t
+                print list(t.branches)[0]
+                print writer.write(t, writer=sw)
+                raise Exception("Expectation failed for '{0}' in {1}".format(name, logic.name))
 
 def test_standard_notation():
     print "Standard notation"
