@@ -45,46 +45,61 @@
             console.log('jQuery not loaded. Not initializing interactive handlers.')
             return
         }
+
+        function zoomToStructure($structure, $proof) {
+            if (!$proof)
+                $proof = $structure.closest('.html-writer-proof')
+            if ($structure.hasClass('zoomed'))
+                return
+            var thisLeft = +$structure.attr('data-left')
+            var thisRight = +$structure.attr('data-right')
+            $('.structure', $proof).each(function(i, s) {
+                var $s = $(s)
+                var left = +$s.attr('data-left')
+                var right = +$s.attr('data-right')
+                var isOutside = (left > thisLeft && right > thisRight) || (left < thisLeft && right < thisRight)
+                var isAncestor = left < thisLeft && right > thisRight
+                var isSelf = left == thisLeft && right == thisRight
+                var isDescendant = left > thisLeft && right < thisRight
+                if (isSelf || isAncestor) {
+                    $s.closest('.child-wrapper').css('width', '100%')
+                    if (!$s.is(':visible'))
+                        $s.show(400)
+                } else if (isDescendant) {
+                    var $cw = $s.closest('.child-wrapper')
+                    var origWidth = $cw.attr('data-orig-width')
+                    $cw.css('width', origWidth)
+                    if (!$s.is(':visible'))
+                        $s.show(400)
+                } else if (isOutside) {
+                    if ($s.is(':visible'))
+                        $s.hide(200)
+                }
+                if (isSelf || isDescendant) {
+                    var $hl = $('.horizontal-line', $s)
+                    if ($hl.length) {
+                        var origWidth = $hl.attr('data-orig-width')
+                        var origMarginLeft = $hl.attr('data-orig-margin-left')
+                        $hl.css({borderBottomStyle: 'solid'}).animate({width: origWidth, marginLeft: origMarginLeft}, 200)
+                    }
+                } else if (isAncestor) {
+                    var $hl = $('.horizontal-line', $s)
+                    if ($hl.length) {
+                        $hl.css({marginLeft: 'auto', borderBottomStyle: 'dotted'}).animate({width: '200px'}, 200)
+                    }
+                }
+                $s.removeClass('zoomed')
+            })
+            $structure.addClass('zoomed')
+        }
+
         $(document).ready(function() {
             $('.html-writer-proof').on('click', function(e) {
                 var $proof = $(this)
                 var $target = $(e.target)
                 var $structure = $target.closest('.structure')
                 if ($structure.length) {
-                    var thisLeft = +$structure.attr('data-left')
-                    var thisRight = +$structure.attr('data-right')
-                    $('.structure', $proof).each(function(i, s) {
-                        var $s = $(s)
-                        var left = +$s.attr('data-left')
-                        var right = +$s.attr('data-right')
-                        var isOutside = (left > thisLeft && right > thisRight) || (left < thisLeft && right < thisRight)
-                        var isAncestor = left < thisLeft && right > thisRight
-                        var isSelf = left == thisLeft && right == thisRight
-                        var isDescendant = left > thisLeft && right < thisRight
-                        if (isSelf || isAncestor) {
-                            $s.show('slow').closest('.child-wrapper').css('width', '100%')
-                        } else if (isDescendant) {
-                            var $cw = $s.closest('.child-wrapper')
-                            var origWidth = $cw.attr('data-orig-width')
-                            $s.show('slow')
-                            $cw.css('width', origWidth)
-                        } else if (isOutside) {
-                            $s.hide('slow')
-                        }
-                        if (isSelf || isDescendant) {
-                            var $hl = $('.horizontal-line', $s)
-                            if ($hl.length) {
-                                var origWidth = $hl.attr('data-orig-width')
-                                var origMarginLeft = $hl.attr('data-orig-margin-left')
-                                $hl.css({width: origWidth, marginLeft: origMarginLeft, borderBottomStyle: 'solid'})
-                            }
-                        } else if (isAncestor) {
-                            var $hl = $('.horizontal-line', $s)
-                            if ($hl.length) {
-                                $hl.css({width: '200px', marginLeft: 'auto', borderBottomStyle: 'dotted'})
-                            }
-                        }
-                    })
+                    zoomToStructure($structure, $proof)
                 }
             })
         })

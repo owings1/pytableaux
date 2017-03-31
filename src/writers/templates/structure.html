@@ -1,5 +1,5 @@
 {% macro write_structure(structure, is_child = False) -%}
-    <div class="html-writer structure" data-left="{{ structure['left'] }}" data-right="{{ structure['right'] }}">
+    <div class="html-writer structure{% if not is_child %} zoomed{% endif %}" data-left="{{ structure['left'] }}" data-right="{{ structure['right'] }}">
         <div class="node-segment">
         {% if is_child %}
             <div class="vertical-line"></div>
