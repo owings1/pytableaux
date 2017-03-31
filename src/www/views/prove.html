@@ -25,7 +25,7 @@
             </div>
             <div class="proof">
                 {% if writer.name == 'HTML' %}
-                    {{ writer.write(tableau, writer=sw) }}
+                    {{ writer.write(tableau, writer=sw, highlight_open=True) }}
                 {% else %}
                     <pre>{{ writer.write(tableau, writer=sw)|e }}</pre>
                 {% endif %}

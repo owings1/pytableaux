@@ -24,84 +24,14 @@ Classical Predicate Logic (CPL) is the standard bivalent logic (True, False).
 Semantics
 ---------
 
-Two primitive operators, negation and disjunction, are defined via truth tables.
+Truth functional operators are defined via truth tables (below).
 
-**Negation**:
+**Predicate Sentences** like *P{Fa}* are handled via a predicate's *extension*:
 
-+------------+------------+
-| A          | not A      |
-+============+============+
-|  T         |  F         |
-+------------+------------+
-|  F         |  T         |
-+------------+------------+
+- *P{Fa}* is true iff the object denoted by the constant *a* is in the extension of the predicate *F*.
 
-**Disjunction**:
-
-+-----------+----------+---------+
-|  A or B   |          |         |
-+===========+==========+=========+
-|           |  **T**   |  **F**  |
-+-----------+----------+---------+
-|  **T**    |    T     |    T    |
-+-----------+----------+---------+
-|  **F**    |    T     |    F    | 
-+-----------+----------+---------+
-
-Other operators are defined via semantic equivalencies in the usual way:
-
-- **Conjunction**: ``A and B := not (not-A or not-B)``
-
-- **Material Conditional**: ``if A then B := not-A or B``
-
-- **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
-
-The truth tables for defined connectives are as follows:
-
-**Conjunction**:
-
-+-----------+----------+---------+
-|  A and B  |          |         |
-+===========+==========+=========+
-|           |  **T**   |  **F**  |
-+-----------+----------+---------+
-|  **T**    |    T     |    F    |
-+-----------+----------+---------+
-|  **F**    |    F     |    F    | 
-+-----------+----------+---------+
-
-**Material Conditional**:
-
-+-----------+----------+---------+
-|  if A, B  |          |         |
-+===========+==========+=========+
-|           |  **T**   |  **F**  |
-+-----------+----------+---------+
-|  **T**    |    T     |    F    |
-+-----------+----------+---------+
-|  **F**    |    T     |    T    | 
-+-----------+----------+---------+
-
-**Material Biconditional**:
-
-+-----------+----------+---------+
-|  A iff B  |          |         |
-+===========+==========+=========+
-|           |  **T**   |  **F**  |
-+-----------+----------+---------+
-|  **T**    |    T     |    F    |
-+-----------+----------+---------+
-|  **F**    |    F     |    T    | 
-+-----------+----------+---------+
-
-The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
-
-**Predicate Sentences** like *a is F* are handled via a predicate's *extension*:
-
-- *a is F* iff the object denoted by the constant *a* is in the extension of the predicate *F*.
-
-*C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
-are cases where *C* also has the value **T**.
+*C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is true
+are cases where *C* also has the value true.
 """
 
 import k, fde
@@ -161,6 +91,24 @@ undesignated_values = k.undesignated_values
 unassigned_value = k.unassigned_value
 truth_functional_operators = fde.truth_functional_operators
 truth_function = fde.truth_function
+
+class Model(k.Model):
+
+    def set_atomic_value(self, atomic, value):
+        return super(Model, self).set_atomic_value(atomic, value, 0)
+
+    def get_atomic_value(self, atomic):
+        return super(Model, self).get_atomic_value(atomic, 0)
+
+    def add_true_predicate_sentence(self, sentence):
+        return super(Model, self).add_true_predicate_sentence(sentence, 0)
+
+    def get_extension(self, predicate):
+        return super(Model, self).get_extension(predicate, 0)
+        
+    def add_access(self, w1, w2):
+        raise Exception(NotImplemented)
+
 class TableauxSystem(logic.TableauxSystem):
     """
     A branch can be thought of as representing a case where each node's sentence
@@ -178,6 +126,23 @@ class TableauxSystem(logic.TableauxSystem):
             branch.add({ 'sentence' : premise })
         branch.add({ 'sentence':  negate(argument.conclusion) })
 
+    @staticmethod
+    def read_model(model, branch):
+        """
+        To read a model from a branch *b*, every atomic sentence on *b* is True,
+        every negated atomic is False. For every predicate sentence Fa0...an on *b*,
+        the tuple <a0,...,an> is in the extension of F.
+        """
+        for node in branch.get_nodes():
+            if 'sentence' in node.props:
+                s = node.props['sentence']
+                if s.is_atomic():
+                    model.set_atomic_value(s, 1)
+                elif s.is_operated() and s.operator == 'Negation' and s.operand.is_atomic():
+                    model.set_atomic_value(s.operand, 0)
+                elif s.is_predicated():
+                    model.add_true_predicate_sentence(s)
+
 class TableauxRules(object):
     """
     The Tableaux System for CPL contains all the operator rules from K, except for
@@ -187,7 +152,7 @@ class TableauxRules(object):
 
     class Closure(logic.TableauxSystem.ClosureRule):
         """
-        A branch is closed iff a sentence and its negation appear on the branch.
+        A branch is closed if a sentence and its negation appear on the branch.
         """
 
         def applies_to_branch(self, branch):
@@ -200,12 +165,38 @@ class TableauxRules(object):
             a = logic.atomic(0, 0)
             self.tableau.branch().update([{ 'sentence' : a }, { 'sentence' : negate(a) }])
 
+    class SelfIdentityClosure(k.TableauxRules.SelfIdentityClosure):
+        """
+        A branch is closed if a sentence of the form *~ a = a* appears on the branch.
+        """
+
+        def example(self):
+            s = negate(examples.self_identity())
+            self.tableau.branch().add({ 'sentence' : s })
+
+    class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
+        """
+        From an unticked node *n* having an Identity sentence *s* on an open branch *b*,
+        and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,
+        if the replacement of that constant for the other constant of *s* is a sentence that does
+        not appear on *b*, then add it.
+        """
+
+        def example(self):
+            self.tableau.branch().update([
+                { 'sentence' : examples.predicated() },
+                { 'sentence' : examples.identity()   }
+            ])
+
     rules = [
 
         Closure,
+        SelfIdentityClosure,
 
         # non-branching rules
-
+        IdentityIndiscernability,
+        k.TableauxRules.Assertion,
+        k.TableauxRules.AssertionNegated,
         k.TableauxRules.Conjunction,
         k.TableauxRules.DisjunctionNegated,
         k.TableauxRules.MaterialConditionalNegated,

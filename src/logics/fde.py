@@ -132,6 +132,10 @@ def truth_function(operator, a, b=None):
         return max(truth_function('Negation', a), b)
     elif operator == 'Material Biconditional' or  operator == 'Biconditional':
         return min(max(truth_function('Negation', a), b), max(truth_function('Negation', b), a))
+
+class Model(object):
+
+    pass
 class TableauxSystem(logic.TableauxSystem):
     """
     Nodes for FDE have a boolean *designation* property, and a branch is closed iff
@@ -704,12 +708,60 @@ class TableauxRules(object):
 
         designation = False
 
+    class AssertionDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, assertion node *n* on a branch *b*, add a designated
+        node to *b* with the operand of *b*, then tick *n*.
+        """
+
+        operator = 'Assertion'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+
+    class AssertionUndesignated(AssertionDesignated):
+        """
+        From an unticked, undesignated, assertion node *n* on a branch *b*, add an undesignated
+        node to *b* with the operand of *n*, then tick *n*.
+        """
+
+        designation = False
+
+    class AssertionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, negated assertion node *n* on branch *b*, add a designated
+        node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
+        """
+
+        operator = 'Assertion'
+        negated = True
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : negate(s.operand), 'designated' : d }).tick(node)
+
+    class AssertionNegatedUndesignated(AssertionNegatedDesignated):
+        """
+        From an unticked, undesignated, negated assertion node *n* on branch *b*, add an undesignated
+        node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
+        """
+
+        designation = False
+
     rules = [
 
         Closure,
 
         # non-branching rules
-
+        AssertionDesignated,
+        AssertionUndesignated,
+        AssertionNegatedDesignated,
+        AssertionNegatedUndesignated,
         ConjunctionDesignated, 
         DisjunctionNegatedDesignated,
         DisjunctionUndesignated,

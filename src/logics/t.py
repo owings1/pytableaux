@@ -89,4 +89,4 @@ class TableauxRules(object):
             self.tableau.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
             
     rules = list(k.TableauxRules.rules)
-    rules.insert(1, Reflexive)
+    rules.insert(2, Reflexive)

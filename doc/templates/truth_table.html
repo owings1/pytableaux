@@ -1,0 +1,43 @@
+<div class="truth-table-wrapper">
+    <table class="truth-table">
+        <thead>
+            <tr>
+                {% if arity == 1 %}
+                    <th colspan="2">{{ operator }}</th>
+                {% else %}
+                    <th colspan="{{ num_values + 1 }}">{{ operator }}</th>
+                {% endif %}
+            </tr>
+            <tr>
+                {% if arity == 1 %}
+                    <th>{{ sw.write(sentence.operand) }}</th>
+                    <th>{{ sw.write(sentence) }}</th>
+                {% else %}
+                    <th colspan="{{ num_values + 1 }}">{{ sw.write(sentence) }}</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% if arity == 2 %}
+                <tr>
+                    <td></td>
+                    {% for x in range(num_values) %}
+                        <td class="value-header row">{{ value_chars[values[x]] }}</td>
+                    {% endfor %}
+                </tr>
+            {% endif %}
+            {% for x in range(num_values) %}
+                <tr>
+                    <td class="value-header column">{{ value_chars[values[x]] }}</td>
+                    {% if arity == 1 %}
+                        <td>{{ value_chars[table['outputs'][table['inputs'].index((values[x],))]] }}</td>
+                    {% else %}
+                        {% for y in range(num_values) %}
+                            <td>{{ value_chars[table['outputs'][table['inputs'].index((values[x], values[y]))]] }}</td>
+                        {% endfor %}
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

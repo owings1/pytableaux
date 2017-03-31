@@ -55,7 +55,7 @@ Notes
 
 Some notable features of K3 include:
 
-* Everything valid in FDE is valid in LP.
+* Everything valid in FDE is valid in K3.
 
 * Like FDE, the law of excluded middle, and conditional identity (if A then A) fail.
 

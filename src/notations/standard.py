@@ -26,6 +26,7 @@ symbol_sets = {
     'default' : logic.Parser.SymbolSet('default', {
         'atomic' : ['A', 'B', 'C', 'D', 'E'],
         'operator' : {
+            'Assertion'              :  '*',
             'Negation'               :  '~',
             'Conjunction'            :  '&',
             'Disjunction'            :  'V',
@@ -58,6 +59,7 @@ symbol_sets = {
     'html'    : logic.Parser.SymbolSet('html', {
         'atomic'   : ['A', 'B', 'C', 'D', 'E'],
         'operator' : {
+            'Assertion'              : '&deg;'   ,
             'Negation'               : '&not;'   ,
             'Conjunction'            : '&and;'   ,
             'Disjunction'            : '&or;'    ,
@@ -77,6 +79,7 @@ symbol_sets = {
         'system_predicate'  : {
             'Identity'  : '=',
             'Existence' : '!',
+            'NegatedIdentity' : '&ne;',
         },
         'user_predicate'  : ['F', 'G', 'H', 'O'],
         'paren_open'      : ['('],
@@ -94,19 +97,26 @@ class Writer(logic.Vocabulary.Writer):
         symset = self.symset(symbol_set)
         if sentence.predicate.arity < 2:
             return super(Writer, self).write_predicated(sentence, symbol_set = symbol_set)
-        return ''.join([
-            self.write_parameter(sentence.parameters[0], symbol_set = symbol_set),
-            self.write_predicate(sentence.predicate, symbol_set = symbol_set),
-            ''.join([
-                self.write_parameter(param, symbol_set = symbol_set) for param in sentence.parameters[1:]
-            ])
-        ])
+        joins = [self.write_parameter(sentence.parameters[0], symbol_set = symbol_set)]
+        if sentence.predicate.name == 'Identity':
+            joins.append(symset.charof('whitespace', 0))
+        joins.append(self.write_predicate(sentence.predicate, symbol_set = symbol_set))
+        if sentence.predicate.name == 'Identity':
+            joins.append(symset.charof('whitespace', 0))
+        joins += [self.write_parameter(param, symbol_set = symbol_set) for param in sentence.parameters[1:]]
+        return ''.join(joins)
 
     def write_operated(self, sentence, symbol_set = None):
         symset = self.symset(symbol_set)
         arity = logic.arity(sentence.operator)
         if arity == 1:
-            return symset.charof('operator', sentence.operator) + self.write(sentence.operand, symbol_set = symbol_set)
+            if (symset.name == 'html' and
+                sentence.operator == 'Negation' and
+                sentence.operand.is_predicated() and
+                sentence.operand.predicate.name == 'Identity'):
+                return self.write_html_negated_identity(sentence, symbol_set = symbol_set)
+            else:
+                return symset.charof('operator', sentence.operator) + self.write(sentence.operand, symbol_set = symbol_set)
         elif arity == 2:
             return ''.join([
                 symset.charof('paren_open', 0),
@@ -120,6 +130,18 @@ class Writer(logic.Vocabulary.Writer):
         else:
             raise Exception(NotImplemented)
 
+    def write_html_negated_identity(self, sentence, symbol_set = None):
+        symset = self.symset(symbol_set)
+        params = sentence.operand.parameters
+        joins = [
+            self.write_parameter(params[0], symbol_set = symbol_set),
+            symset.charof('whitespace', 0),
+            symset.charof('system_predicate', 'NegatedIdentity'),
+            symset.charof('whitespace', 0),
+            self.write_parameter(params[1], symbol_set = symbol_set)
+        ]
+        return ''.join(joins)
+            
 class Parser(logic.Parser):
 
     symbol_sets = {'default': symbol_sets['default']}

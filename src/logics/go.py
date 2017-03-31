@@ -40,6 +40,19 @@ a subset of sentences that obey all principles of classical logic. For example, 
 the Law of Excluded Middle fails for atomic sentences (A or not-A), complex sentences -- those
 with at least one binary connective -- do obey the law: (A or A) or not-(A or A).
 
+**Predicate Sentences** are handled the same way as in K3.
+
+**Quantification** is defined in a different way, in accordance with thinking of the
+universal and existential quantifiers as generalized conjunction and disjunction,
+respectively.
+
+- **Universal Quantifier**: *for all x, x is F* has the value **T** iff everything is in 
+  the extension of *F*, else it has the value *F*.
+
+- **Existential Quantifier**: *there exists an x that is F* has the value **T** iff
+  something is in the extension of *F*, else it has the value *F*.
+
+
 References
 ----------
 
@@ -137,6 +150,9 @@ class TableauxSystem(fde.TableauxSystem):
     pass
 
 class TableauxRules(object):
+    """
+    The rules for GO consist of the rules for K3, except for those defined below.
+    """
 
     class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -421,6 +437,63 @@ class TableauxRules(object):
 
         quantifier = 'Universal'
 
+    class ExistentialNegatedDesignated(object):
+        # needs implemented
+        pass
+
+    class ExistentialNegatedUndesignated(object):
+        pass
+
+    class UniversalNegatedDesignated(object):
+        # """
+        #         not(Forall x: Fx) is True. Thus (Forall x: Fx) is False.
+        #         """
+        # needs implmented
+        pass
+
+    class UniversalNegatedUndesignated(object):
+        pass
+
+    class AssertionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, undesignated assertion node *n* on a branch *b*, add
+        an undesignated node to *b* with the assertion of *n*, then tick *n*.
+        """
+
+        operator = 'Assertion'
+        designation = False
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+
+    class AssertionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, negated assertion node *n* on a branch *b*,
+        add an undesignated node to *b* with the assertion of *n*, then tick *n*.
+        """
+        operator    = 'Assertion'
+        negated     = True
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : s.operand, 'designated' : not d }).tick(node)
+
+    class AssertionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
+        an designated node to *b* with the assertion of *n*, then tick *n*.
+        """
+
+        operator    = 'Assertion'
+        negated     = True
+        designation = False
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
 
     rules = [
 
@@ -429,6 +502,10 @@ class TableauxRules(object):
         k3.TableauxRules.Closure,
 
         # non-branching rules
+        fde.TableauxRules.AssertionDesignated,
+        AssertionUndesignated,
+        AssertionNegatedDesignated,
+        AssertionNegatedUndesignated,
         fde.TableauxRules.ConjunctionDesignated,
         ConjunctionUndesignated,
         ConjunctionNegatedUndesignated,

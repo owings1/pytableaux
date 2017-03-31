@@ -79,7 +79,7 @@ class TableauxRules:
         no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
-        
+
         def applies_to_branch(self, branch):
             if len(self.tableau.history) and self.tableau.history[-1]['rule'] == self:
                 return False
@@ -88,7 +88,7 @@ class TableauxRules:
             if len(worlds):
                 return { 'branch': branch, 'world': worlds.pop() }
             return False
-                
+
         def apply(self, target):
             target['branch'].add({ 
                 'world1': target['world'], 
@@ -98,5 +98,52 @@ class TableauxRules:
         def example(self):
             self.tableau.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
 
-    rules = list(k.TableauxRules.rules)
-    rules.append(Serial)
+    class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
+        """
+        The rule for identity indiscernability is the same as for K, with the exception that
+        the rule does not apply if the Serial rule was the last rule to apply to the branch.
+        This prevents infinite repetition (back and forth) of the Serial and IdentityIndiscernability
+        rules.
+        """
+
+        def applies_to_branch(self, branch):
+            if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TableauxRules.Serial):
+                return False
+            return super(TableauxRules.IdentityIndiscernability, self).applies_to_branch(branch)
+        
+    rules = [
+
+        k.TableauxRules.Closure,
+        k.TableauxRules.SelfIdentityClosure,
+
+        # non-branching rules
+        k.TableauxRules.Conjunction, 
+        k.TableauxRules.DisjunctionNegated, 
+        k.TableauxRules.MaterialConditionalNegated,
+        k.TableauxRules.ConditionalNegated,
+        k.TableauxRules.Existential,
+        k.TableauxRules.ExistentialNegated,
+        k.TableauxRules.Universal,
+        k.TableauxRules.UniversalNegated,
+        k.TableauxRules.DoubleNegation,
+        k.TableauxRules.PossibilityNegated,
+        k.TableauxRules.NecessityNegated,
+
+        # branching rules
+        k.TableauxRules.ConjunctionNegated,
+        k.TableauxRules.Disjunction, 
+        k.TableauxRules.MaterialConditional, 
+        k.TableauxRules.MaterialBiconditional,
+        k.TableauxRules.MaterialBiconditionalNegated,
+        k.TableauxRules.Conditional,
+        k.TableauxRules.Biconditional,
+        k.TableauxRules.BiconditionalNegated,
+
+        # world creation rules
+        k.TableauxRules.Possibility,
+        k.TableauxRules.Necessity,
+
+        # special ordering of serial rule
+        IdentityIndiscernability,
+        Serial
+    ]

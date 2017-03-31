@@ -26,7 +26,7 @@ class Writer(logic.TableauxSystem.Writer):
 
     name = name
 
-    def write_tableau(self, tableau, writer):
+    def write_tableau(self, tableau, writer, opts):
         return self.write_structure(tableau.tree, writer)
 
     def write_structure(self, structure, writer, indent = 0):

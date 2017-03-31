@@ -31,6 +31,7 @@ source_href = 'https://bitbucket.org/owings1/pytableaux'
 
 # name : arity
 operators = {
+    'Assertion'              : 1,
     'Negation'               : 1,
     'Conjunction'            : 2,
     'Disjunction'            : 2,
@@ -44,6 +45,7 @@ operators = {
 
 # default display ordering
 operators_list = [
+    'Assertion'              ,
     'Negation'               ,
     'Conjunction'            ,
     'Disjunction'            ,
@@ -104,6 +106,16 @@ def negate(sentence):
 
     """
     return Vocabulary.OperatedSentence('Negation', [sentence])
+
+def assertion(sentence):
+    """Apply the assertion operator to the sentence. This is shorthand for
+    *operate('Assertion', [sentence])*. Example::
+
+        a = atomic(0, 0)
+        sentence = assertion(a)
+
+    """
+    return Vocabulary.OperatedSentence('Assertion', [sentence])
 
 def operate(operator, operands):
     """Apply an operator to a list of sentences (operands).
@@ -761,6 +773,10 @@ system_predicates = {
 
 class TableauxSystem(object):
 
+    @staticmethod
+    def build_trunk(tableau, argument):
+        raise Exception(NotImplemented)
+
     class Tableau(object):
         """
         Represents a tableau proof of an argument for the given logic.
@@ -794,7 +810,9 @@ class TableauxSystem(object):
             if logic != None:
                 self.logic = get_logic(logic)
                 self.rules = [Rule(self) for Rule in self.logic.TableauxRules.rules]
-            
+
+            self.trunk_built = False
+
             if argument != None:
                 self.build_trunk()
 
@@ -829,6 +847,11 @@ class TableauxSystem(object):
             structure = { 'nodes' : [], 'children' : [], 'closed' : False }
             while True:
                 B = {branch for branch in branches if len(branch.nodes) > depth}
+                structure['has_open'] = False
+                for branch in B:
+                    if not branch.closed:
+                        structure['has_open'] = True
+                        break
                 distinct_nodes = {branch.nodes[depth] for branch in B}
                 if len(distinct_nodes) == 1:
                     structure['nodes'].append(list(B)[0].nodes[depth])
@@ -840,6 +863,8 @@ class TableauxSystem(object):
                 structure['children'].append(self.structure(child_branches, depth))
             if len(branches) == 1:
                 structure['closed'] = list(branches)[0].closed
+                if not structure['closed']:
+                    structure['has_open'] = True
                 structure['width'] = 1
             if len(structure['children']):
                 structure['width'] = sum([child['width'] for child in structure['children']])
@@ -869,7 +894,10 @@ class TableauxSystem(object):
             return [self.branch(other_branch) for x in range(num)]
 
         def build_trunk(self):
-            return self.logic.TableauxSystem.build_trunk(self, self.argument)
+            if self.trunk_built:
+                raise Exception("Trunk is already built.")
+            self.logic.TableauxSystem.build_trunk(self, self.argument)
+            self.trunk_built = True
 
         def finish(self):
             """
@@ -902,12 +930,24 @@ class TableauxSystem(object):
             self.nodes = []
             self.consts = set()
             self.ws = set()
+            self.leaf = None
 
         def has(self, props, ticked=None):
+            """
+            Check whether there is a node on the branch that matches the given properties,
+            optionally filtered by ticked status.
+            """
+            return self.find(props, ticked) != None
+
+        def find(self, props, ticked=None):
+            """
+            Find the first node on the branch that matches the given properties, optionally
+            filtered by ticked status. Returns *None* if not found.
+            """
             for node in self.get_nodes(ticked=ticked):
                 if node.has_props(props):
-                    return True
-            return False
+                    return node
+            return None
 
         def add(self, node):
             """
@@ -918,6 +958,8 @@ class TableauxSystem(object):
             self.nodes.append(node)
             self.consts.update(node.constants())
             self.ws.update(node.worlds())
+            node.parent = self.leaf
+            self.leaf = node
             return self
 
         def update(self, nodes):
@@ -957,6 +999,7 @@ class TableauxSystem(object):
             branch.ticked_nodes = set(self.ticked_nodes)
             branch.consts = set(self.consts)
             branch.ws = set(self.ws)
+            branch.leaf = self.leaf
             return branch
 
         def worlds(self):
@@ -999,14 +1042,14 @@ class TableauxSystem(object):
             return c
 
         def __repr__(self):
-            return self.nodes.__repr__()
+            return {'nodes': self.nodes, 'closed': self.closed}.__repr__()
 
     class Node(object):
         """
         Represents a node on a branch.
         """
 
-        def __init__(self, props={}):
+        def __init__(self, props={}, parent=None):
             #: A dictionary of properties for the node.
             self.props = {
                 'world'      : None,
@@ -1014,6 +1057,7 @@ class TableauxSystem(object):
             }
             self.props.update(props)
             self.ticked = False
+            self.parent = parent
 
         def has_props(self, props):
             for prop in props:
@@ -1253,14 +1297,14 @@ class TableauxSystem(object):
         def document_footer(self):
             return ''
 
-        def write(self, tableau, notation = None, symbol_set = None, writer = None):
+        def write(self, tableau, notation = None, symbol_set = None, writer = None, **opts):
             if writer == None:
                 if notation == None:
                     raise Exception("Must specify either notation or writer.")
                 writer = notation.Writer(symbol_set)
-            return self.write_tableau(tableau, writer)
+            return self.write_tableau(tableau, writer, opts)
 
-        def write_tableau(self, tableau, writer):
+        def write_tableau(self, tableau, writer, opts):
             raise Exception(NotImplemented)
 
 class Parser(object):

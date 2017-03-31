@@ -242,6 +242,10 @@ class TableauxRules(object):
 
         # non-branching rules
 
+        fde.TableauxRules.AssertionDesignated,
+        fde.TableauxRules.AssertionUndesignated,
+        fde.TableauxRules.AssertionNegatedDesignated,
+        fde.TableauxRules.AssertionNegatedUndesignated,
         fde.TableauxRules.ConjunctionDesignated, 
         fde.TableauxRules.DisjunctionNegatedDesignated,
         fde.TableauxRules.DisjunctionUndesignated,

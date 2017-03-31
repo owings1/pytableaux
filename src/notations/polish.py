@@ -29,6 +29,7 @@ symbol_sets = {
     'default' : logic.Parser.SymbolSet('default', {
         'atomic'   : ['a', 'b', 'c', 'd', 'e'],
         'operator' : {
+            'Assertion'              : 'T',
             'Negation'               : 'N',
             'Conjunction'            : 'K',
             'Disjunction'            : 'A',

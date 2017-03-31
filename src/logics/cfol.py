@@ -28,15 +28,15 @@ The semantics for CFOL is the same as CPL, except we add two operators for quant
 
 **Quantification** can be thought of along these lines:
 
-- **Universal Quantifier**: *for all x, x is F* has the value:
+- **Universal Quantifier**: *P{LxFx}* has the value:
 
-    - **T** iff everything is in the extension of *F*.
-    - **F** iff not everything is in the extension of *F*.
+    - **true** iff everything is in the extension of *F*.
+    - **false** iff not everything is in the extension of *F*.
 
-- **Existential Quantifier**: ``there exists an x that is F := not (for all x, not (x is F))``
+- **Existential Quantifier**: *P{XxFx}* is equivalent to *P{~Lx~Fx}*.
 
-*C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
-are cases where *C* also has the value **T**.
+*C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **true**
+are cases where *C* also has the value **true**.
 """
 
 import k, cpl
@@ -76,6 +76,11 @@ undesignated_values = cpl.undesignated_values
 unassigned_value = cpl.unassigned_value
 truth_functional_operators = cpl.truth_functional_operators
 truth_function = cpl.truth_function
+
+class Model(cpl.Model):
+    """
+    A CFOL model is the same as
+    """
 class TableauxSystem(cpl.TableauxSystem):
     """
     CFOL's Tableaux System inherits directly from CPL's.
@@ -83,16 +88,20 @@ class TableauxSystem(cpl.TableauxSystem):
 
 class TableauxRules(object):
     """
-    The Tableaux System for CFOL contains the closure rule from CPL, and all the operator
+    The Tableaux System for CFOL contains the closure and identity rules from CPL, and all the operator
     rules from K, except for the rules for the modal operators (Necessity, Possibility).
     """
 
     rules = [
 
         cpl.TableauxRules.Closure,
+        cpl.TableauxRules.SelfIdentityClosure,
 
         # non-branching rules
 
+        cpl.TableauxRules.IdentityIndiscernability,
+        k.TableauxRules.Assertion,
+        k.TableauxRules.AssertionNegated,
         k.TableauxRules.Conjunction,
         k.TableauxRules.DisjunctionNegated,
         k.TableauxRules.MaterialConditionalNegated,

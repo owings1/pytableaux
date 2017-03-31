@@ -4,7 +4,11 @@
             <div class="vertical-line"></div>
         {% endif %}
         {% for node in structure['nodes'] %}
-            <div class="node {% if node.ticked %}ticked{% endif %}">
+            {% set node_class = '' %}
+            {% if structure['has_open'] and opts['highlight_open'] %}
+                {% set node_class = 'has_open' %}
+            {% endif %}
+            <div class="node {% if node.ticked %}ticked{% endif %} {{ node_class }}">
                 <span class="node-props">
                     {% if 'sentence' in node.props %}
                         <span class="sentence">
@@ -35,7 +39,7 @@
             <div class="horizontal-line" style="width: {{ width }}%; margin-left: {{ margin }}%;"></div>
             {% for child in structure['children'] %}
                 {% set child_width = (100 / structure['width']) * child['width'] %}
-                <div class="child-wrapper" style="width: {{ child_width }}%;"  title="width: {{ child['width'] }}">
+                <div class="child-wrapper" style="width: {{ child_width }}%;">
                     {{ write_structure(child, is_child = True) }}
                 </div>
             {% endfor %}
