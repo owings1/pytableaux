@@ -58,9 +58,21 @@ def example_invalidities():
     ])
     return args
 
-import logic, examples
-from logic import negate, operate, quantify, atomic
+import logic, examples, fde
+from logic import negate, operate, quantify, atomic, constant, predicated
 
+truth_values = [0, 1]
+truth_value_chars = {
+    0 : 'F',
+    1 : 'T'
+}
+designated_values = set([1])
+undesignated_values = set([0])
+unassigned_value = 0
+
+truth_functional_operators = fde.truth_functional_operators
+
+truth_function = fde.truth_function
 class TableauxSystem(logic.TableauxSystem):
     """
     Modal tableaux are similar to classical tableaux, with the addition of a

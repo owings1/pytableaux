@@ -42,7 +42,7 @@ are cases where *C* also has the value **T**.
 import k, cpl
 
 name = 'CFOL'
-description = 'Classical First Order Logic1'
+description = 'Classical First Order Logic'
 
 def example_validities():
     # Everything valid in CPL, K3, K3W, GO, or LP is valid in CFOL
@@ -69,6 +69,13 @@ def example_invalidities():
 import logic, examples
 from logic import negate
 
+truth_values = cpl.truth_values
+truth_value_chars = cpl.truth_value_chars
+designated_values = cpl.designated_values
+undesignated_values = cpl.undesignated_values
+unassigned_value = cpl.unassigned_value
+truth_functional_operators = cpl.truth_functional_operators
+truth_function = cpl.truth_function
 class TableauxSystem(cpl.TableauxSystem):
     """
     CFOL's Tableaux System inherits directly from CPL's.

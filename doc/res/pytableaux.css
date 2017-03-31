@@ -1,0 +1,30 @@
+.truth-table-wrapper {
+    float: left;
+    margin-right: 15px;
+}
+.clear {
+    clear: both;
+}
+.truth-table {
+    border-collapse: collapse;
+    border: 2px solid grey;
+}
+.truth-table th {
+    padding: 8px;
+}
+.truth-table td.value-header {
+    font-weight: bold;
+}
+
+.truth-table td.value-header.row {
+    font-weight: bold;
+    border-bottom: 1px solid black;
+}
+.truth-table td.value-header.column {
+    text-align: right;
+    border-right: 1px solid black;
+}
+
+.truth-table td {
+    padding: 10px;
+}

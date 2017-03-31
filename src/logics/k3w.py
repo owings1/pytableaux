@@ -26,76 +26,10 @@ as Bochvar Internal (B3).
 Semantics
 ---------
 
-Two primitive operators, negation and disjunction, are defined via truth tables.
+The truth-functional operators are defined via truth tables below.
 Negation is the same as K3, but the table for disjunction does not admit a sentence
-with the value **N** for *either* disjunct to be true. Hence the saying "one bit
-of rat's dung spoils the soup," or something.
-
-**Negation**:
-
-+------------+------------+
-| A          | not-A      |
-+============+============+
-|  T         |  F         |
-+------------+------------+
-|  N         |  N         |
-+------------+------------+
-|  F         |  T         |
-+------------+------------+
-
-**Disjunction**:
-
-+-----------+----------+-----------+---------+
-|  A or B   |          |           |         |
-+===========+==========+===========+=========+
-|           |  **T**   |   **N**   |  **F**  |
-+-----------+----------+-----------+---------+
-|  **T**    |    T     |     N     |    T    |
-+-----------+----------+-----------+---------+
-|  **N**    |    N     |     N     |    N    |
-+-----------+----------+-----------+---------+
-|  **F**    |    T     |     N     |    F    | 
-+-----------+----------+-----------+---------+
-
-Other operators are defined via semantic equivalencies:
-
-- **Conjunction**: ``A and B := not (not-A or not-B)``
-
-- **Material Conditional**: ``if A then B := not-A or B``
-    
-- **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
-
-The truth table for some defined connectives are as follows:
-
-**Conjunction**:
-
-+-----------+----------+-----------+---------+
-|  A and B  |          |           |         |
-+===========+==========+===========+=========+
-|           |  **T**   |   **N**   |  **F**  |
-+-----------+----------+-----------+---------+
-|  **T**    |    T     |     N     |    F    |
-+-----------+----------+-----------+---------+
-|  **N**    |    N     |     N     |    N    |
-+-----------+----------+-----------+---------+
-|  **F**    |    F     |     N     |    F    | 
-+-----------+----------+-----------+---------+
-
-**Material Conditional**:
-
-+-----------+----------+-----------+---------+
-|  if A, B  |          |           |         |
-+===========+==========+===========+=========+
-|           |  **T**   |   **N**   |  **F**  |
-+-----------+----------+-----------+---------+
-|  **T**    |    T     |     N     |    F    |
-+-----------+----------+-----------+---------+
-|  **N**    |    N     |     N     |    N    |
-+-----------+----------+-----------+---------+
-|  **F**    |    T     |     N     |    T    | 
-+-----------+----------+-----------+---------+
-
-The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
+with the value **N** for *either* disjunct to be true. Likewise for the other
+binary connectives. Hence the saying "one bit of rat's dung spoils the soup," or something.
 
 **Predicate Sentences** and **Quantification** are handled the same as in FDE.
 
@@ -142,6 +76,18 @@ def example_invalidities():
     
 import logic
 from logic import negate, operate
+
+truth_values = k3.truth_values
+truth_value_chars = k3.truth_value_chars
+designated_values = k3.designated_values
+undesignated_values = k3.undesignated_values
+unassigned_value = k3.unassigned_value
+truth_functional_operators = fde.truth_functional_operators
+
+def truth_function(operator, a, b=None):
+    if logic.arity(operator) == 2 and (a == 0.5 or b == 0.5):
+        return 0.5
+    return fde.truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

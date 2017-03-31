@@ -19,38 +19,14 @@
 # pytableaux - Lukasiewicz 3-valued Logic
 
 """
-Lukasiewicz 3-valued logic is the same as K3, with an extra primitive
-conditional operator that respects the law of conditional identity (if a, then a).
+Lukasiewicz 3-valued logic is the same as K3, with a different conditional
+operator that respects the law of conditional identity (if A, then A).
 
-**Material Conditional**:
+Semantics
+---------
 
-Same as K3:
-
-+-----------+----------+-----------+---------+
-|  if A, B  |          |           |         |
-+===========+==========+===========+=========+
-|           |  **T**   |   **N**   |  **F**  |
-+-----------+----------+-----------+---------+
-|  **T**    |    T     |     N     |    F    |
-+-----------+----------+-----------+---------+
-|  **N**    |    T     |     N     |    N    |
-+-----------+----------+-----------+---------+
-|  **F**    |    T     |     T     |    T    | 
-+-----------+----------+-----------+---------+
-
-**Conditional**:
-
-+------------+----------+-----------+---------+
-|  if A, B   |          |           |         |
-+============+==========+===========+=========+
-|            |  **T**   |   **N**   |  **F**  |
-+------------+----------+-----------+---------+
-|  **T**     |    T     |     N     |    F    |
-+------------+----------+-----------+---------+
-|  **N**     |    T     |     T     |    N    |
-+------------+----------+-----------+---------+
-|  **F**     |    T     |     T     |    T    | 
-+------------+----------+-----------+---------+
+The semantics for L3 is the same as K3, except for the Conditional and Biconditional
+operators (see below).
 """
 name = 'L3'
 description = 'Lukasiewicz 3-valued Logic'
@@ -80,6 +56,19 @@ def example_invalidities():
         'Material Pseudo Contraction'     ,
     ])
     return args
+
+truth_values = k3.truth_values
+truth_value_chars = k3.truth_value_chars
+designated_values = k3.designated_values
+undesignated_values = k3.undesignated_values
+unassigned_value = k3.unassigned_value
+truth_functional_operators = fde.truth_functional_operators
+
+def truth_function(operator, a, b=None):
+    if operator == 'Conditional' or operator == 'Biconditional':
+        if a == 0.5 and b == 0.5:
+            return 1
+    return fde.truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

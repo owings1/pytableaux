@@ -26,73 +26,7 @@ Semantics
 
 The semantics of K3 can be thought of as the same as FDE, with the **B** value removed.
 
-Two primitive operators, negation and disjunction, are defined via truth tables.
-
-**Negation**:
-
-+------------+------------+
-| A          | not-A      |
-+============+============+
-|  T         |  F         |
-+------------+------------+
-|  N         |  N         |
-+------------+------------+
-|  F         |  T         |
-+------------+------------+
-
-**Disjunction**:
-
-+-----------+----------+-----------+---------+
-|  A or B   |          |           |         |
-+===========+==========+===========+=========+
-|           |  **T**   |   **N**   |  **F**  |
-+-----------+----------+-----------+---------+
-|  **T**    |    T     |     T     |    T    |
-+-----------+----------+-----------+---------+
-|  **N**    |    T     |     N     |    N    |
-+-----------+----------+-----------+---------+
-|  **F**    |    T     |     N     |    F    | 
-+-----------+----------+-----------+---------+
-
-Other operators are defined via semantic equivalencies:
-
-- **Conjunction**: ``A and B := not (not-A or not-B)``
-
-- **Material Conditional**: ``if A then B := not-A or B``
-    
-- **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
-
-The truth table for some defined connectives are as follows:
-
-**Conjunction**:
-
-+-----------+----------+-----------+---------+
-|  A and B  |          |           |         |
-+===========+==========+===========+=========+
-|           |  **T**   |   **N**   |  **F**  |
-+-----------+----------+-----------+---------+
-|  **T**    |    T     |     N     |    F    |
-+-----------+----------+-----------+---------+
-|  **N**    |    N     |     N     |    F    |
-+-----------+----------+-----------+---------+
-|  **F**    |    F     |     F     |    F    | 
-+-----------+----------+-----------+---------+
-
-**Material Conditional**:
-
-+-----------+----------+-----------+---------+
-|  if A, B  |          |           |         |
-+===========+==========+===========+=========+
-|           |  **T**   |   **N**   |  **F**  |
-+-----------+----------+-----------+---------+
-|  **T**    |    T     |     N     |    F    |
-+-----------+----------+-----------+---------+
-|  **N**    |    T     |     N     |    N    |
-+-----------+----------+-----------+---------+
-|  **F**    |    T     |     T     |    T    | 
-+-----------+----------+-----------+---------+
-
-The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
+The truth-functional operators are defined via truth tables below.
 
 **Predicate Sentences** like *a is F* are handled via a predicate's *extension* and *anti-extension*:
 
@@ -134,7 +68,7 @@ Some notable features of K3 include:
 name = 'K3'
 description = 'Strong Kleene 3-valued logic'
 
-import fde
+import fde, k
 
 def example_validities():
     args = fde.example_validities()
@@ -169,6 +103,18 @@ def example_invalidities():
     
 import logic
 from logic import negate
+
+truth_values = [0, 0.5, 1]
+truth_value_chars = {
+    0   : 'F',
+    0.5 : 'N',
+    1   : 'T'
+}
+designated_values = k.designated_values
+undesignated_values = set([0, 0.5])
+unassigned_value = 0.5
+truth_functional_operators = fde.truth_functional_operators
+truth_function = fde.truth_function
 
 class TableauxSystem(fde.TableauxSystem):
     """

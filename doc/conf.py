@@ -136,7 +136,7 @@ html_theme = 'default'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
-
+html_static_path = ['res']
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
@@ -249,8 +249,8 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'pytableaux', u'pytableaux Documentation',
-   u'Doug Owings', 'pytableaux', 'One line description of project.',
-   'Miscellaneous'),
+   u'Doug Owings', 'pytableaux', 'A multi-logic proof generator.',
+   'Logic'),
 ]
 
 # Documents to append as an appendix to all manuals.
@@ -269,12 +269,57 @@ import logic, writers, notations, examples
 import writers.html, notations.polish, notations.standard
 import inspect
 import importlib
+from jinja2 import Environment, FileSystemLoader
+
 copyright = logic.copyright
 writer = writers.html.Writer()
 notation = notations.standard
+sp = notation.Parser(examples.vocabulary)
 sw = notation.Writer('html')
+
+env = Environment(
+    loader = FileSystemLoader(os.path.dirname(os.path.abspath(__file__)) + '/templates'),
+    trim_blocks = True,
+    lstrip_blocks = True
+)
+truth_table_template = env.get_template('truth_table.html')
+
+def get_truth_table_html(log, operator, table):
+    s = truth_table_template.render({
+        'arity'      : logic.arity(operator),
+        'sentence'   : examples.operated(operator),
+        'sw'         : sw,
+        'values'     : log.truth_values,
+        'value_chars': log.truth_value_chars,
+        'num_values' : len(log.truth_values),
+        'table'      : table,
+        'operator'   : operator
+    })
+    return s
+
+def make_truth_tables(app, what, name, obj, options, lines):
+    if what == 'module' and hasattr(obj, 'TableauxSystem'):
+        if hasattr(obj, 'truth_functional_operators'):
+            tables = {operator: logic.truth_table(obj, operator) for operator in obj.truth_functional_operators}
+            lines += [
+                'Truth Tables',
+                '------------',
+                '',
+                '.. raw:: html',
+                ''
+            ]
+            for operator in logic.operators_list:
+                if operator in tables:
+                    html = get_truth_table_html(obj, operator, tables[operator])
+                    lines += ['    ' + line for line in html.split('\n')]
+            lines += [
+                '    <div class="clear"></div>',
+                ''
+            ]
+
+header_written = False
 def make_tableau_examples(app, what, name, obj, options, lines):
-    header_written = False
+    #header_written = False
     arg = examples.argument('Material Modus Ponens')
     if what == 'class' and logic.TableauxSystem.Rule in inspect.getmro(obj):
         if obj in [
@@ -285,11 +330,12 @@ def make_tableau_examples(app, what, name, obj, options, lines):
             logic.TableauxSystem.ConditionalNodeRule
         ]:
             return
+        proof = None
         try:
-            if not header_written:
+            if not globals()['header_written']:
                 lines += ['.. raw:: html', '', '    ' + writer.document_header(), '']
-                header_written = True
-            proof = logic.tableau(importlib.import_module(obj.__module__), None)
+                globals()['header_written'] = True
+            proof = logic.tableau(obj.__module__, None)
             rule = next(r for r in proof.rules if r.__class__ == obj)
             rule.example()
             target = rule.applies()
@@ -302,9 +348,13 @@ def make_tableau_examples(app, what, name, obj, options, lines):
                 ''                                     ,
                 '    ' + writer.write(proof, writer=sw)
             ]
-        except:    
+        except Exception as e:
+            print (str(e))
             print 'No example generated for ' + str(obj)
-            raise
+            if proof != None:
+                import json
+                print json.dumps(proof.tree, indent=2, default=str)
+            raise e
     elif what == 'method' and obj.__name__ == 'build_trunk':
         try:
             proof = logic.tableau(importlib.import_module(obj.__module__), arg)
@@ -322,5 +372,31 @@ def make_tableau_examples(app, what, name, obj, options, lines):
             print 'Error making example for ' + str(obj)
             raise
 
+def post_process(app, exception):
+    builddir = os.path.dirname(os.path.abspath(__file__)) + '/_build/html'
+    import re, codecs
+    from HTMLParser import HTMLParser
+    h = HTMLParser()
+    files = [f for f in os.listdir(builddir) if f.endswith('.html')]
+    for fil in files:
+        with codecs.open(builddir + '/' + fil, 'r', 'utf-8') as f:
+            text = f.read()#.decode('utf-8')
+        found = False
+        for s in re.findall(r'P{(.*?)}', text):
+            s1 = h.unescape(s)
+            print('replacing {0} in {1}'.format(s1, fil))
+            found = True
+            sentence = sp.parse(s1)
+            s2 = sw.write(sentence)
+            print("result: {0}".format(s2))
+            text = text.replace(u'P{' + s1 + '}', s2)#.decode('utf-8'))
+        if found:
+            with codecs.open(builddir + '/' + fil, 'w', 'utf-8') as f:
+                #f.write(text.decode('utf-8'))
+                f.write(text)
+    pass
 def setup(app):
     app.connect('autodoc-process-docstring', make_tableau_examples)
+    app.connect('autodoc-process-docstring', make_truth_tables)
+    app.connect('build-finished', post_process)
+    app.add_stylesheet('pytableaux.css')

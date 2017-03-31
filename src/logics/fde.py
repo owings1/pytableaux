@@ -24,83 +24,7 @@ FDE is a 4-valued logic (True, False, Neither and Both).
 Semantics
 ---------
 
-Two primitive operators, negation and disjunction, are defined via truth tables.
-
-**Negation**:
-
-+------------+------------+
-| A          | not-A      |
-+============+============+
-|  T         |  F         |
-+------------+------------+
-|  B         |  B         |
-+------------+------------+
-|  N         |  N         |
-+------------+------------+
-|  F         |  T         |
-+------------+------------+
-
-**Disjunction**:
-
-+-----------+----------+-----------+-----------+---------+
-|  A or B   |          |           |           |         |
-+===========+==========+===========+===========+=========+
-|           |  **T**   |   **B**   |   **N**   |  **F**  |
-+-----------+----------+-----------+-----------+---------+
-|  **T**    |    T     |     T     |     T     |    T    |
-+-----------+----------+-----------+-----------+---------+
-|  **B**    |    T     |     B     |     B     |    F    |
-+-----------+----------+-----------+-----------+---------+
-|  **N**    |    T     |     B     |     N     |    N    |
-+-----------+----------+-----------+-----------+---------+
-|  **F**    |    T     |     F     |     N     |    F    | 
-+-----------+----------+-----------+-----------+---------+
-
-Other operators are defined via semantic equivalencies:
-
-- **Conjunction**: ``A and B := not (not-A or not-B)``
-
-- **Material Conditional**: ``if A then B := not-A or B``
-    
-- **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
-
-The truth tables for some defined connectives are as follows:
-
-**Conjunction**:
-
-+-----------+----------+-----------+-----------+---------+
-|  A and B  |          |           |           |         |
-+===========+==========+===========+===========+=========+
-|           |  **T**   |   **B**   |   **N**   |  **F**  |
-+-----------+----------+-----------+-----------+---------+
-|  **T**    |    T     |     T     |     N     |    F    |
-+-----------+----------+-----------+-----------+---------+
-|  **B**    |    T     |     B     |     B     |    F    |
-+-----------+----------+-----------+-----------+---------+
-|  **N**    |    N     |     B     |     N     |    F    |
-+-----------+----------+-----------+-----------+---------+
-|  **F**    |    F     |     F     |     F     |    F    | 
-+-----------+----------+-----------+-----------+---------+
-
-
-**Material Conditional**:
-
-+-----------+----------+-----------+-----------+---------+
-|  if A, B  |          |           |           |         |
-+===========+==========+===========+===========+=========+
-|           |  **T**   |   **B**   |   **N**   |  **F**  |
-+-----------+----------+-----------+-----------+---------+
-|  **T**    |    T     |     F     |     N     |    F    |
-+-----------+----------+-----------+-----------+---------+
-|  **B**    |    T     |     B     |     B     |    F    |
-+-----------+----------+-----------+-----------+---------+
-|  **N**    |    T     |     B     |     N     |    N    |
-+-----------+----------+-----------+-----------+---------+
-|  **F**    |    T     |     T     |     T     |    T    | 
-+-----------+----------+-----------+-----------+---------+
-
-
-The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
+Truth-functional operators are defined via truth tables (below).
 
 **Predicate Sentences** like *a is F* are handled via a predicate's *extension* and *anti-extension*:
 
@@ -171,6 +95,43 @@ def example_invalidities():
 import logic, examples
 from logic import negate, quantify, atomic
 
+truth_values = [0, 0.25, 0.75, 1]
+truth_value_chars = {
+    0    : 'F',
+    0.25 : 'N',
+    0.75 : 'B',
+    1    : 'T'
+}
+designated_values = set([0.75, 1])
+undesignated_values = set([0, 0.25])
+unassigned_value = 0.25
+
+truth_functional_operators = set([
+    'Assertion'                 ,
+    'Negation'                  ,
+    'Conjunction'               ,
+    'Disjunction'               ,
+    'Material Conditional'      ,
+    'Conditional'               ,
+    'Material Biconditional'    ,
+    'Biconditional'             ,
+])
+
+def truth_function(operator, a, b=None):
+    if operator == 'Assertion':
+        return a
+    if operator == 'Negation':
+        if a == 0 or a == 1:
+            return 1 - a
+        return a
+    elif operator == 'Conjunction':
+        return min(a, b)
+    elif operator == 'Disjunction':
+        return max(a, b)
+    elif operator == 'Material Conditional' or operator == 'Conditional':
+        return max(truth_function('Negation', a), b)
+    elif operator == 'Material Biconditional' or  operator == 'Biconditional':
+        return min(max(truth_function('Negation', a), b), max(truth_function('Negation', b), a))
 class TableauxSystem(logic.TableauxSystem):
     """
     Nodes for FDE have a boolean *designation* property, and a branch is closed iff

@@ -28,50 +28,9 @@ material conditional, which is similar to L3. However, this conditional is
 Semantics
 ---------
 
-Three primitive operators, negation, conjunction, and disjunction are defined
-via truth tables as follows:
+The truth-functional operators are defined via tables below.
 
-**Negation**:
-
-+------------+------------+
-| A          | not-A      |
-+============+============+
-|  T         |  F         |
-+------------+------------+
-|  N         |  N         |
-+------------+------------+
-|  F         |  T         |
-+------------+------------+
-
-**Disjunction**:
-
-+-----------+----------+-----------+---------+
-|  A or B   |          |           |         |
-+===========+==========+===========+=========+
-|           |  **T**   |   **N**   |  **F**  |
-+-----------+----------+-----------+---------+
-|  **T**    |    T     |     T     |    T    |
-+-----------+----------+-----------+---------+
-|  **N**    |    T     |     F     |    F    |
-+-----------+----------+-----------+---------+
-|  **F**    |    T     |     F     |    F    | 
-+-----------+----------+-----------+---------+
-
-**Conjunction**:
-
-+-----------+----------+-----------+---------+
-|  A and B  |          |           |         |
-+===========+==========+===========+=========+
-|           |  **T**   |   **N**   |  **F**  |
-+-----------+----------+-----------+---------+
-|  **T**    |    T     |     F     |    F    |
-+-----------+----------+-----------+---------+
-|  **N**    |    F     |     F     |    F    |
-+-----------+----------+-----------+---------+
-|  **F**    |    F     |     F     |    F    | 
-+-----------+----------+-----------+---------+
-
-Note that, given the tables above, conjunctions and disjunctions always have a classical
+Note that, given the tables below, conjunctions and disjunctions always have a classical
 value (True or False). This means that only atomic sentences (with zero or more negations)
 can have the Neither value.
 
@@ -137,8 +96,39 @@ def example_invalidities():
     ])
     return args
 
-import logic, fde, k3
+import logic, fde, k3, math
 from logic import negate, operate
+
+truth_values = k3.truth_values
+truth_value_chars = k3.truth_value_chars
+designated_values = k3.designated_values
+undesignated_values = k3.undesignated_values
+unassigned_value = k3.unassigned_value
+truth_functional_operators = fde.truth_functional_operators
+
+def gap(v):
+    return min(v, 1 - v)
+
+def crunch(v):
+    return v - gap(v)
+        
+def truth_function(operator, a, b=None):
+    if operator == 'Assertion':
+        return crunch(a)
+    elif operator == 'Negation':
+        return 1 - a
+    elif operator == 'Disjunction':
+        return max(crunch(a), crunch(b))
+    elif operator == 'Conjunction':
+        return min(crunch(a), crunch(b))
+    elif operator == 'Material Conditional':
+        return truth_function('Disjunction', 1 - a, b)
+    elif operator == 'Material Biconditional':
+        return truth_function('Conjunction', truth_function('Disjunction', 1 - a, b), truth_function('Disjunction', 1 - b, a))
+    elif operator == 'Conditional':
+        return crunch(max(1 - a, b, gap(a) + gap(b)))
+    elif operator == 'Biconditional':
+        return truth_function('Conjunction', truth_function('Conditional', a, b), truth_function('Conditional', b, a))
 
 class TableauxSystem(fde.TableauxSystem):
     """

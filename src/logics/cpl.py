@@ -104,7 +104,7 @@ The **Conditional** and **Biconditional** operators are equivalent to their mate
 are cases where *C* also has the value **T**.
 """
 
-import k
+import k, fde
 
 name = 'CPL'
 description = 'Classical Predicate Logic'
@@ -154,6 +154,13 @@ def example_invalidities():
 import logic, examples
 from logic import negate
 
+truth_values = k.truth_values
+truth_value_chars = k.truth_value_chars
+designated_values = k.designated_values
+undesignated_values = k.undesignated_values
+unassigned_value = k.unassigned_value
+truth_functional_operators = fde.truth_functional_operators
+truth_function = fde.truth_function
 class TableauxSystem(logic.TableauxSystem):
     """
     A branch can be thought of as representing a case where each node's sentence

@@ -19,47 +19,13 @@
 # pytableaux - Logic of Paradox
 
 """
-Semantics
----------
-
 LP is a 3-valued logic (True, False, and Both). Two primitive operators, negation and
 disjunction, are defined via truth tables.
 
-**Negation**:
+Semantics
+---------
 
-+------------+------------+
-| A          | not-A      |
-+============+============+
-|  T         |  F         |
-+------------+------------+
-|  B         |  B         |
-+------------+------------+
-|  F         |  T         |
-+------------+------------+
-
-**Disjunction**:
-
-+-----------+----------+-----------+---------+
-|  A or B   |          |           |         |
-+===========+==========+===========+=========+
-|           |  **T**   |   **B**   |  **F**  |
-+-----------+----------+-----------+---------+
-|  **T**    |    T     |     T     |    T    |
-+-----------+----------+-----------+---------+
-|  **B**    |    T     |     B     |    F    |
-+-----------+----------+-----------+---------+
-|  **F**    |    T     |     F     |    F    | 
-+-----------+----------+-----------+---------+
-
-Other operators are defined via semantic equivalencies:
-
-- **Conjunction**: ``A and B := not (not-A or not-B)``
-
-- **Material Conditional**: ``if A then B := not-A or B``
-    
-- **Material Biconditional**: ``A if and only if B := (if A then B) and (if B then A)``
-
-The **Conditional** and **Biconditional** operators are equivalent to their material counterparts.
+Truth-functional operators are defined via truth tables (below).
 
 **Predicate Sentences** like *a is F* are handled via a predicate's *extension* and *anti-extension*:
 
@@ -105,7 +71,7 @@ For futher reading see:
 name = 'LP'
 description = 'Logic of Paradox'
 
-import fde
+import fde, k
 
 def example_validities():
     args = fde.example_validities()
@@ -140,6 +106,18 @@ def example_invalidities():
     
 import logic
 from logic import negate
+
+truth_values = [0, 0.75, 1]
+truth_value_chars = {
+    0    : 'F',
+    0.75 : 'B',
+    1    : 'T'
+}
+designated_values = fde.designated_values
+undesignated_values = k.undesignated_values
+unassigned_value = 0
+truth_functional_operators = fde.truth_functional_operators
+truth_function = fde.truth_function
 
 class TableauxSystem(fde.TableauxSystem):
     """

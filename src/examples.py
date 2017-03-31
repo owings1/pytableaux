@@ -111,6 +111,20 @@ def arguments(names=None):
         names = args_list
     return [argument(name) for name in names]
 
+def predicated():
+    c = logic.constant(0, 0)
+    p = vocabulary.get_predicate(index = 0, subscript = 0)
+    return logic.predicated(p, [c])
+
+def identity():
+    a = logic.constant(0, 0)
+    b = logic.constant(1, 0)
+    return logic.predicated('Identity', [a, b])
+
+def self_identity():
+    a = logic.constant(0, 0)
+    return logic.predicated('Identity', [a, a])
+
 def quantified(quantifier):
     x = logic.variable(0, 0)
     x_is_f = logic.predicated('is F', [x], vocabulary)
@@ -119,3 +133,10 @@ def quantified(quantifier):
         s = logic.operate('Material Conditional', [x_is_f, x_is_g])
         return logic.quantify(quantifier, x, s)
     return logic.quantify(quantifier, x, x_is_f)
+
+def operated(operator):
+    a = logic.atomic(0, 0)
+    operands = [a]
+    for x in range(logic.arity(operator) - 1):
+        operands.append(operands[-1].next())
+    return logic.operate(operator, operands)

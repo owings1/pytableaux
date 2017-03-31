@@ -18,7 +18,7 @@
 #
 # pytableaux - logic base module
 
-import importlib, notations, os
+import importlib, notations, os, itertools
 from types import ModuleType
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -334,6 +334,16 @@ def get_logic(arg):
     """
     return _get_module('logics', arg)
 
+def truth_table(logic, operator):
+    logic = get_logic(logic)
+    inputs = list(itertools.product(*[logic.truth_values for x in range(arity(operator))]))
+    outputs = [logic.truth_function(operator, *values) for values in inputs]
+    return {'inputs': inputs, 'outputs': outputs}
+
+def truth_tables(logic):
+    logic = get_logic(logic)
+    return {operator: truth_table(logic, operator) for operator in logic.truth_functional_operators}
+
 def _get_module(package, arg):    
     if isinstance(arg, ModuleType):
         return arg
@@ -463,6 +473,12 @@ class Vocabulary(object):
         if index >= 0:
             self.user_predicates_index[str([index, subscript])] = predicate    
         return predicate
+
+    def list_predicates(self):
+        return system_predicates_list + self.user_predicates_list
+
+    def list_user_predicates(self):
+        return list(self.user_predicates_list)
 
     class Constant(object):
 
