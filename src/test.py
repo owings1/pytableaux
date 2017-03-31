@@ -21,7 +21,7 @@
 import examples
 from logic import *
 from notations import polish, standard
-from logics import fde, k3, k3w, lp, go, cfol, cpl, k, d, t, s4, l3
+from logics import fde, k3, k3w, b3e, lp, go, cfol, cpl, k, d, t, s4, l3
 from writers import ascii
 
 def main():
@@ -37,6 +37,7 @@ def test_logics():
         'fde',
         'k3',
         'k3w',
+        'b3e',
         'lp',
         'go',
         'cpl',
@@ -64,7 +65,7 @@ def test_logics():
             try:
                 t = tableau(logic, arg).build()
             except:
-                print("Failed to evaluated '{0}' in {1}".format(name, logic.name))
+                print("Failed to evaluate '{0}' in {1}".format(name, logic.name))
                 raise
             result_str = 'VALID' if t.valid else 'INVALID'
             if expect != None:

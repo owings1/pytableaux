@@ -140,6 +140,20 @@ K3W - Weak Kleene Logic
     .. autoclass:: TableauxRules
         :members:
 
+B3E - Bochvar 3-valued External Logic
+=====================================
+
+.. automodule:: logics.b3e
+
+    Tableaux System
+    ---------------
+
+    .. autoclass:: TableauxSystem
+        :members:
+
+    .. autoclass:: TableauxRules
+        :members:
+
 L3 - Lukasiewicz 3-valued Logic
 ===============================
 
