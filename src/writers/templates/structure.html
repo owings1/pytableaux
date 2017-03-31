@@ -1,5 +1,6 @@
 {% macro write_structure(structure, is_child = False) -%}
-    <div class="html-writer structure">
+    <div class="html-writer structure" data-left="{{ structure['left'] }}" data-right="{{ structure['right'] }}">
+        <div class="node-segment">
         {% if is_child %}
             <div class="vertical-line"></div>
         {% endif %}
@@ -11,9 +12,7 @@
             <div class="node {% if node.ticked %}ticked{% endif %} {{ node_class }}">
                 <span class="node-props">
                     {% if 'sentence' in node.props %}
-                        <span class="sentence">
-                            {{ writer.write(node.props['sentence'], symbol_set = 'html') }}
-                        </span>
+                        <span class="sentence">{{ writer.write(node.props['sentence'], symbol_set = 'html') }}</span>
                         {% if 'world' in node.props and node.props['world'] != None %}
                             <span class="world">, w<span class="subscript">{{ node.props['world'] }}</span></span>
                         {% endif %}
@@ -34,17 +33,25 @@
         {% endif %}
         {% if structure['children']|length %}
             <div class="vertical-line"></div>
+        {% endif %}
+        </div>
+        {% if structure['children']|length %}
             {% set width = 100 * structure['balanced_line_width'] %}
             {% set margin = 100 * structure['balanced_line_margin'] %}
-            <div class="horizontal-line" style="width: {{ width }}%; margin-left: {{ margin }}%;"></div>
+            <div class="horizontal-line"
+                style="width: {{ width }}%; margin-left: {{ margin }}%;"
+                data-orig-width="{{ width }}%"
+                data-orig-margin-left="{{ margin }}%"></div>
             {% for child in structure['children'] %}
                 {% set child_width = (100 / structure['width']) * child['width'] %}
-                <div class="child-wrapper" style="width: {{ child_width }}%;">
+                <div class="child-wrapper" style="width: {{ child_width }}%;" data-orig-width="{{ child_width }}%">
                     {{ write_structure(child, is_child = True) }}
                 </div>
             {% endfor %}
         {% endif %}
     </div>
 {%- endmacro %}
-{{ write_structure(tableau.tree) }}
+<div class="html-writer-proof">
+    {{ write_structure(tableau.tree) }}
+</div>
 <div style="clear: both"></div>

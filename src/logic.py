@@ -843,36 +843,41 @@ class TableauxSystem(object):
             """
             return {branch for branch in self.branches if not branch.closed}
 
-        def structure(self, branches, depth=0):
-            structure = { 'nodes' : [], 'children' : [], 'closed' : False }
+        def structure(self, branches, depth=0, pnum=None, parent=None, child_index=0):
+            if pnum == None:
+                pnum = [0]
+            pnum[0] += 1
+            structure = { 'nodes' : [], 'children' : [], 'closed' : False, 'left' : pnum[0] }
             while True:
-                B = {branch for branch in branches if len(branch.nodes) > depth}
+                B = list({branch for branch in branches if len(branch.nodes) > depth})
                 structure['has_open'] = False
                 for branch in B:
                     if not branch.closed:
                         structure['has_open'] = True
                         break
-                distinct_nodes = {branch.nodes[depth] for branch in B}
+                distinct_nodes = list({branch.nodes[depth] for branch in B})
                 if len(distinct_nodes) == 1:
-                    structure['nodes'].append(list(B)[0].nodes[depth])
+                    structure['nodes'].append(B[0].nodes[depth])
                     depth += 1
                     continue
                 break
-            for node in distinct_nodes:
-                child_branches = {branch for branch in branches if branch.nodes[depth] == node}
-                structure['children'].append(self.structure(child_branches, depth))
             if len(branches) == 1:
-                structure['closed'] = list(branches)[0].closed
+                structure['closed'] = branches[0].closed
                 if not structure['closed']:
                     structure['has_open'] = True
-                structure['width'] = 1
+                structure['width'] = 1  
+            for i, node in enumerate(distinct_nodes):
+                child_branches = list({branch for branch in branches if branch.nodes[depth] == node})
+                structure['children'].append(self.structure(child_branches, depth, pnum, structure, i))
+            pnum[0] += 1
+            structure['right'] = pnum[0]
             if len(structure['children']):
                 structure['width'] = sum([child['width'] for child in structure['children']])
                 first_width = float(structure['children'][0]['width']) / 2
                 last_width = float(structure['children'][-1]['width']) / 2
                 inbetween_widths = sum([child['width'] for child in structure['children'][1:-1]])
                 structure['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / structure['width']
-                structure['balanced_line_margin'] = first_width / structure['width']
+                structure['balanced_line_margin'] = first_width / structure['width']               
             return structure
 
         def branch(self, other_branch=None):
@@ -906,7 +911,7 @@ class TableauxSystem(object):
             """
             self.finished = True
             self.valid    = len(self.open_branches()) == 0
-            self.tree     = self.structure(self.branches)
+            self.tree     = self.structure(list(self.branches))
             return self
 
         def __repr__(self):
