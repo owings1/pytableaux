@@ -22,14 +22,28 @@ import logic
 
 name = "ASCII"
 
+HCHAR = '|'
+VCHAR = '_'
+TCHAR = '-'
+
 class Writer(logic.TableauxSystem.Writer):
 
     name = name
 
     def write_tableau(self, tableau, writer, opts):
-        return self.write_structure(tableau.tree, writer)
+        s = ''
+        if 'status_panel' in opts and opts['status_panel']:
+            s += self.write_status(tableau, writer, opts)
+            s += '\n\n'
+        s += '\n'.join([
+            'Proof',
+            '=====',
+            ''
+        ])
+        s += self.write_structure(tableau.tree, writer, opts)
+        return s
 
-    def write_structure(self, structure, writer, indent = 0):
+    def write_structure(self, structure, writer, opts, indent = 0, indents=[]):
         node_strs = []
         for node in structure['nodes']:
             s = ''
@@ -47,10 +61,57 @@ class Writer(logic.TableauxSystem.Writer):
             if node.ticked:
                 s += ' *'
             node_strs.append(s)
-        s = ' ' * indent + ' | '.join(node_strs)
+        s = ''
+        for ind in indents:
+            s += ' ' * (ind - 1) + HCHAR
+        if indent > 0:
+            s += 2 * VCHAR + ' '
+        s += ' | '.join(node_strs)
         if structure['closed']:
             s += ' (X)'
-        i = len(s) + 1
+        elif len(structure['children']) > 0:
+            s += ' ' + HCHAR
+        i = len(s)
         for child in structure['children']:
-            s += "\n" + self.write_structure(child, writer, indent = i)
+            inds = list(indents)
+            inds.append(i - indent)
+            s += "\n" + self.write_structure(child, writer, opts, indent = i, indents=inds)
+            s += '\n'
+            for ind in inds:
+                s += ' ' * (ind - 1) + HCHAR
         return s
+
+    def write_status(self, tableau, writer, opts):
+        lines = []
+        if tableau.argument != None:
+            lines += [
+                'Argument',
+                '========'
+            ]
+            pstrs = [writer.write(premise) for premise in tableau.argument.premises]
+            cstr = writer.write(tableau.argument.conclusion)
+            lines += pstrs
+            if len(tableau.argument.premises):
+                lines.append(TCHAR * min(max([len(s) for s in pstrs] + [5, len(cstr)]), 20))
+            lines.append(cstr)
+            lines.append('')
+        result = 'Valid' if tableau.valid else 'Invalid'
+        lines += [
+            'Summary',
+            '======='
+        ]
+        
+        lines += [
+            'Logic          : {0} - {1}'.format(tableau.logic.name, tableau.logic.description),
+            'Result         : {0}'.format(tableau.stats['result']),
+            'Branches       : {0}'.format(tableau.stats['branches'])
+        ]
+        if not tableau.valid:
+            lines += [
+                'Open Branches  : {0}'.format(tableau.stats['open_branches'])
+            ]
+        lines += [
+            'Distinct Nodes : {0}'.format(tableau.stats['distinct_nodes']),
+            'Rules Applied  : {0}'.format(tableau.stats['rules_applied'])
+        ]
+        return '\n'.join(lines)
