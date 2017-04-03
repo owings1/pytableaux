@@ -115,7 +115,9 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            b1, b2, b3 = self.tableau.branch_multi(branch, 3)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b3 = self.tableau.branch(branch)
             b1.update([
                 { 'sentence' :        s.lhs , 'designated' : d },
                 { 'sentence' : negate(s.rhs), 'designated' : d }
@@ -141,7 +143,9 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            b1, b2, b3 = self.tableau.branch_multi(branch, 3)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b3 = self.tableau.branch(branch)
             b1.update([
                 { 'sentence' :        s.lhs , 'designated' : d },
                 { 'sentence' : negate(s.lhs), 'designated' : d }
@@ -169,7 +173,10 @@ class TableauxRules(object):
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
-            b1, b2, b3, b4 = self.tableau.branch_multi(branch, 4)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b3 = self.tableau.branch(branch)
+            b4 = self.tableau.branch(branch)
             b1.update([
                 { 'sentence' :        s.lhs , 'designated' : True },
                 { 'sentence' :        s.rhs , 'designated' : True }
@@ -202,7 +209,9 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            b1, b2, b3 = self.tableau.branch_multi(branch, 3)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b3 = self.tableau.branch(branch)
             b1.update([
                 { 'sentence' :        s.lhs , 'designated' : d },
                 { 'sentence' : negate(s.rhs), 'designated' : d }
@@ -228,7 +237,9 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            b1, b2, b3 = self.tableau.branch_multi(branch, 3)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b3 = self.tableau.branch(branch)
             b1.update([
                 { 'sentence' :        s.lhs , 'designated' : d },
                 { 'sentence' : negate(s.lhs), 'designated' : d }

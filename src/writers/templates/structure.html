@@ -1,6 +1,8 @@
 {% macro write_structure(structure, is_child = False) -%}
-    <div class="html-writer structure{% if not is_child %} zoomed{% endif %}"
-        data-left="{{ structure['left'] }}" data-right="{{ structure['right'] }}" data-step="{{ structure['step'] }}">
+    <div class="structure{% if not is_child %} zoomed{% endif %}"
+        data-left="{{ structure['left'] }}"
+        data-right="{{ structure['right'] }}"
+        data-step="{{ structure['step'] }}">
         <div class="node-segment">
         {% if is_child %}
             <div class="vertical-line"></div>
@@ -10,7 +12,7 @@
             {% if structure['has_open'] and opts['highlight_open'] %}
                 {% set node_class = 'has_open' %}
             {% endif %}
-            <div class="node {% if node.ticked %}ticked{% endif %} {{ node_class }}" data-step="{{ node.step }}">
+            <div class="node {% if node.ticked %}ticked{% endif %} {{ node_class }}" data-step="{{ node.step }}"{% if node.ticked %} data-ticked-step="{{ node.ticked_step }}"{% endif %}>
                 <span class="node-props">
                     {% if 'sentence' in node.props %}
                         <span class="sentence">{{ writer.write(node.props['sentence'], symbol_set = 'html') }}</span>
@@ -30,25 +32,27 @@
             </div>
         {% endfor %}
         {% if structure['closed'] %}
-            <div class="closeMark">&otimes;</div>
-        {% endif %}
-        {% if structure['children']|length %}
-            <div class="vertical-line"></div>
+            <div class="closeMark" data-step="{{ structure['closed_step'] }}">&otimes;</div>
         {% endif %}
         </div>
         {% if structure['children']|length %}
+            <div class="vertical-line" data-step="{{ structure['branch_step'] }}"></div>
             {% set width = 100 * structure['balanced_line_width'] %}
             {% set margin = 100 * structure['balanced_line_margin'] %}
             <div class="horizontal-line"
                 style="width: {{ width }}%; margin-left: {{ margin }}%;"
                 data-orig-width="{{ width }}%"
-                data-orig-margin-left="{{ margin }}%"></div>
+                data-orig-margin-left="{{ margin }}%"
+                data-step="{{ structure['branch_step'] }}"></div>
             {% for child in structure['children'] %}
                 {% set child_width = (100 / structure['width']) * child['width'] %}
-                <div class="child-wrapper" style="width: {{ child_width }}%;" data-orig-width="{{ child_width }}%">
+                <div class="child-wrapper" style="width: {{ child_width }}%;" data-orig-width="{{ child_width }}%" data-step="{{ child['step'] }}">
                     {{ write_structure(child, is_child = True) }}
                 </div>
             {% endfor %}
+        {% endif %}
+        {% if not is_child %}
+            <div class="clear"></div>
         {% endif %}
     </div>
 {%- endmacro %}
@@ -81,4 +85,3 @@
 <div class="html-writer-proof">
     {{ write_structure(tableau.tree) }}
 </div>
-<div style="clear: both"></div>

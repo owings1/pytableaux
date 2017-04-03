@@ -790,7 +790,7 @@ class TableauxSystem(object):
             self.valid = None
             
             #: The set of branches on the tableau.
-            self.branches = set()
+            self.branches = list()
             
             #: A tree-map structure of the tableau, generated after the proof is finished.
             self.tree = dict()
@@ -812,7 +812,7 @@ class TableauxSystem(object):
                 self.rules = [Rule(self) for Rule in self.logic.TableauxRules.rules]
 
             self.trunk_built = False
-
+            self.current_step = -1
             if argument != None:
                 self.build_trunk()
 
@@ -833,6 +833,7 @@ class TableauxSystem(object):
                     rule.apply(target)
                     application = { 'rule' : rule, 'target' : target }
                     self.history.append(application)
+                    self.current_step += 1
                     return application
             self.finish()
             return False
@@ -849,61 +850,75 @@ class TableauxSystem(object):
             pnum[0] += 1
             structure = { 'nodes' : [], 'children' : [], 'closed' : False, 'left' : pnum[0] }
             while True:
-                B = list({branch for branch in branches if len(branch.nodes) > depth})
+                B = [branch for branch in branches if len(branch.nodes) > depth]
                 structure['has_open'] = False
                 for branch in B:
                     if not branch.closed:
                         structure['has_open'] = True
                         break
-                distinct_nodes = list({branch.nodes[depth] for branch in B})
+                distinct_nodes = []
+                distinct_nodeset = set()
+                for branch in B:
+                    node = branch.nodes[depth]
+                    if node not in distinct_nodeset:
+                        distinct_nodeset.add(node)
+                        distinct_nodes.append(node)
                 if len(distinct_nodes) == 1:
-                    structure['nodes'].append(B[0].nodes[depth])
+                    node = B[0].nodes[depth]
+                    structure['nodes'].append(node)
+                    if 'step' not in structure or structure['step'] > node.step:
+                        structure['step'] = node.step
                     depth += 1
                     continue
                 break
             self.stats['distinct_nodes'] += len(structure['nodes'])
             if len(branches) == 1:
                 structure['closed'] = branches[0].closed
-                if not structure['closed']:
+                if structure['closed']:
+                    structure['closed_step'] = branches[0].closed_step
+                else:
                     structure['has_open'] = True
-                structure['width'] = 1  
-            for i, node in enumerate(distinct_nodes):
-                child_branches = list({branch for branch in branches if branch.nodes[depth] == node})
-                structure['children'].append(self.structure(child_branches, depth, pnum))
+                structure['width'] = 1
+            else:
+                structure['width'] = 0
+                inbetween_widths = 0
+                for i, node in enumerate(distinct_nodes):
+                    child_branches = [branch for branch in branches if branch.nodes[depth] == node]
+                    child = self.structure(child_branches, depth, pnum)
+                    structure['width'] += child['width']
+                    structure['children'].append(child)
+                    if i == 0:
+                        structure['branch_step'] = child['step']
+                        first_width = float(child['width']) / 2
+                    elif i == len(distinct_nodes) - 1:
+                        last_width = float(child['width']) / 2
+                    else:
+                        inbetween_widths += child['width']
+                    if structure['branch_step'] > child['step']:
+                        structure['branch_step'] = child['step']
+                structure['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / structure['width']
+                structure['balanced_line_margin'] = first_width / structure['width']
             pnum[0] += 1
             structure['right'] = pnum[0]
-            if len(structure['children']):
-                structure['width'] = sum([child['width'] for child in structure['children']])
-                first_width = float(structure['children'][0]['width']) / 2
-                last_width = float(structure['children'][-1]['width']) / 2
-                inbetween_widths = sum([child['width'] for child in structure['children'][1:-1]])
-                structure['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / structure['width']
-                structure['balanced_line_margin'] = first_width / structure['width']               
             return structure
 
         def branch(self, other_branch=None):
             """
             Return a new branch on the tableau containing the nodes of the given branch, if any.
             """
-            if not other_branch:
-                branch = TableauxSystem.Branch()
+            if other_branch == None:
+                branch = TableauxSystem.Branch(self)
             else:
                 branch = other_branch.copy()
-                self.branches.discard(other_branch) # ?? can't remember why I do this...
-            self.branches.add(branch)
+            self.branches.append(branch)
             return branch
-
-        def branch_multi(self, other_branch=None, num=1):
-            """
-            Return a list of new branches from the given branch.
-            """
-            return [self.branch(other_branch) for x in range(num)]
 
         def build_trunk(self):
             if self.trunk_built:
                 raise Exception("Trunk is already built.")
             self.logic.TableauxSystem.build_trunk(self, self.argument)
             self.trunk_built = True
+            self.current_step += 1
 
         def finish(self):
             """
@@ -936,7 +951,7 @@ class TableauxSystem(object):
         Represents a tableau branch.
         """
 
-        def __init__(self):
+        def __init__(self, tableau=None):
             #: A branch is closed by a closure rule.
             self.closed = False
             self.ticked_nodes = set()
@@ -944,6 +959,8 @@ class TableauxSystem(object):
             self.consts = set()
             self.ws = set()
             self.leaf = None
+            self.tableau = tableau
+            self.closed_step = None
 
         def has(self, props, ticked=None):
             """
@@ -972,6 +989,8 @@ class TableauxSystem(object):
             self.consts.update(node.constants())
             self.ws.update(node.worlds())
             node.parent = self.leaf
+            if self.tableau != None:
+                node.step = self.tableau.current_step
             self.leaf = node
             return self
 
@@ -987,8 +1006,12 @@ class TableauxSystem(object):
             """
             Tick a node for the branch. Returns self.
             """
-            self.ticked_nodes.add(node)
-            node.ticked = True
+            if node not in self.ticked_nodes:
+                self.ticked_nodes.add(node)
+                node.ticked = True
+                if self.tableau != None and self.tableau.current_step != None:
+                    if node.ticked_step == None or self.tableau.current_step > node.ticked_step:
+                        node.ticked_step = self.tableau.current_step
             return self
 
         def close(self):
@@ -996,6 +1019,8 @@ class TableauxSystem(object):
             Close the branch. Returns self.
             """
             self.closed = True
+            if self.tableau != None:
+                self.closed_step = self.tableau.current_step
             return self
 
         def get_nodes(self, ticked=None):
@@ -1013,6 +1038,7 @@ class TableauxSystem(object):
             branch.consts = set(self.consts)
             branch.ws = set(self.ws)
             branch.leaf = self.leaf
+            branch.tableau = self.tableau
             return branch
 
         def worlds(self):
@@ -1071,6 +1097,8 @@ class TableauxSystem(object):
             self.props.update(props)
             self.ticked = False
             self.parent = parent
+            self.step = None
+            self.ticked_step = None
 
         def has_props(self, props):
             for prop in props:

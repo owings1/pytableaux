@@ -213,10 +213,11 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            for conjunct in s.operands:
-                self.tableau.branch(branch).add({
-                    'sentence' : negate(conjunct), 'designated' : d
-                }).tick(node)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b1.add({ 'sentence' : negate(s.lhs), 'designated' : d }).tick(node)
+            b2.add({ 'sentence' : negate(s.rhs), 'designated' : d }).tick(node)
+
 
     class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -231,10 +232,10 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            for conjunct in s.operands:
-                self.tableau.branch(branch).add({
-                    'sentence' : conjunct, 'designated' : d
-                }).tick(node)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b1.add({ 'sentence' : s.lhs, 'designated' : d }).tick(node)
+            b2.add({ 'sentence' : s.rhs, 'designated' : d }).tick(node)
 
     class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -305,7 +306,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             b1.add({ 'sentence' : negate(s.lhs) , 'designated' : d }).tick(node)
             b2.add({ 'sentence' :        s.rhs  , 'designated' : d }).tick(node)
 
@@ -361,7 +363,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             b1.add({ 'sentence' :        s.lhs  , 'designated' : d }).tick(node)
             b2.add({ 'sentence' : negate(s.rhs) , 'designated' : d }).tick(node)
 
@@ -380,7 +383,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             b1.update([
                 { 'sentence' : negate(s.lhs), 'designated' : d },
                 { 'sentence' : negate(s.rhs), 'designated' : d }
@@ -406,7 +410,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             b1.update([
                 { 'sentence' :        s.lhs  , 'designated' : d },
                 { 'sentence' : negate(s.rhs) , 'designated' : d }

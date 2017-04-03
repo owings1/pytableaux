@@ -179,10 +179,11 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             s = node.props['sentence'].operand
-            newBranches[0].add({ 'sentence' : s.lhs, 'designated' : False }).tick(node)
-            newBranches[1].add({ 'sentence' : s.rhs, 'designated' : False }).tick(node)
+            b1.add({ 'sentence' : s.lhs, 'designated' : False }).tick(node)
+            b2.add({ 'sentence' : s.rhs, 'designated' : False }).tick(node)
 
     class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -278,13 +279,14 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
             s = node.props['sentence'].operand
-            newBranches[0].update([
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b1.update([
                 { 'sentence' : negate(s.lhs) , 'designated' : False },
                 { 'sentence' :        s.rhs  , 'designated' : False },
             ]).tick(node)
-            newBranches[1].update([
+            b2.update([
                 { 'sentence' :        s.lhs , 'designated' : False },
                 { 'sentence' : negate(s.rhs), 'designated' : False }
             ]).tick(node)
@@ -317,11 +319,12 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
             s = node.props['sentence']
             disj = operate('Disjunction', [negate(s.lhs), s.rhs])
-            newBranches[0].add({ 'sentence' : disj, 'designated' : True }).tick(node)
-            newBranches[1].update([
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b1.add({ 'sentence' : disj, 'designated' : True }).tick(node)
+            b2.update([
                 { 'sentence' :        s.lhs  , 'designated' : False },
                 { 'sentence' :        s.rhs  , 'designated' : False },
                 { 'sentence' : negate(s.lhs) , 'designated' : False },
@@ -342,13 +345,14 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             s = node.props['sentence'].operand
-            newBranches[0].update([
+            b1.update([
                 { 'sentence' : s.lhs, 'designated' : True  },
                 { 'sentence' : s.rhs, 'designated' : False }
             ]).tick(node)
-            newBranches[1].update([
+            b2.update([
                 { 'sentence' : negate(s.lhs), 'designated' : False  },
                 { 'sentence' : negate(s.rhs), 'designated' : True }
             ]).tick(node)
@@ -399,10 +403,11 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             s = node.props['sentence'].operand
-            newBranches[0].add({ 'sentence' : negate(operate('Conditional', [s.lhs, s.rhs])), 'designated': True }).tick(node)
-            newBranches[1].add({ 'sentence' : negate(operate('Conditional', [s.rhs, s.lhs])), 'designated': True }).tick(node)
+            b1.add({ 'sentence' : negate(operate('Conditional', [s.lhs, s.rhs])), 'designated': True }).tick(node)
+            b2.add({ 'sentence' : negate(operate('Conditional', [s.rhs, s.lhs])), 'designated': True }).tick(node)
 
     class BiconditionalUndesignated(ConjunctionUndesignated):
         """

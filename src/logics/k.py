@@ -298,8 +298,10 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             w = node.props['world']
-            for conjunct in s.operands:
-                self.tableau.branch(branch).add({ 'sentence' : negate(conjunct), 'world' : w }).tick(node)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b1.add({ 'sentence' : negate(s.lhs), 'world' : w }).tick(node)
+            b2.add({ 'sentence' : negate(s.rhs), 'world' : w }).tick(node)
 
     class Disjunction(TableauxSystem.ConditionalModalNodeRule):
         """
@@ -312,8 +314,10 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             w = node.props['world']
-            for disjunct in s.operands:
-                self.tableau.branch(branch).add({ 'sentence' : disjunct, 'world' : w }).tick(node)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b1.add({ 'sentence' : s.lhs, 'world' : w }).tick(node)
+            b2.add({ 'sentence' : s.rhs, 'world' : w }).tick(node)
 
 
     class DisjunctionNegated(TableauxSystem.ConditionalModalNodeRule):
@@ -345,7 +349,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             w = node.props['world']
-            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             b1.add({ 'sentence' : negate(s.lhs) , 'world' : w }).tick(node)
             b2.add({ 'sentence' :        s.rhs  , 'world' : w }).tick(node)
 
@@ -381,7 +386,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             w = node.props['world']
-            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             b1.update([
                 { 'sentence' : negate(s.lhs), 'world' : w }, 
                 { 'sentence' : negate(s.rhs), 'world' : w }
@@ -406,7 +412,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             w = node.props['world']
-            b1, b2 = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             b1.update([
                 { 'sentence':        s.lhs  , 'world' : w },
                 { 'sentence': negate(s.rhs) , 'world' : w }

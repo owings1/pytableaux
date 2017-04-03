@@ -18,55 +18,59 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 pytableaux - header for html tableau writer
 -->
 <style type="text/css">
-    .html-writer {
+    .html-writer-proof {
         cursor: pointer;
     }
-    .html-writer .node, .html-writer .closeMark {
+    .html-writer-proof .node, .html-writer-proof .closeMark {
         text-align: center;
         margin: 3px 0;
     }
-    .html-writer .node-props {
+    .html-writer-proof .node-props {
         padding: 5px;
         display: inline-block;
     }
-    .html-writer .node.ticked .node-props {
+    .html-writer-proof .node.ticked .node-props {
         border: 1px solid black;
     }
-    .html-writer .child-wrapper {
+    .html-writer-proof .child-wrapper {
         float: left;
     }
-    .html-writer .vertical-line, .horizontal-line {
+    .html-writer-proof .vertical-line, .html-writer-proof .horizontal-line {
         margin: 0 auto;
     }
-    .html-writer .horizontal-line {
+    .html-writer-proof .horizontal-line {
         border-bottom-width: 1px;
         border-bottom-style: solid;
         border-bottom-color: black;
         margin-bottom: -1px;
     }
-    .html-writer .horizontal-line.collapsed {
+    .html-writer-proof .horizontal-line.collapsed {
         border-bottom-style: dotted;
     }
-    .html-writer .vertical-line {
+    .html-writer-proof .vertical-line {
         border-right: 1px solid black;
         height: 10px;
         width: 1px;
     }
-    .html-writer .subscript {
+    .html-writer-proof .subscript {
         vertical-align: sub;
         font-size: 80%;
     }
-    .html-writer .world {
+    .html-writer-proof .world {
         font-style: italic;
     }
-    .html-writer .node.has_open {
+    .html-writer-proof .node.has_open {
         color: red;
     }
-
+    .html-writer-proof .clear, .html-writer-status-panel .clear {
+        clear: both;
+    }
+    .html-writer-status-panel .left {
+        float: left;
+    }
     .html-writer-status-panel dl {
         margin: 0 0 0 3px;
     }
-
     .html-writer-status-panel dd {
         padding: 2px 2px 2px 4px;
         margin: 0px 0 4px 4px;
@@ -74,7 +78,6 @@ pytableaux - header for html tableau writer
         float: left;
         width: 220px;
     }
-
     .html-writer-status-panel dt {
         float: left;
         padding: 2px 3px;
@@ -120,7 +123,8 @@ pytableaux - header for html tableau writer
             PROOF      : 'html-writer-proof' ,
             ZOOMED     : 'zoomed'            ,
             HL         : 'horizontal-line'   ,
-            COLLAPSED  : 'collapsed'
+            COLLAPSED  : 'collapsed'         ,
+            CLOSE      : 'closeMark'
         }
         // class names preceded with .
         var DCLS = {}
@@ -132,7 +136,9 @@ pytableaux - header for html tableau writer
             LEFT           : 'data-left'             ,
             RIGHT          : 'data-right'            ,
             ORIGWIDTH      : 'data-orig-width'       ,
-            ORIGMARGINLEFT : 'data-orig-margin-left'
+            ORIGMARGINLEFT : 'data-orig-margin-left' ,
+            STEP           : 'data-step'             ,
+            TICKSTEP       : 'data-ticked-step'
         }
         /**
          * Show only the lineage of the given structure.

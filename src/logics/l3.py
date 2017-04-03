@@ -101,12 +101,13 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            newBranches = self.tableau.branch_multi(branch, 2)
+            b1 = branch
+            b2 = self.tableau.branch(branch)
             s = node.props['sentence']
-            newBranches[0].add(
+            b1.add(
                 { 'sentence' : operate('Material Conditional', s.operands), 'designated' : True }
             ).tick(node)
-            newBranches[1].update([
+            b2.update([
                 { 'sentence' :        s.lhs,  'designated' : False },
                 { 'sentence' : negate(s.lhs), 'designated' : False },
                 { 'sentence' :        s.rhs,  'designated' : False },
@@ -129,13 +130,14 @@ class TableauxRules(object):
 
         def apply_to_node(self, node, branch):
             s = node.props['sentence']
-            branch.add({ 'sentence' : operate('Material Conditional', s.operands), 'designated' : False })
-            newBranches = self.tableau.branch_multi(branch, 2)
-            newBranches[0].update([
+            b1 = branch
+            b1.add({ 'sentence' : operate('Material Conditional', s.operands), 'designated' : False })
+            b2 = self.tableau.branch(branch)
+            b1.update([
                 { 'sentence' :        s.lhs,  'designated' : True  },
                 { 'sentence' :        s.rhs,  'designated' : False }
             ]).tick(node)
-            newBranches[1].update([
+            b2.update([
                 { 'sentence' :        s.lhs,  'designated' : False },
                 { 'sentence' : negate(s.lhs), 'designated' : False },
                 { 'sentence' : negate(s.rhs), 'designated' : True  }
