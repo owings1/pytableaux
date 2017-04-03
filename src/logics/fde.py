@@ -68,7 +68,7 @@ For futher reading see:
 
 """
 name = 'FDE'
-description = 'First Degree Entailment Logic'
+description = 'First Degree Entailment'
 
 def example_validities():
     return set([

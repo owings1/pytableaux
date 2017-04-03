@@ -16,7 +16,7 @@
 #
 # ------------------
 #
-# pytableaux - Kripke Normal Modal Logic (Fixed Domain)
+# pytableaux - Kripke Normal Modal Logic
 
 """
 Kripke Logic (K) is the foundation of so-called normal modal logics. It is an extension of CFOL,
@@ -30,7 +30,7 @@ Links
 .. _Stanford Encyclopedia on Modal Logic: http://plato.stanford.edu/entries/logic-modal/
 """
 name = 'K'
-description = 'Kripke Normal Modal Logic (Fixed Domain)'
+description = 'Kripke Normal Modal Logic'
 
 def example_validities():
     import cfol
