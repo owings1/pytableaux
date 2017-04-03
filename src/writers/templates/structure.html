@@ -1,5 +1,6 @@
 {% macro write_structure(structure, is_child = False) -%}
-    <div class="html-writer structure{% if not is_child %} zoomed{% endif %}" data-left="{{ structure['left'] }}" data-right="{{ structure['right'] }}">
+    <div class="html-writer structure{% if not is_child %} zoomed{% endif %}"
+        data-left="{{ structure['left'] }}" data-right="{{ structure['right'] }}" data-step="{{ structure['step'] }}">
         <div class="node-segment">
         {% if is_child %}
             <div class="vertical-line"></div>
@@ -9,7 +10,7 @@
             {% if structure['has_open'] and opts['highlight_open'] %}
                 {% set node_class = 'has_open' %}
             {% endif %}
-            <div class="node {% if node.ticked %}ticked{% endif %} {{ node_class }}">
+            <div class="node {% if node.ticked %}ticked{% endif %} {{ node_class }}" data-step="{{ node.step }}">
                 <span class="node-props">
                     {% if 'sentence' in node.props %}
                         <span class="sentence">{{ writer.write(node.props['sentence'], symbol_set = 'html') }}</span>
@@ -51,6 +52,32 @@
         {% endif %}
     </div>
 {%- endmacro %}
+{% if opts['status_panel'] %}
+    {% set result_class = 'valid' if tableau.valid else 'invalid' %}
+    <div class="html-writer-status-panel">
+        <dl class="left">
+            {% if tableau.argument != None %}
+                <dt>Argument</dt>
+                <dd>{{ premises|join('<br>') }}{% if premises|length %}<br><hr>{% endif %}&there4; {{ conclusion }}</dd>
+            {% endif %}
+            <dt>Logic</dt>
+            <dd>{{ tableau.logic.name }} - {{ tableau.logic.description }}</dd>
+            <dt>Result</dt>
+            <dd><span class="result {{ result_class }}">{{ tableau.stats['result'] }}</span></dd>
+            <dt>Branches</dt>
+            <dd>{{ tableau.stats['branches'] }}</dd>
+            {% if not tableau.valid %}
+                <dt>Open Branches</dt>
+                <dd>{{ tableau.stats['open_branches'] }}</dd>
+            {% endif %}
+            <dt>Distinct Nodes</dt>
+            <dd>{{ tableau.stats['distinct_nodes'] }}</dd>
+            <dt>Rules Applied</dt>
+            <dd>{{ tableau.stats['rules_applied'] }}</dd>
+        </dl>
+    </div>
+    <div class="clear"></div>
+{% endif %}
 <div class="html-writer-proof">
     {{ write_structure(tableau.tree) }}
 </div>

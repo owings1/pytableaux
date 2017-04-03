@@ -843,7 +843,7 @@ class TableauxSystem(object):
             """
             return {branch for branch in self.branches if not branch.closed}
 
-        def structure(self, branches, depth=0, pnum=None, parent=None, child_index=0):
+        def structure(self, branches, depth=0, pnum=None):
             if pnum == None:
                 pnum = [0]
             pnum[0] += 1
@@ -861,6 +861,7 @@ class TableauxSystem(object):
                     depth += 1
                     continue
                 break
+            self.stats['distinct_nodes'] += len(structure['nodes'])
             if len(branches) == 1:
                 structure['closed'] = branches[0].closed
                 if not structure['closed']:
@@ -868,7 +869,7 @@ class TableauxSystem(object):
                 structure['width'] = 1  
             for i, node in enumerate(distinct_nodes):
                 child_branches = list({branch for branch in branches if branch.nodes[depth] == node})
-                structure['children'].append(self.structure(child_branches, depth, pnum, structure, i))
+                structure['children'].append(self.structure(child_branches, depth, pnum))
             pnum[0] += 1
             structure['right'] = pnum[0]
             if len(structure['children']):
@@ -911,6 +912,13 @@ class TableauxSystem(object):
             """
             self.finished = True
             self.valid    = len(self.open_branches()) == 0
+            self.stats = {
+                'result'         : 'Valid' if self.valid else 'Invalid',
+                'branches'       : len(self.branches),
+                'open_branches'  : len(self.open_branches()),
+                'distinct_nodes' : 0, # tracked in self.structure()
+                'rules_applied'  : len(self.history)
+            }
             self.tree     = self.structure(list(self.branches))
             return self
 

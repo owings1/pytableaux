@@ -6,28 +6,21 @@
     {% for tableau in tableaux %}
         <div class="evaluation">
             <div class="summary">
-                <div class="argument">
-                    {% if sw.symbol_set.name == 'html' %}
-                        Argument: {{ argument.premises|join(', ') }} &there4; {{ argument.conclusion }}
-                    {% else %}
-                        Argument: {{ argument.premises|join(', ')|e }} &there4; {{ argument.conclusion|e }}
-                    {% endif %}
-                </div>
-                <div class="result">
+                <h3 class="left">{{ tableau.logic.name }} &ndash; {{ tableau.logic.description|e }}</h3>
+                <div class="result right">
                     {% if tableau.valid %}
                         <span class="valid">Valid</span>
                     {% else %}
                         <span class="invalid">Invalid</span>
                     {% endif %}
-                    in {{ tableau.logic.name }} &ndash; {{ tableau.logic.description|e }}
                 </div>
                 <div class="clear"></div>
             </div>
             <div class="proof">
                 {% if writer.name == 'HTML' %}
-                    {{ writer.write(tableau, writer=sw, highlight_open=True) }}
+                    {{ writer.write(tableau, writer=sw, highlight_open=True, status_panel=True) }}
                 {% else %}
-                    <pre>{{ writer.write(tableau, writer=sw)|e }}</pre>
+                    <pre>{{ writer.write(tableau, writer=sw, status_panel=True)|e }}</pre>
                 {% endif %}
             </div>
         </div>

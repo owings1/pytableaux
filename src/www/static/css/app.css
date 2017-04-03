@@ -59,16 +59,16 @@ form.argument fieldset.lexicon {
 .right {
     float: right;
 }
-select[name=logic] {
+form.argument select[name=logic] {
     width: 130px;
     height: 125px;
     padding: 3px 0 0 3px;
 }
-input {
+form.argument input {
     font-size: 14px;
 }
 
-select, input[type=submit] {
+form.argument select, input[type=submit] {
     font-size: 16px;
 }
 
@@ -158,35 +158,53 @@ input.arity {
     width: 10px;
 }
 
-.valid {
-    color: green;
-}
-
-.invalid {
-    color: red;
-}
-
 .evaluation {
     border: 1px solid black;
-    padding: 10px;
     margin-bottom: 10px;
 }
 
-.evaluation .summary {
-    padding: 0 0 5px 0;
+.evaluation > .summary {
+    padding: 10px;
     border-bottom: 1px solid black;
+    background-color: rgba(0, 61, 76, 0.12);
 }
 
-.evaluation .argument {
+.evaluation > .summary h3 {
+    margin: 0;
+    padding: 0.2em;
+    font-size: 1.5em;
+}
+.evaluation > .summary > .argument {
     float: right;
 }
 
-.evaluation .result {
-    float: left;
+.evaluation > .summary > .result {
+    float: right;
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 1.2em;
+    color: white;
+    width: 5.2em;
 }
 
-.proof {
-    margin-top: 10px;
+.evaluation > .summary > .result > span {
+    padding: 0.4em;
+    width: 4.4em;
+    display: inline-block;
+    text-align: center;
+    letter-spacing: 0.05em;
+}
+.evaluation > .summary > .result .valid {
+    background-color: green;
+    border: 1px solid #666;
+}
+
+.evaluation > .summary > .result .invalid {
+    background-color: red;
+    border: 1px solid #aaa;
+}
+.evaluation > .proof {
+    margin: 10px;
 }
 
 .errors {
@@ -241,6 +259,9 @@ input.arity {
     background-repeat: no-repeat;
 }
 
+.proof pre {
+    overflow-x: scroll;
+}
 .hidden {
     display: none;
 }

@@ -1,3 +1,22 @@
+<!--
+pytableaux, a multi-logic proof generator.
+Copyright (C) 2014-2017 Doug Owings.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+pytableaux - header for html tableau writer
+-->
 <style type="text/css">
     .html-writer {
         cursor: pointer;
@@ -20,8 +39,13 @@
         margin: 0 auto;
     }
     .html-writer .horizontal-line {
-        border-bottom: 1px solid black;
+        border-bottom-width: 1px;
+        border-bottom-style: solid;
+        border-bottom-color: black;
         margin-bottom: -1px;
+    }
+    .html-writer .horizontal-line.collapsed {
+        border-bottom-style: dotted;
     }
     .html-writer .vertical-line {
         border-right: 1px solid black;
@@ -38,70 +62,305 @@
     .html-writer .node.has_open {
         color: red;
     }
+
+    .html-writer-status-panel dl {
+        margin: 0 0 0 3px;
+    }
+
+    .html-writer-status-panel dd {
+        padding: 2px 2px 2px 4px;
+        margin: 0px 0 4px 4px;
+        background-color: #eee;
+        float: left;
+        width: 220px;
+    }
+
+    .html-writer-status-panel dt {
+        float: left;
+        padding: 2px 3px;
+        background-color: white;
+        display: inline-block;
+        clear: both;
+        min-width: 140px;
+        text-align: right;
+    }
+    .html-writer-status-panel .valid {
+        color: green;
+    }
+    .html-writer-status-panel .invalid {
+        color: red;
+    }
 </style>
 <script>
     ;(function() {
+
         if (typeof($) != 'function') {
-            console.log('jQuery not loaded. Not initializing interactive handlers.')
+            console.error(new Error('jQuery not loaded. Not initializing interactive handlers.'))
             return
         }
 
+        // animation speed constants, in milliseconds.
+        const ANIM = {
+            FAST : 200,
+            MED  : 300
+        }
+        // pixel width of a collapsed horizontal line
+        const COLLAPSED_LINE_WIDTH = 200
+        // relationship string contants
+        const REL = {
+            SELF       : 'self'       ,
+            ANCESTOR   : 'ancestor'   ,
+            DESCENDANT : 'descendant' ,
+            OUTSIDE    : 'outside'
+        }
+        // class names
+        const CLS = {
+            STRUCTURE  : 'structure'         ,
+            CHILD      : 'child-wrapper'     ,
+            PROOF      : 'html-writer-proof' ,
+            ZOOMED     : 'zoomed'            ,
+            HL         : 'horizontal-line'   ,
+            COLLAPSED  : 'collapsed'
+        }
+        // class names preceded with .
+        var DCLS = {}
+        for (var c in CLS)
+            DCLS[c] = '.' + CLS[c]
+
+        // attributes
+        const ATTR = {
+            LEFT           : 'data-left'             ,
+            RIGHT          : 'data-right'            ,
+            ORIGWIDTH      : 'data-orig-width'       ,
+            ORIGMARGINLEFT : 'data-orig-margin-left'
+        }
+        /**
+         * Show only the lineage of the given structure.
+         *
+         * @param $structure The singleton jQuery .structure element.
+         * @param $proof The singleton jQuery .html-writer-proof element. If not
+         *   passed, it will be retrieved.
+         * @return void
+         */
         function zoomToStructure($structure, $proof) {
-            if (!$proof)
-                $proof = $structure.closest('.html-writer-proof')
-            if ($structure.hasClass('zoomed'))
+
+            if (!$structure.hasClass(CLS.STRUCTURE))
+                throw new Error('Invalid structure argument: ' + $structure)
+
+            // if we are currently zoomed to this structure, there is nothing to do
+            if ($structure.hasClass(CLS.ZOOMED))
                 return
-            var thisLeft = +$structure.attr('data-left')
-            var thisRight = +$structure.attr('data-right')
-            $('.structure', $proof).each(function(i, s) {
+
+            if (!$proof)
+                $proof = $structure.closest(DCLS.PROOF)
+
+            // get the previously zoomed structure
+            var $prev = $(DCLS.ZOOMED, $proof)
+
+            var thisPos = getPos($structure)
+            var prevPos = getPos($prev)
+
+            var toHide = {}
+            var toShow = {}
+            var toRestore = {}
+            var ancestors = []
+            $(DCLS.STRUCTURE, $proof).each(function(i, s) {
                 var $s = $(s)
-                var left = +$s.attr('data-left')
-                var right = +$s.attr('data-right')
-                var isOutside = (left > thisLeft && right > thisRight) || (left < thisLeft && right < thisRight)
-                var isAncestor = left < thisLeft && right > thisRight
-                var isSelf = left == thisLeft && right == thisRight
-                var isDescendant = left > thisLeft && right < thisRight
-                if (isSelf || isAncestor) {
-                    $s.closest('.child-wrapper').css('width', '100%')
-                    if (!$s.is(':visible'))
-                        $s.show(400)
-                } else if (isDescendant) {
-                    var $cw = $s.closest('.child-wrapper')
-                    var origWidth = $cw.attr('data-orig-width')
-                    $cw.css('width', origWidth)
-                    if (!$s.is(':visible'))
-                        $s.show(400)
-                } else if (isOutside) {
-                    if ($s.is(':visible'))
-                        $s.hide(200)
+                var pos = getPos($s)
+                var relation = getRelation(pos, thisPos)
+                var prevRelation = getRelation(pos, prevPos)
+                if (prevRelation == relation) {
+                    // if s stands in the same relation to the target structure
+                    // as it did to the previously zoomed structure, then there
+                    // is nothing to do.
+                    return true
                 }
-                if (isSelf || isDescendant) {
-                    var $hl = $('.horizontal-line', $s)
-                    if ($hl.length) {
-                        var origWidth = $hl.attr('data-orig-width')
-                        var origMarginLeft = $hl.attr('data-orig-margin-left')
-                        $hl.css({borderBottomStyle: 'solid'}).animate({width: origWidth, marginLeft: origMarginLeft}, 200)
-                    }
-                } else if (isAncestor) {
-                    var $hl = $('.horizontal-line', $s)
-                    if ($hl.length) {
-                        $hl.css({marginLeft: 'auto', borderBottomStyle: 'dotted'}).animate({width: '200px'}, 200)
-                    }
+                switch (relation) {
+                    case REL.ANCESTOR:
+                        ancestors.push(s)
+                        if (prevRelation == REL.OUTSIDE)
+                            // track only the highest structures to show if previous relation was outside
+                            trackHighests(toShow, pos)
+                        break
+                    case REL.DESCENDANT:
+                        if (prevRelation == REL.OUTSIDE)
+                            // track only the highest structures to show if previous relation was outside
+                            trackHighests(toShow, pos)
+                        else
+                            // all previous ancestors and the previous structure must be restored
+                            toRestore[pos.left] = pos
+                        break
+                    case REL.OUTSIDE:
+                        // track only the highest structures to hide
+                        trackHighests(toHide, pos)
+                        break
+                    case REL.SELF:
+                        break
                 }
-                $s.removeClass('zoomed')
             })
-            $structure.addClass('zoomed')
+
+            // hide all structures outside the lineage of the current structure
+            $.each(toHide, function(hleft, hpos) {
+                hpos.$el.hide({duration: ANIM.FAST})
+            })
+
+            // restore the width for descendants that were previously ancestors
+            // or the previous zoomed structure itself
+            $.each(toRestore, function(hleft, hpos) {
+                var $cw = hpos.$el.closest(DCLS.CHILD)
+                var origWidth = $cw.attr(ATTR.ORIGWIDTH)
+                var currentWidth = $cw.css('width')
+                if (origWidth != currentWidth) {
+                    $cw.animate({width: origWidth}, {duration: ANIM.FAST})
+                }
+            })
+
+            // show related structures that were previously hidden
+            $.each(toShow, function(hleft, hpos) {
+                hpos.$el.show({duration: ANIM.MED, queue: true})
+            })
+
+            var $ancestors = $(ancestors)
+
+            // collapse all the horizontal lines for the ancestors
+            collapseHorizontalLine($ancestors)
+
+            // make the current target and all its ancestors 100% width
+            $ancestors.add($structure).closest(DCLS.CHILD).animate({width: '100%'}, {duration: ANIM.MED})
+
+            // restore width of all horizontal lines descending from the current target
+            restoreHorizontalLines($structure)
+
+            // unmark the previous structure as zoomed
+            $prev.removeClass(CLS.ZOOMED)
+
+            // mark the current structure as zoomed
+            $structure.addClass(CLS.ZOOMED)
         }
 
+        /*
+         * Restore all horizontal lines in the given context to their original style.
+         *
+         * @param context The context. All .horizontal-line elements within the
+         *   context will be restored.
+         * @return void
+         */
+        function restoreHorizontalLines(context) {
+            $(DCLS.HL, context).removeClass(CLS.COLLAPSED).each(function() {
+                var $hl = $(this)
+                var current = {
+                    width      : $hl.css('width'),
+                    marginLeft : $hl.css('margin-left')
+                }
+                var original = {
+                    width      : $hl.attr(ATTR.ORIGWIDTH),
+                    marginLeft : $hl.attr(ATTR.ORIGMARGINLEFT)
+                }
+                for (var key in original)
+                    if (original[key] != current[key]) {
+                        $hl.animate(original, ANIM.MED)
+                        break
+                    }
+            })
+        }
+
+        /**
+         * Collapse the horizontal line, if any, within the structure(s). This
+         * applies only to direct children of the structure(s).
+         *
+         * @param $structure The jQuery .structure element(s).
+         * @return void
+         */
+        function collapseHorizontalLine($structure) {
+            $structure.children(DCLS.HL)
+                .addClass(CLS.COLLAPSED)
+                .css({marginLeft: 'auto'})
+                .animate({width: COLLAPSED_LINE_WIDTH}, ANIM.FAST)
+        }
+
+        /**
+         * Get the left/right values of the given structure, as well a reference
+         * to the structure's jQuery element.
+         *
+         * @param $el The singleton jQuery .structure element.
+         * @return A plain object with left/right/$el keys.
+         */
+        function getPos($el) {
+            return {
+                left  : +$el.attr(ATTR.LEFT),
+                right : +$el.attr(ATTR.RIGHT),
+                $el   : $el
+            }
+        }
+
+        /**
+         * Get the relation of one position object to the other (see getPos() above).
+         *
+         * @param of The related position object.
+         * @param to The position object to compare to.
+         * @return A string, either 'self', 'ancestor', 'descendant', or 'other'.
+         */
+        function getRelation(of, to) {
+            if (of.left == to.left)
+                return REL.SELF
+            if (of.left < to.left && of.right > to.right)
+                return REL.ANCESTOR
+            if (of.left > to.left && of.right < to.right)
+                return REL.DESCENDANT
+            return REL.OUTSIDE
+        }
+
+        /**
+         * Whether two position objects are siblings.
+         *
+         * @param a The first position object.
+         * @param b The second position object.
+         * @return Boolean.
+         */
+        function isSibling(a, b) {
+            return getRelation(
+                getPos(a.$el.parent().closest(DCLS.STRUCTURE)),
+                getPos(b.$el.parent().closest(DCLS.STRUCTURE))
+            ) == REL.SELF
+        }
+
+        /**
+         * Track only the highest disjoint positions. This checks pos against the
+         * values already in trackObj. If pos is a descendant of a position already
+         * in trackObj, then it is not added. If it is an ancestor, then it is added
+         * to trackObj, and the descendant positions in trackObj are removed.
+         *
+         * @param trackObj The object store to check and modify.
+         * @param pos The position object to potentially add.
+         * @return void
+         */
+        function trackHighests(trackObj, pos) {
+            var replaces = []
+            for (var hleft in trackObj) {
+                var hpos = trackObj[hleft]
+                var relation = getRelation(pos, hpos)
+                if (relation == REL.DESCENDANT)
+                    return
+                if (relation == REL.ANCESTOR)
+                    replaces.push(hleft)
+            }
+            for (var i = 0; i < replaces.length; i++)
+                delete(trackObj[replaces[i]])
+            trackObj[pos.left] = pos
+        }
+
+
         $(document).ready(function() {
-            $('.html-writer-proof').on('click', function(e) {
+            // load a click event handler for each proof in the document.
+            $(DCLS.PROOF).on('click', function(e) {
                 var $proof = $(this)
                 var $target = $(e.target)
-                var $structure = $target.closest('.structure')
+                var $structure = $target.closest(DCLS.STRUCTURE)
                 if ($structure.length) {
                     zoomToStructure($structure, $proof)
                 }
             })
         })
+
     })();
 </script>

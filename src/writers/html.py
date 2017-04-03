@@ -36,11 +36,20 @@ class Writer(logic.TableauxSystem.Writer):
     header   = env.get_template('header.html')
 
     def document_header(self):
-        return self.header.render()
+        return self.env.get_template('header.html').render()
+        #return self.header.render()
 
     def write_tableau(self, tableau, writer, opts):
-        return self.template.render({
-            'tableau'  : tableau,
-            'writer'   : writer,
-            'opts'     : opts
+        if tableau.argument != None:
+            premises = [writer.write(premise) for premise in tableau.argument.premises]
+            conclusion = writer.write(tableau.argument.conclusion)
+        else:
+            premises = None
+            conclusion = None
+        return self.env.get_template('structure.html').render({
+            'tableau'    : tableau,
+            'writer'     : writer,
+            'opts'       : opts,
+            'premises'   : premises,
+            'conclusion' : conclusion
         })
