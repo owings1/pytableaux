@@ -1,19 +1,26 @@
 {% macro write_structure(structure, is_child = False) -%}
-    <div class="structure{% if not is_child %} zoomed{% endif %}"
-        data-left="{{ structure['left'] }}"
+    <div class="structure{% if not is_child %} zoomed{% endif %}{% if structure['has_open'] %} has-open{% endif %}{% if structure['has_closed'] %} has-closed{% endif %}{% if structure['leaf'] %} leaf{% endif %}"
+        data-depth="{{ structure['depth'] }}"
+        data-width="{{ structure['width'] }}"
+        data-left="{{ structure['left'] }}" 
         data-right="{{ structure['right'] }}"
         data-step="{{ structure['step'] }}">
         <div class="node-segment">
         {% if is_child %}
-            <div class="vertical-line"></div>
+            <div class="vertical-line" data-step="{{ structure['step'] }}"></div>
         {% endif %}
         {% for node in structure['nodes'] %}
-            {% set node_class = '' %}
-            {% if structure['has_open'] and opts['highlight_open'] %}
-                {% set node_class = 'has_open' %}
+            {% set node_class = 'node' %}
+            {% if node.ticked %}
+                {% set node_class = node_class + ' ticked' %}
             {% endif %}
-            <div class="node {% if node.ticked %}ticked{% endif %} {{ node_class }}" data-step="{{ node.step }}"{% if node.ticked %} data-ticked-step="{{ node.ticked_step }}"{% endif %}>
-                <span class="node-props">
+            {% if structure['has_open'] and opts['highlight_open'] %}
+                {% set node_class = node_class + ' has_open' %}
+            {% endif %}
+            <div class="{{ node_class }}"
+                data-step="{{ node.step }}"{% if node.ticked %} data-ticked-step="{{ node.ticked_step }}"{% endif %}
+                data-ticked="{% if node.ticked %}1{% else %}0{% endif %}">
+                <span class="node-props{% if node.ticked %} ticked{% endif %}">
                     {% if 'sentence' in node.props %}
                         <span class="sentence">{{ writer.write(node.props['sentence'], symbol_set = 'html') }}</span>
                         {% if 'world' in node.props and node.props['world'] != None %}
@@ -41,12 +48,10 @@
             {% set margin = 100 * structure['balanced_line_margin'] %}
             <div class="horizontal-line"
                 style="width: {{ width }}%; margin-left: {{ margin }}%;"
-                data-orig-width="{{ width }}%"
-                data-orig-margin-left="{{ margin }}%"
                 data-step="{{ structure['branch_step'] }}"></div>
             {% for child in structure['children'] %}
                 {% set child_width = (100 / structure['width']) * child['width'] %}
-                <div class="child-wrapper" style="width: {{ child_width }}%;" data-orig-width="{{ child_width }}%" data-step="{{ child['step'] }}">
+                <div class="child-wrapper" style="width: {{ child_width }}%;" data-step="{{ child['step'] }}" data-current-width-pct="{{ child_width }}%">
                     {{ write_structure(child, is_child = True) }}
                 </div>
             {% endfor %}
@@ -73,15 +78,47 @@
             {% if not tableau.valid %}
                 <dt>Open Branches</dt>
                 <dd>{{ tableau.stats['open_branches'] }}</dd>
+                <dt>Closed Branches</dt>
+                <dd>{{ tableau.stats['closed_branches'] }}</dd>
             {% endif %}
             <dt>Distinct Nodes</dt>
             <dd>{{ tableau.stats['distinct_nodes'] }}</dd>
             <dt>Rules Applied</dt>
             <dd>{{ tableau.stats['rules_applied'] }}</dd>
         </dl>
+        <dl class="left">
+            <dt>Step</dt>
+            <dd>
+                <a class="button step-prev" href="javascript:">&lt;</a>
+                <input type="text" size="{{ tableau.history|length|string|length + 1 }}" class="step-input" value="{{ tableau.history|length }}">
+                <a class="button step-next" href="javascript:">&gt;</a>
+            </dd>
+            <dt>Font</dt>
+            <dd>
+                <a class="button font-minus" href="javascript:">-</a>
+                <a class="button font-reset" href="javascript:">=</a>
+                <a class="button font-plus" href="javascript:">+</a>
+            </dd>
+            <dt>Width</dt>
+            <dd>
+                <a class="button width-minus" href="javascript:">-</a>
+                <a class="button width-reset" href="javascript:">=</a>
+                <a class="button width-plus" href="javascript:">+</a>
+            </dd>
+            <dt>Filter</dt>
+            <dd>
+                <select class="branch-filter">
+                    <option value="all">All Branches</option>
+                    {% if not tableau.valid %}
+                        <option value="open">Open Branches</option>
+                        <option value="closed">Close Branches</option>
+                    {% endif %}
+                </select>
+            </dd>
+        </dl>
     </div>
     <div class="clear"></div>
 {% endif %}
-<div class="html-writer-proof">
+<div class="html-writer-proof" data-step="{{ tableau.history|length }}" data-num-steps="{{ tableau.history|length }}" data-current-width-pct="100">
     {{ write_structure(tableau.tree) }}
 </div>
