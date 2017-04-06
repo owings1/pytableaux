@@ -10,14 +10,8 @@
             <div class="vertical-line" data-step="{{ structure['step'] }}"></div>
         {% endif %}
         {% for node in structure['nodes'] %}
-            {% set node_class = 'node' %}
-            {% if node.ticked %}
-                {% set node_class = node_class + ' ticked' %}
-            {% endif %}
-            {% if structure['has_open'] and opts['highlight_open'] %}
-                {% set node_class = node_class + ' has_open' %}
-            {% endif %}
-            <div class="{{ node_class }}"
+            <div class="node{% if node.ticked %} ticked{% endif %}"
+                data-node-id="{{ node.id }}"
                 data-step="{{ node.step }}"{% if node.ticked %} data-ticked-step="{{ node.ticked_step }}"{% endif %}
                 data-ticked="{% if node.ticked %}1{% else %}0{% endif %}">
                 <span class="node-props{% if node.ticked %} ticked{% endif %}">
@@ -75,7 +69,7 @@
             <dd><span class="result {{ result_class }}">{{ tableau.stats['result'] }}</span></dd>
             <dt>Branches</dt>
             <dd>{{ tableau.stats['branches'] }}</dd>
-            {% if not tableau.valid %}
+            {% if tableau.tree['has_open'] and tableau.tree['has_closed'] %}
                 <dt>Open Branches</dt>
                 <dd>{{ tableau.stats['open_branches'] }}</dd>
                 <dt>Closed Branches</dt>
@@ -89,9 +83,45 @@
         <dl class="left">
             <dt>Step</dt>
             <dd>
+                <a class="button step-start" href="javascript:">B</a>
                 <a class="button step-prev" href="javascript:">&lt;</a>
                 <input type="text" size="{{ tableau.history|length|string|length + 1 }}" class="step-input" value="{{ tableau.history|length }}">
                 <a class="button step-next" href="javascript:">&gt;</a>
+                <a class="button step-end" href="javascript:">E</a>
+            </dd>
+            <dt>Rule</dt>
+            <dd>
+                <span class="step-rule-name{% if tableau.history|length %} hidden{% endif %}" data-step="0">Build Trunk</span>
+                {% for application in tableau.history %}
+                    {% set rule_name = application['rule'].__class__.__name__ %}
+                    <span class="step-rule-name{% if not loop.last %} hidden{% endif %}" data-step="{{ loop.index }}">{{ rule_name }}</span>
+                {% endfor %}
+            </dd>
+            <dt>Target</dt>
+            <dd>
+                <span class="step-rule-target{% if tableau.history|length %} hidden{% endif %}" data-target-type="argument" data-step="0">Argument</span>
+                {% for application in tableau.history %}
+                    {% set target = application['target'] %}
+                    <span class="step-rule-target{% if not loop.last %} hidden{% endif %}"
+                        data-target-type="{{ target['type'] }}"
+                        {% if 'node' in target %}
+                            data-node-id="{{ target['node'].id }}"
+                        {% endif %}
+                        {% if 'branch' in target %}
+                            data-branch-node-id="{{ target['branch'].leaf.id }}"
+                        {% endif %}
+                        data-step="{{ loop.index }}">{{ target['type']|e }}</span>
+                {% endfor %}
+            </dd>
+        </dl>
+        <dl class="left">
+            <dt>Width</dt>
+            <dd>
+                <a class="button width-minus-minus" href="javascript:">{</a>
+                <a class="button width-minus" href="javascript:">[</a>
+                <a class="button width-reset" href="javascript:">|</a>
+                <a class="button width-plus" href="javascript:">]</a>
+                <a class="button width-plus-plus" href="javascript:">}</a>
             </dd>
             <dt>Font</dt>
             <dd>
@@ -99,26 +129,21 @@
                 <a class="button font-reset" href="javascript:">=</a>
                 <a class="button font-plus" href="javascript:">+</a>
             </dd>
-            <dt>Width</dt>
+            <dt>Branch Filter</dt>
             <dd>
-                <a class="button width-minus" href="javascript:">-</a>
-                <a class="button width-reset" href="javascript:">=</a>
-                <a class="button width-plus" href="javascript:">+</a>
-            </dd>
-            <dt>Filter</dt>
-            <dd>
-                <select class="branch-filter">
-                    <option value="all">All Branches</option>
-                    {% if not tableau.valid %}
-                        <option value="open">Open Branches</option>
-                        <option value="closed">Close Branches</option>
+                {% set can_filter = tableau.tree['has_open'] and tableau.tree['has_closed'] %}
+                <select class="branch-filter"{% if not can_filter %} disabled="disabled"{% endif %}>
+                    <option value="all">(A)ll Branches</option>
+                    {% if can_filter %}
+                        <option value="open">(O)pen Branches</option>
+                        <option value="closed">(C)losed Branches</option>
                     {% endif %}
                 </select>
             </dd>
         </dl>
+        <div class="clear"></div>
     </div>
-    <div class="clear"></div>
 {% endif %}
-<div class="html-writer-proof" data-step="{{ tableau.history|length }}" data-num-steps="{{ tableau.history|length }}" data-current-width-pct="100">
+<div class="html-writer-proof{% if opts['highlight_open'] %} highlight-open{% endif %}" data-step="{{ tableau.history|length }}" data-num-steps="{{ tableau.history|length }}" data-current-width-pct="100">
     {{ write_structure(tableau.tree) }}
 </div>

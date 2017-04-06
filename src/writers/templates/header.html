@@ -25,12 +25,16 @@ pytableaux - header for html tableau writer
         text-align: center;
         margin: 3px 0;
     }
+    .html-writer-proof .closeMark {
+        font-size: 1.6em;
+    }
     .html-writer-proof .node-props {
         padding: 5px;
         display: inline-block;
     }
     .html-writer-proof .node .node-props.ticked {
-        border-color: black;
+        padding: 4px;
+        border-color: rgba(0, 0, 0, 0.58);
         border-style: solid;
         border-width: 1px;
     }
@@ -43,17 +47,14 @@ pytableaux - header for html tableau writer
     .html-writer-proof .horizontal-line {
         border-bottom-width: 1px;
         border-bottom-style: solid;
-        border-bottom-color: black;
+        border-bottom-color: rgba(0, 0, 0, 0.58);
         margin-bottom: -1px;
     }
     .html-writer-proof .horizontal-line.collapsed {
-        border-bottom-style: dotted;
-    }
-    .html-writer-proof .horizontal-line.branch-filtered {
         border-bottom-style: dashed;
     }
     .html-writer-proof .vertical-line {
-        border-right: 1px solid black;
+        border-right: 1px solid rgba(0, 0, 0, 0.58);
         height: 10px;
         width: 1px;
     }
@@ -64,11 +65,23 @@ pytableaux - header for html tableau writer
     .html-writer-proof .world {
         font-style: italic;
     }
-    .html-writer-proof .node.has_open {
+    .html-writer-proof.highlight-open .structure.has-open > .node-segment {
         color: red;
+    }
+    .html-writer-proof.highlight-open .structure.has-open.has-closed > .node-segment {
+        color: #e808ff;
     }
     .html-writer-proof .clear, .html-writer-status-panel .clear {
         clear: both;
+    }
+    .html-writer-proof .node.highlight > .node-props, .html-writer-proof .node.highlight > .closeMark {
+        background-color: yellow;
+    }
+    .html-writer-proof .node.highlight-ticked > .node-props.ticked {
+        border-width: 3px;
+        padding: 2px;
+        color: #ddd;
+        
     }
     .html-writer-status-panel .left {
         float: left;
@@ -77,15 +90,17 @@ pytableaux - header for html tableau writer
         margin: 0 0 0 3px;
     }
     .html-writer-status-panel dd {
-        padding: 2px 2px 2px 4px;
+        padding: 5px 2px 0 4px;
         margin: 0px 0 4px 4px;
         background-color: #eee;
         float: left;
         width: 220px;
+        height: 24px;
+        border: 1px solid #ddd;
     }
     .html-writer-status-panel dt {
         float: left;
-        padding: 2px 3px;
+        padding: 5px 3px 0 3px;
         background-color: white;
         display: inline-block;
         clear: both;
@@ -103,11 +118,14 @@ pytableaux - header for html tableau writer
         border: 1px solid #bbb;
         text-decoration: none;
         color: white;
-        font-size: 0.7em;
+        font-size: 0.8em;
         padding: 5px 10px;
     }
     .html-writer-status-panel a.button:hover {
         background-color: lightblue;
+    }
+    .html-writer-status-panel .hidden {
+        display: none;
     }
 </style>
 <script>
@@ -146,35 +164,42 @@ pytableaux - header for html tableau writer
 
         // class names
         const CLS = {
-            STRUCTURE      : 'structure'                ,
-            CHILD          : 'child-wrapper'            ,
-            LEAF           : 'leaf'                     ,
-            PROOF          : 'html-writer-proof'        ,
-            NODESEGMENT    : 'node-segment'             ,
-            NODEPROPS      : 'node-props'               ,
-            NODE           : 'node'                     ,
-            STATUS         : 'html-writer-status-panel' ,
-            ZOOMED         : 'zoomed'                   ,
-            HL             : 'horizontal-line'          ,
-            VL             : 'vertical-line'            ,
-            COLLAPSED      : 'collapsed'                ,
-            CLOSE          : 'closeMark'                ,
-            STEPPREV       : 'step-prev'                ,
-            STEPNEXT       : 'step-next'                ,
-            STEPINPUT      : 'step-input'               ,
-            STEPFILTERED   : 'step-filtered'            ,
-            ZOOMFILTERED   : 'zoom-filtered'            ,
-            BRANCHFILTERED : 'branch-filtered'          ,
-            TICKED         : 'ticked'                   ,
-            FONTPLUS       : 'font-plus'                ,
-            FONTMINUS      : 'font-minus'               ,
-            FONTRESET      : 'font-reset'               ,
-            WIDTHPLUS      : 'width-plus'               ,
-            WIDTHMINUS     : 'width-minus'              ,
-            WIDTHRESET     : 'width-reset'              ,
-            HASOPEN        : 'has-open'                 ,
-            HASCLOSED      : 'has-closed'               ,
-            BRANCHFILTER   : 'branch-filter'
+            STRUCTURE       : 'structure'                ,
+            CHILD           : 'child-wrapper'            ,
+            LEAF            : 'leaf'                     ,
+            PROOF           : 'html-writer-proof'        ,
+            NODESEGMENT     : 'node-segment'             ,
+            NODEPROPS       : 'node-props'               ,
+            NODE            : 'node'                     ,
+            HIDDEN          : 'hidden'                   ,
+            STATUS          : 'html-writer-status-panel' ,
+            ZOOMED          : 'zoomed'                   ,
+            HL              : 'horizontal-line'          ,
+            VL              : 'vertical-line'            ,
+            COLLAPSED       : 'collapsed'                ,
+            CLOSE           : 'closeMark'                ,
+            STEPSTART       : 'step-start'               ,
+            STEPPREV        : 'step-prev'                ,
+            STEPNEXT        : 'step-next'                ,
+            STEPEND         : 'step-end'                 ,
+            STEPINPUT       : 'step-input'               ,
+            STEPRULENAME    : 'step-rule-name'           ,
+            STEPRULETARGET  : 'step-rule-target'         ,
+            STEPFILTERED    : 'step-filtered'            ,
+            ZOOMFILTERED    : 'zoom-filtered'            ,
+            BRANCHFILTERED  : 'branch-filtered'          ,
+            TICKED          : 'ticked'                   ,
+            FONTPLUS        : 'font-plus'                ,
+            FONTMINUS       : 'font-minus'               ,
+            FONTRESET       : 'font-reset'               ,
+            WIDTHPLUS       : 'width-plus'               ,
+            WIDTHPLUSPLUS   : 'width-plus-plus'          ,
+            WIDTHMINUS      : 'width-minus'              ,
+            WIDTHMINUSMINUS : 'width-minus-minus'        ,
+            WIDTHRESET      : 'width-reset'              ,
+            HASOPEN         : 'has-open'                 ,
+            HASCLOSED       : 'has-closed'               ,
+            BRANCHFILTER    : 'branch-filter'
         }
 
         // class names preceded with a '.' for selecting
@@ -207,7 +232,11 @@ pytableaux - header for html tableau writer
                 DCLS.STEPFILTERED,
                 DCLS.ZOOMFILTERED,
                 DCLS.BRANCHFILTERED
-            ].join(',')
+            ].join(','),
+            CANBRANCHFILTER : [
+                DCLS.HASOPEN,
+                DCLS.HASCLOSED
+            ].join('')
         }
         SEL.UNFILTERED = ':not(' + SEL.FILTERED + ')'
 
@@ -332,7 +361,7 @@ pytableaux - header for html tableau writer
                 $hides       : $(hides),
                 $shows       : $(shows),
                 className    : CLS.STEPFILTERED,
-                adjust       : n > prevStep ? 'before' : 'after'
+                adjust       : (n > prevStep) ? 'before' : 'after'
             })
 
             // show nodes, markers, vertical lines
@@ -343,7 +372,14 @@ pytableaux - header for html tableau writer
 
             // set the current step attribute on the proof
             $proof.attr(ATTR.STEP, n)
-            
+
+            // show the rule and target in the status panel
+            var $status = getStatusFromProof($proof)
+            var attrSelector = '[' + ATTR.STEP +'=' + n + ']'
+            $(DCLS.STEPRULENAME, $status).hide().filter(attrSelector).show(ANIM.FAST)
+            $(DCLS.STEPRULETARGET, $status).hide().filter(attrSelector).show(ANIM.FAST)
+            // update the input box
+            $(DCLS.STEPINPUT, $status).val(n)
         }
 
         /**
@@ -385,6 +421,8 @@ pytableaux - header for html tableau writer
                 $shows       : $(toShow),
                 className    : CLS.BRANCHFILTERED
             })
+            $status = getStatusFromProof($proof)
+            $(DCLS.BRANCHFILTER, $status).val(type)
         }
 
         /**
@@ -440,12 +478,12 @@ pytableaux - header for html tableau writer
             // collect the dom elements of the lowest structures
             var leaves = $.map(lowests, function(pos) { return pos.$el.get(0) })
 
-            // adjust the widths (or do this 'after' below)
-            if (opts.adjust == 'before')
-                adjustWidths($proof, $(leaves), true)
-
             // hide elements that have a filter
             $hides.hide(ANIM.FAST)
+
+            // adjust the widths (or do this 'after' below)
+            if (opts.adjust == 'before')
+                adjustWidths($proof, $(leaves), false)
 
             // show elements that do not have a filter
             $(shows).show(ANIM.MED)
@@ -561,8 +599,13 @@ pytableaux - header for html tableau writer
                         $hl.show(ANIM.FAST).animate(hlcss, ANIM.FAST)
                     else
                         $hl.show().css(hlcss)
-                } else
-                    $hl.css(hlcss).hide(animate ? ANIM.FAST : undefined)
+                } else {
+                    $hl.css(hlcss)
+                    if (animate)
+                        $hl.hide(ANIM.FAST)
+                    else
+                        $hl.hide()
+                }
 
                 // If this parent has a parent, mark the filtered width attribute
                 // for the next traversal.
@@ -691,6 +734,54 @@ pytableaux - header for html tableau writer
             return $status.nextAll(DCLS.PROOF)
         }
 
+        /**
+         * Make various incremental UI adjustments.
+         *
+         * @param $proof The singleton jQuery proof element.
+         * @param what What thing to adjust (font, width, step).
+         * @param howMuch How much to adjust it, or 'reset'.
+         * @return void
+         */
+        function adjust($proof, what, howMuch) {
+
+            switch (what) {
+                case 'font'  :
+                    if (howMuch == 'reset')
+                        $proof.css({fontSize: 'inherit'})
+                    else
+                        $proof.css({fontSize: parseInt($proof.css('font-size')) + (parseFloat(howMuch) || 0)})
+                    break
+                case 'width' :
+                    var p
+                    if (howMuch == 'reset')
+                        p = 100
+                    else
+                        p = +$proof.attr(ATTR.CURWIDTHPCT) + (parseFloat(howMuch) || 0)
+                    if (p < 0)
+                        p == 0
+                    $proof.attr(ATTR.CURWIDTHPCT, p)
+                    $proof.css({width: p + '%'})
+                    break
+                case 'step':
+                    var maxSteps = +$proof.attr(ATTR.NUMSTEPS)
+                    var n
+                    if (howMuch == 'beginning' || howMuch == 'start')
+                        n = 0
+                    else if (howMuch == 'reset' || howMuch == 'end')
+                        n = maxSteps
+                    else
+                        n = +$proof.attr(ATTR.STEP) + (parseInt(howMuch) || 0)
+                    if (n < 0)
+                        n = 0
+                    else if (n > maxSteps)
+                        n = maxSteps
+                    step($proof, n)
+                    break
+                default:
+                    break
+            }
+        }
+
         $(document).ready(function() {
 
             var modkey = {
@@ -699,25 +790,24 @@ pytableaux - header for html tableau writer
                 alt   : false
             }
 
+            var $lastProof
+
             // monitor modifier keys
             $(document).on('keyup keydown', function(e) {
                 modkey.shift = e.shiftKey
                 modkey.ctrl  = e.metaKey || e.ctrlKey
                 modkey.alt   = e.altKey
+                modkey.ctrlalt = modkey.ctrl || modkey.alt
             })
 
-            $(DCLS.PROOF).on('keypress', function(e) {
-                var $target = $(e.target)
-            })
+            
 
             // load a click event handler for each proof in the document.
             $(DCLS.PROOF).on('click', function(e) {
                 var $proof = $(this)
                 var $target = $(e.target)
                 var $status = getStatusFromProof($proof)
-                var behavior = 'inspect'
-                if (modkey.ctrl || modkey.alt)
-                    behavior = 'zoom'
+                var behavior = modkey.ctrlalt ? 'zoom' : 'inspect'
                 switch (behavior) {
                     case 'zoom':
                         var $structure = $target.closest(DCLS.STRUCTURE)
@@ -729,6 +819,7 @@ pytableaux - header for html tableau writer
                     default :
                         break
                 }
+                $lastProof = $proof
             })
 
             // load a change event for the status panel
@@ -747,6 +838,7 @@ pytableaux - header for html tableau writer
                 } else if ($target.hasClass(CLS.BRANCHFILTER)) {
                     filterBranches($target.val(), $proof)
                 }
+                $lastProof = $proof
             })
 
             // load a click event for the status panel
@@ -754,52 +846,94 @@ pytableaux - header for html tableau writer
                 var $status = $(this)
                 var $proof = getProofFromStatus($status)
                 var $target = $(e.target)
-                if ($target.hasClass(CLS.STEPNEXT)) {
-                    var maxSteps = +$proof.attr(ATTR.NUMSTEPS)
-                    var n = modkey.shift ? maxSteps : +$proof.attr(ATTR.STEP) + 1
-                    if (n > maxSteps)
-                        return
-                    $(DCLS.STEPINPUT, $status).val(n)
-                    step($proof, n)
+                if ($target.hasClass(CLS.STEPSTART)) {
+                    adjust($proof, 'step', 'start')
+                } else if ($target.hasClass(CLS.STEPNEXT)) {
+                    adjust($proof, 'step', 1)
                 } else if ($target.hasClass(CLS.STEPPREV)) {
-                    var n = modkey.shift ? 0 : +$proof.attr(ATTR.STEP) - 1
-                    if (n < 0)
-                        return
-                    $(DCLS.STEPINPUT, $status).val(n)
-                    step($proof, n)
+                    adjust($proof, 'step', -1)
+                } else if ($target.hasClass(CLS.STEPEND)) {
+                    adjust($proof, 'step', 'end')
                 } else if ($target.hasClass(CLS.FONTPLUS)) {
-                    $proof.css({fontSize: parseInt($proof.css('font-size')) + 1})
+                    adjust($proof, 'font', 1)
                 } else if ($target.hasClass(CLS.FONTMINUS)) {
-                    $proof.css({fontSize: parseInt($proof.css('font-size')) - 1})
+                    adjust($proof, 'font', -1)
                 } else if ($target.hasClass(CLS.FONTRESET)) {
-                    $proof.css({fontSize: 'inherit'})
+                    adjust($proof, 'font', 'reset')
                 } else if ($target.hasClass(CLS.WIDTHPLUS)) {
-                    var p = +$proof.attr(ATTR.CURWIDTHPCT)
-                    if (modkey.shift)
-                        p += 100
-                    else if (modkey.ctrl || modkey.alt)
-                        p += 25
-                    else
-                        p += 10
-                    $proof.attr(ATTR.CURWIDTHPCT, p)
-                    $proof.css({width: p + '%'})
+                    adjust($proof, 'width', 10)
+                } else if ($target.hasClass(CLS.WIDTHPLUSPLUS)) {
+                    adjust($proof, 'width', 25)
                 } else if ($target.hasClass(CLS.WIDTHMINUS)) {
-                    var p = +$proof.attr(ATTR.CURWIDTHPCT)
-                    if (modkey.shift)
-                        p -= 100
-                    else if (modkey.ctrl || modkey.alt)
-                        p -= 25
-                    else
-                        p -= 10
-                    if (p < 0)
-                        p = 0
-                    $proof.attr(ATTR.CURWIDTHPCT, p)
-                    $proof.css({width: p + '%'})
+                    adjust($proof, 'width', -10)
+                } else if ($target.hasClass(CLS.WIDTHMINUSMINUS)) {
+                    adjust($proof, 'width', -25)
                 } else if ($target.hasClass(CLS.WIDTHRESET)) {
-                    var p = 100
-                    $proof.attr(ATTR.CURWIDTHPCT, p)
-                    $proof.css({width: p + '%'})
+                    adjust($proof, 'width', 'reset')
                 }
+                $lastProof = $proof
+            })
+
+            // shortcut keys
+            $(document).on('keypress', function(e) {
+                var $target = $(e.target)
+                var isInput = $target.is(':input')
+                if (!isInput && $lastProof) {
+                    var $proof = $lastProof
+                    var s = String.fromCharCode(e.which)
+                    switch (s) {
+                        case '>':
+                            adjust($proof, 'step', 1)
+                            break
+                        case '<':
+                            adjust($proof, 'step', -1)
+                            break
+                        case 'B':
+                            adjust($proof, 'step', 'start')
+                            break
+                        case 'E':
+                            adjust($proof, 'step', 'end')
+                            break
+                        case '+':
+                            adjust($proof, 'font', 1)
+                            break
+                        case '-':
+                            adjust($proof, 'font', -1)
+                            break
+                        case '=':
+                            adjust($proof, 'font', 'reset')
+                            break
+                        case ']':
+                            adjust($proof, 'width', 10)
+                            break
+                        case '}':
+                            adjust($proof, 'width', 25)
+                            break
+                        case '[':
+                            adjust($proof, 'width', -10)
+                            break
+                        case '{':
+                            adjust($proof, 'width', -25)
+                            break
+                        case '|':
+                            adjust($proof, 'width', 'reset')
+                            break
+                        case 'O':
+                            if ($proof.children(SEL.CANBRANCHFILTER).length)
+                                filterBranches('open', $proof)
+                            break
+                        case 'C':
+                            if ($proof.children(SEL.CANBRANCHFILTER).length)
+                                filterBranches('closed', $proof)
+                            break
+                        case 'A':
+                            if ($proof.children(SEL.CANBRANCHFILTER).length)
+                                filterBranches('all', $proof)
+                            break
+                        default:
+                            break
+                    }
+                }         
             })
         })
 

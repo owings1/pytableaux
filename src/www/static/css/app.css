@@ -127,6 +127,10 @@ table.predicates td, table.predicates th {
     margin: 10px 0 0 127px;
 }
 
+.input.sentence input {
+    width: 215px;
+    padding: 7px 4px;
+}
 .input.sentence .status {
     width: 16px;
     height: 16px;
