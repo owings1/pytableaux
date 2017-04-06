@@ -239,7 +239,7 @@ class TableauxRules(object):
                     w = node.props['world']
                     s = negate(node.props['sentence'])
                     if branch.has({ 'sentence': s, 'world': w }):
-                        return branch
+                        return True
             return False
 
         def example(self):
@@ -263,7 +263,7 @@ class TableauxRules(object):
                         if o.is_predicated() and o.predicate.name == 'Identity':
                             a, b = o.parameters
                             if a == b:
-                                return branch
+                                return True
             return False
 
         def example(self):

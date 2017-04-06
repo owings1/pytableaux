@@ -144,7 +144,7 @@ class TableauxRules(object):
                         'sentence'   : negate(node.props['sentence']),
                         'designated' : False
                     }):
-                        return branch
+                        return True
             return False
 
         def example(self):

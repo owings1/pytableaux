@@ -832,6 +832,12 @@ class TableauxSystem(object):
                 if target:
                     rule.apply(target)
                     application = { 'rule' : rule, 'target' : target }
+                    if isinstance(target, TableauxSystem.Node):
+                        application['target_type'] = 'node'
+                    elif isinstance(target, TableauxSystem.Branch):
+                        application['target_type'] = 'branch'
+                    else:
+                        application['target_type'] = target.__class__.__name__
                     self.history.append(application)
                     self.current_step += 1
                     return application
@@ -1155,7 +1161,7 @@ class TableauxSystem(object):
 
         def applies(self):
             """
-            Whether the rule applies to the tableau. Implementations should return True/False or a target object.
+            Whether the rule applies to the tableau. Implementations should return True/False or a target dict.
             """
             raise Exception(NotImplemented)
 
@@ -1180,13 +1186,20 @@ class TableauxSystem(object):
         """
         A branch rule applies to an open branch on a tableau. This base class implements the applies() method
         by finding the first open branch on the tableau to which the abstract method applies_to_branch() returns
-        a non-false value.
+        a non-false value. If True is returned, then this method will return a dict with a 'branch' key, which
+        will then be passed to the applies() method.
         """
 
         def applies(self):
             for branch in self.tableau.open_branches():
                 target = self.applies_to_branch(branch)
                 if target:
+                    if target == True:
+                        target = {'branch': branch}
+                    elif 'branch' not in target:
+                        target['branch'] = branch
+                    if 'type' not in target:
+                        target['type'] = 'Branch'
                     return target
             return False
 
@@ -1205,8 +1218,8 @@ class TableauxSystem(object):
         def applies_to_branch(self, branch):
             raise Exception(NotImplemented)
 
-        def apply(self, branch):
-            branch.close()
+        def apply(self, target):
+            target['branch'].close()
 
     class NodeRule(BranchRule):
         """
@@ -1218,7 +1231,7 @@ class TableauxSystem(object):
             for branch in self.tableau.open_branches():
                 for node in branch.get_nodes(ticked=False):
                     if self.applies_to_node(node, branch):
-                        return { 'node': node, 'branch': branch }
+                        return { 'node': node, 'branch': branch, 'type': 'Node' }
 
         def apply(self, target):
             return self.apply_to_node(target['node'], target['branch'])
