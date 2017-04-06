@@ -850,15 +850,33 @@ class TableauxSystem(object):
             """
             return {branch for branch in self.branches if not branch.closed}
 
-        def structure(self, branches, depth=0, pnum=None):
-            if pnum == None:
-                pnum = [0, 0]
-            pnum[0] += 1
-            structure = { 'nodes' : [], 'children' : [], 'closed' : False, 'left' : pnum[0], 'descendant_node_count' : 0, 'structure_node_count' : 0, 'depth' : pnum[1] }
+        def structure(self, branches, node_depth=0, track=None):
+            if track == None:
+                track = {
+                    'pos'        : 0,
+                    'depth'      : 0
+                }
+            track['pos'] += 1
+            structure = {
+                'nodes'                 : [],
+                'children'              : [],
+                'closed'                : False,
+                'left'                  : track['pos'],
+                'right'                 : None,
+                'descendant_node_count' : 0,
+                'structure_node_count'  : 0,
+                'depth'                 : track['depth'],
+                'has_open'              : False,
+                'has_closed'            : False,
+                'closed_step'           : None,
+                'step'                  : None,
+                'width'                 : 0,
+                'leaf'                  : False,
+                'balanced_line_width'   : None,
+                'balanced_line_margin'  : None
+            }
             while True:
-                B = [branch for branch in branches if len(branch.nodes) > depth]
-                structure['has_open'] = False
-                structure['has_closed'] = False
+                B = [branch for branch in branches if len(branch.nodes) > node_depth]
                 for branch in B:
                     if branch.closed:
                         structure['has_closed'] = True
@@ -869,16 +887,16 @@ class TableauxSystem(object):
                 distinct_nodes = []
                 distinct_nodeset = set()
                 for branch in B:
-                    node = branch.nodes[depth]
+                    node = branch.nodes[node_depth]
                     if node not in distinct_nodeset:
                         distinct_nodeset.add(node)
                         distinct_nodes.append(node)
                 if len(distinct_nodes) == 1:
-                    node = B[0].nodes[depth]
+                    node = B[0].nodes[node_depth]
                     structure['nodes'].append(node)
-                    if 'step' not in structure or structure['step'] > node.step:
+                    if structure['step'] == None or structure['step'] > node.step:
                         structure['step'] = node.step
-                    depth += 1
+                    node_depth += 1
                     continue
                 break
             self.stats['distinct_nodes'] += len(structure['nodes'])
@@ -892,13 +910,11 @@ class TableauxSystem(object):
                 structure['width'] = 1
                 structure['leaf'] = True
             else:
-                structure['leaf'] = False
-                structure['width'] = 0
                 inbetween_widths = 0
-                pnum[1] += 1
+                track['depth'] += 1
                 for i, node in enumerate(distinct_nodes):
-                    child_branches = [branch for branch in branches if branch.nodes[depth] == node]
-                    child = self.structure(child_branches, depth, pnum)
+                    child_branches = [branch for branch in branches if branch.nodes[node_depth] == node]
+                    child = self.structure(child_branches, node_depth, track)
                     structure['descendant_node_count'] = len(child['nodes']) + child['descendant_node_count']
                     structure['width'] += child['width']
                     structure['children'].append(child)
@@ -913,10 +929,10 @@ class TableauxSystem(object):
                         structure['branch_step'] = child['step']
                 structure['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / structure['width']
                 structure['balanced_line_margin'] = first_width / structure['width']
-                pnum[1] -= 1
+                track['depth'] -= 1
             structure['structure_node_count'] = structure['descendant_node_count'] + len(structure['nodes'])
-            pnum[0] += 1
-            structure['right'] = pnum[0]
+            track['pos'] += 1
+            structure['right'] = track['pos']
             return structure
 
         def branch(self, other_branch=None):
@@ -1120,6 +1136,7 @@ class TableauxSystem(object):
             self.parent = parent
             self.step = None
             self.ticked_step = None
+            self.id = id(self)
 
         def has_props(self, props):
             for prop in props:
