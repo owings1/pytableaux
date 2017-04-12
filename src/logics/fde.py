@@ -172,8 +172,9 @@ class TableauxRules(object):
 
         def applies_to_branch(self, branch):
             for node in branch.get_nodes():
-                if branch.has({ 'sentence' : node.props['sentence'], 'designated' : not node.props['designated'] }):
-                    return True
+                n = branch.find({ 'sentence' : node.props['sentence'], 'designated' : not node.props['designated'] })
+                if n != None:
+                    return {'nodes' : set([node, n]), 'type' : 'Nodes'}
             return False
 
         def example(self):

@@ -86,7 +86,8 @@ class TableauxRules:
             serial_worlds = {node.props['world1'] for node in branch.get_nodes() if 'world1' in node.props}
             worlds = branch.worlds() - serial_worlds
             if len(worlds):
-                return { 'branch': branch, 'world': worlds.pop() }
+                world = worlds.pop()
+                return { 'branch' : branch, 'world' : world, 'node' : branch.find({ 'world1' : world }) }
             return False
 
         def apply(self, target):

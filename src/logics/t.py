@@ -66,7 +66,7 @@ class TableauxRules(object):
     Reflexive rule, which operates on the accessibility relation for worlds.
     """
 
-    class Reflexive(logic.TableauxSystem.BranchRule):
+    class Reflexive(logic.TableauxSystem.NodeRule):
         """
         The Reflexive rule applies to an open branch *b* when there is a node *n*
         on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
@@ -75,11 +75,13 @@ class TableauxRules(object):
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
-                    
-        def applies_to_branch(self, branch):
-            for world in branch.worlds():
+
+        ticked = None
+
+        def applies_to_node(self, node, branch):
+            for world in node.worlds():
                 if not branch.has({ 'world1': world, 'world2': world }):
-                    return { 'world': world, 'branch': branch }
+                    return { 'world': world }
             return False
             
         def apply(self, target):

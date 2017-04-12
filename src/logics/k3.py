@@ -137,11 +137,12 @@ class TableauxRules(object):
         def applies_to_branch(self, branch):
             for node in branch.get_nodes():
                 if node.props['designated']:
-                    if branch.has({
+                    n = branch.find({
                         'sentence'   : negate(node.props['sentence']),
                         'designated' : True
-                    }):
-                        return True
+                    })
+                    if n:
+                        return { 'nodes' : set([node, n]), 'type' : 'Nodes' }
             return False
 
         def example(self):

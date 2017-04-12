@@ -138,6 +138,8 @@ def operate(operator, operands):
     +------------------------+-------+
     | Operator Name          | Arity |
     +========================+=======+
+    | Assertion              | 1     |
+    +------------------------+-------+
     | Negation               | 1     |
     +------------------------+-------+
     | Conjunction            | 2     |
@@ -246,8 +248,10 @@ def parse(string, vocabulary=None, notation='polish'):
     module or a string of the module name. Currently the only implemented notation is
     polish. Example::
 
-        sentence = parse('Kab', notation='polish')
-        assert sentence == operate('Conjunction', [atomic(0, 0), atomic(1, 0)])
+        sentence1 = parse('Kab', notation='polish')
+        assert sentence1 == operate('Conjunction', [atomic(0, 0), atomic(1, 0)])
+        sentence2 = parse('A & B', notation='standard')
+        assert sentence2 == sentence1
 
     Example using user-defined predicates from a vocabulary::
     
@@ -273,12 +277,22 @@ class argument(object):
         # from a, and if a then b, it follows that b
         arg = argument(conclusion=b, premises=[a, premise2])
 
+    You can also pass a notation (and optionally, a vocabulary) to parse sentence::
+
+        arg = argument(conclusion='B', premises=['(A > B)', 'A'], notation='standard')
     """
 
-    def __init__(self, conclusion=None, premises=None, title=None):
-        if premises == None:
-            premises = []
-        self.premises   = premises
+    def __init__(self, conclusion=None, premises=None, title=None, notation=None, vocabulary=None):
+        self.premises = []
+        if premises != None:
+            for premise in premises:
+                if isinstance(premise, str):
+                    if notation == None:
+                        raise Exception("Must pass notation to parse sentence strings.")
+                    premise = parse(premise, vocabulary, notation)
+                self.premises.append(premise)
+        if isinstance(conclusion, str):
+            conclusion = parse(conclusion, vocabulary, notation)
         self.conclusion = conclusion
         self.title      = title
 
@@ -832,12 +846,6 @@ class TableauxSystem(object):
                 if target:
                     rule.apply(target)
                     application = { 'rule' : rule, 'target' : target }
-                    if isinstance(target, TableauxSystem.Node):
-                        application['target_type'] = 'node'
-                    elif isinstance(target, TableauxSystem.Branch):
-                        application['target_type'] = 'branch'
-                    else:
-                        application['target_type'] = target.__class__.__name__
                     self.history.append(application)
                     self.current_step += 1
                     return application
@@ -858,21 +866,42 @@ class TableauxSystem(object):
                 }
             track['pos'] += 1
             structure = {
+                # the nodes on this structure.
                 'nodes'                 : [],
+                # this child structures.
                 'children'              : [],
-                'closed'                : False,
-                'left'                  : track['pos'],
-                'right'                 : None,
-                'descendant_node_count' : 0,
-                'structure_node_count'  : 0,
-                'depth'                 : track['depth'],
-                'has_open'              : False,
-                'has_closed'            : False,
-                'closed_step'           : None,
-                'step'                  : None,
-                'width'                 : 0,
+                # whether this is a terminal (childless) structure.
                 'leaf'                  : False,
+                # whether this is a terminal structure that is closed.
+                'closed'                : False,
+                # whether this is a terminal structure that is open.
+                'open'                  : False,
+                # the pre-ordered tree left value.
+                'left'                  : track['pos'],
+                # the pre-ordered tree right value.
+                'right'                 : None,
+                # the total node count of all descendants.
+                'descendant_node_count' : 0,
+                # the node count plus descendant node count.
+                'structure_node_count'  : 0,
+                # the depth of this structure (ancestor structure count).
+                'depth'                 : track['depth'],
+                # whether this structure or a descendant is open.
+                'has_open'              : False,
+                # whether this structure or a descendant is closed.
+                'has_closed'            : False,
+                # if closed, the step number at which it closed.
+                'closed_step'           : None,
+                # the step number at which this structure first appears.
+                'step'                  : None,
+                # the number of descendant terminal structures, or 1.
+                'width'                 : 0,
+                # 0.5x the width of the first child structure, plus 0.5x the
+                # width of the last child structure (if distinct from the first),
+                # plus the sum of the widths of the other (distinct) children.
                 'balanced_line_width'   : None,
+                # 0.5x the width of the first child structure divided by the
+                # width of this structure.
                 'balanced_line_margin'  : None
             }
             while True:
@@ -902,6 +931,7 @@ class TableauxSystem(object):
             self.stats['distinct_nodes'] += len(structure['nodes'])
             if len(branches) == 1:
                 structure['closed'] = branches[0].closed
+                structure['open'] = not branches[0].closed
                 if structure['closed']:
                     structure['closed_step'] = branches[0].closed_step
                     structure['has_closed'] = True
@@ -1213,7 +1243,7 @@ class TableauxSystem(object):
                 if target:
                     if target == True:
                         target = {'branch': branch}
-                    elif 'branch' not in target:
+                    if 'branch' not in target:
                         target['branch'] = branch
                     if 'type' not in target:
                         target['type'] = 'Branch'
@@ -1244,11 +1274,22 @@ class TableauxSystem(object):
         method. If it applies, return a target dict with props 'node' and 'branch'.
         """
 
+        ticked = False
+
         def applies(self):
             for branch in self.tableau.open_branches():
-                for node in branch.get_nodes(ticked=False):
-                    if self.applies_to_node(node, branch):
-                        return { 'node': node, 'branch': branch, 'type': 'Node' }
+                for node in branch.get_nodes(ticked=self.ticked):
+                    target = self.applies_to_node(node, branch)
+                    if target:
+                        if target == True:
+                            target = {'node' : node}
+                        if 'node' not in target:
+                            target['node'] = node
+                        if 'type' not in target:
+                            target['type'] = 'Node'
+                        if 'branch' not in target:
+                            target['branch'] = branch
+                        return target
 
         def apply(self, target):
             return self.apply_to_node(target['node'], target['branch'])

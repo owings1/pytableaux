@@ -263,7 +263,7 @@ class TableauxRules(object):
                         if o.is_predicated() and o.predicate.name == 'Identity':
                             a, b = o.parameters
                             if a == b:
-                                return True
+                                return { 'node' : node, 'type' : 'Node' }
             return False
 
         def example(self):

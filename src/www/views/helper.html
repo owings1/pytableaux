@@ -19,7 +19,7 @@
             <input type="hidden" class="predicateSymbol" name="user_predicate_symbols[]" value="{{ index }}.{{ subscript }}" />
         </td>
         <td>
-            <input type="text" class="predicateName" name="user_predicate_names[]" value="{{ name }}" />
+            <input type="text" class="predicateName" name="user_predicate_names[]" value="{{ name|e }}" />
         </td>
         <td>
             <input type="text" class="arity" name="user_predicate_arities[]" value="{{ arity }}"/>

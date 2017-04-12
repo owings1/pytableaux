@@ -69,15 +69,17 @@ class TableauxRules(object):
             nodes = {node for node in branch.get_nodes() if 'world1' in node.props}
             for node in nodes:
                 for other_node in nodes:
-                    if (node.props['world2'] == other_node.props['world1'] and
-                        not branch.has({ 
+                    if node.props['world2'] == other_node.props['world1']:
+                        n = branch.find({ 
                             'world1': node.props['world1'], 
                             'world2': other_node.props['world2']
-                        })):
+                        })
+                        if n == None:
                             return { 
                                 'world1': node.props['world1'],
                                 'world2': other_node.props['world2'],
-                                'branch': branch
+                                'branch': branch,
+                                'nodes' : set([node, other_node])
                             }
             return False
 
