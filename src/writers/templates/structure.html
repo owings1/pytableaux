@@ -33,7 +33,7 @@
             </div>
         {% endfor %}
         {% if structure['closed'] %}
-            <div class="closeMark" data-step="{{ structure['closed_step'] }}">&otimes;</div>
+            <div class="closeMark" data-step="{{ structure['closed_step'] }}"><div class="close-prop">&otimes;</div></div>
         {% endif %}
         </div>
         {% if structure['children']|length %}
@@ -91,26 +91,28 @@
             </dd>
             <dt>Rule</dt>
             <dd>
-                <span class="step-rule-name{% if tableau.history|length %} hidden{% endif %}" data-step="0">Build Trunk</span>
+                <a class="step-rule-name{% if tableau.history|length %} hidden{% endif %}" data-step="0" href="javascript:">Build Trunk</a>
                 {% for application in tableau.history %}
                     {% set rule_name = application['rule'].__class__.__name__ %}
-                    <span class="step-rule-name{% if not loop.last %} hidden{% endif %}" data-step="{{ loop.index }}">{{ rule_name }}</span>
+                    <a class="step-rule-name{% if not loop.last %} hidden{% endif %}" data-step="{{ loop.index }}" href="javascript:">{{ rule_name }}</a>
                 {% endfor %}
             </dd>
             <dt>Target</dt>
             <dd>
-                <span class="step-rule-target{% if tableau.history|length %} hidden{% endif %}" data-target-type="argument" data-step="0">Argument</span>
+                <a class="step-rule-target{% if tableau.history|length %} hidden{% endif %}" data-target-type="argument" data-step="0" href="javascript:">Argument</a>
                 {% for application in tableau.history %}
                     {% set target = application['target'] %}
-                    <span class="step-rule-target{% if not loop.last %} hidden{% endif %}"
+                    <a class="step-rule-target{% if not loop.last %} hidden{% endif %}"
                         data-target-type="{{ target['type'] }}"
                         {% if 'node' in target %}
                             data-node-id="{{ target['node'].id }}"
+                        {% elif 'nodes' in target %}
+                            data-node-ids="{% for node in target['nodes'] %},{{ node.id }}{% endfor %}"
                         {% endif %}
                         {% if 'branch' in target %}
                             data-branch-node-id="{{ target['branch'].leaf.id }}"
                         {% endif %}
-                        data-step="{{ loop.index }}">{{ target['type']|e }}</span>
+                        data-step="{{ loop.index }}" href="javascript:">{{ target['type']|e }}</a>
                 {% endfor %}
             </dd>
         </dl>

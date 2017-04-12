@@ -28,6 +28,10 @@ pytableaux - header for html tableau writer
     .html-writer-proof .closeMark {
         font-size: 1.6em;
     }
+    .html-writer-proof .closeMark .close-prop {
+        display: inline-block;
+        padding: 4px;
+    }
     .html-writer-proof .node-props {
         padding: 5px;
         display: inline-block;
@@ -74,14 +78,13 @@ pytableaux - header for html tableau writer
     .html-writer-proof .clear, .html-writer-status-panel .clear {
         clear: both;
     }
-    .html-writer-proof .node.highlight > .node-props, .html-writer-proof .node.highlight > .closeMark {
+    .html-writer-proof .node.highlight > .node-props, .html-writer-proof .closeMark.highlight > .close-prop {
         background-color: yellow;
     }
     .html-writer-proof .node.highlight-ticked > .node-props.ticked {
         border-width: 3px;
         padding: 2px;
         color: #ddd;
-        
     }
     .html-writer-status-panel .left {
         float: left;
@@ -95,7 +98,7 @@ pytableaux - header for html tableau writer
         background-color: #eee;
         float: left;
         width: 220px;
-        height: 24px;
+        min-height: 24px;
         border: 1px solid #ddd;
     }
     .html-writer-status-panel dt {
@@ -136,14 +139,23 @@ pytableaux - header for html tableau writer
             return
         }
 
+        const $E = $()
         // default option sets
         const DEFAULTS = {
             FILTER : {
-                $proof       : $()   ,
-                $hides       : $()   ,
-                $shows       : $()   ,
-                className    : null  ,
+                $proof       : $E      ,
+                $hides       : $E      ,
+                $shows       : $E      ,
+                className    : null    ,
                 adjust       : 'after'
+            },
+            HIGHLIGHT : {
+                $proof     : $E,
+                exclusive  : true,
+                stay       : true,
+                off        : false,
+                ruleStep   : null,
+                ruleTarget : null
             }
         }
 
@@ -199,7 +211,10 @@ pytableaux - header for html tableau writer
             WIDTHRESET      : 'width-reset'              ,
             HASOPEN         : 'has-open'                 ,
             HASCLOSED       : 'has-closed'               ,
-            BRANCHFILTER    : 'branch-filter'
+            BRANCHFILTER    : 'branch-filter'            ,
+            HIGHLIGHT       : 'highlight'                ,
+            HIGHLIGHTTICKED : 'highlight-ticked'         ,
+            STAY            : 'stay'
         }
 
         // class names preceded with a '.' for selecting
@@ -218,7 +233,10 @@ pytableaux - header for html tableau writer
             DEPTH          : 'data-depth'             ,
             FILTEREDWIDTH  : 'data-filtered-width'    ,
             WIDTH          : 'data-width'             ,
-            CURWIDTHPCT    : 'data-current-width-pct'
+            CURWIDTHPCT    : 'data-current-width-pct' ,
+            NODEID         : 'data-node-id'           ,
+            NODEIDS        : 'data-node-ids'          ,
+            BRANCHNODEID   : 'data-branch-node-id'
         }
 
         // selectors
@@ -370,14 +388,17 @@ pytableaux - header for html tableau writer
             // delay the ticking of the nodes for animated effect
             setTimeout(function() { $(DCLS.NODEPROPS, tickNodes).addClass(CLS.TICKED) }, ANIM.MED)
 
+            // do a highlight of the result with a longer delay
+            setTimeout(function() { doHighlight({$proof: $proof, stay: false, ruleStep: n})}, ANIM.SLOW)
+
             // set the current step attribute on the proof
             $proof.attr(ATTR.STEP, n)
 
             // show the rule and target in the status panel
             var $status = getStatusFromProof($proof)
             var attrSelector = '[' + ATTR.STEP +'=' + n + ']'
-            $(DCLS.STEPRULENAME, $status).hide().filter(attrSelector).show(ANIM.FAST)
-            $(DCLS.STEPRULETARGET, $status).hide().filter(attrSelector).show(ANIM.FAST)
+            $(DCLS.STEPRULENAME, $status).hide().filter(attrSelector).show()
+            $(DCLS.STEPRULETARGET, $status).hide().filter(attrSelector).show()
             // update the input box
             $(DCLS.STEPINPUT, $status).val(n)
         }
@@ -620,6 +641,74 @@ pytableaux - header for html tableau writer
         }
 
         /**
+         * Perform a node highlighting operation on a proof.
+         *
+         * Option keys:
+         *
+         *   - $proof     : The singled jQuery proof element.
+         *   - exclusive  : Whether to unhighlight everything else on the proof.
+         *                  Default true.
+         *   - stay       : Whether to keep the highlighting effect, default true.
+         *                  If false, it will flash.
+         *   - off        : Whether to unhighlight everything on the proof.
+         *   - ruleStep   : true || step number. Highlight the resulting nodes of
+         *                  the current (or given) proof step.
+         *   - ruleTarget : true || step number. Highlight the target nodes of
+         *                  the current (or given) proof step.
+         *
+         * @param opts The options.
+         * @return void
+         */
+        function doHighlight(opts) {
+            opts = $.extend({}, DEFAULTS.HIGHLIGHT, opts)
+            var $proof = opts.$proof
+            if (opts.off || opts.exclusive) {
+                $(DCLS.HIGHLIGHT, $proof).removeClass(CLS.HIGHLIGHT)
+                $(DCLS.HIGHLIGHTTICKED, $proof).removeClass(CLS.HIGHLIGHTTICKED)
+            }
+            if (opts.off) {
+                var $status = getStatusFromProof($proof)
+                $(DCLS.HIGHLIGHT, $status).removeClass(CLS.HIGHLIGHT)
+                return
+            }
+            if (opts.ruleStep == null && opts.ruleTarget == null)
+                return
+            if (opts.ruleStep != null) {
+                var n = opts.ruleStep === true ? +$proof.attr(ATTR.STEP) : opts.ruleStep
+                var nodeAttrSel = getAttrSelector(ATTR.STEP, n)
+                var nodeSel = [DCLS.NODE + nodeAttrSel, DCLS.CLOSE + nodeAttrSel].join(',')
+                var tickSel = DCLS.NODE + getAttrSelector(ATTR.TICKSTEP, n)
+                $(nodeSel, $proof).addClass(CLS.HIGHLIGHT)
+                $(tickSel, $proof).addClass(CLS.HIGHLIGHTTICKED)
+            } else {
+                var n = opts.ruleTarget === true ? +$proof.attr(ATTR.STEP) : opts.ruleTarget
+                var nodeAttrSel = getAttrSelector(ATTR.STEP, n)
+                var nodeIds = []
+                var $status = getStatusFromProof($proof)
+                var $ruleTarget = $(DCLS.STEPRULETARGET + nodeAttrSel, $status)
+                var nodeId = $ruleTarget.attr(ATTR.NODEID)
+                if (nodeId)
+                    nodeIds.push(+nodeId)
+                var nodeIdStr = $ruleTarget.attr(ATTR.NODEIDS)
+                if (nodeIdStr) {
+                    var nodeIdsArr = nodeIdStr.split(',')
+                    nodeIdsArr.shift()
+                    $.each(nodeIdsArr, function(i, id) { nodeIds.push(+id) })
+                }
+                if (nodeIds.length) {
+                    var nodeSel = $.map(nodeIds, function(id) { return DCLS.NODE + getAttrSelector(ATTR.NODEID, id) }).join(',')
+                    var $nodes = $(nodeSel, $proof)
+                } else {
+                    var $nodes = $E
+                }
+                // TODO: branch / branches
+                $nodes.addClass(CLS.HIGHLIGHT)
+            }
+            if (!opts.stay)
+                setTimeout(function() { doHighlight({$proof: $proof, off: true})}, ANIM.SLOW)
+        }
+
+        /**
          * Get the left/right values of the given structure, as well a reference
          * to the structure's jQuery element.
          *
@@ -734,6 +823,10 @@ pytableaux - header for html tableau writer
             return $status.nextAll(DCLS.PROOF)
         }
 
+        function getAttrSelector(attr, val, oper) {
+            oper = oper || '='
+            return '[' + attr + oper +'"' + val + '"]'
+        }
         /**
          * Make various incremental UI adjustments.
          *
@@ -799,8 +892,6 @@ pytableaux - header for html tableau writer
                 modkey.alt   = e.altKey
                 modkey.ctrlalt = modkey.ctrl || modkey.alt
             })
-
-            
 
             // load a click event handler for each proof in the document.
             $(DCLS.PROOF).on('click', function(e) {
@@ -870,6 +961,14 @@ pytableaux - header for html tableau writer
                     adjust($proof, 'width', -25)
                 } else if ($target.hasClass(CLS.WIDTHRESET)) {
                     adjust($proof, 'width', 'reset')
+                } else if ($target.hasClass(CLS.STEPRULETARGET)) {
+                    var off = $target.hasClass(CLS.HIGHLIGHT) || $target.hasClass(CLS.STAY)
+                    doHighlight({$proof: $proof, stay: true, off: off, ruleTarget: true})
+                    $target.toggleClass(CLS.STAY)
+                } else if ($target.hasClass(CLS.STEPRULENAME)) {
+                    var off = $target.hasClass(CLS.HIGHLIGHT) || $target.hasClass(CLS.STAY)
+                    doHighlight({$proof: $proof, stay: true, off: off, ruleStep: true})
+                    $target.toggleClass(CLS.STAY)
                 }
                 $lastProof = $proof
             })
@@ -929,6 +1028,23 @@ pytableaux - header for html tableau writer
                         case 'A':
                             if ($proof.children(SEL.CANBRANCHFILTER).length)
                                 filterBranches('all', $proof)
+                            break
+                        case 'r':
+                        case 'R':
+                            var stay = s == 'R'
+                            doHighlight({$proof: $proof, stay: stay, ruleStep: true})
+                            if (stay)
+                                $(DCLS.STEPRULENAME, getStatusFromProof($proof)).toggleClass(CLS.STAY)
+                            break
+                        case 't':
+                        case 'T':
+                            var stay = s == 'T'
+                            doHighlight({$proof: $proof, stay: stay, ruleTarget: true})
+                            if (stay)
+                                $(DCLS.STEPRULENAME, getStatusFromProof($proof)).toggleClass(CLS.STAY)
+                            break
+                        case 'Z':
+                            zoom($proof.children(DCLS.STRUCTURE), $proof)
                             break
                         default:
                             break
