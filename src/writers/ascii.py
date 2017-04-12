@@ -48,7 +48,7 @@ class Writer(logic.TableauxSystem.Writer):
         for node in structure['nodes']:
             s = ''
             if 'sentence' in node.props:
-                s += writer.write(node.props['sentence'])
+                s += writer.write(node.props['sentence'], drop_parens = True)
                 if 'world' in node.props and node.props['world'] != None:
                     s += ', w' + str(node.props['world'])
             if 'designated' in node.props and node.props['designated'] != None:
@@ -88,8 +88,8 @@ class Writer(logic.TableauxSystem.Writer):
                 'Argument',
                 '========'
             ]
-            pstrs = [writer.write(premise) for premise in tableau.argument.premises]
-            cstr = writer.write(tableau.argument.conclusion)
+            pstrs = [writer.write(premise, drop_parens=True) for premise in tableau.argument.premises]
+            cstr = writer.write(tableau.argument.conclusion, drop_parens=True)
             lines += pstrs
             if len(tableau.argument.premises):
                 lines.append(TCHAR * min(max([len(s) for s in pstrs] + [5, len(cstr)]), 20))

@@ -16,7 +16,7 @@
                 data-ticked="{% if node.ticked %}1{% else %}0{% endif %}">
                 <span class="node-props{% if node.ticked %} ticked{% endif %}">
                     {% if 'sentence' in node.props %}
-                        <span class="sentence">{{ writer.write(node.props['sentence'], symbol_set = 'html') }}</span>
+                        <span class="sentence">{{ writer.write(node.props['sentence'], symbol_set = 'html', drop_parens = True) }}</span>
                         {% if 'world' in node.props and node.props['world'] != None %}
                             <span class="world">, w<span class="subscript">{{ node.props['world'] }}</span></span>
                         {% endif %}

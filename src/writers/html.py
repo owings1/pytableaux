@@ -41,8 +41,8 @@ class Writer(logic.TableauxSystem.Writer):
 
     def write_tableau(self, tableau, writer, opts):
         if tableau.argument != None:
-            premises = [writer.write(premise) for premise in tableau.argument.premises]
-            conclusion = writer.write(tableau.argument.conclusion)
+            premises = [writer.write(premise, drop_parens = True) for premise in tableau.argument.premises]
+            conclusion = writer.write(tableau.argument.conclusion, drop_parens = True)
         else:
             premises = None
             conclusion = None

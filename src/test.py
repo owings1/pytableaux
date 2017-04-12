@@ -92,11 +92,8 @@ def test_standard_notation():
     print '      pass: ' + w.write(s2)
     s3 = p.parse('(A & B)')
     print '      pass: ' + w.write(s3)
-    try:
-        s4 = p.parse('A & B')
-        assert False, 's4 should not pass'
-    except Parser.ParseError as e:
-        print '      pass: ' + e.message
+    s4 = p.parse('A & B')
+    print '      pass: ' + w.write(s3)
     try:
         s5 = p.parse('(A & B')
         assert False, 's5 should not pass'

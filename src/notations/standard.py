@@ -93,6 +93,12 @@ class Writer(logic.Vocabulary.Writer):
 
     symbol_sets = symbol_sets
 
+    def write(self, sentence, symbol_set = None, **opts):
+        if sentence.is_operated() and 'drop_parens' in opts and opts['drop_parens']:
+            return self.write_operated(sentence, symbol_set = symbol_set, drop_parens = True)
+        else:
+            return super(Writer, self).write(sentence, symbol_set = symbol_set, **opts)
+
     def write_predicated(self, sentence, symbol_set = None):
         symset = self.symset(symbol_set)
         if sentence.predicate.arity < 2:
@@ -106,7 +112,7 @@ class Writer(logic.Vocabulary.Writer):
         joins += [self.write_parameter(param, symbol_set = symbol_set) for param in sentence.parameters[1:]]
         return ''.join(joins)
 
-    def write_operated(self, sentence, symbol_set = None):
+    def write_operated(self, sentence, symbol_set = None, drop_parens = False):
         symset = self.symset(symbol_set)
         arity = logic.arity(sentence.operator)
         if arity == 1:
@@ -119,13 +125,13 @@ class Writer(logic.Vocabulary.Writer):
                 return symset.charof('operator', sentence.operator) + self.write(sentence.operand, symbol_set = symbol_set)
         elif arity == 2:
             return ''.join([
-                symset.charof('paren_open', 0),
+                symset.charof('paren_open', 0) if not drop_parens else '',
                 symset.charof('whitespace', 0).join([
                     self.write(sentence.lhs, symbol_set = symbol_set),
                     symset.charof('operator', sentence.operator),
                     self.write(sentence.rhs, symbol_set = symbol_set)
                 ]),
-                symset.charof('paren_close', 0)
+                symset.charof('paren_close', 0) if not drop_parens else ''
             ])
         else:
             raise Exception(NotImplemented)
@@ -145,6 +151,25 @@ class Writer(logic.Vocabulary.Writer):
 class Parser(logic.Parser):
 
     symbol_sets = {'default': symbol_sets['default']}
+
+    def parse(self, string):
+        try:
+            s = super(Parser, self).parse(string)
+        except logic.Parser.ParseError as e:
+            try:
+                # allow dropped outer parens
+                pstring = ''.join([
+                    self.symbol_set.charof('paren_open', 0),
+                    string,
+                    self.symbol_set.charof('paren_close', 0)
+                ])
+                s = super(Parser, self).parse(pstring)
+            except logic.Parser.ParseError as e1:
+                raise e
+            else:
+                return s
+        else:
+            return s
 
     def read(self):
         ctype = self.assert_current()
@@ -237,4 +262,4 @@ class Parser(logic.Parser):
 
 writer = Writer()
 def write(sentence, symbol_set = None):
-    return writer.write(sentence, symbol_set = symbol_set)
+    return writer.write(sentence, symbol_set = symbol_set, drop_parens = True)

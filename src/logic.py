@@ -689,7 +689,7 @@ class Vocabulary(object):
             else:
                 return symbol_set
 
-        def write(self, sentence, symbol_set = None):
+        def write(self, sentence, symbol_set = None, **opts):
             if sentence.is_atomic():
                 return self.write_atomic(sentence, symbol_set = symbol_set)
             elif sentence.is_quantified():

@@ -364,7 +364,7 @@ def make_tableau_examples(app, what, name, obj, options, lines):
                 ''                                     ,
                 '.. raw:: html'                        ,
                 ''         ,
-                '    ' + 'Argument: <i>' + '</i>, <i>'.join([sw.write(p) for p in arg.premises]) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>',
+                '    ' + 'Argument: <i>' + '</i>, <i>'.join([sw.write(p, drop_parens=True) for p in arg.premises]) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>',
                 ''                                     ,
                 '    ' + writer.write(proof, writer=sw)
             ]
