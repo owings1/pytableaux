@@ -825,6 +825,8 @@ class TableauxSystem(object):
                 self.logic = get_logic(logic)
                 self.rules = [Rule(self) for Rule in self.logic.TableauxRules.rules]
 
+            self.open_branchset = set()
+            self.branch_dict = dict()
             self.trunk_built = False
             self.current_step = 0
             if argument != None:
@@ -852,11 +854,13 @@ class TableauxSystem(object):
             self.finish()
             return False
 
+        def after_branch_close(self, branch):
+            self.open_branchset.remove(branch)
         def open_branches(self):
             """
             Return the set of open branches on the tableau.
             """
-            return {branch for branch in self.branches if not branch.closed}
+            return set(self.open_branchset)
 
         def structure(self, branches, node_depth=0, track=None):
             if track == None:
@@ -975,6 +979,9 @@ class TableauxSystem(object):
                 branch = other_branch.copy()
             branch.index = len(self.branches)
             self.branches.append(branch)
+            if not branch.closed:
+                self.open_branchset.add(branch)
+            self.branch_dict[id(branch)] = branch
             return branch
 
         def build_trunk(self):
@@ -983,6 +990,9 @@ class TableauxSystem(object):
             self.logic.TableauxSystem.build_trunk(self, self.argument)
             self.trunk_built = True
             self.current_step += 1
+
+        def get_branch(self, branch_id):
+            return self.branch_dict[branch_id]
 
         def finish(self):
             """
@@ -1088,6 +1098,7 @@ class TableauxSystem(object):
             self.closed = True
             if self.tableau != None:
                 self.closed_step = self.tableau.current_step
+                self.tableau.after_branch_close(self)
             return self
 
         def get_nodes(self, ticked=None):
