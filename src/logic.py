@@ -856,6 +856,17 @@ class TableauxSystem(object):
 
         def after_branch_close(self, branch):
             self.open_branchset.remove(branch)
+            for rule in self.rules:
+                rule.after_branch_close(branch)
+
+        def after_node_add(self, branch, node):
+            for rule in self.rules:
+                rule.after_node_add(branch, node)
+
+        def after_node_tick(self, branch, node):
+            for rule in self.rules:
+                rule.after_node_tick(branch, node)
+
         def open_branches(self):
             """
             Return the set of open branches on the tableau.
@@ -982,6 +993,8 @@ class TableauxSystem(object):
             if not branch.closed:
                 self.open_branchset.add(branch)
             self.branch_dict[id(branch)] = branch
+            for rule in self.rules:
+                rule.after_branch_add(branch, other_branch)
             return branch
 
         def build_trunk(self):
@@ -1068,6 +1081,7 @@ class TableauxSystem(object):
             node.parent = self.leaf
             if self.tableau != None:
                 node.step = self.tableau.current_step
+                self.tableau.after_node_add(self, node)
             self.leaf = node
             return self
 
@@ -1089,6 +1103,7 @@ class TableauxSystem(object):
                 if self.tableau != None and self.tableau.current_step != None:
                     if node.ticked_step == None or self.tableau.current_step > node.ticked_step:
                         node.ticked_step = self.tableau.current_step
+                    self.tableau.after_node_tick(self, node)
             return self
 
         def close(self):
@@ -1237,6 +1252,18 @@ class TableauxSystem(object):
             """
             raise Exception(NotImplemented)
 
+        def after_branch_add(self, branch, other_branch = None):
+            pass
+
+        def after_node_add(self, branch, node):
+            pass
+
+        def after_node_tick(self, branch, node):
+            pass
+
+        def after_branch_close(self, branch):
+            pass
+
         def __repr__(self):
             return self.__class__.__name__
 
@@ -1287,9 +1314,40 @@ class TableauxSystem(object):
 
         ticked = False
 
+        def __init__(self, *args):
+            super(TableauxSystem.BranchRule, self).__init__(*args)
+            self.applicable_nodes = dict()
+
+        def after_branch_add(self, branch, other_branch = None):
+            if not branch.closed:
+                branch_id = id(branch)
+                consumed = False
+                if other_branch != None:
+                    other_branch_id = id(other_branch)
+                    if other_branch_id in self.applicable_nodes:
+                        self.applicable_nodes[branch_id] = set(self.applicable_nodes[other_branch_id])
+                        consumed = True
+                if not consumed:
+                    self.applicable_nodes[branch_id] = set()
+                    for node in branch.get_nodes(ticked=self.ticked):
+                        self.after_node_add(branch, node)
+
+        def after_branch_close(self, branch):
+            del(self.applicable_nodes[id(branch)])
+
+        def after_node_add(self, branch, node):
+            if self.applies_to_node(node, branch):
+                self.applicable_nodes[id(branch)].add(node)
+
+        def after_node_tick(self, branch, node):
+            branch_id = id(branch)
+            if self.ticked == False:
+                self.applicable_nodes[branch_id].discard(node)
+
         def applies(self):
-            for branch in self.tableau.open_branches():
-                for node in branch.get_nodes(ticked=self.ticked):
+            for branch_id in self.applicable_nodes:
+                branch = self.tableau.get_branch(branch_id)
+                for node in set(self.applicable_nodes[branch_id]):
                     target = self.applies_to_node(node, branch)
                     if target:
                         if target == True:
@@ -1301,6 +1359,8 @@ class TableauxSystem(object):
                         if 'branch' not in target:
                             target['branch'] = branch
                         return target
+                    else:
+                        self.applicable_nodes[branch_id].discard(node)
 
         def apply(self, target):
             return self.apply_to_node(target['node'], target['branch'])
