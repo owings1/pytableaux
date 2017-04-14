@@ -100,8 +100,8 @@ class Model(k.Model):
     def get_atomic_value(self, atomic):
         return super(Model, self).get_atomic_value(atomic, 0)
 
-    def add_true_predicate_sentence(self, sentence):
-        return super(Model, self).add_true_predicate_sentence(sentence, 0)
+    def set_predicated_value(self, sentence, value):
+        return super(Model, self).set_predicated_value(sentence, value, 0)
 
     def get_extension(self, predicate):
         return super(Model, self).get_extension(predicate, 0)
@@ -136,12 +136,18 @@ class TableauxSystem(logic.TableauxSystem):
         for node in branch.get_nodes():
             if 'sentence' in node.props:
                 s = node.props['sentence']
-                if s.is_atomic():
-                    model.set_atomic_value(s, 1)
-                elif s.is_operated() and s.operator == 'Negation' and s.operand.is_atomic():
-                    model.set_atomic_value(s.operand, 0)
-                elif s.is_predicated():
-                    model.add_true_predicate_sentence(s)
+                if s.is_literal():
+                    if s.is_operated():
+                        assert s.operator == 'Negation'
+                        value = 0
+                        s = s.operand
+                    else:
+                        value = 1
+                    if s.is_atomic():
+                        model.set_atomic_value(s, value)
+                    else:
+                        assert s.is_predicated()
+                        model.set_predicated_value(s, value)
 
 class TableauxRules(object):
     """

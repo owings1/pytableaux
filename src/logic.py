@@ -543,7 +543,7 @@ class Vocabulary(object):
         predicate  = None
 
         def is_sentence(self):
-            return isinstance(self, Vocabulary.Sentence)
+            return True
 
         def is_atomic(self):
             return isinstance(self, Vocabulary.AtomicSentence)
@@ -556,6 +556,14 @@ class Vocabulary(object):
 
         def is_operated(self):
             return isinstance(self, Vocabulary.OperatedSentence)
+
+        def is_literal(self):
+            return self.is_atomic() or self.is_predicated() or (
+                self.is_operated() and self.operator == 'Negation' and (
+                    self.operand.is_atomic() or
+                    self.operand.is_predicated()
+                )
+            )
 
         def substitute(self, constant, variable):
             raise Exception(NotImplemented)

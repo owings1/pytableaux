@@ -105,14 +105,15 @@ class Model(object):
         else:
             return None
 
-    def add_true_predicate_sentence(self, sentence, world):
+    def set_predicated_value(self, sentence, value, world):
         self.predicates.add(sentence.predicate)
         name = sentence.predicate.name
         frame = self.world_frame(world)
         for w in self.worlds:
             if name not in self.worlds[w]['extensions']:
                 self.worlds[w]['extensions'][name] = set()
-        frame['extensions'][name].add(sentence.parameters)
+        if value == 1:
+            frame['extensions'][name].add(sentence.parameters)
         frame['constants'].update(sentence.parameters)
 
     def get_extension(self, predicate, world):
