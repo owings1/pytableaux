@@ -879,7 +879,7 @@ class TableauxSystem(object):
             """
             Return the set of open branches on the tableau.
             """
-            return set(self.open_branchset)
+            return self.open_branchset
 
         def structure(self, branches, node_depth=0, track=None):
             if track == None:
