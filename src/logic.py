@@ -1130,7 +1130,10 @@ class TableauxSystem(object):
             """
             if ticked == None:
                 return self.nodes
-            return [node for node in self.nodes if ticked == (node in self.ticked_nodes)]
+            return [node for node in self.nodes if ticked == self.is_ticked(node)]
+
+        def is_ticked(self, node):
+            return node in self.ticked_nodes
 
         def copy(self):
             branch = TableauxSystem.Branch()
