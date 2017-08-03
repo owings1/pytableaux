@@ -2,27 +2,28 @@
 
 A multi-logic proof generator.
 
-For the deployed site, [see here][site]. For the documentation, [see here][doc].
+## Web UI
+
+For the live site, [see here][site].
 
 ## Docker
 
+The docker image is available on [Docker Hub][dockerhub].
+
 ```bash
-cd ~/git/pytableaux
-
-# build the image
-docker build -t owings1/pytableaux:latest docker
-
-# set container parameters, choose different host port, container name if desired.
-REPO_HOME=`pwd`
-HOST_PORT=8080
-CONT_NAME=pytableaux
-
-# create the container
-docker create --name $CONT_NAME -v $REPO_HOME:/mnt/repo -p $HOST_PORT:8080 -e PY_HOST=0.0.0.0 owings1/pytableaux
-
-# start the container
-docker start $CONT_NAME
+docker run -d -p 8080:8080 --name pytableaux owings1/pytableaux:latest
 ```
+
+The web UI should then be available on port 8080, e.g. `http://localhost:8080`.
+
+## Documentation
+
+For the live documentation, [see here][doc]. If you deployed the docker container,
+the documentation is available at `/doc`, e.g. `http://localhost:8080/doc`.
+
+## Contributing
+
+Please file any issues on [bitbucket][issues].
 
 ## Copyright & License
 
@@ -31,3 +32,5 @@ Copyright (C) 2014-2017 Doug Owings. Released under the [GNU Affero General Publ
 [site]: http://logic.dougowings.net
 [doc]: http://logic.dougowings.net/doc/
 [license]: https://www.gnu.org/licenses/agpl-3.0.en.html
+[dockerhub]: https://hub.docker.com/r/owings1/pytableaux/
+[issues]: https://bitbucket.org/owings1/pytableaux/issues
