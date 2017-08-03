@@ -1059,6 +1059,11 @@ class TableauxSystem(object):
             self.tableau = tableau
             self.closed_step = None
             self.index = None
+            self.node_index = {
+                'sentence'   : dict(),
+                'designated' : dict(),
+                'world'      : dict()
+            }
 
         def has(self, props, ticked=None):
             """
@@ -1072,7 +1077,15 @@ class TableauxSystem(object):
             Find the first node on the branch that matches the given properties, optionally
             filtered by ticked status. Returns *None* if not found.
             """
-            for node in self.get_nodes(ticked=ticked):
+            haystack = set(self.get_nodes(ticked=ticked))
+            # reduce from node index
+            for prop in self.node_index:
+                if prop in props:
+                    key = str(props[prop])
+                    if key not in self.node_index[prop]:
+                        return None
+                    haystack = haystack & self.node_index[prop][key]
+            for node in haystack:
                 if node.has_props(props):
                     return node
             return None
@@ -1091,6 +1104,12 @@ class TableauxSystem(object):
                 node.step = self.tableau.current_step
                 self.tableau.after_node_add(self, node)
             self.leaf = node
+            for prop in self.node_index:
+                if prop in node.props:
+                    key = str(node.props[prop])
+                    if key not in self.node_index[prop]:
+                        self.node_index[prop][key] = set()
+                    self.node_index[prop][key].add(node)
             return self
 
         def update(self, nodes):
@@ -1143,6 +1162,7 @@ class TableauxSystem(object):
             branch.ws = set(self.ws)
             branch.leaf = self.leaf
             branch.tableau = self.tableau
+            branch.node_index = {prop : {key : set(self.node_index[prop][key]) for key in self.node_index[prop]} for prop in self.node_index}
             return branch
 
         def worlds(self):
