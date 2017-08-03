@@ -27,8 +27,8 @@ args = {
     'Affirming a Disjunct 1'           : [[ 'Aab', 'a'  ], 'b'  ],
     'Affirming a Disjunct 2'           : [[ 'Aab', 'a'  ], 'Nb' ],
     'Affirming the Consequent'         : [[ 'Cab', 'b'  ], 'a'  ],
-    'Biconditional Elimination 1'      : [[ 'Eab', 'a'  ], 'b'  ],
-    'Biconditional Elimination 2'      : [[ 'Eab', 'Na' ], 'Nb' ],
+    'Biconditional Elimination 1'      : [[ 'Bab', 'a'  ], 'b'  ],
+    'Biconditional Elimination 2'      : [[ 'Bab', 'Na' ], 'Nb' ],
     'Biconditional Identity'           : 'Baa',
     'Conditional Contraction'          : [[ 'UaUab' ], 'Uab'   ],
     'Conditional Equivalence'          : [[ 'Uab'   ], 'Uba'  ],
@@ -50,6 +50,8 @@ args = {
     'Extracting the Consequent'        : [[ 'Cab'  ], 'b'    ],
     'Law of Excluded Middle'           : 'AaNa',
     'Law of Non-contradiction'         : [[ 'KaNa' ], 'b'  ],
+    'Material Biconditional Elimination 1' : [[ 'Eab', 'a'  ], 'b'  ],
+    'Material Biconditional Elimination 2' : [[ 'Bab', 'Na' ], 'Nb' ],
     'Material Biconditional Identity'  : 'Eaa',
     'Material Contraction'             : [[ 'CaCab' ], 'Cab'   ],
     'Material Identity'                : 'Caa',
@@ -90,7 +92,8 @@ test_pred_data = [
     ['is G', 1, 0, 1],
     ['is H', 2, 0, 1],
     ['Os'  , 3, 0, 2],
-    ['O1s' , 3, 1, 2]
+    ['O1s' , 3, 1, 2],
+    ['O2s' , 3, 2, 2]
 ]
 
 vocabulary = logic.Vocabulary(test_pred_data)
