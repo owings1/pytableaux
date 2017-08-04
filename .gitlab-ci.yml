@@ -1,0 +1,47 @@
+before_script:
+  - export IMAGE_NAME=${CI_REGISTRY_IMAGE}
+  - export IMAGE_TAG=${CI_COMMIT_SHA}
+
+stages:
+  - build
+  - test
+  - publish
+  - cleanup
+
+build_image:
+  stage: build
+  tags:
+    - shell
+  script:
+    - docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+
+test_container:
+  stage: test
+  tags:
+     - shell
+  script:
+    - docker run -t --rm ${IMAGE_NAME}:${IMAGE_TAG} python src/test.py
+
+
+push_image:
+  stage: publish
+  tags:
+    - shell
+  only:
+    - tags
+    - /^v[0-9.]+$/
+  script:
+    - VERSION=${CI_COMMIT_TAG:1}
+    - docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:${VERSION}
+    - docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" --email "$GITLAB_USER_EMAIL" "$CI_REGISTRY"
+    - docker push ${IMAGE_NAME}:${VERSION}
+    - docker push ${IMAGE_NAME}:latest
+
+remove_image:
+  stage: cleanup
+  tags:
+    - shell
+  script:
+    - IMAGE_TAG=${CI_COMMIT_SHA}
+    - docker rmi ${IMAGE_NAME}:${IMAGE_TAG}

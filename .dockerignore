@@ -1,1 +1,6 @@
 doc/_build
+.git
+.gitignore
+.gitlab-ci.yml
+.dockerignore
+*.pyc
