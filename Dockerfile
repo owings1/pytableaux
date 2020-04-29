@@ -1,12 +1,10 @@
 FROM alpine:latest
 
-MAINTAINER Doug Owings <doug@dougowings.net>
-
 WORKDIR /mnt/app
 EXPOSE 8080
 
 # Required packages
-RUN apk add --no-cache --update python curl py-pip && pip install --no-cache-dir jinja2 cherrypy
+RUN apk add --no-cache --update python curl py-pip && pip install --no-cache-dir jinja2 cherrypy pytest coverage
 
 COPY . .
 

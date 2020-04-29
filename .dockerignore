@@ -3,4 +3,9 @@ doc/_build
 .gitignore
 .gitlab-ci.yml
 .dockerignore
-*.pyc
+**/*.pyc
+/local
+.coverage
+/htmlcov
+**/__pycache__
+**/.pytest_cache
