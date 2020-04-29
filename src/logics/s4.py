@@ -28,6 +28,7 @@ def example_validities():
 		'S4 Conditional Inference 1' ,
 		'S4 Material Inference 1'    ,
         'S4 Inference 1'             ,
+        'NP Collapse 1'              ,
     ])
     return args
     
@@ -50,7 +51,6 @@ def example_invalidities():
         'Modal Transformation 2'     ,
         'Modal Transformation 3'     ,
         'Modal Transformation 4'     ,
-        'NP Collapse 1'              ,
         'Triviality 1'               ,
         'Triviality 2'               ,
     ])
