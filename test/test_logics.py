@@ -15,7 +15,8 @@ def example_proof(logic, name, is_build=True):
     if is_build:
         proof.build()
     return proof
-    
+
+
 class TestFDE(object):
 
     def test_examples(self):
