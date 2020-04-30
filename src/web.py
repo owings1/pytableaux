@@ -69,7 +69,7 @@ class App:
     @server.expose
     def index(self, *args, **kw):
         App.fix_kw(kw)
-        print kw
+        print(kw)
         data = {
             'operators_list'     : logic.operators_list,
             'logic_modules'      : available_module_names['logics'],
