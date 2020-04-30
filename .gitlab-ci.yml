@@ -1,57 +1,77 @@
 variables:
-  IMAGE_NAME: $CI_REGISTRY_IMAGE
-  IMAGE_TAG: $CI_JOB_ID
+  IMAGE_NAME: "$CI_REGISTRY_IMAGE"
+  IMAGE_TAG: "$CI_JOB_ID"
 
 stages:
   - test
   - publish
 
-run_tests:
+test_python2:
   stage: test
   tags:
     - shell
+  variables:
+    DOCKERFILE: "res/python2.dockerfile"
   before_script:
-    - docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .
+    - docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" -f "$DOCKERFILE" .
   script:
     - docker run -t --rm "${IMAGE_NAME}:${IMAGE_TAG}" scripts/test.sh
   after_script:
     - docker rmi "${IMAGE_NAME}:${IMAGE_TAG}"
 
+test_python3:
+  stage: test
+  tags:
+    - shell
+  variables:
+    DOCKERFILE: "res/python3.dockerfile"
+  before_script:
+    - docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" -f "$DOCKERFILE" .
+  script:
+    - docker run -t --rm "${IMAGE_NAME}:${IMAGE_TAG}" scripts/test.sh
+  after_script:
+    - docker rmi "${IMAGE_NAME}:${IMAGE_TAG}"
+  
 test_container:
   stage: test
   tags:
     - shell
+  variables:
+    DOCKERFILE: "res/python3.dockerfile"
+    CONTAINER_NAME: "CI-${CI_PROJECT_NAME}-${CI_JOB_ID}"
   before_script:
-    - docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .
+    - docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" -f "$DOCKERFILE" .
   script:
-    - CONTAINER_NAME=CI-${CI_PROJECT_NAME}-${CI_JOB_ID}
-    - docker run -d --name $CONTAINER_NAME ${IMAGE_NAME}:${IMAGE_TAG}
+    - docker run -d --name "$CONTAINER_NAME" "${IMAGE_NAME}:${IMAGE_TAG}"
     - sleep 30
     - while true; do
-    -   STATUS=`docker inspect -f '{{.State.Health.Status}}' $CONTAINER_NAME`
-    -   echo 'Container status:' $STATUS
-    -   if [[ $STATUS = unhealthy ]]; then
+    -   STATUS=`docker inspect -f '{{.State.Health.Status}}' "$CONTAINER_NAME"`
+    -   echo 'Container status:' "$STATUS"
+    -   if [[ "$STATUS" = unhealthy ]]; then
+    -     docker rm -f "$CONTAINER_NAME"
     -     exit 1
-    -   elif [[ $STATUS = healthy ]]; then
+    -   elif [[ "$STATUS" = healthy ]]; then
     -     break
     -   fi
     -   sleep 5
     - done
-    - docker rm -f $CONTAINER_NAME
+    - docker rm -f "$CONTAINER_NAME"
   after_script:
     - docker rmi "${IMAGE_NAME}:${IMAGE_TAG}"
 
-push_image:
+push_image_python3:
   stage: publish
   tags:
     - shell
   only:
     - tags
     - /^v[0-9.]+$/
+  variables:
+    DOCKERFILE: "res/python3.dockerfile"
   before_script:
-    - docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .
+    - docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" -f "$DOCKERFILE" .
   script:
-    - VERSION=${CI_COMMIT_TAG:1}
+    - VERSION="${CI_COMMIT_TAG:1}"
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" --email "$GITLAB_USER_EMAIL" "$CI_REGISTRY"
     - docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:${VERSION}
     - docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
