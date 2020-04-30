@@ -27,7 +27,7 @@ Please file any issues on [bitbucket][issues].
 
 ## Copyright & License
 
-Copyright (C) 2014-2017 Doug Owings. Released under the [GNU Affero General Public License 3.0][license] or later.
+Copyright (C) 2014-2020 Doug Owings. Released under the [GNU Affero General Public License 3.0][license] or later.
 
 [site]: http://logic.dougowings.net
 [doc]: http://logic.dougowings.net/doc/
