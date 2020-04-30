@@ -515,6 +515,9 @@ class Vocabulary(object):
         def __eq__(self, other):
             return isinstance(other, Vocabulary.Constant) and self.__dict__ == other.__dict__
 
+        def __hash__(self):
+            return hash((self.index, self.subscript))
+
         def is_variable(self):
             return False
 
@@ -529,6 +532,9 @@ class Vocabulary(object):
 
         def __eq__(self, other):
             return isinstance(other, Vocabulary.Variable) and self.__dict__ == other.__dict__
+
+        def __hash__(self):
+            return hash((self.index, self.subscript))
 
         def is_variable(self):
             return True
