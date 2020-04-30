@@ -215,6 +215,9 @@ class TableauxSystem(logic.TableauxSystem):
                 model.add_access(node.props['world1'], node.props['world2'])
 
     class ConditionalModalNodeRule(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        Conditional Modal Node Rule
+        """
 
         def example_node(self):
             props = super(TableauxSystem.ConditionalModalNodeRule, self).example_node()
