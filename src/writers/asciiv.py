@@ -62,7 +62,7 @@ import logic
 class Writer(logic.TableauxSystem.Writer):
 
     def write(self, tableau, notation, symbol_set = None):
-        return write_structure(tableau.tree, notation, symbol_set = symbol_set)
+        return self.write_structure(tableau.tree, notation, symbol_set = symbol_set)
 
     def write_structure(self, structure, notation, indent = 0, symbol_set = None):
         node_strs = []
