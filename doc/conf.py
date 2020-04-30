@@ -348,12 +348,14 @@ def make_tableau_examples(app, what, name, obj, options, lines):
                 ''                                     ,
                 '    ' + writer.write(proof, writer=sw)
             ]
+        except StopIteration:
+            pass
         except Exception as e:
-            print (str(e))
-            print 'No example generated for ' + str(obj)
+            print (e)
+            print ('No example generated for ' + str(obj))
             if proof != None:
                 import json
-                print json.dumps(proof.tree, indent=2, default=str)
+                print (json.dumps(proof.tree, indent=2, default=str))
             raise e
     elif what == 'method' and obj.__name__ == 'build_trunk':
         try:
@@ -369,13 +371,14 @@ def make_tableau_examples(app, what, name, obj, options, lines):
                 '    ' + writer.write(proof, writer=sw)
             ]
         except:
-            print 'Error making example for ' + str(obj)
+            print ('Error making example for ' + str(obj))
             raise
 
 def post_process(app, exception):
     builddir = os.path.dirname(os.path.abspath(__file__)) + '/_build/html'
     import re, codecs
-    from HTMLParser import HTMLParser
+    #from HTMLParser import HTMLParser
+    from html.parser import HTMLParser
     h = HTMLParser()
     files = [f for f in os.listdir(builddir) if f.endswith('.html')]
     for fil in files:
@@ -399,4 +402,4 @@ def setup(app):
     app.connect('autodoc-process-docstring', make_tableau_examples)
     app.connect('autodoc-process-docstring', make_truth_tables)
     app.connect('build-finished', post_process)
-    app.add_stylesheet('pytableaux.css')
+    app.add_css_file('pytableaux.css')
