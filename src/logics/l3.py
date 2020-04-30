@@ -31,7 +31,7 @@ operators (see below).
 name = 'L3'
 description = 'Lukasiewicz 3-valued Logic'
 
-import fde, k3
+from . import fde, k3
 import logic
 from logic import operate, negate
 
@@ -45,7 +45,7 @@ def example_validities():
     return args
 
 def example_invalidities():
-    import cfol
+    from . import cfol
     args = cfol.example_invalidities()
     args.update([
         'Conditional Contraction'         ,

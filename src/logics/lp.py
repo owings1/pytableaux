@@ -71,7 +71,7 @@ For futher reading see:
 name = 'LP'
 description = 'Logic of Paradox'
 
-import fde, k
+from . import fde, k
 
 def example_validities():
     args = fde.example_validities()
@@ -87,7 +87,7 @@ def example_validities():
     return args
     
 def example_invalidities():
-    import cfol
+    from . import cfol
     args = cfol.example_invalidities()
     args.update([
         'Biconditional Elimination 1'   ,

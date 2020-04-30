@@ -31,7 +31,7 @@ name = 'T'
 description = 'Reflexive Normal Modal Logic'
 
 def example_validities():
-    import d
+    from . import d
     args = d.example_validities()
     args.update([
     	'NP Collapse 1'         ,
@@ -42,7 +42,7 @@ def example_validities():
     return args
     
 def example_invalidities():
-    import s4
+    from . import s4
     args = s4.example_invalidities()
     args.update([
 		'S4 Inference 1'             ,
@@ -51,7 +51,8 @@ def example_invalidities():
     ])
     return args
 
-import logic, k
+import logic
+from . import k
 from logic import atomic
 
 class TableauxSystem(k.TableauxSystem):

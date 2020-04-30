@@ -39,7 +39,7 @@ binary connectives. Hence the saying "one bit of rat's dung spoils the soup," or
 name = 'K3W'
 description = 'Weak Kleene 3-valued logic'
 
-import fde, k3
+from . import fde, k3
 
 def example_validities():
     args = set([

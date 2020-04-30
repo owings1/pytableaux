@@ -68,7 +68,7 @@ Some notable features of K3 include:
 name = 'K3'
 description = 'Strong Kleene 3-valued logic'
 
-import fde, k
+from . import fde, k
 
 def example_validities():
     args = fde.example_validities()
@@ -88,7 +88,7 @@ def example_validities():
     return args
     
 def example_invalidities():
-    import cfol
+    from . import cfol
     args = cfol.example_invalidities()
     args.update([
         'Biconditional Identity'          ,

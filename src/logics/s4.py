@@ -22,7 +22,7 @@ name = 'S4'
 description = 'S4 Normal Modal Logic'
 
 def example_validities():
-    import t
+    from . import t
     args = t.example_validities()
     args.update([
 		'S4 Conditional Inference 1' ,
@@ -56,7 +56,8 @@ def example_invalidities():
     ])
     return args
     
-import logic, k, t
+import logic
+from . import k, t
 
 class TableauxSystem(k.TableauxSystem):
     pass

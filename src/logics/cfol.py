@@ -39,14 +39,14 @@ The semantics for CFOL is the same as CPL, except we add two operators for quant
 are cases where *C* also has the value **true**.
 """
 
-import k, cpl
+from . import k, cpl
 
 name = 'CFOL'
 description = 'Classical First Order Logic'
 
 def example_validities():
     # Everything valid in CPL, K3, K3W, GO, or LP is valid in CFOL
-    import cpl, k3, k3w, go, lp
+    from . import cpl, k3, k3w, go, lp
     args = k3.example_validities()
     args.update(lp.example_validities())
     args.update(cpl.example_validities())
@@ -55,7 +55,6 @@ def example_validities():
     return args
 
 def example_invalidities():
-    import k
     args = k.example_invalidities()
     args.update([
         'Necessity Distribution'     ,

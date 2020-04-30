@@ -34,8 +34,11 @@ Links
 name = 'D'
 description = 'Deontic Normal Modal Logic'
 
+import logic
+from . import k
+from logic import atomic
+
 def example_validities():
-    import k
     args = k.example_validities()
     args.update([
         'Serial Inference 1',
@@ -43,7 +46,7 @@ def example_validities():
     return args
     
 def example_invalidities():
-    import t
+    from . import t
     args = t.example_invalidities()
     args.update([
     	'Reflexive Inference 1' ,
@@ -51,9 +54,6 @@ def example_invalidities():
         'Possibility Addition'  ,
     ])
     return args
-    
-import logic, k
-from logic import atomic
 
 class TableauxSystem(k.TableauxSystem):
     """

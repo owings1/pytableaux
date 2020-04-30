@@ -87,7 +87,7 @@ def example_validities():
 
 def example_invalidities():
     # Everything invalid in K3 or LP is also invalid in FDE.
-    import k3, lp
+    from . import k3, lp
     args = k3.example_invalidities()
     args.update(lp.example_invalidities())
     return args

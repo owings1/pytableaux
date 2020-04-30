@@ -33,7 +33,7 @@ name = 'K'
 description = 'Kripke Normal Modal Logic'
 
 def example_validities():
-    import cfol
+    from . import cfol
     args = cfol.example_validities()
     args.update([
         'Modal Platitude 1'      ,
@@ -48,7 +48,7 @@ def example_validities():
     return args
 
 def example_invalidities():
-    import t
+    from . import t
     args = t.example_invalidities()
     args.update([
         'Necessity Elimination' ,
@@ -58,7 +58,8 @@ def example_invalidities():
     ])
     return args
 
-import logic, examples, fde
+import logic, examples
+from . import fde
 from logic import negate, operate, quantify, atomic, constant, predicated
 
 truth_values = [0, 1]

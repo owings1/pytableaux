@@ -34,7 +34,7 @@ Truth functional operators are defined via truth tables (below).
 are cases where *C* also has the value true.
 """
 
-import k, fde
+from . import k, fde
 
 name = 'CPL'
 description = 'Classical Predicate Logic'
@@ -72,7 +72,7 @@ def example_validities():
     return args
 
 def example_invalidities():
-    import cfol
+    from . import cfol
     args = cfol.example_invalidities()
     args.update([
         'Existential Syllogism'         ,

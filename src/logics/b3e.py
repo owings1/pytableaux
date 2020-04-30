@@ -34,7 +34,8 @@ Truth-functional operators are defined via truth tables below.
 name = 'B3E'
 description = 'Bochvar 3 External Logic'
 
-import logic, k3, k3w, go, fde
+from . import k3, k3w, go, fde
+import logic
 from logic import assertion, operate, negate
 
 def example_validities():
@@ -46,7 +47,7 @@ def example_validities():
     return args
     
 def example_invalidities():
-    import cpl
+    from . import cpl
     args = cpl.example_invalidities()
     return args
 

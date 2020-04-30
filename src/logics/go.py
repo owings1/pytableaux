@@ -97,7 +97,7 @@ def example_validities():
     ])
 
 def example_invalidities():
-    import cfol
+    from . import cfol
     args = cfol.example_invalidities()
     args.update([
         'DeMorgan 1'                      ,
@@ -109,7 +109,8 @@ def example_invalidities():
     ])
     return args
 
-import logic, fde, k3, math
+import logic, math
+from . import fde, k3
 from logic import negate, operate
 
 truth_values = k3.truth_values
