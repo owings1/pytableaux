@@ -79,6 +79,12 @@ num_const_symbols     = 4
 num_atomic_symbols    = 5
 num_predicate_symbols = 4
 
+class BadArgumentError(Exception):
+    pass
+
+class NotImplementedError(Exception):
+    pass
+
 def atomic(index, subscript):
     """Return an atomic sentence represented by the given index and subscript integers.
     Examples::
@@ -282,16 +288,21 @@ class argument(object):
         arg = argument(conclusion='B', premises=['(A > B)', 'A'], notation='standard')
     """
 
+    class MissingNotationError(Exception):
+        pass
+
     def __init__(self, conclusion=None, premises=None, title=None, notation=None, vocabulary=None):
         self.premises = []
         if premises != None:
             for premise in premises:
                 if isinstance(premise, str):
                     if notation == None:
-                        raise Exception("Must pass notation to parse sentence strings.")
+                        raise argument.MissingNotationError("Must pass notation to parse sentence strings.")
                     premise = parse(premise, vocabulary, notation)
                 self.premises.append(premise)
         if isinstance(conclusion, str):
+            if notation == None:
+                raise argument.MissingNotationError("Must pass notation to parse sentence strings.")
             conclusion = parse(conclusion, vocabulary, notation)
         self.conclusion = conclusion
         self.title      = title
@@ -377,7 +388,7 @@ def _get_module(package, arg):
         if '.' not in arg:
             arg = package + '.' + arg
         return importlib.import_module(arg.lower())
-    raise Exception("Argument must be module or string")
+    raise BadArgumentError("Argument must be module or string")
 
 class Vocabulary(object):
     """
@@ -448,6 +459,7 @@ class Vocabulary(object):
             assert vocab.get_predicate('is tall') == vocab.get_predicate(index=0, subscript=0)
 
         """
+        # TODO: after good coverage allow get_predicate(-1, 0)
         if name == None and index != None and isinstance(index, str):
             name = index
             index = None
@@ -493,6 +505,12 @@ class Vocabulary(object):
             raise Vocabulary.PredicateAlreadyDeclaredError("Cannot declare system predicate '{0}'".format(name))
         if name in self.user_predicates:
             raise Vocabulary.PredicateAlreadyDeclaredError("Predicate '{0}' already declared".format(name))
+        try:
+            self.get_predicate(index=index, subscript=subscript)
+        except Vocabulary.NoSuchPredicateError:
+            pass
+        else:
+            raise Vocabulary.PredicateAlreadyDeclaredError("Predicate for {0},{1} already declared".format(str(index), str(subscript)))
         predicate = Vocabulary.Predicate(name, index, subscript, arity)
         self.user_predicates[name] = predicate
         self.user_predicates_list.append(name)
@@ -572,13 +590,13 @@ class Vocabulary(object):
             )
 
         def substitute(self, constant, variable):
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
         def constants(self):
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
         def variables(self):
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
         def __eq__(self, other):
             return other != None and self.__dict__ == other.__dict__
@@ -727,7 +745,7 @@ class Vocabulary(object):
             elif sentence.is_operated():
                 return self.write_operated(sentence, symbol_set = symbol_set)
             else:
-                raise Exception(NotImplemented)
+                raise NotImplementedError(NotImplemented)
 
         def write_atomic(self, sentence, symbol_set = None):
             symset = self.symset(symbol_set)
@@ -750,7 +768,7 @@ class Vocabulary(object):
             return s
 
         def write_operated(self, sentence, symbol_set = None):
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
         def write_predicate(self, predicate, symbol_set = None):
             symset = self.symset(symbol_set)
@@ -767,7 +785,7 @@ class Vocabulary(object):
             elif param.is_variable():
                 return self.write_variable(param, symbol_set = symbol_set)
             else:
-                raise Exception(NotImplemented)
+                raise NotImplementedError(NotImplemented)
 
         def write_constant(self, constant, symbol_set = None):
             symset = self.symset(symbol_set)
@@ -803,7 +821,7 @@ class TableauxSystem(object):
 
     @staticmethod
     def build_trunk(tableau, argument):
-        raise Exception(NotImplemented)
+        raise NotImplementedError(NotImplemented)
 
     class Tableau(object):
         """
@@ -1273,21 +1291,21 @@ class TableauxSystem(object):
             """
             Whether the rule applies to the tableau. Implementations should return True/False or a target dict.
             """
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
         def apply(self, target):
             """
             Apply the rule to the tableau. Assumes that applies() has returned true. Implementations should
             modify the tableau directly, with no return value.
             """
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
         def example(self):
             """
             Add example branches/nodes sufficient for applies() to return true. Implementations should modify
             the tableau directly, with no return value. Used for building examples/documentation.
             """
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
         def after_branch_add(self, branch, other_branch = None):
             pass
@@ -1329,7 +1347,7 @@ class TableauxSystem(object):
             """
             Abstract method that must be implemented in sub-classes. Should return a target object.
             """
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
     class ClosureRule(BranchRule):
         """
@@ -1338,7 +1356,7 @@ class TableauxSystem(object):
         """
 
         def applies_to_branch(self, branch):
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
         def apply(self, target):
             target['branch'].close()
@@ -1403,16 +1421,16 @@ class TableauxSystem(object):
             return self.apply_to_node(target['node'], target['branch'])
 
         def applies_to_node(self, node, branch):
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
         def apply_to_node(self, node, branch):
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
         def example(self):
             self.tableau.branch().add(self.example_node())
 
         def example_node(self):
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
     class ConditionalNodeRule(NodeRule):
         """
@@ -1540,7 +1558,7 @@ class TableauxSystem(object):
             return self.write_tableau(tableau, writer, opts)
 
         def write_tableau(self, tableau, writer, opts):
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
 class Parser(object):
     """
