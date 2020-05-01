@@ -35,6 +35,8 @@ def example_proof(logic, name, is_build=True):
         proof.build()
     return proof
 
+def empty_proof():
+    return tableau(None, None)
 
 class TestFDE(object):
 
@@ -43,6 +45,13 @@ class TestFDE(object):
         invalids = invalidities('fde')
         assert 'Addition' in valids
         assert 'Law of Excluded Middle' in invalids
+
+    def test_ConjunctionNegatedDesignated_example_node(self):
+        rule = get_logic('fde').TableauxRules.ConjunctionNegatedDesignated(empty_proof())
+        props = rule.example_node()
+        assert props['sentence'].operator == 'Negation'
+        assert props['sentence'].operand.operator == 'Conjunction'
+        assert props['designated']
 
     def test_valid_addition(self):
         proof = example_proof('fde', 'Addition')
@@ -171,6 +180,21 @@ class TestK(object):
         invalids = invalidities('k')
         assert 'Necessity Distribution' in valids
         assert 'Necessity Elimination' in invalids
+
+    def test_Possibility_example_node(self):
+        rule = get_logic('k').TableauxRules.Possibility(empty_proof())
+        props = rule.example_node()
+        assert props['world'] == 0
+
+    def test_Existential_example_node(self):
+        rule = get_logic('k').TableauxRules.Existential(empty_proof())
+        props = rule.example_node()
+        assert props['sentence'].quantifier == 'Existential'
+
+    def test_DisjunctionNegated_example_node(self):
+        rule = get_logic('k').TableauxRules.DisjunctionNegated(empty_proof())
+        props = rule.example_node()
+        assert props['sentence'].operator == 'Negation'
 
     def test_valid_nec_dist(self):
         proof = example_proof('k', 'Necessity Distribution')
