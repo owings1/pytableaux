@@ -528,45 +528,46 @@ class Vocabulary(object):
     def list_user_predicates(self):
         return list(self.user_predicates_list)
 
-    class Constant(object):
+    class Parameter(object):
+
+        def __init__(self, index, subscript):
+            self.index = index
+            self.subscript = subscript
+
+        def is_constant(self):
+            return isinstance(self, Vocabulary.Constant)
+
+        def is_variable(self):
+            return isinstance(self, Vocabulary.Variable)
+
+        def __hash__(self):
+            return hash((self.index, self.subscript))
+
+    class Constant(Parameter):
 
         def __init__(self, index, subscript):
             if index >= num_const_symbols:
                 raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
-            self.index = index
-            self.subscript = subscript
+            super(Vocabulary.Constant, self).__init__(index, subscript)
 
         def __eq__(self, other):
             return isinstance(other, Vocabulary.Constant) and self.__dict__ == other.__dict__
 
         def __hash__(self):
-            return hash((self.index, self.subscript))
+            return Vocabulary.Parameter.__hash__(self)
 
-        def is_variable(self):
-            return False
-
-        def is_constant(self):
-            return True
-
-    class Variable(object):
+    class Variable(Parameter):
 
         def __init__(self, index, subscript):
             if index >= num_var_symbols:
                 raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
-            self.index = index
-            self.subscript = subscript
+            super(Vocabulary.Variable, self).__init__(index, subscript)
 
         def __eq__(self, other):
             return isinstance(other, Vocabulary.Variable) and self.__dict__ == other.__dict__
 
         def __hash__(self):
-            return hash((self.index, self.subscript))
-
-        def is_variable(self):
-            return True
-
-        def is_constant(self):
-            return False
+            return Vocabulary.Parameter.__hash__(self)
 
     class Sentence(object):
 
