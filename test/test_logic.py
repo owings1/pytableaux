@@ -20,7 +20,7 @@
 import pytest
 
 import logic
-
+import examples
 
 def test_parse_standard():
     s = logic.parse('A & B', notation='standard')
@@ -153,6 +153,11 @@ class TestVocabulary(object):
         with pytest.raises(logic.Vocabulary.PredicateAlreadyDeclaredError):
             v.declare_predicate('MyPredicate2', 0, 0, 1)
 
+    def test_declare_predicate_index_too_large(self):
+        v = logic.Vocabulary()
+        with pytest.raises(logic.Vocabulary.IndexTooLargeError):
+            v.declare_predicate('MyPredicate', logic.num_predicate_symbols, 0, 1)
+
     def test_list_predicates_contains_identity(self):
         v = logic.Vocabulary()
         names = v.list_predicates()
@@ -176,10 +181,18 @@ class TestVocabulary(object):
         names = v.list_user_predicates()
         assert 'Identity' not in names
 
+    def test_constant_index_too_large(self):
+        with pytest.raises(logic.Vocabulary.IndexTooLargeError):
+            logic.constant(logic.num_const_symbols, 0)
+
     def test_constant_is_constant_not_variable(self):
         c = logic.constant(0, 0)
         assert c.is_constant()
         assert not c.is_variable()
+
+    def test_variable_index_too_large(self):
+        with pytest.raises(logic.Vocabulary.IndexTooLargeError):
+            logic.variable(logic.num_var_symbols, 0)
 
     def test_sentence_is_sentence(self):
         s = logic.parse('a')
@@ -202,6 +215,10 @@ class TestVocabulary(object):
         with pytest.raises(logic.NotImplementedError):
             s.variables()
 
+    def test_atomic_index_too_large(self):
+        with pytest.raises(logic.Vocabulary.IndexTooLargeError):
+            logic.atomic(logic.num_atomic_symbols, 0)
+        
     def test_atomic_substitute(self):
         s = logic.atomic(0, 0)
         c = logic.constant(0, 0)
@@ -218,3 +235,58 @@ class TestVocabulary(object):
         s = logic.atomic(0, 0)
         res = s.variables()
         assert len(res) == 0
+
+    def test_atomic_next_a0_to_b0(self):
+        s = logic.atomic(0, 0)
+        res = s.next()
+        assert res.index == 1
+        assert res.subscript == 0
+
+    def test_atomic_next_e0_to_a1(self):
+        s = logic.atomic(logic.num_atomic_symbols - 1, 0)
+        res = s.next()
+        assert res.index == 0
+        assert res.subscript == 1
+
+    def test_predicated_no_such_predicate_no_vocab(self):
+        params = [logic.constant(0, 0), logic.constant(1, 0)]
+        with pytest.raises(logic.Vocabulary.NoSuchPredicateError):
+            logic.predicated('MyPredicate', params)
+
+    def test_predicated_arity_mismatch_identity(self):
+        params = [logic.constant(0, 0)]
+        with pytest.raises(logic.Vocabulary.PredicateArityMismatchError):
+            logic.predicated('Identity', params)
+
+    def test_predicated_substitute_a_for_x_identity(self):
+        s = logic.predicated('Identity', [logic.variable(0, 0), logic.constant(1, 0)])
+        res = s.substitute(logic.constant(0, 0), logic.variable(0, 0))
+        assert res.parameters[0] == logic.constant(0, 0)
+        assert res.parameters[1] == logic.constant(1, 0)
+
+    def test_quantified_substitute_inner_quantified(self):
+        x = logic.variable(0, 0)
+        y = logic.variable(1, 0)
+        m = logic.constant(0, 0)
+        s1 = logic.predicated('Identity', [x, y])
+        s2 = logic.quantify('Existential', x, s1)
+        s3 = logic.quantify('Existential', y, s2)
+        res = s3.substitute(m, y)
+        check = logic.parse('SxIxm')
+        assert res == check
+
+    def test_operated_no_such_operator(self):
+        s = logic.atomic(0, 0)
+        with pytest.raises(logic.Vocabulary.NoSuchOperatorError):
+            logic.operate('Misjunction', [s, s])
+
+    def test_operated_arity_mismatch_negation(self):
+        s = logic.atomic(0, 0)
+        with pytest.raises(logic.Vocabulary.OperatorArityMismatchError):
+            logic.operate('Negation', [s, s])
+
+class TestTableauxSystem(object):
+    def test_build_trunk_base_not_impl(self):
+        proof = logic.tableau(None, None)
+        with pytest.raises(logic.NotImplementedError):
+            logic.TableauxSystem.build_trunk(proof, None)
