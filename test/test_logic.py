@@ -286,7 +286,128 @@ class TestVocabulary(object):
             logic.operate('Negation', [s, s])
 
 class TestTableauxSystem(object):
+
     def test_build_trunk_base_not_impl(self):
         proof = logic.tableau(None, None)
         with pytest.raises(logic.NotImplementedError):
             logic.TableauxSystem.build_trunk(proof, None)
+
+class TestTableau(object):
+
+    def test_step_returns_false_when_finished(self):
+        proof = logic.tableau(None, None)
+        # force property
+        proof.finished = True
+        res = proof.step()
+        assert not res
+
+    def test_build_trunk_already_built_error(self):
+        proof = logic.tableau('cpl', examples.argument('Addition'))
+        with pytest.raises(logic.TableauxSystem.TrunkAlreadyBuiltError):
+            proof.build_trunk()
+
+    def test_repr_contains_finished(self):
+        proof = logic.tableau('cpl', examples.argument('Addition'))
+        res = proof.__repr__()
+        assert 'finished' in res
+
+class TestBranch(object):
+
+    def test_new_world_returns_w0(self):
+        b = logic.TableauxSystem.Branch()
+        res = b.new_world()
+        assert res == 0
+
+    def test_new_constant_returns_m(self):
+        b = logic.TableauxSystem.Branch()
+        res = b.new_constant()
+        check = logic.constant(0, 0)
+        assert res == check
+
+    def test_new_constant_returns_m1_after_s0(self):
+        b = logic.TableauxSystem.Branch()
+        i = 0
+        while i < logic.num_const_symbols:
+            c = logic.constant(i, 0)
+            sen = logic.predicated('Identity', [c, c])
+            b.add({'sentence': sen})
+            i += 1
+        res = b.new_constant()
+        check = logic.constant(0, 1)
+        assert res == check
+
+    def test_repr_contains_closed(self):
+        b = logic.TableauxSystem.Branch()
+        res = b.__repr__()
+        assert 'closed' in res
+
+class TestNode(object):
+
+    def test_worlds_contains_worlds(self):
+        node = logic.TableauxSystem.Node({'worlds': set([0, 1])})
+        res = node.worlds()
+        assert 0 in res
+        assert 1 in res
+
+    def test_repr_contains_prop_key(self):
+        node = logic.TableauxSystem.Node({'foo': 1})
+        res = node.__repr__()
+        assert 'foo' in res
+
+class TestRule(object):
+
+    def test_base_applies_not_impl(self):
+        rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
+        with pytest.raises(logic.NotImplementedError):
+            rule.applies()
+
+    def test_base_apply_not_impl(self):
+        rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
+        with pytest.raises(logic.NotImplementedError):
+            rule.apply(None)
+
+    def test_base_example_not_impl(self):
+        rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
+        with pytest.raises(logic.NotImplementedError):
+            rule.example()
+
+    def test_base_repr_equals_rule(self):
+        rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
+        res = rule.__repr__()
+        assert res == 'Rule'
+
+class TestBranchRule(object):
+
+    def test_applies_to_branch_not_impl(self):
+        rule = logic.TableauxSystem.BranchRule(logic.tableau(None, None))
+        with pytest.raises(logic.NotImplementedError):
+            rule.applies_to_branch(None)
+
+class TestClosureRule(object):
+
+    def test_applies_to_branch_not_impl(self):
+        rule = logic.TableauxSystem.ClosureRule(logic.tableau(None, None))
+        with pytest.raises(logic.NotImplementedError):
+            rule.applies_to_branch(None)
+
+class TestNodeRule(object):
+
+    def test_applies_to_node_not_impl(self):
+        rule = logic.TableauxSystem.NodeRule(logic.tableau(None, None))
+        with pytest.raises(logic.NotImplementedError):
+            rule.applies_to_node(None, None)
+
+    def test_apply_to_node_not_impl(self):
+        rule = logic.TableauxSystem.NodeRule(logic.tableau(None, None))
+        with pytest.raises(logic.NotImplementedError):
+            rule.apply_to_node(None, None)
+
+    def test_example_node_not_impl(self):
+        rule = logic.TableauxSystem.NodeRule(logic.tableau(None, None))
+        with pytest.raises(logic.NotImplementedError):
+            rule.example_node()
+
+    def test_example_not_impl(self):
+        rule = logic.TableauxSystem.NodeRule(logic.tableau(None, None))
+        with pytest.raises(logic.NotImplementedError):
+            rule.example()

@@ -29,12 +29,43 @@ import examples
 std = standard.Writer()
 pol = polish.Writer()
 
+class TestBase(object):
+
+    def test_write_operated_not_impl(self):
+        s = operate('Negation', [atomic(0, 0)])
+        w = Vocabulary.Writer(std.symset)
+        with pytest.raises(NotImplementedError):
+            w.write(s) 
+        
 class TestStandard(object):
 
     def test_atomic(self):
         s = atomic(0, 0)
         res = std.write(s)
         assert res == 'A'
+
+    def test_symset_returns_same(self):
+        ss = std.symset('default')
+        res = std.symset(ss)
+        assert res == ss
+
+    def test_write_not_impl_base_sentence(self):
+        s = Vocabulary.Sentence()
+        with pytest.raises(NotImplementedError):
+            std.write(s)
+
+    def test_write_predicate_sys(self):
+        res = std.write_predicate(system_predicates['Identity'])
+        assert res == '='
+
+    def test_write_parameter_not_impl_base_param(str):
+        param = Vocabulary.Parameter(0, 0)
+        with pytest.raises(NotImplementedError):
+            std.write_parameter(param)
+
+    def test_write_subscript_html(str):
+        res = std.write_subscript(1, symbol_set='html')
+        assert '>1</span>' in res
 
 class TestPolish(object):
 
