@@ -426,7 +426,7 @@ class Vocabulary(object):
     class PredicateIndexMismatchError(PredicateError):
         pass
 
-    class OperatorError(object):
+    class OperatorError(Exception):
         pass
 
     class NoSuchOperatorError(OperatorError):
