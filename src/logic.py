@@ -1481,7 +1481,7 @@ class TableauxSystem(object):
         """
 
         ticked      = False
-        modal       = None
+        modal       = None # TODO: get rid of modal property, seems not in use
         negated     = None
         operator    = None
         quantifier  = None
