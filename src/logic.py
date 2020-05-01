@@ -834,6 +834,9 @@ class TableauxSystem(object):
     def build_trunk(tableau, argument):
         raise NotImplementedError(NotImplemented)
 
+    class TrunkAlreadyBuiltError(Exception):
+        pass
+
     class Tableau(object):
         """
         Represents a tableau proof of an argument for the given logic.
@@ -1042,7 +1045,7 @@ class TableauxSystem(object):
 
         def build_trunk(self):
             if self.trunk_built:
-                raise Exception("Trunk is already built.")
+                raise TableauxSystem.TrunkAlreadyBuiltError("Trunk is already built.")
             self.logic.TableauxSystem.build_trunk(self, self.argument)
             self.trunk_built = True
             self.current_step += 1
