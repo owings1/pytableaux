@@ -406,10 +406,15 @@ class Vocabulary(object):
     class Predicate(object):
 
         def __init__(self, name, index, subscript, arity):
+            if index >= num_predicate_symbols:
+                raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
             self.name      = name
             self.arity     = arity
             self.index     = index
             self.subscript = subscript
+
+    class IndexTooLargeError(Exception):
+        pass
 
     class PredicateError(Exception):
         pass
@@ -459,7 +464,6 @@ class Vocabulary(object):
             assert vocab.get_predicate('is tall') == vocab.get_predicate(index=0, subscript=0)
 
         """
-        # TODO: after good coverage allow get_predicate(-1, 0)
         if name == None and index != None and isinstance(index, str):
             name = index
             index = None
@@ -527,6 +531,8 @@ class Vocabulary(object):
     class Constant(object):
 
         def __init__(self, index, subscript):
+            if index >= num_const_symbols:
+                raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
             self.index = index
             self.subscript = subscript
 
@@ -545,6 +551,8 @@ class Vocabulary(object):
     class Variable(object):
 
         def __init__(self, index, subscript):
+            if index >= num_var_symbols:
+                raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
             self.index = index
             self.subscript = subscript
 
@@ -608,6 +616,8 @@ class Vocabulary(object):
     class AtomicSentence(Sentence):
 
         def __init__(self, index, subscript):
+            if index >= num_atomic_symbols:
+                raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
             self.index     = index
             self.subscript = subscript
 
@@ -642,7 +652,7 @@ class Vocabulary(object):
             if len(parameters) != predicate.arity:
                 raise Vocabulary.PredicateArityMismatchError(
                     'Expecting {0} parameters for predicate {1}, got {2} instead.'.format(
-                        predicate.arity, str([index, subscript]), arity
+                        predicate.arity, str([predicate.index, predicate.subscript]), len(parameters)
                     )
                 )
             self.predicate  = predicate
