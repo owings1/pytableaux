@@ -413,6 +413,9 @@ class Vocabulary(object):
             self.index     = index
             self.subscript = subscript
 
+        def __hash__(self):
+            return hash((1, self.index, self.subscript, self.arity))
+
     class IndexTooLargeError(Exception):
         pass
 
@@ -540,9 +543,6 @@ class Vocabulary(object):
         def is_variable(self):
             return isinstance(self, Vocabulary.Variable)
 
-        def __hash__(self):
-            return hash((self.index, self.subscript))
-
     class Constant(Parameter):
 
         def __init__(self, index, subscript):
@@ -554,7 +554,7 @@ class Vocabulary(object):
             return isinstance(other, Vocabulary.Constant) and self.__dict__ == other.__dict__
 
         def __hash__(self):
-            return Vocabulary.Parameter.__hash__(self)
+            return hash((2, self.index, self.subscript))
 
     class Variable(Parameter):
 
@@ -567,7 +567,7 @@ class Vocabulary(object):
             return isinstance(other, Vocabulary.Variable) and self.__dict__ == other.__dict__
 
         def __hash__(self):
-            return Vocabulary.Parameter.__hash__(self)
+            return hash((3, self.index, self.subscript))
 
     class Sentence(object):
 
@@ -640,6 +640,9 @@ class Vocabulary(object):
                 subscript = self.subscript + 1
             return Vocabulary.AtomicSentence(index, subscript)
 
+        def __hash__(self):
+            return hash((4, self.index, self.subscript))
+
     class PredicatedSentence(Sentence):
 
         def __init__(self, predicate, parameters, vocabulary=None):
@@ -675,6 +678,9 @@ class Vocabulary(object):
         def variables(self):
             return {param for param in self.parameters if is_variable(param)}
 
+        def __hash__(self):
+            return hash((5, self.predicate) + tuple((param for param in self.parameters)))
+
     class QuantifiedSentence(Sentence):
 
         def __init__(self, quantifier, variable, sentence):
@@ -692,6 +698,9 @@ class Vocabulary(object):
 
         def variables(self):
             return self.sentence.variables()
+
+        def __hash__(self):
+            return hash((6, quantifiers_list.index(self.quantifier), self.variable, self.sentence))
 
     class OperatedSentence(Sentence):
 
@@ -726,6 +735,9 @@ class Vocabulary(object):
             for operand in self.operands:
                 v.update(operand.variables())
             return v
+
+        def __hash__(self):
+            return hash((7, operators_list.index(self.operator)) + tuple((operand for operand in self.operands)))
 
     class Writer(object):
 
