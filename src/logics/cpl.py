@@ -82,7 +82,7 @@ def example_invalidities():
     return args
 
 import logic, examples
-from logic import negate
+from logic import negate, NotImplementedError
 
 truth_values = k.truth_values
 truth_value_chars = k.truth_value_chars
@@ -95,20 +95,23 @@ truth_function = fde.truth_function
 # NB: model semantics are a work in progress
 class Model(k.Model):
 
-    def set_atomic_value(self, atomic, value):
+    def set_atomic_value(self, atomic, value, world=None):
         return super(Model, self).set_atomic_value(atomic, value, 0)
 
-    def get_atomic_value(self, atomic):
+    def get_atomic_value(self, atomic, world=None):
         return super(Model, self).get_atomic_value(atomic, 0)
 
-    def set_predicated_value(self, sentence, value):
+    def set_predicated_value(self, sentence, value, world=None):
         return super(Model, self).set_predicated_value(sentence, value, 0)
 
-    def get_extension(self, predicate):
+    def get_extension(self, predicate, world=None):
         return super(Model, self).get_extension(predicate, 0)
-        
+
+    def value_of(self, sentence, world=None):
+        return super(Model, self).value_of(sentence, 0)
+
     def add_access(self, w1, w2):
-        raise Exception(NotImplemented)
+        raise NotImplementedError(NotImplemented)
 
 class TableauxSystem(logic.TableauxSystem):
     """
