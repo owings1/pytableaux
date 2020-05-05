@@ -115,7 +115,7 @@ class Model(object):
         if astr in frame['atomics']:
             return frame['atomics'][astr]
         else:
-            return None
+            return unassigned_value
 
     def set_predicated_value(self, sentence, value, world):
         self.predicates.add(sentence.predicate)
@@ -143,10 +143,20 @@ class Model(object):
             self.sees[w1] = set()
         self.sees[w1].add(w2)
 
+    def has_access(self, w1, w2):
+        return Model.Access(w1, w2) in self.access
+        
     def world_frame(self, world):
         if world not in self.worlds:
-            self.worlds[world] = {'atomics' : {}, 'extensions' : {}, 'unassigned' : set(), 'constants' : set()}
-        return self.worlds[world]
+            extensions = {'Identity': set(), 'Existence': set()}
+            self.worlds[world] = {'atomics' : {}, 'extensions' : extensions, 'unassigned' : set(), 'constants' : set()}
+        frame = self.worlds[world]
+        for c in frame['constants']:
+            # make sure each constant exists
+            frame['extensions']['Existence'].add((c,))
+            # make sure each constant is self-identical
+            frame['extensions']['Identity'].add((c, c))
+        return frame
 
     def value_of(self, sentence, world):
         frame = self.world_frame(world)
@@ -224,7 +234,7 @@ class TableauxSystem(logic.TableauxSystem):
                 elif s.is_operated() and s.operator == 'Negation' and s.operand.is_atomic():
                     model.set_atomic_value(s.operand, 0, w)
                 elif s.is_predicated():
-                    model.add_true_predicate_sentence(s, w)
+                    model.set_predicated_value(s, 1, w)
             else:
                 model.add_access(node.props['world1'], node.props['world2'])
 
@@ -699,6 +709,7 @@ class TableauxRules(object):
                     if not branch.has({ 'sentence' : s1, 'world' : w }):
                         # then the rule applies to <s',w,b>
                         return { 'sentence' : s1, 'world' : w, 'branch' : branch }
+            return False
 
         def apply(self, target):
             target['branch'].add({ 'sentence' : target['sentence'], 'world' : target['world'] })
