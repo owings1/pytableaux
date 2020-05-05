@@ -181,6 +181,16 @@ class TestK(object):
         assert 'Necessity Distribution' in valids
         assert 'Necessity Elimination' in invalids
 
+    def test_Closure_example(self):
+        rule = get_logic('k').TableauxRules.Closure(empty_proof())
+        rule.example()
+        assert len(rule.tableau.branches) == 1
+
+    def test_SelfIdentityClosure_example(self):
+        rule = get_logic('k').TableauxRules.SelfIdentityClosure(empty_proof())
+        rule.example()
+        assert len(rule.tableau.branches) == 1
+
     def test_Possibility_example_node(self):
         rule = get_logic('k').TableauxRules.Possibility(empty_proof())
         props = rule.example_node()
@@ -196,13 +206,204 @@ class TestK(object):
         props = rule.example_node()
         assert props['sentence'].operator == 'Negation'
 
+    def test_Universal_example(self):
+        rule = get_logic('k').TableauxRules.Universal(empty_proof())
+        rule.example()
+        assert len(rule.tableau.branches) == 1
+
+    def test_Necessity_example(self):
+        rule = get_logic('k').TableauxRules.Necessity(empty_proof())
+        rule.example()
+        assert len(rule.tableau.branches) == 1
+
+    def test_IdentityIndiscernability_example(self):
+        rule = get_logic('k').TableauxRules.IdentityIndiscernability(empty_proof())
+        rule.example()
+        assert len(rule.tableau.branches) == 1
+
+    def test_valid_conjunction_introduction(self):
+        proof = example_proof('k', 'Conjunction Introduction')
+        assert proof.valid
+
+    def test_valid_addition(self):
+        proof = example_proof('k', 'Addition')
+        assert proof.valid
+
+    def test_valid_self_identity_1(self):
+        proof = example_proof('k', 'Self Identity 1')
+        assert proof.valid
+        
     def test_valid_nec_dist(self):
         proof = example_proof('k', 'Necessity Distribution')
         assert proof.valid
 
+    def test_valid_material_bicond_elim_1(self):
+        proof = example_proof('k', 'Material Biconditional Elimination 1')
+        assert proof.valid
+
+    def test_valid_material_bicond_intro_1(self):
+        proof = example_proof('k', 'Material Biconditional Introduction 1')
+        assert proof.valid
+
+    def test_valid_disj_syllogism(self):
+        proof = example_proof('k', 'Disjunctive Syllogism')
+        assert proof.valid
+
+    def test_valid_disj_syllogism_2(self):
+        proof = example_proof('k', 'Disjunctive Syllogism 2')
+        assert proof.valid
+        
+    def test_valid_assert_elim_1(self):
+        proof = example_proof('k', 'Assertion Elimination 1')
+        assert proof.valid
+
+    def test_valid_assert_elim_2(self):
+        proof = example_proof('k', 'Assertion Elimination 2')
+        assert proof.valid
+
+    def test_valid_nec_elim(self):
+        proof = example_proof('k', 'Necessity Distribution')
+        assert proof.valid
+
+    def test_valid_modal_tranform_2(self):
+        proof = example_proof('k', 'Modal Transformation 2')
+        assert proof.valid
+
+    def test_valid_ident_indiscern_1(self):
+        proof = example_proof('k', 'Identity Indiscernability 1')
+        assert proof.valid
+
+    def test_valid_ident_indiscern_2(self):
+        proof = example_proof('k', 'Identity Indiscernability 2')
+        assert proof.valid
+        
     def test_invalid_nec_elim(self):
         proof = example_proof('k', 'Necessity Elimination')
         assert not proof.valid
+
+    def test_read_model(self):
+        proof = example_proof('k', 'Denying the Antecedent')
+        k = get_logic('k')
+        model = k.Model()
+        branch = list(proof.open_branches())[0]
+        k.TableauxSystem.read_model(model, branch)
+        s = atomic(0, 0)
+        assert model.value_of(s, 0) == 0
+        assert model.value_of(negate(s), 0) == 1
+
+    def test_model_set_predicated_value1(self):
+        k = get_logic('k')
+        model = k.Model()
+        m = constant(0, 0)
+        n = constant(1, 0)
+        s = predicated('Identity', [m, n])
+        model.set_predicated_value(s, 1, 0)
+        res = model.value_of(s, 0)
+        assert res == 1
+
+    def test_model_add_access(self):
+        k = get_logic('k')
+        model = k.Model()
+        model.add_access(0, 0)
+        assert 0 in model.sees[0]
+
+    def test_model_possibly_a_with_access_true(self):
+        k = get_logic('k')
+        model = k.Model()
+        a = atomic(0, 0)
+        model.add_access(0, 1)
+        model.set_atomic_value(a, 1, 1)
+        res = model.value_of(operate('Possibility', [a]), 0)
+        assert res == 1
+
+    def test_model_possibly_a_no_access_false(self):
+        k = get_logic('k')
+        model = k.Model()
+        a = atomic(0, 0)
+        model.set_atomic_value(a, 1, 1)
+        res = model.value_of(operate('Possibility', [a]), 0)
+        assert res == 0
+
+    def test_model_nec_a_no_access_true(self):
+        k = get_logic('k')
+        model = k.Model()
+        a = atomic(0, 0)
+        res = model.value_of(operate('Necessity', [a]), 0)
+        assert res == 1
+
+    def test_model_nec_a_with_access_false(self):
+        k = get_logic('k')
+        model = k.Model()
+        a = atomic(0, 0)
+        model.set_atomic_value(a, 1, 0)
+        model.set_atomic_value(a, 0, 1)
+        model.add_access(0, 1)
+        model.add_access(0, 0)
+        res = model.value_of(operate('Necessity', [a]), 0)
+        assert res == 0
+
+    def test_model_existence_user_pred_true(self):
+        k = get_logic('k')
+        v = Vocabulary()
+        v.declare_predicate('MyPred', 0, 0, 1)
+        m = constant(0, 0)
+        x = variable(0, 0)
+        s1 = predicated('MyPred', [m], v)
+        s2 = predicated('MyPred', [x], v)
+        s3 = quantify('Existential', x, s2)
+
+        model = k.Model()
+        model.set_predicated_value(s1, 1, 0)
+        res = model.value_of(s3, 0)
+        assert res == 1
+
+    def test_model_existense_user_pred_false(self):
+        k = get_logic('k')
+        v = Vocabulary()
+        v.declare_predicate('MyPred', 0, 0, 1)
+        m = constant(0, 0)
+        x = variable(0, 0)
+        s1 = predicated('MyPred', [m], v)
+        s2 = predicated('MyPred', [x], v)
+        s3 = quantify('Existential', x, s2)
+
+        model = k.Model()
+        res = model.value_of(s3, 0)
+        assert res == 0
+
+    def test_model_universal_user_pred_true(self):
+        k = get_logic('k')
+        v = Vocabulary()
+        v.declare_predicate('MyPred', 0, 0, 1)
+        m = constant(0, 0)
+        x = variable(0, 0)
+        s1 = predicated('MyPred', [m], v)
+        s2 = predicated('MyPred', [x], v)
+        s3 = quantify('Universal', x, s2)
+
+        model = k.Model()
+        model.set_predicated_value(s1, 1, 0)
+        res = model.value_of(s3, 0)
+        assert res == 1
+
+    # TODO: failing
+    #def test_model_universal_user_pred_false(self):
+    #    k = get_logic('k')
+    #    v = Vocabulary()
+    #    v.declare_predicate('MyPred', 0, 0, 1)
+    #    m = constant(0, 0)
+    #    n = constant(1, 0)
+    #    x = variable(0, 0)
+    #    s1 = predicated('MyPred', [m], v)
+    #    s2 = predicated('MyPred', [x], v)
+    #    s3 = predicated('MyPred', [n], v)
+    #    s4 = quantify('Universal', x, s2)
+    #
+    #    model = k.Model()
+    #    model.set_predicated_value(s1, 1, 0)
+    #    model.set_predicated_value(s3, 0, 0)
+    #    res = model.value_of(s4, 0)
+    #    assert res == 1
 
 class TestD(object):
 
