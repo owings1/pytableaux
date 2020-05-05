@@ -92,6 +92,7 @@ unassigned_value = k.unassigned_value
 truth_functional_operators = fde.truth_functional_operators
 truth_function = fde.truth_function
 
+# NB: model semantics are a work in progress
 class Model(k.Model):
 
     def set_atomic_value(self, atomic, value):

@@ -75,19 +75,30 @@ truth_functional_operators = fde.truth_functional_operators
 
 truth_function = fde.truth_function
 
+# NB: model semantics are a work in progress
 class Model(object):
+
+    class Access(object):
+        def __init__(self, w1, w2):
+            self.w1 = w1
+            self.w2 = w2
+        def __hash__(self):
+            return hash((self.w1, self.w2))
+        def __eq__(self, other):
+            return self.w1 == other.w1 and self.w2 == other.w2
 
     truth_values = set(truth_values)
 
     def __init__(self):
         self.worlds = {}
-        self.access = {}
+        self.access = set()
         self.sees = {}
         self.predicates = set()
         self.constants = set()
 
     def set_atomic_value(self, atomic, value, world):
         assert value in self.truth_values
+        assert atomic.is_atomic()
         frame = self.world_frame(world)
         astr = str([atomic.index, atomic.subscript])
         if astr in frame['atomics']:
@@ -114,7 +125,7 @@ class Model(object):
             if name not in self.worlds[w]['extensions']:
                 self.worlds[w]['extensions'][name] = set()
         if value == 1:
-            frame['extensions'][name].add(sentence.parameters)
+            frame['extensions'][name].add(tuple(sentence.parameters))
         frame['constants'].update(sentence.parameters)
 
     def get_extension(self, predicate, world):
@@ -126,7 +137,8 @@ class Model(object):
         return frame['extensions'][name]
 
     def add_access(self, w1, w2):
-        self.access.add([w1, w2])
+        access = Model.Access(w1, w2)
+        self.access.add(access)
         if w1 not in self.sees:
             self.sees[w1] = set()
         self.sees[w1].add(w2)
@@ -141,22 +153,24 @@ class Model(object):
         if sentence in frame['unassigned']:
             return unassigned_value
         if sentence.is_predicated():
-            return sentence.parameters in self.get_extension(sentence.predicate, world)
+            return tuple(sentence.parameters) in self.get_extension(sentence.predicate, world)
         elif sentence.is_atomic():
             return self.get_atomic_value(sentence, world)
         elif sentence.is_operated():
             o = sentence.operator
             if o in truth_functional_operators:
-                return truth_function(operator, *[self.value_of(operand, world) for operand in sentence.operands])
+                return truth_function(o, *[self.value_of(operand, world) for operand in sentence.operands])
             elif o == 'Possibility':
-                for w in self.sees[world]:
-                    if self.value_of(sentence.operand, w) == 1:
-                        return 1
+                if world in self.sees:
+                    for w in self.sees[world]:
+                        if self.value_of(sentence.operand, w) == 1:
+                            return 1
                 return 0
             elif o == 'Necessity':
-                for w in self.sees[world]:
-                    if self.value_of(sentence.operand, w) == 0:
-                        return 0
+                if world in self.sees:
+                    for w in self.sees[world]:
+                        if self.value_of(sentence.operand, w) == 0:
+                            return 0
                 return 1
         elif sentence.is_quantified():
             q = sentence.quantifier
