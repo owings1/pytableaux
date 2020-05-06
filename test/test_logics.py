@@ -48,8 +48,8 @@ class TestFDE(LogicTester):
     logic = get_logic('FDE')
 
     def test_examples(self):
-        valids = validities(self.logic)
-        invalids = invalidities(self.logic)
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'Addition' in valids
         assert 'Law of Excluded Middle' in invalids
 
@@ -117,8 +117,8 @@ class TestK3W(LogicTester):
     logic = get_logic('k3w')
 
     def test_examples(self):
-        valids = validities(self.logic)
-        invalids = invalidities(self.logic)
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'Conditional Contraction' in valids
         assert 'Addition' in invalids
 
@@ -195,8 +195,8 @@ class TestB3E(LogicTester):
     logic = get_logic('B3E')
 
     def test_examples(self):
-        valids = validities(self.logic)
-        invalids = invalidities(self.logic)
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'Conditional Contraction' in valids
         assert 'Triviality 1' in invalids
 
@@ -256,11 +256,11 @@ class TestLP(object):
 
 class TestGO(LogicTester):
 
-    logic = get_logic('go')
+    logic = get_logic('GO')
 
     def test_examples(self):
-        valids = validities('go')
-        invalids = invalidities('go')
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'DeMorgan 3' in valids
         assert 'DeMorgan 1' in invalids
 
@@ -396,53 +396,56 @@ class TestGO(LogicTester):
         proof = self.example_proof('DeMorgan 1')
         assert not proof.valid
 
-class TestCPL(object):
+class TestCPL(LogicTester):
+
+    logic = get_logic('CPL')
 
     def test_examples(self):
-        valids = validities('cpl')
-        invalids = invalidities('cpl')
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'Simplification' in valids
         assert 'Syllogism' in invalids
 
     def test_Closure_example(self):
-        rule = get_logic('cpl').TableauxRules.Closure(empty_proof())
+        proof = tableau(self.logic)
+        rule = proof.get_rule('Closure')
         rule.example()
-        assert len(rule.tableau.branches) == 1
+        assert len(proof.branches) == 1
 
     def test_SelfIdentityClosure_example(self):
-        rule = get_logic('cpl').TableauxRules.SelfIdentityClosure(empty_proof())
+        proof = tableau(self.logic)
+        rule = proof.get_rule('SelfIdentityClosure')
         rule.example()
-        assert len(rule.tableau.branches) == 1
+        assert len(proof.branches) == 1
 
     def test_IdentityIndiscernability_example(self):
-        rule = get_logic('cpl').TableauxRules.IdentityIndiscernability(empty_proof())
+        proof = tableau(self.logic)
+        rule = proof.get_rule('IdentityIndiscernability')
         rule.example()
-        assert len(rule.tableau.branches) == 1
+        assert len(proof.branches) == 1
 
     def test_valid_simplification(self):
-        proof = example_proof('cpl', 'Simplification')
+        proof = self.example_proof('Simplification')
         assert proof.valid
 
     def test_invalid_syllogism(self):
-        proof = example_proof('cpl', 'Syllogism')
+        proof = self.example_proof('Syllogism')
         assert not proof.valid
 
     def test_read_model_deny_antec(self):
-        proof = example_proof('cpl', 'Denying the Antecedent')
-        lgc = get_logic('cpl')
-        model = lgc.Model()
+        proof = self.example_proof('Denying the Antecedent')
+        model = self.logic.Model()
         branch = list(proof.open_branches())[0]
-        lgc.TableauxSystem.read_model(model, branch)
+        self.logic.TableauxSystem.read_model(model, branch)
         s = atomic(0, 0)
         assert model.value_of(s) == 0
         assert model.value_of(negate(s)) == 1
 
     def test_read_model_extract_disj_2(self):
-        proof = example_proof('cpl', 'Extracting a Disjunct 2')
-        lgc = get_logic('cpl')
-        model = lgc.Model()
+        proof = self.example_proof('Extracting a Disjunct 2')
+        model = self.logic.Model()
         branch = list(proof.open_branches())[0]
-        lgc.TableauxSystem.read_model(model, branch)
+        self.logic.TableauxSystem.read_model(model, branch)
         s = atomic(0, 0)
         assert model.value_of(s) == 1
         assert model.value_of(negate(s)) == 0
@@ -451,20 +454,17 @@ class TestCPL(object):
         branch = TableauxSystem.Branch()
         s1 = parse('Fm', vocabulary=examples.vocabulary)
         branch.add({'sentence': s1})
-        lgc = get_logic('cpl')
-        model = lgc.Model()
-        lgc.TableauxSystem.read_model(model, branch)
+        model = self.logic.Model()
+        self.logic.TableauxSystem.read_model(model, branch)
         assert model.value_of(s1) == 1
         
     def test_model_add_access_not_impl(self):
-        lgc = get_logic('cpl')
-        model = lgc.Model()
+        model = self.logic.Model()
         with pytest.raises(NotImplementedError):
             model.add_access(0, 0)
 
     def test_model_set_predicated_value1(self):
-        lgc = get_logic('cpl')
-        model = lgc.Model()
+        model = self.logic.Model()
         m = constant(0, 0)
         n = constant(1, 0)
         s = predicated('Identity', [m, n])
@@ -489,57 +489,53 @@ class TestCFOL(object):
         proof = example_proof('cfol', 'Possibility Addition')
         assert not proof.valid
 
-class TestK(object):
+class TestK(LogicTester):
 
-    def get_logic(self):
-        return get_logic('k')
-
-    def new_model(self):
-        return self.get_logic().Model()
+    logic = get_logic('K')
 
     def test_examples(self):
-        valids = validities('k')
-        invalids = invalidities('k')
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'Necessity Distribution' in valids
         assert 'Necessity Elimination' in invalids
 
     def test_Closure_example(self):
-        rule = get_logic('k').TableauxRules.Closure(empty_proof())
+        rule = self.logic.TableauxRules.Closure(empty_proof())
         rule.example()
         assert len(rule.tableau.branches) == 1
 
     def test_SelfIdentityClosure_example(self):
-        rule = get_logic('k').TableauxRules.SelfIdentityClosure(empty_proof())
+        rule = self.logic.TableauxRules.SelfIdentityClosure(empty_proof())
         rule.example()
         assert len(rule.tableau.branches) == 1
 
     def test_Possibility_example_node(self):
-        rule = get_logic('k').TableauxRules.Possibility(empty_proof())
+        rule = self.logic.TableauxRules.Possibility(empty_proof())
         props = rule.example_node()
         assert props['world'] == 0
 
     def test_Existential_example_node(self):
-        rule = get_logic('k').TableauxRules.Existential(empty_proof())
+        rule = self.logic.TableauxRules.Existential(empty_proof())
         props = rule.example_node()
         assert props['sentence'].quantifier == 'Existential'
 
     def test_DisjunctionNegated_example_node(self):
-        rule = get_logic('k').TableauxRules.DisjunctionNegated(empty_proof())
+        rule = self.logic.TableauxRules.DisjunctionNegated(empty_proof())
         props = rule.example_node()
         assert props['sentence'].operator == 'Negation'
 
     def test_Universal_example(self):
-        rule = get_logic('k').TableauxRules.Universal(empty_proof())
+        rule = self.logic.TableauxRules.Universal(empty_proof())
         rule.example()
         assert len(rule.tableau.branches) == 1
 
     def test_Necessity_example(self):
-        rule = get_logic('k').TableauxRules.Necessity(empty_proof())
+        rule = self.logic.TableauxRules.Necessity(empty_proof())
         rule.example()
         assert len(rule.tableau.branches) == 1
 
     def test_IdentityIndiscernability_example(self):
-        rule = get_logic('k').TableauxRules.IdentityIndiscernability(empty_proof())
+        rule = self.logic.TableauxRules.IdentityIndiscernability(empty_proof())
         rule.example()
         assert len(rule.tableau.branches) == 1
 
@@ -548,141 +544,133 @@ class TestK(object):
         branch = proof.branch()
         branch.add({'sentence': parse('Imm'), 'world': 0})
         branch.add({'sentence': parse('Fs', vocabulary=examples.vocabulary), 'world': 0})
-        rule = self.get_logic().TableauxRules.IdentityIndiscernability(proof)
+        rule = self.logic.TableauxRules.IdentityIndiscernability(proof)
         res = rule.applies_to_branch(branch)
         assert not res
         
     def test_valid_conjunction_introduction(self):
-        proof = example_proof('k', 'Conjunction Introduction')
+        proof = self.example_proof('Conjunction Introduction')
         assert proof.valid
 
     def test_valid_addition(self):
-        proof = example_proof('k', 'Addition')
+        proof = self.example_proof('Addition')
         assert proof.valid
 
     def test_valid_self_identity_1(self):
-        proof = example_proof('k', 'Self Identity 1')
+        proof = self.example_proof('Self Identity 1')
         assert proof.valid
         
     def test_valid_nec_dist(self):
-        proof = example_proof('k', 'Necessity Distribution')
+        proof = self.example_proof('Necessity Distribution')
         assert proof.valid
 
     def test_valid_material_bicond_elim_1(self):
-        proof = example_proof('k', 'Material Biconditional Elimination 1')
+        proof = self.example_proof('Material Biconditional Elimination 1')
         assert proof.valid
 
     def test_valid_material_bicond_intro_1(self):
-        proof = example_proof('k', 'Material Biconditional Introduction 1')
+        proof = self.example_proof('Material Biconditional Introduction 1')
         assert proof.valid
 
     def test_valid_disj_syllogism(self):
-        proof = example_proof('k', 'Disjunctive Syllogism')
+        proof = self.example_proof('Disjunctive Syllogism')
         assert proof.valid
 
     def test_valid_disj_syllogism_2(self):
-        proof = example_proof('k', 'Disjunctive Syllogism 2')
+        proof = self.example_proof('Disjunctive Syllogism 2')
         assert proof.valid
         
     def test_valid_assert_elim_1(self):
-        proof = example_proof('k', 'Assertion Elimination 1')
+        proof = self.example_proof('Assertion Elimination 1')
         assert proof.valid
 
     def test_valid_assert_elim_2(self):
-        proof = example_proof('k', 'Assertion Elimination 2')
+        proof = self.example_proof('Assertion Elimination 2')
         assert proof.valid
 
     def test_valid_nec_elim(self):
-        proof = example_proof('k', 'Necessity Distribution')
+        proof = self.example_proof('Necessity Distribution')
         assert proof.valid
 
     def test_valid_modal_tranform_2(self):
-        proof = example_proof('k', 'Modal Transformation 2')
+        proof = self.example_proof('Modal Transformation 2')
         assert proof.valid
 
     def test_valid_ident_indiscern_1(self):
-        proof = example_proof('k', 'Identity Indiscernability 1')
+        proof = self.example_proof('Identity Indiscernability 1')
         assert proof.valid
 
     def test_valid_ident_indiscern_2(self):
-        proof = example_proof('k', 'Identity Indiscernability 2')
+        proof = self.example_proof('Identity Indiscernability 2')
         assert proof.valid
         
     def test_invalid_nec_elim(self):
-        proof = example_proof('k', 'Necessity Elimination')
+        proof = self.example_proof('Necessity Elimination')
         assert not proof.valid
 
     def test_read_model_proof_deny_antec(self):
-        proof = example_proof('k', 'Denying the Antecedent')
-        lgc = get_logic('k')
-        model = lgc.Model()
+        proof = self.example_proof('Denying the Antecedent')
+        model = self.logic.Model()
         branch = list(proof.open_branches())[0]
-        lgc.TableauxSystem.read_model(model, branch)
+        self.logic.TableauxSystem.read_model(model, branch)
         s = atomic(0, 0)
         assert model.value_of(s, 0) == 0
         assert model.value_of(negate(s), 0) == 1
 
     def test_read_model_no_proof_atomic(self):
-        model = self.new_model()
-        lgc = self.get_logic()
+        model = self.logic.Model()
         branch = TableauxSystem.Branch()
         branch.add({'sentence': atomic(0, 0), 'world': 0})
-        lgc.TableauxSystem.read_model(model, branch)
+        self.logic.TableauxSystem.read_model(model, branch)
         assert model.value_of(atomic(0, 0), 0) == 1
 
     def test_read_model_no_proof_predicated(self):
-        model = self.new_model()
-        lgc = self.get_logic()
+        model = self.logic.Model()
         branch = TableauxSystem.Branch()
         s1 = parse('Imn')
         branch.add({'sentence': s1, 'world': 0})
-        lgc.TableauxSystem.read_model(model, branch)
+        self.logic.TableauxSystem.read_model(model, branch)
         assert model.value_of(s1, 0) == 1
 
     def test_read_model_no_proof_access(self):
-        model = self.new_model()
-        lgc = self.get_logic()
+        model = self.logic.Model()
         branch = TableauxSystem.Branch()
         branch.add({'world1': 0, 'world2': 1})
-        lgc.TableauxSystem.read_model(model, branch)
+        self.logic.TableauxSystem.read_model(model, branch)
         assert model.has_access(0, 1)
 
     def test_model_access_equals(self):
-        lgc = get_logic('k')
-        a1 = lgc.Model.Access(0, 0)
-        a2 = lgc.Model.Access(0, 0)
+        a1 = self.logic.Model.Access(0, 0)
+        a2 = self.logic.Model.Access(0, 0)
         assert a1 == a2
 
     def test_model_access_not_equals(self):
-        lgc = get_logic('k')
-        a1 = lgc.Model.Access(0, 0)
-        a2 = lgc.Model.Access(0, 1)
+        a1 = self.logic.Model.Access(0, 0)
+        a2 = self.logic.Model.Access(0, 1)
         assert a1 != a2
 
     def test_model_get_extension_by_name(self):
-        lgc = get_logic('k')
-        model = lgc.Model()
+        model = self.logic.Model()
         s = parse('Imn', vocabulary=examples.vocabulary)
         model.set_predicated_value(s, 1, 0)
         res = model.get_extension('Identity', 0)
         assert (constant(0, 0), constant(1, 0)) in res
 
     def test_model_get_atomic_value_unassigned(self):
-        model = self.new_model()
+        model = self.logic.Model()
         s = atomic(0, 0)
         res = model.get_atomic_value(s, 0)
-        assert res == self.get_logic().unassigned_value
+        assert res == self.logic.unassigned_value
 
     def test_model_value_of_unassigned(self):
-        model = self.new_model()
+        model = self.logic.Model()
         s = atomic(0, 0)
         model.add_unassignable_sentence(s, 0)
         res = model.value_of(s, 0)
-        assert res == self.get_logic().unassigned_value
+        assert res == self.logic.unassigned_value
 
     def test_model_set_predicated_value1(self):
-        lgc = get_logic('k')
-        model = lgc.Model()
+        model = self.logic.Model()
         m = constant(0, 0)
         n = constant(1, 0)
         s = predicated('Identity', [m, n])
@@ -691,14 +679,12 @@ class TestK(object):
         assert res == 1
 
     def test_model_add_access(self):
-        lgc = get_logic('k')
-        model = lgc.Model()
+        model = self.logic.Model()
         model.add_access(0, 0)
         assert 0 in model.sees[0]
 
     def test_model_possibly_a_with_access_true(self):
-        lgc = get_logic('k')
-        model = lgc.Model()
+        model = self.logic.Model()
         a = atomic(0, 0)
         model.add_access(0, 1)
         model.set_atomic_value(a, 1, 1)
@@ -706,23 +692,20 @@ class TestK(object):
         assert res == 1
 
     def test_model_possibly_a_no_access_false(self):
-        lgc = get_logic('k')
-        model = lgc.Model()
+        model = self.logic.Model()
         a = atomic(0, 0)
         model.set_atomic_value(a, 1, 1)
         res = model.value_of(operate('Possibility', [a]), 0)
         assert res == 0
 
     def test_model_nec_a_no_access_true(self):
-        lgc = get_logic('k')
-        model = lgc.Model()
+        model = self.logic.Model()
         a = atomic(0, 0)
         res = model.value_of(operate('Necessity', [a]), 0)
         assert res == 1
 
     def test_model_nec_a_with_access_false(self):
-        lgc = get_logic('k')
-        model = lgc.Model()
+        model = self.logic.Model()
         a = atomic(0, 0)
         model.set_atomic_value(a, 1, 0)
         model.set_atomic_value(a, 0, 1)
@@ -732,7 +715,6 @@ class TestK(object):
         assert res == 0
 
     def test_model_existence_user_pred_true(self):
-        lgc = get_logic('k')
         v = Vocabulary()
         v.declare_predicate('MyPred', 0, 0, 1)
         m = constant(0, 0)
@@ -741,13 +723,12 @@ class TestK(object):
         s2 = predicated('MyPred', [x], v)
         s3 = quantify('Existential', x, s2)
 
-        model = lgc.Model()
+        model = self.logic.Model()
         model.set_predicated_value(s1, 1, 0)
         res = model.value_of(s3, 0)
         assert res == 1
 
     def test_model_existense_user_pred_false(self):
-        lgc = get_logic('k')
         v = Vocabulary()
         v.declare_predicate('MyPred', 0, 0, 1)
         m = constant(0, 0)
@@ -756,12 +737,11 @@ class TestK(object):
         s2 = predicated('MyPred', [x], v)
         s3 = quantify('Existential', x, s2)
 
-        model = lgc.Model()
+        model = self.logic.Model()
         res = model.value_of(s3, 0)
         assert res == 0
 
     def test_model_universal_user_pred_true(self):
-        lgc = get_logic('k')
         v = Vocabulary()
         v.declare_predicate('MyPred', 0, 0, 1)
         m = constant(0, 0)
@@ -770,7 +750,7 @@ class TestK(object):
         s2 = predicated('MyPred', [x], v)
         s3 = quantify('Universal', x, s2)
 
-        model = lgc.Model()
+        model = self.logic.Model()
         model.set_predicated_value(s1, 1, 0)
         res = model.value_of(s3, 0)
         assert res == 1
@@ -778,13 +758,12 @@ class TestK(object):
     def test_model_universal_false(self):
         s1 = parse('VxFx', vocabulary=examples.vocabulary)
         s2 = parse('Fm', vocabulary=examples.vocabulary)
-        model = self.new_model()
+        model = self.logic.Model()
         model.set_predicated_value(s2, 0, 0)
         res = model.value_of(s1, 0)
         assert res == 0
     # TODO: failing
     #def test_model_universal_user_pred_false(self):
-    #    lgc = get_logic('k')
     #    v = Vocabulary()
     #    v.declare_predicate('MyPred', 0, 0, 1)
     #    m = constant(0, 0)
@@ -795,7 +774,7 @@ class TestK(object):
     #    s3 = predicated('MyPred', [n], v)
     #    s4 = quantify('Universal', x, s2)
     #
-    #    model = lgc.Model()
+    #    model = self.logic.Model()
     #    model.set_predicated_value(s1, 1, 0)
     #    model.set_predicated_value(s3, 0, 0)
     #    res = model.value_of(s4, 0)
@@ -858,8 +837,8 @@ class TestL3(LogicTester):
     logic = get_logic('L3')
 
     def test_examples(self):
-        valids = validities(self.logic)
-        invalids = invalidities(self.logic)
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'Conditional Identity' in valids
         assert 'Material Identity' in invalids
 
