@@ -472,7 +472,6 @@ class TestCPL(LogicTester):
         res = model.value_of(s)
         assert res == 1
 
-
 class TestCFOL(object):
 
     def test_examples(self):
@@ -762,6 +761,7 @@ class TestK(LogicTester):
         model.set_predicated_value(s2, 0, 0)
         res = model.value_of(s1, 0)
         assert res == 0
+
     # TODO: failing
     #def test_model_universal_user_pred_false(self):
     #    v = Vocabulary()
@@ -780,20 +780,35 @@ class TestK(LogicTester):
     #    res = model.value_of(s4, 0)
     #    assert res == 1
 
-class TestD(object):
+class TestD(LogicTester):
+
+    logic = get_logic('D')
 
     def test_examples(self):
-        valids = validities('d')
-        invalids = invalidities('d')
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'Serial Inference 1' in valids
         assert 'Reflexive Inference 1' in invalids
 
+    def test_Serial_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule('Serial')
+        rule.example()
+        assert len(proof.branches) == 1
+
+    def test_Serial_applies_to_branch_empty(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        rule = proof.get_rule('Serial')
+        res = rule.applies_to_branch(branch)
+        assert not res
+
     def test_valid_serial_inf_1(self):
-        proof = example_proof('d', 'Serial Inference 1')
+        proof = self.example_proof('Serial Inference 1')
         assert proof.valid
 
     def test_invalid_reflex_inf_1(self):
-        proof = example_proof('d', 'Reflexive Inference 1')
+        proof = self.example_proof('Reflexive Inference 1')
         assert not proof.valid
 
 class TestT(object):
