@@ -1,3 +1,22 @@
+/**
+ * pytableaux, a multi-logic proof generator.
+ * Copyright (C) 2014-2020 Doug Owings.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * pytableaux - web ui core
+*/
 ;(function($){
 
     $(document).ready(function(){
@@ -112,13 +131,15 @@
         }
 
         function ensureEmptyPremise() {
-            if (!hasEmptyPremise())
+            if (!hasEmptyPremise()) {
                 addEmptyPremise()
+            }
         }
 
         function ensureEmptyPredicate() {
-            if (!hasEmptyPredicate())
+            if (!hasEmptyPredicate()) {
                 addEmptyPredicate()
+            }   
         }
 
         function refreshNotation() {
@@ -127,8 +148,9 @@
             $('#Lexicon_' + notation).show()
             $('.predicateSymbol').hide()
             $('.predicateSymbol.notation-' + notation).show()
-            if ($('#example_argument').val())
+            if ($('#example_argument').val()) {
                 refreshExampleArgument()
+            }
         }
 
         function refreshExampleArgument() {
@@ -158,8 +180,9 @@
                 var str = $(this).val()
                 if (str || $(this).hasClass('conclusion')) {
                     var hash = hashString(str + '.' + currentNotation())
-                    if (+$status.attr('data-hash') === hash)
+                    if (+$status.attr('data-hash') === hash) {
                         return
+                    }
                     $status.attr('data-hash', hash)
                     $.ajax({
                         url  : '/parse',
@@ -196,8 +219,9 @@
         // from: http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
         function hashString(str) {
             var hash = 0, i, chr
-            if (str.length === 0)
+            if (str.length === 0) {
                 return hash
+            }
             for (i = 0; i < str.length; i++) {
                 chr   = str.charCodeAt(i)
                 hash  = ((hash << 5) - hash) + chr
