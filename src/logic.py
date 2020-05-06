@@ -312,7 +312,7 @@ class argument(object):
             return [self.premises, self.conclusion].__repr__()
         return [self.premises, self.conclusion, {'title': self.title}].__repr__()
 
-def tableau(logic, arg):
+def tableau(logic, arg=None):
     """
     Create a tableau for the given logic and argument. Example::
 
