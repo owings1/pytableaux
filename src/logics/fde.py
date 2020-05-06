@@ -134,8 +134,8 @@ def truth_function(operator, a, b=None):
         return min(max(truth_function('Negation', a), b), max(truth_function('Negation', b), a))
 
 class Model(object):
-
     pass
+
 class TableauxSystem(logic.TableauxSystem):
     """
     Nodes for FDE have a boolean *designation* property, and a branch is closed iff
