@@ -160,20 +160,52 @@ class TestK3W(LogicTester):
         proof = self.example_proof('Addition')
         assert not proof.valid
 
-class TestB3E(object):
+class TestB3E(LogicTester):
+
+    logic = get_logic('B3E')
 
     def test_examples(self):
-        valids = validities('b3e')
-        invalids = invalidities('b3e')
+        valids = validities(self.logic)
+        invalids = invalidities(self.logic)
         assert 'Conditional Contraction' in valids
         assert 'Triviality 1' in invalids
 
+    def test_truth_table_assertion(self):
+        tbl = truth_table(self.logic, 'Assertion')
+        assert tbl['outputs'][0] == 0
+        assert tbl['outputs'][1] == 0
+        assert tbl['outputs'][2] == 1
+
+    def test_truth_table_conditional(self):
+        tbl = truth_table(self.logic, 'Conditional')
+        assert tbl['outputs'][3] == 1
+        assert tbl['outputs'][4] == 1
+        assert tbl['outputs'][7] == 0
+
+    def test_truth_table_biconditional(self):
+        tbl = truth_table(self.logic, 'Biconditional')
+        assert tbl['outputs'][2] == 0
+        assert tbl['outputs'][4] == 1
+        assert tbl['outputs'][7] == 0
+        
     def test_valid_cond_contraction(self):
-        proof = example_proof('b3e', 'Conditional Contraction')
+        proof = self.example_proof('Conditional Contraction')
+        assert proof.valid
+
+    def test_valid_bicond_elim_1(self):
+        proof = self.example_proof('Biconditional Elimination 1')
+        assert proof.valid
+
+    def test_valid_bicond_elim_3(self):
+        proof = self.example_proof('Biconditional Elimination 3')
+        assert proof.valid
+
+    def test_valid_bicond_intro_1(self):
+        proof = self.example_proof('Biconditional Introduction 1')
         assert proof.valid
 
     def test_invalid_lem(self):
-        proof = example_proof('b3e', 'Law of Excluded Middle')
+        proof = self.example_proof('Law of Excluded Middle')
         assert not proof.valid
 
 class TestLP(object):
