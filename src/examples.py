@@ -61,7 +61,8 @@ args = {
     'Law of Excluded Middle'           : 'AaNa',
     'Law of Non-contradiction'         : [[ 'KaNa' ], 'b'  ],
     'Material Biconditional Elimination 1' : [[ 'Eab', 'a'  ], 'b'  ],
-    'Material Biconditional Elimination 2' : [[ 'Bab', 'Na' ], 'Nb' ],
+    'Material Biconditional Elimination 2' : [[ 'Eab', 'Na' ], 'Nb' ],
+    'Material Biconditional Elimination 3' : [[ 'NEab', 'a'],  'Nb'],
     'Material Biconditional Identity'  : 'Eaa',
     'Material Biconditional Introduction 1': [[ 'a', 'b' ], 'Eab' ],
     'Material Contraction'             : [[ 'CaCab' ], 'Cab'   ],
@@ -95,6 +96,8 @@ args = {
     'Triviality 1'                     : 'a',
     'Triviality 2'                     : [[ 'a' ], 'b' ],
     'Universal Predicate Syllogism'    : [[ 'VxVyCO0xyO1xy', 'O0mn'], 'O1mn'],
+    'Universal from Existential'       : [[ 'SxFx' ], 'VxFx' ],
+    'Universal from Negated Existential 1' : [[ 'NSxFx' ], 'VxNFx' ],
 }
 
 args_list = sorted(args.keys())
