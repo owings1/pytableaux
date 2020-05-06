@@ -20,6 +20,8 @@
 
 import logic, string
 
+from logic import NotImplementedError
+
 name = 'Standard'
 
 symbol_sets = {
@@ -134,7 +136,7 @@ class Writer(logic.Vocabulary.Writer):
                 symset.charof('paren_close', 0) if not drop_parens else ''
             ])
         else:
-            raise Exception(NotImplemented)
+            raise NotImplementedError(NotImplemented)
 
     def write_html_negated_identity(self, sentence, symbol_set = None):
         symset = self.symset(symbol_set)
