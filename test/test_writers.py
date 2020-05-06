@@ -90,14 +90,29 @@ def example_proof(logic, name, is_build=True):
 class TestAscii(object):
 
     def test_write_std_fde_1(self):
-        proof = example_proof('fde', 'Addition')
+        proof = example_proof('FDE', 'Addition')
         res = asc.write(proof, standard)
+        # TODO: assert something
+
+    def test_write_nec_dist_s4(self):
+        proof = example_proof('S4', 'Necessity Distribution')
+        res = asc.write(proof, standard)
+        # TODO: assert something
+
+    def test_write_status_prems(self):
+        proof = example_proof('FDE', 'Addition')
+        res = asc.write(proof, standard, status_panel=True)
         # TODO: assert something
 
 class TestAsciiv(object):
 
     def test_write_std_fde_1(self):
         proof = example_proof('fde', 'Addition')
+        res = asv.write(proof, standard)
+        # TODO: assert something
+
+    def test_write_nec_dist_s4(self):
+        proof = example_proof('S4', 'Necessity Distribution')
         res = asv.write(proof, standard)
         # TODO: assert something
     
