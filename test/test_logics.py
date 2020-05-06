@@ -55,7 +55,7 @@ class TestFDE(LogicTester):
 
     def test_Closure_example(self):
         proof = tableau(self.logic)
-        proof.get_rule('Closure').example()
+        proof.get_rule(self.logic.TableauxRules.Closure).example()
         proof.build()
         assert len(proof.branches) == 1
         assert proof.valid
@@ -96,20 +96,30 @@ class TestFDE(LogicTester):
         proof = self.example_proof('Universal from Existential')
         assert not proof.valid
 
-class TestK3(object):
+class TestK3(LogicTester):
+
+    logic = get_logic('K3')
 
     def test_examples(self):
-        valids = validities('k3')
-        invalids = invalidities('k3')
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'Biconditional Elimination 1' in valids
         assert 'Law of Excluded Middle' in invalids
 
+    def test_Closure_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule(self.logic.TableauxRules.Closure)
+        rule.example()
+        proof.build()
+        assert len(proof.branches) == 1
+        assert proof.valid
+        
     def test_valid_bicond_elim_1(self):
-        proof = example_proof('k3', 'Biconditional Elimination 1')
+        proof = self.example_proof('Biconditional Elimination 1')
         assert proof.valid
 
     def test_invalid_lem(self):
-        proof = example_proof('k3', 'Law of Excluded Middle')
+        proof = self.example_proof('Law of Excluded Middle')
         assert not proof.valid
 
 class TestK3W(LogicTester):
