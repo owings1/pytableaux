@@ -126,10 +126,7 @@ class App(object):
                 else:
                     symbol_set = 'default'
 
-            try:
-                if not isinstance(kw['logic'], list):
-                    kw['logic'] = [kw['logic']]
-            except:
+            if len(kw['logic']) < 1:
                 errors['Logic'] = Exception('Please select a logic')
                 
             if len(errors) > 0:
@@ -137,7 +134,7 @@ class App(object):
             else:
                 view = 'prove'
                 argument = logic.argument(conclusion, premises)
-                tableaux = [logic.tableau(modules['logics'][chosen_logic], argument).build() for chosen_logic in kw['logic']]
+                tableaux = [logic.tableau(modules['logics'][kw['logic']], argument).build()]
                 sw = notation.Writer(symbol_set)
                 data.update({
                     'tableaux'   : tableaux,

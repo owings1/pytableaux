@@ -60,8 +60,6 @@ form.argument fieldset.lexicon {
     float: right;
 }
 form.argument select[name=logic] {
-    width: 130px;
-    height: 125px;
     padding: 3px 0 0 3px;
 }
 form.argument input {

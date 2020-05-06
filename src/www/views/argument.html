@@ -45,13 +45,16 @@
                 </select>
             </div>
             <div class="input">
-                <label for="logic" class="left">Logics</label>
+                <label for="logic" class="left">Logic</label>
                 <div class="left">
-                {% for module in logic_modules %}
-                    <input type="checkbox" value="{{ module }}" name="logic" id="logic" {{ helper.checkbox_default(form_data, 'logic', module) }}/>
-                    <span class="logicName">{{ logics[module].name }}</span>
-                    <span class="logicHelp"><a href="/doc/logics.html#module-logics.{{ module.lower() }}" target="_pytableaux_logic"></a></span><br>
-                {% endfor %}
+                    <select name="logic">
+                        {% for module in logic_modules %}
+                            <option value="{{ module }}" {{ helper.select_opt(form_data, 'logic', logic) }}>
+                                {{ logics[module].name }}
+                            </option>                            
+                            <!-- <span class="logicHelp"><a href="/doc/logics.html#module-logics.{{ module.lower() }}" target="_pytableaux_logic"></a></span><br>-->
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="clear"></div>
             </div>
