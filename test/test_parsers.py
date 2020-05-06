@@ -19,10 +19,12 @@
 # pytableaux - parsers test cases
 import pytest
 
+import examples
+
 from logic import *
 from notations import standard, polish
 
-voc = Vocabulary()
+voc = examples.vocabulary
 std = standard.Parser(voc)
 pol = polish.Parser(voc)
 
@@ -64,6 +66,34 @@ class TestStandard(object):
         s = std.parse('(PXx!x V N=ab)')
         assert s.lhs.operator == 'Possibility'
 
+    def test_infix_pred(self):
+        s = std.parse('a=b')
+        assert s.predicate.name == 'Identity'
+
+    def test_binary_prefix_error(self):
+        with pytest.raises(Parser.ParseError):
+            std.parse('&AB')
+
+    def test_unary_infix_pred_error(self):
+        with pytest.raises(Parser.ParseError):
+            std.parse('aF')
+
+    def test_undefined_pred_error(self):
+        with pytest.raises(Parser.ParseError):
+            std.parse('F1ab')
+
+    def test_unbound_var_error(self):
+        with pytest.raises(Parser.ParseError):
+            std.parse('Fx')
+
+    def test_rebind_var_error(self):
+        with pytest.raises(Parser.ParseError):
+            std.parse('LxLxFx')
+
+    def test_unused_var_error(self):
+        with pytest.raises(Parser.ParseError):
+            std.parse('LxFa')
+
 class TestPolish(object):
 
     def test_parse_atomic(self):
@@ -74,3 +104,11 @@ class TestPolish(object):
         s = pol.parse('Na')
         assert s.is_literal()
         assert s.operator == 'Negation'
+
+    def test_unexpected_constant_error(self):
+        with pytest.raises(Parser.ParseError):
+            pol.parse('m')
+
+    def test_empty_error(self):
+        with pytest.raises(Parser.ParseError):
+            pol.parse('')

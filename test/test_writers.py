@@ -58,14 +58,19 @@ class TestStandard(object):
         res = std.write_predicate(system_predicates['Identity'])
         assert res == '='
 
-    def test_write_parameter_not_impl_base_param(str):
+    def test_write_parameter_not_impl_base_param(self):
         param = Vocabulary.Parameter(0, 0)
         with pytest.raises(NotImplementedError):
             std.write_parameter(param)
 
-    def test_write_subscript_html(str):
+    def test_write_subscript_html(self):
         res = std.write_subscript(1, symbol_set='html')
         assert '>1</span>' in res
+
+    def test_write_neg_ident_html(self):
+        s1 = parse('NImn')
+        res = std.write(s1, symbol_set='html')
+        assert '&ne;' in res
 
 class TestPolish(object):
 
