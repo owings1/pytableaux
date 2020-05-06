@@ -38,6 +38,11 @@ def example_proof(logic, name, is_build=True):
 def empty_proof():
     return tableau(None, None)
 
+class LogicTester(object):
+
+    def example_proof(self, name):
+        return example_proof(self.logic, name)
+
 class TestFDE(object):
 
     def test_examples(self):
@@ -125,7 +130,9 @@ class TestLP(object):
         proof = example_proof('lp', 'Law of Non-contradiction')
         assert not proof.valid
 
-class TestGO(object):
+class TestGO(LogicTester):
+
+    logic = get_logic('go')
 
     def test_examples(self):
         valids = validities('go')
@@ -133,12 +140,136 @@ class TestGO(object):
         assert 'DeMorgan 3' in valids
         assert 'DeMorgan 1' in invalids
 
+    def test_truth_table_assertion(self):
+        tbl = truth_table(self.logic, 'Assertion')
+        assert tbl['outputs'][0] == 0
+        assert tbl['outputs'][1] == 0
+        assert tbl['outputs'][2] == 1
+
+    def test_truth_table_negation(self):
+        tbl = truth_table(self.logic, 'Negation')
+        assert tbl['outputs'][0] == 1
+        assert tbl['outputs'][1] == 0.5
+        assert tbl['outputs'][2] == 0
+
+    def test_truth_table_disjunction(self):
+        tbl = truth_table(self.logic, 'Disjunction')
+        assert tbl['outputs'][0] == 0
+        assert tbl['outputs'][1] == 0
+        assert tbl['outputs'][2] == 1
+
+    def test_truth_table_conjunction(self):
+        tbl = truth_table(self.logic, 'Conjunction')
+        assert tbl['outputs'][0] == 0
+        assert tbl['outputs'][1] == 0
+        assert tbl['outputs'][8] == 1
+
+    def test_truth_table_mat_cond(self):
+        tbl = truth_table(self.logic, 'Material Conditional')
+        assert tbl['outputs'][0] == 1
+        assert tbl['outputs'][1] == 1
+        assert tbl['outputs'][4] == 0
+
+    def test_truth_table_mat_bicond(self):
+        tbl = truth_table(self.logic, 'Material Biconditional')
+        assert tbl['outputs'][0] == 1
+        assert tbl['outputs'][1] == 0
+        assert tbl['outputs'][4] == 0
+
+    def test_truth_table_cond(self):
+        tbl = truth_table(self.logic, 'Conditional')
+        assert tbl['outputs'][0] == 1
+        assert tbl['outputs'][3] == 0
+        assert tbl['outputs'][4] == 1
+
+    def test_truth_table_bicond(self):
+        tbl = truth_table(self.logic, 'Biconditional')
+        assert tbl['outputs'][0] == 1
+        assert tbl['outputs'][4] == 1
+        assert tbl['outputs'][7] == 0
+
+    def test_MaterialConditionalNegatedDesignated_step(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('NCab'), 'designated': True})
+        proof.step()
+        assert branch.has({'sentence': parse('Na'), 'designated': False})
+        assert branch.has({'sentence': parse('b'), 'designated': False})
+
+    def test_MaterialBionditionalNegatedDesignated_step(self):
+        proof = tableau(self.logic)
+        proof.branch().add({'sentence': parse('NEab'), 'designated': True})
+        proof.step()
+        b1, b2 = proof.branches
+        assert b1.has({'sentence': parse('Na'), 'designated': False})
+        assert b1.has({'sentence': parse('b'), 'designated': False})
+        assert b2.has({'sentence': parse('a'), 'designated': False})
+        assert b2.has({'sentence': parse('Nb'), 'designated': False})
+
+    def test_ConditionalDesignated_step(self):
+        proof = tableau(self.logic)
+        proof.branch().add({'sentence': parse('Uab'), 'designated': True})
+        proof.step()
+        b1, b2 = proof.branches
+        assert b1.has({'sentence': parse('ANab'), 'designated': True})
+        assert b2.has({'sentence': parse('a'), 'designated': False})
+        assert b2.has({'sentence': parse('b'), 'designated': False})
+        assert b2.has({'sentence': parse('Na'), 'designated': False})
+        assert b2.has({'sentence': parse('Nb'), 'designated': False})
+
+    def test_ConditionalNegatedDesignated_step(self):
+        proof = tableau(self.logic)
+        proof.branch().add({'sentence': parse('NUab'), 'designated': True})
+        proof.step()
+        b1, b2 = proof.branches
+        assert b1.has({'sentence': parse('a'), 'designated': True})
+        assert b1.has({'sentence': parse('b'), 'designated': False})
+        assert b2.has({'sentence': parse('Na'), 'designated': False})
+        assert b2.has({'sentence': parse('Nb'), 'designated': True})
+
+    def test_BiconditionalDesignated_step(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('Bab'), 'designated': True})
+        proof.step()
+        assert branch.has({'sentence': parse('Uab'), 'designated': True})
+        assert branch.has({'sentence': parse('Uba'), 'designated': True})
+
+    def test_BiconditionalNegatedDesignated_step(self):
+        proof = tableau(self.logic)
+        proof.branch().add({'sentence': parse('NBab'), 'designated': True})
+        proof.step()
+        b1, b2 = proof.branches
+        assert b1.has({'sentence': parse('NUab'), 'designated': True})
+        assert b2.has({'sentence': parse('NUba'), 'designated': True})
+
+    def test_AssertionUndesignated_step(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('Ta'), 'designated': False})
+        proof.step()
+        assert branch.has({'sentence': parse('a'), 'designated': False})
+
+    def test_AssertionNegatedDesignated_step(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('NTa'), 'designated': True})
+        proof.step()
+        assert branch.has({'sentence': parse('a'), 'designated': False})
+
+    def test_AssertionNegatedUndesignated_step(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('NTa'), 'designated': False})
+        proof.step()
+        assert branch.has({'sentence': parse('a'), 'designated': False})
+
     def test_valid_demorgan_3(self):
-        proof = example_proof('go', 'DeMorgan 3')
+        proof = self.example_proof('DeMorgan 3')
         assert proof.valid
 
     def test_invalid_demorgan_1(self):
-        proof = example_proof('go', 'DeMorgan 1')
+        proof = self.example_proof('DeMorgan 1')
         assert not proof.valid
 
 class TestCPL(object):
