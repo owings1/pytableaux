@@ -25,8 +25,8 @@ def example_validities():
     from . import t
     args = t.example_validities()
     args.update([
-		'S4 Conditional Inference 1' ,
-		'S4 Material Inference 1'    ,
+        'S4 Conditional Inference 1' ,
+        'S4 Material Inference 1'    ,
         'S4 Inference 1'             ,
         'NP Collapse 1'              ,
     ])
@@ -34,9 +34,9 @@ def example_validities():
     
 def example_invalidities():
     args = set([
-		'S5 Conditional Inference 1' ,
-		'S5 Material Inference 1'    ,
-	    'Possibility Distribution'   ,
+        'S5 Conditional Inference 1' ,
+        'S5 Material Inference 1'    ,
+        'Possibility Distribution'   ,
         'Affirming a Disjunct 1'     ,
         'Affirming a Disjunct 2'     ,
         'Affirming the Consequent'   ,
