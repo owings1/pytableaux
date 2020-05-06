@@ -41,7 +41,7 @@ view_path = 'www/views'
 jinja_env = Environment(loader=PackageLoader('logic', view_path))
 
 available_module_names = {
-    'logics'    : ['cpl', 'cfol', 'k3', 'k3w', 'l3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
+    'logics'    : ['cpl', 'cfol', 'k3', 'k3w', 'b3e', 'l3', 'lp', 'go', 'fde', 'k', 'd', 't', 's4'],
     'notations' : ['standard', 'polish'],
     'writers'   : ['html', 'ascii']
 }
