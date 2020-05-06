@@ -791,18 +791,46 @@ class TestS4(object):
         proof = example_proof('s4', 'S5 Conditional Inference 1')
         assert not proof.valid
 
-class TestL3(object):
+class TestL3(LogicTester):
+
+    logic = get_logic('L3')
 
     def test_examples(self):
-        valids = validities('l3')
-        invalids = invalidities('l3')
+        valids = validities(self.logic)
+        invalids = invalidities(self.logic)
         assert 'Conditional Identity' in valids
         assert 'Material Identity' in invalids
 
+    def test_truth_table_conditional(self):
+        tbl = truth_table(self.logic, 'Conditional')
+        assert tbl['outputs'][3] == 0.5
+        assert tbl['outputs'][4] == 1
+        assert tbl['outputs'][6] == 0
+        
     def test_valid_cond_identity(self):
-        proof = example_proof('l3', 'Conditional Identity')
+        proof = self.example_proof('Conditional Identity')
+        assert proof.valid
+
+    def test_valid_cond_mp(self):
+        proof = self.example_proof('Conditional Modus Ponens')
+        assert proof.valid
+
+    def test_valid_bicond_elim_1(self):
+        proof = self.example_proof('Biconditional Elimination 1')
+        assert proof.valid
+
+    def test_valid_bicond_elim_3(self):
+        proof = self.example_proof('Biconditional Elimination 3')
+        assert proof.valid
+
+    def test_valid_bicond_intro_3(self):
+        proof = self.example_proof('Biconditional Introduction 3')
+        assert proof.valid
+
+    def test_valid_bicond_ident(self):
+        proof = self.example_proof('Biconditional Identity')
         assert proof.valid
 
     def test_invalid_material_identify(self):
-        proof = example_proof('l3', 'Material Identity')
+        proof = self.example_proof('Material Identity')
         assert not proof.valid
