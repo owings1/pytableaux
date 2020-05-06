@@ -931,6 +931,14 @@ class TableauxSystem(object):
             """
             return self.open_branchset
 
+        def get_rule(self, rule):
+            """
+            Get a rule instance by name or class reference. Returns first occurrence.
+            """
+            for r in self.rules:
+                if r.__class__ == rule or r.__class__.__name__ == rule:
+                    return r
+
         def structure(self, branches, node_depth=0, track=None):
             if track == None:
                 track = {
