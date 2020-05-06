@@ -248,20 +248,29 @@ class TestB3E(LogicTester):
         proof = self.example_proof('Law of Excluded Middle')
         assert not proof.valid
 
-class TestLP(object):
+class TestLP(LogicTester):
+
+    logic = get_logic('LP')
 
     def test_examples(self):
-        valids = validities('lp')
-        invalids = invalidities('lp')
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'Biconditional Identity' in valids
         assert 'Law of Non-contradiction' in invalids
 
+    def test_Closure_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule(self.logic.TableauxRules.Closure)
+        rule.example()
+        proof.build()
+        assert proof.valid
+
     def test_valid_material_ident(self):
-        proof = example_proof('lp', 'Material Identity')
+        proof = self.example_proof('Material Identity')
         assert proof.valid
 
     def test_invalid_lnc(self):
-        proof = example_proof('lp', 'Law of Non-contradiction')
+        proof = self.example_proof('Law of Non-contradiction')
         assert not proof.valid
 
 class TestGO(LogicTester):
