@@ -830,20 +830,30 @@ class TestD(LogicTester):
         proof = self.example_proof('Reflexive Inference 1')
         assert not proof.valid
 
-class TestT(object):
+class TestT(LogicTester):
+
+    logic = get_logic('T')
 
     def test_examples(self):
-        valids = validities('t')
-        invalids = invalidities('t')
+        valids = self.logic.example_validities()
+        invalids = self.logic.example_invalidities()
         assert 'NP Collapse 1' in valids
         assert 'S4 Inference 1' in invalids
 
+    def test_Reflexive_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule(self.logic.TableauxRules.Reflexive)
+        rule.example()
+        proof.build()
+        branch = proof.branches[0]
+        assert branch.has({'world1': 0, 'world2': 0})
+
     def test_valid_np_collapse_1(self):
-        proof = example_proof('t', 'NP Collapse 1')
+        proof = self.example_proof('NP Collapse 1')
         assert proof.valid
 
     def test_invalid_s4_inf_1(self):
-        proof = example_proof('t', 'S4 Inference 1')
+        proof = self.example_proof('S4 Inference 1')
         assert not proof.valid
 
 class TestS4(LogicTester):
