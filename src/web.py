@@ -227,7 +227,159 @@ class App(object):
             'source_href'       : logic.source_href
         }
         
-        
+    @server.expose
+    @server.tools.json_in()
+    @server.tools.json_out()
+    def api(self, action=None):
+        if server.request.method == 'POST':
+            try:
+                if action == 'parse':
+                    result = self.api_parse(server.request.json)
+                elif action == 'prove':
+                    result = self.api_prove(server.request.json)
+                return {
+                    'status'  : 200,
+                    'message' : 'OK',
+                    'result'  : result
+                }
+            except Exception as err:
+                server.response.status = 400
+                return {
+                    'status'  : 400,
+                    'message' : str(err),
+                    'error'   : err.__class__.__name__
+                }
+        server.response.status = 404
+        return {'message': 'Not found', 'code': 404}
+
+    def api_parse(self, body):
+        """
+        Example request body::
+
+            {
+               "notation": "polish",
+               "input": "Fm",
+               "predicates : [
+                  {
+                     "name": "is F",
+                     "index": 0,
+                     "subscript": 0,
+                     "arity": 1
+                  }
+               ]
+            }
+
+        Example success result::
+
+            {
+               "type": "AtomicSentence"
+            }
+        """
+        body = dict(body)
+        if 'notation' not in body:
+            body['notation'] = 'polish'
+        if 'predicates' not in body:
+            body['predicates'] = list()
+        if 'input' not in body:
+            body['input'] = ''
+        notation = modules['notations'][body['notation']]
+        vocab = logic.Vocabulary()
+        for pdata in body['predicates']:
+            vocab.declare_predicate(**pdata)
+        sentence = logic.parse(body['input'], vocab, notation)
+        return {
+            'type': sentence.__class__.__name__
+        }
+
+    def api_prove(self, body):
+        """
+        Example request body::
+
+            {
+                "argument": {
+                    "premises": ["KFmFn"],
+                    "conclusion": "Fm",
+                    "notation": "polish",
+                    "predicates": [
+                        {
+                            "name": "is F",
+                            "index": 0,
+                            "subscript": 0,
+                            "arity": 1
+                        }
+                    ]
+                },
+                "logic": "FDE",
+                "output": {
+                    "notation": "standard",
+                    "format": "html",
+                    "options": {}
+                }
+            }
+
+        Example success result::
+
+            {
+                "tableau": {
+                    "logic": "FDE",
+                    "argument": {
+                        "premises": ["Fa &and; Fb"],
+                        "conclusion": "Fb"
+                    },
+                    "valid": true,
+                    "body": "...html...",
+                    "header": "...",
+                    "footer": "..."
+                }
+            }
+        """
+        body = dict(body)
+        if 'output' not in body:
+            body['output'] = dict()
+        odata = body['output']
+        if 'notation' not in odata:
+            odata['notation'] = 'standard'
+        if 'format' not in odata:
+            odata['format'] = 'html'
+        if 'symset' not in odata:
+            if odata['format'] == 'html':
+                odata['symset'] = 'html'
+            else:
+                odata['symset'] = 'default'
+        if 'options' not in odata:
+            odata['options'] = dict()
+        arg = self.parse_argument_data(body['argument'])
+        proof = logic.tableau(body['logic'], arg).build()
+        output_notation = modules['notations'][odata['notation']]
+        sw = output_notation.Writer(odata['symset'])
+        proof_writer = modules['writers'][odata['format']].Writer()
+        return {
+            'tableau': {
+                'logic' : logic.get_logic(body['logic']).name,
+                'argument': {
+                    'premises': [sw.write(premise) for premise in arg.premises],
+                    'conclusion': sw.write(arg.conclusion)
+                },
+                'valid': proof.valid,
+                'header': proof_writer.document_header(),
+                'footer': proof_writer.document_footer(),
+                'body': proof_writer.write(proof, writer=sw, **odata['options'])
+            }
+        }
+
+    def parse_argument_data(self, adata):
+        adata = dict(adata)
+        if 'notation' not in adata:
+            adata['notation'] = 'polish'
+        if 'predicates' not in adata:
+            adata['predicates'] = list()
+        if 'premises' not in adata:
+            adata['premises'] = list()
+        vocab = logic.Vocabulary()
+        for pdata in adata['predicates']:
+            vocab.declare_predicate(**pdata)
+        return logic.argument(vocabulary=vocab, notation=adata['notation'], premises=adata['premises'], conclusion=adata['conclusion'])
+
 def main():
     server.config.update(global_config)
     server.quickstart(App(), '/', config)

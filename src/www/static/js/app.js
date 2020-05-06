@@ -241,5 +241,39 @@
         ensureEmptyPredicate()
         refreshNotation()
 
+        function getProveApiData() {
+            var data = {
+                argument : {
+                    premises  : [],
+                    predicates: []
+                },
+                output: {}
+            }
+            data.logic = $('select[name="logic"]').val()
+            data.argument.notation = currentNotation()
+            data.argument.conclusion = $('#conclusion').val()
+            $('input.premise').each(function() {
+                var val = $(this).val()
+                if (val) {
+                    data.argument.premises.push(val)
+                }
+            })
+            $('.userPredicate').each(function() {
+                var $tr = $(this)
+                var arity = $('input.arity', $tr).val()
+                if (arity.length > 0) {
+                    var coords = $('input.predicateSymbol', $tr).val().split('.')
+                    data.argument.predicates.push({
+                        name      : $('input.predicateName', $tr).val(),
+                        index     : +coords[0],
+                        subscript : +coords[1],
+                        arity     : +arity
+                    })
+                }
+            })
+            data.output.notation = currentNotation()
+            data.output.format = $('#writer').val()
+            return data
+        }
     })
 })(jQuery);
