@@ -82,20 +82,82 @@ class TestK3(object):
         proof = example_proof('k3', 'Law of Excluded Middle')
         assert not proof.valid
 
-class TestK3W(object):
+class TestK3W(LogicTester):
+
+    logic = get_logic('k3w')
 
     def test_examples(self):
-        valids = validities('k3w')
-        invalids = invalidities('k3w')
+        valids = validities(self.logic)
+        invalids = invalidities(self.logic)
         assert 'Conditional Contraction' in valids
         assert 'Addition' in invalids
 
+    def test_truth_table_conjunction(self):
+        tbl = truth_table(self.logic, 'Conjunction')
+        assert tbl['outputs'][0] == 0
+        assert tbl['outputs'][3] == 0.5
+        assert tbl['outputs'][8] == 1
+
+    def test_DisjunctionNegatedUndesignated_step(self):
+        proof = tableau(self.logic)
+        proof.branch().add({'sentence': parse('NAab'), 'designated': False})
+        proof.step()
+        b1, b2, b3, b4 = proof.branches
+        assert b1.has({'sentence': parse('a'), 'designated': True})
+        assert b1.has({'sentence': parse('b'), 'designated': True})
+        assert b2.has({'sentence': parse('a'), 'designated': True})
+        assert b2.has({'sentence': parse('Nb'), 'designated': True})
+        assert b3.has({'sentence': parse('Na'), 'designated': True})
+        assert b3.has({'sentence': parse('b'), 'designated': True})
+        assert b4.has({'sentence': parse('a'), 'designated': False})
+        assert b4.has({'sentence': parse('Na'), 'designated': False})
+        assert b4.has({'sentence': parse('b'), 'designated': False})
+        assert b4.has({'sentence': parse('Nb'), 'designated': False})
+
+    def test_ConjunctionNegatedDesignated_step(self):
+        proof = tableau(self.logic)
+        proof.branch().add({'sentence': parse('NKab'), 'designated': True})
+        proof.step()
+        b1, b2, b3 = proof.branches
+        assert b1.has({'sentence': parse('a'), 'designated': True})
+        assert b1.has({'sentence': parse('Nb'), 'designated': True})
+        assert b2.has({'sentence': parse('Na'), 'designated': True})
+        assert b2.has({'sentence': parse('b'), 'designated': True})
+        assert b3.has({'sentence': parse('Na'), 'designated': True})
+        assert b3.has({'sentence': parse('Nb'), 'designated': True})
+
+    def test_ConjunctionNegatedUndesignated_step(self):
+        proof = tableau(self.logic)
+        proof.branch().add({'sentence': parse('NKab'), 'designated': False})
+        proof.step()
+        b1, b2, b3 = proof.branches
+        assert b1.has({'sentence': parse('a'), 'designated': False})
+        assert b1.has({'sentence': parse('Na'), 'designated': False})
+        assert b2.has({'sentence': parse('b'), 'designated': False})
+        assert b2.has({'sentence': parse('Nb'), 'designated': False})
+        assert b3.has({'sentence': parse('a'), 'designated': True})
+        assert b3.has({'sentence': parse('b'), 'designated': True})
+
+    def test_MaterialBiconditionalDesignated_step(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('Eab'), 'designated': True})
+        proof.step()
+        assert branch.has({'sentence': parse('KCabCba'), 'designated': True})
+
+    def test_MaterialBiconditionalNegatedDesignated_step(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('NEab'), 'designated': True})
+        proof.step()
+        assert branch.has({'sentence': parse('NKCabCba'), 'designated': True})
+
     def test_valid_cond_contraction(self):
-        proof = example_proof('k3w', 'Conditional Contraction')
+        proof = self.example_proof('Conditional Contraction')
         assert proof.valid
 
     def test_invalid_addition(self):
-        proof = example_proof('k3w', 'Addition')
+        proof = self.example_proof('Addition')
         assert not proof.valid
 
 class TestB3E(object):
