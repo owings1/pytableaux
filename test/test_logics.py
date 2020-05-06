@@ -43,27 +43,57 @@ class LogicTester(object):
     def example_proof(self, name):
         return example_proof(self.logic, name)
 
-class TestFDE(object):
+class TestFDE(LogicTester):
+
+    logic = get_logic('FDE')
 
     def test_examples(self):
-        valids = validities('fde')
-        invalids = invalidities('fde')
+        valids = validities(self.logic)
+        invalids = invalidities(self.logic)
         assert 'Addition' in valids
         assert 'Law of Excluded Middle' in invalids
 
+    def test_Closure_example(self):
+        proof = tableau(self.logic)
+        proof.get_rule('Closure').example()
+        proof.build()
+        assert len(proof.branches) == 1
+        assert proof.valid
+
     def test_ConjunctionNegatedDesignated_example_node(self):
-        rule = get_logic('fde').TableauxRules.ConjunctionNegatedDesignated(empty_proof())
+        proof = tableau(self.logic)
+        rule = proof.get_rule('ConjunctionNegatedDesignated')
         props = rule.example_node()
         assert props['sentence'].operator == 'Negation'
         assert props['sentence'].operand.operator == 'Conjunction'
         assert props['designated']
 
+    def test_ExistentialUndesignated_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule('ExistentialUndesignated')
+        rule.example()
+        s = examples.quantified('Existential')
+        branch = proof.branches[0]
+        assert branch.has({'sentence': s, 'designated': False})
+
     def test_valid_addition(self):
-        proof = example_proof('fde', 'Addition')
+        proof = self.example_proof('Addition')
+        assert proof.valid
+
+    def test_valid_univ_from_neg_exist_1(self):
+        proof = self.example_proof('Universal from Negated Existential 1')
         assert proof.valid
 
     def test_invalid_lem(self):
-        proof = example_proof('fde', 'Law of Excluded Middle')
+        proof = self.example_proof('Law of Excluded Middle')
+        assert not proof.valid
+
+    def test_invalid_mat_bicond_elim_3(self):
+        proof = self.example_proof('Material Biconditional Elimination 3')
+        assert not proof.valid
+
+    def test_invalid_univ_from_exist(self):
+        proof = self.example_proof('Universal from Existential')
         assert not proof.valid
 
 class TestK3(object):
