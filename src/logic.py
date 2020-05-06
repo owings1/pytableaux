@@ -1023,6 +1023,8 @@ class TableauxSystem(object):
             else:
                 inbetween_widths = 0
                 track['depth'] += 1
+                first_width = 0
+                last_width = 0
                 for i, node in enumerate(distinct_nodes):
                     child_branches = [branch for branch in branches if branch.nodes[node_depth] == node]
                     child = self.structure(child_branches, node_depth, track)
@@ -1038,8 +1040,12 @@ class TableauxSystem(object):
                         inbetween_widths += child['width']
                     if structure['branch_step'] > child['step']:
                         structure['branch_step'] = child['step']
-                structure['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / structure['width']
-                structure['balanced_line_margin'] = first_width / structure['width']
+                if structure['width'] > 0:
+                    structure['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / structure['width']
+                    structure['balanced_line_margin'] = first_width / structure['width']
+                else:
+                    structure['balanced_line_width'] = 0
+                    structure['balanced_line_margin'] = 0
                 track['depth'] -= 1
             structure['structure_node_count'] = structure['descendant_node_count'] + len(structure['nodes'])
             track['pos'] += 1
