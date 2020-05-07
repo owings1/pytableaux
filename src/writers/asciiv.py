@@ -16,7 +16,7 @@
 #
 # ------------------
 #
-# pytableaux - ASCIIV writer
+# pytableaux - ASCII-V writer
 
 # this is a work in progress
 #
@@ -58,6 +58,8 @@
 #           a
 
 import logic
+
+name = 'ASCII-V'
 
 class Writer(logic.TableauxSystem.Writer):
 
