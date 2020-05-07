@@ -45,7 +45,7 @@
         }
 
         function currentNotation() {
-            return $('#notation').val()
+            return $('#input_notation').val()
         }
 
         function addEmptyPremise() {
@@ -175,7 +175,7 @@
         }
 
         function refreshStatuses() {
-            $('form.argument input.sentence').each(function() {
+            $('form.argument input.sentence').each(function(sentenceIndex) {
                 var $status = $(this).closest('div.input').find('.status')
                 var str = $(this).val()
                 if (str || $(this).hasClass('conclusion')) {
@@ -233,8 +233,14 @@
         $('form.argument')
           .on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
           .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
-          .on('change', '#example_argument', refreshExampleArgument)
-          .on('change', '#notation', refreshNotation)
+          .on('change', '#example_argument', function() {
+               refreshExampleArgument()
+               refreshStatuses()
+           })
+          .on('change', '#input_notation', function() {
+               refreshNotation()
+               refreshStatuses()
+           })
           .on('change', 'input.sentence', refreshStatuses)
 
         ensureEmptyPremise()
@@ -271,8 +277,9 @@
                     })
                 }
             })
-            data.output.notation = currentNotation()
+            data.output.notation = $('#output_notation').val()
             data.output.format = $('#writer').val()
+            data.output.symset = $('#symbol_set').val()
             return data
         }
     })

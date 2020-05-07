@@ -2,27 +2,24 @@
 {% block content %}
     {{ super() }}
     <hr>
-    {{ writer.document_header() }}
-    {% for tableau in tableaux %}
-        <div class="evaluation">
-            <div class="summary">
-                <h3 class="left">{{ tableau.logic.name }} &ndash; {{ tableau.logic.description|e }}</h3>
-                <div class="result right">
-                    {% if tableau.valid %}
-                        <span class="valid">Valid</span>
-                    {% else %}
-                        <span class="invalid">Invalid</span>
-                    {% endif %}
-                </div>
-                <div class="clear"></div>
+    <div class="evaluation">
+        <div class="summary">
+            <h3 class="left">{{ tableau.logic.name }} &ndash; {{ tableau.logic.description|e }}</h3>
+            <div class="result right">
+                {%- if tableau.valid -%}
+                    <span class="valid">Valid</span>
+                {%- else -%}
+                    <span class="invalid">Invalid</span>
+                {%- endif -%}
             </div>
-            <div class="proof">
-                {% if writer.name == 'HTML' %}
-                    {{ writer.write(tableau, writer=sw, highlight_open=True, status_panel=True) }}
-                {% else %}
-                    <pre>{{ writer.write(tableau, writer=sw, status_panel=True)|e }}</pre>
-                {% endif %}
-            </div>
+            <div class="clear"></div>
         </div>
-    {% endfor %}
+        <div class="proof">
+            {% if writer.name == 'HTML' %}
+                {{ writer.write(tableau, writer=sw, highlight_open=True, status_panel=True) }}
+            {% else %}
+                <pre>{{ writer.write(tableau, writer=sw, status_panel=True)|e }}</pre>
+            {% endif %}
+        </div>
+    </div>
 {% endblock %}

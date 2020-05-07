@@ -39,10 +39,11 @@ class AppTest(helper.CPWebCase):
 
     def test_index_trivial_invalid_polish_ascii_cpl(self):
         kw = {
-            'notation'   : 'polish',
-            'writer'     : 'ascii',
-            'logic'      : 'cpl',
-            'conclusion' : 'a'
+            'input_notation'  : 'polish',
+            'output_notation' : 'polish',
+            'writer'          : 'ascii',
+            'logic'           : 'cpl',
+            'conclusion'      : 'a'
         }
         app = web.App()
         res = app.index(**kw)

@@ -94,50 +94,59 @@ class App(object):
 
         if len(kw) and ('errors' not in kw or not len(kw['errors'])):
 
-            notation = modules['notations'][kw['notation']]
+            input_notation = modules['notations'][kw['input_notation']]
+            output_notation = modules['notations'][kw['output_notation']]
             writer = modules['writers'][kw['writer']].Writer()
             
             errors = {}
             if 'user_predicate_arities[]' in kw:
                 App.declare_user_predicates(kw, vocabulary, errors)
-            parser = notation.Parser(vocabulary)
+            parser = input_notation.Parser(vocabulary)
 
             try:
-                premiseStrs = [premise for premise in kw['premises[]'] if len(premise) > 0]
+                premise_strs = [premise for premise in kw['premises[]'] if len(premise) > 0]
             except:
-                premiseStrs = []
+                premise_strs = list()
 
             premises = []
-            for i, premiseStr in enumerate(premiseStrs):
+            for i, premise_str in enumerate(premise_strs):
                 try:
-                    premises.append(parser.parse(premiseStr))
+                    premises.append(parser.parse(premise_str))
                 except Exception as e:
-                    errors['Premise ' + str(i + 1)] = e
+                    errors['Premise ' + str(i + 1)] = str(e)
             try:
                 conclusion = parser.parse(kw['conclusion'])
             except Exception as e:
-                errors['Conclusion'] = e
+                errors['Conclusion'] = str(e)
 
             if 'symbol_set' in kw:
                 symbol_set = kw['symbol_set']
             else:
-                if kw['writer'] == 'html' and 'html' in notation.symbol_sets:
+                if kw['writer'] == 'html' and 'html' in output_notation.symbol_sets:
                     symbol_set = 'html'
                 else:
                     symbol_set = 'default'
 
+            try:
+                sw = output_notation.Writer(symbol_set)
+            except Exception as e:
+                errors['Symbol Set'] = str(e)
+
             if len(kw['logic']) < 1:
-                errors['Logic'] = Exception('Please select a logic')
-                
+                errors['Logic'] = str(Exception('Please select a logic'))
+            elif kw['logic'] not in modules['logics']:
+                errors['Logic'] = str(Exception('Invalid logic'))
+            else:
+                selected_logic = modules['logics'][kw['logic']]
+
             if len(errors) > 0:
                 kw['errors'] = errors
             else:
                 view = 'prove'
                 argument = logic.argument(conclusion, premises)
-                tableaux = [logic.tableau(modules['logics'][kw['logic']], argument).build()]
-                sw = notation.Writer(symbol_set)
+                proof = logic.tableau(selected_logic, argument).build()
                 data.update({
-                    'tableaux'   : tableaux,
+                    'tableau'    : proof,
                     'notation'   : notation,
                     'sw'         : sw,
                     'writer'     : writer,
@@ -167,7 +176,8 @@ class App(object):
         return ''
         
     def render(self, view, data={}):
-        return jinja_env.get_template(view + '.html').render(data)
+        raw_html = jinja_env.get_template(view + '.html').render(data)
+        return raw_html
 
     @staticmethod
     def fix_kw(kw):
@@ -313,6 +323,7 @@ class App(object):
                 "output": {
                     "notation": "standard",
                     "format": "html",
+                    "symset": "default",
                     "options": {}
                 }
             }

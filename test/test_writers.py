@@ -123,10 +123,6 @@ class TestAsciiv(object):
     
 class TestHtml(object):
 
-    def test_document_header_has_css_elem(self):
-        res = htm.document_header()
-        assert '.html-writer-proof' in res
-
     def test_write_no_arg(self):
         proof = tableau('FDE')
         proof.build()

@@ -32,12 +32,6 @@ class Writer(logic.TableauxSystem.Writer):
         trim_blocks = True,
         lstrip_blocks = True
     )
-    template = env.get_template('structure.html')
-    header   = env.get_template('header.html')
-
-    def document_header(self):
-        return self.env.get_template('header.html').render()
-        #return self.header.render()
 
     def write_tableau(self, tableau, writer, opts):
         if tableau.argument != None:
