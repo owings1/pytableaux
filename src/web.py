@@ -76,35 +76,80 @@ config['/doc'] = {
     'tools.staticdir.index' : index_filename
 }
 
+browser_data = {
+    'example_predicates'              : examples.test_pred_data,
+    'notation_user_predicate_symbols' : notation_user_predicate_symbols,
+    'num_predicate_symbols'           : logic.num_predicate_symbols,
+    'example_arguments' : {
+        arg.title : {
+            notation: {
+                'premises'   : [modules['notations'][notation].write(premise) for premise in arg.premises],
+                'conclusion' : modules['notations'][notation].write(arg.conclusion)
+            }
+            for notation in available_module_names['notations']
+        }
+        for arg in examples.arguments()
+    }
+}
+
+base_view_data = {
+    'operators_list'    : logic.operators_list,
+    'logic_modules'     : available_module_names['logics'],
+    'logics'            : modules['logics'],
+    'writer_modules'    : available_module_names['writers'],
+    'writers'           : modules['writers'],
+    'notation_modules'  : available_module_names['notations'],
+    'notations'         : modules['notations'],
+    'system_predicates' : logic.system_predicates,
+    'quantifiers'       : logic.quantifiers_list,
+    'example_args_list' : examples.args_list,
+    'browser_json'      : json.dumps(browser_data, indent=2),
+    'version'           : logic.version,
+    'copyright'         : logic.copyright,
+    'source_href'       : logic.source_href
+}
+
+def render(view, data={}):
+    raw_html = jinja_env.get_template(view + '.html').render(data)
+    return raw_html
+
+def fix_form_data(form_data):
+    form_data = dict(form_data)
+    if len(form_data):
+        for param in form_data:
+            if param.endswith('[]'):
+                # http://python-future.org/compatible_idioms.html#basestring
+                if isinstance(form_data[param], basestring):
+                    form_data[param] = [form_data[param]]
+    return form_data
+
 class App(object):
                 
     @server.expose
-    def index(self, *args, **kw):
+    def index(self, *args, **form_data):
 
-        App.fix_kw(kw)
+        form_data = fix_form_data(form_data)
 
-        print(args)
-        print(kw)
-
-        data = App.get_base_data(kw)
+        data = dict(base_view_data)
+        data['form_data'] = form_data
 
         vocabulary = logic.Vocabulary()
 
         view = 'argument'
 
-        if len(kw) and ('errors' not in kw or not len(kw['errors'])):
+        if len(form_data) and ('errors' not in form_data or not len(form_data['errors'])):
 
-            input_notation = modules['notations'][kw['input_notation']]
-            output_notation = modules['notations'][kw['output_notation']]
-            writer = modules['writers'][kw['writer']].Writer()
+            input_notation = modules['notations'][form_data['input_notation']]
+            output_notation = modules['notations'][form_data['output_notation']]
+            writer = modules['writers'][form_data['format']].Writer()
             
             errors = {}
-            if 'user_predicate_arities[]' in kw:
-                App.declare_user_predicates(kw, vocabulary, errors)
+            if 'user_predicate_arities[]' in form_data:
+                App.declare_user_predicates(form_data, vocabulary, errors)
             parser = input_notation.Parser(vocabulary)
 
             try:
-                premise_strs = [premise for premise in kw['premises[]'] if len(premise) > 0]
+                premise_strs = [premise for premise in form_data['premises[]'] if len(premise) > 0]
             except:
                 premise_strs = list()
 
@@ -115,14 +160,14 @@ class App(object):
                 except Exception as e:
                     errors['Premise ' + str(i + 1)] = str(e)
             try:
-                conclusion = parser.parse(kw['conclusion'])
+                conclusion = parser.parse(form_data['conclusion'])
             except Exception as e:
                 errors['Conclusion'] = str(e)
 
-            if 'symbol_set' in kw:
-                symbol_set = kw['symbol_set']
+            if 'symbol_set' in form_data:
+                symbol_set = form_data['symbol_set']
             else:
-                if kw['writer'] == 'html' and 'html' in output_notation.symbol_sets:
+                if form_data['writer'] == 'html' and 'html' in output_notation.symbol_sets:
                     symbol_set = 'html'
                 else:
                     symbol_set = 'default'
@@ -132,15 +177,15 @@ class App(object):
             except Exception as e:
                 errors['Symbol Set'] = str(e)
 
-            if len(kw['logic']) < 1:
+            if len(form_data['logic']) < 1:
                 errors['Logic'] = str(Exception('Please select a logic'))
-            elif kw['logic'] not in modules['logics']:
+            elif form_data['logic'] not in modules['logics']:
                 errors['Logic'] = str(Exception('Invalid logic'))
             else:
-                selected_logic = modules['logics'][kw['logic']]
+                selected_logic = modules['logics'][form_data['logic']]
 
             if len(errors) > 0:
-                kw['errors'] = errors
+                form_data['errors'] = errors
             else:
                 view = 'prove'
                 argument = logic.argument(conclusion, premises)
@@ -159,43 +204,30 @@ class App(object):
             'user_predicates'      : vocabulary.user_predicates,
             'user_predicates_list' : vocabulary.user_predicates_list
         })
-        if 'errors' in kw:
-            data['errors'] = kw['errors']
-        return self.render(view, data)
+        if 'errors' in form_data:
+            data['errors'] = form_data['errors']
+        return render(view, data)
 
     @server.expose
-    def parse(self, *args, **kw):
-        notation = modules['notations'][kw['notation']]
+    def parse(self, *args, **form_data):
+        form_data = fix_form_data(form_data)
+        notation = modules['notations'][form_data['notation']]
         vocabulary = logic.Vocabulary()
         errors = {}
-        App.declare_user_predicates(kw, vocabulary, errors)
+        App.declare_user_predicates(form_data, vocabulary, errors)
         try:
-            logic.parse(kw['sentence'], vocabulary, notation)
+            logic.parse(form_data['sentence'], vocabulary, notation)
         except logic.Parser.ParseError as e:
-            return self.render('error', { 'error': e })
+            return self.render('error', { 'error': str(e) })
         return ''
-        
-    def render(self, view, data={}):
-        raw_html = jinja_env.get_template(view + '.html').render(data)
-        return raw_html
 
     @staticmethod
-    def fix_kw(kw):
-        if len(kw):
-            for param in kw:
-                if param.endswith('[]'):
-                    # http://python-future.org/compatible_idioms.html#basestring
-                    if isinstance(kw[param], basestring):
-                        kw[param] = [kw[param]]
-
-    @staticmethod
-    def declare_user_predicates(kw, vocabulary, errors={}):
-        App.fix_kw(kw)
-        arities = kw['user_predicate_arities[]']
-        for i, name in enumerate(kw['user_predicate_names[]']):
+    def declare_user_predicates(form_data, vocabulary, errors={}):
+        arities = form_data['user_predicate_arities[]']
+        for i, name in enumerate(form_data['user_predicate_names[]']):
             if i < len(arities) and len(arities[i]):
                 if len(name):
-                    index, subscript = kw['user_predicate_symbols[]'][i].split('.')
+                    index, subscript = form_data['user_predicate_symbols[]'][i].split('.')
                     try:
                         vocabulary.declare_predicate(name, int(index), int(subscript), int(arities[i]))
                     except Exception as e:
@@ -203,44 +235,11 @@ class App(object):
                 else:
                     errors['Predicate ' + str(i + 1)] = Exception('Name cannot be empty')
 
-    @staticmethod
-    def get_base_data(kw):
-        return {
-            'operators_list'     : logic.operators_list,
-            'logic_modules'      : available_module_names['logics'],
-            'logics'             : modules['logics'],
-            'writer_modules'     : available_module_names['writers'],
-            'writers'            : modules['writers'],
-            'notation_modules'   : available_module_names['notations'],
-            'notations'          : modules['notations'],
-            'form_data'          : kw,
-            'system_predicates'  : logic.system_predicates,
-            'quantifiers'        : logic.quantifiers_list,
-            'example_args_list'  : examples.args_list,
-            'app' : json.dumps({
-                'example_predicates'              : examples.test_pred_data,
-                'notation_user_predicate_symbols' : notation_user_predicate_symbols,
-                'num_predicate_symbols'           : logic.num_predicate_symbols,
-                'example_arguments' : {
-                    arg.title : {
-                        notation: {
-                            'premises'   : [modules['notations'][notation].write(premise) for premise in arg.premises],
-                            'conclusion' : modules['notations'][notation].write(arg.conclusion)
-                        }
-                        for notation in available_module_names['notations']
-                    }
-                    for arg in examples.arguments()
-                }
-            }, indent=2),
-            'version'           : logic.version,
-            'copyright'         : logic.copyright,
-            'source_href'       : logic.source_href
-        }
-        
     @server.expose
     @server.tools.json_in()
     @server.tools.json_out()
     def api(self, action=None):
+        print(server.request.json)
         if server.request.method == 'POST':
             try:
                 if action == 'parse':
@@ -286,6 +285,7 @@ class App(object):
             }
         """
         body = dict(body)
+        print(body)
         if 'notation' not in body:
             body['notation'] = 'polish'
         if 'predicates' not in body:
@@ -323,7 +323,7 @@ class App(object):
                 "output": {
                     "notation": "standard",
                     "format": "html",
-                    "symset": "default",
+                    "symbol_set": "default",
                     "options": {}
                 }
             }

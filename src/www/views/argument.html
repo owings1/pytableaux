@@ -166,10 +166,10 @@
             </div>
             <div class="clear"></div>
             <div class="input select">
-                <label for="writer">Format</label>
-                <select id="writer" name="writer">
+                <label for="format">Format</label>
+                <select id="format" name="format">
                     {% for module in writer_modules -%}
-                        <option value="{{ module }}" {{- helper.select_opt(form_data, 'writer', module) }}>
+                        <option value="{{ module }}" {{- helper.select_opt(form_data, 'format', module) }}>
                             {{- writers[module].name|e -}}
                         </option>
                     {% endfor %}

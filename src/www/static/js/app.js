@@ -17,14 +17,47 @@
  * 
  * pytableaux - web ui core
 */
-;(function($){
+;(function($) {
 
-    $(document).ready(function(){
+    $(document).ready(function() {
 
-        var app = $.parseJSON($('script.app').html())
-        var premiseTemplate = $('#premiseTemplate').html()
-        var predicateRowTemplate = $('#predicateRowTemplate').html()
+        const AppData = $.parseJSON($('script.app').html())
+        const Templates = {
+            premise    : $('#premiseTemplate').html(),
+            predicate  : $('#predicateRowTemplate').html()
+        }
 
+        /**
+         * Main initialization routine.
+         *
+         * @return void
+         */
+        function init() {
+            $('form.argument')
+              .on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
+              .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
+              .on('change', '#example_argument', function() {
+                   refreshExampleArgument()
+                   refreshStatuses()
+               })
+              .on('change', '#input_notation', function() {
+                   refreshNotation()
+                   refreshStatuses()
+               })
+              .on('change', 'input.sentence', refreshStatuses)
+            
+            ensureEmptyPremise()
+            ensureEmptyPredicate()
+            refreshNotation()
+        }
+
+        /**
+         * Interpolate variable strings like {varname}.
+         *
+         * @param html The template html.
+         * @param vars The variables object.
+         * @return string The rendered content.
+         */
         function render(html, vars) {
             if (vars) {
                 $.each(vars, function(name, val) {
@@ -34,9 +67,17 @@
             return html
         }
 
+        /**
+         * Add a premise input row. All parameters are optional.
+         *
+         * @param value The string value of the sentence.
+         * @param status The status class name, 'good' or 'bad'.
+         * @param message The status message.
+         * @return void
+         */
         function addPremise(value, status, message) {
             var premiseNum = $('input.premise').length + 1
-            $('.premises').append(render(premiseTemplate, {
+            $('.premises').append(render(Templates.premise, {
                 n       : premiseNum++,
                 value   : value   || '',
                 status  : status  || '',
@@ -44,31 +85,66 @@
             }))
         }
 
+        /**
+         * Get the input notation value.
+         *
+         * @return String name of the notation, e.g. 'standard'
+         */
         function currentNotation() {
             return $('#input_notation').val()
         }
 
+        /**
+         * Add an empty premise input row.
+         *
+         * @return void
+         */
         function addEmptyPremise() {
             addPremise()
         }
 
+        /**
+         * Remove all premise input rows.
+         *
+         * @return void
+         */
         function clearPremises() {
             $('.input.premise').remove()
         }
 
+        /**
+         * Clear the value of the conclusion input.
+         *
+         * @return void
+         */
         function clearConclusion() {
             $('#conclusion').val('')
         }
 
+        /**
+         * Clear all premises and conclusion inputs.
+         *
+         * @return void
+         */
         function clearArgument() {
             clearPremises()
             clearConclusion()
         }
 
+        /**
+         * Add a user-defined predicate row. The first two parameters, index
+         * and subscript, are required.
+         *
+         * @param index The integer index of the predicate.
+         * @param subscript The integer subscript of the predicate.
+         * @param name The name of the predicate (optional).
+         * @param arity The integer arity of the predicate (optional).
+         * @return void
+         */
         function addPredicate(index, subscript, name, arity) {
-            var thisNotation = currentNotation()
+            const thisNotation = currentNotation()
             var html = ''
-            $.each(app.notation_user_predicate_symbols, function(notation, symbols) {
+            $.each(AppData.notation_user_predicate_symbols, function(notation, symbols) {
                 var classes = ['predicateSymbol', 'notation-' + notation]
                 if (notation != thisNotation)
                     classes.push('hidden')
@@ -78,7 +154,7 @@
                     html += '<span class="subscript">' + subscript + '</span>'
                 html += '</span>'
             })
-            $('table.predicates tbody').append(render(predicateRowTemplate, { 
+            $('table.predicates tbody').append(render(Templates.predicate, { 
                 index       : index,
                 subscript   : subscript,
                 name        : name || ('Predicate ' + ($('input.predicateSymbol').length + 1)),
@@ -87,16 +163,22 @@
             }))
         }
 
+        /**
+         * Add an empty input for a user-defined predicate. Calculates the next
+         * index and subscript.
+         *
+         * @return void
+         */
         function addEmptyPredicate() {
-            var $symbols   = $('input.predicateSymbol')
-            var numSymbols = $symbols.length
+            const $symbols   = $('input.predicateSymbol')
+            const numSymbols = $symbols.length
             var index      = 0
             var subscript  = 0
             if (numSymbols > 0) {
                 var last = $symbols.last().val().split('.')
                 index = +last[0] + 1
                 subscript = +last[1]
-                if (index == app.num_predicate_symbols) {
+                if (index == AppData.num_predicate_symbols) {
                     index = 0
                     subscript += 1
                 }
@@ -104,46 +186,81 @@
             addPredicate(index, subscript)
         }
 
+        /**
+         * Clear all the user-defined predicate input rows.
+         *
+         * @return void
+         */
         function clearPredicates() {
             $('tr.userPredicate').remove()
         }
 
+        /**
+         * Check whether there is already an empty premise input row available
+         * for input.
+         *
+         * @return boolean
+         */
         function hasEmptyPremise() {
             var hasEmpty = false
             $('input.premise').each(function(i){
                 if (!$(this).val()) {
                     hasEmpty = true
+                    // stop iteration
                     return false
                 }
             })
             return hasEmpty
         }
 
+        /**
+         * Check whether there is already an empty predicate input row available
+         * for input.
+         *
+         * @return boolean
+         */
         function hasEmptyPredicate() {
             var hasEmpty = false
             $('input.arity').each(function(i) {
                 if (!$(this).val()){
                     hasEmpty = true
+                    // stop iteration
                     return false
                 }
             })
             return hasEmpty
         }
 
+        /**
+         * Ensure that there is an empty premise input row available for input.
+         *
+         * @return void
+         */
         function ensureEmptyPremise() {
             if (!hasEmptyPremise()) {
                 addEmptyPremise()
             }
         }
 
+        /**
+         * Ensure that there is an empty predicate input row available for input.
+         *
+         * @return void
+         */
         function ensureEmptyPredicate() {
             if (!hasEmptyPredicate()) {
                 addEmptyPredicate()
             }   
         }
 
+        /**
+         * Input notation change handler. Show appropriate lexicon, and update
+         * the example argument, if any.
+         *
+         * @return void
+         */
         function refreshNotation() {
-            var notation = currentNotation()
+            const notation = currentNotation()
             $('.lexicons .lexicon').hide()
             $('#Lexicon_' + notation).show()
             $('.predicateSymbol').hide()
@@ -153,55 +270,71 @@
             }
         }
 
+        /**
+         * Example argument change handler.
+         *
+         * @return void
+         */
         function refreshExampleArgument() {
             clearPredicates()
             clearArgument()
-            var $me = $('#example_argument')
-            var argName = $me.val()
+            const $me = $('#example_argument')
+            const argName = $me.val()
             if (!argName) {
                 ensureEmptyPremise()
                 ensureEmptyPredicate()
                 return
             }
-            var notation = currentNotation()
-            var arg = app.example_arguments[argName][notation]
+            const notation = currentNotation()
+            const arg = AppData.example_arguments[argName][notation]
             $.each(arg.premises, function(i, value) {
                 addPremise(value)
             })
             $('#conclusion').val(arg.conclusion)
-            $.each(app.example_predicates, function(i, pred) {
+            $.each(AppData.example_predicates, function(i, pred) {
                 addPredicate(pred[1], pred[2], pred[0], pred[3])
             })
         }
 
+        /**
+         * Make AJAX requests to parse the premises & conclusion.
+         */
         function refreshStatuses() {
             $('form.argument input.sentence').each(function(sentenceIndex) {
-                var $status = $(this).closest('div.input').find('.status')
-                var str = $(this).val()
-                if (str || $(this).hasClass('conclusion')) {
-                    var hash = hashString(str + '.' + currentNotation())
+                const $status = $(this).closest('div.input').find('.status')
+                const notation = currentNotation()
+                const input = $(this).val()
+                if (input || $(this).hasClass('conclusion')) {
+                    const hash = hashString([input, notation].join('.'))
                     if (+$status.attr('data-hash') === hash) {
                         return
                     }
                     $status.attr('data-hash', hash)
+                    apiData = getApiData()
                     $.ajax({
-                        url  : '/parse',
-                        type : 'post',
-                        data : {
-                            sentence               : str,
-                            notation               : currentNotation(),
-                            user_predicate_names   : $('input.predicateName').map(getVal).get(),
-                            user_predicate_arities : $('input.arity').map(getVal).get(),
-                            user_predicate_symbols : $('input.predicateSymbol').map(getVal).get()
+                        url         : '/api/parse',
+                        method      : 'POST',
+                        contentType : 'application/json',
+                        dataType    : 'json',
+                        data        : JSON.stringify({
+                            input      : input,
+                            notation   : notation,
+                            predicates : apiData.argument.predicates
+                        }),
+                        success: function(res) {
+                            $status.removeClass('bad').addClass('good')
+                            $status.attr('title', res.result.type)
                         },
-                        success: function(err) {
-                            if (err) {
-                                $status.removeClass('good').addClass('bad')
-                                $status.attr('title', err)
+                        error: function(xhr, textStatus, errorThrown) {
+                            $status.removeClass('good').addClass('bad')
+                            var title
+                            if (xhr.status == 400) {
+                                const res = xhr.responseJSON
+                                title = [res.error, res.message].join(': ')
                             } else {
-                                $status.removeClass('bad').addClass('good')
-                                $status.attr('title', '')
+                                title = [textStatus, errorThrown].join(': ')
                             }
+                            $status.attr('title', title)
                         }
                     })
                 } else {
@@ -212,17 +345,21 @@
             })
         }
 
-        function getVal() {
-            return $(this).val()
-        }
-
-        // from: http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+        /**
+         * Generate an integer hash for a string.
+         *
+         * From: http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+         *
+         * @param str The input string.
+         * @return int The hash.
+         */
         function hashString(str) {
-            var hash = 0, i, chr
+            var hash = 0
             if (str.length === 0) {
                 return hash
             }
-            for (i = 0; i < str.length; i++) {
+            var chr
+            for (var i = 0; i < str.length; i++) {
                 chr   = str.charCodeAt(i)
                 hash  = ((hash << 5) - hash) + chr
                 hash |= 0; // Convert to 32bit integer
@@ -230,25 +367,14 @@
             return hash
         }
 
-        $('form.argument')
-          .on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
-          .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
-          .on('change', '#example_argument', function() {
-               refreshExampleArgument()
-               refreshStatuses()
-           })
-          .on('change', '#input_notation', function() {
-               refreshNotation()
-               refreshStatuses()
-           })
-          .on('change', 'input.sentence', refreshStatuses)
-
-        ensureEmptyPremise()
-        ensureEmptyPredicate()
-        refreshNotation()
-
-        function getProveApiData() {
-            var data = {
+        /**
+         * Read the form inputs into an object suitable for posting to
+         * the prove api.
+         *
+         * @return object
+         */
+        function getApiData() {
+            const data = {
                 argument : {
                     premises  : [],
                     predicates: []
@@ -259,16 +385,16 @@
             data.argument.notation = currentNotation()
             data.argument.conclusion = $('#conclusion').val()
             $('input.premise').each(function() {
-                var val = $(this).val()
+                const val = $(this).val()
                 if (val) {
                     data.argument.premises.push(val)
                 }
             })
             $('.userPredicate').each(function() {
-                var $tr = $(this)
-                var arity = $('input.arity', $tr).val()
+                const $tr = $(this)
+                const arity = $('input.arity', $tr).val()
                 if (arity.length > 0) {
-                    var coords = $('input.predicateSymbol', $tr).val().split('.')
+                    const coords = $('input.predicateSymbol', $tr).val().split('.')
                     data.argument.predicates.push({
                         name      : $('input.predicateName', $tr).val(),
                         index     : +coords[0],
@@ -278,9 +404,12 @@
                 }
             })
             data.output.notation = $('#output_notation').val()
-            data.output.format = $('#writer').val()
-            data.output.symset = $('#symbol_set').val()
+            data.output.format = $('#format').val()
+            data.output.symbol_set = $('#symbol_set').val()
             return data
         }
+
+        init()
+
     })
 })(jQuery);

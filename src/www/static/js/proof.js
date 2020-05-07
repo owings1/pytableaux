@@ -19,22 +19,24 @@
  */
 ;(function() {
 
-    if (typeof($) != 'function') {
+    if (typeof(jQuery) != 'function') {
         console.error(new Error('jQuery not loaded. Not initializing interactive handlers.'))
         return
     }
 
+    const $ = jQuery
+
     const $E = $()
     // default option sets
-    const DEFAULTS = {
-        FILTER : {
+    const Defaults = {
+        Filter : {
             $proof       : $E      ,
             $hides       : $E      ,
             $shows       : $E      ,
             className    : null    ,
             adjust       : 'after'
         },
-        HIGHLIGHT : {
+        Highlight : {
             $proof     : $E,
             exclusive  : true,
             stay       : true,
@@ -45,104 +47,104 @@
     }
 
     // animation speed constants, in milliseconds.
-    const ANIM = {
-        FAST : 150,
-        MED  : 250,
-        SLOW : 500
+    const Anim = {
+        Fast : 150,
+        Med  : 250,
+        Slow : 500
     }
 
     // relationship string contants
-    const REL = {
-        SELF       : 'self'       ,
-        ANCESTOR   : 'ancestor'   ,
-        DESCENDANT : 'descendant' ,
-        OUTSIDE    : 'outside'
+    const Rel = {
+        Self       : 'self'       ,
+        Ancestor   : 'ancestor'   ,
+        Descendant : 'descendant' ,
+        Outside    : 'outside'
     }
 
     // class names
-    const CLS = {
-        STRUCTURE       : 'structure'                ,
-        CHILD           : 'child-wrapper'            ,
-        LEAF            : 'leaf'                     ,
-        PROOF           : 'html-writer-proof'        ,
-        NODESEGMENT     : 'node-segment'             ,
-        NODEPROPS       : 'node-props'               ,
-        NODE            : 'node'                     ,
-        HIDDEN          : 'hidden'                   ,
-        STATUS          : 'html-writer-status-panel' ,
-        ZOOMED          : 'zoomed'                   ,
+    const Cls = {
+        Structure       : 'structure'                ,
+        Child           : 'child-wrapper'            ,
+        Leaf            : 'leaf'                     ,
+        Proof           : 'html-writer-proof'        ,
+        NodeSegment     : 'node-segment'             ,
+        NodeProps       : 'node-props'               ,
+        Node            : 'node'                     ,
+        Hidden          : 'hidden'                   ,
+        Status          : 'html-writer-status-panel' ,
+        Zoomed          : 'zoomed'                   ,
         HL              : 'horizontal-line'          ,
         VL              : 'vertical-line'            ,
-        COLLAPSED       : 'collapsed'                ,
-        CLOSE           : 'closeMark'                ,
-        STEPSTART       : 'step-start'               ,
-        STEPPREV        : 'step-prev'                ,
-        STEPNEXT        : 'step-next'                ,
-        STEPEND         : 'step-end'                 ,
-        STEPINPUT       : 'step-input'               ,
-        STEPRULENAME    : 'step-rule-name'           ,
-        STEPRULETARGET  : 'step-rule-target'         ,
-        STEPFILTERED    : 'step-filtered'            ,
-        ZOOMFILTERED    : 'zoom-filtered'            ,
-        BRANCHFILTERED  : 'branch-filtered'          ,
-        TICKED          : 'ticked'                   ,
-        FONTPLUS        : 'font-plus'                ,
-        FONTMINUS       : 'font-minus'               ,
-        FONTRESET       : 'font-reset'               ,
-        WIDTHPLUS       : 'width-plus'               ,
-        WIDTHPLUSPLUS   : 'width-plus-plus'          ,
-        WIDTHMINUS      : 'width-minus'              ,
-        WIDTHMINUSMINUS : 'width-minus-minus'        ,
-        WIDTHRESET      : 'width-reset'              ,
-        HASOPEN         : 'has-open'                 ,
-        HASCLOSED       : 'has-closed'               ,
-        BRANCHFILTER    : 'branch-filter'            ,
-        HIGHLIGHT       : 'highlight'                ,
-        HIGHLIGHTTICKED : 'highlight-ticked'         ,
-        STAY            : 'stay'
+        Collapsed       : 'collapsed'                ,
+        Close           : 'closeMark'                ,
+        StepStart       : 'step-start'               ,
+        StepPrev        : 'step-prev'                ,
+        StepNext        : 'step-next'                ,
+        StepEnd         : 'step-end'                 ,
+        StepInput       : 'step-input'               ,
+        StepRuleName    : 'step-rule-name'           ,
+        StepRuleTarget  : 'step-rule-target'         ,
+        StepFiltered    : 'step-filtered'            ,
+        ZoomFiltered    : 'zoom-filtered'            ,
+        BranchFiltered  : 'branch-filtered'          ,
+        Ticked          : 'ticked'                   ,
+        FontPlus        : 'font-plus'                ,
+        FontMinus       : 'font-minus'               ,
+        FontReset       : 'font-reset'               ,
+        WidthPlus       : 'width-plus'               ,
+        WidthPlusPlus   : 'width-plus-plus'          ,
+        WidthMinus      : 'width-minus'              ,
+        WidthMinusMinus : 'width-minus-minus'        ,
+        WidthReset      : 'width-reset'              ,
+        HasOpen         : 'has-open'                 ,
+        HasClosed       : 'has-closed'               ,
+        BranchFilter    : 'branch-filter'            ,
+        Highlight       : 'highlight'                ,
+        HighlightTicked : 'highlight-ticked'         ,
+        Stay            : 'stay'
     }
 
     // class names preceded with a '.' for selecting
-    var DCLS = {}
-    for (var c in CLS) {
-        DCLS[c] = '.' + CLS[c]
+    const Dcls = {}
+    for (var c in Cls) {
+        Dcls[c] = '.' + Cls[c]
     }
 
     // attributes
-    const ATTR = {
-        LEFT           : 'data-left'              ,
-        RIGHT          : 'data-right'             ,
-        STEP           : 'data-step'              ,
-        TICKED         : 'data-ticked'            ,
-        TICKSTEP       : 'data-ticked-step'       ,
-        NUMSTEPS       : 'data-num-steps'         ,
-        DEPTH          : 'data-depth'             ,
-        FILTEREDWIDTH  : 'data-filtered-width'    ,
-        WIDTH          : 'data-width'             ,
-        CURWIDTHPCT    : 'data-current-width-pct' ,
-        NODEID         : 'data-node-id'           ,
-        NODEIDS        : 'data-node-ids'          ,
-        BRANCHNODEID   : 'data-branch-node-id'
+    const Attrib = {
+        Left           : 'data-left'              ,
+        Right          : 'data-right'             ,
+        Step           : 'data-step'              ,
+        Ticked         : 'data-ticked'            ,
+        TickStep       : 'data-ticked-step'       ,
+        NumSteps       : 'data-num-steps'         ,
+        Depth          : 'data-depth'             ,
+        FilteredWidth  : 'data-filtered-width'    ,
+        Width          : 'data-width'             ,
+        CurWidthPct    : 'data-current-width-pct' ,
+        NodeId         : 'data-node-id'           ,
+        NodeIds        : 'data-node-ids'          ,
+        BranchNodeId   : 'data-branch-node-id'
     }
 
     // selectors
-    var SEL = {
-        STEPPEDCHILDS  : [
-            '>' + DCLS.NODESEGMENT + '>' + DCLS.NODE,
-            '>' + DCLS.NODESEGMENT + '>' + DCLS.CLOSE,
-            '>' + DCLS.VL
+    const Sel = {
+        SteppedChilds  : [
+            '>' + Dcls.NodeSegment + '>' + Dcls.Node,
+            '>' + Dcls.NodeSegment + '>' + Dcls.Close,
+            '>' + Dcls.VL
         ].join(','),
-        FILTERED       : [
-            DCLS.STEPFILTERED,
-            DCLS.ZOOMFILTERED,
-            DCLS.BRANCHFILTERED
+        Filtered       : [
+            Dcls.StepFiltered,
+            Dcls.ZoomFiltered,
+            Dcls.BranchFiltered
         ].join(','),
-        CANBRANCHFILTER : [
-            DCLS.HASOPEN,
-            DCLS.HASCLOSED
+        CanBranchFilter : [
+            Dcls.HasOpen,
+            Dcls.HasClosed
         ].join('')
     }
-    SEL.UNFILTERED = ':not(' + SEL.FILTERED + ')'
+    Sel.Unfiltered = ':not(' + Sel.Filtered + ')'
 
     /**
      * Show only the lineage of the given structure.
@@ -154,29 +156,29 @@
      */
     function zoom($structure, $proof) {
 
-        if (!$structure.hasClass(CLS.STRUCTURE)) {
+        if (!$structure.hasClass(Cls.Structure)) {
             throw new Error('Invalid structure argument: ' + $structure)
         }
 
         // if we are currently zoomed to this structure, there is nothing to do
-        if ($structure.hasClass(CLS.ZOOMED)) {
+        if ($structure.hasClass(Cls.Zoomed)) {
             return
         }
 
         if (!$proof) {
-            $proof = $structure.closest(DCLS.PROOF)
+            $proof = $structure.closest(Dcls.Proof)
         }
 
         // get the previously zoomed structure
-        var $prev = $(DCLS.ZOOMED, $proof)
+        const $prev = $(Dcls.Zoomed, $proof)
 
-        var thisPos = getPos($structure)
+        const thisPos = getPos($structure)
 
-        var hides = []
-        var shows = []
+        const hides = []
+        const shows = []
 
-        $(DCLS.STRUCTURE, $proof).each(function(i, s) {
-            if (getRelation(getPos($(s)), thisPos) == REL.OUTSIDE) {
+        $(Dcls.Structure, $proof).each(function(i, s) {
+            if (getRelation(getPos($(s)), thisPos) == Rel.Outside) {
                 hides.push(s)
             } else {
                 shows.push(s)
@@ -187,14 +189,14 @@
             $hides    : $(hides),
             $shows    : $(shows),
             $proof    : $proof,
-            className : CLS.ZOOMFILTERED
+            className : Cls.ZoomFiltered
         })
 
         // unmark the previous structure as zoomed
-        $prev.removeClass(CLS.ZOOMED)
+        $prev.removeClass(Cls.Zoomed)
 
         // mark the current structure as zoomed
-        $structure.addClass(CLS.ZOOMED)
+        $structure.addClass(Cls.Zoomed)
     }
 
     /**
@@ -206,8 +208,8 @@
      */
     function step($proof, n) {
 
-        var numSteps = +$proof.attr(ATTR.NUMSTEPS)
-        var prevStep = +$proof.attr(ATTR.STEP)
+        const numSteps = +$proof.attr(Attrib.NumSteps)
+        const prevStep = +$proof.attr(Attrib.Step)
 
         if (n < 0) {
             n = 0
@@ -219,16 +221,17 @@
             return
         }
 
-        var shows  = []
-        var toHide = {}
-        var showChilds  = []
-        var hideChilds  = []
-        var tickNodes   = []
-        var untickNodes = []
-        $(DCLS.STRUCTURE, $proof).each(function(i, s) {
-            var $s = $(s)
-            var sPos = getPos($s)
-            var sStep = +$s.attr(ATTR.STEP)
+        const shows  = []
+        const toHide = {}
+        const showChilds  = []
+        const hideChilds  = []
+        const tickNodes   = []
+        const untickNodes = []
+
+        $(Dcls.Structure, $proof).each(function(i, s) {
+            const $s = $(s)
+            const sPos = getPos($s)
+            const sStep = +$s.attr(Attrib.Step)
             if (sStep > n) {
                 // only hide the highest structures
                 trackHighests(toHide, sPos)
@@ -236,20 +239,20 @@
             }
             shows.push(s)
             // process nodes, markers, vertical lines
-            $(SEL.STEPPEDCHILDS, $s).each(function(ni, stepped) {
-                var $stepped = $(stepped)
-                var nStep = +$stepped.attr(ATTR.STEP)
+            $(Sel.SteppedChilds, $s).each(function(ni, stepped) {
+                const $stepped = $(stepped)
+                const nStep = +$stepped.attr(Attrib.Step)
                 if (nStep > n) {
                     hideChilds.push(stepped)
                     return true
                 }
                 showChilds.push(stepped)
                 // ticking/unticking
-                if (!+$stepped.attr(ATTR.TICKED)) {
+                if (!+$stepped.attr(Attrib.Ticked)) {
                     return true
                 }
-                var tStep = +$stepped.attr(ATTR.TICKSTEP)
-                var hasTicked = $(DCLS.NODEPROPS, $stepped).hasClass(CLS.TICKED)
+                const tStep = +$stepped.attr(Attrib.TickStep)
+                const hasTicked = $(Dcls.NodeProps, $stepped).hasClass(Cls.Ticked)
                 if (tStep > n) {
                     if (hasTicked) {
                         untickNodes.push(stepped)
@@ -263,40 +266,40 @@
         })
 
         // hide nodes, markers, vertical lines
-        $(hideChilds).hide(ANIM.FAST)
+        $(hideChilds).hide(Anim.Fast)
 
         // untick nodes
-        $(DCLS.NODEPROPS, untickNodes).removeClass(CLS.TICKED)
+        $(Dcls.NodeProps, untickNodes).removeClass(Cls.Ticked)
 
         // filter structures
-        var hides = $.map(toHide, function(pos) { return pos.$el.get(0) })
+        const hides = $.map(toHide, function(pos) { return pos.$el.get(0) })
         doFilter({
-            $proof       : $proof,
-            $hides       : $(hides),
-            $shows       : $(shows),
-            className    : CLS.STEPFILTERED,
-            adjust       : (n > prevStep) ? 'before' : 'after'
+            $proof    : $proof,
+            $hides    : $(hides),
+            $shows    : $(shows),
+            className : Cls.StepFiltered,
+            adjust    : (n > prevStep) ? 'before' : 'after'
         })
 
         // show nodes, markers, vertical lines
-        $(showChilds).show(ANIM.MED)
+        $(showChilds).show(Anim.Med)
 
         // delay the ticking of the nodes for animated effect
-        setTimeout(function() { $(DCLS.NODEPROPS, tickNodes).addClass(CLS.TICKED) }, ANIM.MED)
+        setTimeout(function() { $(Dcls.NodeProps, tickNodes).addClass(Cls.Ticked) }, Anim.Med)
 
         // do a highlight of the result with a longer delay
-        setTimeout(function() { doHighlight({$proof: $proof, stay: false, ruleStep: n})}, ANIM.SLOW)
+        setTimeout(function() { doHighlight({$proof: $proof, stay: false, ruleStep: n})}, Anim.Slow)
 
         // set the current step attribute on the proof
-        $proof.attr(ATTR.STEP, n)
+        $proof.attr(Attrib.Step, n)
 
         // show the rule and target in the status panel
-        var $status = getStatusFromProof($proof)
-        var attrSelector = '[' + ATTR.STEP +'=' + n + ']'
-        $(DCLS.STEPRULENAME, $status).hide().filter(attrSelector).show()
-        $(DCLS.STEPRULETARGET, $status).hide().filter(attrSelector).show()
+        const $status = getStatusFromProof($proof)
+        const attrSelector = '[' + Attrib.Step + '=' + n + ']'
+        $(Dcls.StepRuleName, $status).hide().filter(attrSelector).show()
+        $(Dcls.StepRuleTarget, $status).hide().filter(attrSelector).show()
         // update the input box
-        $(DCLS.STEPINPUT, $status).val(n)
+        $(Dcls.StepInput, $status).val(n)
     }
 
     /**
@@ -310,20 +313,20 @@
         if (type != 'all' && type != 'closed' && type != 'open') {
             throw new Error("Invalid filter type: " + type)
         }
-        var toHide = []
-        var toShow = []
-        $(DCLS.STRUCTURE, $proof).each(function(i, s) {
-            var $s = $(s)
+        const toHide = []
+        const toShow = []
+        $(Dcls.Structure, $proof).each(function(i, s) {
+            const $s = $(s)
             var shown
             switch (type) {
                 case 'all':
                     shown = true
                     break
                 case 'open' :
-                    shown = $s.hasClass(CLS.HASOPEN)
+                    shown = $s.hasClass(Cls.HasOpen)
                     break
                 case 'closed' :
-                    shown = $s.hasClass(CLS.HASCLOSED)
+                    shown = $s.hasClass(Cls.HasClosed)
                     break
                 default:
                     break
@@ -335,13 +338,13 @@
             }
         })
         doFilter({
-            $proof       : $proof,
-            $hides       : $(toHide),
-            $shows       : $(toShow),
-            className    : CLS.BRANCHFILTERED
+            $proof    : $proof,
+            $hides    : $(toHide),
+            $shows    : $(toShow),
+            className : Cls.BranchFiltered
         })
         $status = getStatusFromProof($proof)
-        $(DCLS.BRANCHFILTER, $status).val(type)
+        $(Dcls.BranchFilter, $status).val(type)
     }
 
     /**
@@ -367,39 +370,39 @@
      */
     function doFilter(opts) {
 
-        opts = $.extend({}, DEFAULTS.FILTER, opts)
+        opts = $.extend({}, Defaults.Filter, opts)
 
-        var $hides = opts.$hides
-        var $shows = opts.$shows
-        var $proof = opts.$proof
-        var className = opts.className
+        const $hides = opts.$hides
+        const $shows = opts.$shows
+        const $proof = opts.$proof
+        const className = opts.className
 
         // track the lowest structures to adjust widths
-        var lowests = {}
+        const lowests = {}
         
         $hides.addClass(className).each(function() {
             trackLowests(lowests, getPos($(this)))
         })
 
-        var shows = []
+        const shows = []
 
         $shows.removeClass(className).each(function() {
-            var pos = getPos($(this))
+            const pos = getPos($(this))
             trackLowests(lowests, pos)
             // if there are no more filters on the element, it will be shown
-            if (pos.$el.is(SEL.UNFILTERED)) {
+            if (pos.$el.is(Sel.Unfiltered)) {
                 shows.push(this)
             }
         })
 
         // sort the elements to show from higher to lower
-        shows.sort(function(a, b) { return $(a).attr(ATTR.DEPTH) - $(b).attr(ATTR.DEPTH) })
+        shows.sort(function(a, b) { return $(a).attr(Attrib.Depth) - $(b).attr(Attrib.Depth) })
 
         // collect the dom elements of the lowest structures
-        var leaves = $.map(lowests, function(pos) { return pos.$el.get(0) })
+        const leaves = $.map(lowests, function(pos) { return pos.$el.get(0) })
 
         // hide elements that have a filter
-        $hides.hide(ANIM.FAST)
+        $hides.hide(Anim.Fast)
 
         // adjust the widths (or do this 'after' below)
         if (opts.adjust == 'before') {
@@ -407,7 +410,7 @@
         }
 
         // show elements that do not have a filter
-        $(shows).show(ANIM.MED)
+        $(shows).show(Anim.Med)
 
         if (opts.adjust && opts.adjust != 'before') {
             adjustWidths($proof, $(leaves), true)
@@ -433,58 +436,58 @@
     function adjustWidths($proof, $leaves, animate) {
 
         if (!$leaves) {
-            $leaves = $(DCLS.LEAF, $proof)
+            $leaves = $(Dcls.Leaf, $proof)
         }
 
         // traverse upward through the ancestors
-        $leaves.parents(DCLS.STRUCTURE + SEL.UNFILTERED).each(function(pi, parent) {
+        $leaves.parents(Dcls.Structure + Sel.Unfiltered).each(function(pi, parent) {
 
-            var $parent            = $(parent)
+            const $parent            = $(parent)
 
             // The horizontal line.
-            var $hl                = $parent.children(DCLS.HL)
+            const $hl                = $parent.children(Dcls.HL)
 
             // All the child-wrapper elements.
-            var $cws               = $parent.children(DCLS.CHILD)
+            const $cws               = $parent.children(Dcls.Child)
 
             // The child-wrapper elements of the structures that are 'visible'.
-            var $cwsUnfiltered     = $cws.has('> ' + SEL.UNFILTERED)
+            const $cwsUnfiltered     = $cws.has('> ' + Sel.Unfiltered)
 
             // The total number of children.
-            var totalChildren      = $cws.length
+            const totalChildren      = $cws.length
 
             // The number of 'visible' children.
-            var unfilteredChildren = $cwsUnfiltered.length
+            const unfilteredChildren = $cwsUnfiltered.length
 
             // The list of child widths.
-            var childWidths        = $cwsUnfiltered.map(function() {
+            const childWidths        = $cwsUnfiltered.map(function() {
                 return +(
-                    $(this).attr(ATTR.FILTEREDWIDTH) ||
-                    $(this).children(DCLS.STRUCTURE).attr(ATTR.WIDTH)
+                    $(this).attr(Attrib.FilteredWidth) ||
+                    $(this).children(Dcls.Structure).attr(Attrib.Width)
                 )
             }).get()
 
             // The total width that the parent should consume.
-            var width = sum(childWidths)
+            const width = sum(childWidths)
 
             // Modify the widths of the visible children.
 
             $cwsUnfiltered.each(function(ci, cw) {
-                var $cw = $(cw)
+                const $cw = $(cw)
                 // calculate the new percentage
-                var newWidthPct = ((childWidths[ci] * 100) / width) + '%'
+                const newWidthPct = ((childWidths[ci] * 100) / width) + '%'
                 // get the current percentage from the store attribute
-                var curWidthPct = $cw.attr(ATTR.CURWIDTHPCT) || Infinity
+                const curWidthPct = $cw.attr(Attrib.CurWidthPct) || Infinity
                 // round for comparisons
-                var cmpNew = Math.floor(parseFloat(newWidthPct) * 10000) / 10000
-                var cmpCur = Math.floor(parseFloat(curWidthPct) * 10000) / 10000
+                const cmpNew = Math.floor(parseFloat(newWidthPct) * 10000) / 10000
+                const cmpCur = Math.floor(parseFloat(curWidthPct) * 10000) / 10000
                 if (cmpNew != cmpCur) {
                     // set the current percentage attribute
-                    $cw.attr(ATTR.CURWIDTHPCT, newWidthPct)
-                    var css = {width: newWidthPct}
+                    $cw.attr(Attrib.CurWidthPct, newWidthPct)
+                    const css = {width: newWidthPct}
                     // only animate if the width is increasing
                     if (animate && cmpNew > cmpCur) {
-                        $cw.animate(css, ANIM.FAST)
+                        $cw.animate(css, Anim.Fast)
                     } else {
                         $cw.css(css)
                     }
@@ -493,7 +496,7 @@
 
             // Modify the horizontal line.
 
-            var hlcss = {}
+            const hlcss = {}
 
             if (unfilteredChildren < 2) {
                 // If we have 1 or 0 visible children, then make the line span 33% and center it.
@@ -504,31 +507,31 @@
                 // If there there are 2 or more visible children, calculate
                 // the line width and left margin. This is a repetition of 
                 // the server-side calculations for the initial state.
-                var first    = childWidths[0] / 2
-                var last     = childWidths[childWidths.length - 1] / 2
-                var betweens = sum(childWidths.slice(1, childWidths.length - 1))
+                const first    = childWidths[0] / 2
+                const last     = childWidths[childWidths.length - 1] / 2
+                const betweens = sum(childWidths.slice(1, childWidths.length - 1))
                 hlcss.marginLeft = ((first * 100 ) / width) + '%'
                 hlcss.width = (((first + betweens + last) * 100) / width) + '%'
             }
 
             // If all children are visible, then restore the line style, otherwise make it dotted.
             if (totalChildren == unfilteredChildren) {
-                $hl.removeClass(CLS.COLLAPSED)
+                $hl.removeClass(Cls.Collapsed)
             } else {
-                $hl.addClass(CLS.COLLAPSED)
+                $hl.addClass(Cls.Collapsed)
             }
 
             // Show the horizontal line if there are visible children, otherwise hide it.
             if (unfilteredChildren > 0) {
                 if (animate) {
-                    $hl.show(ANIM.FAST).animate(hlcss, ANIM.FAST)
+                    $hl.show(Anim.Fast).animate(hlcss, Anim.Fast)
                 } else {
                     $hl.show().css(hlcss)
                 }
             } else {
                 $hl.css(hlcss)
                 if (animate) {
-                    $hl.hide(ANIM.FAST)
+                    $hl.hide(Anim.Fast)
                 } else {
                     $hl.hide()
                 }
@@ -536,12 +539,12 @@
 
             // If this parent has a parent, mark the filtered width attribute
             // for the next traversal.
-            var $pcw = $parent.closest(DCLS.CHILD)
+            const $pcw = $parent.closest(Dcls.Child)
             if ($pcw.length) {
-                if (width == +$parent.attr(ATTR.WIDTH)) {
-                    $pcw.removeAttr(ATTR.FILTEREDWIDTH)
+                if (width == +$parent.attr(Attrib.Width)) {
+                    $pcw.removeAttr(Attrib.FilteredWidth)
                 } else {
-                    $pcw.attr(ATTR.FILTEREDWIDTH, width || 1)
+                    $pcw.attr(Attrib.FilteredWidth, width || 1)
                 }
             }
         })
@@ -567,54 +570,54 @@
      * @return void
      */
     function doHighlight(opts) {
-        opts = $.extend({}, DEFAULTS.HIGHLIGHT, opts)
-        var $proof = opts.$proof
+        opts = $.extend({}, Defaults.Highlight, opts)
+        const $proof = opts.$proof
         if (opts.off || opts.exclusive) {
-            $(DCLS.HIGHLIGHT, $proof).removeClass(CLS.HIGHLIGHT)
-            $(DCLS.HIGHLIGHTTICKED, $proof).removeClass(CLS.HIGHLIGHTTICKED)
+            $(Dcls.Highlight, $proof).removeClass(Cls.Highlight)
+            $(Dcls.HighlightTicked, $proof).removeClass(Cls.HighlightTicked)
         }
         if (opts.off) {
             var $status = getStatusFromProof($proof)
-            $(DCLS.HIGHLIGHT, $status).removeClass(CLS.HIGHLIGHT)
+            $(Dcls.Highlight, $status).removeClass(Cls.Highlight)
             return
         }
         if (opts.ruleStep == null && opts.ruleTarget == null) {
             return
         }
         if (opts.ruleStep != null) {
-            var n = opts.ruleStep === true ? +$proof.attr(ATTR.STEP) : opts.ruleStep
-            var nodeAttrSel = getAttrSelector(ATTR.STEP, n)
-            var nodeSel = [DCLS.NODE + nodeAttrSel, DCLS.CLOSE + nodeAttrSel].join(',')
-            var tickSel = DCLS.NODE + getAttrSelector(ATTR.TICKSTEP, n)
-            $(nodeSel, $proof).addClass(CLS.HIGHLIGHT)
-            $(tickSel, $proof).addClass(CLS.HIGHLIGHTTICKED)
+            var n = opts.ruleStep === true ? +$proof.attr(Attrib.Step) : opts.ruleStep
+            var nodeAttrSel = getAttrSelector(Attrib.Step, n)
+            var nodeSel = [Dcls.Node + nodeAttrSel, Dcls.Close + nodeAttrSel].join(',')
+            var tickSel = Dcls.Node + getAttrSelector(Attrib.TickStep, n)
+            $(nodeSel, $proof).addClass(Cls.Highlight)
+            $(tickSel, $proof).addClass(Cls.HighlightTicked)
         } else {
-            var n = opts.ruleTarget === true ? +$proof.attr(ATTR.STEP) : opts.ruleTarget
-            var nodeAttrSel = getAttrSelector(ATTR.STEP, n)
+            var n = opts.ruleTarget === true ? +$proof.attr(Attrib.Step) : opts.ruleTarget
+            var nodeAttrSel = getAttrSelector(Attrib.Step, n)
             var nodeIds = []
             var $status = getStatusFromProof($proof)
-            var $ruleTarget = $(DCLS.STEPRULETARGET + nodeAttrSel, $status)
-            var nodeId = $ruleTarget.attr(ATTR.NODEID)
+            var $ruleTarget = $(Dcls.StepRuleTarget + nodeAttrSel, $status)
+            var nodeId = $ruleTarget.attr(Attrib.NodeId)
             if (nodeId) {
                 nodeIds.push(+nodeId)
             }
-            var nodeIdStr = $ruleTarget.attr(ATTR.NODEIDS)
+            var nodeIdStr = $ruleTarget.attr(Attrib.NodeIds)
             if (nodeIdStr) {
                 var nodeIdsArr = nodeIdStr.split(',')
                 nodeIdsArr.shift()
                 $.each(nodeIdsArr, function(i, id) { nodeIds.push(+id) })
             }
             if (nodeIds.length) {
-                var nodeSel = $.map(nodeIds, function(id) { return DCLS.NODE + getAttrSelector(ATTR.NODEID, id) }).join(',')
+                var nodeSel = $.map(nodeIds, function(id) { return Dcls.Node + getAttrSelector(Attrib.NodeId, id) }).join(',')
                 var $nodes = $(nodeSel, $proof)
             } else {
                 var $nodes = $E
             }
             // TODO: branch / branches
-            $nodes.addClass(CLS.HIGHLIGHT)
+            $nodes.addClass(Cls.Highlight)
         }
         if (!opts.stay) {
-            setTimeout(function() { doHighlight({$proof: $proof, off: true})}, ANIM.SLOW)
+            setTimeout(function() { doHighlight({$proof: $proof, off: true})}, Anim.Slow)
         }
     }
 
@@ -627,8 +630,8 @@
      */
     function getPos($el) {
         return {
-            left  : +$el.attr(ATTR.LEFT),
-            right : +$el.attr(ATTR.RIGHT),
+            left  : +$el.attr(Attrib.Left),
+            right : +$el.attr(Attrib.Right),
             $el   : $el
         }
     }
@@ -642,15 +645,15 @@
      */
     function getRelation(from, to) {
         if (from.left == to.left) {
-            return REL.SELF
+            return Rel.Self
         }
         if (from.left < to.left && from.right > to.right) {
-            return REL.ANCESTOR
+            return Rel.Ancestor
         }
         if (from.left > to.left && from.right < to.right) {
-            return REL.DESCENDANT
+            return Rel.Descendant
         }
-        return REL.OUTSIDE
+        return Rel.Outside
     }
 
     /**
@@ -664,7 +667,7 @@
      * @return void
      */
     function trackHighests(trackObj, pos) {
-        consolidateRelated(REL.DESCENDANT, REL.ANCESTOR, trackObj, pos)
+        consolidateRelated(Rel.Descendant, Rel.Ancestor, trackObj, pos)
     }
 
     /**
@@ -678,7 +681,7 @@
      * @return void
      */
     function trackLowests(trackObj, pos) {
-        consolidateRelated(REL.ANCESTOR, REL.DESCENDANT, trackObj, pos)
+        consolidateRelated(Rel.Ancestor, Rel.Descendant, trackObj, pos)
     }
 
     /**
@@ -692,7 +695,7 @@
      * @return void
      */
     function consolidateRelated(dropIf, replaceIf, trackObj, pos) {
-        var replaces = []
+        const replaces = []
         for (var hleft in trackObj) {
             var hpos = trackObj[hleft]
             var relation = getRelation(pos, hpos)
@@ -726,7 +729,7 @@
      * @return The jQuery status panel element(s).
      */
     function getStatusFromProof($proof) {
-        return $proof.prevAll(DCLS.STATUS)
+        return $proof.prevAll(Dcls.Status)
     }
 
     /**
@@ -736,7 +739,7 @@
      * @return The jQuery proof element(s).
      */
     function getProofFromStatus($status) {
-        return $status.nextAll(DCLS.PROOF)
+        return $status.nextAll(Dcls.Proof)
     }
 
     function getAttrSelector(attr, val, oper) {
@@ -766,23 +769,23 @@
                 if (howMuch == 'reset') {
                     p = 100
                 } else {
-                    p = +$proof.attr(ATTR.CURWIDTHPCT) + (parseFloat(howMuch) || 0)
+                    p = +$proof.attr(Attrib.CurWidthPct) + (parseFloat(howMuch) || 0)
                 }
                 if (p < 0) {
                     p == 0
                 }
-                $proof.attr(ATTR.CURWIDTHPCT, p)
+                $proof.attr(Attrib.CurWidthPct, p)
                 $proof.css({width: p + '%'})
                 break
             case 'step':
-                var maxSteps = +$proof.attr(ATTR.NUMSTEPS)
+                var maxSteps = +$proof.attr(Attrib.NumSteps)
                 var n
                 if (howMuch == 'beginning' || howMuch == 'start') {
                     n = 0
                 } else if (howMuch == 'reset' || howMuch == 'end') {
                     n = maxSteps
                 } else {
-                    n = +$proof.attr(ATTR.STEP) + (parseInt(howMuch) || 0)
+                    n = +$proof.attr(Attrib.Step) + (parseInt(howMuch) || 0)
                 }
                 if (n < 0) {
                     n = 0
@@ -815,14 +818,14 @@
         })
 
         // load a click event handler for each proof in the document.
-        $(DCLS.PROOF).on('click', function(e) {
-            var $proof = $(this)
-            var $target = $(e.target)
-            var $status = getStatusFromProof($proof)
-            var behavior = modkey.ctrlalt ? 'zoom' : 'inspect'
+        $(Dcls.Proof).on('click', function(e) {
+            const $proof = $(this)
+            const $target = $(e.target)
+            const $status = getStatusFromProof($proof)
+            const behavior = modkey.ctrlalt ? 'zoom' : 'inspect'
             switch (behavior) {
                 case 'zoom':
-                    var $structure = $target.closest(DCLS.STRUCTURE)
+                    var $structure = $target.closest(Dcls.Structure)
                     if ($structure.length) {
                         zoom($structure, $proof)
                     }
@@ -836,69 +839,69 @@
         })
 
         // load a change event for the status panel
-        $(DCLS.STATUS).on('change', function(e) {
-            var $status = $(this)
-            var $proof = getProofFromStatus($status)
-            var $target = $(e.target)
-            if ($target.hasClass(CLS.STEPINPUT)) {
+        $(Dcls.Status).on('change', function(e) {
+            const $status = $(this)
+            const $proof = getProofFromStatus($status)
+            const $target = $(e.target)
+            if ($target.hasClass(Cls.StepInput)) {
                 var n = +$target.val()
-                var maxSteps = +$proof.attr(ATTR.NUMSTEPS)
+                var maxSteps = +$proof.attr(Attrib.NumSteps)
                 if (isNaN(n) || n < 0 || n > maxSteps) {
-                    $target.val($proof.attr(ATTR.STEP))
+                    $target.val($proof.attr(Attrib.Step))
                     return
                 }
                 step($proof, n)
-            } else if ($target.hasClass(CLS.BRANCHFILTER)) {
+            } else if ($target.hasClass(Cls.BranchFilter)) {
                 filterBranches($target.val(), $proof)
             }
             $lastProof = $proof
         })
 
         // load a click event for the status panel
-        $(DCLS.STATUS).on('click', function(e) {
-            var $status = $(this)
-            var $proof = getProofFromStatus($status)
-            var $target = $(e.target)
-            if ($target.hasClass(CLS.STEPSTART)) {
+        $(Dcls.Status).on('click', function(e) {
+            const $status = $(this)
+            const $proof = getProofFromStatus($status)
+            const $target = $(e.target)
+            if ($target.hasClass(Cls.StepStart)) {
                 adjust($proof, 'step', 'start')
-            } else if ($target.hasClass(CLS.STEPNEXT)) {
+            } else if ($target.hasClass(Cls.StepNext)) {
                 adjust($proof, 'step', 1)
-            } else if ($target.hasClass(CLS.STEPPREV)) {
+            } else if ($target.hasClass(Cls.StepPrev)) {
                 adjust($proof, 'step', -1)
-            } else if ($target.hasClass(CLS.STEPEND)) {
+            } else if ($target.hasClass(Cls.StepEnd)) {
                 adjust($proof, 'step', 'end')
-            } else if ($target.hasClass(CLS.FONTPLUS)) {
+            } else if ($target.hasClass(Cls.FontPlus)) {
                 adjust($proof, 'font', 1)
-            } else if ($target.hasClass(CLS.FONTMINUS)) {
+            } else if ($target.hasClass(Cls.FontMinus)) {
                 adjust($proof, 'font', -1)
-            } else if ($target.hasClass(CLS.FONTRESET)) {
+            } else if ($target.hasClass(Cls.FontReset)) {
                 adjust($proof, 'font', 'reset')
-            } else if ($target.hasClass(CLS.WIDTHPLUS)) {
+            } else if ($target.hasClass(Cls.WidthPlus)) {
                 adjust($proof, 'width', 10)
-            } else if ($target.hasClass(CLS.WIDTHPLUSPLUS)) {
+            } else if ($target.hasClass(Cls.WidthPlusPlus)) {
                 adjust($proof, 'width', 25)
-            } else if ($target.hasClass(CLS.WIDTHMINUS)) {
+            } else if ($target.hasClass(Cls.WidthMinus)) {
                 adjust($proof, 'width', -10)
-            } else if ($target.hasClass(CLS.WIDTHMINUSMINUS)) {
+            } else if ($target.hasClass(Cls.WidthMinusMinus)) {
                 adjust($proof, 'width', -25)
-            } else if ($target.hasClass(CLS.WIDTHRESET)) {
+            } else if ($target.hasClass(Cls.WidthReset)) {
                 adjust($proof, 'width', 'reset')
-            } else if ($target.hasClass(CLS.STEPRULETARGET)) {
-                var off = $target.hasClass(CLS.HIGHLIGHT) || $target.hasClass(CLS.STAY)
+            } else if ($target.hasClass(Cls.StepRuleTarget)) {
+                var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
                 doHighlight({$proof: $proof, stay: true, off: off, ruleTarget: true})
-                $target.toggleClass(CLS.STAY)
-            } else if ($target.hasClass(CLS.STEPRULENAME)) {
-                var off = $target.hasClass(CLS.HIGHLIGHT) || $target.hasClass(CLS.STAY)
+                $target.toggleClass(Cls.Stay)
+            } else if ($target.hasClass(Cls.StepRuleName)) {
+                var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
                 doHighlight({$proof: $proof, stay: true, off: off, ruleStep: true})
-                $target.toggleClass(CLS.STAY)
+                $target.toggleClass(Cls.Stay)
             }
             $lastProof = $proof
         })
 
         // shortcut keys
         $(document).on('keypress', function(e) {
-            var $target = $(e.target)
-            var isInput = $target.is(':input')
+            const $target = $(e.target)
+            const isInput = $target.is(':input')
             if (!isInput && $lastProof) {
                 var $proof = $lastProof
                 var s = String.fromCharCode(e.which)
@@ -940,17 +943,17 @@
                         adjust($proof, 'width', 'reset')
                         break
                     case 'O':
-                        if ($proof.children(SEL.CANBRANCHFILTER).length) {
+                        if ($proof.children(Sel.CanBranchFilter).length) {
                             filterBranches('open', $proof)
                         }
                         break
                     case 'C':
-                        if ($proof.children(SEL.CANBRANCHFILTER).length) {
+                        if ($proof.children(Sel.CanBranchFilter).length) {
                             filterBranches('closed', $proof)
                         }
                         break
                     case 'A':
-                        if ($proof.children(SEL.CANBRANCHFILTER).length) {
+                        if ($proof.children(Sel.CanBranchFilter).length) {
                             filterBranches('all', $proof)
                         }
                         break
@@ -959,7 +962,7 @@
                         var stay = s == 'R'
                         doHighlight({$proof: $proof, stay: stay, ruleStep: true})
                         if (stay) {
-                            $(DCLS.STEPRULENAME, getStatusFromProof($proof)).toggleClass(CLS.STAY)
+                            $(Dcls.StepRuleName, getStatusFromProof($proof)).toggleClass(Cls.Stay)
                         }
                         break
                     case 't':
@@ -967,11 +970,11 @@
                         var stay = s == 'T'
                         doHighlight({$proof: $proof, stay: stay, ruleTarget: true})
                         if (stay) {
-                            $(DCLS.STEPRULENAME, getStatusFromProof($proof)).toggleClass(CLS.STAY)
+                            $(Dcls.StepRuleName, getStatusFromProof($proof)).toggleClass(Cls.Stay)
                         }
                         break
                     case 'Z':
-                        zoom($proof.children(DCLS.STRUCTURE), $proof)
+                        zoom($proof.children(Dcls.Structure), $proof)
                         break
                     default:
                         break

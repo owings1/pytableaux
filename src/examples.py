@@ -95,7 +95,7 @@ args = {
     'Syllogism'                        : [[ 'VxCFxGx', 'VxCGxHx' ], 'VxCFxHx'],
     'Triviality 1'                     : 'a',
     'Triviality 2'                     : [[ 'a' ], 'b' ],
-    'Universal Predicate Syllogism'    : [[ 'VxVyCO0xyO1xy', 'O0mn'], 'O1mn'],
+    'Universal Predicate Syllogism'    : [[ 'VxVyCFxFy', 'Fm'], 'Fn'],
     'Universal from Existential'       : [[ 'SxFx' ], 'VxFx' ],
     'Universal from Negated Existential 1' : [[ 'NSxFx' ], 'VxNFx' ],
 }
@@ -104,12 +104,9 @@ args_list = sorted(args.keys())
 
 # Test vocabulary predicate data
 test_pred_data = [
-    ['is F', 0, 0, 1],
-    ['is G', 1, 0, 1],
-    ['is H', 2, 0, 1],
-    ['Os'  , 3, 0, 2],
-    ['O1s' , 3, 1, 2],
-    ['O2s' , 3, 2, 2]
+    ['F-ness', 0, 0, 1],
+    ['G-ness', 1, 0, 1],
+    ['H-ness', 2, 0, 1]
 ]
 
 vocabulary = logic.Vocabulary(test_pred_data)
@@ -146,9 +143,9 @@ def self_identity():
 
 def quantified(quantifier):
     x = logic.variable(0, 0)
-    x_is_f = logic.predicated('is F', [x], vocabulary)
+    x_is_f = logic.predicated(test_pred_data[0][0], [x], vocabulary)
     if quantifier == 'Universal':
-        x_is_g = logic.predicated('is G', [x], vocabulary)
+        x_is_g = logic.predicated(test_pred_data[1][0], [x], vocabulary)
         s = logic.operate('Material Conditional', [x_is_f, x_is_g])
         return logic.quantify(quantifier, x, s)
     return logic.quantify(quantifier, x, x_is_f)
