@@ -12,10 +12,8 @@ Project History & Goals
 =======================
 
 I started this project when I was supposed to be writing my dissertation_ on 
-non-classical logic. I wanted a proof generator for a new logic I was developing,
-and writing that generator myself would allow me to procrastinate heavily with
-somewhat-reduced guilt. I eventually finished the paper, but have continued with
-this project in various forms.
+non-classical logic. I wanted to write a proof generator for a new logic I was
+developing, in order to procrastinate heavily.
 
 The goals of this project are:
 
@@ -23,7 +21,7 @@ The goals of this project are:
 
 2. Demonstrate the simplicity and parsimony of describing and conceptualizing 
    various logics with only a few basic concepts.
-   
+
 The module and class structure of the code attempt to mirror the presentation of
 logical given in Beall's and van Fraassen's `Possibilities and Paradox`_, as
 well as Beall's graduate lectures at the University of Connecticut.
@@ -144,7 +142,7 @@ fixed number of sentences (arity):
 | Necessity               | *necessarily,* ...               |   1   |
 +-------------------------+----------------------------------+-------+
 
-Form many logics, the *Conditional* operator is the same as the *Material Conditional*
+For many logics, the *Conditional* operator is the same as the *Material Conditional*
 operator (and likewise, the *Biconditional* is equivalent to the *Material Biconditional*).
 This comes from the fact that the *Material Conditional* is defined in terms of a
 disjunction, i.e. P{(A > B)} is equivalent to P{(~A V B)}. However, some logics, like L3,
@@ -157,6 +155,7 @@ Similar reasoning motivates the *Assertion* operator. Most logics do not define 
 operator, but given that some do (e.g. Bochvar), we introduce it to the vocabulary, treating
 it as a transparent operator (P{\*A} == P{A}) in logics that do not traditionally define it.
 
+
 Installation
 ============
 
@@ -164,49 +163,64 @@ The program contains the following interfaces:
 
     - An API to use in Python scripts.
     
-    - A web interface with a built-in server, which runs on any machine with Python installed.
-    
-    - [in progress] A CLI for evaluating arguments from the command line.
-    
+    - A web form interface. See https://logic.dougowings.net.
+
+    - (In Progress) A web JSON api.
+
+To run the Docker image from Docker Hub:
+
+    1. Run the command::
+
+        docker run -p 8080:8080 owings1/pytableaux:latest
+
+    2. Access the web interface at http://localhost:8080
+
 To install natively:
 
     1. Download the source, for example::
 
-        cd ~/git
         git clone https://bitbucket.org/owings1/pytableaux
     
-    2. Install dependencies, for example::
+    2. Install dependencies::
 
-        pip install jinja2 cherrypy Sphinx
+        pip install future jinja2 cherrypy
 
     3. Launch the web interface, for example::
 
-        cd ~/git/pytableaux
         python src/web.py
 
     4. Then access http://localhost:8080
 
-To install using docker:
+To build the documentation (requires python-dev and make):
 
-    1. Run the following commands::
+    1. Install the dependencies::
 
-        cd ~/git/pytableaux
+        pip install Sphinx
 
-        # build the image
-        docker build -t owings1/pytableaux:latest docker
+    2. Build the docs::
 
-        # set container parameters, choose different host port, container name if desired.
-        REPO_HOME=`pwd`
-        HOST_PORT=8080
-        CONT_NAME=pytableaux
+        cd doc
+        make clean html
 
-        # create the container
-        docker create --name $CONT_NAME -v $REPO_HOME:/mnt/repo -p $HOST_PORT:8080 -e PY_HOST=0.0.0.0 owings1/pytableaux
+To run the tests:
 
-        # start the container
-        docker start pytableaux
+    1. Install the dependencies::
 
-    2. Access the web interface on the HOST_PORT (e.g. 8080) of your docker IP.
+        pip install pytest
+
+    2. Run the tests::
+
+        python -m pytest test
+
+To build the Docker image yourself:
+
+    1. For Python3::
+
+        docker build -f res/python3.dockerfile .
+
+    2. For Python2::
+
+        docker build -f res/python2.dockerfile .
 
 Parsing
 =======
