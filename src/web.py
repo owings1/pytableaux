@@ -260,7 +260,7 @@ class App(object):
                     'error'   : err.__class__.__name__
                 }
         server.response.status = 404
-        return {'message': 'Not found', 'code': 404}
+        return {'message': 'Not found', 'status': 404}
 
     def api_parse(self, body):
         """
