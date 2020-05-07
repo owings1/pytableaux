@@ -130,20 +130,20 @@ class App(object):
 
         form_data = fix_form_data(form_data)
 
-        data = dict(base_view_data)
-        data['form_data'] = form_data
+        data = dict()
+
+        errors = {}
 
         vocabulary = logic.Vocabulary()
 
         view = 'argument'
 
-        if len(form_data) and ('errors' not in form_data or not len(form_data['errors'])):
+        if len(form_data):
 
             input_notation = modules['notations'][form_data['input_notation']]
             output_notation = modules['notations'][form_data['output_notation']]
             writer = modules['writers'][form_data['format']].Writer()
-            
-            errors = {}
+
             if 'user_predicate_arities[]' in form_data:
                 App.declare_user_predicates(form_data, vocabulary, errors)
             parser = input_notation.Parser(vocabulary)
@@ -167,7 +167,7 @@ class App(object):
             if 'symbol_set' in form_data:
                 symbol_set = form_data['symbol_set']
             else:
-                if form_data['writer'] == 'html' and 'html' in output_notation.symbol_sets:
+                if writer.name == 'HTML' and 'html' in output_notation.symbol_sets:
                     symbol_set = 'html'
                 else:
                     symbol_set = 'default'
@@ -184,9 +184,7 @@ class App(object):
             else:
                 selected_logic = modules['logics'][form_data['logic']]
 
-            if len(errors) > 0:
-                form_data['errors'] = errors
-            else:
+            if len(errors) == 0:
                 view = 'prove'
                 argument = logic.argument(conclusion, premises)
                 proof = logic.tableau(selected_logic, argument).build()
@@ -200,26 +198,18 @@ class App(object):
                         'conclusion' : sw.write(argument.conclusion)
                     }
                 })
+
+        data.update(base_view_data)
         data.update({
+            'form_data'            : form_data,
             'user_predicates'      : vocabulary.user_predicates,
             'user_predicates_list' : vocabulary.user_predicates_list
         })
-        if 'errors' in form_data:
-            data['errors'] = form_data['errors']
-        return render(view, data)
 
-    @server.expose
-    def parse(self, *args, **form_data):
-        form_data = fix_form_data(form_data)
-        notation = modules['notations'][form_data['notation']]
-        vocabulary = logic.Vocabulary()
-        errors = {}
-        App.declare_user_predicates(form_data, vocabulary, errors)
-        try:
-            logic.parse(form_data['sentence'], vocabulary, notation)
-        except logic.Parser.ParseError as e:
-            return self.render('error', { 'error': str(e) })
-        return ''
+        if len(errors) > 0:
+            data['errors'] = errors
+
+        return render(view, data)
 
     @staticmethod
     def declare_user_predicates(form_data, vocabulary, errors={}):
@@ -239,7 +229,6 @@ class App(object):
     @server.tools.json_in()
     @server.tools.json_out()
     def api(self, action=None):
-        print(server.request.json)
         if server.request.method == 'POST':
             try:
                 if action == 'parse':
@@ -285,7 +274,6 @@ class App(object):
             }
         """
         body = dict(body)
-        print(body)
         if 'notation' not in body:
             body['notation'] = 'polish'
         if 'predicates' not in body:

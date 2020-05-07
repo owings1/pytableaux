@@ -41,7 +41,7 @@ class AppTest(helper.CPWebCase):
         kw = {
             'input_notation'  : 'polish',
             'output_notation' : 'polish',
-            'writer'          : 'ascii',
+            'format'          : 'ascii',
             'logic'           : 'cpl',
             'conclusion'      : 'a'
         }
