@@ -1,0 +1,13 @@
+K3 - Strong Kleene Logic
+========================
+
+.. automodule:: logics.k3
+
+    Tableaux System
+    ---------------
+
+    .. autoclass:: TableauxSystem
+        :members:
+
+    .. autoclass:: TableauxRules
+        :members:

@@ -1,0 +1,13 @@
+L3 - Lukasiewicz 3-valued Logic
+===============================
+
+.. automodule:: logics.l3
+
+    Tableaux System
+    ---------------
+
+    .. autoclass:: TableauxSystem
+        :members:
+
+    .. autoclass:: TableauxRules
+        :members:

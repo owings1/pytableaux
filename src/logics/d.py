@@ -32,7 +32,7 @@ Links
 
 """
 name = 'D'
-description = 'Deontic Normal Modal Logic'
+title = 'Deontic Normal Modal Logic'
 
 import logic
 from . import k

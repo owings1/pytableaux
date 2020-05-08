@@ -30,7 +30,7 @@ Links
 .. _Stanford Encyclopedia on Modal Logic: http://plato.stanford.edu/entries/logic-modal/
 """
 name = 'K'
-description = 'Kripke Normal Modal Logic'
+title = 'Kripke Normal Modal Logic'
 
 def example_validities():
     from . import cfol
@@ -239,14 +239,13 @@ class TableauxSystem(logic.TableauxSystem):
                 model.add_access(node.props['world1'], node.props['world2'])
 
     class ConditionalModalNodeRule(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        Conditional Modal Node Rule
-        """
+        # Conditional Modal Node Rule
+        modal = True
 
-        def example_node(self):
-            props = super(TableauxSystem.ConditionalModalNodeRule, self).example_node()
-            props['world'] = 0
-            return props
+        #def example_node(self):
+        #    props = super(TableauxSystem.ConditionalModalNodeRule, self).example_node()
+        #    props['world'] = 0
+        #    return props
         
 
 class TableauxRules(object):
@@ -299,6 +298,48 @@ class TableauxRules(object):
             s = negate(examples.self_identity())
             self.tableau.branch().add({ 'sentence' : s, 'world' : 0 })
 
+    class DoubleNegation(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked double negation node *n* with world *w* on a branch *b*, add a
+        node to *b* with *w* and the double-negatum of *n*, then tick *n*.
+        """
+
+        negated  = True
+        operator = 'Negation'
+
+        def apply_to_node(self, node, branch):
+            w = node.props['world']
+            s = self.sentence(node)
+            branch.add({ 'sentence' : s.operand, 'world' : w }).tick(node)
+
+    class Assertion(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked assertion node *n* with world *w* on a branch *b*,
+        add a node to *b* with the operand of *n* and world *w*, then tick *n*.
+        """
+
+        operator = 'Assertion'
+
+        def apply_to_node(self, node, branch):
+            w = node.props['world']
+            s = self.sentence(node)
+            branch.add({ 'sentence' : s.operand, 'world' : w }).tick(node)
+
+    class AssertionNegated(TableauxSystem.ConditionalModalNodeRule):
+        """
+        From an unticked, negated assertion node *n* with world *w* on a branch *b*,
+        add a node to *b* with the negation of the assertion of *n* and world *w*,
+        then tick *n*.
+        """
+
+        operator = 'Assertion'
+        negated  = True
+
+        def apply_to_node(self, node, branch):
+            w = node.props['world']
+            s = self.sentence(node)
+            branch.add({ 'sentence' : negate(s.operand), 'world' : w }).tick(node)
+
     class Conjunction(TableauxSystem.ConditionalModalNodeRule):
         """
         From an unticked conjunction node *n* with world *w* on a branch *b*, for each conjunct,
@@ -335,7 +376,8 @@ class TableauxRules(object):
     class Disjunction(TableauxSystem.ConditionalModalNodeRule):
         """
         From an unticked disjunction node *n* with world *w* on a branch *b*, for each disjunct,
-        make a new branch *b'* from *b* and add a node with world *w* to *b'*, then tick *n*.
+        make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
+        then tick *n*.
         """
 
         operator = 'Disjunction'
@@ -548,7 +590,7 @@ class TableauxRules(object):
         def applies_to_branch(self, branch):
             constants = branch.constants()
             for node in branch.get_nodes():
-                if 'sentence' in node.props and 'world' in node.props and node.props['sentence'].quantifier == self.quantifier:
+                if node.has('sentence') and node.props['sentence'].quantifier == self.quantifier:
                     w = node.props['world']
                     s = node.props['sentence']
                     v = s.variable
@@ -577,20 +619,6 @@ class TableauxRules(object):
 
         quantifier = 'Universal'
         convert_to = 'Existential'
-
-    class DoubleNegation(TableauxSystem.ConditionalModalNodeRule):
-        """
-        From an unticked double negation node *n* with world *w* on a branch *b*, add a
-        node to *b* with *w* and the double-negatum of *n*, then tick *n*.
-        """
-
-        negated  = True
-        operator = 'Negation'
-
-        def apply_to_node(self, node, branch):
-            w = node.props['world']
-            s = self.sentence(node)
-            branch.add({ 'sentence' : s.operand, 'world' : w }).tick(node)
 
     class Possibility(TableauxSystem.ConditionalModalNodeRule):
         """
@@ -719,34 +747,6 @@ class TableauxRules(object):
                 { 'sentence' : examples.predicated(), 'world' : 0 },
                 { 'sentence' : examples.identity(),   'world' : 0 }
             ])
-
-    class Assertion(TableauxSystem.ConditionalModalNodeRule):
-        """
-        From an unticked assertion node *n* with world *w* on a branch *b*,
-        add a node to *b* with the operand of *n* and world *w*, then tick *n*.
-        """
-
-        operator = 'Assertion'
-
-        def apply_to_node(self, node, branch):
-            w = node.props['world']
-            s = self.sentence(node)
-            branch.add({ 'sentence' : s.operand, 'world' : w }).tick(node)
-
-    class AssertionNegated(TableauxSystem.ConditionalModalNodeRule):
-        """
-        From an unticked, negated assertion node *n* with world *w* on a branch *b*,
-        add a node to *b* with the negation of the assertion of *n* and world *w*,
-        then tick *n*.
-        """
-
-        operator = 'Assertion'
-        negated  = True
-
-        def apply_to_node(self, node, branch):
-            w = node.props['world']
-            s = self.sentence(node)
-            branch.add({ 'sentence' : negate(s.operand), 'world' : w }).tick(node)
 
     rules = [
 

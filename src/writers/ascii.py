@@ -58,6 +58,8 @@ class Writer(logic.TableauxSystem.Writer):
                     s += ' -'
             if 'world1' in node.props and 'world2' in node.props:
                 s += 'w' + str(node.props['world1']) + 'R' + 'w' + str(node.props['world2'])
+            if 'ellipsis' in node.props and node.props['ellipsis']:
+                s += '...'
             if node.ticked:
                 s += ' *'
             node_strs.append(s)
@@ -102,7 +104,7 @@ class Writer(logic.TableauxSystem.Writer):
         ]
         
         lines += [
-            'Logic          : {0} - {1}'.format(tableau.logic.name, tableau.logic.description),
+            'Logic          : {0} - {1}'.format(tableau.logic.name, tableau.logic.title),
             'Result         : {0}'.format(tableau.stats['result']),
             'Branches       : {0}'.format(tableau.stats['branches'])
         ]

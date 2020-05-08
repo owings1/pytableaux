@@ -66,7 +66,7 @@ at the University of Connecticut, under `Professor Jc Beall`_.
 
 """
 name = 'GO'
-description = 'Gappy Object 3-valued Logic'
+title = 'Gappy Object 3-valued Logic'
 
 # Syllogism ?
 # Universal Predicate Syllogism ?

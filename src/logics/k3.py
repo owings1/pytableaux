@@ -66,7 +66,7 @@ Some notable features of K3 include:
 * DeMorgan laws are valid.
 """
 name = 'K3'
-description = 'Strong Kleene 3-valued logic'
+title = 'Strong Kleene 3-valued logic'
 
 from . import fde, k
 

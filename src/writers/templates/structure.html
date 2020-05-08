@@ -32,6 +32,9 @@
                     {% if 'world1' in node.props and 'world2' in node.props %}
                         <span class="access">w<span class="subscript">{{ node.props['world1'] }}</span>Rw<span class="subscript">{{ node.props['world2'] }}</span></span>
                     {% endif %}
+                    {% if 'ellipsis' in node.props and node.props['ellipsis'] %}
+                        <span class="ellipsis">&#x22ee;</span>
+                    {% endif %}
                 </span>
             </div>
         {% endfor %}
@@ -67,7 +70,7 @@
                 <dd>{{ premises|join('<br>') }}{% if premises|length %}<br><hr>{% endif %}&there4; {{ conclusion }}</dd>
             {% endif %}
             <dt>Logic</dt>
-            <dd>{{ tableau.logic.name }} - {{ tableau.logic.description }}</dd>
+            <dd>{{ tableau.logic.name }} - {{ tableau.logic.title }}</dd>
             <dt>Result</dt>
             <dd><span class="result {{ result_class }}">{{ tableau.stats['result'] }}</span></dd>
             <dt>Branches</dt>

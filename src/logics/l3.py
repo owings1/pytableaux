@@ -29,7 +29,7 @@ The semantics for L3 is the same as K3, except for the Conditional and Biconditi
 operators (see below).
 """
 name = 'L3'
-description = 'Lukasiewicz 3-valued Logic'
+title = 'Lukasiewicz 3-valued Logic'
 
 from . import fde, k3
 import logic

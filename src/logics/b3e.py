@@ -32,7 +32,7 @@ Truth-functional operators are defined via truth tables below.
 
 """
 name = 'B3E'
-description = 'Bochvar 3 External Logic'
+title = 'Bochvar 3 External Logic'
 
 from . import k3, k3w, go, fde
 import logic

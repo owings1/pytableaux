@@ -26,9 +26,10 @@ Links
 
 - `Stanford Encyclopedia on Modal Logic`_
 
+.. _Stanford Encyclopedia on Modal Logic: http://plato.stanford.edu/entries/logic-modal/
 """
 name = 'T'
-description = 'Reflexive Normal Modal Logic'
+title = 'Reflexive Normal Modal Logic'
 
 def example_validities():
     from . import d

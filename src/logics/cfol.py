@@ -42,7 +42,7 @@ are cases where *C* also has the value **true**.
 from . import k, cpl
 
 name = 'CFOL'
-description = 'Classical First Order Logic'
+title = 'Classical First Order Logic'
 
 def example_validities():
     # Everything valid in CPL, K3, K3W, GO, or LP is valid in CFOL
@@ -77,9 +77,11 @@ truth_functional_operators = cpl.truth_functional_operators
 truth_function = cpl.truth_function
 
 class Model(cpl.Model):
-    """
-    A CFOL model is the same as
-    """
+    # """
+    # A CFOL model is the same as
+    # """
+    pass
+
 class TableauxSystem(cpl.TableauxSystem):
     """
     CFOL's Tableaux System inherits directly from CPL's.
@@ -87,9 +89,43 @@ class TableauxSystem(cpl.TableauxSystem):
 
 class TableauxRules(object):
     """
-    The Tableaux System for CFOL contains the closure and identity rules from CPL, and all the operator
-    rules from K, except for the rules for the modal operators (Necessity, Possibility).
+    The Tableaux System for CFOL contains all the rules from CPL, as well as
+    additional rules for the quantifiers.
     """
+
+    class Existential(cpl.NonModal, k.TableauxRules.Existential):
+        """
+        From an unticked existential node *n* on a branch *b*, quantifying over
+        variable *v* into sentence *s*, add a node to *b* with the substitution
+        into *s* of *v* with a constant new to *b*, then tick *n*.
+        """
+        pass
+
+    class ExistentialNegated(cpl.NonModal, k.TableauxRules.ExistentialNegated):
+        """
+        From an unticked negated existential node *n* on a branch *b*,
+        quantifying over variable *v* into sentence *s*, add a universally quantified
+        node to *b* over *v* into the negation of *s*, then tick *n*.
+        """
+        pass
+
+    class Universal(cpl.NonModal, k.TableauxRules.Universal):
+        """
+        From a universal node on a branch *b*, quantifying over variable *v* into
+        sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
+        exists) for *v* into *s* does not appear on *b*, add a node with *r* to
+        *b*. The node *n* is never ticked.
+        """
+        pass
+
+    class UniversalNegated(cpl.NonModal, k.TableauxRules.UniversalNegated):
+        """
+        From an unticked negated universal node *n* on a branch *b*,
+        quantifying over variable *v* into sentence *s*, add an existentially
+        quantified node to *b* over *v* into the negation of *s*,
+        then tick *n*.
+        """
+        pass
 
     rules = [
 
@@ -99,27 +135,27 @@ class TableauxRules(object):
         # non-branching rules
 
         cpl.TableauxRules.IdentityIndiscernability,
-        k.TableauxRules.Assertion,
-        k.TableauxRules.AssertionNegated,
-        k.TableauxRules.Conjunction,
-        k.TableauxRules.DisjunctionNegated,
-        k.TableauxRules.MaterialConditionalNegated,
-        k.TableauxRules.ConditionalNegated,
-        k.TableauxRules.Existential,
-        k.TableauxRules.ExistentialNegated,
-        k.TableauxRules.Universal,
-        k.TableauxRules.UniversalNegated,
-        k.TableauxRules.DoubleNegation,
+        cpl.TableauxRules.Assertion,
+        cpl.TableauxRules.AssertionNegated,
+        cpl.TableauxRules.Conjunction,
+        cpl.TableauxRules.DisjunctionNegated,
+        cpl.TableauxRules.MaterialConditionalNegated,
+        cpl.TableauxRules.ConditionalNegated,
+        Existential,
+        ExistentialNegated,
+        Universal,
+        UniversalNegated,
+        cpl.TableauxRules.DoubleNegation,
 
         # branching rules
 
-        k.TableauxRules.ConjunctionNegated,
-        k.TableauxRules.Disjunction,
-        k.TableauxRules.MaterialConditional,
-        k.TableauxRules.MaterialBiconditional,
-        k.TableauxRules.MaterialBiconditionalNegated,
-        k.TableauxRules.Conditional,
-        k.TableauxRules.Biconditional,
-        k.TableauxRules.BiconditionalNegated
+        cpl.TableauxRules.ConjunctionNegated,
+        cpl.TableauxRules.Disjunction,
+        cpl.TableauxRules.MaterialConditional,
+        cpl.TableauxRules.MaterialBiconditional,
+        cpl.TableauxRules.MaterialBiconditionalNegated,
+        cpl.TableauxRules.Conditional,
+        cpl.TableauxRules.Biconditional,
+        cpl.TableauxRules.BiconditionalNegated
 
     ]

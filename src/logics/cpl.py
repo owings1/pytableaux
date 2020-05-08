@@ -37,7 +37,7 @@ are cases where *C* also has the value true.
 from . import k, fde
 
 name = 'CPL'
-description = 'Classical Predicate Logic'
+title = 'Classical Predicate Logic'
 
 def example_validities():
     # Everything valid in K3 or LP is valid in CPL, except quantifier validities
@@ -138,7 +138,7 @@ class TableauxSystem(logic.TableauxSystem):
         the tuple <a0,...,an> is in the extension of F.
         """
         for node in branch.get_nodes():
-            if 'sentence' in node.props:
+            if node.has('sentence'):
                 s = node.props['sentence']
                 if s.is_literal():
                     if s.is_operated():
@@ -152,6 +152,9 @@ class TableauxSystem(logic.TableauxSystem):
                     else:
                         assert s.is_predicated()
                         model.set_predicated_value(s, value)
+
+class NonModal(object):
+    modal = False
 
 class TableauxRules(object):
     """
@@ -176,7 +179,7 @@ class TableauxRules(object):
             a = logic.atomic(0, 0)
             self.tableau.branch().update([{ 'sentence' : a }, { 'sentence' : negate(a) }])
 
-    class SelfIdentityClosure(k.TableauxRules.SelfIdentityClosure):
+    class SelfIdentityClosure(NonModal, k.TableauxRules.SelfIdentityClosure):
         """
         A branch is closed if a sentence of the form *~ a = a* appears on the branch.
         """
@@ -184,6 +187,140 @@ class TableauxRules(object):
         def example(self):
             s = negate(examples.self_identity())
             self.tableau.branch().add({ 'sentence' : s })
+
+    class DoubleNegation(NonModal, k.TableauxRules.DoubleNegation):
+        """
+        From an unticked double negation node *n* on a branch *b*, add a
+        node to *b* with the double-negatum of *n*, then tick *n*.
+        """
+        pass
+
+    class Assertion(NonModal, k.TableauxRules.Assertion):
+        """
+        From an unticked assertion node *n* on a branch *b*,
+        add a node to *b* with the operand of *n*, then tick *n*.
+        """
+        pass
+
+    class AssertionNegated(NonModal, k.TableauxRules.AssertionNegated):
+        """
+        From an unticked, negated assertion node *n* on a branch *b*,
+        add a node to *b* with the negation of the assertion of *n*,
+        then tick *n*.
+        """
+        pass
+
+    class Conjunction(NonModal, k.TableauxRules.Conjunction):
+        """
+        From an unticked conjunction node *n* on a branch *b*, for each conjunct,
+        add a node to *b* with the conjunct, then tick *n*.
+        """
+        pass
+
+    class ConjunctionNegated(NonModal, k.TableauxRules.ConjunctionNegated):
+        """
+        From an unticked negated conjunction node *n* on a branch *b*, for each
+        conjunct, make a new branch *b'* from *b* and add a node with the negation of
+        the conjunct to *b*, then tick *n*.
+        """
+        pass
+
+    class Disjunction(NonModal, k.TableauxRules.Disjunction):
+        """
+        From an unticked disjunction node *n* on a branch *b*, for each disjunct,
+        make a new branch *b'* from *b* and add a node with the disjunct to *b'*,
+        then tick *n*.
+        """
+        pass
+
+    class DisjunctionNegated(NonModal, k.TableauxRules.DisjunctionNegated):
+        """
+        From an unticked negated disjunction node *n* on a branch *b*, for each
+        disjunct, add a node with the negation of the disjunct to *b*, then tick *n*.
+        """
+        pass
+
+    class MaterialConditional(NonModal, k.TableauxRules.MaterialConditional):
+        """
+        From an unticked material conditional node *n*on a branch *b*, make two
+        new branches *b'* and *b''* from *b*, add a node with the negation of the
+        antecedent to *b'*, and add a node with the conequent to *b''*, then tick
+        *n*.
+        """
+        pass
+
+    class MaterialConditionalNegated(NonModal, k.TableauxRules.MaterialConditionalNegated):
+        """
+        From an unticked negated material conditional node *n* on a branch *b*,
+        add two nodes to *b*, one with the antecedent and the other with the negation
+        of the consequent, then tick *n*.
+        """
+        pass
+
+    class MaterialBiconditional(NonModal, k.TableauxRules.MaterialBiconditional):
+        """
+        From an unticked material biconditional node *n* on a branch *b*, make
+        two new branches *b'* and *b''* from *b*, add two nodes to *b'*, one with
+        the negation of the antecedent and one with the negation of the consequent,
+        and add two nodes to *b''*, one with the antecedent and one with the consequent,
+        then tick *n*.
+        """
+        pass
+
+    class MaterialBiconditionalNegated(NonModal, k.TableauxRules.MaterialBiconditionalNegated):
+        """
+        From an unticked negated material biconditional node *n* on a branch *b*,
+        make two new branches *b'* and *b''* from *b*, add two nodes to *b'*, one with
+        the antecedent and the other with the negation of the consequent, and add two nodes
+        to *b''*, one with the negation of the antecedent and the other with the consequent,
+        then tick *n*.
+        """
+        pass
+
+    class Conditional(NonModal, k.TableauxRules.Conditional):
+        """
+        The rule functions the same as the corresponding material conditional rule.
+
+        From an unticked conditional node *n* on a branch *b*, make two
+        new branches *b'* and *b''* from *b*, add a node with the negation of the
+        antecedent to *b'*, and add a node with the conequent to *b''*, then tick
+        *n*.
+        """
+        pass
+
+    class ConditionalNegated(NonModal, k.TableauxRules.ConditionalNegated):
+        """
+        The rule functions the same as the corresponding material conditional rule.
+
+        From an unticked negated conditional node *n* on a branch *b*,
+        add two nodes to *b*, one with the antecedent and the other with the negation
+        of the consequent, then tick *n*.
+        """
+        pass
+
+    class Biconditional(NonModal, k.TableauxRules.Biconditional):
+        """
+        The rule functions the same as the corresponding material biconditional rule.
+
+        From an unticked biconditional node *n* on a branch *b*, make
+        two new branches *b'* and *b''* from *b*, add two nodes to *b'*, one with
+        the negation of the antecedent and one with the negation of the consequent, and add two
+        nodes to *b''*, one with the antecedent and one with the consequent, then
+        tick *n*.
+        """
+        pass
+
+    class BiconditionalNegated(NonModal, k.TableauxRules.BiconditionalNegated):
+        """
+        The rule functions the same as the corresponding material biconditional rule.
+
+        From an unticked negated biconditional node *n* on a branch *b*,
+        make two new branches *b'* and *b''* from *b*, add two nodes to *b'*, one with
+        the antecedent and the other with the negation of the consequent, and add two nodes
+        to *b''*, one with the negation of the antecedent and the other with the consequent,
+        then tick *n*.
+        """
+        pass
 
     class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
         """
@@ -206,23 +343,22 @@ class TableauxRules(object):
 
         # non-branching rules
         IdentityIndiscernability,
-        k.TableauxRules.Assertion,
-        k.TableauxRules.AssertionNegated,
-        k.TableauxRules.Conjunction,
-        k.TableauxRules.DisjunctionNegated,
-        k.TableauxRules.MaterialConditionalNegated,
-        k.TableauxRules.ConditionalNegated,
-        k.TableauxRules.DoubleNegation,
+        Assertion,
+        AssertionNegated,
+        Conjunction,
+        DisjunctionNegated,
+        MaterialConditionalNegated,
+        ConditionalNegated,
+        DoubleNegation,
 
         # branching rules
-
-        k.TableauxRules.ConjunctionNegated,
-        k.TableauxRules.Disjunction,
-        k.TableauxRules.MaterialConditional,
-        k.TableauxRules.MaterialBiconditional,
-        k.TableauxRules.MaterialBiconditionalNegated,
-        k.TableauxRules.Conditional,
-        k.TableauxRules.Biconditional,
-        k.TableauxRules.BiconditionalNegated
+        ConjunctionNegated,
+        Disjunction,
+        MaterialConditional,
+        MaterialBiconditional,
+        MaterialBiconditionalNegated,
+        Conditional,
+        Biconditional,
+        BiconditionalNegated
 
     ]

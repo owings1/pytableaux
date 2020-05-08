@@ -1,6 +1,10 @@
+body {
+    font-size: 80%;
+}
 .truth-table-wrapper {
     float: left;
     margin-right: 15px;
+    margin-bottom: 15px;
 }
 .clear {
     clear: both;

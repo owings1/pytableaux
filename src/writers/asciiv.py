@@ -79,6 +79,8 @@ class Writer(logic.TableauxSystem.Writer):
                     s += ' +'
                 else:
                     s += ' -'
+            if 'ellipsis' in node.props and node.props['ellipsis']:
+                s += '...'
             if node.ticked:
                 s += ' *'
             node_strs.append(s)

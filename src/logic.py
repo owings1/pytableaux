@@ -104,7 +104,7 @@ def atomic(index, subscript):
 
 def negate(sentence):
     """Negate a sentence and return the negated sentence. This is shorthand for 
-    *operate('Negation', [sentence])*. Example::
+    ``operate('Negation', [sentence])``. Example::
 
         a = atomic(0, 0)
         # not a
@@ -115,7 +115,7 @@ def negate(sentence):
 
 def assertion(sentence):
     """Apply the assertion operator to the sentence. This is shorthand for
-    *operate('Assertion', [sentence])*. Example::
+    ``operate('Assertion', [sentence])``. Example::
 
         a = atomic(0, 0)
         sentence = assertion(a)
@@ -188,7 +188,7 @@ def variable(index, subscript):
 
 def predicated(predicate, parameters, vocabulary=None):
     """
-    Return a predicate sentence for the given predicate and parameters. *predicate* can 
+    Return a predicate sentence for the given predicate and parameters. ``predicate`` can 
     either be the name of a predicate or a predicate object. Examples using system predicates
     (Existence, Identity)::
 
@@ -249,10 +249,9 @@ def quantify(quantifier, variable, sentence):
 
 def parse(string, vocabulary=None, notation='polish'):
     """
-    Parse a string and return a sentence. If *vocabulary* is passed, the parser will
-    use its user-defined predicates. The *notation* parameter can be either a notation 
-    module or a string of the module name. Currently the only implemented notation is
-    polish. Example::
+    Parse a string and return a sentence. If ``vocabulary`` is passed, the parser will
+    use its user-defined predicates. The ``notation`` parameter can be either a notation 
+    module or a string of the module name. Example::
 
         sentence1 = parse('Kab', notation='polish')
         assert sentence1 == operate('Conjunction', [atomic(0, 0), atomic(1, 0)])
@@ -880,8 +879,7 @@ class TableauxSystem(object):
             self.argument = argument
 
             if logic != None:
-                self.logic = get_logic(logic)
-                self.rules = [Rule(self) for Rule in self.logic.TableauxRules.rules]
+                self.set_logic(logic)
 
             self.open_branchset = set()
             self.branch_dict = dict()
@@ -912,6 +910,11 @@ class TableauxSystem(object):
             self.finish()
             return False
 
+        def set_logic(self, logic):
+            self.logic = get_logic(logic)
+            self.rules = [Rule(self) for Rule in self.logic.TableauxRules.rules]
+            return self
+            
         def after_branch_close(self, branch):
             self.open_branchset.remove(branch)
             for rule in self.rules:
@@ -1081,8 +1084,8 @@ class TableauxSystem(object):
 
         def finish(self):
             """
-            Mark the tableau as finished. Computes the 'valid' property and builds the structure
-            into the 'tree' property. Returns self.
+            Mark the tableau as finished. Computes the ``valid`` property and builds the structure
+            into the ``tree`` property. Returns self.
             """
             self.finished = True
             num_open      = len(self.open_branches())
@@ -1139,7 +1142,7 @@ class TableauxSystem(object):
         def find(self, props, ticked=None):
             """
             Find the first node on the branch that matches the given properties, optionally
-            filtered by ticked status. Returns *None* if not found.
+            filtered by ticked status. Returns ``None`` if not found.
             """
             haystack = set(self.get_nodes(ticked=ticked))
             # reduce from node index
@@ -1289,6 +1292,9 @@ class TableauxSystem(object):
             self.ticked_step = None
             self.id = id(self)
 
+        def has(self, prop):
+            return prop in self.props and self.props[prop] != None
+
         def has_props(self, props):
             for prop in props:
                 if prop not in self.props or not props[prop] == self.props[prop]:
@@ -1317,7 +1323,7 @@ class TableauxSystem(object):
 
     class Rule(object):
         """
-        Base interface class for a tableau rule. Rule classes are instantiated per tableau instance.
+        Base interface class for a tableau rule.
         """
 
         def __init__(self, tableau):
@@ -1328,23 +1334,17 @@ class TableauxSystem(object):
             self.tableau = tableau
 
         def applies(self):
-            """
-            Whether the rule applies to the tableau. Implementations should return True/False or a target dict.
-            """
+            # Whether the rule applies to the tableau. Implementations should return True/False or a target dict.
             raise NotImplementedError(NotImplemented)
 
         def apply(self, target):
-            """
-            Apply the rule to the tableau. Assumes that applies() has returned true. Implementations should
-            modify the tableau directly, with no return value.
-            """
+            # Apply the rule to the tableau. Assumes that applies() has returned true. Implementations should
+            # modify the tableau directly, with no return value.
             raise NotImplementedError(NotImplemented)
 
         def example(self):
-            """
-            Add example branches/nodes sufficient for applies() to return true. Implementations should modify
-            the tableau directly, with no return value. Used for building examples/documentation.
-            """
+            # Add example branches/nodes sufficient for applies() to return true. Implementations should modify
+            # the tableau directly, with no return value. Used for building examples/documentation.
             raise NotImplementedError(NotImplemented)
 
         def after_branch_add(self, branch, other_branch = None):
@@ -1364,10 +1364,12 @@ class TableauxSystem(object):
 
     class BranchRule(Rule):
         """
-        A branch rule applies to an open branch on a tableau. This base class implements the applies() method
-        by finding the first open branch on the tableau to which the abstract method applies_to_branch() returns
-        a non-false value. If True is returned, then this method will return a dict with a 'branch' key, which
-        will then be passed to the applies() method.
+        A branch rule applies to an open branch on a tableau. This base class
+        implements the ``applies()`` method by finding the first open branch on
+        the tableau to which the abstract method ``applies_to_branch()`` returns
+        a non-``False`` value. If ``True`` is returned, then this method will
+        return a dictionary with a ``branch`` key, which will then be passed to
+        the ``applies()`` method.
         """
 
         def applies(self):
@@ -1384,15 +1386,13 @@ class TableauxSystem(object):
             return False
 
         def applies_to_branch(self, branch):
-            """
-            Abstract method that must be implemented in sub-classes. Should return a target object.
-            """
+            # Abstract method that must be implemented in sub-classes. Should return a target object.
             raise NotImplementedError(NotImplemented)
 
     class ClosureRule(BranchRule):
         """
-        A closure rule has a fixed apply() method that marks the branch as closed. Sub-classes should
-        implement the applies_to_branch() method.
+        A closure rule has a fixed ``apply()`` method that marks the branch as
+        closed. Sub-classes should implement the ``applies_to_branch()`` method.
         """
 
         def applies_to_branch(self, branch):
@@ -1403,8 +1403,9 @@ class TableauxSystem(object):
 
     class NodeRule(BranchRule):
         """
-        A node rule has a fixed applies() method that searches open branches and queries the applies_to_node()
-        method. If it applies, return a target dict with props 'node' and 'branch'.
+        A node rule has a fixed ``applies()`` method that searches open branches
+        and queries the ``applies_to_node()`` method. If it applies, return a
+        target dictionary with keys ``node`` and ``branch``.
         """
 
         ticked = False
@@ -1474,43 +1475,35 @@ class TableauxSystem(object):
 
     class ConditionalNodeRule(NodeRule):
         """
-        A conditional node rule has a fixed applies_to_node() method that searches open branches for nodes
+        A conditional node rule has a fixed ``applies_to_node()`` method that searches open branches for nodes
         that match the attribute conditions of the implementing class. This allows implementations to merely
-        define their attributes and implement the apply_to_node() method. This is the most common type of
+        define their attributes and implement ``the apply_to_node()`` method. This is the most common type of
         rule for operator rules.
 
-        The following attribute conditions can be defined. If a condition is set to None, then it
-        will be vacuously met::
-
-            # the ticked status of the node, default is False.
-            ticked      = False
-
-            # whether this rule applies to modal nodes, i.e. nodes that
-            # reference one or more worlds.
-            modal       = None
-
-            # the main operator of the node's sentence, if any.
-            operator    = None
-
-            # whether the sentence must be negated. if True, then nodes
-            # whose sentence's main connective is Negation will be checked,
-            # and if the negatum has the main connective defined in the
-            # 'operator' condition (above), then this condition will be met.
-            negated     = None
-
-            # the quantifier of the sentence, e.g. 'Universal' or 'Existential'.
-            quantifier  = None
-
-            # the designation status (True, False) of the node.
-            designation = None
-
+        The following attribute conditions can be defined. If a condition is set to ``None``, then it
+        will be vacuously met.
         """
 
+        #: The ticked status of the node, default is ``False``.
         ticked      = False
-        modal       = None # TODO: get rid of modal property, seems not in use
-        negated     = None
+
+        #: Whether this rule applies to modal nodes, i.e. nodes that
+        #: reference one or more worlds.
+        modal       = None
+
+        #: The main operator of the node's sentence, if any.
         operator    = None
+
+        #: Whether the sentence must be negated. if ``True``, then nodes
+        #: whose sentence's main connective is Negation will be checked,
+        #: and if the negatum has the main connective defined in the
+        #: ``operator`` condition (above), then this condition will be met.
+        negated     = None
+
+        #: The quantifier of the sentence, e.g. 'Universal' or 'Existential'.
         quantifier  = None
+
+        #: The designation status (``True``/``False``) of the node.
         designation = None
 
         def applies_to_node(self, node, branch):

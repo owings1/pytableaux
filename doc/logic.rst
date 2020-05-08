@@ -1,7 +1,7 @@
-pytableaux API
+Python API
 =============================
 
-The *logic* module is the base module for the pytableaux API.
+The *logic* module is the base module for the Python API.
 
 .. automodule:: logic
    :members:

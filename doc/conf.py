@@ -14,6 +14,7 @@
 
 import sys
 import os
+import re
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -136,7 +137,7 @@ html_theme = 'default'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
-html_static_path = ['res']
+html_static_path = ['res', '../src/www/static/css']
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
@@ -322,6 +323,7 @@ def make_tableau_examples(app, what, name, obj, options, lines):
     #header_written = False
     arg = examples.argument('Material Modus Ponens')
     if what == 'class' and logic.TableauxSystem.Rule in inspect.getmro(obj):
+        mro = inspect.getmro(obj)
         if obj in [
             logic.TableauxSystem.Rule,
             logic.TableauxSystem.BranchRule,
@@ -338,6 +340,8 @@ def make_tableau_examples(app, what, name, obj, options, lines):
             proof = logic.tableau(obj.__module__, None)
             rule = next(r for r in proof.rules if r.__class__ == obj)
             rule.example()
+            if len(proof.branches) == 1:
+                proof.branches[0].add({'ellipsis': True})
             target = rule.applies()
             rule.apply(target)
             proof.finish()
@@ -376,11 +380,20 @@ def make_tableau_examples(app, what, name, obj, options, lines):
 
 def post_process(app, exception):
     builddir = os.path.dirname(os.path.abspath(__file__)) + '/_build/html'
-    import re, codecs
+    import codecs
     #from HTMLParser import HTMLParser
     from html.parser import HTMLParser
     h = HTMLParser()
-    files = [f for f in os.listdir(builddir) if f.endswith('.html')]
+
+    files = list()
+    for f in os.listdir(builddir):
+        if f.endswith('.html'):
+            files.append(f)
+    for f in os.listdir(builddir + '/logics'):
+        if f.endswith('.html'):
+            files.append('logics/' + f)
+        
+
     for fil in files:
         with codecs.open(builddir + '/' + fil, 'r', 'utf-8') as f:
             text = f.read()#.decode('utf-8')
@@ -398,8 +411,11 @@ def post_process(app, exception):
                 #f.write(text.decode('utf-8'))
                 f.write(text)
     pass
+
 def setup(app):
+    #app.connect('autodoc-process-docstring', sub_sentences)
     app.connect('autodoc-process-docstring', make_tableau_examples)
     app.connect('autodoc-process-docstring', make_truth_tables)
     app.connect('build-finished', post_process)
     app.add_css_file('pytableaux.css')
+    app.add_css_file('proof.css')

@@ -22,6 +22,22 @@
         </div>
     {% endif %}
     <form class="argument" action="/" method="post">
+        <fieldset class="logic">
+            <legend>Logic</legend>
+            <div class="input select">
+                <label for="selected_logic">Logic</label>
+                <select name="logic" id="selected_logic">
+                    {% for module in logic_modules -%}
+                        <option value="{{ module }}" {{- helper.select_opt(form_data, 'logic', module) }}>
+                            {{- logics[module].name|e -}}
+                        </option>                            
+                    {% endfor %}
+                </select>
+                <!-- <span class="logicHelp"><a href="/doc/logics.html#module-logics.cpl" target="_pytableaux_logic"></a></span><br>-->
+            </div>
+            
+            <div class="clear"></div>
+        </fieldset>
         <fieldset class="argument">
             <legend>Argument</legend>
             <div class="input select">
@@ -150,21 +166,9 @@
                     </table>
                 </div>
             </div>
-        </fieldset>
-        <fieldset class="options">
+        </fieldset>        
+        <fieldset class="output">
             <legend>Output</legend>
-            <div class="input select">
-                <label for="selected_logic">Logic</label>
-                <select name="logic" id="selected_logic">
-                    {% for module in logic_modules -%}
-                        <option value="{{ module }}" {{- helper.select_opt(form_data, 'logic', module) }}>
-                            {{- logics[module].name|e -}}
-                        </option>                            
-                    {% endfor %}
-                </select>
-                <!-- <span class="logicHelp"><a href="/doc/logics.html#module-logics.cpl" target="_pytableaux_logic"></a></span><br>-->
-            </div>
-            <div class="clear"></div>
             <div class="input select">
                 <label for="format">Format</label>
                 <select id="format" name="format">

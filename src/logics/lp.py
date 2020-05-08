@@ -69,7 +69,7 @@ For futher reading see:
 - `Stanford Encyclopedia entry on paraconsistent logic <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
 """
 name = 'LP'
-description = 'Logic of Paradox'
+title = 'Logic of Paradox'
 
 from . import fde, k
 

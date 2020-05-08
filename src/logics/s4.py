@@ -19,7 +19,7 @@
 # pytableaux - S4 Normal Modal Logic
 
 name = 'S4'
-description = 'S4 Normal Modal Logic'
+title = 'S4 Normal Modal Logic'
 
 def example_validities():
     from . import t
