@@ -19,24 +19,29 @@
 # pytableaux - Logic of Paradox
 
 """
-LP is a 3-valued logic (True, False, and Both). Two primitive operators, negation and
-disjunction, are defined via truth tables.
+LP is a 3-valued logic (True, False, and Both). It can be understood as `FDE`_ without
+the middle "neither" (*N*) value.
 
 Semantics
 ---------
 
-Truth-functional operators are defined via truth tables (below).
+Truth-functional operators are defined via truth tables (below). The truth tables resemble
+those of `FDE`_ with the *N* value removed.
 
-**Predicate Sentences** like *a is F* are handled via a predicate's *extension* and *anti-extension*:
+**Predicate Sentences** like *a is F* are handled via a predicate's *extension* and *anti-extension*,
+similar to `FDE`_:
 
 - *a is F* iff the object denoted by *a* is in the extension of *F*.
 
 - it's not the case that *a is F* iff the object denoted by *a* is in the anti-extension of *F*.
 
-There is **exhaustion constraint** on a predicate's extension/anti-extension, such that every
-object must be in a predicates extension or anti-extension. There is no exclusivity constraint, so
-an object might be in both the extension and anti-extesion of a predicate. Thus **Quantification**
-can be thought of along these lines:
+Also like `FDE`_, there is no exclusivity constraint, which means that an object
+might be in both the extension and this anti-extesion of a predicate.
+
+Unlike `FDE`_, however, there is an **exhaustion constraint** on a predicate's
+extension/anti-extension, which means that every object must be in (at least one of)
+a predicate's extension or anti-extension.  Thus **Quantification** is interpreted
+as follows:
 
 - **Universal Quantifier**: *for all x, x is F* has the value:
 
@@ -46,28 +51,33 @@ can be thought of along these lines:
 
 - **Existential Quantifier**: ``there exists an x that is F := not (for all x, not (x is F))``
 
-*C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is either **T** or
-**B** (the *designated* values) are cases where *C* also has a *designated* value.
-
-Notes
------
+**Logical Consequence** is defined just as in `FDE`_. *C* is a **Logical Consequence** of *A*
+iff all cases where the value of *A* is either **T** or **B** (the *designated* values) are
+cases where *C* also has a *designated* value.
 
 Some notable features of LP include:
 
-* Everything valid in FDE is valid in LP.
+* Everything valid in `FDE`_ is valid in LP.
 
-* Like FDE, the law of non-contradition fails.
+* Like `FDE`_, the Law of Non-Contradiction fails.
 
-* Unlike FDE, LP has some logical truths, for example the law of excluded middle, and conditional identity (if A then A).
+* Unlike `FDE`_, LP has some logical truths. For example, the Law of Excluded Middle (P{(A V ~A)}),
+  and Material Identity (P{(A > A)}).
 
-* Failure of Modus Ponens, Modus Tollens, Disjunctive Syllogism, and other Classical validities.
+* Many classical validities fail, such as Modus Ponens, Modus Tollens, and Disjunctive Syllogism.
 
 * DeMorgan laws are valid.
+
+References
+----------
 
 For futher reading see:
 
 - `Stanford Encyclopedia entry on paraconsistent logic <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
+
+.. _FDE: fde.html
 """
+
 name = 'LP'
 title = 'Logic of Paradox'
 
@@ -121,20 +131,23 @@ truth_function = fde.truth_function
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    LP's Tableaux System inherits directly from FDE's.
+    LP tableaux behave just like `FDE`_'s using designation markers. The trunk
+    is built in the same way.
     """
     pass
 
 class TableauxRules(object):
     """
-    The Tableaux System for LP contains all the rules from FDE, as well as an additional
-    Closure rule below.
+    The Tableaux System for LP contains all the rules from `FDE`_, as well as an additional
+    closure rule.
     """
 
     class Closure(logic.TableauxSystem.ClosureRule):
         """
         A branch closes when a sentence and its negation both appear as undesignated nodes.
-        This rule is **in addition to** the FDE Closure rule.
+        This rule is **in addition to** the `FDE closure rule`_.
+
+        .. _FDE closure Rule: fde.html#logics.fde.TableauxRules.Closure
         """
 
         def applies_to_branch(self, branch):
