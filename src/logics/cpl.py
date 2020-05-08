@@ -38,6 +38,9 @@ from . import k, fde
 
 name = 'CPL'
 title = 'Classical Predicate Logic'
+description = 'Standard bivalent logic with predication, without quantification'
+tags = set(['bivalent', 'non-modal'])
+tags_list = list(tags)
 
 def example_validities():
     # Everything valid in K3 or LP is valid in CPL, except quantifier validities

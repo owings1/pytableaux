@@ -33,6 +33,9 @@ Truth-functional operators are defined via truth tables below.
 """
 name = 'B3E'
 title = 'Bochvar 3 External Logic'
+description = 'Three-valued logic (True, False, Neither) with assertion operator'
+tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
+tags_list = list(tags)
 
 from . import k3, k3w, go, fde
 import logic

@@ -29,7 +29,7 @@ Semantics
 The truth-functional operators are defined via truth tables below.
 Negation is the same as K3, but the table for disjunction does not admit a sentence
 with the value **N** for *either* disjunct to be true. Likewise for the other
-binary connectives. Hence the saying "one bit of rat's dung spoils the soup," or something.
+binary connectives. Hence the saying "one bit of rat's dung spoils the soup,".
 
 **Predicate Sentences** and **Quantification** are handled the same as in FDE.
 
@@ -38,6 +38,9 @@ binary connectives. Hence the saying "one bit of rat's dung spoils the soup," or
 """
 name = 'K3W'
 title = 'Weak Kleene 3-valued logic'
+description = 'Three-valued logic (True, False, Neither)'
+tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
+tags_list = list(tags)
 
 from . import fde, k3
 

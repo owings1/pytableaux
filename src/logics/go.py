@@ -67,6 +67,9 @@ at the University of Connecticut, under `Professor Jc Beall`_.
 """
 name = 'GO'
 title = 'Gappy Object 3-valued Logic'
+description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
+tags = set(['many-valued', 'gappy', 'non-modal'])
+tags_list = list(tags)
 
 # Syllogism ?
 # Universal Predicate Syllogism ?

@@ -43,6 +43,9 @@ from . import k, cpl
 
 name = 'CFOL'
 title = 'Classical First Order Logic'
+description = 'Standard bivalent logic with full first-order quantification'
+tags = set(['bivalent', 'non-modal', 'first-order'])
+tags_list = list(tags)
 
 def example_validities():
     # Everything valid in CPL, K3, K3W, GO, or LP is valid in CFOL

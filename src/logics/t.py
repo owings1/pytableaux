@@ -30,6 +30,9 @@ Links
 """
 name = 'T'
 title = 'Reflexive Normal Modal Logic'
+description = 'Normal modal logic with a reflexive access relation'
+tags = set(['bivalent', 'modal', 'first-order'])
+tags_list = list(tags)
 
 def example_validities():
     from . import d

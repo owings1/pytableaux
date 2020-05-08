@@ -67,6 +67,9 @@ Some notable features of K3 include:
 """
 name = 'K3'
 title = 'Strong Kleene 3-valued logic'
+description = 'Three-valued logic (True, False, Neither)'
+tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
+tags_list = list(tags)
 
 from . import fde, k
 

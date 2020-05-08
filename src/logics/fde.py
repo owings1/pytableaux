@@ -69,6 +69,9 @@ For futher reading see:
 """
 name = 'FDE'
 title = 'First Degree Entailment'
+description = 'Four-valued logic (True, False, Neither, Both)'
+tags = set(['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order'])
+tags_list = list(tags)
 
 def example_validities():
     return set([

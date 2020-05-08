@@ -19,7 +19,7 @@
 # pytableaux - Lukasiewicz 3-valued Logic
 
 """
-Lukasiewicz 3-valued logic is the same as K3, with a different conditional
+Łukasiewicz 3-valued logic is the same as K3, with a different conditional
 operator that respects the law of conditional identity (if A, then A).
 
 Semantics
@@ -29,7 +29,10 @@ The semantics for L3 is the same as K3, except for the Conditional and Biconditi
 operators (see below).
 """
 name = 'L3'
-title = 'Lukasiewicz 3-valued Logic'
+title = 'Łukasiewicz 3-valued Logic'
+description = 'Three-valued logic (True, False, Neither) with a primitive Conditional operator'
+tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
+tags_list = list(tags)
 
 from . import fde, k3
 import logic

@@ -80,6 +80,9 @@ For futher reading see:
 
 name = 'LP'
 title = 'Logic of Paradox'
+description = 'Three-valued logic (True, False, Both)'
+tags = set(['many-valued', 'glutty', 'non-modal', 'first-order'])
+tags_list = list(tags)
 
 from . import fde, k
 

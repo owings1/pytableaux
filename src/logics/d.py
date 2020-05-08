@@ -33,6 +33,9 @@ Links
 """
 name = 'D'
 title = 'Deontic Normal Modal Logic'
+description = 'Normal modal logic with a serial access relation'
+tags = set(['bivalent', 'modal', 'first-order'])
+tags_list = list(tags)
 
 import logic
 from . import k

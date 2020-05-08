@@ -31,6 +31,9 @@ Links
 """
 name = 'K'
 title = 'Kripke Normal Modal Logic'
+description = 'Base normal modal logic with no access relation restrictions'
+tags = set(['bivalent', 'modal', 'first-order'])
+tags_list = list(tags)
 
 def example_validities():
     from . import cfol
