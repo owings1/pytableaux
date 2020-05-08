@@ -63,8 +63,6 @@ form.argument {
 }
 
 form.argument fieldset {
-    float: left;
-    min-width: 22%;
     border-color: #eee;
 }
 
@@ -166,6 +164,40 @@ table.predicates td, table.predicates th {
     background: url(/static/img/exclamation.png);
 }
 
+ul.details {
+    margin: 16px 0 0 0;
+    padding: 0;
+}
+
+ul.details li {
+    display: block;
+    padding: 0 8px 0 5px;
+    margin: 0 22px 16px 0;
+    border-left: 7px solid #eeeeee;
+}
+
+ul.details .prop {
+    font-style: italic;
+    font-size: 12px;
+}
+ul.details .prop::after {
+    content: "\a";
+    white-space: pre;
+}
+ul.details .value {
+    padding: 2px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.logic-details .tag {
+    border-radius: 0.75rem;
+    padding: 3px 8px 3px 8px;
+    margin: 3px 0 3px 0;
+    display: inline-block;
+    background-color: #003d4c38;
+    font-weight: normal;
+}
 ul.item-symbols {
     list-style-type: none;
     padding: 0;

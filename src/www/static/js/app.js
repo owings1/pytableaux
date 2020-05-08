@@ -45,10 +45,12 @@
                    refreshStatuses()
                })
               .on('change', 'input.sentence', refreshStatuses)
+              .on('change', '#selected_logic', refreshLogic)
             
             ensureEmptyPremise()
             ensureEmptyPredicate()
             refreshNotation()
+            refreshLogic()
         }
 
         /**
@@ -251,6 +253,17 @@
             if (!hasEmptyPredicate()) {
                 addEmptyPredicate()
             }   
+        }
+
+        /**
+         * Logic select change handler. Show appropriate logic information.
+         *
+         * @return void
+         */
+        function refreshLogic() {
+            const logicName = $('#selected_logic').val()
+            $('.logic-details').hide()
+            $('.logic-details.' + logicName).show()
         }
 
         /**
