@@ -7,7 +7,7 @@ LP - Logic of Paradox
     ---------------
 
     .. autoclass:: TableauxSystem
-        :members:
+        :members: build_trunk
 
     .. autoclass:: TableauxRules
         :members:
