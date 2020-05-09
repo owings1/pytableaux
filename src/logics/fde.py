@@ -615,8 +615,9 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             v = s.variable
+            si = s.sentence
             branch.add({
-                'sentence'   : quantify(self.convert_to, v, negate(s)),
+                'sentence'   : quantify(self.convert_to, v, negate(si)),
                 'designated' : d
             }).tick(node)
 
