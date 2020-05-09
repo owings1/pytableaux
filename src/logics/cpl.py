@@ -19,19 +19,40 @@
 # pytableaux - Classical Predicate Logic
 
 """
-Classical Predicate Logic (CPL) is the standard bivalent logic (True, False).
-
 Semantics
----------
+=========
 
-Truth functional operators are defined via truth tables (below).
+Classical Predicate Logic (CPL) is the standard bivalent logic with
+values **T** and **F**, commonly interpretated as 'true' and 'false',
+respectively.
+
+Truth Tables
+------------
+
+**Truth-functional operators** are defined via the following truth tables.
+
+/truth_tables/
+
+Predication
+-----------
 
 **Predicate Sentences** like *P{Fa}* are handled via a predicate's *extension*:
 
-- *P{Fa}* is true iff the object denoted by the constant *a* is in the extension of the predicate *F*.
+- *P{Fa}* is true iff the object denoted by *a* is in the extension of the predicate *F*.
 
-*C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is true
-are cases where *C* also has the value true.
+Quantification
+--------------
+CPL does not have quantification. See `CFOL`_.
+
+Logical Consequence
+-------------------
+
+**Logical Consequence** is defined as follows:
+
+- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
+  are cases where *C* also has the value **T**.
+
+.. _CFOL: cfol.html
 """
 
 from . import k, fde
@@ -161,9 +182,10 @@ class NonModal(object):
 
 class TableauxRules(object):
     """
-    The Tableaux System for CPL contains all the operator rules from K, except for
-    the rules for the modal operators (Necessity, Possibility), and the quantifiers
-    (Universal, Existential).
+    In general, rules for connectives consist of two rules per connective:
+    a "plain" rule, and a negated rule. The special case of negation has only
+    one rule for double negation. There is also a special rule for Identity
+    predicate.
     """
 
     class Closure(logic.TableauxSystem.ClosureRule):
@@ -184,7 +206,7 @@ class TableauxRules(object):
 
     class SelfIdentityClosure(NonModal, k.TableauxRules.SelfIdentityClosure):
         """
-        A branch is closed if a sentence of the form *~ a = a* appears on the branch.
+        A branch is closed if a sentence of the form P{~ a = a} appears on the branch.
         """
 
         def example(self):

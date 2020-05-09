@@ -19,51 +19,84 @@
 # pytableaux - Strong Kleene Logic
 
 """
-K3 is a 3-valued logic (True, False, and Neither).
-
 Semantics
----------
+=========
 
-The semantics of K3 can be thought of as the same as FDE, with the **B** value removed.
+K3 is a three-valued logic (**T**, **F**, and **N**). It can be understood as `FDE`_
+without the **B** value. A common interpretation of these values is:
 
-The truth-functional operators are defined via truth tables below.
+- **T**: true
+- **F**: false
+- **N**: neither true nor false
 
-**Predicate Sentences** like *a is F* are handled via a predicate's *extension* and *anti-extension*:
+Truth Tables
+------------
 
-- *a is F* iff the object denoted by *a* is in the extension of *F*.
+**Truth-functional operators** are defined via the following truth tables. The truth tables
+resemble those of `FDE`_ with the *B* value removed.
 
-- it's not the case that *a is F* iff the object denoted by *a* is in the anti-extension of *F*.
+/truth_tables/
 
-There is an **exclusivity constraint** on a predicate's extension/anti-extension, such that no
-object can be in both a predicate's extension and its anti-extension. There is no exhaustion
-constraint, however, so an object may fail to be in either a predicate's extension or anti-extension
-Thus **Quantification** can be thought of along these lines:
+Predication
+-----------
+
+**Predicate Sentences** like P{Fa} are handled via a predicate's *extension* and *anti-extension*,
+similar to `FDE`_:
+
+- P{Fa} is true iff the object denoted by *a* is in the extension of *F*.
+
+- P{Fa} is false iff the object denoted by *a* is in the anti-extension of *F*.
+
+Like in `FDE`_, there is no exhaustion constraint, which means that an object
+might be in neither the extension nor the anti-extesion of a predicate.
+
+Unlike `FDE`_, however, there is an **exclusivity constraint** on a predicate's extension/anti-extension.
+This means that no object can be in both a predicate's extension and its anti-extension.
+
+In this way, a sentence P{Fa} gets the value:
+
+- **T** iff *a* is in the extension of *F*.
+- **F** iff *a* is in the anti-extension of *F*.
+- **N** iff *a* is neither in the extension nor the anti-extension of *F*.
+
+Quantification
+--------------
+
+**Quantification** is interpreted as follows:
 
 - **Universal Quantifier**: *for all x, x is F* has the value:
 
-    - **T** iff everything is in the extension of *F* and its anti-extension is empty.
+    - **T** iff everything is in the extension of *F*.
     - **N** iff not everything is in the extension of *F* and its anti-extension is empty.
     - **F** iff not everything is in the extension of *F* and its anti-extension is non-empty.
 
-- **Existential Quantifier**: ``there exists an x that is F := not (for all x, not (x is F))``
+- **Existential Quantifier**: P{XxFx} is interpreted as P{~Lx~Fx}.
 
-*C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
-are cases where *C* also has the value **T**.
+Logical Consequence
+-------------------
+
+**Logical Consequence** is defined just like in `CPL`_:
+
+- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
+  are cases where *C* also has the value **T**.
 
 Notes
 -----
 
 Some notable features of K3 include:
 
-* Everything valid in FDE is valid in K3.
+* Everything valid in `FDE`_ is valid in K3.
 
-* Like FDE, the law of excluded middle, and conditional identity (if A then A) fail.
+* Like `FDE`_, the law of excluded middle, and Conditional Identity P{(A $ A)} fail.
 
-* Unlike FDE, K3 has some logical truths, for example the law of non-contradiction, and conditional identity (if A then A).
+* Unlike `FDE`_, K3 has some logical truths, for example the Law of Non-Contradiction,
+  P{~(A & ~A)}, and Conditional Identity P{A $ A}.
 
-* Some Classical validities such as Modus Ponens, Modus Tollens, Disjunctive Syllogism, are valid.
+* Some Classical validities, such as Modus Ponens, Modus Tollens, Disjunctive Syllogism,
+  and DeMorgan laws, are valid.
 
-* DeMorgan laws are valid.
+.. _FDE: fde.html
+.. _CPL: cpl.html
 """
 name = 'K3'
 title = 'Strong Kleene 3-valued logic'
@@ -121,20 +154,22 @@ truth_function = fde.truth_function
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    K3's Tableaux System inherits directly from FDE's.
+    K3's Tableaux System inherits directly from `FDE`_'s.
     """
     pass
         
 class TableauxRules(object):
     """
-    The Tableaux System for K3 contains all the rules from FDE, as well as an additional
-    Closure rule below.
+    The Tableaux System for K3 contains all the rules from `FDE`_, as well as an additional
+    closure rule.
     """
     
     class Closure(logic.TableauxSystem.ClosureRule):
         """
         A branch closes when a sentence and its negation both appear as designated nodes.
-        This rule is **in addition to** the FDE Closure rule.
+        This rule is **in addition to** the `FDE closure rule`_.
+
+        .. _FDE closure Rule: fde.html#logics.fde.TableauxRules.Closure
         """
         
         def applies_to_branch(self, branch):

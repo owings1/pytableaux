@@ -1,6 +1,6 @@
-******
+######
 Logics
-******
+######
 
 .. toctree::
     :maxdepth: 1

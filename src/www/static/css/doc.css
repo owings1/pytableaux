@@ -32,3 +32,7 @@ body {
 .truth-table td {
     padding: 10px;
 }
+
+.contents > ul li p {
+    margin-block-end: 0;
+}

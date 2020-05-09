@@ -299,24 +299,30 @@ def get_truth_table_html(log, operator, table):
     return s
 
 def make_truth_tables(app, what, name, obj, options, lines):
+    srch = '/truth_tables/'
     if what == 'module' and hasattr(obj, 'TableauxSystem'):
-        if hasattr(obj, 'truth_functional_operators'):
+        if hasattr(obj, 'truth_functional_operators') and srch in lines:
+            idx = lines.index(srch)
+            pos = idx + 1
             tables = {operator: logic.truth_table(obj, operator) for operator in obj.truth_functional_operators}
-            lines += [
-                'Truth Tables',
-                '------------',
-                '',
-                '.. raw:: html',
-                ''
-            ]
+            lines[idx] = '.. raw:: html'
+            #lines += [
+            #    'Truth Tables',
+            #    '------------',
+            #    '',
+            #    '.. raw:: html',
+            #    ''
+            #]
+            new_lines = ['']
             for operator in logic.operators_list:
                 if operator in tables:
                     html = get_truth_table_html(obj, operator, tables[operator])
-                    lines += ['    ' + line for line in html.split('\n')]
-            lines += [
+                    new_lines += ['    ' + line for line in html.split('\n')]
+            new_lines += [
                 '    <div class="clear"></div>',
                 ''
             ]
+            lines[pos:pos] = new_lines
 
 header_written = False
 def make_tableau_examples(app, what, name, obj, options, lines):
@@ -417,5 +423,5 @@ def setup(app):
     app.connect('autodoc-process-docstring', make_tableau_examples)
     app.connect('autodoc-process-docstring', make_truth_tables)
     app.connect('build-finished', post_process)
-    app.add_css_file('pytableaux.css')
+    app.add_css_file('doc.css')
     app.add_css_file('proof.css')
