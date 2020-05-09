@@ -218,6 +218,74 @@ class TableauxRules(object):
                 { 'sentence' : a, 'designated' : False }
             ])
 
+    class DoubleNegationDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked designated negated negation node *n* on a branch *b*, add a designated
+        node to *b* with the double-negatum of *n*, then tick *n*.
+        """
+
+        negated     = True
+        operator    = 'Negation'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+
+    class DoubleNegationUndesignated(DoubleNegationDesignated):
+        """
+        From an unticked undesignated negated negation node *n* on a branch *b*, add an
+        undesignated node to *b* with the double-negatum of *n*, then tick *n*.
+        """
+
+        designation = False
+
+    class AssertionDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, assertion node *n* on a branch *b*, add a designated
+        node to *b* with the operand of *b*, then tick *n*.
+        """
+
+        operator = 'Assertion'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+
+    class AssertionUndesignated(AssertionDesignated):
+        """
+        From an unticked, undesignated, assertion node *n* on a branch *b*, add an undesignated
+        node to *b* with the operand of *n*, then tick *n*.
+        """
+
+        designation = False
+
+    class AssertionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, negated assertion node *n* on branch *b*, add a designated
+        node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
+        """
+
+        operator = 'Assertion'
+        negated = True
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : negate(s.operand), 'designated' : d }).tick(node)
+
+    class AssertionNegatedUndesignated(AssertionNegatedDesignated):
+        """
+        From an unticked, undesignated, negated assertion node *n* on branch *b*, add an undesignated
+        node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
+        """
+
+        designation = False
+
     class ConjunctionDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated conjunction node *n* on a branch *b*, for each conjunct
@@ -724,74 +792,6 @@ class TableauxRules(object):
 
         quantifier  = 'Universal'
         convert_to  = 'Existential'
-        designation = False
-
-    class DoubleNegationDesignated(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked designated negated negation node *n* on a branch *b*, add a designated
-        node to *b* with the double-negatum of *n*, then tick *n*.
-        """
-
-        negated     = True
-        operator    = 'Negation'
-        designation = True
-
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
-
-    class DoubleNegationUndesignated(DoubleNegationDesignated):
-        """
-        From an unticked undesignated negated negation node *n* on a branch *b*, add an
-        undesignated node to *b* with the double-negatum of *n*, then tick *n*.
-        """
-
-        designation = False
-
-    class AssertionDesignated(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked, designated, assertion node *n* on a branch *b*, add a designated
-        node to *b* with the operand of *b*, then tick *n*.
-        """
-
-        operator = 'Assertion'
-        designation = True
-
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
-
-    class AssertionUndesignated(AssertionDesignated):
-        """
-        From an unticked, undesignated, assertion node *n* on a branch *b*, add an undesignated
-        node to *b* with the operand of *n*, then tick *n*.
-        """
-
-        designation = False
-
-    class AssertionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked, designated, negated assertion node *n* on branch *b*, add a designated
-        node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
-        """
-
-        operator = 'Assertion'
-        negated = True
-        designation = True
-
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            branch.add({ 'sentence' : negate(s.operand), 'designated' : d }).tick(node)
-
-    class AssertionNegatedUndesignated(AssertionNegatedDesignated):
-        """
-        From an unticked, undesignated, negated assertion node *n* on branch *b*, add an undesignated
-        node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
-        """
-
         designation = False
 
     rules = [
