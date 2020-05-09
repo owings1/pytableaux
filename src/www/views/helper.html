@@ -42,3 +42,7 @@
 {% macro checkbox_default(form_data, key, value) -%}
     {% if key not in form_data or (form_data[key] == value or value in form_data[key]) %} checked="checked"{% endif %}
 {%- endmacro %}
+
+{% macro hidden_if(value) -%}
+    {% if value %} hidden{% endif %}
+{%- endmacro %}

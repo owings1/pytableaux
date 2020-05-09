@@ -23,7 +23,13 @@ body {
     margin: 0;
     padding: 0;
 }
-
+fieldset legend {
+    font-size: 18px;
+    cursor: pointer;
+}
+.toggler {
+    cursor: pointer;
+}
 .headerWrapper, .footerWrapper {
     position: fixed;
     width: 100%;
@@ -126,7 +132,9 @@ form.argument select, input[type=submit] {
     clear: both;
     min-width: 12px;
 }
-
+form.argument div.predicates {
+    max-width: 300px;
+}
 table.predicates {
     width: 100%;
 }

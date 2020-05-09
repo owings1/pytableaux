@@ -46,7 +46,12 @@
                })
               .on('change', 'input.sentence', refreshStatuses)
               .on('change', '#selected_logic', refreshLogic)
-            
+              .on('click', 'legend', function() {
+                   $(this).next('.fieldset-contents').toggle()
+               })
+            $('.toggler').on('click', function() {
+                $($(this).attr('data-target')).toggle()
+            })
             ensureEmptyPremise()
             ensureEmptyPredicate()
             refreshNotation()

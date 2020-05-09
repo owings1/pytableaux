@@ -189,6 +189,7 @@ class App(object):
                 argument = logic.argument(conclusion, premises)
                 proof = logic.tableau(selected_logic, argument).build()
                 data.update({
+                    'is_proof'   : True,
                     'tableau'    : proof,
                     'notation'   : notation,
                     'sw'         : sw,
