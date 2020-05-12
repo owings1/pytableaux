@@ -282,7 +282,7 @@ class TableauxRules(object):
 
     class SelfIdentityClosure(logic.TableauxSystem.ClosureRule):
         """
-        A branch closes when a sentence of the form *~ a = a* appears on the branch *at any world*.
+        A branch closes when a sentence of the form P{~a = a} appears on the branch *at any world*.
         """
 
         def applies_to_branch(self, branch):
@@ -736,19 +736,21 @@ class TableauxRules(object):
                     # let s1 be the replacement of p with the other parameter p1 into s.
                     params = [p1 if param == p else param for param in s.parameters]
                     s1 = predicated(s.predicate, params)
-                    # if <s1,w> does not yet appear on b, ...
-                    if not branch.has({ 'sentence' : s1, 'world' : w }):
-                        # then the rule applies to <s',w,b>
-                        return { 'sentence' : s1, 'world' : w, 'branch' : branch }
+                    # since we have SelfIdentityClosure, we don't need a = a
+                    if s.predicate.name != 'Identity' or params[0] != params[1]:
+                        # if <s1,w> does not yet appear on b, ...
+                        if not branch.has({ 'sentence' : s1, 'world' : w }):
+                            # then the rule applies to <s',w,b>
+                            return { 'sentence' : s1, 'world' : w, 'branch' : branch }
             return False
 
         def apply(self, target):
             target['branch'].add({ 'sentence' : target['sentence'], 'world' : target['world'] })
 
         def example(self):
-            self.tableau.branch().update([
+            self.tableau.branch().update([ 
                 { 'sentence' : examples.predicated(), 'world' : 0 },
-                { 'sentence' : examples.identity(),   'world' : 0 }
+                { 'sentence' : examples.identity(),   'world' : 0 },
             ])
 
     rules = [
@@ -757,7 +759,6 @@ class TableauxRules(object):
         SelfIdentityClosure,
 
         # non-branching rules
-        #IdentityReflexivity,
         IdentityIndiscernability,
         Assertion,
         AssertionNegated,
