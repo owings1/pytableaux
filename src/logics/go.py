@@ -18,43 +18,61 @@
 #
 # pytableaux - Gappy Object 3-valued Logic
 """
-GO is a 3-valued (True, False, Neither) logic, with non-standard readings of
-disjunction and conjunction. It has some similarities to K3, e.g. Material
-Identity and the Law of Excluded Middle fail, however, unlike K3, there are
-logical truths. It contains an additional conditional operator besides the
-material conditional, which is similar to L3. However, this conditional is
-*non-primitive*, and obeys contraction (if A and (if A then B) implies if A then B).
-
 Semantics
----------
+=========
+
+GO is a 3-valued logic (**T**, **F**, and **N**) with non-standard readings of
+disjunction and conjunction.
+
+Truth Tables
+------------
 
 The truth-functional operators are defined via tables below.
 
-Note that, given the tables below, conjunctions and disjunctions always have a classical
-value (True or False). This means that only atomic sentences (with zero or more negations)
-can have the Neither value.
+/truth_tables/
+
+Note that, given the tables above, conjunctions and disjunctions always have a classical
+value (**T** or **F**). This means that only atomic sentences (with zero or more negations)
+can have the non-classical **N** value.
 
 This property of "classical containment" means, that we can define a conditional operator
-that satisfies Identity (if A then A). It also allows us to give a formal description of
+that satisfies Identity P{A $ A}. It also allows us to give a formal description of
 a subset of sentences that obey all principles of classical logic. For example, although
-the Law of Excluded Middle fails for atomic sentences (A or not-A), complex sentences -- those
-with at least one binary connective -- do obey the law: (A or A) or not-(A or A).
+the Law of Excluded Middle fails for atomic sentences P{A V ~A}, complex sentences -- those
+with at least one binary connective -- do obey the law: P{(A V A) V ~(A V A)}.
 
-**Predicate Sentences** are handled the same way as in K3.
+Predication
+-----------
 
-**Quantification** is defined in a different way, in accordance with thinking of the
-universal and existential quantifiers as generalized conjunction and disjunction,
-respectively.
+**Predicate Sentences** are handled the same way as in `K3 Predication`_.
 
-- **Universal Quantifier**: *for all x, x is F* has the value **T** iff everything is in 
+Quantification
+--------------
+
+**Quantification** is defined as follows:
+
+- **Universal Quantifier**: P{LxFx} has the value **T** iff everything is in 
   the extension of *F*, else it has the value *F*.
 
-- **Existential Quantifier**: *there exists an x that is F* has the value **T** iff
+- **Existential Quantifier**: P{XxFx} has the value **T** iff
   something is in the extension of *F*, else it has the value *F*.
 
+This is in accordance with thinking of the universal and existential quantifiers
+as generalized conjunction and disjunction, respectively. Since conjunctions and
+disjunctions can only have a classical value (**T** or **F**), so, too, must
+quantified sentences.
 
-References
-----------
+Notes
+-----
+
+- GO has some similarities to `K3`_. Material Identity P{A $ A} and the
+  Law of Excluded Middle P{A V ~A} fail.
+
+- Unlike `K3`_, there are logical truths, e.g. The Law of Non Contradiction P{~(A & ~A)}.
+
+- GO contains an additional conditional operator besides the material conditional,
+  which is similar to `L3`_. However, this conditional is *non-primitive*, unlike `L3`_,
+  and it obeys contraction (P{A $ (A $ B)} implies P{A $ B}).
 
 This logic was developed as part of my dissertation, `Indeterminacy and Logical Atoms`_
 at the University of Connecticut, under `Professor Jc Beall`_.
@@ -63,6 +81,14 @@ at the University of Connecticut, under `Professor Jc Beall`_.
 .. _Professor Jc Beall: http://entailments.net
 
 .. _Indeterminacy and Logical Atoms: https://bitbucket.org/owings1/dissertation/raw/master/output/dissertation.pdf
+
+.. _K3: k3.html
+
+.. _K3 Predication: k3.html#predication
+
+.. _L3: l3.html
+
+.. _FDE: fde.html
 
 """
 name = 'GO'
@@ -112,9 +138,9 @@ def example_invalidities():
     ])
     return args
 
-import logic, math
+import logic, math, examples
 from . import fde, k3
-from logic import negate, operate
+from logic import negate, operate, quantify
 
 truth_values = k3.truth_values
 truth_value_chars = k3.truth_value_chars
@@ -149,26 +175,93 @@ def truth_function(operator, a, b=None):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    GO's Tableaux System inherits directly from FDE's.
+    GO's Tableaux System inherits directly from `FDE`_'s, employing designation markers,
+    and building the trunk in the same way.
     """
     pass
 
 class TableauxRules(object):
     """
-    The rules for GO consist of the rules for K3, except for those defined below.
+    The closure rules for GO are the `FDE closure rule`_, and the `K3 closure rule`_.
+    Most of the operators rules are unique to GO, with only a few rules that are
+    the same as `FDE`_.
+    
+    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
+    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
     """
 
-    class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
         """
-        From an unticked, undesignated conjunction node *n* on a branch *b*, add a
-        designated node to *b* with the negation of the conjunction, then tick *n*.
-        """
+        This rule is the same as the `FDE DoubleNegationDesignated rule`_.
 
-        operator    = 'Conjunction'
-        designation = False
+        .. _FDE DoubleNegationDesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationDesignated
+        """
+        pass
+
+    class DoubleNegationUndesignated(fde.TableauxRules.DoubleNegationUndesignated):
+        """
+        This rule is the same as the `FDE DoubleNegationUndesignated rule`_.
+
+        .. _FDE DoubleNegationUndesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationUndesignated
+        """
+        pass
+
+    class AssertionDesignated(fde.TableauxRules.AssertionDesignated):
+        """
+        This rule is the same as the `FDE AssertionDesignated rule`_.
+
+        .. _FDE AssertionDesignated rule: fde.html#logics.fde.TableauxRules.AssertionDesignated
+        """
+        pass
+
+    class AssertionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated, negated assertion node *n* on a branch *b*,
+        add an undesignated node to *b* with the assertion of *n*, then tick *n*.
+        """
+        operator    = 'Assertion'
+        negated     = True
+        designation = True
 
         def apply_to_node(self, node, branch):
-            branch.add({ 'sentence': negate(node.props['sentence']), 'designated' : True }).tick(node)
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : s.operand, 'designated' : not d }).tick(node)
+
+    class AssertionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, undesignated assertion node *n* on a branch *b*, add
+        an undesignated node to *b* with the assertion of *n*, then tick *n*.
+        """
+
+        operator = 'Assertion'
+        designation = False
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+
+    class AssertionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
+        an designated node to *b* with the assertion of *n*, then tick *n*.
+        """
+
+        operator    = 'Assertion'
+        negated     = True
+        designation = False
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+
+    class ConjunctionDesignated(fde.TableauxRules.ConjunctionDesignated):
+        """
+        This rule is the same as the `FDE ConjunctionDesignated rule`_.
+
+        .. _FDE ConjunctionDesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionDesignated
+        """
+        pass
 
     class ConjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -189,6 +282,18 @@ class TableauxRules(object):
             b1.add({ 'sentence' : s.lhs, 'designated' : False }).tick(node)
             b2.add({ 'sentence' : s.rhs, 'designated' : False }).tick(node)
 
+    class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, undesignated conjunction node *n* on a branch *b*, add a
+        designated node to *b* with the negation of the conjunction, then tick *n*.
+        """
+
+        operator    = 'Conjunction'
+        designation = False
+
+        def apply_to_node(self, node, branch):
+            branch.add({ 'sentence': negate(node.props['sentence']), 'designated' : True }).tick(node)
+
     class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*,
@@ -203,6 +308,14 @@ class TableauxRules(object):
             s = self.sentence(node)
             branch.add({ 'sentence' : s, 'designated' : True }).tick(node)
 
+    class DisjunctionDesignated(fde.TableauxRules.DisjunctionDesignated):
+        """
+        This rule is the same as the `FDE DisjunctionDesignated rule`_.
+
+        .. _FDE DisjunctionDesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionDesignated
+        """
+        pass
+        
     class DisjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, designated, negated disjunction node *n* on a branch *b*,
@@ -236,6 +349,14 @@ class TableauxRules(object):
 
         operator = 'Disjunction'
 
+    class MaterialConditionalDesignated(fde.TableauxRules.MaterialConditionalDesignated):
+        """
+        This rule is the same as the `FDE MaterialConditionalDesignated rule`_.
+
+        .. _FDE MaterialConditionalDesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalDesignated
+        """
+        pass
+        
     class MaterialConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, designated, negated material conditional node *n* on a branch
@@ -270,6 +391,14 @@ class TableauxRules(object):
 
         operator = 'Material Conditional'
 
+    class MaterialBiconditionalDesignated(fde.TableauxRules.MaterialBiconditionalDesignated):
+        """
+        This rule is the same as the `FDE MaterialBiconditionalDesignated rule`_.
+
+        .. _FDE MaterialBiconditionalDesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalDesignated
+        """
+        pass
+        
     class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, designated, negated, material biconditional node *n* on a branch
@@ -429,6 +558,45 @@ class TableauxRules(object):
 
         operator = 'Biconditional'
 
+    class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
+        """
+        This rule is the same as the `FDE ExistentialDesignated rule`_.
+
+        .. _FDE ExistentialDesignated rule: fde.html#logics.fde.TableauxRules.ExistentialDesignated
+        """
+        pass
+        
+    class ExistentialNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+        """
+        From an unticked, designated negated existential node *n* on a branch *b*, make two branches
+        *b'* and *b''* from *b*. On *b'*, add a designtated node with the standard 
+        translation of the sentence on *b*. For *b''*, substitute a new constant *c* for
+        the quantified variable, and add two undesignated nodes to *b''*, one with the
+        substituted inner sentence, and one with its negation, then tick *n*.
+        """
+
+        quantifier  = 'Existential'
+        designation = True
+        negated     = True
+        convert_to  = 'Universal'
+
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            v = s.variable
+
+            c = branch.new_constant()
+            si = s.sentence
+            ss = s.substitute(c, v)
+
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b1.add({'sentence': quantify(self.convert_to, v, negate(si)), 'designated': d}).tick(node)
+            b2.update([
+                {'sentence': ss, 'designated': not d},
+                {'sentence': negate(ss), 'designated': not d}
+            ]).tick(node)
+
     class ExistentialUndesignated(ConjunctionUndesignated):
         """
         From an unticked, undesignated existential node *n* on a branch *b*, add a designated
@@ -438,6 +606,43 @@ class TableauxRules(object):
         operator   = None
         quantifier = 'Existential'
 
+    class ExistentialNegatedUndesignated(ConjunctionNegatedUndesignated):
+        """
+        From an unticked, undesignated negated existential node *n* on a branch *b*, add a designated
+        node to *b* with the negated existential sentence (negatum), then tick *n*.
+        """
+
+        operator   = None
+        quantifier = 'Existential'
+
+
+    class UniversalDesignated(fde.TableauxRules.UniversalDesignated):
+        """
+        This rule is the same as the `FDE UniversalDesignated rule`_.
+
+        .. _FDE UniversalDesignated rule: fde.html#logics.fde.TableauxRules.UniversalDesignated
+        """
+        pass
+        
+    class UniversalNegatedDesignated(ExistentialNegatedDesignated):
+        """
+        From an unticked, designated universal existential node *n* on a branch *b*, make two branches
+        *b'* and *b''* from *b*. On *b'*, add a designtated node with the standard 
+        translation of the sentence on *b*. For *b''*, substitute a new constant *c* for
+        the quantified variable, and add two undesignated nodes to *b''*, one with the
+        substituted inner sentence, and one with its negation, then tick *n*.
+        """
+        quantifier = 'Universal'
+        convert_to = 'Existential'
+
+        def example_node(self):
+            # Override for more meaningful example
+            s = examples.quantified('Existential')
+            return {
+                'sentence'   : negate(quantify('Universal', s.variable, s.sentence)),
+                'designated' : self.designation
+            }
+
     class UniversalUndesignated(ExistentialUndesignated):
         """
         From an unticked, undesignated universal node *n* on a branch *b*, add a designated
@@ -446,63 +651,13 @@ class TableauxRules(object):
 
         quantifier = 'Universal'
 
-    class ExistentialNegatedDesignated(object):
-        # needs implemented
-        pass
-
-    class ExistentialNegatedUndesignated(object):
-        pass
-
-    class UniversalNegatedDesignated(object):
-        # """
-        #         not(Forall x: Fx) is True. Thus (Forall x: Fx) is False.
-        #         """
-        # needs implmented
-        pass
-
-    class UniversalNegatedUndesignated(object):
-        pass
-
-    class AssertionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class UniversalNegatedUndesignated(ExistentialNegatedUndesignated):
         """
-        From an unticked, undesignated assertion node *n* on a branch *b*, add
-        an undesignated node to *b* with the assertion of *n*, then tick *n*.
+        From an unticked, undesignated negated universal node *n* on a branch *b*, add a designated
+        node to *b* with the negated universal sentence (negatum), then tick *n*.
         """
 
-        operator = 'Assertion'
-        designation = False
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
-
-    class AssertionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked, designated, negated assertion node *n* on a branch *b*,
-        add an undesignated node to *b* with the assertion of *n*, then tick *n*.
-        """
-        operator    = 'Assertion'
-        negated     = True
-        designation = True
-
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : not d }).tick(node)
-
-    class AssertionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
-        """
-        From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
-        an designated node to *b* with the assertion of *n*, then tick *n*.
-        """
-
-        operator    = 'Assertion'
-        negated     = True
-        designation = False
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+        quantifier = 'Universal'
 
     rules = [
 
@@ -511,11 +666,11 @@ class TableauxRules(object):
         k3.TableauxRules.Closure,
 
         # non-branching rules
-        fde.TableauxRules.AssertionDesignated,
+        AssertionDesignated,
         AssertionUndesignated,
         AssertionNegatedDesignated,
         AssertionNegatedUndesignated,
-        fde.TableauxRules.ConjunctionDesignated,
+        ConjunctionDesignated,
         ConjunctionUndesignated,
         ConjunctionNegatedUndesignated,
         DisjunctionNegatedDesignated,
@@ -531,21 +686,24 @@ class TableauxRules(object):
         BiconditionalUndesignated,
         BiconditionalNegatedUndesignated,
         BiconditionalDesignated,
-        fde.TableauxRules.UniversalDesignated,
-        fde.TableauxRules.ExistentialDesignated,
-        UniversalUndesignated,
+        ExistentialDesignated,
         ExistentialUndesignated,
-        fde.TableauxRules.DoubleNegationDesignated,
-        fde.TableauxRules.DoubleNegationUndesignated,
+        ExistentialNegatedUndesignated,
+        UniversalDesignated,
+        UniversalUndesignated,
+        UniversalNegatedUndesignated,
+        DoubleNegationDesignated,
+        DoubleNegationUndesignated,
 
         # branching rules
-        fde.TableauxRules.DisjunctionDesignated,
+        DisjunctionDesignated,
         ConjunctionNegatedDesignated,
-        fde.TableauxRules.MaterialConditionalDesignated,
-        fde.TableauxRules.MaterialBiconditionalDesignated,
+        MaterialConditionalDesignated,
+        MaterialBiconditionalDesignated,
         MaterialBiconditionalNegatedDesignated,
         ConditionalDesignated,
         ConditionalNegatedDesignated,
-        BiconditionalNegatedDesignated
-
+        BiconditionalNegatedDesignated,
+        ExistentialNegatedDesignated,
+        UniversalNegatedDesignated,
     ]
