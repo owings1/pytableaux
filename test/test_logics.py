@@ -798,22 +798,22 @@ class TestK(LogicTester):
         assert res == 0
 
     # TODO: failing
-    #def test_model_universal_user_pred_false(self):
-    #    v = Vocabulary()
-    #    v.declare_predicate('MyPred', 0, 0, 1)
-    #    m = constant(0, 0)
-    #    n = constant(1, 0)
-    #    x = variable(0, 0)
-    #    s1 = predicated('MyPred', [m], v)
-    #    s2 = predicated('MyPred', [x], v)
-    #    s3 = predicated('MyPred', [n], v)
-    #    s4 = quantify('Universal', x, s2)
-    #
-    #    model = self.logic.Model()
-    #    model.set_predicated_value(s1, 1, 0)
-    #    model.set_predicated_value(s3, 0, 0)
-    #    res = model.value_of(s4, 0)
-    #    assert res == 1
+    def test_model_universal_user_pred_false(self):
+        v = Vocabulary()
+        v.declare_predicate('MyPred', 0, 0, 1)
+        m = constant(0, 0)
+        n = constant(1, 0)
+        x = variable(0, 0)
+        s1 = predicated('MyPred', [m], v)
+        s2 = predicated('MyPred', [x], v)
+        s3 = predicated('MyPred', [n], v)
+        s4 = quantify('Universal', x, s2)
+    
+        model = self.logic.Model()
+        model.set_predicated_value(s1, 1, 0)
+        model.set_predicated_value(s3, 0, 0)
+        res = model.value_of(s4, 0)
+        assert res == 0
 
 class TestD(LogicTester):
 
