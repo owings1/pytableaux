@@ -57,12 +57,15 @@
                         refreshOutputHeader()
                     }
                 })
-                .on('click', '.heading', function() {
-                    const $contents = $(this).closest('.fieldset').find('.fieldset-contents')
+                .on('click', '.heading', function(e) {
+                    const $me = $(this)
+                    const $contents = $me.closest('.fieldset').find('.fieldset-contents')
                     const isVisible = $contents.is(':visible')
-                    $('.fieldset-contents').hide()
+                    $('.fieldset-contents').removeClass('uncollapsed').addClass('collapsed').hide('fast')
+                    $('.heading', 'form.argument').removeClass('uncollapsed').addClass('collapsed')
                     if (!isVisible) {
-                        $contents.show()
+                        $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
+                        $me.removeClass('collapsed').addClass('uncollapsed')
                     }
                  })
 
@@ -74,10 +77,10 @@
                 $wrapper = $('#lexicons-wrapper', 'form.argument')
                 if ($me.hasClass('collapsed')) {
                     $me.add($wrapper).removeClass('collapsed').addClass('uncollapsed')
-                    $contents.removeClass('collapsed').addClass('uncollapsed').show()
+                    $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
                 } else {
                     $me.add($wrapper).removeClass('uncollapsed').addClass('collapsed')
-                    $contents.removeClass('uncollapsed').addClass('collapsed').hide()
+                    $contents.removeClass('uncollapsed').addClass('collapsed').hide('fast')
                 }
             })
 

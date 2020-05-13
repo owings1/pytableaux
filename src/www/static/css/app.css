@@ -103,6 +103,26 @@ select#example_argument {
 .right {
     float: right;
 }
+
+.ui-selectmenu-menu .ui-menu {
+    max-height: 300px;
+}
+form.argument .heading .legend::after {
+    content: "";
+    opacity: 75%;
+    margin-right: 10px;
+    width: 22px;
+    height: 22px;
+    background-size: 22px 22px;
+    display: inline-block;
+    float: right;
+}
+form.argument .heading.collapsed .legend::after {
+    background-image: url(../img/plus-medium.png);
+}
+form.argument .heading.uncollapsed .legend::after {
+    background-image: url(../img/minus-medium.png);
+}
 form.argument select[name=logic] {
     padding: 3px 0 0 3px;
 }
@@ -160,6 +180,7 @@ form.argument select, input[type=submit] {
 }
 #lexicons-heading {
     cursor: pointer;
+    color: #333333;
 }
 #lexicons-heading::before {
     background-image: url(../img/book.png);
@@ -169,6 +190,7 @@ form.argument select, input[type=submit] {
     height: 16px;
     margin-right: 5px;
     content: "";
+    opacity: 65%;
 }
 #lexicons-heading::after {
     background-size: 16px 16px;
@@ -177,6 +199,7 @@ form.argument select, input[type=submit] {
     height: 16px;
     float: right;
     content: "";
+    opacity: 45%;
 }
 #lexicons-heading.uncollapsed::after {
     background-image: url(../img/double-left-arrow.png);

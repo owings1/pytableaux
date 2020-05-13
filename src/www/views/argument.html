@@ -23,7 +23,7 @@
     {% endif %}
     <form class="argument" action="/" method="post">
         <div class="fieldset logic">
-            <div class="heading">
+            <div class="heading collapsed">
                 <h2 class="legend">Logic</h2>
                 <span class="heading-summary" id="logic-heading-description"></span>
             </div>
@@ -77,7 +77,7 @@
             </div>
         </div>
         <div class="fieldset argument">
-            <div class="heading">
+            <div class="heading {{- helper.collapsed_if(is_proof) }}">
                 <h2 class="legend">Argument</h2>
                 <span class="heading-summary" id="argument-heading-rendered"></span>
             </div>
@@ -231,7 +231,7 @@
             <div class="clear"></div>
         </div>        
         <div class="fieldset output">
-            <div class="heading">
+            <div class="heading collapsed">
                 <h2 class="legend">Output</h2>
                 <span class="heading-summary" id="output-heading-description"></span>
             </div>

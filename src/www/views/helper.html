@@ -46,3 +46,6 @@
 {% macro hidden_if(value) -%}
     {% if value %} hidden{% endif %}
 {%- endmacro %}
+{% macro collapsed_if(value) -%}
+    {% if value %} collapsed{% else %} uncollapsed{% endif %}
+{%- endmacro %}

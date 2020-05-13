@@ -9,3 +9,9 @@ Creative Commons (Attribution 3.0 Unported)
 icon king https://freeicons.io/profile/3
 https://freeicons.io/navigation-set-arrows/arrow-double-double%20arrow-right-icon-726
 https://freeicons.io/navigation-set-arrows/arrow-double-double%20arrow-left-icon-727
+
+plus-medium.png
+minus-medium.png
+Creative Commons (Attribution 3.0 Unported)
+Raj Dev https://freeicons.io/profile/714
+https://freeicons.io/icon-list/essentials-free-ui-icons-2
