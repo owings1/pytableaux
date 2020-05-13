@@ -160,11 +160,8 @@ undesignated_values = k3.undesignated_values
 unassigned_value = k3.unassigned_value
 truth_functional_operators = fde.truth_functional_operators
 
-def gap(v):
-    return b3e.gap(v)
-
-def crunch(v):
-    return b3e.crunch(v)
+gap = b3e.gap
+crunch = b3e.crunch
 
 def truth_function(operator, a, b=None):
     if operator == 'Assertion':

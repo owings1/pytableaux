@@ -19,15 +19,53 @@
 # pytableaux - Kripke Normal Modal Logic
 
 """
-Kripke Logic (K) is the foundation of so-called normal modal logics. It is an extension of CFOL,
+Semantics
+=========
+
+Kripke Logic (K) is the foundation of so-called normal modal logics. It is an extension of `CFOL`_,
 adding the modal operators for possibility and necessity.
 
-Links
+Truth Tables
+------------
+
+**Truth-functional operators** are defined via the `CPL`_ truth tables.
+
+/truth_tables/
+
+Modal Operators
+---------------
+
+in progress...
+
+Predication
+-----------
+
+in progress...
+
+Quantification
+--------------
+
+in progress...
+
+Logical Consequence
+-------------------
+
+**Logical Consequence** is defined similary as `CPL`_, except with reference to a world:
+
+- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
+  at *w0* are cases where *C* also has the value **T** at *w0*.
+
+Notes
 -----
+
+For further reading, see:
 
 - `Stanford Encyclopedia on Modal Logic`_
 
 .. _Stanford Encyclopedia on Modal Logic: http://plato.stanford.edu/entries/logic-modal/
+
+.. _CFOL: cfol.html
+.. _CPL: cpl.html
 """
 name = 'K'
 title = 'Kripke Normal Modal Logic'
@@ -241,15 +279,8 @@ class TableauxSystem(logic.TableauxSystem):
             else:
                 model.add_access(node.props['world1'], node.props['world2'])
 
-    class ConditionalModalNodeRule(logic.TableauxSystem.ConditionalNodeRule):
-        # Conditional Modal Node Rule
-        modal = True
-
-        #def example_node(self):
-        #    props = super(TableauxSystem.ConditionalModalNodeRule, self).example_node()
-        #    props['world'] = 0
-        #    return props
-        
+class IsModal(object):
+    modal = True
 
 class TableauxRules(object):
     """
@@ -301,7 +332,7 @@ class TableauxRules(object):
             s = negate(examples.self_identity())
             self.tableau.branch().add({ 'sentence' : s, 'world' : 0 })
 
-    class DoubleNegation(TableauxSystem.ConditionalModalNodeRule):
+    class DoubleNegation(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked double negation node *n* with world *w* on a branch *b*, add a
         node to *b* with *w* and the double-negatum of *n*, then tick *n*.
@@ -315,7 +346,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             branch.add({ 'sentence' : s.operand, 'world' : w }).tick(node)
 
-    class Assertion(TableauxSystem.ConditionalModalNodeRule):
+    class Assertion(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
@@ -328,7 +359,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             branch.add({ 'sentence' : s.operand, 'world' : w }).tick(node)
 
-    class AssertionNegated(TableauxSystem.ConditionalModalNodeRule):
+    class AssertionNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, negated assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the negation of the assertion of *n* and world *w*,
@@ -343,7 +374,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             branch.add({ 'sentence' : negate(s.operand), 'world' : w }).tick(node)
 
-    class Conjunction(TableauxSystem.ConditionalModalNodeRule):
+    class Conjunction(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked conjunction node *n* with world *w* on a branch *b*, for each conjunct,
         add a node with world *w* to *b* with the conjunct, then tick *n*.
@@ -358,7 +389,7 @@ class TableauxRules(object):
                 branch.add({ 'sentence' : conjunct, 'world' : w })
             branch.tick(node)
 
-    class ConjunctionNegated(TableauxSystem.ConditionalModalNodeRule):
+    class ConjunctionNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked negated conjunction node *n* with world *w* on a branch *b*, for each
         conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
@@ -376,7 +407,7 @@ class TableauxRules(object):
             b1.add({ 'sentence' : negate(s.lhs), 'world' : w }).tick(node)
             b2.add({ 'sentence' : negate(s.rhs), 'world' : w }).tick(node)
 
-    class Disjunction(TableauxSystem.ConditionalModalNodeRule):
+    class Disjunction(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked disjunction node *n* with world *w* on a branch *b*, for each disjunct,
         make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
@@ -394,7 +425,7 @@ class TableauxRules(object):
             b2.add({ 'sentence' : s.rhs, 'world' : w }).tick(node)
 
 
-    class DisjunctionNegated(TableauxSystem.ConditionalModalNodeRule):
+    class DisjunctionNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked negated disjunction node *n* with world *w* on a branch *b*, for each
         disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
@@ -410,7 +441,7 @@ class TableauxRules(object):
                 branch.add({ 'sentence' : negate(disjunct), 'world' : w })
             branch.tick(node)
 
-    class MaterialConditional(TableauxSystem.ConditionalModalNodeRule):
+    class MaterialConditional(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked material conditional node *n* with world *w* on a branch *b*, make two
         new branches *b'* and *b''* from *b*, add a node with world *w* and the negation of the
@@ -428,7 +459,7 @@ class TableauxRules(object):
             b1.add({ 'sentence' : negate(s.lhs) , 'world' : w }).tick(node)
             b2.add({ 'sentence' :        s.rhs  , 'world' : w }).tick(node)
 
-    class MaterialConditionalNegated(TableauxSystem.ConditionalModalNodeRule):
+    class MaterialConditionalNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked negated material conditional node *n* with world *w* on a branch *b*,
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
@@ -446,7 +477,7 @@ class TableauxRules(object):
                 { 'sentence' : negate(s.rhs) , 'world' : w }
             ]).tick(node)
 
-    class MaterialBiconditional(TableauxSystem.ConditionalModalNodeRule):
+    class MaterialBiconditional(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked material biconditional node *n* with world *w* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add two nodes with world *w* to *b'*, one with
@@ -471,7 +502,7 @@ class TableauxRules(object):
                 { 'sentence' : s.lhs, 'world' : w }
             ]).tick(node)
 
-    class MaterialBiconditionalNegated(TableauxSystem.ConditionalModalNodeRule):
+    class MaterialBiconditionalNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked negated material biconditional node *n* with world *w* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add two nodes with *w* to *b'*, one with
@@ -546,7 +577,7 @@ class TableauxRules(object):
 
         operator = 'Biconditional'
 
-    class Existential(TableauxSystem.ConditionalModalNodeRule):
+    class Existential(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
@@ -561,7 +592,7 @@ class TableauxRules(object):
             v = node.props['sentence'].variable
             branch.add({ 'sentence' : s.substitute(branch.new_constant(), v), 'world': w }).tick(node)
 
-    class ExistentialNegated(TableauxSystem.ConditionalModalNodeRule):
+    class ExistentialNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked negated existential node *n* with world *w* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
@@ -580,7 +611,7 @@ class TableauxRules(object):
             # keep conversion neutral for inheritance below
             branch.add({ 'sentence' : quantify(self.convert_to, v, negate(si)), 'world' : w }).tick(node)
 
-    class Universal(logic.TableauxSystem.BranchRule):
+    class Universal(IsModal, logic.TableauxSystem.BranchRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -623,7 +654,7 @@ class TableauxRules(object):
         quantifier = 'Universal'
         convert_to = 'Existential'
 
-    class Possibility(TableauxSystem.ConditionalModalNodeRule):
+    class Possibility(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -641,7 +672,7 @@ class TableauxRules(object):
                 { 'world1' : w1, 'world2' : w2 }
             ]).tick(node)
 
-    class PossibilityNegated(TableauxSystem.ConditionalModalNodeRule):
+    class PossibilityNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked negated possibility node *n* with world *w* on a branch *b*, add a
         necessity node to *b* with *w*, whose operand is the negation of the negated 
@@ -658,7 +689,7 @@ class TableauxRules(object):
             sn = operate(self.convert_to, [negate(s.operand)])
             branch.add({ 'sentence' : sn, 'world' : w }).tick(node)
 
-    class Necessity(logic.TableauxSystem.BranchRule):
+    class Necessity(IsModal, logic.TableauxSystem.BranchRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -698,7 +729,7 @@ class TableauxRules(object):
         operator   = 'Necessity'
         convert_to = 'Possibility'
 
-    class IdentityIndiscernability(logic.TableauxSystem.BranchRule):
+    class IdentityIndiscernability(IsModal, logic.TableauxSystem.BranchRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,

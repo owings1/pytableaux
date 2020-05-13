@@ -347,7 +347,7 @@ class TableauxRules(object):
         """
         pass
 
-    class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
+    class IdentityIndiscernability(NonModal, k.TableauxRules.IdentityIndiscernability):
         """
         From an unticked node *n* having an Identity sentence *s* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,
