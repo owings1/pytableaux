@@ -62,6 +62,14 @@ as generalized conjunction and disjunction, respectively. Since conjunctions and
 disjunctions can only have a classical value (**T** or **F**), so, too, must
 quantified sentences.
 
+Logical Consequence
+-------------------
+
+**Logical Consequence** is defined just like in `CPL`_ and `K3`_:
+
+- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
+  are cases where *C* also has the value **T**.
+
 Notes
 -----
 
@@ -74,8 +82,8 @@ Notes
   which is similar to `L3`_. However, this conditional is *non-primitive*, unlike `L3`_,
   and it obeys contraction (P{A $ (A $ B)} implies P{A $ B}).
 
-This logic was developed as part of my dissertation, `Indeterminacy and Logical Atoms`_
-at the University of Connecticut, under `Professor Jc Beall`_.
+- This logic was developed as part of my dissertation, `Indeterminacy and Logical Atoms`_
+  at the University of Connecticut, under `Professor Jc Beall`_.
 
 
 .. _Professor Jc Beall: http://entailments.net
@@ -88,13 +96,16 @@ at the University of Connecticut, under `Professor Jc Beall`_.
 
 .. _L3: l3.html
 
+.. _B3E: b3e.html
+
 .. _FDE: fde.html
 
+.. _CPL: cpl.html
 """
 name = 'GO'
 title = 'Gappy Object 3-valued Logic'
 description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
-tags = set(['many-valued', 'gappy', 'non-modal'])
+tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
 tags_list = list(tags)
 
 # Syllogism ?
@@ -139,7 +150,7 @@ def example_invalidities():
     return args
 
 import logic, math, examples
-from . import fde, k3
+from . import fde, k3, b3e
 from logic import negate, operate, quantify
 
 truth_values = k3.truth_values
@@ -150,11 +161,11 @@ unassigned_value = k3.unassigned_value
 truth_functional_operators = fde.truth_functional_operators
 
 def gap(v):
-    return min(v, 1 - v)
+    return b3e.gap(v)
 
 def crunch(v):
-    return v - gap(v)
-        
+    return b3e.crunch(v)
+
 def truth_function(operator, a, b=None):
     if operator == 'Assertion':
         return crunch(a)
@@ -183,8 +194,8 @@ class TableauxSystem(fde.TableauxSystem):
 class TableauxRules(object):
     """
     The closure rules for GO are the `FDE closure rule`_, and the `K3 closure rule`_.
-    Most of the operators rules are unique to GO, with only a few rules that are
-    the same as `FDE`_.
+    Most of the operators rules are unique to GO, with a few rules that are
+    the same as `FDE`_. The rules for assertion mirror those of `B3E`_.
     
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
     .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
@@ -214,46 +225,29 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class AssertionNegatedDesignated(b3e.TableauxRules.AssertionNegatedDesignated):
         """
-        From an unticked, designated, negated assertion node *n* on a branch *b*,
-        add an undesignated node to *b* with the assertion of *n*, then tick *n*.
-        """
-        operator    = 'Assertion'
-        negated     = True
-        designation = True
+        This rule is the same as the `B3E AssertionDesignated rule`_.
 
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : not d }).tick(node)
-
-    class AssertionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+        .. _B3E AssertionDesignated rule: b3e.html#logics.b3e.TableauxRules.AssertionDesignated
         """
-        From an unticked, undesignated assertion node *n* on a branch *b*, add
-        an undesignated node to *b* with the assertion of *n*, then tick *n*.
-        """
+        pass
 
-        operator = 'Assertion'
-        designation = False
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
-
-    class AssertionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class AssertionUndesignated(b3e.TableauxRules.AssertionUndesignated):
         """
-        From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
-        an designated node to *b* with the assertion of *n*, then tick *n*.
-        """
+        This rule is the same as the `B3E AssertionUndesignated rule`_.
 
-        operator    = 'Assertion'
-        negated     = True
-        designation = False
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+        .. _B3E AssertionUndesignated rule: b3e.html#logics.b3e.TableauxRules.AssertionUndesignated
+        """
+        pass
+
+    class AssertionNegatedUndesignated(b3e.TableauxRules.AssertionNegatedUndesignated):
+        """
+        This rule is the same as the `B3E AssertionNegatedUndesignated rule`_.
+
+        .. _B3E AssertionNegatedUndesignated rule: b3e.html#logics.b3e.TableauxRules.AssertionNegatedUndesignated
+        """
+        pass
 
     class ConjunctionDesignated(fde.TableauxRules.ConjunctionDesignated):
         """
