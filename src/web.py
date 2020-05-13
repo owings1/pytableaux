@@ -36,6 +36,7 @@ index_filename = 'index.html'
 current_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(current_dir, 'www', 'static')
 static_dir_doc = os.path.join(current_dir, '..', 'doc', '_build', 'html')
+favicon_file = os.path.join(static_dir, 'img/favicon-96x96.png')
 view_path = 'www/views'
 
 jinja_env = Environment(loader=PackageLoader('logic', view_path))
@@ -75,7 +76,7 @@ config = {
     },
     '/favicon.ico': {
         'tools.staticfile.on': True,
-        'tools.staticfile.filename': os.path.join(static_dir, 'img/favicon-96x96.png')
+        'tools.staticfile.filename': favicon_file
     }
 }
 
