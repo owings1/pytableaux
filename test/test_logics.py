@@ -81,7 +81,7 @@ class TestFDE(LogicTester):
         assert proof.valid
 
     def test_valid_univ_from_neg_exist_1(self):
-        proof = self.example_proof('Universal from Negated Existential 1')
+        proof = self.example_proof('Universal from Negated Existential')
         assert proof.valid
 
     def test_invalid_lem(self):
@@ -407,12 +407,28 @@ class TestGO(LogicTester):
         proof.step()
         assert branch.has({'sentence': parse('a'), 'designated': False})
 
+    def test_valid_neg_exist_from_univ(self):
+        proof = self.example_proof('Negated Existential from Universal')
+        assert proof.valid
+
+    def test_valid_neg_univ_from_exist(self):
+        proof = self.example_proof('Negated Universal from Existential')
+        assert proof.valid
+
     def test_valid_demorgan_3(self):
         proof = self.example_proof('DeMorgan 3')
         assert proof.valid
 
     def test_invalid_demorgan_1(self):
         proof = self.example_proof('DeMorgan 1')
+        assert not proof.valid
+
+    def test_invalid_exist_from_neg_univ(self):
+        proof = self.example_proof('Existential from Negated Universal')
+        assert not proof.valid
+
+    def test_invalid_univ_from_neg_exist(self):
+        proof = self.example_proof('Universal from Negated Existential')
         assert not proof.valid
 
 class TestCPL(LogicTester):

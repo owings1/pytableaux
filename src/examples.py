@@ -51,7 +51,9 @@ args = {
     'Disjunctive Syllogism'            : [[ 'Aab', 'Nb' ], 'a'  ],
     'Disjunctive Syllogism 2'          : [[ 'ANab', 'Nb'], 'Na' ],
     'Existential from Universal'       : [[ 'SxFx' ], 'VxFx' ],
+    'Existential from Negated Universal' : [[ 'NVxFx' ], 'SxNFx' ],
     'Existential Syllogism'            : [[ 'VxCFxGx', 'Fn'  ],  'Gn'],
+    'Explosion'                        : [[ 'KaNa' ], 'b' ],
     'Extracting a Disjunct 1'          : [[ 'Aab'  ], 'b'    ],
     'Extracting a Disjunct 2'          : [[ 'AaNb' ], 'Na'   ],
     'Extracting the Antecedent'        : [[ 'Cab'  ], 'a'    ],
@@ -79,6 +81,8 @@ args = {
     'Modal Transformation 4'           : [[ 'MNa'  ], 'NLa'  ],
     'Necessity Distribution'           : 'CLCabCLaLb',
     'Necessity Elimination'            : [[ 'La'  ], 'a' ],
+    'Negated Existential from Universal' : [[ 'VxFx' ], 'NSxNFx' ],
+    'Negated Universal from Existential' : [[ 'SxFx' ], 'NVxNFx' ],
     'NP Collapse 1'                    : [[ 'LMa' ], 'Ma'],
     'Possibility Addition'             : [[ 'a'   ], 'Ma'],
     'Possibility Distribution'         : [[ 'KMaMb' ], 'MKab'],
@@ -97,7 +101,7 @@ args = {
     'Triviality 2'                     : [[ 'a' ], 'b' ],
     'Universal Predicate Syllogism'    : [[ 'VxVyCFxFy', 'Fm'], 'Fn'],
     'Universal from Existential'       : [[ 'SxFx' ], 'VxFx' ],
-    'Universal from Negated Existential 1' : [[ 'NSxFx' ], 'VxNFx' ],
+    'Universal from Negated Existential' : [[ 'NSxFx' ], 'VxNFx' ],
 }
 
 args_list = sorted(args.keys())
