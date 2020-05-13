@@ -21,6 +21,9 @@
 import importlib, notations, os, itertools
 from types import ModuleType
 
+# http://python-future.org/compatible_idioms.html#basestring
+from past.builtins import basestring
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 base_dir = os.path.abspath(os.path.join(current_dir, '..'))
 with open(os.path.join(base_dir, 'VERSION'), 'r') as f:
@@ -294,12 +297,12 @@ class argument(object):
         self.premises = []
         if premises != None:
             for premise in premises:
-                if isinstance(premise, str):
+                if isinstance(premise, basestring):
                     if notation == None:
                         raise argument.MissingNotationError("Must pass notation to parse sentence strings.")
                     premise = parse(premise, vocabulary, notation)
                 self.premises.append(premise)
-        if isinstance(conclusion, str):
+        if isinstance(conclusion, basestring):
             if notation == None:
                 raise argument.MissingNotationError("Must pass notation to parse sentence strings.")
             conclusion = parse(conclusion, vocabulary, notation)
@@ -383,7 +386,7 @@ def truth_tables(logic):
 def _get_module(package, arg):    
     if isinstance(arg, ModuleType):
         return arg
-    if isinstance(arg, str):
+    if isinstance(arg, basestring):
         if '.' not in arg:
             arg = package + '.' + arg
         return importlib.import_module(arg.lower())
@@ -466,7 +469,7 @@ class Vocabulary(object):
             assert vocab.get_predicate('is tall') == vocab.get_predicate(index=0, subscript=0)
 
         """
-        if name == None and index != None and isinstance(index, str):
+        if name == None and index != None and isinstance(index, basestring):
             name = index
             index = None
         elif index == None and name != None and isinstance(name, int):
@@ -645,7 +648,7 @@ class Vocabulary(object):
     class PredicatedSentence(Sentence):
 
         def __init__(self, predicate, parameters, vocabulary=None):
-            if isinstance(predicate, str):
+            if isinstance(predicate, basestring):
                 if predicate in system_predicates:
                     predicate = system_predicates[predicate]
                 elif vocabulary is None:
@@ -752,7 +755,7 @@ class Vocabulary(object):
                     symbol_set = 'default'
                 else:
                     return self.symbol_set
-            if isinstance(symbol_set, str):
+            if isinstance(symbol_set, basestring):
                 return self.symbol_sets[symbol_set]
             else:
                 return symbol_set
