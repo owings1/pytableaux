@@ -559,34 +559,27 @@ class TableauxRules(object):
         
     class ExistentialNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
-        From an unticked, designated negated existential node *n* on a branch *b*, make two branches
-        *b'* and *b''* from *b*. On *b'*, add a designtated node with the standard 
-        translation of the sentence on *b*. For *b''*, substitute a new constant *c* for
-        the quantified variable, and add two undesignated nodes to *b''*, one with the
-        substituted inner sentence, and one with its negation, then tick *n*.
+        From an unticked, designated negated existential node *n* on a branch *b*,
+        add a designated node *n'* to *b* with a universal sentence consisting of
+        disjunction, whose first disjunct is the negated inner sentence of *n*,
+        and whose second disjunct is the negation of a disjunction *d*, where the
+        first disjunct of *d* is the inner sentence of *n*, and the second disjunct
+        of *d* is the negation of the inner setntence of *n*. Then tick *n*.
         """
-
         quantifier  = 'Existential'
-        designation = True
         negated     = True
+        designation = True
         convert_to  = 'Universal'
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
             v = s.variable
-
-            c = branch.new_constant()
             si = s.sentence
-            ss = s.substitute(c, v)
 
-            b1 = branch
-            b2 = self.tableau.branch(branch)
-            b1.add({'sentence': quantify(self.convert_to, v, negate(si)), 'designated': d}).tick(node)
-            b2.update([
-                {'sentence': ss, 'designated': not d},
-                {'sentence': negate(ss), 'designated': not d}
-            ]).tick(node)
+            si_lem_fail = negate(operate('Disjunction', [si, negate(si)]))
+            si_disj = operate('Disjunction', [negate(si), si_lem_fail])
+            branch.add({'sentence': quantify(self.convert_to, v, si_disj), 'designated': d}).tick(node)
 
     class ExistentialUndesignated(ConjunctionUndesignated):
         """
@@ -615,7 +608,7 @@ class TableauxRules(object):
         """
         pass
         
-    class UniversalNegatedDesignated(ExistentialNegatedDesignated):
+    class UniversalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, designated universal existential node *n* on a branch *b*, make two branches
         *b'* and *b''* from *b*. On *b'*, add a designtated node with the standard 
@@ -623,16 +616,27 @@ class TableauxRules(object):
         the quantified variable, and add two undesignated nodes to *b''*, one with the
         substituted inner sentence, and one with its negation, then tick *n*.
         """
-        quantifier = 'Universal'
-        convert_to = 'Existential'
+        quantifier  = 'Universal'
+        designation = True
+        negated     = True
+        convert_to  = 'Existential'
 
-        def example_node(self):
-            # Override for more meaningful example
-            s = examples.quantified('Existential')
-            return {
-                'sentence'   : negate(quantify('Universal', s.variable, s.sentence)),
-                'designated' : self.designation
-            }
+        def apply_to_node(self, node, branch):
+            s = self.sentence(node)
+            d = self.designation
+            v = s.variable
+
+            c = branch.new_constant()
+            si = s.sentence
+            ss = s.substitute(c, v)
+
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b1.add({'sentence': quantify(self.convert_to, v, negate(si)), 'designated': d}).tick(node)
+            b2.update([
+                {'sentence': ss, 'designated': not d},
+                {'sentence': negate(ss), 'designated': not d}
+            ]).tick(node)
 
     class UniversalUndesignated(ExistentialUndesignated):
         """
@@ -678,6 +682,7 @@ class TableauxRules(object):
         BiconditionalNegatedUndesignated,
         BiconditionalDesignated,
         ExistentialDesignated,
+        ExistentialNegatedDesignated,
         ExistentialUndesignated,
         ExistentialNegatedUndesignated,
         UniversalDesignated,
@@ -695,6 +700,5 @@ class TableauxRules(object):
         ConditionalDesignated,
         ConditionalNegatedDesignated,
         BiconditionalNegatedDesignated,
-        ExistentialNegatedDesignated,
         UniversalNegatedDesignated,
     ]
