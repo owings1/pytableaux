@@ -275,6 +275,14 @@ class TableauxRules(object):
         """
         pass
 
+    class IdentityIndiscernability(cpl.TableauxRules.IdentityIndiscernability):
+        """
+        This rule is the same as the `CPL IdentityIndiscernability rule`_.
+
+        .. _CPL IdentityIndiscernability rule: cpl.html#logics.cpl.TableauxRules.IdentityIndiscernability
+        """
+        pass
+
     rules = [
 
         cpl.TableauxRules.Closure,
@@ -282,28 +290,28 @@ class TableauxRules(object):
 
         # non-branching rules
 
-        cpl.TableauxRules.IdentityIndiscernability,
-        cpl.TableauxRules.Assertion,
-        cpl.TableauxRules.AssertionNegated,
-        cpl.TableauxRules.Conjunction,
-        cpl.TableauxRules.DisjunctionNegated,
-        cpl.TableauxRules.MaterialConditionalNegated,
-        cpl.TableauxRules.ConditionalNegated,
+        IdentityIndiscernability,
+        DoubleNegation,
+        Assertion,
+        AssertionNegated,
+        Conjunction,
+        DisjunctionNegated,
+        MaterialConditionalNegated,
+        ConditionalNegated,
         Existential,
         ExistentialNegated,
         Universal,
         UniversalNegated,
-        cpl.TableauxRules.DoubleNegation,
 
         # branching rules
 
-        cpl.TableauxRules.ConjunctionNegated,
-        cpl.TableauxRules.Disjunction,
-        cpl.TableauxRules.MaterialConditional,
-        cpl.TableauxRules.MaterialBiconditional,
-        cpl.TableauxRules.MaterialBiconditionalNegated,
-        cpl.TableauxRules.Conditional,
-        cpl.TableauxRules.Biconditional,
-        cpl.TableauxRules.BiconditionalNegated
+        ConjunctionNegated,
+        Disjunction,
+        MaterialConditional,
+        MaterialBiconditional,
+        MaterialBiconditionalNegated,
+        Conditional,
+        Biconditional,
+        BiconditionalNegated
 
     ]
