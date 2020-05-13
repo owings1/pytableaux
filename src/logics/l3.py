@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2020 Doug Owings.
 # 
@@ -62,7 +63,7 @@ Logical Consequence
 .. _CPL: cpl.html
 """
 name = 'L3'
-title = 'Łukasiewicz 3-valued Logic'
+title = u'Łukasiewicz 3-valued Logic'
 description = 'Three-valued logic (True, False, Neither) with a primitive Conditional operator'
 tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
 tags_list = list(tags)
