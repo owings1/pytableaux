@@ -171,7 +171,7 @@ class TableauxRules(object):
 
         .. _FDE closure Rule: fde.html#logics.fde.TableauxRules.Closure
         """
-        
+
         def applies_to_branch(self, branch):
             for node in branch.get_nodes():
                 if node.props['designated']:
