@@ -67,13 +67,16 @@ config = {
     '/static' : {
         'tools.staticdir.on'  : True,
         'tools.staticdir.dir' : static_dir
+    },
+    '/doc': {
+        'tools.staticdir.on'    : True,
+        'tools.staticdir.dir'   : static_dir_doc,
+        'tools.staticdir.index' : index_filename
+    },
+    '/favicon.ico': {
+        'tools.staticfile.on': True,
+        'tools.staticfile.filename': os.path.join(static_dir, 'img/favicon-96x96.png')
     }
-}
-
-config['/doc'] = {
-    'tools.staticdir.on'    : True,
-    'tools.staticdir.dir'   : static_dir_doc,
-    'tools.staticdir.index' : index_filename
 }
 
 browser_data = {
