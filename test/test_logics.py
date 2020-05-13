@@ -797,7 +797,6 @@ class TestK(LogicTester):
         res = model.value_of(s1, 0)
         assert res == 0
 
-    # TODO: failing
     def test_model_universal_user_pred_false(self):
         v = Vocabulary()
         v.declare_predicate('MyPred', 0, 0, 1)
