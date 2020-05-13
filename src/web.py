@@ -271,7 +271,17 @@ class App(object):
         Example success result::
 
             {
-               "type": "AtomicSentence"
+               "type": "AtomicSentence",
+               "rendered": {
+                    "standard": {
+                        "default": "Fa",
+                        "html": "Fa"
+                    },
+                    "polish": {
+                        "default": "Fm",
+                        "html": "Fm"
+                    }
+                }
             }
         """
         body = dict(body)
@@ -281,13 +291,20 @@ class App(object):
             body['predicates'] = list()
         if 'input' not in body:
             body['input'] = ''
-        notation = modules['notations'][body['notation']]
+        input_notation = modules['notations'][body['notation']]
         vocab = logic.Vocabulary()
         for pdata in body['predicates']:
             vocab.declare_predicate(**pdata)
-        sentence = logic.parse(body['input'], vocab, notation)
+        sentence = logic.parse(body['input'], vocab, input_notation)
         return {
-            'type': sentence.__class__.__name__
+            'type'     : sentence.__class__.__name__,
+            'rendered' : {
+                notation: {
+                    'default': modules['notations'][notation].write(sentence),
+                    'html'   : modules['notations'][notation].write(sentence, 'html')
+                }
+                for notation in available_module_names['notations']
+            }
         }
 
     def api_prove(self, body):

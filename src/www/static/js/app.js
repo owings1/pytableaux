@@ -27,6 +27,8 @@
             predicate  : $('#predicateRowTemplate').html()
         }
 
+        var SentenceRenders = {}
+
         /**
          * Main initialization routine.
          *
@@ -34,21 +36,35 @@
          */
         function init() {
             $('form.argument')
-              .on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
-              .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
-              .on('change', '#example_argument', function() {
-                   refreshExampleArgument()
-                   refreshStatuses()
-               })
-              .on('change', '#input_notation', function() {
-                   refreshNotation()
-                   refreshStatuses()
-               })
-              .on('change', 'input.sentence', refreshStatuses)
-              .on('change', '#selected_logic', refreshLogic)
-              .on('click', 'legend', function() {
-                   $(this).next('.fieldset-contents').toggle()
-               })
+                .on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
+                .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
+                .on('change', function(e) {
+                    const $target = $(e.target)
+                    if ($target.is('#example_argument')) {
+                        refreshExampleArgument()
+                        refreshStatuses()
+                    } else if ($target.is('#input_notation')) {
+                        refreshNotation()
+                        refreshStatuses()
+                    } else if ($target.is('input.sentence')) {
+                        refreshStatuses()
+                    } else if ($target.is('#selected_logic')) {
+                        refreshLogic()
+                    } else if ($target.is('#output_notation')) {
+                        refreshArgumentHeader()
+                    }
+                    if ($target.closest('.fieldset.output').length) {
+                        refreshOutputHeader()
+                    }
+                })
+                .on('click', '.heading', function() {
+                    const $contents = $(this).closest('.fieldset').find('.fieldset-contents')
+                    const isVisible = $contents.is(':visible')
+                    $('.fieldset-contents').hide()
+                    if (!isVisible) {
+                        $contents.show()
+                    }
+                 })
             $('.toggler').on('click', function() {
                 $($(this).attr('data-target')).toggle()
             })
@@ -56,6 +72,10 @@
             ensureEmptyPredicate()
             refreshNotation()
             refreshLogic()
+            refreshOutputHeader()
+            if ($('.evaluation').length) {
+                refreshStatuses()
+            }
         }
 
         /**
@@ -102,6 +122,33 @@
         }
 
         /**
+         * Get the output format value.
+         *
+         * @return String name of the foramat, e.g. 'html'
+         */
+        function currentOutputFormat() {
+            return $('#format').val()
+        }
+
+        /**
+         * Get the output notation value.
+         *
+         * @return String name of the notation, e.g. 'standard'
+         */
+        function currentOutputNotation() {
+            return $('#output_notation').val()
+        }
+
+        /**
+         * Get the output symbol set value.
+         *
+         * @return String name of the symbol set, e.g. 'default'
+         */
+        function currentOutputSymbolSet() {
+            return $('#symbol_set').val()
+        }
+
+        /**
          * Add an empty premise input row.
          *
          * @return void
@@ -136,6 +183,7 @@
         function clearArgument() {
             clearPremises()
             clearConclusion()
+            SentenceRenders = {}
         }
 
         /**
@@ -269,6 +317,12 @@
             const logicName = $('#selected_logic').val()
             $('.logic-details').hide()
             $('.logic-details.' + logicName).show()
+            $('#logic-heading-description').html(
+                [
+                    $('.logic-details .logic-name.' + logicName).html(),
+                    $('.logic-details .logic-title.' + logicName).html()
+                ].join(' - ')
+            )
         }
 
         /**
@@ -280,7 +334,7 @@
         function refreshNotation() {
             const notation = currentNotation()
             $('.lexicons .lexicon').hide()
-            $('#Lexicon_' + notation).show()
+            $('.lexicon.notation-' + notation).show()
             $('.predicateSymbol').hide()
             $('.predicateSymbol.notation-' + notation).show()
             if ($('#example_argument').val()) {
@@ -342,6 +396,8 @@
                         success: function(res) {
                             $status.removeClass('bad').addClass('good')
                             $status.attr('title', res.result.type)
+                            SentenceRenders[input] = res.result.rendered
+                            refreshArgumentHeader()
                         },
                         error: function(xhr, textStatus, errorThrown) {
                             $status.removeClass('good').addClass('bad')
@@ -353,6 +409,7 @@
                                 title = [textStatus, errorThrown].join(': ')
                             }
                             $status.attr('title', title)
+                            delete SentenceRenders[input]
                         }
                     })
                 } else {
@@ -425,6 +482,52 @@
             data.output.format = $('#format').val()
             data.output.symbol_set = $('#symbol_set').val()
             return data
+        }
+
+        /**
+         * Update the argument display in the header bar of the argument fieldset.
+         *
+         * @return void
+         */
+        function refreshArgumentHeader() {
+            const notation = currentOutputNotation()
+            const symset = currentOutputSymbolSet()
+            const premises = []
+            var conclusion
+            $('form.argument input.sentence').each(function(sentenceIndex) {
+                const $status = $(this).closest('div.input').find('.status')
+                const input = $(this).val()
+                const isConclusion = $(this).hasClass('conclusion')
+                const isGood = $status.hasClass('good')
+                if (input || isConclusion) {
+                    var sentence
+                    if (isGood && SentenceRenders[input]) {
+                        sentence = SentenceRenders[input][notation][symset]
+                    } else {
+                        sentence = '?'
+                    }
+                    if (isConclusion) {
+                        conclusion = sentence
+                    } else {
+                        premises.push(sentence)
+                    }
+                }
+            })
+            $('#argument-heading-rendered').html(premises.join(', ') + ' &there4; ' + conclusion)
+        }
+
+        /**
+         * Update the display in the header bar of the output fieldset.
+         *
+         * @return void
+         */
+        function refreshOutputHeader() {
+            $('#output-heading-description').html(
+                [
+                    currentOutputFormat().toUpperCase(),
+                    currentOutputNotation()
+                ].join(' | ')
+            )
         }
 
         init()

@@ -23,9 +23,25 @@ body {
     margin: 0;
     padding: 0;
 }
-fieldset legend {
-    font-size: 18px;
+.fieldset {
+    clear: both;
+    border: 1px solid red;
+    margin: 0 0 10px 0;
+    padding:0;
+}
+.fieldset .heading {
     cursor: pointer;
+    background-color: aqua;
+    padding: 10px;
+}
+.fieldset .legend {
+    display: inline;
+    font-size: 18px;
+    margin-block-start: 0;
+    margin-block-end: 0;
+}
+.fieldset-contents {
+    padding: 10px;
 }
 .toggler {
     cursor: pointer;
@@ -107,6 +123,10 @@ form.argument select, input[type=submit] {
     vertical-align: top;
 }
 
+.lexicons .lexicon-panel {
+    margin-right: 10px;
+    border: 1px solid blue;
+}
 .lexicons .label {
     border: 1px solid #ccc;
     display: inline-block;
