@@ -82,7 +82,7 @@
                 <span class="heading-summary" id="argument-heading-rendered"></span>
             </div>
             <div class="fieldset-contents {{- helper.hidden_if(is_proof) }}">
-                <div class="left">
+                <div class="left" id="sentences-input-panel">
                     <select id="example_argument">
                         <option value="">&lt;Load example argument&gt;</option>
                         {% for argument_name in example_args_list -%}
@@ -128,10 +128,10 @@
                         <input type="submit" value="Go"/>
                     </div>
                 </div>
-                <div class="left">
-                    <h3 class="toggler" data-target="#lexicons-wrapper">Lexicon</h3>
-                    <div class="lexicons" id="lexicons-wrapper">
-                        <div class="left lexicon-panel">
+                <div class="lexicons-wrapper">
+                    <h3 class="toggler" data-target="#lexicons-content">Lexicon</h3>
+                    <div class="lexicons" id="lexicons-content">
+                        <div class="lexicon-panel">
                             {%- for module in notation_modules -%}
                                 {%- set symset = notations[module].symbol_sets['default'] %}
                                 <div class="lexicon hidden notation-{{ module|e }}">
@@ -152,7 +152,7 @@
                                 </div>
                             {% endfor %}
                         </div>
-                        <div class="left lexicon-panel">
+                        <div class="lexicon-panel last">
                             {%- for module in notation_modules -%}
                                 {%- set symset = notations[module].symbol_sets['default'] %}
                                 <div class="lexicon hidden notation-{{ module|e }}">
@@ -197,7 +197,7 @@
                                                         {%- set symbol = symset.charof('system_predicate', name) -%}
                                                         {%- set subscript = system_predicates[name].subscript -%}
                                                         <span class="predicateSymbol notation-{{module}} hidden">
-                                                            {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript }}</span>{% endif -%}
+                                                            {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript|e }}</span>{% endif -%}
                                                         </span>
                                                     {% endfor %}
                                                 </td>
@@ -209,7 +209,9 @@
                                             {%- set info = label.split('.') -%}
                                             {%- set index = info[0]|int -%}
                                             {%- set subscript = info[1]|int -%}
-                                            {%- call helper.predicate_row(index, subscript, form_data['user_predicate_names[]'][loop.index0], form_data['user_predicate_arities[]'][loop.index0]) %}
+                                            {%- set name = form_data['user_predicate_names[]'][loop.index0] -%}
+                                            {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
+                                            {%- call helper.predicate_row(index, subscript, name, arity) %}
                                                 {% for module in notation_modules -%}
                                                     {%- set symset = notations[module].symbol_sets['default'] -%}
                                                     {{- helper.predicate_symbol(module, symset.charof('user_predicate', index), subscript) }}
@@ -220,6 +222,7 @@
                                 </table>
                             </div>
                         </div>
+                        <div class="clear"></div>
                     </div>
                 </div>
             </div>
@@ -246,7 +249,7 @@
                     <select id="output_notation" name="output_notation">
                         {% for module in notation_modules -%}
                             <option value="{{ module }}" {{- helper.select_opt(form_data, 'output_notation', module) }}>
-                                {{- notations[module].name -}}
+                                {{- notations[module].name|e -}}
                             </option>
                         {% endfor %}
                     </select>

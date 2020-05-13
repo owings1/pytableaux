@@ -25,14 +25,18 @@ body {
 }
 .fieldset {
     clear: both;
-    border: 1px solid red;
+    border: 1px solid #93c3cd;
     margin: 0 0 10px 0;
     padding:0;
 }
 .fieldset .heading {
     cursor: pointer;
-    background-color: aqua;
+    background-color: #93c3cd;
     padding: 10px;
+    color: #333333;
+}
+.fieldset .heading:hover {
+    background-color: #ccd232;
 }
 .fieldset .legend {
     display: inline;
@@ -79,18 +83,11 @@ body {
     padding: 20px;
     margin: 30px 0;
 }
-
+/*
 form.argument {
     min-width: 1040px;
 }
-
-form.argument fieldset {
-    border-color: #eee;
-}
-
-form.argument fieldset.lexicon {
-    width: 20%;
-}
+*/
 
 select#example_argument {
     margin: 5px 0 10px 1px;
@@ -122,10 +119,20 @@ form.argument select, input[type=submit] {
     padding: 10px;
     vertical-align: top;
 }
-
+.lexicons-wrapper {
+    float: left;
+    margin-left: 10px;
+    min-width: 485px;
+}
 .lexicons .lexicon-panel {
     margin-right: 10px;
-    border: 1px solid blue;
+    padding: 0 5px 0 0;
+    float: left;
+}
+.lexicons .lexicon-panel.last {
+    border-left: 1px solid #eee;
+    padding-left: 10px;
+    margin-right: 0;
 }
 .lexicons .label {
     border: 1px solid #ccc;
@@ -134,11 +141,28 @@ form.argument select, input[type=submit] {
     margin: 8px 0 5px 1px;
     min-width: 150px;
 }
-
+.lexicons-wrapper {
+    border: 2px solid #ccc;
+}
+.lexicons-wrapper h3 {
+    padding: 10px;
+    margin-block-start: 0;
+    margin-block-end: 0;
+    background-color: #93c3cd61;
+}
+.lexicons-wrapper h3:hover {
+    background-color: #ccd232;
+}
+.lexicons#lexicons-content {
+    padding: 10px;
+}
 .lexicon dl {
     margin: 0 0 0 3px;
 }
 
+#sentences-input-panel {
+    width: 380px;
+}
 .lexicon dd {
     padding: 2px 0;
     margin: 0px 0 4px 24px;
