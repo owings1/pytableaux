@@ -47,6 +47,9 @@ body {
 .fieldset-contents {
     padding: 10px;
 }
+.fieldset.argument .fieldset-contents {
+    padding-left: 0;
+}
 .toggler {
     cursor: pointer;
 }
@@ -54,6 +57,7 @@ body {
     position: fixed;
     width: 100%;
     background-color: #003d4c;
+    z-index: 2;
 }
 .headerWrapper {
     top: 0px;
@@ -119,11 +123,7 @@ form.argument select, input[type=submit] {
     padding: 10px;
     vertical-align: top;
 }
-.lexicons-wrapper {
-    float: left;
-    margin-left: 10px;
-    min-width: 485px;
-}
+
 .lexicons .lexicon-panel {
     margin-right: 10px;
     padding: 0 5px 0 0;
@@ -142,16 +142,48 @@ form.argument select, input[type=submit] {
     min-width: 150px;
 }
 .lexicons-wrapper {
+    float: left;
     border: 2px solid #ccc;
+}
+.lexicons-wrapper.uncollapsed {
+    min-width: 485px;
 }
 .lexicons-wrapper h3 {
     padding: 10px;
+    font-size: 16px;
     margin-block-start: 0;
     margin-block-end: 0;
     background-color: #93c3cd61;
 }
 .lexicons-wrapper h3:hover {
-    background-color: #ccd232;
+    /*background-color: #ccd232;*/
+}
+#lexicons-heading {
+    cursor: pointer;
+}
+#lexicons-heading::before {
+    background-image: url(../img/book.png);
+    background-size: 16px 16px;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-right: 5px;
+    content: "";
+}
+#lexicons-heading::after {
+    background-size: 16px 16px;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    float: right;
+    content: "";
+}
+#lexicons-heading.uncollapsed::after {
+    background-image: url(../img/double-left-arrow.png);
+}
+#lexicons-heading.collapsed::after {
+    background-image: url(../img/double-right-arrow.png);
+    margin-left: 5px;
 }
 .lexicons#lexicons-content {
     padding: 10px;
@@ -162,6 +194,8 @@ form.argument select, input[type=submit] {
 
 #sentences-input-panel {
     width: 380px;
+    margin-left: 10px;
+    margin-bottom: 10px;
 }
 .lexicon dd {
     padding: 2px 0;
@@ -198,6 +232,12 @@ table.predicates td, table.predicates th {
     margin: 10px 0 0 127px;
 }
 
+.input.example-argument {
+    padding: 10px;
+    text-align: center;
+    border: 1px dashed #cccccc;
+    margin-bottom: 10px;
+}
 .input.sentence input {
     width: 215px;
     padding: 7px 4px;

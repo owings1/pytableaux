@@ -38,7 +38,7 @@
             $('form.argument')
                 .on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
                 .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
-                .on('change', function(e) {
+                .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
                     if ($target.is('#example_argument')) {
                         refreshExampleArgument()
@@ -65,17 +65,36 @@
                         $contents.show()
                     }
                  })
+
+            $('select', 'form.argument').selectmenu()
+            $('input[type="submit"]', 'form.argument').button()
+            $('#lexicons-heading', 'form.argument').on('click', function(e) {
+                $me = $(this)
+                $contents = $('#lexicons-content', 'form.argument')
+                $wrapper = $('#lexicons-wrapper', 'form.argument')
+                if ($me.hasClass('collapsed')) {
+                    $me.add($wrapper).removeClass('collapsed').addClass('uncollapsed')
+                    $contents.removeClass('collapsed').addClass('uncollapsed').show()
+                } else {
+                    $me.add($wrapper).removeClass('uncollapsed').addClass('collapsed')
+                    $contents.removeClass('uncollapsed').addClass('collapsed').hide()
+                }
+            })
+
             $('.toggler').on('click', function() {
                 $($(this).attr('data-target')).toggle()
             })
-            ensureEmptyPremise()
-            ensureEmptyPredicate()
-            refreshNotation()
-            refreshLogic()
-            refreshOutputHeader()
-            if ($('.evaluation').length) {
-                refreshStatuses()
-            }
+
+            setTimeout(function() {
+                ensureEmptyPremise()
+                ensureEmptyPredicate()
+                refreshNotation()
+                refreshLogic()
+                refreshOutputHeader()
+                if ($('.evaluation').length) {
+                    refreshStatuses()
+                }
+            })
         }
 
         /**
