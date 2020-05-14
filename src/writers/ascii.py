@@ -32,7 +32,7 @@ class Writer(logic.TableauxSystem.Writer):
 
     def write_tableau(self, tableau, writer, opts):
         s = ''
-        if 'status_panel' in opts and opts['status_panel']:
+        if 'controls' in opts and opts['controls']:
             s += self.write_status(tableau, writer, opts)
             s += '\n\n'
         s += '\n'.join([

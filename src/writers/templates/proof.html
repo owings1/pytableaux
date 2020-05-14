@@ -1,0 +1,11 @@
+{%- import 'helper.html' as helper -%}
+{%- import 'structure.html' as structure -%}
+{% if opts['controls'] %}
+    {%- include 'controls.html' -%}
+{% endif %}
+<div class="html-writer-proof{% if opts['highlight_open'] %} highlight-open{% endif %}"
+    data-step="{{ tableau.history|length }}"
+    data-num-steps="{{ tableau.history|length }}"
+    data-current-width-pct="100">
+    {{ structure.write_structure(writer, tableau.tree) }}
+</div>

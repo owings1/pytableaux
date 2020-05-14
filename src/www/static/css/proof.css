@@ -74,7 +74,7 @@
 .html-writer-proof.highlight-open .structure.has-open.has-closed > .node-segment {
     color: #e808ff;
 }
-.html-writer-proof .clear, .html-writer-status-panel .clear {
+.html-writer-proof .clear, .html-writer-controls .clear {
     clear: both;
 }
 .html-writer-proof .node.highlight > .node-props, .html-writer-proof .closeMark.highlight > .close-prop {
@@ -85,13 +85,13 @@
     padding: 2px;
     color: #ddd;
 }
-.html-writer-status-panel .left {
+.html-writer-controls .left {
     float: left;
 }
-.html-writer-status-panel dl {
+.html-writer-controls dl {
     margin: 0 0 0 3px;
 }
-.html-writer-status-panel dd {
+.html-writer-controls dd {
     padding: 5px 2px 0 4px;
     margin: 0px 0 4px 4px;
     background-color: #eee;
@@ -100,7 +100,7 @@
     min-height: 24px;
     border: 1px solid #ddd;
 }
-.html-writer-status-panel dt {
+.html-writer-controls dt {
     float: left;
     padding: 5px 3px 0 3px;
     background-color: white;
@@ -109,13 +109,13 @@
     min-width: 140px;
     text-align: right;
 }
-.html-writer-status-panel .valid {
+.html-writer-controls .valid {
     color: green;
 }
-.html-writer-status-panel .invalid {
+.html-writer-controls .invalid {
     color: red;
 }
-.html-writer-status-panel a.button {
+.html-writer-controls a.button {
     background-color: #138ead;
     border: 1px solid #bbb;
     text-decoration: none;
@@ -123,9 +123,9 @@
     font-size: 0.8em;
     padding: 5px 10px;
 }
-.html-writer-status-panel a.button:hover {
+.html-writer-controls a.button:hover {
     background-color: lightblue;
 }
-.html-writer-status-panel .hidden {
+.html-writer-controls .hidden {
     display: none;
 }

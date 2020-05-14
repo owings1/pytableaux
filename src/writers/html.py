@@ -40,7 +40,7 @@ class Writer(logic.TableauxSystem.Writer):
         else:
             premises = None
             conclusion = None
-        return self.env.get_template('structure.html').render({
+        return self.env.get_template('proof.html').render({
             'tableau'    : tableau,
             'writer'     : writer,
             'opts'       : opts,

@@ -106,7 +106,7 @@ class TestAscii(object):
 
     def test_write_status_prems(self):
         proof = example_proof('FDE', 'Addition')
-        res = asc.write(proof, standard, status_panel=True)
+        res = asc.write(proof, standard, controls=True)
         # TODO: assert something
 
 class TestAsciiv(object):
