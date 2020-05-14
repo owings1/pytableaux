@@ -57,36 +57,20 @@
                         refreshOutputHeader()
                     }
                 })
-                .on('click', '.heading', function(e) {
-                    const $me = $(this)
-                    const $contents = $me.closest('.fieldset').find('.fieldset-contents')
-                    const isVisible = $contents.is(':visible')
-                    $('.fieldset-contents').removeClass('uncollapsed').addClass('collapsed').hide('fast')
-                    $('.heading', 'form.argument').removeClass('uncollapsed').addClass('collapsed')
-                    if (!isVisible) {
-                        $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
-                        $me.removeClass('collapsed').addClass('uncollapsed')
+                .on('click', function(e) {
+                    const $target = $(e.target)
+                    const $heading = $target.closest('.heading')
+                    if ($heading.length) {
+                        handleFieldsetHeadingClick($heading)
+                    } else if ($target.is('#lexicons-heading')) {
+                        handleLexiconHeadingClick($target)
+                    } else if ($target.is('.toggler')) {
+                        $(target.attr('data-target')).toggle()
                     }
-                 })
+                })
 
             $('select', 'form.argument').selectmenu()
             $('input[type="submit"]', 'form.argument').button()
-            $('#lexicons-heading', 'form.argument').on('click', function(e) {
-                $me = $(this)
-                $contents = $('#lexicons-content', 'form.argument')
-                $wrapper = $('#lexicons-wrapper', 'form.argument')
-                if ($me.hasClass('collapsed')) {
-                    $me.add($wrapper).removeClass('collapsed').addClass('uncollapsed')
-                    $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
-                } else {
-                    $me.add($wrapper).removeClass('uncollapsed').addClass('collapsed')
-                    $contents.removeClass('uncollapsed').addClass('collapsed').hide('fast')
-                }
-            })
-
-            $('.toggler').on('click', function() {
-                $($(this).attr('data-target')).toggle()
-            })
 
             setTimeout(function() {
                 ensureEmptyPremise()
@@ -98,6 +82,39 @@
                     refreshStatuses()
                 }
             })
+        }
+
+        /**
+         * Show/hide handler for fieldset heading.
+         *
+         * @return void
+         */
+        function handleFieldsetHeadingClick($heading) {
+            const $contents = $heading.closest('.fieldset').find('.fieldset-contents')
+            const isVisible = $contents.is(':visible')
+            $('.fieldset-contents').removeClass('uncollapsed').addClass('collapsed').hide('fast')
+            $('.heading', 'form.argument').removeClass('uncollapsed').addClass('collapsed')
+            if (!isVisible) {
+                $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
+                $heading.removeClass('collapsed').addClass('uncollapsed')
+            }
+        }
+
+        /**
+         * Show/hide handler for lexicons content.
+         *
+         * @return void
+         */
+        function handleLexiconHeadingClick($heading) {
+            $contents = $('#lexicons-content', 'form.argument')
+            $wrapper = $('#lexicons-wrapper', 'form.argument')
+            if ($heading.hasClass('collapsed')) {
+                $heading.add($wrapper).removeClass('collapsed').addClass('uncollapsed')
+                $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
+            } else {
+                $heading.add($wrapper).removeClass('uncollapsed').addClass('collapsed')
+                $contents.removeClass('uncollapsed').addClass('collapsed').hide('fast')
+            }
         }
 
         /**
@@ -443,6 +460,52 @@
         }
 
         /**
+         * Update the argument display in the header bar of the argument fieldset.
+         *
+         * @return void
+         */
+        function refreshArgumentHeader() {
+            const notation = currentOutputNotation()
+            const symset = currentOutputSymbolSet()
+            const premises = []
+            var conclusion
+            $('form.argument input.sentence').each(function(sentenceIndex) {
+                const $status = $(this).closest('div.input').find('.status')
+                const input = $(this).val()
+                const isConclusion = $(this).hasClass('conclusion')
+                const isGood = $status.hasClass('good')
+                if (input || isConclusion) {
+                    var sentence
+                    if (isGood && SentenceRenders[input]) {
+                        sentence = SentenceRenders[input][notation][symset]
+                    } else {
+                        sentence = '?'
+                    }
+                    if (isConclusion) {
+                        conclusion = sentence
+                    } else {
+                        premises.push(sentence)
+                    }
+                }
+            })
+            $('#argument-heading-rendered').html(premises.join(', ') + ' &there4; ' + conclusion)
+        }
+
+        /**
+         * Update the display in the header bar of the output fieldset.
+         *
+         * @return void
+         */
+        function refreshOutputHeader() {
+            $('#output-heading-description').html(
+                [
+                    currentOutputFormat().toUpperCase(),
+                    currentOutputNotation()
+                ].join(' | ')
+            )
+        }
+
+        /**
          * Generate an integer hash for a string.
          *
          * From: http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
@@ -504,52 +567,6 @@
             data.output.format = $('#format').val()
             data.output.symbol_set = $('#symbol_set').val()
             return data
-        }
-
-        /**
-         * Update the argument display in the header bar of the argument fieldset.
-         *
-         * @return void
-         */
-        function refreshArgumentHeader() {
-            const notation = currentOutputNotation()
-            const symset = currentOutputSymbolSet()
-            const premises = []
-            var conclusion
-            $('form.argument input.sentence').each(function(sentenceIndex) {
-                const $status = $(this).closest('div.input').find('.status')
-                const input = $(this).val()
-                const isConclusion = $(this).hasClass('conclusion')
-                const isGood = $status.hasClass('good')
-                if (input || isConclusion) {
-                    var sentence
-                    if (isGood && SentenceRenders[input]) {
-                        sentence = SentenceRenders[input][notation][symset]
-                    } else {
-                        sentence = '?'
-                    }
-                    if (isConclusion) {
-                        conclusion = sentence
-                    } else {
-                        premises.push(sentence)
-                    }
-                }
-            })
-            $('#argument-heading-rendered').html(premises.join(', ') + ' &there4; ' + conclusion)
-        }
-
-        /**
-         * Update the display in the header bar of the output fieldset.
-         *
-         * @return void
-         */
-        function refreshOutputHeader() {
-            $('#output-heading-description').html(
-                [
-                    currentOutputFormat().toUpperCase(),
-                    currentOutputNotation()
-                ].join(' | ')
-            )
         }
 
         init()
