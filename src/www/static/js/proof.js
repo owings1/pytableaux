@@ -71,7 +71,7 @@
         NodeProps       : 'node-props'               ,
         Node            : 'node'                     ,
         Hidden          : 'hidden'                   ,
-        Status          : 'html-writer-status-panel' ,
+        Status          : 'html-writer-controls'     ,
         Zoomed          : 'zoomed'                   ,
         HL              : 'horizontal-line'          ,
         VL              : 'vertical-line'            ,
