@@ -166,7 +166,7 @@ form.argument select, input[type=submit] {
     border: 2px solid #ccc;
 }
 .lexicons-wrapper.uncollapsed {
-    min-width: 485px;
+    /*min-width: 485px;*/
 }
 .lexicons-wrapper h3 {
     padding: 10px;
