@@ -944,3 +944,11 @@ class TestL3(LogicTester):
     def test_invalid_material_identify(self):
         proof = self.example_proof('Material Identity')
         assert not proof.valid
+
+class TestRM3(LogicTester):
+
+    logic = get_logic('RM3')
+
+    def test_valid_cond_mp(self):
+        proof = self.example_proof('Conditional Modus Ponens')
+        assert proof.valid

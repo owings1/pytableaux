@@ -9,6 +9,7 @@ Logics
     logics/cfol
     logics/fde
     logics/lp
+    logics/rm3
     logics/k3
     logics/k3w
     logics/b3e
