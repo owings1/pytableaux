@@ -83,8 +83,8 @@
             </div>
             <div class="fieldset-contents {{- helper.hidden_if(is_proof) }}">
                 <div class="lexicons-wrapper" id="lexicons-wrapper">
-                    <h3 id="lexicons-heading" class="collapser uncollapsed" data-target="#lexicons-content">Lexicon</h3>
-                    <div class="lexicons uncollapsed" id="lexicons-content">
+                    <h3 id="lexicons-heading" class="collapser {{- helper.collapsed_if(is_proof) }}" data-target="#lexicons-content">Lexicon</h3>
+                    <div class="lexicons {{- helper.collapsed_if(is_proof) }} {{- helper.hidden_if(is_proof) }}" id="lexicons-content">
                         <div class="lexicon-panel">
                             {%- for module in notation_modules -%}
                                 {%- set symset = notations[module].symbol_sets['default'] %}

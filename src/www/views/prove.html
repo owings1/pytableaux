@@ -16,9 +16,9 @@
         </div>
         <div class="proof">
             {% if writer.name == 'HTML' %}
-                {{ writer.write(tableau, writer=sw, highlight_open=True, status_panel=True) }}
+                {{ writer.write(tableau, writer=sw, highlight_open=True, controls=True) }}
             {% else %}
-                <pre>{{ writer.write(tableau, writer=sw, status_panel=True)|e }}</pre>
+                <pre>{{ writer.write(tableau, writer=sw, controls=True)|e }}</pre>
             {% endif %}
         </div>
     </div>
