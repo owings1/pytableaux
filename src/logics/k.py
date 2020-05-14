@@ -297,11 +297,10 @@ class TableauxRules(object):
 
         def applies_to_branch(self, branch):
             for node in branch.get_nodes():
-                if 'sentence' in node.props and 'world' in node.props:
-                    w = node.props['world']
-                    s = negate(node.props['sentence'])
-                    if branch.has({ 'sentence': s, 'world': w }):
-                        return True
+                if node.has('sentence') and node.has('world'):
+                    n = branch.find({ 'sentence': negate(node.props['sentence']), 'world': node.props['world']})
+                    if n != None:
+                        return {'nodes' : set([node, n]), 'type' : 'Nodes'}
             return False
 
         def example(self):
@@ -318,7 +317,7 @@ class TableauxRules(object):
 
         def applies_to_branch(self, branch):
             for node in branch.get_nodes():
-                if 'sentence' in node.props:
+                if node.has('sentence'):
                     s = node.props['sentence']
                     if s.is_operated() and s.operator == 'Negation':
                         o = s.operand
