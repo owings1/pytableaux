@@ -408,6 +408,8 @@
 
         /**
          * Make AJAX requests to parse the premises & conclusion.
+         *
+         * @return void
          */
         function refreshStatuses() {
             $('form.argument input.sentence').each(function(sentenceIndex) {
@@ -477,6 +479,9 @@
                     var sentence
                     if (isGood && SentenceRenders[input]) {
                         sentence = SentenceRenders[input][notation][symset]
+                        if (symset != 'html') {
+                            sentence = h(sentence)
+                        }
                     } else {
                         sentence = '?'
                     }
@@ -566,6 +571,16 @@
             data.output.format = $('#format').val()
             data.output.symbol_set = $('#symbol_set').val()
             return data
+        }
+
+        /**
+         * Escape HTML
+         *
+         * @param str The input string.
+         * @return string output.
+         */
+        function h(str) {
+            return str.replace(/</g, '&lt;')
         }
 
         init()
