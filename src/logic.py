@@ -774,7 +774,7 @@ class Vocabulary(object):
 
         def write_atomic(self, sentence, symbol_set = None):
             symset = self.symset(symbol_set)
-            return symset.charof('atomic', sentence.index, subscript = sentence.subscript)
+            return symset.charof('atomic', sentence.index) + self.write_subscript(sentence.subscript, symbol_set = symbol_set)
 
         def write_quantified(self, sentence, symbol_set = None):
             symset = self.symset(symbol_set)
@@ -794,6 +794,10 @@ class Vocabulary(object):
 
         def write_operated(self, sentence, symbol_set = None):
             raise NotImplementedError(NotImplemented)
+
+        def write_operator(self, operator, symbol_set = None):
+            symset = self.symset(symbol_set)
+            return symset.charof('operator', operator)
 
         def write_predicate(self, predicate, symbol_set = None):
             symset = self.symset(symbol_set)
