@@ -50,11 +50,10 @@
                         refreshStatuses()
                     } else if ($target.is('#selected_logic')) {
                         refreshLogic()
-                    } else if ($target.is('#output_notation')) {
-                        refreshArgumentHeader()
                     }
                     if ($target.closest('.fieldset.output').length) {
                         refreshOutputHeader()
+                        refreshArgumentHeader()
                     }
                 })
                 .on('click', function(e) {
