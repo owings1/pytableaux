@@ -11,10 +11,14 @@ body {
 }
 .truth-table {
     border-collapse: collapse;
-    border: 2px solid grey;
+    border: 2px solid gray;
 }
 .truth-table th {
     padding: 8px;
+}
+.truth-table th.operator-name {
+    font-size: 90%;
+    font-weight: normal;
 }
 .truth-table td.value-header {
     font-weight: bold;
@@ -29,6 +33,15 @@ body {
     border-right: 1px solid black;
 }
 
+.truth-table td.operator-symbol {
+    font-size: 110%;
+}
+.truth-table td.operator-symbol.arity-1 {
+    border-bottom: 1px solid black;
+}
+.truth-table td.operator-symbol.arity-2 {
+    text-align: right;
+}
 .truth-table td {
     padding: 10px;
 }

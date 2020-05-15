@@ -116,21 +116,23 @@ class Writer(logic.Vocabulary.Writer):
 
     def write_operated(self, sentence, symbol_set = None, drop_parens = False):
         symset = self.symset(symbol_set)
-        arity = logic.arity(sentence.operator)
+        operator = sentence.operator
+        arity = logic.arity(operator)
         if arity == 1:
+            operand = sentence.operand
             if (symset.name == 'html' and
-                sentence.operator == 'Negation' and
-                sentence.operand.is_predicated() and
-                sentence.operand.predicate.name == 'Identity'):
+                operator == 'Negation' and
+                operand.is_predicated() and
+                operand.predicate.name == 'Identity'):
                 return self.write_html_negated_identity(sentence, symbol_set = symbol_set)
             else:
-                return symset.charof('operator', sentence.operator) + self.write(sentence.operand, symbol_set = symbol_set)
+                return self.write_operator(operator, symbol_set = symbol_set) + self.write(operand, symbol_set = symbol_set)
         elif arity == 2:
             return ''.join([
                 symset.charof('paren_open', 0) if not drop_parens else '',
                 symset.charof('whitespace', 0).join([
                     self.write(sentence.lhs, symbol_set = symbol_set),
-                    symset.charof('operator', sentence.operator),
+                    self.write_operator(operator, symbol_set = symbol_set),
                     self.write(sentence.rhs, symbol_set = symbol_set)
                 ]),
                 symset.charof('paren_close', 0) if not drop_parens else ''

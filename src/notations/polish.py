@@ -64,8 +64,7 @@ class Writer(logic.Vocabulary.Writer):
     }
 
     def write_operated(self, sentence, symbol_set = None):
-        symset = self.symset(symbol_set)
-        return symset.charof('operator', sentence.operator) + ''.join([
+        return self.write_operator(sentence.operator, symbol_set = symbol_set) + ''.join([
             self.write(operand, symbol_set = symbol_set) for operand in sentence.operands
         ])
     
