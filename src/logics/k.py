@@ -101,7 +101,7 @@ def example_invalidities():
 
 import logic, examples
 from . import fde
-from logic import negate, operate, quantify, atomic, constant, predicated
+from logic import negate, operate, quantify, atomic, constant, predicated, NotImplementedError
 
 truth_values = [0, 1]
 truth_value_chars = {
@@ -119,15 +119,6 @@ truth_function = fde.truth_function
 # NB: model semantics are a work in progress
 class Model(object):
 
-    class Access(object):
-        def __init__(self, w1, w2):
-            self.w1 = w1
-            self.w2 = w2
-        def __hash__(self):
-            return hash((self.w1, self.w2))
-        def __eq__(self, other):
-            return self.w1 == other.w1 and self.w2 == other.w2
-
     truth_values = set(truth_values)
 
     def __init__(self):
@@ -137,29 +128,39 @@ class Model(object):
         self.predicates = set()
         self.constants = set()
 
-    def set_atomic_value(self, atomic, value, world):
-        assert value in self.truth_values
-        assert atomic.is_atomic()
-        frame = self.world_frame(world)
-        astr = str([atomic.index, atomic.subscript])
-        if astr in frame['atomics']:
-            assert frame['atomics'][astr] == value
-        frame['atomics'][astr] = value
+    def read_branch(self, branch):
+        for node in branch.nodes:
+            self.read_node(node)
 
-    def add_unassignable_sentence(self, sentence, world):
-        frame = self.world_frame(world)
-        frame['unassigned'].add(sentence)
-        
-    def get_atomic_value(self, atomic, world):
-        frame = self.world_frame(world)
-        astr = str([atomic.index, atomic.subscript])
-        if astr in frame['atomics']:
-            return frame['atomics'][astr]
+    def read_node(self, node):
+        if node.has('sentence'):
+            sentence = node.props['sentence']
+            if sentence.is_literal():
+                self.set_literal_value(sentence, 1, node.props['world'])
+        elif node.has('world1') and node.has('world2'):
+            self.add_access(node.props['world1'], node.props['world2'])
+
+    def set_literal_value(self, sentence, value, world):
+        if sentence.is_operated() and sentence.operator == 'Negation':
+            self.set_literal_value(sentence.operand, 1 - value, world)
+        elif sentence.is_atomic():
+            self.set_atomic_value(sentence, value, world)
+        elif sentence.is_predicated():
+            self.set_predicated_value(sentence, value, world)
         else:
-            return unassigned_value
+            raise NotImplementedError(NotImplemented)
+
+    def set_atomic_value(self, sentence, value, world):
+        frame = self.world_frame(world)
+        if sentence in frame['atomics']:
+            assert frame['atomics'][sentence] == value
+        frame['atomics'][sentence] = value
 
     def set_predicated_value(self, sentence, value, world):
         self.predicates.add(sentence.predicate)
+        for param in sentence.parameters:
+            if param.is_constant():
+                self.constants.add(param)
         name = sentence.predicate.name
         frame = self.world_frame(world)
         for w in self.worlds:
@@ -178,21 +179,20 @@ class Model(object):
         return frame['extensions'][name]
 
     def add_access(self, w1, w2):
-        access = Model.Access(w1, w2)
-        self.access.add(access)
+        self.access.add((w1, w2))
         if w1 not in self.sees:
             self.sees[w1] = set()
         self.sees[w1].add(w2)
 
     def has_access(self, w1, w2):
-        return Model.Access(w1, w2) in self.access
-        
+        return (w1, w2) in self.access
+
     def world_frame(self, world):
         if world not in self.worlds:
             extensions = {'Identity': set(), 'Existence': set()}
-            self.worlds[world] = {'atomics' : {}, 'extensions' : extensions, 'unassigned' : set(), 'constants' : set()}
+            self.worlds[world] = {'atomics' : {}, 'extensions' : extensions, 'constants' : set()}
         frame = self.worlds[world]
-        for c in frame['constants']:
+        for c in self.constants:
             # make sure each constant exists
             frame['extensions']['Existence'].add((c,))
             # make sure each constant is self-identical
@@ -200,43 +200,60 @@ class Model(object):
         return frame
 
     def value_of(self, sentence, world):
-        frame = self.world_frame(world)
-        if sentence in frame['unassigned']:
-            return unassigned_value
         if sentence.is_predicated():
-            return tuple(sentence.parameters) in self.get_extension(sentence.predicate, world)
+            return self.value_of_predicated(sentence, world)
         elif sentence.is_atomic():
-            return self.get_atomic_value(sentence, world)
+            return self.value_of_atomic(sentence, world)
         elif sentence.is_operated():
-            o = sentence.operator
-            if o in truth_functional_operators:
-                return truth_function(o, *[self.value_of(operand, world) for operand in sentence.operands])
-            elif o == 'Possibility':
-                if world in self.sees:
-                    for w in self.sees[world]:
-                        if self.value_of(sentence.operand, w) == 1:
-                            return 1
-                return 0
-            elif o == 'Necessity':
-                if world in self.sees:
-                    for w in self.sees[world]:
-                        if self.value_of(sentence.operand, w) == 0:
-                            return 0
-                return 1
+            return self.value_of_operated(sentence, world)
         elif sentence.is_quantified():
-            q = sentence.quantifier
-            v = sentence.variable
-            if q == 'Existential':
-                for c in frame['constants']:
-                    if self.value_of(sentence.substitute(c, v), world) == 1:
+            return self.value_of_quantified(sentence, world)
+
+    def value_of_atomic(self, sentence, world):
+        frame = self.world_frame(world)
+        if sentence in frame['atomics']:
+            return frame['atomics'][sentence]
+        else:
+            return unassigned_value
+
+    def value_of_predicated(self, sentence, world):
+        return tuple(sentence.parameters) in self.get_extension(sentence.predicate, world)
+
+    def value_of_operated(self, sentence, world):
+        operator = sentence.operator
+        if operator in truth_functional_operators:
+            return truth_function(operator, *[self.value_of(operand, world) for operand in sentence.operands])
+        elif operator == 'Possibility':
+            if world in self.sees:
+                for w2 in self.sees[world]:
+                    if self.value_of(sentence.operand, w2) == 1:
                         return 1
-                return 0
-            elif q == 'Universal':
-                for c in frame['constants']:
-                    if self.value_of(sentence.substitute(c, v), world) == 0:
+            return 0
+        elif operator == 'Necessity':
+            if world in self.sees:
+                for w2 in self.sees[world]:
+                    if self.value_of(sentence.operand, w2) == 0:
                         return 0
-                return 1
-            
+            return 1
+        else:
+            raise NotImplementedError(NotImplemented)
+
+    def value_of_quantified(self, sentence, world):
+        frame = self.world_frame(world)
+        q = sentence.quantifier
+        v = sentence.variable
+        if q == 'Existential':
+            for c in self.constants:
+                if self.value_of(sentence.substitute(c, v), world) == 1:
+                    return 1
+            return 0
+        elif q == 'Universal':
+            for c in self.constants:
+                if self.value_of(sentence.substitute(c, v), world) == 0:
+                    return 0
+            return 1
+
+
 class TableauxSystem(logic.TableauxSystem):
     """
     Modal tableaux are similar to classical tableaux, with the addition of a
@@ -266,18 +283,7 @@ class TableauxSystem(logic.TableauxSystem):
         sentence Fa0...an at a world *w* on *b*, the tuple <a0,...,an> is in the extension
         of F at *w*.
         """
-        for node in branch.get_nodes():
-            if 'sentence' in node.props:
-                w = node.props['world']
-                s = node.props['sentence']
-                if s.is_atomic():
-                    model.set_atomic_value(s, 1, w)
-                elif s.is_operated() and s.operator == 'Negation' and s.operand.is_atomic():
-                    model.set_atomic_value(s.operand, 0, w)
-                elif s.is_predicated():
-                    model.set_predicated_value(s, 1, w)
-            else:
-                model.add_access(node.props['world1'], node.props['world2'])
+        model.read_branch(branch)
 
 class IsModal(object):
     modal = True

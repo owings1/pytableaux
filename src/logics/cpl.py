@@ -122,9 +122,6 @@ class Model(k.Model):
     def set_atomic_value(self, atomic, value, world=None):
         return super(Model, self).set_atomic_value(atomic, value, 0)
 
-    def get_atomic_value(self, atomic, world=None):
-        return super(Model, self).get_atomic_value(atomic, 0)
-
     def set_predicated_value(self, sentence, value, world=None):
         return super(Model, self).set_predicated_value(sentence, value, 0)
 

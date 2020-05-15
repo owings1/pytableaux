@@ -852,6 +852,10 @@ class TableauxSystem(object):
     def build_trunk(tableau, argument):
         raise NotImplementedError(NotImplemented)
 
+    @staticmethod
+    def read_model(model, branch):
+        raise NotImplementedError(NotImplemented)
+
     class TrunkAlreadyBuiltError(Exception):
         pass
 

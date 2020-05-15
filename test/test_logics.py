@@ -673,16 +673,6 @@ class TestK(LogicTester):
         self.logic.TableauxSystem.read_model(model, branch)
         assert model.has_access(0, 1)
 
-    def test_model_access_equals(self):
-        a1 = self.logic.Model.Access(0, 0)
-        a2 = self.logic.Model.Access(0, 0)
-        assert a1 == a2
-
-    def test_model_access_not_equals(self):
-        a1 = self.logic.Model.Access(0, 0)
-        a2 = self.logic.Model.Access(0, 1)
-        assert a1 != a2
-
     def test_model_get_extension_by_name(self):
         model = self.logic.Model()
         s = parse('Imn', vocabulary=examples.vocabulary)
@@ -690,17 +680,10 @@ class TestK(LogicTester):
         res = model.get_extension('Identity', 0)
         assert (constant(0, 0), constant(1, 0)) in res
 
-    def test_model_get_atomic_value_unassigned(self):
+    def test_model_value_of_atomic_unassigned(self):
         model = self.logic.Model()
         s = atomic(0, 0)
-        res = model.get_atomic_value(s, 0)
-        assert res == self.logic.unassigned_value
-
-    def test_model_value_of_unassigned(self):
-        model = self.logic.Model()
-        s = atomic(0, 0)
-        model.add_unassignable_sentence(s, 0)
-        res = model.value_of(s, 0)
+        res = model.value_of_atomic(s, 0)
         assert res == self.logic.unassigned_value
 
     def test_model_set_predicated_value1(self):
@@ -712,7 +695,7 @@ class TestK(LogicTester):
         res = model.value_of(s, 0)
         assert res == 1
 
-    def test_model_add_access(self):
+    def test_model_add_access_sees(self):
         model = self.logic.Model()
         model.add_access(0, 0)
         assert 0 in model.sees[0]
