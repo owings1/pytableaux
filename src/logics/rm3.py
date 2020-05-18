@@ -71,21 +71,22 @@ import logic
 from logic import negate, operate
 from . import fde, lp, l3
 
-truth_values = lp.truth_values
-truth_value_chars = lp.truth_value_chars
-designated_values = fde.designated_values
-undesignated_values = lp.undesignated_values
-unassigned_value = lp.unassigned_value
-truth_functional_operators = fde.truth_functional_operators
+class Model(lp.Model):
+
+    def truth_function(self, operator, a, b=None):
+        if operator == 'Conditional' and a > b:
+            return 0
+        return super(Model, self).truth_function(operator, a, b)
+
+# legacy properties
+truth_values = [0, 0.75, 1]
+truth_value_chars = Model.truth_value_chars
+truth_functional_operators = Model.truth_functional_operators
 
 def truth_function(operator, a, b=None):
-    if operator == 'Conditional':
-        if a > b:
-            return 0
-    elif operator == 'Biconditional':
-        return truth_function('Conjunction', truth_function('Conditional', a, b), truth_function('Conditional', b, a))
-    return fde.truth_function(operator, a, b)
-    
+    # legacy api
+    return Model().truth_function(operator, a, b)
+
 class TableauxSystem(fde.TableauxSystem):
     """
     RM3 tableaux behave just like `FDE`_'s using designation markers. The trunk

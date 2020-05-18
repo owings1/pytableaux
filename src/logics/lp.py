@@ -147,17 +147,29 @@ def example_invalidities():
 import logic
 from logic import negate
 
+class Model(fde.Model):
+    truth_values = set([0, 0.75, 1])
+    undesignated_values = set([0])
+    unassigned_value = 0
+    char_values = {
+        'F' : 0,
+        'B' : 0.75,
+        'T' : 1
+    }
+    truth_value_chars = {
+        0    : 'F',
+        0.75 : 'B',
+        1    : 'T'
+    }
+
+# legacy properties
 truth_values = [0, 0.75, 1]
-truth_value_chars = {
-    0    : 'F',
-    0.75 : 'B',
-    1    : 'T'
-}
-designated_values = fde.designated_values
-undesignated_values = k.undesignated_values
-unassigned_value = 0
-truth_functional_operators = fde.truth_functional_operators
-truth_function = fde.truth_function
+truth_value_chars = Model.truth_value_chars
+truth_functional_operators = Model.truth_functional_operators
+
+def truth_function(operator, a, b=None):
+    # legacy api
+    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """
