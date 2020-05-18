@@ -153,33 +153,32 @@ import logic, math, examples
 from . import fde, k3, b3e
 from logic import negate, operate, quantify
 
-truth_values = k3.truth_values
-truth_value_chars = k3.truth_value_chars
-designated_values = k3.designated_values
-undesignated_values = k3.undesignated_values
-unassigned_value = k3.unassigned_value
-truth_functional_operators = fde.truth_functional_operators
+def gap(v):
+    return min(v, 1 - v)
 
-gap = b3e.gap
-crunch = b3e.crunch
+def crunch(v):
+    return v - gap(v)
+
+class Model(k3.Model):
+    def truth_function(self, operator, a, b=None):
+        if operator == 'Assertion':
+            return crunch(a)
+        elif operator == 'Disjunction':
+            return max(crunch(a), crunch(b))
+        elif operator == 'Conjunction':
+            return min(crunch(a), crunch(b))
+        elif operator == 'Conditional':
+            return crunch(max(1 - a, b, gap(a) + gap(b)))
+        return super(Model, self).truth_function(operator, a, b)
+        
+# legacy properties
+truth_values = [0, 0.5, 1]
+truth_value_chars = Model.truth_value_chars
+truth_functional_operators = Model.truth_functional_operators
 
 def truth_function(operator, a, b=None):
-    if operator == 'Assertion':
-        return crunch(a)
-    elif operator == 'Negation':
-        return 1 - a
-    elif operator == 'Disjunction':
-        return max(crunch(a), crunch(b))
-    elif operator == 'Conjunction':
-        return min(crunch(a), crunch(b))
-    elif operator == 'Material Conditional':
-        return truth_function('Disjunction', 1 - a, b)
-    elif operator == 'Material Biconditional':
-        return truth_function('Conjunction', truth_function('Disjunction', 1 - a, b), truth_function('Disjunction', 1 - b, a))
-    elif operator == 'Conditional':
-        return crunch(max(1 - a, b, gap(a) + gap(b)))
-    elif operator == 'Biconditional':
-        return truth_function('Conjunction', truth_function('Conditional', a, b), truth_function('Conditional', b, a))
+    # legacy api
+    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

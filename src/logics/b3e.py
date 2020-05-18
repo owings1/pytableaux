@@ -84,28 +84,35 @@ def example_invalidities():
     args = cpl.example_invalidities()
     return args
 
-truth_values = k3w.truth_values
-truth_value_chars = k3w.truth_value_chars
-designated_values = k3w.designated_values
-undesignated_values = k3w.undesignated_values
-unassigned_value = k3w.unassigned_value
-truth_functional_operators = fde.truth_functional_operators
-
 def gap(v):
     return min(v, 1 - v)
 
 def crunch(v):
     return v - gap(v)
 
+class Model(k3w.Model):
+
+    def truth_function(self, operator, a, b=None):
+        if operator == 'Assertion':
+            return crunch(a)
+        elif operator == 'Conditional':
+            return self.truth_function(
+                'Disjunction',
+                self.truth_function('Negation', self.truth_function('Assertion', a)),
+                self.truth_function('Assertion', b)
+            )
+        elif operator == 'Biconditional':
+            return fde.Model.truth_function(self, operator, a, b)
+        return super(Model, self).truth_function(operator, a, b)
+
+# legacy properties
+truth_values = [0, 0.5, 1]
+truth_value_chars = Model.truth_value_chars
+truth_functional_operators = Model.truth_functional_operators
+
 def truth_function(operator, a, b=None):
-    if operator == 'Assertion':
-        return crunch(a)
-    elif operator == 'Conditional':
-        return truth_function('Disjunction', truth_function('Negation', truth_function('Assertion', a)), truth_function('Assertion', b))
-    elif operator == 'Biconditional':
-        return truth_function('Conjunction', truth_function('Conditional', a, b), truth_function('Conditional', b, a))
-    else:
-        return k3w.truth_function(operator, a, b)
+    # legacy api
+    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

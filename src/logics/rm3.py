@@ -75,7 +75,7 @@ class Model(lp.Model):
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Conditional' and a > b:
-            return 0
+            return self.char_values['F']
         return super(Model, self).truth_function(operator, a, b)
 
 # legacy properties
