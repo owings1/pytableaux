@@ -96,6 +96,93 @@ class TestFDE(LogicTester):
         proof = self.example_proof('Universal from Existential')
         assert not proof.valid
 
+    def test_model_b_value_atomic_branch(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        s = parse('a')
+        branch.update([
+            {'sentence': s, 'designated': True},
+            {'sentence': negate(s), 'designated': True}
+        ])
+        model = branch.make_model()
+        assert model.value_of(s) == 0.75
+
+    def test_model_univ_t_value_branch(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        s = parse('Fm', examples.vocabulary)
+        branch.add({'sentence': s, 'designated': True})
+        s1 = parse('VxFx', examples.vocabulary)
+        model = branch.make_model()
+        assert model.value_of(s1) == 1
+
+    def test_model_exist_b_value_branch(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        s = parse('Fm', examples.vocabulary)
+        s1 = parse('Fn', examples.vocabulary)
+        branch.update([
+            {'sentence': s, 'designated': True},
+            {'sentence': negate(s), 'designated': True},
+            {'sentence': s1, 'designated': False},
+            {'sentence': negate(s1), 'designated': False},
+        ])
+        s2 = parse('SxFx', examples.vocabulary)
+        model = branch.make_model()
+        assert model.value_of(s2) == 0.75
+
+    def test_model_necessity_opaque_des_value_branch(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        s = parse('La')
+        branch.add({'sentence': s, 'designated': True})
+        model = branch.make_model()
+        assert model.value_of(s) in model.designated_values
+
+    def test_model_necessity_opaque_b_value_branch(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        s = parse('La')
+        branch.update([
+            {'sentence': s, 'designated': True},
+            {'sentence': negate(s), 'designated': True}
+        ])
+        model = branch.make_model()
+        assert model.value_of(s) == 0.75
+
+    def test_model_atomic_undes_value_branch(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        s = parse('a')
+        branch.update([
+            {'sentence': s, 'designated': False}
+        ])
+        model = branch.make_model()
+        assert model.value_of(s) in model.undesignated_values
+
+    def test_model_atomic_t_value_branch(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        s = parse('a')
+        branch.update([
+            {'sentence': s, 'designated': True},
+            {'sentence': negate(s), 'designated': False}
+        ])
+        model = branch.make_model()
+        assert model.value_of(s) == 1
+
+    def test_model_atomic_f_value_branch(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        s = parse('a')
+        branch.update([
+            {'sentence': s, 'designated': False},
+            {'sentence': negate(s), 'designated': True}
+        ])
+        model = branch.make_model()
+        assert model.value_of(s) == 0
+
+
 class TestK3(LogicTester):
 
     logic = get_logic('K3')
@@ -507,6 +594,22 @@ class TestCPL(LogicTester):
         res = model.value_of(s)
         assert res == 1
 
+    def test_model_opaque_necessity_branch_make_model(self):
+        s = parse('La')
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': s})
+        model = branch.make_model()
+        assert model.value_of(s) == 1
+
+    def test_model_opaque_neg_necessity_branch_make_model(self):
+        s = parse('La')
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': negate(s)})
+        model = branch.make_model()
+        assert model.value_of(s) == 0
+
 class TestCFOL(object):
 
     def test_examples(self):
@@ -648,15 +751,15 @@ class TestK(LogicTester):
         branch = list(proof.open_branches())[0]
         self.logic.TableauxSystem.read_model(model, branch)
         s = atomic(0, 0)
-        assert model.value_of(s, 0) == 0
-        assert model.value_of(negate(s), 0) == 1
+        assert model.value_of(s, world=0) == 0
+        assert model.value_of(negate(s), world=0) == 1
 
     def test_read_model_no_proof_atomic(self):
         model = self.logic.Model()
         branch = TableauxSystem.Branch()
         branch.add({'sentence': atomic(0, 0), 'world': 0})
         self.logic.TableauxSystem.read_model(model, branch)
-        assert model.value_of(atomic(0, 0), 0) == 1
+        assert model.value_of(atomic(0, 0), world=0) == 1
 
     def test_read_model_no_proof_predicated(self):
         model = self.logic.Model()
@@ -664,7 +767,7 @@ class TestK(LogicTester):
         s1 = parse('Imn')
         branch.add({'sentence': s1, 'world': 0})
         self.logic.TableauxSystem.read_model(model, branch)
-        assert model.value_of(s1, 0) == 1
+        assert model.value_of(s1, world=0) == 1
 
     def test_read_model_no_proof_access(self):
         model = self.logic.Model()
@@ -692,7 +795,7 @@ class TestK(LogicTester):
         n = constant(1, 0)
         s = predicated('Identity', [m, n])
         model.set_predicated_value(s, 1, 0)
-        res = model.value_of(s, 0)
+        res = model.value_of(s, world=0)
         assert res == 1
 
     def test_model_add_access_sees(self):
@@ -705,20 +808,20 @@ class TestK(LogicTester):
         a = atomic(0, 0)
         model.add_access(0, 1)
         model.set_atomic_value(a, 1, 1)
-        res = model.value_of(operate('Possibility', [a]), 0)
+        res = model.value_of(operate('Possibility', [a]), world=0)
         assert res == 1
 
     def test_model_possibly_a_no_access_false(self):
         model = self.logic.Model()
         a = atomic(0, 0)
         model.set_atomic_value(a, 1, 1)
-        res = model.value_of(operate('Possibility', [a]), 0)
+        res = model.value_of(operate('Possibility', [a]), world=0)
         assert res == 0
 
     def test_model_nec_a_no_access_true(self):
         model = self.logic.Model()
         a = atomic(0, 0)
-        res = model.value_of(operate('Necessity', [a]), 0)
+        res = model.value_of(operate('Necessity', [a]), world=0)
         assert res == 1
 
     def test_model_nec_a_with_access_false(self):
@@ -728,7 +831,7 @@ class TestK(LogicTester):
         model.set_atomic_value(a, 0, 1)
         model.add_access(0, 1)
         model.add_access(0, 0)
-        res = model.value_of(operate('Necessity', [a]), 0)
+        res = model.value_of(operate('Necessity', [a]), world=0)
         assert res == 0
 
     def test_model_existence_user_pred_true(self):
@@ -742,7 +845,7 @@ class TestK(LogicTester):
 
         model = self.logic.Model()
         model.set_predicated_value(s1, 1, 0)
-        res = model.value_of(s3, 0)
+        res = model.value_of(s3, world=0)
         assert res == 1
 
     def test_model_existense_user_pred_false(self):
@@ -755,7 +858,7 @@ class TestK(LogicTester):
         s3 = quantify('Existential', x, s2)
 
         model = self.logic.Model()
-        res = model.value_of(s3, 0)
+        res = model.value_of(s3, world=0)
         assert res == 0
 
     def test_model_universal_user_pred_true(self):
@@ -769,7 +872,7 @@ class TestK(LogicTester):
 
         model = self.logic.Model()
         model.set_predicated_value(s1, 1, 0)
-        res = model.value_of(s3, 0)
+        res = model.value_of(s3, world=0)
         assert res == 1
 
     def test_model_universal_false(self):
@@ -777,7 +880,7 @@ class TestK(LogicTester):
         s2 = parse('Fm', vocabulary=examples.vocabulary)
         model = self.logic.Model()
         model.set_predicated_value(s2, 0, 0)
-        res = model.value_of(s1, 0)
+        res = model.value_of(s1, world=0)
         assert res == 0
 
     def test_model_universal_user_pred_false(self):
@@ -794,7 +897,7 @@ class TestK(LogicTester):
         model = self.logic.Model()
         model.set_predicated_value(s1, 1, 0)
         model.set_predicated_value(s3, 0, 0)
-        res = model.value_of(s4, 0)
+        res = model.value_of(s4, world=0)
         assert res == 0
 
 class TestD(LogicTester):
