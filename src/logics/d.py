@@ -41,23 +41,6 @@ import logic
 from . import k
 from logic import atomic
 
-def example_validities():
-    args = k.example_validities()
-    args.update([
-        'Serial Inference 1',
-    ])
-    return args
-    
-def example_invalidities():
-    from . import t
-    args = t.example_invalidities()
-    args.update([
-    	'Reflexive Inference 1' ,
-        'Necessity Elimination' ,
-        'Possibility Addition'  ,
-    ])
-    return args
-
 class TableauxSystem(k.TableauxSystem):
     """
     D's Tableaux System inherits directly from K's.

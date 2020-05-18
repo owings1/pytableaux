@@ -73,52 +73,10 @@ description = 'Base normal modal logic with no access relation restrictions'
 tags = set(['bivalent', 'modal', 'first-order'])
 tags_list = list(tags)
 
-def example_validities():
-    from . import cfol
-    args = cfol.example_validities()
-    args.update([
-        'Modal Platitude 1'      ,
-        'Modal Platitude 2'      ,
-        'Modal Platitude 3'      ,
-        'Modal Transformation 1' ,
-        'Modal Transformation 2' ,
-        'Modal Transformation 3' ,
-        'Modal Transformation 4' ,
-        'Necessity Distribution' ,
-    ])
-    return args
-
-def example_invalidities():
-    from . import t
-    args = t.example_invalidities()
-    args.update([
-        'Necessity Elimination' ,
-        'Possibility Addition'  ,
-        'Reflexive Inference 1' ,
-        'Serial Inference 1'    ,
-    ])
-    return args
-
 import logic, examples
-from . import fde
 from logic import negate, operate, quantify, atomic, constant, predicated, NotImplementedError
+from . import fde
 
-truth_values = [0, 1]
-truth_value_chars = {
-    0 : 'F',
-    1 : 'T'
-}
-designated_values = set([1])
-undesignated_values = set([0])
-unassigned_value = 0
-
-truth_functional_operators = fde.truth_functional_operators
-
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
-
-# NB: model semantics are a work in progress
 class Model(logic.Model):
 
     truth_values = set([0, 1])
@@ -271,17 +229,19 @@ class Model(logic.Model):
         if sentence in frame['opaques']:
             return frame['opaques'][sentence]
         else:
-            return unassigned_value
+            return self.unassigned_value
 
     def value_of_atomic(self, sentence, world=None, **kw):
         frame = self.world_frame(world)
         if sentence in frame['atomics']:
             return frame['atomics'][sentence]
         else:
-            return unassigned_value
+            return self.unassigned_value
 
     def value_of_predicated(self, sentence, **kw):
-        return tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw)
+        if tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw):
+            return self.char_values['T']
+        return self.char_values['F']
 
     def value_of_operated(self, sentence, world=None, **kw):
         operator = sentence.operator
@@ -316,6 +276,14 @@ class Model(logic.Model):
             return 1
         return super(Model, self).value_of_quantified(sentence, world=world, **kw)
 
+# legacy properties
+truth_values = [0, 1]
+truth_value_chars = Model.truth_value_chars
+truth_functional_operators = Model.truth_functional_operators
+
+def truth_function(operator, a, b=None):
+    # legacy api
+    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(logic.TableauxSystem):
     """

@@ -54,67 +54,15 @@ Logical Consequence
 
 .. _CFOL: cfol.html
 """
-
-from . import k, fde
-
 name = 'CPL'
 title = 'Classical Predicate Logic'
 description = 'Standard bivalent logic with predication, without quantification'
 tags = set(['bivalent', 'non-modal'])
 tags_list = list(tags)
 
-def example_validities():
-    # Everything valid in K3 or LP is valid in CPL, except quantifier validities
-    args = set([
-        'Addition'                        ,
-        'Biconditional Elimination 1'     ,
-        'Biconditional Elimination 2'     ,
-        'Biconditional Identity'          ,
-        'Conditional Contraction'         ,
-        'Conditional Identity'            ,
-        'Conditional Modus Ponens'        ,
-        'Conditional Modus Tollens'       ,
-        'Conditional Pseudo Contraction'  ,
-        'DeMorgan 1'                      ,
-        'DeMorgan 2'                      ,
-        'DeMorgan 3'                      ,
-        'DeMorgan 4'                      ,
-        'Disjunctive Syllogism'           ,
-        'Law of Excluded Middle'          ,
-        'Law of Non-contradiction'        ,
-        'Material Biconditional Identity' ,
-        'Material Contraction'            ,
-        'Material Identity'               ,
-        'Material Modus Ponens'           ,
-        'Material Modus Tollens'          ,
-        'Material Pseudo Contraction'     ,
-        'Modal Platitude 1'               ,
-        'Modal Platitude 2'               ,
-        'Modal Platitude 3'               ,
-        'Simplification'                  ,
-    ])
-    return args
-
-def example_invalidities():
-    from . import cfol
-    args = cfol.example_invalidities()
-    args.update([
-        'Existential Syllogism'         ,
-        'Syllogism'                     ,
-        'Universal Predicate Syllogism' ,
-    ])
-    return args
-
 import logic, examples
 from logic import negate, NotImplementedError
-
-truth_values = k.truth_values
-truth_value_chars = k.truth_value_chars
-designated_values = k.designated_values
-undesignated_values = k.undesignated_values
-unassigned_value = k.unassigned_value
-truth_functional_operators = fde.truth_functional_operators
-truth_function = fde.truth_function
+from . import k
 
 class Model(k.Model):
 
@@ -130,20 +78,23 @@ class Model(k.Model):
     def set_opaque_value(self, sentence, value, **kw):
         return super(Model, self).set_opaque_value(sentence, value, world=0)
 
-    def set_atomic_value(self, sentence, value, **kw):
-        return super(Model, self).set_atomic_value(sentence, value, world=0)
-
-    def set_predicated_value(self, sentence, value, **kw):
-        return super(Model, self).set_predicated_value(sentence, value, world=0)
-
-    def get_extension(self, predicate, **kw):
-        return super(Model, self).get_extension(predicate, world=0)
+    def set_literal_value(self, sentence, value, **kw):
+        return super(Model, self).set_literal_value(sentence, value, world=0)
 
     def value_of(self, sentence, **kw):
         return super(Model, self).value_of(sentence, world=0)
 
     def add_access(self, w1, w2):
         raise NotImplementedError(NotImplemented)
+
+# legacy properties
+truth_values = [0, 1]
+truth_value_chars = Model.truth_value_chars
+truth_functional_operators = Model.truth_functional_operators
+
+def truth_function(operator, a, b=None):
+    # legacy api
+    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(logic.TableauxSystem):
     """

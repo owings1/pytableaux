@@ -47,12 +47,6 @@ class TestFDE(LogicTester):
 
     logic = get_logic('FDE')
 
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'Addition' in valids
-        assert 'Law of Excluded Middle' in invalids
-
     def test_Closure_example(self):
         proof = tableau(self.logic)
         proof.get_rule(self.logic.TableauxRules.Closure).example()
@@ -187,12 +181,6 @@ class TestK3(LogicTester):
 
     logic = get_logic('K3')
 
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'Biconditional Elimination 1' in valids
-        assert 'Law of Excluded Middle' in invalids
-
     def test_Closure_example(self):
         proof = tableau(self.logic)
         rule = proof.get_rule(self.logic.TableauxRules.Closure)
@@ -212,12 +200,6 @@ class TestK3(LogicTester):
 class TestK3W(LogicTester):
 
     logic = get_logic('k3w')
-
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'Conditional Contraction' in valids
-        assert 'Addition' in invalids
 
     def test_truth_table_conjunction(self):
         tbl = truth_table(self.logic, 'Conjunction')
@@ -291,12 +273,6 @@ class TestB3E(LogicTester):
 
     logic = get_logic('B3E')
 
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'Conditional Contraction' in valids
-        assert 'Triviality 1' in invalids
-
     def test_truth_table_assertion(self):
         tbl = truth_table(self.logic, 'Assertion')
         assert tbl['outputs'][0] == 0
@@ -339,12 +315,6 @@ class TestLP(LogicTester):
 
     logic = get_logic('LP')
 
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'Biconditional Identity' in valids
-        assert 'Law of Non-contradiction' in invalids
-
     def test_Closure_example(self):
         proof = tableau(self.logic)
         rule = proof.get_rule(self.logic.TableauxRules.Closure)
@@ -363,12 +333,6 @@ class TestLP(LogicTester):
 class TestGO(LogicTester):
 
     logic = get_logic('GO')
-
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'DeMorgan 3' in valids
-        assert 'DeMorgan 1' in invalids
 
     def test_truth_table_assertion(self):
         tbl = truth_table(self.logic, 'Assertion')
@@ -522,11 +486,11 @@ class TestCPL(LogicTester):
 
     logic = get_logic('CPL')
 
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'Simplification' in valids
-        assert 'Syllogism' in invalids
+    #def test_examples(self):
+    #    valids = self.logic.example_validities()
+    #    invalids = self.logic.example_invalidities()
+    #    assert 'Simplification' in valids
+    #    assert 'Syllogism' in invalids
 
     def test_Closure_example(self):
         proof = tableau(self.logic)
@@ -585,12 +549,12 @@ class TestCPL(LogicTester):
         with pytest.raises(NotImplementedError):
             model.add_access(0, 0)
 
-    def test_model_set_predicated_value1(self):
+    def test_model_set_literal_value_predicated1(self):
         model = self.logic.Model()
         m = constant(0, 0)
         n = constant(1, 0)
         s = predicated('Identity', [m, n])
-        model.set_predicated_value(s, 1)
+        model.set_literal_value(s, 1)
         res = model.value_of(s)
         assert res == 1
 
@@ -612,12 +576,6 @@ class TestCPL(LogicTester):
 
 class TestCFOL(object):
 
-    def test_examples(self):
-        valids = validities('cfol')
-        invalids = invalidities('cfol')
-        assert 'Syllogism' in valids
-        assert 'Possibility Addition' in invalids
-
     def test_valid_syllogism(self):
         proof = example_proof('cfol', 'Syllogism')
         assert proof.valid
@@ -629,12 +587,6 @@ class TestCFOL(object):
 class TestK(LogicTester):
 
     logic = get_logic('K')
-
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'Necessity Distribution' in valids
-        assert 'Necessity Elimination' in invalids
 
     def test_Closure_example(self):
         rule = self.logic.TableauxRules.Closure(empty_proof())
@@ -787,7 +739,7 @@ class TestK(LogicTester):
         model = self.logic.Model()
         s = atomic(0, 0)
         res = model.value_of_atomic(s, 0)
-        assert res == self.logic.unassigned_value
+        assert res == model.unassigned_value
 
     def test_model_set_predicated_value1(self):
         model = self.logic.Model()
@@ -904,12 +856,6 @@ class TestD(LogicTester):
 
     logic = get_logic('D')
 
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'Serial Inference 1' in valids
-        assert 'Reflexive Inference 1' in invalids
-
     def test_Serial_example(self):
         proof = tableau(self.logic)
         rule = proof.get_rule('Serial')
@@ -935,12 +881,6 @@ class TestT(LogicTester):
 
     logic = get_logic('T')
 
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'NP Collapse 1' in valids
-        assert 'S4 Inference 1' in invalids
-
     def test_Reflexive_example(self):
         proof = tableau(self.logic)
         rule = proof.get_rule(self.logic.TableauxRules.Reflexive)
@@ -960,12 +900,6 @@ class TestT(LogicTester):
 class TestS4(LogicTester):
 
     logic = get_logic('S4')
-
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'S4 Inference 1' in valids
-        assert 'S5 Conditional Inference 1' in invalids
 
     def test_Transitive_example(self):
         proof = tableau(self.logic)
@@ -990,12 +924,6 @@ class TestS4(LogicTester):
 class TestL3(LogicTester):
 
     logic = get_logic('L3')
-
-    def test_examples(self):
-        valids = self.logic.example_validities()
-        invalids = self.logic.example_invalidities()
-        assert 'Conditional Identity' in valids
-        assert 'Material Identity' in invalids
 
     def test_truth_table_conditional(self):
         tbl = truth_table(self.logic, 'Conditional')

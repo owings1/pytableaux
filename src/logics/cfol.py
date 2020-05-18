@@ -70,43 +70,23 @@ description = 'Standard bivalent logic with full first-order quantification'
 tags = set(['bivalent', 'non-modal', 'first-order'])
 tags_list = list(tags)
 
-def example_validities():
-    # Everything valid in CPL, K3, K3W, GO, or LP is valid in CFOL
-    from . import cpl, k3, k3w, go, lp
-    args = k3.example_validities()
-    args.update(lp.example_validities())
-    args.update(cpl.example_validities())
-    args.update(k3w.example_validities())
-    args.update(go.example_validities())
-    return args
-
-def example_invalidities():
-    args = k.example_invalidities()
-    args.update([
-        'Necessity Distribution'     ,
-        'Necessity Elimination'      ,
-        'Possibility Addition'       ,
-        'Possibility Distribution'   ,
-        'Reflexive Inference 1'      ,
-    ])
-    return args
-
 import logic, examples
 from logic import negate
-
-truth_values = cpl.truth_values
-truth_value_chars = cpl.truth_value_chars
-designated_values = cpl.designated_values
-undesignated_values = cpl.undesignated_values
-unassigned_value = cpl.unassigned_value
-truth_functional_operators = cpl.truth_functional_operators
-truth_function = cpl.truth_function
 
 class Model(cpl.Model):
     # """
     # A CFOL model is the same as
     # """
     pass
+
+# legacy properties
+truth_values = [0, 1]
+truth_value_chars = Model.truth_value_chars
+truth_functional_operators = Model.truth_functional_operators
+
+def truth_function(operator, a, b=None):
+    # legacy api
+    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(cpl.TableauxSystem):
     """

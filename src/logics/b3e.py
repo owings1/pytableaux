@@ -67,22 +67,9 @@ description = 'Three-valued logic (True, False, Neither) with assertion operator
 tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
 tags_list = list(tags)
 
-from . import k3, k3w, fde
 import logic
 from logic import assertion, operate, negate
-
-def example_validities():
-    args = k3w.example_validities()
-    args.update([
-        #'Biconditional Identity' ,
-        #'Conditional Identity'   ,
-    ])
-    return args
-    
-def example_invalidities():
-    from . import cpl
-    args = cpl.example_invalidities()
-    return args
+from . import k3, k3w, fde
 
 def gap(v):
     return min(v, 1 - v)

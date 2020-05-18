@@ -72,28 +72,6 @@ from . import fde, k3
 import logic
 from logic import operate, negate
 
-def example_validities():
-    args = k3.example_validities()
-    args.remove('Conditional Contraction')
-    args.update([
-        'Biconditional Identity' ,
-        'Conditional Identity'   ,
-    ])
-    return args
-
-def example_invalidities():
-    from . import cfol
-    args = cfol.example_invalidities()
-    args.update([
-        'Conditional Contraction'         ,
-        'Conditional Pseudo Contraction'  ,
-        'Law of Excluded Middle'          ,
-        'Material Biconditional Identity' ,
-        'Material Identity'               ,
-        'Material Pseudo Contraction'     ,
-    ])
-    return args
-
 class Model(k3.Model):
 
     def truth_function(self, operator, a, b=None):

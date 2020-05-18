@@ -104,38 +104,7 @@ description = 'Three-valued logic (True, False, Neither)'
 tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
 tags_list = list(tags)
 
-from . import fde, k
-
-def example_validities():
-    args = fde.example_validities()
-    args.update([
-        'Biconditional Elimination 1'   ,
-        'Biconditional Elimination 2'   ,
-        'Conditional Modus Ponens'      ,
-        'Conditional Modus Tollens'     ,
-        'Disjunctive Syllogism'         ,
-        'Existential Syllogism'         ,
-        'Law of Non-contradiction'      ,
-        'Material Modus Ponens'         ,
-        'Material Modus Tollens'        ,
-        'Syllogism'                     ,
-        'Universal Predicate Syllogism' ,
-    ])
-    return args
-    
-def example_invalidities():
-    from . import cfol
-    args = cfol.example_invalidities()
-    args.update([
-        'Biconditional Identity'          ,
-        'Conditional Identity'            ,
-        'Conditional Pseudo Contraction'  ,
-        'Law of Excluded Middle'          ,
-        'Material Biconditional Identity' ,
-        'Material Identity'               ,
-        'Material Pseudo Contraction'     ,
-    ])
-    return args
+from . import fde
     
 import logic
 from logic import negate

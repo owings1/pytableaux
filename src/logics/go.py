@@ -108,47 +108,6 @@ description = 'Three-valued logic (True, False, Neither) with classical-like bin
 tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
 tags_list = list(tags)
 
-# Syllogism ?
-# Universal Predicate Syllogism ?
-def example_validities():
-    return set([
-        'Addition'                       ,
-        'Biconditional Elimination 1'    ,
-        'Biconditional Elimination 2'    ,
-        'Biconditional Identity'         ,
-        'Conditional Contraction'        ,
-        'Conditional Identity'           ,
-        'Conditional Modus Ponens'       ,
-        'Conditional Modus Tollens'      ,
-        'Conditional Pseudo Contraction' ,
-        'DeMorgan 3'                     ,
-        'DeMorgan 4'                     ,
-        'Disjunctive Syllogism'          ,
-        'Existential Syllogism'          ,
-        'Law of Non-contradiction'       ,
-        'Material Contraction'           ,
-        'Material Modus Ponens'          ,
-        'Material Modus Tollens'         ,
-        'Material Pseudo Contraction'    ,
-        'Modal Platitude 1'              ,
-        'Modal Platitude 2'              ,
-        'Modal Platitude 3'              ,
-        'Simplification'                 ,
-    ])
-
-def example_invalidities():
-    from . import cfol
-    args = cfol.example_invalidities()
-    args.update([
-        'DeMorgan 1'                      ,
-        'DeMorgan 2'                      ,
-        'Law of Excluded Middle'          ,
-        'Material Biconditional Identity' ,
-        'Material Identity'               ,
-        'Material Identity'               ,
-    ])
-    return args
-
 import logic, math, examples
 from . import fde, k3, b3e
 from logic import negate, operate, quantify

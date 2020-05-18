@@ -74,43 +74,9 @@ description = 'Three-valued logic with values T, F, and N'
 tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
 tags_list = list(tags)
 
-from . import fde, k3
-
-def example_validities():
-    args = set([
-        'Biconditional Elimination 1'   ,
-        'Biconditional Elimination 2'   ,
-        'Conditional Contraction'       ,
-        'Conditional Modus Ponens'      ,
-        'Conditional Modus Tollens'     ,
-        'DeMorgan 1'                    ,
-        'DeMorgan 2'                    ,
-        'DeMorgan 3'                    ,
-        'DeMorgan 4'                    ,
-        'Disjunctive Syllogism'         ,
-        'Existential Syllogism'         ,
-        'Law of Non-contradiction'      ,
-        'Material Contraction'          ,
-        'Material Modus Ponens'         ,
-        'Material Modus Tollens'        ,
-        'Modal Platitude 1'             ,
-        'Modal Platitude 2'             ,
-        'Modal Platitude 3'             ,
-        'Simplification'                ,
-        'Syllogism'                     ,
-        'Universal Predicate Syllogism' ,
-    ])
-    return args
-    
-def example_invalidities():
-    args = k3.example_invalidities()
-    args.update([
-        'Addition',
-    ])
-    return args
-    
 import logic
 from logic import negate, operate
+from . import fde, k3
 
 class Model(k3.Model):
     def truth_function(self, operator, a, b=None):

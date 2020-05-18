@@ -104,28 +104,6 @@ description = 'Four-valued logic (True, False, Neither, Both)'
 tags = set(['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order'])
 tags_list = list(tags)
 
-def example_validities():
-    return set([
-        'Addition'                ,
-        'Conditional Contraction' ,
-        'DeMorgan 1'              ,
-        'DeMorgan 2'              ,
-        'DeMorgan 3'              ,
-        'DeMorgan 4'              ,
-        'Material Contraction'    ,
-        'Modal Platitude 1'       ,
-        'Modal Platitude 2'       ,
-        'Modal Platitude 3'       ,
-        'Simplification'          ,
-    ])
-
-def example_invalidities():
-    # Everything invalid in K3 or LP is also invalid in FDE.
-    from . import k3, lp
-    args = k3.example_invalidities()
-    args.update(lp.example_invalidities())
-    return args
-
 import logic, examples
 from logic import negate, quantify, atomic, NotImplementedError
 

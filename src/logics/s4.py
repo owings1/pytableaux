@@ -23,41 +23,6 @@ title = 'S4 Normal Modal Logic'
 description = 'Normal modal logic with a reflexive and transitive access relation'
 tags = set(['bivalent', 'modal', 'first-order'])
 tags_list = list(tags)
-
-def example_validities():
-    from . import t
-    args = t.example_validities()
-    args.update([
-        'S4 Conditional Inference 1' ,
-        'S4 Material Inference 1'    ,
-        'S4 Inference 1'             ,
-        'NP Collapse 1'              ,
-    ])
-    return args
-    
-def example_invalidities():
-    args = set([
-        'S5 Conditional Inference 1' ,
-        'S5 Material Inference 1'    ,
-        'Possibility Distribution'   ,
-        'Affirming a Disjunct 1'     ,
-        'Affirming a Disjunct 2'     ,
-        'Affirming the Consequent'   ,
-        'Conditional Equivalence'    ,
-        'Denying the Antecedent'     ,
-        'Existential from Universal' ,
-        'Extracting a Disjunct 1'    ,
-        'Extracting a Disjunct 2'    ,
-        'Extracting the Antecedent'  ,
-        'Extracting the Consequent'  ,
-        'Modal Transformation 1'     ,
-        'Modal Transformation 2'     ,
-        'Modal Transformation 3'     ,
-        'Modal Transformation 4'     ,
-        'Triviality 1'               ,
-        'Triviality 2'               ,
-    ])
-    return args
     
 import logic
 from . import k, t
