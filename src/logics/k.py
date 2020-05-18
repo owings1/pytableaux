@@ -114,68 +114,141 @@ unassigned_value = 0
 
 truth_functional_operators = fde.truth_functional_operators
 
-truth_function = fde.truth_function
+def truth_function(operator, a, b=None):
+    # legacy api
+    return Model().truth_function(operator, a, b)
 
 # NB: model semantics are a work in progress
-class Model(object):
+class Model(logic.Model):
 
-    truth_values = set(truth_values)
+    truth_values = set([0, 1])
+
+    truth_function = fde.Model.truth_function
+    truth_functional_operators = fde.Model.truth_functional_operators
+    
+    designated_values = set([1])
+    undesignated_values = set([0])
+    unassigned_value = 0
+    char_values = {
+        'F' : 0,
+        'T' : 1
+    }
+    truth_value_chars = {
+        0 : 'F',
+        1 : 'T'
+    }
 
     def __init__(self):
-        self.worlds = {}
+        self.frames = {}
         self.access = set()
         self.sees = {}
         self.predicates = set()
         self.constants = set()
 
     def read_branch(self, branch):
+    #    """
+    #    To read a model from a branch *b*, every atomic sentence at a world *w* on *b*
+    #    is True at *w*, and every negated atomic is False at *w*. For every predicate
+    #    sentence Fa0...an at a world *w* on *b*, the tuple <a0,...,an> is in the extension
+    #    of F at *w*.
+    #    """
         for node in branch.nodes:
             self.read_node(node)
+        self.finish()
 
     def read_node(self, node):
         if node.has('sentence'):
             sentence = node.props['sentence']
-            if sentence.is_literal():
-                self.set_literal_value(sentence, 1, node.props['world'])
+            if self.is_sentence_opaque(sentence):
+                self.set_opaque_value(sentence, 1, world=node.props['world'])
+            elif sentence.is_literal():
+                self.set_literal_value(sentence, 1, world=node.props['world'])
         elif node.has('world1') and node.has('world2'):
             self.add_access(node.props['world1'], node.props['world2'])
 
-    def set_literal_value(self, sentence, value, world):
+    def finish(self):
+        for world in self.frames:
+            for predicate in self.predicates:
+                self.agument_extension_with_identicals(predicate, world)
+            identity_extension = self.get_extension('Identity', world=world)
+            existence_extension = self.get_extension('Existence', world=world)
+            for c in self.constants:
+                # make sure each constant exists
+                existence_extension.add((c,))
+                # make sure each constant is self-identical
+                identity_extension.add((c, c))
+
+    def agument_extension_with_identicals(self, predicate, world):
+        extension = self.get_extension(predicate, world=world)
+        for c in self.constants:
+            identicals = self.get_identicals(c, world=world)
+            to_add = set()
+            for params in extension:
+                if c in params:
+                    for new_c in identicals:
+                        new_params = []
+                        for p in params:
+                            if p == c:
+                                new_params.append(new_c)
+                            else:
+                                new_params.append(p)
+                        to_add.add(tuple(new_params))
+            extension.update(to_add)
+
+    def get_identicals(self, c, world=None, **kw):
+        identity_extension = self.get_extension('Identity', world=world, **kw)
+        identicals = set()
+        for params in identity_extension:
+            if c in params:
+                identicals.update(params)
+        if c in identicals:
+            identicals.remove(c)
+        return identicals
+
+    def set_literal_value(self, sentence, value, **kw):
         if sentence.is_operated() and sentence.operator == 'Negation':
-            self.set_literal_value(sentence.operand, 1 - value, world)
+            self.set_literal_value(sentence.operand, self.truth_function('Negation', value), **kw)
         elif sentence.is_atomic():
-            self.set_atomic_value(sentence, value, world)
+            self.set_atomic_value(sentence, value, **kw)
         elif sentence.is_predicated():
-            self.set_predicated_value(sentence, value, world)
+            self.set_predicated_value(sentence, value, **kw)
         else:
             raise NotImplementedError(NotImplemented)
 
-    def set_atomic_value(self, sentence, value, world):
+    def set_opaque_value(self, sentence, value, world=None, **kw):
         frame = self.world_frame(world)
-        if sentence in frame['atomics']:
-            assert frame['atomics'][sentence] == value
+        if sentence in frame['opaques'] and frame['opaques'][sentence] != value:
+            raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
+        frame['opaques'][sentence] = value
+        
+    def set_atomic_value(self, sentence, value, world=None, **kw):
+        frame = self.world_frame(world)
+        if sentence in frame['atomics'] and frame['atomics'][sentence] != value:
+            raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
         frame['atomics'][sentence] = value
 
-    def set_predicated_value(self, sentence, value, world):
-        self.predicates.add(sentence.predicate)
-        for param in sentence.parameters:
+    def set_predicated_value(self, sentence, value, world=None, **kw):
+        predicate = sentence.predicate
+        self.predicates.add(predicate)
+        params = tuple(sentence.parameters)
+        for param in params:
             if param.is_constant():
                 self.constants.add(param)
-        name = sentence.predicate.name
-        frame = self.world_frame(world)
-        for w in self.worlds:
-            if name not in self.worlds[w]['extensions']:
-                self.worlds[w]['extensions'][name] = set()
+        extension = self.get_extension(predicate, world=world, **kw)
+        if value == 0:
+            if params in extension:
+                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
         if value == 1:
-            frame['extensions'][name].add(tuple(sentence.parameters))
-        frame['constants'].update(sentence.parameters)
+            extension.add(params)
 
-    def get_extension(self, predicate, world):
+    def get_extension(self, predicate, world=None, **kw):
         if isinstance(predicate, logic.Vocabulary.Predicate):
             name = predicate.name
         else:
             name = predicate
         frame = self.world_frame(world)
+        if name not in frame['extensions']:
+            frame['extensions'][name] = set()
         return frame['extensions'][name]
 
     def add_access(self, w1, w2):
@@ -188,70 +261,60 @@ class Model(object):
         return (w1, w2) in self.access
 
     def world_frame(self, world):
-        if world not in self.worlds:
+        if world not in self.frames:
             extensions = {'Identity': set(), 'Existence': set()}
-            self.worlds[world] = {'atomics' : {}, 'extensions' : extensions, 'constants' : set()}
-        frame = self.worlds[world]
-        for c in self.constants:
-            # make sure each constant exists
-            frame['extensions']['Existence'].add((c,))
-            # make sure each constant is self-identical
-            frame['extensions']['Identity'].add((c, c))
-        return frame
+            self.frames[world] = {'atomics' : {}, 'extensions' : extensions, 'opaques': {}}
+        return self.frames[world]
 
-    def value_of(self, sentence, world):
-        if sentence.is_predicated():
-            return self.value_of_predicated(sentence, world)
-        elif sentence.is_atomic():
-            return self.value_of_atomic(sentence, world)
-        elif sentence.is_operated():
-            return self.value_of_operated(sentence, world)
-        elif sentence.is_quantified():
-            return self.value_of_quantified(sentence, world)
+    def value_of_opaque(self, sentence, world=None, **kw):
+        frame = self.world_frame(world)
+        if sentence in frame['opaques']:
+            return frame['opaques'][sentence]
+        else:
+            return unassigned_value
 
-    def value_of_atomic(self, sentence, world):
+    def value_of_atomic(self, sentence, world=None, **kw):
         frame = self.world_frame(world)
         if sentence in frame['atomics']:
             return frame['atomics'][sentence]
         else:
             return unassigned_value
 
-    def value_of_predicated(self, sentence, world):
-        return tuple(sentence.parameters) in self.get_extension(sentence.predicate, world)
+    def value_of_predicated(self, sentence, **kw):
+        return tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw)
 
-    def value_of_operated(self, sentence, world):
+    def value_of_operated(self, sentence, world=None, **kw):
         operator = sentence.operator
-        if operator in truth_functional_operators:
-            return truth_function(operator, *[self.value_of(operand, world) for operand in sentence.operands])
-        elif operator == 'Possibility':
+        if operator == 'Possibility':
             if world in self.sees:
                 for w2 in self.sees[world]:
-                    if self.value_of(sentence.operand, w2) == 1:
+                    if self.value_of(sentence.operand, world=w2, **kw) == 1:
                         return 1
             return 0
         elif operator == 'Necessity':
             if world in self.sees:
                 for w2 in self.sees[world]:
-                    if self.value_of(sentence.operand, w2) == 0:
+                    if self.value_of(sentence.operand, world=w2, **kw) == 0:
                         return 0
             return 1
         else:
-            raise NotImplementedError(NotImplemented)
+            return super(Model, self).value_of_operated(sentence, world=world, **kw)
 
-    def value_of_quantified(self, sentence, world):
+    def value_of_quantified(self, sentence, world=None, **kw):
         frame = self.world_frame(world)
         q = sentence.quantifier
         v = sentence.variable
         if q == 'Existential':
             for c in self.constants:
-                if self.value_of(sentence.substitute(c, v), world) == 1:
+                if self.value_of(sentence.substitute(c, v), world=world, **kw) == 1:
                     return 1
             return 0
         elif q == 'Universal':
             for c in self.constants:
-                if self.value_of(sentence.substitute(c, v), world) == 0:
+                if self.value_of(sentence.substitute(c, v), world=world, **kw) == 0:
                     return 0
             return 1
+        return super(Model, self).value_of_quantified(sentence, world=world, **kw)
 
 
 class TableauxSystem(logic.TableauxSystem):
@@ -274,16 +337,6 @@ class TableauxSystem(logic.TableauxSystem):
         for premise in argument.premises:
             branch.add({ 'sentence': premise, 'world': 0 })
         branch.add({ 'sentence': negate(argument.conclusion), 'world': 0 })
-
-    @staticmethod
-    def read_model(model, branch):
-        """
-        To read a model from a branch *b*, every atomic sentence at a world *w* on *b*
-        is True at *w*, and every negated atomic is False at *w*. For every predicate
-        sentence Fa0...an at a world *w* on *b*, the tuple <a0,...,an> is in the extension
-        of F at *w*.
-        """
-        model.read_branch(branch)
 
 class IsModal(object):
     modal = True
