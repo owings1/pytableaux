@@ -116,20 +116,31 @@ unassigned_value = k.unassigned_value
 truth_functional_operators = fde.truth_functional_operators
 truth_function = fde.truth_function
 
-# NB: model semantics are a work in progress
 class Model(k.Model):
 
-    def set_atomic_value(self, atomic, value, world=None):
-        return super(Model, self).set_atomic_value(atomic, value, 0)
+    def is_sentence_opaque(self, sentence):
+        if sentence.is_quantified():
+            return True
+        if sentence.is_operated():
+            operator = sentence.operator
+            if operator == 'Necessity' or operator == 'Possibility':
+                return True
+        return super(Model, self).is_sentence_opaque(sentence)
 
-    def set_predicated_value(self, sentence, value, world=None):
-        return super(Model, self).set_predicated_value(sentence, value, 0)
+    def set_opaque_value(self, sentence, value, **kw):
+        return super(Model, self).set_opaque_value(sentence, value, world=0)
 
-    def get_extension(self, predicate, world=None):
-        return super(Model, self).get_extension(predicate, 0)
+    def set_atomic_value(self, sentence, value, **kw):
+        return super(Model, self).set_atomic_value(sentence, value, world=0)
 
-    def value_of(self, sentence, world=None):
-        return super(Model, self).value_of(sentence, 0)
+    def set_predicated_value(self, sentence, value, **kw):
+        return super(Model, self).set_predicated_value(sentence, value, world=0)
+
+    def get_extension(self, predicate, **kw):
+        return super(Model, self).get_extension(predicate, world=0)
+
+    def value_of(self, sentence, **kw):
+        return super(Model, self).value_of(sentence, world=0)
 
     def add_access(self, w1, w2):
         raise NotImplementedError(NotImplemented)
@@ -150,29 +161,6 @@ class TableauxSystem(logic.TableauxSystem):
         for premise in argument.premises:
             branch.add({ 'sentence' : premise })
         branch.add({ 'sentence':  negate(argument.conclusion) })
-
-    @staticmethod
-    def read_model(model, branch):
-        """
-        To read a model from a branch *b*, every atomic sentence on *b* is True,
-        every negated atomic is False. For every predicate sentence Fa0...an on *b*,
-        the tuple <a0,...,an> is in the extension of F.
-        """
-        for node in branch.get_nodes():
-            if node.has('sentence'):
-                s = node.props['sentence']
-                if s.is_literal():
-                    if s.is_operated():
-                        assert s.operator == 'Negation'
-                        value = 0
-                        s = s.operand
-                    else:
-                        value = 1
-                    if s.is_atomic():
-                        model.set_atomic_value(s, value)
-                    else:
-                        assert s.is_predicated()
-                        model.set_predicated_value(s, value)
 
 class NonModal(object):
     modal = False
