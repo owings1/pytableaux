@@ -109,7 +109,7 @@ from logic import negate, quantify, atomic, NotImplementedError
 
 class Model(logic.Model):
 
-    truth_values = set([0, 0.25, 0.75, 1])
+    truth_values = [0, 0.25, 0.75, 1]
     truth_functional_operators = set([
         'Assertion'                 ,
         'Negation'                  ,
@@ -223,9 +223,16 @@ class Model(logic.Model):
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
             if params in anti_extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
-        if value == self.char_values['T'] or ('B' in self.char_values and value == self.char_values['B']):
+        elif value == self.char_values['T']:
+            if params in anti_extension:
+                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
             extension.add(params)
-        if value == self.char_values['F'] or ('B' in self.char_values and value == self.char_values['B']):
+        elif value == self.char_values['F']:
+            if params in extension:
+                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
+            anti_extension.add(params)
+        elif 'B' in self.char_values and value == self.char_values['B']:
+            extension.add(params)
             anti_extension.add(params)
 
     def get_extension(self, predicate):
