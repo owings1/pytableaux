@@ -28,11 +28,11 @@ def validities(logic):
 def invalidities(logic):
     return get_logic(logic).example_invalidities()
 
-def example_proof(logic, name, is_build=True):
+def example_proof(logic, name, is_build=True, is_models=True):
     arg = examples.argument(name)
     proof = tableau(logic, arg)
     if is_build:
-        proof.build()
+        proof.build(build_models=is_models)
     return proof
 
 def empty_proof():
@@ -40,8 +40,8 @@ def empty_proof():
 
 class LogicTester(object):
 
-    def example_proof(self, name):
-        return example_proof(self.logic, name)
+    def example_proof(self, name, **kw):
+        return example_proof(self.logic, name, **kw)
 
 class TestFDE(LogicTester):
 
@@ -78,6 +78,12 @@ class TestFDE(LogicTester):
         proof = self.example_proof('Universal from Negated Existential')
         assert proof.valid
 
+    def test_valid_neg_assert_a_implies_a(self):
+        arg = argument(premises=['NTa'], conclusion='Na', notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
+
     def test_invalid_lem(self):
         proof = self.example_proof('Law of Excluded Middle')
         assert not proof.valid
@@ -89,6 +95,12 @@ class TestFDE(LogicTester):
     def test_invalid_univ_from_exist(self):
         proof = self.example_proof('Universal from Existential')
         assert not proof.valid
+
+    def test_invalid_lnc_build_model(self):
+        proof = self.example_proof('Law of Non-contradiction')
+        model = proof.branches[0].model
+        assert not proof.valid
+        assert model.value_of(parse('a')) == model.char_values['B']
 
     def test_model_b_value_atomic_branch(self):
         proof = tableau(self.logic)

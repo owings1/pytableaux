@@ -905,12 +905,14 @@ class TableauxSystem(object):
             if argument != None:
                 self.build_trunk()
 
-        def build(self):
+        def build(self, build_models=False):
             """
             Build the tableau. Returns self.
             """
             while not self.finished:
                 self.step()
+            if build_models:
+                self.build_models()
             return self
 
         def step(self):
@@ -1117,6 +1119,10 @@ class TableauxSystem(object):
             }
             self.tree     = self.structure(self.branches)
             return self
+
+        def build_models(self):
+            for branch in list(self.open_branches()):
+                branch.make_model()
 
         def __repr__(self):
             return {
