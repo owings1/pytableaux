@@ -127,48 +127,224 @@ def example_invalidities():
     return args
 
 import logic, examples
-from logic import negate, quantify, atomic
+from logic import negate, quantify, atomic, NotImplementedError
 
+class Model(logic.Model):
+
+    truth_values = set([0, 0.25, 0.75, 1])
+    truth_functional_operators = set([
+        'Assertion'                 ,
+        'Negation'                  ,
+        'Conjunction'               ,
+        'Disjunction'               ,
+        'Material Conditional'      ,
+        'Conditional'               ,
+        'Material Biconditional'    ,
+        'Biconditional'             ,
+    ])
+    designated_values = set([0.75, 1])
+    undesignated_values = set([0, 0.25])
+    unassigned_value = 0.25
+    char_values = {
+        'F' : 0,
+        'N' : 0.25,
+        'B' : 0.75,
+        'T' : 1
+    }
+    truth_value_chars = {
+        0    : 'F',
+        0.25 : 'N',
+        0.75 : 'B',
+        1    : 'T'
+    }
+
+    def __init__(self):
+        self.extensions = {}
+        self.anti_extensions = {}
+        self.atomics = {}
+        self.opaques = {}
+        self.constants = set()
+
+    def read_branch(self, branch):
+        for node in branch.nodes:
+            if node.has('sentence'):
+                sentence = node.props['sentence']
+                is_opaque = self.is_sentence_opaque(sentence)
+                if sentence.is_literal() or is_opaque:
+                    d = node.props['designated']
+                    if sentence.is_operated() and sentence.operator == 'Negation':
+                        # the negative of s is the negatum of s
+                        nnode = branch.find({'sentence': sentence.operand})
+                    else:
+                        # the negative of s is the negation of s
+                        nnode = branch.find({'sentence': negate(sentence)})
+                    if nnode != None:
+                        # both s and its negative are on the branch
+                        nd = nnode.props['designated']
+                        if d and not nd:
+                            # only s is designated
+                            value = self.char_values['T']
+                        elif not d and nd:
+                            # only the negative of s is designated
+                            value = self.char_values['F']
+                        elif d and nd:
+                            # both sentences are designated
+                            value = self.char_values['B']
+                        else:
+                            # both sentences are undesignated
+                            value = self.char_values['N']
+                    else:
+                        # the negative of s is not on the branch
+                        if d:
+                            # any designated value will work
+                            value = self.char_values['T']
+                        else:
+                            # any undesignated value will work
+                            value = self.char_values['F']
+                    if is_opaque:
+                        self.set_opaque_value(sentence, value)
+                    else:
+                        self.set_literal_value(sentence, value)
+        self.finish()
+
+    def finish(self):
+        # TODO: consider augmenting the logic with identity and existence predicate
+        #       restrictions. in that case, new tableaux rules need to be written.
+        pass
+
+    def set_literal_value(self, sentence, value):
+        if sentence.is_operated() and sentence.operator == 'Negation':
+            self.set_literal_value(sentence.operand, self.truth_function('Negation', value))
+        elif sentence.is_atomic():
+            self.set_atomic_value(sentence, value)
+        elif sentence.is_predicated():
+            self.set_predicated_value(sentence, value)
+        else:
+            raise NotImplementedError(NotImplemented)
+
+    def set_opaque_value(self, sentence, value):
+        if sentence in self.opaques and self.opaques[sentence] != value:
+            raise Model.ModelValueError('Inconsistent value {0} for sentence {1}'.format(str(value), str(sentence)))
+        self.opaques[sentence] = value
+        
+    def set_atomic_value(self, sentence, value):
+        if sentence in self.atomics and self.atomics[sentence] != value:
+            raise Model.ModelValueError('Inconsistent value {0} for sentence {1}'.format(str(value), str(sentence)))
+        self.atomics[sentence] = value
+
+    def set_predicated_value(self, sentence, value):
+        predicate = sentence.predicate
+        params = tuple(sentence.parameters)
+        for param in params:
+            if param.is_constant():
+                self.constants.add(param)
+        extension = self.get_extension(predicate)
+        anti_extension = self.get_anti_extension(predicate)
+        if 'N' in self.char_values and value == self.char_values['N']:
+            if params in extension:
+                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
+            if params in anti_extension:
+                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
+        if value == self.char_values['T'] or ('B' in self.char_values and value == self.char_values['B']):
+            extension.add(params)
+        if value == self.char_values['F'] or ('B' in self.char_values and value == self.char_values['B']):
+            anti_extension.add(params)
+
+    def get_extension(self, predicate):
+        if isinstance(predicate, logic.Vocabulary.Predicate):
+            name = predicate.name
+        else:
+            name = predicate
+        if name not in self.extensions:
+            self.extensions[name] = set()
+        return self.extensions[name]
+
+    def get_anti_extension(self, predicate):
+        if isinstance(predicate, logic.Vocabulary.Predicate):
+            name = predicate.name
+        else:
+            name = predicate
+        if name not in self.anti_extensions:
+            self.anti_extensions[name] = set()
+        return self.anti_extensions[name]
+
+    def value_of_atomic(self, sentence, **kw):
+        if sentence in self.atomics:
+            return self.atomics[sentence]
+        return self.unassigned_value
+
+    def value_of_opaque(self, sentence, **kw):
+        if sentence in self.opaques:
+            return self.opaques[sentence]
+        return self.unassigned_value
+
+    def value_of_predicated(self, sentence, **kw):
+        params = tuple(sentence.parameters)
+        predicate = sentence.predicate
+        extension = self.get_extension(predicate)
+        anti_extension = self.get_anti_extension(predicate)
+        if params in extension and params in anti_extension:
+            return self.char_values['B']
+        elif params in extension:
+            return self.char_values['T']
+        elif params in anti_extension:
+            return self.char_values['F']
+        return self.char_values['N']
+
+    def value_of_quantified(self, sentence, **kw):
+        q = sentence.quantifier
+        v = sentence.variable
+        values = {self.value_of(sentence.substitute(c, v), **kw) for c in self.constants}    
+        if q == 'Existential':
+            return max(values)
+        elif q == 'Universal':
+            return min(values)
+        return super(Model, self).value_of_quantified(sentence, **kw)
+
+    def truth_function(self, operator, a, b=None):
+        # Define as generically as possible for reuse.
+        if operator == 'Assertion':
+            return a
+        if operator == 'Negation':
+            if a == self.char_values['F'] or a == self.char_values['T']:
+                return 1 - a
+            return a
+        elif operator == 'Conjunction':
+            return min(a, b)
+        elif operator == 'Disjunction':
+            return max(a, b)
+        elif operator == 'Material Conditional':
+            return self.truth_function('Disjunction', self.truth_function('Negation', a), b)
+        elif operator == 'Material Biconditional':
+            return self.truth_function(
+                'Conjunction',
+                self.truth_function('Material Conditional', a, b),
+                self.truth_function('Material Conditional', b, a)
+            )
+        elif operator == 'Conditional':
+            return self.truth_function('Material Conditional', a, b)
+        elif operator == 'Biconditional':
+            return self.truth_function(
+                'Conjunction',
+                self.truth_function('Conditional', a, b),
+                self.truth_function('Conditional', b, a)
+            )
+        else:
+            raise NotImplementedError(NotImplemented)
+
+    def is_sentence_opaque(self, sentence):
+        if sentence.is_operated():
+            return sentence.operator == 'Necessity' or sentence.operator == 'Possibility'
+        return super(Model, self).is_sentence_opaque(sentence)
+
+# legacy properties
 truth_values = [0, 0.25, 0.75, 1]
-truth_value_chars = {
-    0    : 'F',
-    0.25 : 'N',
-    0.75 : 'B',
-    1    : 'T'
-}
-designated_values = set([0.75, 1])
-undesignated_values = set([0, 0.25])
-unassigned_value = 0.25
-
-truth_functional_operators = set([
-    'Assertion'                 ,
-    'Negation'                  ,
-    'Conjunction'               ,
-    'Disjunction'               ,
-    'Material Conditional'      ,
-    'Conditional'               ,
-    'Material Biconditional'    ,
-    'Biconditional'             ,
-])
+truth_value_chars = Model.truth_value_chars
+truth_functional_operators = Model.truth_functional_operators
 
 def truth_function(operator, a, b=None):
-    if operator == 'Assertion':
-        return a
-    if operator == 'Negation':
-        if a == 0 or a == 1:
-            return 1 - a
-        return a
-    elif operator == 'Conjunction':
-        return min(a, b)
-    elif operator == 'Disjunction':
-        return max(a, b)
-    elif operator == 'Material Conditional' or operator == 'Conditional':
-        return max(truth_function('Negation', a), b)
-    elif operator == 'Material Biconditional' or  operator == 'Biconditional':
-        return min(max(truth_function('Negation', a), b), max(truth_function('Negation', b), a))
-
-class Model(object):
-    pass
+    # legacy api
+    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(logic.TableauxSystem):
     """
