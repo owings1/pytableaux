@@ -315,15 +315,6 @@ class Model(logic.Model):
             return sentence.operator == 'Necessity' or sentence.operator == 'Possibility'
         return super(Model, self).is_sentence_opaque(sentence)
 
-# legacy properties
-truth_values = [0, 0.25, 0.75, 1]
-truth_value_chars = Model.truth_value_chars
-truth_functional_operators = Model.truth_functional_operators
-
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
-
 class TableauxSystem(logic.TableauxSystem):
     """
     Nodes for FDE have a boolean *designation* property, and a branch is closed iff

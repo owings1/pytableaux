@@ -129,15 +129,6 @@ class Model(k3.Model):
         elif operator == 'Conditional':
             return crunch(max(1 - a, b, gap(a) + gap(b)))
         return super(Model, self).truth_function(operator, a, b)
-        
-# legacy properties
-truth_values = [0, 0.5, 1]
-truth_value_chars = Model.truth_value_chars
-truth_functional_operators = Model.truth_functional_operators
-
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

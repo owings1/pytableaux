@@ -78,15 +78,6 @@ class Model(lp.Model):
             return self.char_values['F']
         return super(Model, self).truth_function(operator, a, b)
 
-# legacy properties
-truth_values = [0, 0.75, 1]
-truth_value_chars = Model.truth_value_chars
-truth_functional_operators = Model.truth_functional_operators
-
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
-
 class TableauxSystem(fde.TableauxSystem):
     """
     RM3 tableaux behave just like `FDE`_'s using designation markers. The trunk

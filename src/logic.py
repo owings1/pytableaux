@@ -374,14 +374,14 @@ def get_logic(arg):
     return _get_module('logics', arg)
 
 def truth_table(logic, operator):
-    logic = get_logic(logic)
-    inputs = list(itertools.product(*[logic.truth_values for x in range(arity(operator))]))
-    outputs = [logic.truth_function(operator, *values) for values in inputs]
+    model = get_logic(logic).Model()
+    inputs = list(itertools.product(*[model.truth_values for x in range(arity(operator))]))
+    outputs = [model.truth_function(operator, *values) for values in inputs]
     return {'inputs': inputs, 'outputs': outputs}
 
 def truth_tables(logic):
-    logic = get_logic(logic)
-    return {operator: truth_table(logic, operator) for operator in logic.truth_functional_operators}
+    model = get_logic(logic).Model()
+    return {operator: truth_table(logic, operator) for operator in model.truth_functional_operators}
 
 def _get_module(package, arg):    
     if isinstance(arg, ModuleType):

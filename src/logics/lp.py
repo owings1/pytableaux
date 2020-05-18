@@ -116,7 +116,7 @@ from logic import negate
 from . import fde
 
 class Model(fde.Model):
-    truth_values = set([0, 0.75, 1])
+    truth_values = [0, 0.75, 1]
     undesignated_values = set([0])
     unassigned_value = 0
     char_values = {
@@ -129,15 +129,6 @@ class Model(fde.Model):
         0.75 : 'B',
         1    : 'T'
     }
-
-# legacy properties
-truth_values = [0, 0.75, 1]
-truth_value_chars = Model.truth_value_chars
-truth_functional_operators = Model.truth_functional_operators
-
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

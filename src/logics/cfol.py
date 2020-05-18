@@ -73,20 +73,28 @@ tags_list = list(tags)
 import logic, examples
 from logic import negate
 
-class Model(cpl.Model):
+class Model(k.Model):
     # """
     # A CFOL model is the same as
     # """
-    pass
+    def is_sentence_opaque(self, sentence):
+        if sentence.is_operated():
+            operator = sentence.operator
+            if operator == 'Necessity' or operator == 'Possibility':
+                return True
+        return super(Model, self).is_sentence_opaque(sentence)
 
-# legacy properties
-truth_values = [0, 1]
-truth_value_chars = Model.truth_value_chars
-truth_functional_operators = Model.truth_functional_operators
+    def set_opaque_value(self, sentence, value, **kw):
+        return super(Model, self).set_opaque_value(sentence, value, world=0)
 
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
+    def set_literal_value(self, sentence, value, **kw):
+        return super(Model, self).set_literal_value(sentence, value, world=0)
+
+    def value_of(self, sentence, **kw):
+        return super(Model, self).value_of(sentence, world=0)
+
+    def add_access(self, w1, w2):
+        raise NotImplementedError(NotImplemented)
 
 class TableauxSystem(cpl.TableauxSystem):
     """

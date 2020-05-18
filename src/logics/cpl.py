@@ -87,15 +87,6 @@ class Model(k.Model):
     def add_access(self, w1, w2):
         raise NotImplementedError(NotImplemented)
 
-# legacy properties
-truth_values = [0, 1]
-truth_value_chars = Model.truth_value_chars
-truth_functional_operators = Model.truth_functional_operators
-
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
-
 class TableauxSystem(logic.TableauxSystem):
     """
     A branch can be thought of as representing a case where each node's sentence

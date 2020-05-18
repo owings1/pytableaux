@@ -79,19 +79,11 @@ from logic import negate, operate
 from . import fde, k3
 
 class Model(k3.Model):
+
     def truth_function(self, operator, a, b=None):
         if logic.arity(operator) == 2 and (a == self.char_values['N'] or b == self.char_values['N']):
             return self.char_values['N']
         return super(Model, self).truth_function(operator, a, b)
-
-# legacy properties
-truth_values = [0, 0.5, 1]
-truth_value_chars = Model.truth_value_chars
-truth_functional_operators = Model.truth_functional_operators
-
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

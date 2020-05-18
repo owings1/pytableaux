@@ -92,15 +92,6 @@ class Model(k3w.Model):
             return fde.Model.truth_function(self, operator, a, b)
         return super(Model, self).truth_function(operator, a, b)
 
-# legacy properties
-truth_values = [0, 0.5, 1]
-truth_value_chars = Model.truth_value_chars
-truth_functional_operators = Model.truth_functional_operators
-
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
-
 class TableauxSystem(fde.TableauxSystem):
     """
     B3E's Tableaux System inherits directly from `FDE`_'s, employing designation markers,

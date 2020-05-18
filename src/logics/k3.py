@@ -101,16 +101,15 @@ Some notable features of K3 include:
 name = 'K3'
 title = 'Strong Kleene 3-valued logic'
 description = 'Three-valued logic (True, False, Neither)'
-tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
-tags_list = list(tags)
+tags_list = list(['many-valued', 'gappy', 'non-modal', 'first-order'])
+tags = set(tags_list)
 
-from . import fde
-    
 import logic
 from logic import negate
+from . import fde
 
 class Model(fde.Model):
-    truth_values = set([0, 0.5, 1])
+    truth_values = [0, 0.5, 1]
     designated_values = set([1])
     undesignated_values = set([0, 0.5])
     unassigned_value = 0.5
@@ -124,15 +123,6 @@ class Model(fde.Model):
         0.5  : 'N',
         1    : 'T'
     }
-
-# legacy properties
-truth_values = [0, 0.5, 1]
-truth_value_chars = Model.truth_value_chars
-truth_functional_operators = Model.truth_functional_operators
-
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """
