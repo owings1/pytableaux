@@ -38,6 +38,13 @@ import logic
 from . import k
 from logic import atomic
 
+class Model(k.Model):
+
+    def finish(self):
+        for w in self.frames:
+            self.add_access(w, w)
+        super(Model, self).finish()
+
 class TableauxSystem(k.TableauxSystem):
     """
     T's Tableaux System inherits directly from K's.

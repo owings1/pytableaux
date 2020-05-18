@@ -27,6 +27,22 @@ tags_list = list(tags)
 import logic
 from . import k, t
 
+class Model(t.Model):
+
+    def finish(self):
+        while True:
+            super(Model, self).finish()
+            to_add = set()
+            for w1 in self.frames:
+                for w2 in self.visibles(w1):
+                    for w3 in self.visibles(w2):
+                        a = (w1, w3)
+                        if a not in self.access:
+                            to_add.add(a)
+            if len(to_add) == 0:
+                return
+            self.access.update(to_add)
+
 class TableauxSystem(k.TableauxSystem):
     pass
     

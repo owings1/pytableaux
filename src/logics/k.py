@@ -77,10 +77,18 @@ import logic, examples
 from logic import negate, operate, quantify, atomic, constant, predicated, NotImplementedError
 from . import fde
 
+def substitute_params(params, old_value, new_value):
+    new_params = []
+    for p in params:
+        if p == old_value:
+            new_params.append(new_value)
+        else:
+            new_params.append(p)
+    return tuple(new_params)
+
 class Model(logic.Model):
 
-    truth_values = set([0, 1])
-
+    truth_values = [0, 1]
     truth_function = fde.Model.truth_function
     truth_functional_operators = fde.Model.truth_functional_operators
     
@@ -144,13 +152,8 @@ class Model(logic.Model):
             for params in extension:
                 if c in params:
                     for new_c in identicals:
-                        new_params = []
-                        for p in params:
-                            if p == c:
-                                new_params.append(new_c)
-                            else:
-                                new_params.append(p)
-                        to_add.add(tuple(new_params))
+                        new_params = substitute_params(params, c, new_c)
+                        to_add.add(new_params)
             extension.update(to_add)
 
     def get_identicals(self, c, world=None, **kw):
@@ -214,9 +217,16 @@ class Model(logic.Model):
         if w1 not in self.sees:
             self.sees[w1] = set()
         self.sees[w1].add(w2)
+        self.world_frame(w1)
+        self.world_frame(w2)
 
     def has_access(self, w1, w2):
         return (w1, w2) in self.access
+
+    def visibles(self, world):
+        if world in self.sees:
+            return self.sees[world]
+        return set()
 
     def world_frame(self, world):
         if world not in self.frames:

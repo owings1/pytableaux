@@ -38,8 +38,23 @@ tags = set(['bivalent', 'modal', 'first-order'])
 tags_list = list(tags)
 
 import logic
-from . import k
 from logic import atomic
+from . import k
+
+class Model(k.Model):
+
+    def finish(self):
+        needs_world = set()
+        for world in self.frames:
+            if len(self.visibles(world)) == 0:
+                needs_world.add(world)
+        if len(needs_world) > 0:
+            # only add one extra world
+            w2 = max(self.frames.keys()) + 1
+            for w1 in needs_world:
+                self.add_access(w1, w2)
+            self.add_access(w2, w2)
+        super(Model, self).finish()
 
 class TableauxSystem(k.TableauxSystem):
     """
