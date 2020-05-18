@@ -545,6 +545,9 @@ class Vocabulary(object):
         def is_variable(self):
             return isinstance(self, Vocabulary.Variable)
 
+        def __repr__(self):
+            return (self.index, self.subscript).__repr__()
+
     class Constant(Parameter):
 
         def __init__(self, index, subscript):
@@ -854,9 +857,12 @@ class TableauxSystem(object):
 
     @staticmethod
     def read_model(model, branch):
-        raise NotImplementedError(NotImplemented)
+        model.read_branch(branch)
 
     class TrunkAlreadyBuiltError(Exception):
+        pass
+
+    class BranchClosedError(Exception):
         pass
 
     class Tableau(object):
@@ -1137,6 +1143,7 @@ class TableauxSystem(object):
             self.tableau = tableau
             self.closed_step = None
             self.index = None
+            self.model = None
             self.node_index = {
                 'sentence'   : dict(),
                 'designated' : dict(),
@@ -1281,6 +1288,17 @@ class TableauxSystem(object):
                     subscript += 1
                 c = constant(index, subscript)
             return c
+
+        def make_model(self):
+            """
+            Make a model from the open branch.
+            """
+            model = self.tableau.logic.Model()
+            if self.closed:
+                raise BranchClosedError('Cannot build a model from a closed branch')
+            model.read_branch(self)
+            self.model = model
+            return model
 
         def __repr__(self):
             return {'nodes': self.nodes, 'closed': self.closed}.__repr__()
@@ -1603,6 +1621,52 @@ class TableauxSystem(object):
 
         def write_tableau(self, tableau, writer, opts):
             raise NotImplementedError(NotImplemented)
+
+class Model(object):
+
+    class ModelValueError(Exception):
+        pass
+
+    truth_functional_operators = set()
+
+    def read_branch(self, branch):
+        raise NotImplementedError(NotImplemented)
+
+    def value_of(self, sentence, **kw):
+        if self.is_sentence_opaque(sentence):
+            return self.value_of_opaque(sentence, **kw)
+        elif sentence.is_predicated():
+            return self.value_of_predicated(sentence, **kw)
+        elif sentence.is_atomic():
+            return self.value_of_atomic(sentence, **kw)
+        elif sentence.is_operated():
+            return self.value_of_operated(sentence, **kw)
+        elif sentence.is_quantified():
+            return self.value_of_quantified(sentence, **kw)
+
+    def truth_function(self, operator, a, b=None):
+        raise NotImplementedError(NotImplemented)
+
+    def is_sentence_opaque(self, sentence, **kw):
+        return False
+
+    def value_of_opaque(self, sentence, **kw):
+        raise NotImplementedError(NotImplemented)
+
+    def value_of_atomic(self, sentence, **kw):
+        raise NotImplementedError(NotImplemented)
+
+    def value_of_predicated(self, sentence, **kw):
+        raise NotImplementedError(NotImplemented)
+
+    def value_of_operated(self, sentence, **kw):
+        operator = sentence.operator
+        if operator in self.truth_functional_operators:
+            return self.truth_function(operator, *[self.value_of(operand, **kw) for operand in sentence.operands])
+        raise NotImplementedError(NotImplemented)
+
+    def value_of_quantified(self, sentence, **kw):
+        raise NotImplementedError(NotImplemented)
 
 class Parser(object):
     """
