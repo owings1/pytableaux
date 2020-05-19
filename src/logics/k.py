@@ -286,14 +286,6 @@ class Model(logic.Model):
             return 1
         return super(Model, self).value_of_quantified(sentence, world=world, **kw)
 
-# legacy properties
-truth_values = [0, 1]
-truth_value_chars = Model.truth_value_chars
-truth_functional_operators = Model.truth_functional_operators
-
-def truth_function(operator, a, b=None):
-    # legacy api
-    return Model().truth_function(operator, a, b)
 
 class TableauxSystem(logic.TableauxSystem):
     """
