@@ -89,7 +89,6 @@ def substitute_params(params, old_value, new_value):
 class Model(logic.Model):
 
     truth_values = [0, 1]
-    truth_function = fde.Model.truth_function
     truth_functional_operators = fde.Model.truth_functional_operators
     
     designated_values = set([1])
@@ -110,6 +109,7 @@ class Model(logic.Model):
         self.sees = {}
         self.predicates = set()
         self.constants = set()
+        self.fde = fde.Model()
 
     def read_branch(self, branch):
     #    """
@@ -286,6 +286,8 @@ class Model(logic.Model):
             return 1
         return super(Model, self).value_of_quantified(sentence, world=world, **kw)
 
+    def truth_function(self, operator, a, b=None):
+        return self.fde.truth_function(operator, a, b)
 
 class TableauxSystem(logic.TableauxSystem):
     """
