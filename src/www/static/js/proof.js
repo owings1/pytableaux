@@ -106,11 +106,13 @@
         ControlsHeading : 'controls-heading'     ,
         ControlsContent : 'controls-contents'    ,
         ControlsPos     : 'controls-position'    ,
+        ControlsWrap    : 'controls-wrapper'     ,
         CollapseWrap    : 'collapser-wrapper'    ,
         CollapseHead    : 'collapser-heading'    ,
         CollapseContent : 'collapser-contents'   ,
         PositionedLeft  : 'positioned-left'      ,
-        PositionedRight : 'positioned-right'
+        PositionedRight : 'positioned-right'     ,
+        PartHeader      : 'part-header'
     }
 
     // class names preceded with a '.' for selecting
@@ -751,10 +753,19 @@
         return $status.nextAll(Dcls.Proof)
     }
 
+    /**
+     * Form a selector string for an attribute.
+     *
+     * @param attr The attribute name.
+     * @param val The attribute value.
+     * @param oper The operator, default is '='.
+     * @return The attribute selector string.
+     */
     function getAttrSelector(attr, val, oper) {
         oper = oper || '='
-        return '[' + attr + oper +'"' + val + '"]'
+        return ['[', attr, oper, '"', val, '"]'].join('')
     }
+
     /**
      * Make various incremental UI adjustments.
      *
@@ -812,8 +823,7 @@
      * Show/hide handler for collapser.
      *
      * @param $heading The heading jQuery element
-     * @param $status (optional) The status panel jQuery element, for resetting
-     *     the minHeight of the parent element if this is the controls.
+     * @param $status (optional) The status panel jQuery element, for adjusting height.
      * @return void
      */
     function handlerCollapserHeadingClick($heading, $status) {
@@ -830,15 +840,32 @@
         }
         const isControls = $status && $heading.hasClass(Cls.ControlsHeading)
         if (isControls) {
-            setTimeout(function() {
-                const $parent = $status.parent()
-                if (isShow) {
-                    $parent.css({minHeight: $wrapper.css('height')})
-                } else {
-                    $parent.css({minHeight: ''})
-                }
-            }, speed)
+            adjustHeightForControls($status, speed)
         }
+    }
+
+    /**
+     * Resetting the minHeight of the parent element of the status panel.
+     *
+     * @param $status The status panel jQuery element.
+     * @param delay The delay, default is Anim.Fast or 100 if Anim.Fast is NaN.
+     * @return void
+     */
+    function adjustHeightForControls($status, delay) {
+        delay = +delay
+        if (isNaN(delay)) {
+            delay = (!isNaN(+Anim.Fast) && Anim.Fast) || 100
+        }
+        setTimeout(function() {
+            const $parent = $status.parent()
+            const $wrapper = $status.find(Dcls.ControlsWrap)
+            const isShown = $wrapper.hasClass(Cls.Uncollapsed)
+            if (isShown) {
+                $parent.css({minHeight: $wrapper.css('height')})
+            } else {
+                $parent.css({minHeight: ''})
+            }
+        }, delay)
     }
 
     /**
@@ -861,7 +888,7 @@
 
     $(document).ready(function() {
 
-        var modkey = {
+        const modkey = {
             shift : false,
             ctrl  : false,
             alt   : false
@@ -880,14 +907,14 @@
         $(Dcls.ControlsContent).accordion({
             header      : 'h4',
             heightStyle : 'content',
-            animate     : 100
+            animate     : Anim.Fast
         })
 
         // load a click event handler for each proof in the document.
         $(Dcls.Proof).on('click', function(e) {
-            const $proof = $(this)
-            const $target = $(e.target)
-            const $status = getStatusFromProof($proof)
+            const $proof   = $(this)
+            const $target  = $(e.target)
+            const $status  = getStatusFromProof($proof)
             const behavior = modkey.ctrlalt ? 'zoom' : 'inspect'
             switch (behavior) {
                 case 'zoom':
@@ -933,6 +960,8 @@
             const $collapserHeading = $target.closest(Dcls.CollapseHead)
             if ($collapserHeading.length) {
                 handlerCollapserHeadingClick($collapserHeading, $status)
+            } else if ($target.is(Dcls.PartHeader)) {
+                adjustHeightForControls($status, Anim.Fast)
             } else if ($target.hasClass(Cls.StepStart)) {
                 adjust($proof, 'step', 'start')
             } else if ($target.hasClass(Cls.StepNext)) {
@@ -974,7 +1003,7 @@
             const $target = $(e.target)
             const isInput = $target.is(':input')
             if (!isInput && $lastProof) {
-                var $proof = $lastProof
+                const $proof = $lastProof
                 var s = String.fromCharCode(e.which)
                 switch (s) {
                     case '>':
@@ -1022,7 +1051,7 @@
                         if ($proof.children(Sel.CanBranchFilter).length) {
                             filterBranches('closed', $proof)
                         }
-                        break
+                        breakq
                     case 'A':
                         if ($proof.children(Sel.CanBranchFilter).length) {
                             filterBranches('all', $proof)
@@ -1031,21 +1060,29 @@
                     case 'r':
                     case 'R':
                         var stay = s == 'R'
+                        var $status = getStatusFromProof($proof)
                         doHighlight({$proof: $proof, stay: stay, ruleStep: true})
                         if (stay) {
-                            $(Dcls.StepRuleName, getStatusFromProof($proof)).toggleClass(Cls.Stay)
+                            $(Dcls.StepRuleName, $status).toggleClass(Cls.Stay)
                         }
                         break
                     case 't':
                     case 'T':
                         var stay = s == 'T'
+                        var $status = getStatusFromProof($proof)
                         doHighlight({$proof: $proof, stay: stay, ruleTarget: true})
                         if (stay) {
-                            $(Dcls.StepRuleName, getStatusFromProof($proof)).toggleClass(Cls.Stay)
+                            $(Dcls.StepRuleName, $status).toggleClass(Cls.Stay)
                         }
                         break
                     case 'Z':
                         zoom($proof.children(Dcls.Structure), $proof)
+                        break
+                    case 'q':
+                    case 'Q':
+                        var $status = getStatusFromProof($proof)
+                        var $heading = $(Dcls.ControlsHeading, $status)
+                        handlerCollapserHeadingClick($heading, $status)
                         break
                     default:
                         break

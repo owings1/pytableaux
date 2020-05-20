@@ -9,14 +9,6 @@
             <h4 class="part-header">Details</h4>
             <div class="part-content">
                 <ul class="details">
-                    {% if tableau.argument != None %}
-                        <li>
-                            <span class="prop">Argument</span>
-                            <span class="value logic-title {{ module|e }}">
-                                {{ premises|join('<br>') }}{% if premises|length %}<br><hr>{% endif %}&there4; {{ conclusion }}
-                            </span>
-                        </li>
-                    {% endif %}
                     <li>
                         <span class="prop">Logic</span>
                         <span class="value">{{ tableau.logic.name|e }} - {{ tableau.logic.title|e }}</span>
@@ -27,6 +19,14 @@
                             {{ tableau.stats['result'] }}
                         </span>
                     </li>
+                    {% if tableau.argument != None %}
+                        <li>
+                            <span class="prop">Argument</span>
+                            <span class="value logic-title {{ module|e }}">
+                                {{ premises|join('<br>') }}{% if premises|length %}<br><hr>{% endif %}&there4; {{ conclusion }}
+                            </span>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
             <h4 class="part-header">Stats</h4>

@@ -96,13 +96,13 @@
 }
 .html-writer-controls ul.details {
     margin: 16px 0 0 0;
-    padding: 0;
+    padding: 0 0 0 3px;
 }
 .html-writer-controls ul.details li {
     display: block;
     padding: 0 8px 0 5px;
     margin: 0 22px 16px 0;
-    border-left: 7px solid #eeeeee;
+    border-left: 3px solid #44727e;
 }
 .html-writer-controls ul.details .prop {
     font-style: italic;
@@ -193,10 +193,6 @@
 .html-writer-controls .collapser-wrapper.positioned-left .collapser-heading.collapsed::after {
     margin-left: 5px;
 }
-
-.html-writer-controls .collapser-contents {
-    padding: 10px;
-}
 .html-writer-controls .ui-accordion-header.ui-state-active {
     background: #1b5361d1;
     border: 1px solid #1387a5d1;
@@ -216,4 +212,7 @@
 .html-writer-controls .collapser-wrapper.positioned-right .controls-heading::after {
     margin-left: 5px;
     opacity: 85%;
+}
+.html-writer-controls .controls-contents .ui-accordion-header {
+    margin: 0;
 }
