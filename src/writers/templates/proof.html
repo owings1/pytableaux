@@ -3,7 +3,7 @@
 {% if opts['controls'] %}
     {%- include 'controls.html' -%}
 {% endif %}
-<div class="html-writer-proof{% if opts['highlight_open'] %} highlight-open{% endif %}"
+<div class="html-writer-proof {%- if opts['highlight_open'] %} highlight-open{% endif %}"
     data-step="{{ tableau.history|length }}"
     data-num-steps="{{ tableau.history|length }}"
     data-current-width-pct="100">

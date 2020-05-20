@@ -17,6 +17,9 @@
  * 
  * pytableaux - css for html tableau writer
  */
+.proof pre {
+    overflow-x: scroll;
+}
 .html-writer-proof {
     cursor: pointer;
 }
@@ -85,35 +88,44 @@
     padding: 2px;
     color: #ddd;
 }
-.html-writer-controls .left {
-    float: left;
-}
-.html-writer-controls dl {
-    margin: 0 0 0 3px;
-}
-.html-writer-controls dd {
-    padding: 5px 2px 0 4px;
-    margin: 0px 0 4px 4px;
-    background-color: #eee;
-    float: left;
-    width: 220px;
-    min-height: 24px;
-    border: 1px solid #ddd;
-}
-.html-writer-controls dt {
-    float: left;
-    padding: 5px 3px 0 3px;
-    background-color: white;
+.html-writer-controls {
     display: inline-block;
-    clear: both;
-    min-width: 140px;
-    text-align: right;
+}
+.html-writer-controls .controls-contents {
+    min-width: 260px;
+}
+.html-writer-controls ul.details {
+    margin: 16px 0 0 0;
+    padding: 0;
+}
+.html-writer-controls ul.details li {
+    display: block;
+    padding: 0 8px 0 5px;
+    margin: 0 22px 16px 0;
+    border-left: 7px solid #eeeeee;
+}
+.html-writer-controls ul.details .prop {
+    font-style: italic;
+    font-size: 12px;
+}
+.html-writer-controls ul.details .prop::after {
+    content: "\a";
+    white-space: pre;
+}
+.html-writer-controls ul.details .value {
+    padding: 2px;
+    font-weight: bold;
+    font-size: 14px;
+    margin-top: 5px;
 }
 .html-writer-controls .valid {
     color: green;
 }
 .html-writer-controls .invalid {
     color: red;
+}
+.html-writer-controls .controls-contents .part-content {
+    padding: 0;
 }
 .html-writer-controls a.button {
     background-color: #138ead;
@@ -128,4 +140,81 @@
 }
 .html-writer-controls .hidden {
     display: none;
+}
+/* Collapser */
+
+.html-writer-controls .collapser-wrapper {
+    border: 2px solid #ccc;
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+.html-writer-controls .collapser-heading {
+    cursor: pointer;
+    color: #333333;
+    padding: 10px;
+    font-size: 16px;
+    margin-block-start: 0;
+    margin-block-end: 0;
+    background-color: #93c3cd61;
+}
+.html-writer-controls .collapser-heading h3 {
+    display: inline;
+    margin-block-start: 0;
+    margin-block-end: 0;
+}
+.html-writer-controls .collapser-heading.uncollapsed {
+    border-bottom: 1px solid #cccccc;
+}
+.html-writer-controls .collapser-heading::before {
+    background-size: 16px 16px;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-right: 5px;
+    content: "";
+    opacity: 85%;
+}
+.html-writer-controls .collapser-heading::after {
+    background-size: 16px 16px;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    float: right;
+    content: "";
+    opacity: 45%;
+}
+.html-writer-controls .collapser-wrapper.positioned-left .collapser-heading.uncollapsed::after,
+.html-writer-controls .collapser-wrapper.positioned-right .collapser-heading.collapsed::before {
+    background-image: url(../img/double-left-arrow.png);
+}
+.html-writer-controls .collapser-wrapper.positioned-left .collapser-heading.collapsed::after,
+.html-writer-controls .collapser-wrapper.positioned-right .collapser-heading.uncollapsed::before {
+    background-image: url(../img/double-right-arrow.png);
+    
+}
+.html-writer-controls .collapser-wrapper.positioned-left .collapser-heading.collapsed::after {
+    margin-left: 5px;
+}
+
+.html-writer-controls .collapser-contents {
+    padding: 10px;
+}
+.html-writer-controls .ui-accordion-header.ui-state-active {
+    background: #1b5361d1;
+    border: 1px solid #1387a5d1;
+}
+
+.html-writer-controls {
+    position: absolute;
+    margin-right: 20px;
+}
+.html-writer-controls .controls-wrapper {
+    background: #ffffff;
+}
+.html-writer-controls .collapser-wrapper.positioned-left .controls-heading::before,
+.html-writer-controls .collapser-wrapper.positioned-right .controls-heading::after {
+    background-image: url(../img/controls.png);
+}
+.html-writer-controls .collapser-wrapper.positioned-right .controls-heading::after {
+    margin-left: 5px;
 }

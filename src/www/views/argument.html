@@ -9,265 +9,271 @@
             {symbol_html}
         {% endcall %}
     </script>
-    {% if errors %}
-        <div class="errors">
-            <h3>Please correct the following errors:</h3>
-            <dl>
-                {% for field in errors %}
-                    <dt>{{ field }}:</dt>
-                    <dd>{{ errors[field]|e }}</dd>
-                {% endfor %}
-            </dl>
-            <div class="clear"></div>
-        </div>
-    {% endif %}
-    <form class="argument" action="/" method="post">
-        <div class="fieldset logic">
-            <div class="heading collapsed">
-                <h2 class="legend">Logic</h2>
-                <span class="heading-summary" id="logic-heading-description"></span>
+    <div class="pt-app">
+        {% if errors %}
+            <div class="errors">
+                <h3>Please correct the following errors:</h3>
+                <dl>
+                    {% for field in errors %}
+                        <dt>{{ field }}:</dt>
+                        <dd>{{ errors[field]|e }}</dd>
+                    {% endfor %}
+                </dl>
+                <div class="clear"></div>
             </div>
-            <div class="fieldset-contents hidden">
-                <div class="input select">
-                    <label for="selected_logic">Select Logic</label>
-                    <select name="logic" id="selected_logic">
-                        {% for module in logic_modules -%}
-                            <option value="{{ module|e }}" {{- helper.select_opt(form_data, 'logic', module) }}>
-                                {{- logics[module].name|e -}}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    <div class="input submit">
-                        <input type="submit" value="Go"/>
+        {% endif %}
+        <form class="argument" action="/" method="post">
+            <div class="fieldset logic">
+                <div class="heading collapsed">
+                    <h2 class="legend">Logic</h2>
+                    <span class="heading-summary" id="logic-heading-description"></span>
+                </div>
+                <div class="fieldset-contents hidden">
+                    <div id="logic-select-panel">
+                        <div class="input select">
+                            <label for="selected_logic">Select Logic</label>
+                            <select name="logic" id="selected_logic">
+                                {% for module in logic_modules -%}
+                                    <option value="{{ module|e }}" {{- helper.select_opt(form_data, 'logic', module) }}>
+                                        {{- logics[module].name|e -}}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="input submit">
+                                <input type="submit" value="Go"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="collapser-wrapper" id="logic-details-wrapper">
+                        <div id="logic-details-heading" class="collapser-heading uncollapsed" data-target="#logic-details-contents">Details</div>
+                        <div class="collapser-contents" id="logic-details-contents">
+                            {% for module in logic_modules -%}
+                                <div class="hidden logic-details {{ module|e }}">
+                                    <span class="hidden logic-name {{ module|e }}">{{ logics[module].name|e }}</span>
+                                    <ul class="details">
+                                        <li>
+                                            <span class="prop">Title</span>
+                                            <span class="value logic-title {{ module|e }}">{{ logics[module].title|e }}</span>
+                                        </li>
+                                        <li>
+                                            <span class="prop">Description</span>
+                                            <span class="value">{{ logics[module].description|e }}</span>
+                                        </li>
+                                        <li>
+                                            <span class="prop">Tags</span>
+                                            <span class="value tags">
+                                                {% for tag in logics[module].tags_list -%}
+                                                    <span class="tag">{{ tag|e }}</span>
+                                                {% endfor %}
+                                            </span>
+                                        </li>
+                                        <li>
+                                            <span class="prop">Links</span>
+                                            <span class="value">
+                                                <a class="doc-link" href="/doc/logics/{{ module|e }}.html" target="_pytableaux_logic">Documentation</a>
+                                            </span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="clear"></div>
+                </div>
+            </div>
+            <div class="fieldset argument">
+                <div class="heading {{- helper.collapsed_if(is_proof) }}">
+                    <h2 class="legend">Argument</h2>
+                    <span class="heading-summary" id="argument-heading-rendered"></span>
+                </div>
+                <div class="fieldset-contents {{- helper.hidden_if(is_proof) }}">
+                    <div class="collapser-wrapper" id="lexicons-wrapper">
+                        <div id="lexicons-heading" class="collapser-heading {{- helper.collapsed_if(is_proof) }}" data-target="#lexicons-content">Lexicon</div>
+                        <div class="lexicons collapser-contents {{- helper.collapsed_if(is_proof) }} {{- helper.hidden_if(is_proof) }}" id="lexicons-content">
+                            <div class="lexicon-panel">
+                                {%- for module in notation_modules -%}
+                                    {%- set symset = notations[module].symbol_sets['default'] %}
+                                    <div class="lexicon hidden notation-{{ module|e }}">
+                                        <span class="label">Atomics</span>
+                                        <ul class="item-symbols">
+                                            {% for char in symset.chars('atomic') -%}
+                                                <li>{{ char|e }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                        <span class="label">Operators</span>
+                                        <dl class="operator-symbols">
+                                            {% for operator in operators_list -%}
+                                                <dt>{{ symset.charof('operator', operator)|e }}</dt>
+                                                <dd>{{ operator|e }}</dd>
+                                            {% endfor %}
+                                        </dl>
+                                        <div class="clear"></div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="lexicon-panel last">
+                                {%- for module in notation_modules -%}
+                                    {%- set symset = notations[module].symbol_sets['default'] %}
+                                    <div class="lexicon hidden notation-{{ module|e }}">
+                                        <span class="label">Constants</span>
+                                        <ul class="item-symbols">
+                                            {% for char in symset.chars('constant') -%}
+                                                <li>{{ char|e }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                        <span class="label">Variables</span>
+                                        <ul class="item-symbols">
+                                            {% for char in symset.chars('variable') -%}
+                                                <li>{{ char|e }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                        <span class="label">Quantifiers</span>
+                                        <dl class="operator-symbols">
+                                            {% for quantifier in quantifiers -%}
+                                                <dt>{{ symset.charof('quantifier', quantifier)|e }}</dt>
+                                                <dd>{{ quantifier|e }}</dd>
+                                            {% endfor %}
+                                        </dl>
+                                        <div class="clear"></div>
+                                    </div>
+                                {% endfor %}
+                                <span class="label">Predicates</span>
+                                <div class="predicates">
+                                    <table class="predicates">
+                                        <thead>
+                                            <tr>
+                                                <th>Symbol</th>
+                                                <th>Name</th>
+                                                <th>Arity</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for name in system_predicates -%}
+                                                <tr class="systemPredicate">
+                                                    <td>
+                                                        {% for module in notation_modules %}
+                                                            {%- set symset = notations[module].symbol_sets['default'] -%}
+                                                            {%- set symbol = symset.charof('system_predicate', name) -%}
+                                                            {%- set subscript = system_predicates[name].subscript -%}
+                                                            <span class="predicateSymbol notation-{{module}} hidden">
+                                                                {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript|e }}</span>{% endif -%}
+                                                            </span>
+                                                        {% endfor %}
+                                                    </td>
+                                                    <td>{{ name|e }}</td>
+                                                    <td>{{ system_predicates[name].arity }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                            {% for label in form_data['user_predicate_symbols[]'] %}
+                                                {%- set info = label.split('.') -%}
+                                                {%- set index = info[0]|int -%}
+                                                {%- set subscript = info[1]|int -%}
+                                                {%- set name = form_data['user_predicate_names[]'][loop.index0] -%}
+                                                {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
+                                                {%- call helper.predicate_row(index, subscript, name, arity) %}
+                                                    {% for module in notation_modules -%}
+                                                        {%- set symset = notations[module].symbol_sets['default'] -%}
+                                                        {{- helper.predicate_symbol(module, symset.charof('user_predicate', index), subscript) }}
+                                                    {% endfor -%}
+                                                {%- endcall -%}
+                                            {%- endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="clear"></div>
+                        </div>
+                    </div>
+                    <div class="left" id="sentences-input-panel">
+                        <div class="input select example-argument">
+                            <select id="example_argument">
+                                <option value="">Load example argument ...</option>
+                                {% for argument_name in example_args_list -%}
+                                    <option value="{{ argument_name|e }}">{{ argument_name|e }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="input select">
+                            <label for="input_notation">Notation</label>
+                            <select id="input_notation" name="input_notation">
+                                {% for module in notation_modules -%}
+                                    <option value="{{ module|e }}" {{ helper.select_opt(form_data, 'input_notation', module) }}>
+                                        {{- notations[module].name -}}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="premises">
+                            {%- if 'premises[]' in form_data -%}
+                                {%- for premise in form_data['premises[]'] -%}
+                                    {%- set error_label = 'Premise ' ~ loop.index -%}
+                                    {%- if error_label in errors -%}
+                                        {{ helper.premise(loop.index, premise, 'bad', errors[error_label].message) }}
+                                    {%- elif premise -%}
+                                        {{ helper.premise(loop.index, premise, 'good') }}
+                                    {%- endif -%}
+                                {%- endfor -%}
+                            {% endif %}
+                        </div>
+                        <div class="sentence input conclusion">
+                            <label for="conclusion">Conclusion</label>
+                            <input id="conclusion" class="sentence conclusion" type="text" name="conclusion" value="{{ form_data['conclusion'] }}" />
+                            {%- set status = '' -%}
+                            {%- set message = '' -%}
+                            {%- if 'Conclusion' in errors -%}
+                                {%- set status = 'bad' -%}
+                                {%- set message = errors['Conclusion'].message -%}
+                            {%- elif 'conclusion' in form_data -%}
+                                {%- set status = 'good' -%}
+                            {%- endif %}
+                            <span class="status {{ status }}" title="{{ message|e }}"></span>
+                        </div>    
+                        <div class="input submit">
+                            <input type="submit" value="Go"/>
+                        </div>
                     </div>
                 </div>
                 <div class="clear"></div>
-                <h3 class="toggler" data-target="#logic-details">Logic Details</h3>
-                <div class="logic-details-wrapper" id="logic-details">
-                    {% for module in logic_modules -%}
-                        <div class="hidden logic-details {{ module|e }}">
-                            <span class="hidden logic-name {{ module|e }}">{{ logics[module].name|e }}</span>
-                            <ul class="details">
-                                <li>
-                                    <span class="prop">Title</span>
-                                    <span class="value logic-title {{ module|e }}">{{ logics[module].title|e }}</span>
-                                </li>
-                                <li>
-                                    <span class="prop">Description</span>
-                                    <span class="value">{{ logics[module].description|e }}</span>
-                                </li>
-                                <li>
-                                    <span class="prop">Tags</span>
-                                    <span class="value tags">
-                                        {% for tag in logics[module].tags_list -%}
-                                            <span class="tag">{{ tag|e }}</span>
-                                        {% endfor %}
-                                    </span>
-                                </li>
-                                <li>
-                                    <span class="prop">Links</span>
-                                    <span class="value">
-                                        <a class="doc-link" href="/doc/logics/{{ module|e }}.html" target="_pytableaux_logic">Documentation</a>
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
-                    {% endfor %}
+            </div>        
+            <div class="fieldset output">
+                <div class="heading collapsed">
+                    <h2 class="legend">Output</h2>
+                    <span class="heading-summary" id="output-heading-description"></span>
                 </div>
-            </div>
-        </div>
-        <div class="fieldset argument">
-            <div class="heading {{- helper.collapsed_if(is_proof) }}">
-                <h2 class="legend">Argument</h2>
-                <span class="heading-summary" id="argument-heading-rendered"></span>
-            </div>
-            <div class="fieldset-contents {{- helper.hidden_if(is_proof) }}">
-                <div class="lexicons-wrapper" id="lexicons-wrapper">
-                    <h3 id="lexicons-heading" class="collapser {{- helper.collapsed_if(is_proof) }}" data-target="#lexicons-content">Lexicon</h3>
-                    <div class="lexicons {{- helper.collapsed_if(is_proof) }} {{- helper.hidden_if(is_proof) }}" id="lexicons-content">
-                        <div class="lexicon-panel">
-                            {%- for module in notation_modules -%}
-                                {%- set symset = notations[module].symbol_sets['default'] %}
-                                <div class="lexicon hidden notation-{{ module|e }}">
-                                    <span class="label">Atomics</span>
-                                    <ul class="item-symbols">
-                                        {% for char in symset.chars('atomic') -%}
-                                            <li>{{ char|e }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                    <span class="label">Operators</span>
-                                    <dl class="operator-symbols">
-                                        {% for operator in operators_list -%}
-                                            <dt>{{ symset.charof('operator', operator)|e }}</dt>
-                                            <dd>{{ operator|e }}</dd>
-                                        {% endfor %}
-                                    </dl>
-                                    <div class="clear"></div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                        <div class="lexicon-panel last">
-                            {%- for module in notation_modules -%}
-                                {%- set symset = notations[module].symbol_sets['default'] %}
-                                <div class="lexicon hidden notation-{{ module|e }}">
-                                    <span class="label">Constants</span>
-                                    <ul class="item-symbols">
-                                        {% for char in symset.chars('constant') -%}
-                                            <li>{{ char|e }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                    <span class="label">Variables</span>
-                                    <ul class="item-symbols">
-                                        {% for char in symset.chars('variable') -%}
-                                            <li>{{ char|e }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                    <span class="label">Quantifiers</span>
-                                    <dl class="operator-symbols">
-                                        {% for quantifier in quantifiers -%}
-                                            <dt>{{ symset.charof('quantifier', quantifier)|e }}</dt>
-                                            <dd>{{ quantifier|e }}</dd>
-                                        {% endfor %}
-                                    </dl>
-                                    <div class="clear"></div>
-                                </div>
-                            {% endfor %}
-                            <span class="label">Predicates</span>
-                            <div class="predicates">
-                                <table class="predicates">
-                                    <thead>
-                                        <tr>
-                                            <th>Symbol</th>
-                                            <th>Name</th>
-                                            <th>Arity</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for name in system_predicates -%}
-                                            <tr class="systemPredicate">
-                                                <td>
-                                                    {% for module in notation_modules %}
-                                                        {%- set symset = notations[module].symbol_sets['default'] -%}
-                                                        {%- set symbol = symset.charof('system_predicate', name) -%}
-                                                        {%- set subscript = system_predicates[name].subscript -%}
-                                                        <span class="predicateSymbol notation-{{module}} hidden">
-                                                            {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript|e }}</span>{% endif -%}
-                                                        </span>
-                                                    {% endfor %}
-                                                </td>
-                                                <td>{{ name|e }}</td>
-                                                <td>{{ system_predicates[name].arity }}</td>
-                                            </tr>
-                                        {% endfor %}
-                                        {% for label in form_data['user_predicate_symbols[]'] %}
-                                            {%- set info = label.split('.') -%}
-                                            {%- set index = info[0]|int -%}
-                                            {%- set subscript = info[1]|int -%}
-                                            {%- set name = form_data['user_predicate_names[]'][loop.index0] -%}
-                                            {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
-                                            {%- call helper.predicate_row(index, subscript, name, arity) %}
-                                                {% for module in notation_modules -%}
-                                                    {%- set symset = notations[module].symbol_sets['default'] -%}
-                                                    {{- helper.predicate_symbol(module, symset.charof('user_predicate', index), subscript) }}
-                                                {% endfor -%}
-                                            {%- endcall -%}
-                                        {%- endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="clear"></div>
-                    </div>
-                </div>
-                <div class="left" id="sentences-input-panel">
-                    <div class="input select example-argument">
-                        <select id="example_argument">
-                            <option value="">Load example argument ...</option>
-                            {% for argument_name in example_args_list -%}
-                                <option value="{{ argument_name|e }}">{{ argument_name|e }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+                <div class="fieldset-contents hidden">
                     <div class="input select">
-                        <label for="input_notation">Notation</label>
-                        <select id="input_notation" name="input_notation">
-                            {% for module in notation_modules -%}
-                                <option value="{{ module|e }}" {{ helper.select_opt(form_data, 'input_notation', module) }}>
-                                    {{- notations[module].name -}}
+                        <label for="format">Format</label>
+                        <select id="format" name="format">
+                            {% for module in writer_modules -%}
+                                <option value="{{ module }}" {{- helper.select_opt(form_data, 'format', module) }}>
+                                    {{- writers[module].name|e -}}
                                 </option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="premises">
-                        {%- if 'premises[]' in form_data -%}
-                            {%- for premise in form_data['premises[]'] -%}
-                                {%- set error_label = 'Premise ' ~ loop.index -%}
-                                {%- if error_label in errors -%}
-                                    {{ helper.premise(loop.index, premise, 'bad', errors[error_label].message) }}
-                                {%- elif premise -%}
-                                    {{ helper.premise(loop.index, premise, 'good') }}
-                                {%- endif -%}
-                            {%- endfor -%}
-                        {% endif %}
+                    <div class="input select">
+                        <label for="output_notation">Notation</label>
+                        <select id="output_notation" name="output_notation">
+                            {% for module in notation_modules -%}
+                                <option value="{{ module }}" {{- helper.select_opt(form_data, 'output_notation', module) }}>
+                                    {{- notations[module].name|e -}}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="sentence input conclusion">
-                        <label for="conclusion">Conclusion</label>
-                        <input id="conclusion" class="sentence conclusion" type="text" name="conclusion" value="{{ form_data['conclusion'] }}" />
-                        {%- set status = '' -%}
-                        {%- set message = '' -%}
-                        {%- if 'Conclusion' in errors -%}
-                            {%- set status = 'bad' -%}
-                            {%- set message = errors['Conclusion'].message -%}
-                        {%- elif 'conclusion' in form_data -%}
-                            {%- set status = 'good' -%}
-                        {%- endif %}
-                        <span class="status {{ status }}" title="{{ message|e }}"></span>
-                    </div>    
+                    <div class="input select">
+                        <label for="symbol_set">Symbol Set</label>
+                        <select id="symbol_set" name="symbol_set">
+                            <option value="html" {{- helper.select_opt(form_data, 'symbol_set', 'html') }}>HTML</option>
+                            <option value="default" {{- helper.select_opt(form_data, 'symbol_set', 'default') }}>Default</option>
+                        </select>
+                    </div>
                     <div class="input submit">
                         <input type="submit" value="Go"/>
                     </div>
                 </div>
             </div>
-            <div class="clear"></div>
-        </div>        
-        <div class="fieldset output">
-            <div class="heading collapsed">
-                <h2 class="legend">Output</h2>
-                <span class="heading-summary" id="output-heading-description"></span>
-            </div>
-            <div class="fieldset-contents hidden">
-                <div class="input select">
-                    <label for="format">Format</label>
-                    <select id="format" name="format">
-                        {% for module in writer_modules -%}
-                            <option value="{{ module }}" {{- helper.select_opt(form_data, 'format', module) }}>
-                                {{- writers[module].name|e -}}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="input select">
-                    <label for="output_notation">Notation</label>
-                    <select id="output_notation" name="output_notation">
-                        {% for module in notation_modules -%}
-                            <option value="{{ module }}" {{- helper.select_opt(form_data, 'output_notation', module) }}>
-                                {{- notations[module].name|e -}}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="input select">
-                    <label for="symbol_set">Symbol Set</label>
-                    <select id="symbol_set" name="symbol_set">
-                        <option value="html" {{- helper.select_opt(form_data, 'symbol_set', 'html') }}>HTML</option>
-                        <option value="default" {{- helper.select_opt(form_data, 'symbol_set', 'default') }}>Default</option>
-                    </select>
-                </div>
-                <div class="input submit">
-                    <input type="submit" value="Go"/>
-                </div>
-            </div>
-        </div>
-    </form>
-    <div class="clear"></div>
+        </form>
+        <div class="clear"></div>
+    </div>
 {%- endblock -%}

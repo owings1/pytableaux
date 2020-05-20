@@ -23,36 +23,26 @@ body {
     margin: 0;
     padding: 0;
 }
-.fieldset {
+
+
+.subscript { 
+    position: relative; 
+    bottom: -0.2em; 
+    font-size: 80%; 
+}
+.hidden {
+    display: none;
+}
+.clear {
     clear: both;
-    border: 1px solid #93c3cd;
-    margin: 0 0 10px 0;
-    padding:0;
 }
-.fieldset .heading {
-    cursor: pointer;
-    background-color: #93c3cd;
-    padding: 10px;
-    color: #333333;
+.left {
+    float: left;
 }
-.fieldset .heading:hover {
-    background-color: #ccd232;
+.right {
+    float: right;
 }
-.fieldset .legend {
-    display: inline;
-    font-size: 18px;
-    margin-block-start: 0;
-    margin-block-end: 0;
-}
-.fieldset-contents {
-    padding: 10px;
-}
-.fieldset.argument .fieldset-contents {
-    padding-left: 0;
-}
-.toggler {
-    cursor: pointer;
-}
+
 .headerWrapper, .footerWrapper {
     position: fixed;
     width: 100%;
@@ -69,45 +59,87 @@ body {
     color: white;
     padding: 10px;
 }
-
 .header a, .footer a {
     color: white;
     text-decoration: none;
 }
-
 .header a:hover, .footer a:hover {
     text-decoration: underline;
 }
-
 .footer {
     text-align: center;
+    font-size: 11px;
 }
-
 .content {
     padding: 20px;
     margin: 30px 0;
 }
-/*
-form.argument {
-    min-width: 1040px;
-}
-*/
 
-select#example_argument {
+
+.pt-app .errors {
+    background-color: rgb(255, 190, 202);
+    padding: 5px 10px;
+    border: 1px solid red;
+    margin-bottom: 10px;
+}
+.pt-app .errors h3 {
+    color: red;
+    margin: 0;
+}
+.pt-app .errors dt {
+    display: inline-block;
+    float: left;
+    width: 100px;
+    text-align: right;
+    padding: 10px;
+    clear: both;
+    font-style: italic;
+}
+.pt-app .errors dd {
+    display: inline-block;
+    margin: 0;
+    padding: 10px;
+    float: left;
+    font-weight: bold;
+}
+.pt-app .fieldset {
+    clear: both;
+    border: 1px solid #93c3cd;
+    margin: 0 0 10px 0;
+    padding:0;
+}
+.pt-app .fieldset .heading {
+    cursor: pointer;
+    background-color: #93c3cd;
+    padding: 10px;
+    color: #333333;
+}
+.pt-app .fieldset .heading:hover {
+    background-color: #ccd232;
+}
+.pt-app .fieldset .legend {
+    display: inline;
+    font-size: 18px;
+    margin-block-start: 0;
+    margin-block-end: 0;
+}
+.pt-app .fieldset-contents {
+    padding: 10px;
+}
+.pt-app .fieldset.argument .fieldset-contents {
+    padding-left: 0;
+}
+.pt-app .toggler {
+    cursor: pointer;
+}
+
+.pt-app select#example_argument {
     margin: 5px 0 10px 1px;
 }
-
-.left {
-    float: left;
-}
-.right {
-    float: right;
-}
-
-.ui-selectmenu-menu .ui-menu {
+.pt-app.ui-selectmenu-menu .ui-menu {
     max-height: 300px;
 }
-form.argument .heading .legend::after {
+.pt-app .heading .legend::after {
     content: "";
     opacity: 75%;
     margin-right: 10px;
@@ -117,24 +149,19 @@ form.argument .heading .legend::after {
     display: inline-block;
     float: right;
 }
-form.argument .heading.collapsed .legend::after {
+.pt-app .heading.collapsed .legend::after {
     background-image: url(../img/plus-medium.png);
 }
-form.argument .heading.uncollapsed .legend::after {
+.pt-app .heading.uncollapsed .legend::after {
     background-image: url(../img/minus-medium.png);
 }
-form.argument select[name=logic] {
-    padding: 3px 0 0 3px;
-}
-form.argument input {
+.pt-app input {
     font-size: 14px;
 }
-
-form.argument select, input[type=submit] {
+.pt-app select, input[type=submit] {
     font-size: 16px;
 }
-
-.input label {
+.pt-app .input label {
     border: 1px solid white;
     width: 100px;
     text-align: right;
@@ -143,47 +170,43 @@ form.argument select, input[type=submit] {
     padding: 10px;
     vertical-align: top;
 }
-
-.lexicons .lexicon-panel {
+.pt-app .lexicons .lexicon-panel {
     margin-right: 10px;
     padding: 0 5px 0 0;
     float: left;
 }
-.lexicons .lexicon-panel.last {
+.pt-app .lexicons .lexicon-panel.last {
     border-left: 1px solid #eee;
     padding-left: 10px;
     margin-right: 0;
 }
-.lexicons .label {
+.pt-app .lexicons .label {
     border: 1px solid #ccc;
     display: inline-block;
     padding: 6px;
     margin: 8px 0 5px 1px;
     min-width: 150px;
 }
-.lexicons-wrapper {
+/* Collapser */
+.pt-app .collapser-wrapper {
     float: left;
     border: 2px solid #ccc;
+    margin-right: 10px;
+    margin-bottom: 10px;
 }
-.lexicons-wrapper.uncollapsed {
-    /*min-width: 485px;*/
-}
-.lexicons-wrapper h3 {
+.pt-app .collapser-heading {
+    cursor: pointer;
+    color: #333333;
     padding: 10px;
     font-size: 16px;
     margin-block-start: 0;
     margin-block-end: 0;
     background-color: #93c3cd61;
 }
-.lexicons-wrapper h3:hover {
-    /*background-color: #ccd232;*/
+.pt-app .collapser-heading.uncollapsed {
+    border-bottom: 1px solid #cccccc;
 }
-#lexicons-heading {
-    cursor: pointer;
-    color: #333333;
-}
-#lexicons-heading::before {
-    background-image: url(../img/book.png);
+.pt-app .collapser-heading::before {
     background-size: 16px 16px;
     display: inline-block;
     width: 16px;
@@ -192,7 +215,8 @@ form.argument select, input[type=submit] {
     content: "";
     opacity: 65%;
 }
-#lexicons-heading::after {
+
+.pt-app .collapser-heading::after {
     background-size: 16px 16px;
     display: inline-block;
     width: 16px;
@@ -201,31 +225,43 @@ form.argument select, input[type=submit] {
     content: "";
     opacity: 45%;
 }
-#lexicons-heading.uncollapsed::after {
+.pt-app .collapser-heading.uncollapsed::after {
     background-image: url(../img/double-left-arrow.png);
 }
-#lexicons-heading.collapsed::after {
+.pt-app .collapser-heading.collapsed::after {
     background-image: url(../img/double-right-arrow.png);
     margin-left: 5px;
 }
-.lexicons#lexicons-content {
+.pt-app .collapser-contents {
     padding: 10px;
 }
-.lexicon dl {
-    margin: 0 0 0 3px;
+.pt-app #logic-details-heading::before {
+    background-image: url(../img/cluster.png);
+    opacity: 45%;
 }
-
-#sentences-input-panel {
-    width: 380px;
-    margin-left: 10px;
+.pt-app #lexicons-heading::before {
+    background-image: url(../img/book.png);
+}
+/* End Collapser */
+.pt-app #logic-select-panel {
     margin-bottom: 10px;
 }
-.lexicon dd {
+.pt-app #logic-details-contents {
+    /*max-width: 400px;*/
+}
+.pt-app .lexicon dl {
+    margin: 0 0 0 3px;
+}
+.pt-app #sentences-input-panel {
+    width: 380px;
+    /*margin-left: 10px;*/
+    margin-bottom: 10px;
+}
+.pt-app .lexicon dd {
     padding: 2px 0;
     margin: 0px 0 4px 24px;
 }
-
-.lexicon dt {
+.pt-app .lexicon dt {
     float: left;
     background-color: #eee;
     padding: 2px 3px;
@@ -233,79 +269,69 @@ form.argument select, input[type=submit] {
     clear: both;
     min-width: 12px;
 }
-form.argument div.predicates {
+.pt-app div.predicates {
     max-width: 300px;
 }
-table.predicates {
+.pt-app table.predicates {
     width: 100%;
 }
-
-table.predicates th {
+.pt-app table.predicates th {
     font-weight: normal;
     text-align: left;
     background-color: #eee;
 }
-
-table.predicates td, table.predicates th {
+.pt-app table.predicates td, table.predicates th {
     border: 1px solid #eee;
     padding: 5px;
 }
-
-.input.submit input[type=submit] {
+.pt-app .input.submit input[type=submit] {
     margin: 10px 0 0 127px;
 }
-
-.input.example-argument {
+.pt-app .input.example-argument {
     padding: 10px;
     text-align: center;
     border: 1px dashed #cccccc;
     margin-bottom: 10px;
 }
-.input.sentence input {
+.pt-app .input.sentence input {
     width: 215px;
     padding: 7px 4px;
 }
-.input.sentence .status {
+.pt-app .input.sentence .status {
     width: 16px;
     height: 16px;
     display: inline-block;
 }
-
-.input.sentence .status.good {
+.pt-app .input.sentence .status.good {
     background: url(/static/img/accept.png);
 }
-
-.input.sentence .status.bad {
+.pt-app .input.sentence .status.bad {
     background: url(/static/img/exclamation.png);
 }
-
-ul.details {
+.pt-app ul.details {
     margin: 16px 0 0 0;
     padding: 0;
 }
-
-ul.details li {
+.pt-app ul.details li {
     display: block;
     padding: 0 8px 0 5px;
     margin: 0 22px 16px 0;
     border-left: 7px solid #eeeeee;
 }
-
-ul.details .prop {
+.pt-app ul.details .prop {
     font-style: italic;
     font-size: 12px;
 }
-ul.details .prop::after {
+.pt-app ul.details .prop::after {
     content: "\a";
     white-space: pre;
 }
-ul.details .value {
+.pt-app ul.details .value {
     padding: 2px;
     font-weight: bold;
     font-size: 14px;
 }
-
-.logic-details .tag {
+.pt-app .logic-details .tag {
     border-radius: 0.75rem;
     padding: 3px 8px 3px 8px;
     margin: 3px 0 3px 0;
@@ -313,34 +339,32 @@ ul.details .value {
     background-color: #003d4c38;
     font-weight: normal;
 }
-ul.item-symbols {
+.pt-app ul.item-symbols {
     list-style-type: none;
     padding: 0;
     margin: 0;
 }
-
-ul.item-symbols li {
+.pt-app ul.item-symbols li {
     display: inline-block;
     padding: 2px 3px;
     background-color: #eee;
     margin: 0 3px;
 }
-
-input.arity {
+.pt-app input.arity {
     width: 10px;
 }
+
 
 .evaluation {
     border: 1px solid black;
     margin-bottom: 10px;
+    /*min-height: 600px;*/
 }
-
 .evaluation > .summary {
     padding: 10px;
     border-bottom: 1px solid black;
     background-color: rgba(0, 61, 76, 0.12);
 }
-
 .evaluation > .summary h3 {
     margin: 0;
     padding: 0.2em;
@@ -349,7 +373,6 @@ input.arity {
 .evaluation > .summary > .argument {
     float: right;
 }
-
 .evaluation > .summary > .result {
     float: right;
     text-transform: uppercase;
@@ -358,7 +381,6 @@ input.arity {
     color: white;
     width: 5.2em;
 }
-
 .evaluation > .summary > .result > span {
     padding: 0.4em;
     width: 4.4em;
@@ -370,7 +392,6 @@ input.arity {
     background-color: green;
     border: 1px solid #666;
 }
-
 .evaluation > .summary > .result .invalid {
     background-color: red;
     border: 1px solid #aaa;
@@ -380,42 +401,7 @@ input.arity {
     overflow-x: scroll;
 }
 
-.errors {
-    background-color: rgb(255, 190, 202);
-    padding: 5px 10px;
-    border: 1px solid red;
-    margin-bottom: 10px;
-}
-
-.errors h3 {
-    color: red;
-    margin: 0;
-}
-
-.errors dt {
-    display: inline-block;
-    float: left;
-    width: 100px;
-    text-align: right;
-    padding: 10px;
-    clear: both;
-    font-style: italic;
-}
-
-.errors dd {
-    display: inline-block;
-    margin: 0;
-    padding: 10px;
-    float: left;
-    font-weight: bold;
-}
-
-.subscript { 
-    position: relative; 
-    bottom: -0.2em; 
-    font-size: 80%; 
-}
-
+/*
 .logicName {
     display: inline-block;
     width: 50px;
@@ -431,14 +417,4 @@ input.arity {
     background-position-y: 6px;
     background-repeat: no-repeat;
 }
-
-.proof pre {
-    overflow-x: scroll;
-}
-.hidden {
-    display: none;
-}
-
-.clear {
-    clear: both;
-}
+*/

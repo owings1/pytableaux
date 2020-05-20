@@ -76,6 +76,7 @@
         HL              : 'horizontal-line'      ,
         VL              : 'vertical-line'        ,
         Collapsed       : 'collapsed'            ,
+        Uncollapsed     : 'uncollapsed'          ,
         Close           : 'closeMark'            ,
         StepStart       : 'step-start'           ,
         StepPrev        : 'step-prev'            ,
@@ -101,7 +102,15 @@
         BranchFilter    : 'branch-filter'        ,
         Highlight       : 'highlight'            ,
         HighlightTicked : 'highlight-ticked'     ,
-        Stay            : 'stay'
+        Stay            : 'stay'                 ,
+        ControlsHeading : 'controls-heading'     ,
+        ControlsContent : 'controls-contents'    ,
+        ControlsPos     : 'controls-position'    ,
+        CollapseWrap    : 'collapser-wrapper'    ,
+        CollapseHead    : 'collapser-heading'    ,
+        CollapseContent : 'collapser-contents'   ,
+        PositionedLeft  : 'positioned-left'      ,
+        PositionedRight : 'positioned-right'
     }
 
     // class names preceded with a '.' for selecting
@@ -799,6 +808,57 @@
         }
     }
 
+    /**
+     * Show/hide handler for collapser.
+     *
+     * @param $heading The heading jQuery element
+     * @param $status (optional) The status panel jQuery element, for resetting
+     *     the minHeight of the parent element if this is the controls.
+     * @return void
+     */
+    function handlerCollapserHeadingClick($heading, $status) {
+        const $wrapper = $heading.closest(Dcls.CollapseWrap)
+        const $contents = $wrapper.find(Dcls.CollapseContent)
+        const isShow = $heading.hasClass(Cls.Collapsed)
+        const speed = isShow ? Anim.Med : Anim.Fast
+        if (isShow) {
+            $heading.add($wrapper).removeClass(Cls.Collapsed).addClass(Cls.Uncollapsed)
+            $contents.removeClass(Cls.Collapsed).addClass(Cls.Uncollapsed).show(speed)
+        } else {
+            $heading.add($wrapper).removeClass(Cls.Uncollapsed).addClass(Cls.Collapsed)
+            $contents.removeClass(Cls.Uncollapsed).addClass(Cls.Collapsed).hide(speed)
+        }
+        const isControls = $status && $heading.hasClass(Cls.ControlsHeading)
+        if (isControls) {
+            setTimeout(function() {
+                const $parent = $status.parent()
+                if (isShow) {
+                    $parent.css({minHeight: $wrapper.css('height')})
+                } else {
+                    $parent.css({minHeight: ''})
+                }
+            }, speed)
+        }
+    }
+
+    /**
+     * Position the controls element according to the selector element.
+     *
+     * @param $status The status panel jQuery element.
+     * @return void
+     */
+    function positionControls($status) {
+        const value = $(Dcls.ControlsPos, $status).val()
+        const $wrapper = $(Dcls.CollapseWrap, $status)
+        if (value == 'right') {
+            $status.css('right', 0)
+            $wrapper.removeClass(Cls.PositionedLeft).addClass(Cls.PositionedRight)
+        } else {
+            $status.css('right', '')
+            $wrapper.removeClass(Cls.PositionedRight).addClass(Cls.PositionedLeft)
+        }
+    }
+
     $(document).ready(function() {
 
         var modkey = {
@@ -815,6 +875,12 @@
             modkey.ctrl  = e.metaKey || e.ctrlKey
             modkey.alt   = e.altKey
             modkey.ctrlalt = modkey.ctrl || modkey.alt
+        })
+
+        $(Dcls.ControlsContent).accordion({
+            header      : 'h4',
+            heightStyle : 'content',
+            animate     : 100
         })
 
         // load a click event handler for each proof in the document.
@@ -853,6 +919,8 @@
                 step($proof, n)
             } else if ($target.hasClass(Cls.BranchFilter)) {
                 filterBranches($target.val(), $proof)
+            } else if ($target.hasClass(Cls.ControlsPos)) {
+                positionControls($status)
             }
             $lastProof = $proof
         })
@@ -862,7 +930,10 @@
             const $status = $(this)
             const $proof = getProofFromStatus($status)
             const $target = $(e.target)
-            if ($target.hasClass(Cls.StepStart)) {
+            const $collapserHeading = $target.closest(Dcls.CollapseHead)
+            if ($collapserHeading.length) {
+                handlerCollapserHeadingClick($collapserHeading, $status)
+            } else if ($target.hasClass(Cls.StepStart)) {
                 adjust($proof, 'step', 'start')
             } else if ($target.hasClass(Cls.StepNext)) {
                 adjust($proof, 'step', 1)

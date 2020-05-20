@@ -29,13 +29,14 @@
 
         var SentenceRenders = {}
 
+        const $form = $('form.argument')
         /**
          * Main initialization routine.
          *
          * @return void
          */
         function init() {
-            $('form.argument')
+            $form
                 .on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
                 .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
                 .on('change selectmenuchange', function(e) {
@@ -59,17 +60,22 @@
                 .on('click', function(e) {
                     const $target = $(e.target)
                     const $heading = $target.closest('.heading')
+                    const $collapserHeading = $target.closest('.collapser-heading')
                     if ($heading.length) {
                         handleFieldsetHeadingClick($heading)
-                    } else if ($target.is('#lexicons-heading')) {
-                        handleLexiconHeadingClick($target)
+                    } else if ($collapserHeading.length) {
+                        handlerCollapserHeadingClick($collapserHeading)
                     } else if ($target.is('.toggler')) {
-                        $(target.attr('data-target')).toggle()
+                        $($target.attr('data-target')).toggle()
                     }
                 })
 
-            $('select', 'form.argument').selectmenu()
-            $('input[type="submit"]', 'form.argument').button()
+            $('select', $form).selectmenu({
+                classes: {
+                    'ui-selectmenu-menu': 'pt-app'
+                }
+            })
+            $('input[type="submit"]', $form).button()
 
             setTimeout(function() {
                 ensureEmptyPremise()
@@ -91,8 +97,8 @@
         function handleFieldsetHeadingClick($heading) {
             const $contents = $heading.closest('.fieldset').find('.fieldset-contents')
             const isVisible = $contents.is(':visible')
-            $('.fieldset-contents').removeClass('uncollapsed').addClass('collapsed').hide('fast')
-            $('.heading', 'form.argument').removeClass('uncollapsed').addClass('collapsed')
+            $('.fieldset-contents', $form).removeClass('uncollapsed').addClass('collapsed').hide('fast')
+            $('.heading', $form).removeClass('uncollapsed').addClass('collapsed')
             if (!isVisible) {
                 $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
                 $heading.removeClass('collapsed').addClass('uncollapsed')
@@ -100,13 +106,14 @@
         }
 
         /**
-         * Show/hide handler for lexicons content.
+         * Show/hide handler for collapser.
          *
+         * @param $heading The heading jQuery element
          * @return void
          */
-        function handleLexiconHeadingClick($heading) {
-            $contents = $('#lexicons-content', 'form.argument')
-            $wrapper = $('#lexicons-wrapper', 'form.argument')
+        function handlerCollapserHeadingClick($heading) {
+            const $wrapper = $heading.closest('.collapser-wrapper')
+            const $contents = $wrapper.find('.collapser-contents')
             if ($heading.hasClass('collapsed')) {
                 $heading.add($wrapper).removeClass('collapsed').addClass('uncollapsed')
                 $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
@@ -141,8 +148,8 @@
          * @return void
          */
         function addPremise(value, status, message) {
-            var premiseNum = $('input.premise').length + 1
-            $('.premises').append(render(Templates.premise, {
+            var premiseNum = $('input.premise', $form).length + 1
+            $('.premises', $form).append(render(Templates.premise, {
                 n       : premiseNum++,
                 value   : value   || '',
                 status  : status  || '',
@@ -156,7 +163,7 @@
          * @return String name of the notation, e.g. 'standard'
          */
         function currentNotation() {
-            return $('#input_notation').val()
+            return $('#input_notation', $form).val()
         }
 
         /**
@@ -165,7 +172,7 @@
          * @return String name of the foramat, e.g. 'html'
          */
         function currentOutputFormat() {
-            return $('#format').val()
+            return $('#format', $form).val()
         }
 
         /**
@@ -174,7 +181,7 @@
          * @return String name of the notation, e.g. 'standard'
          */
         function currentOutputNotation() {
-            return $('#output_notation').val()
+            return $('#output_notation', $form).val()
         }
 
         /**
@@ -183,7 +190,7 @@
          * @return String name of the symbol set, e.g. 'default'
          */
         function currentOutputSymbolSet() {
-            return $('#symbol_set').val()
+            return $('#symbol_set', $form).val()
         }
 
         /**
@@ -201,7 +208,7 @@
          * @return void
          */
         function clearPremises() {
-            $('.input.premise').remove()
+            $('.input.premise', $form).remove()
         }
 
         /**
@@ -210,7 +217,7 @@
          * @return void
          */
         function clearConclusion() {
-            $('#conclusion').val('')
+            $('#conclusion', $form).val('')
         }
 
         /**
@@ -247,10 +254,10 @@
                     html += '<span class="subscript">' + subscript + '</span>'
                 html += '</span>'
             })
-            $('table.predicates tbody').append(render(Templates.predicate, { 
+            $('table.predicates tbody', $form).append(render(Templates.predicate, { 
                 index       : index,
                 subscript   : subscript,
-                name        : name || ('Predicate ' + ($('input.predicateSymbol').length + 1)),
+                name        : name || ('Predicate ' + ($('input.predicateSymbol', $form).length + 1)),
                 arity       : arity || '',
                 symbol_html : html
             }))
@@ -263,7 +270,7 @@
          * @return void
          */
         function addEmptyPredicate() {
-            const $symbols   = $('input.predicateSymbol')
+            const $symbols   = $('input.predicateSymbol', $form)
             const numSymbols = $symbols.length
             var index      = 0
             var subscript  = 0
@@ -296,7 +303,7 @@
          */
         function hasEmptyPremise() {
             var hasEmpty = false
-            $('input.premise').each(function(i){
+            $('input.premise', $form).each(function(i){
                 if (!$(this).val()) {
                     hasEmpty = true
                     // stop iteration
@@ -314,7 +321,7 @@
          */
         function hasEmptyPredicate() {
             var hasEmpty = false
-            $('input.arity').each(function(i) {
+            $('input.arity', $form).each(function(i) {
                 if (!$(this).val()){
                     hasEmpty = true
                     // stop iteration
@@ -353,12 +360,12 @@
          */
         function refreshLogic() {
             const logicName = $('#selected_logic').val()
-            $('.logic-details').hide()
-            $('.logic-details.' + logicName).show()
+            $('.logic-details', $form).hide()
+            $('.logic-details.' + logicName, $form).show()
             $('#logic-heading-description').html(
                 [
-                    $('.logic-details .logic-name.' + logicName).html(),
-                    $('.logic-details .logic-title.' + logicName).html()
+                    $('.logic-details .logic-name.' + logicName, $form).html(),
+                    $('.logic-details .logic-title.' + logicName, $form).html()
                 ].join(' - ')
             )
         }
@@ -371,10 +378,10 @@
          */
         function refreshNotation() {
             const notation = currentNotation()
-            $('.lexicons .lexicon').hide()
-            $('.lexicon.notation-' + notation).show()
-            $('.predicateSymbol').hide()
-            $('.predicateSymbol.notation-' + notation).show()
+            $('.lexicons .lexicon', $form).hide()
+            $('.lexicon.notation-' + notation, $form).show()
+            $('.predicateSymbol', $form).hide()
+            $('.predicateSymbol.notation-' + notation, $form).show()
             if ($('#example_argument').val()) {
                 refreshExampleArgument()
             }
@@ -412,7 +419,7 @@
          * @return void
          */
         function refreshStatuses() {
-            $('form.argument input.sentence').each(function(sentenceIndex) {
+            $('input.sentence', $form).each(function(sentenceIndex) {
                 const $status = $(this).closest('div.input').find('.status')
                 const notation = currentNotation()
                 const input = $(this).val()
@@ -470,7 +477,7 @@
             const symset = currentOutputSymbolSet()
             const premises = []
             var conclusion
-            $('form.argument input.sentence').each(function(sentenceIndex) {
+            $('input.sentence', $form).each(function(sentenceIndex) {
                 const $status = $(this).closest('div.input').find('.status')
                 const input = $(this).val()
                 const isConclusion = $(this).hasClass('conclusion')
@@ -545,16 +552,16 @@
                 },
                 output: {}
             }
-            data.logic = $('select[name="logic"]').val()
+            data.logic = $('select[name="logic"]', $form).val()
             data.argument.notation = currentNotation()
             data.argument.conclusion = $('#conclusion').val()
-            $('input.premise').each(function() {
+            $('input.premise', $form).each(function() {
                 const val = $(this).val()
                 if (val) {
                     data.argument.premises.push(val)
                 }
             })
-            $('.userPredicate').each(function() {
+            $('.userPredicate', $form).each(function() {
                 const $tr = $(this)
                 const arity = $('input.arity', $tr).val()
                 if (arity.length > 0) {

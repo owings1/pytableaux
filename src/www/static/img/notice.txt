@@ -15,3 +15,14 @@ minus-medium.png
 Creative Commons (Attribution 3.0 Unported)
 Raj Dev https://freeicons.io/profile/714
 https://freeicons.io/icon-list/essentials-free-ui-icons-2
+
+cluster.png
+Creative Commons (Attribution 3.0 Unported)
+BECRIS https://freeicons.io/profile/3484
+Danda Euatham https://becrisdesign.com/
+https://freeicons.io/essential-app-icons
+
+controls.png
+Creative Commons (Attribution 3.0 Unported)
+Muhammad Haq https://freeicons.io/profile/823
+https://freeicons.io/user-interface-icons-10
