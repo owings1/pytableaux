@@ -165,31 +165,29 @@
 .html-writer-controls .collapser-heading.uncollapsed {
     border-bottom: 1px solid #cccccc;
 }
-.html-writer-controls .collapser-heading::before {
-    background-size: 16px 16px;
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    margin-right: 5px;
-    content: "";
-    opacity: 85%;
-}
+.html-writer-controls .collapser-heading::before,
 .html-writer-controls .collapser-heading::after {
     background-size: 16px 16px;
     display: inline-block;
     width: 16px;
     height: 16px;
-    float: right;
     content: "";
-    opacity: 45%;
+}
+.html-writer-controls .collapser-heading::before {
+    margin-right: 5px;
+}
+.html-writer-controls .collapser-heading::after {
+    float: right;
 }
 .html-writer-controls .collapser-wrapper.positioned-left .collapser-heading.uncollapsed::after,
 .html-writer-controls .collapser-wrapper.positioned-right .collapser-heading.collapsed::before {
     background-image: url(../img/double-left-arrow.png);
+    opacity: 45%;
 }
 .html-writer-controls .collapser-wrapper.positioned-left .collapser-heading.collapsed::after,
 .html-writer-controls .collapser-wrapper.positioned-right .collapser-heading.uncollapsed::before {
     background-image: url(../img/double-right-arrow.png);
+    opacity: 45%;
     
 }
 .html-writer-controls .collapser-wrapper.positioned-left .collapser-heading.collapsed::after {
@@ -217,4 +215,5 @@
 }
 .html-writer-controls .collapser-wrapper.positioned-right .controls-heading::after {
     margin-left: 5px;
+    opacity: 85%;
 }
