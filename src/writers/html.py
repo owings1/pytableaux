@@ -33,16 +33,16 @@ class Writer(logic.TableauxSystem.Writer):
         lstrip_blocks = True
     )
 
-    def write_tableau(self, tableau, writer, opts):
+    def write_tableau(self, tableau, sw, opts):
         if tableau.argument != None:
-            premises = [writer.write(premise, drop_parens = True) for premise in tableau.argument.premises]
-            conclusion = writer.write(tableau.argument.conclusion, drop_parens = True)
+            premises = [sw.write(premise, drop_parens = True) for premise in tableau.argument.premises]
+            conclusion = sw.write(tableau.argument.conclusion, drop_parens = True)
         else:
             premises = None
             conclusion = None
         return self.env.get_template('proof.html').render({
             'tableau'    : tableau,
-            'writer'     : writer,
+            'sw'         : sw,
             'opts'       : opts,
             'premises'   : premises,
             'conclusion' : conclusion

@@ -137,6 +137,7 @@ class Model(logic.Model):
     }
 
     def __init__(self):
+        super(Model, self).__init__()
         self.extensions = {}
         self.anti_extensions = {}
         self.atomics = {}

@@ -564,16 +564,16 @@
                 },
                 output: {}
             }
-            data.logic = $('select[name="logic"]', $Ctx).val()
+            data.logic = $('select[name="logic"]', $Frm).val()
             data.argument.notation = currentNotation()
             data.argument.conclusion = $('#conclusion').val()
-            $('input.premise', $Ctx).each(function() {
+            $('input.premise', $Frm).each(function() {
                 const val = $(this).val()
                 if (val) {
                     data.argument.premises.push(val)
                 }
             })
-            $('.userPredicate', $Ctx).each(function() {
+            $('.userPredicate', $Frm).each(function() {
                 const $tr = $(this)
                 const arity = $('input.arity', $tr).val()
                 if (arity.length > 0) {
@@ -586,9 +586,15 @@
                     })
                 }
             })
-            data.output.notation = $('#output_notation').val()
-            data.output.format = $('#format').val()
-            data.output.symbol_set = $('#symbol_set').val()
+            data.output.notation = $('#output_notation', $Frm).val()
+            data.output.format = $('#format', $Frm).val()
+            data.output.symbol_set = $('#symbol_set', $Frm).val()
+            data.output.options = {}
+            $('input:checkbox.options', $Frm).each(function() {
+                const $me = $(this)
+                const opt = $me.attr('name').split('.')[1]
+                data.output.options[opt] = $me.is(':checked')
+            })
             return data
         }
 

@@ -222,3 +222,6 @@
 .html-writer-controls .controls-contents .ui-accordion-header {
     margin: 0;
 }
+.html-writer-controls .models .model {
+    display: none;
+}

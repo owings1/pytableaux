@@ -30,25 +30,25 @@ class Writer(logic.TableauxSystem.Writer):
 
     name = name
 
-    def write_tableau(self, tableau, writer, opts):
+    def write_tableau(self, tableau, sw, opts):
         s = ''
         if 'controls' in opts and opts['controls']:
-            s += self.write_status(tableau, writer, opts)
+            s += self.write_status(tableau, sw, opts)
             s += '\n\n'
         s += '\n'.join([
             'Proof',
             '=====',
             ''
         ])
-        s += self.write_structure(tableau.tree, writer, opts)
+        s += self.write_structure(tableau.tree, sw, opts)
         return s
 
-    def write_structure(self, structure, writer, opts, indent = 0, indents=[]):
+    def write_structure(self, structure, sw, opts, indent = 0, indents=[]):
         node_strs = []
         for node in structure['nodes']:
             s = ''
             if 'sentence' in node.props:
-                s += writer.write(node.props['sentence'], drop_parens = True)
+                s += sw.write(node.props['sentence'], drop_parens = True)
                 if 'world' in node.props and node.props['world'] != None:
                     s += ', w' + str(node.props['world'])
             if 'designated' in node.props and node.props['designated'] != None:
@@ -77,21 +77,21 @@ class Writer(logic.TableauxSystem.Writer):
         for child in structure['children']:
             inds = list(indents)
             inds.append(i - indent)
-            s += "\n" + self.write_structure(child, writer, opts, indent = i, indents=inds)
+            s += "\n" + self.write_structure(child, sw, opts, indent = i, indents=inds)
             s += '\n'
             for ind in inds:
                 s += ' ' * (ind - 1) + HCHAR
         return s
 
-    def write_status(self, tableau, writer, opts):
+    def write_status(self, tableau, sw, opts):
         lines = []
         if tableau.argument != None:
             lines += [
                 'Argument',
                 '========'
             ]
-            pstrs = [writer.write(premise, drop_parens=True) for premise in tableau.argument.premises]
-            cstr = writer.write(tableau.argument.conclusion, drop_parens=True)
+            pstrs = [sw.write(premise, drop_parens=True) for premise in tableau.argument.premises]
+            cstr = sw.write(tableau.argument.conclusion, drop_parens=True)
             lines += pstrs
             if len(tableau.argument.premises):
                 lines.append(TCHAR * min(max([len(s) for s in pstrs] + [5, len(cstr)]), 20))

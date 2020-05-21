@@ -32,7 +32,7 @@ def example_proof(logic, name, is_build=True, is_models=True):
     arg = examples.argument(name)
     proof = tableau(logic, arg)
     if is_build:
-        proof.build(build_models=is_models)
+        proof.build(models=is_models)
     return proof
 
 def empty_proof():

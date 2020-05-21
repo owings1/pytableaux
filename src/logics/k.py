@@ -104,12 +104,71 @@ class Model(logic.Model):
     }
 
     def __init__(self):
+        super(Model, self).__init__()
         self.frames = {}
         self.access = set()
         self.sees = {}
         self.predicates = set()
         self.constants = set()
         self.fde = fde.Model()
+
+    def get_data(self):
+        import notations
+        data = super(Model, self).get_data()
+        sw = notations.polish.Writer()
+        data.update({
+            'worlds': {
+                'description'     : 'set of worlds',
+                'type'            : 'set',
+                'member_datatype' : 'int',
+                'member_typehint' : 'world',
+                'symbol'          : 'W',
+                'values'          : sorted(list(self.frames.keys())),
+            },
+            'access': {
+                'description'     : 'access relation',
+                'type'            : 'set',
+                'member_datatype' : 'tuple',
+                'member_typehint' : 'access',
+                'symbol'          : 'R',
+                'values'          : sorted(list(self.access)),
+            },
+            'frames': {
+                'description'     : 'world frames',
+                'type'            : 'set',
+                'member_datatype' : 'map',
+                'member_typehint' : 'frame',
+                'symbol'          : 'F',
+                'key_order'       : sorted(list(self.frames.keys())),
+                'values'          : dict()
+            }
+        })
+        for world in self.frames:
+            frame = self.world_frame(world)
+            fdata = {
+                'world'   : {
+                    'description' : 'world',
+                    'type'        : 'int',
+                    'value'       : world,
+                    'symbol'      : 'w'
+                },
+                'atomics' : {
+                    'description'     : 'atomic values',
+                    'type'            : 'function',
+                    'input_datatype'  : 'sentence',
+                    'output_datatype' : 'string',
+                    'output_typehint' : 'truth_value',
+                    'symbol'          : 'v',
+                    'values'          : [
+                        {
+                            'input'  : sw.write(sentence),
+                            'output' : self.truth_value_chars[frame['atomics'][sentence]]
+                        }
+                        for sentence in sorted(list(frame['atomics'].keys()))
+                    ]
+                }
+            }
+        return data
 
     def read_branch(self, branch):
     #    """
@@ -181,7 +240,7 @@ class Model(logic.Model):
         if sentence in frame['opaques'] and frame['opaques'][sentence] != value:
             raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
         frame['opaques'][sentence] = value
-        
+
     def set_atomic_value(self, sentence, value, world=None, **kw):
         frame = self.world_frame(world)
         if sentence in frame['atomics'] and frame['atomics'][sentence] != value:

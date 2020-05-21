@@ -409,10 +409,12 @@ class Vocabulary(object):
 
         def __init__(self, name, index, subscript, arity):
             if index >= num_predicate_symbols:
-                raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
-            self.name      = name
+                raise Vocabulary.IndexTooLargeError("Predicate index too large {0}".format(str(index)))
             if arity == None or arity < 1:
-                raise Vocabulary.PredicateError('Invalid predicate arity {0}'.format(str(arity)))
+                raise Vocabulary.PredicateArityError('Invalid predicate arity {0}'.format(str(arity)))
+            if subscript == None or subscript < 0:
+                raise Vocabulary.PredicateSubscriptError('Invalid predicate subscript {0}'.format(str(subscript)))
+            self.name      = name
             self.arity     = arity
             self.index     = index
             self.subscript = subscript
@@ -420,10 +422,16 @@ class Vocabulary(object):
         def __hash__(self):
             return hash((1, self.index, self.subscript, self.arity))
 
-    class IndexTooLargeError(Exception):
+    class PredicateError(Exception):
         pass
 
-    class PredicateError(Exception):
+    class IndexTooLargeError(PredicateError):
+        pass
+
+    class PredicateArityError(PredicateError):
+        pass
+
+    class PredicateSubscriptError(PredicateError):
         pass
 
     class PredicateAlreadyDeclaredError(PredicateError):
@@ -614,8 +622,30 @@ class Vocabulary(object):
         def variables(self):
             raise NotImplementedError(NotImplemented)
 
+        def hash_tuple(self):
+            raise NotImplementedError(NotImplemented)
+
         def __eq__(self, other):
             return other != None and self.__dict__ == other.__dict__
+
+        def __ne__(self, other):
+            return other == None or self.__dict__ != other.__dict__
+
+        def __lt__(self, other):
+            return self.hash_tuple() < other.hash_tuple()
+
+        def __le__(self, other):
+            return self.hash_tuple() <= other.hash_tuple()
+
+        def __gt__(self, other):
+            return self.hash_tuple() > other.hash_tuple()
+
+        def __ge__(self, other):
+            return self.hash_tuple() >= other.hash_tuple()
+
+        def __cmp__(self, other):
+            # Python 2 only
+            return cmp(self.hash_tuple(), other.hash_tuple())
 
         def __repr__(self):
             from notations import polish
@@ -647,8 +677,11 @@ class Vocabulary(object):
                 subscript = self.subscript + 1
             return Vocabulary.AtomicSentence(index, subscript)
 
+        def hash_tuple(self):
+            return (4, self.index, self.subscript)
+
         def __hash__(self):
-            return hash((4, self.index, self.subscript))
+            return hash(self.hash_tuple())
 
     class PredicatedSentence(Sentence):
 
@@ -685,8 +718,11 @@ class Vocabulary(object):
         def variables(self):
             return {param for param in self.parameters if is_variable(param)}
 
+        def hash_tuple(self):
+            return (5, self.predicate) + tuple((param for param in self.parameters))
+
         def __hash__(self):
-            return hash((5, self.predicate) + tuple((param for param in self.parameters)))
+            return hash(self.hash_tuple())
 
     class QuantifiedSentence(Sentence):
 
@@ -706,8 +742,11 @@ class Vocabulary(object):
         def variables(self):
             return self.sentence.variables()
 
+        def hash_tuple(self):
+            return (6, quantifiers_list.index(self.quantifier), self.variable, self.sentence)
+
         def __hash__(self):
-            return hash((6, quantifiers_list.index(self.quantifier), self.variable, self.sentence))
+            return hash(self.hash_tuple())
 
     class OperatedSentence(Sentence):
 
@@ -743,8 +782,11 @@ class Vocabulary(object):
                 v.update(operand.variables())
             return v
 
+        def hash_tuple(self):
+            return (7, operators_list.index(self.operator)) + tuple((operand for operand in self.operands))
+
         def __hash__(self):
-            return hash((7, operators_list.index(self.operator)) + tuple((operand for operand in self.operands)))
+            return hash(self.hash_tuple())
 
     class Writer(object):
 
@@ -897,6 +939,9 @@ class TableauxSystem(object):
             #: The argument of the tableau, if given
             self.argument = argument
 
+            # flag to build models
+            self.is_build_models = None
+
             if logic != None:
                 self.set_logic(logic)
 
@@ -907,14 +952,14 @@ class TableauxSystem(object):
             if argument != None:
                 self.build_trunk()
 
-        def build(self, build_models=False):
+        def build(self, models=False):
             """
             Build the tableau. Returns self.
             """
+            self.is_build_models = models
             while not self.finished:
                 self.step()
-            if build_models:
-                self.build_models()
+            self.is_build_models = None
             return self
 
         def step(self):
@@ -1007,11 +1052,13 @@ class TableauxSystem(object):
                 'balanced_line_width'   : None,
                 # 0.5x the width of the first child structure divided by the
                 # width of this structure.
-                'balanced_line_margin'  : None
+                'balanced_line_margin'  : None,
+                # the branch id, only set for leaves
+                'branch_id'             : None,
             }
             while True:
-                B = [branch for branch in branches if len(branch.nodes) > node_depth]
-                for branch in B:
+                relevant = [branch for branch in branches if len(branch.nodes) > node_depth]
+                for branch in relevant:
                     if branch.closed:
                         structure['has_closed'] = True
                     else:
@@ -1020,13 +1067,13 @@ class TableauxSystem(object):
                         break
                 distinct_nodes = []
                 distinct_nodeset = set()
-                for branch in B:
+                for branch in relevant:
                     node = branch.nodes[node_depth]
                     if node not in distinct_nodeset:
                         distinct_nodeset.add(node)
                         distinct_nodes.append(node)
                 if len(distinct_nodes) == 1:
-                    node = B[0].nodes[node_depth]
+                    node = relevant[0].nodes[node_depth]
                     structure['nodes'].append(node)
                     if structure['step'] == None or structure['step'] > node.step:
                         structure['step'] = node.step
@@ -1035,15 +1082,19 @@ class TableauxSystem(object):
                 break
             self.stats['distinct_nodes'] += len(structure['nodes'])
             if len(branches) == 1:
-                structure['closed'] = branches[0].closed
-                structure['open'] = not branches[0].closed
+                branch = branches[0]
+                structure['closed'] = branch.closed
+                structure['open'] = not branch.closed
                 if structure['closed']:
-                    structure['closed_step'] = branches[0].closed_step
+                    structure['closed_step'] = branch.closed_step
                     structure['has_closed'] = True
                 else:
                     structure['has_open'] = True
                 structure['width'] = 1
                 structure['leaf'] = True
+                structure['branch_id'] = branch.id
+                if branch.model != None:
+                    structure['model_id'] = branch.model.id
             else:
                 inbetween_widths = 0
                 track['depth'] += 1
@@ -1119,6 +1170,8 @@ class TableauxSystem(object):
                 'distinct_nodes' : 0, # tracked in self.structure()
                 'rules_applied'  : len(self.history)
             }
+            if self.is_build_models:
+                self.build_models()
             self.tree     = self.structure(self.branches)
             return self
 
@@ -1141,7 +1194,7 @@ class TableauxSystem(object):
         """
 
         def __init__(self, tableau=None):
-            #: A branch is closed by a closure rule.
+            self.id = id(self)
             self.closed = False
             self.ticked_nodes = set()
             self.nodes = []
@@ -1620,17 +1673,17 @@ class TableauxSystem(object):
         def document_footer(self):
             return ''
 
-        def write(self, tableau, notation = None, symbol_set = None, writer = None, **options):
+        def write(self, tableau, notation = None, symbol_set = None, sw = None, **options):
             opts = dict(self.defaults)
             opts.update(options)
             
-            if writer == None:
+            if sw == None:
                 if notation == None:
-                    raise Exception("Must specify either notation or writer.")
-                writer = notation.Writer(symbol_set)
-            return self.write_tableau(tableau, writer, opts)
+                    raise Exception("Must specify either notation or sw.")
+                sw = notation.Writer(symbol_set)
+            return self.write_tableau(tableau, sw, opts)
 
-        def write_tableau(self, tableau, writer, opts):
+        def write_tableau(self, tableau, sw, opts):
             raise NotImplementedError(NotImplemented)
 
 class Model(object):
@@ -1639,6 +1692,9 @@ class Model(object):
         pass
 
     truth_functional_operators = set()
+
+    def __init__(self):
+        self.id = id(self)
 
     def read_branch(self, branch):
         raise NotImplementedError(NotImplemented)
@@ -1678,6 +1734,9 @@ class Model(object):
 
     def value_of_quantified(self, sentence, **kw):
         raise NotImplementedError(NotImplemented)
+
+    def get_data(self):
+        return dict()
 
 class Parser(object):
     """

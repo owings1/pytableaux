@@ -71,7 +71,7 @@
                                         <li>
                                             <span class="prop">Links</span>
                                             <span class="value">
-                                                <a class="doc-link" href="/doc/logics/{{ module|e }}.html" target="_pytableaux_logic">Documentation</a>
+                                                <a class="doc-link" href="/doc/logics/{{ module|e }}.html" target="_blank">Documentation</a>
                                             </span>
                                         </li>
                                     </ul>
@@ -268,6 +268,10 @@
                             <option value="html" {{- helper.select_opt(form_data, 'symbol_set', 'html') }}>HTML</option>
                             <option value="default" {{- helper.select_opt(form_data, 'symbol_set', 'default') }}>Default</option>
                         </select>
+                    </div>
+                    <div class="input">
+                        <label for="options_models">Build models</label>
+                        <input type="checkbox" id="options_models" name="options.models" class="options" value="true" {{- helper.checkbox_default(form_data, 'options.models', True) }}/>
                     </div>
                     <div class="input submit">
                         <input type="submit" value="Go"/>

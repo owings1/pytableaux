@@ -1,5 +1,7 @@
+{% if opts['models'] %}
+    {%- import 'model.html' as model_helper -%}
+{% endif %}
 {% set result_class = 'valid' if tableau.valid else 'invalid' %}
-
 <div class="html-writer-controls">
     <div class="collapser-wrapper positioned-left controls-wrapper">
         <div class="collapser-heading controls-heading collapsed"><span class="heading-title">Controls</span></div>
@@ -20,8 +22,8 @@
                     {% if tableau.argument != None %}
                         <li>
                             <span class="prop">Argument</span>
-                            <span class="value logic-title {{ module|e }}">
-                                {{ premises|join('<br>') }}{% if premises|length %}<br><hr>{% endif %}&there4; {{ conclusion }}
+                            <span class="value">
+                                {{ premises|join('<br>') }}{% if premises|length %}<br>----------<br>{% endif %}&there4; {{ conclusion }}
                             </span>
                         </li>
                     {% endif %}
@@ -111,6 +113,9 @@
                                     <option value="closed">(C)losed Branches</option>
                                 {% endif %}
                             </select>
+                            {% if not can_filter %}
+                                No open branches
+                            {% endif %}
                         </span>
                     </li>
                 </ul>
@@ -147,6 +152,21 @@
                     </li>
                 </ul>
             </div>
+            {% if opts['models'] -%}
+                <h4 class="part-header">Model</h4>
+                <div class="part-content">
+                    {% if tableau.stats['open_branches'] > 0 %}
+                        <span class="select-a-branch">Select a branch to view model</span>
+                        <div class="models">
+                            {% for branch in tableau.open_branches() %}
+                                {{ model_helper.write_model(branch) }}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <span class="no-models">No countermodels</span>
+                    {% endif %}
+                </div>
+            {% endif %}
             <div class="clear"></div>
         </div>
         <div class="clear"></div>

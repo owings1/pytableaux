@@ -401,6 +401,47 @@ body {
     overflow-x: scroll;
 }
 
+.pt-app .debugs-wrapper::before {
+    content: "";
+    display: block;
+    margin-top: 100px;
+    margin-bottom: 20px;
+    border-bottom: 2px dashed #9e9e9e;
+}
+.pt-app .debugs {
+    border: 1px solid #cccccc;
+    background-color: #ffb00052;
+    padding-bottom: 20px;
+}
+.pt-app .debugs .debug {
+    padding: 10px 10px 0 10px;
+}
+.pt-app .debugs h3 {
+    background-color: #ffb00059;
+    margin-block-start: 0;
+    margin-block-end: 0;
+    padding: 10px;
+    border-bottom: 1px solid #cccccc;
+}
+.pt-app .debugs h4 {
+    background-color: #adadad;
+    margin-block-start: 0;
+    margin-block-end: 0;
+    margin-top: 10px;
+    padding: 10px;
+    color: #0f100f;
+    border: 1px solid #888888;
+}
+.pt-app .debug-content {
+    padding: 20px;
+    background-color: #eeeeee;
+    border: 1px solid #888888;
+}
+.pt-app .json-dump {
+    white-space: pre;
+    font-family: monospace;
+    overflow-x: scroll;
+}
 /*
 .logicName {
     display: inline-block;
