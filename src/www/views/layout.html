@@ -14,11 +14,14 @@
     <div class="headerWrapper">
         <div class="header">
             <a href="/">pytableaux {{ version }}</a>
-            <span class="right"><a href="/doc">documentation</a> | <a href="{{ source_href }}" target="_blank">source</a></span>
+            <span class="right"><a href="/doc" target="_blank">documentation</a> | <a href="{{ source_href }}" target="_blank">source</a></span>
         </div>
     </div>
     <div class="content">
         {%- block content -%}{%- endblock -%}
+        {%- if is_debug %}
+            {%- include 'debug.html' -%}
+        {%- endif %}
     </div>
     <div class="footerWrapper">
         <div class="footer">

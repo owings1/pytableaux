@@ -39,8 +39,8 @@
     {% if key not in form_data or (form_data[key] == value or value in form_data[key]) %} selected="selected"{% endif %}
 {%- endmacro %}
 
-{% macro checkbox_default(form_data, key, value) -%}
-    {% if key not in form_data or (form_data[key] == value or value in form_data[key]) %} checked="checked"{% endif %}
+{% macro checkbox_default(form_data, key, is_default = False) -%}
+    {% if key in form_data or (is_default and not form_data|length) %} checked="checked"{% endif %}
 {%- endmacro %}
 
 {% macro hidden_if(value) -%}
