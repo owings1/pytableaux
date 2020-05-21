@@ -410,7 +410,7 @@ def post_process(app, exception):
             found = True
             sentence = sp.parse(s1)
             s2 = sw.write(sentence, drop_parens=True)
-            print("result: {0}".format(s2))
+            #print("result: {0}".format(s2))
             text = text.replace(u'P{' + s + '}', s2)#.decode('utf-8'))
         if found:
             with codecs.open(builddir + '/' + fil, 'w', 'utf-8') as f:
