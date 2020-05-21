@@ -91,6 +91,12 @@
 .html-writer-controls {
     display: inline-block;
 }
+.html-writer-controls .controls-heading.collapsed span.heading-title {
+    display: none;
+}
+.html-writer-controls .controls-heading.uncollapsed span.heading-title {
+    display: inline;
+}
 .html-writer-controls .controls-contents {
     min-width: 260px;
 }
