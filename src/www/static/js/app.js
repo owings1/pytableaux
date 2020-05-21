@@ -29,15 +29,15 @@
 
         var SentenceRenders = {}
 
-        const $form = $('form.argument')
+        const $Ctx = $('form.argument')
+        const $Frm = $Ctx
         /**
          * Main initialization routine.
          *
          * @return void
          */
         function init() {
-            $form
-                .on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
+            $Frm.on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
                 .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
                 .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
@@ -69,13 +69,14 @@
                         $($target.attr('data-target')).toggle()
                     }
                 })
+                
 
-            $('select', $form).selectmenu({
+            $('select', $Frm).selectmenu({
                 classes: {
                     'ui-selectmenu-menu': 'pt-app'
                 }
             })
-            $('input[type="submit"]', $form).button()
+            $('input[type="submit"]', $Frm).button()
 
             setTimeout(function() {
                 ensureEmptyPremise()
@@ -97,8 +98,8 @@
         function handleFieldsetHeadingClick($heading) {
             const $contents = $heading.closest('.fieldset').find('.fieldset-contents')
             const isVisible = $contents.is(':visible')
-            $('.fieldset-contents', $form).removeClass('uncollapsed').addClass('collapsed').hide('fast')
-            $('.heading', $form).removeClass('uncollapsed').addClass('collapsed')
+            $('.fieldset-contents', $Ctx).removeClass('uncollapsed').addClass('collapsed').hide('fast')
+            $('.heading', $Ctx).removeClass('uncollapsed').addClass('collapsed')
             if (!isVisible) {
                 $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
                 $heading.removeClass('collapsed').addClass('uncollapsed')
@@ -148,8 +149,8 @@
          * @return void
          */
         function addPremise(value, status, message) {
-            var premiseNum = $('input.premise', $form).length + 1
-            $('.premises', $form).append(render(Templates.premise, {
+            var premiseNum = $('input.premise', $Ctx).length + 1
+            $('.premises', $Ctx).append(render(Templates.premise, {
                 n       : premiseNum++,
                 value   : value   || '',
                 status  : status  || '',
@@ -163,7 +164,7 @@
          * @return String name of the notation, e.g. 'standard'
          */
         function currentNotation() {
-            return $('#input_notation', $form).val()
+            return $('#input_notation', $Ctx).val()
         }
 
         /**
@@ -172,7 +173,7 @@
          * @return String name of the foramat, e.g. 'html'
          */
         function currentOutputFormat() {
-            return $('#format', $form).val()
+            return $('#format', $Ctx).val()
         }
 
         /**
@@ -181,7 +182,7 @@
          * @return String name of the notation, e.g. 'standard'
          */
         function currentOutputNotation() {
-            return $('#output_notation', $form).val()
+            return $('#output_notation', $Ctx).val()
         }
 
         /**
@@ -190,7 +191,7 @@
          * @return String name of the symbol set, e.g. 'default'
          */
         function currentOutputSymbolSet() {
-            return $('#symbol_set', $form).val()
+            return $('#symbol_set', $Ctx).val()
         }
 
         /**
@@ -208,7 +209,7 @@
          * @return void
          */
         function clearPremises() {
-            $('.input.premise', $form).remove()
+            $('.input.premise', $Ctx).remove()
         }
 
         /**
@@ -217,7 +218,7 @@
          * @return void
          */
         function clearConclusion() {
-            $('#conclusion', $form).val('')
+            $('#conclusion', $Ctx).val('')
         }
 
         /**
@@ -254,10 +255,10 @@
                     html += '<span class="subscript">' + subscript + '</span>'
                 html += '</span>'
             })
-            $('table.predicates tbody', $form).append(render(Templates.predicate, { 
+            $('table.predicates tbody', $Ctx).append(render(Templates.predicate, { 
                 index       : index,
                 subscript   : subscript,
-                name        : name || ('Predicate ' + ($('input.predicateSymbol', $form).length + 1)),
+                name        : name || ('Predicate ' + ($('input.predicateSymbol', $Ctx).length + 1)),
                 arity       : arity || '',
                 symbol_html : html
             }))
@@ -270,7 +271,7 @@
          * @return void
          */
         function addEmptyPredicate() {
-            const $symbols   = $('input.predicateSymbol', $form)
+            const $symbols   = $('input.predicateSymbol', $Ctx)
             const numSymbols = $symbols.length
             var index      = 0
             var subscript  = 0
@@ -303,7 +304,7 @@
          */
         function hasEmptyPremise() {
             var hasEmpty = false
-            $('input.premise', $form).each(function(i){
+            $('input.premise', $Ctx).each(function(i){
                 if (!$(this).val()) {
                     hasEmpty = true
                     // stop iteration
@@ -321,7 +322,7 @@
          */
         function hasEmptyPredicate() {
             var hasEmpty = false
-            $('input.arity', $form).each(function(i) {
+            $('input.arity', $Ctx).each(function(i) {
                 if (!$(this).val()){
                     hasEmpty = true
                     // stop iteration
@@ -360,12 +361,12 @@
          */
         function refreshLogic() {
             const logicName = $('#selected_logic').val()
-            $('.logic-details', $form).hide()
-            $('.logic-details.' + logicName, $form).show()
+            $('.logic-details', $Ctx).hide()
+            $('.logic-details.' + logicName, $Ctx).show()
             $('#logic-heading-description').html(
                 [
-                    $('.logic-details .logic-name.' + logicName, $form).html(),
-                    $('.logic-details .logic-title.' + logicName, $form).html()
+                    $('.logic-details .logic-name.' + logicName, $Ctx).html(),
+                    $('.logic-details .logic-title.' + logicName, $Ctx).html()
                 ].join(' - ')
             )
         }
@@ -378,10 +379,10 @@
          */
         function refreshNotation() {
             const notation = currentNotation()
-            $('.lexicons .lexicon', $form).hide()
-            $('.lexicon.notation-' + notation, $form).show()
-            $('.predicateSymbol', $form).hide()
-            $('.predicateSymbol.notation-' + notation, $form).show()
+            $('.lexicons .lexicon', $Ctx).hide()
+            $('.lexicon.notation-' + notation, $Ctx).show()
+            $('.predicateSymbol', $Ctx).hide()
+            $('.predicateSymbol.notation-' + notation, $Ctx).show()
             if ($('#example_argument').val()) {
                 refreshExampleArgument()
             }
@@ -419,7 +420,7 @@
          * @return void
          */
         function refreshStatuses() {
-            $('input.sentence', $form).each(function(sentenceIndex) {
+            $('input.sentence', $Ctx).each(function(sentenceIndex) {
                 const $status = $(this).closest('div.input').find('.status')
                 const notation = currentNotation()
                 const input = $(this).val()
@@ -477,7 +478,7 @@
             const symset = currentOutputSymbolSet()
             const premises = []
             var conclusion
-            $('input.sentence', $form).each(function(sentenceIndex) {
+            $('input.sentence', $Ctx).each(function(sentenceIndex) {
                 const $status = $(this).closest('div.input').find('.status')
                 const input = $(this).val()
                 const isConclusion = $(this).hasClass('conclusion')
@@ -552,16 +553,16 @@
                 },
                 output: {}
             }
-            data.logic = $('select[name="logic"]', $form).val()
+            data.logic = $('select[name="logic"]', $Ctx).val()
             data.argument.notation = currentNotation()
             data.argument.conclusion = $('#conclusion').val()
-            $('input.premise', $form).each(function() {
+            $('input.premise', $Ctx).each(function() {
                 const val = $(this).val()
                 if (val) {
                     data.argument.premises.push(val)
                 }
             })
-            $('.userPredicate', $form).each(function() {
+            $('.userPredicate', $Ctx).each(function() {
                 const $tr = $(this)
                 const arity = $('input.arity', $tr).val()
                 if (arity.length > 0) {
