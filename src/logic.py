@@ -411,6 +411,8 @@ class Vocabulary(object):
             if index >= num_predicate_symbols:
                 raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
             self.name      = name
+            if arity == None or arity < 1:
+                raise Vocabulary.PredicateError('Invalid predicate arity {0}'.format(str(arity)))
             self.arity     = arity
             self.index     = index
             self.subscript = subscript
