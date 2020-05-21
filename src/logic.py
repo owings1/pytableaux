@@ -1609,8 +1609,8 @@ class TableauxSystem(object):
 
     class Writer(object):
 
-        def __init__(self):
-            pass
+        def __init__(self, **opts):
+            self.defaults = dict(opts)
 
         def document_header(self):
             return ''
@@ -1618,7 +1618,10 @@ class TableauxSystem(object):
         def document_footer(self):
             return ''
 
-        def write(self, tableau, notation = None, symbol_set = None, writer = None, **opts):
+        def write(self, tableau, notation = None, symbol_set = None, writer = None, **options):
+            opts = dict(self.defaults)
+            opts.update(options)
+            
             if writer == None:
                 if notation == None:
                     raise Exception("Must specify either notation or writer.")

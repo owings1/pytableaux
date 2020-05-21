@@ -57,7 +57,12 @@
                         refreshArgumentHeader()
                     }
                 })
-                .on('click', function(e) {
+                .on('submit', function(e) {
+                    //e.preventDefault()
+                    submitForm()
+                })
+
+                $Ctx.on('click', function(e) {
                     const $target = $(e.target)
                     const $heading = $target.closest('.heading')
                     const $collapserHeading = $target.closest('.collapser-heading')
@@ -88,6 +93,12 @@
                     refreshStatuses()
                 }
             })
+        }
+
+        function submitForm() {
+            const data = getApiData()
+            const json = JSON.stringify(data)
+            $('input[name="api-json"]', $Frm).val(json)
         }
 
         /**

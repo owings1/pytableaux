@@ -127,6 +127,11 @@ def fix_form_data(form_data):
                     form_data[param] = [form_data[param]]
     return form_data
 
+class RequestDataError(Exception):
+
+    def __init__(self, errors):
+        self.errors = errors
+
 class App(object):
                 
     @server.expose
@@ -134,101 +139,48 @@ class App(object):
 
         form_data = fix_form_data(form_data)
 
-        data = dict()
+        data = dict(base_view_data)
 
         errors = {}
 
-        vocabulary = logic.Vocabulary()
+        vocab = logic.Vocabulary()
 
         view = 'argument'
 
         if len(form_data):
 
-            input_notation = modules['notations'][form_data['input_notation']]
-            output_notation = modules['notations'][form_data['output_notation']]
-            writer = modules['writers'][form_data['format']].Writer()
-
-            if 'user_predicate_arities[]' in form_data:
-                App.declare_user_predicates(form_data, vocabulary, errors)
-            parser = input_notation.Parser(vocabulary)
-
             try:
-                premise_strs = [premise for premise in form_data['premises[]'] if len(premise) > 0]
-            except:
-                premise_strs = list()
-
-            premises = []
-            for i, premise_str in enumerate(premise_strs):
                 try:
-                    premises.append(parser.parse(premise_str))
-                except Exception as e:
-                    errors['Premise ' + str(i + 1)] = str(e)
-            try:
-                conclusion = parser.parse(form_data['conclusion'])
-            except Exception as e:
-                errors['Conclusion'] = str(e)
-
-            if 'symbol_set' in form_data:
-                symbol_set = form_data['symbol_set']
-            else:
-                if writer.name == 'HTML' and 'html' in output_notation.symbol_sets:
-                    symbol_set = 'html'
-                else:
-                    symbol_set = 'default'
-
-            try:
-                sw = output_notation.Writer(symbol_set)
-            except Exception as e:
-                errors['Symbol Set'] = str(e)
-
-            if len(form_data['logic']) < 1:
-                errors['Logic'] = str(Exception('Please select a logic'))
-            elif form_data['logic'] not in modules['logics']:
-                errors['Logic'] = str(Exception('Invalid logic'))
-            else:
-                selected_logic = modules['logics'][form_data['logic']]
+                    api_data = json.loads(form_data['api-json'])
+                except Exception as err:
+                    raise RequestDataError({'api-data': str(err)})
+                print(api_data)
+                try:
+                    vocab = self.parse_predicates_data(api_data['argument']['predicates'])
+                except RequestDataError as err:
+                    errors.update(err.errors)
+                result = self.api_prove(api_data)
+            except RequestDataError as err:
+                errors.update(err.errors)
+                result = None
 
             if len(errors) == 0:
                 view = 'prove'
-                argument = logic.argument(conclusion, premises)
-                proof = logic.tableau(selected_logic, argument).build()
                 data.update({
                     'is_proof'   : True,
-                    'tableau'    : proof,
-                    'notation'   : notation,
-                    'sw'         : sw,
-                    'writer'     : writer,
-                    'argument' : {
-                        'premises'   : [sw.write(premise) for premise in argument.premises],
-                        'conclusion' : sw.write(argument.conclusion)
-                    }
+                    'result'     : result
                 })
 
-        data.update(base_view_data)
         data.update({
             'form_data'            : form_data,
-            'user_predicates'      : vocabulary.user_predicates,
-            'user_predicates_list' : vocabulary.user_predicates_list
+            'user_predicates'      : vocab.user_predicates,
+            'user_predicates_list' : vocab.user_predicates_list
         })
 
         if len(errors) > 0:
             data['errors'] = errors
 
         return render(view, data)
-
-    @staticmethod
-    def declare_user_predicates(form_data, vocabulary, errors={}):
-        arities = form_data['user_predicate_arities[]']
-        for i, name in enumerate(form_data['user_predicate_names[]']):
-            if i < len(arities) and len(arities[i]):
-                if len(name):
-                    index, subscript = form_data['user_predicate_symbols[]'][i].split('.')
-                    try:
-                        vocabulary.declare_predicate(name, int(index), int(subscript), int(arities[i]))
-                    except Exception as e:
-                        errors['Predicate ' + str(i + 1)] = e
-                else:
-                    errors['Predicate ' + str(i + 1)] = Exception('Name cannot be empty')
 
     @server.expose
     @server.tools.json_in()
@@ -245,10 +197,18 @@ class App(object):
                     'message' : 'OK',
                     'result'  : result
                 }
-            except Exception as err:
+            except RequestDataError as err:
                 server.response.status = 400
                 return {
                     'status'  : 400,
+                    'message' : 'Request data errors',
+                    'error'   : err.__class__.__name__,
+                    'errors'  : err.errors
+                }
+            except Exception as err:
+                server.response.status = 500
+                return {
+                    'status'  : 500,
                     'message' : str(err),
                     'error'   : err.__class__.__name__
                 }
@@ -334,7 +294,10 @@ class App(object):
                     "notation": "standard",
                     "format": "html",
                     "symbol_set": "default",
-                    "options": {}
+                    "options": {
+                        "highlight_open": true,
+                        "controls": true
+                    }
                 }
             }
 
@@ -350,7 +313,12 @@ class App(object):
                     "valid": true,
                     "body": "...html...",
                     "header": "...",
-                    "footer": "..."
+                    "footer": "...",
+                    "writer": {
+                        "name": "HTML",
+                        "format": "html,
+                        "options": {}
+                    }
                 }
             }
         """
@@ -362,21 +330,44 @@ class App(object):
             odata['notation'] = 'standard'
         if 'format' not in odata:
             odata['format'] = 'html'
-        if 'symset' not in odata:
+        if 'symbol_set' not in odata:
             if odata['format'] == 'html':
-                odata['symset'] = 'html'
+                odata['symbol_set'] = 'html'
             else:
-                odata['symset'] = 'default'
+                odata['symbol_set'] = 'default'
         if 'options' not in odata:
             odata['options'] = dict()
-        arg = self.parse_argument_data(body['argument'])
-        proof = logic.tableau(body['logic'], arg).build()
-        output_notation = modules['notations'][odata['notation']]
-        sw = output_notation.Writer(odata['symset'])
-        proof_writer = modules['writers'][odata['format']].Writer()
+        if 'highlight_open' not in odata['options']:
+            odata['options']['highlight_open'] = True
+        if 'controls' not in odata['options']:
+            odata['options']['controls'] = True
+        errors = {}
+        try:
+            selected_logic = logic.get_logic(body['logic'])
+        except Exception as err:
+            errors['Logic'] = str(err)
+        try:
+            arg = self.parse_argument_data(body['argument'])
+        except RequestDataError as err:
+            errors.update(err.errors)
+        try:
+            output_notation = modules['notations'][odata['notation']]
+            try:
+                sw = output_notation.Writer(odata['symbol_set'])
+            except Exception as err:
+                errors['Symbol Set'] = str(err)
+        except Exception as err:
+            errors['Output notation'] = str(err)
+        try:
+            proof_writer = modules['writers'][odata['format']].Writer(**odata['options'])
+        except Exception as err:
+            errors['Output format'] = str(err)
+        if len(errors) > 0:
+            raise RequestDataError(errors)
+        proof = logic.tableau(selected_logic, arg).build()
         return {
             'tableau': {
-                'logic' : logic.get_logic(body['logic']).name,
+                'logic' : selected_logic.name,
                 'argument': {
                     'premises': [sw.write(premise) for premise in arg.premises],
                     'conclusion': sw.write(arg.conclusion)
@@ -384,7 +375,12 @@ class App(object):
                 'valid': proof.valid,
                 'header': proof_writer.document_header(),
                 'footer': proof_writer.document_footer(),
-                'body': proof_writer.write(proof, writer=sw, **odata['options'])
+                'body': proof_writer.write(proof, writer=sw),
+                'writer': {
+                    'name': proof_writer.name,
+                    'format': odata['format'],
+                    'options': proof_writer.defaults
+                }
             }
         }
 
@@ -397,9 +393,47 @@ class App(object):
         if 'premises' not in adata:
             adata['premises'] = list()
         vocab = logic.Vocabulary()
-        for pdata in adata['predicates']:
-            vocab.declare_predicate(**pdata)
-        return logic.argument(vocabulary=vocab, notation=adata['notation'], premises=adata['premises'], conclusion=adata['conclusion'])
+        errors = dict()
+        try:
+            notation = modules['notations'][adata['notation']]
+        except Exception as e:
+            errors['Notation'] = str(e)
+        try:
+            vocab = self.parse_predicates_data(adata['predicates'])
+        except RequestDataError as err:
+            errors.update(err.errors)
+        if len(errors) == 0:
+            parser = notation.Parser(vocabulary=vocab)
+            i = 1
+            premises = []
+            for premise in adata['premises']:
+                try:
+                    premises.append(parser.parse(premise))
+                except Exception as e:
+                    premises.append(None)
+                    errors['Premise ' + str(i)] = str(e)
+                i += 1
+            try:
+                conclusion = parser.parse(adata['conclusion'])
+            except Exception as e:
+                errors['Conclusion'] = str(e)
+        if len(errors) > 0:
+            raise RequestDataError(errors)
+        return logic.argument(conclusion, premises)
+
+    def parse_predicates_data(self, predicates):
+        vocab = logic.Vocabulary()
+        errors = {}
+        i = 1
+        for pdata in predicates:
+            try:
+                vocab.declare_predicate(**pdata)
+            except Exception as e:
+                errors['Predicate ' + str(i)] = str(e)
+            i += 1
+        if len(errors) > 0:
+            raise RequestDataError(errors)
+        return vocab
 
 def main():
     server.config.update(global_config)

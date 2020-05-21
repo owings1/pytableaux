@@ -6,7 +6,7 @@
         <div class="summary">
             <h3 class="left">Proof Result</h3>
             <div class="result">
-                {%- if tableau.valid -%}
+                {%- if result.tableau.valid -%}
                     <span class="valid">Valid</span>
                 {%- else -%}
                     <span class="invalid">Invalid</span>
@@ -15,10 +15,10 @@
             <div class="clear"></div>
         </div>
         <div class="proof">
-            {% if writer.name == 'HTML' %}
-                {{ writer.write(tableau, writer=sw, highlight_open=True, controls=True) }}
+            {% if result.tableau.writer.name == 'HTML' %}
+                {{ result.tableau.body }}
             {% else %}
-                <pre>{{ writer.write(tableau, writer=sw, controls=True)|e }}</pre>
+                <pre>{{ result.tableau.body|e }}</pre>
             {% endif %}
         </div>
     </div>
