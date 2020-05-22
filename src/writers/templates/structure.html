@@ -17,37 +17,35 @@
             <div class="vertical-line" data-step="{{ structure['step'] }}"></div>
         {% endif %}
         {% for node in structure['nodes'] %}
-            <div class="node{% if node.ticked %} ticked{% endif %}"
+            <div class="node {{- ' ticked' if node.ticked }}"
                 data-node-id="{{ node.id }}"
                 data-step="{{ node.step }}"
                 {% if node.ticked %}
                     data-ticked-step="{{ node.ticked_step }}"
                 {% endif %}
-                data-ticked="{% if node.ticked %}1{% else %}0{% endif %}">
-                <span class="node-props{% if node.ticked %} ticked{% endif %}">
-                    {% if 'sentence' in node.props %}
+                data-ticked="{{ '1' if node.ticked else '0' }}">
+                <span class="node-props {{- ' ticked' if node.ticked}}">
+                    {% if node.has('sentence') %}
                         {% set sentence_raw = sw.write(node.props['sentence'], drop_parens = True) %}
-                        <span class="sentence">{{ sentence_raw if sw.symbol_set.name == 'HTML' else sentence_raw|e }}</span>
-                        {% if 'world' in node.props and node.props['world'] != None %}
+                        <span class="sentence">{{ sentence_raw if sw.symbol_set.name == 'html' else sentence_raw|e }}</span>
+                        {% if node.has('world') %}
                             <span class="world">, w<span class="subscript">{{ node.props['world'] }}</span></span>
                         {% endif %}
                     {% endif %}
-                    {% if 'designated' in node.props and node.props['designated'] != None %}
-                        <span class="designation {% if not node.props['designated'] %}un{% endif %}designated">
-                            {%- if node.props['designated'] %} &oplus;{% else %} &ominus;{% endif -%}
-                        </span>
+                    {% if node.has('designated') %}
+                        <span class="designation {{ 'designated' if node.props['designated'] else 'undesignated' }}"></span>
                     {% endif %}
-                    {% if 'world1' in node.props and 'world2' in node.props %}
+                    {% if node.has('world1') and node.has('world2') %}
                         <span class="access">w<span class="subscript">{{ node.props['world1'] }}</span>Rw<span class="subscript">{{ node.props['world2'] }}</span></span>
                     {% endif %}
-                    {% if 'ellipsis' in node.props and node.props['ellipsis'] %}
-                        <span class="ellipsis">&#x22ee;</span>
+                    {% if node.has('ellipsis') %}
+                        <span class="ellipsis"></span>
                     {% endif %}
                 </span>
             </div>
         {% endfor %}
         {% if structure['closed'] %}
-            <div class="closeMark" data-step="{{ structure['closed_step'] }}"><div class="close-prop">&otimes;</div></div>
+            <div class="closeMark" data-step="{{ structure['closed_step'] }}"><div class="close-prop"></div></div>
         {% endif %}
         </div>
         {% if structure['children']|length %}
@@ -65,6 +63,9 @@
             {% endfor %}
         {% endif %}
         {% if not is_child %}
+            {% if not structure['closed'] %}
+                <div class="openMark"></div>
+            {% endif %}
             <div class="clear"></div>
         {% endif %}
     </div>
