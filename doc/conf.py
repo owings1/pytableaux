@@ -356,7 +356,7 @@ def make_tableau_examples(app, what, name, obj, options, lines):
                 ''                                     ,
                 '.. raw:: html'                        ,
                 ''                                     ,
-                '    ' + writer.write(proof, writer=sw)
+                '    ' + writer.write(proof, sw=sw)
             ]
         except StopIteration:
             pass
@@ -378,11 +378,12 @@ def make_tableau_examples(app, what, name, obj, options, lines):
                 ''         ,
                 '    ' + 'Argument: <i>' + '</i>, <i>'.join([sw.write(p, drop_parens=True) for p in arg.premises]) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>',
                 ''                                     ,
-                '    ' + writer.write(proof, writer=sw)
+                '    ' + writer.write(proof, sw=sw)
             ]
-        except:
+        except Exception as e:
             print ('Error making example for ' + str(obj))
-            raise
+            print(str(e))
+            raise e
 
 def post_process(app, exception):
     builddir = os.path.dirname(os.path.abspath(__file__)) + '/_build/html'
