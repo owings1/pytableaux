@@ -3,7 +3,48 @@
     {% set data = model.get_data() -%}
     <div class="model" data-model-id="{{ model.id|e }}" data-branch-id="{{ branch.id|e }}">
         <ul class="details">
-            
+            {% for key in data -%}
+                {% set info = data[key] -%}
+                <li class="{{ 'in-summary' if info['in_summary'] }}">
+                    <span class="prop">{{ key|e }}</span>
+                    <span class="value">{{ write_info(sw, info, True) }}</span>
+                </li>
+            {% endfor -%}
         </ul>
     </div>
+{% endmacro -%}
+
+{% macro write_info(sw, info, is_summary=False) -%}
+    {% if info['symbol'] -%}
+        <span class="symbol">{{ info['symbol']| e }}</span>
+    {% endif -%}
+    <span class="values">
+        {% if info ['type'] == 'set' -%}
+            {{ write_set(sw, info, is_summary) -}}
+        {% endif -%}
+    </span>
+{% endmacro -%}
+
+{% macro write_set(sw, info, is_summary=False) -%}
+    <span class="set">
+        {%- if info['member_typehint'] == 'world' -%}
+            {%- for w in info['values'] -%}
+                {{- write_world(w, loop.last) -}}
+            {%- endfor -%}
+        {%- elif info['member_typehint'] == 'access' -%}
+            {%- for worlds in info['values'] -%}
+                <span class="tuple">
+                    {%- for w in worlds -%}
+                        {{- write_world(w, loop.last) -}}
+                    {%- endfor -%}
+                </span>
+            {%- endfor -%}
+        {%- else -%}
+            ...
+        {%- endif -%}
+    </span>
+{% endmacro -%}
+
+{% macro write_world(subscript, is_last) -%}
+    <span class="world">w<span class="subscript">{{ subscript|e }}</span></span>{{ ',' if not is_last -}}
 {% endmacro -%}

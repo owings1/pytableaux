@@ -226,9 +226,78 @@
 
 /* Models */
 
+.html-writer-controls .model ul li {
+    display: none;
+}
+.html-writer-controls .model ul li.in-summary {
+    display: block;
+}
+
+@font-face {
+    font-family: "Charmonman";
+    font-weight: normal;
+    src: url("fonts/charmonman/Charmonman-Regular.ttf") format("truetype");
+}
+@font-face {
+    font-family: "Charmonman"; 
+    font-weight: bold;
+    src: url("fonts/charmonman/Charmonman-Bold.ttf") format("truetype");
+}
+@font-face {
+    font-family: "NanumMyeongjo";
+    font-weight: 100 400;
+    src: url("fonts/nanum_myeongjo/NanumMyeongjo-Regular.ttf") format("truetype");
+}
+@font-face {
+    font-family: "NanumMyeongjo";
+    font-weight: 500 700;
+    src: url("fonts/nanum_myeongjo/NanumMyeongjo-Bold.ttf") format("truetype");
+}
+@font-face {
+    font-family: "NanumMyeongjo";
+    font-weight: 800 900;
+    src: url("fonts/nanum_myeongjo/NanumMyeongjo-ExtraBold.ttf") format("truetype");
+}
+.html-writer-models .model ul.details li .prop {
+    font-weight: bold;
+}
+.html-writer-models .model ul.details li .value {
+    font-weight: normal;
+}
 .html-writer-models .model {
     display: none;
 }
 .html-writer-models.inspected .select-a-branch {
     display: none;
+}
+.html-writer-models .model .symbol {
+    font-family: "Charmonman", "cursive";
+    font-weight: bold;
+    font-size: 18px;
+}
+.html-writer-models .model .symbol::after {
+    font-family: "NanumMyeongjo", "cursive";
+    content: "=";
+    margin-left: 14px;
+}
+.html-writer-models .model .values .set::before {
+    font-family: "NanumMyeongjo", "cursive";
+    content: "{";
+    font-size: 18px;
+}
+.html-writer-models .model .values .set::after {
+    font-family: "NanumMyeongjo", "cursive";
+    content: "}";
+    font-size: 18px;
+}
+.html-writer-models .model .values .tuple::before {
+    font-family: "NanumMyeongjo", "cursive";
+    content: "<";
+}
+.html-writer-models .model .values .tuple::after {
+    font-family: "NanumMyeongjo", "cursive";
+    content: ">";
+}
+.html-writer-models .model .values .world {
+    font-style: italic;
 }

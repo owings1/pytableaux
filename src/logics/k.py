@@ -119,6 +119,7 @@ class Model(logic.Model):
         data.update({
             'worlds': {
                 'description'     : 'set of worlds',
+                'in_summary'      : True,
                 'type'            : 'set',
                 'member_datatype' : 'int',
                 'member_typehint' : 'world',
@@ -127,6 +128,7 @@ class Model(logic.Model):
             },
             'access': {
                 'description'     : 'access relation',
+                'in_summary'      : True,
                 'type'            : 'set',
                 'member_datatype' : 'tuple',
                 'member_typehint' : 'access',

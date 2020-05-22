@@ -247,13 +247,19 @@
         $(Dcls.Inspected, $proof).removeClass(Cls.Inspected)
         $structure.addClass(Cls.Inspected)
 
-        $(Dcls.Model, $models).hide()
+        const $modelElements = $(Dcls.Model, $models)
         const modelId = $structure.attr(Attrib.ModelId)
+        $modelElements.hide()
         if (modelId) {
-            $models.addClass(Cls.Inspected).find(Dcls.Model + getAttrSelector(Attrib.ModelId, modelId)).show(Anim.Fast)
+            $models.addClass(Cls.Inspected)
+            $modelElements.first(getAttrSelector(Attrib.ModelId, modelId)).show(Anim.Fast)
         } else {
             $models.removeClass(Cls.Inspected)
         }
+        // This currently relies on the controls being present, which is set by
+        // options.controls. When we implement a view for the models independent
+        // of the controls, this method should be updated. See also getModelsFromProof().
+        adjustHeightForControls(getStatusFromProof($proof))
     }
 
     /**
@@ -818,7 +824,7 @@
     function getModelsFromProof($proof) {
         // This currently relies on the controls being present, which is set by
         // options.controls. When we implement a view for the models independent
-        // of the controls, this method should be updated.
+        // of the controls, this method should be updated. See also setInspectedBranch().
         return getModelsFromStatus(getStatusFromProof($proof))
     }
 
