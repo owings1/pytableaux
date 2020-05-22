@@ -20,12 +20,12 @@
 .html-writer-proof pre {
     overflow-x: scroll;
 }
-.html-writer-proof {
+.html-writer-proof.with-controls {
     cursor: pointer;
 }
 .html-writer-proof .node, .html-writer-proof .closeMark {
     text-align: center;
-    margin: 3px 0;
+    margin: 0.2em 0;
 }
 .html-writer-proof .closeMark {
     font-size: 1.6em;
@@ -33,6 +33,18 @@
 .html-writer-proof .closeMark .close-prop {
     display: inline-block;
     padding: 4px;
+}
+.html-writer-proof .closeMark .close-prop::after {
+    content: '\2297';
+}
+.html-writer-proof .node-props .designation.designated::after {
+    content: '\2295';
+}
+.html-writer-proof .node-props .designation.undesignated::after {
+    content: '\2296';
+}
+.html-writer-proof .node-props .ellipsis::after {
+    content: '\22EE';
 }
 .html-writer-proof .node-props {
     padding: 5px;
