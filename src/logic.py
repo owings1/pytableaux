@@ -908,6 +908,9 @@ class TableauxSystem(object):
     class TrunkAlreadyBuiltError(Exception):
         pass
 
+    class TrunkNotBuiltError(Exception):
+        pass
+
     class BranchClosedError(Exception):
         pass
 
@@ -939,20 +942,21 @@ class TableauxSystem(object):
             self.rules = []
 
             #: The argument of the tableau, if given
-            self.argument = argument
+            self.argument = None
 
             # flag to build models
             self.is_build_models = None
-
-            if logic != None:
-                self.set_logic(logic)
 
             self.open_branchset = set()
             self.branch_dict = dict()
             self.trunk_built = False
             self.current_step = 0
+
+            if logic != None:
+                self.set_logic(logic)
+
             if argument != None:
-                self.build_trunk()
+                self.set_argument(argument)
 
         def build(self, models=False):
             """
@@ -967,6 +971,8 @@ class TableauxSystem(object):
         def step(self):
             if self.finished:
                 return False
+            if self.argument != None and not self.trunk_built:
+                raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.") 
             for rule in self.rules:
                 target = rule.applies()
                 if target:
@@ -982,7 +988,13 @@ class TableauxSystem(object):
             self.logic = get_logic(logic)
             self.rules = [Rule(self) for Rule in self.logic.TableauxRules.rules]
             return self
-            
+
+        def set_argument(self, argument):
+            self.argument = argument
+            if self.logic != None:
+                self.build_trunk()
+            return self
+
         def after_branch_close(self, branch):
             self.open_branchset.remove(branch)
             for rule in self.rules:
@@ -1013,8 +1025,8 @@ class TableauxSystem(object):
         def structure(self, branches, node_depth=0, track=None):
             if track == None:
                 track = {
-                    'pos'        : 0,
-                    'depth'      : 0
+                    'pos'   : 0,
+                    'depth' : 0,
                 }
             track['pos'] += 1
             structure = {
@@ -1110,6 +1122,7 @@ class TableauxSystem(object):
                 last_width = 0
                 for i, node in enumerate(distinct_nodes):
                     child_branches = [branch for branch in branches if branch.nodes[node_depth] == node]
+                    # recurse
                     child = self.structure(child_branches, node_depth, track)
                     structure['descendant_node_count'] = len(child['nodes']) + child['descendant_node_count']
                     structure['width'] += child['width']
