@@ -324,7 +324,7 @@ def make_truth_tables(app, what, name, obj, options, lines):
             ]
             lines[pos:pos] = new_lines
 
-header_written = False
+#header_written = False
 def make_tableau_examples(app, what, name, obj, options, lines):
     #header_written = False
     arg = examples.argument('Material Modus Ponens')
@@ -361,7 +361,7 @@ def make_tableau_examples(app, what, name, obj, options, lines):
         except StopIteration:
             pass
         except Exception as e:
-            print (e)
+            print (str(e))
             print ('No example generated for ' + str(obj))
             if proof != None:
                 import json
