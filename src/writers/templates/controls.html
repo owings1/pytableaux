@@ -23,7 +23,21 @@
                         <li>
                             <span class="prop">Argument</span>
                             <span class="value">
-                                {{ premises|join('<br>') }}{% if premises|length %}<br>----------<br>{% endif %}&there4; {{ conclusion }}
+                                {% for premise in premises -%}
+                                    {% if sw.symbol_set.name == 'HTML' -%}
+                                        {{ premise }}
+                                    {% else -%}
+                                        {{ premise|e }}
+                                    {% endif -%}
+                                    <br>
+                                    {{ '----------<br>' if loop.last -}}
+                                {% endfor -%}
+                                &there4;
+                                {% if sw.symbol_set.name == 'HTML' -%}
+                                    {{ conclusion }}
+                                {% else -%}
+                                    {{ conclusion|e }}
+                                {% endif -%}
                             </span>
                         </li>
                     {% endif %}
