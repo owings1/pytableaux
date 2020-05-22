@@ -340,9 +340,9 @@ def make_tableau_examples(app, what, name, obj, options, lines):
             return
         proof = None
         try:
-            if not globals()['header_written']:
-                lines += ['.. raw:: html', '', '    ' + writer.document_header(), '']
-                globals()['header_written'] = True
+            #if not globals()['header_written']:
+            #    lines += ['.. raw:: html', '', '    ' + writer.document_header(), '']
+            #    globals()['header_written'] = True
             proof = logic.tableau(obj.__module__, None)
             rule = next(r for r in proof.rules if r.__class__ == obj)
             rule.example()
