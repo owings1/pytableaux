@@ -18,6 +18,12 @@
 #
 # pytableaux - S4 Normal Modal Logic
 
+# TODO:
+#   - avoid loop with transitive/reflexive on problematic argument:
+#       - NPA |- B
+#       - N(A > P~B) |- C
+#
+#
 name = 'S4'
 title = 'S4 Normal Modal Logic'
 description = 'Normal modal logic with a reflexive and transitive access relation'
@@ -45,10 +51,13 @@ class Model(t.Model):
 
 class TableauxSystem(k.TableauxSystem):
     pass
-    
+
 class TableauxRules(object):
     
     class Transitive(logic.TableauxSystem.BranchRule):
+        """
+        Transitive rule.
+        """
         
         def applies_to_branch(self, branch):
             nodes = {node for node in branch.get_nodes() if 'world1' in node.props}
