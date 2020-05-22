@@ -25,6 +25,7 @@ import os.path
 import cherrypy as server
 from jinja2 import Environment, PackageLoader
 
+ProofTimeoutError = logic.TableauxSystem.ProofTimeoutError
 # http://python-future.org/compatible_idioms.html#basestring
 from past.builtins import basestring
 
@@ -33,15 +34,20 @@ default_port = 8080
 envvar_host = 'PY_HOST'
 envvar_port = 'PY_PORT'
 envvar_debug = 'PY_DEBUG'
+envvar_maxtimeout = 'PY_MAXTIMEOUT'
 index_filename = 'index.html'
+default_maxtimeout = 30000
 
 is_debug = envvar_debug in os.environ and len(os.environ[envvar_debug]) > 0
+
+maxtimeout = int(os.environ[envvar_maxtimeout]) if envvar_maxtimeout in os.environ else default_maxtimeout
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(current_dir, 'www', 'static')
 static_dir_doc = os.path.join(current_dir, '..', 'doc', '_build', 'html')
 favicon_file = os.path.join(static_dir, 'img/favicon-60x60.png')
 view_path = 'www/views'
+template_cache = dict()
 
 jinja_env = Environment(loader=PackageLoader('logic', view_path))
 
@@ -64,8 +70,9 @@ for notation_name in modules['notations']:
 
 global_config = {
     'global': {
-        'server.socket_host': os.environ[envvar_host] if envvar_host in os.environ else default_host,
-        'server.socket_port': int(os.environ[envvar_port]) if envvar_port in os.environ else default_port
+        'server.socket_host'   : os.environ[envvar_host] if envvar_host in os.environ else default_host,
+        'server.socket_port'   : int(os.environ[envvar_port]) if envvar_port in os.environ else default_port,
+        'engine.autoreload.on' : not is_debug
     }
 }
 config = {
@@ -118,8 +125,14 @@ base_view_data = {
     'is_debug'          : is_debug,
 }
 
+def get_template(view):
+    if is_debug or (view not in template_cache):
+        template_cache[view] = jinja_env.get_template(view + '.html')
+    print(template_cache.keys())
+    return template_cache[view]
+
 def render(view, data={}):
-    raw_html = jinja_env.get_template(view + '.html').render(data)
+    raw_html = get_template(view).render(data)
     return raw_html
 
 def fix_form_data(form_data):
@@ -169,7 +182,8 @@ class App(object):
                 result = self.api_prove(api_data)
             except RequestDataError as err:
                 errors.update(err.errors)
-
+            except ProofTimeoutError as err:
+                errors['Tableau'] = str(err)
 
             if len(errors) == 0:
                 view = 'prove'
@@ -210,6 +224,13 @@ class App(object):
                     'status'  : 200,
                     'message' : 'OK',
                     'result'  : result
+                }
+            except ProofTimeoutError as err:
+                server.response.statis = 408
+                return {
+                    'status'  : 408,
+                    'message' : str(err),
+                    'error'   : err.__class__.__name__
                 }
             except RequestDataError as err:
                 server.response.status = 400
@@ -396,7 +417,7 @@ class App(object):
         if len(errors) > 0:
             raise RequestDataError(errors)
 
-        proof = logic.tableau(selected_logic, arg).build(models=odata['options']['models'])
+        proof = logic.tableau(selected_logic, arg).build(models=odata['options']['models'], timeout=maxtimeout)
 
         return {
             'tableau': {
