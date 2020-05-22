@@ -1,8 +1,16 @@
+**************************
 S4 - S4 Normal Modal Logic
-==========================
+**************************
 
-Semantics
----------
+.. contents:: :local:
 
-Tableaux
---------
+.. automodule:: logics.s4
+
+    Tableaux System
+    ===============
+
+    .. autoclass:: TableauxSystem
+        :members: build_trunk
+
+    .. autoclass:: TableauxRules
+        :members:
