@@ -113,14 +113,12 @@ class Model(logic.Model):
         self.fde = fde.Model()
 
     def get_data(self):
-        import notations
         data = super(Model, self).get_data()
-        sw = notations.polish.Writer()
         data.update({
             'worlds': {
                 'description'     : 'set of worlds',
                 'in_summary'      : True,
-                'type'            : 'set',
+                'datatype'        : 'set',
                 'member_datatype' : 'int',
                 'member_typehint' : 'world',
                 'symbol'          : 'W',
@@ -129,7 +127,7 @@ class Model(logic.Model):
             'access': {
                 'description'     : 'access relation',
                 'in_summary'      : True,
-                'type'            : 'set',
+                'datatype'        : 'set',
                 'member_datatype' : 'tuple',
                 'member_typehint' : 'access',
                 'symbol'          : 'R',
@@ -137,11 +135,11 @@ class Model(logic.Model):
             },
             'frames': {
                 'description'     : 'world frames',
-                'type'            : 'set',
+                'datatype'        : 'set',
                 'member_datatype' : 'map',
                 'member_typehint' : 'frame',
+                'member_keyorder' : sorted(list(self.frames.keys())),
                 'symbol'          : 'F',
-                'key_order'       : sorted(list(self.frames.keys())),
                 'values'          : dict()
             }
         })
@@ -150,20 +148,22 @@ class Model(logic.Model):
             fdata = {
                 'world'   : {
                     'description' : 'world',
-                    'type'        : 'int',
+                    'datatype'    : 'int',
+                    'typehint'    : 'world', 
                     'value'       : world,
-                    'symbol'      : 'w'
+                    'symbol'      : 'w',
                 },
                 'atomics' : {
                     'description'     : 'atomic values',
-                    'type'            : 'function',
+                    'datatype'        : 'function',
+                    'typehint'        : 'truth_function',
                     'input_datatype'  : 'sentence',
                     'output_datatype' : 'string',
                     'output_typehint' : 'truth_value',
                     'symbol'          : 'v',
                     'values'          : [
                         {
-                            'input'  : sw.write(sentence),
+                            'input'  : sentence,
                             'output' : self.truth_value_chars[frame['atomics'][sentence]]
                         }
                         for sentence in sorted(list(frame['atomics'].keys()))

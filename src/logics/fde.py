@@ -144,6 +144,46 @@ class Model(logic.Model):
         self.opaques = {}
         self.constants = set()
 
+    def get_data(self):
+        data = super(Model, self).get_data()
+        data.update({
+            'atomics' : {
+                'description'     : 'atomic values',
+                'in_summary'      : True,
+                'datatype'        : 'function',
+                'typehint'        : 'truth_function',
+                'input_datatype'  : 'sentence',
+                'output_datatype' : 'string',
+                'output_typehint' : 'truth_value',
+                'symbol'          : 'v',
+                'values'          : [
+                    {
+                        'input'  : sentence,
+                        'output' : self.truth_value_chars[self.atomics[sentence]]
+                    }
+                    for sentence in sorted(list(self.atomics.keys()))
+                ]
+            },
+            'opaques' : {
+                'description'     : 'opaque values',
+                'in_summary'      : True,
+                'datatype'        : 'function',
+                'typehint'        : 'truth_function',
+                'input_datatype'  : 'sentence',
+                'output_datatype' : 'string',
+                'output_typehint' : 'truth_value',
+                'symbol'          : 'v',
+                'values'          : [
+                    {
+                        'input'  : sentence,
+                        'output' : self.truth_value_chars[self.opaques[sentence]]
+                    }
+                    for sentence in sorted(list(self.opaques.keys()))
+                ]
+            }
+        })
+        return data
+
     def read_branch(self, branch):
         for node in branch.nodes:
             if node.has('sentence'):

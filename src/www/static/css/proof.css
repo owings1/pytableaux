@@ -294,34 +294,49 @@
 .html-writer-models.inspected .select-a-branch {
     display: none;
 }
-.html-writer-models .model .symbol {
+.html-writer-models .symbol {
     font-family: "Charmonman", "cursive";
-    font-weight: bold;
-    font-size: 18px;
 }
-.html-writer-models .model .symbol::after {
-    font-family: "NanumMyeongjo", "cursive";
-    content: "=";
+.html-writer-models .model .set > .symbol::after {
     margin-left: 14px;
 }
-.html-writer-models .model .values .set::before {
-    font-family: "NanumMyeongjo", "cursive";
-    content: "{";
-    font-size: 18px;
-}
-.html-writer-models .model .values .set::after {
-    font-family: "NanumMyeongjo", "cursive";
-    content: "}";
-    font-size: 18px;
-}
-.html-writer-models .model .values .tuple::before {
-    font-family: "NanumMyeongjo", "cursive";
-    content: "<";
-}
-.html-writer-models .model .values .tuple::after {
-    font-family: "NanumMyeongjo", "cursive";
-    content: ">";
+.html-writer-models .model .set > .symbol::after {
+    content: "=";
 }
 .html-writer-models .model .values .world {
     font-style: italic;
+}
+.html-writer-models .model .set > .symbol {
+    font-weight: bold;
+    font-size: 18px;
+    
+}
+.html-writer-models .model .set > .values::before,
+.html-writer-models .model .set > .values::after {
+    font-family: "NanumMyeongjo", "cursive";
+    font-size: 18px;
+}
+.html-writer-models .model .set.non-empty > .values::before {
+    content: "{";
+}
+.html-writer-models .model .set.non-empty > .values::after {
+    content: "}";
+}
+.html-writer-models .model .set.empty > .values::after,
+.html-writer-models .model .function.empty::after {
+    content: "\2205";
+}
+.html-writer-models .model .tuple > .values::before {
+    font-family: "NanumMyeongjo", "cursive";
+    content: "<";
+}
+.html-writer-models .model .tuple > .values::after {
+    font-family: "NanumMyeongjo", "cursive";
+    content: ">";
+}
+.html-writer-models .model .function > .values > .input::before {
+    content: '(';
+}
+.html-writer-models .model .function > .values > .input::after {
+    content: ') = ';
 }

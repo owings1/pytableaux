@@ -95,7 +95,13 @@
             })
         }
 
+        /**
+         * Form submit handler.
+         *
+         * @return void
+         */
         function submitForm() {
+            $('input:submit', $Frm).prop('disabled', true)
             const data = getApiData()
             const json = JSON.stringify(data)
             $('input[name="api-json"]', $Frm).val(json)

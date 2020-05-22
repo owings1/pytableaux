@@ -252,7 +252,7 @@
         $modelElements.hide()
         if (modelId) {
             $models.addClass(Cls.Inspected)
-            $modelElements.first(getAttrSelector(Attrib.ModelId, modelId)).show(Anim.Fast)
+            $modelElements.filter(getAttrSelector(Attrib.ModelId, modelId)).show(Anim.Fast)
         } else {
             $models.removeClass(Cls.Inspected)
         }
