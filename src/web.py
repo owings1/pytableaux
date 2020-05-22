@@ -340,6 +340,7 @@ class App(object):
                     "writer": {
                         "name": "HTML",
                         "format": "html,
+                        "symbol_set": "default",
                         "options": {}
                     }
                 }
@@ -411,6 +412,7 @@ class App(object):
                 'writer': {
                     'name': proof_writer.name,
                     'format': odata['format'],
+                    'symbol_set': odata['symbol_set'],
                     'options': proof_writer.defaults
                 }
             }
