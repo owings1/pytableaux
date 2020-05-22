@@ -155,16 +155,16 @@
             {% if opts['models'] -%}
                 <h4 class="part-header">Model</h4>
                 <div class="part-content">
-                    {% if tableau.stats['open_branches'] > 0 %}
-                        <span class="select-a-branch">Select a branch to view model</span>
-                        <div class="models">
+                    <div class="html-writer-models">
+                        {% if tableau.stats['open_branches'] > 0 %}
+                            <div class="message select-a-branch">Select a branch to view model</div>
                             {% for branch in tableau.open_branches() %}
-                                {{ model_helper.write_model(branch) }}
+                                {{ model_helper.write_model(sw, branch) }}
                             {% endfor %}
-                        </div>
-                    {% else %}
-                        <span class="no-models">No countermodels</span>
-                    {% endif %}
+                        {% else %}
+                            <div class="message no-models">No countermodels</div>
+                        {% endif %}
+                    </div>
                 </div>
             {% endif %}
             <div class="clear"></div>

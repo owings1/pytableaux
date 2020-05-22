@@ -72,7 +72,9 @@
         Node            : 'node'                 ,
         Hidden          : 'hidden'               ,
         Status          : 'html-writer-controls' ,
+        Models          : 'html-writer-models'   ,
         Zoomed          : 'zoomed'               ,
+        Inspected       : 'inspected'            ,
         HL              : 'horizontal-line'      ,
         VL              : 'vertical-line'        ,
         Collapsed       : 'collapsed'            ,
@@ -112,7 +114,8 @@
         CollapseContent : 'collapser-contents'   ,
         PositionedLeft  : 'positioned-left'      ,
         PositionedRight : 'positioned-right'     ,
-        PartHeader      : 'part-header'
+        PartHeader      : 'part-header'          ,
+        Model           : 'model'
     }
 
     // class names preceded with a '.' for selecting
@@ -135,7 +138,9 @@
         CurWidthPct    : 'data-current-width-pct' ,
         NodeId         : 'data-node-id'           ,
         NodeIds        : 'data-node-ids'          ,
-        BranchNodeId   : 'data-branch-node-id'
+        BranchNodeId   : 'data-branch-node-id'    ,
+        BranchId       : 'data-branch-id'         ,
+        ModelId        : 'data-model-id'
     }
 
     // selectors
@@ -208,6 +213,47 @@
 
         // mark the current structure as zoomed
         $structure.addClass(Cls.Zoomed)
+    }
+
+    /**
+     * Set the branch being inspected.
+     *
+     * @param $structure The singleton jQuery .structure element.
+     * @param $proof The singleton jQuery .html-writer-proof element. If not
+     *   passed, it will be retrieved.
+     * @param $models The models jQuery element. If not passed, it will be
+     *   retrieved.
+     * @return void
+     */
+    function setInspectedBranch($structure, $proof, $models) {
+
+        if (!$structure.hasClass(Cls.Structure)) {
+            throw new Error('Invalid structure argument: ' + $structure)
+        }
+
+        // if we are currently inspecting this structure, there is nothing to do
+        if ($structure.hasClass(Cls.Inspected)) {
+            return
+        }
+
+        if (!$proof) {
+            $proof = $structure.closest(Dcls.Proof)
+        }
+
+        if (!$models) {
+            $models = getModelsFromProof($proof)
+        }
+
+        $(Dcls.Inspected, $proof).removeClass(Cls.Inspected)
+        $structure.addClass(Cls.Inspected)
+
+        $(Dcls.Model, $models).hide()
+        const modelId = $structure.attr(Attrib.ModelId)
+        if (modelId) {
+            $models.addClass(Cls.Inspected).find(Dcls.Model + getAttrSelector(Attrib.ModelId, modelId)).show(Anim.Fast)
+        } else {
+            $models.removeClass(Cls.Inspected)
+        }
     }
 
     /**
@@ -734,23 +780,46 @@
     }
 
     /**
-     * Get the status panel element(s) from the proof element(s).
+     * Get the status panel element from the proof element.
      *
-     * @param $proof The jQuery proof element(s).
-     * @return The jQuery status panel element(s).
+     * @param $proof The jQuery proof element.
+     * @return The jQuery status panel element.
      */
     function getStatusFromProof($proof) {
         return $proof.prevAll(Dcls.Status)
     }
 
     /**
-     * Get the proof element(s) from the status panel element(s).
+     * Get the proof element from the status panel element.
      *
-     * @param $status The jQuery status panel element(s).
-     * @return The jQuery proof element(s).
+     * @param $status The jQuery status panel element.
+     * @return The jQuery proof element.
      */
     function getProofFromStatus($status) {
         return $status.nextAll(Dcls.Proof)
+    }
+
+    /**
+     * Get the models element from the status panel element.
+     *
+     * @param $status The jQuery status panel element.
+     * @return The jQuery models element.
+     */
+    function getModelsFromStatus($status) {
+        return $status.find(Dcls.Models)
+    }
+
+    /**
+     * Get the models element from the proof element.
+     *
+     * @param $proof The jQuery proof element.
+     * @return The jQuery models element.
+     */
+    function getModelsFromProof($proof) {
+        // This currently relies on the controls being present, which is set by
+        // options.controls. When we implement a view for the models independent
+        // of the controls, this method should be updated.
+        return getModelsFromStatus(getStatusFromProof($proof))
     }
 
     /**
@@ -826,7 +895,7 @@
      * @param $status (optional) The status panel jQuery element, for adjusting height.
      * @return void
      */
-    function handlerCollapserHeadingClick($heading, $status) {
+    function handleCollapserHeadingClick($heading, $status) {
         const $wrapper = $heading.closest(Dcls.CollapseWrap)
         const $contents = $wrapper.find(Dcls.CollapseContent)
         const isShow = $heading.hasClass(Cls.Collapsed)
@@ -898,10 +967,11 @@
 
         // monitor modifier keys
         $(document).on('keyup keydown', function(e) {
-            modkey.shift = e.shiftKey
-            modkey.ctrl  = e.metaKey || e.ctrlKey
-            modkey.alt   = e.altKey
+            modkey.shift   = e.shiftKey
+            modkey.ctrl    = e.metaKey || e.ctrlKey
+            modkey.alt     = e.altKey
             modkey.ctrlalt = modkey.ctrl || modkey.alt
+            
         })
 
         $(Dcls.ControlsContent).accordion({
@@ -915,18 +985,21 @@
             const $proof   = $(this)
             const $target  = $(e.target)
             const $status  = getStatusFromProof($proof)
-            const behavior = modkey.ctrlalt ? 'zoom' : 'inspect'
-            switch (behavior) {
-                case 'zoom':
-                    var $structure = $target.closest(Dcls.Structure)
-                    if ($structure.length) {
+            const $models  = getModelsFromProof($proof)
+            const $structure = $target.closest(Dcls.Structure)
+            if ($structure.length) {
+                const behavior = modkey.ctrlalt ? 'zoom' : 'inspect'
+                switch (behavior) {
+                    case 'zoom':
                         zoom($structure, $proof)
-                    }
-                    break
-                case 'inspect':
-                    break
-                default :
-                    break
+                        setInspectedBranch($structure, $proof, $models)
+                        break
+                    case 'inspect':
+                        setInspectedBranch($structure, $proof, $models)
+                        break
+                    default :
+                        break
+                }
             }
             $lastProof = $proof
         })
@@ -959,7 +1032,7 @@
             const $target = $(e.target)
             const $collapserHeading = $target.closest(Dcls.CollapseHead)
             if ($collapserHeading.length) {
-                handlerCollapserHeadingClick($collapserHeading, $status)
+                handleCollapserHeadingClick($collapserHeading, $status)
             } else if ($target.is(Dcls.PartHeader)) {
                 adjustHeightForControls($status, Anim.Fast)
             } else if ($target.hasClass(Cls.StepStart)) {
@@ -1051,7 +1124,7 @@
                         if ($proof.children(Sel.CanBranchFilter).length) {
                             filterBranches('closed', $proof)
                         }
-                        breakq
+                        break
                     case 'A':
                         if ($proof.children(Sel.CanBranchFilter).length) {
                             filterBranches('all', $proof)
@@ -1082,7 +1155,7 @@
                     case 'Q':
                         var $status = getStatusFromProof($proof)
                         var $heading = $(Dcls.ControlsHeading, $status)
-                        handlerCollapserHeadingClick($heading, $status)
+                        handleCollapserHeadingClick($heading, $status)
                         break
                     default:
                         break

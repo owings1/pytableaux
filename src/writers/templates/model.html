@@ -1,7 +1,9 @@
-{% macro write_model(branch) -%}
+{% macro write_model(sw, branch) -%}
     {% set model = branch.model -%}
-    <div class="model">
-        ID: {{ model.id|e }}<br>
-        Branch ID: {{ branch.id|e }}
+    {% set data = model.get_data() -%}
+    <div class="model" data-model-id="{{ model.id|e }}" data-branch-id="{{ branch.id|e }}">
+        <ul class="details">
+            
+        </ul>
     </div>
-{% endmacro %}
+{% endmacro -%}

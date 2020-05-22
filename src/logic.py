@@ -1055,6 +1055,8 @@ class TableauxSystem(object):
                 'balanced_line_margin'  : None,
                 # the branch id, only set for leaves
                 'branch_id'             : None,
+                # the model id, if exists, only set for leaves
+                'model_id'              : None,
             }
             while True:
                 relevant = [branch for branch in branches if len(branch.nodes) > node_depth]

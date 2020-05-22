@@ -17,7 +17,7 @@
  * 
  * pytableaux - css for html tableau writer
  */
-.proof pre {
+.html-writer-proof pre {
     overflow-x: scroll;
 }
 .html-writer-proof {
@@ -88,6 +88,9 @@
     padding: 2px;
     color: #ddd;
 }
+
+/* Controls */
+
 .html-writer-controls {
     display: inline-block;
 }
@@ -147,8 +150,6 @@
 .html-writer-controls .hidden {
     display: none;
 }
-/* Collapser */
-
 .html-writer-controls .collapser-wrapper {
     border: 2px solid #ccc;
     margin-right: 10px;
@@ -222,6 +223,12 @@
 .html-writer-controls .controls-contents .ui-accordion-header {
     margin: 0;
 }
-.html-writer-controls .models .model {
+
+/* Models */
+
+.html-writer-models .model {
+    display: none;
+}
+.html-writer-models.inspected .select-a-branch {
     display: none;
 }

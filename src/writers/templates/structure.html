@@ -5,7 +5,8 @@
         data-left="{{ structure['left'] }}" 
         data-right="{{ structure['right'] }}"
         data-step="{{ structure['step'] }}"
-        data-branch-id="{{ structure['branch_id'] }}">
+        data-branch-id="{{ structure['branch_id'] }}"
+        data-model-id="{{ structure['model_id'] if structure['model_id'] }}">
         <div class="node-segment">
         {% if is_child %}
             <div class="vertical-line" data-step="{{ structure['step'] }}"></div>
