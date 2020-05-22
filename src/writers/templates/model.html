@@ -37,7 +37,7 @@
                     {%- for w in worlds -%}
                         {{- write_world(w, loop.last) -}}
                     {%- endfor -%}
-                </span>
+                </span>{{ ',' if not loop.last -}}
             {%- endfor -%}
         {%- else -%}
             ...
@@ -46,5 +46,5 @@
 {% endmacro -%}
 
 {% macro write_world(subscript, is_last) -%}
-    <span class="world">w<span class="subscript">{{ subscript|e }}</span></span>{{ ',' if not is_last -}}
+    <span class="world">w<span class="subscript">{{ subscript|e }}</span></span>{{ ', ' if not is_last -}}
 {% endmacro -%}

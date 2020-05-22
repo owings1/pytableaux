@@ -93,6 +93,12 @@
 
 .html-writer-controls {
     display: inline-block;
+    position: absolute;
+    margin-right: 20px;
+    z-index: 1;
+}
+.html-writer-controls .controls-wrapper {
+    background: #ffffff;
 }
 .html-writer-controls .controls-heading.collapsed span.heading-title {
     display: none;
@@ -115,6 +121,7 @@
 }
 .html-writer-controls ul.details .prop {
     font-style: italic;
+    font-weight: bold;
     font-size: 12px;
 }
 .html-writer-controls ul.details .prop::after {
@@ -123,7 +130,6 @@
 }
 .html-writer-controls ul.details .value {
     padding: 2px;
-    font-weight: bold;
     font-size: 14px;
     margin-top: 5px;
 }
@@ -205,13 +211,6 @@
     border: 1px solid #1387a5d1;
 }
 
-.html-writer-controls {
-    position: absolute;
-    margin-right: 20px;
-}
-.html-writer-controls .controls-wrapper {
-    background: #ffffff;
-}
 .html-writer-controls .collapser-wrapper.positioned-left .controls-heading::before,
 .html-writer-controls .collapser-wrapper.positioned-right .controls-heading::after {
     background-image: url(../img/controls.png);
@@ -223,6 +222,10 @@
 .html-writer-controls .controls-contents .ui-accordion-header {
     margin: 0;
 }
+.html-writer-controls .wip {
+    color: purple;
+    font-weight: bold;
+}
 
 /* Models */
 
@@ -232,7 +235,12 @@
 .html-writer-controls .model ul li.in-summary {
     display: block;
 }
-
+.html-writer-controls .html-writer-models {
+    max-width: 300px;
+}
+.html-writer-controls .html-writer-models .message {
+    padding: 10px;
+}
 @font-face {
     font-family: "Charmonman";
     font-weight: normal;
@@ -258,6 +266,7 @@
     font-weight: 800 900;
     src: url("fonts/nanum_myeongjo/NanumMyeongjo-ExtraBold.ttf") format("truetype");
 }
+
 .html-writer-models .model ul.details li .prop {
     font-weight: bold;
 }
@@ -266,6 +275,9 @@
 }
 .html-writer-models .model {
     display: none;
+}
+.html-writer-models.single-branch .model {
+    display: block;
 }
 .html-writer-models.inspected .select-a-branch {
     display: none;

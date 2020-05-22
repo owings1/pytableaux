@@ -113,9 +113,6 @@
                                     <option value="closed">(C)losed Branches</option>
                                 {% endif %}
                             </select>
-                            {% if not can_filter %}
-                                No open branches
-                            {% endif %}
                         </span>
                     </li>
                 </ul>
@@ -155,14 +152,15 @@
             {% if opts['models'] -%}
                 <h4 class="part-header">Model</h4>
                 <div class="part-content">
-                    <div class="html-writer-models">
+                    <div class="html-writer-models {{- ' single-branch inspected' if tableau.stats['branches'] == 1 }}">
+                        <div class="message wip">NB: models are a work in progress</div>
                         {% if tableau.stats['open_branches'] > 0 %}
-                            <div class="message select-a-branch">Select a branch to view model</div>
+                            <div class="message select-a-branch">Select an open branch to view model</div>
                             {% for branch in tableau.open_branches() %}
                                 {{ model_helper.write_model(sw, branch) }}
                             {% endfor %}
                         {% else %}
-                            <div class="message no-models">No countermodels</div>
+                            <div class="message no-models">No open branches</div>
                         {% endif %}
                     </div>
                 </div>

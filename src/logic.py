@@ -880,11 +880,13 @@ class Vocabulary(object):
         def write_subscript(self, subscript, symbol_set = None):
             symset = self.symset(symbol_set)
             if symset.name == 'html':
-                return ''.join([
-                    '<span class="subscript">',
-                    symset.subfor(subscript, skip_zero = True),
-                    '</span>'
-                ])
+                if subscript != 0:
+                    return ''.join([
+                        '<span class="subscript">',
+                        symset.subfor(subscript, skip_zero = True),
+                        '</span>'
+                    ])
+                return ''
             else:
                 return symset.subfor(subscript, skip_zero = True)
 
@@ -1057,6 +1059,8 @@ class TableauxSystem(object):
                 'branch_id'             : None,
                 # the model id, if exists, only set for leaves
                 'model_id'              : None,
+                # whether this is the one and only branch
+                'is_only_branch'        : False,
             }
             while True:
                 relevant = [branch for branch in branches if len(branch.nodes) > node_depth]
@@ -1097,6 +1101,8 @@ class TableauxSystem(object):
                 structure['branch_id'] = branch.id
                 if branch.model != None:
                     structure['model_id'] = branch.model.id
+                if track['depth'] == 0:
+                    structure['is_only_branch'] = True
             else:
                 inbetween_widths = 0
                 track['depth'] += 1

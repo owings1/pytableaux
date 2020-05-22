@@ -1,5 +1,10 @@
 {% macro write_structure(sw, structure, is_child = False) -%}
-    <div class="structure{% if not is_child %} zoomed{% endif %}{% if structure['has_open'] %} has-open{% endif %}{% if structure['has_closed'] %} has-closed{% endif %}{% if structure['leaf'] %} leaf{% endif %}"
+    <div class="structure 
+        {{- ' zoomed' if not is_child -}}
+        {{- ' has-open' if structure['has_open'] -}}
+        {{- ' has-closed' if structure['has_closed'] -}}
+        {{- ' leaf' if structure['leaf'] -}}
+        {{- ' inspected' if structure['is_only_branch'] -}}"
         data-depth="{{ structure['depth'] }}"
         data-width="{{ structure['width'] }}"
         data-left="{{ structure['left'] }}" 
