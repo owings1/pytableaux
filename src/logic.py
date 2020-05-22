@@ -18,7 +18,7 @@
 #
 # pytableaux - logic base module
 
-import importlib, notations, os, itertools
+import importlib, notations, os, itertools, time
 from types import ModuleType
 
 # http://python-future.org/compatible_idioms.html#basestring
@@ -81,6 +81,9 @@ num_var_symbols       = 4
 num_const_symbols     = 4
 num_atomic_symbols    = 5
 num_predicate_symbols = 4
+
+def nowms():
+    return int(round(time.time() * 1000))
 
 class BadArgumentError(Exception):
     pass
@@ -914,6 +917,9 @@ class TableauxSystem(object):
     class BranchClosedError(Exception):
         pass
 
+    class ProofTimeoutError(Exception):
+        pass
+
     class Tableau(object):
         """
         Represents a tableau proof of an argument for the given logic.
@@ -946,6 +952,8 @@ class TableauxSystem(object):
 
             # flag to build models
             self.is_build_models = None
+            # build start time
+            self.build_start_time = None
 
             self.open_branchset = set()
             self.branch_dict = dict()
@@ -958,12 +966,15 @@ class TableauxSystem(object):
             if argument != None:
                 self.set_argument(argument)
 
-        def build(self, models=False):
+        def build(self, models=False, timeout=None):
             """
             Build the tableau. Returns self.
             """
             self.is_build_models = models
+            self.build_start_time = nowms()
+            self.build_timeout = timeout
             while not self.finished:
+                self.check_timeout()
                 self.step()
             self.is_build_models = None
             return self
@@ -1022,11 +1033,20 @@ class TableauxSystem(object):
                 if r.__class__ == rule or r.__class__.__name__ == rule:
                     return r
 
+        def check_timeout(self):
+            if self.build_timeout != None and self.build_timeout >= 0:
+                expiry = self.build_start_time + self.build_timeout
+                now = nowms()
+                if now > expiry:
+                    raise TableauxSystem.ProofTimeoutError('Timeout of {0}ms exceeded.'.format(str(self.build_timeout)))
+                    
         def structure(self, branches, node_depth=0, track=None):
+            is_root = track == None
             if track == None:
                 track = {
-                    'pos'   : 0,
-                    'depth' : 0,
+                    'pos'            : 0,
+                    'depth'          : 0,
+                    'distinct_nodes' : 0,
                 }
             track['pos'] += 1
             structure = {
@@ -1098,7 +1118,7 @@ class TableauxSystem(object):
                     node_depth += 1
                     continue
                 break
-            self.stats['distinct_nodes'] += len(structure['nodes'])
+            track['distinct_nodes'] += len(structure['nodes'])
             if len(branches) == 1:
                 branch = branches[0]
                 structure['closed'] = branch.closed
@@ -1146,6 +1166,8 @@ class TableauxSystem(object):
             structure['structure_node_count'] = structure['descendant_node_count'] + len(structure['nodes'])
             track['pos'] += 1
             structure['right'] = track['pos']
+            if is_root:
+                structure['distinct_nodes'] = track['distinct_nodes']
             return structure
 
         def branch(self, other_branch=None):
@@ -1188,16 +1210,22 @@ class TableauxSystem(object):
                 'branches'       : len(self.branches),
                 'open_branches'  : num_open,
                 'closed_branches': len(self.branches) - num_open,
-                'distinct_nodes' : 0, # tracked in self.structure()
-                'rules_applied'  : len(self.history)
+                'rules_applied'  : len(self.history),
             }
             if self.is_build_models:
                 self.build_models()
-            self.tree     = self.structure(self.branches)
+            self.tree = self.structure(self.branches)
+            self.stats['distinct_nodes'] = self.tree['distinct_nodes']
+            if self.build_start_time != None:
+                self.stats['build_duration'] = nowms() - self.build_start_time
+            else:
+                self.stats['build_duration'] = None
             return self
 
         def build_models(self):
+            model_start_time = nowms()
             for branch in list(self.open_branches()):
+                self.check_timeout()
                 branch.make_model()
 
         def __repr__(self):
