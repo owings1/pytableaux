@@ -86,6 +86,107 @@ def substitute_params(params, old_value, new_value):
             new_params.append(p)
     return tuple(new_params)
 
+class Frame(object):
+
+    def __init__(self, world):
+        self.world = world
+        self.atomics = {}
+        self.opaques = {}
+        self.predicates = set()
+        self.extensions = {'Identity': set(), 'Existence': set()}
+
+    def get_data(self, model):
+        return {
+            'description' : 'frame at world {0}'.format(str(self.world)),
+            'datatype'    : 'map',
+            'typehint'    : 'frame',
+            'value'       : {
+                'world'   : {
+                    'description' : 'world',
+                    'datatype'    : 'int',
+                    'typehint'    : 'world', 
+                    'value'       : self.world,
+                    'symbol'      : 'w',
+                },
+                'Atomics' : {
+                    'description'     : 'atomic values',
+                    'datatype'        : 'function',
+                    'typehint'        : 'truth_function',
+                    'input_datatype'  : 'sentence',
+                    'output_datatype' : 'string',
+                    'output_typehint' : 'truth_value',
+                    'symbol'          : 'v',
+                    'values'          : [
+                        {
+                            'input'  : sentence,
+                            'output' : model.truth_value_chars[self.atomics[sentence]]
+                        }
+                        for sentence in sorted(list(self.atomics.keys()))
+                    ]
+                },
+                'Opaques' : {
+                    'description'     : 'opaque values',
+                    'datatype'        : 'function',
+                    'typehint'        : 'truth_function',
+                    'input_datatype'  : 'sentence',
+                    'output_datatype' : 'string',
+                    'output_typehint' : 'truth_value',
+                    'symbol'          : 'v',
+                    'values'          : [
+                        {
+                            'input'  : sentence,
+                            'output' : model.truth_value_chars[self.opaques[sentence]],
+                        }
+                        for sentence in sorted(list(self.opaques.keys()))
+                    ]
+                },
+                'Predicates' : {
+                    'description' : 'predicate extensions',
+                    'datatype'    : 'list',
+                    'values'      : [
+                        {
+                            'description'     : 'predicate extension for {0}'.format(predicate.name),
+                            'datatype'        : 'function',
+                            'typehint'        : 'extension',
+                            'input_datatype'  : 'predicate',
+                            'output_datatype' : 'set',
+                            'output_typehint' : 'extension',
+                            'symbol'          : 'P',
+                            'values'          : [
+                                {
+                                    'input'  : predicate,
+                                    'output' : self.extensions[predicate.name],
+                                }
+                            ]
+                        }
+                        for predicate in sorted(list(model.predicates)) if predicate.name in self.extensions
+                    ]
+                }
+            }
+        }
+
+    def __eq__(self, other):
+        return other != None and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return other == None or self.__dict__ != other.__dict__
+
+    def __lt__(self, other):
+        return self.world < other.world
+
+    def __le__(self, other):
+        return self.world <= other.world
+
+    def __gt__(self, other):
+        return self.world > other.world
+
+    def __ge__(self, other):
+        return self.world >= other.world
+
+    def __cmp__(self, other):
+        # Python 2 only
+        return cmp(self.world, other.world)
+
 class Model(logic.Model):
 
     truth_values = [0, 1]
@@ -118,9 +219,8 @@ class Model(logic.Model):
         self.world_frame(0)
 
     def get_data(self):
-        data = dict()
-        data.update({
-            'worlds': {
+        return {
+            'Worlds': {
                 'description'     : 'set of worlds',
                 'in_summary'      : True,
                 'datatype'        : 'set',
@@ -129,107 +229,26 @@ class Model(logic.Model):
                 'symbol'          : 'W',
                 'values'          : sorted(list(self.frames.keys())),
             },
-            'access': {
+            'Access': {
                 'description'     : 'access relation',
                 'in_summary'      : True,
                 'datatype'        : 'set',
+                'typehint'        : 'access_relation',
                 'member_datatype' : 'tuple',
                 'member_typehint' : 'access',
                 'symbol'          : 'R',
                 'values'          : sorted(list(self.access)),
             },
-        })
-        frames_data = {
-            'description'     : 'world frames',
-            'datatype'        : 'set',
-            'typehint'        : 'frames',
-            'member_datatype' : 'map',
-            'member_typehint' : 'frame',
-            'symbol'          : 'F',
-            'values'          : list()
-        }
-        for world in self.frames:
-            frame = self.world_frame(world)
-            fdata = {
-                'world'   : {
-                    'description' : 'world',
-                    'datatype'    : 'int',
-                    'typehint'    : 'world', 
-                    'value'       : world,
-                    'symbol'      : 'w',
-                },
-                'atomics' : {
-                    'description'     : 'atomic values',
-                    'datatype'        : 'function',
-                    'typehint'        : 'truth_function',
-                    'input_datatype'  : 'sentence',
-                    'output_datatype' : 'string',
-                    'output_typehint' : 'truth_value',
-                    'symbol'          : 'v',
-                    'values'          : [
-                        {
-                            'input'  : sentence,
-                            'output' : self.truth_value_chars[frame['atomics'][sentence]]
-                        }
-                        for sentence in sorted(list(frame['atomics'].keys()))
-                    ]
-                },
-                'opaques' : {
-                    'description'     : 'opaque values',
-                    'datatype'        : 'function',
-                    'typehint'        : 'truth_function',
-                    'input_datatype'  : 'sentence',
-                    'output_datatype' : 'string',
-                    'output_typehint' : 'truth_value',
-                    'symbol'          : 'v',
-                    'values'          : [
-                        {
-                            'input'  : sentence,
-                            'output' : self.truth_value_chars[frame['opaques'][sentence]]
-                        }
-                        for sentence in sorted(list(frame['opaques'].keys()))
-                    ]
-                },
-                'predicates' : {
-                    'description' : 'predicate extensions',
-                    'datatype'    : 'list',
-                    'values'      : list()
-                }
+            'Frames': {
+                'description'     : 'world frames',
+                'datatype'        : 'list',
+                'typehint'        : 'frames',
+                'member_datatype' : 'map',
+                'member_typehint' : 'frame',
+                'symbol'          : 'F',
+                'values'          : [frame.get_data(self) for frame in sorted(self.frames.values())]
             }
-            for predicate in sorted(list(self.predicates)):
-                pdata = {
-                    'description'     : 'predicate extension',
-                    'datatype'        : 'function',
-                    'typehint'        : 'extension',
-                    'input_datatype'  : 'predicate',
-                    'output_datatype' : 'set',
-                    'output_typehint' : 'extension',
-                    'symbol'          : 'P',
-                    'values'          : [
-                        {
-                            'input'  : predicate,
-                            'output' : self.get_extension(predicate, world=world),
-                        }
-                    ]
-                }
-                fdata['predicates']['values'].append(pdata)
-            frames_data['values'].append(fdata)
-
-        if len(frames_data['values']):
-            data.update({
-                'frame-0': {
-                    'description' : 'frame at world 0',
-                    'in_summary'  : True,
-                    'datatype'    : 'map',
-                    'typehint'    : 'frame',
-                    'symbol'      : 'F',
-                    'value'       : frames_data['values'][0],
-                }
-            })
-        data.update({
-            'frames' : frames_data
-        })
-        return data
+        }
 
     def read_branch(self, branch):
     #    """
@@ -305,15 +324,15 @@ class Model(logic.Model):
 
     def set_opaque_value(self, sentence, value, world=None, **kw):
         frame = self.world_frame(world)
-        if sentence in frame['opaques'] and frame['opaques'][sentence] != value:
+        if sentence in frame.opaques and frame.opaques[sentence] != value:
             raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
-        frame['opaques'][sentence] = value
+        frame.opaques[sentence] = value
 
     def set_atomic_value(self, sentence, value, world=None, **kw):
         frame = self.world_frame(world)
-        if sentence in frame['atomics'] and frame['atomics'][sentence] != value:
+        if sentence in frame.atomics and frame.atomics[sentence] != value:
             raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
-        frame['atomics'][sentence] = value
+        frame.atomics[sentence] = value
 
     def set_predicated_value(self, sentence, value, world=None, **kw):
         predicate = sentence.predicate
@@ -335,11 +354,11 @@ class Model(logic.Model):
         frame = self.world_frame(world)
         if predicate not in self.predicates:
             self.predicates.add(predicate)
-        if predicate not in frame['predicates']:
-            frame['predicates'].add(predicate)
-        if name not in frame['extensions']:
-            frame['extensions'][name] = set()
-        return frame['extensions'][name]
+        if predicate not in frame.predicates:
+            frame.predicates.add(predicate)
+        if name not in frame.extensions:
+            frame.extensions[name] = set()
+        return frame.extensions[name]
 
     def add_access(self, w1, w2):
         self.access.add((w1, w2))
@@ -359,21 +378,20 @@ class Model(logic.Model):
 
     def world_frame(self, world):
         if world not in self.frames:
-            extensions = {'Identity': set(), 'Existence': set()}
-            self.frames[world] = {'atomics' : {}, 'extensions' : extensions, 'opaques': {}, 'predicates': set()}
+            self.frames[world] = Frame(world)
         return self.frames[world]
 
     def value_of_opaque(self, sentence, world=None, **kw):
         frame = self.world_frame(world)
-        if sentence in frame['opaques']:
-            return frame['opaques'][sentence]
+        if sentence in frame.opaques:
+            return frame.opaques[sentence]
         else:
             return self.unassigned_value
 
     def value_of_atomic(self, sentence, world=None, **kw):
         frame = self.world_frame(world)
-        if sentence in frame['atomics']:
-            return frame['atomics'][sentence]
+        if sentence in frame.atomics:
+            return frame.atomics[sentence]
         else:
             return self.unassigned_value
 

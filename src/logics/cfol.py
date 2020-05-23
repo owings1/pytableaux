@@ -67,16 +67,20 @@ from . import k, cpl
 name = 'CFOL'
 title = 'Classical First Order Logic'
 description = 'Standard bivalent logic with full first-order quantification'
-tags = set(['bivalent', 'non-modal', 'first-order'])
-tags_list = list(tags)
+tags_list = ['bivalent', 'non-modal', 'first-order']
+tags = set(tags_list)
 
 import logic, examples
 from logic import negate
 
 class Model(k.Model):
-    # """
-    # A CFOL model is the same as
-    # """
+
+    def get_data(self):
+        kdata = super(Model, self).get_data()
+        data = kdata['Frames']['values'][0]
+        del data['world']
+        return data
+
     def is_sentence_opaque(self, sentence):
         if sentence.is_operated():
             operator = sentence.operator

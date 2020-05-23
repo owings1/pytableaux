@@ -151,9 +151,8 @@ class Model(logic.Model):
     def get_data(self):
         data = dict()
         data.update({
-            'atomics' : {
+            'Atomics' : {
                 'description'     : 'atomic values',
-                'in_summary'      : True,
                 'datatype'        : 'function',
                 'typehint'        : 'truth_function',
                 'input_datatype'  : 'sentence',
@@ -168,9 +167,8 @@ class Model(logic.Model):
                     for sentence in sorted(list(self.atomics.keys()))
                 ]
             },
-            'opaques' : {
+            'Opaques' : {
                 'description'     : 'opaque values',
-                'in_summary'      : True,
                 'datatype'        : 'function',
                 'typehint'        : 'truth_function',
                 'input_datatype'  : 'sentence',
@@ -185,7 +183,7 @@ class Model(logic.Model):
                     for sentence in sorted(list(self.opaques.keys()))
                 ]
             },
-            'predicates' : {
+            'Predicates' : {
                 'description' : 'predicate extensions/anti-extensions',
                 'in_summary'  : True,
                 'datatype'    : 'list',
@@ -225,7 +223,7 @@ class Model(logic.Model):
                     ]
                 }
             ]
-            data['predicates']['values'].extend(pdata)
+            data['Predicates']['values'].extend(pdata)
         return data
 
     def read_branch(self, branch):
