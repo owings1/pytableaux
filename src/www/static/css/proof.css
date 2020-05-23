@@ -125,22 +125,22 @@
     margin: 16px 0 0 0;
     padding: 0 0 0 3px;
 }
-.html-writer-controls ul.details li {
+.html-writer-controls ul.details > li {
     display: block;
     padding: 0 8px 0 5px;
     margin: 0 22px 16px 0;
     border-left: 3px solid #44727e;
 }
-.html-writer-controls ul.details .prop {
+.html-writer-controls ul.details > li > .prop {
     font-style: italic;
     font-weight: bold;
     font-size: 12px;
 }
-.html-writer-controls ul.details .prop::after {
+.html-writer-controls ul.details > li > .prop::after {
     content: "\a";
     white-space: pre;
 }
-.html-writer-controls ul.details .value {
+.html-writer-controls ul.details > li > .value {
     padding: 2px;
     font-size: 14px;
     margin-top: 5px;
@@ -241,10 +241,10 @@
 
 /* Models */
 
-.html-writer-controls .model ul li {
+.html-writer-controls .model > ul > li {
     display: none;
 }
-.html-writer-controls .model ul li.in-summary {
+.html-writer-controls .model > ul > li.in-summary {
     display: block;
 }
 .html-writer-controls .html-writer-models {
@@ -300,21 +300,31 @@
 .html-writer-models .model .set > .symbol::after {
     margin-left: 14px;
 }
-.html-writer-models .model .set > .symbol::after {
+.html-writer-models .model .map > .values > li > .value > .symbol::after {
+    margin-left: 10px;
+}
+.html-writer-models .model .set > .symbol::after,
+.html-writer-models .model .map > .values > li > .value > .symbol::after {
     content: "=";
+    margin-right: 5px;
 }
 .html-writer-models .model .values .world {
     font-style: italic;
 }
-.html-writer-models .model .set > .symbol {
+.html-writer-models .model .set > .values,
+.html-writer-models .model .set > .values > .tuple,
+.html-writer-models .model .set > .values > .tuple > .values {
+    display: inline;
+}
+.html-writer-models .model .set > .symbol,
+.html-writer-models .model .map > .values > li > .value > .symbol {
     font-weight: bold;
-    font-size: 18px;
-    
+    font-size: 14px;
 }
 .html-writer-models .model .set > .values::before,
 .html-writer-models .model .set > .values::after {
     font-family: "NanumMyeongjo", "cursive";
-    font-size: 18px;
+    font-size: 14px;
 }
 .html-writer-models .model .set.non-empty > .values::before {
     content: "{";
@@ -323,7 +333,8 @@
     content: "}";
 }
 .html-writer-models .model .set.empty > .values::after,
-.html-writer-models .model .function.empty::after {
+.html-writer-models .model .function.empty::after,
+.html-writer-models .model .list.empty::after {
     content: "\2205";
 }
 .html-writer-models .model .tuple > .values::before {
@@ -334,9 +345,49 @@
     font-family: "NanumMyeongjo", "cursive";
     content: ">";
 }
-.html-writer-models .model .function > .values > .input::before {
+.html-writer-models .model .function > ul.values,
+.html-writer-models .model .map > ul.values,
+.html-writer-models .model .list > ul.values {
+    margin: 0;
+    padding: 0;
+    padding-inline-start: 0;
+}
+.html-writer-models .model .function > ul.values li,
+.html-writer-models .model .map > ul.values li,
+.html-writer-models .model .list > ul.values li  {
+    display: block;
+    padding: 0;
+    margin: 0;
+}
+.html-writer-models .model .map > ul.values > li > .prop {
+    font-style: italic;
+    font-weight: bold;
+    font-size: 12px;
+}
+.html-writer-models .model .map > ul.values > li {
+    margin-top: 5px;
+}
+.html-writer-models .model .map > ul.values > li > .value {
+    padding-left: 10px;
+}
+.html-writer-models .model .truth_value {
+    font-weight: bold;
+}
+.html-writer-models .model .function > ul.values > li > .input,
+.html-writer-models .model .function > ul.values > li > .output,
+.html-writer-models .model .function > ul.values > li > .output > .set {
+    display: inline;
+}
+.html-writer-models .model .function > ul.values > li > .input::before {
     content: '(';
 }
-.html-writer-models .model .function > .values > .input::after {
+.html-writer-models .model .function > ul.values > li > .input::after {
     content: ') = ';
+}
+.html-writer-models .model .function.extension > ul.values > li > .symbol {
+    font-size: 18px;
+    font-weight: bold;
+}
+.html-writer-models .model .function.extension > ul.values > li {
+    padding-top: 4px;
 }
