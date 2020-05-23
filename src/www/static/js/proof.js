@@ -25,6 +25,7 @@
     }
 
     const $ = jQuery
+    const InteveralPeriod = 40
 
     const $E = $()
     // default option sets
@@ -114,6 +115,8 @@
         CollapseContent : 'collapser-contents'   ,
         PositionedLeft  : 'positioned-left'      ,
         PositionedRight : 'positioned-right'     ,
+        HasDragged      : 'has-dragged'          ,
+        IsDrag          : 'is-drag'              ,
         PartHeader      : 'part-header'          ,
         Model           : 'model'
     }
@@ -140,7 +143,8 @@
         NodeIds        : 'data-node-ids'          ,
         BranchNodeId   : 'data-branch-node-id'    ,
         BranchId       : 'data-branch-id'         ,
-        ModelId        : 'data-model-id'
+        ModelId        : 'data-model-id'          ,
+        TopOffset      : 'data-top-offset'
     }
 
     // selectors
@@ -936,7 +940,11 @@
             const $wrapper = $status.find(Dcls.ControlsWrap)
             const isShown = $wrapper.hasClass(Cls.Uncollapsed)
             if (isShown) {
-                $parent.css({minHeight: $wrapper.css('height')})
+                // accommodate for draggable/changed position
+                const offset = $status.position().top - $status.parent().position().top
+                const wrapperHeight = parseInt($wrapper.css('height'))
+                const minHeight = wrapperHeight + offset
+                $parent.css({minHeight: minHeight})
             } else {
                 $parent.css({minHeight: ''})
             }
@@ -947,18 +955,45 @@
      * Position the controls element according to the selector element.
      *
      * @param $status The status panel jQuery element.
+     * @param skipPos Whether to skip the css positioning, only set classes.
      * @return void
      */
-    function positionControls($status) {
+    function positionControls($status, skipPos) {
         const value = $(Dcls.ControlsPos, $status).val()
         const $wrapper = $(Dcls.CollapseWrap, $status)
+        const $parent = $status.parent()
         if (value == 'right') {
-            $status.css('right', 0)
+            if ($status.hasClass(Cls.IsDrag)) {
+                // convert left to right
+                var rightVal = getRightOffset($status)
+            } else {
+                // computer contained "0"ish right offset
+                var rightVal = computeRightZeroOffset($status)
+            }
+            $status.css({left: '', right: rightVal})
             $wrapper.removeClass(Cls.PositionedLeft).addClass(Cls.PositionedRight)
         } else {
-            $status.css('right', '')
+            if (!$status.hasClass(Cls.IsDrag)) {
+                $status.css('right', '')
+                $status.css('left', '')
+            }
             $wrapper.removeClass(Cls.PositionedRight).addClass(Cls.PositionedLeft)
         }
+    }
+
+    function getRightOffset($el) {
+        return $(document).width() - $el.offset().left - $el.width() - parseFloat($el.css('marginRight') || 0)
+    }
+
+    function computeRightZeroOffset($el) {
+        var n = parseFloat($el.css('marginRight') || 0)
+        $el = $el.parent()
+        while ($el.length && $el.get(0) != document) {
+            n += parseFloat($el.css('marginRight') || 0)
+            n += parseFloat($el.css('paddingRight') || 0)
+            $el = $el.parent()
+        }
+        return n
     }
 
     $(document).ready(function() {
@@ -970,6 +1005,8 @@
         }
 
         var $lastProof
+        var invtervalHandle
+        var lastDocHeight
 
         // monitor modifier keys
         $(document).on('keyup keydown', function(e) {
@@ -977,7 +1014,6 @@
             modkey.ctrl    = e.metaKey || e.ctrlKey
             modkey.alt     = e.altKey
             modkey.ctrlalt = modkey.ctrl || modkey.alt
-            
         })
 
         $(Dcls.ControlsContent).accordion({
@@ -985,6 +1021,48 @@
             heightStyle : 'content',
             animate     : Anim.Fast
         })
+
+        $(Dcls.Status).draggable({
+            containment : 'parent',
+            handle      : Dcls.ControlsHeading,
+            start       : function() {
+                const $me = $(this)
+                $me.css({left: '', right: ''})
+                $me.addClass(Cls.HasDragged).addClass(Cls.IsDrag)
+            },
+            stop        : function() {
+                const $me = $(this)
+                const $parent = $me.parent()
+                // check if we are more to the left or right
+                const leftVal = $me.position().left
+                const middle = $parent.width() / 2
+                $(Dcls.ControlsPos, $me).val(leftVal > middle ? 'right' : 'left')
+                positionControls($me)
+                // store the top offset relative to parent
+                const topOffset = $me.offset().top - $parent.offset().top
+                $me.attr(Attrib.TopOffset, topOffset)
+            },
+            // TODO: apply rewrite to deprecated option when available.
+            // see https://jqueryui.com/upgrade-guide/1.12/#deprecated-distance-and-delay-options
+            distance    : 10
+        })
+
+        invtervalHandle = setInterval(function() {
+            const newDocHeight = $(document).height()
+            if (newDocHeight != lastDocHeight) {
+                lastDocHeight = newDocHeight
+                $(Dcls.Status).each(function() {
+                    const $me = $(this)
+                    const $parent = $(this).parent()
+                    if ($me.hasClass(Cls.HasDragged)) {
+                        const topOffset = +$me.attr(Attrib.TopOffset) || 0
+                        const parentTop = $parent.offset().top
+                        const newTop = parentTop + topOffset
+                        $me.css({top: newTop})
+                    }
+                })
+            }
+        }, InteveralPeriod)
 
         // load a click event handler for each proof in the document.
         $(Dcls.Proof).on('click', function(e) {
@@ -1026,6 +1104,7 @@
             } else if ($target.hasClass(Cls.BranchFilter)) {
                 filterBranches($target.val(), $proof)
             } else if ($target.hasClass(Cls.ControlsPos)) {
+                $status.removeClass(Cls.IsDrag)
                 positionControls($status)
             }
             $lastProof = $proof
