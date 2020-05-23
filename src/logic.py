@@ -422,8 +422,34 @@ class Vocabulary(object):
             self.index     = index
             self.subscript = subscript
 
+        def hash_tuple(self):
+            return (1, self.index, self.subscript, self.arity)
+
+        # TODO: make this DRY with Sentence
+        def __eq__(self, other):
+            return other != None and self.__dict__ == other.__dict__
+
+        def __ne__(self, other):
+            return other == None or self.__dict__ != other.__dict__
+
+        def __lt__(self, other):
+            return self.hash_tuple() < other.hash_tuple()
+
+        def __le__(self, other):
+            return self.hash_tuple() <= other.hash_tuple()
+
+        def __gt__(self, other):
+            return self.hash_tuple() > other.hash_tuple()
+
+        def __ge__(self, other):
+            return self.hash_tuple() >= other.hash_tuple()
+
+        def __cmp__(self, other):
+            # Python 2 only
+            return cmp(self.hash_tuple(), other.hash_tuple())
+
         def __hash__(self):
-            return hash((1, self.index, self.subscript, self.arity))
+            return hash(self.hash_tuple())
 
     class PredicateError(Exception):
         pass
@@ -457,6 +483,10 @@ class Vocabulary(object):
 
     class OperatorArityMismatchError(OperatorError):
         pass
+
+    @staticmethod
+    def get_system_predicate(name):
+        return system_predicates[name]
 
     def __init__(self, predicate_defs=None):
         self.user_predicates       = {}
