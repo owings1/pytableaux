@@ -6,23 +6,23 @@
     <div class="collapser-wrapper positioned-left controls-wrapper">
         <div class="collapser-heading controls-heading collapsed"><span class="heading-title">Controls</span></div>
         <div class="collapser-contents controls-contents hidden">
-            <h4 class="part-header">Details</h4>
+            <h4 class="part-header">Summary</h4>
             <div class="part-content">
                 <ul class="details">
                     <li>
                         <span class="prop">Logic</span>
-                        <span class="value">{{ tableau.logic.name|e }} - {{ tableau.logic.title|e }}</span>
+                        <div class="value">{{ tableau.logic.name|e }} - {{ tableau.logic.title|e }}</div>
                     </li>
                     <li>
                         <span class="prop">Result</span>
-                        <span class="value result {{ result_class }}">
+                        <div class="value result {{ result_class }}">
                             {{ tableau.stats['result'] }}
-                        </span>
+                        </div>
                     </li>
                     {% if tableau.argument != None %}
                         <li>
                             <span class="prop">Argument</span>
-                            <span class="value">
+                            <div class="value">
                                 {% for premise in premises -%}
                                     {% if sw.symbol_set.name == 'html' -%}
                                         {{ premise }}
@@ -38,7 +38,7 @@
                                 {% else -%}
                                     {{ conclusion|e }}
                                 {% endif -%}
-                            </span>
+                            </div>
                         </li>
                     {% endif %}
                 </ul>
@@ -48,23 +48,23 @@
                 <ul class="details">
                     <li>
                         <span class="prop">Branches</span>
-                        <span class="value">{{ tableau.stats['branches'] }}</span>
+                        <div class="value">{{ tableau.stats['branches'] }}</div>
                     </li>
                     <li>
                         <span class="prop">Open Branches</span>
-                        <span class="value">{{ tableau.stats['open_branches'] }}</span>
+                        <div class="value">{{ tableau.stats['open_branches'] }}</div>
                     </li>
                     <li>
                         <span class="prop">Closed Branches</span>
-                        <span class="value">{{ tableau.stats['closed_branches'] }}</span>
+                        <div class="value">{{ tableau.stats['closed_branches'] }}</div>
                     </li>
                     <li>
                         <span class="prop">Nodes</span>
-                        <span class="value">{{ tableau.stats['distinct_nodes'] }}</span>
+                        <div class="value">{{ tableau.stats['distinct_nodes'] }}</div>
                     </li>
                     <li>
                         <span class="prop">Rules Applied</span>
-                        <span class="value">{{ tableau.stats['rules_applied'] }}</span>
+                        <div class="value">{{ tableau.stats['rules_applied'] }}</div>
                     </li>
                 </ul>
             </div>
@@ -73,27 +73,27 @@
                 <ul class="details">
                     <li>
                         <span class="prop">Step</span>
-                        <span class="value">
+                        <div class="value">
                             <a class="button step-start" href="javascript:">B</a>
                             <a class="button step-prev" href="javascript:">&lt;</a>
                             <input type="text" size="{{ tableau.history|length|string|length + 1 }}" class="step-input" value="{{ tableau.history|length }}">
                             <a class="button step-next" href="javascript:">&gt;</a>
                             <a class="button step-end" href="javascript:">E</a>
-                        </span>
+                        </div>
                     </li>
                     <li>
                         <span class="prop">Rule</span>
-                        <span class="value">
+                        <div class="value">
                             <a class="step-rule-name {{- helper.hidden_if(tableau.history|length) }}" data-step="0" href="javascript:">Build Trunk</a>
                             {% for application in tableau.history %}
                                 {% set rule_name = application['rule'].__class__.__name__ %}
                                 <a class="step-rule-name{% if not loop.last %} hidden{% endif %}" data-step="{{ loop.index }}" href="javascript:">{{ rule_name }}</a>
                             {% endfor %}
-                        </span>
+                        </div>
                     </li>
                     <li>
                         <span class="prop">Target</span>
-                        <span class="value">
+                        <div class="value">
                             <a class="step-rule-target {{- helper.hidden_if(tableau.history|length) }}" data-target-type="argument" data-step="0" href="javascript:">Argument</a>
                             {% for application in tableau.history %}
                                 {% set target = application['target'] %}
@@ -109,7 +109,7 @@
                                     {% endif %}
                                     data-step="{{ loop.index }}" href="javascript:">{{ target['type']|e }}</a>
                             {% endfor %}
-                        </span>
+                        </div>
                     </li>
                 </ul>
             </div>
@@ -118,7 +118,7 @@
                 <ul class="details">
                     <li>
                         <span class="prop">Branch Filter</span>
-                        <span class="value">
+                        <div class="value">
                             {% set can_filter = tableau.tree['has_open'] and tableau.tree['has_closed'] %}
                             <select class="branch-filter"{% if not can_filter %} disabled="disabled"{% endif %}>
                                 <option value="all">(A)ll Branches</option>
@@ -127,7 +127,7 @@
                                     <option value="closed">(C)losed Branches</option>
                                 {% endif %}
                             </select>
-                        </span>
+                        </div>
                     </li>
                 </ul>
             </div>
@@ -136,30 +136,30 @@
                 <ul class="details">
                     <li>
                         <span class="prop">Width</span>
-                        <span class="value">
+                        <div class="value">
                             <a class="button width-minus-minus" href="javascript:">{</a>
                             <a class="button width-minus" href="javascript:">[</a>
                             <a class="button width-reset" href="javascript:">|</a>
                             <a class="button width-plus" href="javascript:">]</a>
                             <a class="button width-plus-plus" href="javascript:">}</a>
-                        </span>
+                        </div>
                     </li>
                     <li>
                         <span class="prop">Font</span>
-                        <span class="value">
+                        <div class="value">
                             <a class="button font-minus" href="javascript:">-</a>
                             <a class="button font-reset" href="javascript:">=</a>
                             <a class="button font-plus" href="javascript:">+</a>
-                        </span>
+                        </div>
                     </li>
                     <li>
                         <span class="prop">Controls Position</span>
-                        <span class="value">
+                        <div class="value">
                             <select class="controls-position">
                                 <option value="left" selected="selected">Left</option>
                                 <option value="right">Right</option>
                             </select>
-                        </span>
+                        </div>
                     </li>
                 </ul>
             </div>
@@ -167,7 +167,7 @@
                 <h4 class="part-header">Model</h4>
                 <div class="part-content">
                     <div class="html-writer-models {{- ' single-branch inspected' if tableau.stats['branches'] == 1 }}">
-                        <div class="message wip">NB: models are a work in progress</div>
+                        <!-- <div class="message wip">NB: models are a work in progress</div>-->
                         {% if tableau.stats['open_branches'] > 0 %}
                             <div class="message select-a-branch">Select an open branch to view model</div>
                             {% for branch in tableau.open_branches() %}
