@@ -106,7 +106,6 @@
 .html-writer-controls {
     display: inline-block;
     position: absolute;
-    margin-right: 20px;
     z-index: 1;
 }
 .html-writer-controls .controls-wrapper {
@@ -173,7 +172,6 @@
     border-color: #7b7b7b;
     border-style: solid;
     border-width: 1px 1px 1px 1px;
-    margin-right: 10px;
     margin-bottom: 10px;
 }
 .html-writer-controls .collapser-heading {
