@@ -5,7 +5,7 @@
         <ul class="details">
             {% for key in data -%}
                 {% set info = data[key] -%}
-                <li class="{{ 'in-summary' if info['in_summary'] }}">
+                <li>
                     <div class="prop">{{ key|e }}</div>
                     <div class="value">{{ write_info(sw, info) }}</div>
                 </li>
@@ -22,7 +22,7 @@
     {% elif info['datatype'] == 'map' -%}
         {{ write_map(sw, info['value']) }}
     {% elif info['datatype'] == 'list' -%}
-        {{ write_list(sw, info['values']) }}
+        {{ write_list(sw, info['values'], info['member_datatype'], typehint=info['typehint'], member_typehint=info['member_typehint'], symbol=info['symbol']) }}
     {% else %}
         {{ write_item(sw, info['value'], info['datatype'], typehint=info['typehint'], symbol=info['symbol']) }}
     {% endif -%}
@@ -52,7 +52,9 @@
         {%- if symbol -%}
             <span class="symbol">{{ symbol| e }}</span>
         {%- endif -%}
-        <div class="values">
+        <div class="values
+            {{- ' ' + member_typehint|e if member_typehint -}}
+            ">
             {%- if member_typehint == 'world' -%}
                 {%- for w in values -%}
                     {{- write_world(w, loop.last) -}}
@@ -68,20 +70,31 @@
                     {{ ',' if not loop.last -}}
                 {%- endfor -%}
             {%- else -%}
-                ...
+                ...0
             {%- endif -%}
         </div>
     </div>
 {% endmacro -%}
 
-{%- macro write_list(sw, values) -%}
-    <div class="list {{ 'non-empty' if values|length else 'empty'}}">
+{%- macro write_list(sw, values, member_datatype, typehint=None, member_typehint=None, symbol=None) -%}
+    <div class="list
+        {{- ' non-empty' if values|length else ' empty' -}}
+        {{- ' ' + typehint|e if typehint -}}">
         {%- if values|length -%}
-            <ul class="values">
+            <ul class="values
+                {{- ' ' + member_typehint|e if member_typehint -}}
+                ">
                 {%- for value in values -%}
-                    <li>{{ write_info(sw, value) }}</li>
+                    <li>
+                        {%- if symbol -%}
+                            <span class="symbol">{{ symbol|e }}<span class="subscript">{{ loop.index0 }}</span></span>
+                        {%- endif -%}
+                        {{- write_info(sw, value) -}}
+                    </li>
                 {%- endfor -%}
             </ul>
+        {%- elif symbol -%}
+            <span class="symbol">{{ symbol|e }}</span>
         {%- endif %}
     </div>
 {%- endmacro -%}
