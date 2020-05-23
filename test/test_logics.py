@@ -876,9 +876,11 @@ class TestK(LogicTester):
         model.set_predicated_value(s, 1, 0)
         model.finish()
         data = model.get_data()
-        assert len(data['frame-0']['value']['predicates']['values']) == 2
-        assert len(data['frame-0']['value']['predicates']['values'][1]['values']) > 0
-        assert data['frame-0']['value']['predicates']['values'][1]['values'][0]['input'].name == 'Identity'
+        assert len(data['Frames']['values']) == 1
+        fdata = data['Frames']['values'][0]['value']
+        assert len(fdata['Predicates']['values']) == 2
+        pdata = fdata['Predicates']['values'][1]
+        assert pdata['values'][0]['input'].name == 'Identity'
 
 class TestD(LogicTester):
 
