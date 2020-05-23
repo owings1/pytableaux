@@ -188,6 +188,11 @@ class TestFDE(LogicTester):
         model = branch.make_model()
         assert model.value_of(s) == 0
 
+    def test_model_is_opaque_neg_necessity(self):
+        model = self.logic.Model()
+        s = parse('NLa')
+        assert model.is_sentence_opaque(s)
+
 
 class TestK3(LogicTester):
 
@@ -740,13 +745,6 @@ class TestK(LogicTester):
         self.logic.TableauxSystem.read_model(model, branch)
         assert model.has_access(0, 1)
 
-    def test_model_get_extension_by_name(self):
-        model = self.logic.Model()
-        s = parse('Imn', vocabulary=examples.vocabulary)
-        model.set_predicated_value(s, 1, 0)
-        res = model.get_extension('Identity', 0)
-        assert (constant(0, 0), constant(1, 0)) in res
-
     def test_model_value_of_atomic_unassigned(self):
         model = self.logic.Model()
         s = atomic(0, 0)
@@ -863,6 +861,24 @@ class TestK(LogicTester):
         model.set_predicated_value(s3, 0, 0)
         res = model.value_of(s4, world=0)
         assert res == 0
+
+    def test_model_identity_extension_non_empty_with_sentence(self):
+        s = parse('Imn')
+        model = self.logic.Model()
+        model.set_predicated_value(s, 1, 0)
+        extension = model.get_extension(Vocabulary.get_system_predicate('Identity'), 0)
+        assert len(extension) > 0
+        assert (constant(0, 0), constant(1, 0)) in extension
+        
+    def test_model_frame_data_has_identity_with_sentence(self):
+        s = parse('Imn')
+        model = self.logic.Model()
+        model.set_predicated_value(s, 1, 0)
+        model.finish()
+        data = model.get_data()
+        assert len(data['frame-0']['value']['predicates']['values']) == 2
+        assert len(data['frame-0']['value']['predicates']['values'][1]['values']) > 0
+        assert data['frame-0']['value']['predicates']['values'][1]['values'][0]['input'].name == 'Identity'
 
 class TestD(LogicTester):
 
