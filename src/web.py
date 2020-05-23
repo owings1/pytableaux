@@ -72,7 +72,7 @@ global_config = {
     'global': {
         'server.socket_host'   : os.environ[envvar_host] if envvar_host in os.environ else default_host,
         'server.socket_port'   : int(os.environ[envvar_port]) if envvar_port in os.environ else default_port,
-        'engine.autoreload.on' : not is_debug
+        'engine.autoreload.on' : is_debug
     }
 }
 config = {
