@@ -503,12 +503,6 @@ class TestCPL(LogicTester):
 
     logic = get_logic('CPL')
 
-    #def test_examples(self):
-    #    valids = self.logic.example_validities()
-    #    invalids = self.logic.example_invalidities()
-    #    assert 'Simplification' in valids
-    #    assert 'Syllogism' in invalids
-
     def test_Closure_example(self):
         proof = tableau(self.logic)
         rule = proof.get_rule('Closure')
@@ -591,7 +585,17 @@ class TestCPL(LogicTester):
         model = branch.make_model()
         assert model.value_of(s) == 0
 
-class TestCFOL(object):
+    def test_model_get_data_triv(self):
+        s = parse('a')
+        model = self.logic.Model()
+        model.set_literal_value(s, 1)
+        model.finish()
+        data = model.get_data()
+        assert 'Atomics' in data
+
+class TestCFOL(LogicTester):
+
+    logic = get_logic('CFOL')
 
     def test_valid_syllogism(self):
         proof = example_proof('cfol', 'Syllogism')
@@ -600,6 +604,14 @@ class TestCFOL(object):
     def test_invalid_possibility_addition(self):
         proof = example_proof('cfol', 'Possibility Addition')
         assert not proof.valid
+
+    def test_model_get_data_triv(self):
+        s = parse('a')
+        model = self.logic.Model()
+        model.set_literal_value(s, 1)
+        model.finish()
+        data = model.get_data()
+        assert 'Atomics' in data
 
 class TestK(LogicTester):
 

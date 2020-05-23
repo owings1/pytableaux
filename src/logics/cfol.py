@@ -76,8 +76,7 @@ from logic import negate
 class Model(k.Model):
 
     def get_data(self):
-        kdata = super(Model, self).get_data()
-        data = kdata['Frames']['values'][0]
+        data = self.world_frame(0).get_data(self)['value']
         del data['world']
         return data
 
