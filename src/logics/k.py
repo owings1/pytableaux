@@ -108,12 +108,17 @@ class Model(logic.Model):
         self.frames = {}
         self.access = set()
         self.sees = {}
-        self.predicates = set()
+        self.predicates = set([
+            logic.Vocabulary.get_system_predicate('Identity'),
+            logic.Vocabulary.get_system_predicate('Existence'),
+        ])
         self.constants = set()
         self.fde = fde.Model()
+        # sure there is a w0
+        self.world_frame(0)
 
     def get_data(self):
-        data = super(Model, self).get_data()
+        data = dict()
         data.update({
             'worlds': {
                 'description'     : 'set of worlds',
@@ -133,16 +138,16 @@ class Model(logic.Model):
                 'symbol'          : 'R',
                 'values'          : sorted(list(self.access)),
             },
-            'frames': {
-                'description'     : 'world frames',
-                'datatype'        : 'set',
-                'member_datatype' : 'map',
-                'member_typehint' : 'frame',
-                'member_keyorder' : sorted(list(self.frames.keys())),
-                'symbol'          : 'F',
-                'values'          : dict()
-            }
         })
+        frames_data = {
+            'description'     : 'world frames',
+            'datatype'        : 'set',
+            'typehint'        : 'frames',
+            'member_datatype' : 'map',
+            'member_typehint' : 'frame',
+            'symbol'          : 'F',
+            'values'          : list()
+        }
         for world in self.frames:
             frame = self.world_frame(world)
             fdata = {
@@ -168,8 +173,62 @@ class Model(logic.Model):
                         }
                         for sentence in sorted(list(frame['atomics'].keys()))
                     ]
+                },
+                'opaques' : {
+                    'description'     : 'opaque values',
+                    'datatype'        : 'function',
+                    'typehint'        : 'truth_function',
+                    'input_datatype'  : 'sentence',
+                    'output_datatype' : 'string',
+                    'output_typehint' : 'truth_value',
+                    'symbol'          : 'v',
+                    'values'          : [
+                        {
+                            'input'  : sentence,
+                            'output' : self.truth_value_chars[frame['opaques'][sentence]]
+                        }
+                        for sentence in sorted(list(frame['opaques'].keys()))
+                    ]
+                },
+                'predicates' : {
+                    'description' : 'predicate extensions',
+                    'datatype'    : 'list',
+                    'values'      : list()
                 }
             }
+            for predicate in sorted(list(self.predicates)):
+                pdata = {
+                    'description'     : 'predicate extension',
+                    'datatype'        : 'function',
+                    'typehint'        : 'extension',
+                    'input_datatype'  : 'predicate',
+                    'output_datatype' : 'set',
+                    'output_typehint' : 'extension',
+                    'symbol'          : 'P',
+                    'values'          : [
+                        {
+                            'input'  : predicate,
+                            'output' : self.get_extension(predicate, world=world),
+                        }
+                    ]
+                }
+                fdata['predicates']['values'].append(pdata)
+            frames_data['values'].append(fdata)
+
+        if len(frames_data['values']):
+            data.update({
+                'frame-0': {
+                    'description' : 'frame at world 0',
+                    'in_summary'  : True,
+                    'datatype'    : 'map',
+                    'typehint'    : 'frame',
+                    'symbol'      : 'F',
+                    'value'       : frames_data['values'][0],
+                }
+            })
+        data.update({
+            'frames' : frames_data
+        })
         return data
 
     def read_branch(self, branch):
@@ -197,13 +256,20 @@ class Model(logic.Model):
         for world in self.frames:
             for predicate in self.predicates:
                 self.agument_extension_with_identicals(predicate, world)
-            identity_extension = self.get_extension('Identity', world=world)
-            existence_extension = self.get_extension('Existence', world=world)
-            for c in self.constants:
-                # make sure each constant exists
-                existence_extension.add((c,))
-                # make sure each constant is self-identical
-                identity_extension.add((c, c))
+            self.ensure_self_identity(world)
+            self.ensure_self_existence(world)
+
+    def ensure_self_identity(self, world):
+        identity_extension = self.get_extension(logic.Vocabulary.get_system_predicate('Identity'), world=world)
+        for c in self.constants:
+            # make sure each constant is self-identical
+            identity_extension.add((c, c))
+
+    def ensure_self_existence(self, world):
+        existence_extension = self.get_extension(logic.Vocabulary.get_system_predicate('Existence'), world=world)
+        for c in self.constants:
+            # make sure each constant exists
+            existence_extension.add((c,))
 
     def agument_extension_with_identicals(self, predicate, world):
         extension = self.get_extension(predicate, world=world)
@@ -218,7 +284,7 @@ class Model(logic.Model):
             extension.update(to_add)
 
     def get_identicals(self, c, world=None, **kw):
-        identity_extension = self.get_extension('Identity', world=world, **kw)
+        identity_extension = self.get_extension(logic.Vocabulary.get_system_predicate('Identity'), world=world, **kw)
         identicals = set()
         for params in identity_extension:
             if c in params:
@@ -251,7 +317,8 @@ class Model(logic.Model):
 
     def set_predicated_value(self, sentence, value, world=None, **kw):
         predicate = sentence.predicate
-        self.predicates.add(predicate)
+        if predicate not in self.predicates:
+            self.predicates.add(predicate)
         params = tuple(sentence.parameters)
         for param in params:
             if param.is_constant():
@@ -264,11 +331,12 @@ class Model(logic.Model):
             extension.add(params)
 
     def get_extension(self, predicate, world=None, **kw):
-        if isinstance(predicate, logic.Vocabulary.Predicate):
-            name = predicate.name
-        else:
-            name = predicate
+        name = predicate.name
         frame = self.world_frame(world)
+        if predicate not in self.predicates:
+            self.predicates.add(predicate)
+        if predicate not in frame['predicates']:
+            frame['predicates'].add(predicate)
         if name not in frame['extensions']:
             frame['extensions'][name] = set()
         return frame['extensions'][name]
@@ -292,7 +360,7 @@ class Model(logic.Model):
     def world_frame(self, world):
         if world not in self.frames:
             extensions = {'Identity': set(), 'Existence': set()}
-            self.frames[world] = {'atomics' : {}, 'extensions' : extensions, 'opaques': {}}
+            self.frames[world] = {'atomics' : {}, 'extensions' : extensions, 'opaques': {}, 'predicates': set()}
         return self.frames[world]
 
     def value_of_opaque(self, sentence, world=None, **kw):

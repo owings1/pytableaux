@@ -143,9 +143,13 @@ class Model(logic.Model):
         self.atomics = {}
         self.opaques = {}
         self.constants = set()
+        self.predicates = set([
+            logic.Vocabulary.get_system_predicate('Identity'),
+            logic.Vocabulary.get_system_predicate('Existence'),
+        ])
 
     def get_data(self):
-        data = super(Model, self).get_data()
+        data = dict()
         data.update({
             'atomics' : {
                 'description'     : 'atomic values',
@@ -180,8 +184,48 @@ class Model(logic.Model):
                     }
                     for sentence in sorted(list(self.opaques.keys()))
                 ]
+            },
+            'predicates' : {
+                'description' : 'predicate extensions/anti-extensions',
+                'in_summary'  : True,
+                'datatype'    : 'list',
+                'values'      : list()
             }
         })
+        for predicate in sorted(list(self.predicates)):
+            pdata = [
+                {
+                    'description'     : 'predicate extension',
+                    'datatype'        : 'function',
+                    'typehint'        : 'extension',
+                    'input_datatype'  : 'predicate',
+                    'output_datatype' : 'set',
+                    'output_typehint' : 'extension',
+                    'symbol'          : 'P+',
+                    'values'          : [
+                        {
+                            'input'  : predicate,
+                            'output' : self.get_extension(predicate),
+                        }
+                    ]
+                },
+                {
+                    'description'     : 'predicate anti-extension',
+                    'datatype'        : 'function',
+                    'typehint'        : 'extension',
+                    'input_datatype'  : 'predicate',
+                    'output_datatype' : 'set',
+                    'output_typehint' : 'extension',
+                    'symbol'          : 'P-',
+                    'values'          : [
+                        {
+                            'input'  : predicate,
+                            'output' : self.get_anti_extension(predicate),
+                        }
+                    ]
+                }
+            ]
+            data['predicates']['values'].extend(pdata)
         return data
 
     def read_branch(self, branch):
@@ -242,6 +286,9 @@ class Model(logic.Model):
             raise NotImplementedError(NotImplemented)
 
     def set_opaque_value(self, sentence, value):
+        if sentence.is_operated() and sentence.operator == 'Negation':
+            sentence = sentence.operand
+            value = self.truth_function('Negation', value)
         if sentence in self.opaques and self.opaques[sentence] != value:
             raise Model.ModelValueError('Inconsistent value {0} for sentence {1}'.format(str(value), str(sentence)))
         self.opaques[sentence] = value
@@ -275,23 +322,20 @@ class Model(logic.Model):
         elif 'B' in self.char_values and value == self.char_values['B']:
             extension.add(params)
             anti_extension.add(params)
+        self.predicates.add(predicate)
 
     def get_extension(self, predicate):
-        if isinstance(predicate, logic.Vocabulary.Predicate):
-            name = predicate.name
-        else:
-            name = predicate
+        name = predicate.name
         if name not in self.extensions:
             self.extensions[name] = set()
+            self.predicates.add(predicate)
         return self.extensions[name]
 
     def get_anti_extension(self, predicate):
-        if isinstance(predicate, logic.Vocabulary.Predicate):
-            name = predicate.name
-        else:
-            name = predicate
+        name = predicate.name
         if name not in self.anti_extensions:
             self.anti_extensions[name] = set()
+            self.predicates.add(predicate)
         return self.anti_extensions[name]
 
     def value_of_atomic(self, sentence, **kw):
@@ -360,7 +404,11 @@ class Model(logic.Model):
 
     def is_sentence_opaque(self, sentence):
         if sentence.is_operated():
-            return sentence.operator == 'Necessity' or sentence.operator == 'Possibility'
+            if sentence.operator == 'Negation':
+                s = sentence.operand
+            else:
+                s = sentence
+            return s.operator == 'Necessity' or s.operator == 'Possibility'
         return super(Model, self).is_sentence_opaque(sentence)
 
 class TableauxSystem(logic.TableauxSystem):

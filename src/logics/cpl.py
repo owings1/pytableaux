@@ -66,6 +66,14 @@ from . import k
 
 class Model(k.Model):
 
+    def get_data(self):
+        kdata = super(Model, self).get_data()
+        data = kdata['frames']['values'][0]
+        del data['world']
+        for key in data:
+            data[key]['in_summary'] = True
+        return data
+
     def is_sentence_opaque(self, sentence):
         if sentence.is_quantified():
             return True
