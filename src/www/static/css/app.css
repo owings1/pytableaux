@@ -126,9 +126,6 @@ body {
 .pt-app .fieldset-contents {
     padding: 10px;
 }
-.pt-app .fieldset.argument .fieldset-contents {
-    padding-left: 0;
-}
 .pt-app .toggler {
     cursor: pointer;
 }
@@ -254,7 +251,7 @@ body {
 }
 .pt-app #sentences-input-panel {
     width: 380px;
-    /*margin-left: 10px;*/
+    margin-right: 10px;
     margin-bottom: 10px;
 }
 .pt-app .lexicon dd {
