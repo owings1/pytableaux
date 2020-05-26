@@ -1,0 +1,49 @@
+<div id="logic-select-panel">
+    <div class="input select">
+        <label for="selected_logic">Select Logic</label>
+        <select name="logic" id="selected_logic">
+            {% for module in logic_modules -%}
+                <option value="{{ module|e }}" {{- helper.select_opt(form_data, 'logic', module) }}>
+                    {{- logics[module].name|e -}}
+                </option>
+            {% endfor %}
+        </select>
+        <div class="input submit">
+            <input type="submit" value="Go"/>
+        </div>
+    </div>
+</div>
+<div class="collapser-wrapper" id="logic-details-wrapper">
+    <div id="logic-details-heading" class="collapser-heading uncollapsed" data-target="#logic-details-contents">Details</div>
+    <div class="collapser-contents" id="logic-details-contents">
+        {% for module in logic_modules -%}
+            <div class="hidden logic-details {{ module|e }}">
+                <span class="hidden logic-name {{ module|e }}">{{ logics[module].name|e }}</span>
+                <ul class="details">
+                    <li>
+                        <span class="prop">Title</span>
+                        <span class="value logic-title {{ module|e }}">{{ logics[module].title|e }}</span>
+                    </li>
+                    <li>
+                        <span class="prop">Description</span>
+                        <span class="value">{{ logics[module].description|e }}</span>
+                    </li>
+                    <li>
+                        <span class="prop">Tags</span>
+                        <span class="value tags">
+                            {% for tag in logics[module].tags_list -%}
+                                <span class="tag">{{ tag|e }}</span>
+                            {% endfor %}
+                        </span>
+                    </li>
+                    <li>
+                        <span class="prop">Links</span>
+                        <span class="value">
+                            <a class="doc-link" href="/doc/logics/{{ module|e }}.html" target="_blank" rel="noreferrer noopener">Documentation</a>
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        {% endfor %}
+    </div>
+</div>

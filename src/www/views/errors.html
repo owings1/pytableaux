@@ -1,0 +1,10 @@
+<div class="errors">
+    <h3>Please correct the following errors:</h3>
+    <dl>
+        {% for field in errors %}
+            <dt>{{ field }}:</dt>
+            <dd>{{ errors[field]|e }}</dd>
+        {% endfor %}
+    </dl>
+    <div class="clear"></div>
+</div>

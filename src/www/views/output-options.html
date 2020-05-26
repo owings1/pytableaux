@@ -1,0 +1,34 @@
+<div class="input select">
+    <label for="format">Format</label>
+    <select id="format" name="format">
+        {% for module in writer_modules -%}
+            <option value="{{ module }}" {{- helper.select_opt(form_data, 'format', module) }}>
+                {{- writers[module].name|e -}}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="input select">
+    <label for="output_notation">Notation</label>
+    <select id="output_notation" name="output_notation">
+        {% for module in notation_modules -%}
+            <option value="{{ module }}" {{- helper.select_opt(form_data, 'output_notation', module) }}>
+                {{- notations[module].name|e -}}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+<div class="input select">
+    <label for="symbol_set">Symbol Set</label>
+    <select id="symbol_set" name="symbol_set">
+        <option value="html" {{- helper.select_opt(form_data, 'symbol_set', 'html') }}>HTML</option>
+        <option value="default" {{- helper.select_opt(form_data, 'symbol_set', 'default') }}>Default</option>
+    </select>
+</div>
+<div class="input">
+    <label for="options_models">Build models</label>
+    <input type="checkbox" id="options_models" name="options.models" class="options" value="true" {{- helper.checkbox_default(form_data, 'options.models', True) }}/>
+</div>
+<div class="input submit">
+    <input type="submit" value="Go"/>
+</div>

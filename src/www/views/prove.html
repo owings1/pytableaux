@@ -1,12 +1,13 @@
 {% extends "argument.html" %}
 {% block content %}
     {{ super() }}
+    {% set proof = result.tableau %}
     <hr>
     <div class="evaluation">
         <div class="summary">
             <h3 class="left">Proof Result</h3>
             <div class="result">
-                {%- if result.tableau.valid -%}
+                {%- if proof.valid -%}
                     <span class="valid">Valid</span>
                 {%- else -%}
                     <span class="invalid">Invalid</span>
@@ -15,10 +16,10 @@
             <div class="clear"></div>
         </div>
         <div class="proof">
-            {% if result.tableau.writer.name == 'HTML' %}
-                {{ result.tableau.body }}
+            {% if proof.writer.format == 'html' %}
+                {{ proof.body }}
             {% else %}
-                <pre>{{ result.tableau.body|e }}</pre>
+                <pre>{{ proof.body|e }}</pre>
             {% endif %}
         </div>
     </div>
