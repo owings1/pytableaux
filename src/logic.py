@@ -1818,26 +1818,21 @@ class Model(object):
         return dict()
 
 class Parser(object):
-    """
-    The base Parser class handles parsing operations common to all notations (Polish and Standard).
-    This consists of all parsing except for operator expressions, as well as the following classes
-    of symbols:
-
-    - Whitespace symbols: the *space* character.
-    - Subscript symbols: digit characters.
-
-    Each specific notation defines its own characters for each of the following classes of symbols:
-
-    - Constant symbols
-    - Variable symbols
-    - Predicate symbols, including system-defined predicates, and user-defined predicate.
-    - Quanitfier symbols
-    - Operator symbols
-    - Atomic sentence (proposition) symbols
-
-
-
-    """
+    # The base Parser class handles parsing operations common to all notations (Polish and Standard).
+    # This consists of all parsing except for operator expressions, as well as the following classes
+    # of symbols:
+    # 
+    # - Whitespace symbols: the *space* character.
+    # - Subscript symbols: digit characters.
+    # 
+    # Each specific notation defines its own characters for each of the following classes of symbols:
+    # 
+    # - Constant symbols
+    # - Variable symbols
+    # - Predicate symbols, including system-defined predicates, and user-defined predicate.
+    # - Quanitfier symbols
+    # - Operator symbols
+    # - Atomic sentence (proposition) symbols
 
     class ParseError(Exception):
         pass
