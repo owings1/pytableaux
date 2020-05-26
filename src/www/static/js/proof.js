@@ -1045,7 +1045,7 @@
             // TODO: apply rewrite to deprecated option when available.
             // see https://jqueryui.com/upgrade-guide/1.12/#deprecated-distance-and-delay-options
             distance    : 10
-        })
+        }).css({position: 'absolute'})
 
         invtervalHandle = setInterval(function() {
             const newDocHeight = $(document).height()
