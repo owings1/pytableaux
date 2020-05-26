@@ -113,7 +113,7 @@ class Writer(logic.TableauxSystem.Writer):
                 'Open Branches  : {0}'.format(tableau.stats['open_branches'])
             ]
         lines += [
-            'Distinct Nodes : {0}'.format(tableau.stats['distinct_nodes']),
+            'Nodes          : {0}'.format(tableau.stats['distinct_nodes']),
             'Rules Applied  : {0}'.format(tableau.stats['rules_applied'])
         ]
         return '\n'.join(lines)
