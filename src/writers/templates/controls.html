@@ -2,9 +2,9 @@
     {%- import 'model.html' as model_helper -%}
 {% endif %}
 {% set result_class = 'valid' if tableau.valid else 'invalid' %}
-<div class="html-writer-controls">
+<div class="html-writer-controls drag-panel">
     <div class="collapser-wrapper positioned-left controls-wrapper">
-        <div class="collapser-heading controls-heading collapsed"><span class="heading-title">Controls</span></div>
+        <div class="collapser-heading controls-heading drag-handle collapsed"><span class="heading-title">Controls</span></div>
         <div class="collapser-contents controls-contents hidden">
             <h4 class="part-header">Summary</h4>
             <div class="part-content">
@@ -155,7 +155,7 @@
                     <li>
                         <span class="prop">Controls Position</span>
                         <div class="value">
-                            <select class="controls-position">
+                            <select class="controls-position position-select">
                                 <option value="left" selected="selected">Left</option>
                                 <option value="right">Right</option>
                             </select>

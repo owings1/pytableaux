@@ -113,8 +113,11 @@
         CollapseWrap    : 'collapser-wrapper'    ,
         CollapseHead    : 'collapser-heading'    ,
         CollapseContent : 'collapser-contents'   ,
+        PositionSelect  : 'position-select'      ,
         PositionedLeft  : 'positioned-left'      ,
         PositionedRight : 'positioned-right'     ,
+        DragPanel       : 'drag-panel'           ,
+        DragHandle      : 'drag-handle'          ,
         HasDragged      : 'has-dragged'          ,
         IsDrag          : 'is-drag'              ,
         PartHeader      : 'part-header'          ,
@@ -955,11 +958,10 @@
      * Position the controls element according to the selector element.
      *
      * @param $status The status panel jQuery element.
-     * @param skipPos Whether to skip the css positioning, only set classes.
      * @return void
      */
-    function positionControls($status, skipPos) {
-        const value = $(Dcls.ControlsPos, $status).val()
+    function positionDraggable($status) {
+        const value = $(Dcls.PositionSelect, $status).val() || 'left'
         const $wrapper = $(Dcls.CollapseWrap, $status)
         const $parent = $status.parent()
         if (value == 'right') {
@@ -967,24 +969,36 @@
                 // convert left to right
                 var rightVal = getRightOffset($status)
             } else {
-                // computer contained "0"ish right offset
+                // compute contained "0"ish right offset
                 var rightVal = computeRightZeroOffset($status)
             }
             $status.css({left: '', right: rightVal})
             $wrapper.removeClass(Cls.PositionedLeft).addClass(Cls.PositionedRight)
         } else {
             if (!$status.hasClass(Cls.IsDrag)) {
-                $status.css('right', '')
-                $status.css('left', '')
+                $status.css({left: '', right: ''})
             }
             $wrapper.removeClass(Cls.PositionedRight).addClass(Cls.PositionedLeft)
         }
     }
 
+    /**
+     * Compute the right offset from the left position.
+     *
+     * @param $el The jQuery element.
+     * @return float The right offset value.
+     */
     function getRightOffset($el) {
         return $(document).width() - $el.offset().left - $el.width() - parseFloat($el.css('marginRight') || 0)
     }
 
+    /**
+     * Compute the absolute right offset value to simulate a right float inside
+     * the parent element,
+     *
+     * @param $el The jQuery element.
+     * @return float The right offset value.
+     */
     function computeRightZeroOffset($el) {
         var n = parseFloat($el.css('marginRight') || 0)
         $el = $el.parent()
@@ -994,6 +1008,25 @@
             $el = $el.parent()
         }
         return n
+    }
+
+    function onDraggableStart() {
+        const $me = $(this)
+        $me.css({left: '', right: ''})
+        $me.addClass(Cls.HasDragged).addClass(Cls.IsDrag)
+    }
+
+    function onDraggableStop() {
+        const $me = $(this)
+        const $parent = $me.parent()
+        // check if we are more to the left or right
+        const leftVal = $me.position().left
+        const middle = $parent.width() / 2
+        $(Dcls.PositionSelect, $me).val(leftVal > middle ? 'right' : 'left')
+        positionDraggable($me)
+        // store the top offset relative to parent
+        const topOffset = $me.offset().top - $parent.offset().top
+        $me.attr(Attrib.TopOffset, topOffset)
     }
 
     $(document).ready(function() {
@@ -1022,26 +1055,11 @@
             animate     : Anim.Fast
         })
 
-        $(Dcls.Status).draggable({
+        $(Dcls.DragPanel).draggable({
             containment : 'parent',
-            handle      : Dcls.ControlsHeading,
-            start       : function() {
-                const $me = $(this)
-                $me.css({left: '', right: ''})
-                $me.addClass(Cls.HasDragged).addClass(Cls.IsDrag)
-            },
-            stop        : function() {
-                const $me = $(this)
-                const $parent = $me.parent()
-                // check if we are more to the left or right
-                const leftVal = $me.position().left
-                const middle = $parent.width() / 2
-                $(Dcls.ControlsPos, $me).val(leftVal > middle ? 'right' : 'left')
-                positionControls($me)
-                // store the top offset relative to parent
-                const topOffset = $me.offset().top - $parent.offset().top
-                $me.attr(Attrib.TopOffset, topOffset)
-            },
+            handle      : Dcls.DragHandle,
+            start       : onDraggableStart,
+            stop        : onDraggableStop,
             // TODO: apply rewrite to deprecated option when available.
             // see https://jqueryui.com/upgrade-guide/1.12/#deprecated-distance-and-delay-options
             distance    : 10
@@ -1105,7 +1123,7 @@
                 filterBranches($target.val(), $proof)
             } else if ($target.hasClass(Cls.ControlsPos)) {
                 $status.removeClass(Cls.IsDrag)
-                positionControls($status)
+                positionDraggable($status)
             }
             $lastProof = $proof
         })
