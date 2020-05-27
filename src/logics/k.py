@@ -79,6 +79,9 @@ import logic, examples
 from logic import negate, operate, quantify, atomic, constant, predicated, NotImplementedError
 from . import fde
 
+Identity = logic.get_system_predicate('Identity')
+Existence = logic.get_system_predicate('Existence')
+
 def substitute_params(params, old_value, new_value):
     new_params = []
     for p in params:
@@ -89,13 +92,21 @@ def substitute_params(params, old_value, new_value):
     return tuple(new_params)
 
 class Frame(object):
+    """
+    A K-frame comprises the interpretation of sentences and predicates at a world.
+    """
 
     def __init__(self, world):
+        #: The world of the frame.
         self.world = world
+        #: An assignment of each atomic sentence to a value.
         self.atomics = {}
+        #: An assignment of each opaque (un-interpreted) sentence to a value.
         self.opaques = {}
+        #: A map of predicates to their extension.
+        self.extensions = {}
         self.predicates = set()
-        self.extensions = {'Identity': set(), 'Existence': set()}
+        self.extensions.update({'Identity': set(), 'Existence': set()})
 
     def get_data(self, model):
         return {
@@ -190,9 +201,14 @@ class Frame(object):
         return cmp(self.world, other.world)
 
 class Model(logic.Model):
+    """
+    A K-model comprises a non-empty collection of K-frames, and a world access
+    relation.
+    """
 
     truth_values = [0, 1]
     truth_functional_operators = fde.Model.truth_functional_operators
+    modal_operators = set(['Possibility', 'Necessity'])
     
     designated_values = set([1])
     undesignated_values = set([0])
@@ -208,16 +224,17 @@ class Model(logic.Model):
 
     def __init__(self):
         super(Model, self).__init__()
+        #: A map from worlds to their frame.
         self.frames = {}
+        #: A set of pairs of worlds.
         self.access = set()
-        self.sees = {}
         self.predicates = set([
-            logic.Vocabulary.get_system_predicate('Identity'),
-            logic.Vocabulary.get_system_predicate('Existence'),
+            Identity,
+            Existence,
         ])
         self.constants = set()
         self.fde = fde.Model()
-        # sure there is a w0
+        # ensure there is a w0
         self.world_frame(0)
 
     def get_data(self):
@@ -281,13 +298,13 @@ class Model(logic.Model):
             self.ensure_self_existence(world)
 
     def ensure_self_identity(self, world):
-        identity_extension = self.get_extension(logic.Vocabulary.get_system_predicate('Identity'), world=world)
+        identity_extension = self.get_extension(Identity, world=world)
         for c in self.constants:
             # make sure each constant is self-identical
             identity_extension.add((c, c))
 
     def ensure_self_existence(self, world):
-        existence_extension = self.get_extension(logic.Vocabulary.get_system_predicate('Existence'), world=world)
+        existence_extension = self.get_extension(Existence, world=world)
         for c in self.constants:
             # make sure each constant exists
             existence_extension.add((c,))
@@ -305,7 +322,7 @@ class Model(logic.Model):
             extension.update(to_add)
 
     def get_identicals(self, c, world=None, **kw):
-        identity_extension = self.get_extension(logic.Vocabulary.get_system_predicate('Identity'), world=world, **kw)
+        identity_extension = self.get_extension(Identity, world=world, **kw)
         identicals = set()
         for params in identity_extension:
             if c in params:
@@ -364,9 +381,6 @@ class Model(logic.Model):
 
     def add_access(self, w1, w2):
         self.access.add((w1, w2))
-        if w1 not in self.sees:
-            self.sees[w1] = set()
-        self.sees[w1].add(w2)
         self.world_frame(w1)
         self.world_frame(w2)
 
@@ -374,9 +388,7 @@ class Model(logic.Model):
         return (w1, w2) in self.access
 
     def visibles(self, world):
-        if world in self.sees:
-            return self.sees[world]
-        return set()
+        return {w for w in self.frames if (world, w) in self.access}
 
     def world_frame(self, world):
         if world not in self.frames:
@@ -387,15 +399,13 @@ class Model(logic.Model):
         frame = self.world_frame(world)
         if sentence in frame.opaques:
             return frame.opaques[sentence]
-        else:
-            return self.unassigned_value
+        return self.unassigned_value
 
     def value_of_atomic(self, sentence, world=None, **kw):
         frame = self.world_frame(world)
         if sentence in frame.atomics:
             return frame.atomics[sentence]
-        else:
-            return self.unassigned_value
+        return self.unassigned_value
 
     def value_of_predicated(self, sentence, **kw):
         if tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw):
@@ -403,21 +413,24 @@ class Model(logic.Model):
         return self.char_values['F']
 
     def value_of_operated(self, sentence, world=None, **kw):
+        if sentence.operator in self.modal_operators:
+            return self.value_of_modal(sentence, world=world, **kw)
+        return super(Model, self).value_of_operated(sentence, world=world, **kw)
+
+    def value_of_modal(self, sentence, world=None, **kw):
         operator = sentence.operator
         if operator == 'Possibility':
-            if world in self.sees:
-                for w2 in self.sees[world]:
-                    if self.value_of(sentence.operand, world=w2, **kw) == 1:
-                        return 1
+            for w2 in self.visibles(world):
+                if self.value_of(sentence.operand, world=w2, **kw) == 1:
+                    return 1
             return 0
         elif operator == 'Necessity':
-            if world in self.sees:
-                for w2 in self.sees[world]:
-                    if self.value_of(sentence.operand, world=w2, **kw) == 0:
-                        return 0
+            for w2 in self.visibles(world):
+                if self.value_of(sentence.operand, world=w2, **kw) == 0:
+                    return 0
             return 1
         else:
-            return super(Model, self).value_of_operated(sentence, world=world, **kw)
+            raise NotImplementedError(NotImplemented)
 
     def value_of_quantified(self, sentence, world=None, **kw):
         frame = self.world_frame(world)
@@ -436,6 +449,9 @@ class Model(logic.Model):
         return super(Model, self).value_of_quantified(sentence, world=world, **kw)
 
     def truth_function(self, operator, a, b=None):
+        """
+        The K truth function is just the restricted FDE truth function.
+        """
         return self.fde.truth_function(operator, a, b)
 
 class TableauxSystem(logic.TableauxSystem):

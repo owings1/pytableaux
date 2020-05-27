@@ -775,7 +775,7 @@ class TestK(LogicTester):
     def test_model_add_access_sees(self):
         model = self.logic.Model()
         model.add_access(0, 0)
-        assert 0 in model.sees[0]
+        assert 0 in model.visibles(0)
 
     def test_model_possibly_a_with_access_true(self):
         model = self.logic.Model()
