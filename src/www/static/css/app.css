@@ -237,9 +237,6 @@ body {
 .pt-app #logic-select-panel {
     margin-bottom: 10px;
 }
-.pt-app #logic-details-contents {
-    /*max-width: 400px;*/
-}
 .pt-app .lexicon dl {
     margin: 0 0 0 3px;
 }

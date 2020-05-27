@@ -93,7 +93,7 @@
 .html-writer-proof .node.highlight-ticked > .node-props.ticked {
     border-width: 3px;
     padding: 2px;
-    color: #ddd;
+    color: #dddddd;
 }
 .html-writer-proof .structure > .node-segment {
     text-align: center;
@@ -109,7 +109,7 @@
     width: 16px;
     height: 16px;
     background-size: 16px 16px;
-    background-image: url(../img/inspected-blue.svg);
+    background-image: url(../img/inspected-black.svg);
 }
 /* Controls */
 
@@ -252,7 +252,6 @@
     background: #1b5361d1;
     border: 1px solid #1387a5d1;
 }
-
 .html-writer-controls .collapser-wrapper.positioned-left .controls-heading.collapsed::before,
 .html-writer-controls .collapser-wrapper.positioned-right .controls-heading.collapsed::after {
     background-image: url(../img/controls.svg);
@@ -276,10 +275,6 @@
 }
 
 /* Models */
-
-.html-writer-models .model > ul > li {
-    /*display: none;*/
-}
 .html-writer-models .model > ul > li.in-summary {
     display: block;
 }
