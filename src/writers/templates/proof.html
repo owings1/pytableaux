@@ -1,13 +1,19 @@
 {%- import 'helper.html' as helper -%}
 {%- import 'structure.html' as structure -%}
-{% if opts['controls'] %}
-    {%- include 'controls.html' -%}
-{% endif %}
-<div class="html-writer-proof
-    {{- ' highlight-open' if opts['highlight_open'] }}
-    {{- ' with-controls' if opts['controls'] }}"
-    data-step="{{ tableau.history|length }}"
-    data-num-steps="{{ tableau.history|length }}"
-    data-current-width-pct="100">
-    {{ structure.write_structure(sw, tableau.tree) }}
+<div class="html-writer">
+    {% if opts['controls'] %}
+        {%- include 'controls.html' -%}
+    {% endif %}
+    {% if opts['models'] %}
+        {%- include 'models.html' -%}
+    {% endif %}
+    <div class="html-writer-proof
+        {{- ' highlight-open' if opts['highlight_open'] }}
+        {{- ' with-controls' if opts['controls'] }}"
+        data-step="{{ tableau.history|length }}"
+        data-num-steps="{{ tableau.history|length }}"
+        data-current-width-pct="100">
+        {{ structure.write_structure(sw, tableau.tree) }}
+    </div>
+    <div class="clear"></div>
 </div>

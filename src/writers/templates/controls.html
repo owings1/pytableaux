@@ -1,6 +1,3 @@
-{% if opts['models'] %}
-    {%- import 'model.html' as model_helper -%}
-{% endif %}
 {% set result_class = 'valid' if tableau.valid else 'invalid' %}
 <div class="html-writer-controls drag-panel">
     <div class="collapser-wrapper positioned-left controls-wrapper">
@@ -163,22 +160,6 @@
                     </li>
                 </ul>
             </div>
-            {% if opts['models'] -%}
-                <h4 class="part-header">Model</h4>
-                <div class="part-content">
-                    <div class="html-writer-models {{- ' single-branch inspected' if tableau.stats['branches'] == 1 }}">
-                        <!-- <div class="message wip">NB: models are a work in progress</div>-->
-                        {% if tableau.stats['open_branches'] > 0 %}
-                            <div class="message select-a-branch">Select an open branch to view model</div>
-                            {% for branch in tableau.open_branches() %}
-                                {{ model_helper.write_model(sw, branch) }}
-                            {% endfor %}
-                        {% else %}
-                            <div class="message no-models">No open branches</div>
-                        {% endif %}
-                    </div>
-                </div>
-            {% endif %}
             <div class="clear"></div>
         </div>
         <div class="clear"></div>
