@@ -128,7 +128,6 @@ base_view_data = {
 def get_template(view):
     if is_debug or (view not in template_cache):
         template_cache[view] = jinja_env.get_template(view + '.html')
-    print(template_cache.keys())
     return template_cache[view]
 
 def render(view, data={}):
