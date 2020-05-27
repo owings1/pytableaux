@@ -23,8 +23,6 @@ body {
     margin: 0;
     padding: 0;
 }
-
-
 .subscript { 
     position: relative; 
     bottom: -0.2em; 
@@ -42,17 +40,16 @@ body {
 .right {
     float: right;
 }
-
-.headerWrapper, .footerWrapper {
+.header-wrapper, .footer-wrapper {
     position: fixed;
     width: 100%;
     background-color: #003d4c;
     z-index: 3;
 }
-.headerWrapper {
+.header-wrapper {
     top: 0px;
 }
-.footerWrapper {
+.footer-wrapper {
     bottom: 0px;
 }
 .header, .footer {
@@ -70,12 +67,10 @@ body {
     text-align: center;
     font-size: 11px;
 }
-.content {
+.pt-content {
     padding: 20px;
     margin: 30px 0;
 }
-
-
 .pt-app .errors {
     background-color: rgb(255, 190, 202);
     padding: 5px 10px;
@@ -129,7 +124,6 @@ body {
 .pt-app .toggler {
     cursor: pointer;
 }
-
 .pt-app select#example_argument {
     margin: 5px 0 10px 1px;
 }
@@ -350,14 +344,12 @@ body {
 .pt-app input.arity {
     width: 10px;
 }
-
 .evaluation pre {
     overflow-x: scroll;
 }
 .evaluation {
     border: 1px solid black;
     margin-bottom: 10px;
-    /*min-height: 600px;*/
 }
 .evaluation > .summary {
     padding: 10px;
@@ -399,7 +391,6 @@ body {
     padding: 10px;
     overflow-x: scroll;
 }
-
 .pt-app .debugs-wrapper::before {
     content: "";
     display: block;
@@ -441,20 +432,3 @@ body {
     font-family: monospace;
     overflow-x: scroll;
 }
-/*
-.logicName {
-    display: inline-block;
-    width: 50px;
-    font-size: 16px;
-    height: 24px;
-}
-
-.logicHelp a {
-    display: inline-block;
-    background-image: url(../img/help_icon.png);
-    width:18px;
-    height: 24px;
-    background-position-y: 6px;
-    background-repeat: no-repeat;
-}
-*/
