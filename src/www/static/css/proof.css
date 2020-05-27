@@ -17,6 +17,9 @@
  * 
  * pytableaux - css for html tableau writer
  */
+.html-writer {
+    min-height: 90px;
+}
 .html-writer-proof pre {
     overflow-x: scroll;
 }
