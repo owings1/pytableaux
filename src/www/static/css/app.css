@@ -141,10 +141,10 @@ body {
     float: right;
 }
 .pt-app .heading.collapsed .legend::after {
-    background-image: url(../img/plus-medium.png);
+    background-image: url(../img/plus-medium.svg);
 }
 .pt-app .heading.uncollapsed .legend::after {
-    background-image: url(../img/minus-medium.png);
+    background-image: url(../img/minus-medium.svg);
 }
 .pt-app input {
     font-size: 14px;
@@ -217,21 +217,21 @@ body {
     opacity: 45%;
 }
 .pt-app .collapser-heading.uncollapsed::after {
-    background-image: url(../img/double-left-arrow.png);
+    background-image: url(../img/double-left-arrow.svg);
 }
 .pt-app .collapser-heading.collapsed::after {
-    background-image: url(../img/double-right-arrow.png);
+    background-image: url(../img/double-right-arrow.svg);
     margin-left: 5px;
 }
 .pt-app .collapser-contents {
     padding: 10px;
 }
 .pt-app #logic-details-heading::before {
-    background-image: url(../img/cluster.png);
+    background-image: url(../img/cluster.svg);
     opacity: 45%;
 }
 .pt-app #lexicons-heading::before {
-    background-image: url(../img/book.png);
+    background-image: url(../img/book.svg);
 }
 /* End Collapser */
 .pt-app #logic-select-panel {
@@ -294,10 +294,12 @@ body {
     display: inline-block;
 }
 .pt-app .input.sentence .status.good {
-    background: url(/static/img/accept.png);
+    background: url(/static/img/check-green.svg);
+    background-size: 16px 16px;
 }
 .pt-app .input.sentence .status.bad {
-    background: url(/static/img/exclamation.png);
+    background: url(/static/img/error-red.svg);
+    background-size: 16px 16px;
 }
 .pt-app ul.details {
     margin: 16px 0 0 0;

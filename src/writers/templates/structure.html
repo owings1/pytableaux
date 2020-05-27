@@ -5,7 +5,8 @@
         {{- ' has-closed' if structure['has_closed'] -}}
         {{- ' leaf' if structure['leaf'] -}}
         {{- ' inspected' if structure['is_only_branch'] -}}
-        {{- ' closed' if structure['closed'] -}}"
+        {{- ' closed' if structure['closed'] -}}
+        {{- ' open' if structure['open'] -}}"
         data-depth="{{ structure['depth'] }}"
         data-width="{{ structure['width'] }}"
         data-left="{{ structure['left'] }}" 
@@ -61,9 +62,6 @@
             {% endfor %}
         {% endif %}
         {% if not is_child %}
-            {% if not structure['closed'] %}
-                <div class="openMark"></div>
-            {% endif %}
             <div class="clear"></div>
         {% endif %}
     </div>
