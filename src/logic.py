@@ -376,6 +376,14 @@ def get_logic(arg):
     """
     return _get_module('logics', arg)
 
+def get_system_predicate(name):
+    """
+    Get a system predicate by name. Example::
+
+        assert get_system_predicate('Identity').arity == 2
+    """
+    return Vocabulary.get_system_predicate(name)
+
 def truth_table(logic, operator):
     model = get_logic(logic).Model()
     inputs = list(itertools.product(*[model.truth_values for x in range(arity(operator))]))
