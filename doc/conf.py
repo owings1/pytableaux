@@ -290,9 +290,9 @@ def get_truth_table_html(log, operator, table):
         'arity'      : logic.arity(operator),
         'sentence'   : examples.operated(operator),
         'sw'         : sw,
-        'values'     : log.truth_values,
-        'value_chars': log.truth_value_chars,
-        'num_values' : len(log.truth_values),
+        'values'     : log.Model.truth_values,
+        'value_chars': log.Model.truth_value_chars,
+        'num_values' : len(log.Model.truth_values),
         'table'      : table,
         'operator'   : operator
     })
@@ -300,11 +300,11 @@ def get_truth_table_html(log, operator, table):
 
 def make_truth_tables(app, what, name, obj, options, lines):
     srch = '/truth_tables/'
-    if what == 'module' and hasattr(obj, 'TableauxSystem'):
-        if hasattr(obj, 'truth_functional_operators') and srch in lines:
+    if what == 'module' and hasattr(obj, 'Model'):
+        if hasattr(obj.Model, 'truth_functional_operators') and srch in lines:
             idx = lines.index(srch)
             pos = idx + 1
-            tables = {operator: logic.truth_table(obj, operator) for operator in obj.truth_functional_operators}
+            tables = {operator: logic.truth_table(obj, operator) for operator in obj.Model.truth_functional_operators}
             lines[idx] = '.. raw:: html'
             #lines += [
             #    'Truth Tables',
