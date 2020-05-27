@@ -4,7 +4,8 @@
         {{- ' has-open' if structure['has_open'] -}}
         {{- ' has-closed' if structure['has_closed'] -}}
         {{- ' leaf' if structure['leaf'] -}}
-        {{- ' inspected' if structure['is_only_branch'] -}}"
+        {{- ' inspected' if structure['is_only_branch'] -}}
+        {{- ' closed' if structure['closed'] -}}"
         data-depth="{{ structure['depth'] }}"
         data-width="{{ structure['width'] }}"
         data-left="{{ structure['left'] }}" 
@@ -44,9 +45,6 @@
                 </span>
             </div>
         {% endfor %}
-        {% if structure['closed'] %}
-            <div class="closeMark" data-step="{{ structure['closed_step'] }}"><div class="close-prop"></div></div>
-        {% endif %}
         </div>
         {% if structure['children']|length %}
             <div class="vertical-line" data-step="{{ structure['branch_step'] }}"></div>

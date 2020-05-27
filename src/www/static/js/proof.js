@@ -38,11 +38,11 @@
             adjust       : 'after'
         },
         Highlight : {
-            $proof     : $E,
-            exclusive  : true,
-            stay       : true,
-            off        : false,
-            ruleStep   : null,
+            $proof     : $E    ,
+            exclusive  : true  ,
+            stay       : true  ,
+            off        : false ,
+            ruleStep   : null  ,
             ruleTarget : null
         }
     }
@@ -110,7 +110,7 @@
         ControlsHeading : 'controls-heading'     ,
         ControlsContent : 'controls-contents'    ,
         ControlsPos     : 'controls-position'    ,
-        ModelsPos       : 'models-position'    ,
+        ModelsPos       : 'models-position'      ,
         ControlsWrap    : 'controls-wrapper'     ,
         CollapseWrap    : 'collapser-wrapper'    ,
         CollapseHead    : 'collapser-heading'    ,
@@ -250,11 +250,11 @@
             $proof = $structure.closest(Dcls.Proof)
         }
 
-        if (!$models) {
-            $models = getModelsFromProof($proof)
-        }
+        const $main = $proof.closest(Dcls.Main)
 
-        const $main = $models.closest(Dcls.Main)
+        if (!$models) {
+            $models = $(Dcls.Models, $main)
+        }
 
         $(Dcls.Inspected, $proof).removeClass(Cls.Inspected)
         $structure.addClass(Cls.Inspected)
@@ -300,6 +300,8 @@
         const hideChilds  = []
         const tickNodes   = []
         const untickNodes = []
+
+        const $main = $proof.closest(Dcls.Main)
 
         $(Dcls.Structure, $proof).each(function(i, s) {
             const $s = $(s)
@@ -367,7 +369,7 @@
         $proof.attr(Attrib.Step, n)
 
         // show the rule and target in the controls panel
-        const $controls = getControlsFromProof($proof)
+        const $controls = $(Dcls.Controls, $main)
         const attrSelector = '[' + Attrib.Step + '=' + n + ']'
         $(Dcls.StepRuleName, $controls).hide().filter(attrSelector).show()
         $(Dcls.StepRuleTarget, $controls).hide().filter(attrSelector).show()
@@ -386,6 +388,7 @@
         if (type != 'all' && type != 'closed' && type != 'open') {
             throw new Error("Invalid filter type: " + type)
         }
+        const $main = $proof.closest(Dcls.Main)
         const toHide = []
         const toShow = []
         $(Dcls.Structure, $proof).each(function(i, s) {
@@ -416,7 +419,7 @@
             $shows    : $(toShow),
             className : Cls.BranchFiltered
         })
-        const $controls = getControlsFromProof($proof)
+        const $controls = $(Dcls.Controls, $main)
         $(Dcls.BranchFilter, $controls).val(type)
     }
 
@@ -645,12 +648,13 @@
     function doHighlight(opts) {
         opts = $.extend({}, Defaults.Highlight, opts)
         const $proof = opts.$proof
+        const $main = $proof.closest(Dcls.Main)
         if (opts.off || opts.exclusive) {
             $(Dcls.Highlight, $proof).removeClass(Cls.Highlight)
             $(Dcls.HighlightTicked, $proof).removeClass(Cls.HighlightTicked)
         }
         if (opts.off) {
-            var $controls = getControlsFromProof($proof)
+            var $controls = $(Dcls.Controls, $main)
             $(Dcls.Highlight, $controls).removeClass(Cls.Highlight)
             return
         }
@@ -668,7 +672,7 @@
             var n = opts.ruleTarget === true ? +$proof.attr(Attrib.Step) : opts.ruleTarget
             var nodeAttrSel = getAttrSelector(Attrib.Step, n)
             var nodeIds = []
-            var $controls = getControlsFromProof($proof)
+            var $controls = $(Dcls.Controls, $main)
             var $ruleTarget = $(Dcls.StepRuleTarget + nodeAttrSel, $controls)
             var nodeId = $ruleTarget.attr(Attrib.NodeId)
             if (nodeId) {
@@ -793,56 +797,6 @@
      */
     function sum(arr) {
         return arr.reduce(function(a, b) { return a + b }, 0)
-    }
-
-    /**
-     * Get the controls panel element from the proof element.
-     *
-     * @param $proof The jQuery proof element.
-     * @return The jQuery controls panel element.
-     */
-    function getControlsFromProof($proof) {
-        return $proof.prevAll(Dcls.Controls)
-    }
-
-    /**
-     * Get the proof element from the controls panel element.
-     *
-     * @param $controls The jQuery controls panel element.
-     * @return The jQuery proof element.
-     */
-    function getProofFromControls($controls) {
-        return $controls.nextAll(Dcls.Proof)
-    }
-
-    /**
-     * Get the models element from the controls panel element.
-     *
-     * @param $controls The jQuery controls panel element.
-     * @return The jQuery models element.
-     */
-    function getModelsFromControls($controls) {
-        return $controls.nextAll(Dcls.Models)
-    }
-
-    /**
-     * Get the models element from the proof element.
-     *
-     * @param $proof The jQuery proof element.
-     * @return The jQuery models element.
-     */
-    function getModelsFromProof($proof) {
-        return $proof.prevAll(Dcls.Models)
-    }
-
-    /**
-     * Get the proof element from the models panel element.
-     *
-     * @param $models The jQuery models panel element.
-     * @return The jQuery proof element.
-     */
-    function getProofFromModels($models) {
-        return $models.nextAll(Dcls.Proof)
     }
 
     /**
@@ -1056,6 +1010,30 @@
         adjustMainHeight($main)
     }
 
+    /**
+     * Main interval function.
+     *
+     * @return void
+     */
+    function mainInterval() {
+        $(Dcls.Main).each(function() {
+            const $main = $(this)
+            const thisTop = $main.offset().top
+            const lastTop = $main.attr(Attrib.LastTop)
+            if (thisTop != lastTop) {
+                $(Dcls.DragPanel, $main).each(function() {
+                    const $me = $(this)
+                    const $parent = $me.parent()
+                    const topOffset = +$me.attr(Attrib.TopOffset) || 0
+                    const parentTop = $parent.offset().top
+                    const newTop = parentTop + topOffset
+                    $me.css({top: newTop})
+                })
+                $main.attr(Attrib.LastTop, thisTop)
+            }
+        })
+    }
+
     $(document).ready(function() {
 
         const modkey = {
@@ -1108,24 +1086,7 @@
                 const $me = $(this)
                 $me.attr(Attrib.LastTop, $me.offset().top)
             })
-            IntervalHandle = setInterval(function() {
-                $(Dcls.Main).each(function() {
-                    const $main = $(this)
-                    const thisTop = $main.offset().top
-                    const lastTop = $main.attr(Attrib.LastTop)
-                    if (thisTop != lastTop) {
-                        $(Dcls.DragPanel, $main).each(function() {
-                            const $me = $(this)
-                            const $parent = $me.parent()
-                            const topOffset = +$me.attr(Attrib.TopOffset) || 0
-                            const parentTop = $parent.offset().top
-                            const newTop = parentTop + topOffset
-                            $me.css({top: newTop})
-                        })
-                        $main.attr(Attrib.LastTop, thisTop)
-                    }
-                })
-            }, IntervalPeriod)
+            IntervalHandle = setInterval(mainInterval, IntervalPeriod)
         }
         
 
@@ -1133,8 +1094,9 @@
         $(Dcls.Proof).on('click', function(e) {
             const $proof     = $(this)
             const $target    = $(e.target)
-            const $controls  = getControlsFromProof($proof)
-            const $models    = getModelsFromProof($proof)
+            const $main      = $proof.closest(Dcls.Main)
+            const $controls  = $(Dcls.Controls, $main)
+            const $models    = $(Dcls.Models, $main)
             const $structure = $target.closest(Dcls.Structure)
             if ($structure.length) {
                 const behavior = modkey.ctrlalt ? 'zoom' : 'inspect'
@@ -1156,9 +1118,10 @@
         // load a change event for the controls panel
         $(Dcls.Controls).on('change', function(e) {
             const $controls = $(this)
-            const $proof = getProofFromControls($controls)
-            const $main = $controls.closest(Dcls.Main)
-            const $target = $(e.target)
+            const $target   = $(e.target)
+            const $main     = $controls.closest(Dcls.Main)
+            const $proof    = $(Dcls.Proof, $main)
+            const $models   = $(Dcls.Models, $main)
             if ($target.hasClass(Cls.StepInput)) {
                 var n = +$target.val()
                 var maxSteps = +$proof.attr(Attrib.NumSteps)
@@ -1173,7 +1136,6 @@
                 $controls.removeClass(Cls.IsDrag)
                 positionDraggable($controls)
             } else if ($target.hasClass(Cls.ModelsPos)) {
-                var $models = $main.find(Dcls.Models)
                 $(Dcls.PositionSelect, $models).val($target.val())
                 $models.removeClass(Cls.IsDrag)
                 positionDraggable($models)
@@ -1184,9 +1146,9 @@
         // load a click event for the controls panel
         $(Dcls.Controls).on('click', function(e) {
             const $controls = $(this)
-            const $proof = getProofFromControls($controls)
-            const $target = $(e.target)
-            const $main = $controls.closest(Dcls.Main)
+            const $target   = $(e.target)
+            const $main     = $controls.closest(Dcls.Main)
+            const $proof    = $(Dcls.Proof, $main)
             const $collapserHeading = $target.closest(Dcls.CollapseHead)
             if ($collapserHeading.length) {
                 handleCollapserHeadingClick($collapserHeading)
@@ -1229,10 +1191,11 @@
         })
 
         $(Dcls.Models).on('click', function(e) {
-            const $models = $(this)
-            const $proof = getProofFromModels($models)
-            const $controls = getControlsFromProof($proof)
-            const $target = $(e.target)
+            const $models   = $(this)
+            const $target   = $(e.target)
+            const $main     = $models.closest(Dcls.Main)
+            const $proof    = $(Dcls.Proof, $main)
+            const $controls = $(Dcls.Controls, $main)
             const $collapserHeading = $target.closest(Dcls.CollapseHead)
             if ($collapserHeading.length) {
                 handleCollapserHeadingClick($collapserHeading)
@@ -1246,6 +1209,7 @@
             const isInput = $target.is(':input')
             if (!isInput && $lastProof) {
                 const $proof = $lastProof
+                const $main  = $proof.closest(Dcls.Main)
                 var s = String.fromCharCode(e.which)
                 switch (s) {
                     case '>':
@@ -1302,7 +1266,7 @@
                     case 'r':
                     case 'R':
                         var stay = s == 'R'
-                        var $controls = getControlsFromProof($proof)
+                        var $controls = $(Dcls.Controls, $main)
                         doHighlight({$proof: $proof, stay: stay, ruleStep: true})
                         if (stay) {
                             $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
@@ -1311,7 +1275,7 @@
                     case 't':
                     case 'T':
                         var stay = s == 'T'
-                        var $controls = getControlsFromProof($proof)
+                        var $controls = $(Dcls.Controls, $main)
                         doHighlight({$proof: $proof, stay: stay, ruleTarget: true})
                         if (stay) {
                             $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
@@ -1322,13 +1286,13 @@
                         break
                     case 'q':
                     case 'Q':
-                        var $controls = getControlsFromProof($proof)
+                        var $controls = $(Dcls.Controls, $main)
                         var $heading = $(Dcls.CollapseHead, $controls)
                         handleCollapserHeadingClick($heading)
                         break
                     case 'm':
                     case 'M':
-                        var $models = getModelsFromProof($proof)
+                        var $models = $(Dcls.Models, $main)
                         var $heading = $(Dcls.CollapseHead, $models)
                         handleCollapserHeadingClick($heading)
                         break
