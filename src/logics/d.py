@@ -34,8 +34,10 @@ Links
 name = 'D'
 title = 'Deontic Normal Modal Logic'
 description = 'Normal modal logic with a serial access relation'
-tags = set(['bivalent', 'modal', 'first-order'])
-tags_list = list(tags)
+tags_list = ['bivalent', 'modal', 'first-order']
+tags = set(tags_list)
+category = 'Bivalent Modal'
+category_display_order = 2
 
 import logic
 from logic import atomic

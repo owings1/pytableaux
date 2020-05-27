@@ -71,8 +71,10 @@ Logical Consequence
 name = 'K3W'
 title = 'Weak Kleene 3-valued logic'
 description = 'Three-valued logic with values T, F, and N'
-tags = set(['many-valued', 'gappy', 'non-modal', 'first-order'])
-tags_list = list(tags)
+tags_list = ['many-valued', 'gappy', 'non-modal', 'first-order']
+tags = set(tags_list)
+category = 'Many-valued'
+category_display_order = 3
 
 import logic
 from logic import negate, operate

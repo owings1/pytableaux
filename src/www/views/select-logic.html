@@ -2,10 +2,14 @@
     <div class="input select">
         <label for="selected_logic">Select Logic</label>
         <select name="logic" id="selected_logic">
-            {% for module in logic_modules -%}
-                <option value="{{ module|e }}" {{- helper.select_opt(form_data, 'logic', module) }}>
-                    {{- logics[module].name|e -}}
-                </option>
+            {% for category in logic_categories -%}
+                <optgroup label="{{ category|e }}">
+                    {% for module in logic_categories[category] -%}
+                        <option value="{{ module|e }}" {{- helper.select_opt(form_data, 'logic', module) }}>
+                            {{- logics[module].name|e -}}
+                        </option>
+                    {% endfor %}
+                </optgroup>
             {% endfor %}
         </select>
         <input type="submit" value="Go"/>

@@ -61,17 +61,17 @@ Logical Consequence
 .. _CPL: cpl.html
 
 """
-
-from . import k, cpl
-
 name = 'CFOL'
 title = 'Classical First Order Logic'
 description = 'Standard bivalent logic with full first-order quantification'
 tags_list = ['bivalent', 'non-modal', 'first-order']
 tags = set(tags_list)
+category = 'Bivalent'
+category_display_order = 2
 
 import logic, examples
 from logic import negate
+from . import k, cpl
 
 class Model(k.Model):
 

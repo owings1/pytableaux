@@ -70,8 +70,10 @@ For further reading, see:
 name = 'K'
 title = 'Kripke Normal Modal Logic'
 description = 'Base normal modal logic with no access relation restrictions'
-tags = set(['bivalent', 'modal', 'first-order'])
-tags_list = list(tags)
+tags_list = ['bivalent', 'modal', 'first-order']
+tags = set(tags_list)
+category = 'Bivalent Modal'
+category_display_order = 1
 
 import logic, examples
 from logic import negate, operate, quantify, atomic, constant, predicated, NotImplementedError

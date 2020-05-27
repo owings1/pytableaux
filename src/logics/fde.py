@@ -101,8 +101,10 @@ For futher reading see:
 name = 'FDE'
 title = 'First Degree Entailment'
 description = 'Four-valued logic (True, False, Neither, Both)'
-tags = set(['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order'])
-tags_list = list(tags)
+tags_list = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
+tags = set(tags_list)
+category = 'Many-valued'
+category_display_order = 1
 
 import logic, examples
 from logic import negate, quantify, atomic, NotImplementedError

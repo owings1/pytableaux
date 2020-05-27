@@ -27,9 +27,11 @@
 name = 'S4'
 title = 'S4 Normal Modal Logic'
 description = 'Normal modal logic with a reflexive and transitive access relation'
-tags = set(['bivalent', 'modal', 'first-order'])
-tags_list = list(tags)
-    
+tags_list = ['bivalent', 'modal', 'first-order']
+tags = set(tags_list)
+category = 'Bivalent Modal'
+category_display_order = 4
+
 import logic
 from . import k, t
 

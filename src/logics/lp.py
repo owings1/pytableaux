@@ -104,12 +104,13 @@ For futher reading see:
 
 .. _FDE: fde.html
 """
-
 name = 'LP'
 title = 'Logic of Paradox'
 description = 'Three-valued logic (True, False, Both)'
-tags = set(['many-valued', 'glutty', 'non-modal', 'first-order'])
-tags_list = list(tags)
+tags_list = ['many-valued', 'glutty', 'non-modal', 'first-order']
+tags = set(tags_list)
+category = 'Many-valued'
+category_display_order = 7
 
 import logic
 from logic import negate

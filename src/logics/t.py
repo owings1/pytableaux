@@ -31,8 +31,10 @@ Links
 name = 'T'
 title = 'Reflexive Normal Modal Logic'
 description = 'Normal modal logic with a reflexive access relation'
-tags = set(['bivalent', 'modal', 'first-order'])
-tags_list = list(tags)
+tags_list = ['bivalent', 'modal', 'first-order']
+tags = set(tags_list)
+category = 'Bivalent Modal'
+category_display_order = 3
 
 import logic
 from . import k

@@ -59,6 +59,8 @@ title = 'Classical Predicate Logic'
 description = 'Standard bivalent logic with predication, without quantification'
 tags = set(['bivalent', 'non-modal'])
 tags_list = list(tags)
+category = 'Bivalent'
+category_display_order = 1
 
 import logic, examples
 from logic import negate, NotImplementedError
