@@ -149,6 +149,7 @@
         BranchNodeId   : 'data-branch-node-id'    ,
         BranchId       : 'data-branch-id'         ,
         ModelId        : 'data-model-id'          ,
+        LastTop        : 'data-last-top'          ,
         TopOffset      : 'data-top-offset'
     }
 
@@ -1081,7 +1082,9 @@
             animate     : Anim.Fast
         })
 
-        $(Dcls.DragPanel).draggable({
+        const $dragPanels = $(Dcls.DragPanel)
+
+        $dragPanels.draggable({
             containment : 'parent',
             handle      : Dcls.DragHandle,
             start       : onDraggableStart,
@@ -1100,20 +1103,31 @@
             })
         }
 
-        IntervalHandle = setInterval(function() {
-            const newDocHeight = $(document).height()
-            if (newDocHeight != lastDocHeight) {
-                lastDocHeight = newDocHeight
-                $(Dcls.Controls).add(Dcls.Models).each(function() {
-                    const $me = $(this)
-                    const $parent = $(this).parent()
-                    const topOffset = +$me.attr(Attrib.TopOffset) || 0
-                    const parentTop = $parent.offset().top
-                    const newTop = parentTop + topOffset
-                    $me.css({top: newTop})
+        if ($dragPanels.length) {
+            $dragPanels.each(function() {
+                const $me = $(this)
+                $me.attr(Attrib.LastTop, $me.offset().top)
+            })
+            IntervalHandle = setInterval(function() {
+                $(Dcls.Main).each(function() {
+                    const $main = $(this)
+                    const thisTop = $main.offset().top
+                    const lastTop = $main.attr(Attrib.LastTop)
+                    if (thisTop != lastTop) {
+                        $(Dcls.DragPanel, $main).each(function() {
+                            const $me = $(this)
+                            const $parent = $me.parent()
+                            const topOffset = +$me.attr(Attrib.TopOffset) || 0
+                            const parentTop = $parent.offset().top
+                            const newTop = parentTop + topOffset
+                            $me.css({top: newTop})
+                        })
+                        $main.attr(Attrib.LastTop, thisTop)
+                    }
                 })
-            }
-        }, IntervalPeriod)
+            }, IntervalPeriod)
+        }
+        
 
         // load a click event handler for each proof in the document.
         $(Dcls.Proof).on('click', function(e) {
