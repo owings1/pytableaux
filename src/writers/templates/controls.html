@@ -158,6 +158,17 @@
                             </select>
                         </div>
                     </li>
+                    {% if opts['models'] %}
+                        <li>
+                            <span class="prop">Models Position</span>
+                            <div class="value">
+                                <select class="models-position position-select">
+                                    <option value="left" selected="selected">Left</option>
+                                    <option value="right">Right</option>
+                                </select>
+                            </div>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
             <div class="clear"></div>

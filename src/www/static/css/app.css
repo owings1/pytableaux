@@ -47,7 +47,7 @@ body {
     position: fixed;
     width: 100%;
     background-color: #003d4c;
-    z-index: 2;
+    z-index: 3;
 }
 .headerWrapper {
     top: 0px;

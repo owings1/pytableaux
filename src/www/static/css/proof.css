@@ -106,7 +106,6 @@
 .html-writer-controls, .html-writer-models {
     display: inline-block;
     position: absolute;
-   
 }
 .html-writer-controls {
     z-index: 2;
@@ -114,13 +113,16 @@
 .html-writer-models {
     z-index: 1;
 }
+.html-writer-models .collapser-wrapper.uncollapsed {
+    min-width: 200px;
+}
 .html-writer .collapser-wrapper {
     background: #ffffff;
 }
-.html-writer-controls .controls-heading.collapsed span.heading-title {
+.html-writer .collapser-heading.collapsed span.heading-title {
     display: none;
 }
-.html-writer-controls .controls-heading.uncollapsed span.heading-title {
+.html-writer .collapser-heading.uncollapsed span.heading-title {
     display: inline;
 }
 .html-writer-controls .controls-contents {
@@ -244,6 +246,10 @@
 .html-writer-controls .collapser-wrapper.positioned-left .controls-heading.collapsed::before,
 .html-writer-controls .collapser-wrapper.positioned-right .controls-heading.collapsed::after {
     background-image: url(../img/controls.png);
+}
+.html-writer-models .collapser-wrapper.positioned-left .collapser-heading.collapsed::before,
+.html-writer-models .collapser-wrapper.positioned-right .collapser-heading.collapsed::after {
+    background-image: url(../img/models.png);
 }
 .html-writer .collapser-wrapper.positioned-right .controls-heading::after {
     margin-left: 5px;

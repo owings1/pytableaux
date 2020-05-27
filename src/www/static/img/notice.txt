@@ -23,9 +23,11 @@ Danda Euatham https://becrisdesign.com/
 https://freeicons.io/essential-app-icons
 
 controls.png
+models.png
 Creative Commons (Attribution 3.0 Unported)
 Muhammad Haq https://freeicons.io/profile/823
-https://freeicons.io/user-interface-icons-10
+https://freeicons.io/icon-list/user-interface-icons-10
+https://freeicons.io/communication-and-media/open-book-icon-30122
 
 https://fonts.google.com/specimen/Charmonman
 Open Font License

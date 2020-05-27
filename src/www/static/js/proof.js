@@ -25,7 +25,7 @@
     }
 
     const $ = jQuery
-    const InteveralPeriod = 40
+    const IntervalPeriod = 40
 
     const $E = $()
     // default option sets
@@ -110,6 +110,7 @@
         ControlsHeading : 'controls-heading'     ,
         ControlsContent : 'controls-contents'    ,
         ControlsPos     : 'controls-position'    ,
+        ModelsPos       : 'models-position'    ,
         ControlsWrap    : 'controls-wrapper'     ,
         CollapseWrap    : 'collapser-wrapper'    ,
         CollapseHead    : 'collapser-heading'    ,
@@ -252,7 +253,7 @@
             $models = getModelsFromProof($proof)
         }
 
-        const $main = $models.closest(Dcls.main)
+        const $main = $models.closest(Dcls.Main)
 
         $(Dcls.Inspected, $proof).removeClass(Cls.Inspected)
         $structure.addClass(Cls.Inspected)
@@ -1021,12 +1022,22 @@
         return n
     }
 
+    /**
+     * Draggable start handler.
+     *
+     * @return void
+     */
     function onDraggableStart() {
         const $me = $(this)
         $me.css({left: '', right: ''})
         $me.addClass(Cls.HasDragged).addClass(Cls.IsDrag)
     }
 
+    /**
+     * Draggable stop handler.
+     *
+     * @return void
+     */
     function onDraggableStop() {
         const $me = $(this)
         const $parent = $me.parent()
@@ -1053,7 +1064,7 @@
         }
 
         var $lastProof
-        var invtervalHandle
+        var IntervalHandle
         var lastDocHeight
 
         // monitor modifier keys
@@ -1089,7 +1100,7 @@
             })
         }
 
-        invtervalHandle = setInterval(function() {
+        IntervalHandle = setInterval(function() {
             const newDocHeight = $(document).height()
             if (newDocHeight != lastDocHeight) {
                 lastDocHeight = newDocHeight
@@ -1102,14 +1113,14 @@
                     $me.css({top: newTop})
                 })
             }
-        }, InteveralPeriod)
+        }, IntervalPeriod)
 
         // load a click event handler for each proof in the document.
         $(Dcls.Proof).on('click', function(e) {
-            const $proof    = $(this)
-            const $target   = $(e.target)
-            const $controls = getControlsFromProof($proof)
-            const $models   = getModelsFromProof($proof)
+            const $proof     = $(this)
+            const $target    = $(e.target)
+            const $controls  = getControlsFromProof($proof)
+            const $models    = getModelsFromProof($proof)
             const $structure = $target.closest(Dcls.Structure)
             if ($structure.length) {
                 const behavior = modkey.ctrlalt ? 'zoom' : 'inspect'
@@ -1132,6 +1143,7 @@
         $(Dcls.Controls).on('change', function(e) {
             const $controls = $(this)
             const $proof = getProofFromControls($controls)
+            const $main = $controls.closest(Dcls.Main)
             const $target = $(e.target)
             if ($target.hasClass(Cls.StepInput)) {
                 var n = +$target.val()
@@ -1146,6 +1158,11 @@
             } else if ($target.hasClass(Cls.ControlsPos)) {
                 $controls.removeClass(Cls.IsDrag)
                 positionDraggable($controls)
+            } else if ($target.hasClass(Cls.ModelsPos)) {
+                var $models = $main.find(Dcls.Models)
+                $(Dcls.PositionSelect, $models).val($target.val())
+                $models.removeClass(Cls.IsDrag)
+                positionDraggable($models)
             }
             $lastProof = $proof
         })
@@ -1292,7 +1309,13 @@
                     case 'q':
                     case 'Q':
                         var $controls = getControlsFromProof($proof)
-                        var $heading = $(Dcls.ControlsHeading, $controls)
+                        var $heading = $(Dcls.CollapseHead, $controls)
+                        handleCollapserHeadingClick($heading)
+                        break
+                    case 'm':
+                    case 'M':
+                        var $models = getModelsFromProof($proof)
+                        var $heading = $(Dcls.CollapseHead, $models)
                         handleCollapserHeadingClick($heading)
                         break
                     default:
