@@ -894,6 +894,14 @@ class TestK(LogicTester):
         pdata = fdata['Predicates']['values'][1]
         assert pdata['values'][0]['input'].name == 'Identity'
 
+    def test_model_get_data_with_access_has_2_frames(self):
+        model = self.logic.Model()
+        model.set_literal_value(parse('a'), 1, world=0)
+        model.add_access(0, 1)
+        model.finish()
+        data = model.get_data()
+        assert len(data['Frames']['values']) == 2
+
 class TestD(LogicTester):
 
     logic = get_logic('D')
