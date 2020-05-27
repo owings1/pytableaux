@@ -28,6 +28,7 @@
     const IntervalPeriod = 40
 
     const $E = $()
+
     // default option sets
     const Defaults = {
         Filter : {
@@ -172,15 +173,66 @@
     }
     Sel.Unfiltered = ':not(' + Sel.Filtered + ')'
 
+    // drag panel opts
+    const DragPanelOpts = {
+        containment : 'parent',
+        handle      : Dcls.DragHandle,
+        start       : onDraggableStart,
+        stop        : onDraggableStop,
+        // TODO: apply rewrite to deprecated option when available.
+        // see https://jqueryui.com/upgrade-guide/1.12/#deprecated-distance-and-delay-options
+        distance    : 10
+    }
+
+    // panel accordion opts
+    const PanelAccordionOpts = {
+        header      : 'h4',
+        heightStyle : 'content',
+        animate     : Anim.Fast
+    }
+
+    // mod key state
+    const ModKey = {
+        shift : false,
+        ctrl  : false,
+        alt   : false
+    }
+
+    // relevant action keys
+    const ActionKeys = {
+        '>' : true,
+        '<' : true,
+        'B' : true,
+        'E' : true,
+        '+' : true,
+        '-' : true,
+        '=' : true,
+        ']' : true,
+        '}' : true,
+        '[' : true,
+        '{' : true,
+        '|' : true,
+        'O' : true,
+        'C' : true,
+        'A' : true,
+        'r' : true,
+        'R' : true,
+        't' : true,
+        'T' : true,
+        'Z' : true,
+        'q' : true,
+        'Q' : true,
+        'm' : true,
+        'M' : true
+    }
+
     /**
      * Show only the lineage of the given structure.
      *
-     * @param $structure The singleton jQuery .structure element.
-     * @param $proof The singleton jQuery .html-writer-proof element. If not
-     *   passed, it will be retrieved.
+     * @param $structure The jQuery .structure element(s).
      * @return void
      */
-    function zoom($structure, $proof) {
+    function zoom($structure) {
 
         if (!$structure.hasClass(Cls.Structure)) {
             throw new Error('Invalid structure argument: ' + $structure)
@@ -191,9 +243,7 @@
             return
         }
 
-        if (!$proof) {
-            $proof = $structure.closest(Dcls.Proof)
-        }
+        const $proof = $structure.first().closest(Dcls.Proof)
 
         // get the previously zoomed structure
         const $prev = $(Dcls.Zoomed, $proof)
@@ -229,13 +279,9 @@
      * Set the branch being inspected.
      *
      * @param $structure The singleton jQuery .structure element.
-     * @param $proof The singleton jQuery .html-writer-proof element. If not
-     *   passed, it will be retrieved.
-     * @param $models The models jQuery element. If not passed, it will be
-     *   retrieved.
      * @return void
      */
-    function setInspectedBranch($structure, $proof, $models) {
+    function setInspectedBranch($structure) {
 
         if (!$structure.hasClass(Cls.Structure)) {
             throw new Error('Invalid structure argument: ' + $structure)
@@ -246,21 +292,15 @@
             return
         }
 
-        if (!$proof) {
-            $proof = $structure.closest(Dcls.Proof)
-        }
-
+        const $proof = $structure.closest(Dcls.Proof)
         const $main = $proof.closest(Dcls.Main)
-
-        if (!$models) {
-            $models = $(Dcls.Models, $main)
-        }
+        const $models = $(Dcls.Models, $main)
+        const $modelElements = $(Dcls.Model, $models)
+        const modelId = $structure.attr(Attrib.ModelId)
 
         $(Dcls.Inspected, $proof).removeClass(Cls.Inspected)
         $structure.addClass(Cls.Inspected)
-
-        const $modelElements = $(Dcls.Model, $models)
-        const modelId = $structure.attr(Attrib.ModelId)
+        
         $modelElements.hide()
         if (modelId) {
             $models.addClass(Cls.Inspected)
@@ -302,6 +342,7 @@
         const untickNodes = []
 
         const $main = $proof.closest(Dcls.Main)
+        const $controls = $(Dcls.Controls, $main)
 
         $(Dcls.Structure, $proof).each(function(i, s) {
             const $s = $(s)
@@ -369,7 +410,6 @@
         $proof.attr(Attrib.Step, n)
 
         // show the rule and target in the controls panel
-        const $controls = $(Dcls.Controls, $main)
         const attrSelector = '[' + Attrib.Step + '=' + n + ']'
         $(Dcls.StepRuleName, $controls).hide().filter(attrSelector).show()
         $(Dcls.StepRuleTarget, $controls).hide().filter(attrSelector).show()
@@ -385,12 +425,17 @@
      * @return void
      */
     function filterBranches(type, $proof) {
+
         if (type != 'all' && type != 'closed' && type != 'open') {
             throw new Error("Invalid filter type: " + type)
         }
+
         const $main = $proof.closest(Dcls.Main)
+        const $controls = $(Dcls.Controls, $main)
+
         const toHide = []
         const toShow = []
+
         $(Dcls.Structure, $proof).each(function(i, s) {
             const $s = $(s)
             var shown
@@ -413,13 +458,14 @@
                 toHide.push(s)
             }
         })
+
         doFilter({
             $proof    : $proof,
             $hides    : $(toHide),
             $shows    : $(toShow),
             className : Cls.BranchFiltered
         })
-        const $controls = $(Dcls.Controls, $main)
+
         $(Dcls.BranchFilter, $controls).val(type)
     }
 
@@ -504,12 +550,12 @@
      * @param $proof The singleton proof jQuery element.
      * @param $leaves The jQuery element with the leaves, or deepest
      *   affected structures.
-     * @param animate Whether to animate the width transitions. Default
+     * @param isAnimate Whether to animate the width transitions. Default
      *   is to animate all horizontal lines changes, and to animate width
      *   changes if the adjusted width is known to be an increase.
      * @return void
      */
-    function adjustWidths($proof, $leaves, animate) {
+    function adjustWidths($proof, $leaves, isAnimate) {
 
         if (!$leaves) {
             $leaves = $(Dcls.Leaf, $proof)
@@ -562,7 +608,7 @@
                     $cw.attr(Attrib.CurWidthPct, newWidthPct)
                     const css = {width: newWidthPct}
                     // only animate if the width is increasing
-                    if (animate && cmpNew > cmpCur) {
+                    if (isAnimate && cmpNew > cmpCur) {
                         $cw.animate(css, Anim.Fast)
                     } else {
                         $cw.css(css)
@@ -599,14 +645,14 @@
 
             // Show the horizontal line if there are visible children, otherwise hide it.
             if (unfilteredChildren > 0) {
-                if (animate) {
+                if (isAnimate) {
                     $hl.show(Anim.Fast).animate(hlcss, Anim.Fast)
                 } else {
                     $hl.show().css(hlcss)
                 }
             } else {
                 $hl.css(hlcss)
-                if (animate) {
+                if (isAnimate) {
                     $hl.hide(Anim.Fast)
                 } else {
                     $hl.hide()
@@ -888,7 +934,7 @@
     }
 
     /**
-     * Resetting the minHeight of the parent element of the  panel.
+     * Resetting the minHeight of the parent element of the panel.
      *
      * @param $main The main jQuery element.
      * @param delay The delay, default is Anim.Fast or 100 if Anim.Fast is NaN.
@@ -902,7 +948,7 @@
         delay += 50
         setTimeout(function() {
             var maxMinHeight = 0
-            $main.find(Dcls.CollapseWrap).each(function() {
+            $(Dcls.CollapseWrap, $main).each(function() {
                 const $wrapper = $(this)
                 const $panel = $wrapper.closest(Dcls.DragPanel)
                 const offset = $panel.position().top - $main.position().top
@@ -994,6 +1040,7 @@
      * @return void
      */
     function onDraggableStop() {
+
         const $me = $(this)
         const $parent = $me.parent()
 
@@ -1011,295 +1058,332 @@
     }
 
     /**
+     * Handle a click event on a proof.
+     *
+     * @param $target The target jQuery element.
+     * @param $proof The proof jQuery element.
+     * @return void
+     */
+    function handleProofClick($target, $proof) {
+
+        const $structure = $target.closest(Dcls.Structure)
+
+        if ($structure.length) {
+            const behavior = ModKey.ctrlalt ? 'zoom' : 'inspect'
+            switch (behavior) {
+                case 'zoom':
+                    zoom($structure)
+                    setInspectedBranch($structure)
+                    break
+                case 'inspect':
+                    setInspectedBranch($structure)
+                    break
+                default :
+                    break
+            }
+        }
+    }
+
+    /**
+     * Handle a click event on a controls panel
+     *
+     * @param $target The target jQuery element.
+     * @param $controls The controls jQuery element.
+     * @return void
+     */
+    function handleControlsClick($target, $controls) {
+
+        const $main  = $controls.closest(Dcls.Main)
+        const $proof = $(Dcls.Proof, $main)
+
+        const $collapserHeading = $target.closest(Dcls.CollapseHead)
+
+        if ($collapserHeading.length) {
+            handleCollapserHeadingClick($collapserHeading)
+        } else if ($target.is(Dcls.PartHeader)) {
+            adjustMainHeight($main, Anim.Fast)
+        } else if ($target.hasClass(Cls.StepStart)) {
+            adjust($proof, 'step', 'start')
+        } else if ($target.hasClass(Cls.StepNext)) {
+            adjust($proof, 'step', 1)
+        } else if ($target.hasClass(Cls.StepPrev)) {
+            adjust($proof, 'step', -1)
+        } else if ($target.hasClass(Cls.StepEnd)) {
+            adjust($proof, 'step', 'end')
+        } else if ($target.hasClass(Cls.FontPlus)) {
+            adjust($proof, 'font', 1)
+        } else if ($target.hasClass(Cls.FontMinus)) {
+            adjust($proof, 'font', -1)
+        } else if ($target.hasClass(Cls.FontReset)) {
+            adjust($proof, 'font', 'reset')
+        } else if ($target.hasClass(Cls.WidthPlus)) {
+            adjust($proof, 'width', 10)
+        } else if ($target.hasClass(Cls.WidthPlusPlus)) {
+            adjust($proof, 'width', 25)
+        } else if ($target.hasClass(Cls.WidthMinus)) {
+            adjust($proof, 'width', -10)
+        } else if ($target.hasClass(Cls.WidthMinusMinus)) {
+            adjust($proof, 'width', -25)
+        } else if ($target.hasClass(Cls.WidthReset)) {
+            adjust($proof, 'width', 'reset')
+        } else if ($target.hasClass(Cls.StepRuleTarget)) {
+            var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
+            doHighlight({$proof: $proof, stay: true, off: off, ruleTarget: true})
+            $target.toggleClass(Cls.Stay)
+        } else if ($target.hasClass(Cls.StepRuleName)) {
+            var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
+            doHighlight({$proof: $proof, stay: true, off: off, ruleStep: true})
+            $target.toggleClass(Cls.Stay)
+        }
+    }
+
+    /**
+     * Handle a change event on a controls panel.
+     *
+     * @param $target The target jQuery element.
+     * @param $controls The controls jQuery element.
+     * @return void
+     */
+    function handleControlsChange($target, $controls) {
+
+        const $main   = $controls.closest(Dcls.Main)
+        const $proof  = $(Dcls.Proof, $main)
+        const $models = $(Dcls.Models, $main)
+
+        if ($target.hasClass(Cls.StepInput)) {
+            var n = +$target.val()
+            var maxSteps = +$proof.attr(Attrib.NumSteps)
+            if (isNaN(n) || n < 0 || n > maxSteps) {
+                $target.val($proof.attr(Attrib.Step))
+                return
+            }
+            step($proof, n)
+        } else if ($target.hasClass(Cls.BranchFilter)) {
+            filterBranches($target.val(), $proof)
+        } else if ($target.hasClass(Cls.ControlsPos)) {
+            $controls.removeClass(Cls.IsDrag)
+            positionDraggable($controls)
+        } else if ($target.hasClass(Cls.ModelsPos)) {
+            $(Dcls.PositionSelect, $models).val($target.val())
+            $models.removeClass(Cls.IsDrag)
+            positionDraggable($models)
+        }
+    }
+
+    /**
+     * Handle a click event on a models panel.
+     *
+     * @param $target The target jQuery element.
+     * @param $models The models panel jQuery element.
+     * @return void
+     */
+    function handleModelsClick($target, $models) {
+        const $collapserHeading = $target.closest(Dcls.CollapseHead)
+        if ($collapserHeading.length) {
+            handleCollapserHeadingClick($collapserHeading)
+        }
+    }
+
+    /**
+     * Adjust the positions of the drag panels when the main container position
+     * changes.
+     *
+     * @param $main The main container jQuery element.
+     * @return void
+     */
+    function adjustPanelPositionsForMain($main) {
+        const thisMainTop = $main.offset().top
+        const lastMainTop = $main.attr(Attrib.LastTop)
+        if (thisMainTop != lastMainTop) {
+            $(Dcls.DragPanel, $main).each(function() {
+                const $panel = $(this)
+                const topOffset = +$panel.attr(Attrib.TopOffset) || 0
+                const newTop = thisMainTop + topOffset
+                $panel.css({top: newTop})
+            })
+            $main.attr(Attrib.LastTop, thisMainTop)
+        }
+    }
+
+    /**
+     * Handle an action key on the main container.
+     *
+     * @param key The action key character.
+     * @param $main The main container jQuery element.
+     * @return void
+     */
+    function handleActionKey(key, $main) {
+
+        const $proof = $(Dcls.Proof, $main)
+
+        switch (key) {
+            case '>':
+                adjust($proof, 'step', 1)
+                break
+            case '<':
+                adjust($proof, 'step', -1)
+                break
+            case 'B':
+                adjust($proof, 'step', 'start')
+                break
+            case 'E':
+                adjust($proof, 'step', 'end')
+                break
+            case '+':
+                adjust($proof, 'font', 1)
+                break
+            case '-':
+                adjust($proof, 'font', -1)
+                break
+            case '=':
+                adjust($proof, 'font', 'reset')
+                break
+            case ']':
+                adjust($proof, 'width', 10)
+                break
+            case '}':
+                adjust($proof, 'width', 25)
+                break
+            case '[':
+                adjust($proof, 'width', -10)
+                break
+            case '{':
+                adjust($proof, 'width', -25)
+                break
+            case '|':
+                adjust($proof, 'width', 'reset')
+                break
+            case 'O':
+                if ($proof.children(Sel.CanBranchFilter).length) {
+                    filterBranches('open', $proof)
+                }
+                break
+            case 'C':
+                if ($proof.children(Sel.CanBranchFilter).length) {
+                    filterBranches('closed', $proof)
+                }
+                break
+            case 'A':
+                if ($proof.children(Sel.CanBranchFilter).length) {
+                    filterBranches('all', $proof)
+                }
+                break
+            case 'r':
+            case 'R':
+                var stay = key == 'R'
+                doHighlight({$proof: $proof, stay: stay, ruleStep: true})
+                if (stay) {
+                    $(Dcls.StepRuleName, $(Dcls.Controls, $main)).toggleClass(Cls.Stay)
+                }
+                break
+            case 't':
+            case 'T':
+                var stay = key == 'T'
+                doHighlight({$proof: $proof, stay: stay, ruleTarget: true})
+                if (stay) {
+                    $(Dcls.StepRuleName, $(Dcls.Controls, $main)).toggleClass(Cls.Stay)
+                }
+                break
+            case 'Z':
+                zoom($proof.children(Dcls.Structure))
+                break
+            case 'q':
+            case 'Q':
+                handleCollapserHeadingClick($(Dcls.CollapseHead, $(Dcls.Controls, $main)))
+                break
+            case 'm':
+            case 'M':
+                handleCollapserHeadingClick($(Dcls.CollapseHead, $(Dcls.Models, $main)))
+                break
+            default:
+                break
+        }
+    }
+
+    /**
      * Main interval function.
      *
      * @return void
      */
     function mainInterval() {
         $(Dcls.Main).each(function() {
-            const $main = $(this)
-            const thisTop = $main.offset().top
-            const lastTop = $main.attr(Attrib.LastTop)
-            if (thisTop != lastTop) {
-                $(Dcls.DragPanel, $main).each(function() {
-                    const $me = $(this)
-                    const $parent = $me.parent()
-                    const topOffset = +$me.attr(Attrib.TopOffset) || 0
-                    const parentTop = $parent.offset().top
-                    const newTop = parentTop + topOffset
-                    $me.css({top: newTop})
-                })
-                $main.attr(Attrib.LastTop, thisTop)
-            }
+            adjustPanelPositionsForMain($(this))
         })
     }
 
     $(document).ready(function() {
 
-        const modkey = {
-            shift : false,
-            ctrl  : false,
-            alt   : false
-        }
-
-        var $lastProof
+        var $CurrentMain = $(Dcls.Main).first()
         var IntervalHandle
-        var lastDocHeight
 
-        // monitor modifier keys
-        $(document).on('keyup keydown', function(e) {
-            modkey.shift   = e.shiftKey
-            modkey.ctrl    = e.metaKey || e.ctrlKey
-            modkey.alt     = e.altKey
-            modkey.ctrlalt = modkey.ctrl || modkey.alt
-        })
-
-        $(Dcls.ControlsContent).accordion({
-            header      : 'h4',
-            heightStyle : 'content',
-            animate     : Anim.Fast
-        })
+        $(Dcls.ControlsContent).accordion(PanelAccordionOpts)
 
         const $dragPanels = $(Dcls.DragPanel)
 
-        $dragPanels.draggable({
-            containment : 'parent',
-            handle      : Dcls.DragHandle,
-            start       : onDraggableStart,
-            stop        : onDraggableStop,
-            // TODO: apply rewrite to deprecated option when available.
-            // see https://jqueryui.com/upgrade-guide/1.12/#deprecated-distance-and-delay-options
-            distance    : 10
-        }).css({position: 'absolute'})
-
-        if ($(Dcls.Controls).length) {
-            $(Dcls.Models).each(function() {
-                const $me = $(this)
-                const currentTop = $me.offset().top
-                $me.css({top: currentTop + 50})
-                $me.attr(Attrib.TopOffset, '50')
-            })
-        }
-
         if ($dragPanels.length) {
+            $dragPanels.draggable(DragPanelOpts).css({position: 'absolute'})
             $dragPanels.each(function() {
-                const $me = $(this)
-                $me.attr(Attrib.LastTop, $me.offset().top)
+                const $panel = $(this)
+                const currentTop = $panel.offset().top
+                if ($panel.hasClass(Cls.Models)) {
+                    $panel.css({top: currentTop + 50})
+                    $panel.attr(Attrib.TopOffset, '50')
+                }
+                $panel.attr(Attrib.LastTop, currentTop)
             })
             IntervalHandle = setInterval(mainInterval, IntervalPeriod)
         }
-        
 
         // load a click event handler for each proof in the document.
         $(Dcls.Proof).on('click', function(e) {
-            const $proof     = $(this)
-            const $target    = $(e.target)
-            const $main      = $proof.closest(Dcls.Main)
-            const $controls  = $(Dcls.Controls, $main)
-            const $models    = $(Dcls.Models, $main)
-            const $structure = $target.closest(Dcls.Structure)
-            if ($structure.length) {
-                const behavior = modkey.ctrlalt ? 'zoom' : 'inspect'
-                switch (behavior) {
-                    case 'zoom':
-                        zoom($structure, $proof)
-                        setInspectedBranch($structure, $proof, $models)
-                        break
-                    case 'inspect':
-                        setInspectedBranch($structure, $proof, $models)
-                        break
-                    default :
-                        break
-                }
-            }
-            $lastProof = $proof
+            const $proof  = $(this)
+            handleProofClick($(e.target), $proof)
+            $CurrentMain = $proof.closest(Dcls.Main)
         })
 
         // load a change event for the controls panel
         $(Dcls.Controls).on('change', function(e) {
             const $controls = $(this)
-            const $target   = $(e.target)
-            const $main     = $controls.closest(Dcls.Main)
-            const $proof    = $(Dcls.Proof, $main)
-            const $models   = $(Dcls.Models, $main)
-            if ($target.hasClass(Cls.StepInput)) {
-                var n = +$target.val()
-                var maxSteps = +$proof.attr(Attrib.NumSteps)
-                if (isNaN(n) || n < 0 || n > maxSteps) {
-                    $target.val($proof.attr(Attrib.Step))
-                    return
-                }
-                step($proof, n)
-            } else if ($target.hasClass(Cls.BranchFilter)) {
-                filterBranches($target.val(), $proof)
-            } else if ($target.hasClass(Cls.ControlsPos)) {
-                $controls.removeClass(Cls.IsDrag)
-                positionDraggable($controls)
-            } else if ($target.hasClass(Cls.ModelsPos)) {
-                $(Dcls.PositionSelect, $models).val($target.val())
-                $models.removeClass(Cls.IsDrag)
-                positionDraggable($models)
-            }
-            $lastProof = $proof
+            handleControlsChange($(e.target), $controls)
+            $CurrentMain = $controls.closest(Dcls.Main)
         })
 
         // load a click event for the controls panel
         $(Dcls.Controls).on('click', function(e) {
             const $controls = $(this)
-            const $target   = $(e.target)
-            const $main     = $controls.closest(Dcls.Main)
-            const $proof    = $(Dcls.Proof, $main)
-            const $collapserHeading = $target.closest(Dcls.CollapseHead)
-            if ($collapserHeading.length) {
-                handleCollapserHeadingClick($collapserHeading)
-            } else if ($target.is(Dcls.PartHeader)) {
-                adjustMainHeight($main, Anim.Fast)
-            } else if ($target.hasClass(Cls.StepStart)) {
-                adjust($proof, 'step', 'start')
-            } else if ($target.hasClass(Cls.StepNext)) {
-                adjust($proof, 'step', 1)
-            } else if ($target.hasClass(Cls.StepPrev)) {
-                adjust($proof, 'step', -1)
-            } else if ($target.hasClass(Cls.StepEnd)) {
-                adjust($proof, 'step', 'end')
-            } else if ($target.hasClass(Cls.FontPlus)) {
-                adjust($proof, 'font', 1)
-            } else if ($target.hasClass(Cls.FontMinus)) {
-                adjust($proof, 'font', -1)
-            } else if ($target.hasClass(Cls.FontReset)) {
-                adjust($proof, 'font', 'reset')
-            } else if ($target.hasClass(Cls.WidthPlus)) {
-                adjust($proof, 'width', 10)
-            } else if ($target.hasClass(Cls.WidthPlusPlus)) {
-                adjust($proof, 'width', 25)
-            } else if ($target.hasClass(Cls.WidthMinus)) {
-                adjust($proof, 'width', -10)
-            } else if ($target.hasClass(Cls.WidthMinusMinus)) {
-                adjust($proof, 'width', -25)
-            } else if ($target.hasClass(Cls.WidthReset)) {
-                adjust($proof, 'width', 'reset')
-            } else if ($target.hasClass(Cls.StepRuleTarget)) {
-                var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
-                doHighlight({$proof: $proof, stay: true, off: off, ruleTarget: true})
-                $target.toggleClass(Cls.Stay)
-            } else if ($target.hasClass(Cls.StepRuleName)) {
-                var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
-                doHighlight({$proof: $proof, stay: true, off: off, ruleStep: true})
-                $target.toggleClass(Cls.Stay)
-            }
-            $lastProof = $proof
+            handleControlsClick($(e.target), $controls)
+            $CurrentMain = $controls.closest(Dcls.Main)
         })
 
+        // load a click event for the models panel
         $(Dcls.Models).on('click', function(e) {
-            const $models   = $(this)
-            const $target   = $(e.target)
-            const $main     = $models.closest(Dcls.Main)
-            const $proof    = $(Dcls.Proof, $main)
-            const $controls = $(Dcls.Controls, $main)
-            const $collapserHeading = $target.closest(Dcls.CollapseHead)
-            if ($collapserHeading.length) {
-                handleCollapserHeadingClick($collapserHeading)
-            }
-            $lastProof = $proof
+            const $models = $(this)
+            handleModelsClick($(e.target), $models)
+            $CurrentMain = $models.closest(Dcls.Main)
         })
 
-        // shortcut keys
+        // monitor modifier keys
+        $(document).on('keyup keydown', function(e) {
+            ModKey.shift   = e.shiftKey
+            ModKey.ctrl    = e.metaKey || e.ctrlKey
+            ModKey.alt     = e.altKey
+            ModKey.ctrlalt = ModKey.ctrl || ModKey.alt
+        })
+
+        // action keys
         $(document).on('keypress', function(e) {
+            const key = String.fromCharCode(e.which)
+            if (!ActionKeys[key]) {
+                return
+            }
             const $target = $(e.target)
             const isInput = $target.is(':input')
-            if (!isInput && $lastProof) {
-                const $proof = $lastProof
-                const $main  = $proof.closest(Dcls.Main)
-                var s = String.fromCharCode(e.which)
-                switch (s) {
-                    case '>':
-                        adjust($proof, 'step', 1)
-                        break
-                    case '<':
-                        adjust($proof, 'step', -1)
-                        break
-                    case 'B':
-                        adjust($proof, 'step', 'start')
-                        break
-                    case 'E':
-                        adjust($proof, 'step', 'end')
-                        break
-                    case '+':
-                        adjust($proof, 'font', 1)
-                        break
-                    case '-':
-                        adjust($proof, 'font', -1)
-                        break
-                    case '=':
-                        adjust($proof, 'font', 'reset')
-                        break
-                    case ']':
-                        adjust($proof, 'width', 10)
-                        break
-                    case '}':
-                        adjust($proof, 'width', 25)
-                        break
-                    case '[':
-                        adjust($proof, 'width', -10)
-                        break
-                    case '{':
-                        adjust($proof, 'width', -25)
-                        break
-                    case '|':
-                        adjust($proof, 'width', 'reset')
-                        break
-                    case 'O':
-                        if ($proof.children(Sel.CanBranchFilter).length) {
-                            filterBranches('open', $proof)
-                        }
-                        break
-                    case 'C':
-                        if ($proof.children(Sel.CanBranchFilter).length) {
-                            filterBranches('closed', $proof)
-                        }
-                        break
-                    case 'A':
-                        if ($proof.children(Sel.CanBranchFilter).length) {
-                            filterBranches('all', $proof)
-                        }
-                        break
-                    case 'r':
-                    case 'R':
-                        var stay = s == 'R'
-                        var $controls = $(Dcls.Controls, $main)
-                        doHighlight({$proof: $proof, stay: stay, ruleStep: true})
-                        if (stay) {
-                            $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
-                        }
-                        break
-                    case 't':
-                    case 'T':
-                        var stay = s == 'T'
-                        var $controls = $(Dcls.Controls, $main)
-                        doHighlight({$proof: $proof, stay: stay, ruleTarget: true})
-                        if (stay) {
-                            $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
-                        }
-                        break
-                    case 'Z':
-                        zoom($proof.children(Dcls.Structure), $proof)
-                        break
-                    case 'q':
-                    case 'Q':
-                        var $controls = $(Dcls.Controls, $main)
-                        var $heading = $(Dcls.CollapseHead, $controls)
-                        handleCollapserHeadingClick($heading)
-                        break
-                    case 'm':
-                    case 'M':
-                        var $models = $(Dcls.Models, $main)
-                        var $heading = $(Dcls.CollapseHead, $models)
-                        handleCollapserHeadingClick($heading)
-                        break
-                    default:
-                        break
-                }
-            }         
+            const shouldProcess = !isInput && $CurrentMain.length
+            if (!shouldProcess) {
+                return
+            }
+            const $main = $CurrentMain
+            handleActionKey(key, $main)
         })
     })
 
