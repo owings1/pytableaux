@@ -209,7 +209,7 @@ class Model(logic.Model):
         self.domain = set()
         self.denotation = {}
 
-    def value_of_operated(self, sentence, world=None, **kw):
+    def value_of_operated(self, sentence, world=0, **kw):
         """
         The value of a sentence with a truth-functional operator `w` is determined by
         the values of its operands at `w` according to the following tables.
@@ -229,7 +229,7 @@ class Model(logic.Model):
             return self.char_values['T']
         return self.char_values['F']
 
-    def value_of_existential(self, sentence, world=None, **kw):
+    def value_of_existential(self, sentence, world=0, **kw):
         """
         An existential sentence is true at `w`, just when the sentence resulting in the
         subsitution of some constant in the domain for the variable is true at `w`.
@@ -239,7 +239,7 @@ class Model(logic.Model):
                 return 1
         return 0
 
-    def value_of_universal(self, sentence, world=None, **kw):
+    def value_of_universal(self, sentence, world=0, **kw):
         """
         A universal sentence is true at `w`, just when the sentence resulting in the
         subsitution of each constant in the domain for the variable is true at `w`.
@@ -249,7 +249,7 @@ class Model(logic.Model):
                 return 0
         return 1
 
-    def value_of_possibility(self, sentence, world=None, **kw):
+    def value_of_possibility(self, sentence, world=0, **kw):
         """
         A possibility sentence is true at `w` iff its operand is true at `w'` for
         some `w'` such that `<w, w'>` in the access relation.
@@ -259,7 +259,7 @@ class Model(logic.Model):
                 return 1
         return 0
 
-    def value_of_necessity(self, sentence, world=None, **kw):
+    def value_of_necessity(self, sentence, world=0, **kw):
         """
         A possibility sentence is true at `w` iff its operand is true at `w'` for
         each `w'` such that `<w, w'>` is in the access relation.
@@ -316,10 +316,14 @@ class Model(logic.Model):
     def read_node(self, node):
         if node.has('sentence'):
             sentence = node.props['sentence']
+            #if node.has('world'):
+            world = node.props['world']
+            #else:
+            #    world = 0
             if self.is_sentence_opaque(sentence):
-                self.set_opaque_value(sentence, 1, world=node.props['world'])
+                self.set_opaque_value(sentence, 1, world=world)
             elif sentence.is_literal():
-                self.set_literal_value(sentence, 1, world=node.props['world'])
+                self.set_literal_value(sentence, 1, world=world)
         elif node.has('world1') and node.has('world2'):
             self.add_access(node.props['world1'], node.props['world2'])
 
@@ -364,7 +368,7 @@ class Model(logic.Model):
                         to_add.add(new_params)
             extension.update(to_add)
 
-    def get_identicals(self, c, world=None, **kw):
+    def get_identicals(self, c, world=0, **kw):
         identity_extension = self.get_extension(Identity, world=world, **kw)
         identicals = set()
         for params in identity_extension:
@@ -384,19 +388,19 @@ class Model(logic.Model):
         else:
             raise NotImplementedError(NotImplemented)
 
-    def set_opaque_value(self, sentence, value, world=None, **kw):
+    def set_opaque_value(self, sentence, value, world=0, **kw):
         frame = self.world_frame(world)
         if sentence in frame.opaques and frame.opaques[sentence] != value:
             raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
         frame.opaques[sentence] = value
 
-    def set_atomic_value(self, sentence, value, world=None, **kw):
+    def set_atomic_value(self, sentence, value, world=0, **kw):
         frame = self.world_frame(world)
         if sentence in frame.atomics and frame.atomics[sentence] != value:
             raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
         frame.atomics[sentence] = value
 
-    def set_predicated_value(self, sentence, value, world=None, **kw):
+    def set_predicated_value(self, sentence, value, world=0, **kw):
         predicate = sentence.predicate
         if predicate not in self.predicates:
             self.predicates.add(predicate)
@@ -411,7 +415,7 @@ class Model(logic.Model):
         if value == 1:
             extension.add(params)
 
-    def get_extension(self, predicate, world=None, **kw):
+    def get_extension(self, predicate, world=0, **kw):
         name = predicate.name
         frame = self.world_frame(world)
         if predicate not in self.predicates:
@@ -438,19 +442,19 @@ class Model(logic.Model):
             self.frames[world] = self.__class__.Frame(world)
         return self.frames[world]
 
-    def value_of_opaque(self, sentence, world=None, **kw):
+    def value_of_opaque(self, sentence, world=0, **kw):
         frame = self.world_frame(world)
         if sentence in frame.opaques:
             return frame.opaques[sentence]
         return self.unassigned_value
 
-    def value_of_atomic(self, sentence, world=None, **kw):
+    def value_of_atomic(self, sentence, world=0, **kw):
         frame = self.world_frame(world)
         if sentence in frame.atomics:
             return frame.atomics[sentence]
         return self.unassigned_value
 
-    def value_of_modal(self, sentence, world=None, **kw):
+    def value_of_modal(self, sentence, world=0, **kw):
         operator = sentence.operator
         if operator == 'Possibility':
             return self.value_of_possibility(sentence, world=world, **kw)
@@ -459,7 +463,7 @@ class Model(logic.Model):
         else:
             raise NotImplementedError(NotImplemented)
 
-    def value_of_quantified(self, sentence, world=None, **kw):
+    def value_of_quantified(self, sentence, world=0, **kw):
         q = sentence.quantifier
         if q == 'Existential':
             return self.value_of_existential(sentence, world=world, **kw)
