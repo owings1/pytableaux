@@ -439,6 +439,6 @@
 .html-writer-models .model ul.values.frame > li > .symbol {
     font-size: 17px;
 }
-.html-writer-models .model .list.frames > ul.values > li:nth-child(even) {
-    margin-top: 10px;
+.html-writer-models .model .list.frames > ul.values > li {
+    margin-bottom: 10px;
 }
