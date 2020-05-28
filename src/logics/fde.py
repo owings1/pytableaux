@@ -100,10 +100,10 @@ class Model(logic.Model):
         """
         A sentence with predicate `P` with parameters `<p,...>` has the value:
 
-        - **T** iff `<p,...>` is in the extension of `P` and not in the anti-extension of `P`.
-        - **F** iff `<p,...>` is in the anti-extension of `P` and not in the extension of `P`.
-        - **N** iff `<p,...>` is in both the extension and anti-extension of `P`.
-        - **B** iff `<p,...>` is neither in the extension nor anti-extension of `P`.
+        * **T** iff `<p,...>` is in the extension of `P` and not in the anti-extension of `P`.
+        * **F** iff `<p,...>` is in the anti-extension of `P` and not in the extension of `P`.
+        * **B** iff `<p,...>` is in both the extension and anti-extension of `P`.
+        * **N** iff `<p,...>` is neither in the extension nor anti-extension of `P`.
 
         Note, for FDE, there is no exclusivity or exhaustion constraint on a predicate's
         extension/anti-extension. This means that `<p,...>` could be in neither the extension
