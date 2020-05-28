@@ -41,128 +41,128 @@ def substitute_params(params, old_value, new_value):
             new_params.append(p)
     return tuple(new_params)
 
-class Frame(object):
-    """
-    A K-frame comprises the interpretation of sentences and predicates at a world.
-    """
-
-    #: The world of the frame.
-    world = 0
-
-    #: An assignment of each atomic sentence to a value.
-    atomics = {}
-
-    #: An assignment of each opaque (un-interpreted) sentence to a value.
-    opaques = {}
-
-    #: A map of predicates to their extension.
-    extensions = {}
-
-    def __init__(self, world):
-        self.world = world
-        self.atomics = {}
-        self.opaques = {}
-        self.extensions = {}
-        self.predicates = set()
-        self.extensions.update({'Identity': set(), 'Existence': set()})
-
-    def get_data(self, model):
-        return {
-            'description' : 'frame at world {0}'.format(str(self.world)),
-            'datatype'    : 'map',
-            'typehint'    : 'frame',
-            'value'       : {
-                'world'   : {
-                    'description' : 'world',
-                    'datatype'    : 'int',
-                    'typehint'    : 'world', 
-                    'value'       : self.world,
-                    'symbol'      : 'w',
-                },
-                'Atomics' : {
-                    'description'     : 'atomic values',
-                    'datatype'        : 'function',
-                    'typehint'        : 'truth_function',
-                    'input_datatype'  : 'sentence',
-                    'output_datatype' : 'string',
-                    'output_typehint' : 'truth_value',
-                    'symbol'          : 'v',
-                    'values'          : [
-                        {
-                            'input'  : sentence,
-                            'output' : model.truth_value_chars[self.atomics[sentence]]
-                        }
-                        for sentence in sorted(list(self.atomics.keys()))
-                    ]
-                },
-                'Opaques' : {
-                    'description'     : 'opaque values',
-                    'datatype'        : 'function',
-                    'typehint'        : 'truth_function',
-                    'input_datatype'  : 'sentence',
-                    'output_datatype' : 'string',
-                    'output_typehint' : 'truth_value',
-                    'symbol'          : 'v',
-                    'values'          : [
-                        {
-                            'input'  : sentence,
-                            'output' : model.truth_value_chars[self.opaques[sentence]],
-                        }
-                        for sentence in sorted(list(self.opaques.keys()))
-                    ]
-                },
-                'Predicates' : {
-                    'description' : 'predicate extensions',
-                    'datatype'    : 'list',
-                    'values'      : [
-                        {
-                            'description'     : 'predicate extension for {0}'.format(predicate.name),
-                            'datatype'        : 'function',
-                            'typehint'        : 'extension',
-                            'input_datatype'  : 'predicate',
-                            'output_datatype' : 'set',
-                            'output_typehint' : 'extension',
-                            'symbol'          : 'P',
-                            'values'          : [
-                                {
-                                    'input'  : predicate,
-                                    'output' : self.extensions[predicate.name],
-                                }
-                            ]
-                        }
-                        for predicate in sorted(list(model.predicates)) if predicate.name in self.extensions
-                    ]
-                }
-            }
-        }
-
-    def __eq__(self, other):
-        return other != None and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return other == None or self.__dict__ != other.__dict__
-
-    def __lt__(self, other):
-        return self.world < other.world
-
-    def __le__(self, other):
-        return self.world <= other.world
-
-    def __gt__(self, other):
-        return self.world > other.world
-
-    def __ge__(self, other):
-        return self.world >= other.world
-
-    def __cmp__(self, other):
-        # Python 2 only
-        return cmp(self.world, other.world)
-
 class Model(logic.Model):
     """
     A K-model comprises a non-empty collection of K-frames, a world access
     relation, and a set of constants (the domain).
     """
+
+    class Frame(object):
+        """
+        A K-frame comprises the interpretation of sentences and predicates at a world.
+        """
+
+        #: The world of the frame.
+        world = 0
+
+        #: An assignment of each atomic sentence to a value.
+        atomics = {}
+
+        #: An assignment of each opaque (un-interpreted) sentence to a value.
+        opaques = {}
+
+        #: A map of predicates to their extension.
+        extensions = {}
+
+        def __init__(self, world):
+            self.world = world
+            self.atomics = {}
+            self.opaques = {}
+            self.extensions = {}
+            self.predicates = set()
+            self.extensions.update({'Identity': set(), 'Existence': set()})
+
+        def get_data(self, model):
+            return {
+                'description' : 'frame at world {0}'.format(str(self.world)),
+                'datatype'    : 'map',
+                'typehint'    : 'frame',
+                'value'       : {
+                    'world'   : {
+                        'description' : 'world',
+                        'datatype'    : 'int',
+                        'typehint'    : 'world', 
+                        'value'       : self.world,
+                        'symbol'      : 'w',
+                    },
+                    'Atomics' : {
+                        'description'     : 'atomic values',
+                        'datatype'        : 'function',
+                        'typehint'        : 'truth_function',
+                        'input_datatype'  : 'sentence',
+                        'output_datatype' : 'string',
+                        'output_typehint' : 'truth_value',
+                        'symbol'          : 'v',
+                        'values'          : [
+                            {
+                                'input'  : sentence,
+                                'output' : model.truth_value_chars[self.atomics[sentence]]
+                            }
+                            for sentence in sorted(list(self.atomics.keys()))
+                        ]
+                    },
+                    'Opaques' : {
+                        'description'     : 'opaque values',
+                        'datatype'        : 'function',
+                        'typehint'        : 'truth_function',
+                        'input_datatype'  : 'sentence',
+                        'output_datatype' : 'string',
+                        'output_typehint' : 'truth_value',
+                        'symbol'          : 'v',
+                        'values'          : [
+                            {
+                                'input'  : sentence,
+                                'output' : model.truth_value_chars[self.opaques[sentence]],
+                            }
+                            for sentence in sorted(list(self.opaques.keys()))
+                        ]
+                    },
+                    'Predicates' : {
+                        'description' : 'predicate extensions',
+                        'datatype'    : 'list',
+                        'values'      : [
+                            {
+                                'description'     : 'predicate extension for {0}'.format(predicate.name),
+                                'datatype'        : 'function',
+                                'typehint'        : 'extension',
+                                'input_datatype'  : 'predicate',
+                                'output_datatype' : 'set',
+                                'output_typehint' : 'extension',
+                                'symbol'          : 'P',
+                                'values'          : [
+                                    {
+                                        'input'  : predicate,
+                                        'output' : self.extensions[predicate.name],
+                                    }
+                                ]
+                            }
+                            for predicate in sorted(list(model.predicates)) if predicate.name in self.extensions
+                        ]
+                    }
+                }
+            }
+
+        def __eq__(self, other):
+            return other != None and self.__dict__ == other.__dict__
+
+        def __ne__(self, other):
+            return other == None or self.__dict__ != other.__dict__
+
+        def __lt__(self, other):
+            return self.world < other.world
+
+        def __le__(self, other):
+            return self.world <= other.world
+
+        def __gt__(self, other):
+            return self.world > other.world
+
+        def __ge__(self, other):
+            return self.world >= other.world
+
+        def __cmp__(self, other):
+            # Python 2 only
+            return cmp(self.world, other.world)
 
     truth_values = [0, 1]
     truth_functional_operators = fde.Model.truth_functional_operators
@@ -189,6 +189,10 @@ class Model(logic.Model):
     #: The domain of constants.
     constants = set()
 
+    # wip: real domain (fixed)
+    domain = set()
+    denotation = {}
+
     def __init__(self):
         super(Model, self).__init__()
         self.frames = {}
@@ -201,6 +205,9 @@ class Model(logic.Model):
         self.fde = fde.Model()
         # ensure there is a w0
         self.world_frame(0)
+        # TODO: implement real domain and denotation, think of identity necessity
+        self.domain = set()
+        self.denotation = {}
 
     def value_of_operated(self, sentence, world=None, **kw):
         """
@@ -215,8 +222,8 @@ class Model(logic.Model):
 
     def value_of_predicated(self, sentence, **kw):
         """
-        A sentence for predicate P is true at `w` iff the tuple of the parameters
-        is in the extension of P at `w`.
+        A sentence for predicate `P` is true at `w` iff the tuple of the parameters
+        is in the extension of `P` at `w`.
         """
         if tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw):
             return self.char_values['T']
@@ -428,7 +435,7 @@ class Model(logic.Model):
 
     def world_frame(self, world):
         if world not in self.frames:
-            self.frames[world] = Frame(world)
+            self.frames[world] = self.__class__.Frame(world)
         return self.frames[world]
 
     def value_of_opaque(self, sentence, world=None, **kw):

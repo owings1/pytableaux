@@ -12,9 +12,6 @@ adding the modal operators for possibility and necessity.
     Semantics
     =========
 
-    .. autoclass:: Frame
-        :members:
-
     .. autoclass:: Model
         :members:
 

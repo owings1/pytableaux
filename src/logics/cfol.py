@@ -17,50 +17,6 @@
 # ------------------
 #
 # pytableaux - Classical First-Order Logic
-
-"""
-Semantics
-=========
-
-Classical First-Order Logic (CFOL) augments `CPL`_ with the quantifiers: Universal and Existential.
-
-Truth Tables
-------------
-
-**Truth-functional** operators are defined by the standard classical truth tables.
-
-/truth_tables/
-
-Predication
------------
-
-Predication is defined just as in `CPL`_:
-
-- *P{Fa}* is true iff the object denoted by *a* is in the extension of the predicate *F*.
-
-Quantification
---------------
-
-**Quantification** is interpreted as follows:
-
-- **Universal Quantifier**: *P{LxFx}* has the value:
-
-    - **true** iff everything is in the extension of *F*.
-    - **false** iff not everything is in the extension of *F*.
-
-- **Existential Quantifier**: *P{XxFx}* is equivalent to *P{~Lx~Fx}*.
-
-Logical Consequence
--------------------
-
-**Logical Consequence** is defined in the standard way:
-
-- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **true**
-  are cases where *C* also has the value **true**.
-
-.. _CPL: cpl.html
-
-"""
 name = 'CFOL'
 title = 'Classical First Order Logic'
 description = 'Standard bivalent logic with full first-order quantification'
@@ -74,6 +30,25 @@ from logic import negate
 from . import k, cpl
 
 class Model(k.Model):
+    """
+    A CFOL Model is just a `K model`_ with the single world-0 frame. Sentences
+    with modal operators are treated as opaque. See `K frame`_ for a description
+    of the `atomics` and predicate `extensions`.
+
+    .. _K model: k.html#logics.k.Model
+    .. _K frame: k.html#logics.k.Model.Frame
+    """
+
+    def value_of_operated(self, sentence, **kw):
+        """
+        The value of a sentence with a truth-functional operator is determined by
+        the values of its operands according to the following tables.
+
+        //truth_tables//cfol//
+        """
+        if self.is_sentence_opaque(sentence):
+            return self.value_of_opaque(sentence, world=0, **kw)
+        return super(Model, self).value_of_operated(sentence, world=0, **kw)
 
     def get_data(self):
         data = self.world_frame(0).get_data(self)['value']
@@ -81,6 +56,9 @@ class Model(k.Model):
         return data
 
     def is_sentence_opaque(self, sentence):
+        """
+        A sentence is opaque if its operator is either Necessity or Possibility.
+        """
         if sentence.is_operated():
             operator = sentence.operator
             if operator == 'Necessity' or operator == 'Possibility':
