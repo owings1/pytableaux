@@ -17,57 +17,6 @@
 # ------------------
 #
 # pytableaux - Weak Kleene Logic
-
-"""
-Semantics
-=========
-K3W is a 3-valued logic with values **T**, **F**, and **N**. The logic is similar
-to `K3`_, but with slightly different behavior of the **N** value. This logic is also
-known as Bochvar Internal (B3).
-
-Truth Tables
-------------
-**Truth-functional operators** are defined via the following truth tables. Note that,
-for the binary connectives, if either operand has the value **N**, then the whole
-sentence has the value **N**. Hence the saying, "one bit of rat's dung spoils the soup."
-
-/truth_tables/
-
-Predication
------------
-
-Predication is the same as `K3`_, where there is an **exclusivity constraint**
-on a predicate's extension/anti-extension. A sentence P{Fa} gets the value:
-
-- **T** iff *a* is in the extension of *F*.
-- **F** iff *a* is in the anti-extension of *F*.
-- **N** iff *a* is neither in the extension nor the anti-extension of *F*.
-
-Quantification
---------------
-
-Quantification is the same as `K3`_:
-
-- **Universal Quantifier**: *for all x, x is F* has the value:
-
-    - **T** iff everything is in the extension of *F*.
-    - **N** iff not everything is in the extension of *F* and its anti-extension is empty.
-    - **F** iff not everything is in the extension of *F* and its anti-extension is non-empty.
-
-- **Existential Quantifier**: P{XxFx} is interpreted as P{~Lx~Fx}.
-
-Logical Consequence
--------------------
-
-**Logical Consequence** is defined just like in `CPL`_ and `K3`_:
-
-- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
-  are cases where *C* also has the value **T**.
-
-.. _CPL: cpl.html
-.. _K3: k3.html
-.. _FDE: fde.html
-"""
 name = 'K3W'
 title = 'Weak Kleene 3-valued logic'
 description = 'Three-valued logic with values T, F, and N'
@@ -81,6 +30,24 @@ from logic import negate, operate
 from . import fde, k3
 
 class Model(k3.Model):
+    """
+    A K3W model is just like a `K3 model`_ with different tables for some of the connectives.
+
+    .. _K3 model: k3.html#logics.k3.Model
+    """
+
+    def value_of_operated(self, sentence, **kw):
+        """
+        The value of a sentence with a truth-functional operator is determined by
+        the values of its operands according to the following tables.
+
+        Note that,  for the binary connectives, if either operand has the value **N**,
+        then the whole sentence has the value **N**. Hence the saying, "one bit of rat's
+        dung spoils the soup."
+
+        //truth_tables//k3w//
+        """
+        return super(Model, self).value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         if logic.arity(operator) == 2 and (a == self.char_values['N'] or b == self.char_values['N']):
@@ -89,7 +56,9 @@ class Model(k3.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    K3W's Tableaux System inherits directly from `FDE`_'s.
+    K3W's Tableaux System inherits directly from the `FDE system`_.
+
+    .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
     pass
         
@@ -102,6 +71,7 @@ class TableauxRules(object):
     
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
     .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
+    .. _FDE: fde.html
     """
 
     class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):

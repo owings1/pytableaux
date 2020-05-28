@@ -12,8 +12,16 @@ Contents:
    :maxdepth: 2
    
    introduction
-   logic
+
+.. toctree::
+   :maxdepth: 3
+
    logics
+
+.. toctree::
+   :maxdepth: 2
+
+   logic
 
 
 

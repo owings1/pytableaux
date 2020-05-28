@@ -2,20 +2,37 @@
 Logics
 ######
 
+Bivalent
+========
+
 .. toctree::
     :maxdepth: 1
 
     logics/cpl
     logics/cfol
-    logics/fde
-    logics/lp
-    logics/rm3
-    logics/k3
-    logics/k3w
-    logics/b3e
-    logics/l3
-    logics/go
+
+Bivalent Modal
+==============
+
+.. toctree::
+    :maxdepth: 1
+
     logics/k
     logics/d
     logics/t
     logics/s4
+
+Many-valued
+===========
+
+.. toctree::
+    :maxdepth: 1
+
+    logics/fde
+    logics/k3
+    logics/k3w
+    logics/b3e
+    logics/go
+    logics/l3
+    logics/lp
+    logics/rm3

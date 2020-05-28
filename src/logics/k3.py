@@ -17,87 +17,6 @@
 # ------------------
 #
 # pytableaux - Strong Kleene Logic
-
-"""
-Semantics
-=========
-
-K3 is a three-valued logic (**T**, **F**, and **N**). It can be understood as `FDE`_
-without the **B** value. A common interpretation of these values is:
-
-- **T**: true
-- **F**: false
-- **N**: neither true nor false
-
-Truth Tables
-------------
-
-**Truth-functional operators** are defined via the following truth tables. The truth tables
-resemble those of `FDE`_ with the *B* value removed.
-
-/truth_tables/
-
-Predication
------------
-
-**Predicate Sentences** like P{Fa} are handled via a predicate's *extension* and *anti-extension*,
-similar to `FDE`_:
-
-- P{Fa} is true iff the object denoted by *a* is in the extension of *F*.
-
-- P{Fa} is false iff the object denoted by *a* is in the anti-extension of *F*.
-
-Like in `FDE`_, there is no exhaustion constraint, which means that an object
-might be in neither the extension nor the anti-extesion of a predicate.
-
-Unlike `FDE`_, however, there is an **exclusivity constraint** on a predicate's extension/anti-extension.
-This means that no object can be in both a predicate's extension and its anti-extension.
-
-In this way, a sentence P{Fa} gets the value:
-
-- **T** iff *a* is in the extension of *F*.
-- **F** iff *a* is in the anti-extension of *F*.
-- **N** iff *a* is neither in the extension nor the anti-extension of *F*.
-
-Quantification
---------------
-
-**Quantification** is interpreted as follows:
-
-- **Universal Quantifier**: *for all x, x is F* has the value:
-
-    - **T** iff everything is in the extension of *F*.
-    - **N** iff not everything is in the extension of *F* and its anti-extension is empty.
-    - **F** iff not everything is in the extension of *F* and its anti-extension is non-empty.
-
-- **Existential Quantifier**: P{XxFx} is interpreted as P{~Lx~Fx}.
-
-Logical Consequence
--------------------
-
-**Logical Consequence** is defined just like in `CPL`_:
-
-- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
-  are cases where *C* also has the value **T**.
-
-Notes
------
-
-Some notable features of K3 include:
-
-* Everything valid in `FDE`_ is valid in K3.
-
-* Like `FDE`_, the law of excluded middle, and Conditional Identity P{(A $ A)} fail.
-
-* Unlike `FDE`_, K3 has some logical truths, for example the Law of Non-Contradiction,
-  P{~(A & ~A)}, and Conditional Identity P{A $ A}.
-
-* Some Classical validities, such as Modus Ponens, Modus Tollens, Disjunctive Syllogism,
-  and DeMorgan laws, are valid.
-
-.. _FDE: fde.html
-.. _CPL: cpl.html
-"""
 name = 'K3'
 title = 'Strong Kleene 3-valued logic'
 description = 'Three-valued logic (True, False, Neither)'
@@ -111,6 +30,12 @@ from logic import negate
 from . import fde
 
 class Model(fde.Model):
+    """
+    A K3 model is like an `FDE model`_ without the **B** value, which yields an
+    exclusivity restraint an predicate's extension/anti-extension.
+
+    .. _FDE model: fde.html#logics.fde.Model
+    """
     truth_values = [0, 0.5, 1]
     designated_values = set([1])
     undesignated_values = set([0, 0.5])
@@ -125,6 +50,15 @@ class Model(fde.Model):
         0.5  : 'N',
         1    : 'T'
     }
+
+    def value_of_operated(self, sentence, **kw):
+        """
+        The value of a sentence with a truth-functional operator is determined by
+        the values of its operands according to the following tables.
+
+        //truth_tables//k3//
+        """
+        return super(Model, self).value_of_operated(sentence, **kw)
 
 class TableauxSystem(fde.TableauxSystem):
     """
