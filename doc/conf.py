@@ -298,35 +298,46 @@ def get_truth_table_html(log, operator, table):
     })
     return s
 
+def get_truth_tables_lines_for_logic(lgc):
+    lgc = logic.get_logic(lgc)
+    tables = {operator: logic.truth_table(lgc, operator) for operator in lgc.Model.truth_functional_operators}
+    new_lines = ['']
+    for operator in logic.operators_list:
+        if operator in tables:
+            html = get_truth_table_html(lgc, operator, tables[operator])
+            new_lines += ['    ' + line for line in html.split('\n')]
+    new_lines += [
+        '    <div class="clear"></div>',
+        ''
+    ]
+    return new_lines
+
 def make_truth_tables(app, what, name, obj, options, lines):
     srch = '/truth_tables/'
     if what == 'module' and hasattr(obj, 'Model'):
         if hasattr(obj.Model, 'truth_functional_operators') and srch in lines:
             idx = lines.index(srch)
             pos = idx + 1
-            tables = {operator: logic.truth_table(obj, operator) for operator in obj.Model.truth_functional_operators}
             lines[idx] = '.. raw:: html'
-            #lines += [
-            #    'Truth Tables',
-            #    '------------',
-            #    '',
-            #    '.. raw:: html',
-            #    ''
-            #]
-            new_lines = ['']
-            for operator in logic.operators_list:
-                if operator in tables:
-                    html = get_truth_table_html(obj, operator, tables[operator])
-                    new_lines += ['    ' + line for line in html.split('\n')]
-            new_lines += [
-                '    <div class="clear"></div>',
-                ''
-            ]
-            lines[pos:pos] = new_lines
+            lines[pos:pos] = get_truth_tables_lines_for_logic(obj)
 
-#header_written = False
+def make_truth_tables_models(app, what, name, obj, options, lines):
+    is_found = False
+    idx = 0
+    for line in lines:
+        if '//truth_tables//' in line:
+            is_found = True
+            break
+        idx += 1
+    if not is_found:
+        return
+    pos = idx + 1
+    logic_name, = re.findall(r'//truth_tables//(.*)//', lines[idx])
+    lines[idx] = '.. raw:: html'
+    lines[pos:pos] = get_truth_tables_lines_for_logic(logic_name)
+
 def make_tableau_examples(app, what, name, obj, options, lines):
-    #header_written = False
+
     arg = examples.argument('Material Modus Ponens')
     if what == 'class' and logic.TableauxSystem.Rule in inspect.getmro(obj):
         mro = inspect.getmro(obj)
@@ -340,9 +351,6 @@ def make_tableau_examples(app, what, name, obj, options, lines):
             return
         proof = None
         try:
-            #if not globals()['header_written']:
-            #    lines += ['.. raw:: html', '', '    ' + writer.document_header(), '']
-            #    globals()['header_written'] = True
             proof = logic.tableau(obj.__module__, None)
             rule = next(r for r in proof.rules if r.__class__ == obj)
             rule.example()
@@ -399,7 +407,7 @@ def post_process(app, exception):
     for f in os.listdir(builddir + '/logics'):
         if f.endswith('.html'):
             files.append('logics/' + f)
-        
+
 
     for fil in files:
         with codecs.open(builddir + '/' + fil, 'r', 'utf-8') as f:
@@ -423,6 +431,7 @@ def setup(app):
     #app.connect('autodoc-process-docstring', sub_sentences)
     app.connect('autodoc-process-docstring', make_tableau_examples)
     app.connect('autodoc-process-docstring', make_truth_tables)
+    app.connect('autodoc-process-docstring', make_truth_tables_models)
     app.connect('build-finished', post_process)
     app.add_css_file('doc.css')
     app.add_css_file('proof.css')
