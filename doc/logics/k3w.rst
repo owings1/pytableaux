@@ -36,4 +36,3 @@ known as Bochvar Internal (B3).
 
 .. _CPL: cpl.html
 .. _K3: k3.html
-.. _FDE: fde.html

@@ -41,7 +41,7 @@ class Model(k3.Model):
         The value of a sentence with a truth-functional operator is determined by
         the values of its operands according to the following tables.
 
-        Note that,  for the binary connectives, if either operand has the value **N**,
+        Note that, for the binary connectives, if either operand has the value **N**,
         then the whole sentence has the value **N**. Hence the saying, "one bit of rat's
         dung spoils the soup."
 
@@ -56,7 +56,8 @@ class Model(k3.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    K3W's Tableaux System inherits directly from the `FDE system`_.
+    K3W's Tableaux System inherits directly from the `FDE system`_, employing
+    designation markers, and building the trunk in the same way.
 
     .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
