@@ -17,50 +17,6 @@
 # ------------------
 #
 # pytableaux - Bochvar 3 External logic
-"""
-Semantics
-=========
-
-B3E is a three-valued logic with values **T**, **F**, and **N**.
-B3E is similar to `K3W`_, with a special Assertion operator, that always results in
-a classical value (**T** or **F**).
-
-Truth Tables
-------------
-
-**Truth-functional operators** are defined via truth tables below.
-
-/truth_tables/
-
-Predication
------------
-**Predicate Sentences** are handled as in `K3 Predication`_.
-
-Quantification
---------------
-
-**Quantification** is handled as in `K3 Quantification`_.
-
-Logical Consequence
--------------------
-
-**Logical Consequence** is defined just like in `CPL`_ and `K3`_:
-
-- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
-  are cases where *C* also has the value **T**.
-
-.. _K3W: k3w.html
-
-.. _K3: k3.html
-
-.. _K3 Predication: k3.html#predication
-
-.. _K3 Quantification: k3.html#quantification
-
-.. _FDE: fde.html
-
-.. _CPL: cpl.html
-"""
 name = 'B3E'
 title = 'Bochvar 3 External Logic'
 description = 'Three-valued logic (True, False, Neither) with assertion operator'
@@ -80,6 +36,23 @@ def crunch(v):
     return v - gap(v)
 
 class Model(k3w.Model):
+    """
+    A B3E model is just like a `K3W model`_ with different tables for some of the connectives.
+
+    .. _K3W model: k3w.html#logics.k3w.Model
+    """
+
+    def value_of_operated(self, sentence, **kw):
+        """
+        The value of a sentence with a truth-functional operator is determined by
+        the values of its operands according to the following tables.
+
+        Note that the conditional operator is definable in terms of the assertion
+        operator, as P{~\*A V \*B}.
+
+        //truth_tables//b3e//
+        """
+        return super(Model, self).value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Assertion':
@@ -96,8 +69,10 @@ class Model(k3w.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    B3E's Tableaux System inherits directly from `FDE`_'s, employing designation markers,
-    and building the trunk in the same way.
+    B3E's Tableaux System inherits directly from the `FDE system`_, employing
+    designation markers, and building the trunk in the same way.
+
+    .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
 
 class TableauxRules(object):
@@ -108,6 +83,8 @@ class TableauxRules(object):
 
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
     .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
+    .. _FDE: fde.html
+    .. _K3W: k3w.html
     """
 
     class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
