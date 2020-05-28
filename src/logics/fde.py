@@ -17,87 +17,6 @@
 # ------------------
 #
 # pytableaux - First Degree Entailment Logic
-
-"""
-Semantics
-=========
-
-FDE is a 4-valued logic (**T**, **F**, **N** and **B**). A common interpretation of these
-values is:
-
-- **T**: just true
-- **F**: just false
-- **N**: neither true nor false
-- **B**: both true and false
-
-Truth Tables
-------------
-
-**Truth-functional operators** are defined via the following truth tables.
-
-/truth_tables/
-
-Predication
------------
-
-**Predicate Sentences** like P{Fa} are handled via a predicate's *extension* and *anti-extension*:
-
-- P{Fa} is true iff the object denoted by *a* is in the extension of *F*.
-
-- P{Fa} is false iff the object denoted by *a* is in the anti-extension of *F*.
-
-There is no exclusivity or exhaustion constraint on a predicate's extension/anti-extension.
-This means that an object could be in neither the extension nor the anti-extension of a predicate,
-or it could be in both the extension and the anti-extension.
-
-In this way, a sentence P{Fa} gets the value:
-
-- **T** iff *a* is in the extension of *F*, and it is *not* in the anti-extension of *F*.
-- **F** iff *a* is in the anti-extension of *F*, and it is *not* in the extension of *F*.
-- **N** iff *a* is neither in the extension nor the anti-extension of *F*.
-- **B** iff *a* is in both the extension and anti-extension of *F*.
-
-Quantification
---------------
-
-**Quantification** is interpreted as follows:
-
-- **Universal Quantifier**: as sentence P{LxFx} has the value:
-
-    - **T** iff everything is in the extension of *F* and its anti-extension is empty.
-    - **B** iff everything is in the extension of *F* and its anti-extension is non-empty.
-    - **N** iff not everything is in the extension of *F* and its anti-extension is empty.
-    - **F** iff not everything is in the extension of *F* and its anti-extension is non-empty.
-
-- **Existential Quantifier**: P{XxFx} is interpreted as P{~Lx~Fx}.
-
-Logical Consequence
--------------------
-
-**Logical Consequence** is defined in terms of the *designated* values **T** and **B**:
-
-- *C* is a **Logical Consequence** of *A* iff all cases where *A* has a *desginated* value
-  (**T** or **B**) are cases where *C* also has a *designated* value.
-
-Notes
------
-
-Some notable features of FDE include:
-
-* No logical truths. The means that the Law of Excluded Middle P{A V ~A}, and the
-  Law of Non-Contradiction P{~(A & ~A)} fail, as well as Conditional Identity P{A $ A}.
-  
-* Failure of Modus Ponens, Modus Tollens, Disjunctive Syllogism, and other Classical validities.
-
-* DeMorgan laws are valid, as well as Conditional Contraction (P{A $ (A $ B)} implies P{A $ B}).
-
-For futher reading see:
-
-- `Stanford Encyclopedia on Paraconsistent Logic`_
-
-.. _Stanford Encyclopedia on Paraconsistent Logic: http://plato.stanford.edu/entries/logic-paraconsistent/
-
-"""
 name = 'FDE'
 title = 'First Degree Entailment'
 description = 'Four-valued logic (True, False, Neither, Both)'
@@ -109,7 +28,25 @@ category_display_order = 1
 import logic, examples
 from logic import negate, quantify, atomic, NotImplementedError
 
+Identity = logic.get_system_predicate('Identity')
+Existence = logic.get_system_predicate('Existence')
+
 class Model(logic.Model):
+    """
+    FDE Model.
+    """
+
+    #: An assignment of each atomic sentence to a value.
+    atomics = {}
+
+    #: An assignment of each opaque (un-interpreted) sentence to a value.
+    opaques = {}
+
+    #: A map of predicates to their extension.
+    extensions = {}
+
+    #: A map of predicates to their anti-extension.
+    anti_extensions = {}
 
     truth_values = [0, 0.25, 0.75, 1]
     truth_functional_operators = set([
@@ -146,9 +83,75 @@ class Model(logic.Model):
         self.opaques = {}
         self.constants = set()
         self.predicates = set([
-            logic.Vocabulary.get_system_predicate('Identity'),
-            logic.Vocabulary.get_system_predicate('Existence'),
+            Identity,
+            Existence,
         ])
+
+    def value_of_operated(self, sentence, **kw):
+        """
+        The value of a sentence with a truth-functional operator is determined by
+        the values of its operands according to the following tables.
+
+        //truth_tables//fde//
+        """
+        return super(Model, self).value_of_operated(sentence, **kw)
+
+    def value_of_predicated(self, sentence, **kw):
+        """
+        A sentence with predicate `P` with parameters `<p,...>` has the value:
+
+        - **T** iff `<p,...>` is in the extension of `P` and not in the anti-extension of `P`.
+        - **F** iff `<p,...>` is in the anti-extension of `P` and not in the extension of `P`.
+        - **N** iff `<p,...>` is in both the extension and anti-extension of `P`.
+        - **B** iff `<p,...>` is neither in the extension nor anti-extension of `P`.
+
+        Note, for FDE, there is no exclusivity or exhaustion constraint on a predicate's
+        extension/anti-extension. This means that `<p,...>` could be in neither the extension
+        nor the anti-extension of a predicate, or it could be in both the extension and the
+        anti-extension.
+        """
+        params = tuple(sentence.parameters)
+        predicate = sentence.predicate
+        extension = self.get_extension(predicate)
+        anti_extension = self.get_anti_extension(predicate)
+        if params in extension and params in anti_extension:
+            return self.char_values['B']
+        elif params in extension:
+            return self.char_values['T']
+        elif params in anti_extension:
+            return self.char_values['F']
+        return self.char_values['N']
+
+    def value_of_existential(self, sentence, **kw):
+        """
+        The value of an existential sentence is the maximum value of the sentences that
+        result from replacing each constant for the quantified variable. The ordering of
+        the values from least to greatest is: **F**, **N**, **B**, **T**.
+        """
+        values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
+        return max(values)
+
+    def value_of_universal(self, sentence, **kw):
+        """
+        The value of an universal sentence is the minimum value of the sentences that
+        result from replacing each constant for the quantified variable. The ordering of
+        the values from least to greatest is: **F**, **N**, **B**, **T**.
+        """
+        values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
+        return min(values)
+
+    def is_sentence_opaque(self, sentence):
+        """
+        A sentence is opaque if its operator is Necessity or Possibility, or if it is
+        a negated sentence whose negatum has the operator Necessity or Possibility.
+        """
+        if sentence.is_operated():
+            if sentence.operator == 'Negation':
+                s = sentence.operand
+            else:
+                s = sentence
+            return s.operator == 'Necessity' or s.operator == 'Possibility'
+        return super(Model, self).is_sentence_opaque(sentence)
 
     def get_data(self):
         data = dict()
@@ -348,27 +351,12 @@ class Model(logic.Model):
             return self.opaques[sentence]
         return self.unassigned_value
 
-    def value_of_predicated(self, sentence, **kw):
-        params = tuple(sentence.parameters)
-        predicate = sentence.predicate
-        extension = self.get_extension(predicate)
-        anti_extension = self.get_anti_extension(predicate)
-        if params in extension and params in anti_extension:
-            return self.char_values['B']
-        elif params in extension:
-            return self.char_values['T']
-        elif params in anti_extension:
-            return self.char_values['F']
-        return self.char_values['N']
-
     def value_of_quantified(self, sentence, **kw):
         q = sentence.quantifier
-        v = sentence.variable
-        values = {self.value_of(sentence.substitute(c, v), **kw) for c in self.constants}    
         if q == 'Existential':
-            return max(values)
+            return self.value_of_existential(sentence, **kw)
         elif q == 'Universal':
-            return min(values)
+            return self.value_of_universal(sentence, **kw)
         return super(Model, self).value_of_quantified(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
@@ -402,15 +390,6 @@ class Model(logic.Model):
         else:
             raise NotImplementedError(NotImplemented)
 
-    def is_sentence_opaque(self, sentence):
-        if sentence.is_operated():
-            if sentence.operator == 'Negation':
-                s = sentence.operand
-            else:
-                s = sentence
-            return s.operator == 'Necessity' or s.operator == 'Possibility'
-        return super(Model, self).is_sentence_opaque(sentence)
-
 class TableauxSystem(logic.TableauxSystem):
     """
     Nodes for FDE have a boolean *designation* property, and a branch is closed iff
@@ -425,7 +404,6 @@ class TableauxSystem(logic.TableauxSystem):
         To build the trunk for an argument, add a designated node for each premise, and
         an undesignated node for the conclusion.
         """
-
         branch = tableau.branch()
         for premise in argument.premises:
             branch.add({ 'sentence' : premise, 'designated' : True, 'world' : None })
