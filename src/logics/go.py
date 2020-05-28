@@ -17,91 +17,6 @@
 # ------------------
 #
 # pytableaux - Gappy Object 3-valued Logic
-"""
-Semantics
-=========
-
-GO is a 3-valued logic (**T**, **F**, and **N**) with non-standard readings of
-disjunction and conjunction.
-
-Truth Tables
-------------
-
-The truth-functional operators are defined via tables below.
-
-/truth_tables/
-
-Note that, given the tables above, conjunctions and disjunctions always have a classical
-value (**T** or **F**). This means that only atomic sentences (with zero or more negations)
-can have the non-classical **N** value.
-
-This property of "classical containment" means, that we can define a conditional operator
-that satisfies Identity P{A $ A}. It also allows us to give a formal description of
-a subset of sentences that obey all principles of classical logic. For example, although
-the Law of Excluded Middle fails for atomic sentences P{A V ~A}, complex sentences -- those
-with at least one binary connective -- do obey the law: P{(A V A) V ~(A V A)}.
-
-Predication
------------
-
-**Predicate Sentences** are handled the same way as in `K3 Predication`_.
-
-Quantification
---------------
-
-**Quantification** is defined as follows:
-
-- **Universal Quantifier**: P{LxFx} has the value **T** iff everything is in 
-  the extension of *F*, else it has the value *F*.
-
-- **Existential Quantifier**: P{XxFx} has the value **T** iff
-  something is in the extension of *F*, else it has the value *F*.
-
-This is in accordance with thinking of the universal and existential quantifiers
-as generalized conjunction and disjunction, respectively. Since conjunctions and
-disjunctions can only have a classical value (**T** or **F**), so, too, must
-quantified sentences.
-
-Logical Consequence
--------------------
-
-**Logical Consequence** is defined just like in `CPL`_ and `K3`_:
-
-- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
-  are cases where *C* also has the value **T**.
-
-Notes
------
-
-- GO has some similarities to `K3`_. Material Identity P{A $ A} and the
-  Law of Excluded Middle P{A V ~A} fail.
-
-- Unlike `K3`_, there are logical truths, e.g. The Law of Non Contradiction P{~(A & ~A)}.
-
-- GO contains an additional conditional operator besides the material conditional,
-  which is similar to `L3`_. However, this conditional is *non-primitive*, unlike `L3`_,
-  and it obeys contraction (P{A $ (A $ B)} implies P{A $ B}).
-
-- This logic was developed as part of my dissertation, `Indeterminacy and Logical Atoms`_
-  at the University of Connecticut, under `Professor Jc Beall`_.
-
-
-.. _Professor Jc Beall: http://entailments.net
-
-.. _Indeterminacy and Logical Atoms: https://bitbucket.org/owings1/dissertation/raw/master/output/dissertation.pdf
-
-.. _K3: k3.html
-
-.. _K3 Predication: k3.html#predication
-
-.. _L3: l3.html
-
-.. _B3E: b3e.html
-
-.. _FDE: fde.html
-
-.. _CPL: cpl.html
-"""
 name = 'GO'
 title = 'Gappy Object 3-valued Logic'
 description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
@@ -121,6 +36,62 @@ def crunch(v):
     return v - gap(v)
 
 class Model(k3.Model):
+    """
+    A GO model is like a `K3 model`_, but with different tables for some of the connectives,
+    as well as a different behavior for the quantifiers.
+
+    .. _K3 model: k3.html#logics.k3.Model
+    """
+
+    def value_of_operated(self, sentence, **kw):
+        """
+        The value of a sentence with a truth-functional operator is determined by
+        the values of its operands according to the following tables.
+
+        //truth_tables//go//
+
+        Note that, given the tables above, conjunctions and disjunctions always have a classical
+        value (**T** or **F**). This means that only atomic sentences (with zero or more negations)
+        can have the non-classical **N** value.
+
+        This property of "classical containment" means, that we can define a conditional operator
+        that satisfies Identity P{A $ A}. It also allows us to give a formal description of
+        a subset of sentences that obey all principles of classical logic. For example, although
+        the Law of Excluded Middle fails for atomic sentences P{A V ~A}, complex sentences -- those
+        with at least one binary connective -- do obey the law: P{(A V A) V ~(A V A)}.
+        """
+        return super(Model, self).value_of_operated(sentence, **kw)
+
+    def value_of_existential(self, sentence, **kw):
+        """
+        The value of an existential sentence is the maximum of the *crunched
+        values* of the sentences that result from replacing each constant for the
+        quantified variable.
+
+        The *crunched value* of *v* is 1 (**T**) if *v* is 1, else 0 (**F**).
+
+        Note that this is in accord with interpreting the existential quantifier
+        in terms of generalized disjunction.
+        """
+        values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
+        crunched = {crunch(v) for v in values}
+        return max(crunched)
+
+    def value_of_universal(self, sentence, **kw):
+        """
+        The value of an universal sentence is the minimum of the *crunched values*
+        of the sentences that result from replacing each constant for the quantified
+        variable.
+
+        The *crunched value* of *v* is 1 (**T**) if *v* is 1, else 0 (**F**).
+
+        Note that this is in accord with interpreting the universal quantifier
+        in terms of generalized conjunction.
+        """
+        values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
+        crunched = {crunch(v) for v in values}
+        return min(crunched)
+
     def truth_function(self, operator, a, b=None):
         if operator == 'Assertion':
             return crunch(a)
@@ -134,8 +105,10 @@ class Model(k3.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    GO's Tableaux System inherits directly from `FDE`_'s, employing designation markers,
-    and building the trunk in the same way.
+    GO's Tableaux System inherits directly from the `FDE system`_, employing
+    designation markers, and building the trunk in the same way.
+
+    .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
     pass
 
