@@ -18,50 +18,6 @@
 # ------------------
 #
 # pytableaux - Lukasiewicz 3-valued Logic
-
-"""
-Semantics
-=========
-Ł3 is a three-valued logic with values **T**, **F**, and **N**. It is
-similar to K3, but with a different, primitive conditional 
-operator that respects the Law of Conditional Identity (P{A $ A}).
-
-Truth Tables
-------------
-
-**Truth-functional operators** are defined via truth tables below. Note the
-value of the Conditional operator when both operands have the value **N**.
-
-/truth_tables/
-
-Predication
------------
-
-**Predicate Sentences** are handled as in `K3 Predication`_.
-
-Quantification
---------------
-
-**Quantification** is handled as in `K3 Quantification`_.
-
-Logical Consequence
--------------------
-
-**Logical Consequence** is defined just like in `CPL`_ and `K3`_:
-
-- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
-  are cases where *C* also has the value **T**.
-
-.. _K3: k3.html
-
-.. _K3 Predication: k3.html#predication
-
-.. _K3 Quantification: k3.html#quantification
-
-.. _FDE: fde.html
-
-.. _CPL: cpl.html
-"""
 name = 'L3'
 title = u'Łukasiewicz 3-valued Logic'
 description = 'Three-valued logic (True, False, Neither) with a primitive Conditional operator'
@@ -75,6 +31,21 @@ import logic
 from logic import operate, negate
 
 class Model(k3.Model):
+    """
+    An L3 model is just like a `K3 model`_ with different tables for the conditional
+    and bi-conditional operators.
+
+    .. _K3 model: k3.html#logics.k3.Model
+    """
+
+    def value_of_operated(self, sentence, **kw):
+        """
+        The value of a sentence with a truth-functional operator is determined by
+        the values of its operands according to the following tables.
+
+        //truth_tables//l3//
+        """
+        return super(Model, self).value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Conditional' or operator == 'Biconditional':
@@ -84,8 +55,10 @@ class Model(k3.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    Ł3's Tableaux System inherits directly from `FDE`_'s, employing designation markers,
-    and building the trunk in the same way.
+    Ł3's Tableaux System inherits directly from the `FDE system`_, employing
+    designation markers, and building the trunk in the same way.
+
+    .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
     pass
 
@@ -97,6 +70,7 @@ class TableauxRules(object):
 
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
     .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
+    .. _FDE: fde.html
     """
 
     class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):

@@ -2,9 +2,20 @@
 L3 - Łukasiewicz 3-valued Logic
 *******************************
 
+Ł3 is a three-valued logic with values **T**, **F**, and **N**. It is
+similar to `K3`_, but with a different, primitive conditional 
+operator that respects the Law of Conditional Identity (P{A $ A}).
+
 .. contents:: :local:
 
 .. automodule:: logics.l3
+
+    Semantics
+    =========
+
+    .. autoclass:: Model
+
+        .. automethod:: value_of_operated(sentence)
 
     Tableaux System
     ===============
@@ -14,3 +25,14 @@ L3 - Łukasiewicz 3-valued Logic
 
     .. autoclass:: TableauxRules
         :members:
+
+    Logical Consequence
+    ===================
+
+    **Logical Consequence** is defined just like in `CPL`_ and `K3`_:
+
+    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
+      are models where *C* also has the value **T**.
+
+.. _K3: k3.html
+.. _CPL: cpl.html
