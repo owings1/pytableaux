@@ -62,7 +62,10 @@ class Model(fde.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    K3's Tableaux System inherits directly from `FDE`_'s.
+    K3's Tableaux System inherits directly from the `FDE system`_, employing
+    designation markers, and building the trunk in the same way.
+
+    .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
     pass
         
