@@ -17,56 +17,6 @@
 # ------------------
 #
 # pytableaux - Kripke Normal Modal Logic
-
-"""
-Semantics
-=========
-
-Kripke Logic (K) is the foundation of so-called normal modal logics. It is an extension of `CFOL`_,
-adding the modal operators for possibility and necessity.
-
-Truth Tables
-------------
-
-**Truth-functional operators** are defined via the `CPL`_ truth tables.
-
-/truth_tables/
-
-Modal Operators
----------------
-
-in progress...
-
-Predication
------------
-
-in progress...
-
-Quantification
---------------
-
-in progress...
-
-Logical Consequence
--------------------
-
-**Logical Consequence** is defined similary as `CPL`_, except with reference to a world:
-
-- *C* is a **Logical Consequence** of *A* iff all cases where the value of *A* is **T**
-  at *w0* are cases where *C* also has the value **T** at *w0*.
-
-Notes
------
-
-For further reading, see:
-
-- `Stanford Encyclopedia on Modal Logic`_
-
-.. _Stanford Encyclopedia on Modal Logic: http://plato.stanford.edu/entries/logic-modal/
-
-.. _CFOL: cfol.html
-.. _CPL: cpl.html
-"""
 name = 'K'
 title = 'Kripke Normal Modal Logic'
 description = 'Base normal modal logic with no access relation restrictions'
@@ -96,14 +46,22 @@ class Frame(object):
     A K-frame comprises the interpretation of sentences and predicates at a world.
     """
 
+    #: The world of the frame.
+    world = 0
+
+    #: An assignment of each atomic sentence to a value.
+    atomics = {}
+
+    #: An assignment of each opaque (un-interpreted) sentence to a value.
+    opaques = {}
+
+    #: A map of predicates to their extension.
+    extensions = {}
+
     def __init__(self, world):
-        #: The world of the frame.
         self.world = world
-        #: An assignment of each atomic sentence to a value.
         self.atomics = {}
-        #: An assignment of each opaque (un-interpreted) sentence to a value.
         self.opaques = {}
-        #: A map of predicates to their extension.
         self.extensions = {}
         self.predicates = set()
         self.extensions.update({'Identity': set(), 'Existence': set()})
@@ -202,8 +160,8 @@ class Frame(object):
 
 class Model(logic.Model):
     """
-    A K-model comprises a non-empty collection of K-frames, and a world access
-    relation.
+    A K-model comprises a non-empty collection of K-frames, a world access
+    relation, and a set of constants (the domain).
     """
 
     truth_values = [0, 1]
@@ -222,11 +180,18 @@ class Model(logic.Model):
         1 : 'T'
     }
 
+    #: A map from worlds to their frame.
+    frames = {}
+
+    #: A set of pairs of worlds.
+    access = set()
+
+    #: The domain of constants.
+    constants = set()
+
     def __init__(self):
         super(Model, self).__init__()
-        #: A map from worlds to their frame.
         self.frames = {}
-        #: A set of pairs of worlds.
         self.access = set()
         self.predicates = set([
             Identity,
@@ -236,6 +201,66 @@ class Model(logic.Model):
         self.fde = fde.Model()
         # ensure there is a w0
         self.world_frame(0)
+
+    def value_of_operated(self, sentence, world=None, **kw):
+        """
+        The value of a sentence with a truth-functional operator `w` is determined by
+        the values of its operands at `w` according to the following tables.
+
+        //truth_tables//k//
+        """
+        if sentence.operator in self.modal_operators:
+            return self.value_of_modal(sentence, world=world, **kw)
+        return super(Model, self).value_of_operated(sentence, world=world, **kw)
+
+    def value_of_predicated(self, sentence, **kw):
+        """
+        A sentence for predicate P is true at `w` iff the tuple of the parameters
+        is in the extension of P at `w`.
+        """
+        if tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw):
+            return self.char_values['T']
+        return self.char_values['F']
+
+    def value_of_existential(self, sentence, world=None, **kw):
+        """
+        An existential sentence is true at `w`, just when the sentence resulting in the
+        subsitution of some constant in the domain for the variable is true at `w`.
+        """
+        for c in self.constants:
+            if self.value_of(sentence.substitute(c, sentence.variable), world=world, **kw) == 1:
+                return 1
+        return 0
+
+    def value_of_universal(self, sentence, world=None, **kw):
+        """
+        A universal sentence is true at `w`, just when the sentence resulting in the
+        subsitution of each constant in the domain for the variable is true at `w`.
+        """
+        for c in self.constants:
+            if self.value_of(sentence.substitute(c, sentence.variable), world=world, **kw) == 0:
+                return 0
+        return 1
+
+    def value_of_possibility(self, sentence, world=None, **kw):
+        """
+        A possibility sentence is true at `w` iff its operand is true at `w'` for
+        some `w'` such that `<w, w'>` in the access relation.
+        """
+        for w2 in self.visibles(world):
+            if self.value_of(sentence.operand, world=w2, **kw) == 1:
+                return 1
+        return 0
+
+    def value_of_necessity(self, sentence, world=None, **kw):
+        """
+        A possibility sentence is true at `w` iff its operand is true at `w'` for
+        each `w'` such that `<w, w'>` is in the access relation.
+        """
+        for w2 in self.visibles(world):
+            if self.value_of(sentence.operand, world=w2, **kw) == 0:
+                return 0
+        return 1
 
     def get_data(self):
         return {
@@ -270,6 +295,7 @@ class Model(logic.Model):
         }
 
     def read_branch(self, branch):
+        # TODO: write docs
     #    """
     #    To read a model from a branch *b*, every atomic sentence at a world *w* on *b*
     #    is True at *w*, and every negated atomic is False at *w*. For every predicate
@@ -291,11 +317,21 @@ class Model(logic.Model):
             self.add_access(node.props['world1'], node.props['world2'])
 
     def finish(self):
+        # track all atomics
+        atomics = set()
         for world in self.frames:
+            frame = self.world_frame(world)
+            atomics.update(frame.atomics.keys())
             for predicate in self.predicates:
                 self.agument_extension_with_identicals(predicate, world)
             self.ensure_self_identity(world)
             self.ensure_self_existence(world)
+        # make sure each atomic is assigned a value in each frame
+        for world in self.frames:
+            frame = self.world_frame(world)
+            for s in atomics:
+                if s not in frame.atomics:
+                    self.set_literal_value(s, self.unassigned_value, world=world)
 
     def ensure_self_identity(self, world):
         identity_extension = self.get_extension(Identity, world=world)
@@ -407,51 +443,24 @@ class Model(logic.Model):
             return frame.atomics[sentence]
         return self.unassigned_value
 
-    def value_of_predicated(self, sentence, **kw):
-        if tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw):
-            return self.char_values['T']
-        return self.char_values['F']
-
-    def value_of_operated(self, sentence, world=None, **kw):
-        if sentence.operator in self.modal_operators:
-            return self.value_of_modal(sentence, world=world, **kw)
-        return super(Model, self).value_of_operated(sentence, world=world, **kw)
-
     def value_of_modal(self, sentence, world=None, **kw):
         operator = sentence.operator
         if operator == 'Possibility':
-            for w2 in self.visibles(world):
-                if self.value_of(sentence.operand, world=w2, **kw) == 1:
-                    return 1
-            return 0
+            return self.value_of_possibility(sentence, world=world, **kw)
         elif operator == 'Necessity':
-            for w2 in self.visibles(world):
-                if self.value_of(sentence.operand, world=w2, **kw) == 0:
-                    return 0
-            return 1
+            return self.value_of_necessity(sentence, world=world, **kw)
         else:
             raise NotImplementedError(NotImplemented)
 
     def value_of_quantified(self, sentence, world=None, **kw):
-        frame = self.world_frame(world)
         q = sentence.quantifier
-        v = sentence.variable
         if q == 'Existential':
-            for c in self.constants:
-                if self.value_of(sentence.substitute(c, v), world=world, **kw) == 1:
-                    return 1
-            return 0
+            return self.value_of_existential(sentence, world=world, **kw)
         elif q == 'Universal':
-            for c in self.constants:
-                if self.value_of(sentence.substitute(c, v), world=world, **kw) == 0:
-                    return 0
-            return 1
+            return self.value_of_universal(sentence, world=world, **kw)
         return super(Model, self).value_of_quantified(sentence, world=world, **kw)
 
     def truth_function(self, operator, a, b=None):
-        """
-        The K truth function is just the restricted FDE truth function.
-        """
         return self.fde.truth_function(operator, a, b)
 
 class TableauxSystem(logic.TableauxSystem):
