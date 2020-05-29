@@ -911,8 +911,8 @@ class TableauxRules(object):
 
         operator = 'Necessity'
 
-        def __init__(self, tableau):
-            super(TableauxRules.Necessity, self).__init__(tableau)
+        def __init__(self, *args):
+            super(TableauxRules.Necessity, self).__init__(*args)
             # branch id => node id => count
             self.track = dict()
 
@@ -938,6 +938,7 @@ class TableauxRules(object):
             return cands
 
         def select_best_target_for_branch(self, branch, cands):
+            # select the node we have applied to the least for this branch.
             self.ensure_track_targets(cands)
             cand_node_ids = {target['node'].id for target in cands}
             least_count = min({self.track[branch.id][node_id] for node_id in cand_node_ids})
