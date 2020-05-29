@@ -52,12 +52,12 @@
     content: '\22EE';
 }
 .html-writer-proof .node-props {
-    padding: 5px;
+    padding: 0.2em;
     display: inline-block;
 }
 .html-writer-proof .node .node-props.ticked {
-    padding: 4px;
-    border-color: rgba(0, 0, 0, 0.58);
+    padding: 0.2em;
+    border-color: #aaaaaa;
     border-style: solid;
     border-width: 1px;
 }
@@ -70,15 +70,15 @@
 .html-writer-proof .horizontal-line {
     border-bottom-width: 1px;
     border-bottom-style: solid;
-    border-bottom-color: rgba(0, 0, 0, 0.58);
+    border-bottom-color: #aaaaaa;
     margin-bottom: -1px;
 }
 .html-writer-proof .horizontal-line.collapsed {
     border-bottom-style: dashed;
 }
 .html-writer-proof .vertical-line {
-    border-right: 1px solid rgba(0, 0, 0, 0.58);
-    height: 10px;
+    border-right: 1px solid #aaaaaa;
+    height: 0.7em;
     width: 1px;
 }
 .html-writer-proof .subscript {
@@ -113,8 +113,8 @@
     display: inline-block;
     background-position: center;
     content: '';
-    width: 17px;
-    height: 17px;
+    width: 16px;
+    height: 16px;
 }
 .html-writer-proof .structure.leaf.inspected > .node-segment::after {
     width: 16px;
