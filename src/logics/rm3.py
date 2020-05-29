@@ -17,50 +17,6 @@
 # ------------------
 #
 # pytableaux - R-mingle 3 logic
-"""
-Semantics
-=========
-
-R-mingle 3 (RM3) is a three-valued logic with values **T**, **F**, and **B**.
-It is similar to `LP`_, with a different conditional operator.
-
-Truth Tables
-------------
-
-**Truth-functional operators** are defined via truth tables below. Note the
-distinct treatment of the conditional (and thus the biconditional) operators.
-
-/truth_tables/
-
-Predication
------------
-
-**Predicate Sentences** are handled the same way as in `LP Predication`_.
-
-Quantification
---------------
-
-**Quantification** is handled as in `LP Quantification`_.
-
-Logical Consequence
--------------------
-
-**Logical Consequence** is defined, just as in `FDE`_, in terms of *designated* values **T**
-and **B**:
-
-- *C* is a **Logical Consequence** of *A* iff all cases where *A* has a *designated*
-  value (**T** or **B**) are cases where *C* also has a *designated* value.
-
-.. _LP: lp.html
-
-.. _LP Predication: lp.html#predication
-
-.. _LP Quantification: lp.html#quantification
-
-.. _FDE: fde.html
-
-.. _L3: l3.html
-"""
 name = 'RM3'
 title = 'R-mingle 3'
 description = 'Three-valued logic (True, False, Both) with a primitive Conditional operator'
@@ -74,6 +30,21 @@ from logic import negate, operate
 from . import fde, lp, l3
 
 class Model(lp.Model):
+    """
+    An RM3 model is just like an `LP model`_ with different tables for the conditional
+    and bi-conditional operators.
+
+    .. _LP model: lp.html#logics.lp.Model
+    """
+
+    def value_of_operated(self, sentence, **kw):
+        """
+        The value of a sentence with a truth-functional operator is determined by
+        the values of its operands according to the following tables.
+
+        //truth_tables//rm3//
+        """
+        return super(Model, self).value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Conditional' and a > b:
@@ -82,8 +53,10 @@ class Model(lp.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    RM3 tableaux behave just like `FDE`_'s using designation markers. The trunk
-    is built in the same way.
+    RM3's Tableaux System inherits directly from the `FDE system`_, employing
+    designation markers, and building the trunk in the same way.
+
+    .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
     pass
 

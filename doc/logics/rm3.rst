@@ -2,9 +2,19 @@
 RM3 - R-mingle 3
 ****************
 
+R-mingle 3 (RM3) is a three-valued logic with values **T**, **F**, and **B**.
+It is similar to `LP`_, with a different conditional operator.
+
 .. contents:: :local:
 
 .. automodule:: logics.rm3
+
+    Semantics
+    =========
+
+    .. autoclass:: Model
+
+        .. automethod:: value_of_operated(sentence)
 
     Tableaux System
     ===============
@@ -14,3 +24,15 @@ RM3 - R-mingle 3
 
     .. autoclass:: TableauxRules
         :members:
+
+    Logical Consequence
+    ===================
+
+    **Logical Consequence** is defined, just as in `FDE`_, in terms of *designated* values **T**
+    and **B**:
+
+    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
+      (**T** or **B**) are models where *C* also has a *designated* value.
+
+.. _FDE: fde.html
+.. _LP: lp.html
