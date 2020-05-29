@@ -911,7 +911,19 @@ class TableauxRules(object):
 
         operator = 'Necessity'
 
+        def __init__(self, tableau):
+            super(TableauxRules.Necessity, self).__init__(tableau)
+            # branch id => node id => count
+            self.track = dict()
+
         def applies_to_branch(self, branch):
+            cands = self.get_candidate_targets_for_branch(branch)
+            if len(cands) == 0:
+                return False
+            return self.select_best_target_for_branch(branch, cands)
+
+        def get_candidate_targets_for_branch(self, branch):
+            cands = list()
             worlds = branch.worlds()
             for node in branch.get_nodes():
                 if ('world' in node.props and
@@ -922,11 +934,34 @@ class TableauxRules(object):
                     for w2 in worlds:
                         if (branch.has({ 'world1': w1, 'world2': w2 }) and
                             not branch.has({ 'sentence': s, 'world': w2 })):
-                            return { 'node': node, 'sentence' : s, 'world': w2, 'branch': branch }
-            return False
+                            cands.append({ 'node': node, 'sentence' : s, 'world': w2, 'branch': branch })
+            return cands
+
+        def select_best_target_for_branch(self, branch, cands):
+            self.ensure_track_targets(cands)
+            cand_node_ids = {target['node'].id for target in cands}
+            least_count = min({self.track[branch.id][node_id] for node_id in cand_node_ids})
+            for target in cands:
+                if self.track[branch.id][target['node'].id] == least_count:
+                    return target
+
+        def ensure_track_targets(self, cands):
+            for target in cands:
+                self.ensure_track_target(target)
+
+        def ensure_track_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            if branch.id not in self.track:
+                self.track[branch.id] = dict()
+            if node.id not in self.track[branch.id]:
+                self.track[branch.id][node.id] = 0
 
         def apply(self, target):
-            target['branch'].add({ 'sentence': target['sentence'], 'world': target['world'] })
+            branch = target['branch']
+            branch.add({ 'sentence': target['sentence'], 'world': target['world'] })
+            self.ensure_track_target(target)
+            self.track[branch.id][target['node'].id] += 1
 
         def example(self):
             s = operate(self.operator, [atomic(0, 0)])
@@ -1030,6 +1065,6 @@ class TableauxRules(object):
 
         # world creation rules
         Possibility,
-        Necessity
+        Necessity,
 
     ]
