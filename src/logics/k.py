@@ -322,6 +322,7 @@ class Model(logic.Model):
                 self.set_opaque_value(sentence, 1, world=world)
             elif sentence.is_literal():
                 self.set_literal_value(sentence, 1, world=world)
+            self.predicates.update(node.predicates())
         elif node.has('world1') and node.has('world2'):
             self.add_access(node.props['world1'], node.props['world2'])
 

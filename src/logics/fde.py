@@ -232,6 +232,7 @@ class Model(logic.Model):
     def read_branch(self, branch):
         for node in branch.nodes:
             if node.has('sentence'):
+                self.predicates.update(node.predicates())
                 sentence = node.props['sentence']
                 is_opaque = self.is_sentence_opaque(sentence)
                 if sentence.is_literal() or is_opaque:
