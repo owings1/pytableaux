@@ -143,7 +143,7 @@ class TestFDE(LogicTester):
         s = parse('La')
         branch.add({'sentence': s, 'designated': True})
         model = branch.make_model()
-        assert model.value_of(s) in model.designated_values
+        assert model.value_of(s) in set([0.75, 1])
 
     def test_model_necessity_opaque_b_value_branch(self):
         proof = tableau(self.logic)
@@ -164,7 +164,7 @@ class TestFDE(LogicTester):
             {'sentence': s, 'designated': False}
         ])
         model = branch.make_model()
-        assert model.value_of(s) in model.undesignated_values
+        assert model.value_of(s) in set([0, 0.25])
 
     def test_model_atomic_t_value_branch(self):
         proof = tableau(self.logic)

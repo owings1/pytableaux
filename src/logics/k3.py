@@ -37,8 +37,6 @@ class Model(fde.Model):
     .. _FDE model: fde.html#logics.fde.Model
     """
     truth_values = [0, 0.5, 1]
-    designated_values = set([1])
-    undesignated_values = set([0, 0.5])
     unassigned_value = 0.5
     char_values = {
         'F' : 0,

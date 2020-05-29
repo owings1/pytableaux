@@ -167,9 +167,7 @@ class Model(logic.Model):
     truth_values = [0, 1]
     truth_functional_operators = fde.Model.truth_functional_operators
     modal_operators = set(['Possibility', 'Necessity'])
-    
-    designated_values = set([1])
-    undesignated_values = set([0])
+
     unassigned_value = 0
     char_values = {
         'F' : 0,

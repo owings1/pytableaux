@@ -59,8 +59,6 @@ class Model(logic.Model):
         'Material Biconditional'    ,
         'Biconditional'             ,
     ])
-    designated_values = set([0.75, 1])
-    undesignated_values = set([0, 0.25])
     unassigned_value = 0.25
     char_values = {
         'F' : 0,
