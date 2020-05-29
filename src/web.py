@@ -356,7 +356,8 @@ class App(object):
                         "controls": true,
                         "models": false
                     }
-                }
+                },
+                "max_steps": null
             }
 
         Example success result::
@@ -377,7 +378,8 @@ class App(object):
                         "format": "html,
                         "symbol_set": "default",
                         "options": {}
-                    }
+                    },
+                    "max_steps" : null
                 }
             }
         """
@@ -405,6 +407,8 @@ class App(object):
             odata['options']['controls'] = True
         if 'models' not in odata['options']:
             odata['options']['models'] = False
+        if 'max_steps' not in body:
+            body['max_steps'] = None
 
         errors = {}
         try:
@@ -428,10 +432,22 @@ class App(object):
         except Exception as err:
             errors['Output format'] = str(err)
 
+        if body['max_steps'] != None:
+            try:
+                body['max_steps'] = int(body['max_steps'])
+            except Exception as err:
+                errors['Max steps'] = str(err)
+
         if len(errors) > 0:
             raise RequestDataError(errors)
 
-        proof = logic.tableau(selected_logic, arg).build(models=odata['options']['models'], timeout=maxtimeout)
+        build_opts = {
+            'models'    : odata['options']['models'],
+            'timeout'   : maxtimeout,
+            'max_steps' : body['max_steps'],
+        }
+
+        proof = logic.tableau(selected_logic, arg).build(**build_opts)
 
         return {
             'tableau': {
@@ -444,6 +460,7 @@ class App(object):
                 'header': proof_writer.document_header(),
                 'footer': proof_writer.document_footer(),
                 'body': proof_writer.write(proof, sw=sw),
+                'result': proof.stats['result'],
                 'writer': {
                     'name': proof_writer.name,
                     'format': odata['format'],

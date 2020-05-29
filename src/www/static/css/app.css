@@ -369,11 +369,9 @@ body {
     font-weight: bold;
     font-size: 1.2em;
     color: white;
-    width: 5.2em;
 }
 .evaluation > .summary > .result > span {
     padding: 0.4em;
-    width: 4.4em;
     display: inline-block;
     text-align: center;
     letter-spacing: 0.05em;
@@ -384,6 +382,10 @@ body {
 }
 .evaluation > .summary > .result .invalid {
     background-color: red;
+    border: 1px solid #aaa;
+}
+.evaluation > .summary > .result .unfinished {
+    background-color: #666;
     border: 1px solid #aaa;
 }
 .evaluation > .proof {

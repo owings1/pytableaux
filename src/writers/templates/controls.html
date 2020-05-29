@@ -1,4 +1,3 @@
-{% set result_class = 'valid' if tableau.valid else 'invalid' %}
 <div class="html-writer-controls drag-panel">
     <div class="collapser-wrapper positioned-left controls-wrapper">
         <div class="collapser-heading controls-heading drag-handle collapsed"><span class="heading-title">Controls</span></div>
@@ -12,8 +11,8 @@
                     </li>
                     <li>
                         <span class="prop">Result</span>
-                        <div class="value result {{ result_class }}">
-                            {{ tableau.stats['result'] }}
+                        <div class="value result {{ tableau['stats']['result']|lower|e }}">
+                            {{ tableau.stats['result']|e }}
                         </div>
                     </li>
                     {% if tableau.argument != None %}

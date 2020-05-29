@@ -7,11 +7,7 @@
         <div class="summary">
             <h3 class="left">Proof Result</h3>
             <div class="result">
-                {%- if proof.valid -%}
-                    <span class="valid">Valid</span>
-                {%- else -%}
-                    <span class="invalid">Invalid</span>
-                {%- endif -%}
+                <span class="{{ proof['result']|lower|e }}">{{ proof['result']|e }}</span>
             </div>
             <div class="clear"></div>
         </div>

@@ -29,6 +29,10 @@
     <label for="options_models">Build models</label>
     <input type="checkbox" id="options_models" name="options.models" class="options" value="true" {{- helper.checkbox_default(form_data, 'options.models', True) }}/>
 </div>
+<div class="input">
+    <label for="options_max_steps">Max steps</label>
+    <input type="text" id="options_max_steps" size="5" name="max_steps" value="{{ form_data['max_steps']|e }}"/>
+</div>
 <div class="input submit">
     <input type="submit" value="Go"/>
 </div>

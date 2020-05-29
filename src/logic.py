@@ -992,6 +992,8 @@ class TableauxSystem(object):
             self.is_build_models = None
             # build start time
             self.build_start_time = None
+            # whether we ended pre-maturely (e.g. max_steps)
+            self.is_premature = False
 
             self.open_branchset = set()
             self.branch_dict = dict()
@@ -1004,7 +1006,7 @@ class TableauxSystem(object):
             if argument != None:
                 self.set_argument(argument)
 
-        def build(self, models=False, timeout=None):
+        def build(self, models=False, timeout=None, max_steps=None):
             """
             Build the tableau. Returns self.
             """
@@ -1012,8 +1014,12 @@ class TableauxSystem(object):
             self.build_start_time = nowms()
             self.build_timeout = timeout
             while not self.finished:
+                if max_steps != None and len(self.history) >= max_steps:
+                    self.is_premature = True
+                    break
                 self.check_timeout()
                 self.step()
+            self.finish()
             self.is_build_models = None
             return self
 
@@ -1240,16 +1246,23 @@ class TableauxSystem(object):
             Mark the tableau as finished. Computes the ``valid`` property and builds the structure
             into the ``tree`` property. Returns self.
             """
+            if self.finished:
+                return self
             self.finished = True
             num_open      = len(self.open_branches())
             self.valid    = num_open == 0
             self.stats = {
-                'result'         : 'Valid' if self.valid else 'Invalid',
                 'branches'       : len(self.branches),
                 'open_branches'  : num_open,
                 'closed_branches': len(self.branches) - num_open,
                 'rules_applied'  : len(self.history),
             }
+            if self.valid:
+                self.stats['result'] = 'Valid'
+            elif self.is_premature:
+                self.stats['result'] = 'Unfinished'
+            else:
+                self.stats['result'] = 'Invalid'
             if self.is_build_models:
                 self.build_models()
             self.tree = self.structure(self.branches)

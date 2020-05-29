@@ -601,6 +601,18 @@
                 const opt = $me.attr('name').split('.')[1]
                 data.output.options[opt] = $me.is(':checked')
             })
+            const maxStepsVal = $('#options_max_steps', $Frm).val()
+            if (maxStepsVal.length) {
+                const maxStepsIntVal = parseInt(maxStepsVal)
+                if (isNaN(maxStepsIntVal)) {
+                    // let invalid values propagate
+                    data.max_steps = maxStepsVal
+                } else {
+                    data.max_steps = maxStepsIntVal
+                }
+            } else {
+                data.max_steps = null
+            }
             return data
         }
 
