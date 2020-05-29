@@ -78,6 +78,7 @@ class Model(logic.Model):
         self.extensions = {}
         self.anti_extensions = {}
         self.atomics = {}
+        self.all_atomics = set()
         self.opaques = {}
         self.constants = set()
         self.predicates = set([
@@ -233,6 +234,7 @@ class Model(logic.Model):
         for node in branch.nodes:
             if node.has('sentence'):
                 self.predicates.update(node.predicates())
+                self.all_atomics.update(node.atomics())
                 sentence = node.props['sentence']
                 is_opaque = self.is_sentence_opaque(sentence)
                 if sentence.is_literal() or is_opaque:
@@ -275,6 +277,9 @@ class Model(logic.Model):
     def finish(self):
         # TODO: consider augmenting the logic with identity and existence predicate
         #       restrictions. in that case, new tableaux rules need to be written.
+        for s in self.all_atomics:
+            if s not in self.atomics:
+                self.set_literal_value(s, self.unassigned_value)
         pass
 
     def set_literal_value(self, sentence, value):
