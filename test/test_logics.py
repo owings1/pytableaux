@@ -947,6 +947,12 @@ class TestD(LogicTester):
         proof = self.example_proof('Reflexive Inference 1')
         assert not proof.valid
 
+    def test_invalid_optimize_nec_rule1(self):
+        arg = argument('NLVxNFx', premises=['LMSxFx'], notation='polish', vocabulary=examples.vocabulary)
+        proof = tableau(self.logic, arg)
+        proof.build(timeout=1000)
+        assert not proof.valid
+
 class TestT(LogicTester):
 
     logic = get_logic('T')
@@ -966,6 +972,12 @@ class TestT(LogicTester):
     def test_invalid_s4_inf_1(self):
         proof = self.example_proof('S4 Inference 1')
         assert not proof.valid
+
+    def test_valid_optimize_nec_rule1(self):
+        arg = argument('NLVxNFx', premises=['LMSxFx'], notation='polish', vocabulary=examples.vocabulary)
+        proof = tableau(self.logic, arg)
+        proof.build(timeout=1000)
+        assert proof.valid
 
 class TestS4(LogicTester):
 
