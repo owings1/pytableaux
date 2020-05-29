@@ -663,6 +663,12 @@ class Vocabulary(object):
         def variables(self):
             raise NotImplementedError(NotImplemented)
 
+        def atomics(self):
+            raise NotImplementedError(NotImplemented)
+
+        def predicates(self):
+            raise NotImplementedError(NotImplemented)
+
         def hash_tuple(self):
             raise NotImplementedError(NotImplemented)
 
@@ -707,6 +713,12 @@ class Vocabulary(object):
             return set()
 
         def variables(self):
+            return set()
+
+        def atomics(self):
+            return set([self])
+
+        def predicates(self):
             return set()
 
         def next(self):
@@ -759,6 +771,12 @@ class Vocabulary(object):
         def variables(self):
             return {param for param in self.parameters if is_variable(param)}
 
+        def atomics(self):
+            return set()
+
+        def predicates(self):
+            return set([self.predicate])
+
         def hash_tuple(self):
             return (5, self.predicate) + tuple((param for param in self.parameters))
 
@@ -782,6 +800,12 @@ class Vocabulary(object):
 
         def variables(self):
             return self.sentence.variables()
+
+        def atomics(self):
+            return self.sentence.atomics()
+
+        def predicates(self):
+            return self.sentence.predicates()
 
         def hash_tuple(self):
             return (6, quantifiers_list.index(self.quantifier), self.variable, self.sentence)
@@ -822,6 +846,18 @@ class Vocabulary(object):
             for operand in self.operands:
                 v.update(operand.variables())
             return v
+
+        def atomics(self):
+            a = set()
+            for operand in self.operands:
+                a.update(operand.atomics())
+            return a
+
+        def predicates(self):
+            p = set()
+            for operand in self.operands:
+                p.update(operand.predicates())
+            return p
 
         def hash_tuple(self):
             return (7, operators_list.index(self.operator)) + tuple((operand for operand in self.operands))
@@ -1300,6 +1336,8 @@ class TableauxSystem(object):
             self.nodes = []
             self.consts = set()
             self.ws = set()
+            self.preds = set()
+            self.atms = set()
             self.leaf = None
             self.tableau = tableau
             self.closed_step = None
@@ -1345,6 +1383,8 @@ class TableauxSystem(object):
             self.nodes.append(node)
             self.consts.update(node.constants())
             self.ws.update(node.worlds())
+            self.preds.update(node.predicates())
+            self.atms.update(node.atomics())
             node.parent = self.leaf
             if self.tableau != None:
                 node.step = self.tableau.current_step
@@ -1432,6 +1472,18 @@ class TableauxSystem(object):
             """
             return self.consts
 
+        def predicates(self):
+            """
+            Return the set of predicates that appear on the branch.
+            """
+            return self.preds
+
+        def atomics(self):
+            """
+            Return the set of atomics that appear on the branch.
+            """
+            return self.atms
+
         def new_constant(self):
             """
             Return a new constant that does not appear on the branch.
@@ -1503,9 +1555,19 @@ class TableauxSystem(object):
                 worlds.update(self.props['worlds'])
             return worlds
 
+        def atomics(self):
+            if self.has('sentence'):
+                return self.props['sentence'].atomics()
+            return set()
+
         def constants(self):
-            if 'sentence' in self.props:
+            if self.has('sentence'):
                 return self.props['sentence'].constants()
+            return set()
+
+        def predicates(self):
+            if self.has('sentence'):
+                return self.props['sentence'].predicates()
             return set()
 
         def __repr__(self):
