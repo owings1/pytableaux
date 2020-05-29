@@ -20,6 +20,10 @@
 .html-writer {
     min-height: 90px;
 }
+.html-writer .clear {
+    clear: both;
+}
+
 .html-writer-proof pre {
     overflow-x: scroll;
 }
@@ -38,7 +42,10 @@
 }
 .html-writer-proof .structure.closed > .node-segment > .node:last-child::after {
     display: block;
+    text-align: center;
     font-size: 1.6em;
+    margin: auto;
+    width: 2em;
     content: '\2297';
 }
 .html-writer-proof .node-props .ellipsis::after {
@@ -81,17 +88,18 @@
 .html-writer-proof .world {
     font-style: italic;
 }
-.html-writer-proof.highlight-open .structure.has-open > .node-segment {
+.html-writer-proof.color-open .structure.has-open > .node-segment {
     color: red;
 }
-.html-writer-proof.highlight-open .structure.has-open.has-closed > .node-segment {
+.html-writer-proof.color-open .structure.has-open.has-closed > .node-segment {
     color: #e808ff;
 }
-.html-writer-proof .clear, .html-writer-controls .clear {
-    clear: both;
-}
-.html-writer-proof .node.highlight > .node-props, .html-writer-proof .closeMark.highlight > .close-prop {
+.html-writer-proof .node.highlight > .node-props, 
+.html-writer-proof .structure.closed.highlight-closed > .node-segment > .node:last-child::after {
     background-color: yellow;
+}
+.html-writer-proof .structure.closed.hide-closed > .node-segment > .node:last-child::after {
+    display: none;
 }
 .html-writer-proof .node.highlight-ticked > .node-props.ticked {
     border-width: 3px;
@@ -114,6 +122,7 @@
     background-size: 16px 16px;
     background-image: url(../img/inspected-black.svg);
 }
+
 /* Controls */
 
 .html-writer-controls, .html-writer-models {

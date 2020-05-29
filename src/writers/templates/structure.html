@@ -12,6 +12,9 @@
         data-left="{{ structure['left'] }}" 
         data-right="{{ structure['right'] }}"
         data-step="{{ structure['step'] }}"
+        {%- if structure['closed'] %}
+            data-closed-step="{{ structure['closed_step'] }}"
+        {%- endif %}
         data-branch-id="{{ structure['branch_id'] }}"
         data-model-id="{{ structure['model_id'] if structure['model_id'] }}">
         <div class="node-segment">

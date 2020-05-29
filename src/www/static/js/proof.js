@@ -82,7 +82,6 @@
         VL              : 'vertical-line'        ,
         Collapsed       : 'collapsed'            ,
         Uncollapsed     : 'uncollapsed'          ,
-        Close           : 'closeMark'            ,
         StepStart       : 'step-start'           ,
         StepPrev        : 'step-prev'            ,
         StepNext        : 'step-next'            ,
@@ -94,6 +93,7 @@
         ZoomFiltered    : 'zoom-filtered'        ,
         BranchFiltered  : 'branch-filtered'      ,
         Ticked          : 'ticked'               ,
+        Closed          : 'closed'               ,
         FontPlus        : 'font-plus'            ,
         FontMinus       : 'font-minus'           ,
         FontReset       : 'font-reset'           ,
@@ -107,10 +107,12 @@
         BranchFilter    : 'branch-filter'        ,
         Highlight       : 'highlight'            ,
         HighlightTicked : 'highlight-ticked'     ,
+        HighlightClosed : 'highlight-closed'     ,
+        HideClosed      : 'hide-closed'          ,
         Stay            : 'stay'                 ,
         ControlsHeading : 'controls-heading'     ,
         ControlsContent : 'controls-contents'    ,
-        ColorOpen       : 'highlight-open'       ,
+        ColorOpen       : 'color-open'           ,
         ControlsPos     : 'controls-position'    ,
         ModelsPos       : 'models-position'      ,
         ControlsWrap    : 'controls-wrapper'     ,
@@ -141,6 +143,7 @@
         Step           : 'data-step'              ,
         Ticked         : 'data-ticked'            ,
         TickStep       : 'data-ticked-step'       ,
+        CloseStep      : 'data-closed-step'       ,
         NumSteps       : 'data-num-steps'         ,
         Depth          : 'data-depth'             ,
         FilteredWidth  : 'data-filtered-width'    ,
@@ -159,7 +162,6 @@
     const Sel = {
         SteppedChilds  : [
             '>' + Dcls.NodeSegment + '>' + Dcls.Node,
-            '>' + Dcls.NodeSegment + '>' + Dcls.Close,
             '>' + Dcls.VL
         ].join(','),
         Filtered       : [
@@ -345,17 +347,20 @@
         const $main = $proof.closest(Dcls.Main)
         const $controls = $(Dcls.Controls, $main)
 
+        var highlightDelay = Anim.Slow
+
         $(Dcls.Structure, $proof).each(function(i, s) {
             const $s = $(s)
             const sPos = getPos($s)
             const sStep = +$s.attr(Attrib.Step)
+            
             if (sStep > n) {
                 // only hide the highest structures
                 trackHighests(toHide, sPos)
                 return true
             }
             shows.push(s)
-            // process nodes, markers, vertical lines
+            // process nodes, vertical lines
             $(Sel.SteppedChilds, $s).each(function(ni, stepped) {
                 const $stepped = $(stepped)
                 const nStep = +$stepped.attr(Attrib.Step)
@@ -380,9 +385,22 @@
                     }
                 }
             })
+
+            if ($s.hasClass(Cls.Closed)) {
+                // handle close marker pseudo elements via class
+                const sCloseStep = +$s.attr(Attrib.CloseStep)
+                if (sCloseStep <= n) {
+                    $s.removeClass(Cls.HideClosed)
+                    if (sCloseStep == n && Math.abs(n - prevStep) == 1) {
+                        highlightDelay = Anim.Fast
+                    }
+                } else {
+                    $s.addClass(Cls.HideClosed)
+                }
+            }
         })
 
-        // hide nodes, markers, vertical lines
+        // hide nodes, vertical lines
         $(hideChilds).hide(Anim.Fast)
 
         // untick nodes
@@ -398,20 +416,20 @@
             adjust    : (n > prevStep) ? 'before' : 'after'
         })
 
-        // show nodes, markers, vertical lines
+        // show nodes, vertical lines
         $(showChilds).show(Anim.Med)
 
         // delay the ticking of the nodes for animated effect
         setTimeout(function() { $(Dcls.NodeProps, tickNodes).addClass(Cls.Ticked) }, Anim.Med)
 
-        // do a highlight of the result with a longer delay
-        setTimeout(function() { doHighlight({$proof: $proof, stay: false, ruleStep: n})}, Anim.Slow)
+        // highlight the result
+        setTimeout(function() { doHighlight({$proof: $proof, stay: false, ruleStep: n})}, highlightDelay)
 
         // set the current step attribute on the proof
         $proof.attr(Attrib.Step, n)
 
         // show the rule and target in the controls panel
-        const attrSelector = '[' + Attrib.Step + '=' + n + ']'
+        const attrSelector = getAttrSelector(Attrib.Step, n)
         $(Dcls.StepRuleName, $controls).hide().filter(attrSelector).show()
         $(Dcls.StepRuleTarget, $controls).hide().filter(attrSelector).show()
         // update the input box
@@ -699,6 +717,7 @@
         if (opts.off || opts.exclusive) {
             $(Dcls.Highlight, $proof).removeClass(Cls.Highlight)
             $(Dcls.HighlightTicked, $proof).removeClass(Cls.HighlightTicked)
+            $(Dcls.HighlightClosed, $proof).removeClass(Cls.HighlightClosed)
         }
         if (opts.off) {
             var $controls = $(Dcls.Controls, $main)
@@ -711,10 +730,12 @@
         if (opts.ruleStep != null) {
             var n = opts.ruleStep === true ? +$proof.attr(Attrib.Step) : opts.ruleStep
             var nodeAttrSel = getAttrSelector(Attrib.Step, n)
-            var nodeSel = [Dcls.Node + nodeAttrSel, Dcls.Close + nodeAttrSel].join(',')
+            var nodeSel = Dcls.Node + nodeAttrSel
+            var closeSel = Dcls.Structure + getAttrSelector(Attrib.CloseStep, n)
             var tickSel = Dcls.Node + getAttrSelector(Attrib.TickStep, n)
             $(nodeSel, $proof).addClass(Cls.Highlight)
             $(tickSel, $proof).addClass(Cls.HighlightTicked)
+            $(closeSel, $proof).addClass(Cls.HighlightClosed)
         } else {
             var n = opts.ruleTarget === true ? +$proof.attr(Attrib.Step) : opts.ruleTarget
             var nodeAttrSel = getAttrSelector(Attrib.Step, n)

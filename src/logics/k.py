@@ -933,9 +933,16 @@ class TableauxRules(object):
                     s = node.props['sentence'].operand
                     w1 = node.props['world']
                     for w2 in worlds:
-                        if (branch.has({ 'world1': w1, 'world2': w2 }) and
-                            not branch.has({ 'sentence': s, 'world': w2 })):
-                            cands.append({ 'node': node, 'sentence' : s, 'world': w2, 'branch': branch })
+                        anode = branch.find({ 'world1': w1, 'world2': w2 })
+                        if anode != None and not branch.has({ 'sentence': s, 'world': w2 }):
+                            cands.append({
+                                'node'     : node,
+                                'sentence' : s,
+                                'world'    : w2,
+                                'branch'   : branch,
+                                'nodes'    : set([node, anode]),
+                                'type'     : 'Nodes',
+                            })
             return cands
 
         def select_best_target_for_branch(self, branch, cands):

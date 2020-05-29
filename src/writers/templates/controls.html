@@ -97,7 +97,8 @@
                                     data-target-type="{{ target['type'] }}"
                                     {% if 'node' in target %}
                                         data-node-id="{{ target['node'].id }}"
-                                    {% elif 'nodes' in target %}
+                                    {% endif %}
+                                    {% if 'nodes' in target %}
                                         data-node-ids="{% for node in target['nodes'] %},{{ node.id }}{% endfor %}"
                                     {% endif %}
                                     {% if 'branch' in target %}
@@ -152,7 +153,7 @@
                         <li>
                             <span class="prop">Color Branches</span>
                             <div class="value">
-                                <input type="checkbox" class="highlight-open" {{- ' checked' if opts['highlight_open'] }}/>
+                                <input type="checkbox" class="color-open" {{- ' checked' if opts['color_open'] }}/>
                             </div>
                         </li>
                     {%- endif %}

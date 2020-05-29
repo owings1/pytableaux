@@ -352,7 +352,7 @@ class App(object):
                     "format": "html",
                     "symbol_set": "default",
                     "options": {
-                        "highlight_open": true,
+                        "color_open": true,
                         "controls": true,
                         "models": false
                     }
@@ -401,8 +401,8 @@ class App(object):
                 odata['symbol_set'] = 'default'
         if 'options' not in odata:
             odata['options'] = dict()
-        if 'highlight_open' not in odata['options']:
-            odata['options']['highlight_open'] = True
+        if 'color_open' not in odata['options']:
+            odata['options']['color_open'] = True
         if 'controls' not in odata['options']:
             odata['options']['controls'] = True
         if 'models' not in odata['options']:
