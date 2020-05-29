@@ -42,8 +42,8 @@ class Model(k3.Model):
         the values of its operands according to the following tables.
 
         Note that, for the binary connectives, if either operand has the value **N**,
-        then the whole sentence has the value **N**. Hence the saying, "one bit of rat's
-        dung spoils the soup."
+        then the whole sentence has the value **N**. To (re-)quote a Chinese proverb,
+        "a single jot of rat's dung spoils the soup."
 
         //truth_tables//k3w//
         """
