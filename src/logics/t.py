@@ -17,17 +17,6 @@
 # ------------------
 #
 # pytableaux - Reflexive Normal Modal Logic
-"""
-Reflexive Modal Logic is an extension of K, with a *reflexive* accessibility relation,
-which states that for every world *w*, *w* accesses *w* (itself).
-
-Links
------
-
-- `Stanford Encyclopedia on Modal Logic`_
-
-.. _Stanford Encyclopedia on Modal Logic: http://plato.stanford.edu/entries/logic-modal/
-"""
 name = 'T'
 title = 'Reflexive Normal Modal Logic'
 description = 'Normal modal logic with a reflexive access relation'
@@ -41,6 +30,14 @@ from . import k
 from logic import atomic
 
 class Model(k.Model):
+    """
+    A T model is just like a `K model`_ with a *reflexive* restriction on the access
+    relation.
+
+    * **Reflexivity**: For each world *w*, `<w,w>` is in the access relation.
+
+    .. _K model: k.html#logics.k.Model
+    """
 
     def finish(self):
         for w in self.frames:
@@ -49,14 +46,18 @@ class Model(k.Model):
 
 class TableauxSystem(k.TableauxSystem):
     """
-    T's Tableaux System inherits directly from K's.
+    T's Tableaux System inherits directly inherits directly from the `K system`_.
+
+    .. _K system: k.html#logics.k.TableauxSystem
     """
     pass
 
 class TableauxRules(object):
     """
-    The Tableaux Rules for T contain the rules for K, as well as an additional
+    The Tableaux Rules for T contain the rules for `K`_, as well as an additional
     Reflexive rule, which operates on the accessibility relation for worlds.
+
+    .. _K: k.html
     """
 
     class Reflexive(logic.TableauxSystem.NodeRule):
