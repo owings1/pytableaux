@@ -90,6 +90,43 @@ class TableauxRules(object):
                 { 'world1' : 0, 'world2' : 1 },
                 { 'world1' : 1, 'world2' : 2 }
             ])
-    
-    rules = list(t.TableauxRules.rules)
-    rules.insert(2, Transitive)
+
+    rules = [
+
+        k.TableauxRules.Closure,
+        k.TableauxRules.SelfIdentityClosure,
+
+        Transitive,
+        t.TableauxRules.Reflexive,
+
+        # non-branching rules
+        k.TableauxRules.IdentityIndiscernability,
+        k.TableauxRules.Assertion,
+        k.TableauxRules.AssertionNegated,
+        k.TableauxRules.Conjunction, 
+        k.TableauxRules.DisjunctionNegated, 
+        k.TableauxRules.MaterialConditionalNegated,
+        k.TableauxRules.ConditionalNegated,
+        k.TableauxRules.Existential,
+        k.TableauxRules.ExistentialNegated,
+        k.TableauxRules.Universal,
+        k.TableauxRules.UniversalNegated,
+        k.TableauxRules.DoubleNegation,
+        k.TableauxRules.PossibilityNegated,
+        k.TableauxRules.NecessityNegated,
+
+        # branching rules
+        k.TableauxRules.ConjunctionNegated,
+        k.TableauxRules.Disjunction, 
+        k.TableauxRules.MaterialConditional, 
+        k.TableauxRules.MaterialBiconditional,
+        k.TableauxRules.MaterialBiconditionalNegated,
+        k.TableauxRules.Conditional,
+        k.TableauxRules.Biconditional,
+        k.TableauxRules.BiconditionalNegated,
+
+        # world creation rules
+        k.TableauxRules.Possibility,
+        k.TableauxRules.Necessity
+
+    ]
