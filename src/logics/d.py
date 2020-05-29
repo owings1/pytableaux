@@ -68,6 +68,7 @@ class TableauxRules:
 
     .. _K: k.html
     """
+
     class Serial(logic.TableauxSystem.BranchRule):
         """
         The Serial rule applies to a an open branch *b* when there is a world *w* that
