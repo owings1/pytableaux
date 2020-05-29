@@ -34,6 +34,13 @@ a classical value (**T** or **F**).
     * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
       are models where *C* also has the value **T**.
 
+    Notes
+    =====
+
+    * The assertion operator can expression alternate versions of validities that
+      fail in `K3W`_. For example, P{A} implies P{A V \*B} in B3E, which fails in
+      `K3W`_.
+
 .. _CPL: cpl.html
 .. _K3: k3.html
 .. _K3W: k3w.html

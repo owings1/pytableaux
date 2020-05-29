@@ -141,15 +141,16 @@ class TableauxRules(object):
     class AssertionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
-        an designated node to *b* with the assertion of *n*, then tick *n*.
+        a designated node to *b* with the assertion of *n*, then tick *n*.
         """
 
         operator    = 'Assertion'
         negated     = True
         designation = False
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
-            d = self.designation
+            d = not self.designation
             branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
 
     class ConjunctionDesignated(fde.TableauxRules.ConjunctionDesignated):

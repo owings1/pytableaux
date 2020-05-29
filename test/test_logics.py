@@ -276,6 +276,12 @@ class TestK3W(LogicTester):
         proof.build()
         assert not proof.valid
 
+    def test_invalid_asserted_addition(self):
+        arg = argument('AaTb', premises=['a'], notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert not proof.valid
+
 class TestB3E(LogicTester):
 
     logic = get_logic('B3E')
@@ -323,6 +329,18 @@ class TestB3E(LogicTester):
         proof = tableau(self.logic, arg)
         proof.build()
         assert not proof.valid
+
+    def test_valid_prior_rule_defect2(self):
+        arg = argument('AANaTbNa', premises=['Na'], notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
+
+    def test_valid_asserted_addition(self):
+        arg = argument('AaTb', premises=['a'], notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
 
 class TestLP(LogicTester):
 
@@ -469,7 +487,7 @@ class TestGO(LogicTester):
         branch = proof.branch()
         branch.add({'sentence': parse('NTa'), 'designated': False})
         proof.step()
-        assert branch.has({'sentence': parse('a'), 'designated': False})
+        assert branch.has({'sentence': parse('a'), 'designated': True})
 
     def test_valid_neg_exist_from_univ(self):
         proof = self.example_proof('Negated Existential from Universal')
@@ -494,6 +512,12 @@ class TestGO(LogicTester):
     def test_invalid_univ_from_neg_exist(self):
         proof = self.example_proof('Universal from Negated Existential')
         assert not proof.valid
+
+    def test_valid_prior_b3e_rule_defect2(self):
+        arg = argument('AANaTbNa', premises=['Na'], notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
 
 class TestCPL(LogicTester):
 
