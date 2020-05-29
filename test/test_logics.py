@@ -224,22 +224,6 @@ class TestK3W(LogicTester):
         assert tbl['outputs'][3] == 0.5
         assert tbl['outputs'][8] == 1
 
-    def test_DisjunctionNegatedUndesignated_step(self):
-        proof = tableau(self.logic)
-        proof.branch().add({'sentence': parse('NAab'), 'designated': False})
-        proof.step()
-        b1, b2, b3, b4 = proof.branches
-        assert b1.has({'sentence': parse('a'), 'designated': True})
-        assert b1.has({'sentence': parse('b'), 'designated': True})
-        assert b2.has({'sentence': parse('a'), 'designated': True})
-        assert b2.has({'sentence': parse('Nb'), 'designated': True})
-        assert b3.has({'sentence': parse('Na'), 'designated': True})
-        assert b3.has({'sentence': parse('b'), 'designated': True})
-        assert b4.has({'sentence': parse('a'), 'designated': False})
-        assert b4.has({'sentence': parse('Na'), 'designated': False})
-        assert b4.has({'sentence': parse('b'), 'designated': False})
-        assert b4.has({'sentence': parse('Nb'), 'designated': False})
-
     def test_ConjunctionNegatedDesignated_step(self):
         proof = tableau(self.logic)
         proof.branch().add({'sentence': parse('NKab'), 'designated': True})
@@ -286,6 +270,12 @@ class TestK3W(LogicTester):
         proof = self.example_proof('Addition')
         assert not proof.valid
 
+    def test_invalid_prior_rule_defect(self):
+        arg = argument('ANAabNa', premises=['Na'], notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert not proof.valid
+
 class TestB3E(LogicTester):
 
     logic = get_logic('B3E')
@@ -326,6 +316,12 @@ class TestB3E(LogicTester):
 
     def test_invalid_lem(self):
         proof = self.example_proof('Law of Excluded Middle')
+        assert not proof.valid
+
+    def test_invalid_prior_rule_defect(self):
+        arg = argument('ANAabNa', premises=['Na'], notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
         assert not proof.valid
 
 class TestLP(LogicTester):

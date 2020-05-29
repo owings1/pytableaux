@@ -264,13 +264,14 @@ class TableauxRules(object):
     class DisjunctionNegatedUndesignated(fde.TableauxRules.DisjunctionNegatedUndesignated):
         """
         It's not the case that both disjuncts are False. Thus, either both disjuncts are True,
-        one disjunct is True and the other False, or both dijuncts are Neither. So, from an
-        unticked, undesignated, negated disjunction node *n*, on a branch *b*, make four nodes
-        *b'*, *b''*, *b'''*, *b''''* from *b*. On *b'*, add a designated node for each disjunct.
+        one disjunct is True and the other False, or at least one of the dijuncts is Neither. So, from an
+        unticked, undesignated, negated disjunction node *n*, on a branch *b*, make five branches
+        *b'*, *b''*, *b'''*, *b''''*, *b'''''* from *b*. On *b'*, add a designated node for each disjunct.
         On *b''* add a designated node for the first disjunct, an undesignated node for the second
         disjunct, and a designated node for the negation of the second disjunct. On *b'''* do the
-        same as before, except with the second and first disjuncts, respectively. Finally, on
-        *b''''*, add undesignated nodes for each disjunct and their negations. Then, tick *n*.
+        same as before, except with the second and first disjuncts, respectively. On
+        *b''''*, add undesignated nodes for the first disjunct and its negation, and on *b'''''*,
+        add undesignated nodes for the other disjunction and its negation. Then, tick *n*.
         """
 
         def apply_to_node(self, node, branch):
@@ -279,6 +280,7 @@ class TableauxRules(object):
             b2 = self.tableau.branch(branch)
             b3 = self.tableau.branch(branch)
             b4 = self.tableau.branch(branch)
+            b5 = self.tableau.branch(branch)
             b1.update([
                 { 'sentence' :        s.lhs , 'designated' : True },
                 { 'sentence' :        s.rhs , 'designated' : True }
@@ -294,6 +296,8 @@ class TableauxRules(object):
             b4.update([
                 { 'sentence' :        s.lhs,  'designated' : False },
                 { 'sentence' : negate(s.lhs), 'designated' : False },
+            ]).tick(node)
+            b5.update([
                 { 'sentence' :        s.rhs,  'designated' : False },
                 { 'sentence' : negate(s.rhs), 'designated' : False }
             ]).tick(node)
@@ -565,6 +569,6 @@ class TableauxRules(object):
         ConjunctionNegatedDesignated,
         ConjunctionNegatedUndesignated,
 
-        # four-branching rules
+        # five-branching rules
         DisjunctionNegatedUndesignated
     ]
