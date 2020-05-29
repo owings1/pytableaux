@@ -2,6 +2,8 @@
 S4 - S4 Normal Modal Logic
 **************************
 
+Normal modal logic with reflexive and transitive access relation.
+
 .. contents:: :local:
 
 .. automodule:: logics.s4
