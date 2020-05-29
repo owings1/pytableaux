@@ -110,6 +110,7 @@
         Stay            : 'stay'                 ,
         ControlsHeading : 'controls-heading'     ,
         ControlsContent : 'controls-contents'    ,
+        ColorOpen       : 'highlight-open'       ,
         ControlsPos     : 'controls-position'    ,
         ModelsPos       : 'models-position'      ,
         ControlsWrap    : 'controls-wrapper'     ,
@@ -1167,6 +1168,12 @@
             $(Dcls.PositionSelect, $models).val($target.val())
             $models.removeClass(Cls.IsDrag)
             positionDraggable($models)
+        } else if ($target.hasClass(Cls.ColorOpen)) {
+            if ($target.prop('checked')) {
+                $proof.addClass(Cls.ColorOpen)
+            } else {
+                $proof.removeClass(Cls.ColorOpen)
+            }
         }
     }
 
