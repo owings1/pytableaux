@@ -6,6 +6,12 @@ S4 - S4 Normal Modal Logic
 
 .. automodule:: logics.s4
 
+    Semantics
+    =========
+
+    .. autoclass:: Model
+        :members:
+
     Tableaux System
     ===============
 
@@ -14,3 +20,13 @@ S4 - S4 Normal Modal Logic
 
     .. autoclass:: TableauxRules
         :members:
+
+    Logical Consequence
+    ===================
+
+    **Logical Consequence** is defined just as in `K`_:
+
+    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
+      at *w0* are models where *C* also has the value **T** at *w0*.
+
+.. _K: k.html

@@ -36,6 +36,16 @@ import logic
 from . import k, t
 
 class Model(t.Model):
+    """
+    An S4 model is just like a `T model`_ with an additional *transitive*
+    restriction on the access relation.
+
+    * **Transitivity**: For each world *w* and each world *w'*, for any world
+      *w''* such that `<w,w'>` and `<w',w''>` are in the access relation, then
+      `<w,w''>` is in the access relation.
+
+    .. _T model: t.html#logics.t.Model
+    """
 
     def finish(self):
         while True:
@@ -52,13 +62,26 @@ class Model(t.Model):
             self.access.update(to_add)
 
 class TableauxSystem(k.TableauxSystem):
+    """
+    S4's Tableaux System inherits directly inherits directly from the `K system`_.
+
+    .. _K system: k.html#logics.k.TableauxSystem
+    """
     pass
 
 class TableauxRules(object):
+    """
+    The Tableaux Rules for S4 contain the rules for `T`_, as well as an additional
+    Transitive rule, which operates on the accessibility relation for worlds.
+
+    .. _T: t.html
+    """
     
     class Transitive(logic.TableauxSystem.BranchRule):
         """
-        Transitive rule.
+        For any world *w* appearing on a branch *b*, for each world *w'* and for each
+        world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
+        appear on *b*, then add *wRw''* to *b*.
         """
         
         def applies_to_branch(self, branch):
