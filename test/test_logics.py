@@ -991,6 +991,12 @@ class TestS4(LogicTester):
         proof = self.example_proof('S5 Conditional Inference 1')
         assert not proof.valid
 
+    def test_valid_optimize_nec_rule1(self):
+        arg = argument('NLVxNFx', premises=['LMSxFx'], notation='polish', vocabulary=examples.vocabulary)
+        proof = tableau(self.logic, arg)
+        proof.build(timeout=1000)
+        assert proof.valid
+
 class TestL3(LogicTester):
 
     logic = get_logic('L3')
