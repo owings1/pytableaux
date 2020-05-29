@@ -17,20 +17,6 @@
 # ------------------
 #
 # pytableaux - Deonitic Normal Modal Logic
-
-"""
-Deontic logic, also known as the Logic of Obligation, is an extension of K, with
-a *serial* accessibility relation, which states that for every world *w*, there is
-a world *w'* such that *w* accesses *w'*.
-
-Links
------
-
-- `Stanford Encyclopedia on Deontic Logic`_
-
-.. _Stanford Encyclopedia on Deontic Logic: http://plato.stanford.edu/entries/logic-deontic/
-
-"""
 name = 'D'
 title = 'Deontic Normal Modal Logic'
 description = 'Normal modal logic with a serial access relation'
@@ -44,6 +30,15 @@ from logic import atomic
 from . import k
 
 class Model(k.Model):
+    """
+    A D model is just like a `K model`_ with a *serial* restriction on the access
+    relation.
+
+    * **Seriality**: For each world *w*, there is some world *w'* such that `<w,w'>`
+      is in the access relation.
+
+    .. _K model: k.html#logics.k.Model
+    """
 
     def finish(self):
         needs_world = set()
@@ -60,14 +55,18 @@ class Model(k.Model):
 
 class TableauxSystem(k.TableauxSystem):
     """
-    D's Tableaux System inherits directly from K's.
+    D's Tableaux System inherits directly inherits directly from the `K system`_.
+
+    .. _K system: k.html#logics.k.TableauxSystem
     """
     pass
 
 class TableauxRules:
     """
-    The Tableaux Rules for D contain the rules for K, as well as an additional
+    The Tableaux Rules for D contain the rules for `K`_, as well as an additional
     Serial rule, which operates on the accessibility relation for worlds.
+
+    .. _K: k.html
     """
     class Serial(logic.TableauxSystem.BranchRule):
         """
@@ -104,7 +103,7 @@ class TableauxRules:
 
     class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
         """
-        The rule for identity indiscernability is the same as for K, with the exception that
+        The rule for identity indiscernability is the same as for `K`_, with the exception that
         the rule does not apply if the Serial rule was the last rule to apply to the branch.
         This prevents infinite repetition (back and forth) of the Serial and IdentityIndiscernability
         rules.
