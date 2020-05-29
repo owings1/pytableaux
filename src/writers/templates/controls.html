@@ -44,23 +44,23 @@
                 <ul class="details">
                     <li>
                         <span class="prop">Branches</span>
-                        <div class="value">{{ tableau.stats['branches'] }}</div>
+                        <div class="value">{{ tableau.stats['branches']|e }}</div>
                     </li>
                     <li>
                         <span class="prop">Open Branches</span>
-                        <div class="value">{{ tableau.stats['open_branches'] }}</div>
+                        <div class="value">{{ tableau.stats['open_branches']|e }}</div>
                     </li>
                     <li>
                         <span class="prop">Closed Branches</span>
-                        <div class="value">{{ tableau.stats['closed_branches'] }}</div>
+                        <div class="value">{{ tableau.stats['closed_branches']|e }}</div>
                     </li>
                     <li>
                         <span class="prop">Nodes</span>
-                        <div class="value">{{ tableau.stats['distinct_nodes'] }}</div>
+                        <div class="value">{{ tableau.stats['distinct_nodes']|e }}</div>
                     </li>
                     <li>
                         <span class="prop">Rules Applied</span>
-                        <div class="value">{{ tableau.stats['rules_applied'] }}</div>
+                        <div class="value">{{ tableau.stats['rules_applied']|e }}</div>
                     </li>
                 </ul>
             </div>
@@ -148,6 +148,14 @@
                             <a class="button font-plus" href="javascript:">+</a>
                         </div>
                     </li>
+                    {%- if tableau.tree['has_open'] %}
+                        <li>
+                            <span class="prop">Color Branches</span>
+                            <div class="value">
+                                <input type="checkbox" class="highlight-open" {{- ' checked' if opts['highlight_open'] }}/>
+                            </div>
+                        </li>
+                    {%- endif %}
                     <li>
                         <span class="prop">Controls Position</span>
                         <div class="value">
