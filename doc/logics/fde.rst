@@ -34,7 +34,7 @@ values is:
 
     **Logical Consequence** is defined in terms of the *designated* values **T** and **B**:
 
-    - *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
+    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
       (**T** or **B**) are models where *C* also has a *designated* value.
 
     Notes

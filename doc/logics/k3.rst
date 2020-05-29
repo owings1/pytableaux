@@ -26,7 +26,7 @@ without the **B** value.
 
             Note, unlike `FDE`_, there is an exclusivity constraint on a predicate's
             extension/anti-extension. This means that `<p,...>` cannot be in both the
-            extension and the anti-extension of `P`. Like `FDE`_, there is not exhaustion
+            extension and the anti-extension of `P`. Like `FDE`_, there is no exhaustion
             restraint.
 
     Tableaux System
