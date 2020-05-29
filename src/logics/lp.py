@@ -17,93 +17,6 @@
 # ------------------
 #
 # pytableaux - Logic of Paradox
-
-"""
-Semantics
-=========
-
-LP is a 3-valued logic (**T**, **F**, and **B**). It can be understood as `FDE`_ without
-the **N** value. A common intepretation of these values is:
-
-- **T**: just true
-- **F**: just false
-- **B**: both true and false
-
-Truth Tables
-------------
-
-**Truth-functional operators** are defined via the following truth tables. The truth tables
-resemble those of `FDE`_ with the **N** value removed.
-
-/truth_tables/
-
-Predication
------------
-
-**Predicate Sentences** like *a is F* are handled via a predicate's *extension* and *anti-extension*,
-similar to `FDE`_:
-
-- P{Fa} is true iff the object denoted by *a* is in the extension of *F*.
-
-- P{Fa} is false iff the object denoted by *a* is in the anti-extension of *F*.
-
-Like in `FDE`_, there is no exclusivity constraint, which means that an object
-might be in both the extension and the anti-extesion of a predicate.
-
-Unlike `FDE`_, however, there is an **exhaustion constraint** on a predicate's
-extension/anti-extension. This means that every object must be in (at least one of)
-a predicate's extension or anti-extension.
-
-In this way, a sentence P{Fa} gets the value:
-
-- **T** iff *a* is in the extension of *F*, and it is *not* in the anti-extension of *F*.
-- **F** iff *a* is in the anti-extension of *F*, and it is *not* in the extension of *F*.
-- **B** iff *a* is in both the extension and anti-extension of *F*.
-
-Quantification
---------------
-
-**Quantification** is interpreted as follows:
-
-- **Universal Quantifier**: as sentence P{LxFx} has the value:
-
-    - **T** iff everything is in the extension of *F* and its anti-extension is empty.
-    - **B** iff everything is in the extension of *F* and its anti-extension is non-empty.
-    - **F** iff not everything is in the extension of *F* and its anti-extension is non-empty.
-
-- **Existential Quantifier**: P{XxFx} is interpreted as P{~Lx~Fx}.
-
-Logical Consequence
--------------------
-
-**Logical Consequence** is defined, just as in `FDE`_, in terms of *designated* values **T**
-and **B**:
-
-- *C* is a **Logical Consequence** of *A* iff all cases where *A* has a *designated*
-  value (**T** or **B**) are cases where *C* also has a *designated* value.
-
-Notes
------
-
-Some notable features of LP include:
-
-* Everything valid in `FDE`_ is valid in LP.
-
-* Like `FDE`_, the Law of Non-Contradiction fails P{~(A & ~A)}.
-
-* Unlike `FDE`_, LP has some logical truths. For example, the Law of Excluded Middle (P{(A V ~A)}),
-  and Conditional Identity (P{(A $ A)}).
-
-* Many classical validities fail, such as Modus Ponens, Modus Tollens, and Disjunctive Syllogism.
-
-* DeMorgan laws are valid.
-
-For futher reading see:
-
-- `Stanford Encyclopedia entry on paraconsistent logic <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
-
-.. _FDE: fde.html
-"""
 name = 'LP'
 title = 'Logic of Paradox'
 description = 'Three-valued logic (True, False, Both)'
@@ -117,6 +30,12 @@ from logic import negate
 from . import fde
 
 class Model(fde.Model):
+    """
+    An LP model is like an `FDE model`_ without the **N** value, which yields an
+    exhaustion restraint an predicate's extension/anti-extension.
+
+    .. _FDE model: fde.html#logics.fde.Model
+    """
     truth_values = [0, 0.75, 1]
     undesignated_values = set([0])
     unassigned_value = 0
@@ -131,10 +50,21 @@ class Model(fde.Model):
         1    : 'T'
     }
 
+    def value_of_operated(self, sentence, **kw):
+        """
+        The value of a sentence with a truth-functional operator is determined by
+        the values of its operands according to the following tables.
+
+        //truth_tables//lp//
+        """
+        return super(Model, self).value_of_operated(sentence, **kw)
+
 class TableauxSystem(fde.TableauxSystem):
     """
-    LP tableaux behave just like `FDE`_'s using designation markers. The trunk
-    is built in the same way.
+    LP's Tableaux System inherits directly from the `FDE system`_, employing
+    designation markers, and building the trunk in the same way.
+
+    .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
     pass
 
