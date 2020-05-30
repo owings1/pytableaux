@@ -84,6 +84,22 @@ class TestFDE(LogicTester):
         proof.build()
         assert proof.valid
 
+    def test_valid_demorgan_1(self):
+        proof = self.example_proof('DeMorgan 1')
+        assert proof.valid
+
+    def test_valid_demorgan_2(self):
+        proof = self.example_proof('DeMorgan 2')
+        assert proof.valid
+
+    def test_valid_demorgan_3(self):
+        proof = self.example_proof('DeMorgan 3')
+        assert proof.valid
+
+    def test_valid_demorgan_4(self):
+        proof = self.example_proof('DeMorgan 4')
+        assert proof.valid
+
     def test_invalid_lem(self):
         proof = self.example_proof('Law of Excluded Middle')
         assert not proof.valid
@@ -214,6 +230,22 @@ class TestK3(LogicTester):
         proof = self.example_proof('Law of Excluded Middle')
         assert not proof.valid
 
+    def test_valid_demorgan_1(self):
+        proof = self.example_proof('DeMorgan 1')
+        assert proof.valid
+
+    def test_valid_demorgan_2(self):
+        proof = self.example_proof('DeMorgan 2')
+        assert proof.valid
+
+    def test_valid_demorgan_3(self):
+        proof = self.example_proof('DeMorgan 3')
+        assert proof.valid
+
+    def test_valid_demorgan_4(self):
+        proof = self.example_proof('DeMorgan 4')
+        assert proof.valid
+
 class TestK3W(LogicTester):
 
     logic = get_logic('k3w')
@@ -223,18 +255,6 @@ class TestK3W(LogicTester):
         assert tbl['outputs'][0] == 0
         assert tbl['outputs'][3] == 0.5
         assert tbl['outputs'][8] == 1
-
-    def test_ConjunctionNegatedDesignated_step(self):
-        proof = tableau(self.logic)
-        proof.branch().add({'sentence': parse('NKab'), 'designated': True})
-        proof.step()
-        b1, b2, b3 = proof.branches
-        assert b1.has({'sentence': parse('a'), 'designated': True})
-        assert b1.has({'sentence': parse('Nb'), 'designated': True})
-        assert b2.has({'sentence': parse('Na'), 'designated': True})
-        assert b2.has({'sentence': parse('b'), 'designated': True})
-        assert b3.has({'sentence': parse('Na'), 'designated': True})
-        assert b3.has({'sentence': parse('Nb'), 'designated': True})
 
     def test_ConjunctionNegatedUndesignated_step(self):
         proof = tableau(self.logic)
@@ -281,6 +301,22 @@ class TestK3W(LogicTester):
         proof = tableau(self.logic, arg)
         proof.build()
         assert not proof.valid
+
+    def test_valid_demorgan_1(self):
+        proof = self.example_proof('DeMorgan 1')
+        assert proof.valid
+
+    def test_valid_demorgan_2(self):
+        proof = self.example_proof('DeMorgan 2')
+        assert proof.valid
+
+    def test_valid_demorgan_3(self):
+        proof = self.example_proof('DeMorgan 3')
+        assert proof.valid
+
+    def test_valid_demorgan_4(self):
+        proof = self.example_proof('DeMorgan 4')
+        assert proof.valid
 
 class TestB3E(LogicTester):
 
@@ -1061,4 +1097,20 @@ class TestRM3(LogicTester):
 
     def test_valid_cond_mp(self):
         proof = self.example_proof('Conditional Modus Ponens')
+        assert proof.valid
+
+    def test_valid_demorgan_1(self):
+        proof = self.example_proof('DeMorgan 1')
+        assert proof.valid
+
+    def test_valid_demorgan_2(self):
+        proof = self.example_proof('DeMorgan 2')
+        assert proof.valid
+
+    def test_valid_demorgan_3(self):
+        proof = self.example_proof('DeMorgan 3')
+        assert proof.valid
+
+    def test_valid_demorgan_4(self):
+        proof = self.example_proof('DeMorgan 4')
         assert proof.valid
