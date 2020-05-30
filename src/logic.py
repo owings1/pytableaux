@@ -330,7 +330,7 @@ class argument(object):
             return [self.premises, self.conclusion].__repr__()
         return [self.premises, self.conclusion, {'title': self.title}].__repr__()
 
-def tableau(logic, arg=None):
+def tableau(logic, arg=None, **opts):
     """
     Create a tableau for the given logic and argument. Example::
 
@@ -343,7 +343,7 @@ def tableau(logic, arg=None):
             print "Invalid"
 
     """
-    return TableauxSystem.Tableau(logic, arg)
+    return TableauxSystem.Tableau(logic, arg, **opts)
 
 def arity(operator):
     """
@@ -1012,7 +1012,7 @@ class TableauxSystem(object):
         Represents a tableau proof of an argument for the given logic.
         """
 
-        def __init__(self, logic, argument):
+        def __init__(self, logic, argument, **opts):
             #: A tableau is finished when no more rules can apply.
             self.finished = False
             
@@ -1043,6 +1043,9 @@ class TableauxSystem(object):
             self.build_start_time = None
             # whether we ended pre-maturely (e.g. max_steps)
             self.is_premature = False
+
+            # opts
+            self.opts = opts
 
             self.open_branchset = set()
             self.branch_dict = dict()
@@ -1090,7 +1093,12 @@ class TableauxSystem(object):
 
         def set_logic(self, logic):
             self.logic = get_logic(logic)
-            self.rules = [Rule(self) for Rule in self.logic.TableauxRules.rules]
+            opts = dict()
+            if 'is_rank_optim' in self.opts:
+                opts['is_rank_optim'] = self.opts['is_rank_optim']
+            else:
+                opts['is_rank_optim'] = True
+            self.rules = [Rule(self, **opts) for Rule in self.logic.TableauxRules.rules]
             return self
 
         def set_argument(self, argument):
@@ -1597,7 +1605,7 @@ class TableauxSystem(object):
         Base interface class for a tableau rule.
         """
 
-        def __init__(self, tableau):
+        def __init__(self, tableau, **opts):
             """
             Instantiate the rule for the tableau.
             """
@@ -1678,8 +1686,8 @@ class TableauxSystem(object):
 
     class SelectiveTrackingBranchRule(BranchRule):
 
-        def __init__(self, *args):
-            super(TableauxSystem.SelectiveTrackingBranchRule, self).__init__(*args)
+        def __init__(self, *args, **opts):
+            super(TableauxSystem.SelectiveTrackingBranchRule, self).__init__(*args, **opts)
             self.stbr_track = dict()
 
         def applies_to_branch(self, branch):
@@ -1732,9 +1740,13 @@ class TableauxSystem(object):
 
         ticked = False
 
-        def __init__(self, *args):
-            super(TableauxSystem.BranchRule, self).__init__(*args)
+        def __init__(self, *args, **opts):
+            super(TableauxSystem.BranchRule, self).__init__(*args, **opts)
             self.applicable_nodes = dict()
+            if 'is_rank_optim' in opts:
+                self.is_rank_optim = opts['is_rank_optim']
+            else:
+                self.is_rank_optim = True
 
         def after_branch_add(self, branch, other_branch = None):
             if not branch.closed:
@@ -1777,6 +1789,8 @@ class TableauxSystem(object):
                             target['type'] = 'Node'
                         if 'branch' not in target:
                             target['branch'] = branch
+                        if not self.is_rank_optim:
+                            return target
                         cands.append(target)
                     else:
                         self.applicable_nodes[branch_id].discard(node)
