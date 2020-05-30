@@ -87,7 +87,7 @@ class TableauxRules(object):
     .. _K3W: k3w.html
     """
 
-    class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
+    class DoubleNegationDesignated(k3w.TableauxRules.DoubleNegationDesignated):
         """
         This rule is the same as the `FDE DoubleNegationDesignated rule`_.
 
@@ -95,7 +95,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DoubleNegationUndesignated(fde.TableauxRules.DoubleNegationUndesignated):
+    class DoubleNegationUndesignated(k3w.TableauxRules.DoubleNegationUndesignated):
         """
         This rule is the same as the `FDE DoubleNegationUndesignated rule`_.
 
@@ -103,7 +103,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionDesignated(fde.TableauxRules.AssertionDesignated):
+    class AssertionDesignated(k3w.TableauxRules.AssertionDesignated):
         """
         This rule is the same as the `FDE AssertionDesignated rule`_.
 
@@ -153,7 +153,7 @@ class TableauxRules(object):
             d = not self.designation
             branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
 
-    class ConjunctionDesignated(fde.TableauxRules.ConjunctionDesignated):
+    class ConjunctionDesignated(k3w.TableauxRules.ConjunctionDesignated):
         """
         This rule is the same as the `FDE ConjunctionDesignated rule`_.
 
@@ -169,7 +169,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionUndesignated(fde.TableauxRules.ConjunctionUndesignated):
+    class ConjunctionUndesignated(k3w.TableauxRules.ConjunctionUndesignated):
         """
         This rule is the same as the `FDE ConjunctionUndesignated rule`_.
 
@@ -193,7 +193,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DisjunctionNegatedDesignated(fde.TableauxRules.DisjunctionNegatedDesignated):
+    class DisjunctionNegatedDesignated(k3w.TableauxRules.DisjunctionNegatedDesignated):
         """
         This rule is the same as the `FDE DisjunctionNegatedDesignated rule`_.
 
@@ -409,7 +409,7 @@ class TableauxRules(object):
         designation = False
         negated     = True
 
-    class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
+    class ExistentialDesignated(k3w.TableauxRules.ExistentialDesignated):
         """
         This rule is the same as the `FDE ExistentialDesignated rule`_.
 
@@ -417,7 +417,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedDesignated(fde.TableauxRules.ExistentialNegatedDesignated):
+    class ExistentialNegatedDesignated(k3w.TableauxRules.ExistentialNegatedDesignated):
         """
         This rule is the same as the `FDE ExistentialNegatedDesignated rule`_.
 
@@ -425,7 +425,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialUndesignated(fde.TableauxRules.ExistentialUndesignated):
+    class ExistentialUndesignated(k3w.TableauxRules.ExistentialUndesignated):
         """
         This rule is the same as the `FDE ExistentialUndesignated rule`_.
 
@@ -433,7 +433,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedUndesignated(fde.TableauxRules.ExistentialNegatedUndesignated):
+    class ExistentialNegatedUndesignated(k3w.TableauxRules.ExistentialNegatedUndesignated):
         """
         This rule is the same as the `FDE ExistentialNegatedUndesignated rule`_.
 
@@ -441,7 +441,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalDesignated(fde.TableauxRules.UniversalDesignated):
+    class UniversalDesignated(k3w.TableauxRules.UniversalDesignated):
         """
         This rule is the same as the `FDE UniversalDesignated rule`_.
 
@@ -449,7 +449,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalNegatedDesignated(fde.TableauxRules.UniversalNegatedDesignated):
+    class UniversalNegatedDesignated(k3w.TableauxRules.UniversalNegatedDesignated):
         """
         This rule is the same as the `FDE UniversalNegatedDesignated rule`_.
 
@@ -457,7 +457,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalUndesignated(fde.TableauxRules.UniversalUndesignated):
+    class UniversalUndesignated(k3w.TableauxRules.UniversalUndesignated):
         """
         This rule is the same as the `FDE UniversalUndesignated rule`_.
 
@@ -465,7 +465,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalNegatedUndesignated(fde.TableauxRules.UniversalNegatedUndesignated):
+    class UniversalNegatedUndesignated(k3w.TableauxRules.UniversalNegatedUndesignated):
         """
         This rule is the same as the `FDE UniversalNegatedUndesignated rule`_.
 
