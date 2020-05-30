@@ -26,7 +26,7 @@ category = 'Many-valued'
 category_display_order = 8
 
 import logic
-from logic import negate, operate
+from logic import negate, negative, operate
 from . import fde, lp, l3
 
 class Model(lp.Model):
@@ -71,7 +71,7 @@ class TableauxRules(object):
     .. _LP closure rule: lp.html#logics.lp.TableauxRules.Closure
     """
 
-    class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
+    class DoubleNegationDesignated(lp.TableauxRules.DoubleNegationDesignated):
         """
         This rule is the same as the `FDE DoubleNegationDesignated rule`_.
 
@@ -79,7 +79,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DoubleNegationUndesignated(fde.TableauxRules.DoubleNegationUndesignated):
+    class DoubleNegationUndesignated(lp.TableauxRules.DoubleNegationUndesignated):
         """
         This rule is the same as the `FDE DoubleNegationUndesignated rule`_.
 
@@ -87,7 +87,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionDesignated(fde.TableauxRules.AssertionDesignated):
+    class AssertionDesignated(lp.TableauxRules.AssertionDesignated):
         """
         This rule is the same as the `FDE AssertionDesignated rule`_.
 
@@ -95,7 +95,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionNegatedDesignated(fde.TableauxRules.AssertionNegatedDesignated):
+    class AssertionNegatedDesignated(lp.TableauxRules.AssertionNegatedDesignated):
         """
         This rule is the same as the `FDE AssertionNegatedDesignated rule`_.
 
@@ -103,7 +103,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionUndesignated(fde.TableauxRules.AssertionUndesignated):
+    class AssertionUndesignated(lp.TableauxRules.AssertionUndesignated):
         """
         This rule is the same as the `FDE AssertionUndesignated rule`_.
 
@@ -111,7 +111,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionNegatedUndesignated(fde.TableauxRules.AssertionNegatedUndesignated):
+    class AssertionNegatedUndesignated(lp.TableauxRules.AssertionNegatedUndesignated):
         """
         This rule is the same as the `FDE AssertionNegatedUndesignated rule`_.
 
@@ -119,7 +119,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionDesignated(fde.TableauxRules.ConjunctionDesignated):
+    class ConjunctionDesignated(lp.TableauxRules.ConjunctionDesignated):
         """
         This rule is the same as the `FDE ConjunctionDesignated rule`_.
 
@@ -127,7 +127,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionNegatedDesignated(fde.TableauxRules.ConjunctionNegatedDesignated):
+    class ConjunctionNegatedDesignated(lp.TableauxRules.ConjunctionNegatedDesignated):
         """
         This rule is the same as the `FDE ConjunctionNegatedDesignated rule`_.
 
@@ -135,7 +135,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionUndesignated(fde.TableauxRules.ConjunctionUndesignated):
+    class ConjunctionUndesignated(lp.TableauxRules.ConjunctionUndesignated):
         """
         This rule is the same as the `FDE ConjunctionUndesignated rule`_.
 
@@ -143,7 +143,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionNegatedUndesignated(fde.TableauxRules.ConjunctionNegatedUndesignated):
+    class ConjunctionNegatedUndesignated(lp.TableauxRules.ConjunctionNegatedUndesignated):
         """
         This rule is the same as the `FDE ConjunctionNegatedUndesignated rule`_.
 
@@ -151,7 +151,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DisjunctionDesignated(fde.TableauxRules.DisjunctionDesignated):
+    class DisjunctionDesignated(lp.TableauxRules.DisjunctionDesignated):
         """
         This rule is the same as the `FDE DisjunctionDesignated rule`_.
 
@@ -159,7 +159,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DisjunctionNegatedDesignated(fde.TableauxRules.DisjunctionNegatedDesignated):
+    class DisjunctionNegatedDesignated(lp.TableauxRules.DisjunctionNegatedDesignated):
         """
         This rule is the same as the `FDE DisjunctionNegatedDesignated rule`_.
 
@@ -167,7 +167,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DisjunctionUndesignated(fde.TableauxRules.DisjunctionUndesignated):
+    class DisjunctionUndesignated(lp.TableauxRules.DisjunctionUndesignated):
         """
         This rule is the same as the `FDE DisjunctionUndesignated rule`_.
 
@@ -175,7 +175,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DisjunctionNegatedUndesignated(fde.TableauxRules.DisjunctionNegatedUndesignated):
+    class DisjunctionNegatedUndesignated(lp.TableauxRules.DisjunctionNegatedUndesignated):
         """
         This rule is the same as the `FDE DisjunctionNegatedUndesignated rule`_.
 
@@ -183,7 +183,7 @@ class TableauxRules(object):
         """
         pass
 
-    class MaterialConditionalDesignated(fde.TableauxRules.MaterialConditionalDesignated):
+    class MaterialConditionalDesignated(lp.TableauxRules.MaterialConditionalDesignated):
         """
         This rule is the same as the `FDE MaterialConditionalDesignated rule`_.
 
@@ -191,7 +191,7 @@ class TableauxRules(object):
         """
         pass
 
-    class MaterialConditionalNegatedDesignated(fde.TableauxRules.MaterialConditionalNegatedDesignated):
+    class MaterialConditionalNegatedDesignated(lp.TableauxRules.MaterialConditionalNegatedDesignated):
         """
         This rule is the same as the `FDE MaterialConditionalNegatedDesignated rule`_.
 
@@ -199,7 +199,7 @@ class TableauxRules(object):
         """
         pass
 
-    class MaterialConditionalNegatedUndesignated(fde.TableauxRules.MaterialConditionalNegatedUndesignated):
+    class MaterialConditionalNegatedUndesignated(lp.TableauxRules.MaterialConditionalNegatedUndesignated):
         """
         This rule is the same as the `FDE MaterialConditionalNegatedUndesignated rule`_.
 
@@ -207,7 +207,7 @@ class TableauxRules(object):
         """
         pass
 
-    class MaterialConditionalUndesignated(fde.TableauxRules.MaterialConditionalUndesignated):
+    class MaterialConditionalUndesignated(lp.TableauxRules.MaterialConditionalUndesignated):
         """
         This rule is the same as the `FDE MaterialConditionalUndesignated rule`_.
 
@@ -215,7 +215,7 @@ class TableauxRules(object):
         """
         pass
 
-    class MaterialBiconditionalDesignated(fde.TableauxRules.MaterialBiconditionalDesignated):
+    class MaterialBiconditionalDesignated(lp.TableauxRules.MaterialBiconditionalDesignated):
         """
         This rule is the same as the `FDE MaterialBiconditionalDesignated rule`_.
 
@@ -223,7 +223,7 @@ class TableauxRules(object):
         """
         pass
 
-    class MaterialBiconditionalNegatedDesignated(fde.TableauxRules.MaterialBiconditionalNegatedDesignated):
+    class MaterialBiconditionalNegatedDesignated(lp.TableauxRules.MaterialBiconditionalNegatedDesignated):
         """
         This rule is the same as the `FDE MaterialBiconditionalNegatedDesignated rule`_.
 
@@ -231,7 +231,7 @@ class TableauxRules(object):
         """
         pass
 
-    class MaterialBiconditionalUndesignated(fde.TableauxRules.MaterialBiconditionalUndesignated):
+    class MaterialBiconditionalUndesignated(lp.TableauxRules.MaterialBiconditionalUndesignated):
         """
         This rule is the same as the `FDE MaterialBiconditionalUndesignated rule`_.
 
@@ -239,7 +239,7 @@ class TableauxRules(object):
         """
         pass
 
-    class MaterialBiconditionalNegatedUndesignated(fde.TableauxRules.MaterialBiconditionalNegatedUndesignated):
+    class MaterialBiconditionalNegatedUndesignated(lp.TableauxRules.MaterialBiconditionalNegatedUndesignated):
         """
         This rule is the same as the `FDE MaterialBiconditionalNegatedUndesignated rule`_.
 
@@ -247,7 +247,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConditionalDesignated(fde.TableauxRules.ConditionalDesignated):
+    class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'*, add an undesignated
@@ -257,27 +257,57 @@ class TableauxRules(object):
         four designated nodes, with the antecedent, the negation of the antecedent,
         the consequent, and the negation of the consequent, respecitively. Then tick *n*.
         """
+
+        operator    = 'Conditional'
+        designation = True
+
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
             b2 = self.tableau.branch(branch)
             b3 = self.tableau.branch(branch)
             b1.update([
-                {'sentence': lhs, 'designated': False},
-                {'sentence': negate(lhs), 'designated': True}
+                {'sentence':        lhs , 'designated': False},
+                {'sentence': negate(lhs), 'designated': True},
             ]).tick(node)
             b2.update([
-                {'sentence': rhs, 'designated': True},
-                {'sentence': negate(rhs), 'designated': False}
+                {'sentence':        rhs , 'designated': True},
+                {'sentence': negate(rhs), 'designated': False},
             ]).tick(node)
             b3.update([
-                {'sentence': lhs, 'designated': True},
+                {'sentence':        lhs , 'designated': True},
                 {'sentence': negate(lhs), 'designated': True},
-                {'sentence': rhs, 'designated': True},
-                {'sentence': negate(rhs), 'designated': True}
+                {'sentence':        rhs , 'designated': True},
+                {'sentence': negate(rhs), 'designated': True},
             ]).tick(node)
 
-    class ConditionalNegatedDesignated(fde.TableauxRules.ConditionalNegatedDesignated):
+        def score_target_map(self, target):
+            branch = target['branch']
+            lhs, rhs = self.sentence(target['node']).operands
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence':          lhs , 'designated': True},
+                    {'sentence': negative(lhs), 'designated': False},
+                    # LP closure redundant
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence':          rhs , 'designated': False},
+                    {'sentence': negative(rhs), 'designated': True},
+                    # LP closure redundant
+                ]),
+                'b3': branch.has_any([
+                    # FDE closure
+                    {'sentence':          lhs , 'designated': False},
+                    {'sentence': negative(lhs), 'designated': False},
+                    {'sentence':          rhs , 'designated': False},
+                    {'sentence': negative(rhs), 'designated': False},
+                    # LP closure n/a
+                ]),
+            }
+
+    class ConditionalNegatedDesignated(lp.TableauxRules.ConditionalNegatedDesignated):
         """
         This rule is the same as the `FDE ConditionalNegatedDesignated rule`_.
 
@@ -285,7 +315,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConditionalUndesignated(fde.TableauxRules.ConditionalUndesignated):
+    class ConditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, undesignated conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'*, add a designated node
@@ -293,33 +323,80 @@ class TableauxRules(object):
         On *b''*, add an undesignated node with the negation of the antecedent,
         and a designated node with the negation of the consequent. Then tick *n*.
         """
+
+        operator    = 'Conditional'
+        designation = False
+
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
             b2 = self.tableau.branch(branch)
             b1.update([
                 {'sentence': lhs, 'designated': True},
-                {'sentence': rhs, 'designated': False}
+                {'sentence': rhs, 'designated': False},
             ]).tick(node)
             b2.update([
                 {'sentence': negate(lhs), 'designated': False},
-                {'sentence': negate(rhs), 'designated': True}
+                {'sentence': negate(rhs), 'designated': True},
             ]).tick(node)
 
-    class ConditionalNegatedUndesignated(fde.TableauxRules.ConditionalNegatedUndesignated):
+        def score_target_map(self, target):
+            branch = target['branch']
+            lhs, rhs = self.sentence(target['node']).operands
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': lhs, 'designated': False},
+                    {'sentence': rhs, 'designated': True},
+                    # LP closure
+                    {'sentence': negative(rhs), 'designated': False},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(lhs), 'designated': True},
+                    {'sentence': negative(rhs), 'designated': False},
+                    # LP closure
+                    {'sentence': lhs, 'designated': False},
+                ])
+            }
+
+    class ConditionalNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, undesignated, negated conditional node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'*, add an undesignated node
         with the antecedent. On *b''*, add an undesignated node with the negation of
         the consequent. Then tick *n*.
         """
+
+        negated     = True
+        operator    = 'Conditional'
+        designation = False
+
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
             b2 = self.tableau.branch(branch)
             b1.add({'sentence': lhs, 'designated': False}).tick(node)
             b2.add({'sentence': negate(rhs), 'designated': False}).tick(node)
-        
+
+        def score_target_map(self, target):
+            branch = target['branch']
+            lhs, rhs = self.sentence(target['node']).operands
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': lhs, 'designated': True},
+                    # LP closure
+                    {'sentence': negative(lhs), 'designated': False},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(rhs), 'designated': True},
+                    # LP closure
+                    {'sentence': rhs, 'designated': False},
+                ]),
+            }
+
     class BiconditionalDesignated(l3.TableauxRules.BiconditionalDesignated):
         """
         This rule is the same as the `L3 BiconditionalDesignated rule`_.
@@ -352,7 +429,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
+    class ExistentialDesignated(lp.TableauxRules.ExistentialDesignated):
         """
         This rule is the same as the `FDE ExistentialDesignated rule`_.
 
@@ -360,7 +437,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedDesignated(fde.TableauxRules.ExistentialNegatedDesignated):
+    class ExistentialNegatedDesignated(lp.TableauxRules.ExistentialNegatedDesignated):
         """
         This rule is the same as the `FDE ExistentialNegatedDesignated rule`_.
 
@@ -368,7 +445,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialUndesignated(fde.TableauxRules.ExistentialUndesignated):
+    class ExistentialUndesignated(lp.TableauxRules.ExistentialUndesignated):
         """
         This rule is the same as the `FDE ExistentialUndesignated rule`_.
 
@@ -376,7 +453,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedUndesignated(fde.TableauxRules.ExistentialNegatedUndesignated):
+    class ExistentialNegatedUndesignated(lp.TableauxRules.ExistentialNegatedUndesignated):
         """
         This rule is the same as the `FDE ExistentialNegatedUndesignated rule`_.
 
@@ -384,7 +461,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalDesignated(fde.TableauxRules.UniversalDesignated):
+    class UniversalDesignated(lp.TableauxRules.UniversalDesignated):
         """
         This rule is the same as the `FDE UniversalDesignated rule`_.
 
@@ -392,7 +469,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalNegatedDesignated(fde.TableauxRules.UniversalNegatedDesignated):
+    class UniversalNegatedDesignated(lp.TableauxRules.UniversalNegatedDesignated):
         """
         This rule is the same as the `FDE UniversalNegatedDesignated rule`_.
 
@@ -400,7 +477,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalUndesignated(fde.TableauxRules.UniversalUndesignated):
+    class UniversalUndesignated(lp.TableauxRules.UniversalUndesignated):
         """
         This rule is the same as the `FDE UniversalUndesignated rule`_.
 
@@ -408,7 +485,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalNegatedUndesignated(fde.TableauxRules.UniversalNegatedUndesignated):
+    class UniversalNegatedUndesignated(lp.TableauxRules.UniversalNegatedUndesignated):
         """
         This rule is the same as the `FDE UniversalNegatedUndesignated rule`_.
 
