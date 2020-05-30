@@ -1787,7 +1787,13 @@ class TableauxSystem(object):
                 return False
 
         def score_target(self, target):
-            return 0
+            return sum(self.score_target_list(target))
+
+        def score_target_list(self, target):
+            return self.score_target_map(target).values()
+
+        def score_target_map(self, target):
+            return {0: 0}
 
         def apply(self, target):
             return self.apply_to_node(target['node'], target['branch'])
