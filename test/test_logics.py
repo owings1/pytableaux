@@ -1047,6 +1047,14 @@ class TestL3(LogicTester):
         proof = self.example_proof('Material Identity')
         assert not proof.valid
 
+    def test_invalid_cond_contraction(self):
+        proof = self.example_proof('Conditional Contraction')
+        assert not proof.valid
+
+    def test_invalid_cond_pseudo_contraction(self):
+        proof = self.example_proof('Conditional Pseudo Contraction')
+        assert not proof.valid
+        
 class TestRM3(LogicTester):
 
     logic = get_logic('RM3')
