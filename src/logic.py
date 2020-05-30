@@ -1740,6 +1740,7 @@ class TableauxSystem(object):
                 self.applicable_nodes[branch_id].discard(node)
 
         def applies(self):
+            cands = list()
             for branch_id in self.applicable_nodes:
                 branch = self.tableau.get_branch(branch_id)
                 for node in set(self.applicable_nodes[branch_id]):
@@ -1753,9 +1754,21 @@ class TableauxSystem(object):
                             target['type'] = 'Node'
                         if 'branch' not in target:
                             target['branch'] = branch
-                        return target
+                        cands.append(target)
                     else:
                         self.applicable_nodes[branch_id].discard(node)
+            if len(cands):
+                # score candidates
+                cand_scores = [self.score_target(target) for target in cands]
+                max_score = max(set(cand_scores))
+                for i in range(len(cands)):
+                    if cand_scores[i] == max_score:
+                        return cands[i]
+            else:
+                return False
+
+        def score_target(self, target):
+            return 0
 
         def apply(self, target):
             return self.apply_to_node(target['node'], target['branch'])
