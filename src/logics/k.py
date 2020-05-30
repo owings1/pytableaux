@@ -804,7 +804,9 @@ class TableauxRules(object):
             w = node.props['world']
             s = self.sentence(node)
             v = node.props['sentence'].variable
-            branch.add({ 'sentence' : s.substitute(branch.new_constant(), v), 'world': w }).tick(node)
+            c = branch.new_constant()
+            r = s.substitute(c, v)
+            branch.add({'sentence': r, 'world': w}).tick(node)
 
     class ExistentialNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
