@@ -28,7 +28,7 @@ category_display_order = 6
 
 from . import fde, k3
 import logic
-from logic import operate, negate
+from logic import operate, negate, negative
 
 class Model(k3.Model):
     """
@@ -252,21 +252,25 @@ class TableauxRules(object):
     class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated conditional node *n* on a branch *b*, make two
-        new branches *b'* and *b''* from *b*, add a material conditional designated
-        node to *b'* with the same operands as *n*, and add four undesignated nodes
-        to *b''*: a node with the antecedent, a node with the negation of the antecedent,
+        new branches *b'* and *b''* from *b*. To *b'* add a designated disjunction
+        node with the negation of the antecedent as the first disjunct, and the
+        consequent as the second disjunct. On *b''* add four undesignated nodes:
+        a node with the antecedent, a node with the negation of the antecedent,
         a node with the consequent, and a node with the negation of the consequent.
         Then tick *n*.
         """
+
         operator    = 'Conditional'
         designation = True
+
+        # TODO: Turn this into a 3-branching rule
 
         def apply_to_node(self, node, branch):
             b1 = branch
             b2 = self.tableau.branch(branch)
             s = node.props['sentence']
             b1.add(
-                { 'sentence' : operate('Material Conditional', s.operands), 'designated' : True }
+                { 'sentence' : operate('Disjunction', [negate(s.lhs), s.rhs]), 'designated' : True }
             ).tick(node)
             b2.update([
                 { 'sentence' :        s.lhs,  'designated' : False },
@@ -274,6 +278,37 @@ class TableauxRules(object):
                 { 'sentence' :        s.rhs,  'designated' : False },
                 { 'sentence' : negate(s.rhs), 'designated' : False }
             ]).tick(node)
+
+        def score_target(self, target):
+            # override the FDE score
+            score = 0
+            if self.designation:
+                # only apply to implementations for designated rules
+                branch = target['branch']
+                s = self.sentence(target['node'])
+                # b1 checks
+                b1_s = operate('Disjunction', [negate(s.lhs), s.rhs])
+                if branch.has({'sentence': b1_s, 'designated': False }):
+                    score += 1
+                elif branch.has({'sentence': negative(b1_s), 'designated': True}):
+                    score += 1
+                else:
+                    if branch.has({'sentence': s.lhs, 'designated': True}):
+                        score += 0.5
+                    if branch.has({'sentence': negative(s.rhs), 'designated': True}):
+                        score += 0.5
+                # b2 checks
+                b2_checks = [
+                    {'sentence' :           s.lhs, 'designated' : True},
+                    {'sentence' : negative(s.lhs), 'designated' : True},
+                    {'sentence' :           s.rhs, 'designated' : True},
+                    {'sentence' : negative(s.rhs), 'designated' : True}
+                ]
+                for props in b2_checks:
+                    if branch.has(props):
+                        score += 1
+                        break
+            return score
 
     class ConditionalNegatedDesignated(k3.TableauxRules.ConditionalNegatedDesignated):
         """
@@ -308,6 +343,36 @@ class TableauxRules(object):
                 {'sentence': negate(s.lhs), 'designated': False},
                 {'sentence': negate(s.rhs), 'designated': True},
             ]).tick(node)
+
+        def score_target(self, target):
+            # note FDE does not score this since it is not a branching rule in FDE.
+            score = 0
+            if not self.designation:
+                # only apply to implementations for undesignated rules
+                branch = target['branch']
+                s = self.sentence(target['node'])
+                # b1 checks
+                b1_checks = [
+                    {'sentence': s.lhs, 'designated': False},
+                    {'sentence': s.rhs, 'designated': True},
+                    {'sentence': negative(s.lhs), 'designated': True},
+                ]
+                for props in b1_checks:
+                    if branch.has(props):
+                        score += 1
+                        break
+                # b2 checks
+                b2_checks = [
+                    {'sentence': s.lhs, 'designated': True},
+                    {'sentence': negative(s.lhs), 'designated': True},
+                    {'sentence': negative(s.rhs), 'designated': False},
+                    {'sentence': s.rhs, 'designated': True},
+                ]
+                for props in b2_checks:
+                    if branch.has(props):
+                        score += 1
+                        break
+            return score
 
     class ConditionalNegatedUndesignated(k3.TableauxRules.ConditionalNegatedUndesignated):
         """
