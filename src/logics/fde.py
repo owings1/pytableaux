@@ -26,7 +26,7 @@ category = 'Many-valued'
 category_display_order = 1
 
 import logic, examples
-from logic import negate, quantify, atomic, NotImplementedError
+from logic import negate, negative, quantify, atomic, NotImplementedError
 
 Identity = logic.get_system_predicate('Identity')
 Existence = logic.get_system_predicate('Existence')
@@ -544,6 +544,17 @@ class TableauxRules(object):
             b1.add({ 'sentence' : negate(s.lhs), 'designated' : d }).tick(node)
             b2.add({ 'sentence' : negate(s.rhs), 'designated' : d }).tick(node)
 
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            d = self.designation
+            score = 0
+            if branch.has({'sentence': negative(s.lhs), 'designated': not d}):
+                score += 1
+            if branch.has({'sentence': negative(s.rhs), 'designated': not d}):
+                score += 1
+            return score
 
     class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -562,6 +573,18 @@ class TableauxRules(object):
             b2 = self.tableau.branch(branch)
             b1.add({ 'sentence' : s.lhs, 'designated' : d }).tick(node)
             b2.add({ 'sentence' : s.rhs, 'designated' : d }).tick(node)
+
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            d = self.designation
+            score = 0
+            if branch.has({'sentence': s.lhs, 'designated': not d}):
+                score += 1
+            if branch.has({'sentence': s.rhs, 'designated': not d}):
+                score += 1
+            return score
 
     class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -637,6 +660,18 @@ class TableauxRules(object):
             b1.add({ 'sentence' : negate(s.lhs) , 'designated' : d }).tick(node)
             b2.add({ 'sentence' :        s.rhs  , 'designated' : d }).tick(node)
 
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            d = self.designation
+            score = 0
+            if branch.has({'sentence': negative(s.lhs), 'designated': not d}):
+                score += 1
+            if branch.has({'sentence': s.rhs, 'designated': not d}):
+                score += 1
+            return score
+
     class MaterialConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated negated material conditional node *n* on a branch *b*, add
@@ -694,6 +729,18 @@ class TableauxRules(object):
             b1.add({ 'sentence' :        s.lhs  , 'designated' : d }).tick(node)
             b2.add({ 'sentence' : negate(s.rhs) , 'designated' : d }).tick(node)
 
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            d = self.designation
+            score = 0
+            if branch.has({'sentence': s.lhs, 'designated': not d}):
+                score += 1
+            if branch.has({'sentence': negative(s.rhs), 'designated': not d}):
+                score += 1
+            return score
+
     class MaterialBiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked designated material biconditional node *n* on a branch *b*, make
@@ -719,6 +766,18 @@ class TableauxRules(object):
                 { 'sentence' : s.rhs, 'designated' : d },
                 { 'sentence' : s.lhs, 'designated' : d }
             ]).tick(node)
+
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            d = self.designation
+            score = 0
+            if branch.has({'sentence': negative(s.lhs), 'designated': not d}) or branch.has({'sentence': negative(s.rhs), 'designated': not d}):
+                score += 1
+            if branch.has({'sentence': s.rhs, 'designated': not d}) or branch.has({'sentence': s.lhs, 'designated': not d}):
+                score += 1
+            return score
 
     class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -746,7 +805,19 @@ class TableauxRules(object):
                 { 'sentence' : negate(s.lhs) , 'designated' : d },
                 { 'sentence' :        s.rhs  , 'designated' : d }
             ]).tick(node)
-                    
+
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            d = self.designation
+            score = 0
+            if branch.has({'sentence': s.lhs, 'designated': not d}) or branch.has({'sentence': negative(s.rhs), 'designated': not d}):
+                score += 1
+            if branch.has({'sentence': negative(s.lhs), 'designated': not d}) or branch.has({'sentence': s.rhs, 'designated': not d}):
+                score += 1
+            return score
+
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
         """
         From an unticked undesignated material biconditional node *n* on a branch *b*, make
