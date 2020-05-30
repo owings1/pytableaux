@@ -621,17 +621,15 @@ class TableauxRules(object):
             b1.add({ 'sentence' : negate(s.lhs), 'world' : w }).tick(node)
             b2.add({ 'sentence' : negate(s.rhs), 'world' : w }).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             w = node.props['world']
-            score = 0
-            if branch.has({'sentence': s.lhs, 'world': w}):
-                score += 1
-            if branch.has({'sentence': s.rhs, 'world': w}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has({'sentence': s.lhs, 'world': w}),
+                'b2': branch.has({'sentence': s.rhs, 'world': w}),
+            }
 
     class Disjunction(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -650,17 +648,15 @@ class TableauxRules(object):
             b1.add({ 'sentence' : s.lhs, 'world' : w }).tick(node)
             b2.add({ 'sentence' : s.rhs, 'world' : w }).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             w = node.props['world']
-            score = 0
-            if branch.has({'sentence': negative(s.lhs), 'world': w}):
-                score += 1
-            if branch.has({'sentence': negative(s.rhs), 'world': w}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has({'sentence': negative(s.lhs), 'world': w}),
+                'b2': branch.has({'sentence': negative(s.rhs), 'world': w}),
+            }
 
     class DisjunctionNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -696,17 +692,15 @@ class TableauxRules(object):
             b1.add({ 'sentence' : negate(s.lhs) , 'world' : w }).tick(node)
             b2.add({ 'sentence' :        s.rhs  , 'world' : w }).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             w = node.props['world']
-            score = 0
-            if branch.has({'sentence': s.lhs, 'world': w}):
-                score += 1
-            if branch.has({'sentence': negative(s.rhs), 'world': w}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has({'sentence':          s.lhs , 'world': w}),
+                'b2': branch.has({'sentence': negative(s.rhs), 'world': w}),
+            }
 
     class MaterialConditionalNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -751,17 +745,21 @@ class TableauxRules(object):
                 { 'sentence' : s.lhs, 'world' : w }
             ]).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             w = node.props['world']
-            score = 0
-            if branch.has({'sentence': s.lhs, 'world': w}) or branch.has({'sentence': s.rhs, 'world': w}):
-                score += 1
-            if branch.has({'sentence': negative(s.lhs), 'world': w}) or branch.has({'sentence': negative(s.rhs), 'world': w}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has_any([
+                    {'sentence': s.lhs, 'world': w},
+                    {'sentence': s.rhs, 'world': w},
+                ]),
+                'b2': branch.has_any([
+                    {'sentence': negative(s.lhs), 'world': w},
+                    {'sentence': negative(s.rhs), 'world': w},
+                ]),
+            }
 
     class MaterialBiconditionalNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -789,17 +787,22 @@ class TableauxRules(object):
                 { 'sentence':        s.lhs  , 'world' : w }
             ]).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             w = node.props['world']
             score = 0
-            if branch.has({'sentence': negative(s.lhs), 'world': w}) or branch.has({'sentence': s.rhs, 'world': w}):
-                score += 1
-            if branch.has({'sentence': s.lhs, 'world': w}) or branch.has({'sentence': negative(s.rhs), 'world': w}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has_any([
+                    {'sentence': negative(s.lhs), 'world': w},
+                    {'sentence':          s.rhs , 'world': w},
+                ]),
+                'b2': branch.has_any([
+                    {'sentence':          s.lhs , 'world': w},
+                    {'sentence': negative(s.rhs), 'world': w},
+                ]),
+            }
 
     class Conditional(MaterialConditional):
         """
