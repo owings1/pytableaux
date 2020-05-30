@@ -163,16 +163,14 @@ class TableauxRules(object):
         """
 
         def score_target(self, target):
-            branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
-            d = self.designation
             score = super(TableauxRules.ConjunctionNegatedDesignated, self).score_target(target)
-            if d:
+            if self.designation:
                 # only apply to implementations for designated rules
-                if branch.has({'sentence': s.lhs, 'designated': d}):
+                branch = target['branch']
+                s = self.sentence(target['node'])
+                if branch.has({'sentence': s.lhs, 'designated': True}):
                     score += 1
-                if branch.has({'sentence': s.rhs, 'designated': d}):
+                if branch.has({'sentence': s.rhs, 'designated': True}):
                     score += 1
             return score
 
@@ -184,16 +182,14 @@ class TableauxRules(object):
         """
 
         def score_target(self, target):
-            branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
-            d = self.designation
             score = super(TableauxRules.ConjunctionUndesignated, self).score_target(target)
-            if d:
+            if self.designation:
                 # only apply to implementations for designated rules
-                if branch.has({'sentence': negative(s.lhs), 'designated': d}):
+                branch = target['branch']
+                s = self.sentence(target['node'])
+                if branch.has({'sentence': negative(s.lhs), 'designated': True}):
                     score += 1
-                if branch.has({'sentence': negative(s.rhs), 'designated': d}):
+                if branch.has({'sentence': negative(s.rhs), 'designated': True}):
                     score += 1
             return score
 
@@ -253,16 +249,14 @@ class TableauxRules(object):
         """
 
         def score_target(self, target):
-            branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
-            d = self.designation
             score = super(TableauxRules.MaterialConditionalDesignated, self).score_target(target)
-            if d:
+            if self.designation:
                 # only apply to implementations for designated rules
-                if branch.has({'sentence': s.lhs, 'designated': d}):
+                branch = target['branch']
+                s = self.sentence(target['node'])
+                if branch.has({'sentence': s.lhs, 'designated': True}):
                     score += 1
-                if branch.has({'sentence': negative(s.rhs), 'designated': d}):
+                if branch.has({'sentence': negative(s.rhs), 'designated': True}):
                     score += 1
             return score
 
@@ -290,16 +284,14 @@ class TableauxRules(object):
         """
 
         def score_target(self, target):
-            branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
-            d = self.designation
             score = super(TableauxRules.MaterialConditionalNegatedUndesignated, self).score_target(target)
-            if d:
+            if self.designation:
                 # only apply to implementations for designated rules
-                if branch.has({'sentence': negative(s.lhs), 'designated': d}):
+                branch = target['branch']
+                s = self.sentence(target['node'])
+                if branch.has({'sentence': negative(s.lhs), 'designated': True}):
                     score += 1
-                if branch.has({'sentence': s.rhs, 'designated': d}):
+                if branch.has({'sentence': s.rhs, 'designated': True}):
                     score += 1
             return score
 
@@ -311,16 +303,14 @@ class TableauxRules(object):
         """
 
         def score_target(self, target):
-            branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
-            d = self.designation
             score = super(TableauxRules.MaterialBiconditionalDesignated, self).score_target(target)
-            if d:
+            if self.designation:
                 # only apply to implementations for designated rules
-                if branch.has({'sentence': s.lhs, 'designated': d}) or branch.has({'sentence': s.rhs, 'designated': d}):
+                branch = target['branch']
+                s = self.sentence(target['node'])
+                if branch.has({'sentence': s.lhs, 'designated': True}) or branch.has({'sentence': s.rhs, 'designated': True}):
                     score += 1
-                if branch.has({'sentence': negative(s.lhs), 'designated': d}) or branch.has({'sentence': negative(s.rhs), 'designated': d}):
+                if branch.has({'sentence': negative(s.lhs), 'designated': True}) or branch.has({'sentence': negative(s.rhs), 'designated': True}):
                     score += 1
             return score
 
@@ -332,16 +322,14 @@ class TableauxRules(object):
         """
 
         def score_target(self, target):
-            branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
-            d = self.designation
             score = super(TableauxRules.MaterialBiconditionalNegatedDesignated, self).score_target(target)
-            if d:
+            if self.designation:
                 # only apply to implementations for designated rules
-                if branch.has({'sentence': negative(s.lhs), 'designated': d}) or branch.has({'sentence': s.rhs, 'designated': d}):
+                branch = target['branch']
+                s = self.sentence(target['node'])
+                if branch.has({'sentence': negative(s.lhs), 'designated': True}) or branch.has({'sentence': s.rhs, 'designated': True}):
                     score += 1
-                if branch.has({'sentence': s.lhs, 'designated': d}) or branch.has({'sentence': negative(s.rhs), 'designated': d}):
+                if branch.has({'sentence': s.lhs, 'designated': True}) or branch.has({'sentence': negative(s.rhs), 'designated': True}):
                     score += 1
             return score
 
