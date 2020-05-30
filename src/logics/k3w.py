@@ -26,7 +26,7 @@ category = 'Many-valued'
 category_display_order = 3
 
 import logic
-from logic import negate, operate
+from logic import negate, negative, operate
 from . import fde, k3
 
 class Model(k3.Model):
@@ -75,7 +75,7 @@ class TableauxRules(object):
     .. _FDE: fde.html
     """
 
-    class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
+    class DoubleNegationDesignated(k3.TableauxRules.DoubleNegationDesignated):
         """
         This rule is the same as the `FDE DoubleNegationDesignated rule`_.
 
@@ -83,7 +83,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DoubleNegationUndesignated(fde.TableauxRules.DoubleNegationUndesignated):
+    class DoubleNegationUndesignated(k3.TableauxRules.DoubleNegationUndesignated):
         """
         This rule is the same as the `FDE DoubleNegationUndesignated rule`_.
 
@@ -91,7 +91,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionDesignated(fde.TableauxRules.AssertionDesignated):
+    class AssertionDesignated(k3.TableauxRules.AssertionDesignated):
         """
         This rule is the same as the `FDE AssertionDesignated rule`_.
 
@@ -99,7 +99,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionNegatedDesignated(fde.TableauxRules.AssertionNegatedDesignated):
+    class AssertionNegatedDesignated(k3.TableauxRules.AssertionNegatedDesignated):
         """
         This rule is the same as the `FDE AssertionNegatedDesignated rule`_.
 
@@ -107,7 +107,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionUndesignated(fde.TableauxRules.AssertionUndesignated):
+    class AssertionUndesignated(k3.TableauxRules.AssertionUndesignated):
         """
         This rule is the same as the `FDE AssertionUndesignated rule`_.
 
@@ -115,7 +115,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionNegatedUndesignated(fde.TableauxRules.AssertionNegatedUndesignated):
+    class AssertionNegatedUndesignated(k3.TableauxRules.AssertionNegatedUndesignated):
         """
         This rule is the same as the `FDE AssertionNegatedUndesignated rule`_.
 
@@ -123,7 +123,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionDesignated(fde.TableauxRules.ConjunctionDesignated):
+    class ConjunctionDesignated(k3.TableauxRules.ConjunctionDesignated):
         """
         This rule is the same as the `FDE ConjunctionDesignated rule`_.
 
@@ -131,7 +131,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionNegatedDesignated(fde.TableauxRules.ConjunctionNegatedDesignated):
+    class ConjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, designated, negated conjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
@@ -141,6 +141,10 @@ class TableauxRules(object):
         designated nodes with the negation of each conjunct. Then tick *n*.
         """
 
+        negated     = True
+        operator    = 'Conjunction'
+        designation = True
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
@@ -160,7 +164,60 @@ class TableauxRules(object):
                 { 'sentence' : negate(s.rhs), 'designated' : d }
             ]).tick(node)
 
-    class ConjunctionUndesignated(fde.TableauxRules.ConjunctionUndesignated):
+        def score_target_map(self, target):
+            scores = {
+                'b1': 0,
+                'b2': 0,
+                'b3': 0,
+            }
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            d = self.designation
+            # b1
+            #  FDE closure
+            if branch.has_any([
+                {'sentence': s.lhs          , 'designated': not d},
+                {'sentence': negative(s.rhs), 'designated': not d},
+            ]):
+                scores['b1'] += 1
+            #  K3 closure
+            elif d:
+                if branch.has_any([
+                    {'sentence': negative(s.lhs), 'designated': True},
+                    {'sentence': s.rhs          , 'designated': True},
+                ]):
+                    scores['b1'] += 1
+            # b2
+            #  FDE closure
+            if branch.has_any([
+                {'sentence': negative(s.lhs), 'designated': not d},
+                {'sentence': s.rhs          , 'designated': not d},
+            ]):
+                scores['b2'] += 1
+            #  K3 closure
+            elif d:
+                if branch.has_any([
+                    {'sentence': s.lhs          , 'designated': True},
+                    {'sentence': negative(s.rhs), 'designated': True},
+                ]):
+                    scores['b2'] += 1
+            # b3
+            #  FDE closure
+            if branch.has_any([
+                {'sentence': negative(s.lhs), 'designated': not d},
+                {'sentence': negative(s.rhs), 'designated': not d},
+            ]):
+                scores['b3'] += 1
+            #  K3 closure
+            elif d:
+                if branch.has_any([
+                    {'sentence': s.lhs, 'designated': True},
+                    {'sentence': s.rhs, 'designated': True},
+                ]):
+                    scores['b3'] += 1
+            return scores
+
+    class ConjunctionUndesignated(k3.TableauxRules.ConjunctionUndesignated):
         """
         This rule is the same as the `FDE ConjunctionUndesignated rule`_.
 
@@ -168,7 +225,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionNegatedUndesignated(fde.TableauxRules.ConjunctionNegatedUndesignated):
+    class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated nodes
@@ -177,6 +234,10 @@ class TableauxRules(object):
         Then tick *n*. 
         """
 
+        negated     = True
+        operator    = 'Conjunction'
+        designation = False
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
@@ -184,19 +245,66 @@ class TableauxRules(object):
             b2 = self.tableau.branch(branch)
             b3 = self.tableau.branch(branch)
             b1.update([
-                { 'sentence' :        s.lhs , 'designated' : d },
-                { 'sentence' : negate(s.lhs), 'designated' : d }
+                {'sentence':        s.lhs , 'designated': d},
+                {'sentence': negate(s.lhs), 'designated': d},
             ]).tick(node)
             b2.update([
-                { 'sentence' :        s.rhs , 'designated' : d },
-                { 'sentence' : negate(s.rhs), 'designated' : d }
+                {'sentence':        s.rhs , 'designated': d},
+                {'sentence': negate(s.rhs), 'designated': d},
             ]).tick(node)
             b3.update([
-                { 'sentence' :        s.lhs , 'designated' : not d },
-                { 'sentence' :        s.rhs , 'designated' : not d }
+                {'sentence':        s.lhs , 'designated': not d},
+                {'sentence':        s.rhs , 'designated': not d},
             ]).tick(node)
 
-    class DisjunctionDesignated(fde.TableauxRules.DisjunctionDesignated):
+        def score_target_map(self, target):
+            scores = {
+                'b1': 0,
+                'b2': 0,
+                'b3': 0,
+            }
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            d = self.designation
+            # b1
+            #  FDE closure
+            if branch.has_any([
+                {'sentence':          s.lhs , 'designated': not d},
+                {'sentence': negative(s.lhs), 'designated': not d},
+            ]):
+                scores['b1'] += 1
+            #  K3 closure
+            elif d:
+                # no known impl
+                pass
+            # b2
+            #  FDE closure
+            if branch.has_any([
+                {'sentence':          s.rhs , 'designated': not d},
+                {'sentence': negative(s.rhs), 'designated': not d},
+            ]):
+                scores['b2'] += 1
+            #  K3 closure
+            elif d:
+                # no known impl
+                pass
+            # b3
+            #  FDE closure
+            if branch.has_any([
+                {'sentence': s.lhs, 'designated': d},
+                {'sentence': s.rhs, 'designated': d},
+            ]):
+                scores['b3'] += 1
+            #  K3 closure
+            elif not d:
+                if branch.has_any([
+                    {'sentence': negative(s.lhs), 'designated': True},
+                    {'sentence': negative(s.rhs), 'designated': True},
+                ]):
+                    scores['b3'] += 1
+            return scores
+
+    class DisjunctionDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, designated, disjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
@@ -206,6 +314,9 @@ class TableauxRules(object):
         designated node with each disjunct. Then tick *n*.
         """
 
+        operator    = 'Disjunction'
+        designation = True
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
@@ -213,19 +324,72 @@ class TableauxRules(object):
             b2 = self.tableau.branch(branch)
             b3 = self.tableau.branch(branch)
             b1.update([
-                { 'sentence' :        s.lhs , 'designated' : d },
-                { 'sentence' : negate(s.rhs), 'designated' : d }
+                {'sentence':        s.lhs , 'designated': d},
+                {'sentence': negate(s.rhs), 'designated': d},
             ]).tick(node)
             b2.update([
-                { 'sentence' : negate(s.lhs), 'designated' : d },
-                { 'sentence' :        s.rhs , 'designated' : d }
+                {'sentence': negate(s.lhs), 'designated': d},
+                {'sentence':        s.rhs , 'designated': d},
             ]).tick(node)
             b3.update([
-                { 'sentence' :        s.lhs , 'designated' : d },
-                { 'sentence' :        s.rhs , 'designated' : d }
+                {'sentence': s.lhs, 'designated': d},
+                {'sentence': s.rhs, 'designated': d},
             ]).tick(node)
 
-    class DisjunctionNegatedDesignated(fde.TableauxRules.DisjunctionNegatedDesignated):
+        def score_target_map(self, target):
+            scores = {
+                'b1': 0,
+                'b2': 0,
+                'b3': 0,
+            }
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            d = self.designation
+            # b1
+            #  FDE closure
+            if branch.has_any([
+                {'sentence':          s.lhs , 'designated': not d},
+                {'sentence': negative(s.rhs), 'designated': not d},
+            ]):
+                scores['b1'] += 1
+            #  K3 closure
+            elif d:
+                if branch.has_any([
+                    {'sentence': negative(s.lhs), 'designated': True},
+                    {'sentence':          s.rhs , 'designated': True},
+                ]):
+                    scores['b1'] += 1
+            # b2
+            #  FDE closure
+            if branch.has_any([
+                {'sentence': negative(s.lhs), 'designated': not d},
+                {'sentence':          s.rhs , 'designated': not d},
+            ]):
+                scores['b2'] += 1
+            #  K3 closure
+            elif d:
+                if branch.has_any([
+                    {'sentence':          s.lhs , 'designated': True},
+                    {'sentence': negative(s.rhs), 'designated': True},
+                ]):
+                    scores['b2'] += 1
+            # b3
+            #  FDE closure
+            if branch.has_any([
+                {'sentence': s.lhs, 'designated': not d},
+                {'sentence': s.rhs, 'designated': not d},
+            ]):
+                scores['b3'] += 1
+            #  K3 closure
+            elif d:
+                if branch.has_any([
+                    {'sentence': negative(s.lhs), 'designated': True},
+                    {'sentence': negative(s.rhs), 'designated': True},
+                ]):
+                    scores['b3'] += 1
+            return scores
+            
+    class DisjunctionNegatedDesignated(k3.TableauxRules.DisjunctionNegatedDesignated):
         """
         This rule is the same as the `FDE DisjunctionNegatedDesignated rule`_.
 
@@ -233,7 +397,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DisjunctionUndesignated(fde.TableauxRules.DisjunctionUndesignated):
+    class DisjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, undesignated disjunction node *n* on a branch *b*, make three
         new branches *b'*, *b''*, and *b'''* from b. On *b'* add undesignated nodes for
@@ -242,6 +406,9 @@ class TableauxRules(object):
         of each disjunct. Then tick *n*.
         """
 
+        operator    = 'Disjunction'
+        designation = False
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
@@ -249,60 +416,120 @@ class TableauxRules(object):
             b2 = self.tableau.branch(branch)
             b3 = self.tableau.branch(branch)
             b1.update([
-                { 'sentence' :        s.lhs , 'designated' : d },
-                { 'sentence' : negate(s.lhs), 'designated' : d }
+                {'sentence':        s.lhs , 'designated': d},
+                {'sentence': negate(s.lhs), 'designated': d},
             ]).tick(node)
             b2.update([
-                { 'sentence' :        s.rhs , 'designated' : d },
-                { 'sentence' : negate(s.rhs), 'designated' : d }
+                {'sentence':        s.rhs , 'designated': d},
+                {'sentence': negate(s.rhs), 'designated': d},
             ]).tick(node)
             b3.update([
-                { 'sentence' : negate(s.lhs), 'designated' : not d },
-                { 'sentence' : negate(s.rhs), 'designated' : not d }
+                {'sentence': negate(s.lhs), 'designated': not d},
+                {'sentence': negate(s.rhs), 'designated': not d},
             ]).tick(node)
 
-    class DisjunctionNegatedUndesignated(fde.TableauxRules.DisjunctionNegatedUndesignated):
+        def score_target_map(self, target):
+            scores = {
+                'b1': 0,
+                'b2': 0,
+                'b3': 0,
+            }
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            d = self.designation
+            # b1
+            scores['b1'] = branch.has_any([
+                # FDE closure
+                {'sentence':          s.lhs , 'designated': not d},
+                {'sentence': negative(s.lhs), 'designated': not d},
+                # K3 closure - no known impl
+            ])
+            # b2
+            #  FDE closure
+            scores['b2'] = branch.has_any([
+                # FDE closure
+                {'sentence':          s.rhs , 'designated': not d},
+                {'sentence': negative(s.rhs), 'designated': not d},
+                # K3 closure - no known impl
+            ])
+            # b3
+            #  FDE closure
+            if branch.has_any([
+                {'sentence': negative(s.lhs), 'designated': d},
+                {'sentence': negative(s.rhs), 'designated': d},
+            ]):
+                scores['b3'] += 1
+            #  K3 closure
+            elif not d:
+                if branch.has_any([
+                    {'sentence': s.lhs, 'designated': True},
+                    {'sentence': s.rhs, 'designated': True},
+                ]):
+                    scores['b3'] += 1
+            return scores
+
+    class DisjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
-        It's not the case that both disjuncts are False. Thus, either both disjuncts are True,
-        one disjunct is True and the other False, or at least one of the dijuncts is Neither. So, from an
-        unticked, undesignated, negated disjunction node *n*, on a branch *b*, make five branches
-        *b'*, *b''*, *b'''*, *b''''*, *b'''''* from *b*. On *b'*, add a designated node for each disjunct.
-        On *b''* add a designated node for the first disjunct, an undesignated node for the second
-        disjunct, and a designated node for the negation of the second disjunct. On *b'''* do the
-        same as before, except with the second and first disjuncts, respectively. On
-        *b''''*, add undesignated nodes for the first disjunct and its negation, and on *b'''''*,
-        add undesignated nodes for the other disjunction and its negation. Then, tick *n*.
+        Either the disjunction is designated, or at least one of the disjuncts
+        has the value **N**. So, from an unticked, undesignated, negated
+        disjunction node *n* on a branch *b*, make three branches *b'*, *b''*,
+        and *b'''* from *b*. On *b'* add a designated node with the disjunction.
+        On *b''* add two undesignated nodes with the first disjunct and its
+        negation, respectively. On *b'''* add undesignated nodes with the second
+        disjunct and its negation, respectively. Then tick *n*.
         """
+
+        negated     = True
+        operator    = 'Disjunction'
+        designation = False
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             b1 = branch
             b2 = self.tableau.branch(branch)
             b3 = self.tableau.branch(branch)
-            b4 = self.tableau.branch(branch)
-            b5 = self.tableau.branch(branch)
-            b1.update([
-                { 'sentence' :        s.lhs , 'designated' : True },
-                { 'sentence' :        s.rhs , 'designated' : True }
-            ]).tick(node)
+            b1.add({'sentence': s, 'designated': True}).tick(node)
             b2.update([
-                { 'sentence' :        s.lhs,  'designated' : True  },
-                { 'sentence' : negate(s.rhs), 'designated' : True  }
+                {'sentence':        s.lhs , 'designated': False},
+                {'sentence': negate(s.lhs), 'designated': False},
             ]).tick(node)
             b3.update([
-                { 'sentence' : negate(s.lhs), 'designated' : True  },
-                { 'sentence' :        s.rhs,  'designated' : True  }
-            ]).tick(node)
-            b4.update([
-                { 'sentence' :        s.lhs,  'designated' : False },
-                { 'sentence' : negate(s.lhs), 'designated' : False },
-            ]).tick(node)
-            b5.update([
-                { 'sentence' :        s.rhs,  'designated' : False },
-                { 'sentence' : negate(s.rhs), 'designated' : False }
+                {'sentence':        s.rhs , 'designated': False},
+                {'sentence': negate(s.rhs), 'designated': False},
             ]).tick(node)
 
-    class MaterialConditionalDesignated(fde.TableauxRules.MaterialConditionalDesignated):
+        def score_target_map(self, target):
+            scores = {
+                'b1': 0,
+                'b2': 0,
+                'b3': 0,
+            }
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            # b1
+            scores['b1'] = branch.has_any([
+                # FDE closure
+                {'sentence': s, 'designated': False},
+                # K3 closure
+                {'sentence': negative(s), 'designated': True},
+            ])
+            # b2
+            scores['b2'] = branch.has_any([
+                # FDE closure
+                {'sentence':          s.lhs , 'designated': True},
+                {'sentence': negative(s.lhs), 'designated': True},
+                # K3 closure - no known impl
+            ])
+            # b3
+            scores['b3'] = branch.has_any([
+                # FDE closure
+                {'sentence':          s.rhs , 'designated': True},
+                {'sentence': negative(s.rhs), 'designated': True},
+                # K3 closure - no known impl
+            ])
+            return scores
+
+    class MaterialConditionalDesignated(k3.TableauxRules.MaterialConditionalDesignated):
         """
         This rule reduces to a disjunction.
         """
@@ -310,15 +537,10 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            branch.add({
-                'sentence' : operate('Disjunction', [
-                    negate(s.lhs),
-                           s.rhs
-                ]),
-                'designated' : d
-            }).tick(node)
+            sd = operate('Disjunction', [negate(s.lhs), s.rhs])
+            branch.add({'sentence': sd, 'designated': d}).tick(node)
 
-    class MaterialConditionalNegatedDesignated(fde.TableauxRules.MaterialConditionalNegatedDesignated):
+    class MaterialConditionalNegatedDesignated(k3.TableauxRules.MaterialConditionalNegatedDesignated):
         """
         This rule reduces to a negated disjunction.
         """
@@ -326,15 +548,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            branch.add({
-                'sentence' : negate(
-                    operate('Disjunction', [
-                        negate(s.lhs),
-                               s.rhs
-                    ])
-                ),
-                'designated' : d
-            }).tick(node)
+            sd = operate('Disjunction', [negate(s.lhs), s.rhs])
+            branch.add({'sentence': negate(sd), 'designated': d}).tick(node)
 
     class MaterialConditionalUndesignated(MaterialConditionalDesignated):
         """
@@ -350,7 +565,7 @@ class TableauxRules(object):
 
         designation = False
 
-    class MaterialBiconditionalDesignated(fde.TableauxRules.MaterialBiconditionalDesignated):
+    class MaterialBiconditionalDesignated(k3.TableauxRules.MaterialBiconditionalDesignated):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -366,7 +581,7 @@ class TableauxRules(object):
                 'designated' : d
             }).tick(node)
 
-    class MaterialBiconditionalNegatedDesignated(fde.TableauxRules.MaterialBiconditionalNegatedDesignated):
+    class MaterialBiconditionalNegatedDesignated(k3.TableauxRules.MaterialBiconditionalNegatedDesignated):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
@@ -454,7 +669,7 @@ class TableauxRules(object):
 
         operator = 'Biconditional'
 
-    class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
+    class ExistentialDesignated(k3.TableauxRules.ExistentialDesignated):
         """
         This rule is the same as the `FDE ExistentialDesignated rule`_.
 
@@ -462,7 +677,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedDesignated(fde.TableauxRules.ExistentialNegatedDesignated):
+    class ExistentialNegatedDesignated(k3.TableauxRules.ExistentialNegatedDesignated):
         """
         This rule is the same as the `FDE ExistentialNegatedDesignated rule`_.
 
@@ -470,7 +685,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialUndesignated(fde.TableauxRules.ExistentialUndesignated):
+    class ExistentialUndesignated(k3.TableauxRules.ExistentialUndesignated):
         """
         This rule is the same as the `FDE ExistentialUndesignated rule`_.
 
@@ -478,7 +693,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedUndesignated(fde.TableauxRules.ExistentialNegatedUndesignated):
+    class ExistentialNegatedUndesignated(k3.TableauxRules.ExistentialNegatedUndesignated):
         """
         This rule is the same as the `FDE ExistentialNegatedUndesignated rule`_.
 
@@ -486,7 +701,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalDesignated(fde.TableauxRules.UniversalDesignated):
+    class UniversalDesignated(k3.TableauxRules.UniversalDesignated):
         """
         This rule is the same as the `FDE UniversalDesignated rule`_.
 
@@ -494,7 +709,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalNegatedDesignated(fde.TableauxRules.UniversalNegatedDesignated):
+    class UniversalNegatedDesignated(k3.TableauxRules.UniversalNegatedDesignated):
         """
         This rule is the same as the `FDE UniversalNegatedDesignated rule`_.
 
@@ -502,7 +717,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalUndesignated(fde.TableauxRules.UniversalUndesignated):
+    class UniversalUndesignated(k3.TableauxRules.UniversalUndesignated):
         """
         This rule is the same as the `FDE UniversalUndesignated rule`_.
 
@@ -510,7 +725,7 @@ class TableauxRules(object):
         """
         pass
 
-    class UniversalNegatedUndesignated(fde.TableauxRules.UniversalNegatedUndesignated):
+    class UniversalNegatedUndesignated(k3.TableauxRules.UniversalNegatedUndesignated):
         """
         This rule is the same as the `FDE UniversalNegatedUndesignated rule`_.
 
@@ -569,6 +784,6 @@ class TableauxRules(object):
         ConjunctionNegatedDesignated,
         ConjunctionNegatedUndesignated,
 
-        # five-branching rules
-        DisjunctionNegatedUndesignated
+        # five-branching rules (formerly)
+        DisjunctionNegatedUndesignated,
     ]

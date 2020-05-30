@@ -544,17 +544,15 @@ class TableauxRules(object):
             b1.add({ 'sentence' : negate(s.lhs), 'designated' : d }).tick(node)
             b2.add({ 'sentence' : negate(s.rhs), 'designated' : d }).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             d = self.designation
-            score = 0
-            if branch.has({'sentence': negative(s.lhs), 'designated': not d}):
-                score += 1
-            if branch.has({'sentence': negative(s.rhs), 'designated': not d}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has({'sentence': negative(s.lhs), 'designated': not d}),
+                'b2': branch.has({'sentence': negative(s.rhs), 'designated': not d}),
+            }
 
     class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -574,17 +572,15 @@ class TableauxRules(object):
             b1.add({ 'sentence' : s.lhs, 'designated' : d }).tick(node)
             b2.add({ 'sentence' : s.rhs, 'designated' : d }).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             d = self.designation
-            score = 0
-            if branch.has({'sentence': s.lhs, 'designated': not d}):
-                score += 1
-            if branch.has({'sentence': s.rhs, 'designated': not d}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has({'sentence': s.lhs, 'designated': not d}),
+                'b2': branch.has({'sentence': s.rhs, 'designated': not d}),
+            }
 
     class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -660,17 +656,15 @@ class TableauxRules(object):
             b1.add({ 'sentence' : negate(s.lhs) , 'designated' : d }).tick(node)
             b2.add({ 'sentence' :        s.rhs  , 'designated' : d }).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             d = self.designation
-            score = 0
-            if branch.has({'sentence': negative(s.lhs), 'designated': not d}):
-                score += 1
-            if branch.has({'sentence': s.rhs, 'designated': not d}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has({'sentence': negative(s.lhs), 'designated': not d}),
+                'b2': branch.has({'sentence': s.rhs, 'designated': not d}),
+            }
 
     class MaterialConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -729,17 +723,15 @@ class TableauxRules(object):
             b1.add({ 'sentence' :        s.lhs  , 'designated' : d }).tick(node)
             b2.add({ 'sentence' : negate(s.rhs) , 'designated' : d }).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             d = self.designation
-            score = 0
-            if branch.has({'sentence': s.lhs, 'designated': not d}):
-                score += 1
-            if branch.has({'sentence': negative(s.rhs), 'designated': not d}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has({'sentence': s.lhs,           'designated': not d}),
+                'b2': branch.has({'sentence': negative(s.rhs), 'designated': not d}),
+            }
 
     class MaterialBiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -767,17 +759,21 @@ class TableauxRules(object):
                 { 'sentence' : s.lhs, 'designated' : d }
             ]).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             d = self.designation
-            score = 0
-            if branch.has({'sentence': negative(s.lhs), 'designated': not d}) or branch.has({'sentence': negative(s.rhs), 'designated': not d}):
-                score += 1
-            if branch.has({'sentence': s.rhs, 'designated': not d}) or branch.has({'sentence': s.lhs, 'designated': not d}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has_any([
+                    {'sentence': negative(s.lhs), 'designated': not d},
+                    {'sentence': negative(s.rhs), 'designated': not d},
+                ]),
+                'b2': branch.has_any([
+                    {'sentence': s.rhs, 'designated': not d},
+                    {'sentence': s.lhs, 'designated': not d},
+                ]),
+            }
 
     class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -806,17 +802,21 @@ class TableauxRules(object):
                 { 'sentence' :        s.rhs  , 'designated' : d }
             ]).tick(node)
 
-        def score_target(self, target):
+        def score_target_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
             d = self.designation
-            score = 0
-            if branch.has({'sentence': s.lhs, 'designated': not d}) or branch.has({'sentence': negative(s.rhs), 'designated': not d}):
-                score += 1
-            if branch.has({'sentence': negative(s.lhs), 'designated': not d}) or branch.has({'sentence': s.rhs, 'designated': not d}):
-                score += 1
-            return score
+            return {
+                'b1': branch.has_any([
+                    {'sentence': s.lhs,           'designated': not d},
+                    {'sentence': negative(s.rhs), 'designated': not d},
+                ]),
+                'b2': branch.has_any([
+                    {'sentence': negative(s.lhs), 'designated': not d},
+                    {'sentence': s.rhs,           'designated': not d},
+                ]),
+            }
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
         """
