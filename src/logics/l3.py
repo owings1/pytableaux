@@ -285,31 +285,28 @@ class TableauxRules(object):
 
     class ConditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
-        From an unticked undesignated conditional node *n* on a branch *b*, add a
-        material conditional undesignated node to *b* with the same operands as *n*,
-        then make two new branches *b'* and *b''* from *b*, and add a designated node
-        with the antecedent and an undesignated node with the consequent to *b'* ,
-        and add an undesignated node with the antecedent, an undesignated node with
-        the negation of the antecedent, and a designated node to *b''* with the
-        negation of the consequent to *b''*, then tick *n*.        
+        From an unticked undesignated conditional node *n* on a branch *b*,
+        make two new branches *b'* and *b''* from *b*. On *b'* add a designated node
+        with the antecedent and an undesignated node with the consequent. On *b''*,
+        add undesignated nodes for the antecedent and its negation, and a designated
+        with the negation of the consequent. Then tick *n*.   
         """
 
         operator    = 'Conditional'
         designation = False
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence']
+            s = self.sentence(node)
             b1 = branch
-            b1.add({ 'sentence' : operate('Material Conditional', s.operands), 'designated' : False })
             b2 = self.tableau.branch(branch)
             b1.update([
-                { 'sentence' :        s.lhs,  'designated' : True  },
-                { 'sentence' :        s.rhs,  'designated' : False }
+                {'sentence': s.lhs, 'designated': True},
+                {'sentence': s.rhs, 'designated': False},
             ]).tick(node)
             b2.update([
-                { 'sentence' :        s.lhs,  'designated' : False },
-                { 'sentence' : negate(s.lhs), 'designated' : False },
-                { 'sentence' : negate(s.rhs), 'designated' : True  }
+                {'sentence': s.lhs, 'designated': False},
+                {'sentence': negate(s.lhs), 'designated': False},
+                {'sentence': negate(s.rhs), 'designated': True},
             ]).tick(node)
 
     class ConditionalNegatedUndesignated(k3.TableauxRules.ConditionalNegatedUndesignated):
