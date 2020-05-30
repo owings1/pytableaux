@@ -613,6 +613,10 @@
             } else {
                 data.max_steps = null
             }
+            const $rankOptim = $('#options_rank_optimizations', $Frm)
+            if ($rankOptim.length) {
+                data.rank_optimizations = $rankOptim.is(':checked')
+            }
             return data
         }
 

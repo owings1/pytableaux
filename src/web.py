@@ -357,7 +357,8 @@ class App(object):
                         "models": false
                     }
                 },
-                "max_steps": null
+                "max_steps": null,
+                "rank_optimizations": true
             }
 
         Example success result::
@@ -409,6 +410,8 @@ class App(object):
             odata['options']['models'] = False
         if 'max_steps' not in body:
             body['max_steps'] = None
+        if 'rank_optimizations' not in body:
+            body['rank_optimizations'] = True
 
         errors = {}
         try:
@@ -447,7 +450,11 @@ class App(object):
             'max_steps' : body['max_steps'],
         }
 
-        proof = logic.tableau(selected_logic, arg).build(**build_opts)
+        proof_opts = {
+            'is_rank_optim': body['rank_optimizations']
+        }
+        proof = logic.tableau(selected_logic, arg, **proof_opts)
+        proof.build(**build_opts)
 
         return {
             'tableau': {
