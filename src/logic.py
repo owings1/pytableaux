@@ -1618,6 +1618,10 @@ class TableauxSystem(object):
             # the tableau directly, with no return value. Used for building examples/documentation.
             raise NotImplementedError(NotImplemented)
 
+        def sentence(self, node):
+            if 'sentence' in node.props:
+                return node.props['sentence']
+
         def after_branch_add(self, branch, other_branch = None):
             pass
 
