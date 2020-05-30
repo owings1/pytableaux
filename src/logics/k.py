@@ -26,7 +26,7 @@ category = 'Bivalent Modal'
 category_display_order = 1
 
 import logic, examples
-from logic import negate, operate, quantify, atomic, constant, predicated, NotImplementedError
+from logic import negate, negative, operate, quantify, atomic, constant, predicated, NotImplementedError
 from . import fde
 
 Identity = logic.get_system_predicate('Identity')
@@ -621,6 +621,18 @@ class TableauxRules(object):
             b1.add({ 'sentence' : negate(s.lhs), 'world' : w }).tick(node)
             b2.add({ 'sentence' : negate(s.rhs), 'world' : w }).tick(node)
 
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            w = node.props['world']
+            score = 0
+            if branch.has({'sentence': s.lhs, 'world': w}):
+                score += 1
+            if branch.has({'sentence': s.rhs, 'world': w}):
+                score += 1
+            return score
+
     class Disjunction(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked disjunction node *n* with world *w* on a branch *b*, for each disjunct,
@@ -638,6 +650,17 @@ class TableauxRules(object):
             b1.add({ 'sentence' : s.lhs, 'world' : w }).tick(node)
             b2.add({ 'sentence' : s.rhs, 'world' : w }).tick(node)
 
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            w = node.props['world']
+            score = 0
+            if branch.has({'sentence': negative(s.lhs), 'world': w}):
+                score += 1
+            if branch.has({'sentence': negative(s.rhs), 'world': w}):
+                score += 1
+            return score
 
     class DisjunctionNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -672,6 +695,18 @@ class TableauxRules(object):
             b2 = self.tableau.branch(branch)
             b1.add({ 'sentence' : negate(s.lhs) , 'world' : w }).tick(node)
             b2.add({ 'sentence' :        s.rhs  , 'world' : w }).tick(node)
+
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            w = node.props['world']
+            score = 0
+            if branch.has({'sentence': s.lhs, 'world': w}):
+                score += 1
+            if branch.has({'sentence': negative(s.rhs), 'world': w}):
+                score += 1
+            return score
 
     class MaterialConditionalNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -716,6 +751,18 @@ class TableauxRules(object):
                 { 'sentence' : s.lhs, 'world' : w }
             ]).tick(node)
 
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            w = node.props['world']
+            score = 0
+            if branch.has({'sentence': s.lhs, 'world': w}) or branch.has({'sentence': s.rhs, 'world': w}):
+                score += 1
+            if branch.has({'sentence': negative(s.lhs), 'world': w}) or branch.has({'sentence': negative(s.rhs), 'world': w}):
+                score += 1
+            return score
+
     class MaterialBiconditionalNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked negated material biconditional node *n* with world *w* on a branch *b*,
@@ -741,6 +788,18 @@ class TableauxRules(object):
                 { 'sentence': negate(s.rhs) , 'world' : w },
                 { 'sentence':        s.lhs  , 'world' : w }
             ]).tick(node)
+
+        def score_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            s = self.sentence(node)
+            w = node.props['world']
+            score = 0
+            if branch.has({'sentence': negative(s.lhs), 'world': w}) or branch.has({'sentence': s.rhs, 'world': w}):
+                score += 1
+            if branch.has({'sentence': s.lhs, 'world': w}) or branch.has({'sentence': negative(s.rhs), 'world': w}):
+                score += 1
+            return score
 
     class Conditional(MaterialConditional):
         """
