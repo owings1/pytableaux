@@ -513,16 +513,16 @@ class TableauxRules(object):
         def applies_to_branch(self, branch):
             for node in branch.get_nodes():
                 if node.has('sentence') and node.has('world'):
-                    n = branch.find({ 'sentence': negate(node.props['sentence']), 'world': node.props['world']})
+                    n = branch.find({'sentence': negate(node.props['sentence']), 'world': node.props['world']})
                     if n != None:
-                        return {'nodes' : set([node, n]), 'type' : 'Nodes'}
+                        return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
 
         def example(self):
             a = atomic(0, 0)
             self.tableau.branch().update([
-                { 'sentence' :        a  , 'world' : 0 },
-                { 'sentence' : negate(a) , 'world' : 0 }
+                {'sentence':        a , 'world': 0},
+                {'sentence': negate(a), 'world': 0},
             ])
 
     class SelfIdentityClosure(logic.TableauxSystem.ClosureRule):
@@ -539,12 +539,12 @@ class TableauxRules(object):
                         if o.is_predicated() and o.predicate.name == 'Identity':
                             a, b = o.parameters
                             if a == b:
-                                return { 'node' : node, 'type' : 'Node' }
+                                return {'node': node, 'type': 'Node'}
             return False
 
         def example(self):
             s = negate(examples.self_identity())
-            self.tableau.branch().add({ 'sentence' : s, 'world' : 0 })
+            self.tableau.branch().add({'sentence': s, 'world': 0})
 
     class DoubleNegation(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -558,7 +558,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             w = node.props['world']
             s = self.sentence(node)
-            branch.add({ 'sentence' : s.operand, 'world' : w }).tick(node)
+            branch.add({'sentence': s.operand, 'world': w}).tick(node)
 
     class Assertion(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -571,7 +571,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             w = node.props['world']
             s = self.sentence(node)
-            branch.add({ 'sentence' : s.operand, 'world' : w }).tick(node)
+            branch.add({'sentence': s.operand, 'world': w}).tick(node)
 
     class AssertionNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -586,7 +586,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             w = node.props['world']
             s = self.sentence(node)
-            branch.add({ 'sentence' : negate(s.operand), 'world' : w }).tick(node)
+            branch.add({'sentence': negate(s.operand), 'world': w}).tick(node)
 
     class Conjunction(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -600,7 +600,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             w = node.props['world']
             for conjunct in s.operands:
-                branch.add({ 'sentence' : conjunct, 'world' : w })
+                branch.add({'sentence': conjunct, 'world': w})
             branch.tick(node)
 
     class ConjunctionNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
@@ -618,8 +618,8 @@ class TableauxRules(object):
             w = node.props['world']
             b1 = branch
             b2 = self.tableau.branch(branch)
-            b1.add({ 'sentence' : negate(s.lhs), 'world' : w }).tick(node)
-            b2.add({ 'sentence' : negate(s.rhs), 'world' : w }).tick(node)
+            b1.add({'sentence': negate(s.lhs), 'world': w}).tick(node)
+            b2.add({'sentence': negate(s.rhs), 'world': w}).tick(node)
 
         def score_target_map(self, target):
             branch = target['branch']
@@ -645,8 +645,8 @@ class TableauxRules(object):
             w = node.props['world']
             b1 = branch
             b2 = self.tableau.branch(branch)
-            b1.add({ 'sentence' : s.lhs, 'world' : w }).tick(node)
-            b2.add({ 'sentence' : s.rhs, 'world' : w }).tick(node)
+            b1.add({'sentence': s.lhs, 'world': w}).tick(node)
+            b2.add({'sentence': s.rhs, 'world': w}).tick(node)
 
         def score_target_map(self, target):
             branch = target['branch']
@@ -671,7 +671,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             w = node.props['world']
             for disjunct in s.operands:
-                branch.add({ 'sentence' : negate(disjunct), 'world' : w })
+                branch.add({'sentence': negate(disjunct), 'world': w})
             branch.tick(node)
 
     class MaterialConditional(IsModal, logic.TableauxSystem.ConditionalNodeRule):
@@ -689,8 +689,8 @@ class TableauxRules(object):
             w = node.props['world']
             b1 = branch
             b2 = self.tableau.branch(branch)
-            b1.add({ 'sentence' : negate(s.lhs) , 'world' : w }).tick(node)
-            b2.add({ 'sentence' :        s.rhs  , 'world' : w }).tick(node)
+            b1.add({'sentence': negate(s.lhs), 'world': w}).tick(node)
+            b2.add({'sentence':        s.rhs , 'world': w}).tick(node)
 
         def score_target_map(self, target):
             branch = target['branch']
@@ -716,8 +716,8 @@ class TableauxRules(object):
             s = self.sentence(node)
             w = node.props['world']
             branch.update([
-                { 'sentence' :        s.lhs  , 'world' : w }, 
-                { 'sentence' : negate(s.rhs) , 'world' : w }
+                {'sentence':        s.lhs , 'world': w}, 
+                {'sentence': negate(s.rhs), 'world': w},
             ]).tick(node)
 
     class MaterialBiconditional(IsModal, logic.TableauxSystem.ConditionalNodeRule):
@@ -887,7 +887,8 @@ class TableauxRules(object):
             v = s.variable
             si = s.sentence
             # keep conversion neutral for inheritance below
-            branch.add({ 'sentence' : quantify(self.convert_to, v, negate(si)), 'world' : w }).tick(node)
+            sq = quantify(self.convert_to, v, negate(si))
+            branch.add({'sentence': sq, 'world': w}).tick(node)
 
     class Universal(IsModal, logic.TableauxSystem.SelectiveTrackingBranchRule):
         """
@@ -903,29 +904,42 @@ class TableauxRules(object):
             cands = list()
             constants = branch.constants()
             for node in branch.get_nodes():
-                if node.has('sentence') and node.props['sentence'].quantifier == self.quantifier:
+                if not node.has('sentence'):
+                    continue
+                s = self.sentence(node)
+                if s.quantifier == self.quantifier:
                     w = node.props['world']
-                    s = node.props['sentence']
                     v = s.variable
                     if len(constants):
                         # if the branch already has a constant, find all the substitutions not
                         # already on the branch.
                         for c in constants:
                             r = s.substitute(c, v)
-                            if not branch.has({ 'sentence' : r, 'world' : w }):
-                                cands.append({ 'branch' : branch, 'sentence' : r, 'node' : node, 'world' : w })
+                            if not branch.has({'sentence': r, 'world': w}):
+                                cands.append({
+                                    'branch'   : branch,
+                                    'sentence' : r,
+                                    'node'     : node,
+                                    'world'    : w,
+                                })
                     else:
                         # if the branch does not have any constants, pick a new one
-                        r = s.substitute(branch.new_constant(), v)
-                        cands.append({ 'branch' : branch, 'sentence' : r, 'node': node, 'world' : w })
+                        c = branch.new_constant()
+                        r = s.substitute(c, v)
+                        cands.append({
+                            'branch'   : branch,
+                            'sentence' : r,
+                            'node'     : node,
+                            'world'    : w,
+                        })
             return cands
 
         def apply_to_target(self, target):
             branch = target['branch']
-            branch.add({ 'sentence' : target['sentence'], 'world' : target['world'] })
+            branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example(self):
-            self.tableau.branch().add({ 'sentence' : examples.quantified(self.quantifier), 'world' : 0 })
+            self.tableau.branch().add({'sentence': examples.quantified(self.quantifier), 'world': 0})
 
     class UniversalNegated(ExistentialNegated):
         """
@@ -952,8 +966,8 @@ class TableauxRules(object):
             w1 = node.props['world']
             w2 = branch.new_world()
             branch.update([
-                { 'sentence' : s.operand, 'world' : w2 },
-                { 'world1' : w1, 'world2' : w2 }
+                {'sentence': s.operand, 'world': w2},
+                {'world1': w1, 'world2': w2},
             ]).tick(node)
 
     class PossibilityNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
@@ -971,7 +985,7 @@ class TableauxRules(object):
             w = node.props['world']
             s = self.sentence(node)
             sn = operate(self.convert_to, [negate(s.operand)])
-            branch.add({ 'sentence' : sn, 'world' : w }).tick(node)
+            branch.add({'sentence': sn, 'world': w}).tick(node)
 
     class Necessity(IsModal, logic.TableauxSystem.SelectiveTrackingBranchRule):
         """
@@ -986,14 +1000,15 @@ class TableauxRules(object):
             cands = list()
             worlds = branch.worlds()
             for node in branch.get_nodes():
-                if ('world' in node.props and
-                    'sentence' in node.props and
-                    node.props['sentence'].operator == self.operator):                    
-                    s = node.props['sentence'].operand
+                if not node.has('sentence') or not node.has('world'):
+                    continue
+                s = self.sentence(node)
+                if s.operator == self.operator:                    
+                    s = s.operand
                     w1 = node.props['world']
                     for w2 in worlds:
-                        anode = branch.find({ 'world1': w1, 'world2': w2 })
-                        if anode != None and not branch.has({ 'sentence': s, 'world': w2 }):
+                        anode = branch.find({'world1': w1, 'world2': w2})
+                        if anode != None and not branch.has({'sentence': s, 'world': w2}):
                             cands.append({
                                 'node'     : node,
                                 'sentence' : s,
@@ -1006,11 +1021,14 @@ class TableauxRules(object):
 
         def apply_to_target(self, target):
             branch = target['branch']
-            branch.add({ 'sentence': target['sentence'], 'world': target['world'] })
+            branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example(self):
             s = operate(self.operator, [atomic(0, 0)])
-            self.tableau.branch().update([{ 'sentence' : s, 'world' : 0 }, { 'world1' : 0, 'world2' : 1 }])
+            self.tableau.branch().update([
+                {'sentence': s, 'world': 0},
+                {'world1': 0, 'world2': 1},
+            ])
 
     class NecessityNegated(PossibilityNegated):
         """
@@ -1063,18 +1081,18 @@ class TableauxRules(object):
                     # since we have SelfIdentityClosure, we don't need a = a
                     if s.predicate.name != 'Identity' or params[0] != params[1]:
                         # if <s1,w> does not yet appear on b, ...
-                        if not branch.has({ 'sentence' : s1, 'world' : w }):
+                        if not branch.has({'sentence': s1, 'world': w}):
                             # then the rule applies to <s',w,b>
-                            return { 'sentence' : s1, 'world' : w, 'branch' : branch }
+                            return {'sentence': s1, 'world': w, 'branch': branch}
             return False
 
         def apply(self, target):
-            target['branch'].add({ 'sentence' : target['sentence'], 'world' : target['world'] })
+            target['branch'].add({'sentence': target['sentence'], 'world': target['world']})
 
         def example(self):
             self.tableau.branch().update([ 
-                { 'sentence' : examples.predicated(), 'world' : 0 },
-                { 'sentence' : examples.identity(),   'world' : 0 },
+                {'sentence' : examples.predicated(), 'world': 0},
+                {'sentence' : examples.identity(),   'world': 0},
             ])
 
     rules = [

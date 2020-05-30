@@ -410,8 +410,8 @@ class TableauxSystem(logic.TableauxSystem):
         """
         branch = tableau.branch()
         for premise in argument.premises:
-            branch.add({ 'sentence' : premise, 'designated' : True, 'world' : None })
-        branch.add({ 'sentence' : argument.conclusion, 'designated' : False, 'world': None })
+            branch.add({'sentence': premise, 'designated': True, 'world': None})
+        branch.add({'sentence' : argument.conclusion, 'designated': False, 'world': None})
 
 class TableauxRules(object):
     """
@@ -429,16 +429,16 @@ class TableauxRules(object):
 
         def applies_to_branch(self, branch):
             for node in branch.get_nodes():
-                n = branch.find({ 'sentence' : node.props['sentence'], 'designated' : not node.props['designated'] })
+                n = branch.find({'sentence': node.props['sentence'], 'designated': not node.props['designated']})
                 if n != None:
-                    return {'nodes' : set([node, n]), 'type' : 'Nodes'}
+                    return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
 
         def example(self):
             a = atomic(0, 0)
             self.tableau.branch().update([
-                { 'sentence' : a, 'designated' : True  },
-                { 'sentence' : a, 'designated' : False }
+                {'sentence': a, 'designated': True },
+                {'sentence': a, 'designated': False},
             ])
 
     class DoubleNegationDesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -454,7 +454,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+            branch.add({'sentence': s.operand, 'designated': d}).tick(node)
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
         """
@@ -476,7 +476,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+            branch.add({'sentence': s.operand, 'designated': d}).tick(node)
 
     class AssertionUndesignated(AssertionDesignated):
         """
@@ -499,7 +499,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            branch.add({ 'sentence' : negate(s.operand), 'designated' : d }).tick(node)
+            branch.add({'sentence': negate(s.operand), 'designated': d}).tick(node)
 
     class AssertionNegatedUndesignated(AssertionNegatedDesignated):
         """
@@ -522,7 +522,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             for conjunct in s.operands:
-                branch.add({ 'sentence' : conjunct, 'designated' : d })
+                branch.add({'sentence': conjunct, 'designated': d})
             branch.tick(node)
 
     class ConjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -541,13 +541,12 @@ class TableauxRules(object):
             d = self.designation
             b1 = branch
             b2 = self.tableau.branch(branch)
-            b1.add({ 'sentence' : negate(s.lhs), 'designated' : d }).tick(node)
-            b2.add({ 'sentence' : negate(s.rhs), 'designated' : d }).tick(node)
+            b1.add({'sentence': negate(s.lhs), 'designated': d}).tick(node)
+            b2.add({'sentence': negate(s.rhs), 'designated': d}).tick(node)
 
         def score_target_map(self, target):
             branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
+            s = self.sentence(target['node'])
             d = self.designation
             return {
                 'b1': branch.has({'sentence': negative(s.lhs), 'designated': not d}),
@@ -569,13 +568,12 @@ class TableauxRules(object):
             d = self.designation
             b1 = branch
             b2 = self.tableau.branch(branch)
-            b1.add({ 'sentence' : s.lhs, 'designated' : d }).tick(node)
-            b2.add({ 'sentence' : s.rhs, 'designated' : d }).tick(node)
+            b1.add({'sentence': s.lhs, 'designated': d}).tick(node)
+            b2.add({'sentence': s.rhs, 'designated': d}).tick(node)
 
         def score_target_map(self, target):
             branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
+            s = self.sentence(target['node'])
             d = self.designation
             return {
                 'b1': branch.has({'sentence': s.lhs, 'designated': not d}),
@@ -596,7 +594,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             for conjunct in s.operands:
-                branch.add({ 'sentence' : negate(conjunct), 'designated' : d })
+                branch.add({'sentence' : negate(conjunct), 'designated': d})
             branch.tick(node)
 
     class DisjunctionDesignated(ConjunctionUndesignated):
@@ -653,17 +651,16 @@ class TableauxRules(object):
             d = self.designation
             b1 = branch
             b2 = self.tableau.branch(branch)
-            b1.add({ 'sentence' : negate(s.lhs) , 'designated' : d }).tick(node)
-            b2.add({ 'sentence' :        s.rhs  , 'designated' : d }).tick(node)
+            b1.add({'sentence': negate(s.lhs), 'designated': d}).tick(node)
+            b2.add({'sentence':        s.rhs , 'designated': d}).tick(node)
 
         def score_target_map(self, target):
             branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
+            s = self.sentence(target['node'])
             d = self.designation
             return {
                 'b1': branch.has({'sentence': negative(s.lhs), 'designated': not d}),
-                'b2': branch.has({'sentence': s.rhs, 'designated': not d}),
+                'b2': branch.has({'sentence':          s.rhs , 'designated': not d}),
             }
 
     class MaterialConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -681,8 +678,8 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             branch.update([
-                { 'sentence' :        s.lhs  , 'designated' : d },
-                { 'sentence' : negate(s.rhs) , 'designated' : d }
+                {'sentence':        s.lhs , 'designated': d},
+                {'sentence': negate(s.rhs), 'designated': d},
             ]).tick(node)
 
     class MaterialConditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -699,8 +696,8 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             branch.update([
-                { 'sentence' : negate(s.lhs) , 'designated' : d },
-                { 'sentence' :        s.rhs  , 'designated' : d }
+                {'sentence': negate(s.lhs), 'designated': d},
+                {'sentence':        s.rhs , 'designated': d},
             ]).tick(node)
 
     class MaterialConditionalNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -720,16 +717,15 @@ class TableauxRules(object):
             d = self.designation
             b1 = branch
             b2 = self.tableau.branch(branch)
-            b1.add({ 'sentence' :        s.lhs  , 'designated' : d }).tick(node)
-            b2.add({ 'sentence' : negate(s.rhs) , 'designated' : d }).tick(node)
+            b1.add({'sentence':        s.lhs , 'designated': d}).tick(node)
+            b2.add({'sentence': negate(s.rhs), 'designated': d}).tick(node)
 
         def score_target_map(self, target):
             branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
+            s = self.sentence(target['node'])
             d = self.designation
             return {
-                'b1': branch.has({'sentence': s.lhs,           'designated': not d}),
+                'b1': branch.has({'sentence':          s.lhs , 'designated': not d}),
                 'b2': branch.has({'sentence': negative(s.rhs), 'designated': not d}),
             }
 
@@ -751,18 +747,17 @@ class TableauxRules(object):
             b1 = branch
             b2 = self.tableau.branch(branch)
             b1.update([
-                { 'sentence' : negate(s.lhs), 'designated' : d },
-                { 'sentence' : negate(s.rhs), 'designated' : d }
+                {'sentence': negate(s.lhs), 'designated': d},
+                {'sentence': negate(s.rhs), 'designated': d},
             ]).tick(node)
             b2.update([
-                { 'sentence' : s.rhs, 'designated' : d },
-                { 'sentence' : s.lhs, 'designated' : d }
+                {'sentence': s.rhs, 'designated': d},
+                {'sentence': s.lhs, 'designated': d},
             ]).tick(node)
 
         def score_target_map(self, target):
             branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
+            s = self.sentence(target['node'])
             d = self.designation
             return {
                 'b1': branch.has_any([
@@ -794,27 +789,26 @@ class TableauxRules(object):
             b1 = branch
             b2 = self.tableau.branch(branch)
             b1.update([
-                { 'sentence' :        s.lhs  , 'designated' : d },
-                { 'sentence' : negate(s.rhs) , 'designated' : d }
+                {'sentence':        s.lhs , 'designated': d},
+                {'sentence': negate(s.rhs), 'designated': d},
             ]).tick(node)
             b2.update([
-                { 'sentence' : negate(s.lhs) , 'designated' : d },
-                { 'sentence' :        s.rhs  , 'designated' : d }
+                {'sentence': negate(s.lhs), 'designated': d},
+                {'sentence':        s.rhs , 'designated': d},
             ]).tick(node)
 
         def score_target_map(self, target):
             branch = target['branch']
-            node = target['node']
-            s = self.sentence(node)
+            s = self.sentence(target['node'])
             d = self.designation
             return {
                 'b1': branch.has_any([
-                    {'sentence': s.lhs,           'designated': not d},
+                    {'sentence':          s.lhs , 'designated': not d},
                     {'sentence': negative(s.rhs), 'designated': not d},
                 ]),
                 'b2': branch.has_any([
                     {'sentence': negative(s.lhs), 'designated': not d},
-                    {'sentence': s.rhs,           'designated': not d},
+                    {'sentence':          s.rhs , 'designated': not d},
                 ]),
             }
 
@@ -955,10 +949,8 @@ class TableauxRules(object):
             d = self.designation
             v = s.variable
             c = branch.new_constant()
-            branch.add({
-                'sentence'   : s.substitute(c, v),
-                'designated' : d
-            }).tick(node)
+            r = s.substitute(c, v)
+            branch.add({'sentence': r, 'designated': d}).tick(node)
 
     class ExistentialNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -978,10 +970,8 @@ class TableauxRules(object):
             d = self.designation
             v = s.variable
             si = s.sentence
-            branch.add({
-                'sentence'   : quantify(self.convert_to, v, negate(si)),
-                'designated' : d
-            }).tick(node)
+            sq = quantify(self.convert_to, v, negate(si))
+            branch.add({'sentence': sq, 'designated': d}).tick(node)
 
     class ExistentialUndesignated(logic.TableauxSystem.SelectiveTrackingBranchRule):
         """
@@ -1004,7 +994,7 @@ class TableauxRules(object):
                 # keep quantifier and designation neutral for inheritance below
                 if not n.has('sentence') or n.props['designated'] != d:
                     continue
-                s = n.props['sentence']
+                s = self.sentence(n)
                 if s.quantifier != q:
                     continue
                 v = s.variable
@@ -1131,6 +1121,6 @@ class TableauxRules(object):
         BiconditionalDesignated,
         BiconditionalNegatedDesignated,
         BiconditionalUndesignated,
-        BiconditionalNegatedUndesignated
+        BiconditionalNegatedUndesignated,
 
     ]
