@@ -55,9 +55,6 @@ without the **B** value.
 
     * Like `FDE`_, the law of excluded middle, and Conditional Identity P{(A $ A)} fail.
 
-    * Unlike `FDE`_, K3 has some logical truths, for example the Law of Non-Contradiction,
-      P{~(A & ~A)}, and Conditional Identity P{A $ A}.
-
     * Some Classical validities, such as Modus Ponens, Modus Tollens, Disjunctive Syllogism,
       and DeMorgan laws, are valid.
 
