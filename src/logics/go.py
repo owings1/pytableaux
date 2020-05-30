@@ -193,10 +193,26 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             b1 = branch
             b2 = self.tableau.branch(branch)
-            s = node.props['sentence'].operand
-            b1.add({ 'sentence' : s.lhs, 'designated' : False }).tick(node)
-            b2.add({ 'sentence' : s.rhs, 'designated' : False }).tick(node)
+            s = self.sentence(node)
+            b1.add({'sentence': s.lhs, 'designated': False}).tick(node)
+            b2.add({'sentence': s.rhs, 'designated': False}).tick(node)
 
+        def score_target_map(self, target):
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': s.lhs, 'designated': True},
+                    # K3 closure n/a
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence': s.rhs, 'designated': True},
+                    # K3 closure n/a
+                ]),
+            }
+            
     class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, undesignated conjunction node *n* on a branch *b*, add a
@@ -207,7 +223,8 @@ class TableauxRules(object):
         designation = False
 
         def apply_to_node(self, node, branch):
-            branch.add({ 'sentence': negate(node.props['sentence']), 'designated' : True }).tick(node)
+            s = self.sentence(node)
+            branch.add({'sentence': negate(s), 'designated': True}).tick(node)
 
     class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -221,7 +238,7 @@ class TableauxRules(object):
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
-            branch.add({ 'sentence' : s, 'designated' : True }).tick(node)
+            branch.add({'sentence': s, 'designated': True}).tick(node)
 
     class DisjunctionDesignated(k3.TableauxRules.DisjunctionDesignated):
         """
@@ -242,10 +259,10 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence'].operand
+            s = self.sentence(node)
             branch.update([
-                { 'sentence': s.lhs, 'designated' : False },
-                { 'sentence': s.rhs, 'designated' : False }
+                {'sentence': s.lhs, 'designated': False},
+                {'sentence': s.rhs, 'designated': False},
             ]).tick(node)
 
     class DisjunctionUndesignated(ConjunctionUndesignated):
@@ -284,10 +301,10 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence'].operand
+            s = self.sentence(node)
             branch.update([
-                { 'sentence' : negate(s.lhs) , 'designated' : False },
-                { 'sentence' :        s.rhs  , 'designated' : False }
+                {'sentence': negate(s.lhs), 'designated': False},
+                {'sentence':        s.rhs , 'designated': False},
             ]).tick(node)
 
     class MaterialConditionalUndesignated(ConjunctionUndesignated):
@@ -327,17 +344,35 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence'].operand
+            s = self.sentence(node)
             b1 = branch
             b2 = self.tableau.branch(branch)
             b1.update([
-                { 'sentence' : negate(s.lhs) , 'designated' : False },
-                { 'sentence' :        s.rhs  , 'designated' : False },
+                {'sentence': negate(s.lhs), 'designated': False},
+                {'sentence':        s.rhs , 'designated': False},
             ]).tick(node)
             b2.update([
-                { 'sentence' :        s.lhs , 'designated' : False },
-                { 'sentence' : negate(s.rhs), 'designated' : False }
+                {'sentence':        s.lhs , 'designated': False},
+                {'sentence': negate(s.rhs), 'designated': False},
             ]).tick(node)
+
+        def score_target_map(self, target):
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(s.lhs), 'designated': True},
+                    {'sentence':          s.rhs , 'designated': True},
+                    # K3 closure n/a
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s.lhs , 'designated': True},
+                    {'sentence': negative(s.rhs), 'designated': True},
+                    # K3 closure n/a
+                ]),
+            }
 
     class MaterialBiconditionalUndesignated(ConjunctionUndesignated):
         """
@@ -367,17 +402,38 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence']
+            s = self.sentence(node)
             disj = operate('Disjunction', [negate(s.lhs), s.rhs])
             b1 = branch
             b2 = self.tableau.branch(branch)
-            b1.add({ 'sentence' : disj, 'designated' : True }).tick(node)
+            b1.add({'sentence': disj, 'designated': True}).tick(node)
             b2.update([
-                { 'sentence' :        s.lhs  , 'designated' : False },
-                { 'sentence' :        s.rhs  , 'designated' : False },
-                { 'sentence' : negate(s.lhs) , 'designated' : False },
-                { 'sentence' : negate(s.rhs) , 'designated' : False }
+                {'sentence':        s.lhs , 'designated': False},
+                {'sentence':        s.rhs , 'designated': False},
+                {'sentence': negate(s.lhs), 'designated': False},
+                {'sentence': negate(s.rhs), 'designated': False},
             ]).tick(node)
+
+        def score_target_map(self, target):
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            disj = operate('Disjunction', [negative(s.lhs), s.rhs])
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': disj, 'designated': False},
+                    # K3 closure
+                    {'sentence': negative(disj), 'designated': True},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s.lhs , 'designated': True},
+                    {'sentence':          s.rhs , 'designated': True},
+                    {'sentence': negative(s.lhs), 'designated': True},
+                    {'sentence': negative(s.rhs), 'designated': True},
+                    # K3 closure n/a
+                ]),
+            }
 
     class ConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -393,17 +449,37 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
+            s = self.sentence(node)
             b1 = branch
             b2 = self.tableau.branch(branch)
-            s = node.props['sentence'].operand
             b1.update([
-                { 'sentence' : s.lhs, 'designated' : True  },
-                { 'sentence' : s.rhs, 'designated' : False }
+                {'sentence': s.lhs,'designated' : True },
+                {'sentence': s.rhs,'designated' : False},
             ]).tick(node)
             b2.update([
-                { 'sentence' : negate(s.lhs), 'designated' : False  },
-                { 'sentence' : negate(s.rhs), 'designated' : True }
+                {'sentence': negate(s.lhs), 'designated': False},
+                {'sentence': negate(s.rhs), 'designated': True },
             ]).tick(node)
+
+        def score_target_map(self, target):
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': s.lhs,'designated' : False},
+                    {'sentence': s.rhs,'designated' : True },
+                    # K3 closure
+                    {'sentence': negative(s.lhs),'designated' : True},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(s.lhs), 'designated': True },
+                    {'sentence': negative(s.rhs), 'designated': False},
+                    # K3 closure
+                    {'sentence': s.rhs, 'designated': True},
+                ]),
+            }
 
     class ConditionalUndesignated(ConjunctionUndesignated):
         """
@@ -432,10 +508,10 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
-            s = node.props['sentence']
+            s = self.sentence(node)
             branch.update([
-                { 'sentence' : operate('Conditional', [s.lhs, s.rhs]), 'designated' : True },
-                { 'sentence' : operate('Conditional', [s.rhs, s.lhs]), 'designated' : True }
+                {'sentence': operate('Conditional', [s.lhs, s.rhs]), 'designated': True},
+                {'sentence': operate('Conditional', [s.rhs, s.lhs]), 'designated': True},
             ]).tick(node)
 
     class BiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -451,11 +527,33 @@ class TableauxRules(object):
         designation = True
 
         def apply_to_node(self, node, branch):
+            s = self.sentence(node)
             b1 = branch
             b2 = self.tableau.branch(branch)
-            s = node.props['sentence'].operand
-            b1.add({ 'sentence' : negate(operate('Conditional', [s.lhs, s.rhs])), 'designated': True }).tick(node)
-            b2.add({ 'sentence' : negate(operate('Conditional', [s.rhs, s.lhs])), 'designated': True }).tick(node)
+            cond1 = operate('Conditional', [s.lhs, s.rhs])
+            cond2 = operate('Conditional', [s.rhs, s.lhs])
+            b1.add({'sentence': negate(cond1), 'designated': True}).tick(node)
+            b2.add({'sentence': negate(cond2), 'designated': True}).tick(node)
+
+        def score_target_map(self, target):
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            cond1 = operate('Conditional', [s.lhs, s.rhs])
+            cond2 = operate('Conditional', [s.rhs, s.lhs])
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(cond1), 'designated': False},
+                    # K3 closure
+                    {'sentence': cond1, 'designated': True},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(cond2), 'designated': False},
+                    # K3 closure
+                    {'sentence': cond2, 'designated': True},
+                ]),
+            }
 
     class BiconditionalUndesignated(ConjunctionUndesignated):
         """
@@ -523,7 +621,6 @@ class TableauxRules(object):
         operator   = None
         quantifier = 'Existential'
 
-
     class UniversalDesignated(k3.TableauxRules.UniversalDesignated):
         """
         This rule is the same as the `FDE UniversalDesignated rule`_.
@@ -545,6 +642,10 @@ class TableauxRules(object):
         negated     = True
         convert_to  = 'Existential'
 
+        # NB: since the rule always uses a new constant, scoring the targets
+        # would require complex predicting of whether the branch might close,
+        # e.g. by checking for universal statements that might result in closure.
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
@@ -553,15 +654,16 @@ class TableauxRules(object):
             c = branch.new_constant()
             si = s.sentence
             ss = s.substitute(c, v)
+            sq = quantify(self.convert_to, v, negate(si))
 
             b1 = branch
             b2 = self.tableau.branch(branch)
-            b1.add({'sentence': quantify(self.convert_to, v, negate(si)), 'designated': d}).tick(node)
+            b1.add({'sentence': sq, 'designated': d}).tick(node)
             b2.update([
-                {'sentence': ss, 'designated': not d},
-                {'sentence': negate(ss), 'designated': not d}
+                {'sentence':        ss , 'designated': not d},
+                {'sentence': negate(ss), 'designated': not d},
             ]).tick(node)
-
+            
     class UniversalUndesignated(ExistentialUndesignated):
         """
         From an unticked, undesignated universal node *n* on a branch *b*, add a designated
