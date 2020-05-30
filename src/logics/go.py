@@ -27,7 +27,7 @@ category_display_order = 5
 
 import logic, math, examples
 from . import fde, k3, b3e
-from logic import negate, operate, quantify
+from logic import negate, negative, operate, quantify
 
 def gap(v):
     return min(v, 1 - v)
@@ -122,7 +122,7 @@ class TableauxRules(object):
     .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
     """
 
-    class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
+    class DoubleNegationDesignated(k3.TableauxRules.DoubleNegationDesignated):
         """
         This rule is the same as the `FDE DoubleNegationDesignated rule`_.
 
@@ -130,7 +130,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DoubleNegationUndesignated(fde.TableauxRules.DoubleNegationUndesignated):
+    class DoubleNegationUndesignated(k3.TableauxRules.DoubleNegationUndesignated):
         """
         This rule is the same as the `FDE DoubleNegationUndesignated rule`_.
 
@@ -138,7 +138,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionDesignated(fde.TableauxRules.AssertionDesignated):
+    class AssertionDesignated(k3.TableauxRules.AssertionDesignated):
         """
         This rule is the same as the `FDE AssertionDesignated rule`_.
 
@@ -170,7 +170,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionDesignated(fde.TableauxRules.ConjunctionDesignated):
+    class ConjunctionDesignated(k3.TableauxRules.ConjunctionDesignated):
         """
         This rule is the same as the `FDE ConjunctionDesignated rule`_.
 
@@ -223,7 +223,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             branch.add({ 'sentence' : s, 'designated' : True }).tick(node)
 
-    class DisjunctionDesignated(fde.TableauxRules.DisjunctionDesignated):
+    class DisjunctionDesignated(k3.TableauxRules.DisjunctionDesignated):
         """
         This rule is the same as the `FDE DisjunctionDesignated rule`_.
 
@@ -264,7 +264,7 @@ class TableauxRules(object):
 
         operator = 'Disjunction'
 
-    class MaterialConditionalDesignated(fde.TableauxRules.MaterialConditionalDesignated):
+    class MaterialConditionalDesignated(k3.TableauxRules.MaterialConditionalDesignated):
         """
         This rule is the same as the `FDE MaterialConditionalDesignated rule`_.
 
@@ -306,7 +306,7 @@ class TableauxRules(object):
 
         operator = 'Material Conditional'
 
-    class MaterialBiconditionalDesignated(fde.TableauxRules.MaterialBiconditionalDesignated):
+    class MaterialBiconditionalDesignated(k3.TableauxRules.MaterialBiconditionalDesignated):
         """
         This rule is the same as the `FDE MaterialBiconditionalDesignated rule`_.
 
@@ -473,7 +473,7 @@ class TableauxRules(object):
 
         operator = 'Biconditional'
 
-    class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
+    class ExistentialDesignated(k3.TableauxRules.ExistentialDesignated):
         """
         This rule is the same as the `FDE ExistentialDesignated rule`_.
 
@@ -524,7 +524,7 @@ class TableauxRules(object):
         quantifier = 'Existential'
 
 
-    class UniversalDesignated(fde.TableauxRules.UniversalDesignated):
+    class UniversalDesignated(k3.TableauxRules.UniversalDesignated):
         """
         This rule is the same as the `FDE UniversalDesignated rule`_.
 
