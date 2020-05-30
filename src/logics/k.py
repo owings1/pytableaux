@@ -267,6 +267,10 @@ class Model(logic.Model):
                 return 0
         return 1
 
+    def is_countermodel(self, argument):
+        # TODO: implement
+        raise NotImplementedError(NotImplemented)
+
     def get_data(self):
         return {
             'Worlds': {
@@ -517,6 +521,11 @@ class TableauxRules(object):
                     if n != None:
                         return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
+
+        def node_will_close_branch(self, node, branch):
+            return node.has('sentence') and node.has('world') and branch.has({
+                'sentence': negative(node.props['sentence']), 'world': node.props['world']
+            })
 
         def example(self):
             a = atomic(0, 0)

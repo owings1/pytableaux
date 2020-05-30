@@ -152,6 +152,10 @@ class Model(logic.Model):
             return s.operator == 'Necessity' or s.operator == 'Possibility'
         return super(Model, self).is_sentence_opaque(sentence)
 
+    def is_countermodel(self, argument):
+        # TODO: implement
+        raise NotImplementedError(NotImplemented)
+
     def get_data(self):
         data = dict()
         data.update({
@@ -433,6 +437,9 @@ class TableauxRules(object):
                 if n != None:
                     return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
+
+        def node_will_close_branch(self, node, branch):
+            return branch.has({'sentence': node.props['sentence'], 'designated': not node.props['designated']})
 
         def example(self):
             a = atomic(0, 0)

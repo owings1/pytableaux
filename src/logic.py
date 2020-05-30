@@ -1687,6 +1687,16 @@ class TableauxSystem(object):
         def applies_to_branch(self, branch):
             raise NotImplementedError(NotImplemented)
 
+        def branch_closes_with(self, branch, node):
+            # TODO: WIP
+            if not isinstance(node, TableauxSystem.Node):
+                node = TableauxSystem.Node(props=node)
+            return self.node_will_close_branch(node, branch)
+
+        def node_will_close_branch(self, node, branch):
+            # TODO: WIP
+            raise NotImplementedError(NotImplemented)
+
         def apply(self, target):
             target['branch'].close()
 
@@ -1809,6 +1819,11 @@ class TableauxSystem(object):
                         return cands[i]
             else:
                 return False
+
+        def get_branch_additions(self, target):
+            # TODO
+            # should return a list of lists of node props
+            pass
 
         def score_target(self, target):
             return sum(self.score_target_list(target))
@@ -2004,6 +2019,10 @@ class Model(object):
         raise NotImplementedError(NotImplemented)
 
     def value_of_quantified(self, sentence, **kw):
+        raise NotImplementedError(NotImplemented)
+
+    def is_countermodel(self, argument):
+        # TODO: WIP
         raise NotImplementedError(NotImplemented)
 
     def get_data(self):
