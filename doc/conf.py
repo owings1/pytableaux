@@ -285,16 +285,16 @@ env = Environment(
 )
 truth_table_template = env.get_template('truth_table.html')
 
-def get_truth_table_html(log, operator, table):
+def get_truth_table_html(lgc, operator, table):
     s = truth_table_template.render({
         'arity'      : logic.arity(operator),
         'sentence'   : examples.operated(operator),
         'sw'         : sw,
-        'values'     : log.Model.truth_values,
-        'value_chars': log.Model.truth_value_chars,
-        'num_values' : len(log.Model.truth_values),
+        'values'     : lgc.Model.truth_values,
+        'value_chars': lgc.Model.truth_value_chars,
+        'num_values' : len(lgc.Model.truth_values),
         'table'      : table,
-        'operator'   : operator
+        'operator'   : operator,
     })
     return s
 
