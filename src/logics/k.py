@@ -825,7 +825,7 @@ class TableauxRules(object):
             # keep conversion neutral for inheritance below
             branch.add({ 'sentence' : quantify(self.convert_to, v, negate(si)), 'world' : w }).tick(node)
 
-    class Universal(IsModal, logic.TableauxSystem.BranchRule):
+    class Universal(IsModal, logic.TableauxSystem.SelectiveTrackingBranchRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -835,7 +835,8 @@ class TableauxRules(object):
 
         quantifier = 'Universal'
 
-        def applies_to_branch(self, branch):
+        def get_candidate_targets_for_branch(self, branch):
+            cands = list()
             constants = branch.constants()
             for node in branch.get_nodes():
                 if node.has('sentence') and node.props['sentence'].quantifier == self.quantifier:
@@ -843,16 +844,21 @@ class TableauxRules(object):
                     s = node.props['sentence']
                     v = s.variable
                     if len(constants):
+                        # if the branch already has a constant, find all the substitutions not
+                        # already on the branch.
                         for c in constants:
                             r = s.substitute(c, v)
                             if not branch.has({ 'sentence' : r, 'world' : w }):
-                                return { 'branch' : branch, 'sentence' : r, 'node' : node, 'world' : w }
-                        continue
-                    return { 'branch' : branch, 'sentence' : s.substitute(branch.new_constant(), v), 'world' : w }
-            return False
+                                cands.append({ 'branch' : branch, 'sentence' : r, 'node' : node, 'world' : w })
+                    else:
+                        # if the branch does not have any constants, pick a new one
+                        r = s.substitute(branch.new_constant(), v)
+                        cands.append({ 'branch' : branch, 'sentence' : r, 'node': node, 'world' : w })
+            return cands
 
-        def apply(self, target):
-            target['branch'].add({ 'sentence' : target['sentence'], 'world' : target['world'] })
+        def apply_to_target(self, target):
+            branch = target['branch']
+            branch.add({ 'sentence' : target['sentence'], 'world' : target['world'] })
 
         def example(self):
             self.tableau.branch().add({ 'sentence' : examples.quantified(self.quantifier), 'world' : 0 })
@@ -903,7 +909,7 @@ class TableauxRules(object):
             sn = operate(self.convert_to, [negate(s.operand)])
             branch.add({ 'sentence' : sn, 'world' : w }).tick(node)
 
-    class Necessity(IsModal, logic.TableauxSystem.BranchRule):
+    class Necessity(IsModal, logic.TableauxSystem.SelectiveTrackingBranchRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -911,17 +917,6 @@ class TableauxRules(object):
         """
 
         operator = 'Necessity'
-
-        def __init__(self, *args):
-            super(TableauxRules.Necessity, self).__init__(*args)
-            # branch id => node id => count
-            self.track = dict()
-
-        def applies_to_branch(self, branch):
-            cands = self.get_candidate_targets_for_branch(branch)
-            if len(cands) == 0:
-                return False
-            return self.select_best_target_for_branch(branch, cands)
 
         def get_candidate_targets_for_branch(self, branch):
             cands = list()
@@ -945,32 +940,9 @@ class TableauxRules(object):
                             })
             return cands
 
-        def select_best_target_for_branch(self, branch, cands):
-            # select the node we have applied to the least for this branch.
-            self.ensure_track_targets(cands)
-            cand_node_ids = {target['node'].id for target in cands}
-            least_count = min({self.track[branch.id][node_id] for node_id in cand_node_ids})
-            for target in cands:
-                if self.track[branch.id][target['node'].id] == least_count:
-                    return target
-
-        def ensure_track_targets(self, cands):
-            for target in cands:
-                self.ensure_track_target(target)
-
-        def ensure_track_target(self, target):
-            branch = target['branch']
-            node = target['node']
-            if branch.id not in self.track:
-                self.track[branch.id] = dict()
-            if node.id not in self.track[branch.id]:
-                self.track[branch.id][node.id] = 0
-
-        def apply(self, target):
+        def apply_to_target(self, target):
             branch = target['branch']
             branch.add({ 'sentence': target['sentence'], 'world': target['world'] })
-            self.ensure_track_target(target)
-            self.track[branch.id][target['node'].id] += 1
 
         def example(self):
             s = operate(self.operator, [atomic(0, 0)])

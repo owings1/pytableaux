@@ -912,7 +912,7 @@ class TableauxRules(object):
                 'designated' : d
             }).tick(node)
 
-    class ExistentialUndesignated(logic.TableauxSystem.BranchRule):
+    class ExistentialUndesignated(logic.TableauxSystem.SelectiveTrackingBranchRule):
         """
         From an undesignated existential node *n* on a branch *b*, for any constant *c* on
         *b* such that the result *r* of substituting *c* for the variable bound by the
@@ -924,33 +924,31 @@ class TableauxRules(object):
         quantifier  = 'Existential'
         designation = False
 
-        def applies_to_branch(self, branch):
-            target = False
+        def get_candidate_targets_for_branch(self, branch):
+            cands = list()
             d = self.designation
             q = self.quantifier
             constants = branch.constants()
             for n in branch.get_nodes():
                 # keep quantifier and designation neutral for inheritance below
-                if 'sentence' not in n.props or n.props['designated'] != d:
+                if not n.has('sentence') or n.props['designated'] != d:
                     continue
                 s = n.props['sentence']
                 if s.quantifier != q:
                     continue
                 v = s.variable
-                if not len(constants):
-                    c = branch.new_constant()
-                    target = { 'branch' : branch, 'sentence' : s.substitute(c, v), 'node' : n }
-                else:
+                if len(constants):
                     for c in constants:
                         r = s.substitute(c, v)
                         if not branch.has({ 'sentence': r, 'designated' : d }):
-                            target = { 'branch' : branch, 'sentence' : r, 'node' : n }
-                            break
-                if target:
-                    break
-            return target
-
-        def apply(self, target):
+                            cands.append({ 'branch' : branch, 'sentence' : r, 'node' : n })
+                else:
+                    c = branch.new_constant()
+                    r = s.substitute(c, v)
+                    cands.append({ 'branch' : branch, 'sentence' : r, 'node' : n })
+            return cands
+            
+        def apply_to_target(self, target):
             # keep designation neutral for inheritance below
             target['branch'].add({ 'sentence' : target['sentence'], 'designated' : self.designation })
 

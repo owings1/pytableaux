@@ -1653,6 +1653,53 @@ class TableauxSystem(object):
         def apply(self, target):
             target['branch'].close()
 
+    class SelectiveTrackingBranchRule(BranchRule):
+
+        def __init__(self, *args):
+            super(TableauxSystem.SelectiveTrackingBranchRule, self).__init__(*args)
+            self.stbr_track = dict()
+
+        def applies_to_branch(self, branch):
+            cands = self.get_candidate_targets_for_branch(branch)
+            if len(cands) == 0:
+                return False
+            return self.select_best_target_for_branch(branch, cands)
+
+        def select_best_target_for_branch(self, branch, cands):
+            # select the node to which we have applied the least for this branch.
+            self.ensure_track_targets(cands)
+            cand_node_ids = {target['node'].id for target in cands}
+            least_count = min({self.stbr_track[branch.id][node_id] for node_id in cand_node_ids})
+            for target in cands:
+                if self.stbr_track[branch.id][target['node'].id] == least_count:
+                    return target
+
+        def ensure_track_targets(self, cands):
+            for target in cands:
+                self.ensure_track_target(target)
+
+        def ensure_track_target(self, target):
+            branch = target['branch']
+            node = target['node']
+            if branch.id not in self.stbr_track:
+                self.stbr_track[branch.id] = dict()
+            if node.id not in self.stbr_track[branch.id]:
+                self.stbr_track[branch.id][node.id] = 0
+
+        def apply(self, target):
+            branch = target['branch']
+            node = target['node']
+            self.apply_to_target(target)
+            self.ensure_track_target(target)
+            self.stbr_track[branch.id][node.id] += 1
+
+        def get_candidate_targets_for_branch(self, branch):
+            # Implementation must return target with both branch and node properties.
+            raise NotImplementedError(NotImplemented)
+
+        def apply_to_target(self, target):
+            raise NotImplementedError(NotImplemented)
+
     class NodeRule(BranchRule):
         """
         A node rule has a fixed ``applies()`` method that searches open branches
