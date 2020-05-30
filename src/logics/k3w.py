@@ -147,75 +147,71 @@ class TableauxRules(object):
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
-            d = self.designation
             b1 = branch
             b2 = self.tableau.branch(branch)
             b3 = self.tableau.branch(branch)
             b1.update([
-                { 'sentence' :        s.lhs , 'designated' : d },
-                { 'sentence' : negate(s.rhs), 'designated' : d }
+                {'sentence':        s.lhs , 'designated': True},
+                {'sentence': negate(s.rhs), 'designated': True},
             ]).tick(node)
             b2.update([
-                { 'sentence' : negate(s.lhs), 'designated' : d },
-                { 'sentence' :        s.rhs , 'designated' : d }
+                {'sentence': negate(s.lhs), 'designated': True},
+                {'sentence':        s.rhs , 'designated': True},
             ]).tick(node)
             b3.update([
-                { 'sentence' : negate(s.lhs), 'designated' : d },
-                { 'sentence' : negate(s.rhs), 'designated' : d }
+                {'sentence': negate(s.lhs), 'designated': True},
+                {'sentence': negate(s.rhs), 'designated': True},
             ]).tick(node)
 
         def score_target_map(self, target):
-            scores = {
-                'b1': 0,
-                'b2': 0,
-                'b3': 0,
-            }
             branch = target['branch']
             s = self.sentence(target['node'])
-            d = self.designation
-            # b1
-            #  FDE closure
-            if branch.has_any([
-                {'sentence': s.lhs          , 'designated': not d},
-                {'sentence': negative(s.rhs), 'designated': not d},
-            ]):
-                scores['b1'] += 1
-            #  K3 closure
-            elif d:
-                if branch.has_any([
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s.lhs , 'designated': False},
+                    {'sentence': negative(s.rhs), 'designated': False},
+                    # K3 closure
                     {'sentence': negative(s.lhs), 'designated': True},
-                    {'sentence': s.rhs          , 'designated': True},
-                ]):
-                    scores['b1'] += 1
-            # b2
-            #  FDE closure
-            if branch.has_any([
-                {'sentence': negative(s.lhs), 'designated': not d},
-                {'sentence': s.rhs          , 'designated': not d},
-            ]):
-                scores['b2'] += 1
-            #  K3 closure
-            elif d:
-                if branch.has_any([
-                    {'sentence': s.lhs          , 'designated': True},
+                    {'sentence':          s.rhs , 'designated': True},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(s.lhs), 'designated': False},
+                    {'sentence':          s.rhs , 'designated': False},
+                    # K3 closure
+                    {'sentence':          s.lhs , 'designated': True},
                     {'sentence': negative(s.rhs), 'designated': True},
-                ]):
-                    scores['b2'] += 1
-            # b3
-            #  FDE closure
-            if branch.has_any([
-                {'sentence': negative(s.lhs), 'designated': not d},
-                {'sentence': negative(s.rhs), 'designated': not d},
-            ]):
-                scores['b3'] += 1
-            #  K3 closure
-            elif d:
-                if branch.has_any([
+                ]),
+                'b3': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(s.lhs), 'designated': False},
+                    {'sentence': negative(s.rhs), 'designated': False},
+                    # K3 closure
                     {'sentence': s.lhs, 'designated': True},
                     {'sentence': s.rhs, 'designated': True},
-                ]):
-                    scores['b3'] += 1
-            return scores
+                ]),
+            }
+
+        # If you try this 2-branching version, don't forget to
+        # reorder the rules!
+        #
+        #def apply_to_node(self, node, branch):
+        #    s = self.sentence(node)
+        #    d = self.designation
+        #    b1 = branch
+        #    b2 = self.tableau.branch(branch)
+        #    disj1 = operate('Disjunction', [s.rhs, negate(s.rhs)])
+        #    disj2 = operate('Disjunction', [s.lhs, negate(s.lhs)])
+        #    b1.update([
+        #        {'sentence': negate(s.lhs), 'designated': True},
+        #        {'sentence':        disj1 , 'designated': True},
+        #    ]).tick(node)
+        #    b2.update([
+        #        {'sentence': negate(s.rhs), 'designated': True},
+        #        {'sentence':        disj2 , 'designated': True},
+        #    ]).tick(node)
+
 
     class ConjunctionUndesignated(k3.TableauxRules.ConjunctionUndesignated):
         """
