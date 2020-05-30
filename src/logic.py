@@ -1383,6 +1383,12 @@ class TableauxSystem(object):
                     return True
             return False
 
+        def has_all(self, props_list, ticked=None):
+            for props in props_list:
+                if not self.has(props, ticked=ticked):
+                    return False
+            return True
+
         def find(self, props, ticked=None):
             """
             Find the first node on the branch that matches the given properties, optionally
