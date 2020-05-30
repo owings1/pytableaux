@@ -119,6 +119,19 @@ def negate(sentence):
     """
     return Vocabulary.OperatedSentence('Negation', [sentence])
 
+def negative(sentence):
+    """Either negate this sentence, or, if it is a negated sentence, return its
+    negatum. Example::
+
+        a = atomic(0, 0)
+        s1 = negate(a)
+        s2 = negative(s1)
+        assert s2 == a
+    """
+    if sentence.is_operated() and sentence.operator == 'Negation':
+        return sentence.operand
+    return negate(sentence)
+
 def assertion(sentence):
     """Apply the assertion operator to the sentence. This is shorthand for
     ``operate('Assertion', [sentence])``. Example::
