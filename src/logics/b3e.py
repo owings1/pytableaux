@@ -48,7 +48,7 @@ class Model(k3w.Model):
         the values of its operands according to the following tables.
 
         Note that the conditional operator is definable in terms of the assertion
-        operator, as P{~\*A V \*B}.
+        operator, as P{~\\*A V \\*B}.
 
         //truth_tables//b3e//
         """
