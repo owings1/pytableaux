@@ -451,3 +451,12 @@
 .html-writer-models .model .list.frames > ul.values > li {
     margin-bottom: 10px;
 }
+.html-writer-models .model .is-countermodel {
+    
+}
+.html-writer-models .model .is-countermodel.yes {
+    color: green;
+}
+.html-writer-models .model .is-countermodel.no {
+    color: red;
+}
