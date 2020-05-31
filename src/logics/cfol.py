@@ -63,9 +63,9 @@ class Model(k.Model):
     def read_node(self, node):
         sentence = node.props['sentence']
         if self.is_sentence_opaque(sentence):
-            self.set_opaque_value(sentence, 1)
+            self.set_opaque_value(sentence, self.char_values['T'])
         elif sentence.is_literal():
-            self.set_literal_value(sentence, 1)
+            self.set_literal_value(sentence, self.char_values['T'])
 
     def get_data(self):
         data = self.world_frame(0).get_data(self)['value']

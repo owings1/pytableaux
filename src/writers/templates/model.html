@@ -3,6 +3,12 @@
     {% set data = model.get_data() -%}
     <div class="model" data-model-id="{{ model.id|e }}" data-branch-id="{{ branch.id|e }}">
         <ul class="details">
+            <li>
+                <div class="prop">Is countermodel</div>
+                <div class="value">
+                    <span class="is-countermodel {{ bool_to_yn(model.is_countermodel)|lower }}">{{ bool_to_yn(model.is_countermodel) }}</span>
+                </div>
+            </li>
             {% for key in data -%}
                 {% set info = data[key] -%}
                 <li>
@@ -13,6 +19,10 @@
         </ul>
     </div>
 {% endmacro -%}
+
+{%- macro bool_to_yn(value) -%}
+    {{- 'Yes' if value else 'No' -}}
+{%- endmacro -%}
 
 {% macro write_info(sw, info) -%}
     {% if info ['datatype'] == 'set' -%}

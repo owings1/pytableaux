@@ -73,6 +73,8 @@ class Model(logic.Model):
         1    : 'T'
     }
 
+    designated_values = set([0.75, 1])
+
     def __init__(self):
         super(Model, self).__init__()
         self.extensions = {}
@@ -152,9 +154,16 @@ class Model(logic.Model):
             return s.operator == 'Necessity' or s.operator == 'Possibility'
         return super(Model, self).is_sentence_opaque(sentence)
 
-    def is_countermodel(self, argument):
-        # TODO: implement
-        raise NotImplementedError(NotImplemented)
+    def is_countermodel_to(self, argument):
+        """
+        A model is a countermodel to an argument iff the value of every premise
+        is in the set of designated values, and the value of the conclusion
+        is not in the set of designated values.
+        """
+        for premise in argument.premises:
+            if self.value_of(premise) not in self.designated_values:
+                return False
+        return self.value_of(argument.conclusion) not in self.designated_values
 
     def get_data(self):
         data = dict()

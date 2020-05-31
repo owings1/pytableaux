@@ -49,6 +49,8 @@ class Model(fde.Model):
         1    : 'T'
     }
 
+    designated_values = set([1])
+
     def value_of_operated(self, sentence, **kw):
         """
         The value of a sentence with a truth-functional operator is determined by

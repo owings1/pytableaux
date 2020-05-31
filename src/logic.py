@@ -991,10 +991,6 @@ class TableauxSystem(object):
     def build_trunk(tableau, argument):
         raise NotImplementedError(NotImplemented)
 
-    @staticmethod
-    def read_model(model, branch):
-        model.read_branch(branch)
-
     class TrunkAlreadyBuiltError(Exception):
         pass
 
@@ -1543,6 +1539,8 @@ class TableauxSystem(object):
             if self.closed:
                 raise BranchClosedError('Cannot build a model from a closed branch')
             model.read_branch(self)
+            if self.tableau.argument != None and not self.tableau.is_premature:
+                model.is_countermodel = model.is_countermodel_to(self.tableau.argument)
             self.model = model
             return model
 
@@ -1981,6 +1979,8 @@ class Model(object):
 
     def __init__(self):
         self.id = id(self)
+        # flag to be set externally
+        self.is_countermodel = None
 
     def read_branch(self, branch):
         raise NotImplementedError(NotImplemented)
@@ -2021,8 +2021,7 @@ class Model(object):
     def value_of_quantified(self, sentence, **kw):
         raise NotImplementedError(NotImplemented)
 
-    def is_countermodel(self, argument):
-        # TODO: WIP
+    def is_countermodel_to(self, argument):
         raise NotImplementedError(NotImplemented)
 
     def get_data(self):

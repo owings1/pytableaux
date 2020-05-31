@@ -233,9 +233,10 @@ class Model(logic.Model):
         subsitution of some constant in the domain for the variable is true at `w`.
         """
         for c in self.constants:
-            if self.value_of(sentence.substitute(c, sentence.variable), world=world, **kw) == 1:
-                return 1
-        return 0
+            r = sentence.substitute(c, sentence.variable)
+            if self.value_of(r, world=world, **kw) == self.char_values['T']:
+                return self.char_values['T']
+        return self.char_values['F']
 
     def value_of_universal(self, sentence, world=0, **kw):
         """
@@ -243,9 +244,10 @@ class Model(logic.Model):
         subsitution of each constant in the domain for the variable is true at `w`.
         """
         for c in self.constants:
-            if self.value_of(sentence.substitute(c, sentence.variable), world=world, **kw) == 0:
-                return 0
-        return 1
+            r = sentence.substitute(c, sentence.variable)
+            if self.value_of(r, world=world, **kw) == self.char_values['F']:
+                return self.char_values['F']
+        return self.char_values['T']
 
     def value_of_possibility(self, sentence, world=0, **kw):
         """
@@ -253,9 +255,9 @@ class Model(logic.Model):
         some `w'` such that `<w, w'>` in the access relation.
         """
         for w2 in self.visibles(world):
-            if self.value_of(sentence.operand, world=w2, **kw) == 1:
-                return 1
-        return 0
+            if self.value_of(sentence.operand, world=w2, **kw) == self.char_values['T']:
+                return self.char_values['T']
+        return self.char_values['F']
 
     def value_of_necessity(self, sentence, world=0, **kw):
         """
@@ -263,13 +265,19 @@ class Model(logic.Model):
         each `w'` such that `<w, w'>` is in the access relation.
         """
         for w2 in self.visibles(world):
-            if self.value_of(sentence.operand, world=w2, **kw) == 0:
-                return 0
-        return 1
+            if self.value_of(sentence.operand, world=w2, **kw) == self.char_values['F']:
+                return self.char_values['F']
+        return self.char_values['T']
 
-    def is_countermodel(self, argument):
-        # TODO: implement
-        raise NotImplementedError(NotImplemented)
+    def is_countermodel_to(self, argument):
+        """
+        A model is a countermodel for an argument iff the value of each premise
+        is **T** at `w0` and the value of the conclusion is **F** at `w0`.
+        """
+        for premise in argument.premises:
+            if self.value_of(premise, world=0) != self.char_values['T']:
+                return False
+        return self.value_of(premise, world=0) == self.char_values['F']
 
     def get_data(self):
         return {
@@ -318,14 +326,11 @@ class Model(logic.Model):
     def read_node(self, node):
         if node.has('sentence'):
             sentence = node.props['sentence']
-            #if node.has('world'):
             world = node.props['world']
-            #else:
-            #    world = 0
             if self.is_sentence_opaque(sentence):
-                self.set_opaque_value(sentence, 1, world=world)
+                self.set_opaque_value(sentence, self.char_values['T'], world=world)
             elif sentence.is_literal():
-                self.set_literal_value(sentence, 1, world=world)
+                self.set_literal_value(sentence, self.char_values['T'], world=world)
             self.predicates.update(node.predicates())
         elif node.has('world1') and node.has('world2'):
             self.add_access(node.props['world1'], node.props['world2'])
@@ -412,10 +417,10 @@ class Model(logic.Model):
             if param.is_constant():
                 self.constants.add(param)
         extension = self.get_extension(predicate, world=world, **kw)
-        if value == 0:
+        if value == self.char_values['F']:
             if params in extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
-        if value == 1:
+        if value == self.char_values['T']:
             extension.add(params)
 
     def get_extension(self, predicate, world=0, **kw):
