@@ -52,16 +52,6 @@ def test_argument_parse_prems_preparsed_conclusion():
     assert len(a.premises) == 2
     assert a.conclusion == conclusion
 
-def test_argument_parse_prems_missing_notation():
-    premises = ['Aab', 'Nb']
-    conclusion = logic.parse('a')
-    with pytest.raises(logic.argument.MissingNotationError):
-        logic.argument(conclusion=conclusion, premises=premises)
-
-def test_argument_parse_conclusion_missing_notation():
-    with pytest.raises(logic.argument.MissingNotationError):
-        logic.argument(conclusion='a')
-
 def test_argument_repr_untitled():
     a = logic.argument(conclusion='a', notation='polish')
     res = a.__repr__()

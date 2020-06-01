@@ -32,6 +32,8 @@ with open(os.path.join(base_dir, 'VERSION'), 'r') as f:
 copyright = '2014-2020, Doug Owings. Released under the GNU Affero General Public License v3 or later'
 source_href = 'https://bitbucket.org/owings1/pytableaux'
 
+default_notation = 'polish'
+
 # name : arity
 operators = {
     'Assertion'              : 1,
@@ -266,7 +268,7 @@ def quantify(quantifier, variable, sentence):
     """
     return Vocabulary.QuantifiedSentence(quantifier, variable, sentence)
 
-def parse(string, vocabulary=None, notation='polish'):
+def parse(string, vocabulary=None, notation=None):
     """
     Parse a string and return a sentence. If ``vocabulary`` is passed, the parser will
     use its user-defined predicates. The ``notation`` parameter can be either a notation 
@@ -287,6 +289,8 @@ def parse(string, vocabulary=None, notation='polish'):
     """
     if vocabulary is None:
         vocabulary = Vocabulary()
+    if notation == None:
+        notation = default_notation
     notation = _get_module('notations', notation)
     return notation.Parser(vocabulary).parse(string)
 
@@ -314,13 +318,9 @@ class argument(object):
         if premises != None:
             for premise in premises:
                 if isinstance(premise, basestring):
-                    if notation == None:
-                        raise argument.MissingNotationError("Must pass notation to parse sentence strings.")
                     premise = parse(premise, vocabulary, notation)
                 self.premises.append(premise)
         if isinstance(conclusion, basestring):
-            if notation == None:
-                raise argument.MissingNotationError("Must pass notation to parse sentence strings.")
             conclusion = parse(conclusion, vocabulary, notation)
         self.conclusion = conclusion
         self.title      = title
