@@ -27,6 +27,13 @@
                         <dd>{{ operator|e }}</dd>
                     {% endfor %}
                 </dl>
+                <span class="label">Quantifiers</span>
+                <dl class="operator-symbols">
+                    {% for quantifier in quantifiers -%}
+                        <dt>{{ symset.charof('quantifier', quantifier)|e }}</dt>
+                        <dd>{{ quantifier|e }}</dd>
+                    {% endfor %}
+                </dl>
                 <div class="clear"></div>
             </div>
         {% endfor %}
@@ -47,13 +54,6 @@
                         <li>{{ char|e }}</li>
                     {% endfor %}
                 </ul>
-                <span class="label">Quantifiers</span>
-                <dl class="operator-symbols">
-                    {% for quantifier in quantifiers -%}
-                        <dt>{{ symset.charof('quantifier', quantifier)|e }}</dt>
-                        <dd>{{ quantifier|e }}</dd>
-                    {% endfor %}
-                </dl>
                 <div class="clear"></div>
             </div>
         {% endfor %}
