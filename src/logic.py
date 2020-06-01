@@ -1087,7 +1087,9 @@ class TableauxSystem(object):
             self.is_premature = False
 
             # opts
-            self.opts = opts
+            self.opts = dict(opts)
+            if 'is_group_optim' not in self.opts:
+                self.opts['is_group_optim'] = True
 
             self.open_branchset = set()
             self.branch_dict = dict()
@@ -1166,6 +1168,8 @@ class TableauxSystem(object):
             for rule in rules:
                 target = rule.applies()
                 if target:
+                    if not self.opts['is_group_optim']:
+                        return (rule, target)
                     if 'score' not in target:
                         target['score'] = 0
                     results.append((rule, target))

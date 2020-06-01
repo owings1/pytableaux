@@ -638,6 +638,10 @@
             if ($rankOptim.length) {
                 data.rank_optimizations = $rankOptim.is(':checked')
             }
+            const $groupOptim = $('#options_group_optimizations', $Frm)
+            if ($groupOptim.length) {
+                data.group_optimizations = $groupOptim.is(':checked')
+            }
             return data
         }
 

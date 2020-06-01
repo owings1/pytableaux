@@ -381,7 +381,8 @@ class App(object):
                     }
                 },
                 "max_steps": null,
-                "rank_optimizations": true
+                "rank_optimizations": true,
+                "group_optimizations": true
             }
 
         Example success result::
@@ -437,6 +438,8 @@ class App(object):
             body['max_steps'] = None
         if 'rank_optimizations' not in body:
             body['rank_optimizations'] = True
+        if 'group_optimizations' not in body:
+            body['group_optimizations'] = True
 
         errors = {}
         try:
@@ -476,7 +479,8 @@ class App(object):
         }
 
         proof_opts = {
-            'is_rank_optim': body['rank_optimizations']
+            'is_rank_optim'  : body['rank_optimizations'],
+            'is_group_optim' : body['group_optimizations'],
         }
         proof = logic.tableau(selected_logic, arg, **proof_opts)
         proof.build(**build_opts)
