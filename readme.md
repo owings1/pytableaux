@@ -11,7 +11,7 @@ For the live site, [see here][site].
 The docker image is available on [Docker Hub][dockerhub].
 
 ```bash
-docker run -d -p 8080:8080 --name pytableaux owings1/pytableaux:latest
+docker run -d -p 8080:8080 owings1/pytableaux:latest
 ```
 
 The web UI should then be available on port 8080, e.g. `http://localhost:8080`.
