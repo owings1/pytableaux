@@ -1,6 +1,6 @@
 # pytableaux
 
-A multi-logic proof generator.
+A multi-logic proof and semantic model generator.
 
 ## Web UI
 
