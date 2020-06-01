@@ -397,6 +397,60 @@ class TestLP(LogicTester):
         proof = self.example_proof('Law of Non-contradiction')
         assert not proof.valid
 
+    def test_valid_b_then_a_arrow_b(self):
+        arg = argument('Uab', premises=['b'])
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
+
+    def test_invalid_cond_modus_ponens(self):
+        proof = self.example_proof('Conditional Modus Ponens')
+        assert not proof.valid
+
+    def test_valid_a_not_a_not_b_thus_not_a_arrow_b(self):
+        proof = tableau(self.logic, argument('NUab', ['a', 'Na', 'Nb'])).build()
+        assert proof.valid
+
+    def test_invalid_a_a_arrow_not_b_arrow_c_thus_not_b_arrow_c(self):
+        proof = tableau(self.logic, argument('NUab', ['a', 'UaNUbc'])).build()
+        assert not proof.valid
+
+class TestRM3(LogicTester):
+
+    logic = get_logic('RM3')
+
+    def test_valid_cond_mp(self):
+        proof = self.example_proof('Conditional Modus Ponens')
+        assert proof.valid
+
+    def test_valid_demorgan_1(self):
+        proof = self.example_proof('DeMorgan 1')
+        assert proof.valid
+
+    def test_valid_demorgan_2(self):
+        proof = self.example_proof('DeMorgan 2')
+        assert proof.valid
+
+    def test_valid_demorgan_3(self):
+        proof = self.example_proof('DeMorgan 3')
+        assert proof.valid
+
+    def test_valid_demorgan_4(self):
+        proof = self.example_proof('DeMorgan 4')
+        assert proof.valid
+
+    def test_invalid_b_then_a_arrow_b(self):
+        arg = argument('Uab', premises=['b'])
+        proof = tableau(self.logic, arg).build()
+        assert not proof.valid
+
+    def test_valid_cond_modus_ponens(self):
+        proof = self.example_proof('Conditional Modus Ponens')
+        assert proof.valid
+
+    def test_valid_a_a_arrow_not_b_arrow_c_thus_not_b_arrow_c(self):
+        proof = tableau(self.logic, argument('NUab', ['a', 'UaNUbc'])).build()
+        assert proof.valid
+
 class TestGO(LogicTester):
 
     logic = get_logic('GO')
@@ -1182,27 +1236,3 @@ class TestL3(LogicTester):
     def test_invalid_cond_pseudo_contraction(self):
         proof = self.example_proof('Conditional Pseudo Contraction')
         assert not proof.valid
-        
-class TestRM3(LogicTester):
-
-    logic = get_logic('RM3')
-
-    def test_valid_cond_mp(self):
-        proof = self.example_proof('Conditional Modus Ponens')
-        assert proof.valid
-
-    def test_valid_demorgan_1(self):
-        proof = self.example_proof('DeMorgan 1')
-        assert proof.valid
-
-    def test_valid_demorgan_2(self):
-        proof = self.example_proof('DeMorgan 2')
-        assert proof.valid
-
-    def test_valid_demorgan_3(self):
-        proof = self.example_proof('DeMorgan 3')
-        assert proof.valid
-
-    def test_valid_demorgan_4(self):
-        proof = self.example_proof('DeMorgan 4')
-        assert proof.valid

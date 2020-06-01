@@ -250,12 +250,10 @@ class TableauxRules(object):
     class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
-        three branches *b'*, *b''*, and *b'''* from *b*. On *b'*, add an undesignated
-        node with the antecedent, and a designated node with the negation of the
-        antecedent. On *b''*, add a designated node with the consequent, and an
-        undesignated node with the negation of the consequent. On *b'''*, add
-        four designated nodes, with the antecedent, the negation of the antecedent,
-        the consequent, and the negation of the consequent, respecitively. Then tick *n*.
+        two branches *b'*, *b''* from *b*. On *b'* add two undesignated nodes,
+        one with the antecedent, and the other with the negation of the consequent.
+        On *b''* add four designated nodes, with the antecedent, its negation,
+        the conequent, and its negation, respectively. Then tick *n*.
         """
 
         operator    = 'Conditional'
@@ -265,16 +263,11 @@ class TableauxRules(object):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
             b2 = self.tableau.branch(branch)
-            b3 = self.tableau.branch(branch)
             b1.update([
                 {'sentence':        lhs , 'designated': False},
-                {'sentence': negate(lhs), 'designated': True},
-            ]).tick(node)
-            b2.update([
-                {'sentence':        rhs , 'designated': True},
                 {'sentence': negate(rhs), 'designated': False},
             ]).tick(node)
-            b3.update([
+            b2.update([
                 {'sentence':        lhs , 'designated': True},
                 {'sentence': negate(lhs), 'designated': True},
                 {'sentence':        rhs , 'designated': True},
@@ -288,16 +281,12 @@ class TableauxRules(object):
                 'b1': branch.has_any([
                     # FDE closure
                     {'sentence':          lhs , 'designated': True},
+                    {'sentence': negative(rhs), 'designated': True},
+                    # LP closure
                     {'sentence': negative(lhs), 'designated': False},
-                    # LP closure redundant
+                    {'sentence':          rhs , 'designated': False},
                 ]),
                 'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence':          rhs , 'designated': False},
-                    {'sentence': negative(rhs), 'designated': True},
-                    # LP closure redundant
-                ]),
-                'b3': branch.has_any([
                     # FDE closure
                     {'sentence':          lhs , 'designated': False},
                     {'sentence': negative(lhs), 'designated': False},
@@ -317,7 +306,7 @@ class TableauxRules(object):
 
     class ConditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
-        From an unticked, undesignated conditional node *n* on a branch *b*, make
+        From an unticked, undesignated, conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'*, add a designated node
         with the antecedent, and an undesignated node with with consequent.
         On *b''*, add an undesignated node with the negation of the antecedent,
@@ -360,42 +349,13 @@ class TableauxRules(object):
                 ])
             }
 
-    class ConditionalNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConditionalNegatedUndesignated(lp.TableauxRules.ConditionalNegatedUndesignated):
         """
-        From an unticked, undesignated, negated conditional node *n* on a branch *b*,
-        make two branches *b'* and *b''* from *b*. On *b'*, add an undesignated node
-        with the antecedent. On *b''*, add an undesignated node with the negation of
-        the consequent. Then tick *n*.
+        This rule is the same as the `FDE ConditionalNegatedDesignated rule`_.
+
+        .. _FDE ConditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.ConditionalNegatedUndesignated
         """
-
-        negated     = True
-        operator    = 'Conditional'
-        designation = False
-
-        def apply_to_node(self, node, branch):
-            lhs, rhs = self.sentence(node).operands
-            b1 = branch
-            b2 = self.tableau.branch(branch)
-            b1.add({'sentence': lhs, 'designated': False}).tick(node)
-            b2.add({'sentence': negate(rhs), 'designated': False}).tick(node)
-
-        def score_target_map(self, target):
-            branch = target['branch']
-            lhs, rhs = self.sentence(target['node']).operands
-            return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence': lhs, 'designated': True},
-                    # LP closure
-                    {'sentence': negative(lhs), 'designated': False},
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence': negative(rhs), 'designated': True},
-                    # LP closure
-                    {'sentence': rhs, 'designated': False},
-                ]),
-            }
+        pass
 
     class BiconditionalDesignated(l3.TableauxRules.BiconditionalDesignated):
         """
@@ -510,6 +470,7 @@ class TableauxRules(object):
         MaterialConditionalNegatedDesignated,
         MaterialConditionalUndesignated,
         ConditionalNegatedDesignated,
+        ConditionalUndesignated,
         ExistentialDesignated,
         ExistentialNegatedDesignated,
         ExistentialUndesignated,
@@ -537,10 +498,7 @@ class TableauxRules(object):
         MaterialBiconditionalNegatedDesignated,
         MaterialBiconditionalUndesignated,
         MaterialBiconditionalNegatedUndesignated,
-        ConditionalNegatedUndesignated,
-        ConditionalUndesignated,
-
-        # 3-branching rules
         ConditionalDesignated,
+        ConditionalNegatedUndesignated,
 
     ]
