@@ -1,5 +1,15 @@
 <div id="lexicons-heading" class="collapser-heading {{- helper.collapsed_if(is_proof) }}" data-target="#lexicons-content">Lexicon</div>
 <div class="lexicons collapser-contents {{- helper.collapsed_if(is_proof) }} {{- helper.hidden_if(is_proof) }}" id="lexicons-content">
+    <div class="input select">
+        <label for="input_notation">Notation</label>
+        <select id="input_notation" name="input_notation">
+            {% for module in notation_modules -%}
+                <option value="{{ module|e }}" {{ helper.select_opt(form_data, 'input_notation', module) }}>
+                    {{- notations[module].name -}}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
     <div class="lexicon-panel">
         {%- for module in notation_modules -%}
             {%- set symset = notations[module].symbol_sets['default'] %}

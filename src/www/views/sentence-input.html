@@ -6,16 +6,6 @@
         {% endfor %}
     </select>
 </div>
-<div class="input select">
-    <label for="input_notation">Notation</label>
-    <select id="input_notation" name="input_notation">
-        {% for module in notation_modules -%}
-            <option value="{{ module|e }}" {{ helper.select_opt(form_data, 'input_notation', module) }}>
-                {{- notations[module].name -}}
-            </option>
-        {% endfor %}
-    </select>
-</div>
 <div class="premises">
     {%- if 'premises[]' in form_data -%}
         {%- for premise in form_data['premises[]'] -%}
