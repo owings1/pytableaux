@@ -434,9 +434,13 @@ class Vocabulary(object):
         def __init__(self, name, index, subscript, arity):
             if index >= num_predicate_symbols:
                 raise Vocabulary.IndexTooLargeError("Predicate index too large {0}".format(str(index)))
-            if arity == None or arity < 1:
+            if arity == None or not isinstance(arity, int):
+                raise Vocabulary.PredicateArityError('Predicate arity must be an integer')
+            if arity < 1:
                 raise Vocabulary.PredicateArityError('Invalid predicate arity {0}'.format(str(arity)))
-            if subscript == None or subscript < 0:
+            if subscript == None or not isinstance(subscript, int):
+                raise Vocabulary.PredicateSubscriptError('Predicate subscript must be an integer')
+            if subscript < 0:
                 raise Vocabulary.PredicateSubscriptError('Invalid predicate subscript {0}'.format(str(subscript)))
             self.name      = name
             self.arity     = arity
@@ -470,7 +474,8 @@ class Vocabulary(object):
 
         def __cmp__(self, other):
             # Python 2 only
-            return cmp(self.hash_tuple(), other.hash_tuple())
+            #return cmp(self.hash_tuple(), other.hash_tuple())
+            return (self.hash_tuple() > other.hash_tuple()) - (self.hash_tuple() < other.hash_tuple())
 
         def __hash__(self):
             return hash(self.hash_tuple())
@@ -739,7 +744,8 @@ class Vocabulary(object):
 
         def __cmp__(self, other):
             # Python 2 only
-            return cmp(self.hash_tuple(), other.hash_tuple())
+            #return cmp(self.hash_tuple(), other.hash_tuple())
+            return (self.hash_tuple() > other.hash_tuple()) - (self.hash_tuple() < other.hash_tuple())
 
         def __repr__(self):
             from notations import polish
@@ -1361,7 +1367,6 @@ class TableauxSystem(object):
             return self
 
         def build_models(self):
-            model_start_time = nowms()
             for branch in list(self.open_branches()):
                 self.check_timeout()
                 branch.make_model()
@@ -1381,6 +1386,7 @@ class TableauxSystem(object):
         """
 
         def __init__(self, tableau=None):
+            # Make sure properties are copied if needed in copy()
             self.id = id(self)
             self.closed = False
             self.ticked_nodes = set()
@@ -1408,12 +1414,20 @@ class TableauxSystem(object):
             return self.find(props, ticked) != None
 
         def has_any(self, props_list, ticked=None):
+            """
+            Check a list of property dictionaries against the ``has()`` method. Return ``True``
+            when the first match is found.
+            """
             for props in props_list:
                 if self.has(props, ticked=ticked):
                     return True
             return False
 
         def has_all(self, props_list, ticked=None):
+            """
+            Check a list of property dictionaries against the ``has()`` method. Return ``False``
+            when the first non-match is found.
+            """
             for props in props_list:
                 if not self.has(props, ticked=ticked):
                     return False
@@ -1509,6 +1523,7 @@ class TableauxSystem(object):
             branch.ticked_nodes = set(self.ticked_nodes)
             branch.consts = set(self.consts)
             branch.ws = set(self.ws)
+            branch.atms = set(self.atms)
             branch.leaf = self.leaf
             branch.tableau = self.tableau
             branch.node_index = {prop : {key : set(self.node_index[prop][key]) for key in self.node_index[prop]} for prop in self.node_index}
@@ -1579,7 +1594,7 @@ class TableauxSystem(object):
             return model
 
         def __repr__(self):
-            return {'nodes': self.nodes, 'closed': self.closed}.__repr__()
+            return {'nodes': len(self.nodes), 'leaf': self.leaf, 'closed': self.closed}.__repr__()
 
     class Node(object):
         """
