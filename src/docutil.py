@@ -18,7 +18,7 @@
 #
 # pytableaux - documenation utility functions
 import logic, writers, notations, examples
-import writers.html, notations.polish, notations.standard
+import writers.html, notations.standard
 import inspect
 import codecs
 import json
@@ -26,14 +26,10 @@ import os
 import re
 import html
 from jinja2 import Environment, FileSystemLoader
-from html.parser import HTMLParser
-
-h = HTMLParser()
 
 writer = writers.html.Writer()
-notation = notations.standard
-sp = notation.Parser(examples.vocabulary)
-sw = notation.Writer('html')
+sp = notations.standard.Parser(examples.vocabulary)
+sw = notations.standard.Writer('html')
 
 doc_dir = os.path.dirname(os.path.abspath(__file__)) + '/../doc'
 
