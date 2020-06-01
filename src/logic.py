@@ -446,6 +446,9 @@ class Vocabulary(object):
         def hash_tuple(self):
             return (1, self.index, self.subscript, self.arity)
 
+        def is_system_predicate(self):
+            return self.index < 0
+
         # TODO: make this DRY with Sentence
         def __eq__(self, other):
             return other != None and self.__dict__ == other.__dict__
@@ -510,14 +513,27 @@ class Vocabulary(object):
         return system_predicates[name]
 
     def __init__(self, predicate_defs=None):
-        self.user_predicates       = {}
+        # set of predicate instances
+        self.user_predicates_set   = set()
+        # list of predicate names
         self.user_predicates_list  = []
+        # name to predicate instance
+        self.user_predicates       = {}
+        # string of [subscript, arity] to predicate instance
         self.user_predicates_index = {}
         if predicate_defs:
             for info in predicate_defs:
                 if len(info) != 4:
                     raise Vocabulary.PredicateError("Predicate declarations must be 4-tuples (name, index, subscript, arity).")
                 self.declare_predicate(*info)
+
+    def copy(self):
+        vocab = Vocabulary()
+        vocab.user_predicates = dict(self.user_predicates)
+        vocab.user_predicates_list = list(self.user_predicates_list)
+        vocab.user_predicates_set = set(self.user_predicates_set)
+        vocab.user_predicates_index = dict(self.user_predicates_index)
+        return vocab
 
     def get_predicate(self, name=None, index=None, subscript=None):
         """
@@ -585,12 +601,30 @@ class Vocabulary(object):
         else:
             raise Vocabulary.PredicateAlreadyDeclaredError("Predicate for {0},{1} already declared".format(str(index), str(subscript)))
         predicate = Vocabulary.Predicate(name, index, subscript, arity)
-        self.user_predicates[name] = predicate
-        self.user_predicates_list.append(name)
-        if index >= 0:
-            self.user_predicates_index[str([index, subscript])] = predicate    
+        self.add_predicate(predicate)
         return predicate
 
+    def add_predicate(self, predicate):
+        """
+        Add a predicate instance::
+
+            vocab1 = Vocabulary()
+            predicate = vocab1.declare_predicate(name='is tall', index=0, subscript=0, arity=1)
+            vocab2 = Vocabulary()
+            vocab2.add_predicate(predicate)
+            assert vocab2.get_predicate('is tall') == predicate
+        """
+        if not isinstance(predicate, Vocabulary.Predicate):
+            raise Vocabulary.PredicateError('Predicate must be an instance of Vocabulary.Predicate')
+        if predicate.index < 0:
+            raise Vocabulary.PredicateError('Cannot add a system predicate to a vocabulary')
+        self.user_predicates[predicate.name] = predicate
+        self.user_predicates_index[str([predicate.index, predicate.subscript])] = predicate
+        if predicate not in self.user_predicates_set:
+            self.user_predicates_set.add(predicate)
+            self.user_predicates_list.append(predicate.name)
+        return predicate
+        
     def list_predicates(self):
         return system_predicates_list + self.user_predicates_list
 
