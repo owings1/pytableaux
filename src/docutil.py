@@ -24,6 +24,7 @@ import codecs
 import json
 import os
 import re
+import html
 from jinja2 import Environment, FileSystemLoader
 from html.parser import HTMLParser
 
@@ -46,6 +47,7 @@ jinja_env = Environment(
 truth_table_template = jinja_env.get_template('truth_table.html')
 
 def get_truth_table_html(lgc, operator):
+    lgc = logic.get_logic(lgc)
     table = logic.truth_table(lgc, operator)
     s = truth_table_template.render({
         'arity'      : logic.arity(operator),
@@ -61,18 +63,18 @@ def get_truth_table_html(lgc, operator):
 
 def get_truth_tables_for_logic(lgc):
     lgc = logic.get_logic(lgc)
-    html = ''
+    htm = ''
     for operator in logic.operators_list:
         if operator in lgc.Model.truth_functional_operators:
-            html += get_truth_table_html(lgc, operator)
-    return html
+            htm += get_truth_table_html(lgc, operator)
+    return htm
 
-def get_replace_sentence_expressions_result(text, filename='unknown', is_print=False):
+def get_replace_sentence_expressions_result(text):
     is_found = False
+    replaced = list()
     for s in re.findall(r'P{(.*?)}', text):
-        s1 = h.unescape(s)
-        if is_print:
-            print('replacing {0} in {1}'.format(s1, filename))
+        s1 = html.unescape(s)
+        replaced.append(s1)
         is_found = True
         sentence = sp.parse(s1)
         s2 = sw.write(sentence, drop_parens=True)
@@ -80,6 +82,7 @@ def get_replace_sentence_expressions_result(text, filename='unknown', is_print=F
     return {
         'is_found' : is_found,
         'text'     : text,
+        'replaced' : replaced,
     }
 
 def get_rule_example_html(lgc, ruleish):
@@ -101,7 +104,7 @@ def get_build_trunk_example_html(lgc, arg):
 def get_argument_example_html(arg):
     return 'Argument: <i>' + '</i>, <i>'.join([sw.write(p, drop_parens=True) for p in arg.premises]) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>'
 
-class SphinxUtil(object):
+class SphinxUtil(object): # pragma: no cover
 
     skip_rules = [
         logic.TableauxSystem.Rule,
@@ -126,8 +129,10 @@ class SphinxUtil(object):
         for fil in files:
             with codecs.open(builddir + '/' + fil, 'r', 'utf-8') as f:
                 text = f.read()
-            result = get_replace_sentence_expressions_result(text, filename=fil, is_print=True)
+            result = get_replace_sentence_expressions_result(text)
             if result['is_found']:
+                for sr in result['replaced']:
+                    print('replacing {0} in {1}'.format(sr, fil))
                 with codecs.open(builddir + '/' + fil, 'w', 'utf-8') as f:
                     f.write(result['text'])
 
@@ -137,8 +142,8 @@ class SphinxUtil(object):
         new_lines = ['']
         for operator in logic.operators_list:
             if operator in lgc.Model.truth_functional_operators:
-                html = get_truth_table_html(lgc, operator)
-                new_lines += ['    ' + line for line in html.split('\n')]
+                htm = get_truth_table_html(lgc, operator)
+                new_lines += ['    ' + line for line in htm.split('\n')]
         new_lines += [
             '    <div class="clear"></div>',
             ''
