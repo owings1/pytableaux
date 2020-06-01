@@ -10,6 +10,9 @@
     <link rel="stylesheet" type="text/css" href="/static/css/app.css"/>
     <link rel="stylesheet" type="text/css" href="/static/css/proof.css"/>
     <meta name="viewport" content="width=device-width"/>
+    {% if is_google_analytics -%}
+        {% include 'analytics.html' %}
+    {% endif -%}
 </head>
 <body>
     <div class="header-wrapper">

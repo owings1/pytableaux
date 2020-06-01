@@ -35,12 +35,17 @@ envvar_host = 'PT_HOST'
 envvar_port = 'PT_PORT'
 envvar_debug = 'PT_DEBUG'
 envvar_maxtimeout = 'PT_MAXTIMEOUT'
+envvar_ganalytics_id = 'PT_GOOGLE_ANALYTICS_ID'
 index_filename = 'index.html'
 default_maxtimeout = 30000
 
-is_debug = envvar_debug in os.environ and len(os.environ[envvar_debug]) > 0
+def is_envvar(envvar):
+    return envvar in os.environ and len(os.environ[envvar]) > 0
 
-maxtimeout = int(os.environ[envvar_maxtimeout]) if envvar_maxtimeout in os.environ else default_maxtimeout
+is_debug = is_envvar(envvar_debug)
+is_google_analytics = is_envvar(envvar_ganalytics_id)
+maxtimeout = int(os.environ[envvar_maxtimeout]) if is_envvar(envvar_maxtimeout) else default_maxtimeout
+google_analytics_id = os.environ[envvar_ganalytics_id] if is_google_analytics else None
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(current_dir, 'www', 'static')
@@ -122,22 +127,24 @@ browser_data = {
 }
 
 base_view_data = {
-    'operators_list'    : logic.operators_list,
-    'logic_modules'     : available_module_names['logics'],
-    'logics'            : modules['logics'],
-    'logic_categories'  : logic_categories,
-    'writer_modules'    : available_module_names['writers'],
-    'writers'           : modules['writers'],
-    'notation_modules'  : available_module_names['notations'],
-    'notations'         : modules['notations'],
-    'system_predicates' : logic.system_predicates,
-    'quantifiers'       : logic.quantifiers_list,
-    'example_args_list' : examples.args_list,
-    'browser_json'      : json.dumps(browser_data, indent=2),
-    'version'           : logic.version,
-    'copyright'         : logic.copyright,
-    'source_href'       : logic.source_href,
-    'is_debug'          : is_debug,
+    'operators_list'      : logic.operators_list,
+    'logic_modules'       : available_module_names['logics'],
+    'logics'              : modules['logics'],
+    'logic_categories'    : logic_categories,
+    'writer_modules'      : available_module_names['writers'],
+    'writers'             : modules['writers'],
+    'notation_modules'    : available_module_names['notations'],
+    'notations'           : modules['notations'],
+    'system_predicates'   : logic.system_predicates,
+    'quantifiers'         : logic.quantifiers_list,
+    'example_args_list'   : examples.args_list,
+    'browser_json'        : json.dumps(browser_data, indent=2),
+    'version'             : logic.version,
+    'copyright'           : logic.copyright,
+    'source_href'         : logic.source_href,
+    'is_debug'            : is_debug,
+    'is_google_analytics' : is_google_analytics,
+    'google_analytics_id' : google_analytics_id,
 }
 
 def get_template(view):
