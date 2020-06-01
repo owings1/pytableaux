@@ -45,7 +45,8 @@ jinja_env = Environment(
 )
 truth_table_template = jinja_env.get_template('truth_table.html')
 
-def get_truth_table_html(lgc, operator, table):
+def get_truth_table_html(lgc, operator):
+    table = logic.truth_table(lgc, operator)
     s = truth_table_template.render({
         'arity'      : logic.arity(operator),
         'sentence'   : examples.operated(operator),
@@ -58,36 +59,58 @@ def get_truth_table_html(lgc, operator, table):
     })
     return s
 
-def get_truth_tables_lines_for_logic(lgc):
+def get_truth_tables_for_logic(lgc):
     lgc = logic.get_logic(lgc)
-    tables = {operator: logic.truth_table(lgc, operator) for operator in lgc.Model.truth_functional_operators}
-    new_lines = ['']
+    html = ''
     for operator in logic.operators_list:
-        if operator in tables:
-            html = get_truth_table_html(lgc, operator, tables[operator])
-            new_lines += ['    ' + line for line in html.split('\n')]
-    new_lines += [
-        '    <div class="clear"></div>',
-        ''
-    ]
-    return new_lines
+        if operator in lgc.Model.truth_functional_operators:
+            html += get_truth_table_html(lgc, operator)
+    return html
 
 def get_replace_sentence_expressions_result(text, filename='unknown', is_print=False):
-    found = False
+    is_found = False
     for s in re.findall(r'P{(.*?)}', text):
         s1 = h.unescape(s)
         if is_print:
             print('replacing {0} in {1}'.format(s1, filename))
-        found = True
+        is_found = True
         sentence = sp.parse(s1)
         s2 = sw.write(sentence, drop_parens=True)
         text = text.replace(u'P{' + s + '}', s2)
     return {
-        'is_found' : found,
+        'is_found' : is_found,
         'text'     : text,
     }
 
+def get_rule_example_html(lgc, ruleish):
+    proof = logic.tableau(logic.get_logic(lgc), None)
+    rule = proof.get_rule(ruleish)
+    rule.example()
+    if len(proof.branches) == 1:
+        proof.branches[0].add({'ellipsis': True})
+    target = rule.applies()
+    rule.apply(target)
+    proof.finish()
+    return writer.write(proof, sw=sw)
+
+def get_build_trunk_example_html(lgc, arg):
+    proof = logic.tableau(logic.get_logic(lgc), arg)
+    proof.finish()
+    return writer.write(proof, sw=sw)
+
+def get_argument_example_html(arg):
+    return 'Argument: <i>' + '</i>, <i>'.join([sw.write(p, drop_parens=True) for p in arg.premises]) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>'
+
 class SphinxUtil(object):
+
+    skip_rules = [
+        logic.TableauxSystem.Rule,
+        logic.TableauxSystem.BranchRule,
+        logic.TableauxSystem.ClosureRule,
+        logic.TableauxSystem.NodeRule,
+        logic.TableauxSystem.ConditionalNodeRule,
+        logic.TableauxSystem.SelectiveTrackingBranchRule,
+    ]
 
     @staticmethod
     def docs_post_process(app, exception):
@@ -109,6 +132,20 @@ class SphinxUtil(object):
                     f.write(result['text'])
 
     @staticmethod
+    def get_truth_tables_lines_for_logic(lgc):
+        lgc = logic.get_logic(lgc)
+        new_lines = ['']
+        for operator in logic.operators_list:
+            if operator in lgc.Model.truth_functional_operators:
+                html = get_truth_table_html(lgc, operator)
+                new_lines += ['    ' + line for line in html.split('\n')]
+        new_lines += [
+            '    <div class="clear"></div>',
+            ''
+        ]
+        return new_lines
+
+    @staticmethod
     def make_truth_tables(app, what, name, obj, options, lines):
         # Sphinx utility
         srch = '/truth_tables/'
@@ -117,7 +154,7 @@ class SphinxUtil(object):
                 idx = lines.index(srch)
                 pos = idx + 1
                 lines[idx] = '.. raw:: html'
-                lines[pos:pos] = get_truth_tables_lines_for_logic(obj)
+                lines[pos:pos] = SphinxUtil.get_truth_tables_lines_for_logic(obj)
 
     @staticmethod
     def make_truth_tables_models(app, what, name, obj, options, lines):
@@ -134,59 +171,43 @@ class SphinxUtil(object):
         pos = idx + 1
         logic_name, = re.findall(r'//truth_tables//(.*)//', lines[idx])
         lines[idx] = '.. raw:: html'
-        lines[pos:pos] = get_truth_tables_lines_for_logic(logic_name)
+        lines[pos:pos] = SphinxUtil.get_truth_tables_lines_for_logic(logic_name)
 
     @staticmethod
     def make_tableau_examples(app, what, name, obj, options, lines):
         # Sphinx utility
         arg = examples.argument('Material Modus Ponens')
-        if what == 'class' and logic.TableauxSystem.Rule in inspect.getmro(obj):
+        if what == 'class':
             mro = inspect.getmro(obj)
-            if obj in [
-                logic.TableauxSystem.Rule,
-                logic.TableauxSystem.BranchRule,
-                logic.TableauxSystem.ClosureRule,
-                logic.TableauxSystem.NodeRule,
-                logic.TableauxSystem.ConditionalNodeRule
-            ]:
-                return
-            proof = None
-            try:
-                proof = logic.tableau(obj.__module__, None)
-                rule = proof.get_rule(obj)
-                rule.example()
-                if len(proof.branches) == 1:
-                    proof.branches[0].add({'ellipsis': True})
-                target = rule.applies()
-                rule.apply(target)
-                proof.finish()
-                lines += [
-                    'Example:'                             ,
-                    ''                                     ,
-                    '.. raw:: html'                        ,
-                    ''                                     ,
-                    '    ' + writer.write(proof, sw=sw)
-                ]
-            except StopIteration:
-                pass
-            except Exception as e:
-                print (str(e))
-                print ('No example generated for ' + str(obj))
-                if proof != None:
-                    print (json.dumps(proof.tree, indent=2, default=str))
-                raise e
+            if logic.TableauxSystem.Rule in mro and obj not in SphinxUtil.skip_rules:
+                proof = None
+                try:
+                    proof_html = get_rule_example_html(obj.__module__, obj)
+                    lines += [
+                        'Example:',
+                        '',
+                        '.. raw:: html',
+                        '',
+                        '    ' + proof_html,
+                    ]
+                except StopIteration:
+                    pass
+                except Exception as e:
+                    print (str(e))
+                    print ('No example generated for ' + str(obj))
+                    raise e
         elif what == 'method' and obj.__name__ == 'build_trunk':
             try:
-                proof = logic.tableau(obj.__module__, arg)
-                proof.finish()
+                proof_html = get_build_trunk_example_html(obj.__module__, arg)
+                arg_html = get_argument_example_html(arg)
                 lines += [
                     'Example:' ,
-                    ''                                     ,
-                    '.. raw:: html'                        ,
-                    ''         ,
-                    '    ' + 'Argument: <i>' + '</i>, <i>'.join([sw.write(p, drop_parens=True) for p in arg.premises]) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>',
-                    ''                                     ,
-                    '    ' + writer.write(proof, sw=sw)
+                    '',
+                    '.. raw:: html',
+                    '',
+                    '    ' + arg_html,
+                    '',
+                    '    ' + proof_html,
                 ]
             except Exception as e:
                 print ('Error making example for ' + str(obj))
