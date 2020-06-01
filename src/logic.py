@@ -1067,11 +1067,11 @@ class TableauxSystem(object):
             #: A reference to the logic, if given
             self.logic = None
 
-            #: The rule instances of the logic, if given
-            self.all_rules = []
-
             #: The argument of the tableau, if given
             self.argument = None
+
+            # All rule instances of the logic
+            self.all_rules = []
 
             # The closure rules
             self.closure_rules = []
