@@ -589,7 +589,7 @@ class TestCPL(LogicTester):
         proof = self.example_proof('Denying the Antecedent')
         model = self.logic.Model()
         branch = list(proof.open_branches())[0]
-        self.logic.TableauxSystem.read_model(model, branch)
+        model.read_branch(branch)
         s = atomic(0, 0)
         assert model.value_of(s) == 0
         assert model.value_of(negate(s)) == 1
@@ -598,7 +598,7 @@ class TestCPL(LogicTester):
         proof = self.example_proof('Extracting a Disjunct 2')
         model = self.logic.Model()
         branch = list(proof.open_branches())[0]
-        self.logic.TableauxSystem.read_model(model, branch)
+        model.read_branch(branch)
         s = atomic(0, 0)
         assert model.value_of(s) == 1
         assert model.value_of(negate(s)) == 0
@@ -608,7 +608,7 @@ class TestCPL(LogicTester):
         s1 = parse('Fm', vocabulary=examples.vocabulary)
         branch.add({'sentence': s1})
         model = self.logic.Model()
-        self.logic.TableauxSystem.read_model(model, branch)
+        model.read_branch(branch)
         assert model.value_of(s1) == 1
         
     def test_model_add_access_not_impl(self):
@@ -786,7 +786,7 @@ class TestK(LogicTester):
         proof = self.example_proof('Denying the Antecedent')
         model = self.logic.Model()
         branch = list(proof.open_branches())[0]
-        self.logic.TableauxSystem.read_model(model, branch)
+        model.read_branch(branch)
         s = atomic(0, 0)
         assert model.value_of(s, world=0) == 0
         assert model.value_of(negate(s), world=0) == 1
@@ -795,7 +795,7 @@ class TestK(LogicTester):
         model = self.logic.Model()
         branch = TableauxSystem.Branch()
         branch.add({'sentence': atomic(0, 0), 'world': 0})
-        self.logic.TableauxSystem.read_model(model, branch)
+        model.read_branch(branch)
         assert model.value_of(atomic(0, 0), world=0) == 1
 
     def test_read_model_no_proof_predicated(self):
@@ -803,14 +803,14 @@ class TestK(LogicTester):
         branch = TableauxSystem.Branch()
         s1 = parse('Imn')
         branch.add({'sentence': s1, 'world': 0})
-        self.logic.TableauxSystem.read_model(model, branch)
+        model.read_branch(branch)
         assert model.value_of(s1, world=0) == 1
 
     def test_read_model_no_proof_access(self):
         model = self.logic.Model()
         branch = TableauxSystem.Branch()
         branch.add({'world1': 0, 'world2': 1})
-        self.logic.TableauxSystem.read_model(model, branch)
+        model.read_branch(branch)
         assert model.has_access(0, 1)
 
     def test_model_value_of_atomic_unassigned(self):
