@@ -14,7 +14,6 @@
 
 import sys
 import os
-import re
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -250,7 +249,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'pytableaux', u'pytableaux Documentation',
-   u'Doug Owings', 'pytableaux', 'A multi-logic proof generator.',
+   u'Doug Owings', 'pytableaux', 'A multi-logic proof and semantic model generator.',
    'Logic'),
 ]
 
@@ -266,172 +265,18 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-import logic, writers, notations, examples
-import writers.html, notations.polish, notations.standard
-import inspect
-import importlib
-from jinja2 import Environment, FileSystemLoader
+
+import logic
+import codecs
+import docutil
 
 copyright = logic.copyright
-writer = writers.html.Writer()
-notation = notations.standard
-sp = notation.Parser(examples.vocabulary)
-sw = notation.Writer('html')
-
-env = Environment(
-    loader = FileSystemLoader(os.path.dirname(os.path.abspath(__file__)) + '/templates'),
-    trim_blocks = True,
-    lstrip_blocks = True
-)
-truth_table_template = env.get_template('truth_table.html')
-
-def get_truth_table_html(lgc, operator, table):
-    s = truth_table_template.render({
-        'arity'      : logic.arity(operator),
-        'sentence'   : examples.operated(operator),
-        'sw'         : sw,
-        'values'     : lgc.Model.truth_values,
-        'value_chars': lgc.Model.truth_value_chars,
-        'num_values' : len(lgc.Model.truth_values),
-        'table'      : table,
-        'operator'   : operator,
-    })
-    return s
-
-def get_truth_tables_lines_for_logic(lgc):
-    lgc = logic.get_logic(lgc)
-    tables = {operator: logic.truth_table(lgc, operator) for operator in lgc.Model.truth_functional_operators}
-    new_lines = ['']
-    for operator in logic.operators_list:
-        if operator in tables:
-            html = get_truth_table_html(lgc, operator, tables[operator])
-            new_lines += ['    ' + line for line in html.split('\n')]
-    new_lines += [
-        '    <div class="clear"></div>',
-        ''
-    ]
-    return new_lines
-
-def make_truth_tables(app, what, name, obj, options, lines):
-    srch = '/truth_tables/'
-    if what == 'module' and hasattr(obj, 'Model'):
-        if hasattr(obj.Model, 'truth_functional_operators') and srch in lines:
-            idx = lines.index(srch)
-            pos = idx + 1
-            lines[idx] = '.. raw:: html'
-            lines[pos:pos] = get_truth_tables_lines_for_logic(obj)
-
-def make_truth_tables_models(app, what, name, obj, options, lines):
-    is_found = False
-    idx = 0
-    for line in lines:
-        if '//truth_tables//' in line:
-            is_found = True
-            break
-        idx += 1
-    if not is_found:
-        return
-    pos = idx + 1
-    logic_name, = re.findall(r'//truth_tables//(.*)//', lines[idx])
-    lines[idx] = '.. raw:: html'
-    lines[pos:pos] = get_truth_tables_lines_for_logic(logic_name)
-
-def make_tableau_examples(app, what, name, obj, options, lines):
-
-    arg = examples.argument('Material Modus Ponens')
-    if what == 'class' and logic.TableauxSystem.Rule in inspect.getmro(obj):
-        mro = inspect.getmro(obj)
-        if obj in [
-            logic.TableauxSystem.Rule,
-            logic.TableauxSystem.BranchRule,
-            logic.TableauxSystem.ClosureRule,
-            logic.TableauxSystem.NodeRule,
-            logic.TableauxSystem.ConditionalNodeRule
-        ]:
-            return
-        proof = None
-        try:
-            proof = logic.tableau(obj.__module__, None)
-            rule = next(r for r in proof.rules if r.__class__ == obj)
-            rule.example()
-            if len(proof.branches) == 1:
-                proof.branches[0].add({'ellipsis': True})
-            target = rule.applies()
-            rule.apply(target)
-            proof.finish()
-            lines += [
-                'Example:'                             ,
-                ''                                     ,
-                '.. raw:: html'                        ,
-                ''                                     ,
-                '    ' + writer.write(proof, sw=sw)
-            ]
-        except StopIteration:
-            pass
-        except Exception as e:
-            print (str(e))
-            print ('No example generated for ' + str(obj))
-            if proof != None:
-                import json
-                print (json.dumps(proof.tree, indent=2, default=str))
-            raise e
-    elif what == 'method' and obj.__name__ == 'build_trunk':
-        try:
-            proof = logic.tableau(importlib.import_module(obj.__module__), arg)
-            proof.finish()
-            lines += [
-                'Example:' ,
-                ''                                     ,
-                '.. raw:: html'                        ,
-                ''         ,
-                '    ' + 'Argument: <i>' + '</i>, <i>'.join([sw.write(p, drop_parens=True) for p in arg.premises]) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>',
-                ''                                     ,
-                '    ' + writer.write(proof, sw=sw)
-            ]
-        except Exception as e:
-            print ('Error making example for ' + str(obj))
-            print(str(e))
-            raise e
-
-def post_process(app, exception):
-    builddir = os.path.dirname(os.path.abspath(__file__)) + '/_build/html'
-    import codecs
-    #from HTMLParser import HTMLParser
-    from html.parser import HTMLParser
-    h = HTMLParser()
-
-    files = list()
-    for f in os.listdir(builddir):
-        if f.endswith('.html'):
-            files.append(f)
-    for f in os.listdir(builddir + '/logics'):
-        if f.endswith('.html'):
-            files.append('logics/' + f)
-
-
-    for fil in files:
-        with codecs.open(builddir + '/' + fil, 'r', 'utf-8') as f:
-            text = f.read()#.decode('utf-8')
-        found = False
-        for s in re.findall(r'P{(.*?)}', text):
-            s1 = h.unescape(s)
-            print('replacing {0} in {1}'.format(s1, fil))
-            found = True
-            sentence = sp.parse(s1)
-            s2 = sw.write(sentence, drop_parens=True)
-            #print("result: {0}".format(s2))
-            text = text.replace(u'P{' + s + '}', s2)#.decode('utf-8'))
-        if found:
-            with codecs.open(builddir + '/' + fil, 'w', 'utf-8') as f:
-                #f.write(text.decode('utf-8'))
-                f.write(text)
-    pass
 
 def setup(app):
     #app.connect('autodoc-process-docstring', sub_sentences)
-    app.connect('autodoc-process-docstring', make_tableau_examples)
-    app.connect('autodoc-process-docstring', make_truth_tables)
-    app.connect('autodoc-process-docstring', make_truth_tables_models)
-    app.connect('build-finished', post_process)
+    app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_tableau_examples)
+    app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_truth_tables)
+    app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_truth_tables_models)
+    app.connect('build-finished', docutil.SphinxUtil.docs_post_process)
     app.add_css_file('doc.css')
     app.add_css_file('proof.css')
