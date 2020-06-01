@@ -1291,8 +1291,7 @@ class TableauxSystem(object):
                         last_width = float(child['width']) / 2
                     else:
                         inbetween_widths += child['width']
-                    if structure['branch_step'] > child['step']:
-                        structure['branch_step'] = child['step']
+                    structure['branch_step'] = min(structure['branch_step'], child['step'])
                 if structure['width'] > 0:
                     structure['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / structure['width']
                     structure['balanced_line_margin'] = first_width / structure['width']
