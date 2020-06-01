@@ -1168,8 +1168,8 @@ class TableauxRules(object):
         [
             # branching rules
             ConjunctionNegated,
-            Disjunction, 
-            MaterialConditional, 
+            Disjunction,
+            MaterialConditional,
             MaterialBiconditional,
             MaterialBiconditionalNegated,
             Conditional,
