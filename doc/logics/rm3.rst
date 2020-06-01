@@ -34,5 +34,13 @@ It is similar to `LP`_, with a different conditional operator.
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
       (**T** or **B**) are models where *C* also has a *designated* value.
 
+    Notes
+    =====
+
+    * With the conditional operator, Modus Ponens (P{A}, P{A $ B}, therefore P{B}) is
+      valid in RM3, but it fails in `LP`_.
+
+    * The argument P{B}, therefore P{A $ B} is valid in `LP`_, but not in RM3.
+
 .. _FDE: fde.html
 .. _LP: lp.html
