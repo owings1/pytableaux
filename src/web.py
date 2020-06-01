@@ -197,13 +197,13 @@ class App(object):
                 except Exception as err:
                     raise RequestDataError({'api-data': str(err)})
                 try:
-                    vocab = self.parse_predicates_data(api_data['argument']['predicates'])
+                    arg, vocab = self.parse_argument_data(api_data['argument'])
                 except RequestDataError as err:
                     errors.update(err.errors)
                 result = self.api_prove(api_data)
             except RequestDataError as err:
                 errors.update(err.errors)
-            except ProofTimeoutError as err:
+            except ProofTimeoutError as err: # pragma: no cover
                 errors['Tableau'] = str(err)
 
             if len(errors) == 0:
@@ -237,16 +237,18 @@ class App(object):
     def api(self, action=None):
         if server.request.method == 'POST':
             try:
+                result = None
                 if action == 'parse':
                     result = self.api_parse(server.request.json)
                 elif action == 'prove':
                     result = self.api_prove(server.request.json)
-                return {
-                    'status'  : 200,
-                    'message' : 'OK',
-                    'result'  : result
-                }
-            except ProofTimeoutError as err:
+                if result:
+                    return {
+                        'status'  : 200,
+                        'message' : 'OK',
+                        'result'  : result
+                    }
+            except ProofTimeoutError as err: # pragma: no cover
                 server.response.statis = 408
                 return {
                     'status'  : 408,
@@ -261,7 +263,7 @@ class App(object):
                     'error'   : err.__class__.__name__,
                     'errors'  : err.errors
                 }
-            except Exception as err:
+            except Exception as err: # pragma: no cover
                 server.response.status = 500
                 return {
                     'status'  : 500,
@@ -279,7 +281,7 @@ class App(object):
             {
                "notation": "polish",
                "input": "Fm",
-               "predicates : [
+               "predicates" : [
                   {
                      "name": "is F",
                      "index": 0,
@@ -292,7 +294,7 @@ class App(object):
         Example success result::
 
             {
-               "type": "AtomicSentence",
+               "type": "PredicatedSentence",
                "rendered": {
                     "standard": {
                         "default": "Fa",
@@ -316,21 +318,17 @@ class App(object):
         if 'input' not in body:
             body['input'] = ''
 
-        vocab = logic.Vocabulary()
-
         errors = {}
         try:
             input_notation = modules['notations'][body['notation']]
         except KeyError:
             errors['Notation'] = 'Invalid notation'
 
-        i = 0
-        for pdata in body['predicates']:
-            i += 1
-            try:
-                vocab.declare_predicate(**pdata)
-            except Exception as err:
-                errors['Predicate ' + str(i)] = str(err)
+        try:
+            vocab = self.parse_predicates_data(body['predicates'])
+        except RequestDataError as err:
+            errors.update(err.errors)
+            vocab = logic.Vocabulary()
 
         if len(errors) == 0:
             parser = input_notation.Parser(vocabulary=vocab)
@@ -413,6 +411,8 @@ class App(object):
         body = dict(body)
 
         # defaults
+        if 'argument' not in body:
+            body['argument'] = dict()
         if 'output' not in body:
             body['output'] = dict()
         odata = body['output']
@@ -444,7 +444,7 @@ class App(object):
         except Exception as err:
             errors['Logic'] = str(err)
         try:
-            arg = self.parse_argument_data(body['argument'])
+            arg, v = self.parse_argument_data(body['argument'])
         except RequestDataError as err:
             errors.update(err.errors)
         try:
@@ -546,7 +546,7 @@ class App(object):
         if len(errors) > 0:
             raise RequestDataError(errors)
 
-        return logic.argument(conclusion, premises)
+        return (logic.argument(conclusion, premises), vocab)
 
     def parse_predicates_data(self, predicates):
         vocab = logic.Vocabulary()
@@ -562,9 +562,9 @@ class App(object):
             raise RequestDataError(errors)
         return vocab
 
-def main():
+def main(): # pragma: no cover
     server.config.update(global_config)
     server.quickstart(App(), '/', config)
 
-if  __name__ == '__main__':
+if  __name__ == '__main__': # pragma: no cover
     main()
