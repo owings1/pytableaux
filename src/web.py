@@ -31,10 +31,10 @@ from past.builtins import basestring
 
 default_host = '127.0.0.1'
 default_port = 8080
-envvar_host = 'PY_HOST'
-envvar_port = 'PY_PORT'
-envvar_debug = 'PY_DEBUG'
-envvar_maxtimeout = 'PY_MAXTIMEOUT'
+envvar_host = 'PT_HOST'
+envvar_port = 'PT_PORT'
+envvar_debug = 'PT_DEBUG'
+envvar_maxtimeout = 'PT_MAXTIMEOUT'
 index_filename = 'index.html'
 default_maxtimeout = 30000
 
