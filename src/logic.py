@@ -1051,16 +1051,16 @@ class TableauxSystem(object):
         def __init__(self, logic, argument, **opts):
             #: A tableau is finished when no more rules can apply.
             self.finished = False
-            
+
             #: An argument is proved (valid) when its finished tableau has no open branches.
             self.valid = None
-            
+
             #: The set of branches on the tableau.
             self.branches = list()
-            
+
             #: A tree-map structure of the tableau, generated after the proof is finished.
             self.tree = dict()
-            
+
             # A history of rule applications.
             self.history = []
 
