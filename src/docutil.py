@@ -45,7 +45,7 @@ truth_table_template = jinja_env.get_template('truth_table.html')
 def get_truth_table_html(lgc, operator):
     lgc = logic.get_logic(lgc)
     table = logic.truth_table(lgc, operator)
-    s = truth_table_template.render({
+    return truth_table_template.render({
         'arity'      : logic.arity(operator),
         'sentence'   : examples.operated(operator),
         'sw'         : sw,
@@ -55,7 +55,6 @@ def get_truth_table_html(lgc, operator):
         'table'      : table,
         'operator'   : operator,
     })
-    return s
 
 def get_truth_tables_for_logic(lgc):
     lgc = logic.get_logic(lgc)
