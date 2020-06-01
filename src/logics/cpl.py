@@ -283,29 +283,32 @@ class TableauxRules(object):
                 { 'sentence' : examples.identity()   }
             ])
 
-    rules = [
-
+    closure_rules = [
         Closure,
         SelfIdentityClosure,
+    ]
 
-        # non-branching rules
-        IdentityIndiscernability,
-        Assertion,
-        AssertionNegated,
-        Conjunction,
-        DisjunctionNegated,
-        MaterialConditionalNegated,
-        ConditionalNegated,
-        DoubleNegation,
-
-        # branching rules
-        ConjunctionNegated,
-        Disjunction,
-        MaterialConditional,
-        MaterialBiconditional,
-        MaterialBiconditionalNegated,
-        Conditional,
-        Biconditional,
-        BiconditionalNegated
-
+    rule_groups = [
+        [
+            # non-branching rules
+            IdentityIndiscernability,
+            Assertion,
+            AssertionNegated,
+            Conjunction,
+            DisjunctionNegated,
+            MaterialConditionalNegated,
+            ConditionalNegated,
+            DoubleNegation,
+        ],
+        [
+            # branching rules
+            ConjunctionNegated,
+            Disjunction,
+            MaterialConditional,
+            MaterialBiconditional,
+            MaterialBiconditionalNegated,
+            Conditional,
+            Biconditional,
+            BiconditionalNegated,
+        ]
     ]

@@ -540,51 +540,54 @@ class TableauxRules(object):
         """
         pass
 
-    rules = [
-
+    closure_rules = [
         fde.TableauxRules.Closure,
         k3.TableauxRules.Closure,
+    ]
 
-        # non-branching rules
-        AssertionDesignated,
-        AssertionUndesignated,
-        AssertionNegatedDesignated,
-        AssertionNegatedUndesignated,
-        ConjunctionDesignated,
-        DisjunctionNegatedDesignated,
-        DisjunctionUndesignated,
-        DisjunctionNegatedUndesignated,
-        MaterialConditionalNegatedDesignated,
-        MaterialConditionalUndesignated,
-        ConditionalNegatedDesignated,
-        BiconditionalDesignated,
-        BiconditionalNegatedDesignated,
-        BiconditionalUndesignated,
-        BiconditionalNegatedUndesignated,
-        ExistentialDesignated,
-        ExistentialNegatedDesignated,
-        ExistentialUndesignated,
-        ExistentialNegatedUndesignated,
-        UniversalDesignated,
-        UniversalNegatedDesignated,
-        UniversalUndesignated,
-        UniversalNegatedUndesignated,
-        DoubleNegationDesignated,
-        DoubleNegationUndesignated,
-
-        # branching rules
-
-        ConjunctionNegatedDesignated,
-        ConjunctionUndesignated,
-        ConjunctionNegatedUndesignated,
-        DisjunctionDesignated,
-        MaterialConditionalDesignated,
-        MaterialConditionalNegatedUndesignated,
-        MaterialBiconditionalDesignated,
-        MaterialBiconditionalNegatedDesignated,
-        MaterialBiconditionalUndesignated,
-        MaterialBiconditionalNegatedUndesignated,
-        ConditionalDesignated,
-        ConditionalUndesignated,
-        ConditionalNegatedUndesignated,
+    rule_groups = [
+        [
+            # non-branching rules
+            AssertionDesignated,
+            AssertionUndesignated,
+            AssertionNegatedDesignated,
+            AssertionNegatedUndesignated,
+            ConjunctionDesignated,
+            DisjunctionNegatedDesignated,
+            DisjunctionUndesignated,
+            DisjunctionNegatedUndesignated,
+            MaterialConditionalNegatedDesignated,
+            MaterialConditionalUndesignated,
+            ConditionalNegatedDesignated,
+            BiconditionalDesignated,
+            BiconditionalNegatedDesignated,
+            BiconditionalUndesignated,
+            BiconditionalNegatedUndesignated,
+            ExistentialDesignated,
+            ExistentialNegatedDesignated,
+            ExistentialUndesignated,
+            ExistentialNegatedUndesignated,
+            UniversalDesignated,
+            UniversalNegatedDesignated,
+            UniversalUndesignated,
+            UniversalNegatedUndesignated,
+            DoubleNegationDesignated,
+            DoubleNegationUndesignated,
+        ],
+        [
+            # branching rules
+            ConjunctionNegatedDesignated,
+            ConjunctionUndesignated,
+            ConjunctionNegatedUndesignated,
+            DisjunctionDesignated,
+            MaterialConditionalDesignated,
+            MaterialConditionalNegatedUndesignated,
+            MaterialBiconditionalDesignated,
+            MaterialBiconditionalNegatedDesignated,
+            MaterialBiconditionalUndesignated,
+            MaterialBiconditionalNegatedUndesignated,
+            ConditionalDesignated,
+            ConditionalUndesignated,
+            ConditionalNegatedUndesignated,
+        ],
     ]

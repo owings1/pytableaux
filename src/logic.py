@@ -1068,10 +1068,16 @@ class TableauxSystem(object):
             self.logic = None
 
             #: The rule instances of the logic, if given
-            self.rules = []
+            self.all_rules = []
 
             #: The argument of the tableau, if given
             self.argument = None
+
+            # The closure rules
+            self.closure_rules = []
+
+            # The rule groups
+            self.rule_groups = []
 
             # flag to build models
             self.is_build_models = None
@@ -1116,14 +1122,14 @@ class TableauxSystem(object):
                 return False
             if self.argument != None and not self.trunk_built:
                 raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.") 
-            for rule in self.rules:
-                target = rule.applies()
-                if target:
-                    rule.apply(target)
-                    application = { 'rule' : rule, 'target' : target }
-                    self.history.append(application)
-                    self.current_step += 1
-                    return application
+            res = self.get_rule_and_target_to_apply()
+            if res:
+                rule, target = res
+                rule.apply(target)
+                application = { 'rule' : rule, 'target' : target }
+                self.history.append(application)
+                self.current_step += 1
+                return application
             self.finish()
             return False
 
@@ -1134,8 +1140,34 @@ class TableauxSystem(object):
                 opts['is_rank_optim'] = self.opts['is_rank_optim']
             else:
                 opts['is_rank_optim'] = True
-            self.rules = [Rule(self, **opts) for Rule in self.logic.TableauxRules.rules]
+            self.rule_groups = [
+                [Rule(self, **opts) for Rule in rule_group]
+                for rule_group in self.logic.TableauxRules.rule_groups
+            ]
+            self.closure_rules = [Rule(self, **opts) for Rule in self.logic.TableauxRules.closure_rules]
+            self.all_rules = list(self.closure_rules)
+            for rules in self.rule_groups:
+                self.all_rules += rules
             return self
+
+        def get_rule_and_target_to_apply(self):
+            for rule in self.closure_rules:
+                target = rule.applies()
+                if target:
+                    return (rule, target)
+            for rules in self.rule_groups:
+                res = self.get_rule_and_target_from_group(rules)
+                if res != None:
+                    return res
+            return None
+
+        def get_rule_and_target_from_group(self, rules):
+            # TODO: optimize
+            for rule in rules:
+                target = rule.applies()
+                if target:
+                    return (rule, target)
+            return None
 
         def set_argument(self, argument):
             self.argument = argument
@@ -1145,15 +1177,15 @@ class TableauxSystem(object):
 
         def after_branch_close(self, branch):
             self.open_branchset.remove(branch)
-            for rule in self.rules:
+            for rule in self.all_rules:
                 rule.after_branch_close(branch)
 
         def after_node_add(self, branch, node):
-            for rule in self.rules:
+            for rule in self.all_rules:
                 rule.after_node_add(branch, node)
 
         def after_node_tick(self, branch, node):
-            for rule in self.rules:
+            for rule in self.all_rules:
                 rule.after_node_tick(branch, node)
 
         def open_branches(self):
@@ -1166,7 +1198,7 @@ class TableauxSystem(object):
             """
             Get a rule instance by name or class reference. Returns first occurrence.
             """
-            for r in self.rules:
+            for r in self.all_rules:
                 if r.__class__ == rule or r.__class__.__name__ == rule:
                     return r
 
@@ -1319,7 +1351,7 @@ class TableauxSystem(object):
             if not branch.closed:
                 self.open_branchset.add(branch)
             self.branch_dict[id(branch)] = branch
-            for rule in self.rules:
+            for rule in self.all_rules:
                 rule.after_branch_add(branch, other_branch)
             return branch
 

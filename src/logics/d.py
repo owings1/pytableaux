@@ -114,40 +114,52 @@ class TableauxRules:
             if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TableauxRules.Serial):
                 return False
             return super(TableauxRules.IdentityIndiscernability, self).applies_to_branch(branch)
-        
-    rules = [
 
+    closure_rules = [
         k.TableauxRules.Closure,
         k.TableauxRules.SelfIdentityClosure,
+    ]
 
-        # non-branching rules
-        k.TableauxRules.Conjunction, 
-        k.TableauxRules.DisjunctionNegated, 
-        k.TableauxRules.MaterialConditionalNegated,
-        k.TableauxRules.ConditionalNegated,
-        k.TableauxRules.Existential,
-        k.TableauxRules.ExistentialNegated,
-        k.TableauxRules.Universal,
-        k.TableauxRules.UniversalNegated,
-        k.TableauxRules.DoubleNegation,
-        k.TableauxRules.PossibilityNegated,
-        k.TableauxRules.NecessityNegated,
-
-        # branching rules
-        k.TableauxRules.ConjunctionNegated,
-        k.TableauxRules.Disjunction, 
-        k.TableauxRules.MaterialConditional, 
-        k.TableauxRules.MaterialBiconditional,
-        k.TableauxRules.MaterialBiconditionalNegated,
-        k.TableauxRules.Conditional,
-        k.TableauxRules.Biconditional,
-        k.TableauxRules.BiconditionalNegated,
-
-        # world creation rules
-        k.TableauxRules.Possibility,
-        k.TableauxRules.Necessity,
-
-        # special ordering of serial rule
-        IdentityIndiscernability,
-        Serial
+    rule_groups = [
+        [
+            # non-branching rules
+            k.TableauxRules.Conjunction, 
+            k.TableauxRules.DisjunctionNegated, 
+            k.TableauxRules.MaterialConditionalNegated,
+            k.TableauxRules.ConditionalNegated,
+            k.TableauxRules.Existential,
+            k.TableauxRules.ExistentialNegated,
+            k.TableauxRules.Universal,
+            k.TableauxRules.UniversalNegated,
+            k.TableauxRules.DoubleNegation,
+            k.TableauxRules.PossibilityNegated,
+            k.TableauxRules.NecessityNegated,
+        ],
+        [
+            # branching rules
+            k.TableauxRules.ConjunctionNegated,
+            k.TableauxRules.Disjunction, 
+            k.TableauxRules.MaterialConditional, 
+            k.TableauxRules.MaterialBiconditional,
+            k.TableauxRules.MaterialBiconditionalNegated,
+            k.TableauxRules.Conditional,
+            k.TableauxRules.Biconditional,
+            k.TableauxRules.BiconditionalNegated,
+        ],
+        [
+            # world creation rules 1
+            k.TableauxRules.Possibility,
+        ],
+        [
+            # world creation rules 2
+            k.TableauxRules.Necessity,
+        ],
+        [
+            # special ordering of serial rule
+            IdentityIndiscernability,
+        ],
+        [
+            # special ordering of serial rule
+            Serial,
+        ],
     ]

@@ -1142,39 +1142,46 @@ class TableauxRules(object):
                 {'sentence' : examples.identity(),   'world': 0},
             ])
 
-    rules = [
-
+    closure_rules = [
         Closure,
         SelfIdentityClosure,
+    ]
 
-        # non-branching rules
-        IdentityIndiscernability,
-        Assertion,
-        AssertionNegated,
-        Conjunction, 
-        DisjunctionNegated, 
-        MaterialConditionalNegated,
-        ConditionalNegated,
-        Existential,
-        ExistentialNegated,
-        Universal,
-        UniversalNegated,
-        DoubleNegation,
-        PossibilityNegated,
-        NecessityNegated,
-
-        # branching rules
-        ConjunctionNegated,
-        Disjunction, 
-        MaterialConditional, 
-        MaterialBiconditional,
-        MaterialBiconditionalNegated,
-        Conditional,
-        Biconditional,
-        BiconditionalNegated,
-
-        # world creation rules
-        Possibility,
-        Necessity,
-
+    rule_groups = [
+        [
+            # non-branching rules
+            IdentityIndiscernability,
+            Assertion,
+            AssertionNegated,
+            Conjunction, 
+            DisjunctionNegated, 
+            MaterialConditionalNegated,
+            ConditionalNegated,
+            Existential,
+            ExistentialNegated,
+            Universal,
+            UniversalNegated,
+            DoubleNegation,
+            PossibilityNegated,
+            NecessityNegated,
+        ],
+        [
+            # branching rules
+            ConjunctionNegated,
+            Disjunction, 
+            MaterialConditional, 
+            MaterialBiconditional,
+            MaterialBiconditionalNegated,
+            Conditional,
+            Biconditional,
+            BiconditionalNegated,
+        ],
+        [
+            # world creation rules 1
+            Possibility,
+        ],
+        [
+            # world creation rules 2
+            Necessity,
+        ],
     ]

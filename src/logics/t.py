@@ -84,41 +84,49 @@ class TableauxRules(object):
         def example(self):
             self.tableau.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
 
-    rules = [
-
+    closure_rules = [
         k.TableauxRules.Closure,
         k.TableauxRules.SelfIdentityClosure,
+    ]
 
-        Reflexive,
-
-        # non-branching rules
-        k.TableauxRules.IdentityIndiscernability,
-        k.TableauxRules.Assertion,
-        k.TableauxRules.AssertionNegated,
-        k.TableauxRules.Conjunction, 
-        k.TableauxRules.DisjunctionNegated, 
-        k.TableauxRules.MaterialConditionalNegated,
-        k.TableauxRules.ConditionalNegated,
-        k.TableauxRules.Existential,
-        k.TableauxRules.ExistentialNegated,
-        k.TableauxRules.Universal,
-        k.TableauxRules.UniversalNegated,
-        k.TableauxRules.DoubleNegation,
-        k.TableauxRules.PossibilityNegated,
-        k.TableauxRules.NecessityNegated,
-
-        # branching rules
-        k.TableauxRules.ConjunctionNegated,
-        k.TableauxRules.Disjunction, 
-        k.TableauxRules.MaterialConditional, 
-        k.TableauxRules.MaterialBiconditional,
-        k.TableauxRules.MaterialBiconditionalNegated,
-        k.TableauxRules.Conditional,
-        k.TableauxRules.Biconditional,
-        k.TableauxRules.BiconditionalNegated,
-
-        # world creation rules
-        k.TableauxRules.Possibility,
-        k.TableauxRules.Necessity
-
+    rule_groups = [
+        [
+            Reflexive,
+        ],
+        [
+            # non-branching rules
+            k.TableauxRules.IdentityIndiscernability,
+            k.TableauxRules.Assertion,
+            k.TableauxRules.AssertionNegated,
+            k.TableauxRules.Conjunction, 
+            k.TableauxRules.DisjunctionNegated, 
+            k.TableauxRules.MaterialConditionalNegated,
+            k.TableauxRules.ConditionalNegated,
+            k.TableauxRules.Existential,
+            k.TableauxRules.ExistentialNegated,
+            k.TableauxRules.Universal,
+            k.TableauxRules.UniversalNegated,
+            k.TableauxRules.DoubleNegation,
+            k.TableauxRules.PossibilityNegated,
+            k.TableauxRules.NecessityNegated,
+        ],
+        [
+            # branching rules
+            k.TableauxRules.ConjunctionNegated,
+            k.TableauxRules.Disjunction, 
+            k.TableauxRules.MaterialConditional, 
+            k.TableauxRules.MaterialBiconditional,
+            k.TableauxRules.MaterialBiconditionalNegated,
+            k.TableauxRules.Conditional,
+            k.TableauxRules.Biconditional,
+            k.TableauxRules.BiconditionalNegated,
+        ],
+        [
+            # world creation rules 1
+            k.TableauxRules.Possibility,
+        ],
+        [
+            # world creation rules 2
+            k.TableauxRules.Necessity,
+        ],
     ]

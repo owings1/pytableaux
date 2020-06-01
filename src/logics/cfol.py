@@ -250,35 +250,37 @@ class TableauxRules(object):
         """
         pass
 
-    rules = [
-
+    closure_rules = [
         cpl.TableauxRules.Closure,
         cpl.TableauxRules.SelfIdentityClosure,
+    ]
 
-        # non-branching rules
+    rule_groups = [
+        [
+            # non-branching rules
 
-        IdentityIndiscernability,
-        DoubleNegation,
-        Assertion,
-        AssertionNegated,
-        Conjunction,
-        DisjunctionNegated,
-        MaterialConditionalNegated,
-        ConditionalNegated,
-        Existential,
-        ExistentialNegated,
-        Universal,
-        UniversalNegated,
-
-        # branching rules
-
-        ConjunctionNegated,
-        Disjunction,
-        MaterialConditional,
-        MaterialBiconditional,
-        MaterialBiconditionalNegated,
-        Conditional,
-        Biconditional,
-        BiconditionalNegated
-
+            IdentityIndiscernability,
+            DoubleNegation,
+            Assertion,
+            AssertionNegated,
+            Conjunction,
+            DisjunctionNegated,
+            MaterialConditionalNegated,
+            ConditionalNegated,
+            Existential,
+            ExistentialNegated,
+            Universal,
+            UniversalNegated,
+        ],
+        [
+            # branching rules
+            ConjunctionNegated,
+            Disjunction,
+            MaterialConditional,
+            MaterialBiconditional,
+            MaterialBiconditionalNegated,
+            Conditional,
+            Biconditional,
+            BiconditionalNegated,
+        ],
     ]
