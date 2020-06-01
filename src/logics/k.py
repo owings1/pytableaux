@@ -277,7 +277,7 @@ class Model(logic.Model):
         for premise in argument.premises:
             if self.value_of(premise, world=0) != self.char_values['T']:
                 return False
-        return self.value_of(premise, world=0) == self.char_values['F']
+        return self.value_of(argument.conclusion, world=0) == self.char_values['F']
 
     def get_data(self):
         return {
