@@ -142,6 +142,39 @@ class Model(logic.Model):
                 }
             }
 
+        def is_equivalent_to(self, other):
+            # check for informational equivalence, ignoring world
+            # check atomic keys
+            akeys_a = set(self.atomics.keys())
+            akeys_b = set(other.atomics.keys())
+            if len(akeys_a.difference(akeys_b)) or len(akeys_b.difference(akeys_a)):
+                return False
+            # check opaque keys
+            okeys_a = set(self.opaques.keys())
+            okeys_b = set(other.opaques.keys())
+            if len(okeys_a.difference(okeys_b)) or len(okeys_b.difference(okeys_a)):
+                return False
+            # check extensions keys
+            ekeys_a = set(self.extensions.keys())
+            ekeys_b = set(other.extensions.keys())
+            if len(ekeys_a.difference(ekeys_b)) or len(ekeys_b.difference(ekeys_a)):
+                return False
+            # check atomic values
+            for s in self.atomics:
+                if other.atomics[s] != self.atomics[s]:
+                    return False
+            # check opaque values
+            for s in self.opaques:
+                if other.opaques[s] != self.opaques[s]:
+                    return False
+            # check extensions values
+            for p in self.extensions:
+                ext_a = self.extensions[p]
+                ext_b = other.extensions[p]
+                if len(ext_a.difference(ext_b)) or len(ext_b.difference(ext_a)):
+                    return False
+            return True
+
         def __eq__(self, other):
             return other != None and self.__dict__ == other.__dict__
 

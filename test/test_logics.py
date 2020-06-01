@@ -958,6 +958,98 @@ class TestK(LogicTester):
         data = model.get_data()
         assert len(data['Frames']['values']) == 2
 
+    def test_frame_difference_atomic_keys_diff(self):
+        model = self.logic.Model()
+        model.set_literal_value(parse('a'), 1, world=0)
+        model.set_literal_value(parse('b'), 1, world=1)
+        frame_a = model.world_frame(0)
+        frame_b = model.world_frame(1)
+        assert not frame_a.is_equivalent_to(frame_b)
+        assert not frame_b.is_equivalent_to(frame_a)
+
+    def test_frame_difference_atomic_values_diff(self):
+        model = self.logic.Model()
+        model.set_literal_value(parse('a'), 1, world=0)
+        model.set_literal_value(parse('a'), 0, world=1)
+        frame_a = model.world_frame(0)
+        frame_b = model.world_frame(1)
+        assert not frame_a.is_equivalent_to(frame_b)
+        assert not frame_b.is_equivalent_to(frame_a)
+
+    def test_frame_difference_atomic_values_equiv(self):
+        model = self.logic.Model()
+        model.set_literal_value(parse('a'), 1, world=0)
+        model.set_literal_value(parse('a'), 1, world=1)
+        frame_a = model.world_frame(0)
+        frame_b = model.world_frame(1)
+        assert frame_a.is_equivalent_to(frame_b)
+        assert frame_b.is_equivalent_to(frame_a)
+
+    def test_frame_difference_opaque_keys_diff(self):
+        model = self.logic.Model()
+        model.set_opaque_value(parse('Ma'), 1, world=0)
+        model.set_opaque_value(parse('Mb'), 1, world=1)
+        frame_a = model.world_frame(0)
+        frame_b = model.world_frame(1)
+        assert not frame_a.is_equivalent_to(frame_b)
+        assert not frame_b.is_equivalent_to(frame_a)
+
+    def test_frame_difference_opaque_values_diff(self):
+        model = self.logic.Model()
+        model.set_opaque_value(parse('Ma'), 1, world=0)
+        model.set_opaque_value(parse('Ma'), 0, world=1)
+        frame_a = model.world_frame(0)
+        frame_b = model.world_frame(1)
+        assert not frame_a.is_equivalent_to(frame_b)
+        assert not frame_b.is_equivalent_to(frame_a)
+
+    def test_frame_difference_opaque_values_equiv(self):
+        model = self.logic.Model()
+        model.set_opaque_value(parse('Ma'), 1, world=0)
+        model.set_opaque_value(parse('Ma'), 1, world=1)
+        frame_a = model.world_frame(0)
+        frame_b = model.world_frame(1)
+        assert frame_a.is_equivalent_to(frame_b)
+        assert frame_b.is_equivalent_to(frame_a)
+
+    def test_frame_difference_extension_keys_diff(self):
+        vocab = Vocabulary()
+        vocab.add_predicate(examples.vocabulary.get_predicate(index=0, subscript=0))
+        vocab.declare_predicate('g', 1, 0, 2)
+        s1 = parse('Fm', vocabulary=vocab)
+        s2 = parse('Gmn', vocabulary=vocab)
+        model = self.logic.Model()
+        model.set_predicated_value(s1, 1, world=0)
+        model.set_predicated_value(s2, 1, world=1)
+        frame_a = model.world_frame(0)
+        frame_b = model.world_frame(1)
+        assert not frame_a.is_equivalent_to(frame_b)
+        assert not frame_b.is_equivalent_to(frame_a)
+
+    def test_frame_difference_extension_values_diff(self):
+        s1 = parse('Fm', vocabulary=examples.vocabulary)
+        s2 = parse('Fn', vocabulary=examples.vocabulary)
+        model = self.logic.Model()
+        model.set_predicated_value(s1, 1, world=0)
+        model.set_predicated_value(s2, 1, world=1)
+        frame_a = model.world_frame(0)
+        frame_b = model.world_frame(1)
+        assert not frame_a.is_equivalent_to(frame_b)
+        assert not frame_b.is_equivalent_to(frame_a)
+
+    def test_frame_difference_extension_values_equiv(self):
+        s1 = parse('Fm', vocabulary=examples.vocabulary)
+        s2 = parse('Fn', vocabulary=examples.vocabulary)
+        model = self.logic.Model()
+        model.set_predicated_value(s1, 1, world=0)
+        model.set_predicated_value(s2, 0, world=0)
+        model.set_predicated_value(s1, 1, world=1)
+        model.set_predicated_value(s2, 0, world=1)
+        frame_a = model.world_frame(0)
+        frame_b = model.world_frame(1)
+        assert frame_a.is_equivalent_to(frame_b)
+        assert frame_b.is_equivalent_to(frame_a)
+
 class TestD(LogicTester):
 
     logic = get_logic('D')
