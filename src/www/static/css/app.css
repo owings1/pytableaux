@@ -153,7 +153,7 @@ body {
     font-size: 16px;
 }
 .pt-app .input label {
-    border: 1px solid white;
+    border: 1px solid #cccccc;
     width: 100px;
     text-align: right;
     display: inline-block;
@@ -256,6 +256,8 @@ body {
     display: inline-block;
     clear: both;
     min-width: 12px;
+    border: 1px solid #cccccc;
+    text-align: center;
 }
 .pt-app div.predicates {
     max-width: 300px;
@@ -267,6 +269,9 @@ body {
     font-weight: normal;
     text-align: left;
     background-color: #eee;
+}
+.pt-app div.input {
+    margin: 2px 0;
 }
 .pt-app table.predicates td, table.predicates th {
     border: 1px solid #eee;
@@ -334,11 +339,17 @@ body {
     padding: 0;
     margin: 0;
 }
-.pt-app ul.item-symbols li {
+.pt-app ul.item-symbols li,
+.pt-app .predicateSymbol {
     display: inline-block;
     padding: 2px 3px;
     background-color: #eee;
     margin: 0 3px;
+    border: 1px solid #cccccc;
+    text-align: center;
+}
+.pt-app .predicateSymbol {
+    min-width: 10px;
 }
 .pt-app input.arity {
     width: 10px;
