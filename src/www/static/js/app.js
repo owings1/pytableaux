@@ -49,6 +49,10 @@
                         refreshStatuses()
                     } else if ($target.is('input.sentence')) {
                         refreshStatuses()
+                    } else if ($target.hasClass('arity')) {
+                        refreshStatuses(true)
+                    } else if ($target.hasClass('predicateName')) {
+                        refreshStatuses(true)
                     } else if ($target.is('#selected_logic')) {
                         refreshLogic()
                     }
@@ -436,14 +440,14 @@
          *
          * @return void
          */
-        function refreshStatuses() {
+        function refreshStatuses(isForce) {
             $('input.sentence', $Ctx).each(function(sentenceIndex) {
                 const $status = $(this).closest('div.input').find('.status')
                 const notation = currentNotation()
                 const input = $(this).val()
                 if (input || $(this).hasClass('conclusion')) {
                     const hash = hashString([input, notation].join('.'))
-                    if (+$status.attr('data-hash') === hash) {
+                    if (!isForce && +$status.attr('data-hash') === hash) {
                         return
                     }
                     $status.attr('data-hash', hash)
@@ -469,7 +473,16 @@
                             var title
                             if (xhr.status == 400) {
                                 const res = xhr.responseJSON
-                                title = [res.error, res.message].join(': ')
+                                if (res.errors) {
+                                    if (res.errors.Sentence) {
+                                        title = res.errors.Sentence
+                                    } else {
+                                        var errKey = Object.keys(res.errors)[0]
+                                        title = [errKey, res.errors[errKey]].join(': ')
+                                    }
+                                } else {
+                                    title = [res.error, res.message].join(': ')
+                                }
                             } else {
                                 title = [textStatus, errorThrown].join(': ')
                             }
@@ -584,11 +597,19 @@
                 const arity = $('input.arity', $tr).val()
                 if (arity.length > 0) {
                     const coords = $('input.predicateSymbol', $tr).val().split('.')
+                    const arityNumVal = +arity
+                    // let invalid arity propagate
+                    var arityVal
+                    if (isNaN(arityNumVal)) {
+                        arityVal = arity
+                    } else {
+                        arityVal = arityNumVal
+                    }
                     data.argument.predicates.push({
                         name      : $('input.predicateName', $tr).val(),
                         index     : +coords[0],
                         subscript : +coords[1],
-                        arity     : +arity
+                        arity     : arityVal
                     })
                 }
             })
