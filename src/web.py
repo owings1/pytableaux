@@ -316,14 +316,32 @@ class App(object):
         if 'input' not in body:
             body['input'] = ''
 
-        input_notation = modules['notations'][body['notation']]
         vocab = logic.Vocabulary()
+
+        errors = {}
+        try:
+            input_notation = modules['notations'][body['notation']]
+        except KeyError:
+            errors['Notation'] = 'Invalid notation'
+
+        i = 0
         for pdata in body['predicates']:
-            vocab.declare_predicate(**pdata)
-        parser = input_notation.Parser(vocabulary=vocab)
+            i += 1
+            try:
+                vocab.declare_predicate(**pdata)
+            except Exception as err:
+                errors['Predicate ' + str(i)] = str(err)
 
-        sentence = parser.parse(body['input'])
+        if len(errors) == 0:
+            parser = input_notation.Parser(vocabulary=vocab)
+            try:
+                sentence = parser.parse(body['input'])
+            except Exception as err:
+                errors['Sentence'] = str(err)
 
+        if len(errors) > 0:
+            raise RequestDataError(errors)
+            
         return {
             'type'     : sentence.__class__.__name__,
             'rendered' : {
@@ -504,11 +522,12 @@ class App(object):
             notation = modules['notations'][adata['notation']]
         except Exception as e:
             errors['Notation'] = str(e)
-        try:
-            vocab = self.parse_predicates_data(adata['predicates'])
-        except RequestDataError as err:
-            errors.update(err.errors)
+
         if len(errors) == 0:
+            try:
+                vocab = self.parse_predicates_data(adata['predicates'])
+            except RequestDataError as err:
+                errors.update(err.errors)
             parser = notation.Parser(vocabulary=vocab)
             i = 1
             premises = []
