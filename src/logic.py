@@ -1162,11 +1162,23 @@ class TableauxSystem(object):
             return None
 
         def get_rule_and_target_from_group(self, rules):
-            # TODO: optimize
+            results = []
             for rule in rules:
                 target = rule.applies()
                 if target:
-                    return (rule, target)
+                    if 'score' not in target:
+                        target['score'] = 0
+                    results.append((rule, target))
+            if len(results):
+                scores = []
+                for res in results:
+                    rule, target = res
+                    scores.append(target['score'])
+                max_score = max(scores)
+                for res in results:
+                    rule, target = res
+                    if target['score'] == max_score:
+                        return res
             return None
 
         def set_argument(self, argument):
@@ -1557,7 +1569,13 @@ class TableauxSystem(object):
             branch.atms = set(self.atms)
             branch.leaf = self.leaf
             branch.tableau = self.tableau
-            branch.node_index = {prop : {key : set(self.node_index[prop][key]) for key in self.node_index[prop]} for prop in self.node_index}
+            branch.node_index = {
+                prop : {
+                    key : set(self.node_index[prop][key])
+                    for key in self.node_index[prop]
+                }
+                for prop in self.node_index
+            }
             return branch
 
         def worlds(self):
@@ -1690,9 +1708,6 @@ class TableauxSystem(object):
         """
 
         def __init__(self, tableau, **opts):
-            """
-            Instantiate the rule for the tableau.
-            """
             #: Reference to the tableau for which the rule is instantiated.
             self.tableau = tableau
 
@@ -1877,6 +1892,7 @@ class TableauxSystem(object):
                     if target:
                         if target == True:
                             target = {'node' : node}
+                        target['score'] = 0
                         if 'node' not in target:
                             target['node'] = node
                         if 'type' not in target:
@@ -1894,6 +1910,7 @@ class TableauxSystem(object):
                 max_score = max(set(cand_scores))
                 for i in range(len(cands)):
                     if cand_scores[i] == max_score:
+                        cands[i]['score'] = cand_scores[i]
                         return cands[i]
             else:
                 return False
