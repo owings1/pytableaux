@@ -1585,7 +1585,7 @@ class TableauxSystem(object):
             """
             model = self.tableau.logic.Model()
             if self.closed:
-                raise BranchClosedError('Cannot build a model from a closed branch')
+                raise TableauxSystem.BranchClosedError('Cannot build a model from a closed branch')
             model.read_branch(self)
             if self.tableau.argument != None and not self.tableau.is_premature:
                 model.is_countermodel = model.is_countermodel_to(self.tableau.argument)
