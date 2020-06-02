@@ -80,7 +80,7 @@ symbol_sets = {
         },
         'system_predicate'  : {
             'Identity'  : '=',
-            'Existence' : '!',
+            'Existence' : 'E!',
             'NegatedIdentity' : '&ne;',
         },
         'user_predicate'  : ['F', 'G', 'H', 'O'],
