@@ -250,10 +250,11 @@ class TableauxRules(object):
     class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
-        two branches *b'*, *b''* from *b*. On *b'* add two undesignated nodes,
-        one with the antecedent, and the other with the negation of the consequent.
-        On *b''* add four designated nodes, with the antecedent, its negation,
-        the conequent, and its negation, respectively. Then tick *n*.
+        three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add an undesignated
+        node with the antecedent. On *b''* add an undesignated node with the
+        negation of the consequent. On *b'''* add four designated nodes, with
+        the antecedent, its negation, the consequent, and its negation,
+        respectively. Then tick *n*.
         """
 
         operator    = 'Conditional'
@@ -263,11 +264,14 @@ class TableauxRules(object):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
             b2 = self.tableau.branch(branch)
+            b3 = self.tableau.branch(branch)
             b1.update([
                 {'sentence':        lhs , 'designated': False},
-                {'sentence': negate(rhs), 'designated': False},
             ]).tick(node)
             b2.update([
+                {'sentence': negate(rhs), 'designated': False},
+            ]).tick(node)
+            b3.update([
                 {'sentence':        lhs , 'designated': True},
                 {'sentence': negate(lhs), 'designated': True},
                 {'sentence':        rhs , 'designated': True},
@@ -281,18 +285,22 @@ class TableauxRules(object):
                 'b1': branch.has_any([
                     # FDE closure
                     {'sentence':          lhs , 'designated': True},
-                    {'sentence': negative(rhs), 'designated': True},
                     # LP closure
                     {'sentence': negative(lhs), 'designated': False},
-                    {'sentence':          rhs , 'designated': False},
                 ]),
                 'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(rhs), 'designated': True},
+                    # LP closure
+                    {'sentence':          rhs , 'designated': False},
+                ]),
+                'b3': branch.has_any([
                     # FDE closure
                     {'sentence':          lhs , 'designated': False},
                     {'sentence': negative(lhs), 'designated': False},
                     {'sentence':          rhs , 'designated': False},
                     {'sentence': negative(rhs), 'designated': False},
-                    # LP closure n/a
+                    # LP closure - n/a
                 ]),
             }
 
@@ -357,37 +365,166 @@ class TableauxRules(object):
         """
         pass
 
-    class BiconditionalDesignated(l3.TableauxRules.BiconditionalDesignated):
+    class BiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
-        This rule is the same as the `L3 BiconditionalDesignated rule`_.
+        From an unticked designated biconditional node *n* on a branch *b*, make
+        three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated
+        nodes for each of the two operands. On *b''*, add undesignated nodes fo
+        the negation of each operand. On *b'''*, add four designated nodes, one
+        with each operand, and one for the negation of each operand. Then tick *n*.
+        """
 
-        .. _L3 BiconditionalDesignated rule: l3.html#logics.l3.TableauxRules.BiconditionalDesignated
+        operator    = 'Biconditional'
+        designation = True
+
+        def apply_to_node(self, node, branch):
+            lhs, rhs = self.sentence(node).operands
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b3 = self.tableau.branch(branch)
+            b1.update([
+                {'sentence': lhs, 'designated': False},
+                {'sentence': rhs, 'designated': False},
+            ]).tick(node)
+            b2.update([
+                {'sentence': negate(lhs), 'designated': False},
+                {'sentence': negate(rhs), 'designated': False},
+            ]).tick(node)
+            b3.update([
+                {'sentence':        lhs , 'designated': True},
+                {'sentence': negate(lhs), 'designated': True},
+                {'sentence':        rhs , 'designated': True},
+                {'sentence': negate(rhs), 'designated': True},
+            ]).tick(node)
+
+        def score_target_map(self, target):
+            branch = target['branch']
+            lhs, rhs = self.sentence(target['node']).operands
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': lhs, 'designated': True},
+                    {'sentence': rhs, 'designated': True},
+                    # LP closure
+                    {'sentence': negative(lhs), 'designated': False},
+                    {'sentence': negative(rhs), 'designated': False},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(lhs), 'designated': True},
+                    {'sentence': negative(rhs), 'designated': True},
+                    # LP closure
+                    {'sentence': lhs, 'designated': False},
+                    {'sentence': rhs, 'designated': False},
+                ]),
+                'b3': branch.has_any([
+                    # FDE closure
+                    {'sentence':          lhs , 'designated': False},
+                    {'sentence': negative(lhs), 'designated': False},
+                    {'sentence':          rhs , 'designated': False},
+                    {'sentence': negative(rhs), 'designated': False},
+                    # LP closure - n/a
+                ]),
+            }
+
+    class BiconditionalNegatedDesignated(lp.TableauxRules.BiconditionalNegatedDesignated):
+        """
+        This rule is the same as the `FDE BiconditionalNegatedDesignated rule`_.
+
+        .. _FDE BiconditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.BiconditionalNegatedDesignated
         """
         pass
 
-    class BiconditionalNegatedDesignated(l3.TableauxRules.BiconditionalNegatedDesignated):
+    class BiconditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
-        This rule is the same as the `L3 BiconditionalNegatedDesignated rule`_.
+        From an unticked undesignated biconditional node *n* on a branch *b*, add a
+        conjunction undesignated node to *b*, with first conjunct being a conditional
+        with the same operands as *n*, and the second conjunct being a conditional
+        with the reversed operands of *n*, then tick *n*.
+        """
 
-        .. _L3 BiconditionalNegatedDesignated rule: l3.html#logics.l3.TableauxRules.BiconditionalNegatedDesignated
-        """
-        pass
+        operator    = 'Biconditional'
+        designation = False
 
-    class BiconditionalUndesignated(l3.TableauxRules.BiconditionalUndesignated):
-        """
-        This rule is the same as the `L3 BiconditionalUndesignated rule`_.
+        def apply_to_node(self, node, branch):
+            lhs, rhs = self.sentence(node).operands
+            s_cond1 = operate('Conditional', [lhs, rhs])
+            s_cond2 = operate('Conditional', [rhs, lhs])
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b1.update([
+                {'sentence': s_cond1, 'designated': False},
+            ]).tick(node)
+            b2.update([
+                {'sentence': s_cond2, 'designated': False},
+            ]).tick(node)
 
-        .. _L3 BiconditionalUndesignated rule: l3.html#logics.l3.TableauxRules.BiconditionalUndesignated
-        """
-        pass
+        def score_target_map(self, target):
+            branch = target['branch']
+            lhs, rhs = self.sentence(target['node']).operands
+            s_cond1 = operate('Conditional', [lhs, rhs])
+            s_cond2 = operate('Conditional', [rhs, lhs])
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s_cond1 , 'designated': True},
+                    # LP closure
+                    {'sentence': negative(s_cond1), 'designated': False},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s_cond2 , 'designated': True},
+                    # LP closure
+                    {'sentence': negative(s_cond2), 'designated': False},
+                ]),
+            }
 
-    class BiconditionalNegatedUndesignated(l3.TableauxRules.BiconditionalNegatedUndesignated):
+    class BiconditionalNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
-        This rule is the same as the `L3 BiconditionalNegatedUndesignated rule`_.
+        From an unticked undesignated negated biconditional node *n* on a branch *b*,
+        make two branches *b'* and *b''* from *b*. On *b'* add an undesignated node
+        for each operand. On *b''* add an undesignated nodes for the negation of
+        each operand. Then tick *n*.
+        """
 
-        .. _L3 BiconditionalNegatedUndesignated rule: l3.html#logics.l3.TableauxRules.BiconditionalNegatedUndesignated
-        """
-        pass
+        negated     = True
+        operator    = 'Biconditional'
+        designation = False
+
+        def apply_to_node(self, node, branch):
+            lhs, rhs = self.sentence(node).operands
+            b1 = branch
+            b2 = self.tableau.branch(branch)
+            b1.update([
+                {'sentence': lhs, 'designated': False},
+                {'sentence': rhs, 'designated': False},
+            ]).tick(node)
+            b2.update([
+                {'sentence': negate(lhs), 'designated': False},
+                {'sentence': negate(rhs), 'designated': False},
+            ]).tick(node)
+
+        def score_target_map(self, target):
+            branch = target['branch']
+            lhs, rhs = self.sentence(target['node']).operands
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': lhs, 'designated': True},
+                    {'sentence': rhs, 'designated': True},
+                    # LP closure
+                    {'sentence': negative(lhs), 'designated': False},
+                    {'sentence': negative(rhs), 'designated': False},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(lhs), 'designated': True},
+                    {'sentence': negative(rhs), 'designated': True},
+                    # LP closure
+                    {'sentence': lhs, 'designated': False},
+                    {'sentence': rhs, 'designated': False},
+                ]),
+            }
 
     class ExistentialDesignated(lp.TableauxRules.ExistentialDesignated):
         """
@@ -483,13 +620,9 @@ class TableauxRules(object):
             UniversalNegatedUndesignated,
             DoubleNegationDesignated,
             DoubleNegationUndesignated,
-            BiconditionalDesignated,
-            BiconditionalNegatedDesignated,
-            BiconditionalUndesignated,
-            BiconditionalNegatedUndesignated,
         ],
         [
-            # branching rules
+            # 2 branching rules
             ConjunctionNegatedDesignated,
             ConjunctionUndesignated,
             ConjunctionNegatedUndesignated,
@@ -500,7 +633,14 @@ class TableauxRules(object):
             MaterialBiconditionalNegatedDesignated,
             MaterialBiconditionalUndesignated,
             MaterialBiconditionalNegatedUndesignated,
-            ConditionalDesignated,
             ConditionalNegatedUndesignated,
+            BiconditionalNegatedDesignated,
+            BiconditionalUndesignated,
+            BiconditionalNegatedUndesignated,
         ],
+        [
+            # 3 branching rules
+            ConditionalDesignated,
+            BiconditionalDesignated,
+        ]
     ]

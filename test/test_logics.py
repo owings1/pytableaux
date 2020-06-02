@@ -466,8 +466,13 @@ class TestLP(LogicTester):
         proof = tableau(self.logic, argument('NUab', ['a', 'Na', 'Nb'])).build()
         assert proof.valid
 
-    def test_invalid_a_a_arrow_not_b_arrow_c_thus_not_b_arrow_c(self):
+    def test_invalid_a_a_arrow_not_b_arrow_c_thus_not_a_arrow_b(self):
         proof = tableau(self.logic, argument('NUab', ['a', 'UaNUbc'])).build()
+        assert not proof.valid
+
+    def test_invalid_a_a_arrow_not_b_arrow_c_thus_not_b_arrow_c(self):
+        # this is an instance of modus ponens
+        proof = tableau(self.logic, argument('NUbc', ['a', 'UaNUbc'])).build()
         assert not proof.valid
 
 class TestRM3(LogicTester):
@@ -503,9 +508,24 @@ class TestRM3(LogicTester):
         proof = self.example_proof('Conditional Modus Ponens')
         assert proof.valid
 
-    def test_valid_a_a_arrow_not_b_arrow_c_thus_not_b_arrow_c(self):
+    def test_invalid_a_a_arrow_not_b_arrow_c_thus_not_a_arrow_b(self):
         proof = tableau(self.logic, argument('NUab', ['a', 'UaNUbc'])).build()
+        assert not proof.valid
+
+    def test_valid_a_a_arrow_not_b_arrow_c_thus_not_b_arrow_c(self):
+        # this is an instance of modus ponens
+        proof = tableau(self.logic, argument('NUbc', ['a', 'UaNUbc'])).build()
         assert proof.valid
+
+    def test_valid_bicond_thus_matbicond(self):
+        arg = argument('Eab', premises=['Bab'])
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
+
+    def test_invalid_matbicon_thus_bicond(self):
+        arg = argument('Bab', premises=['Eab'])
+        proof = tableau(self.logic, arg).build()
+        assert not proof.valid
 
 class TestGO(LogicTester):
 
