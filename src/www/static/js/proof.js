@@ -229,6 +229,12 @@
         'M' : true
     }
 
+    // enums
+    const E_AdjustWhat = {
+        Font  : 'font'  ,
+        Width : 'width' ,
+        Step  : 'step'
+    }
     /**
      * Show only the lineage of the given structure.
      *
@@ -891,14 +897,14 @@
     function adjust($proof, what, howMuch) {
 
         switch (what) {
-            case 'font'  :
+            case E_AdjustWhat.Font  :
                 if (howMuch == 'reset') {
                     $proof.css({fontSize: 'inherit'})
                 } else {
                     $proof.css({fontSize: parseInt($proof.css('font-size')) + (parseFloat(howMuch) || 0)})
                 }
                 break
-            case 'width' :
+            case E_AdjustWhat.Width :
                 var p
                 if (howMuch == 'reset') {
                     p = 100
@@ -911,7 +917,7 @@
                 $proof.attr(Attrib.CurWidthPct, p)
                 $proof.css({width: p + '%'})
                 break
-            case 'step':
+            case E_AdjustWhat.Step:
                 var maxSteps = +$proof.attr(Attrib.NumSteps)
                 var n
                 if (howMuch == 'beginning' || howMuch == 'start') {
@@ -1130,29 +1136,29 @@
         } else if ($target.is(Dcls.PartHeader)) {
             adjustMainHeight($main, Anim.Fast)
         } else if ($target.hasClass(Cls.StepStart)) {
-            adjust($proof, 'step', 'start')
+            adjust($proof, E_AdjustWhat.Step, 'start')
         } else if ($target.hasClass(Cls.StepNext)) {
-            adjust($proof, 'step', 1)
+            adjust($proof, E_AdjustWhat.Step, 1)
         } else if ($target.hasClass(Cls.StepPrev)) {
-            adjust($proof, 'step', -1)
+            adjust($proof, E_AdjustWhat.Step, -1)
         } else if ($target.hasClass(Cls.StepEnd)) {
-            adjust($proof, 'step', 'end')
+            adjust($proof, E_AdjustWhat.Step, 'end')
         } else if ($target.hasClass(Cls.FontPlus)) {
-            adjust($proof, 'font', 1)
+            adjust($proof, E_AdjustWhat.Font, 1)
         } else if ($target.hasClass(Cls.FontMinus)) {
-            adjust($proof, 'font', -1)
+            adjust($proof, E_AdjustWhat.Font, -1)
         } else if ($target.hasClass(Cls.FontReset)) {
-            adjust($proof, 'font', 'reset')
+            adjust($proof, E_AdjustWhat.Font, 'reset')
         } else if ($target.hasClass(Cls.WidthPlus)) {
-            adjust($proof, 'width', 10)
+            adjust($proof, E_AdjustWhat.Width, 10)
         } else if ($target.hasClass(Cls.WidthPlusPlus)) {
-            adjust($proof, 'width', 25)
+            adjust($proof, E_AdjustWhat.Width, 25)
         } else if ($target.hasClass(Cls.WidthMinus)) {
-            adjust($proof, 'width', -10)
+            adjust($proof, E_AdjustWhat.Width, -10)
         } else if ($target.hasClass(Cls.WidthMinusMinus)) {
-            adjust($proof, 'width', -25)
+            adjust($proof, E_AdjustWhat.Width, -25)
         } else if ($target.hasClass(Cls.WidthReset)) {
-            adjust($proof, 'width', 'reset')
+            adjust($proof, E_AdjustWhat.Width, 'reset')
         } else if ($target.hasClass(Cls.StepRuleTarget)) {
             var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
             doHighlight({$proof: $proof, stay: true, off: off, ruleTarget: true})
@@ -1251,40 +1257,40 @@
 
         switch (key) {
             case '>':
-                adjust($proof, 'step', 1)
+                adjust($proof, E_AdjustWhat.Step, 1)
                 break
             case '<':
-                adjust($proof, 'step', -1)
+                adjust($proof, E_AdjustWhat.Step, -1)
                 break
             case 'B':
-                adjust($proof, 'step', 'start')
+                adjust($proof, E_AdjustWhat.Step, 'start')
                 break
             case 'E':
-                adjust($proof, 'step', 'end')
+                adjust($proof, E_AdjustWhat.Step, 'end')
                 break
             case '+':
-                adjust($proof, 'font', 1)
+                adjust($proof, E_AdjustWhat.Font, 1)
                 break
             case '-':
-                adjust($proof, 'font', -1)
+                adjust($proof, E_AdjustWhat.Font, -1)
                 break
             case '=':
-                adjust($proof, 'font', 'reset')
+                adjust($proof, E_AdjustWhat.Font, 'reset')
                 break
             case ']':
-                adjust($proof, 'width', 10)
+                adjust($proof, E_AdjustWhat.Width, 10)
                 break
             case '}':
-                adjust($proof, 'width', 25)
+                adjust($proof, E_AdjustWhat.Width, 25)
                 break
             case '[':
-                adjust($proof, 'width', -10)
+                adjust($proof, E_AdjustWhat.Width, -10)
                 break
             case '{':
-                adjust($proof, 'width', -25)
+                adjust($proof, E_AdjustWhat.Width, -25)
                 break
             case '|':
-                adjust($proof, 'width', 'reset')
+                adjust($proof, E_AdjustWhat.Width, 'reset')
                 break
             case 'O':
                 if ($proof.children(Sel.CanBranchFilter).length) {
