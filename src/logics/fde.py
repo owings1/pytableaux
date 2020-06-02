@@ -84,8 +84,8 @@ class Model(logic.Model):
         self.opaques = {}
         self.constants = set()
         self.predicates = set([
-            Identity,
-            Existence,
+            #Identity,
+            #Existence,
         ])
 
     def value_of_operated(self, sentence, **kw):
@@ -377,6 +377,7 @@ class Model(logic.Model):
         return super(Model, self).value_of_quantified(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
+
         # Define as generically as possible for reuse.
         if operator == 'Assertion':
             return a
@@ -452,7 +453,7 @@ class TableauxRules(object):
 
         def example(self):
             a = atomic(0, 0)
-            self.tableau.branch().update([
+            self.branch().update([
                 {'sentence': a, 'designated': True },
                 {'sentence': a, 'designated': False},
             ])
@@ -556,7 +557,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.add({'sentence': negate(s.lhs), 'designated': d}).tick(node)
             b2.add({'sentence': negate(s.rhs), 'designated': d}).tick(node)
 
@@ -583,7 +584,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.add({'sentence': s.lhs, 'designated': d}).tick(node)
             b2.add({'sentence': s.rhs, 'designated': d}).tick(node)
 
@@ -666,7 +667,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.add({'sentence': negate(s.lhs), 'designated': d}).tick(node)
             b2.add({'sentence':        s.rhs , 'designated': d}).tick(node)
 
@@ -732,7 +733,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.add({'sentence':        s.lhs , 'designated': d}).tick(node)
             b2.add({'sentence': negate(s.rhs), 'designated': d}).tick(node)
 
@@ -761,7 +762,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 {'sentence': negate(s.lhs), 'designated': d},
                 {'sentence': negate(s.rhs), 'designated': d},
@@ -803,7 +804,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 {'sentence':        s.lhs , 'designated': d},
                 {'sentence': negate(s.rhs), 'designated': d},
@@ -1032,7 +1033,7 @@ class TableauxRules(object):
         def example(self):
             # keep quantifier and designation neutral for inheritance below
             s = examples.quantified(self.quantifier)
-            self.tableau.branch().add({ 'sentence' : s, 'designated' : self.designation })
+            self.branch().add({ 'sentence' : s, 'designated' : self.designation })
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """

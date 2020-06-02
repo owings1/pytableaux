@@ -99,7 +99,7 @@ class TableauxRules(object):
 
         def example(self):
             a = logic.atomic(0, 0)
-            self.tableau.branch().update([
+            self.branch().update([
                 { 'sentence' :        a  , 'designated' : True },
                 { 'sentence' : negate(a) , 'designated' : True }
             ])

@@ -192,7 +192,7 @@ class TableauxRules(object):
 
         def apply_to_node(self, node, branch):
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             s = self.sentence(node)
             b1.add({'sentence': s.lhs, 'designated': False}).tick(node)
             b2.add({'sentence': s.rhs, 'designated': False}).tick(node)
@@ -346,7 +346,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 {'sentence': negate(s.lhs), 'designated': False},
                 {'sentence':        s.rhs , 'designated': False},
@@ -405,7 +405,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             disj = operate('Disjunction', [negate(s.lhs), s.rhs])
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.add({'sentence': disj, 'designated': True}).tick(node)
             b2.update([
                 {'sentence':        s.lhs , 'designated': False},
@@ -451,7 +451,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 {'sentence': s.lhs,'designated' : True },
                 {'sentence': s.rhs,'designated' : False},
@@ -529,7 +529,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             cond1 = operate('Conditional', [s.lhs, s.rhs])
             cond2 = operate('Conditional', [s.rhs, s.lhs])
             b1.add({'sentence': negate(cond1), 'designated': True}).tick(node)
@@ -657,7 +657,7 @@ class TableauxRules(object):
             sq = quantify(self.convert_to, v, negate(si))
 
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.add({'sentence': sq, 'designated': d}).tick(node)
             b2.update([
                 {'sentence':        ss , 'designated': not d},

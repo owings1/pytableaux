@@ -100,7 +100,7 @@ class TableauxRules:
             })
 
         def example(self):
-            self.tableau.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
+            self.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
 
     class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
         """

@@ -267,7 +267,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             b1_s = operate('Disjunction', [negate(s.lhs), s.rhs])
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.add(
                 { 'sentence' : b1_s, 'designated' : True }
             ).tick(node)
@@ -336,7 +336,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 {'sentence': s.lhs, 'designated': True},
                 {'sentence': s.rhs, 'designated': False},
@@ -398,7 +398,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             s_mbicond = operate('Material Biconditional', s.operands)
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 {'sentence': s_mbicond, 'designated': True},
             ]).tick(node)
@@ -451,7 +451,7 @@ class TableauxRules(object):
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
-            b1, b2 = branch, self.tableau.branch(branch)
+            b1, b2 = branch, self.branch(branch)
             s_cond1 = operate('Conditional', [s.lhs, s.rhs])
             s_cond2 = operate('Conditional', [s.rhs, s.lhs])
             b1.update([
@@ -496,7 +496,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             s_mbicond = operate('Material Biconditional', s.operands)
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 {'sentence': negate(s_mbicond), 'designated': False},
             ]).tick(node)

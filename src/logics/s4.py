@@ -109,7 +109,7 @@ class TableauxRules(object):
             })
 
         def example(self):
-            self.tableau.branch().update([
+            self.branch().update([
                 { 'world1' : 0, 'world2' : 1 },
                 { 'world1' : 1, 'world2' : 2 }
             ])

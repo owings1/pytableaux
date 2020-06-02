@@ -263,8 +263,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
-            b2 = self.tableau.branch(branch)
-            b3 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
+            b3 = self.branch(branch)
             b1.update([
                 {'sentence':        lhs , 'designated': False},
             ]).tick(node)
@@ -327,7 +327,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 {'sentence': lhs, 'designated': True},
                 {'sentence': rhs, 'designated': False},
@@ -380,8 +380,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
-            b2 = self.tableau.branch(branch)
-            b3 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
+            b3 = self.branch(branch)
             b1.update([
                 {'sentence': lhs, 'designated': False},
                 {'sentence': rhs, 'designated': False},
@@ -451,7 +451,7 @@ class TableauxRules(object):
             s_cond1 = operate('Conditional', [lhs, rhs])
             s_cond2 = operate('Conditional', [rhs, lhs])
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 {'sentence': s_cond1, 'designated': False},
             ]).tick(node)
@@ -494,7 +494,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 {'sentence': lhs, 'designated': False},
                 {'sentence': rhs, 'designated': False},

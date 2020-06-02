@@ -148,8 +148,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             b1 = branch
-            b2 = self.tableau.branch(branch)
-            b3 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
+            b3 = self.branch(branch)
             b1.update([
                 {'sentence':        s.lhs , 'designated': True},
                 {'sentence': negate(s.rhs), 'designated': True},
@@ -238,8 +238,8 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             b1 = branch
-            b2 = self.tableau.branch(branch)
-            b3 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
+            b3 = self.branch(branch)
             b1.update([
                 {'sentence':        s.lhs , 'designated': d},
                 {'sentence': negate(s.lhs), 'designated': d},
@@ -317,8 +317,8 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             b1 = branch
-            b2 = self.tableau.branch(branch)
-            b3 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
+            b3 = self.branch(branch)
             b1.update([
                 {'sentence':        s.lhs , 'designated': d},
                 {'sentence': negate(s.rhs), 'designated': d},
@@ -409,8 +409,8 @@ class TableauxRules(object):
             s = self.sentence(node)
             d = self.designation
             b1 = branch
-            b2 = self.tableau.branch(branch)
-            b3 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
+            b3 = self.branch(branch)
             b1.update([
                 {'sentence':        s.lhs , 'designated': d},
                 {'sentence': negate(s.lhs), 'designated': d},
@@ -482,8 +482,8 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             b1 = branch
-            b2 = self.tableau.branch(branch)
-            b3 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
+            b3 = self.branch(branch)
             b1.add({'sentence': s, 'designated': True}).tick(node)
             b2.update([
                 {'sentence':        s.lhs , 'designated': False},

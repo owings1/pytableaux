@@ -567,7 +567,7 @@ class TableauxRules(object):
 
         def example(self):
             a = atomic(0, 0)
-            self.tableau.branch().update([
+            self.branch().update([
                 {'sentence':        a , 'world': 0},
                 {'sentence': negate(a), 'world': 0},
             ])
@@ -591,7 +591,7 @@ class TableauxRules(object):
 
         def example(self):
             s = negate(examples.self_identity())
-            self.tableau.branch().add({'sentence': s, 'world': 0})
+            self.branch().add({'sentence': s, 'world': 0})
 
     class NonExistenceClosure(logic.TableauxSystem.ClosureRule):
         """
@@ -609,7 +609,7 @@ class TableauxRules(object):
 
         def example(self):
             s = logic.parse('NJm')
-            self.tableau.branch().add({'sentence': s, 'world': 0})
+            self.branch().add({'sentence': s, 'world': 0})
 
     class DoubleNegation(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -682,7 +682,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             w = node.props['world']
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.add({'sentence': negate(s.lhs), 'world': w}).tick(node)
             b2.add({'sentence': negate(s.rhs), 'world': w}).tick(node)
 
@@ -709,7 +709,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             w = node.props['world']
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.add({'sentence': s.lhs, 'world': w}).tick(node)
             b2.add({'sentence': s.rhs, 'world': w}).tick(node)
 
@@ -753,7 +753,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             w = node.props['world']
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.add({'sentence': negate(s.lhs), 'world': w}).tick(node)
             b2.add({'sentence':        s.rhs , 'world': w}).tick(node)
 
@@ -800,7 +800,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             w = node.props['world']
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 { 'sentence' : negate(s.lhs), 'world' : w }, 
                 { 'sentence' : negate(s.rhs), 'world' : w }
@@ -842,7 +842,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             w = node.props['world']
             b1 = branch
-            b2 = self.tableau.branch(branch)
+            b2 = self.branch(branch)
             b1.update([
                 { 'sentence':        s.lhs  , 'world' : w },
                 { 'sentence': negate(s.rhs) , 'world' : w }
@@ -1004,7 +1004,7 @@ class TableauxRules(object):
             branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example(self):
-            self.tableau.branch().add({'sentence': examples.quantified(self.quantifier), 'world': 0})
+            self.branch().add({'sentence': examples.quantified(self.quantifier), 'world': 0})
 
     class UniversalNegated(ExistentialNegated):
         """
@@ -1090,7 +1090,7 @@ class TableauxRules(object):
 
         def example(self):
             s = operate(self.operator, [atomic(0, 0)])
-            self.tableau.branch().update([
+            self.branch().update([
                 {'sentence': s, 'world': 0},
                 {'world1': 0, 'world2': 1},
             ])
@@ -1155,7 +1155,7 @@ class TableauxRules(object):
             target['branch'].add({'sentence': target['sentence'], 'world': target['world']})
 
         def example(self):
-            self.tableau.branch().update([ 
+            self.branch().update([ 
                 {'sentence' : examples.predicated(), 'world': 0},
                 {'sentence' : examples.identity(),   'world': 0},
             ])
