@@ -26,6 +26,7 @@ import os
 import re
 import html
 from jinja2 import Environment, FileSystemLoader
+from html.parser import HTMLParser
 
 writer = writers.html.Writer()
 sp = notations.standard.Parser(examples.vocabulary)
@@ -68,7 +69,10 @@ def get_replace_sentence_expressions_result(text):
     is_found = False
     replaced = list()
     for s in re.findall(r'P{(.*?)}', text):
-        s1 = html.unescape(s)
+        try:
+            s1 = html.unescape(s)
+        except AttributeError:
+            s1 = HTMLParser().unescape(s)
         replaced.append(s1)
         is_found = True
         sentence = sp.parse(s1)
