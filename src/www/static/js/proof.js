@@ -1400,6 +1400,9 @@
             position: {my: 'top-60 right', at: 'right center'}
         })
 
+        // set models resizable
+        $(Dcls.CollapseContent, Dcls.Models).resizable()
+
         // monitor modifier keys
         $(document).on('keyup keydown', function(e) {
             ModKey.shift   = e.shiftKey
