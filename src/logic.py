@@ -1646,6 +1646,10 @@ class TableauxSystem(object):
             self.model = model
             return model
 
+        def branch(self):
+            # Convenience for tableau branch method
+            return self.tableau.branch(self)
+
         def __repr__(self):
             return {'nodes': len(self.nodes), 'leaf': self.leaf, 'closed': self.closed}.__repr__()
 
@@ -1728,6 +1732,10 @@ class TableauxSystem(object):
             # Add example branches/nodes sufficient for applies() to return true. Implementations should modify
             # the tableau directly, with no return value. Used for building examples/documentation.
             raise NotImplementedError(NotImplemented)
+
+        def branch(self, other_branch=None):
+            # convenience for self.tableau.branch()
+            return self.tableau.branch(other_branch)
 
         def sentence(self, node):
             if 'sentence' in node.props:
