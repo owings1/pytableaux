@@ -590,10 +590,7 @@ class TableauxRules(object):
         """
         pass
 
-    closure_rules = [
-        fde.TableauxRules.Closure,
-        lp.TableauxRules.Closure,
-    ]
+    closure_rules = list(lp.TableauxRules.closure_rules)
 
     rule_groups = [
         [

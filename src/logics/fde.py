@@ -434,7 +434,7 @@ class TableauxRules(object):
     to double negation only, one designated rule, and one undesignated rule.
     """
 
-    class Closure(logic.TableauxSystem.ClosureRule):
+    class DesignationClosure(logic.TableauxSystem.ClosureRule):
         """
         A branch closes when a sentence appears on a node marked *designated*,
         and the same sentence appears on a node marked *undesignated*.
@@ -1093,7 +1093,7 @@ class TableauxRules(object):
         designation = False
 
     closure_rules = [
-        Closure,
+        DesignationClosure,
     ]
 
     rule_groups = [

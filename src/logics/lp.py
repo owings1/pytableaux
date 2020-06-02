@@ -73,7 +73,7 @@ class TableauxRules(object):
     closure rule.
     """
 
-    class Closure(logic.TableauxSystem.ClosureRule):
+    class GapClosure(logic.TableauxSystem.ClosureRule):
         """
         A branch closes when a sentence and its negation both appear as undesignated nodes.
         This rule is **in addition to** the `FDE closure rule`_.
@@ -504,9 +504,8 @@ class TableauxRules(object):
         """
         pass
 
-    closure_rules = [
-        fde.TableauxRules.Closure,
-        Closure,
+    closure_rules = list(fde.TableauxRules.closure_rules) + [
+        GapClosure,
     ]
 
     rule_groups = [

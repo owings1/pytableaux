@@ -473,10 +473,7 @@ class TableauxRules(object):
         """
         pass
 
-    closure_rules = [
-        k3.TableauxRules.Closure,
-        fde.TableauxRules.Closure,
-    ]
+    closure_rules = list(k3.TableauxRules.closure_rules)
 
     rule_groups = [
         [

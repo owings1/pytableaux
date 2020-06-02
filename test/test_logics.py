@@ -47,9 +47,9 @@ class TestFDE(LogicTester):
 
     logic = get_logic('FDE')
 
-    def test_Closure_example(self):
+    def test_DesignationClosure_example(self):
         proof = tableau(self.logic)
-        proof.get_rule(self.logic.TableauxRules.Closure).example()
+        proof.get_rule(self.logic.TableauxRules.DesignationClosure).example()
         proof.build()
         assert len(proof.branches) == 1
         assert proof.valid
@@ -214,9 +214,9 @@ class TestK3(LogicTester):
 
     logic = get_logic('K3')
 
-    def test_Closure_example(self):
+    def test_GlutClosure_example(self):
         proof = tableau(self.logic)
-        rule = proof.get_rule(self.logic.TableauxRules.Closure)
+        rule = proof.get_rule(self.logic.TableauxRules.GlutClosure)
         rule.example()
         proof.build()
         assert len(proof.branches) == 1
@@ -438,9 +438,9 @@ class TestLP(LogicTester):
 
     logic = get_logic('LP')
 
-    def test_Closure_example(self):
+    def test_GapClosure_example(self):
         proof = tableau(self.logic)
-        rule = proof.get_rule(self.logic.TableauxRules.Closure)
+        rule = proof.get_rule(self.logic.TableauxRules.GapClosure)
         rule.example()
         proof.build()
         assert proof.valid
