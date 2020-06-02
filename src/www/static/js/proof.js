@@ -954,13 +954,15 @@
         if (isShow) {
             $heading.add($wrapper).removeClass(Cls.Collapsed).addClass(Cls.Uncollapsed)
             $contents.removeClass(Cls.Collapsed).addClass(Cls.Uncollapsed).show(speed)
-            $heading.tooltip('disable')
+            // see regression notes below
+            //$heading.tooltip('disable')
         } else {
             $heading.add($wrapper).removeClass(Cls.Uncollapsed).addClass(Cls.Collapsed)
             $contents.removeClass(Cls.Uncollapsed).addClass(Cls.Collapsed).hide(speed)
-            setTimeout(function() {
-                $heading.tooltip('enable')
-            }, 100)
+            // see regression notes below
+            //setTimeout(function() {
+            //    $heading.tooltip('enable')
+            //}, 100)
             
         }
         adjustMainHeight($main, speed)
@@ -1402,9 +1404,10 @@
         })
 
         // set tooltip plugin
-        $(Dcls.CollapseHead).tooltip({
-            position: {my: 'top-60 right', at: 'right center'}
-        })
+        // This causes overactive UI and regression on after element click
+        //$(Dcls.CollapseHead).tooltip({
+        //    position: {my: 'top-60 right', at: 'right center'}
+        //})
 
         // set models resizable
         $(Dcls.CollapseContent, Dcls.Models).resizable()
