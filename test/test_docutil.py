@@ -37,7 +37,7 @@ def test_get_replace_sentence_expressions_result_1():
     assert sstr not in res['text']
 
 def test_get_rule_example_html_1():
-    res = docutil.get_rule_example_html('cpl', 'Closure')
+    res = docutil.get_rule_example_html('cpl', 'ContradictionClosure')
     assert len(res) > 0
 
 def test_get_build_trunk_example_html_1():

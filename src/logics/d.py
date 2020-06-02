@@ -115,10 +115,7 @@ class TableauxRules:
                 return False
             return super(TableauxRules.IdentityIndiscernability, self).applies_to_branch(branch)
 
-    closure_rules = [
-        k.TableauxRules.Closure,
-        k.TableauxRules.SelfIdentityClosure,
-    ]
+    closure_rules = list(k.TableauxRules.closure_rules)
 
     rule_groups = [
         [

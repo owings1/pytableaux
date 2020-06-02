@@ -84,10 +84,7 @@ class TableauxRules(object):
         def example(self):
             self.tableau.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
 
-    closure_rules = [
-        k.TableauxRules.Closure,
-        k.TableauxRules.SelfIdentityClosure,
-    ]
+    closure_rules = list(k.TableauxRules.closure_rules)
 
     rule_groups = [
         [

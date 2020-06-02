@@ -250,10 +250,7 @@ class TableauxRules(object):
         """
         pass
 
-    closure_rules = [
-        cpl.TableauxRules.Closure,
-        cpl.TableauxRules.SelfIdentityClosure,
-    ]
+    closure_rules = list(cpl.TableauxRules.closure_rules)
 
     rule_groups = [
         [

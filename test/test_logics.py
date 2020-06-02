@@ -691,13 +691,19 @@ class TestCPL(LogicTester):
 
     def test_Closure_example(self):
         proof = tableau(self.logic)
-        rule = proof.get_rule('Closure')
+        rule = proof.get_rule('ContradictionClosure')
         rule.example()
         assert len(proof.branches) == 1
 
     def test_SelfIdentityClosure_example(self):
         proof = tableau(self.logic)
         rule = proof.get_rule('SelfIdentityClosure')
+        rule.example()
+        assert len(proof.branches) == 1
+
+    def test_NonExistenceClosure_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule('NonExistenceClosure')
         rule.example()
         assert len(proof.branches) == 1
 
@@ -803,8 +809,8 @@ class TestK(LogicTester):
 
     logic = get_logic('K')
 
-    def test_Closure_example(self):
-        rule = self.logic.TableauxRules.Closure(empty_proof())
+    def test_ContradictionClosure_example(self):
+        rule = self.logic.TableauxRules.ContradictionClosure(empty_proof())
         rule.example()
         assert len(rule.tableau.branches) == 1
 

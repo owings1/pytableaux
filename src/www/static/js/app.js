@@ -82,6 +82,7 @@
                         clearExampleArgument()
                         ensureEmptyPremise()
                         refreshStatuses()
+                        refreshArgumentHeader()
                     }
                 })
                 
@@ -102,6 +103,7 @@
                 if ($('.evaluation').length) {
                     refreshStatuses()
                 }
+                refreshArgumentHeader()
             })
         }
 

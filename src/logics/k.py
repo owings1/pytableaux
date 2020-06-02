@@ -546,7 +546,7 @@ class TableauxRules(object):
     connectives.
     """
 
-    class Closure(logic.TableauxSystem.ClosureRule):
+    class ContradictionClosure(logic.TableauxSystem.ClosureRule):
         """
         A branch closes when a sentence and its negation both appear on a node **with the
         same world** on the branch.
@@ -591,6 +591,24 @@ class TableauxRules(object):
 
         def example(self):
             s = negate(examples.self_identity())
+            self.tableau.branch().add({'sentence': s, 'world': 0})
+
+    class NonExistenceClosure(logic.TableauxSystem.ClosureRule):
+        """
+        A branch closes when a sentence of the form P{~!a} appears on the branch *at any world*.
+        """
+
+        def applies_to_branch(self, branch):
+            for node in branch.get_nodes():
+                if node.has('sentence'):
+                    s = node.props['sentence']
+                    if s.is_operated() and s.operator == 'Negation':
+                        o = s.operand
+                        if o.is_predicated() and o.predicate.name == 'Existence':
+                            return {'node': node, 'type': 'Node'}
+
+        def example(self):
+            s = logic.parse('NJm')
             self.tableau.branch().add({'sentence': s, 'world': 0})
 
     class DoubleNegation(IsModal, logic.TableauxSystem.ConditionalNodeRule):
@@ -1143,8 +1161,9 @@ class TableauxRules(object):
             ])
 
     closure_rules = [
-        Closure,
+        ContradictionClosure,
         SelfIdentityClosure,
+        NonExistenceClosure,
     ]
 
     rule_groups = [

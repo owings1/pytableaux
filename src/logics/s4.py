@@ -114,10 +114,7 @@ class TableauxRules(object):
                 { 'world1' : 1, 'world2' : 2 }
             ])
 
-    closure_rules = [
-        k.TableauxRules.Closure,
-        k.TableauxRules.SelfIdentityClosure,
-    ]
+    closure_rules = list(k.TableauxRules.closure_rules)
 
     rule_groups = [
         [
