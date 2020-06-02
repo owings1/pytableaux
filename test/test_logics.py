@@ -378,6 +378,62 @@ class TestB3E(LogicTester):
         proof.build()
         assert proof.valid
 
+class TestL3(LogicTester):
+
+    logic = get_logic('L3')
+
+    def test_truth_table_conditional(self):
+        tbl = truth_table(self.logic, 'Conditional')
+        assert tbl['outputs'][3] == 0.5
+        assert tbl['outputs'][4] == 1
+        assert tbl['outputs'][6] == 0
+        
+    def test_valid_cond_identity(self):
+        proof = self.example_proof('Conditional Identity')
+        assert proof.valid
+
+    def test_valid_cond_mp(self):
+        proof = self.example_proof('Conditional Modus Ponens')
+        assert proof.valid
+
+    def test_valid_bicond_elim_1(self):
+        proof = self.example_proof('Biconditional Elimination 1')
+        assert proof.valid
+
+    def test_valid_bicond_elim_3(self):
+        proof = self.example_proof('Biconditional Elimination 3')
+        assert proof.valid
+
+    def test_valid_bicond_intro_3(self):
+        proof = self.example_proof('Biconditional Introduction 3')
+        assert proof.valid
+
+    def test_valid_bicond_ident(self):
+        proof = self.example_proof('Biconditional Identity')
+        assert proof.valid
+
+    def test_invalid_material_identify(self):
+        proof = self.example_proof('Material Identity')
+        assert not proof.valid
+
+    def test_invalid_cond_contraction(self):
+        proof = self.example_proof('Conditional Contraction')
+        assert not proof.valid
+
+    def test_invalid_cond_pseudo_contraction(self):
+        proof = self.example_proof('Conditional Pseudo Contraction')
+        assert not proof.valid
+
+    def test_valid_bicond_from_mat_bicond(self):
+        arg = argument('Bab', premises=['Eab'])
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
+
+    def test_invalid_mat_bicon_from_bicond(self):
+        arg = argument('Eab', premises=['Bab'])
+        proof = tableau(self.logic, arg).build()
+        assert not proof.valid
+
 class TestLP(LogicTester):
 
     logic = get_logic('LP')
@@ -1190,49 +1246,3 @@ class TestS4(LogicTester):
         proof = tableau(self.logic, arg)
         proof.build(timeout=1000)
         assert proof.valid
-
-class TestL3(LogicTester):
-
-    logic = get_logic('L3')
-
-    def test_truth_table_conditional(self):
-        tbl = truth_table(self.logic, 'Conditional')
-        assert tbl['outputs'][3] == 0.5
-        assert tbl['outputs'][4] == 1
-        assert tbl['outputs'][6] == 0
-        
-    def test_valid_cond_identity(self):
-        proof = self.example_proof('Conditional Identity')
-        assert proof.valid
-
-    def test_valid_cond_mp(self):
-        proof = self.example_proof('Conditional Modus Ponens')
-        assert proof.valid
-
-    def test_valid_bicond_elim_1(self):
-        proof = self.example_proof('Biconditional Elimination 1')
-        assert proof.valid
-
-    def test_valid_bicond_elim_3(self):
-        proof = self.example_proof('Biconditional Elimination 3')
-        assert proof.valid
-
-    def test_valid_bicond_intro_3(self):
-        proof = self.example_proof('Biconditional Introduction 3')
-        assert proof.valid
-
-    def test_valid_bicond_ident(self):
-        proof = self.example_proof('Biconditional Identity')
-        assert proof.valid
-
-    def test_invalid_material_identify(self):
-        proof = self.example_proof('Material Identity')
-        assert not proof.valid
-
-    def test_invalid_cond_contraction(self):
-        proof = self.example_proof('Conditional Contraction')
-        assert not proof.valid
-
-    def test_invalid_cond_pseudo_contraction(self):
-        proof = self.example_proof('Conditional Pseudo Contraction')
-        assert not proof.valid
