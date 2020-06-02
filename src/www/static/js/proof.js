@@ -948,9 +948,14 @@
         if (isShow) {
             $heading.add($wrapper).removeClass(Cls.Collapsed).addClass(Cls.Uncollapsed)
             $contents.removeClass(Cls.Collapsed).addClass(Cls.Uncollapsed).show(speed)
+            $heading.tooltip('disable')
         } else {
             $heading.add($wrapper).removeClass(Cls.Uncollapsed).addClass(Cls.Collapsed)
             $contents.removeClass(Cls.Uncollapsed).addClass(Cls.Collapsed).hide(speed)
+            setTimeout(function() {
+                $heading.tooltip('enable')
+            }, 100)
+            
         }
         adjustMainHeight($main, speed)
     }
@@ -1388,6 +1393,11 @@
             const $models = $(this)
             handleModelsClick($(e.target), $models)
             $CurrentMain = $models.closest(Dcls.Main)
+        })
+
+        // set tooltip plugin
+        $(Dcls.CollapseHead).tooltip({
+            position: {my: 'top-60 right', at: 'right center'}
         })
 
         // monitor modifier keys

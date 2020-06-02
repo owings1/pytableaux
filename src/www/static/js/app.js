@@ -492,7 +492,7 @@
                         }),
                         success: function(res) {
                             $status.removeClass('bad').addClass('good')
-                            $status.attr('title', res.result.type)
+                            $status.attr('title', res.result.type).tooltip()
                             SentenceRenders[input] = res.result.rendered
                             refreshArgumentHeader()
                         },
@@ -514,7 +514,7 @@
                             } else {
                                 title = [textStatus, errorThrown].join(': ')
                             }
-                            $status.attr('title', title)
+                            $status.attr('title', title).tooltip()
                             delete SentenceRenders[input]
                         }
                     })
