@@ -31,6 +31,7 @@
 
         const $Ctx = $('form.argument')
         const $Frm = $Ctx
+
         /**
          * Main initialization routine.
          *
@@ -404,8 +405,18 @@
             $('.lexicon.notation-' + notation, $Ctx).show()
             $('.predicateSymbol', $Ctx).hide()
             $('.predicateSymbol.notation-' + notation, $Ctx).show()
-            if ($('#example_argument').val()) {
+            if ($('#example_argument', $Ctx).val()) {
                 refreshExampleArgument()
+            } else {
+                // translate good sentences
+                $('input.sentence', $Ctx).each(function() {
+                    const value = $(this).val()
+                    if (value && SentenceRenders[value]) {
+                        if (SentenceRenders[value][notation]) {
+                            $(this).val(SentenceRenders[value][notation].default)
+                        }
+                    }
+                })
             }
         }
 
@@ -466,6 +477,7 @@
                             $status.removeClass('bad').addClass('good')
                             $status.attr('title', res.result.type)
                             SentenceRenders[input] = res.result.rendered
+                            console.log(SentenceRenders)
                             refreshArgumentHeader()
                         },
                         error: function(xhr, textStatus, errorThrown) {
