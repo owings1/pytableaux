@@ -82,7 +82,7 @@ class TableauxRules(object):
             target['branch'].add({ 'world1': target['world'], 'world2': target['world'] })
 
         def example(self):
-            self.tableau.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
+            self.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
 
     closure_rules = list(k.TableauxRules.closure_rules)
 
