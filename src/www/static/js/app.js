@@ -261,6 +261,11 @@
             SentenceRenders = {}
         }
 
+        /**
+         * Clear the example argument select menu.
+         *
+         * @return void
+         */
         function clearExampleArgument() {
             $('#example_argument', $Ctx).val('')
             $('#example_argument', $Ctx).selectmenu('refresh')
