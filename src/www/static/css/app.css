@@ -44,7 +44,7 @@ body {
     position: fixed;
     width: 100%;
     background-color: #003d4c;
-    z-index: 3;
+    z-index: 101;
 }
 .header-wrapper {
     top: 0px;
@@ -234,6 +234,14 @@ body {
     background-image: url(../img/book.svg);
 }
 /* End Collapser */
+.pt-app .clear-argument {
+    float: right;
+    margin-right: 28px;
+    margin-top: 8px;
+}
+.pt-app a#clear_argument {
+
+}
 .pt-app #logic-select-panel {
     margin-bottom: 10px;
 }

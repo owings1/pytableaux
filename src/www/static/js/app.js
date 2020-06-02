@@ -77,6 +77,11 @@
                         handlerCollapserHeadingClick($collapserHeading)
                     } else if ($target.is('.toggler')) {
                         $($target.attr('data-target')).toggle()
+                    } else if ($target.is('#clear_argument')) {
+                        clearArgument()
+                        clearExampleArgument()
+                        ensureEmptyPremise()
+                        refreshStatuses()
                     }
                 })
                 
@@ -252,6 +257,11 @@
             clearPremises()
             clearConclusion()
             SentenceRenders = {}
+        }
+
+        function clearExampleArgument() {
+            $('#example_argument', $Ctx).val('')
+            $('#example_argument', $Ctx).selectmenu('refresh')
         }
 
         /**
@@ -456,7 +466,7 @@
                 const $status = $(this).closest('div.input').find('.status')
                 const notation = currentNotation()
                 const input = $(this).val()
-                if (input || $(this).hasClass('conclusion')) {
+                if (input) {
                     const hash = hashString([input, notation].join('.'))
                     if (!isForce && +$status.attr('data-hash') === hash) {
                         return
@@ -477,7 +487,6 @@
                             $status.removeClass('bad').addClass('good')
                             $status.attr('title', res.result.type)
                             SentenceRenders[input] = res.result.rendered
-                            console.log(SentenceRenders)
                             refreshArgumentHeader()
                         },
                         error: function(xhr, textStatus, errorThrown) {
