@@ -487,9 +487,26 @@ class TestLP(LogicTester):
         proof = tableau(self.logic, argument('NUbc', ['a', 'UaNUbc'])).build()
         assert not proof.valid
 
+    def test_invalid_mp_with_neg_bicon(self):
+        arg = argument('NBab', premises=['c', 'BcNUab'])
+        proof = tableau(self.logic, arg).build()
+        assert not proof.valid
+
 class TestRM3(LogicTester):
 
     logic = get_logic('RM3')
+
+    def test_truth_table_conditional(self):
+        tbl = truth_table(self.logic, 'Conditional')
+        assert tbl['outputs'][0] == 1
+        assert tbl['outputs'][3] == 0
+        assert tbl['outputs'][4] == 0.75
+
+    def test_model_value_of_biconditional(self):
+        model = self.logic.Model()
+        model.set_literal_value(parse('a'), 0.75)
+        model.set_literal_value(parse('b'), 0)
+        assert model.value_of(parse('Bab')) == 0
 
     def test_valid_cond_mp(self):
         proof = self.example_proof('Conditional Modus Ponens')
@@ -538,6 +555,11 @@ class TestRM3(LogicTester):
         arg = argument('Bab', premises=['Eab'])
         proof = tableau(self.logic, arg).build()
         assert not proof.valid
+
+    def test_valid_mp_with_neg_bicon(self):
+        arg = argument('NBab', premises=['c', 'BcNUab'])
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
 
 class TestGO(LogicTester):
 
