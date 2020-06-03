@@ -37,6 +37,9 @@ a classical value (**T** or **F**).
     Notes
     =====
 
+    * Unlike `K3W`_, B3E has some logical truths. For example P{(A $ B) V ~(A $ B)}.
+      This logical truth is an instance of the Law of Excluded Middle.
+
     * The assertion operator can expression alternate versions of validities that
       fail in `K3W`_. For example, P{A} implies P{A V \*B} in B3E, which fails in
       `K3W`_.
