@@ -170,10 +170,10 @@ class TableauxRules(object):
                 # only apply to implementations for designated rules
                 branch = target['branch']
                 s = self.sentence(target['node'])
-                if not scores['b1']:
-                    scores['b1'] = branch.has({'sentence': s.lhs, 'designated': True})
-                if not scores['b2']:
-                    scores['b2'] = branch.has({'sentence': s.rhs, 'designated': True})
+                scores.update({
+                    'b1': scores['b1'] or branch.has({'sentence': s.lhs, 'designated': True}),
+                    'b2': scores['b2'] or branch.has({'sentence': s.rhs, 'designated': True}),
+                })
             return scores
 
     class ConjunctionUndesignated(fde.TableauxRules.ConjunctionUndesignated):
@@ -189,10 +189,10 @@ class TableauxRules(object):
                 # only apply to implementations for designated rules
                 branch = target['branch']
                 s = self.sentence(target['node'])
-                if not scores['b1']:
-                    scores['b1'] = branch.has({'sentence': negative(s.lhs), 'designated': True})
-                if not scores['b2']:
-                    scores['b2'] = branch.has({'sentence': negative(s.rhs), 'designated': True})
+                scores.update({
+                    'b1': scores['b1'] or branch.has({'sentence': negative(s.lhs), 'designated': True}),
+                    'b2': scores['b2'] or branch.has({'sentence': negative(s.rhs), 'designated': True}),
+                })
             return scores
 
     class ConjunctionNegatedUndesignated(fde.TableauxRules.ConjunctionNegatedUndesignated):
@@ -256,10 +256,10 @@ class TableauxRules(object):
                 # only apply to implementations for designated rules
                 branch = target['branch']
                 s = self.sentence(target['node'])
-                if not scores['b1']:
-                    scores['b1'] = branch.has({'sentence': s.lhs, 'designated': True})
-                if not scores['b2']:
-                    scores['b2'] = branch.has({'sentence': negative(s.rhs), 'designated': True})
+                scores.update({
+                    'b1': scores['b1'] or branch.has({'sentence':          s.lhs , 'designated': True}),
+                    'b2': scores['b2'] or branch.has({'sentence': negative(s.rhs), 'designated': True}),
+                })
             return scores
 
     class MaterialConditionalNegatedDesignated(fde.TableauxRules.MaterialConditionalNegatedDesignated):
@@ -284,18 +284,7 @@ class TableauxRules(object):
 
         .. _FDE MaterialConditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalNegatedUndesignated
         """
-
-        def score_target_map(self, target):
-            scores = super(TableauxRules.MaterialConditionalNegatedUndesignated, self).score_target_map(target)
-            if self.designation:
-                # only apply to implementations for designated rules
-                branch = target['branch']
-                s = self.sentence(target['node'])
-                if not scores['b1']:
-                    scores['b1'] = branch.has({'sentence': negative(s.lhs), 'designated': True})
-                if not scores['b2']:
-                    scores['b2'] = branch.has({'sentence': s.rhs, 'designated': True})
-            return scores
+        pass
 
     class MaterialBiconditionalDesignated(fde.TableauxRules.MaterialBiconditionalDesignated):
         """
@@ -310,16 +299,16 @@ class TableauxRules(object):
                 # only apply to implementations for designated rules
                 branch = target['branch']
                 s = self.sentence(target['node'])
-                if not scores['b1']:
-                    scores['b1'] = branch.has_any([
+                scores.update({
+                    'b1': scores['b1'] or branch.has_any([
                         {'sentence': s.lhs, 'designated': True},
                         {'sentence': s.rhs, 'designated': True},
-                    ])
-                if not scores['b2']:
-                    scores['b2'] = branch.has_any([
+                    ]),
+                    'b2': scores['b2'] or branch.has_any([
                         {'sentence': negative(s.lhs), 'designated': True},
                         {'sentence': negative(s.rhs), 'designated': True},
-                    ])
+                    ]),
+                })
             return scores
 
     class MaterialBiconditionalNegatedDesignated(fde.TableauxRules.MaterialBiconditionalNegatedDesignated):
@@ -335,16 +324,16 @@ class TableauxRules(object):
                 # only apply to implementations for designated rules
                 branch = target['branch']
                 s = self.sentence(target['node'])
-                if not scores['b1']:
-                    scores['b1'] = branch.has_any([
+                scores.update({
+                    'b1': scores['b1'] or branch.has_any([
                         {'sentence': negative(s.lhs), 'designated': True},
                         {'sentence': s.rhs,           'designated': True},
-                    ])
-                if not scores['b2']:
-                    scores['b2'] = branch.has_any([
+                    ]),
+                    'b2': scores['b2'] or branch.has_any([
                         {'sentence': s.lhs,           'designated': True},
                         {'sentence': negative(s.rhs), 'designated': True},
-                    ])
+                    ]),
+                })
             return scores
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
