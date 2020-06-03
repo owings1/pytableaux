@@ -840,6 +840,20 @@ class TestCPL(LogicTester):
         data = model.get_data()
         assert 'Atomics' in data
 
+    def test_identity_indiscernability_not_applies(self):
+        vocab = Vocabulary()
+        vocab.declare_predicate('MyPred', 0, 0, 2)
+        proof = tableau(self.logic)
+        s1 = parse('Fmn', vocabulary=vocab)
+        s2 = parse('Io1o2')
+        branch = proof.branch()
+        branch.update([
+            {'sentence': s1, 'world': 0},
+            {'sentence': s2, 'world': 0},
+        ])
+        rule = proof.get_rule(proof.logic.TableauxRules.IdentityIndiscernability)
+        assert not rule.applies_to_branch(branch)
+
 class TestCFOL(LogicTester):
 
     logic = get_logic('CFOL')
@@ -1241,6 +1255,94 @@ class TestK(LogicTester):
         assert frame_a.is_equivalent_to(frame_b)
         assert frame_b.is_equivalent_to(frame_a)
 
+    def test_frame_not_equals(self):
+        s = parse('a')
+        model1 = self.logic.Model()
+        model2 = self.logic.Model()
+        model1.set_literal_value(s, 1, world=0)
+        model2.set_literal_value(s, 0, world=0)
+        f1 = model1.world_frame(0)
+        f2 = model2.world_frame(0)
+        assert f1 != f2
+
+    def test_frame_not_equals(self):
+        s = parse('a')
+        model1 = self.logic.Model()
+        model2 = self.logic.Model()
+        model1.set_literal_value(s, 1, world=0)
+        model2.set_literal_value(s, 1, world=0)
+        f1 = model1.world_frame(0)
+        f2 = model2.world_frame(0)
+        assert f1 == f2
+
+    def test_frame_ordering(self):
+        s = parse('a')
+        model = self.logic.Model()
+        model.set_literal_value(s, 1, world=0)
+        model.set_literal_value(s, 0, world=1)
+        f1 = model.world_frame(0)
+        f2 = model.world_frame(1)
+        assert f2 > f1
+        assert f1 < f2
+        assert f2 >= f1
+        assert f1 <= f2
+        # coverage
+        assert f1.__cmp__(f2) < 0
+
+    def test_model_not_impl_various(self):
+        s1 = parse('Aab')
+        model = self.logic.Model()
+        with pytest.raises(NotImplementedError):
+            model.set_literal_value(s1, model.char_values['T'])
+        with pytest.raises(NotImplementedError):
+            model.value_of_modal(s1)
+        with pytest.raises(NotImplementedError):
+            model.value_of_quantified(s1)
+
+    def test_model_value_error_various(self):
+        s1 = parse('a')
+        model = self.logic.Model()
+        model.set_opaque_value(s1, model.char_values['T'])
+        with pytest.raises(Model.ModelValueError):
+            model.set_opaque_value(s1, model.char_values['F'])
+        model = self.logic.Model()
+        model.set_atomic_value(s1, model.char_values['T'])
+        with pytest.raises(Model.ModelValueError):
+            model.set_atomic_value(s1, model.char_values['F'])
+        s2 = parse('Fm', vocabulary=examples.vocabulary)
+        model.set_predicated_value(s2, model.char_values['T'])
+        with pytest.raises(Model.ModelValueError):
+            model.set_predicated_value(s2, model.char_values['F'])
+
+    def test_model_get_extension_adds_predicate_to_predicates(self):
+        # coverage
+        s1 = parse('Fm', vocabulary=examples.vocabulary)
+        model = self.logic.Model()
+        res = model.get_extension(s1.predicate)
+        assert len(res) == 0
+        assert s1.predicate in model.predicates
+
+    def test_model_is_countermodel_to_false1(self):
+        arg = argument('b', premises=['a'])
+        s1 = arg.premises[0]
+        model = self.logic.Model()
+        model.set_literal_value(s1, 0)
+        model.set_literal_value(arg.conclusion, 1)
+        assert not model.is_countermodel_to(arg)
+
+    def test_nonexistence_closure1(self):
+        arg = argument('b', premises=['NJm'])
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
+
+    def test_nonexistence_closure_example(self):
+        proof = tableau(self.logic, None)
+        rule = proof.get_rule(self.logic.TableauxRules.NonExistenceClosure)
+        rule.example()
+        proof.build()
+        assert proof.valid
+        
+        
 class TestD(LogicTester):
 
     logic = get_logic('D')

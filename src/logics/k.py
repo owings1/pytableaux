@@ -195,7 +195,8 @@ class Model(logic.Model):
 
         def __cmp__(self, other):
             # Python 2 only
-            return cmp(self.world, other.world)
+            #return cmp(self.world, other.world)
+            return (self.world > other.world) - (self.world < other.world)
 
     truth_values = [0, 1]
     truth_functional_operators = fde.Model.truth_functional_operators
@@ -360,9 +361,7 @@ class Model(logic.Model):
         if node.has('sentence'):
             sentence = node.props['sentence']
             world = node.props['world']
-            if self.is_sentence_opaque(sentence):
-                self.set_opaque_value(sentence, self.char_values['T'], world=world)
-            elif sentence.is_literal():
+            if sentence.is_literal():
                 self.set_literal_value(sentence, self.char_values['T'], world=world)
             self.predicates.update(node.predicates())
         elif node.has('world1') and node.has('world2'):
@@ -1060,23 +1059,22 @@ class TableauxRules(object):
             cands = list()
             worlds = branch.worlds()
             for node in branch.get_nodes():
-                if not node.has('sentence') or not node.has('world'):
-                    continue
-                s = self.sentence(node)
-                if s.operator == self.operator:                    
-                    s = s.operand
-                    w1 = node.props['world']
-                    for w2 in worlds:
-                        anode = branch.find({'world1': w1, 'world2': w2})
-                        if anode != None and not branch.has({'sentence': s, 'world': w2}):
-                            cands.append({
-                                'node'     : node,
-                                'sentence' : s,
-                                'world'    : w2,
-                                'branch'   : branch,
-                                'nodes'    : set([node, anode]),
-                                'type'     : 'Nodes',
-                            })
+                if node.has('sentence'):
+                    s = self.sentence(node)
+                    if s.operator == self.operator:                    
+                        s = s.operand
+                        w1 = node.props['world']
+                        for w2 in worlds:
+                            anode = branch.find({'world1': w1, 'world2': w2})
+                            if anode != None and not branch.has({'sentence': s, 'world': w2}):
+                                cands.append({
+                                    'node'     : node,
+                                    'sentence' : s,
+                                    'world'    : w2,
+                                    'branch'   : branch,
+                                    'nodes'    : set([node, anode]),
+                                    'type'     : 'Nodes',
+                                })
             return cands
 
         def apply_to_target(self, target):
@@ -1111,19 +1109,20 @@ class TableauxRules(object):
         def applies_to_branch(self, branch):
             nodes = {
                 n for n in branch.get_nodes(ticked = False) if (
-                    'sentence' in n.props and
+                    n.has('sentence') and
                     n.props['sentence'].is_predicated()
                 )
             }
             inodes = {
                 n for n in nodes if (
                     n.props['sentence'].predicate.name == 'Identity' and
+                    # checking length of the set excludes self-identity sentences.
                     len(set(n.props['sentence'].parameters)) == 2
                 )
             }
-            for node in inodes:
-                w = node.props['world']
-                pa, pb = node.props['sentence'].parameters
+            for inode in inodes:
+                w = inode.props['world']
+                pa, pb = inode.props['sentence'].parameters
                 # find a node n with a sentence s having one of those parameters p.
                 for n in nodes:
                     s = n.props['sentence']
@@ -1134,7 +1133,7 @@ class TableauxRules(object):
                         p = pb
                         p1 = pa
                     else:
-                        continue
+                        continue # pragma: no cover
                     # let s1 be the replacement of p with the other parameter p1 into s.
                     params = [p1 if param == p else param for param in s.parameters]
                     s1 = predicated(s.predicate, params)
