@@ -1,0 +1,34 @@
+**************************
+S5 - S5 Normal Modal Logic
+**************************
+
+Normal modal logic with reflexive, symmetric, and transitive access relation.
+
+.. contents:: :local:
+
+.. automodule:: logics.s5
+
+    Semantics
+    =========
+
+    .. autoclass:: Model
+        :members:
+
+    Tableaux System
+    ===============
+
+    .. autoclass:: TableauxSystem
+        :members: build_trunk
+
+    .. autoclass:: TableauxRules
+        :members:
+
+    Logical Consequence
+    ===================
+
+    **Logical Consequence** is defined just as in `K`_:
+
+    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
+      at *w0* are models where *C* also has the value **T** at *w0*.
+
+.. _K: k.html

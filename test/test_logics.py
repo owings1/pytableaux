@@ -1567,3 +1567,29 @@ class TestS4(LogicTester):
         proof = tableau(self.logic, argument('MNb', premises=['LCaMMMNb', 'Ma']))
         proof.build(timeout=5000)
         assert proof.valid
+
+class TestS5(LogicTester):
+
+    logic = get_logic('S5')
+
+    def test_Symmetric_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule(self.logic.TableauxRules.Symmetric)
+        rule.example()
+        proof.build()
+        branch = proof.branches[0]
+        assert branch.has({'world1': 1, 'world2': 0})
+
+    def test_valid_s4_cond_inf_2(self):
+        proof = self.example_proof('S4 Conditional Inference 2')
+        assert proof.valid
+
+    def test_valid_s5_cond_inf_1(self):
+        proof = self.example_proof('S5 Conditional Inference 1')
+        assert proof.valid
+
+    def test_model_finish_symmetry_visibles(self):
+        model = self.logic.Model()
+        model.add_access(0, 1)
+        model.finish()
+        assert 0 in model.visibles(1)

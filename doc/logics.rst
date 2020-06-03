@@ -21,6 +21,7 @@ Bivalent Modal
     logics/d
     logics/t
     logics/s4
+    logics/s5
 
 Many-valued
 ===========

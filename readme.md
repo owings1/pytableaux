@@ -45,6 +45,7 @@ Bivalent Modal
 - **D** - Deontic Normal Modal Logic
 - **T** - Reflexive Normal Modal Logic
 - **S4** - S4 Normal Modal Logic
+- **S5** - S5 Normal Modal Logic
 
 ## Contributing
 

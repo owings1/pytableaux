@@ -57,7 +57,7 @@ template_cache = dict()
 jinja_env = Environment(loader=PackageLoader('logic', view_path))
 
 available_module_names = {
-    'logics'    : ['cpl', 'cfol', 'fde', 'k3', 'k3w', 'b3e', 'go', 'l3', 'lp', 'rm3', 'k', 'd', 't', 's4'],
+    'logics'    : ['cpl', 'cfol', 'fde', 'k3', 'k3w', 'b3e', 'go', 'l3', 'lp', 'rm3', 'k', 'd', 't', 's4', 's5'],
     'notations' : ['standard', 'polish'],
     'writers'   : ['html', 'ascii']
 }
