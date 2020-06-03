@@ -1792,16 +1792,6 @@ class TableauxSystem(object):
         def applies_to_branch(self, branch):
             raise NotImplementedError(NotImplemented)
 
-        def branch_closes_with(self, branch, node):
-            # TODO: WIP
-            if not isinstance(node, TableauxSystem.Node):
-                node = TableauxSystem.Node(props=node)
-            return self.node_will_close_branch(node, branch)
-
-        def node_will_close_branch(self, node, branch):
-            # TODO: WIP
-            raise NotImplementedError(NotImplemented)
-
         def apply(self, target):
             target['branch'].close()
 

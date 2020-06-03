@@ -119,9 +119,6 @@ class TableauxRules(object):
                         return { 'nodes': set([node, n]), 'type' : 'Nodes' }
             return False
 
-        def node_will_close_branch(self, node, branch):
-            return node.has('sentence') and branch.has({'sentence': negative(node.props['sentence'])})
-
         def example(self):
             a = logic.atomic(0, 0)
             self.tableau.branch().update([{ 'sentence' : a }, { 'sentence' : negate(a) }])

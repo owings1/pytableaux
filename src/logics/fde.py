@@ -448,9 +448,6 @@ class TableauxRules(object):
                     return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
 
-        def node_will_close_branch(self, node, branch):
-            return branch.has({'sentence': node.props['sentence'], 'designated': not node.props['designated']})
-
         def example(self):
             a = atomic(0, 0)
             self.branch().update([
