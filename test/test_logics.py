@@ -1565,7 +1565,7 @@ class TestS4(LogicTester):
 
     def test_valid_s4_complex_possibility_with_timeout(self):
         proof = tableau(self.logic, argument('MNb', premises=['LCaMMMNb', 'Ma']))
-        proof.build(timeout=5000)
+        proof.build(timeout=10000)
         assert proof.valid
 
 class TestS5(LogicTester):
