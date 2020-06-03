@@ -461,6 +461,20 @@ class TestLP(LogicTester):
         proof = self.example_proof('Material Identity')
         assert proof.valid
 
+    def test_case_model_not_a_countermodel(self):
+        arg = argument('NBab', premises=['c', 'BcNUab'])
+        model = self.logic.Model()
+        model.set_literal_value(parse('a'), 0)
+        model.set_literal_value(parse('b'), 1)
+        model.set_literal_value(parse('c'), 0.75)
+        assert model.value_of(arg.premises[1]) == 0.75
+
+    def test_case_bad_rule_neg_bicond_undes(self):
+        arg = argument('NBab', premises=['NBab'])
+        proof = tableau(self.logic, arg)
+        rule = proof.get_rule(self.logic.TableauxRules.BiconditionalNegatedUndesignated)
+        assert rule.applies()
+
     def test_invalid_lnc(self):
         proof = self.example_proof('Law of Non-contradiction')
         assert not proof.valid

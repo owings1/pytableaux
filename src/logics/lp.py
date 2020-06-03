@@ -362,7 +362,7 @@ class TableauxRules(object):
         .. _FDE MaterialBiconditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalNegatedUndesignated
         """
 
-        negated     = False
+        negated     = True
         designation = False
 
     class ConditionalDesignated(MaterialConditionalDesignated):
