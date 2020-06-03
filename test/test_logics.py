@@ -764,6 +764,13 @@ class TestCPL(LogicTester):
         with pytest.raises(NotImplementedError):
             model.add_access(0, 0)
 
+    def test_model_value_of_operated_opaque(self):
+        # coverage
+        model = self.logic.Model()
+        s = parse('La')
+        model.set_opaque_value(s, 1)
+        assert model.value_of_operated(s) == 1
+        
     def test_model_set_literal_value_predicated1(self):
         model = self.logic.Model()
         m = constant(0, 0)
