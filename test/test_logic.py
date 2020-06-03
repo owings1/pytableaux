@@ -356,6 +356,8 @@ class TestVocabulary(object):
             s.predicates()
         with pytest.raises(logic.NotImplementedError):
             s.hash_tuple()
+        with pytest.raises(logic.NotImplementedError):
+            s.operators()
 
     def test_atomic_less_than_predicated(self):
         s1 = logic.atomic(0, 4)
@@ -368,6 +370,12 @@ class TestVocabulary(object):
     def test_atomic_cmp_self_0_compat(self):
         s = logic.atomic(0, 0)
         assert s.__cmp__(s) == 0
+
+    def test_sentence_operators_collection(self):
+        s = logic.parse('KAMVxJxNbTNNImn')
+        ops = s.operators()
+        assert len(ops) == 7
+        assert ','.join(ops) == 'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
 
 class TestTableauxSystem(object):
 
