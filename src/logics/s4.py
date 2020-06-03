@@ -17,13 +17,6 @@
 # ------------------
 #
 # pytableaux - S4 Normal Modal Logic
-
-# TODO:
-#   - avoid loop with transitive/reflexive on problematic argument:
-#       - NPA |- B
-#       - N(A > P~B) |- C
-#
-#
 name = 'S4'
 title = 'S4 Normal Modal Logic'
 description = 'Normal modal logic with a reflexive and transitive access relation'
