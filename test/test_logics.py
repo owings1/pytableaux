@@ -108,6 +108,18 @@ class TestFDE(LogicTester):
         proof = self.example_proof('Material Biconditional Elimination 3')
         assert not proof.valid
 
+    def test_invalid_lem_model_is_countermodel_to(self):
+        proof = self.example_proof('Law of Excluded Middle')
+        branch, = list(proof.open_branchset)
+        assert branch.model.is_countermodel_to(proof.argument)
+
+    def test_a_thus_b_is_countermodel_to_false(self):
+        arg = argument('b', premises=['a'])
+        model = self.logic.Model()
+        model.set_literal_value(arg.premises[0], model.char_values['F'])
+        model.set_literal_value(arg.conclusion, model.char_values['F'])
+        assert not model.is_countermodel_to(arg)
+
     def test_invalid_univ_from_exist(self):
         proof = self.example_proof('Universal from Existential')
         assert not proof.valid
@@ -209,6 +221,65 @@ class TestFDE(LogicTester):
         s = parse('NLa')
         assert model.is_sentence_opaque(s)
 
+    def test_model_get_data_various(self):
+        s1 = parse('a')
+        s2 = parse('Imn')
+        model = self.logic.Model()
+        model.set_literal_value(s1, model.char_values['B'])
+        model.set_literal_value(s2, model.char_values['F'])
+        res = model.get_data()
+        assert 'Atomics' in res
+
+    def test_model_not_impl_various(self):
+        s1 = parse('Aab')
+        model = self.logic.Model()
+        with pytest.raises(NotImplementedError):
+            model.set_literal_value(s1, model.char_values['T'])
+        with pytest.raises(NotImplementedError):
+            model.value_of_quantified(s1)
+        with pytest.raises(NotImplementedError):
+            model.truth_function('Foomunction', 0)
+
+    def test_model_value_of_atomic_unassigned(self):
+        s = parse('a')
+        model = self.logic.Model()
+        res = model.value_of(s)
+        assert res == model.unassigned_value
+
+    def test_model_value_of_opaque_unassigned(self):
+        s = parse('La')
+        model = self.logic.Model()
+        res = model.value_of(s)
+        assert res == model.unassigned_value
+
+    def test_model_value_error_various(self):
+        s1 = parse('La')
+        model = self.logic.Model()
+        model.set_opaque_value(s1, model.char_values['T'])
+        with pytest.raises(Model.ModelValueError):
+            model.set_opaque_value(s1, model.char_values['B'])
+        s2 = parse('a')
+        model = self.logic.Model()
+        model.set_atomic_value(s2, model.char_values['T'])
+        with pytest.raises(Model.ModelValueError):
+            model.set_atomic_value(s2, model.char_values['B'])
+        s3 = parse('Imn')
+        model = self.logic.Model()
+        model.set_predicated_value(s3, model.char_values['T'])
+        with pytest.raises(Model.ModelValueError):
+            model.set_predicated_value(s3, model.char_values['N'])
+        model = self.logic.Model()
+        model.set_predicated_value(s3, model.char_values['B'])
+        with pytest.raises(Model.ModelValueError):
+            model.set_predicated_value(s3, model.char_values['T'])
+        model = self.logic.Model()
+        model.set_predicated_value(s3, model.char_values['B'])
+        with pytest.raises(Model.ModelValueError):
+            model.set_predicated_value(s3, model.char_values['F'])
+        model = self.logic.Model()
+        model.set_predicated_value(s3, model.char_values['F'])
+        with pytest.raises(Model.ModelValueError):
+            model.set_predicated_value(s3, model.char_values['N'])
 
 class TestK3(LogicTester):
 
