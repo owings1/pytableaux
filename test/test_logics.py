@@ -1500,3 +1500,10 @@ class TestS4(LogicTester):
         proof = tableau(self.logic, arg)
         proof.build(timeout=1000)
         assert proof.valid
+
+    def test_model_finish_transitity_visibles(self):
+        model = self.logic.Model()
+        model.add_access(0, 1)
+        model.add_access(1, 2)
+        model.finish()
+        assert 2 in model.visibles(0)
