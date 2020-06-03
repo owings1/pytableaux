@@ -1853,6 +1853,7 @@ class TableauxSystem(object):
             node = target['node']
             if branch.id not in self.stbr_track:
                 self.stbr_track[branch.id] = dict()
+                self.on_branch_track(branch)
             if node.id not in self.stbr_track[branch.id]:
                 self.stbr_track[branch.id][node.id] = 0
 
@@ -1862,6 +1863,9 @@ class TableauxSystem(object):
             self.apply_to_target(target)
             self.ensure_track_target(target)
             self.stbr_track[branch.id][node.id] += 1
+
+        def on_branch_track(self, branch):
+            pass
 
         def get_candidate_targets_for_branch(self, branch):
             # Implementation must return target with both branch and node properties.
