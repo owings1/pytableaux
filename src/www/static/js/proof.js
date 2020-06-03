@@ -235,6 +235,42 @@
         Width : 'width' ,
         Step  : 'step'
     }
+
+    const E_AdjustWhen = {
+        Before : 'before',
+        After  : 'after'
+    }
+
+    const E_HowMuch = {
+        Start           : 'start'     ,
+        End             : 'end'       ,
+        Beginning       : 'beginning' ,
+        Reset           : 'reset'     ,
+        StepInc         :   1         ,
+        StepDec         :  -1         ,
+        FontInc         :   1         ,
+        FontDec         :  -1         ,
+        WidthInc        :   1         ,
+        WidthDec        :  -1         ,
+        WidthUpMed      :  10         ,
+        WidthDownMed    : -10         ,
+        WidthUpLarge    :  25         ,
+        WidthDownLarge  : -25
+    }
+
+    const E_FilterType = {
+        Open   : 'open'   ,
+        Closed : 'closed' ,
+        All    : 'all'
+    }
+
+    const ValidFilterTypeValues = flipObject(E_FilterType)
+
+    const E_Behave = {
+        Inspect : 'inspect',
+        Zoom    : 'zoom'
+    }
+
     /**
      * Show only the lineage of the given structure.
      *
@@ -419,7 +455,7 @@
             $hides    : $(hides),
             $shows    : $(shows),
             className : Cls.StepFiltered,
-            adjust    : (n > prevStep) ? 'before' : 'after'
+            adjust    : (n > prevStep) ? E_AdjustWhen.Before : E_AdjustWhen.After
         })
 
         // show nodes, vertical lines
@@ -451,7 +487,7 @@
      */
     function filterBranches(type, $proof) {
 
-        if (type != 'all' && type != 'closed' && type != 'open') {
+        if (!(type in ValidFilterTypeValues)) {
             throw new Error("Invalid filter type: " + type)
         }
 
@@ -465,13 +501,13 @@
             const $s = $(s)
             var shown
             switch (type) {
-                case 'all':
+                case E_FilterType.All:
                     shown = true
                     break
-                case 'open' :
+                case E_FilterType.Open:
                     shown = $s.hasClass(Cls.HasOpen)
                     break
-                case 'closed' :
+                case E_FilterType.Closed:
                     shown = $s.hasClass(Cls.HasClosed)
                     break
                 default:
@@ -552,14 +588,14 @@
         $hides.hide(Anim.Fast)
 
         // adjust the widths (or do this 'after' below)
-        if (opts.adjust == 'before') {
+        if (opts.adjust == E_AdjustWhen.Before) {
             adjustWidths($proof, $(leaves), false)
         }
 
         // show elements that do not have a filter
         $(shows).show(Anim.Med)
 
-        if (opts.adjust && opts.adjust != 'before') {
+        if (opts.adjust && opts.adjust != E_AdjustWhen.Before) {
             adjustWidths($proof, $(leaves), true)
         }
     }
@@ -886,6 +922,14 @@
         return ['[', attr, oper, '"', val, '"]'].join('')
     }
 
+    function flipObject(obj) {
+        const ret = {}
+        for (var k in obj) {
+            ret[obj[k]] = k
+        }
+        return ret
+    }
+
     /**
      * Make various incremental UI adjustments.
      *
@@ -898,15 +942,15 @@
 
         switch (what) {
             case E_AdjustWhat.Font  :
-                if (howMuch == 'reset') {
+                if (howMuch == E_HowMuch.Reset) {
                     $proof.css({fontSize: 'inherit'})
                 } else {
-                    $proof.css({fontSize: parseInt($proof.css('font-size')) + (parseFloat(howMuch) || 0)})
+                    $proof.css({fontSize: parseInt($proof.css('fontSize')) + (parseFloat(howMuch) || 0)})
                 }
                 break
             case E_AdjustWhat.Width :
                 var p
-                if (howMuch == 'reset') {
+                if (howMuch == E_HowMuch.Reset) {
                     p = 100
                 } else {
                     p = +$proof.attr(Attrib.CurWidthPct) + (parseFloat(howMuch) || 0)
@@ -920,9 +964,9 @@
             case E_AdjustWhat.Step:
                 var maxSteps = +$proof.attr(Attrib.NumSteps)
                 var n
-                if (howMuch == 'beginning' || howMuch == 'start') {
+                if (howMuch == E_HowMuch.Beginning || howMuch == E_HowMuch.Start) {
                     n = 0
-                } else if (howMuch == 'reset' || howMuch == 'end') {
+                } else if (howMuch == E_HowMuch.Reset || howMuch == E_HowMuch.End) {
                     n = maxSteps
                 } else {
                     n = +$proof.attr(Attrib.Step) + (parseInt(howMuch) || 0)
@@ -1104,13 +1148,13 @@
         const $structure = $target.closest(Dcls.Structure)
 
         if ($structure.length) {
-            const behavior = ModKey.ctrlalt ? 'zoom' : 'inspect'
+            const behavior = ModKey.ctrlalt ? E_Behave.Zoom : E_Behave.Inspect
             switch (behavior) {
-                case 'zoom':
+                case E_Behave.Zoom:
                     zoom($structure)
                     setInspectedBranch($structure)
                     break
-                case 'inspect':
+                case E_Behave.Inspect:
                     setInspectedBranch($structure)
                     break
                 default :
@@ -1138,29 +1182,29 @@
         } else if ($target.is(Dcls.PartHeader)) {
             adjustMainHeight($main, Anim.Fast)
         } else if ($target.hasClass(Cls.StepStart)) {
-            adjust($proof, E_AdjustWhat.Step, 'start')
+            adjust($proof, E_AdjustWhat.Step, E_HowMuch.Start)
         } else if ($target.hasClass(Cls.StepNext)) {
-            adjust($proof, E_AdjustWhat.Step, 1)
+            adjust($proof, E_AdjustWhat.Step, E_HowMuch.StepInc)
         } else if ($target.hasClass(Cls.StepPrev)) {
-            adjust($proof, E_AdjustWhat.Step, -1)
+            adjust($proof, E_AdjustWhat.Step, E_HowMuch.StepDec)
         } else if ($target.hasClass(Cls.StepEnd)) {
-            adjust($proof, E_AdjustWhat.Step, 'end')
+            adjust($proof, E_AdjustWhat.Step, E_HowMuch.End)
         } else if ($target.hasClass(Cls.FontPlus)) {
-            adjust($proof, E_AdjustWhat.Font, 1)
+            adjust($proof, E_AdjustWhat.Font, E_HowMuch.FontInc)
         } else if ($target.hasClass(Cls.FontMinus)) {
-            adjust($proof, E_AdjustWhat.Font, -1)
+            adjust($proof, E_AdjustWhat.Font, E_HowMuch.FontDec)
         } else if ($target.hasClass(Cls.FontReset)) {
-            adjust($proof, E_AdjustWhat.Font, 'reset')
+            adjust($proof, E_AdjustWhat.Font, E_HowMuch.Reset)
         } else if ($target.hasClass(Cls.WidthPlus)) {
-            adjust($proof, E_AdjustWhat.Width, 10)
+            adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthUpMed)
         } else if ($target.hasClass(Cls.WidthPlusPlus)) {
-            adjust($proof, E_AdjustWhat.Width, 25)
+            adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthUpLarge)
         } else if ($target.hasClass(Cls.WidthMinus)) {
-            adjust($proof, E_AdjustWhat.Width, -10)
+            adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthDownMed)
         } else if ($target.hasClass(Cls.WidthMinusMinus)) {
-            adjust($proof, E_AdjustWhat.Width, -25)
+            adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthDownLarge)
         } else if ($target.hasClass(Cls.WidthReset)) {
-            adjust($proof, E_AdjustWhat.Width, 'reset')
+            adjust($proof, E_AdjustWhat.Width, E_HowMuch.Reset)
         } else if ($target.hasClass(Cls.StepRuleTarget)) {
             var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
             doHighlight({$proof: $proof, stay: true, off: off, ruleTarget: true})
@@ -1203,7 +1247,7 @@
             $models.removeClass(Cls.IsDrag)
             positionDraggable($models)
         } else if ($target.hasClass(Cls.ColorOpen)) {
-            if ($target.prop('checked')) {
+            if ($target.is(':checked')) {
                 $proof.addClass(Cls.ColorOpen)
             } else {
                 $proof.removeClass(Cls.ColorOpen)
@@ -1259,54 +1303,54 @@
 
         switch (key) {
             case '>':
-                adjust($proof, E_AdjustWhat.Step, 1)
+                adjust($proof, E_AdjustWhat.Step, E_HowMuch.StepInc)
                 break
             case '<':
-                adjust($proof, E_AdjustWhat.Step, -1)
+                adjust($proof, E_AdjustWhat.Step, E_HowMuch.StepDec)
                 break
             case 'B':
-                adjust($proof, E_AdjustWhat.Step, 'start')
+                adjust($proof, E_AdjustWhat.Step, E_HowMuch.Start)
                 break
             case 'E':
-                adjust($proof, E_AdjustWhat.Step, 'end')
+                adjust($proof, E_AdjustWhat.Step, E_HowMuch.End)
                 break
             case '+':
-                adjust($proof, E_AdjustWhat.Font, 1)
+                adjust($proof, E_AdjustWhat.Font, E_HowMuch.FontInc)
                 break
             case '-':
-                adjust($proof, E_AdjustWhat.Font, -1)
+                adjust($proof, E_AdjustWhat.Font, E_HowMuch.FontDec)
                 break
             case '=':
-                adjust($proof, E_AdjustWhat.Font, 'reset')
+                adjust($proof, E_AdjustWhat.Font, E_HowMuch.Reset)
                 break
             case ']':
-                adjust($proof, E_AdjustWhat.Width, 10)
+                adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthUpMed)
                 break
             case '}':
-                adjust($proof, E_AdjustWhat.Width, 25)
+                adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthUpLarge)
                 break
             case '[':
-                adjust($proof, E_AdjustWhat.Width, -10)
+                adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthDownMed)
                 break
             case '{':
-                adjust($proof, E_AdjustWhat.Width, -25)
+                adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthDownLarge)
                 break
             case '|':
-                adjust($proof, E_AdjustWhat.Width, 'reset')
+                adjust($proof, E_AdjustWhat.Width, E_HowMuch.Reset)
                 break
             case 'O':
                 if ($proof.children(Sel.CanBranchFilter).length) {
-                    filterBranches('open', $proof)
+                    filterBranches(E_FilterType.Open, $proof)
                 }
                 break
             case 'C':
                 if ($proof.children(Sel.CanBranchFilter).length) {
-                    filterBranches('closed', $proof)
+                    filterBranches(E_FilterType.Closed, $proof)
                 }
                 break
             case 'A':
                 if ($proof.children(Sel.CanBranchFilter).length) {
-                    filterBranches('all', $proof)
+                    filterBranches(E_FilterType.All, $proof)
                 }
                 break
             case 'r':
