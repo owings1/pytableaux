@@ -1563,9 +1563,9 @@ class TestS4(LogicTester):
         proof.build(timeout=2000)
         assert not proof.valid
 
-    def test_valid_s4_complex_possibility_with_timeout(self):
+    def test_valid_s4_complex_possibility_with_max_steps(self):
         proof = tableau(self.logic, argument('MNb', premises=['LCaMMMNb', 'Ma']))
-        proof.build(timeout=10000)
+        proof.build(max_steps=200)
         assert proof.valid
 
 class TestS5(LogicTester):
