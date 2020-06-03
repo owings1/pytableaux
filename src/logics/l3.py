@@ -265,11 +265,11 @@ class TableauxRules(object):
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
-            b1_s = operate('Disjunction', [negate(s.lhs), s.rhs])
+            s_disj = operate('Disjunction', [negate(s.lhs), s.rhs])
             b1 = branch
             b2 = self.branch(branch)
             b1.add(
-                { 'sentence' : b1_s, 'designated' : True }
+                { 'sentence' : s_disj, 'designated' : True }
             ).tick(node)
             b2.update([
                 {'sentence':        s.lhs,  'designated': False},
@@ -279,39 +279,25 @@ class TableauxRules(object):
             ]).tick(node)
 
         def score_target_map(self, target):
-            scores = {
-                'b1': 0,
-                'b2': 0,
-            }
             branch = target['branch']
             s = self.sentence(target['node'])
-            b1_s = operate('Disjunction', [negative(s.lhs), s.rhs])
-            # b1
-            #  FDE closure
-            if branch.has({'sentence': b1_s, 'designated': False}):
-                scores['b1'] += 1
-            #  K3 closure
-            else:
-                if branch.has({'sentence': negative(b1_s), 'designated': True}):
-                    scores['b1'] += 1
-                else:
-                    if branch.has({'sentence': s.lhs, 'designated': True}):
-                        scores['b1'] += 0.5
-                    if branch.has({'sentence': negative(s.rhs), 'designated': True}):
-                        scores['b1'] += 0.5
-            # b2
-            #  FDE closure
-            if branch.has_any([
-                {'sentence' :           s.lhs, 'designated' : True},
-                {'sentence' : negative(s.lhs), 'designated' : True},
-                {'sentence' :           s.rhs, 'designated' : True},
-                {'sentence' : negative(s.rhs), 'designated' : True},
-            ]):
-                scores['b2'] += 1
-            #  K3 closure
-            else:
-                pass
-            return scores
+            s_disj = operate('Disjunction', [negative(s.lhs), s.rhs])
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s_disj , 'designated': False},
+                    # K3 closure
+                    {'sentence': negative(s_disj), 'designated': True},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence' :          s.lhs , 'designated' : True},
+                    {'sentence' : negative(s.lhs), 'designated' : True},
+                    {'sentence' :          s.rhs , 'designated' : True},
+                    {'sentence' : negative(s.rhs), 'designated' : True},
+                    # K3 closure - n/a
+                ]),
+            }
 
     class ConditionalNegatedDesignated(k3.TableauxRules.ConditionalNegatedDesignated):
         """
