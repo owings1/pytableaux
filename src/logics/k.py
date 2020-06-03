@@ -1190,11 +1190,9 @@ class TableauxRules(object):
             BiconditionalNegated,
         ],
         [
-            # world creation rules 1
-            Possibility,
-        ],
-        [
             # world creation rules 2
             Necessity,
+            # world creation rules 1
+            Possibility,
         ],
     ]

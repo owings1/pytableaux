@@ -152,11 +152,9 @@ class TableauxRules(object):
             k.TableauxRules.BiconditionalNegated,
         ],
         [
-            # world creation rules 1
-            k.TableauxRules.Possibility,
-        ],
-        [
             # world creation rules 2
             k.TableauxRules.Necessity,
+            # world creation rules 1
+            k.TableauxRules.Possibility,
         ],
     ]

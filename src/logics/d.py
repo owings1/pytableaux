@@ -144,12 +144,10 @@ class TableauxRules:
             k.TableauxRules.BiconditionalNegated,
         ],
         [
-            # world creation rules 1
-            k.TableauxRules.Possibility,
-        ],
-        [
             # world creation rules 2
             k.TableauxRules.Necessity,
+            # world creation rules 1
+            k.TableauxRules.Possibility,
         ],
         [
             # special ordering of serial rule
