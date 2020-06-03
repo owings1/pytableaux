@@ -318,6 +318,10 @@ class TestK3W(LogicTester):
         proof = self.example_proof('DeMorgan 4')
         assert proof.valid
 
+    def test_invalid_cond_lem(self):
+        proof = tableau(self.logic, argument('AUabNUab')).build()
+        assert not proof.valid
+
 class TestB3E(LogicTester):
 
     logic = get_logic('B3E')
@@ -378,6 +382,10 @@ class TestB3E(LogicTester):
         proof.build()
         assert proof.valid
 
+    def test_valid_cond_lem(self):
+        proof = tableau(self.logic, argument('AUabNUab')).build()
+        assert proof.valid
+
 class TestL3(LogicTester):
 
     logic = get_logic('L3')
@@ -432,6 +440,10 @@ class TestL3(LogicTester):
     def test_invalid_mat_bicon_from_bicond(self):
         arg = argument('Eab', premises=['Bab'])
         proof = tableau(self.logic, arg).build()
+        assert not proof.valid
+
+    def test_invalid_cond_lem(self):
+        proof = tableau(self.logic, argument('AUabNUab')).build()
         assert not proof.valid
 
 class TestLP(LogicTester):
