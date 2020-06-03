@@ -1029,6 +1029,12 @@ class TableauxRules(object):
                 {'world1': w1, 'world2': w2},
             ]).tick(node)
 
+        def score_target(self, target):
+            s = self.sentence(target['node'])
+            # Apply to the simplest possibility sentence, so we don't get stuck
+            possibility_ops = [operator for operator in s.operators() if operator == 'Possibility']
+            return -1 * len(possibility_ops)
+
     class PossibilityNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked negated possibility node *n* with world *w* on a branch *b*, add a
