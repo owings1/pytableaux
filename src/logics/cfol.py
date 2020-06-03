@@ -26,7 +26,7 @@ category = 'Bivalent'
 category_display_order = 2
 
 import logic, examples
-from logic import negate
+from logic import negate, NotImplementedError
 from . import k, cpl
 
 class Model(k.Model):

@@ -925,6 +925,13 @@ class TestCPL(LogicTester):
         rule = proof.get_rule(proof.logic.TableauxRules.IdentityIndiscernability)
         assert not rule.applies_to_branch(branch)
 
+    def test_model_value_of_operated_opaque1(self):
+        s1 = parse('La')
+        model = self.logic.Model()
+        model.set_opaque_value(s1, model.char_values['F'])
+        res = model.value_of_operated(negate(s1))
+        assert res == model.char_values['T']
+
 class TestCFOL(LogicTester):
 
     logic = get_logic('CFOL')
@@ -944,6 +951,34 @@ class TestCFOL(LogicTester):
         model.finish()
         data = model.get_data()
         assert 'Atomics' in data
+
+    def test_model_value_of_operated_opaque1(self):
+        s1 = parse('La')
+        model = self.logic.Model()
+        model.set_opaque_value(s1, model.char_values['F'])
+        res = model.value_of_operated(negate(s1))
+        assert res == model.char_values['T']
+
+    def test_model_value_of_operated_opaque2(self):
+        s1 = parse('La')
+        model = self.logic.Model()
+        model.set_opaque_value(s1, model.char_values['T'])
+        res = model.value_of_operated(s1)
+        assert res == model.char_values['T']
+
+    def test_model_read_node_opaque(self):
+        s1 = parse('La')
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': s1})
+        model = self.logic.Model()
+        model.read_node(branch.nodes[0])
+        assert model.value_of(s1) == model.char_values['T']
+
+    def test_model_add_access_not_impl(self):
+        model = self.logic.Model()
+        with pytest.raises(NotImplementedError):
+            model.add_access(0, 0)
 
 class TestK(LogicTester):
 

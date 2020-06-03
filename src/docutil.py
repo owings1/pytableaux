@@ -71,7 +71,7 @@ def get_replace_sentence_expressions_result(text):
     for s in re.findall(r'P{(.*?)}', text):
         try:
             s1 = html.unescape(s)
-        except AttributeError:
+        except AttributeError: # pragma: no cover
             s1 = HTMLParser().unescape(s)
         replaced.append(s1)
         is_found = True
