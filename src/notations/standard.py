@@ -233,10 +233,10 @@ class Parser(logic.Parser):
                     operator_pos = self.pos + length
                     operator = peek_operator
             length += 1
-        if length == 1:
-            raise logic.Parser.ParseError('Empty parenthetical expression at position {0}.'.format(self.pos))
         if operator == None:
             raise logic.Parser.ParseError('Parenthetical expression is missing binary operator at position {0}.'.format(self.pos))
+        #if length == 2: #if length == 1:
+        #    raise logic.Parser.ParseError('Empty parenthetical expression at position {0}.'.format(self.pos))
         # now we can divide the string into lhs and rhs
         lhs_start = self.pos + 1
         # move past the open paren
