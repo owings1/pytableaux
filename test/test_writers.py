@@ -72,6 +72,24 @@ class TestStandard(object):
         res = std.write(s1, symbol_set='html')
         assert '&ne;' in res
 
+    def test_write_operated_3ary_not_impl(self):
+        operators['Schmoogation'] = 3
+        with pytest.raises(NotImplementedError):
+            try:
+                std.write_operated(operate('Schmoogation', [parse('a'), parse('a'), parse('a')]))
+            except:
+                del operators['Schmoogation']
+                raise
+            else:
+                del operators['Schmoogation']
+
+    def test_parse_errors_various_parens(self):
+        # coverage
+        with pytest.raises(Parser.ParseError):
+            parse('(A & &A)', notation='standard')
+        with pytest.raises(Parser.ParseError):
+            parse('(A & ())', notation='standard')
+
 class TestPolish(object):
 
     def test_atomic(self):
@@ -99,8 +117,15 @@ class TestAscii(object):
         res = asc.write(proof, standard)
         # TODO: assert something
 
+    def test_write_std_fde_mmp(self):
+        proof = example_proof('FDE', 'Material Modus Ponens')
+        res = asc.write(proof, standard, controls=True)
+        # TODO: assert something
+
     def test_write_nec_dist_s4(self):
-        proof = example_proof('S4', 'Necessity Distribution')
+        proof = tableau('S4', examples.argument('Necessity Distribution'))
+        proof.branches[0].add({'ellipsis': True})
+        proof.build()
         res = asc.write(proof, standard)
         # TODO: assert something
 
@@ -117,7 +142,9 @@ class TestAsciiv(object):
         # TODO: assert something
 
     def test_write_nec_dist_s4(self):
-        proof = example_proof('S4', 'Necessity Distribution')
+        proof = tableau('S4', examples.argument('Necessity Distribution'))
+        proof.branches[0].add({'ellipsis': True})
+        proof.build()
         res = asv.write(proof, standard)
         # TODO: assert something
     
