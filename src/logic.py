@@ -1381,6 +1381,7 @@ class TableauxSystem(object):
                 branch = TableauxSystem.Branch(self)
             else:
                 branch = other_branch.copy()
+                branch.parent = other_branch
             branch.index = len(self.branches)
             self.branches.append(branch)
             if not branch.closed:
@@ -1466,6 +1467,7 @@ class TableauxSystem(object):
             self.closed_step = None
             self.index = None
             self.model = None
+            self.parent = None
             self.node_index = {
                 'sentence'   : dict(),
                 'designated' : dict(),
@@ -1664,6 +1666,13 @@ class TableauxSystem(object):
                 model.is_countermodel = model.is_countermodel_to(self.tableau.argument)
             self.model = model
             return model
+
+        def origin(self):
+            # get the oldest parent
+            origin = self
+            while origin.parent != None:
+                origin = origin.parent
+            return origin
 
         def branch(self):
             # Convenience for tableau branch method
