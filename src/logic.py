@@ -721,6 +721,9 @@ class Vocabulary(object):
         def predicates(self):
             raise NotImplementedError(NotImplemented)
 
+        def operators(self):
+            raise NotImplementedError(NotImplemented)
+
         def hash_tuple(self):
             raise NotImplementedError(NotImplemented)
 
@@ -773,6 +776,9 @@ class Vocabulary(object):
 
         def predicates(self):
             return set()
+
+        def operators(self):
+            return list()
 
         def next(self):
             if self.index < num_atomic_symbols - 1:
@@ -830,6 +836,9 @@ class Vocabulary(object):
         def predicates(self):
             return set([self.predicate])
 
+        def operators(self):
+            return list()
+
         def hash_tuple(self):
             return (5, self.predicate) + tuple((param for param in self.parameters))
 
@@ -859,6 +868,9 @@ class Vocabulary(object):
 
         def predicates(self):
             return self.sentence.predicates()
+
+        def operators(self):
+            return self.sentence.operators()
 
         def hash_tuple(self):
             return (6, quantifiers_list.index(self.quantifier), self.variable, self.sentence)
@@ -911,6 +923,13 @@ class Vocabulary(object):
             for operand in self.operands:
                 p.update(operand.predicates())
             return p
+
+        def operators(self):
+            ops = list()
+            ops.append(self.operator)
+            for operand in self.operands:
+                ops.extend(operand.operators())
+            return ops
 
         def hash_tuple(self):
             return (7, operators_list.index(self.operator)) + tuple((operand for operand in self.operands))
