@@ -1055,13 +1055,23 @@ class TableauxRules(object):
 
         operator = 'Necessity'
 
+        # Track the maximum number of worlds that should be on the branch
+        # so we can halt on infinite branches.
+        branch_max_worlds = None
+
         def get_candidate_targets_for_branch(self, branch):
             cands = list()
+            # If we have already reached the max number of worlds projected for
+            # the branch (origin), return the empty list.
+            origin = branch.origin()
+            if self.branch_max_worlds != None and origin.id in self.branch_max_worlds:
+                if len(branch.worlds()) > self.branch_max_worlds[origin.id]:
+                    return cands
             worlds = branch.worlds()
             for node in branch.get_nodes():
                 if node.has('sentence'):
                     s = self.sentence(node)
-                    if s.operator == self.operator:                    
+                    if s.operator == self.operator:
                         s = s.operand
                         w1 = node.props['world']
                         for w2 in worlds:
@@ -1077,6 +1087,24 @@ class TableauxRules(object):
                                 })
             return cands
 
+        def on_branch_track(self, branch):
+            # Project the maximum number of worlds for a branch (origin) as
+            # the number of worlds already on the branch + the number of modal
+            # operators + 1.
+            if self.branch_max_worlds == None:
+                self.branch_max_worlds = dict()
+            origin = branch.origin()
+            if origin.id in self.branch_max_worlds:
+                return
+            current_world_count = len(branch.worlds())
+            branch_modal_operators_list = list()
+            for node in branch.get_nodes():
+                if node.has('sentence'):
+                    for operator in self.sentence(node).operators():
+                        if operator == 'Necessity' or operator == 'Possibility':
+                            branch_modal_operators_list.append(operator)
+            self.branch_max_worlds[origin.id] = current_world_count + len(branch_modal_operators_list) + 1
+                    
         def apply_to_target(self, target):
             branch = target['branch']
             branch.add({'sentence': target['sentence'], 'world': target['world']})
