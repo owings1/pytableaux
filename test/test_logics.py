@@ -1447,7 +1447,10 @@ class TestK(LogicTester):
         rule.example()
         proof.build()
         assert proof.valid
-        
+
+    def test_invalid_s4_cond_inf_2(self):
+        proof = self.example_proof('S4 Conditional Inference 2')
+        assert not proof.valid
         
 class TestD(LogicTester):
 
@@ -1480,6 +1483,10 @@ class TestD(LogicTester):
         proof.build(timeout=1000)
         assert not proof.valid
 
+    def test_invalid_s4_cond_inf_2(self):
+        proof = self.example_proof('S4 Conditional Inference 2')
+        assert not proof.valid
+
 class TestT(LogicTester):
 
     logic = get_logic('T')
@@ -1496,8 +1503,8 @@ class TestT(LogicTester):
         proof = self.example_proof('NP Collapse 1')
         assert proof.valid
 
-    def test_invalid_s4_inf_1(self):
-        proof = self.example_proof('S4 Inference 1')
+    def test_invalid_s4_material_inf_1(self):
+        proof = self.example_proof('S4 Material Inference 1')
         assert not proof.valid
 
     def test_valid_optimize_nec_rule1(self):
@@ -1505,6 +1512,10 @@ class TestT(LogicTester):
         proof = tableau(self.logic, arg)
         proof.build(timeout=1000)
         assert proof.valid
+
+    def test_invalid_s4_cond_inf_2(self):
+        proof = self.example_proof('S4 Conditional Inference 2')
+        assert not proof.valid
 
 class TestS4(LogicTester):
 
@@ -1518,8 +1529,8 @@ class TestS4(LogicTester):
         branch = proof.branches[0]
         assert branch.has({'world1': 0, 'world2': 2})
 
-    def test_valid_s4_inf_1(self):
-        proof = self.example_proof('S4 Inference 1')
+    def test_valid_s4_material_inf_1(self):
+        proof = self.example_proof('S4 Material Inference 1')
         assert proof.valid
 
     def test_valid_np_collapse_1(self):
@@ -1542,3 +1553,17 @@ class TestS4(LogicTester):
         model.add_access(1, 2)
         model.finish()
         assert 2 in model.visibles(0)
+
+    def test_valid_s4_cond_inf_2(self):
+        proof = self.example_proof('S4 Conditional Inference 2')
+        assert proof.valid
+
+    def test_invalid_problematic_1_with_timeout(self):
+        proof = tableau(self.logic, argument('b', premises=['LMa']))
+        proof.build(timeout=2000)
+        assert not proof.valid
+
+    def test_valid_s4_complex_possibility_with_timeout(self):
+        proof = tableau(self.logic, argument('MNb', premises=['LCaMMMNb', 'Ma']))
+        proof.build(timeout=5000)
+        assert proof.valid
