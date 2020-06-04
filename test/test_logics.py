@@ -216,11 +216,6 @@ class TestFDE(LogicTester):
         model = branch.make_model()
         assert model.value_of(s) == 0
 
-    def test_model_is_opaque_neg_necessity(self):
-        model = self.logic.Model()
-        s = parse('NLa')
-        assert model.is_sentence_opaque(s)
-
     def test_model_get_data_various(self):
         s1 = parse('a')
         s2 = parse('Imn')
@@ -281,6 +276,16 @@ class TestFDE(LogicTester):
         with pytest.raises(Model.ModelValueError):
             model.set_predicated_value(s3, model.char_values['N'])
 
+    def test_model_read_branch_with_negated_opaque_then_faithful(self):
+        arg = argument('a', premises=['NLa', 'b'])
+        proof = tableau(self.logic, arg)
+        proof.build(models=True)
+        model = proof.branches[0].model
+        assert model.value_of(parse('a')) == model.char_values['F']
+        assert model.value_of(parse('La')) == model.char_values['F']
+        assert model.value_of(parse('NLa')) == model.char_values['T']
+        assert model.is_countermodel_to(arg)
+        
 class TestK3(LogicTester):
 
     logic = get_logic('K3')
@@ -932,6 +937,12 @@ class TestCPL(LogicTester):
         res = model.value_of_operated(negate(s1))
         assert res == model.char_values['T']
 
+    def test_model_value_of_opaque_unassigned(self):
+        s = parse('La')
+        model = self.logic.Model()
+        res = model.value_of(s)
+        assert res == model.unassigned_value
+
 class TestCFOL(LogicTester):
 
     logic = get_logic('CFOL')
@@ -979,6 +990,16 @@ class TestCFOL(LogicTester):
         model = self.logic.Model()
         with pytest.raises(NotImplementedError):
             model.add_access(0, 0)
+
+    def test_model_read_branch_with_negated_opaque_then_faithful(self):
+        arg = argument('a', premises=['NLa', 'b'])
+        proof = tableau(self.logic, arg)
+        proof.build(models=True)
+        model = proof.branches[0].model
+        assert model.value_of(parse('a')) == model.char_values['F']
+        assert model.value_of(parse('La')) == model.char_values['F']
+        assert model.value_of(parse('NLa')) == model.char_values['T']
+        assert model.is_countermodel_to(arg)
 
 class TestK(LogicTester):
 
@@ -1451,7 +1472,19 @@ class TestK(LogicTester):
     def test_invalid_s4_cond_inf_2(self):
         proof = self.example_proof('S4 Conditional Inference 2')
         assert not proof.valid
-        
+
+    def test_model_finish_every_opaque_has_value_in_every_frame(self):
+        s1 = parse('a')
+        s2 = parse('b')
+        model = self.logic.Model()
+        model.set_opaque_value(s1, model.char_values['T'], world=0)
+        model.set_opaque_value(s2, model.char_values['T'], world=1)
+        model.finish()
+        f1 = model.world_frame(0)
+        f2 = model.world_frame(1)
+        assert s2 in f1.opaques
+        assert s1 in f2.opaques
+
 class TestD(LogicTester):
 
     logic = get_logic('D')
