@@ -949,6 +949,23 @@ class TestCPL(LogicTester):
         res = model.value_of(s)
         assert res == model.unassigned_value
 
+    def test_model_set_predicated_false_value_error_on_set_to_true(self):
+        s = parse('Fm', vocabulary=examples.vocabulary)
+        model = self.logic.Model()
+        model.set_literal_value(s, 'F')
+        with pytest.raises(Model.ModelValueError):
+            model.set_literal_value(s, 'T')
+
+    def test_model_get_anti_extension(self):
+        # coverage
+        s = parse('Fm', vocabulary=examples.vocabulary)
+        model = self.logic.Model()
+        predicate = s.predicate
+        anti_extension = model.get_anti_extension(predicate)
+        assert len(anti_extension) == 0
+        model.set_literal_value(s, 'F')
+        assert tuple(s.parameters) in anti_extension
+
 class TestCFOL(LogicTester):
 
     logic = get_logic('CFOL')

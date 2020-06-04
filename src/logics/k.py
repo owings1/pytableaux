@@ -64,11 +64,14 @@ class Model(logic.Model):
         #: A map of predicates to their extension.
         extensions = {}
 
+        # Track the anti-extensions to ensure integrity
+        anti_extensions = {}
         def __init__(self, world):
             self.world = world
             self.atomics = {}
             self.opaques = {}
             self.extensions = {Identity: set(), Existence: set()}
+            self.anti_extensions = {}
 
         def get_data(self):
             return {
@@ -459,10 +462,14 @@ class Model(logic.Model):
             if param.is_constant():
                 self.constants.add(param)
         extension = self.get_extension(predicate, **kw)
+        anti_extension = self.get_anti_extension(predicate, **kw)
         if value == 'F':
             if params in extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
+            anti_extension.add(params)
         if value == 'T':
+            if params in anti_extension:
+                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extensions'.format(str(value), str(params)))
             extension.add(params)
 
     def get_extension(self, predicate, world=0, **kw):
@@ -471,7 +478,19 @@ class Model(logic.Model):
             self.predicates.add(predicate)
         if predicate not in frame.extensions:
             frame.extensions[predicate] = set()
+        if predicate not in frame.anti_extensions:
+            frame.anti_extensions[predicate] = set()
         return frame.extensions[predicate]
+
+    def get_anti_extension(self, predicate, world=0, **kw):
+        frame = self.world_frame(world)
+        if predicate not in self.predicates:
+            self.predicates.add(predicate)
+        if predicate not in frame.extensions:
+            frame.extensions[predicate] = set()
+        if predicate not in frame.anti_extensions:
+            frame.anti_extensions[predicate] = set()
+        return frame.anti_extensions[predicate]
 
     def add_access(self, w1, w2):
         self.access.add((w1, w2))
