@@ -49,7 +49,7 @@ class Model(k3.Model):
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Conditional' or operator == 'Biconditional':
-            if self.cvals[a] == 'N' and a == b:
+            if a == 'N' and a == b:
                 return 'T'
         return super(Model, self).truth_function(operator, a, b)
 

@@ -36,30 +36,27 @@ class Model(fde.Model):
 
     .. _FDE model: fde.html#logics.fde.Model
     """
-    truth_values = ['F', 'N', 'T']
+
+    #: The admissible values
+    truth_values = set(['F', 'N', 'T'])
+
+    #: The designated value
+    designated_values = set(['T'])
+
+    truth_values_list = ['F', 'N', 'T']
     unassigned_value = 'N'
 
     #tmp
     nvals = {
-        'F'  : 0,
-        'N'  : 0.5,
-        'T'  : 1,
-        0    : 0,
-        0.5  : 0.5,
-        1    : 1,
-        None : None,
+        'F': 0   ,
+        'N': 0.5 ,
+        'T': 1   ,
     }
     cvals = {
-        'F'  : 'F',
-        'N'  : 'N',
-        'T'  : 'T',
-        0    : 'F',
-        0.5  : 'N',
-        1    : 'T',
-        None : None,
+        0   : 'F',
+        0.5 : 'N',
+        1   : 'T',
     }
-
-    designated_values = set(['T'])
 
     def value_of_operated(self, sentence, **kw):
         """
@@ -94,14 +91,13 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            for node in branch.get_nodes():
-                if node.props['designated']:
-                    n = branch.find({
-                        'sentence'   : negate(node.props['sentence']),
-                        'designated' : True,
-                    })
-                    if n:
-                        return {'nodes': set([node, n]), 'type': 'Nodes'}
+            for node in branch.find_all({'designated': True, '_operator': 'Negation'}):
+                n = branch.find({
+                    'sentence'   : self.sentence(node).operand,
+                    'designated' : True,
+                })
+                if n:
+                    return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
 
         def example(self):
@@ -337,10 +333,10 @@ class TableauxRules(object):
                 scores.update({
                     'b1': scores['b1'] or branch.has_any([
                         {'sentence': negative(s.lhs), 'designated': True},
-                        {'sentence': s.rhs,           'designated': True},
+                        {'sentence':          s.rhs , 'designated': True},
                     ]),
                     'b2': scores['b2'] or branch.has_any([
-                        {'sentence': s.lhs,           'designated': True},
+                        {'sentence':          s.lhs , 'designated': True},
                         {'sentence': negative(s.rhs), 'designated': True},
                     ]),
                 })

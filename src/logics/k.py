@@ -47,6 +47,35 @@ class Model(logic.Model):
     relation, and a set of constants (the domain).
     """
 
+    #: The admissable values
+    truth_values = set(['F', 'T'])
+
+    #: A set of pairs of worlds.
+    access = set()
+
+    #: The domain of constants.
+    constants = set()
+
+    #: A map from worlds to their frame.
+    frames = {}
+
+    truth_values_list = ['F', 'T']
+
+    unassigned_value = 'F'
+
+    nvals = {
+        'F': 0,
+        'T': 1,
+    }
+    cvals = {
+        1: 'T',
+        0: 'F',
+    }
+
+    # wip: real domain (fixed)
+    domain = set()
+    denotation = {}
+
     class Frame(object):
         """
         A K-frame comprises the interpretation of sentences and predicates at a world.
@@ -64,13 +93,14 @@ class Model(logic.Model):
         #: A map of predicates to their extension.
         extensions = {}
 
-        # Track the anti-extensions to ensure integrity
-        anti_extensions = {}
         def __init__(self, world):
+
             self.world = world
             self.atomics = {}
             self.opaques = {}
             self.extensions = {Identity: set(), Existence: set()}
+
+            # Track the anti-extensions to ensure integrity
             self.anti_extensions = {}
 
         def get_data(self):
@@ -199,46 +229,20 @@ class Model(logic.Model):
             #return cmp(self.world, other.world)
             return (self.world > other.world) - (self.world < other.world)
 
-    truth_values = ['F', 'T']
-    truth_functional_operators = fde.Model.truth_functional_operators
-    modal_operators = set(['Possibility', 'Necessity'])
-
-    unassigned_value = 'F'
-
-    #: A map from worlds to their frame.
-    frames = {}
-
-    #: A set of pairs of worlds.
-    access = set()
-
-    #: The domain of constants.
-    constants = set()
-
-    # Track the predicates
-    predicates = set()
-
-    nvals = {
-        'F': 0,
-        'T': 1,
-    }
-    cvals = {
-        1: 'T',
-        0: 'F',
-    }
-
-    # wip: real domain (fixed)
-    domain = set()
-    denotation = {}
-
     def __init__(self):
+
         super(Model, self).__init__()
+
         self.frames = {}
         self.access = set()
+
         self.predicates = set([Identity, Existence])
         self.constants = set()
         self.fde = fde.Model()
+
         # ensure there is a w0
         self.world_frame(0)
+
         # TODO: implement real domain and denotation, think of identity necessity
         self.domain = set()
         self.denotation = {}
@@ -350,7 +354,7 @@ class Model(logic.Model):
         }
 
     def read_branch(self, branch):
-        for node in branch.nodes:
+        for node in branch.get_nodes():
             self.read_node(node)
         self.finish()
 
@@ -469,7 +473,7 @@ class Model(logic.Model):
             anti_extension.add(params)
         if value == 'T':
             if params in anti_extension:
-                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extensions'.format(str(value), str(params)))
+                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
             extension.add(params)
 
     def get_extension(self, predicate, world=0, **kw):

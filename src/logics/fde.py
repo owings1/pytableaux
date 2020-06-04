@@ -36,6 +36,12 @@ class Model(logic.Model):
     FDE Model.
     """
 
+    #: The admissable values
+    truth_values = set(['F', 'N', 'B', 'T'])
+
+    #: The designated values
+    designated_values = set(['B', 'T'])
+
     #: An assignment of each atomic sentence to a value.
     atomics = {}
 
@@ -48,28 +54,16 @@ class Model(logic.Model):
     #: A map of predicates to their anti-extension.
     anti_extensions = {}
 
-    predicates = set()
-
-    truth_values = ['F', 'N', 'B', 'T']
-    truth_functional_operators = set([
-        'Assertion'              ,
-        'Negation'               ,
-        'Conjunction'            ,
-        'Disjunction'            ,
-        'Material Conditional'   ,
-        'Conditional'            ,
-        'Material Biconditional' ,
-        'Biconditional'          ,
-    ])
+    truth_values_list = ['F', 'N', 'B', 'T']
     unassigned_value = 'N'
 
-    #tmp
     nvals = {
-        'F': 0,
-        'N': 0.25,
-        'B': 0.75,
-        'T': 1,
+        'F': 0    ,
+        'N': 0.25 ,
+        'B': 0.75 ,
+        'T': 1    ,
     }
+
     cvals = {
         0    : 'F',
         0.25 : 'N',
@@ -77,15 +71,16 @@ class Model(logic.Model):
         1    : 'T',
     }
 
-    designated_values = set(['B', 'T'])
-
     def __init__(self):
+
         super(Model, self).__init__()
+
         self.extensions = {}
         self.anti_extensions = {}
         self.atomics = {}
-        self.all_atomics = set()
         self.opaques = {}
+
+        self.all_atomics = set()
         self.constants = set()
         self.predicates = set([
             #Identity,
@@ -150,9 +145,8 @@ class Model(logic.Model):
         A sentence is opaque if its operator is Necessity or Possibility, or if it is
         a negated sentence whose negatum has the operator Necessity or Possibility.
         """
-        if sentence.is_operated():
-            s = sentence
-            return s.operator == 'Necessity' or s.operator == 'Possibility'
+        if sentence.operator in self.modal_operators:
+            return True
         return super(Model, self).is_sentence_opaque(sentence)
 
     def is_countermodel_to(self, argument):
@@ -448,8 +442,8 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            for node in branch.get_nodes():
-                n = branch.find({'sentence': node.props['sentence'], 'designated': not node.props['designated']})
+            for node in branch.find_all({'designated': True}):
+                n = branch.find({'sentence': self.sentence(node), 'designated': False})
                 if n != None:
                     return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
@@ -1010,13 +1004,9 @@ class TableauxRules(object):
             d = self.designation
             q = self.quantifier
             constants = branch.constants()
-            for n in branch.get_nodes():
+            for n in branch.find_all({'_quantifier': q, 'designated': d}):
                 # keep quantifier and designation neutral for inheritance below
-                if not n.has('sentence') or n.props['designated'] != d:
-                    continue
                 s = self.sentence(n)
-                if s.quantifier != q:
-                    continue
                 v = s.variable
                 if len(constants):
                     for c in constants:

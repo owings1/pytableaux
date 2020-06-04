@@ -399,7 +399,7 @@ def get_system_predicate(name):
 
 def truth_table(logic, operator):
     model = get_logic(logic).Model()
-    inputs = list(itertools.product(*[model.truth_values for x in range(arity(operator))]))
+    inputs = list(itertools.product(*[model.truth_values_list for x in range(arity(operator))]))
     outputs = [model.truth_function(operator, *values) for values in inputs]
     return {'inputs': inputs, 'outputs': outputs}
 
@@ -2177,7 +2177,22 @@ class Model(object):
     class ModelValueError(Exception):
         pass
 
-    truth_functional_operators = set()
+    # Default list
+    truth_functional_operators = set([
+        'Assertion'              ,
+        'Negation'               ,
+        'Conjunction'            ,
+        'Disjunction'            ,
+        'Material Conditional'   ,
+        'Conditional'            ,
+        'Material Biconditional' ,
+        'Biconditional'          ,
+    ])
+    # Default list
+    modal_operators = set([
+        'Necessity',
+        'Possibility'
+    ])
 
     def __init__(self):
         self.id = id(self)

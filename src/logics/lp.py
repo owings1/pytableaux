@@ -36,27 +36,22 @@ class Model(fde.Model):
 
     .. _FDE model: fde.html#logics.fde.Model
     """
-    truth_values = ['F', 'B', 'T']
+
+    #: The admissible values
+    truth_values = set(['F', 'B', 'T'])
+
+    truth_values_list = ['F', 'B', 'T']
     unassigned_value = 'F'
 
-    #tmp
     nvals = {
-        'F'  : 0,
-        'B'  : 0.75,
-        'T'  : 1,
-        0    : 0,
-        0.75 : 0.75,
-        1    : 1,
-        None : None,
+        'F': 0    ,
+        'B': 0.75 ,
+        'T': 1    ,
     }
     cvals = {
-        'F'  : 'F',
-        'B'  : 'B',
-        'T'  : 'T',
         0    : 'F',
         0.75 : 'B',
         1    : 'T',
-        None : None,
     }
 
     def value_of_operated(self, sentence, **kw):
@@ -92,14 +87,13 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            for node in branch.get_nodes():
-                if not node.props['designated']:
-                    n = branch.find({
-                        'sentence'  : negate(node.props['sentence']),
-                        'designated': False,
-                    })
-                    if n:
-                        return {'nodes': set([node, n]), 'type': 'Nodes'}
+            for node in branch.find_all({'designated': False, '_operator': 'Negation'}):
+                n = branch.find({
+                    'sentence'  : self.sentence(node).operand,
+                    'designated': False,
+                })
+                if n:
+                    return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
 
         def example(self):
