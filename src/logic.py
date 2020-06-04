@@ -1471,7 +1471,13 @@ class TableauxSystem(object):
             self.node_index = {
                 'sentence'   : dict(),
                 'designated' : dict(),
-                'world'      : dict()
+                'world'      : dict(),
+            }
+            self.node_sindex = {
+                '_operator'      : dict(),
+                '_quantifier'    : dict(),
+                '_predicate'     : dict(),
+                '_is_predicated' : dict(),
             }
 
         def has(self, props, ticked=None):
@@ -1507,17 +1513,36 @@ class TableauxSystem(object):
             filtered by ticked status. Returns ``None`` if not found.
             """
             haystack = set(self.get_nodes(ticked=ticked))
+            results = self.search_nodes(props, haystack, limit=1)
+            if len(results):
+                return results[0]
+            return None
+
+        def find_all(self, props, ticked=None):
+            haystack = set(self.get_nodes(ticked=ticked))
+            return self.search_nodes(props, haystack)
+
+        def search_nodes(self, props, haystack, limit=None):
+            results = []
             # reduce from node index
             for prop in self.node_index:
                 if prop in props:
                     key = str(props[prop])
                     if key not in self.node_index[prop]:
-                        return None
+                        return results
                     haystack = haystack & self.node_index[prop][key]
+            for prop in self.node_sindex:
+                if prop in props:
+                    key = props[prop]
+                    if key not in self.node_sindex[prop]:
+                        return results
+                    haystack = haystack & self.node_sindex[prop][key]
             for node in haystack:
+                if limit != None and len(results) >= limit:
+                    break
                 if node.has_props(props):
-                    return node
-            return None
+                    results.append(node)
+            return results
 
         def add(self, node):
             """
@@ -1541,6 +1566,25 @@ class TableauxSystem(object):
                     if key not in self.node_index[prop]:
                         self.node_index[prop][key] = set()
                     self.node_index[prop][key].add(node)
+            if node.has('sentence'):
+                s = node.props['sentence']
+                if s.operator != None:
+                    if s.operator not in self.node_sindex['_operator']:
+                        self.node_sindex['_operator'][s.operator] = set()
+                    self.node_sindex['_operator'][s.operator].add(node)
+                if s.quantifier != None:
+                    if s.quantifier not in self.node_sindex['_quantifier']:
+                        self.node_sindex['_quantifier'][s.quantifier] = set()
+                    self.node_sindex['_quantifier'][s.quantifier].add(node)
+                if s.predicate != None:
+                    if s.predicate not in self.node_sindex['_predicate']:
+                        self.node_sindex['_predicate'][s.predicate] = set()
+                    self.node_sindex['_predicate'][s.predicate].add(node)
+                is_predicated = s.is_predicated()
+                if is_predicated not in self.node_sindex['_is_predicated']:
+                    self.node_sindex['_is_predicated'][is_predicated] = set()
+                self.node_sindex['_is_predicated'][is_predicated].add(node)
+                    
             return self
 
         def update(self, nodes):
@@ -1600,6 +1644,13 @@ class TableauxSystem(object):
                     for key in self.node_index[prop]
                 }
                 for prop in self.node_index
+            }
+            branch.node_sindex = {
+                prop : {
+                    key : set(self.node_sindex[prop][key])
+                    for key in self.node_sindex[prop]
+                }
+                for prop in self.node_sindex
             }
             return branch
 
@@ -1704,6 +1755,8 @@ class TableauxSystem(object):
 
         def has_props(self, props):
             for prop in props:
+                if str(prop).startswith('_'):
+                    continue
                 if prop not in self.props or not props[prop] == self.props[prop]:
                     return False
             return True
