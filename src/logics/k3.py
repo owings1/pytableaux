@@ -41,12 +41,12 @@ class Model(fde.Model):
     char_values = {
         'F' : 0,
         'N' : 0.5,
-        'T' : 1
+        'T' : 1,
     }
     truth_value_chars = {
         0    : 'F',
         0.5  : 'N',
-        1    : 'T'
+        1    : 'T',
     }
 
     designated_values = set([1])
@@ -88,17 +88,17 @@ class TableauxRules(object):
                 if node.props['designated']:
                     n = branch.find({
                         'sentence'   : negate(node.props['sentence']),
-                        'designated' : True
+                        'designated' : True,
                     })
                     if n:
-                        return { 'nodes' : set([node, n]), 'type' : 'Nodes' }
+                        return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
 
         def example(self):
             a = logic.atomic(0, 0)
             self.branch().update([
-                { 'sentence' :        a  , 'designated' : True },
-                { 'sentence' : negate(a) , 'designated' : True }
+                {'sentence':        a , 'designated': True},
+                {'sentence': negate(a), 'designated': True},
             ])
 
     class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):

@@ -1024,22 +1024,22 @@ class TableauxRules(object):
                 if len(constants):
                     for c in constants:
                         r = s.substitute(c, v)
-                        if not branch.has({ 'sentence': r, 'designated' : d }):
-                            cands.append({ 'branch' : branch, 'sentence' : r, 'node' : n })
+                        if not branch.has({'sentence': r, 'designated': d}):
+                            cands.append({'branch': branch, 'sentence': r, 'node': n})
                 else:
                     c = branch.new_constant()
                     r = s.substitute(c, v)
-                    cands.append({ 'branch' : branch, 'sentence' : r, 'node' : n })
+                    cands.append({'branch': branch, 'sentence': r, 'node': n})
             return cands
             
         def apply_to_target(self, target):
             # keep designation neutral for inheritance below
-            target['branch'].add({ 'sentence' : target['sentence'], 'designated' : self.designation })
+            target['branch'].add({'sentence': target['sentence'], 'designated': self.designation})
 
         def example(self):
             # keep quantifier and designation neutral for inheritance below
             s = examples.quantified(self.quantifier)
-            self.branch().add({ 'sentence' : s, 'designated' : self.designation })
+            self.branch().add({'sentence': s, 'designated': self.designation})
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """

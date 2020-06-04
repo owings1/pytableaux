@@ -123,7 +123,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : not d }).tick(node)
+            branch.add({'sentence': s.operand, 'designated': not d}).tick(node)
 
     class AssertionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -136,7 +136,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            branch.add({ 'sentence' : s.operand, 'designated' : d }).tick(node)
+            branch.add({'sentence': s.operand, 'designated': d}).tick(node)
 
     class AssertionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -301,10 +301,7 @@ class TableauxRules(object):
             ])
             if self.negated:
                 sn = negate(sn)
-            branch.add({
-                'sentence'   : sn,
-                'designated' : d
-            }).tick(node)
+            branch.add({'sentence': sn, 'designated': d}).tick(node)
 
     class ConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -313,8 +310,8 @@ class TableauxRules(object):
         with the consequent to *b*. Then tick *n*.
         """
 
-        operator    = 'Conditional'
         negated     = True
+        operator    = 'Conditional'
         designation = True
 
         def apply_to_node(self, node, branch):
@@ -331,8 +328,8 @@ class TableauxRules(object):
         with the consequent to *b*. Then tick *n*.
         """
 
-        designation = False
         negated     = False
+        designation = False
 
     class ConditionalNegatedUndesignated(ConditionalDesignated):
         """
@@ -341,8 +338,8 @@ class TableauxRules(object):
         operands are preceded by the Assertion operator, then tick *n*.
         """
 
-        designation = False
         negated     = True
+        designation = False
 
     class BiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -384,7 +381,7 @@ class TableauxRules(object):
         inverted. Then tick *n*.
         """
 
-        negated     = True
+        negated = True
 
     class BiconditionalUndesignated(BiconditionalDesignated):
         """
@@ -406,8 +403,8 @@ class TableauxRules(object):
         inverted. Then tick *n*.
         """
 
-        designation = False
         negated     = True
+        designation = False
 
     class ExistentialDesignated(k3w.TableauxRules.ExistentialDesignated):
         """

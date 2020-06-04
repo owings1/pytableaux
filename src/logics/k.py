@@ -543,8 +543,8 @@ class TableauxSystem(logic.TableauxSystem):
         """
         branch = tableau.branch()
         for premise in argument.premises:
-            branch.add({ 'sentence': premise, 'world': 0 })
-        branch.add({ 'sentence': negate(argument.conclusion), 'world': 0 })
+            branch.add({'sentence': premise, 'world': 0})
+        branch.add({'sentence': negate(argument.conclusion), 'world': 0})
 
 class IsModal(object):
     modal = True
@@ -807,12 +807,12 @@ class TableauxRules(object):
             b1 = branch
             b2 = self.branch(branch)
             b1.update([
-                { 'sentence' : negate(s.lhs), 'world' : w }, 
-                { 'sentence' : negate(s.rhs), 'world' : w }
+                {'sentence': negate(s.lhs), 'world': w}, 
+                {'sentence': negate(s.rhs), 'world': w},
             ]).tick(node)
             b2.update([
-                { 'sentence' : s.rhs, 'world' : w }, 
-                { 'sentence' : s.lhs, 'world' : w }
+                {'sentence': s.rhs, 'world': w}, 
+                {'sentence': s.lhs, 'world': w},
             ]).tick(node)
 
         def score_target_map(self, target):
@@ -849,12 +849,12 @@ class TableauxRules(object):
             b1 = branch
             b2 = self.branch(branch)
             b1.update([
-                { 'sentence':        s.lhs  , 'world' : w },
-                { 'sentence': negate(s.rhs) , 'world' : w }
+                {'sentence':        s.lhs , 'world': w},
+                {'sentence': negate(s.rhs), 'world': w},
             ]).tick(node)
             b2.update([
-                { 'sentence': negate(s.rhs) , 'world' : w },
-                { 'sentence':        s.lhs  , 'world' : w }
+                {'sentence': negate(s.rhs), 'world': w},
+                {'sentence':        s.lhs , 'world': w},
             ]).tick(node)
 
         def score_target_map(self, target):
@@ -862,7 +862,6 @@ class TableauxRules(object):
             node = target['node']
             s = self.sentence(node)
             w = node.props['world']
-            score = 0
             return {
                 'b1': branch.has_any([
                     {'sentence': negative(s.lhs), 'world': w},
@@ -1078,13 +1077,13 @@ class TableauxRules(object):
 
         def get_candidate_targets_for_branch(self, branch):
             cands = list()
+            worlds = branch.worlds()
             # If we have already reached the max number of worlds projected for
             # the branch (origin), return the empty list.
             origin = branch.origin()
             if self.branch_max_worlds != None and origin.id in self.branch_max_worlds:
-                if len(branch.worlds()) > self.branch_max_worlds[origin.id]:
+                if len(worlds) > self.branch_max_worlds[origin.id]:
                     return cands
-            worlds = branch.worlds()
             for node in branch.get_nodes():
                 if node.has('sentence'):
                     s = self.sentence(node)
@@ -1113,14 +1112,13 @@ class TableauxRules(object):
             origin = branch.origin()
             if origin.id in self.branch_max_worlds:
                 return
-            current_world_count = len(branch.worlds())
             branch_modal_operators_list = list()
             for node in branch.get_nodes():
                 if node.has('sentence'):
-                    for operator in self.sentence(node).operators():
-                        if operator == 'Necessity' or operator == 'Possibility':
-                            branch_modal_operators_list.append(operator)
-            self.branch_max_worlds[origin.id] = current_world_count + len(branch_modal_operators_list) + 1
+                    branch_modal_operators_list.extend(
+                        [o for o in self.sentence(node).operators() if o in Model.modal_operators]
+                    )
+            self.branch_max_worlds[origin.id] = len(branch.worlds()) + len(branch_modal_operators_list) + 1
                     
         def apply_to_target(self, target):
             branch = target['branch']
@@ -1197,8 +1195,8 @@ class TableauxRules(object):
 
         def example(self):
             self.branch().update([ 
-                {'sentence' : examples.predicated(), 'world': 0},
-                {'sentence' : examples.identity(),   'world': 0},
+                {'sentence': examples.predicated(), 'world': 0},
+                {'sentence': examples.identity(),   'world': 0},
             ])
 
     closure_rules = [

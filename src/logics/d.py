@@ -86,17 +86,17 @@ class TableauxRules:
         def applies_to_branch(self, branch):
             if len(self.tableau.history) and self.tableau.history[-1]['rule'] == self:
                 return False
-            serial_worlds = {node.props['world1'] for node in branch.get_nodes() if 'world1' in node.props}
+            serial_worlds = {node.props['world1'] for node in branch.get_nodes() if node.has('world1')}
             worlds = branch.worlds() - serial_worlds
             if len(worlds):
                 world = worlds.pop()
-                return { 'branch' : branch, 'world' : world, 'node' : branch.find({ 'world1' : world }) }
+                return {'branch': branch, 'world': world, 'node': branch.find({'world1': world})}
             return False
 
         def apply(self, target):
             target['branch'].add({ 
                 'world1': target['world'], 
-                'world2': target['branch'].new_world()
+                'world2': target['branch'].new_world(),
             })
 
         def example(self):

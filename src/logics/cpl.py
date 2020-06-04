@@ -81,8 +81,8 @@ class TableauxSystem(logic.TableauxSystem):
         """
         branch = tableau.branch()
         for premise in argument.premises:
-            branch.add({ 'sentence' : premise })
-        branch.add({ 'sentence':  negate(argument.conclusion) })
+            branch.add({'sentence': premise})
+        branch.add({'sentence': negate(argument.conclusion)})
 
 class NonModal(object):
     modal = False
@@ -103,14 +103,17 @@ class TableauxRules(object):
         def applies_to_branch(self, branch):
             for node in branch.get_nodes():
                 if node.has('sentence'):
-                    n = branch.find({ 'sentence' : negate(node.props['sentence']) })
+                    n = branch.find({'sentence': negate(node.props['sentence'])})
                     if n != None:
-                        return { 'nodes': set([node, n]), 'type' : 'Nodes' }
+                        return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
 
         def example(self):
             a = logic.atomic(0, 0)
-            self.tableau.branch().update([{ 'sentence' : a }, { 'sentence' : negate(a) }])
+            self.tableau.branch().update([
+                {'sentence':        a },
+                {'sentence': negate(a)},
+            ])
 
     class SelfIdentityClosure(NonModal, k.TableauxRules.SelfIdentityClosure):
         """
@@ -119,7 +122,7 @@ class TableauxRules(object):
 
         def example(self):
             s = negate(examples.self_identity())
-            self.tableau.branch().add({ 'sentence' : s })
+            self.branch().add({'sentence': s})
 
     class NonExistenceClosure(NonModal, k.TableauxRules.NonExistenceClosure):
         """
@@ -128,7 +131,7 @@ class TableauxRules(object):
 
         def example(self):
             s = logic.parse('NJm')
-            self.tableau.branch().add({ 'sentence' : s })
+            self.branch().add({'sentence': s})
 
     class DoubleNegation(NonModal, k.TableauxRules.DoubleNegation):
         """
@@ -273,9 +276,9 @@ class TableauxRules(object):
         """
 
         def example(self):
-            self.tableau.branch().update([
-                { 'sentence' : examples.predicated() },
-                { 'sentence' : examples.identity()   }
+            self.branch().update([
+                {'sentence': examples.predicated()},
+                {'sentence': examples.identity()  },
             ])
 
     closure_rules = [
