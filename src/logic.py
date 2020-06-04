@@ -1202,23 +1202,20 @@ class TableauxSystem(object):
 
         def get_rule_and_target_from_group(self, rules):
             results = []
+            group_scores = []
             for rule in rules:
                 target = rule.applies()
                 if target:
                     if not self.opts['is_group_optim']:
                         return (rule, target)
-                    if 'group_score' not in target:
-                        target['group_score'] = 0
+                    group_scores.append(rule.group_score(target))
                     results.append((rule, target))
             if len(results):
-                scores = []
-                for res in results:
-                    rule, target = res
-                    scores.append(target['group_score'])
-                max_score = max(scores)
-                for res in results:
-                    rule, target = res
-                    if target['group_score'] == max_score:
+                max_group_score = max(group_scores)
+                for i in range(len(results)):
+                    res = results[i]
+                    group_score = group_scores[i]
+                    if group_score == max_group_score:
                         return res
             return None
 
@@ -1840,6 +1837,9 @@ class TableauxSystem(object):
             if 'sentence' in node.props:
                 return node.props['sentence']
 
+        def group_score(self, target):
+            return 0
+
         def after_branch_add(self, branch, other_branch = None):
             pass
 
@@ -1899,6 +1899,10 @@ class TableauxSystem(object):
         def __init__(self, *args, **opts):
             super(TableauxSystem.SelectiveTrackingBranchRule, self).__init__(*args, **opts)
             self.stbr_track = dict()
+            if 'is_rank_optim' in opts:
+                self.is_rank_optim = opts['is_rank_optim']
+            else:
+                self.is_rank_optim = True
 
         def applies_to_branch(self, branch):
             cands = self.get_candidate_targets_for_branch(branch)
@@ -1912,7 +1916,9 @@ class TableauxSystem(object):
             cand_node_ids = {target['node'].id for target in cands}
             least_count = min({self.stbr_track[branch.id][node_id] for node_id in cand_node_ids})
             for target in cands:
-                if self.stbr_track[branch.id][target['node'].id] == least_count:
+                track_count = self.stbr_track[branch.id][target['node'].id]
+                if track_count == least_count or not self.is_rank_optim:
+                    target['track_count'] = track_count
                     return target
 
         def ensure_track_targets(self, cands):
@@ -1997,6 +2003,7 @@ class TableauxSystem(object):
                     if target:
                         if target == True:
                             target = {'node' : node}
+                        target['candidate_score'] = 0
                         if 'node' not in target:
                             target['node'] = node
                         if 'type' not in target:
@@ -2013,15 +2020,19 @@ class TableauxSystem(object):
                 cand_scores = [self.score_candidate(target) for target in cands]
                 max_score = max(set(cand_scores))
                 for i in range(len(cands)):
-                    if cand_scores[i] == max_score:
-                        return cands[i]
+                    target = cands[i]
+                    candidate_score = cand_scores[i]
+                    if candidate_score == max_score:
+                        target['candidate_score'] = candidate_score
+                        return target
             else:
                 return False
 
-        def get_branch_additions(self, target):
-            # TODO
-            # should return a list of lists of node props
-            pass
+        def group_score(self, target):
+            # TODO: redesign candidate/group scoring, which will
+            #       require overhauling or replacing the applies() api.
+            # for now, propagate group score
+            return target['candidate_score']
 
         def score_candidate(self, target):
             return sum(self.score_candidate_list(target))

@@ -966,6 +966,12 @@ class TestCPL(LogicTester):
         model.set_literal_value(s, 'F')
         assert tuple(s.parameters) in anti_extension
 
+    def test_group_score_from_candidate_score1(self):
+        arg = argument('Na', premises=['Cab', 'Nb', 'Acd'])
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
+        assert len(proof.branches) == 2
+
 class TestCFOL(LogicTester):
 
     logic = get_logic('CFOL')
