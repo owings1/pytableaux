@@ -558,7 +558,7 @@ class TableauxRules(object):
             b1.add({'sentence': negate(s.lhs), 'designated': d}).tick(node)
             b2.add({'sentence': negate(s.rhs), 'designated': d}).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             d = self.designation
@@ -585,7 +585,7 @@ class TableauxRules(object):
             b1.add({'sentence': s.lhs, 'designated': d}).tick(node)
             b2.add({'sentence': s.rhs, 'designated': d}).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             d = self.designation
@@ -668,7 +668,7 @@ class TableauxRules(object):
             b1.add({'sentence': negate(s.lhs), 'designated': d}).tick(node)
             b2.add({'sentence':        s.rhs , 'designated': d}).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             d = self.designation
@@ -734,7 +734,7 @@ class TableauxRules(object):
             b1.add({'sentence':        s.lhs , 'designated': d}).tick(node)
             b2.add({'sentence': negate(s.rhs), 'designated': d}).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             d = self.designation
@@ -769,7 +769,7 @@ class TableauxRules(object):
                 {'sentence': s.lhs, 'designated': d},
             ]).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             d = self.designation
@@ -811,7 +811,7 @@ class TableauxRules(object):
                 {'sentence':        s.rhs , 'designated': d},
             ]).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             d = self.designation

@@ -704,7 +704,7 @@ class TableauxRules(object):
             b1.add({'sentence': negate(s.lhs), 'world': w}).tick(node)
             b2.add({'sentence': negate(s.rhs), 'world': w}).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
@@ -731,7 +731,7 @@ class TableauxRules(object):
             b1.add({'sentence': s.lhs, 'world': w}).tick(node)
             b2.add({'sentence': s.rhs, 'world': w}).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
@@ -775,7 +775,7 @@ class TableauxRules(object):
             b1.add({'sentence': negate(s.lhs), 'world': w}).tick(node)
             b2.add({'sentence':        s.rhs , 'world': w}).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
@@ -828,7 +828,7 @@ class TableauxRules(object):
                 {'sentence': s.lhs, 'world': w},
             ]).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
@@ -870,7 +870,7 @@ class TableauxRules(object):
                 {'sentence':        s.lhs , 'world': w},
             ]).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             node = target['node']
             s = self.sentence(node)
@@ -953,7 +953,7 @@ class TableauxRules(object):
             branch.add({'sentence': r, 'world': w}).tick(node)
 
         # this actually hurts
-        #def score_target(self, target):
+        #def score_candidate(self, target):
         #    return -1 * len(self.sentence(target['node']).quantifiers())
 
     class ExistentialNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
@@ -1053,7 +1053,7 @@ class TableauxRules(object):
                 {'world1': w1, 'world2': w2},
             ]).tick(node)
 
-        def score_target(self, target):
+        def score_candidate(self, target):
             s = self.sentence(target['node'])
             # Apply to the simplest possibility sentence, so we don't get stuck
             ops = s.operators()

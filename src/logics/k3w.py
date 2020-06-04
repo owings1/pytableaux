@@ -163,7 +163,7 @@ class TableauxRules(object):
                 {'sentence': negate(s.rhs), 'designated': True},
             ]).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             return {
@@ -252,7 +252,7 @@ class TableauxRules(object):
                 {'sentence':        s.rhs , 'designated': True},
             ]).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             return {
@@ -309,7 +309,7 @@ class TableauxRules(object):
                 {'sentence': s.rhs, 'designated': True},
             ]).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             return {
@@ -378,7 +378,7 @@ class TableauxRules(object):
                 {'sentence': negate(s.rhs), 'designated': True},
             ]).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             d = self.designation
@@ -435,7 +435,7 @@ class TableauxRules(object):
                 {'sentence': negate(s.rhs), 'designated': False},
             ]).tick(node)
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             branch = target['branch']
             s = self.sentence(target['node'])
             return {

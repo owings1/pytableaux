@@ -166,8 +166,8 @@ class TableauxRules(object):
         .. _FDE ConjunctionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionNegatedDesignated
         """
 
-        def score_target_map(self, target):
-            scores = super(TableauxRules.ConjunctionNegatedDesignated, self).score_target_map(target)
+        def score_candidate_map(self, target):
+            scores = super(TableauxRules.ConjunctionNegatedDesignated, self).score_candidate_map(target)
             if not self.designation:
                 # only apply to implementations for undesignated rules
                 branch = target['branch']
@@ -185,8 +185,8 @@ class TableauxRules(object):
         .. _FDE ConjunctionUndesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionUndesignated
         """
 
-        def score_target_map(self, target):
-            scores = super(TableauxRules.ConjunctionUndesignated, self).score_target_map(target)
+        def score_candidate_map(self, target):
+            scores = super(TableauxRules.ConjunctionUndesignated, self).score_candidate_map(target)
             if not self.designation:
                 # only apply to implementations for undesignated rules
                 branch = target['branch']
@@ -276,8 +276,8 @@ class TableauxRules(object):
         .. _FDE MaterialConditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalNegatedUndesignated
         """
 
-        def score_target_map(self, target):
-            scores = super(TableauxRules.MaterialConditionalNegatedUndesignated, self).score_target_map(target)
+        def score_candidate_map(self, target):
+            scores = super(TableauxRules.MaterialConditionalNegatedUndesignated, self).score_candidate_map(target)
             if not self.designation:
                 # only apply to implementations for undesignated rules
                 branch = target['branch']
@@ -299,8 +299,8 @@ class TableauxRules(object):
         .. _FDE MaterialBiconditionalDesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalDesignated
         """
 
-        def score_target_map(self, target):
-            scores = super(TableauxRules.MaterialBiconditionalDesignated, self).score_target_map(target)
+        def score_candidate_map(self, target):
+            scores = super(TableauxRules.MaterialBiconditionalDesignated, self).score_candidate_map(target)
             if not self.designation:
                 # only apply to implementations for undesignated rules
                 branch = target['branch']
@@ -324,8 +324,8 @@ class TableauxRules(object):
         .. _FDE MaterialBiconditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalNegatedDesignated
         """
 
-        def score_target_map(self, target):
-            scores = super(TableauxRules.MaterialBiconditionalNegatedDesignated, self).score_target_map(target)
+        def score_candidate_map(self, target):
+            scores = super(TableauxRules.MaterialBiconditionalNegatedDesignated, self).score_candidate_map(target)
             if not self.designation:
                 # only apply to implementations for undesignated rules
                 branch = target['branch']

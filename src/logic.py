@@ -1207,18 +1207,18 @@ class TableauxSystem(object):
                 if target:
                     if not self.opts['is_group_optim']:
                         return (rule, target)
-                    if 'score' not in target:
-                        target['score'] = 0
+                    if 'group_score' not in target:
+                        target['group_score'] = 0
                     results.append((rule, target))
             if len(results):
                 scores = []
                 for res in results:
                     rule, target = res
-                    scores.append(target['score'])
+                    scores.append(target['group_score'])
                 max_score = max(scores)
                 for res in results:
                     rule, target = res
-                    if target['score'] == max_score:
+                    if target['group_score'] == max_score:
                         return res
             return None
 
@@ -1997,7 +1997,6 @@ class TableauxSystem(object):
                     if target:
                         if target == True:
                             target = {'node' : node}
-                        target['score'] = 0
                         if 'node' not in target:
                             target['node'] = node
                         if 'type' not in target:
@@ -2011,11 +2010,10 @@ class TableauxSystem(object):
                         self.applicable_nodes[branch_id].discard(node)
             if len(cands):
                 # score candidates
-                cand_scores = [self.score_target(target) for target in cands]
+                cand_scores = [self.score_candidate(target) for target in cands]
                 max_score = max(set(cand_scores))
                 for i in range(len(cands)):
                     if cand_scores[i] == max_score:
-                        cands[i]['score'] = cand_scores[i]
                         return cands[i]
             else:
                 return False
@@ -2025,13 +2023,13 @@ class TableauxSystem(object):
             # should return a list of lists of node props
             pass
 
-        def score_target(self, target):
-            return sum(self.score_target_list(target))
+        def score_candidate(self, target):
+            return sum(self.score_candidate_list(target))
 
-        def score_target_list(self, target):
-            return self.score_target_map(target).values()
+        def score_candidate_list(self, target):
+            return self.score_candidate_map(target).values()
 
-        def score_target_map(self, target):
+        def score_candidate_map(self, target):
             return {}
 
         def apply(self, target):
