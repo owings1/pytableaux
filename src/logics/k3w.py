@@ -366,57 +366,44 @@ class TableauxRules(object):
             b2 = self.branch(branch)
             b3 = self.branch(branch)
             b1.update([
-                {'sentence':        s.lhs , 'designated': d},
-                {'sentence': negate(s.lhs), 'designated': d},
+                {'sentence':        s.lhs , 'designated': False},
+                {'sentence': negate(s.lhs), 'designated': False},
             ]).tick(node)
             b2.update([
-                {'sentence':        s.rhs , 'designated': d},
-                {'sentence': negate(s.rhs), 'designated': d},
+                {'sentence':        s.rhs , 'designated': False},
+                {'sentence': negate(s.rhs), 'designated': False},
             ]).tick(node)
             b3.update([
-                {'sentence': negate(s.lhs), 'designated': not d},
-                {'sentence': negate(s.rhs), 'designated': not d},
+                {'sentence': negate(s.lhs), 'designated': True},
+                {'sentence': negate(s.rhs), 'designated': True},
             ]).tick(node)
 
         def score_target_map(self, target):
-            scores = {
-                'b1': 0,
-                'b2': 0,
-                'b3': 0,
-            }
             branch = target['branch']
             s = self.sentence(target['node'])
             d = self.designation
-            # b1
-            scores['b1'] = branch.has_any([
-                # FDE closure
-                {'sentence':          s.lhs , 'designated': not d},
-                {'sentence': negative(s.lhs), 'designated': not d},
-                # K3 closure - no known impl
-            ])
-            # b2
-            #  FDE closure
-            scores['b2'] = branch.has_any([
-                # FDE closure
-                {'sentence':          s.rhs , 'designated': not d},
-                {'sentence': negative(s.rhs), 'designated': not d},
-                # K3 closure - no known impl
-            ])
-            # b3
-            #  FDE closure
-            if branch.has_any([
-                {'sentence': negative(s.lhs), 'designated': d},
-                {'sentence': negative(s.rhs), 'designated': d},
-            ]):
-                scores['b3'] += 1
-            #  K3 closure
-            elif not d:
-                if branch.has_any([
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s.lhs , 'designated': True},
+                    {'sentence': negative(s.lhs), 'designated': True},
+                    # K3 closure - n/a
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s.rhs , 'designated': True},
+                    {'sentence': negative(s.rhs), 'designated': True},
+                    # K3 closure - n/a
+                ]),
+                'b3': branch.has_any([
+                    # FDE closure
+                    {'sentence': negative(s.lhs), 'designated': False},
+                    {'sentence': negative(s.rhs), 'designated': False},
+                    # K3 closure
                     {'sentence': s.lhs, 'designated': True},
                     {'sentence': s.rhs, 'designated': True},
-                ]):
-                    scores['b3'] += 1
-            return scores
+                ]),
+            }
 
     class DisjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -449,35 +436,28 @@ class TableauxRules(object):
             ]).tick(node)
 
         def score_target_map(self, target):
-            scores = {
-                'b1': 0,
-                'b2': 0,
-                'b3': 0,
-            }
             branch = target['branch']
             s = self.sentence(target['node'])
-            # b1
-            scores['b1'] = branch.has_any([
-                # FDE closure
-                {'sentence': s, 'designated': False},
-                # K3 closure
-                {'sentence': negative(s), 'designated': True},
-            ])
-            # b2
-            scores['b2'] = branch.has_any([
-                # FDE closure
-                {'sentence':          s.lhs , 'designated': True},
-                {'sentence': negative(s.lhs), 'designated': True},
-                # K3 closure - no known impl
-            ])
-            # b3
-            scores['b3'] = branch.has_any([
-                # FDE closure
-                {'sentence':          s.rhs , 'designated': True},
-                {'sentence': negative(s.rhs), 'designated': True},
-                # K3 closure - no known impl
-            ])
-            return scores
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': s, 'designated': False},
+                    # K3 closure
+                    {'sentence': negative(s), 'designated': True},
+                ]),
+                    'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s.lhs , 'designated': True},
+                    {'sentence': negative(s.lhs), 'designated': True},
+                    # K3 closure - no known impl
+                ]),
+                'b3': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s.rhs , 'designated': True},
+                    {'sentence': negative(s.rhs), 'designated': True},
+                    # K3 closure - no known impl
+                ]),
+            }
 
     class MaterialConditionalDesignated(k3.TableauxRules.MaterialConditionalDesignated):
         """

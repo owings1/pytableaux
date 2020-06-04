@@ -328,37 +328,31 @@ class TableauxRules(object):
                 {'sentence': s.rhs, 'designated': False},
             ]).tick(node)
             b2.update([
-                {'sentence': s.lhs,         'designated': False},
+                {'sentence':        s.lhs , 'designated': False},
                 {'sentence': negate(s.lhs), 'designated': False},
                 {'sentence': negate(s.rhs), 'designated': True},
             ]).tick(node)
 
         def score_target_map(self, target):
-            scores = {
-                'b1': 0,
-                'b2': 0,
-            }
-            # only apply to implementations for undesignated rules
             branch = target['branch']
             s = self.sentence(target['node'])
-            # b1
-            scores['b1'] = branch.has_any([
-                # FDE closure
-                {'sentence': s.lhs, 'designated': False},
-                {'sentence': s.rhs, 'designated': True},
-                # K3 closure
-                {'sentence': negative(s.lhs), 'designated': True},
-            ])
-            # b2
-            scores['b2'] = branch.has_any([
-                # FDE closure
-                {'sentence': s.lhs,           'designated': True},
-                {'sentence': negative(s.lhs), 'designated': True},
-                {'sentence': negative(s.rhs), 'designated': False},
-                # K3 closure
-                {'sentence': s.rhs, 'designated': True},
-            ])
-            return scores
+            return {
+                'b1': branch.has_any([
+                    # FDE closure
+                    {'sentence': s.lhs, 'designated': False},
+                    {'sentence': s.rhs, 'designated': True},
+                    # K3 closure
+                    {'sentence': negative(s.lhs), 'designated': True},
+                ]),
+                'b2': branch.has_any([
+                    # FDE closure
+                    {'sentence':          s.lhs , 'designated': True},
+                    {'sentence': negative(s.lhs), 'designated': True},
+                    {'sentence': negative(s.rhs), 'designated': False},
+                    # K3 closure
+                    {'sentence': s.rhs, 'designated': True},
+                ]),
+            }
 
     class ConditionalNegatedUndesignated(k3.TableauxRules.ConditionalNegatedUndesignated):
         """
@@ -412,7 +406,7 @@ class TableauxRules(object):
                     {'sentence': negative(s.lhs), 'designated': True},
                     {'sentence':          s.rhs,  'designated': True},
                     {'sentence': negative(s.rhs), 'designated': True},
-                    # K3 closure n/a
+                    # K3 closure - n/a
                 ]),
             }
 
@@ -456,12 +450,12 @@ class TableauxRules(object):
                 'b1': branch.has_any([
                     # FDE closure
                     {'sentence': s_cond1, 'designated': True},
-                    # K3 closure n/a
+                    # K3 closure - n/a
                 ]),
                 'b2': branch.has_any([
                     # FDE closure
                     {'sentence': s_cond2, 'designated': True},
-                    # K3 closure n/a
+                    # K3 closure - n/a
                 ])
             }
 
@@ -501,7 +495,7 @@ class TableauxRules(object):
                 'b1': branch.has_any([
                     # FDE closure
                     {'sentence': negative(s_mbicond), 'designated': True},
-                    # K3 closure n/a
+                    # K3 closure - n/a
                 ]),
                 'b2': branch.has_any([
                     # FDE closure
@@ -509,7 +503,7 @@ class TableauxRules(object):
                     {'sentence': negative(s.lhs), 'designated': True},
                     {'sentence':          s.rhs,  'designated': True},
                     {'sentence': negative(s.rhs), 'designated': True},
-                    # K3 closure n/a
+                    # K3 closure - n/a
                 ]),
             }
 
@@ -593,9 +587,7 @@ class TableauxRules(object):
             MaterialConditionalNegatedDesignated,
             MaterialConditionalUndesignated,
             ConditionalNegatedDesignated,
-
             BiconditionalNegatedDesignated,
-
             ExistentialDesignated,
             ExistentialNegatedDesignated,
             ExistentialUndesignated,

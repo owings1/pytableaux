@@ -27,7 +27,6 @@ category_display_order = 3
 
 import logic
 from . import k
-from logic import atomic
 
 class Model(k.Model):
     """
@@ -74,15 +73,16 @@ class TableauxRules(object):
 
         def applies_to_node(self, node, branch):
             for world in node.worlds():
-                if not branch.has({ 'world1': world, 'world2': world }):
-                    return { 'world': world }
+                if not branch.has({'world1': world, 'world2': world}):
+                    return {'world': world}
             return False
             
         def apply(self, target):
-            target['branch'].add({ 'world1': target['world'], 'world2': target['world'] })
+            target['branch'].add({'world1': target['world'], 'world2': target['world']})
 
         def example(self):
-            self.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
+            s = logic.atomic(0, 0)
+            self.branch().add({'sentence': s, 'world': 0})
 
     closure_rules = list(k.TableauxRules.closure_rules)
 

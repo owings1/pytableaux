@@ -78,33 +78,33 @@ class TableauxRules(object):
         """
         
         def applies_to_branch(self, branch):
-            nodes = {node for node in branch.get_nodes() if 'world1' in node.props}
+            nodes = {node for node in branch.get_nodes() if node.has('world1')}
             for node in nodes:
                 for other_node in nodes:
                     if node.props['world2'] == other_node.props['world1']:
                         n = branch.find({ 
                             'world1': node.props['world1'], 
-                            'world2': other_node.props['world2']
+                            'world2': other_node.props['world2'],
                         })
                         if n == None:
                             return { 
                                 'world1': node.props['world1'],
                                 'world2': other_node.props['world2'],
                                 'branch': branch,
-                                'nodes' : set([node, other_node])
+                                'nodes' : set([node, other_node]),
                             }
             return False
 
         def apply(self, target):
             target['branch'].add({
                 'world1': target['world1'],
-                'world2': target['world2']
+                'world2': target['world2'],
             })
 
         def example(self):
             self.branch().update([
-                { 'world1' : 0, 'world2' : 1 },
-                { 'world1' : 1, 'world2' : 2 }
+                {'world1': 0, 'world2': 1},
+                {'world1': 1, 'world2': 2},
             ])
 
     closure_rules = list(k.TableauxRules.closure_rules)

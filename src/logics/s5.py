@@ -75,7 +75,7 @@ class TableauxRules(object):
         """
         
         def applies_to_branch(self, branch):
-            nodes = {node for node in branch.get_nodes() if 'world1' in node.props}
+            nodes = {node for node in branch.get_nodes() if node.has('world1')}
             for node in nodes:
                 n = branch.find({
                     'world1': node.props['world2'],
