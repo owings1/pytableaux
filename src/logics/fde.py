@@ -147,10 +147,11 @@ class Model(logic.Model):
         a negated sentence whose negatum has the operator Necessity or Possibility.
         """
         if sentence.is_operated():
-            if sentence.operator == 'Negation':
-                s = sentence.operand
-            else:
-                s = sentence
+            #if sentence.operator == 'Negation':
+            #    s = sentence.operand
+            #else:
+            #    s = sentence
+            s = sentence
             return s.operator == 'Necessity' or s.operator == 'Possibility'
         return super(Model, self).is_sentence_opaque(sentence)
 
@@ -249,8 +250,9 @@ class Model(logic.Model):
                 self.predicates.update(node.predicates())
                 self.all_atomics.update(node.atomics())
                 sentence = node.props['sentence']
+                is_literal = self.is_sentence_literal(sentence)
                 is_opaque = self.is_sentence_opaque(sentence)
-                if sentence.is_literal() or is_opaque:
+                if is_literal or is_opaque:
                     d = node.props['designated']
                     if sentence.is_operated() and sentence.operator == 'Negation':
                         # the negative of s is the negatum of s
@@ -295,8 +297,15 @@ class Model(logic.Model):
                 self.set_literal_value(s, self.unassigned_value)
         pass
 
+    def is_sentence_literal(self, sentence):
+        if sentence.is_operated() and sentence.operator == 'Negation' and self.is_sentence_opaque(sentence.operand):
+            return True
+        return sentence.is_literal()
+
     def set_literal_value(self, sentence, value):
-        if sentence.is_operated() and sentence.operator == 'Negation':
+        if self.is_sentence_opaque(sentence):
+            self.set_opaque_value(sentence, value)
+        elif sentence.is_operated() and sentence.operator == 'Negation':
             self.set_literal_value(sentence.operand, self.truth_function('Negation', value))
         elif sentence.is_atomic():
             self.set_atomic_value(sentence, value)
@@ -306,9 +315,9 @@ class Model(logic.Model):
             raise NotImplementedError(NotImplemented)
 
     def set_opaque_value(self, sentence, value):
-        if sentence.is_operated() and sentence.operator == 'Negation':
-            sentence = sentence.operand
-            value = self.truth_function('Negation', value)
+        #if sentence.is_operated() and sentence.operator == 'Negation':
+        #    sentence = sentence.operand
+        #    value = self.truth_function('Negation', value)
         if sentence in self.opaques and self.opaques[sentence] != value:
             raise Model.ModelValueError('Inconsistent value {0} for sentence {1}'.format(str(value), str(sentence)))
         self.opaques[sentence] = value

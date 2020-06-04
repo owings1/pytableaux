@@ -46,26 +46,15 @@ class Model(k.Model):
 
         //truth_tables//cfol//
         """
-        if self.is_sentence_opaque(sentence):
-            return self.value_of_opaque(sentence, **kw)
         return super(Model, self).value_of_operated(sentence, **kw)
 
     def is_sentence_opaque(self, sentence):
         """
         A sentence is opaque if its operator is either Necessity or Possibility.
         """
-        if sentence.is_operated():
-            operator = sentence.operator
-            if operator == 'Necessity' or operator == 'Possibility':
-                return True
+        if sentence.operator in self.modal_operators:
+            return True
         return super(Model, self).is_sentence_opaque(sentence)
-
-    def read_node(self, node):
-        sentence = node.props['sentence']
-        if self.is_sentence_opaque(sentence):
-            self.set_opaque_value(sentence, self.char_values['T'])
-        elif sentence.is_literal():
-            self.set_literal_value(sentence, self.char_values['T'])
 
     def get_data(self):
         data = self.world_frame(0).get_data(self)['value']

@@ -248,7 +248,9 @@ class Model(logic.Model):
 
         //truth_tables//k//
         """
-        if sentence.operator in self.modal_operators:
+        if self.is_sentence_opaque(sentence):
+            return self.value_of_opaque(sentence, world=world, **kw)
+        elif sentence.operator in self.modal_operators:
             return self.value_of_modal(sentence, world=world, **kw)
         return super(Model, self).value_of_operated(sentence, world=world, **kw)
 
@@ -346,13 +348,6 @@ class Model(logic.Model):
         }
 
     def read_branch(self, branch):
-        # TODO: write docs
-    #    """
-    #    To read a model from a branch *b*, every atomic sentence at a world *w* on *b*
-    #    is True at *w*, and every negated atomic is False at *w*. For every predicate
-    #    sentence Fa0...an at a world *w* on *b*, the tuple <a0,...,an> is in the extension
-    #    of F at *w*.
-    #    """
         for node in branch.nodes:
             self.read_node(node)
         self.finish()
@@ -361,28 +356,37 @@ class Model(logic.Model):
         if node.has('sentence'):
             sentence = node.props['sentence']
             world = node.props['world']
-            if sentence.is_literal():
+            if world == None:
+                world = 0
+            if self.is_sentence_opaque(sentence):
+                self.set_opaque_value(sentence, self.char_values['T'], world=world)
+            elif self.is_sentence_literal(sentence):
                 self.set_literal_value(sentence, self.char_values['T'], world=world)
             self.predicates.update(node.predicates())
         elif node.has('world1') and node.has('world2'):
             self.add_access(node.props['world1'], node.props['world2'])
 
     def finish(self):
-        # track all atomics
+        # track all atomics and opaques
         atomics = set()
+        opaques = set()
         for world in self.frames:
             frame = self.world_frame(world)
             atomics.update(frame.atomics.keys())
+            opaques.update(frame.opaques.keys())
             for predicate in self.predicates:
                 self.agument_extension_with_identicals(predicate, world)
             self.ensure_self_identity(world)
             self.ensure_self_existence(world)
-        # make sure each atomic is assigned a value in each frame
+        # make sure each atomic and opaque is assigned a value in each frame
         for world in self.frames:
             frame = self.world_frame(world)
             for s in atomics:
                 if s not in frame.atomics:
                     self.set_literal_value(s, self.unassigned_value, world=world)
+            for s in opaques:
+                if s not in frame.opaques:
+                    self.set_opaque_value(s, self.unassigned_value, world=world)
 
     def ensure_self_identity(self, world):
         identity_extension = self.get_extension(Identity, world=world)
@@ -418,8 +422,15 @@ class Model(logic.Model):
             identicals.remove(c)
         return identicals
 
+    def is_sentence_literal(self, sentence):
+        if sentence.is_operated() and sentence.operator == 'Negation' and self.is_sentence_opaque(sentence.operand):
+            return True
+        return sentence.is_literal()
+
     def set_literal_value(self, sentence, value, **kw):
-        if sentence.is_operated() and sentence.operator == 'Negation':
+        if self.is_sentence_opaque(sentence):
+            self.set_opaque_value(sentence, value, **kw)
+        elif sentence.is_operated() and sentence.operator == 'Negation':
             self.set_literal_value(sentence.operand, self.truth_function('Negation', value), **kw)
         elif sentence.is_atomic():
             self.set_atomic_value(sentence, value, **kw)
@@ -1167,6 +1178,8 @@ class TableauxRules(object):
                         p = pb
                         p1 = pa
                     else:
+                        # continue statements do register as covered. this line is covered
+                        # by test_identity_indiscernability_not_applies
                         continue # pragma: no cover
                     # let s1 be the replacement of p with the other parameter p1 into s.
                     params = [p1 if param == p else param for param in s.parameters]
