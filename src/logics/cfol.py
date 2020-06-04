@@ -57,7 +57,7 @@ class Model(k.Model):
         return super(Model, self).is_sentence_opaque(sentence)
 
     def get_data(self):
-        data = self.world_frame(0).get_data(self)['value']
+        data = self.world_frame(0).get_data()['value']
         del data['world']
         return data
 

@@ -48,25 +48,27 @@ class Model(logic.Model):
     #: A map of predicates to their anti-extension.
     anti_extensions = {}
 
+    predicates = set()
+
     truth_values = ['F', 'N', 'B', 'T']
     truth_functional_operators = set([
-        'Assertion'                 ,
-        'Negation'                  ,
-        'Conjunction'               ,
-        'Disjunction'               ,
-        'Material Conditional'      ,
-        'Conditional'               ,
-        'Material Biconditional'    ,
-        'Biconditional'             ,
+        'Assertion'              ,
+        'Negation'               ,
+        'Conjunction'            ,
+        'Disjunction'            ,
+        'Material Conditional'   ,
+        'Conditional'            ,
+        'Material Biconditional' ,
+        'Biconditional'          ,
     ])
     unassigned_value = 'N'
 
     #tmp
     nvals = {
-        'F'  : 0,
-        'N'  : 0.25,
-        'B'  : 0.75,
-        'T'  : 1,
+        'F': 0,
+        'N': 0.25,
+        'B': 0.75,
+        'T': 1,
     }
     cvals = {
         0    : 'F',
@@ -75,7 +77,6 @@ class Model(logic.Model):
         1    : 'T',
     }
 
-    #designated_values = set([0.75, 1])
     designated_values = set(['B', 'T'])
 
     def __init__(self):

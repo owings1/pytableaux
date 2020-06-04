@@ -1162,7 +1162,7 @@ class TestK(LogicTester):
         m = constant(0, 0)
         n = constant(1, 0)
         s = predicated('Identity', [m, n])
-        model.set_predicated_value(s, 'T', 0)
+        model.set_predicated_value(s, 'T', world=0)
         res = model.value_of(s, world=0)
         assert res == 'T'
 
@@ -1175,14 +1175,14 @@ class TestK(LogicTester):
         model = self.logic.Model()
         a = atomic(0, 0)
         model.add_access(0, 1)
-        model.set_atomic_value(a, 'T', 1)
+        model.set_atomic_value(a, 'T', world=1)
         res = model.value_of(operate('Possibility', [a]), world=0)
         assert res == 'T'
 
     def test_model_possibly_a_no_access_false(self):
         model = self.logic.Model()
         a = atomic(0, 0)
-        model.set_atomic_value(a, 'T', 1)
+        model.set_atomic_value(a, 'T', world=1)
         res = model.value_of(operate('Possibility', [a]), world=0)
         assert res == 'F'
 
@@ -1195,8 +1195,8 @@ class TestK(LogicTester):
     def test_model_nec_a_with_access_false(self):
         model = self.logic.Model()
         a = atomic(0, 0)
-        model.set_atomic_value(a, 'T', 0)
-        model.set_atomic_value(a, 'F', 1)
+        model.set_atomic_value(a, 'T', world=0)
+        model.set_atomic_value(a, 'F', world=1)
         model.add_access(0, 1)
         model.add_access(0, 0)
         res = model.value_of(operate('Necessity', [a]), world=0)
@@ -1212,7 +1212,7 @@ class TestK(LogicTester):
         s3 = quantify('Existential', x, s2)
 
         model = self.logic.Model()
-        model.set_predicated_value(s1, 'T', 0)
+        model.set_predicated_value(s1, 'T', world=0)
         res = model.value_of(s3, world=0)
         assert res == 'T'
 
@@ -1239,7 +1239,7 @@ class TestK(LogicTester):
         s3 = quantify('Universal', x, s2)
 
         model = self.logic.Model()
-        model.set_predicated_value(s1, 'T', 0)
+        model.set_predicated_value(s1, 'T', world=0)
         res = model.value_of(s3, world=0)
         assert res == 'T'
 
@@ -1247,7 +1247,7 @@ class TestK(LogicTester):
         s1 = parse('VxFx', vocabulary=examples.vocabulary)
         s2 = parse('Fm', vocabulary=examples.vocabulary)
         model = self.logic.Model()
-        model.set_predicated_value(s2, 0, 0)
+        model.set_predicated_value(s2, 0, world=0)
         res = model.value_of(s1, world=0)
         assert res == 'F'
 
@@ -1263,23 +1263,23 @@ class TestK(LogicTester):
         s4 = quantify('Universal', x, s2)
     
         model = self.logic.Model()
-        model.set_predicated_value(s1, 'T', 0)
-        model.set_predicated_value(s3, 'F', 0)
+        model.set_predicated_value(s1, 'T', world=0)
+        model.set_predicated_value(s3, 'F', world=0)
         res = model.value_of(s4, world=0)
         assert res == 'F'
 
     def test_model_identity_extension_non_empty_with_sentence(self):
         s = parse('Imn')
         model = self.logic.Model()
-        model.set_predicated_value(s, 'T', 0)
-        extension = model.get_extension(Vocabulary.get_system_predicate('Identity'), 0)
+        model.set_predicated_value(s, 'T', world=0)
+        extension = model.get_extension(Vocabulary.get_system_predicate('Identity'), world=0)
         assert len(extension) > 0
         assert (constant(0, 0), constant(1, 0)) in extension
         
     def test_model_frame_data_has_identity_with_sentence(self):
         s = parse('Imn')
         model = self.logic.Model()
-        model.set_predicated_value(s, 'T', 0)
+        model.set_predicated_value(s, 'T', world=0)
         model.finish()
         data = model.get_data()
         assert len(data['Frames']['values']) == 1

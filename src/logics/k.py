@@ -29,7 +29,7 @@ import logic, examples
 from logic import negate, negative, operate, quantify, atomic, constant, predicated, NotImplementedError
 from . import fde
 
-Identity = logic.get_system_predicate('Identity')
+Identity  = logic.get_system_predicate('Identity')
 Existence = logic.get_system_predicate('Existence')
 
 def substitute_params(params, old_value, new_value):
@@ -68,11 +68,9 @@ class Model(logic.Model):
             self.world = world
             self.atomics = {}
             self.opaques = {}
-            self.extensions = {}
-            self.predicates = set()
-            self.extensions.update({'Identity': set(), 'Existence': set()})
+            self.extensions = {Identity: set(), Existence: set()}
 
-        def get_data(self, model):
+        def get_data(self):
             return {
                 'description' : 'frame at world {0}'.format(str(self.world)),
                 'datatype'    : 'map',
@@ -132,11 +130,11 @@ class Model(logic.Model):
                                 'values'          : [
                                     {
                                         'input'  : predicate,
-                                        'output' : self.extensions[predicate.name],
+                                        'output' : self.extensions[predicate],
                                     }
                                 ]
                             }
-                            for predicate in sorted(list(model.predicates)) if predicate.name in self.extensions
+                            for predicate in sorted(list(self.extensions.keys()))
                         ]
                     }
                 }
@@ -213,28 +211,27 @@ class Model(logic.Model):
     #: The domain of constants.
     constants = set()
 
+    # Track the predicates
+    predicates = set()
+
+    nvals = {
+        'F': 0,
+        'T': 1,
+    }
+    cvals = {
+        1: 'T',
+        0: 'F',
+    }
+
     # wip: real domain (fixed)
     domain = set()
     denotation = {}
-
-    #tmp
-    nvals = {
-        'F'  : 0,
-        'T'  : 1,
-    }
-    cvals = {
-        1    : 'T',
-        0    : 'F',
-    }
 
     def __init__(self):
         super(Model, self).__init__()
         self.frames = {}
         self.access = set()
-        self.predicates = set([
-            Identity,
-            Existence,
-        ])
+        self.predicates = set([Identity, Existence])
         self.constants = set()
         self.fde = fde.Model()
         # ensure there is a w0
@@ -243,7 +240,7 @@ class Model(logic.Model):
         self.domain = set()
         self.denotation = {}
 
-    def value_of_operated(self, sentence, world=0, **kw):
+    def value_of_operated(self, sentence, **kw):
         """
         The value of a sentence with a truth-functional operator `w` is determined by
         the values of its operands at `w` according to the following tables.
@@ -251,10 +248,10 @@ class Model(logic.Model):
         //truth_tables//k//
         """
         if self.is_sentence_opaque(sentence):
-            return self.value_of_opaque(sentence, world=world, **kw)
+            return self.value_of_opaque(sentence, **kw)
         elif sentence.operator in self.modal_operators:
-            return self.value_of_modal(sentence, world=world, **kw)
-        return super(Model, self).value_of_operated(sentence, world=world, **kw)
+            return self.value_of_modal(sentence, **kw)
+        return super(Model, self).value_of_operated(sentence, **kw)
 
     def value_of_predicated(self, sentence, **kw):
         """
@@ -265,25 +262,25 @@ class Model(logic.Model):
             return 'T'
         return 'F'
 
-    def value_of_existential(self, sentence, world=0, **kw):
+    def value_of_existential(self, sentence, **kw):
         """
         An existential sentence is true at `w`, just when the sentence resulting in the
         subsitution of some constant in the domain for the variable is true at `w`.
         """
         for c in self.constants:
             r = sentence.substitute(c, sentence.variable)
-            if self.value_of(r, world=world, **kw) == 'T':
+            if self.value_of(r, **kw) == 'T':
                 return 'T'
         return 'F'
 
-    def value_of_universal(self, sentence, world=0, **kw):
+    def value_of_universal(self, sentence, **kw):
         """
         A universal sentence is true at `w`, just when the sentence resulting in the
         subsitution of each constant in the domain for the variable is true at `w`.
         """
         for c in self.constants:
             r = sentence.substitute(c, sentence.variable)
-            if self.value_of(r, world=world, **kw) == 'F':
+            if self.value_of(r, **kw) == 'F':
                 return 'F'
         return 'T'
 
@@ -345,7 +342,7 @@ class Model(logic.Model):
                 'member_datatype' : 'map',
                 'member_typehint' : 'frame',
                 'symbol'          : 'F',
-                'values'          : [frame.get_data(self) for frame in sorted(self.frames.values())]
+                'values'          : [frame.get_data() for frame in sorted(self.frames.values())]
             }
         }
 
@@ -414,8 +411,8 @@ class Model(logic.Model):
                         to_add.add(new_params)
             extension.update(to_add)
 
-    def get_identicals(self, c, world=0, **kw):
-        identity_extension = self.get_extension(Identity, world=world, **kw)
+    def get_identicals(self, c, **kw):
+        identity_extension = self.get_extension(Identity, **kw)
         identicals = set()
         for params in identity_extension:
             if c in params:
@@ -453,7 +450,7 @@ class Model(logic.Model):
             raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
         frame.atomics[sentence] = value
 
-    def set_predicated_value(self, sentence, value, world=0, **kw):
+    def set_predicated_value(self, sentence, value, **kw):
         predicate = sentence.predicate
         if predicate not in self.predicates:
             self.predicates.add(predicate)
@@ -461,7 +458,7 @@ class Model(logic.Model):
         for param in params:
             if param.is_constant():
                 self.constants.add(param)
-        extension = self.get_extension(predicate, world=world, **kw)
+        extension = self.get_extension(predicate, **kw)
         if value == 'F':
             if params in extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
@@ -469,15 +466,12 @@ class Model(logic.Model):
             extension.add(params)
 
     def get_extension(self, predicate, world=0, **kw):
-        name = predicate.name
         frame = self.world_frame(world)
         if predicate not in self.predicates:
             self.predicates.add(predicate)
-        if predicate not in frame.predicates:
-            frame.predicates.add(predicate)
-        if name not in frame.extensions:
-            frame.extensions[name] = set()
-        return frame.extensions[name]
+        if predicate not in frame.extensions:
+            frame.extensions[predicate] = set()
+        return frame.extensions[predicate]
 
     def add_access(self, w1, w2):
         self.access.add((w1, w2))
@@ -507,22 +501,22 @@ class Model(logic.Model):
             return frame.atomics[sentence]
         return self.unassigned_value
 
-    def value_of_modal(self, sentence, world=0, **kw):
+    def value_of_modal(self, sentence, **kw):
         operator = sentence.operator
         if operator == 'Possibility':
-            return self.value_of_possibility(sentence, world=world, **kw)
+            return self.value_of_possibility(sentence, **kw)
         elif operator == 'Necessity':
-            return self.value_of_necessity(sentence, world=world, **kw)
+            return self.value_of_necessity(sentence, **kw)
         else:
             raise NotImplementedError(NotImplemented)
 
-    def value_of_quantified(self, sentence, world=0, **kw):
+    def value_of_quantified(self, sentence, **kw):
         q = sentence.quantifier
         if q == 'Existential':
-            return self.value_of_existential(sentence, world=world, **kw)
+            return self.value_of_existential(sentence, **kw)
         elif q == 'Universal':
-            return self.value_of_universal(sentence, world=world, **kw)
-        return super(Model, self).value_of_quantified(sentence, world=world, **kw)
+            return self.value_of_universal(sentence, **kw)
+        return super(Model, self).value_of_quantified(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         return self.fde.truth_function(operator, a, b)
