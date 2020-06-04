@@ -724,6 +724,9 @@ class Vocabulary(object):
         def operators(self):
             raise NotImplementedError(NotImplemented)
 
+        def quantifiers(self):
+            raise NotImplementedError(NotImplemented)
+
         def hash_tuple(self):
             raise NotImplementedError(NotImplemented)
 
@@ -778,6 +781,9 @@ class Vocabulary(object):
             return set()
 
         def operators(self):
+            return list()
+
+        def quantifiers(self):
             return list()
 
         def next(self):
@@ -839,6 +845,9 @@ class Vocabulary(object):
         def operators(self):
             return list()
 
+        def quantifiers(self):
+            return list()
+
         def hash_tuple(self):
             return (5, self.predicate) + tuple((param for param in self.parameters))
 
@@ -871,6 +880,9 @@ class Vocabulary(object):
 
         def operators(self):
             return self.sentence.operators()
+
+        def quantifiers(self):
+            return [self.quantifier] + self.sentence.quantifiers()
 
         def hash_tuple(self):
             return (6, quantifiers_list.index(self.quantifier), self.variable, self.sentence)
@@ -930,6 +942,12 @@ class Vocabulary(object):
             for operand in self.operands:
                 ops.extend(operand.operators())
             return ops
+
+        def quantifiers(self):
+            qts = list()
+            for operand in self.operands:
+                qts.extend(operand.quantifiers())
+            return qts
 
         def hash_tuple(self):
             return (7, operators_list.index(self.operator)) + tuple((operand for operand in self.operands))
