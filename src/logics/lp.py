@@ -85,18 +85,18 @@ class TableauxRules(object):
             for node in branch.get_nodes():
                 if not node.props['designated']:
                     n = branch.find({
-                        'sentence'   : negate(node.props['sentence']),
-                        'designated' : False
+                        'sentence'  : negate(node.props['sentence']),
+                        'designated': False,
                     })
                     if n:
-                        return { 'nodes' : set([node, n]), 'type' : 'Nodes' }
+                        return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
 
         def example(self):
             a = logic.atomic(0, 0)
             self.branch().update([
-                { 'sentence' :        a  , 'designated' : False },
-                { 'sentence' : negate(a) , 'designated' : False }
+                {'sentence':        a , 'designated': False},
+                {'sentence': negate(a), 'designated': False},
             ])
 
     class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
@@ -278,10 +278,14 @@ class TableauxRules(object):
                 # only apply to implementations for undesignated rules
                 branch = target['branch']
                 s = self.sentence(target['node'])
-                if not scores['b1']:
-                    scores['b1'] = branch.has({'sentence': negative(s.lhs), 'designated': False})
-                if not scores['b2']:
-                    scores['b2'] = branch.has({'sentence': s.rhs, 'designated': False})
+                scores.update({
+                    'b1': scores['b1'] or branch.has(
+                        {'sentence': negative(s.lhs), 'designated': False}
+                    ),
+                    'b2': scores['b2'] or branch.has(
+                        {'sentence': s.rhs , 'designated': False}
+                    ),
+                })
             return scores
 
     class MaterialBiconditionalDesignated(fde.TableauxRules.MaterialBiconditionalDesignated):
@@ -297,16 +301,16 @@ class TableauxRules(object):
                 # only apply to implementations for undesignated rules
                 branch = target['branch']
                 s = self.sentence(target['node'])
-                if not scores['b1']:
-                    scores['b1'] = branch.has_any([
+                scores.update({
+                    'b1': scores['b1'] or branch.has_any([
                         {'sentence': s.lhs, 'designated': False},
                         {'sentence': s.rhs, 'designated': False},
-                    ])
-                if not scores['b2']:
-                    scores['b2'] = branch.has_any([
+                    ]),
+                    'b2': scores['b2'] or branch.has_any([
                         {'sentence': negative(s.lhs), 'designated': False},
                         {'sentence': negative(s.rhs), 'designated': False},
-                    ])
+                    ]),
+                })
             return scores
 
     class MaterialBiconditionalNegatedDesignated(fde.TableauxRules.MaterialBiconditionalNegatedDesignated):
@@ -322,16 +326,16 @@ class TableauxRules(object):
                 # only apply to implementations for undesignated rules
                 branch = target['branch']
                 s = self.sentence(target['node'])
-                if not scores['b1']:
-                    scores['b1'] = branch.has_any([
+                scores.update({
+                    'b1': scores['b1'] or branch.has_any([
                         {'sentence': negative(s.lhs), 'designated': False},
-                        {'sentence': s.rhs,           'designated': False},
-                    ])
-                if not scores['b2']:
-                    scores['b2'] = branch.has_any([
-                        {'sentence': s.lhs,           'designated': False},
+                        {'sentence':          s.rhs , 'designated': False},
+                    ]),
+                    'b2': scores['b2'] or branch.has_any([
+                        {'sentence':          s.lhs , 'designated': False},
                         {'sentence': negative(s.rhs), 'designated': False},
-                    ])
+                    ]),
+                })
             return scores
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
