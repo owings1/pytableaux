@@ -1125,6 +1125,9 @@ class TableauxRules(object):
         # so we can halt on infinite branches.
         branch_max_worlds = None
 
+        # cache the sentence branch complexity
+        branch_complexities = None
+
         def get_candidate_targets_for_branch(self, branch):
             cands = list()
             worlds = branch.worlds()
@@ -1150,9 +1153,15 @@ class TableauxRules(object):
                             'branch'   : branch,
                             'nodes'    : set([node, anode]),
                             'type'     : 'Nodes',
-                            #'score'    : -1 * len(necessity_ops) * len(ops),
                         })
             return cands
+
+        def branch_complexity(self, sentence):
+            if self.branch_complexities == None:
+                self.branch_complexities = dict()
+            if sentence not in self.branch_complexities:
+                self.branch_complexities[sentence] = self.tableau.logic.TableauxSystem.branch_complexity(sentence.operators())
+            return self.branch_complexities[sentence]
 
         def on_branch_track(self, branch):
             # Project the maximum number of worlds for a branch (origin) as
@@ -1166,8 +1175,9 @@ class TableauxRules(object):
             branch_modal_operators_list = list()
             for node in branch.get_nodes():
                 if node.has('sentence'):
+                    ops = self.sentence(node).operators()
                     branch_modal_operators_list.extend(
-                        [o for o in self.sentence(node).operators() if o in Model.modal_operators]
+                        [o for o in ops if o in Model.modal_operators]
                     )
             self.branch_max_worlds[origin.id] = len(branch.worlds()) + len(branch_modal_operators_list) + 1
                     
@@ -1179,7 +1189,8 @@ class TableauxRules(object):
             # This should already be the lest-applied-to node
             if target['branch'].has({'sentence': negative(target['sentence']), 'world': target['world']}):
                 return 1
-            return -1 * self.tableau.logic.TableauxSystem.branch_complexity(target['sentence'].operators())
+            return -1 * len(target['sentence'].operators())
+            #return -1 * self.branch_complexity(target['sentence'])
 
         def example(self):
             s = operate(self.operator, [atomic(0, 0)])
