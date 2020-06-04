@@ -125,13 +125,17 @@ class TableauxRules(object):
             k.TableauxRules.DisjunctionNegated, 
             k.TableauxRules.MaterialConditionalNegated,
             k.TableauxRules.ConditionalNegated,
-            k.TableauxRules.Existential,
-            k.TableauxRules.ExistentialNegated,
-            k.TableauxRules.Universal,
-            k.TableauxRules.UniversalNegated,
             k.TableauxRules.DoubleNegation,
             k.TableauxRules.PossibilityNegated,
             k.TableauxRules.NecessityNegated,
+            k.TableauxRules.ExistentialNegated,
+            k.TableauxRules.UniversalNegated,
+        ],
+        [
+            k.TableauxRules.Existential,
+        ],
+        [
+            k.TableauxRules.Universal,
         ],
         [
             # branching rules
@@ -147,6 +151,8 @@ class TableauxRules(object):
         [
             # world creation rules 2
             k.TableauxRules.Necessity,
+        ],
+        [
             # world creation rules 1
             k.TableauxRules.Possibility,
         ],

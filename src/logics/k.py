@@ -559,9 +559,9 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            for node in branch.get_nodes():
+            for node in branch.find_all({'_operator': 'Negation'}):
                 if node.has('sentence') and node.has('world'):
-                    n = branch.find({'sentence': negate(node.props['sentence']), 'world': node.props['world']})
+                    n = branch.find({'sentence': node.props['sentence'].operand, 'world': node.props['world']})
                     if n != None:
                         return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
@@ -579,15 +579,12 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            for node in branch.get_nodes():
-                if node.has('sentence'):
-                    s = node.props['sentence']
-                    if s.is_operated() and s.operator == 'Negation':
-                        o = s.operand
-                        if o.is_predicated() and o.predicate.name == 'Identity':
-                            a, b = o.parameters
-                            if a == b:
-                                return {'node': node, 'type': 'Node'}
+            for node in branch.find_all({'_operator': 'Negation'}):
+                s = self.sentence(node).operand
+                if s.predicate == Identity:
+                    a, b = s.parameters
+                    if a == b:
+                        return {'node': node, 'type': 'Node'}
             return False
 
         def example(self):
@@ -600,13 +597,10 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            for node in branch.get_nodes():
-                if node.has('sentence'):
-                    s = node.props['sentence']
-                    if s.is_operated() and s.operator == 'Negation':
-                        o = s.operand
-                        if o.is_predicated() and o.predicate.name == 'Existence':
-                            return {'node': node, 'type': 'Node'}
+            for node in branch.find_all({'_operator': 'Negation'}):
+                s = self.sentence(node).operand
+                if s.predicate == Existence:
+                    return {'node': node, 'type': 'Node'}
 
         def example(self):
             s = logic.parse('NJm')
@@ -935,6 +929,10 @@ class TableauxRules(object):
             r = s.substitute(c, v)
             branch.add({'sentence': r, 'world': w}).tick(node)
 
+        # this actually hurts
+        #def score_target(self, target):
+        #    return -1 * len(self.sentence(target['node']).quantifiers())
+
     class ExistentialNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From an unticked negated existential node *n* with world *w* on a branch *b*,
@@ -968,35 +966,32 @@ class TableauxRules(object):
         def get_candidate_targets_for_branch(self, branch):
             cands = list()
             constants = branch.constants()
-            for node in branch.get_nodes():
-                if not node.has('sentence'):
-                    continue
+            for node in branch.find_all({'_quantifier': self.quantifier}):
                 s = self.sentence(node)
-                if s.quantifier == self.quantifier:
-                    w = node.props['world']
-                    v = s.variable
-                    if len(constants):
-                        # if the branch already has a constant, find all the substitutions not
-                        # already on the branch.
-                        for c in constants:
-                            r = s.substitute(c, v)
-                            if not branch.has({'sentence': r, 'world': w}):
-                                cands.append({
-                                    'branch'   : branch,
-                                    'sentence' : r,
-                                    'node'     : node,
-                                    'world'    : w,
-                                })
-                    else:
-                        # if the branch does not have any constants, pick a new one
-                        c = branch.new_constant()
+                w = node.props['world']
+                v = s.variable
+                if len(constants):
+                    # if the branch already has a constant, find all the substitutions not
+                    # already on the branch.
+                    for c in constants:
                         r = s.substitute(c, v)
-                        cands.append({
-                            'branch'   : branch,
-                            'sentence' : r,
-                            'node'     : node,
-                            'world'    : w,
-                        })
+                        if not branch.has({'sentence': r, 'world': w}):
+                            cands.append({
+                                'branch'   : branch,
+                                'sentence' : r,
+                                'node'     : node,
+                                'world'    : w,
+                            })
+                else:
+                    # if the branch does not have any constants, pick a new one
+                    c = branch.new_constant()
+                    r = s.substitute(c, v)
+                    cands.append({
+                        'branch'   : branch,
+                        'sentence' : r,
+                        'node'     : node,
+                        'world'    : w,
+                    })
             return cands
 
         def apply_to_target(self, target):
@@ -1038,8 +1033,9 @@ class TableauxRules(object):
         def score_target(self, target):
             s = self.sentence(target['node'])
             # Apply to the simplest possibility sentence, so we don't get stuck
-            possibility_ops = [operator for operator in s.operators() if operator == 'Possibility']
-            return -1 * len(possibility_ops)
+            ops = s.operators()
+            possibility_ops = [operator for operator in ops if operator == self.operator]
+            return -1 * len(possibility_ops) # * len(ops) # Also rank by simplest?
 
     class PossibilityNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -1080,23 +1076,24 @@ class TableauxRules(object):
             if self.branch_max_worlds != None and origin.id in self.branch_max_worlds:
                 if len(worlds) > self.branch_max_worlds[origin.id]:
                     return cands
-            for node in branch.get_nodes():
-                if node.has('sentence'):
-                    s = self.sentence(node)
-                    if s.operator == self.operator:
-                        s = s.operand
-                        w1 = node.props['world']
-                        for w2 in worlds:
-                            anode = branch.find({'world1': w1, 'world2': w2})
-                            if anode != None and not branch.has({'sentence': s, 'world': w2}):
-                                cands.append({
-                                    'node'     : node,
-                                    'sentence' : s,
-                                    'world'    : w2,
-                                    'branch'   : branch,
-                                    'nodes'    : set([node, anode]),
-                                    'type'     : 'Nodes',
-                                })
+            for node in branch.find_all({'_operator': self.operator}):
+                s = self.sentence(node)
+                si = s.operand
+                w1 = node.props['world']
+                for w2 in worlds:
+                    anode = branch.find({'world1': w1, 'world2': w2})
+                    if anode != None and not branch.has({'sentence': si, 'world': w2}):
+                        ops = s.operators()
+                        necessity_ops = [operator for operator in ops if operator == self.operator]
+                        cands.append({
+                            'node'     : node,
+                            'sentence' : si,
+                            'world'    : w2,
+                            'branch'   : branch,
+                            'nodes'    : set([node, anode]),
+                            'type'     : 'Nodes',
+                            #'score'    : -1 * len(necessity_ops) * len(ops),
+                        })
             return cands
 
         def on_branch_track(self, branch):
@@ -1146,19 +1143,8 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            nodes = {
-                n for n in branch.get_nodes(ticked = False) if (
-                    n.has('sentence') and
-                    n.props['sentence'].is_predicated()
-                )
-            }
-            inodes = {
-                n for n in nodes if (
-                    n.props['sentence'].predicate.name == 'Identity' and
-                    # checking length of the set excludes self-identity sentences.
-                    len(set(n.props['sentence'].parameters)) == 2
-                )
-            }
+            nodes = set(branch.find_all({'_is_predicated': True}, ticked = False))
+            inodes = set(branch.search_nodes({'_predicate': Identity}, nodes))
             for inode in inodes:
                 w = inode.props['world']
                 pa, pb = inode.props['sentence'].parameters
@@ -1172,14 +1158,14 @@ class TableauxRules(object):
                         p = pb
                         p1 = pa
                     else:
-                        # continue statements do register as covered. this line is covered
+                        # this continue statements does not register as covered. this line is covered
                         # by test_identity_indiscernability_not_applies
                         continue # pragma: no cover
                     # let s1 be the replacement of p with the other parameter p1 into s.
                     params = [p1 if param == p else param for param in s.parameters]
                     s1 = predicated(s.predicate, params)
                     # since we have SelfIdentityClosure, we don't need a = a
-                    if s.predicate.name != 'Identity' or params[0] != params[1]:
+                    if s.predicate != Identity or params[0] != params[1]:
                         # if <s1,w> does not yet appear on b, ...
                         if not branch.has({'sentence': s1, 'world': w}):
                             # then the rule applies to <s',w,b>
@@ -1211,13 +1197,17 @@ class TableauxRules(object):
             DisjunctionNegated, 
             MaterialConditionalNegated,
             ConditionalNegated,
-            Existential,
-            ExistentialNegated,
-            Universal,
-            UniversalNegated,
             DoubleNegation,
             PossibilityNegated,
             NecessityNegated,
+            ExistentialNegated,
+            UniversalNegated,
+        ],
+        [
+            Existential,
+        ],
+        [
+            Universal,
         ],
         [
             # branching rules
@@ -1233,6 +1223,8 @@ class TableauxRules(object):
         [
             # world creation rules 2
             Necessity,
+        ],
+        [
             # world creation rules 1
             Possibility,
         ],
