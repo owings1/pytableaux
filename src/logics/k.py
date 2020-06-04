@@ -96,7 +96,7 @@ class Model(logic.Model):
                         'values'          : [
                             {
                                 'input'  : sentence,
-                                'output' : model.cvals[self.atomics[sentence]]
+                                'output' : self.atomics[sentence]
                             }
                             for sentence in sorted(list(self.atomics.keys()))
                         ]
@@ -112,7 +112,7 @@ class Model(logic.Model):
                         'values'          : [
                             {
                                 'input'  : sentence,
-                                'output' : model.cvals[self.opaques[sentence]],
+                                'output' : self.opaques[sentence],
                             }
                             for sentence in sorted(list(self.opaques.keys()))
                         ]
@@ -198,21 +198,11 @@ class Model(logic.Model):
             #return cmp(self.world, other.world)
             return (self.world > other.world) - (self.world < other.world)
 
-    #truth_values = [0, 1]
     truth_values = ['F', 'T']
     truth_functional_operators = fde.Model.truth_functional_operators
     modal_operators = set(['Possibility', 'Necessity'])
 
     unassigned_value = 'F'
-    #unassigned_value = 0
-    #char_values = {
-    #    'F' : 0,
-    #    'T' : 1
-    #}
-    #truth_value_chars = {
-    #    0 : 'F',
-    #    1 : 'T'
-    #}
 
     #: A map from worlds to their frame.
     frames = {}
@@ -231,16 +221,10 @@ class Model(logic.Model):
     nvals = {
         'F'  : 0,
         'T'  : 1,
-        1    : 1,
-        0    : 0,
-        None : None,
     }
     cvals = {
-        'F'  : 'F',
-        'T'  : 'T',
         1    : 'T',
         0    : 'F',
-        None : None,
     }
 
     def __init__(self):
@@ -441,7 +425,7 @@ class Model(logic.Model):
         return identicals
 
     def is_sentence_literal(self, sentence):
-        if sentence.is_operated() and sentence.operator == 'Negation' and self.is_sentence_opaque(sentence.operand):
+        if sentence.operator == 'Negation' and self.is_sentence_opaque(sentence.operand):
             return True
         return sentence.is_literal()
 

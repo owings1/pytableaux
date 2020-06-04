@@ -36,19 +36,8 @@ class Model(fde.Model):
 
     .. _FDE model: fde.html#logics.fde.Model
     """
-    #truth_values = [0, 0.75, 1]
     truth_values = ['F', 'B', 'T']
     unassigned_value = 'F'
-    #char_values = {
-    #    'F' : 0,
-    #    'B' : 0.75,
-    #    'T' : 1
-    #}
-    #truth_value_chars = {
-    #    0    : 'F',
-    #    0.75 : 'B',
-    #    1    : 'T'
-    #}
 
     #tmp
     nvals = {

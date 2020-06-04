@@ -48,7 +48,6 @@ class Model(logic.Model):
     #: A map of predicates to their anti-extension.
     anti_extensions = {}
 
-    #truth_values = [0, 0.25, 0.75, 1]
     truth_values = ['F', 'N', 'B', 'T']
     truth_functional_operators = set([
         'Assertion'                 ,
@@ -61,19 +60,6 @@ class Model(logic.Model):
         'Biconditional'             ,
     ])
     unassigned_value = 'N'
-    #unassigned_value = 0.25
-    #char_values = {
-    #    'F' : 0,
-    #    'N' : 0.25,
-    #    'B' : 0.75,
-    #    'T' : 1
-    #}
-    #truth_value_chars = {
-    #    0    : 'F',
-    #    0.25 : 'N',
-    #    0.75 : 'B',
-    #    1    : 'T'
-    #}
 
     #tmp
     nvals = {
@@ -81,24 +67,13 @@ class Model(logic.Model):
         'N'  : 0.25,
         'B'  : 0.75,
         'T'  : 1,
-        0    : 0,
-        0.25 : 0.25,
-        0.75 : 0.75,
-        1    : 1,
-        None : None,
     }
     cvals = {
-        'F'  : 'F',
-        'N'  : 'N',
-        'B'  : 'B',
-        'T'  : 'T',
         0    : 'F',
         0.25 : 'N',
         0.75 : 'B',
         1    : 'T',
-        None : None,
     }
-    
 
     #designated_values = set([0.75, 1])
     designated_values = set(['B', 'T'])
@@ -175,10 +150,6 @@ class Model(logic.Model):
         a negated sentence whose negatum has the operator Necessity or Possibility.
         """
         if sentence.is_operated():
-            #if sentence.operator == 'Negation':
-            #    s = sentence.operand
-            #else:
-            #    s = sentence
             s = sentence
             return s.operator == 'Necessity' or s.operator == 'Possibility'
         return super(Model, self).is_sentence_opaque(sentence)
@@ -208,7 +179,7 @@ class Model(logic.Model):
                 'values'          : [
                     {
                         'input'  : sentence,
-                        'output' : self.cvals[self.atomics[sentence]]
+                        'output' : self.atomics[sentence]
                     }
                     for sentence in sorted(list(self.atomics.keys()))
                 ]
@@ -224,7 +195,7 @@ class Model(logic.Model):
                 'values'          : [
                     {
                         'input'  : sentence,
-                        'output' : self.cvals[self.opaques[sentence]]
+                        'output' : self.opaques[sentence]
                     }
                     for sentence in sorted(list(self.opaques.keys()))
                 ]
@@ -360,7 +331,7 @@ class Model(logic.Model):
                 self.constants.add(param)
         extension = self.get_extension(predicate)
         anti_extension = self.get_anti_extension(predicate)
-        if 'N' in self.truth_values and self.cvals[value] == 'N':
+        if 'N' in self.truth_values and value == 'N':
             if params in extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
             if params in anti_extension:
@@ -373,7 +344,7 @@ class Model(logic.Model):
             if params in extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
             anti_extension.add(params)
-        elif 'B' in self.truth_values and self.cvals[value] == 'B':
+        elif 'B' in self.truth_values and value == 'B':
             extension.add(params)
             anti_extension.add(params)
         self.predicates.add(predicate)
@@ -416,7 +387,7 @@ class Model(logic.Model):
         if operator == 'Assertion':
             return a
         if operator == 'Negation':
-            if self.cvals[a] == 'F' or self.cvals[a] == 'T':
+            if a == 'F' or a == 'T':
                 return self.cvals[1 - self.nvals[a]]
             return a
         elif operator == 'Conjunction':

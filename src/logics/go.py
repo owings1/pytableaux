@@ -75,7 +75,7 @@ class Model(k3.Model):
         """
         values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
         crunched = {crunch(self.nvals[v]) for v in values}
-        return max(crunched)
+        return self.cvals[max(crunched)]
 
     def value_of_universal(self, sentence, **kw):
         """
@@ -90,7 +90,7 @@ class Model(k3.Model):
         """
         values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
         crunched = {crunch(self.nvals[v]) for v in values}
-        return min(crunched)
+        return self.cvals[min(crunched)]
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Assertion':
