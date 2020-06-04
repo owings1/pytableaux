@@ -1915,11 +1915,27 @@ class TableauxSystem(object):
             self.ensure_track_targets(cands)
             cand_node_ids = {target['node'].id for target in cands}
             least_count = min({self.stbr_track[branch.id][node_id] for node_id in cand_node_ids})
+            bests = list()
             for target in cands:
                 track_count = self.stbr_track[branch.id][target['node'].id]
-                if track_count == least_count or not self.is_rank_optim:
-                    target['track_count'] = track_count
+                target['track_count'] = track_count
+                if not self.is_rank_optim:
                     return target
+                if track_count == least_count:
+                    bests.append(target)
+            if len(bests):
+                # score candidates
+                cand_scores = [self.score_candidate(target) for target in bests]
+                max_score = max(set(cand_scores))
+                for i in range(len(bests)):
+                    target = bests[i]
+                    candidate_score = cand_scores[i]
+                    if candidate_score == max_score:
+                        target['candidate_score'] = candidate_score
+                        return target
+
+        def score_candidate(self, target):
+            return 0
 
         def ensure_track_targets(self, cands):
             for target in cands:
@@ -1959,6 +1975,8 @@ class TableauxSystem(object):
         """
 
         ticked = False
+
+        branch_level = 1
 
         def __init__(self, *args, **opts):
             super(TableauxSystem.BranchRule, self).__init__(*args, **opts)
@@ -2032,7 +2050,7 @@ class TableauxSystem(object):
             # TODO: redesign candidate/group scoring, which will
             #       require overhauling or replacing the applies() api.
             # for now, propagate group score
-            return target['candidate_score']
+            return target['candidate_score'] / self.branch_level
 
         def score_candidate(self, target):
             return sum(self.score_candidate_list(target))

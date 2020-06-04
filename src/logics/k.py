@@ -565,9 +565,34 @@ class TableauxSystem(logic.TableauxSystem):
             branch.add({'sentence': premise, 'world': 0})
         branch.add({'sentence': negate(argument.conclusion), 'world': 0})
 
-class IsModal(object):
-    modal = True
+    @staticmethod
+    def branch_complexity(operators):
+        # TODO: make this more general
+        operators = list(operators)
+        last_is_negated = False
+        complexity = 0
+        neg_branchable = set(['Conjunction', 'Material Biconditional', 'Biconditional'])
+        pos_branchable = set(['Disjunction', 'Material Conditional', 'Conditional'])
+        while len(operators):
+            operator = operators.pop(0)
+            if operator == 'Assertion':
+                continue
+            if operator == 'Negation':
+                if last_is_negated:
+                    last_is_negated = False
+                    continue
+                last_is_negated = True
+            elif last_is_negated:
+                if operator in neg_branchable:
+                    complexity += 1
+                    last_is_negated = False
+            elif operator in pos_branchable:
+                complexity += 1
+        return complexity
 
+class IsModal(object):
+    modal = True            
+            
 class TableauxRules(object):
     """
     Rules for modal operators employ *world* indexes as well access-type
@@ -696,6 +721,8 @@ class TableauxRules(object):
         negated  = True
         operator = 'Conjunction'
 
+        branch_level = 2
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             w = node.props['world']
@@ -722,6 +749,8 @@ class TableauxRules(object):
         """
 
         operator = 'Disjunction'
+
+        branch_level = 2
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
@@ -766,6 +795,8 @@ class TableauxRules(object):
         """
 
         operator = 'Material Conditional'
+
+        branch_level = 2
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
@@ -814,6 +845,8 @@ class TableauxRules(object):
 
         operator = 'Material Biconditional'
 
+        branch_level = 2
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             w = node.props['world']
@@ -855,6 +888,8 @@ class TableauxRules(object):
 
         negated  = True
         operator = 'Material Biconditional'
+
+        branch_level = 2
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
@@ -1139,6 +1174,12 @@ class TableauxRules(object):
         def apply_to_target(self, target):
             branch = target['branch']
             branch.add({'sentence': target['sentence'], 'world': target['world']})
+
+        def score_candidate(self, target):
+            # This should already be the lest-applied-to node
+            if target['branch'].has({'sentence': negative(target['sentence']), 'world': target['world']}):
+                return 1
+            return -1 * self.tableau.logic.TableauxSystem.branch_complexity(target['sentence'].operators())
 
         def example(self):
             s = operate(self.operator, [atomic(0, 0)])

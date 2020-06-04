@@ -145,6 +145,8 @@ class TableauxRules(object):
         operator    = 'Conjunction'
         designation = True
 
+        branch_level = 3
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             b1 = branch
@@ -234,6 +236,8 @@ class TableauxRules(object):
         operator    = 'Conjunction'
         designation = False
 
+        branch_level = 3
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             b1 = branch
@@ -290,6 +294,8 @@ class TableauxRules(object):
 
         operator    = 'Disjunction'
         designation = True
+
+        branch_level = 3
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
@@ -359,6 +365,8 @@ class TableauxRules(object):
         operator    = 'Disjunction'
         designation = False
 
+        branch_level = 3
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
@@ -419,6 +427,8 @@ class TableauxRules(object):
         negated     = True
         operator    = 'Disjunction'
         designation = False
+
+        branch_level = 3
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)

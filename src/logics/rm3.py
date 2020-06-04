@@ -260,6 +260,8 @@ class TableauxRules(object):
         operator    = 'Conditional'
         designation = True
 
+        branch_level = 3
+
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
@@ -324,6 +326,8 @@ class TableauxRules(object):
         operator    = 'Conditional'
         designation = False
 
+        branch_level = 2
+
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             b1 = branch
@@ -376,6 +380,8 @@ class TableauxRules(object):
 
         operator    = 'Biconditional'
         designation = True
+
+        branch_level = 3
 
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
@@ -446,6 +452,8 @@ class TableauxRules(object):
         operator    = 'Biconditional'
         designation = False
 
+        branch_level = 2
+
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             s_cond1 = operate('Conditional', [lhs, rhs])
@@ -490,6 +498,8 @@ class TableauxRules(object):
         negated     = True
         operator    = 'Biconditional'
         designation = False
+
+        branch_level = 2
 
         def apply_to_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands

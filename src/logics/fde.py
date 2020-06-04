@@ -550,6 +550,8 @@ class TableauxRules(object):
         operator    = 'Conjunction'
         designation = True
 
+        branch_level = 2
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
@@ -576,6 +578,8 @@ class TableauxRules(object):
 
         operator    = 'Conjunction'
         designation = False
+
+        branch_level = 2
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
@@ -660,6 +664,8 @@ class TableauxRules(object):
         operator    = 'Material Conditional'
         designation = True
 
+        branch_level = 2
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
@@ -726,6 +732,8 @@ class TableauxRules(object):
         operator    = 'Material Conditional'
         designation = False
 
+        branch_level = 2
+
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
@@ -754,6 +762,8 @@ class TableauxRules(object):
 
         operator    = 'Material Biconditional'
         designation = True
+
+        branch_level = 2
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
@@ -796,6 +806,8 @@ class TableauxRules(object):
         negated     = True
         operator    = 'Material Biconditional'
         designation = True
+
+        branch_level = 2
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
