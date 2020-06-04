@@ -50,8 +50,8 @@ class Model(k3.Model):
         return super(Model, self).value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
-        if logic.arity(operator) == 2 and (a == self.char_values['N'] or b == self.char_values['N']):
-            return self.char_values['N']
+        if logic.arity(operator) == 2 and (a == self.cvals['N'] or b == self.cvals['N']):
+            return 'N'
         return super(Model, self).truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):

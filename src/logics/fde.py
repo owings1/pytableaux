@@ -48,7 +48,8 @@ class Model(logic.Model):
     #: A map of predicates to their anti-extension.
     anti_extensions = {}
 
-    truth_values = [0, 0.25, 0.75, 1]
+    #truth_values = [0, 0.25, 0.75, 1]
+    truth_values = ['F', 'N', 'B', 'T']
     truth_functional_operators = set([
         'Assertion'                 ,
         'Negation'                  ,
@@ -59,21 +60,48 @@ class Model(logic.Model):
         'Material Biconditional'    ,
         'Biconditional'             ,
     ])
-    unassigned_value = 0.25
-    char_values = {
-        'F' : 0,
-        'N' : 0.25,
-        'B' : 0.75,
-        'T' : 1
+    unassigned_value = 'N'
+    #unassigned_value = 0.25
+    #char_values = {
+    #    'F' : 0,
+    #    'N' : 0.25,
+    #    'B' : 0.75,
+    #    'T' : 1
+    #}
+    #truth_value_chars = {
+    #    0    : 'F',
+    #    0.25 : 'N',
+    #    0.75 : 'B',
+    #    1    : 'T'
+    #}
+
+    #tmp
+    nvals = {
+        'F'  : 0,
+        'N'  : 0.25,
+        'B'  : 0.75,
+        'T'  : 1,
+        0    : 0,
+        0.25 : 0.25,
+        0.75 : 0.75,
+        1    : 1,
+        None : None,
     }
-    truth_value_chars = {
+    cvals = {
+        'F'  : 'F',
+        'N'  : 'N',
+        'B'  : 'B',
+        'T'  : 'T',
         0    : 'F',
         0.25 : 'N',
         0.75 : 'B',
-        1    : 'T'
+        1    : 'T',
+        None : None,
     }
+    
 
-    designated_values = set([0.75, 1])
+    #designated_values = set([0.75, 1])
+    designated_values = set(['B', 'T'])
 
     def __init__(self):
         super(Model, self).__init__()
@@ -116,12 +144,12 @@ class Model(logic.Model):
         extension = self.get_extension(predicate)
         anti_extension = self.get_anti_extension(predicate)
         if params in extension and params in anti_extension:
-            return self.char_values['B']
+            return 'B'
         elif params in extension:
-            return self.char_values['T']
+            return 'T'
         elif params in anti_extension:
-            return self.char_values['F']
-        return self.char_values['N']
+            return 'F'
+        return 'N'
 
     def value_of_existential(self, sentence, **kw):
         """
@@ -130,7 +158,7 @@ class Model(logic.Model):
         the values from least to greatest is: **F**, **N**, **B**, **T**.
         """
         values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
-        return max(values)
+        return self.cvals[max({self.nvals[value] for value in values})]
 
     def value_of_universal(self, sentence, **kw):
         """
@@ -139,7 +167,7 @@ class Model(logic.Model):
         the values from least to greatest is: **F**, **N**, **B**, **T**.
         """
         values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
-        return min(values)
+        return self.cvals[min({self.nvals[value] for value in values})]
 
     def is_sentence_opaque(self, sentence):
         """
@@ -180,7 +208,7 @@ class Model(logic.Model):
                 'values'          : [
                     {
                         'input'  : sentence,
-                        'output' : self.truth_value_chars[self.atomics[sentence]]
+                        'output' : self.cvals[self.atomics[sentence]]
                     }
                     for sentence in sorted(list(self.atomics.keys()))
                 ]
@@ -196,7 +224,7 @@ class Model(logic.Model):
                 'values'          : [
                     {
                         'input'  : sentence,
-                        'output' : self.truth_value_chars[self.opaques[sentence]]
+                        'output' : self.cvals[self.opaques[sentence]]
                     }
                     for sentence in sorted(list(self.opaques.keys()))
                 ]
@@ -265,24 +293,24 @@ class Model(logic.Model):
                         nd = nnode.props['designated']
                         if d and not nd:
                             # only s is designated
-                            value = self.char_values['T']
+                            value = 'T'
                         elif not d and nd:
                             # only the negative of s is designated
-                            value = self.char_values['F']
+                            value = 'F'
                         elif d and nd:
                             # both sentences are designated
-                            value = self.char_values['B']
+                            value = 'B'
                         else:
                             # both sentences are undesignated
-                            value = self.char_values['N']
+                            value = 'N'
                     else:
                         # the negative of s is not on the branch
                         if d:
                             # any designated value will work
-                            value = self.char_values['T']
+                            value = 'T'
                         else:
                             # any undesignated value will work
-                            value = self.char_values['F']
+                            value = 'F'
                     if is_opaque:
                         self.set_opaque_value(sentence, value)
                     else:
@@ -298,7 +326,7 @@ class Model(logic.Model):
         pass
 
     def is_sentence_literal(self, sentence):
-        if sentence.is_operated() and sentence.operator == 'Negation' and self.is_sentence_opaque(sentence.operand):
+        if sentence.operator == 'Negation' and self.is_sentence_opaque(sentence.operand):
             return True
         return sentence.is_literal()
 
@@ -315,9 +343,6 @@ class Model(logic.Model):
             raise NotImplementedError(NotImplemented)
 
     def set_opaque_value(self, sentence, value):
-        #if sentence.is_operated() and sentence.operator == 'Negation':
-        #    sentence = sentence.operand
-        #    value = self.truth_function('Negation', value)
         if sentence in self.opaques and self.opaques[sentence] != value:
             raise Model.ModelValueError('Inconsistent value {0} for sentence {1}'.format(str(value), str(sentence)))
         self.opaques[sentence] = value
@@ -335,20 +360,20 @@ class Model(logic.Model):
                 self.constants.add(param)
         extension = self.get_extension(predicate)
         anti_extension = self.get_anti_extension(predicate)
-        if 'N' in self.char_values and value == self.char_values['N']:
+        if 'N' in self.truth_values and self.cvals[value] == 'N':
             if params in extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
             if params in anti_extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
-        elif value == self.char_values['T']:
+        elif value == 'T':
             if params in anti_extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
             extension.add(params)
-        elif value == self.char_values['F']:
+        elif value == 'F':
             if params in extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
             anti_extension.add(params)
-        elif 'B' in self.char_values and value == self.char_values['B']:
+        elif 'B' in self.truth_values and self.cvals[value] == 'B':
             extension.add(params)
             anti_extension.add(params)
         self.predicates.add(predicate)
@@ -391,13 +416,13 @@ class Model(logic.Model):
         if operator == 'Assertion':
             return a
         if operator == 'Negation':
-            if a == self.char_values['F'] or a == self.char_values['T']:
-                return 1 - a
+            if self.cvals[a] == 'F' or self.cvals[a] == 'T':
+                return self.cvals[1 - self.nvals[a]]
             return a
         elif operator == 'Conjunction':
-            return min(a, b)
+            return self.cvals[min(self.nvals[a], self.nvals[b])]
         elif operator == 'Disjunction':
-            return max(a, b)
+            return self.cvals[max(self.nvals[a], self.nvals[b])]
         elif operator == 'Material Conditional':
             return self.truth_function('Disjunction', self.truth_function('Negation', a), b)
         elif operator == 'Material Biconditional':

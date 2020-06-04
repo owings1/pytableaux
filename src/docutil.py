@@ -51,7 +51,7 @@ def get_truth_table_html(lgc, operator):
         'sentence'   : examples.operated(operator),
         'sw'         : sw,
         'values'     : lgc.Model.truth_values,
-        'value_chars': lgc.Model.truth_value_chars,
+        #'value_chars': lgc.Model.truth_value_chars,
         'num_values' : len(lgc.Model.truth_values),
         'table'      : table,
         'operator'   : operator,

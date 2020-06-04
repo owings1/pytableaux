@@ -49,8 +49,8 @@ class Model(k3.Model):
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Conditional' or operator == 'Biconditional':
-            if a == self.char_values['N'] and b == self.char_values['N']:
-                return self.char_values['T']
+            if self.cvals[a] == 'N' and a == b:
+                return 'T'
         return super(Model, self).truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):

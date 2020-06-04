@@ -66,12 +66,12 @@ def test_truth_table_cpl_negation():
     tbl = logic.truth_table('cpl', 'Negation')
     assert len(tbl['inputs']) == 2
     assert len(tbl['outputs']) == 2
-    assert tbl['inputs'][0][0] == 0
-    assert tbl['outputs'][0] == 1
+    assert tbl['inputs'][0][0] == 'F'
+    assert tbl['outputs'][0] == 'T'
 
 def test_truth_tables_cpl():
     tbls = logic.truth_tables('cpl')
-    assert tbls['Negation']['outputs'][0] == 1
+    assert tbls['Negation']['outputs'][0] == 'T'
 
 def test_get_logic_cpl_case_insensitive():
     lgc1 = logic.get_logic('cpl')

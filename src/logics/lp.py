@@ -36,17 +36,38 @@ class Model(fde.Model):
 
     .. _FDE model: fde.html#logics.fde.Model
     """
-    truth_values = [0, 0.75, 1]
-    unassigned_value = 0
-    char_values = {
-        'F' : 0,
-        'B' : 0.75,
-        'T' : 1
+    #truth_values = [0, 0.75, 1]
+    truth_values = ['F', 'B', 'T']
+    unassigned_value = 'F'
+    #char_values = {
+    #    'F' : 0,
+    #    'B' : 0.75,
+    #    'T' : 1
+    #}
+    #truth_value_chars = {
+    #    0    : 'F',
+    #    0.75 : 'B',
+    #    1    : 'T'
+    #}
+
+    #tmp
+    nvals = {
+        'F'  : 0,
+        'B'  : 0.75,
+        'T'  : 1,
+        0    : 0,
+        0.75 : 0.75,
+        1    : 1,
+        None : None,
     }
-    truth_value_chars = {
+    cvals = {
+        'F'  : 'F',
+        'B'  : 'B',
+        'T'  : 'T',
         0    : 'F',
         0.75 : 'B',
-        1    : 'T'
+        1    : 'T',
+        None : None,
     }
 
     def value_of_operated(self, sentence, **kw):

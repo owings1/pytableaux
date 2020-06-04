@@ -96,7 +96,7 @@ class Model(logic.Model):
                         'values'          : [
                             {
                                 'input'  : sentence,
-                                'output' : model.truth_value_chars[self.atomics[sentence]]
+                                'output' : model.cvals[self.atomics[sentence]]
                             }
                             for sentence in sorted(list(self.atomics.keys()))
                         ]
@@ -112,7 +112,7 @@ class Model(logic.Model):
                         'values'          : [
                             {
                                 'input'  : sentence,
-                                'output' : model.truth_value_chars[self.opaques[sentence]],
+                                'output' : model.cvals[self.opaques[sentence]],
                             }
                             for sentence in sorted(list(self.opaques.keys()))
                         ]
@@ -198,19 +198,21 @@ class Model(logic.Model):
             #return cmp(self.world, other.world)
             return (self.world > other.world) - (self.world < other.world)
 
-    truth_values = [0, 1]
+    #truth_values = [0, 1]
+    truth_values = ['F', 'T']
     truth_functional_operators = fde.Model.truth_functional_operators
     modal_operators = set(['Possibility', 'Necessity'])
 
-    unassigned_value = 0
-    char_values = {
-        'F' : 0,
-        'T' : 1
-    }
-    truth_value_chars = {
-        0 : 'F',
-        1 : 'T'
-    }
+    unassigned_value = 'F'
+    #unassigned_value = 0
+    #char_values = {
+    #    'F' : 0,
+    #    'T' : 1
+    #}
+    #truth_value_chars = {
+    #    0 : 'F',
+    #    1 : 'T'
+    #}
 
     #: A map from worlds to their frame.
     frames = {}
@@ -224,6 +226,22 @@ class Model(logic.Model):
     # wip: real domain (fixed)
     domain = set()
     denotation = {}
+
+    #tmp
+    nvals = {
+        'F'  : 0,
+        'T'  : 1,
+        1    : 1,
+        0    : 0,
+        None : None,
+    }
+    cvals = {
+        'F'  : 'F',
+        'T'  : 'T',
+        1    : 'T',
+        0    : 'F',
+        None : None,
+    }
 
     def __init__(self):
         super(Model, self).__init__()
@@ -260,8 +278,8 @@ class Model(logic.Model):
         is in the extension of `P` at `w`.
         """
         if tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw):
-            return self.char_values['T']
-        return self.char_values['F']
+            return 'T'
+        return 'F'
 
     def value_of_existential(self, sentence, world=0, **kw):
         """
@@ -270,9 +288,9 @@ class Model(logic.Model):
         """
         for c in self.constants:
             r = sentence.substitute(c, sentence.variable)
-            if self.value_of(r, world=world, **kw) == self.char_values['T']:
-                return self.char_values['T']
-        return self.char_values['F']
+            if self.value_of(r, world=world, **kw) == 'T':
+                return 'T'
+        return 'F'
 
     def value_of_universal(self, sentence, world=0, **kw):
         """
@@ -281,9 +299,9 @@ class Model(logic.Model):
         """
         for c in self.constants:
             r = sentence.substitute(c, sentence.variable)
-            if self.value_of(r, world=world, **kw) == self.char_values['F']:
-                return self.char_values['F']
-        return self.char_values['T']
+            if self.value_of(r, world=world, **kw) == 'F':
+                return 'F'
+        return 'T'
 
     def value_of_possibility(self, sentence, world=0, **kw):
         """
@@ -291,9 +309,9 @@ class Model(logic.Model):
         some `w'` such that `<w, w'>` in the access relation.
         """
         for w2 in self.visibles(world):
-            if self.value_of(sentence.operand, world=w2, **kw) == self.char_values['T']:
-                return self.char_values['T']
-        return self.char_values['F']
+            if self.value_of(sentence.operand, world=w2, **kw) == 'T':
+                return 'T'
+        return 'F'
 
     def value_of_necessity(self, sentence, world=0, **kw):
         """
@@ -301,9 +319,9 @@ class Model(logic.Model):
         each `w'` such that `<w, w'>` is in the access relation.
         """
         for w2 in self.visibles(world):
-            if self.value_of(sentence.operand, world=w2, **kw) == self.char_values['F']:
-                return self.char_values['F']
-        return self.char_values['T']
+            if self.value_of(sentence.operand, world=w2, **kw) == 'F':
+                return 'F'
+        return 'T'
 
     def is_countermodel_to(self, argument):
         """
@@ -311,9 +329,9 @@ class Model(logic.Model):
         is **T** at `w0` and the value of the conclusion is **F** at `w0`.
         """
         for premise in argument.premises:
-            if self.value_of(premise, world=0) != self.char_values['T']:
+            if self.value_of(premise, world=0) != 'T':
                 return False
-        return self.value_of(argument.conclusion, world=0) == self.char_values['F']
+        return self.value_of(argument.conclusion, world=0) == 'F'
 
     def get_data(self):
         return {
@@ -359,9 +377,9 @@ class Model(logic.Model):
             if world == None:
                 world = 0
             if self.is_sentence_opaque(sentence):
-                self.set_opaque_value(sentence, self.char_values['T'], world=world)
+                self.set_opaque_value(sentence, 'T', world=world)
             elif self.is_sentence_literal(sentence):
-                self.set_literal_value(sentence, self.char_values['T'], world=world)
+                self.set_literal_value(sentence, 'T', world=world)
             self.predicates.update(node.predicates())
         elif node.has('world1') and node.has('world2'):
             self.add_access(node.props['world1'], node.props['world2'])
@@ -460,10 +478,10 @@ class Model(logic.Model):
             if param.is_constant():
                 self.constants.add(param)
         extension = self.get_extension(predicate, world=world, **kw)
-        if value == self.char_values['F']:
+        if value == 'F':
             if params in extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
-        if value == self.char_values['T']:
+        if value == 'T':
             extension.add(params)
 
     def get_extension(self, predicate, world=0, **kw):

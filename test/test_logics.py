@@ -116,8 +116,8 @@ class TestFDE(LogicTester):
     def test_a_thus_b_is_countermodel_to_false(self):
         arg = argument('b', premises=['a'])
         model = self.logic.Model()
-        model.set_literal_value(arg.premises[0], model.char_values['F'])
-        model.set_literal_value(arg.conclusion, model.char_values['F'])
+        model.set_literal_value(arg.premises[0], 'F')
+        model.set_literal_value(arg.conclusion, 'F')
         assert not model.is_countermodel_to(arg)
 
     def test_invalid_univ_from_exist(self):
@@ -128,7 +128,7 @@ class TestFDE(LogicTester):
         proof = self.example_proof('Law of Non-contradiction')
         model = proof.branches[0].model
         assert not proof.valid
-        assert model.value_of(parse('a')) == model.char_values['B']
+        assert model.value_of(parse('a')) == 'B'
 
     def test_model_b_value_atomic_branch(self):
         proof = tableau(self.logic)
@@ -139,7 +139,7 @@ class TestFDE(LogicTester):
             {'sentence': negate(s), 'designated': True}
         ])
         model = branch.make_model()
-        assert model.value_of(s) == 0.75
+        assert model.value_of(s) == 'B'
 
     def test_model_univ_t_value_branch(self):
         proof = tableau(self.logic)
@@ -148,7 +148,7 @@ class TestFDE(LogicTester):
         branch.add({'sentence': s, 'designated': True})
         s1 = parse('VxFx', examples.vocabulary)
         model = branch.make_model()
-        assert model.value_of(s1) == 1
+        assert model.value_of(s1) == 'T'
 
     def test_model_exist_b_value_branch(self):
         proof = tableau(self.logic)
@@ -163,7 +163,7 @@ class TestFDE(LogicTester):
         ])
         s2 = parse('SxFx', examples.vocabulary)
         model = branch.make_model()
-        assert model.value_of(s2) == 0.75
+        assert model.value_of(s2) == 'B'
 
     def test_model_necessity_opaque_des_value_branch(self):
         proof = tableau(self.logic)
@@ -171,7 +171,7 @@ class TestFDE(LogicTester):
         s = parse('La')
         branch.add({'sentence': s, 'designated': True})
         model = branch.make_model()
-        assert model.value_of(s) in set([0.75, 1])
+        assert model.value_of(s) in set(['B', 'T'])
 
     def test_model_necessity_opaque_b_value_branch(self):
         proof = tableau(self.logic)
@@ -182,7 +182,7 @@ class TestFDE(LogicTester):
             {'sentence': negate(s), 'designated': True}
         ])
         model = branch.make_model()
-        assert model.value_of(s) == 0.75
+        assert model.value_of(s) == 'B'
 
     def test_model_atomic_undes_value_branch(self):
         proof = tableau(self.logic)
@@ -192,7 +192,7 @@ class TestFDE(LogicTester):
             {'sentence': s, 'designated': False}
         ])
         model = branch.make_model()
-        assert model.value_of(s) in set([0, 0.25])
+        assert model.value_of(s) in set(['F', 'N'])
 
     def test_model_atomic_t_value_branch(self):
         proof = tableau(self.logic)
@@ -203,7 +203,7 @@ class TestFDE(LogicTester):
             {'sentence': negate(s), 'designated': False}
         ])
         model = branch.make_model()
-        assert model.value_of(s) == 1
+        assert model.value_of(s) == 'T'
 
     def test_model_atomic_f_value_branch(self):
         proof = tableau(self.logic)
@@ -214,14 +214,14 @@ class TestFDE(LogicTester):
             {'sentence': negate(s), 'designated': True}
         ])
         model = branch.make_model()
-        assert model.value_of(s) == 0
+        assert model.value_of(s) == 'F'
 
     def test_model_get_data_various(self):
         s1 = parse('a')
         s2 = parse('Imn')
         model = self.logic.Model()
-        model.set_literal_value(s1, model.char_values['B'])
-        model.set_literal_value(s2, model.char_values['F'])
+        model.set_literal_value(s1, 'B')
+        model.set_literal_value(s2, 'F')
         res = model.get_data()
         assert 'Atomics' in res
 
@@ -229,11 +229,11 @@ class TestFDE(LogicTester):
         s1 = parse('Aab')
         model = self.logic.Model()
         with pytest.raises(NotImplementedError):
-            model.set_literal_value(s1, model.char_values['T'])
+            model.set_literal_value(s1, 'T')
         with pytest.raises(NotImplementedError):
             model.value_of_quantified(s1)
         with pytest.raises(NotImplementedError):
-            model.truth_function('Foomunction', 0)
+            model.truth_function('Foomunction', 'F')
 
     def test_model_value_of_atomic_unassigned(self):
         s = parse('a')
@@ -250,40 +250,40 @@ class TestFDE(LogicTester):
     def test_model_value_error_various(self):
         s1 = parse('La')
         model = self.logic.Model()
-        model.set_opaque_value(s1, model.char_values['T'])
+        model.set_opaque_value(s1, 'T')
         with pytest.raises(Model.ModelValueError):
-            model.set_opaque_value(s1, model.char_values['B'])
+            model.set_opaque_value(s1, 'B')
         s2 = parse('a')
         model = self.logic.Model()
-        model.set_atomic_value(s2, model.char_values['T'])
+        model.set_atomic_value(s2, 'T')
         with pytest.raises(Model.ModelValueError):
-            model.set_atomic_value(s2, model.char_values['B'])
+            model.set_atomic_value(s2, 'B')
         s3 = parse('Imn')
         model = self.logic.Model()
-        model.set_predicated_value(s3, model.char_values['T'])
+        model.set_predicated_value(s3, 'T')
         with pytest.raises(Model.ModelValueError):
-            model.set_predicated_value(s3, model.char_values['N'])
+            model.set_predicated_value(s3, 'N')
         model = self.logic.Model()
-        model.set_predicated_value(s3, model.char_values['B'])
+        model.set_predicated_value(s3, 'B')
         with pytest.raises(Model.ModelValueError):
-            model.set_predicated_value(s3, model.char_values['T'])
+            model.set_predicated_value(s3, 'T')
         model = self.logic.Model()
-        model.set_predicated_value(s3, model.char_values['B'])
+        model.set_predicated_value(s3, 'B')
         with pytest.raises(Model.ModelValueError):
-            model.set_predicated_value(s3, model.char_values['F'])
+            model.set_predicated_value(s3, 'F')
         model = self.logic.Model()
-        model.set_predicated_value(s3, model.char_values['F'])
+        model.set_predicated_value(s3, 'F')
         with pytest.raises(Model.ModelValueError):
-            model.set_predicated_value(s3, model.char_values['N'])
+            model.set_predicated_value(s3, 'N')
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
         arg = argument('a', premises=['NLa', 'b'])
         proof = tableau(self.logic, arg)
         proof.build(models=True)
         model = proof.branches[0].model
-        assert model.value_of(parse('a')) == model.char_values['F']
-        assert model.value_of(parse('La')) == model.char_values['F']
-        assert model.value_of(parse('NLa')) == model.char_values['T']
+        assert model.value_of(parse('a')) == 'F'
+        assert model.value_of(parse('La')) == 'F'
+        assert model.value_of(parse('NLa')) == 'T'
         assert model.is_countermodel_to(arg)
         
 class TestK3(LogicTester):
@@ -328,9 +328,9 @@ class TestK3W(LogicTester):
 
     def test_truth_table_conjunction(self):
         tbl = truth_table(self.logic, 'Conjunction')
-        assert tbl['outputs'][0] == 0
-        assert tbl['outputs'][3] == 0.5
-        assert tbl['outputs'][8] == 1
+        assert tbl['outputs'][0] == 'F'
+        assert tbl['outputs'][3] == 'N'
+        assert tbl['outputs'][8] == 'T'
 
     def test_ConjunctionNegatedUndesignated_step(self):
         proof = tableau(self.logic)
@@ -404,21 +404,21 @@ class TestB3E(LogicTester):
 
     def test_truth_table_assertion(self):
         tbl = truth_table(self.logic, 'Assertion')
-        assert tbl['outputs'][0] == 0
-        assert tbl['outputs'][1] == 0
-        assert tbl['outputs'][2] == 1
+        assert tbl['outputs'][0] == 'F'
+        assert tbl['outputs'][1] == 'F'
+        assert tbl['outputs'][2] == 'T'
 
     def test_truth_table_conditional(self):
         tbl = truth_table(self.logic, 'Conditional')
-        assert tbl['outputs'][3] == 1
-        assert tbl['outputs'][4] == 1
-        assert tbl['outputs'][7] == 0
+        assert tbl['outputs'][3] == 'T'
+        assert tbl['outputs'][4] == 'T'
+        assert tbl['outputs'][7] == 'F'
 
     def test_truth_table_biconditional(self):
         tbl = truth_table(self.logic, 'Biconditional')
-        assert tbl['outputs'][2] == 0
-        assert tbl['outputs'][4] == 1
-        assert tbl['outputs'][7] == 0
+        assert tbl['outputs'][2] == 'F'
+        assert tbl['outputs'][4] == 'T'
+        assert tbl['outputs'][7] == 'F'
         
     def test_valid_cond_contraction(self):
         proof = self.example_proof('Conditional Contraction')
@@ -468,9 +468,9 @@ class TestL3(LogicTester):
 
     def test_truth_table_conditional(self):
         tbl = truth_table(self.logic, 'Conditional')
-        assert tbl['outputs'][3] == 0.5
-        assert tbl['outputs'][4] == 1
-        assert tbl['outputs'][6] == 0
+        assert tbl['outputs'][3] == 'N'
+        assert tbl['outputs'][4] == 'T'
+        assert tbl['outputs'][6] == 'F'
         
     def test_valid_cond_identity(self):
         proof = self.example_proof('Conditional Identity')
@@ -540,10 +540,10 @@ class TestLP(LogicTester):
     def test_case_model_not_a_countermodel(self):
         arg = argument('NBab', premises=['c', 'BcNUab'])
         model = self.logic.Model()
-        model.set_literal_value(parse('a'), 0)
-        model.set_literal_value(parse('b'), 1)
-        model.set_literal_value(parse('c'), 0.75)
-        assert model.value_of(arg.premises[1]) == 0.75
+        model.set_literal_value(parse('a'), 'F')
+        model.set_literal_value(parse('b'), 'T')
+        model.set_literal_value(parse('c'), 'B')
+        assert model.value_of(arg.premises[1]) == 'B'
 
     def test_case_bad_rule_neg_bicond_undes(self):
         arg = argument('NBab', premises=['NBab'])
@@ -588,15 +588,21 @@ class TestRM3(LogicTester):
 
     def test_truth_table_conditional(self):
         tbl = truth_table(self.logic, 'Conditional')
-        assert tbl['outputs'][0] == 1
-        assert tbl['outputs'][3] == 0
-        assert tbl['outputs'][4] == 0.75
+        assert tbl['outputs'][0] == 'T'
+        assert tbl['outputs'][1] == 'T'
+        assert tbl['outputs'][2] == 'T'
+        assert tbl['outputs'][3] == 'F'
+        assert tbl['outputs'][4] == 'B'
+        assert tbl['outputs'][5] == 'T'
+        assert tbl['outputs'][6] == 'F'
+        assert tbl['outputs'][7] == 'F'
+        assert tbl['outputs'][8] == 'T'
 
     def test_model_value_of_biconditional(self):
         model = self.logic.Model()
-        model.set_literal_value(parse('a'), 0.75)
-        model.set_literal_value(parse('b'), 0)
-        assert model.value_of(parse('Bab')) == 0
+        model.set_literal_value(parse('a'), 'B')
+        model.set_literal_value(parse('b'), 'F')
+        assert model.value_of(parse('Bab')) == 'F'
 
     def test_valid_cond_mp(self):
         proof = self.example_proof('Conditional Modus Ponens')
@@ -657,51 +663,51 @@ class TestGO(LogicTester):
 
     def test_truth_table_assertion(self):
         tbl = truth_table(self.logic, 'Assertion')
-        assert tbl['outputs'][0] == 0
-        assert tbl['outputs'][1] == 0
-        assert tbl['outputs'][2] == 1
+        assert tbl['outputs'][0] == 'F'
+        assert tbl['outputs'][1] == 'F'
+        assert tbl['outputs'][2] == 'T'
 
     def test_truth_table_negation(self):
         tbl = truth_table(self.logic, 'Negation')
-        assert tbl['outputs'][0] == 1
-        assert tbl['outputs'][1] == 0.5
-        assert tbl['outputs'][2] == 0
+        assert tbl['outputs'][0] == 'T'
+        assert tbl['outputs'][1] == 'N'
+        assert tbl['outputs'][2] == 'F'
 
     def test_truth_table_disjunction(self):
         tbl = truth_table(self.logic, 'Disjunction')
-        assert tbl['outputs'][0] == 0
-        assert tbl['outputs'][1] == 0
-        assert tbl['outputs'][2] == 1
+        assert tbl['outputs'][0] == 'F'
+        assert tbl['outputs'][1] == 'F'
+        assert tbl['outputs'][2] == 'T'
 
     def test_truth_table_conjunction(self):
         tbl = truth_table(self.logic, 'Conjunction')
-        assert tbl['outputs'][0] == 0
-        assert tbl['outputs'][1] == 0
-        assert tbl['outputs'][8] == 1
+        assert tbl['outputs'][0] == 'F'
+        assert tbl['outputs'][1] == 'F'
+        assert tbl['outputs'][8] == 'T'
 
     def test_truth_table_mat_cond(self):
         tbl = truth_table(self.logic, 'Material Conditional')
-        assert tbl['outputs'][0] == 1
-        assert tbl['outputs'][1] == 1
-        assert tbl['outputs'][4] == 0
+        assert tbl['outputs'][0] == 'T'
+        assert tbl['outputs'][1] == 'T'
+        assert tbl['outputs'][4] == 'F'
 
     def test_truth_table_mat_bicond(self):
         tbl = truth_table(self.logic, 'Material Biconditional')
-        assert tbl['outputs'][0] == 1
-        assert tbl['outputs'][1] == 0
-        assert tbl['outputs'][4] == 0
+        assert tbl['outputs'][0] == 'T'
+        assert tbl['outputs'][1] == 'F'
+        assert tbl['outputs'][4] == 'F'
 
     def test_truth_table_cond(self):
         tbl = truth_table(self.logic, 'Conditional')
-        assert tbl['outputs'][0] == 1
-        assert tbl['outputs'][3] == 0
-        assert tbl['outputs'][4] == 1
+        assert tbl['outputs'][0] == 'T'
+        assert tbl['outputs'][3] == 'F'
+        assert tbl['outputs'][4] == 'T'
 
     def test_truth_table_bicond(self):
         tbl = truth_table(self.logic, 'Biconditional')
-        assert tbl['outputs'][0] == 1
-        assert tbl['outputs'][4] == 1
-        assert tbl['outputs'][7] == 0
+        assert tbl['outputs'][0] == 'T'
+        assert tbl['outputs'][4] == 'T'
+        assert tbl['outputs'][7] == 'F'
 
     def test_MaterialConditionalNegatedDesignated_step(self):
         proof = tableau(self.logic)
@@ -851,8 +857,8 @@ class TestCPL(LogicTester):
         branch = list(proof.open_branches())[0]
         model.read_branch(branch)
         s = atomic(0, 0)
-        assert model.value_of(s) == 0
-        assert model.value_of(negate(s)) == 1
+        assert model.value_of(s) == 'F'
+        assert model.value_of(negate(s)) == 'T'
 
     def test_read_model_extract_disj_2(self):
         proof = self.example_proof('Extracting a Disjunct 2')
@@ -860,8 +866,8 @@ class TestCPL(LogicTester):
         branch = list(proof.open_branches())[0]
         model.read_branch(branch)
         s = atomic(0, 0)
-        assert model.value_of(s) == 1
-        assert model.value_of(negate(s)) == 0
+        assert model.value_of(s) == 'T'
+        assert model.value_of(negate(s)) == 'F'
 
     def test_read_model_no_proof_predicated(self):
         branch = TableauxSystem.Branch()
@@ -869,7 +875,7 @@ class TestCPL(LogicTester):
         branch.add({'sentence': s1})
         model = self.logic.Model()
         model.read_branch(branch)
-        assert model.value_of(s1) == 1
+        assert model.value_of(s1) == 'T'
         
     def test_model_add_access_not_impl(self):
         model = self.logic.Model()
@@ -880,17 +886,17 @@ class TestCPL(LogicTester):
         # coverage
         model = self.logic.Model()
         s = parse('La')
-        model.set_opaque_value(s, 1)
-        assert model.value_of_operated(s) == 1
+        model.set_opaque_value(s, 'T')
+        assert model.value_of_operated(s) == 'T'
         
     def test_model_set_literal_value_predicated1(self):
         model = self.logic.Model()
         m = constant(0, 0)
         n = constant(1, 0)
         s = predicated('Identity', [m, n])
-        model.set_literal_value(s, 1)
+        model.set_literal_value(s, 'T')
         res = model.value_of(s)
-        assert res == 1
+        assert res == 'T'
 
     def test_model_opaque_necessity_branch_make_model(self):
         s = parse('La')
@@ -898,7 +904,7 @@ class TestCPL(LogicTester):
         branch = proof.branch()
         branch.add({'sentence': s})
         model = branch.make_model()
-        assert model.value_of(s) == 1
+        assert model.value_of(s) == 'T'
 
     def test_model_opaque_neg_necessity_branch_make_model(self):
         s = parse('La')
@@ -906,12 +912,12 @@ class TestCPL(LogicTester):
         branch = proof.branch()
         branch.add({'sentence': negate(s)})
         model = branch.make_model()
-        assert model.value_of(s) == 0
+        assert model.value_of(s) == 'F'
 
     def test_model_get_data_triv(self):
         s = parse('a')
         model = self.logic.Model()
-        model.set_literal_value(s, 1)
+        model.set_literal_value(s, 'T')
         model.finish()
         data = model.get_data()
         assert 'Atomics' in data
@@ -933,9 +939,9 @@ class TestCPL(LogicTester):
     def test_model_value_of_operated_opaque1(self):
         s1 = parse('La')
         model = self.logic.Model()
-        model.set_opaque_value(s1, model.char_values['F'])
+        model.set_opaque_value(s1, 'F')
         res = model.value_of_operated(negate(s1))
-        assert res == model.char_values['T']
+        assert res == 'T'
 
     def test_model_value_of_opaque_unassigned(self):
         s = parse('La')
@@ -958,7 +964,7 @@ class TestCFOL(LogicTester):
     def test_model_get_data_triv(self):
         s = parse('a')
         model = self.logic.Model()
-        model.set_literal_value(s, 1)
+        model.set_literal_value(s, 'T')
         model.finish()
         data = model.get_data()
         assert 'Atomics' in data
@@ -966,16 +972,16 @@ class TestCFOL(LogicTester):
     def test_model_value_of_operated_opaque1(self):
         s1 = parse('La')
         model = self.logic.Model()
-        model.set_opaque_value(s1, model.char_values['F'])
+        model.set_opaque_value(s1, 'F')
         res = model.value_of_operated(negate(s1))
-        assert res == model.char_values['T']
+        assert res == 'T'
 
     def test_model_value_of_operated_opaque2(self):
         s1 = parse('La')
         model = self.logic.Model()
-        model.set_opaque_value(s1, model.char_values['T'])
+        model.set_opaque_value(s1, 'T')
         res = model.value_of_operated(s1)
-        assert res == model.char_values['T']
+        assert res == 'T'
 
     def test_model_read_node_opaque(self):
         s1 = parse('La')
@@ -984,7 +990,7 @@ class TestCFOL(LogicTester):
         branch.add({'sentence': s1})
         model = self.logic.Model()
         model.read_node(branch.nodes[0])
-        assert model.value_of(s1) == model.char_values['T']
+        assert model.value_of(s1) == 'T'
 
     def test_model_add_access_not_impl(self):
         model = self.logic.Model()
@@ -996,9 +1002,9 @@ class TestCFOL(LogicTester):
         proof = tableau(self.logic, arg)
         proof.build(models=True)
         model = proof.branches[0].model
-        assert model.value_of(parse('a')) == model.char_values['F']
-        assert model.value_of(parse('La')) == model.char_values['F']
-        assert model.value_of(parse('NLa')) == model.char_values['T']
+        assert model.value_of(parse('a'))   == 'F'
+        assert model.value_of(parse('La'))  == 'F'
+        assert model.value_of(parse('NLa')) == 'T'
         assert model.is_countermodel_to(arg)
 
 class TestK(LogicTester):
@@ -1120,15 +1126,15 @@ class TestK(LogicTester):
         branch = list(proof.open_branches())[0]
         model.read_branch(branch)
         s = atomic(0, 0)
-        assert model.value_of(s, world=0) == 0
-        assert model.value_of(negate(s), world=0) == 1
+        assert model.value_of(s, world=0) == 'F'
+        assert model.value_of(negate(s), world=0) == 'T'
 
     def test_read_model_no_proof_atomic(self):
         model = self.logic.Model()
         branch = TableauxSystem.Branch()
         branch.add({'sentence': atomic(0, 0), 'world': 0})
         model.read_branch(branch)
-        assert model.value_of(atomic(0, 0), world=0) == 1
+        assert model.value_of(atomic(0, 0), world=0) == 'T'
 
     def test_read_model_no_proof_predicated(self):
         model = self.logic.Model()
@@ -1136,7 +1142,7 @@ class TestK(LogicTester):
         s1 = parse('Imn')
         branch.add({'sentence': s1, 'world': 0})
         model.read_branch(branch)
-        assert model.value_of(s1, world=0) == 1
+        assert model.value_of(s1, world=0) == 'T'
 
     def test_read_model_no_proof_access(self):
         model = self.logic.Model()
@@ -1148,7 +1154,7 @@ class TestK(LogicTester):
     def test_model_value_of_atomic_unassigned(self):
         model = self.logic.Model()
         s = atomic(0, 0)
-        res = model.value_of_atomic(s, 0)
+        res = model.value_of_atomic(s, 'F')
         assert res == model.unassigned_value
 
     def test_model_set_predicated_value1(self):
@@ -1156,9 +1162,9 @@ class TestK(LogicTester):
         m = constant(0, 0)
         n = constant(1, 0)
         s = predicated('Identity', [m, n])
-        model.set_predicated_value(s, 1, 0)
+        model.set_predicated_value(s, 'T', 0)
         res = model.value_of(s, world=0)
-        assert res == 1
+        assert res == 'T'
 
     def test_model_add_access_sees(self):
         model = self.logic.Model()
@@ -1169,32 +1175,32 @@ class TestK(LogicTester):
         model = self.logic.Model()
         a = atomic(0, 0)
         model.add_access(0, 1)
-        model.set_atomic_value(a, 1, 1)
+        model.set_atomic_value(a, 'T', 1)
         res = model.value_of(operate('Possibility', [a]), world=0)
-        assert res == 1
+        assert res == 'T'
 
     def test_model_possibly_a_no_access_false(self):
         model = self.logic.Model()
         a = atomic(0, 0)
-        model.set_atomic_value(a, 1, 1)
+        model.set_atomic_value(a, 'T', 1)
         res = model.value_of(operate('Possibility', [a]), world=0)
-        assert res == 0
+        assert res == 'F'
 
     def test_model_nec_a_no_access_true(self):
         model = self.logic.Model()
         a = atomic(0, 0)
         res = model.value_of(operate('Necessity', [a]), world=0)
-        assert res == 1
+        assert res == 'T'
 
     def test_model_nec_a_with_access_false(self):
         model = self.logic.Model()
         a = atomic(0, 0)
-        model.set_atomic_value(a, 1, 0)
-        model.set_atomic_value(a, 0, 1)
+        model.set_atomic_value(a, 'T', 0)
+        model.set_atomic_value(a, 'F', 1)
         model.add_access(0, 1)
         model.add_access(0, 0)
         res = model.value_of(operate('Necessity', [a]), world=0)
-        assert res == 0
+        assert res == 'F'
 
     def test_model_existence_user_pred_true(self):
         v = Vocabulary()
@@ -1206,9 +1212,9 @@ class TestK(LogicTester):
         s3 = quantify('Existential', x, s2)
 
         model = self.logic.Model()
-        model.set_predicated_value(s1, 1, 0)
+        model.set_predicated_value(s1, 'T', 0)
         res = model.value_of(s3, world=0)
-        assert res == 1
+        assert res == 'T'
 
     def test_model_existense_user_pred_false(self):
         v = Vocabulary()
@@ -1221,7 +1227,7 @@ class TestK(LogicTester):
 
         model = self.logic.Model()
         res = model.value_of(s3, world=0)
-        assert res == 0
+        assert res == 'F'
 
     def test_model_universal_user_pred_true(self):
         v = Vocabulary()
@@ -1233,9 +1239,9 @@ class TestK(LogicTester):
         s3 = quantify('Universal', x, s2)
 
         model = self.logic.Model()
-        model.set_predicated_value(s1, 1, 0)
+        model.set_predicated_value(s1, 'T', 0)
         res = model.value_of(s3, world=0)
-        assert res == 1
+        assert res == 'T'
 
     def test_model_universal_false(self):
         s1 = parse('VxFx', vocabulary=examples.vocabulary)
@@ -1243,7 +1249,7 @@ class TestK(LogicTester):
         model = self.logic.Model()
         model.set_predicated_value(s2, 0, 0)
         res = model.value_of(s1, world=0)
-        assert res == 0
+        assert res == 'F'
 
     def test_model_universal_user_pred_false(self):
         v = Vocabulary()
@@ -1257,15 +1263,15 @@ class TestK(LogicTester):
         s4 = quantify('Universal', x, s2)
     
         model = self.logic.Model()
-        model.set_predicated_value(s1, 1, 0)
-        model.set_predicated_value(s3, 0, 0)
+        model.set_predicated_value(s1, 'T', 0)
+        model.set_predicated_value(s3, 'F', 0)
         res = model.value_of(s4, world=0)
-        assert res == 0
+        assert res == 'F'
 
     def test_model_identity_extension_non_empty_with_sentence(self):
         s = parse('Imn')
         model = self.logic.Model()
-        model.set_predicated_value(s, 1, 0)
+        model.set_predicated_value(s, 'T', 0)
         extension = model.get_extension(Vocabulary.get_system_predicate('Identity'), 0)
         assert len(extension) > 0
         assert (constant(0, 0), constant(1, 0)) in extension
@@ -1273,7 +1279,7 @@ class TestK(LogicTester):
     def test_model_frame_data_has_identity_with_sentence(self):
         s = parse('Imn')
         model = self.logic.Model()
-        model.set_predicated_value(s, 1, 0)
+        model.set_predicated_value(s, 'T', 0)
         model.finish()
         data = model.get_data()
         assert len(data['Frames']['values']) == 1
@@ -1284,7 +1290,7 @@ class TestK(LogicTester):
 
     def test_model_get_data_with_access_has_2_frames(self):
         model = self.logic.Model()
-        model.set_literal_value(parse('a'), 1, world=0)
+        model.set_literal_value(parse('a'), 'T', world=0)
         model.add_access(0, 1)
         model.finish()
         data = model.get_data()
@@ -1292,8 +1298,8 @@ class TestK(LogicTester):
 
     def test_frame_difference_atomic_keys_diff(self):
         model = self.logic.Model()
-        model.set_literal_value(parse('a'), 1, world=0)
-        model.set_literal_value(parse('b'), 1, world=1)
+        model.set_literal_value(parse('a'), 'T', world=0)
+        model.set_literal_value(parse('b'), 'T', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert not frame_a.is_equivalent_to(frame_b)
@@ -1301,8 +1307,8 @@ class TestK(LogicTester):
 
     def test_frame_difference_atomic_values_diff(self):
         model = self.logic.Model()
-        model.set_literal_value(parse('a'), 1, world=0)
-        model.set_literal_value(parse('a'), 0, world=1)
+        model.set_literal_value(parse('a'), 'T', world=0)
+        model.set_literal_value(parse('a'), 'F', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert not frame_a.is_equivalent_to(frame_b)
@@ -1310,8 +1316,8 @@ class TestK(LogicTester):
 
     def test_frame_difference_atomic_values_equiv(self):
         model = self.logic.Model()
-        model.set_literal_value(parse('a'), 1, world=0)
-        model.set_literal_value(parse('a'), 1, world=1)
+        model.set_literal_value(parse('a'), 'T', world=0)
+        model.set_literal_value(parse('a'), 'T', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert frame_a.is_equivalent_to(frame_b)
@@ -1319,8 +1325,8 @@ class TestK(LogicTester):
 
     def test_frame_difference_opaque_keys_diff(self):
         model = self.logic.Model()
-        model.set_opaque_value(parse('Ma'), 1, world=0)
-        model.set_opaque_value(parse('Mb'), 1, world=1)
+        model.set_opaque_value(parse('Ma'), 'T', world=0)
+        model.set_opaque_value(parse('Mb'), 'T', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert not frame_a.is_equivalent_to(frame_b)
@@ -1328,8 +1334,8 @@ class TestK(LogicTester):
 
     def test_frame_difference_opaque_values_diff(self):
         model = self.logic.Model()
-        model.set_opaque_value(parse('Ma'), 1, world=0)
-        model.set_opaque_value(parse('Ma'), 0, world=1)
+        model.set_opaque_value(parse('Ma'), 'T', world=0)
+        model.set_opaque_value(parse('Ma'), 'F', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert not frame_a.is_equivalent_to(frame_b)
@@ -1337,8 +1343,8 @@ class TestK(LogicTester):
 
     def test_frame_difference_opaque_values_equiv(self):
         model = self.logic.Model()
-        model.set_opaque_value(parse('Ma'), 1, world=0)
-        model.set_opaque_value(parse('Ma'), 1, world=1)
+        model.set_opaque_value(parse('Ma'), 'T', world=0)
+        model.set_opaque_value(parse('Ma'), 'T', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert frame_a.is_equivalent_to(frame_b)
@@ -1351,8 +1357,8 @@ class TestK(LogicTester):
         s1 = parse('Fm', vocabulary=vocab)
         s2 = parse('Gmn', vocabulary=vocab)
         model = self.logic.Model()
-        model.set_predicated_value(s1, 1, world=0)
-        model.set_predicated_value(s2, 1, world=1)
+        model.set_predicated_value(s1, 'T', world=0)
+        model.set_predicated_value(s2, 'T', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert not frame_a.is_equivalent_to(frame_b)
@@ -1362,8 +1368,8 @@ class TestK(LogicTester):
         s1 = parse('Fm', vocabulary=examples.vocabulary)
         s2 = parse('Fn', vocabulary=examples.vocabulary)
         model = self.logic.Model()
-        model.set_predicated_value(s1, 1, world=0)
-        model.set_predicated_value(s2, 1, world=1)
+        model.set_predicated_value(s1, 'T', world=0)
+        model.set_predicated_value(s2, 'T', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert not frame_a.is_equivalent_to(frame_b)
@@ -1373,10 +1379,10 @@ class TestK(LogicTester):
         s1 = parse('Fm', vocabulary=examples.vocabulary)
         s2 = parse('Fn', vocabulary=examples.vocabulary)
         model = self.logic.Model()
-        model.set_predicated_value(s1, 1, world=0)
-        model.set_predicated_value(s2, 0, world=0)
-        model.set_predicated_value(s1, 1, world=1)
-        model.set_predicated_value(s2, 0, world=1)
+        model.set_predicated_value(s1, 'T', world=0)
+        model.set_predicated_value(s2, 'F', world=0)
+        model.set_predicated_value(s1, 'T', world=1)
+        model.set_predicated_value(s2, 'F', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert frame_a.is_equivalent_to(frame_b)
@@ -1386,8 +1392,8 @@ class TestK(LogicTester):
         s = parse('a')
         model1 = self.logic.Model()
         model2 = self.logic.Model()
-        model1.set_literal_value(s, 1, world=0)
-        model2.set_literal_value(s, 0, world=0)
+        model1.set_literal_value(s, 'T', world=0)
+        model2.set_literal_value(s, 'F', world=0)
         f1 = model1.world_frame(0)
         f2 = model2.world_frame(0)
         assert f1 != f2
@@ -1396,8 +1402,8 @@ class TestK(LogicTester):
         s = parse('a')
         model1 = self.logic.Model()
         model2 = self.logic.Model()
-        model1.set_literal_value(s, 1, world=0)
-        model2.set_literal_value(s, 1, world=0)
+        model1.set_literal_value(s, 'T', world=0)
+        model2.set_literal_value(s, 'T', world=0)
         f1 = model1.world_frame(0)
         f2 = model2.world_frame(0)
         assert f1 == f2
@@ -1405,8 +1411,8 @@ class TestK(LogicTester):
     def test_frame_ordering(self):
         s = parse('a')
         model = self.logic.Model()
-        model.set_literal_value(s, 1, world=0)
-        model.set_literal_value(s, 0, world=1)
+        model.set_literal_value(s, 'T', world=0)
+        model.set_literal_value(s, 'F', world=1)
         f1 = model.world_frame(0)
         f2 = model.world_frame(1)
         assert f2 > f1
@@ -1420,7 +1426,7 @@ class TestK(LogicTester):
         s1 = parse('Aab')
         model = self.logic.Model()
         with pytest.raises(NotImplementedError):
-            model.set_literal_value(s1, model.char_values['T'])
+            model.set_literal_value(s1, 'T')
         with pytest.raises(NotImplementedError):
             model.value_of_modal(s1)
         with pytest.raises(NotImplementedError):
@@ -1429,17 +1435,17 @@ class TestK(LogicTester):
     def test_model_value_error_various(self):
         s1 = parse('a')
         model = self.logic.Model()
-        model.set_opaque_value(s1, model.char_values['T'])
+        model.set_opaque_value(s1, 'T')
         with pytest.raises(Model.ModelValueError):
-            model.set_opaque_value(s1, model.char_values['F'])
+            model.set_opaque_value(s1, 'F')
         model = self.logic.Model()
-        model.set_atomic_value(s1, model.char_values['T'])
+        model.set_atomic_value(s1, 'T')
         with pytest.raises(Model.ModelValueError):
-            model.set_atomic_value(s1, model.char_values['F'])
+            model.set_atomic_value(s1, 'F')
         s2 = parse('Fm', vocabulary=examples.vocabulary)
-        model.set_predicated_value(s2, model.char_values['T'])
+        model.set_predicated_value(s2, 'T')
         with pytest.raises(Model.ModelValueError):
-            model.set_predicated_value(s2, model.char_values['F'])
+            model.set_predicated_value(s2, 'F')
 
     def test_model_get_extension_adds_predicate_to_predicates(self):
         # coverage
@@ -1453,8 +1459,8 @@ class TestK(LogicTester):
         arg = argument('b', premises=['a'])
         s1 = arg.premises[0]
         model = self.logic.Model()
-        model.set_literal_value(s1, 0)
-        model.set_literal_value(arg.conclusion, 1)
+        model.set_literal_value(s1, 'F')
+        model.set_literal_value(arg.conclusion, 'T')
         assert not model.is_countermodel_to(arg)
 
     def test_nonexistence_closure1(self):
@@ -1477,8 +1483,8 @@ class TestK(LogicTester):
         s1 = parse('a')
         s2 = parse('b')
         model = self.logic.Model()
-        model.set_opaque_value(s1, model.char_values['T'], world=0)
-        model.set_opaque_value(s2, model.char_values['T'], world=1)
+        model.set_opaque_value(s1, 'T', world=0)
+        model.set_opaque_value(s2, 'T', world=1)
         model.finish()
         f1 = model.world_frame(0)
         f2 = model.world_frame(1)

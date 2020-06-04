@@ -47,8 +47,8 @@ class Model(lp.Model):
         return super(Model, self).value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
-        if operator == 'Conditional' and a > b:
-            return self.char_values['F']
+        if operator == 'Conditional' and self.nvals[a] > self.nvals[b]:
+            return 'F'
         return super(Model, self).truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):

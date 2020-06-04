@@ -74,7 +74,7 @@ class Model(k3.Model):
         in terms of generalized disjunction.
         """
         values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
-        crunched = {crunch(v) for v in values}
+        crunched = {crunch(self.nvals[v]) for v in values}
         return max(crunched)
 
     def value_of_universal(self, sentence, **kw):
@@ -89,18 +89,18 @@ class Model(k3.Model):
         in terms of generalized conjunction.
         """
         values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
-        crunched = {crunch(v) for v in values}
+        crunched = {crunch(self.nvals[v]) for v in values}
         return min(crunched)
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Assertion':
-            return crunch(a)
+            return self.cvals[crunch(self.nvals[a])]
         elif operator == 'Disjunction':
-            return max(crunch(a), crunch(b))
+            return self.cvals[max(crunch(self.nvals[a]), crunch(self.nvals[b]))]
         elif operator == 'Conjunction':
-            return min(crunch(a), crunch(b))
+            return self.cvals[min(crunch(self.nvals[a]), crunch(self.nvals[b]))]
         elif operator == 'Conditional':
-            return crunch(max(1 - a, b, gap(a) + gap(b)))
+            return self.cvals[crunch(max(1 - self.nvals[a], self.nvals[b], gap(self.nvals[a]) + gap(self.nvals[b])))]
         return super(Model, self).truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):

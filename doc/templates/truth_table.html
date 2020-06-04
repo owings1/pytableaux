@@ -24,18 +24,18 @@
                 <tr>
                     <td class="operator-symbol arity-2">{{ sw.write_operator(operator) }}</td>
                     {% for x in range(num_values) %}
-                        <td class="value-header row">{{ value_chars[values[x]] }}</td>
+                        <td class="value-header row">{{ values[x] }}</td>
                     {% endfor %}
                 </tr>
             {% endif %}
             {% for x in range(num_values) %}
                 <tr>
-                    <td class="value-header column">{{ value_chars[values[x]] }}</td>
+                    <td class="value-header column">{{ values[x] }}</td>
                     {% if arity == 1 %}
-                        <td>{{ value_chars[table['outputs'][table['inputs'].index((values[x],))]] }}</td>
+                        <td>{{ table['outputs'][table['inputs'].index((values[x],))] }}</td>
                     {% else %}
                         {% for y in range(num_values) %}
-                            <td>{{ value_chars[table['outputs'][table['inputs'].index((values[x], values[y]))]] }}</td>
+                            <td>{{ table['outputs'][table['inputs'].index((values[x], values[y]))] }}</td>
                         {% endfor %}
                     {% endif %}
                 </tr>

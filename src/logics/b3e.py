@@ -56,7 +56,7 @@ class Model(k3w.Model):
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Assertion':
-            return crunch(a)
+            return self.cvals[crunch(self.nvals[a])]
         elif operator == 'Conditional':
             return self.truth_function(
                 'Disjunction',
