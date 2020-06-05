@@ -118,62 +118,62 @@ class TableauxSystem(fde.TableauxSystem):
     branchables = {
         'Conjunction': {
             False : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
             True  : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
         },
         'Disjunction': {
             False  : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
             True : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
         },
         'Material Conditional': {
             False  : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
             True : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
         },
         'Material Biconditional': {
             False  : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
             True : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
         },
         'Conditional': {
             False  : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
             True : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
         },
         'Biconditional': {
             False  : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
             True : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
         },
     }

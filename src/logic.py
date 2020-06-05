@@ -1070,8 +1070,8 @@ class TableauxSystem(object):
     def build_trunk(tableau, argument):
         raise NotImplementedError(NotImplemented)
 
-    @staticmethod
-    def branching_complexity(node):
+    @classmethod
+    def branching_complexity(cls, node):
         return 0
 
     class TrunkAlreadyBuiltError(Exception):
@@ -1505,6 +1505,8 @@ class TableauxSystem(object):
                 'sentence'   : dict(),
                 'designated' : dict(),
                 'world'      : dict(),
+                'world1'     : dict(),
+                'world2'     : dict(),
             }
 
         def has(self, props, ticked=None):
@@ -1512,7 +1514,7 @@ class TableauxSystem(object):
             Check whether there is a node on the branch that matches the given properties,
             optionally filtered by ticked status.
             """
-            return self.find(props, ticked) != None
+            return self.find(props, ticked=ticked) != None
 
         def has_any(self, props_list, ticked=None):
             """
@@ -1539,26 +1541,31 @@ class TableauxSystem(object):
             Find the first node on the branch that matches the given properties, optionally
             filtered by ticked status. Returns ``None`` if not found.
             """
-            haystack = set(self.get_nodes(ticked=ticked))
-            results = self.search_nodes(props, haystack, limit=1)
+            results = self.search_nodes(props, ticked=ticked, limit=1)
             if len(results):
                 return results[0]
             return None
 
         def find_all(self, props, ticked=None):
-            haystack = set(self.get_nodes(ticked=ticked))
-            return self.search_nodes(props, haystack)
+            return self.search_nodes(props, ticked=ticked)
 
-        def search_nodes(self, props, haystack, limit=None):
+        def search_nodes(self, props, ticked=None, limit=None):
             results = []
+            best_haystack = None
             # reduce from node index
             for prop in self.node_index:
                 if prop in props:
                     key = str(props[prop])
                     if key not in self.node_index[prop]:
                         return results
-                    haystack = haystack & self.node_index[prop][key]
-            for node in haystack:
+                    haystack = self.node_index[prop][key]
+                    if best_haystack == None or len(haystack) < len(best_haystack):
+                        best_haystack = haystack
+            if ticked and (best_haystack == None or len(self.ticked_nodes) < len(best_haystack)):
+                best_haystack = self.ticked_nodes
+            if best_haystack == None:
+                best_haystack = self.nodes
+            for node in best_haystack:
                 if limit != None and len(results) >= limit:
                     break
                 if node.has_props(props):
@@ -1992,10 +1999,10 @@ class TableauxSystem(object):
 
         def after_branch_add(self, branch, other_branch = None):
             if not branch.closed:
-                branch_id = id(branch)
+                branch_id = branch.id
                 consumed = False
                 if other_branch != None:
-                    other_branch_id = id(other_branch)
+                    other_branch_id = other_branch.id
                     if other_branch_id in self.applicable_nodes:
                         self.applicable_nodes[branch_id] = set(self.applicable_nodes[other_branch_id])
                         consumed = True
@@ -2005,14 +2012,14 @@ class TableauxSystem(object):
                         self.after_node_add(branch, node)
 
         def after_branch_close(self, branch):
-            del(self.applicable_nodes[id(branch)])
+            del(self.applicable_nodes[branch.id])
 
         def after_node_add(self, branch, node):
             if self.applies_to_node(node, branch):
-                self.applicable_nodes[id(branch)].add(node)
+                self.applicable_nodes[branch.id].add(node)
 
         def after_node_tick(self, branch, node):
-            branch_id = id(branch)
+            branch_id = branch.id
             if self.ticked == False:
                 self.applicable_nodes[branch_id].discard(node)
 
@@ -2183,7 +2190,6 @@ class TableauxSystem(object):
             score = super(TableauxSystem.ConditionalNodeRule, self).score_candidate(target)
             if score == 0:
                 complexity = self.branching_complexity(target['node'])
-                print('Using branch complexity for {0} = {1}'.format(str(target['node']), str(complexity)))
                 score = -1 * complexity
             return score
 

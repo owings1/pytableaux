@@ -424,62 +424,62 @@ class TableauxSystem(logic.TableauxSystem):
     branchables = {
         'Conjunction': {
             False : {
-                True  : 1,
-                False : 2,
+                True  : 0,
+                False : 1,
             },
             True  : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
         },
         'Disjunction': {
             False  : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
             True : {
-                True  : 1,
-                False : 2,
+                True  : 0,
+                False : 1,
             },
         },
         'Material Conditional': {
             False  : {
-                True  : 2,
-                False : 1,
+                True  : 1,
+                False : 0,
             },
             True : {
-                True  : 1,
-                False : 2,
+                True  : 0,
+                False : 1,
             },
         },
         'Material Biconditional': {
             False  : {
-                True  : 2,
-                False : 2,
-            },
-            True : {
-                True  : 2,
-                False : 2,
-            },
-        },
-        'Conditional': {
-            False  : {
-                True  : 2,
+                True  : 1,
                 False : 1,
             },
             True : {
                 True  : 1,
-                False : 2,
+                False : 1,
+            },
+        },
+        'Conditional': {
+            False  : {
+                True  : 1,
+                False : 0,
+            },
+            True : {
+                True  : 0,
+                False : 1,
             },
         },
         'Biconditional': {
             False  : {
-                True  : 2,
-                False : 2,
+                True  : 1,
+                False : 1,
             },
             True : {
-                True  : 2,
-                False : 2,
+                True  : 1,
+                False : 1,
             },
         },
     }
@@ -495,23 +495,25 @@ class TableauxSystem(logic.TableauxSystem):
             branch.add({'sentence': premise, 'designated': True, 'world': None})
         branch.add({'sentence' : argument.conclusion, 'designated': False, 'world': None})
 
-    @staticmethod
-    def branching_complexity(node):
+    @classmethod
+    def branching_complexity(cls, node):
         if not node.has('sentence'):
             return 0
         sentence = node.props['sentence']
         operators = list(sentence.operators())
         last_is_negated = False
-        complexity = 1
+        designated = node.props['designated']
+        complexity = 0
         while len(operators):
+            print((operators, complexity, last_is_negated))
             operator = operators.pop(0)
             if operator == 'Negation':
                 if last_is_negated:
                     last_is_negated = False
                     continue
                 last_is_negated = True
-            if operator in TableauxSystem.branchables:
-                complexity *= TableauxSystem.branchables[operator][last_is_negated][node.props['designated']]
+            if operator in cls.branchables:
+                complexity += cls.branchables[operator][last_is_negated][designated]
                 last_is_negated = False
         return complexity
 

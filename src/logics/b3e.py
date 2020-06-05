@@ -81,23 +81,23 @@ class TableauxSystem(fde.TableauxSystem):
         # reduction
         'Conditional': {
             False  : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
             True : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
         },
         # reduction
         'Biconditional': {
             False  : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
             True : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
         },
     })

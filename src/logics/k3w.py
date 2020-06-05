@@ -64,66 +64,66 @@ class TableauxSystem(fde.TableauxSystem):
     branchables = {
         'Conjunction': {
             False : {
-                True  : 1,
-                False : 2,
+                True  : 0,
+                False : 1,
             },
             True  : {
-                True  : 3,
-                False : 3,
+                True  : 2,
+                False : 2,
             },
         },
         'Disjunction': {
             False  : {
-                True  : 3,
-                False : 3,
+                True  : 2,
+                False : 2,
             },
             True : {
-                True  : 1,
-                False : 3,
+                True  : 0,
+                False : 2,
             },
         },
         # reduction
         'Material Conditional': {
             False  : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
             True : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
         },
         # reduction
         'Material Biconditional': {
             False  : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
             True : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
         },
         # reduction
         'Conditional': {
             False  : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
             True : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
         },
         # reduction
         'Biconditional': {
             False  : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
             True : {
-                True  : 1,
-                False : 1,
+                True  : 0,
+                False : 0,
             },
         },
     }

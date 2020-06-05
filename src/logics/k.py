@@ -576,14 +576,14 @@ class TableauxSystem(logic.TableauxSystem):
             branch.add({'sentence': premise, 'world': 0})
         branch.add({'sentence': negate(argument.conclusion), 'world': 0})
 
-    @staticmethod
-    def branching_complexity(node):
+    @classmethod
+    def branching_complexity(cls, node):
         if not node.has('sentence'):
             return 0
         sentence = node.props['sentence']
         operators = list(sentence.operators())
         last_is_negated = False
-        complexity = 1
+        complexity = 0
         while len(operators):
             operator = operators.pop(0)
             if operator == 'Assertion':
@@ -594,11 +594,11 @@ class TableauxSystem(logic.TableauxSystem):
                     continue
                 last_is_negated = True
             elif last_is_negated:
-                if operator in TableauxSystem.neg_branchable:
-                    complexity *= 2
+                if operator in cls.neg_branchable:
+                    complexity += 1
                     last_is_negated = False
-            elif operator in TableauxSystem.pos_branchable:
-                complexity *= 2
+            elif operator in cls.pos_branchable:
+                complexity += 1
         return complexity
 
 class IsModal(object):
@@ -1245,7 +1245,9 @@ class TableauxRules(object):
             if origin.id in self.branch_max_worlds:
                 return
             branch_modal_operators_list = list()
-            for node in branch.get_nodes():
+            # we only care about unticked nodes, since ticked nodes will have
+            # already created any worlds.
+            for node in branch.get_nodes(ticked=False):
                 if node.has('sentence'):
                     ops = self.sentence(node).operators()
                     branch_modal_operators_list.extend(

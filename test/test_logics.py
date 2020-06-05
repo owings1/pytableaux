@@ -285,7 +285,45 @@ class TestFDE(LogicTester):
         assert model.value_of(parse('La')) == 'F'
         assert model.value_of(parse('NLa')) == 'T'
         assert model.is_countermodel_to(arg)
-        
+
+    def test_branching_complexity_undes_0_1(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('a'), 'designated': False})
+        node = branch.get_nodes()[0]
+        assert proof.branching_complexity(node) == 0
+
+    def test_branching_complexity_undes_1_1(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('Kab'), 'designated': False})
+        node = branch.get_nodes()[0]
+        assert proof.branching_complexity(node) == 1
+
+    def test_branching_complexity_undes_1_2(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('NAaNKbc'), 'designated': False})
+        node = branch.get_nodes()[0]
+        assert node.props['sentence'].operators() == ['Negation', 'Disjunction', 'Negation', 'Conjunction']
+        assert proof.branching_complexity(node) == 1
+
+    def test_branching_complexity_undes_1_3(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('NAab'), 'designated': False})
+        node = branch.get_nodes()[0]
+        assert node.props['sentence'].operators() == ['Negation', 'Disjunction']
+        assert proof.branching_complexity(node) == 1
+
+    def test_branching_complexity_undes_2_1(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('KaKab'), 'designated': False})
+        node = branch.get_nodes()[0]
+        assert node.props['sentence'].operators() == ['Conjunction', 'Conjunction']
+        assert proof.branching_complexity(node) == 2
+
 class TestK3(LogicTester):
 
     logic = get_logic('K3')
@@ -814,6 +852,13 @@ class TestGO(LogicTester):
         proof = tableau(self.logic, arg)
         proof.build()
         assert proof.valid
+
+    def test_branching_complexity_inherits_branchables(self):
+        proof = tableau(self.logic)
+        branch = proof.branch()
+        branch.add({'sentence': parse('Kab'), 'designated': False})
+        node, = branch.get_nodes()
+        assert self.logic.TableauxSystem.branching_complexity(node) == 0
 
 class TestCPL(LogicTester):
 
