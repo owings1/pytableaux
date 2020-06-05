@@ -278,8 +278,10 @@ class Model(logic.Model):
         An existential sentence is true at `w`, just when the sentence resulting in the
         subsitution of some constant in the domain for the variable is true at `w`.
         """
+        si = sentence.sentence
+        v = sentence.variable
         for c in self.constants:
-            r = sentence.substitute(c, sentence.variable)
+            r = si.substitute(c, v)
             if self.value_of(r, **kw) == 'T':
                 return 'T'
         return 'F'
@@ -289,8 +291,10 @@ class Model(logic.Model):
         A universal sentence is true at `w`, just when the sentence resulting in the
         subsitution of each constant in the domain for the variable is true at `w`.
         """
+        si = sentence.sentence
+        v = sentence.variable
         for c in self.constants:
-            r = sentence.substitute(c, sentence.variable)
+            r = si.substitute(c, v)
             if self.value_of(r, **kw) == 'F':
                 return 'F'
         return 'T'
@@ -1008,7 +1012,8 @@ class TableauxRules(object):
             s = self.sentence(node)
             v = node.props['sentence'].variable
             c = branch.new_constant()
-            r = s.substitute(c, v)
+            si = s.sentence
+            r = si.substitute(c, v)
             branch.add({'sentence': r, 'world': w}).tick(node)
 
         # this actually hurts
@@ -1055,13 +1060,14 @@ class TableauxRules(object):
                 s = self.sentence(node)
                 if s.quantifier != self.quantifier:
                     continue
+                si = s.sentence
                 w = node.props['world']
                 v = s.variable
                 if len(constants):
                     # if the branch already has a constant, find all the substitutions not
                     # already on the branch.
                     for c in constants:
-                        r = s.substitute(c, v)
+                        r = si.substitute(c, v)
                         if not branch.has({'sentence': r, 'world': w}):
                             cands.append({
                                 'branch'   : branch,
@@ -1072,7 +1078,7 @@ class TableauxRules(object):
                 else:
                     # if the branch does not have any constants, pick a new one
                     c = branch.new_constant()
-                    r = s.substitute(c, v)
+                    r = si.substitute(c, v)
                     cands.append({
                         'branch'   : branch,
                         'sentence' : r,

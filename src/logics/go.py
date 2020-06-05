@@ -73,8 +73,10 @@ class Model(k3.Model):
         Note that this is in accord with interpreting the existential quantifier
         in terms of generalized disjunction.
         """
-        values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
-        crunched = {crunch(self.nvals[v]) for v in values}
+        si = sentence.sentence
+        v = sentence.variable
+        values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
+        crunched = {crunch(self.nvals[val]) for val in values}
         return self.cvals[max(crunched)]
 
     def value_of_universal(self, sentence, **kw):
@@ -88,8 +90,10 @@ class Model(k3.Model):
         Note that this is in accord with interpreting the universal quantifier
         in terms of generalized conjunction.
         """
-        values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
-        crunched = {crunch(self.nvals[v]) for v in values}
+        si = sentence.sentence
+        v = sentence.variable
+        values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
+        crunched = {crunch(self.nvals[val]) for val in values}
         return self.cvals[min(crunched)]
 
     def truth_function(self, operator, a, b=None):
@@ -725,7 +729,7 @@ class TableauxRules(object):
 
             c = branch.new_constant()
             si = s.sentence
-            ss = s.substitute(c, v)
+            ss = si.substitute(c, v)
             sq = quantify(self.convert_to, v, negate(si))
 
             b1 = branch

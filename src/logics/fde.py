@@ -128,7 +128,9 @@ class Model(logic.Model):
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: **F**, **N**, **B**, **T**.
         """
-        values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
+        v = sentence.variable
+        si = sentence.sentence
+        values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
         return self.cvals[max({self.nvals[value] for value in values})]
 
     def value_of_universal(self, sentence, **kw):
@@ -137,7 +139,9 @@ class Model(logic.Model):
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: **F**, **N**, **B**, **T**.
         """
-        values = {self.value_of(sentence.substitute(c, sentence.variable), **kw) for c in self.constants}
+        v = sentence.variable
+        si = sentence.sentence
+        values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
         return self.cvals[min({self.nvals[value] for value in values})]
 
     def is_sentence_opaque(self, sentence):
@@ -1056,10 +1060,11 @@ class TableauxRules(object):
 
         def apply_to_node(self, node, branch):
             s = self.sentence(node)
+            si = s.sentence
             d = self.designation
             v = s.variable
             c = branch.new_constant()
-            r = s.substitute(c, v)
+            r = si.substitute(c, v)
             branch.add({'sentence': r, 'designated': d}).tick(node)
 
     class ExistentialNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
@@ -1104,14 +1109,15 @@ class TableauxRules(object):
                 # keep quantifier and designation neutral for inheritance below
                 s = self.sentence(n)
                 v = s.variable
+                si = s.sentence
                 if len(constants):
                     for c in constants:
-                        r = s.substitute(c, v)
+                        r = si.substitute(c, v)
                         if not branch.has({'sentence': r, 'designated': d}):
                             cands.append({'branch': branch, 'sentence': r, 'node': n})
                 else:
                     c = branch.new_constant()
-                    r = s.substitute(c, v)
+                    r = si.substitute(c, v)
                     cands.append({'branch': branch, 'sentence': r, 'node': n})
             return cands
             

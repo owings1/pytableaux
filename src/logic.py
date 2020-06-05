@@ -862,9 +862,11 @@ class Vocabulary(object):
             self.sentence   = sentence
 
         def substitute(self, constant, variable):
-            if self.sentence.is_quantified():
-                return Vocabulary.QuantifiedSentence(self.sentence.quantifier, self.sentence.variable, self.sentence.substitute(constant, variable))
-            return self.sentence.substitute(constant, variable)
+            
+            #if self.sentence.is_quantified():
+            #    return Vocabulary.QuantifiedSentence(self.sentence.quantifier, self.sentence.variable, self.sentence.substitute(constant, variable))
+            return Vocabulary.QuantifiedSentence(self.quantifier, self.variable, self.sentence.substitute(constant, variable))
+            #return self.sentence.substitute(constant, variable)
 
         def constants(self):
             return self.sentence.constants()

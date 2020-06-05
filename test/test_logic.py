@@ -329,7 +329,7 @@ class TestVocabulary(object):
         s1 = logic.predicated('Identity', [x, y])
         s2 = logic.quantify('Existential', x, s1)
         s3 = logic.quantify('Existential', y, s2)
-        res = s3.substitute(m, y)
+        res = s3.sentence.substitute(m, y)
         check = logic.parse('SxIxm')
         assert res == check
 
@@ -376,6 +376,15 @@ class TestVocabulary(object):
         ops = s.operators()
         assert len(ops) == 7
         assert ','.join(ops) == 'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
+
+    def test_complex_quantified_substitution(self):
+        vocab = logic.Vocabulary()
+        vocab.declare_predicate('MyPred', 0, 0, 2)
+        s1 = logic.parse('SxMVyFxy', vocabulary=vocab)
+        m = logic.constant(0, 0)
+        s2 = s1.sentence.substitute(m, s1.variable)
+        s3 = logic.parse('MVyFmy', vocabulary=vocab)
+        assert s2 == s3
 
 class TestTableauxSystem(object):
 
