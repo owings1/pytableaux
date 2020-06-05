@@ -1491,12 +1491,6 @@ class TableauxSystem(object):
                 'designated' : dict(),
                 'world'      : dict(),
             }
-            #self.node_sindex = {
-            #    '_operator'      : dict(),
-            #    '_quantifier'    : dict(),
-            #    '_predicate'     : dict(),
-            #    '_is_predicated' : dict(),
-            #}
 
         def has(self, props, ticked=None):
             """
@@ -1549,12 +1543,6 @@ class TableauxSystem(object):
                     if key not in self.node_index[prop]:
                         return results
                     haystack = haystack & self.node_index[prop][key]
-            #for prop in self.node_sindex:
-            #    if prop in props:
-            #        key = props[prop]
-            #        if key not in self.node_sindex[prop]:
-            #            return results
-            #        haystack = haystack & self.node_sindex[prop][key]
             for node in haystack:
                 if limit != None and len(results) >= limit:
                     break
@@ -1583,26 +1571,7 @@ class TableauxSystem(object):
                     key = str(node.props[prop])
                     if key not in self.node_index[prop]:
                         self.node_index[prop][key] = set()
-                    self.node_index[prop][key].add(node)
-            #if node.has('sentence'):
-            #    s = node.props['sentence']
-            #    if s.operator != None:
-            #        if s.operator not in self.node_sindex['_operator']:
-            #            self.node_sindex['_operator'][s.operator] = set()
-            #        self.node_sindex['_operator'][s.operator].add(node)
-            #    if s.quantifier != None:
-            #        if s.quantifier not in self.node_sindex['_quantifier']:
-            #            self.node_sindex['_quantifier'][s.quantifier] = set()
-            #        self.node_sindex['_quantifier'][s.quantifier].add(node)
-            #    if s.predicate != None:
-            #        if s.predicate not in self.node_sindex['_predicate']:
-            #            self.node_sindex['_predicate'][s.predicate] = set()
-            #        self.node_sindex['_predicate'][s.predicate].add(node)
-            #    is_predicated = s.is_predicated()
-            #    if is_predicated not in self.node_sindex['_is_predicated']:
-            #        self.node_sindex['_is_predicated'][is_predicated] = set()
-            #    self.node_sindex['_is_predicated'][is_predicated].add(node)
-                    
+                    self.node_index[prop][key].add(node)                    
             return self
 
         def update(self, nodes):
@@ -1663,13 +1632,6 @@ class TableauxSystem(object):
                 }
                 for prop in self.node_index
             }
-            #branch.node_sindex = {
-            #    prop : {
-            #        key : set(self.node_sindex[prop][key])
-            #        for key in self.node_sindex[prop]
-            #    }
-            #    for prop in self.node_sindex
-            #}
             return branch
 
         def worlds(self):
