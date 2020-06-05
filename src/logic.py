@@ -2547,3 +2547,51 @@ class Parser(object):
 
     def typeof(self, c):
         return self.symbol_set.typeof(c)
+
+class StopWatch(object):
+
+    class StateError(Exception):
+        pass
+
+    def __init__(self, started=False):
+        self._start_time = None
+        self._elapsed = 0
+        self._is_running = False
+        self._times_started = 0
+        if started:
+            self.start()
+
+    def start(self):
+        if self._is_running:
+            raise StopWatch.StateError('StopWatch already started')
+        self._start_time = nowms()
+        self._is_running = True
+        self._times_started += 1
+        return self
+
+    def stop(self):
+        if not self._is_running:
+            raise StopWatch.StateError('StopWatch already stopped')
+        self._is_running = False
+        self._elapsed += nowms() - self._start_time
+        return self
+
+    def reset(self):
+        self._elapsed = 0
+        if self._is_running:
+            self._start_time = nowms()
+        return self
+
+    def elapsed(self):
+        if self._is_running:
+            return self._elapsed + (nowms() - self._start_time)
+        return self._elapsed
+
+    def is_running(self):
+        return self._is_running
+
+    def times_started(self):
+        return self._times_started
+
+    def __repr__(self):
+        return self.elapsed().__repr__()
