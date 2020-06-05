@@ -111,10 +111,10 @@ class TableauxRules(object):
 
     rule_groups = [
         [
-            Transitive,
+            t.TableauxRules.Reflexive,
         ],
         [
-            t.TableauxRules.Reflexive,
+            Transitive,
         ],
         [
             # non-branching rules
