@@ -60,7 +60,29 @@ class TableauxSystem(fde.TableauxSystem):
 
     .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
-    pass
+    branchables = dict(fde.TableauxSystem.branchables)
+    branchables.update({
+        'Conditional': {
+            False  : {
+                True  : 2,
+                False : 2,
+            },
+            True : {
+                True  : 1,
+                False : 2,
+            },
+        },
+        'Biconditional': {
+            False  : {
+                True  : 2,
+                False : 2,
+            },
+            True : {
+                True  : 2,
+                False : 2,
+            },
+        },
+    })
 
 class TableauxRules(object):
     """

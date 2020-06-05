@@ -557,6 +557,9 @@ class TableauxSystem(logic.TableauxSystem):
     to their classical counterparts.
     """
 
+    neg_branchable = set(['Conjunction', 'Material Biconditional', 'Biconditional'])
+    pos_branchable = set(['Disjunction', 'Material Conditional', 'Conditional'])
+
     @staticmethod
     def build_trunk(tableau, argument):
         """
@@ -570,13 +573,13 @@ class TableauxSystem(logic.TableauxSystem):
         branch.add({'sentence': negate(argument.conclusion), 'world': 0})
 
     @staticmethod
-    def branching_complexity(operators):
-        # TODO: make this more general
-        operators = list(operators)
+    def branching_complexity(node):
+        if not node.has('sentence'):
+            return 0
+        sentence = node.props['sentence']
+        operators = list(sentence.operators())
         last_is_negated = False
-        complexity = 0
-        neg_branchable = set(['Conjunction', 'Material Biconditional', 'Biconditional'])
-        pos_branchable = set(['Disjunction', 'Material Conditional', 'Conditional'])
+        complexity = 1
         while len(operators):
             operator = operators.pop(0)
             if operator == 'Assertion':
@@ -587,11 +590,11 @@ class TableauxSystem(logic.TableauxSystem):
                     continue
                 last_is_negated = True
             elif last_is_negated:
-                if operator in neg_branchable:
-                    complexity += 1
+                if operator in TableauxSystem.neg_branchable:
+                    complexity *= 2
                     last_is_negated = False
-            elif operator in pos_branchable:
-                complexity += 1
+            elif operator in TableauxSystem.pos_branchable:
+                complexity *= 2
         return complexity
 
 class IsModal(object):
@@ -1105,54 +1108,61 @@ class TableauxRules(object):
 
         operator = 'Possibility'
 
-        branching_complexities = None
         sentence_track = None
+
+        def __init__(self, *args, **opts):
+            super(TableauxRules.Possibility, self).__init__(*args, **opts)
+            self.branch_sentence_track = {}
+
         def apply_to_node(self, node, branch):
             s  = self.sentence(node)
+            si = s.operand
             w1 = node.props['world']
             w2 = branch.new_world()
             branch.update([
-                {'sentence': s.operand, 'world': w2},
+                {'sentence': si, 'world': w2},
                 {'world1': w1, 'world2': w2},
             ]).tick(node)
-            self.sentence_track_inc(s.operand)
+            self.sentence_track_inc(branch, si)
 
+        # override
         def score_candidate(self, target):
+            branch = target['branch']
             s = self.sentence(target['node'])
-            if target['branch'].has({'sentence': negative(s), 'world': target['branch'].new_world()}):
+            si = s.operand
+            if branch.has({'sentence': negative(si), 'world': branch.new_world()}):
+                return 1
+            track_count = self.sentence_track_count(branch, si)
+            if track_count == 0:
                 return 1
             # Apply to the simplest possibility sentence, so we don't get stuck
             ops = s.operators()
-            possibility_ops = [operator for operator in ops if operator == self.operator]
-            return -1 * len(possibility_ops) # * len(ops) # Also rank by simplest?
+            # use full modal complexity, not just possbility NPNA vs NPA
+            modal_ops = [operator for operator in ops if operator in Model.modal_operators]
+            return -1 * len(modal_ops) * track_count
+            #possibility_ops = [operator for operator in ops if operator == self.operator]
+            #return -1 * len(possibility_ops) # * len(ops) # Also rank by simplest?
             #return -1 * (len(possibility_ops) + self.branching_complexity(self.sentence(target['node']).operand))
 
         def group_score(self, target):
             if target['candidate_score'] > 0:
                 return 1
-            s = self.sentence(target['node']).operand
-            return -1 * min(self.branching_complexity(s), self.sentence_track_count(s))
+            branch = target['branch']
+            s = self.sentence(target['node'])
+            si = s.operand
+            #self.branching_complexity(target['node']), 
+            return -1 * min([self.sentence_track_count(branch, si)])
 
-        def sentence_track_count(self, sentence):
-            if self.sentence_track == None:
-                self.sentence_track = dict()
-            if sentence not in self.sentence_track:
-                self.sentence_track[sentence] = 0
-            return self.sentence_track[sentence]
+        def sentence_track_count(self, branch, sentence):
+            if branch.id not in self.branch_sentence_track:
+                self.branch_sentence_track[branch.id] = {}
+            if sentence not in self.branch_sentence_track[branch.id]:
+                self.branch_sentence_track[branch.id][sentence] = 0
+            return self.branch_sentence_track[branch.id][sentence]
 
-        def sentence_track_inc(self, sentence):
-            if self.sentence_track == None:
-                self.sentence_track = dict()
-            if sentence not in self.sentence_track:
-                self.sentence_track[sentence] = 0
-            self.sentence_track[sentence] += 1
-
-        def branching_complexity(self, sentence):
-            if self.branching_complexities == None:
-                self.branching_complexities = dict()
-            if sentence not in self.branching_complexities:
-                self.branching_complexities[sentence] = self.tableau.logic.TableauxSystem.branching_complexity(sentence.operators())
-            return self.branching_complexities[sentence]
+        def sentence_track_inc(self, branch, sentence):
+            self.sentence_track_count(branch, sentence)
+            self.branch_sentence_track[branch.id][sentence] += 1
 
     class PossibilityNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -1184,8 +1194,9 @@ class TableauxRules(object):
         # so we can halt on infinite branches.
         branch_max_worlds = None
 
-        # cache the sentence branch complexity
-        branching_complexities = None
+        def __init__(self, *args, **opts):
+            super(TableauxRules.Necessity, self).__init__(*args, **opts)
+            self.branch_max_worlds = {}
 
         def get_candidate_targets_for_branch(self, branch):
             cands = list()
@@ -1220,19 +1231,10 @@ class TableauxRules(object):
                         })
             return cands
 
-        def branching_complexity(self, sentence):
-            if self.branching_complexities == None:
-                self.branching_complexities = dict()
-            if sentence not in self.branching_complexities:
-                self.branching_complexities[sentence] = self.tableau.logic.TableauxSystem.branching_complexity(sentence.operators())
-            return self.branching_complexities[sentence]
-
         def on_branch_track(self, branch):
             # Project the maximum number of worlds for a branch (origin) as
             # the number of worlds already on the branch + the number of modal
             # operators + 1.
-            if self.branch_max_worlds == None:
-                self.branch_max_worlds = dict()
             origin = branch.origin()
             if origin.id in self.branch_max_worlds:
                 return
@@ -1254,12 +1256,13 @@ class TableauxRules(object):
             if target['branch'].has({'sentence': negative(target['sentence']), 'world': target['world']}):
                 return 1
             #return -1 * len(target['sentence'].operators())
-            return -1 * self.branching_complexity(target['sentence'])
+            return -1 * self.branching_complexity(target['node'])
 
         def group_score(self, target):
             if target['candidate_score'] > 0:
                 return 1
-            return -1 * min(target['track_count'], self.branching_complexity(target['sentence']))
+            return -1 * min([target['track_count']])
+            #return -1 * min(target['track_count'], self.branching_complexity(target['node']))
 
         def example(self):
             s = operate(self.operator, [atomic(0, 0)])

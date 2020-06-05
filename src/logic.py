@@ -1068,6 +1068,10 @@ class TableauxSystem(object):
     def build_trunk(tableau, argument):
         raise NotImplementedError(NotImplemented)
 
+    @staticmethod
+    def branching_complexity(node):
+        return 0
+
     class TrunkAlreadyBuiltError(Exception):
         pass
 
@@ -1132,6 +1136,7 @@ class TableauxSystem(object):
             self.branch_dict = dict()
             self.trunk_built = False
             self.current_step = 0
+            self.branching_complexities = dict()
 
             if logic != None:
                 self.set_logic(logic)
@@ -1456,6 +1461,14 @@ class TableauxSystem(object):
                 self.check_timeout()
                 branch.make_model()
 
+        def branching_complexity(self, node):
+            if node.id not in self.branching_complexities:
+                if self.logic != None:
+                    self.branching_complexities[node.id] = self.logic.TableauxSystem.branching_complexity(node)
+                else:
+                    return 0
+            return self.branching_complexities[node.id]
+            
         def __repr__(self):
             return {
                 'argument'      : self.argument,
@@ -1783,6 +1796,11 @@ class TableauxSystem(object):
             return set()
 
         def __repr__(self):
+            if self.parent:
+                parent_id = self.parent.id
+            else:
+                parent_id = None
+            return {'id': self.id, 'props': self.props, 'ticked': self.ticked, 'step': self.step, 'parent': parent_id}.__repr__()
             return self.__dict__.__repr__()
 
     class Rule(object):
@@ -1818,6 +1836,11 @@ class TableauxSystem(object):
 
         def group_score(self, target):
             return 0
+
+        def branching_complexity(self, node):
+            if self.tableau != None:
+                return self.tableau.branching_complexity(node)
+            return 1
 
         def after_branch_add(self, branch, other_branch = None):
             pass
@@ -2153,6 +2176,14 @@ class TableauxSystem(object):
             if sentence != None:
                 props['sentence'] = sentence
             return props
+
+        def score_candidate(self, target):
+            score = super(TableauxSystem.ConditionalNodeRule, self).score_candidate(target)
+            if score == 0:
+                complexity = self.branching_complexity(target['node'])
+                print('Using branch complexity for {0} = {1}'.format(str(target['node']), str(complexity)))
+                score = -1 * complexity
+            return score
 
     class Writer(object):
 

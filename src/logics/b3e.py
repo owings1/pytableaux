@@ -75,6 +75,33 @@ class TableauxSystem(fde.TableauxSystem):
     .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
 
+    # operator => negated => designated
+    branchables = dict(fde.TableauxSystem.branchables)
+    branchables.update({
+        # reduction
+        'Conditional': {
+            False  : {
+                True  : 1,
+                False : 1,
+            },
+            True : {
+                True  : 1,
+                False : 1,
+            },
+        },
+        # reduction
+        'Biconditional': {
+            False  : {
+                True  : 1,
+                False : 1,
+            },
+            True : {
+                True  : 1,
+                False : 1,
+            },
+        },
+    })
+
 class TableauxRules(object):
     """
     The closure rules for B3E are the `FDE closure rule`_, and the `K3 closure rule`_.

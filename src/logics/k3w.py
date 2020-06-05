@@ -61,7 +61,72 @@ class TableauxSystem(fde.TableauxSystem):
 
     .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
-    pass
+    branchables = {
+        'Conjunction': {
+            False : {
+                True  : 1,
+                False : 2,
+            },
+            True  : {
+                True  : 3,
+                False : 3,
+            },
+        },
+        'Disjunction': {
+            False  : {
+                True  : 3,
+                False : 3,
+            },
+            True : {
+                True  : 1,
+                False : 3,
+            },
+        },
+        # reduction
+        'Material Conditional': {
+            False  : {
+                True  : 1,
+                False : 1,
+            },
+            True : {
+                True  : 1,
+                False : 1,
+            },
+        },
+        # reduction
+        'Material Biconditional': {
+            False  : {
+                True  : 1,
+                False : 1,
+            },
+            True : {
+                True  : 1,
+                False : 1,
+            },
+        },
+        # reduction
+        'Conditional': {
+            False  : {
+                True  : 1,
+                False : 1,
+            },
+            True : {
+                True  : 1,
+                False : 1,
+            },
+        },
+        # reduction
+        'Biconditional': {
+            False  : {
+                True  : 1,
+                False : 1,
+            },
+            True : {
+                True  : 1,
+                False : 1,
+            },
+        },
+    }
         
 class TableauxRules(object):
     """

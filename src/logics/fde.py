@@ -416,6 +416,70 @@ class TableauxSystem(logic.TableauxSystem):
     on an open branch.
     """
 
+    # operator => negated => designated
+    branchables = {
+        'Conjunction': {
+            False : {
+                True  : 1,
+                False : 2,
+            },
+            True  : {
+                True  : 2,
+                False : 1,
+            },
+        },
+        'Disjunction': {
+            False  : {
+                True  : 2,
+                False : 1,
+            },
+            True : {
+                True  : 1,
+                False : 2,
+            },
+        },
+        'Material Conditional': {
+            False  : {
+                True  : 2,
+                False : 1,
+            },
+            True : {
+                True  : 1,
+                False : 2,
+            },
+        },
+        'Material Biconditional': {
+            False  : {
+                True  : 2,
+                False : 2,
+            },
+            True : {
+                True  : 2,
+                False : 2,
+            },
+        },
+        'Conditional': {
+            False  : {
+                True  : 2,
+                False : 1,
+            },
+            True : {
+                True  : 1,
+                False : 2,
+            },
+        },
+        'Biconditional': {
+            False  : {
+                True  : 2,
+                False : 2,
+            },
+            True : {
+                True  : 2,
+                False : 2,
+            },
+        },
+    }
+
     @staticmethod
     def build_trunk(tableau, argument):
         """
@@ -426,6 +490,26 @@ class TableauxSystem(logic.TableauxSystem):
         for premise in argument.premises:
             branch.add({'sentence': premise, 'designated': True, 'world': None})
         branch.add({'sentence' : argument.conclusion, 'designated': False, 'world': None})
+
+    @staticmethod
+    def branching_complexity(node):
+        if not node.has('sentence'):
+            return 0
+        sentence = node.props['sentence']
+        operators = list(sentence.operators())
+        last_is_negated = False
+        complexity = 1
+        while len(operators):
+            operator = operators.pop(0)
+            if operator == 'Negation':
+                if last_is_negated:
+                    last_is_negated = False
+                    continue
+                last_is_negated = True
+            if operator in TableauxSystem.branchables:
+                complexity *= TableauxSystem.branchables[operator][last_is_negated][node.props['designated']]
+                last_is_negated = False
+        return complexity
 
 class TableauxRules(object):
     """

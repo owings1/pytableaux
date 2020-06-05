@@ -67,7 +67,7 @@ class Model(k.Model):
     def add_access(self, w1, w2):
         raise NotImplementedError(NotImplemented)
 
-class TableauxSystem(logic.TableauxSystem):
+class TableauxSystem(k.TableauxSystem):
     """
     A branch can be thought of as representing a case where each node's sentence
     is true.
