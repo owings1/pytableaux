@@ -1397,22 +1397,22 @@ class TableauxSystem(object):
                 structure['distinct_nodes'] = track['distinct_nodes']
             return structure
 
-        def branch(self, other_branch=None):
+        def branch(self, parent=None):
             """
             Return a new branch on the tableau containing the nodes of the given branch, if any.
             """
-            if other_branch == None:
+            if parent == None:
                 branch = TableauxSystem.Branch(self)
             else:
-                branch = other_branch.copy()
-                branch.parent = other_branch
+                branch = parent.copy()
+                branch.parent = parent
             branch.index = len(self.branches)
             self.branches.append(branch)
             if not branch.closed:
                 self.open_branchset.add(branch)
-            self.branch_dict[id(branch)] = branch
+            self.branch_dict[branch.id] = branch
             for rule in self.all_rules:
-                rule.after_branch_add(branch, other_branch)
+                rule.after_branch_add(branch)
             return branch
 
         def build_trunk(self):
@@ -1835,9 +1835,9 @@ class TableauxSystem(object):
             # the tableau directly, with no return value. Used for building examples/documentation.
             raise NotImplementedError(NotImplemented)
 
-        def branch(self, other_branch=None):
+        def branch(self, parent=None):
             # convenience for self.tableau.branch()
-            return self.tableau.branch(other_branch)
+            return self.tableau.branch(parent)
 
         def sentence(self, node):
             if 'sentence' in node.props:
@@ -1851,7 +1851,7 @@ class TableauxSystem(object):
                 return self.tableau.branching_complexity(node)
             return 1
 
-        def after_branch_add(self, branch, other_branch = None):
+        def after_branch_add(self, branch):
             pass
 
         def after_node_add(self, branch, node):
@@ -1997,17 +1997,15 @@ class TableauxSystem(object):
             else:
                 self.is_rank_optim = True
 
-        def after_branch_add(self, branch, other_branch = None):
+        def after_branch_add(self, branch):
             if not branch.closed:
-                branch_id = branch.id
                 consumed = False
-                if other_branch != None:
-                    other_branch_id = other_branch.id
-                    if other_branch_id in self.applicable_nodes:
-                        self.applicable_nodes[branch_id] = set(self.applicable_nodes[other_branch_id])
+                if branch.parent != None:
+                    if branch.parent.id in self.applicable_nodes:
+                        self.applicable_nodes[branch.id] = set(self.applicable_nodes[branch.parent.id])
                         consumed = True
                 if not consumed:
-                    self.applicable_nodes[branch_id] = set()
+                    self.applicable_nodes[branch.id] = set()
                     for node in branch.get_nodes(ticked=self.ticked):
                         self.after_node_add(branch, node)
 
@@ -2019,9 +2017,8 @@ class TableauxSystem(object):
                 self.applicable_nodes[branch.id].add(node)
 
         def after_node_tick(self, branch, node):
-            branch_id = branch.id
             if self.ticked == False:
-                self.applicable_nodes[branch_id].discard(node)
+                self.applicable_nodes[branch.id].discard(node)
 
         def applies(self):
             cands = list()
