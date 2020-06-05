@@ -429,10 +429,10 @@ class TestTableau(object):
         with pytest.raises(logic.TableauxSystem.ProofTimeoutError):
             proof.build(timeout=1)
 
-    def test_finish_empty_sets_build_duration_none(self):
+    def test_finish_empty_sets_build_duration_ms_none(self):
         proof = logic.tableau(None, None)
         proof.finish()
-        assert proof.stats['build_duration'] == None
+        assert proof.stats['build_duration_ms'] == None
 
 class TestBranch(object):
 
