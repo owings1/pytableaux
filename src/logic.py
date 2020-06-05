@@ -1160,12 +1160,14 @@ class TableauxSystem(object):
             if self.finished:
                 return False
             if self.argument != None and not self.trunk_built:
-                raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.") 
+                raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.")
+            step_start_time = nowms()
             res = self.get_rule_and_target_to_apply()
             if res:
                 rule, target = res
                 rule.apply(target)
-                application = { 'rule' : rule, 'target' : target }
+                step_duration = nowms() - step_start_time
+                application = {'rule': rule, 'target': target, 'duration_ms': step_duration}
                 self.history.append(application)
                 self.current_step += 1
                 return application
@@ -1431,6 +1433,7 @@ class TableauxSystem(object):
                 'open_branches'  : num_open,
                 'closed_branches': len(self.branches) - num_open,
                 'rules_applied'  : len(self.history),
+                'rules_duration_ms' : sum((application['duration_ms'] for application in self.history)),
             }
             if self.valid:
                 self.stats['result'] = 'Valid'
@@ -1443,9 +1446,9 @@ class TableauxSystem(object):
             self.tree = self.structure(self.branches)
             self.stats['distinct_nodes'] = self.tree['distinct_nodes']
             if self.build_start_time != None:
-                self.stats['build_duration'] = nowms() - self.build_start_time
+                self.stats['build_duration_ms'] = nowms() - self.build_start_time
             else:
-                self.stats['build_duration'] = None
+                self.stats['build_duration_ms'] = None
             return self
 
         def build_models(self):

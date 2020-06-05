@@ -62,6 +62,14 @@
                         <span class="prop">Rules Applied</span>
                         <div class="value">{{ tableau.stats['rules_applied']|e }}</div>
                     </li>
+                    <li>
+                        <span class="prop">Duration</span>
+                        <div class="value">{{ tableau.stats['build_duration_ms']|e }}ms</div>
+                    </li>
+                    <li>
+                        <span class="prop">Overhead</span>
+                        <div class="value">{{ (tableau.stats['build_duration_ms'] - tableau.stats['rules_duration_ms'])|e }}ms</div>
+                    </li>
                 </ul>
             </div>
             <h4 class="part-header">Step</h4>
@@ -80,20 +88,21 @@
                     <li>
                         <span class="prop">Rule</span>
                         <div class="value">
-                            <a class="step-rule-name {{- helper.hidden_if(tableau.history|length) }}" data-step="0" href="javascript:">Build Trunk</a>
+                            <a class="step-rule-name step-rule-datum {{- helper.hidden_if(tableau.history|length) }}" data-step="0" href="javascript:">Build Trunk</a>
                             {% for application in tableau.history %}
                                 {% set rule_name = application['rule'].__class__.__name__ %}
-                                <a class="step-rule-name{% if not loop.last %} hidden{% endif %}" data-step="{{ loop.index }}" href="javascript:">{{ rule_name }}</a>
+                                <a class="step-rule-name step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}" href="javascript:">{{ rule_name }}</a>
                             {% endfor %}
                         </div>
                     </li>
                     <li>
                         <span class="prop">Target</span>
                         <div class="value">
-                            <a class="step-rule-target {{- helper.hidden_if(tableau.history|length) }}" data-target-type="argument" data-step="0" href="javascript:">Argument</a>
+                            <a class="step-rule-target step-rule-datum {{- helper.hidden_if(tableau.history|length) }}"
+                                data-target-type="argument" data-step="0" href="javascript:">Argument</a>
                             {% for application in tableau.history %}
                                 {% set target = application['target'] %}
-                                <a class="step-rule-target{% if not loop.last %} hidden{% endif %}"
+                                <a class="step-rule-target step-rule-datum {{- helper.hidden_if(not loop.last) }}"
                                     data-target-type="{{ target['type'] }}"
                                     {% if 'node' in target %}
                                         data-node-id="{{ target['node'].id }}"
@@ -106,6 +115,16 @@
                                     {% endif %}
                                     data-step="{{ loop.index }}" href="javascript:">{{ target['type']|e }}</a>
                             {% endfor %}
+                        </div>
+                    </li>
+                    <li>
+                        <span class="prop">Duration</span>
+                        <div class="value">
+                            {%- for application in tableau.history %}
+                                <span class="step-rule-duration step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}">
+                                    {{- application['duration_ms']|e }}ms
+                                </span>
+                            {%- endfor %}
                         </div>
                     </li>
                 </ul>

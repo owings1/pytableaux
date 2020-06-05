@@ -87,6 +87,7 @@
         StepNext        : 'step-next'            ,
         StepEnd         : 'step-end'             ,
         StepInput       : 'step-input'           ,
+        StepRuleDatum   : 'step-rule-datum'      ,
         StepRuleName    : 'step-rule-name'       ,
         StepRuleTarget  : 'step-rule-target'     ,
         StepFiltered    : 'step-filtered'        ,
@@ -472,8 +473,8 @@
 
         // show the rule and target in the controls panel
         const attrSelector = getAttrSelector(Attrib.Step, n)
-        $(Dcls.StepRuleName, $controls).hide().filter(attrSelector).show()
-        $(Dcls.StepRuleTarget, $controls).hide().filter(attrSelector).show()
+        $(Dcls.StepRuleDatum, $controls).hide().filter(attrSelector).show()
+        //$(Dcls.StepRuleTarget, $controls).hide().filter(attrSelector).show()
         // update the input box
         $(Dcls.StepInput, $controls).val(n)
     }

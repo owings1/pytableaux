@@ -496,6 +496,7 @@ class App(object):
                 'header': proof_writer.document_header(),
                 'footer': proof_writer.document_footer(),
                 'body': proof_writer.write(proof, sw=sw),
+                'stats': proof.stats,
                 'result': proof.stats['result'],
                 'writer': {
                     'name': proof_writer.name,
