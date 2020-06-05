@@ -41,6 +41,10 @@ def substitute_params(params, old_value, new_value):
             new_params.append(p)
     return tuple(new_params)
 
+# LCaMNb
+# Ma
+# KMNbc
+
 class Model(logic.Model):
     """
     A K-model comprises a non-empty collection of K-frames, a world access
@@ -566,7 +570,7 @@ class TableauxSystem(logic.TableauxSystem):
         branch.add({'sentence': negate(argument.conclusion), 'world': 0})
 
     @staticmethod
-    def branch_complexity(operators):
+    def branching_complexity(operators):
         # TODO: make this more general
         operators = list(operators)
         last_is_negated = False
@@ -607,11 +611,16 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            for node in branch.find_all({'_operator': 'Negation'}):
+            for node in branch.get_nodes():
                 if node.has('sentence') and node.has('world'):
-                    n = branch.find({'sentence': node.props['sentence'].operand, 'world': node.props['world']})
+                    n = branch.find({'sentence': negate(node.props['sentence']), 'world': node.props['world']})
                     if n != None:
                         return {'nodes': set([node, n]), 'type': 'Nodes'}
+            #for node in branch.find_all({'_operator': 'Negation'}):
+            #    if node.has('sentence') and node.has('world'):
+            #        n = branch.find({'sentence': node.props['sentence'].operand, 'world': node.props['world']})
+            #        if n != None:
+            #            return {'nodes': set([node, n]), 'type': 'Nodes'}
             return False
 
         def example(self):
@@ -627,12 +636,19 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            for node in branch.find_all({'_operator': 'Negation'}):
-                s = self.sentence(node).operand
-                if s.predicate == Identity:
-                    a, b = s.parameters
-                    if a == b:
-                        return {'node': node, 'type': 'Node'}
+            #for node in branch.find_all({'_operator': 'Negation'}):
+            #    s = self.sentence(node).operand
+            #    if s.predicate == Identity:
+            #        a, b = s.parameters
+            #        if a == b:
+            #            return {'node': node, 'type': 'Node'}
+            for node in branch.get_nodes():
+                if node.has('sentence'):
+                    s = self.sentence(node)
+                    if s.operator == 'Negation' and s.operand.predicate == Identity:
+                        a, b = s.operand.parameters
+                        if a == b:
+                            return {'node': node, 'type': 'Node'}
             return False
 
         def example(self):
@@ -645,10 +661,15 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            for node in branch.find_all({'_operator': 'Negation'}):
-                s = self.sentence(node).operand
-                if s.predicate == Existence:
-                    return {'node': node, 'type': 'Node'}
+            #for node in branch.find_all({'_operator': 'Negation'}):
+            #    s = self.sentence(node).operand
+            #    if s.predicate == Existence:
+            #        return {'node': node, 'type': 'Node'}
+            for node in branch.get_nodes():
+                if node.has('sentence'):
+                    s = self.sentence(node)
+                    if s.operator == 'Negation' and s.operand.predicate == Existence:
+                        return {'node': node, 'type': 'Node'}
 
         def example(self):
             s = logic.parse('NJm')
@@ -1024,8 +1045,13 @@ class TableauxRules(object):
         def get_candidate_targets_for_branch(self, branch):
             cands = list()
             constants = branch.constants()
-            for node in branch.find_all({'_quantifier': self.quantifier}):
+            for node in branch.get_nodes():
+            #for node in branch.find_all({'_quantifier': self.quantifier}):
+                if not node.has('sentence'):
+                    continue
                 s = self.sentence(node)
+                if s.quantifier != self.quantifier:
+                    continue
                 w = node.props['world']
                 v = s.variable
                 if len(constants):
@@ -1079,6 +1105,8 @@ class TableauxRules(object):
 
         operator = 'Possibility'
 
+        branching_complexities = None
+        sentence_track = None
         def apply_to_node(self, node, branch):
             s  = self.sentence(node)
             w1 = node.props['world']
@@ -1087,13 +1115,44 @@ class TableauxRules(object):
                 {'sentence': s.operand, 'world': w2},
                 {'world1': w1, 'world2': w2},
             ]).tick(node)
+            self.sentence_track_inc(s.operand)
 
         def score_candidate(self, target):
             s = self.sentence(target['node'])
+            if target['branch'].has({'sentence': negative(s), 'world': target['branch'].new_world()}):
+                return 1
             # Apply to the simplest possibility sentence, so we don't get stuck
             ops = s.operators()
             possibility_ops = [operator for operator in ops if operator == self.operator]
             return -1 * len(possibility_ops) # * len(ops) # Also rank by simplest?
+            #return -1 * (len(possibility_ops) + self.branching_complexity(self.sentence(target['node']).operand))
+
+        def group_score(self, target):
+            if target['candidate_score'] > 0:
+                return 1
+            s = self.sentence(target['node']).operand
+            return -1 * min(self.branching_complexity(s), self.sentence_track_count(s))
+
+        def sentence_track_count(self, sentence):
+            if self.sentence_track == None:
+                self.sentence_track = dict()
+            if sentence not in self.sentence_track:
+                self.sentence_track[sentence] = 0
+            return self.sentence_track[sentence]
+
+        def sentence_track_inc(self, sentence):
+            if self.sentence_track == None:
+                self.sentence_track = dict()
+            if sentence not in self.sentence_track:
+                self.sentence_track[sentence] = 0
+            self.sentence_track[sentence] += 1
+
+        def branching_complexity(self, sentence):
+            if self.branching_complexities == None:
+                self.branching_complexities = dict()
+            if sentence not in self.branching_complexities:
+                self.branching_complexities[sentence] = self.tableau.logic.TableauxSystem.branching_complexity(sentence.operators())
+            return self.branching_complexities[sentence]
 
     class PossibilityNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
@@ -1126,7 +1185,7 @@ class TableauxRules(object):
         branch_max_worlds = None
 
         # cache the sentence branch complexity
-        branch_complexities = None
+        branching_complexities = None
 
         def get_candidate_targets_for_branch(self, branch):
             cands = list()
@@ -1137,8 +1196,13 @@ class TableauxRules(object):
             if self.branch_max_worlds != None and origin.id in self.branch_max_worlds:
                 if len(worlds) > self.branch_max_worlds[origin.id]:
                     return cands
-            for node in branch.find_all({'_operator': self.operator}):
+            #for node in branch.find_all({'_operator': self.operator}):
+            for node in branch.get_nodes():
+                if not node.has('sentence'):
+                    continue
                 s = self.sentence(node)
+                if s.operator != self.operator:
+                    continue
                 si = s.operand
                 w1 = node.props['world']
                 for w2 in worlds:
@@ -1156,12 +1220,12 @@ class TableauxRules(object):
                         })
             return cands
 
-        def branch_complexity(self, sentence):
-            if self.branch_complexities == None:
-                self.branch_complexities = dict()
-            if sentence not in self.branch_complexities:
-                self.branch_complexities[sentence] = self.tableau.logic.TableauxSystem.branch_complexity(sentence.operators())
-            return self.branch_complexities[sentence]
+        def branching_complexity(self, sentence):
+            if self.branching_complexities == None:
+                self.branching_complexities = dict()
+            if sentence not in self.branching_complexities:
+                self.branching_complexities[sentence] = self.tableau.logic.TableauxSystem.branching_complexity(sentence.operators())
+            return self.branching_complexities[sentence]
 
         def on_branch_track(self, branch):
             # Project the maximum number of worlds for a branch (origin) as
@@ -1189,8 +1253,13 @@ class TableauxRules(object):
             # This should already be the lest-applied-to node
             if target['branch'].has({'sentence': negative(target['sentence']), 'world': target['world']}):
                 return 1
-            return -1 * len(target['sentence'].operators())
-            #return -1 * self.branch_complexity(target['sentence'])
+            #return -1 * len(target['sentence'].operators())
+            return -1 * self.branching_complexity(target['sentence'])
+
+        def group_score(self, target):
+            if target['candidate_score'] > 0:
+                return 1
+            return -1 * min(target['track_count'], self.branching_complexity(target['sentence']))
 
         def example(self):
             s = operate(self.operator, [atomic(0, 0)])
@@ -1218,8 +1287,17 @@ class TableauxRules(object):
         """
 
         def applies_to_branch(self, branch):
-            nodes = set(branch.find_all({'_is_predicated': True}, ticked = False))
-            inodes = set(branch.search_nodes({'_predicate': Identity}, nodes))
+            #nodes = set(branch.find_all({'_is_predicated': True}, ticked = False))
+            nodes = {
+                node for node in branch.get_nodes(ticked = False)
+                if node.has('sentence') and self.sentence(node).is_predicated()
+            }
+            #inodes = set(branch.search_nodes({'_predicate': Identity}, nodes))
+            inodes = {
+                node for node in nodes if self.sentence(node).predicate == Identity and
+                # checking length of the set excludes self-identity sentences.
+                len(set(self.sentence(node).parameters)) == 2
+            }
             for inode in inodes:
                 w = inode.props['world']
                 pa, pb = inode.props['sentence'].parameters
