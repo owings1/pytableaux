@@ -1907,13 +1907,17 @@ class TableauxSystem(object):
 
     class SelectiveTrackingBranchRule(BranchRule):
 
+        # TODO: maybe refactor into node rule -- but this one
+        #       has diff reqs since applies_to_node may change
+        #       its result over time, i.e. False then True
+
         def __init__(self, *args, **opts):
             super(TableauxSystem.SelectiveTrackingBranchRule, self).__init__(*args, **opts)
             self.stbr_track = dict()
-            if 'is_rank_optim' in opts:
-                self.is_rank_optim = opts['is_rank_optim']
-            else:
-                self.is_rank_optim = True
+            #if 'is_rank_optim' in opts:
+            #    self.is_rank_optim = opts['is_rank_optim']
+            #else:
+            #    self.is_rank_optim = True
 
         def applies_to_branch(self, branch):
             cands = self.get_candidate_targets_for_branch(branch)
@@ -1930,8 +1934,9 @@ class TableauxSystem(object):
             for target in cands:
                 track_count = self.stbr_track[branch.id][target['node'].id]
                 target['track_count'] = track_count
-                if not self.is_rank_optim:
-                    return target
+                # This would bypass the initial reduction the
+                #if not self.is_rank_optim:
+                #    return target
                 if track_count == least_count:
                     bests.append(target)
             if len(bests):
