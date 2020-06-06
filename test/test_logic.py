@@ -546,23 +546,6 @@ class TestRule(object):
         res = rule.__repr__()
         assert res == 'Rule'
 
-class TestBranchRule(object):
-    pass
-    #def test_applies_to_branch_not_impl(self):
-    #    rule = logic.TableauxSystem.BranchRule(logic.tableau(None, None))
-    #    with pytest.raises(logic.NotImplementedError):
-    #        rule.applies_to_branch(None)
-    #
-    #def test_target_has_branch_when_returns_true_mock(self):
-    #    class MockRule(logic.TableauxSystem.BranchRule):
-    #        def applies_to_branch(self, branch):
-    #            return True
-    #    proof = logic.tableau(None, None)
-    #    branch = proof.branch()
-    #    rule = MockRule(proof)
-    #    res = rule.applies()
-    #    assert res['branch'] == branch
-
 class TestClosureRule(object):
 
     def test_applies_to_branch_not_impl(self):
@@ -591,15 +574,6 @@ class TestNodeRule(object):
         rule = logic.TableauxSystem.NodeRule(logic.tableau(None, None))
         with pytest.raises(logic.NotImplementedError):
             rule.example()
-
-class TestSelectiveTrackingBranchRule(object):
-
-    def test_not_impl_various(self):
-        rule = logic.TableauxSystem.SelectiveTrackingBranchRule(logic.tableau(None, None))
-        with pytest.raises(logic.NotImplementedError):
-            rule.get_candidate_targets_for_branch(None)
-        with pytest.raises(logic.NotImplementedError):
-            rule.apply_to_target(None)
 
 class TestModel(object):
 

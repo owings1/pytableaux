@@ -1422,6 +1422,8 @@ class TableauxSystem(object):
             self.logic.TableauxSystem.build_trunk(self, self.argument)
             self.trunk_built = True
             self.current_step += 1
+            for rule in self.all_rules:
+                rule.after_trunk_build(self.branches)
 
         def get_branch(self, branch_id):
             return self.branch_dict[branch_id]
@@ -1866,6 +1868,9 @@ class TableauxSystem(object):
                 return self.tableau.branching_complexity(node)
             return 1
 
+        def after_trunk_build(self, branches):
+            pass
+
         def after_branch_add(self, branch):
             pass
 
@@ -1907,84 +1912,6 @@ class TableauxSystem(object):
         def applies_to_branch(self, branch):
             raise NotImplementedError(NotImplemented)
 
-    class SelectiveTrackingBranchRule(Rule):
-
-        # TODO: maybe refactor into node rule -- but this one
-        #       has diff reqs since applies_to_node may change
-        #       its result over time, i.e. False then True
-
-        def __init__(self, *args, **opts):
-            super(TableauxSystem.SelectiveTrackingBranchRule, self).__init__(*args, **opts)
-            self.stbr_track = dict()
-            #if 'is_rank_optim' in opts:
-            #    self.is_rank_optim = opts['is_rank_optim']
-            #else:
-            #    self.is_rank_optim = True
-
-        def get_candidate_targets(self, branch):
-            return self.get_candidate_targets_for_branch(branch)
-
-        def select_best_target(self, targets, branch):
-            return self.select_best_target_for_branch(branch, targets)
-
-        def get_candidate_targets_for_branch(self, branch):
-            # Implementation must return target with both 'branch' and 'node' properties.
-            raise NotImplementedError(NotImplemented)
-
-        def apply_to_target(self, target):
-            raise NotImplementedError(NotImplemented)
-
-        def select_best_target_for_branch(self, branch, cands):
-            # select the node to which we have applied the least for this branch.
-            self.ensure_track_targets(cands)
-            cand_node_ids = {target['node'].id for target in cands}
-            least_count = min({self.stbr_track[branch.id][node_id] for node_id in cand_node_ids})
-            bests = list()
-            for target in cands:
-                track_count = self.stbr_track[branch.id][target['node'].id]
-                target['track_count'] = track_count
-                # This would bypass the initial reduction the
-                #if not self.is_rank_optim:
-                #    return target
-                if track_count == least_count:
-                    bests.append(target)
-            if len(bests):
-                # score candidates
-                cand_scores = [self.score_candidate(target) for target in bests]
-                max_score = max(set(cand_scores))
-                for i in range(len(bests)):
-                    target = bests[i]
-                    candidate_score = cand_scores[i]
-                    if candidate_score == max_score:
-                        target['candidate_score'] = candidate_score
-                        return target
-
-        def score_candidate(self, target):
-            return 0
-
-        def ensure_track_targets(self, cands):
-            for target in cands:
-                self.ensure_track_target(target)
-
-        def ensure_track_target(self, target):
-            branch = target['branch']
-            node = target['node']
-            if branch.id not in self.stbr_track:
-                self.stbr_track[branch.id] = dict()
-                self.on_branch_track(branch)
-            if node.id not in self.stbr_track[branch.id]:
-                self.stbr_track[branch.id][node.id] = 0
-
-        def apply(self, target):
-            branch = target['branch']
-            node = target['node']
-            self.apply_to_target(target)
-            self.ensure_track_target(target)
-            self.stbr_track[branch.id][node.id] += 1
-
-        def on_branch_track(self, branch):
-            pass
-
     class NodeRule(Rule):
         """
         A node rule has a fixed ``applies()`` method that searches open branches
@@ -2010,35 +1937,64 @@ class TableauxSystem(object):
             cands = list()
             if branch.id in self.potential_nodes:
                 for node in set(self.potential_nodes[branch.id]):
-                    target = self.applies_to_node(node, branch)
-                    if target:
-                        if target == True:
-                            target = {'node' : node}
-                        target['candidate_score'] = 0
-                        if 'node' not in target:
-                            target['node'] = node
-                        if 'type' not in target:
-                            target['type'] = 'Node'
-                        if 'branch' not in target:
-                            target['branch'] = branch
-                        cands.append(target)
+                    targets = self.get_targets_for_node(node, branch)
+                    if targets and len(targets):
+                        for target in targets:
+                            target = self.extend_node_target(target, node, branch)
+                            cands.append(target)
                     else:
                         if not self.is_potential_node(node, branch):
                             self.potential_nodes[branch.id].discard(node)
             return cands
 
+        def get_targets_for_node(self, node, branch):
+            target = self.get_target_for_node(node, branch)
+            if target:
+                return [target]
+
+        def get_target_for_node(self, node, branch):
+            return self.applies_to_node(node, branch)
+
+        def extend_node_target(self, target, node, branch):
+            if target == True:
+                target = {'node' : node}
+            if 'node' not in target:
+                target['node'] = node
+            if 'type' not in target:
+                target['type'] = 'Node'
+            if 'branch' not in target:
+                target['branch'] = branch
+            target['candidate_score'] = self.score_candidate(target)
+            return target
+
         def select_best_target(self, targets, branch):
             if not self.is_rank_optim:
                 return targets[0]
-            # score candidates
-            cand_scores = [self.score_candidate(target) for target in targets]
-            max_score = max(set(cand_scores))
+            max_score = max(set([target['candidate_score'] for target in targets]))
             for i in range(len(targets)):
                 target = targets[i]
-                candidate_score = cand_scores[i]
-                if candidate_score == max_score:
-                    target['candidate_score'] = candidate_score
+                if target['candidate_score'] == max_score:
                     return target
+
+        def min_application_count(self, branch_id):
+            if branch_id in self.node_applications:
+                if not len(self.node_applications[branch_id]):
+                    return 0
+                return min({
+                    self.node_application_count(node_id, branch_id)
+                    for node_id in self.node_applications[branch_id]
+                })
+            return 0
+
+        def node_application_count(self, node_id, branch_id):
+            if branch_id in self.node_applications:
+                if node_id in self.node_applications[branch_id]:
+                    return self.node_applications[branch_id][node_id]
+            return 0
+
+        def is_potential_node(self, node, branch):
+            # Default impl
+            return self.applies_to_node(node, branch)
 
         def after_branch_add(self, branch):
             if not branch.closed:
@@ -2055,10 +2011,6 @@ class TableauxSystem(object):
                     for node in branch.get_nodes(ticked=self.ticked):
                         if self.is_potential_node(node, branch):
                             self.potential_nodes[branch.id].add(node)
-
-        def is_potential_node(self, node, branch):
-            # Default impl
-            return self.applies_to_node(node, branch)
 
         def after_branch_close(self, branch):
             del(self.potential_nodes[branch.id])
@@ -2092,9 +2044,12 @@ class TableauxSystem(object):
             node = target['node']
             if node.id not in self.node_applications[branch.id]:
                 self.node_applications[branch.id][node.id] = 0
-            res = self.apply_to_node(node, branch)
+            res = self.apply_to_target(target)
             self.node_applications[branch.id][node.id] += 1
             return res
+
+        def apply_to_target(self, target):
+            return self.apply_to_node(target['node'], target['branch'])
 
         def applies_to_node(self, node, branch):
             raise NotImplementedError(NotImplemented)
@@ -2141,7 +2096,13 @@ class TableauxSystem(object):
         #: The designation status (``True``/``False``) of the node.
         designation = None
 
+        def is_potential_node(self, node, branch):
+            return self.conditions_apply(node, branch)
+
         def applies_to_node(self, node, branch):
+            return self.conditions_apply(node, branch)
+
+        def conditions_apply(self, node, branch):
             if self.ticked != None and self.ticked != (node in branch.ticked_nodes):
                 return False
             if self.modal != None:

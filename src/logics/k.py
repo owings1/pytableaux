@@ -1040,7 +1040,7 @@ class TableauxRules(object):
             sq = quantify(self.convert_to, v, negate(si))
             branch.add({'sentence': sq, 'world': w}).tick(node)
 
-    class Universal(IsModal, logic.TableauxSystem.SelectiveTrackingBranchRule):
+    class Universal(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -1050,42 +1050,69 @@ class TableauxRules(object):
 
         quantifier = 'Universal'
 
-        def get_candidate_targets_for_branch(self, branch):
-            cands = list()
+        def get_targets_for_node(self, node, branch):
+            s = self.sentence(node)
+            si = s.sentence
+            w = node.props['world']
+            v = s.variable
             constants = branch.constants()
-            for node in branch.get_nodes():
-            #for node in branch.find_all({'_quantifier': self.quantifier}):
-                if not node.has('sentence'):
-                    continue
-                s = self.sentence(node)
-                if s.quantifier != self.quantifier:
-                    continue
-                si = s.sentence
-                w = node.props['world']
-                v = s.variable
-                if len(constants):
-                    # if the branch already has a constant, find all the substitutions not
-                    # already on the branch.
-                    for c in constants:
-                        r = si.substitute(c, v)
-                        if not branch.has({'sentence': r, 'world': w}):
-                            cands.append({
-                                'branch'   : branch,
-                                'sentence' : r,
-                                'node'     : node,
-                                'world'    : w,
-                            })
-                else:
-                    # if the branch does not have any constants, pick a new one
-                    c = branch.new_constant()
+            targets = list()
+            if len(constants):
+                # if the branch already has a constant, find all the substitutions not
+                # already on the branch.
+                for c in constants:
                     r = si.substitute(c, v)
-                    cands.append({
-                        'branch'   : branch,
-                        'sentence' : r,
-                        'node'     : node,
-                        'world'    : w,
-                    })
-            return cands
+                    target = {'sentence': r, 'world': w}
+                    if not branch.has(target):
+                        targets.append(target)
+            else:
+                # if the branch does not have any constants, pick a new one
+                c = branch.new_constant()
+                r = si.substitute(c, v)
+                target = {'sentence': r, 'world': w}
+                targets.append(target)
+            return targets
+
+        def score_candidate(self, target):
+            node_apply_count = self.node_application_count(target['node'], target['branch'])
+            return float(1 / (node_apply_count + 1))
+
+        #def get_candidate_targets_for_branch(self, branch):
+        #    cands = list()
+        #    constants = branch.constants()
+        #    for node in branch.get_nodes():
+        #    #for node in branch.find_all({'_quantifier': self.quantifier}):
+        #        if not node.has('sentence'):
+        #            continue
+        #        s = self.sentence(node)
+        #        if s.quantifier != self.quantifier:
+        #            continue
+        #        si = s.sentence
+        #        w = node.props['world']
+        #        v = s.variable
+        #        if len(constants):
+        #            # if the branch already has a constant, find all the substitutions not
+        #            # already on the branch.
+        #            for c in constants:
+        #                r = si.substitute(c, v)
+        #                if not branch.has({'sentence': r, 'world': w}):
+        #                    cands.append({
+        #                        'branch'   : branch,
+        #                        'sentence' : r,
+        #                        'node'     : node,
+        #                        'world'    : w,
+        #                    })
+        #        else:
+        #            # if the branch does not have any constants, pick a new one
+        #            c = branch.new_constant()
+        #            r = si.substitute(c, v)
+        #            cands.append({
+        #                'branch'   : branch,
+        #                'sentence' : r,
+        #                'node'     : node,
+        #                'world'    : w,
+        #            })
+        #    return cands
 
         def apply_to_target(self, target):
             branch = target['branch']
@@ -1297,7 +1324,7 @@ class TableauxRules(object):
             sn = operate(self.convert_to, [negate(s.operand)])
             branch.add({'sentence': sn, 'world': w}).tick(node)
 
-    class Necessity(IsModal, logic.TableauxSystem.SelectiveTrackingBranchRule):
+    class Necessity(IsModal, logic.TableauxSystem.ConditionalNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -1306,86 +1333,86 @@ class TableauxRules(object):
 
         operator = 'Necessity'
 
-        # Track the maximum number of worlds that should be on the branch
-        # so we can halt on infinite branches.
-        branch_max_worlds = None
-
         def __init__(self, *args, **opts):
             super(TableauxRules.Necessity, self).__init__(*args, **opts)
+            # Track the maximum number of worlds that should be on the branch
+            # so we can halt on infinite branches.
             self.branch_max_worlds = {}
-            # TODO
-            #self.necessity_nodes = {}
 
-        # This checks all the nodes each time.
-        # TODO: cache necessity nodes
-        def get_candidate_targets_for_branch(self, branch):
-            cands = list()
-            worlds = branch.worlds()
+        def after_trunk_build(self, branches):
+            super(TableauxRules.Necessity, self).after_trunk_build(branches)
+            for branch in branches:
+                # Project the maximum number of worlds for a branch (origin) as
+                # the number of worlds already on the branch + the number of modal
+                # operators + 1.
+                origin = branch.origin()
+                # In most cases, we will have only one origin branch.
+                if origin.id in self.branch_max_worlds:
+                    return
+                branch_modal_operators_list = list()
+                # we only care about unticked nodes, since ticked nodes will have
+                # already created any worlds.
+                for node in branch.get_nodes(ticked=False):
+                    if node.has('sentence'):
+                        ops = self.sentence(node).operators()
+                        branch_modal_operators_list.extend(
+                            [o for o in ops if o in Model.modal_operators]
+                        )
+                self.branch_max_worlds[origin.id] = len(branch.worlds()) + len(branch_modal_operators_list) + 1
+
+        def max_worlds_reached(self, branch):
             # TODO: should this logic move to the possibility rule instead?
             #       after all, it's the one that will add a new world.
             #
             # If we have already reached the max number of worlds projected for
             # the branch (origin), return the empty list.
             origin = branch.origin()
-            if self.branch_max_worlds != None and origin.id in self.branch_max_worlds:
-                if len(worlds) > self.branch_max_worlds[origin.id]:
-                    return cands
-            #for node in branch.find_all({'_operator': self.operator}):
-            for node in branch.get_nodes():
-                if not node.has('sentence'):
-                    continue
-                s = self.sentence(node)
-                if s.operator != self.operator:
-                    continue
-                si = s.operand
-                w1 = node.props['world']
-                for w2 in worlds:
-                    anode = branch.find({'world1': w1, 'world2': w2})
-                    if anode != None and not branch.has({'sentence': si, 'world': w2}):
-                        ops = s.operators()
-                        necessity_ops = [operator for operator in ops if operator == self.operator]
-                        cands.append({
-                            'node'     : node,
-                            'branch'   : branch,
-                            'sentence' : si,
-                            'world'    : w2,
-                            'nodes'    : set([node, anode]),
-                            'type'     : 'Nodes',
-                        })
-            return cands
-
-        def on_branch_track(self, branch):
-            # Project the maximum number of worlds for a branch (origin) as
-            # the number of worlds already on the branch + the number of modal
-            # operators + 1.
-            origin = branch.origin()
             if origin.id in self.branch_max_worlds:
+                return len(branch.worlds()) > self.branch_max_worlds[origin.id]
+            return False
+
+        def is_least_applied_to(self, node, branch):
+            node_apply_count = self.node_application_count(node.id, branch.id)
+            min_apply_count = self.min_application_count(branch.id)
+            return min_apply_count >= node_apply_count
+
+        def get_targets_for_node(self, node, branch):
+
+            # Check for max worlds reached
+            if self.max_worlds_reached(branch):
                 return
-            branch_modal_operators_list = list()
-            # we only care about unticked nodes, since ticked nodes will have
-            # already created any worlds.
-            for node in branch.get_nodes(ticked=False):
-                if node.has('sentence'):
-                    ops = self.sentence(node).operators()
-                    branch_modal_operators_list.extend(
-                        [o for o in ops if o in Model.modal_operators]
-                    )
-            self.branch_max_worlds[origin.id] = len(branch.worlds()) + len(branch_modal_operators_list) + 1
-                    
-        def apply_to_target(self, target):
-            branch = target['branch']
-            branch.add({'sentence': target['sentence'], 'world': target['world']})
+
+            # Only count least-applied-to nodes
+            if not self.is_least_applied_to(node, branch):
+                return
+
+            targets = list()
+            worlds = branch.worlds()
+            s = self.sentence(node)
+            si = s.operand
+            w1 = node.props['world']
+            for w2 in worlds:
+                anode = branch.find({'world1': w1, 'world2': w2})
+                if anode != None and not branch.has({'sentence': si, 'world': w2}):
+                    targets.append({
+                        'sentence' : si,
+                        'world'    : w2,
+                        'nodes'    : set([node, anode]),
+                        'type'     : 'Nodes',
+                    })
+            return targets
 
         def score_candidate(self, target):
 
-            # least-applied-to
-            #
-            # The SelectiveTrackingBranchRule already reduces the candidates
-            # to the least-applied to, so this should already be one of
-            # the least-applied-to nodes
+            # We are already restricted to least-applied-to nodes by ``get_targets_for_node()``
 
             # Check for closure
             if target['branch'].has({'sentence': negative(target['sentence']), 'world': target['world']}):
+                return 1
+
+            # not applied to yet
+            node_apply_count = self.node_application_count(target['node'].id, target['branch'].id)
+            if node_apply_count == 0:
                 return 1
 
             # Pick the least branching complexity
@@ -1397,8 +1424,12 @@ class TableauxRules(object):
         def group_score(self, target):
             if target['candidate_score'] > 0:
                 return 1
-            return -1 * min([target['track_count']])
+            return -1 * self.node_application_count(target['node'].id, target['branch'].id)
             #return -1 * min(target['track_count'], self.branching_complexity(target['node']))
+
+        def apply_to_target(self, target):
+            branch = target['branch']
+            branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example(self):
             s = operate(self.operator, [atomic(0, 0)])

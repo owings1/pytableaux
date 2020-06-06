@@ -109,7 +109,6 @@ class SphinxUtil(object): # pragma: no cover
         logic.TableauxSystem.ClosureRule,
         logic.TableauxSystem.NodeRule,
         logic.TableauxSystem.ConditionalNodeRule,
-        logic.TableauxSystem.SelectiveTrackingBranchRule,
     ]
 
     @staticmethod

@@ -1090,7 +1090,7 @@ class TableauxRules(object):
             sq = quantify(self.convert_to, v, negate(si))
             branch.add({'sentence': sq, 'designated': d}).tick(node)
 
-    class ExistentialUndesignated(logic.TableauxSystem.SelectiveTrackingBranchRule):
+    class ExistentialUndesignated(logic.TableauxSystem.ConditionalNodeRule):
         """
         From an undesignated existential node *n* on a branch *b*, for any constant *c* on
         *b* such that the result *r* of substituting *c* for the variable bound by the
@@ -1102,26 +1102,29 @@ class TableauxRules(object):
         quantifier  = 'Existential'
         designation = False
 
-        def get_candidate_targets_for_branch(self, branch):
-            cands = list()
+        def get_targets_for_node(self, node, branch):
+            s = self.sentence(node)
             d = self.designation
-            q = self.quantifier
+            v = s.variable
+            si = s.sentence
             constants = branch.constants()
-            for n in branch.find_all({'_quantifier': q, 'designated': d}):
-                # keep quantifier and designation neutral for inheritance below
-                s = self.sentence(n)
-                v = s.variable
-                si = s.sentence
-                if len(constants):
-                    for c in constants:
-                        r = si.substitute(c, v)
-                        if not branch.has({'sentence': r, 'designated': d}):
-                            cands.append({'branch': branch, 'sentence': r, 'node': n})
-                else:
-                    c = branch.new_constant()
+            targets = list()
+            if len(constants):
+                for c in constants:
                     r = si.substitute(c, v)
-                    cands.append({'branch': branch, 'sentence': r, 'node': n})
-            return cands
+                    target = {'sentence': r, 'designated': d}
+                    if not branch.has(target):
+                        targets.append(target)
+            else:
+                c = branch.new_constant()
+                r = si.substitute(c, v)
+                target = {'sentence': r, 'designated': d}
+                targets.append(target)
+            return targets
+
+        def score_candidate(self, target):
+            node_apply_count = self.node_application_count(target['node'], target['branch'])
+            return float(1 / (node_apply_count + 1))
             
         def apply_to_target(self, target):
             # keep designation neutral for inheritance below
