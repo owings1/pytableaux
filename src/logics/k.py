@@ -632,13 +632,11 @@ class MaxWorldTrackingFilterRule(IsModal, logic.TableauxSystem.FilterNodeRule):
                         [o for o in ops if o in Model.modal_operators]
                     )
             self.branch_max_worlds[origin.id] = len(branch.worlds()) + len(branch_modal_operators_list) + 1
-        print(self.branch_max_worlds)
 
     def get_max_worlds(self, branch):
         origin = branch.origin()
         if origin.id in self.branch_max_worlds:
             return self.branch_max_worlds[origin.id]
-        print('No origin tracked for {0}'.format(branch.id))
 
     def max_worlds_reached(self, branch):
         # TODO: should this logic move to the possibility rule instead?
