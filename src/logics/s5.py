@@ -103,9 +103,9 @@ class TableauxRules(object):
     closure_rules = list(k.TableauxRules.closure_rules)
 
     rule_groups = [
-        [
-            t.TableauxRules.Reflexive,
-        ],
+        #[
+        #    
+        #],
         [
             # non-branching rules
             k.TableauxRules.IdentityIndiscernability,
@@ -128,10 +128,6 @@ class TableauxRules(object):
             k.TableauxRules.Universal,
         ],
         [
-            Symmetric,
-            s4.TableauxRules.Transitive,
-        ],
-        [
             # branching rules
             k.TableauxRules.ConjunctionNegated,
             k.TableauxRules.Disjunction, 
@@ -143,11 +139,13 @@ class TableauxRules(object):
             k.TableauxRules.BiconditionalNegated,
         ],
         [
-            # world creation rules 2
+            t.TableauxRules.Reflexive,
+            Symmetric,
+            s4.TableauxRules.Transitive,
+        ],
+        [
+            # modal rules rules
             k.TableauxRules.Necessity,
-        #],
-        #[
-            # world creation rules 1
             k.TableauxRules.Possibility,
         ],
     ]
