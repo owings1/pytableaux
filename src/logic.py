@@ -1444,12 +1444,16 @@ class TableauxSystem(object):
             num_open      = len(self.open_branches())
             self.valid    = num_open == 0
             self.stats = {
-                'branches'       : len(self.branches),
-                'open_branches'  : num_open,
-                'closed_branches': len(self.branches) - num_open,
-                'rules_applied'  : len(self.history),
+                'branches'          : len(self.branches),
+                'open_branches'     : num_open,
+                'closed_branches'   : len(self.branches) - num_open,
+                'rules_applied'     : len(self.history),
                 'rules_duration_ms' : sum((application['duration_ms'] for application in self.history)),
                 'build_duration_ms' : self.build_timer.elapsed(),
+                'rules_time_ms'     : sum([
+                    sum([rule.search_timer.elapsed(), rule.apply_timer.elapsed()])
+                    for rule in self.all_rules
+                ]),
                 'rules' : [
                     {
                         'class'           : rule.__class__.__name__,
@@ -1458,6 +1462,14 @@ class TableauxSystem(object):
                         'apply_time_ms'   : rule.apply_timer.elapsed(),
                         'search_time_avg' : rule.search_timer.elapsed_avg(),
                         'apply_time_avg'  : rule.apply_timer.elapsed_avg(),
+                        'timers'          : {
+                            name : {
+                                'duration_ms': rule.timers[name].elapsed(),
+                                'duration_avg': rule.timers[name].elapsed_avg(),
+                                'times_started': rule.timers[name].times_started(),
+                            }
+                            for name in rule.timers
+                        }
                     }
                     for rule in self.all_rules
                 ]
@@ -1470,9 +1482,9 @@ class TableauxSystem(object):
                 self.stats['result'] = 'Invalid'
             if self.is_build_models:
                 self.build_models()
-            tree_timer = StopWatch(True)
-            self.tree = self.structure(self.branches)
-            self.stats['tree_duration_ms'] = tree_timer.stop().elapsed()
+            with StopWatch() as tree_timer:
+                self.tree = self.structure(self.branches)
+                self.stats['tree_duration_ms'] = tree_timer.elapsed()
             self.stats['distinct_nodes'] = self.tree['distinct_nodes']
             
             return self
@@ -1847,6 +1859,7 @@ class TableauxSystem(object):
             self.tableau = tableau
             self.search_timer = StopWatch()
             self.apply_timer = StopWatch()
+            self.timers = {}
 
         def get_target(self, branch):
             cands = self.get_candidate_targets(branch)
@@ -2026,6 +2039,7 @@ class TableauxSystem(object):
                     self.potential_nodes[branch.id] = set()
                     self.node_applications[branch.id] = dict()
                     for node in branch.get_nodes(ticked=self.ticked):
+                        #self.after_node_add(branch, node)
                         if self.is_potential_node(node, branch):
                             self.potential_nodes[branch.id].add(node)
 
