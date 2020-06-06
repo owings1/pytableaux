@@ -70,38 +70,65 @@ class TableauxRules(object):
     .. _T: t.html
     """
     
-    class Transitive(logic.TableauxSystem.Rule):
+    class Transitive(logic.TableauxSystem.NodeRule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* and for each
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
         appear on *b*, then add *wRw''* to *b*.
         """
-        
-        def get_candidate_targets(self, branch):
-            nodes = {node for node in branch.get_nodes() if node.has('world1')}
-            cands = list()
-            for node in nodes:
-                for other_node in nodes:
-                    if node.props['world2'] == other_node.props['world1']:
-                        n = branch.find({ 
-                            'world1': node.props['world1'], 
-                            'world2': other_node.props['world2'],
-                        })
-                        if n == None:
-                            target = { 
-                                'world1': node.props['world1'],
-                                'world2': other_node.props['world2'],
-                                'branch': branch,
-                                'nodes' : set([node, other_node]),
-                                'type'  : 'Nodes',
-                            }
-                            cands.append(target)
-            return cands
 
-        def select_best_target(self, targets, branch):
-            return targets[0]
+        def __init__(self, *args, **opts):
+            super(TableauxRules.Transitive, self).__init__(*args, **opts)
+            self.access = {}
 
-        def apply(self, target):
+        def is_potential_node(self, node, branch):
+            return node.has('world1') and node.has('world2')
+
+        def visibles(self, world, branch):
+            if branch.id in self.access:
+                access = self.access[branch.id]
+                if world in access:
+                    return access[world]
+            return set()
+
+        def track_access(self, w1, w2, branch):
+            if branch.id not in self.access:
+                self.access[branch.id] = {}
+            access = self.access[branch.id]
+            if w1 not in access:
+                access[w1] = set()
+            access[w1].add(w2)
+
+        def track_access_node(self, node, branch):
+            w1 = node.props['world1']
+            w2 = node.props['world2']
+            self.track_access(w1, w2, branch)
+
+        def after_node_add(self, branch, node):
+            super(TableauxRules.Transitive, self).after_node_add(branch, node)
+            if self.is_potential_node(node, branch):
+                self.track_access_node(node, branch)
+
+        def get_targets_for_node(self, node, branch):
+            w1 = node.props['world1']
+            w2 = node.props['world2']
+            targets = list()
+            for w3 in self.visibles(w2, branch).difference(self.visibles(w1, branch)):
+                if not branch.has({'world1': w1, 'world2': w3}):
+                    targets.append({
+                        'world1': w1,
+                        'world2': w3,
+                        'branch': branch,
+                        'nodes' : set([node, branch.find({'world1': w2, 'world2': w3})]),
+                        'type'  : 'Nodes',
+                    })
+            return targets
+
+        def score_candidate(self, target):
+            # Rank the highest world
+            return target['world2']
+
+        def apply_to_target(self, target):
             target['branch'].add({
                 'world1': target['world1'],
                 'world2': target['world2'],
@@ -135,13 +162,13 @@ class TableauxRules(object):
             k.TableauxRules.UniversalNegated,
         ],
         [
-            Transitive,
-        ],
-        [
             k.TableauxRules.Existential,
         ],
         [
             k.TableauxRules.Universal,
+        ],
+        [
+            Transitive,
         ],
         [
             # branching rules

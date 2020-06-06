@@ -603,7 +603,52 @@ class TableauxSystem(logic.TableauxSystem):
 
 class IsModal(object):
     modal = True            
-            
+
+class MaxWorldTrackingFilterRule(IsModal, logic.TableauxSystem.FilterNodeRule):
+
+    def __init__(self, *args, **opts):
+        super(MaxWorldTrackingFilterRule, self).__init__(*args, **opts)
+        # Track the maximum number of worlds that should be on the branch
+        # so we can halt on infinite branches.
+        self.branch_max_worlds = {}
+
+    def after_trunk_build(self, branches):
+        super(MaxWorldTrackingFilterRule, self).after_trunk_build(branches)
+        for branch in branches:
+            # Project the maximum number of worlds for a branch (origin) as
+            # the number of worlds already on the branch + the number of modal
+            # operators + 1.
+            origin = branch.origin()
+            # In most cases, we will have only one origin branch.
+            if origin.id in self.branch_max_worlds:
+                return
+            branch_modal_operators_list = list()
+            # we only care about unticked nodes, since ticked nodes will have
+            # already created any worlds.
+            for node in branch.get_nodes(ticked=False):
+                if node.has('sentence'):
+                    ops = self.sentence(node).operators()
+                    branch_modal_operators_list.extend(
+                        [o for o in ops if o in Model.modal_operators]
+                    )
+            self.branch_max_worlds[origin.id] = len(branch.worlds()) + len(branch_modal_operators_list) + 1
+        print(self.branch_max_worlds)
+
+    def get_max_worlds(self, branch):
+        origin = branch.origin()
+        if origin.id in self.branch_max_worlds:
+            return self.branch_max_worlds[origin.id]
+        print('No origin tracked for {0}'.format(branch.id))
+
+    def max_worlds_reached(self, branch):
+        # TODO: should this logic move to the possibility rule instead?
+        #       after all, it's the one that will add a new world.
+        #
+        # If we have already reached the max number of worlds projected for
+        # the branch (origin), return the empty list.
+        max_worlds = self.get_max_worlds(branch)
+        return max_worlds != None and len(branch.worlds()) > max_worlds
+
 class TableauxRules(object):
     """
     Rules for modal operators employ *world* indexes as well access-type
@@ -1077,43 +1122,6 @@ class TableauxRules(object):
             node_apply_count = self.node_application_count(target['node'], target['branch'])
             return float(1 / (node_apply_count + 1))
 
-        #def get_candidate_targets_for_branch(self, branch):
-        #    cands = list()
-        #    constants = branch.constants()
-        #    for node in branch.get_nodes():
-        #    #for node in branch.find_all({'_quantifier': self.quantifier}):
-        #        if not node.has('sentence'):
-        #            continue
-        #        s = self.sentence(node)
-        #        if s.quantifier != self.quantifier:
-        #            continue
-        #        si = s.sentence
-        #        w = node.props['world']
-        #        v = s.variable
-        #        if len(constants):
-        #            # if the branch already has a constant, find all the substitutions not
-        #            # already on the branch.
-        #            for c in constants:
-        #                r = si.substitute(c, v)
-        #                if not branch.has({'sentence': r, 'world': w}):
-        #                    cands.append({
-        #                        'branch'   : branch,
-        #                        'sentence' : r,
-        #                        'node'     : node,
-        #                        'world'    : w,
-        #                    })
-        #        else:
-        #            # if the branch does not have any constants, pick a new one
-        #            c = branch.new_constant()
-        #            r = si.substitute(c, v)
-        #            cands.append({
-        #                'branch'   : branch,
-        #                'sentence' : r,
-        #                'node'     : node,
-        #                'world'    : w,
-        #            })
-        #    return cands
-
         def apply_to_target(self, target):
             branch = target['branch']
             branch.add({'sentence': target['sentence'], 'world': target['world']})
@@ -1132,7 +1140,7 @@ class TableauxRules(object):
         quantifier = 'Universal'
         convert_to = 'Existential'
 
-    class Possibility(IsModal, logic.TableauxSystem.FilterNodeRule):
+    class Possibility(MaxWorldTrackingFilterRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -1147,6 +1155,16 @@ class TableauxRules(object):
             super(TableauxRules.Possibility, self).__init__(*args, **opts)
             self.branch_sentence_track = {}
             self.modal_complexities = {}
+
+        def is_potential_node(self, node, branch):
+            if self.max_worlds_reached(branch):
+                return False
+            return super(TableauxRules.Possibility, self).is_potential_node(node, branch)
+
+        def applies_to_node(self, node, branch):
+            if self.max_worlds_reached(branch):
+                return False
+            return super(TableauxRules.Possibility, self).applies_to_node(node, branch)
 
         def apply_to_node(self, node, branch):
             s  = self.sentence(node)
@@ -1324,7 +1342,7 @@ class TableauxRules(object):
             sn = operate(self.convert_to, [negate(s.operand)])
             branch.add({'sentence': sn, 'world': w}).tick(node)
 
-    class Necessity(IsModal, logic.TableauxSystem.FilterNodeRule):
+    class Necessity(MaxWorldTrackingFilterRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -1333,43 +1351,10 @@ class TableauxRules(object):
 
         operator = 'Necessity'
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.Necessity, self).__init__(*args, **opts)
-            # Track the maximum number of worlds that should be on the branch
-            # so we can halt on infinite branches.
-            self.branch_max_worlds = {}
-
-        def after_trunk_build(self, branches):
-            super(TableauxRules.Necessity, self).after_trunk_build(branches)
-            for branch in branches:
-                # Project the maximum number of worlds for a branch (origin) as
-                # the number of worlds already on the branch + the number of modal
-                # operators + 1.
-                origin = branch.origin()
-                # In most cases, we will have only one origin branch.
-                if origin.id in self.branch_max_worlds:
-                    return
-                branch_modal_operators_list = list()
-                # we only care about unticked nodes, since ticked nodes will have
-                # already created any worlds.
-                for node in branch.get_nodes(ticked=False):
-                    if node.has('sentence'):
-                        ops = self.sentence(node).operators()
-                        branch_modal_operators_list.extend(
-                            [o for o in ops if o in Model.modal_operators]
-                        )
-                self.branch_max_worlds[origin.id] = len(branch.worlds()) + len(branch_modal_operators_list) + 1
-
-        def max_worlds_reached(self, branch):
-            # TODO: should this logic move to the possibility rule instead?
-            #       after all, it's the one that will add a new world.
-            #
-            # If we have already reached the max number of worlds projected for
-            # the branch (origin), return the empty list.
-            origin = branch.origin()
-            if origin.id in self.branch_max_worlds:
-                return len(branch.worlds()) > self.branch_max_worlds[origin.id]
-            return False
+        def is_potential_node(self, node, branch):
+            if self.max_worlds_reached(branch):
+                return False
+            return super(TableauxRules.Necessity, self).is_potential_node(node, branch)
 
         def is_least_applied_to(self, node, branch):
             node_apply_count = self.node_application_count(node.id, branch.id)

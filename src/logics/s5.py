@@ -89,23 +89,6 @@ class TableauxRules(object):
                     }
             return False
 
-        #def applies_to_branch(self, branch):
-        #    nodes = {node for node in branch.get_nodes() if node.has('world1')}
-        #    for node in nodes:
-        #        n = branch.find({
-        #            'world1': node.props['world2'],
-        #            'world2': node.props['world1'],
-        #        })
-        #        if n == None:
-        #            return { 
-        #                'world1': node.props['world2'],
-        #                'world2': node.props['world1'],
-        #                'branch': branch,
-        #                'node'  : node,
-        #            }
-        #                
-        #    return False
-
         def apply(self, target):
             target['branch'].add({
                 'world1': target['world1'],
@@ -123,7 +106,6 @@ class TableauxRules(object):
         [
             t.TableauxRules.Reflexive,
         ],
-
         [
             # non-branching rules
             k.TableauxRules.IdentityIndiscernability,
@@ -140,14 +122,14 @@ class TableauxRules(object):
             k.TableauxRules.UniversalNegated,
         ],
         [
-            Symmetric,
-            s4.TableauxRules.Transitive,
-        ],
-        [
             k.TableauxRules.Existential,
         ],
         [
             k.TableauxRules.Universal,
+        ],
+        [
+            Symmetric,
+            s4.TableauxRules.Transitive,
         ],
         [
             # branching rules

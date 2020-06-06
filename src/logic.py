@@ -1653,6 +1653,7 @@ class TableauxSystem(object):
             branch.consts = set(self.consts)
             branch.ws = set(self.ws)
             branch.atms = set(self.atms)
+            branch.preds = set(self.preds)
             branch.leaf = self.leaf
             branch.tableau = self.tableau
             branch.node_index = {
