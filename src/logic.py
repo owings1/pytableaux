@@ -2000,6 +2000,7 @@ class TableauxSystem(object):
         def __init__(self, *args, **opts):
             super(TableauxSystem.BranchRule, self).__init__(*args, **opts)
             self.applicable_nodes = dict()
+            self.node_applications = dict()
             if 'is_rank_optim' in opts:
                 self.is_rank_optim = opts['is_rank_optim']
             else:
@@ -2008,17 +2009,21 @@ class TableauxSystem(object):
         def after_branch_add(self, branch):
             if not branch.closed:
                 consumed = False
-                if branch.parent != None:
-                    if branch.parent.id in self.applicable_nodes:
-                        self.applicable_nodes[branch.id] = set(self.applicable_nodes[branch.parent.id])
+                parent = branch.parent
+                if parent != None:
+                    if parent.id in self.applicable_nodes:
+                        self.applicable_nodes[branch.id] = set(self.applicable_nodes[parent.id])
+                        self.node_applications[branch.id] = dict(self.node_applications[parent.id])
                         consumed = True
                 if not consumed:
                     self.applicable_nodes[branch.id] = set()
+                    self.node_applications[branch.id] = dict()
                     for node in branch.get_nodes(ticked=self.ticked):
                         self.after_node_add(branch, node)
 
         def after_branch_close(self, branch):
             del(self.applicable_nodes[branch.id])
+            del(self.node_applications[branch.id])
 
         def after_node_add(self, branch, node):
             if self.applies_to_node(node, branch):
@@ -2078,7 +2083,13 @@ class TableauxSystem(object):
             return {}
 
         def apply(self, target):
-            return self.apply_to_node(target['node'], target['branch'])
+            branch = target['branch']
+            node = target['node']
+            if node.id not in self.node_applications[branch.id]:
+                self.node_applications[branch.id][node.id] = 0
+            res = self.apply_to_node(node, branch)
+            self.node_applications[branch.id][node.id] += 1
+            return res
 
         def applies_to_node(self, node, branch):
             raise NotImplementedError(NotImplemented)
