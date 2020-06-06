@@ -1417,7 +1417,7 @@ class TableauxRules(object):
         operator   = 'Necessity'
         convert_to = 'Possibility'
 
-    class IdentityIndiscernability(IsModal, logic.TableauxSystem.BranchRule):
+    class IdentityIndiscernability(IsModal, logic.TableauxSystem.Rule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,

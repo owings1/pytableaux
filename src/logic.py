@@ -1881,19 +1881,7 @@ class TableauxSystem(object):
         def __repr__(self):
             return self.__class__.__name__
 
-    class BranchRule(Rule):
-        """
-        A branch rule applies to an open branch on a tableau. This base class
-        implements the ``applies()`` method by finding the first open branch on
-        the tableau to which the abstract method ``applies_to_branch()`` returns
-        a non-``False`` value. If ``True`` is returned, then this method will
-        return a dictionary with a ``branch`` key, which will then be passed to
-        the ``applies()`` method.
-        """
-        pass
-        # TODO remove
-
-    class ClosureRule(BranchRule):
+    class ClosureRule(Rule):
         """
         A closure rule has a fixed ``apply()`` method that marks the branch as
         closed. Sub-classes should implement the ``applies_to_branch()`` method.
@@ -1919,7 +1907,7 @@ class TableauxSystem(object):
         def applies_to_branch(self, branch):
             raise NotImplementedError(NotImplemented)
 
-    class SelectiveTrackingBranchRule(BranchRule):
+    class SelectiveTrackingBranchRule(Rule):
 
         # TODO: maybe refactor into node rule -- but this one
         #       has diff reqs since applies_to_node may change
@@ -1997,7 +1985,7 @@ class TableauxSystem(object):
         def on_branch_track(self, branch):
             pass
 
-    class NodeRule(BranchRule):
+    class NodeRule(Rule):
         """
         A node rule has a fixed ``applies()`` method that searches open branches
         and queries the ``applies_to_node()`` method. If it applies, return a
@@ -2010,7 +1998,7 @@ class TableauxSystem(object):
         branch_level = 1
 
         def __init__(self, *args, **opts):
-            super(TableauxSystem.BranchRule, self).__init__(*args, **opts)
+            super(TableauxSystem.NodeRule, self).__init__(*args, **opts)
             self.potential_nodes = dict()
             self.node_applications = dict()
             if 'is_rank_optim' in opts:

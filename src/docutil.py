@@ -106,7 +106,6 @@ class SphinxUtil(object): # pragma: no cover
 
     skip_rules = [
         logic.TableauxSystem.Rule,
-        logic.TableauxSystem.BranchRule,
         logic.TableauxSystem.ClosureRule,
         logic.TableauxSystem.NodeRule,
         logic.TableauxSystem.ConditionalNodeRule,

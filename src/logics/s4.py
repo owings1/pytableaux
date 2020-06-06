@@ -70,7 +70,7 @@ class TableauxRules(object):
     .. _T: t.html
     """
     
-    class Transitive(logic.TableauxSystem.BranchRule):
+    class Transitive(logic.TableauxSystem.Rule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* and for each
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
