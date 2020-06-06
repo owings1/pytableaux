@@ -271,7 +271,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated conditional node *n* on a branch *b*, make two
         new branches *b'* and *b''* from *b*. To *b'* add a designated disjunction
@@ -331,7 +331,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConditionalUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked undesignated conditional node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*. On *b'* add a designated node
@@ -388,7 +388,7 @@ class TableauxRules(object):
         """
         pass
         
-    class BiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class BiconditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, add
         two branches *b'* and *b''* to *b*. On *b'* add a designated material
@@ -446,7 +446,7 @@ class TableauxRules(object):
         """
         pass
 
-    class BiconditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class BiconditionalUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked undesignated biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add an undesignated conditional

@@ -138,7 +138,7 @@ class TableauxRules(object):
         """
         pass
 
-    class AssertionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class AssertionNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, negated assertion node *n* on a branch *b*,
         add an undesignated node to *b* with the assertion of *n*, then tick *n*.
@@ -152,7 +152,7 @@ class TableauxRules(object):
             d = self.designation
             branch.add({'sentence': s.operand, 'designated': not d}).tick(node)
 
-    class AssertionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class AssertionUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, undesignated assertion node *n* on a branch *b*, add
         an undesignated node to *b* with the assertion of *n*, then tick *n*.
@@ -165,7 +165,7 @@ class TableauxRules(object):
             d = self.designation
             branch.add({'sentence': s.operand, 'designated': d}).tick(node)
 
-    class AssertionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class AssertionNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
         a designated node to *b* with the assertion of *n*, then tick *n*.
@@ -308,7 +308,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*,
         add a designated node to *b* with a disjunction, where the
@@ -330,7 +330,7 @@ class TableauxRules(object):
                 sn = negate(sn)
             branch.add({'sentence': sn, 'designated': d}).tick(node)
 
-    class ConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated negated conditional node *n* on a branch *b*,
         add a designated node with the antecedent, and an undesigntated node
@@ -368,7 +368,7 @@ class TableauxRules(object):
         negated     = True
         designation = False
 
-    class BiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class BiconditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add two
         designated nodes to *b*, one with a disjunction, where the

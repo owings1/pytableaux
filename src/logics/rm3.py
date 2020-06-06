@@ -269,7 +269,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add an undesignated
@@ -336,7 +336,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConditionalUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, undesignated, conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'*, add a designated node
@@ -391,7 +391,7 @@ class TableauxRules(object):
         """
         pass
 
-    class BiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class BiconditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated
@@ -463,7 +463,7 @@ class TableauxRules(object):
         """
         pass
 
-    class BiconditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class BiconditionalUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked undesignated biconditional node *n* on a branch *b*, add a
         conjunction undesignated node to *b*, with first conjunct being a conditional
@@ -509,7 +509,7 @@ class TableauxRules(object):
                 ]),
             }
 
-    class BiconditionalNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class BiconditionalNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked undesignated negated biconditional node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'* add an undesignated node

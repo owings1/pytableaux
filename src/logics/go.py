@@ -244,7 +244,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConjunctionNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, negated conjunction node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add an undesignated node to
@@ -281,7 +281,7 @@ class TableauxRules(object):
                 ]),
             }
             
-    class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConjunctionUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, undesignated conjunction node *n* on a branch *b*, add a
         designated node to *b* with the negation of the conjunction, then tick *n*.
@@ -294,7 +294,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             branch.add({'sentence': negate(s), 'designated': True}).tick(node)
 
-    class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConjunctionNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*,
         add a designated node to *b* with the (un-negated) conjuction, then tick *n*.
@@ -316,7 +316,7 @@ class TableauxRules(object):
         """
         pass
         
-    class DisjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class DisjunctionNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, negated disjunction node *n* on a branch *b*,
         add an undesignated node to *b* for each disjunct, then tick *n*.
@@ -357,7 +357,7 @@ class TableauxRules(object):
         """
         pass
         
-    class MaterialConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialConditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, negated material conditional node *n* on a branch
         *b*, add an undesignated node with the negation of the antecedent, and an
@@ -399,7 +399,7 @@ class TableauxRules(object):
         """
         pass
         
-    class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, negated, material biconditional node *n* on a branch
         *b*, make two branches *b'* and *b''* from *b*. On *b'* add undesignated nodes for
@@ -460,7 +460,7 @@ class TableauxRules(object):
 
         operator = 'Material Biconditional'
 
-    class ConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, conditional node *n* on a branch *b*, make two branches
         *b'* and *b''* from *b*. On *b'* add a designated node with a disjunction of the
@@ -507,7 +507,7 @@ class TableauxRules(object):
                 ]),
             }
 
-    class ConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, negated conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add a designated node with the
@@ -571,7 +571,7 @@ class TableauxRules(object):
 
         operator = 'Conditional'
 
-    class BiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class BiconditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add two
         designated conditional nodes to *b*, one with the operands of the biconditional,
@@ -588,7 +588,7 @@ class TableauxRules(object):
                 {'sentence': operate('Conditional', [s.rhs, s.lhs]), 'designated': True},
             ]).tick(node)
 
-    class BiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class BiconditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, negated biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add a designated negated conditional
@@ -655,7 +655,7 @@ class TableauxRules(object):
         """
         pass
         
-    class ExistentialNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ExistentialNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated negated existential node *n* on a branch *b*,
         add a designated node *n'* to *b* with a universal sentence consisting of
@@ -705,7 +705,7 @@ class TableauxRules(object):
         """
         pass
         
-    class UniversalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class UniversalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated universal existential node *n* on a branch *b*, make two branches
         *b'* and *b''* from *b*. On *b'*, add a designtated node with the standard 

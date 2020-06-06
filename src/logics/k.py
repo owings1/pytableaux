@@ -682,7 +682,7 @@ class TableauxRules(object):
             s = logic.parse('NJm')
             self.branch().add({'sentence': s, 'world': 0})
 
-    class DoubleNegation(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class DoubleNegation(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked double negation node *n* with world *w* on a branch *b*, add a
         node to *b* with *w* and the double-negatum of *n*, then tick *n*.
@@ -696,7 +696,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             branch.add({'sentence': s.operand, 'world': w}).tick(node)
 
-    class Assertion(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class Assertion(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
@@ -709,7 +709,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             branch.add({'sentence': s.operand, 'world': w}).tick(node)
 
-    class AssertionNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class AssertionNegated(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, negated assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the negation of the assertion of *n* and world *w*,
@@ -724,7 +724,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             branch.add({'sentence': negate(s.operand), 'world': w}).tick(node)
 
-    class Conjunction(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class Conjunction(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked conjunction node *n* with world *w* on a branch *b*, for each conjunct,
         add a node with world *w* to *b* with the conjunct, then tick *n*.
@@ -739,7 +739,7 @@ class TableauxRules(object):
                 branch.add({'sentence': conjunct, 'world': w})
             branch.tick(node)
 
-    class ConjunctionNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class ConjunctionNegated(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked negated conjunction node *n* with world *w* on a branch *b*, for each
         conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
@@ -769,7 +769,7 @@ class TableauxRules(object):
                 'b2': branch.has({'sentence': s.rhs, 'world': w}),
             }
 
-    class Disjunction(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class Disjunction(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked disjunction node *n* with world *w* on a branch *b*, for each disjunct,
         make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
@@ -798,7 +798,7 @@ class TableauxRules(object):
                 'b2': branch.has({'sentence': negative(s.rhs), 'world': w}),
             }
 
-    class DisjunctionNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class DisjunctionNegated(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked negated disjunction node *n* with world *w* on a branch *b*, for each
         disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
@@ -814,7 +814,7 @@ class TableauxRules(object):
                 branch.add({'sentence': negate(disjunct), 'world': w})
             branch.tick(node)
 
-    class MaterialConditional(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialConditional(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked material conditional node *n* with world *w* on a branch *b*, make two
         new branches *b'* and *b''* from *b*, add a node with world *w* and the negation of the
@@ -844,7 +844,7 @@ class TableauxRules(object):
                 'b2': branch.has({'sentence': negative(s.rhs), 'world': w}),
             }
 
-    class MaterialConditionalNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialConditionalNegated(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked negated material conditional node *n* with world *w* on a branch *b*,
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
@@ -862,7 +862,7 @@ class TableauxRules(object):
                 {'sentence': negate(s.rhs), 'world': w},
             ]).tick(node)
 
-    class MaterialBiconditional(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialBiconditional(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked material biconditional node *n* with world *w* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add two nodes with world *w* to *b'*, one with
@@ -905,7 +905,7 @@ class TableauxRules(object):
                 ]),
             }
 
-    class MaterialBiconditionalNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialBiconditionalNegated(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked negated material biconditional node *n* with world *w* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add two nodes with *w* to *b'*, one with
@@ -998,7 +998,7 @@ class TableauxRules(object):
 
         operator = 'Biconditional'
 
-    class Existential(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class Existential(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
@@ -1020,7 +1020,7 @@ class TableauxRules(object):
         #def score_candidate(self, target):
         #    return -1 * len(self.sentence(target['node']).quantifiers())
 
-    class ExistentialNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class ExistentialNegated(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked negated existential node *n* with world *w* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
@@ -1040,7 +1040,7 @@ class TableauxRules(object):
             sq = quantify(self.convert_to, v, negate(si))
             branch.add({'sentence': sq, 'world': w}).tick(node)
 
-    class Universal(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class Universal(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -1132,7 +1132,7 @@ class TableauxRules(object):
         quantifier = 'Universal'
         convert_to = 'Existential'
 
-    class Possibility(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class Possibility(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -1307,7 +1307,7 @@ class TableauxRules(object):
             self.sentence_track_count(branch, sentence)
             self.branch_sentence_track[branch.id][sentence] += 1
 
-    class PossibilityNegated(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class PossibilityNegated(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked negated possibility node *n* with world *w* on a branch *b*, add a
         necessity node to *b* with *w*, whose operand is the negation of the negated 
@@ -1324,7 +1324,7 @@ class TableauxRules(object):
             sn = operate(self.convert_to, [negate(s.operand)])
             branch.add({'sentence': sn, 'world': w}).tick(node)
 
-    class Necessity(IsModal, logic.TableauxSystem.ConditionalNodeRule):
+    class Necessity(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node

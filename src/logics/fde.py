@@ -545,7 +545,7 @@ class TableauxRules(object):
                 {'sentence': a, 'designated': False},
             ])
 
-    class DoubleNegationDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class DoubleNegationDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated negated negation node *n* on a branch *b*, add a designated
         node to *b* with the double-negatum of *n*, then tick *n*.
@@ -568,7 +568,7 @@ class TableauxRules(object):
 
         designation = False
 
-    class AssertionDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class AssertionDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, assertion node *n* on a branch *b*, add a designated
         node to *b* with the operand of *b*, then tick *n*.
@@ -590,7 +590,7 @@ class TableauxRules(object):
 
         designation = False
 
-    class AssertionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class AssertionNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, negated assertion node *n* on branch *b*, add a designated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
@@ -613,7 +613,7 @@ class TableauxRules(object):
 
         designation = False
 
-    class ConjunctionDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConjunctionDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add a designated node with *c* to *b*, then tick *n*.
@@ -629,7 +629,7 @@ class TableauxRules(object):
                 branch.add({'sentence': conjunct, 'designated': d})
             branch.tick(node)
 
-    class ConjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConjunctionNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated negated conjunction node *n* on a branch *b*, for each conjunct
         *c*, make a new branch *b'* from *b* and add a designated node with the negation of *c* to *b'*,
@@ -659,7 +659,7 @@ class TableauxRules(object):
                 'b2': branch.has({'sentence': negative(s.rhs), 'designated': not d}),
             }
 
-    class ConjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConjunctionUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked undesignated conjunction node *n* on a branch *b*, for each conjunct
         *c*, make a new branch *b'* from *b* and add an undesignated node with *c* to *b'*,
@@ -688,7 +688,7 @@ class TableauxRules(object):
                 'b2': branch.has({'sentence': s.rhs, 'designated': not d}),
             }
 
-    class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConjunctionNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked undesignated negated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add an undesignated node with the negation of *c* to *b*, then tick *n*.
@@ -743,7 +743,7 @@ class TableauxRules(object):
         operator    = 'Disjunction'
         designation = False
 
-    class MaterialConditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialConditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated material conditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add a designated node with the negation
@@ -773,7 +773,7 @@ class TableauxRules(object):
                 'b2': branch.has({'sentence':          s.rhs , 'designated': not d}),
             }
 
-    class MaterialConditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialConditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated negated material conditional node *n* on a branch *b*, add
         a designated node with the antecedent, and a designated node with the negation of the
@@ -792,7 +792,7 @@ class TableauxRules(object):
                 {'sentence': negate(s.rhs), 'designated': d},
             ]).tick(node)
 
-    class MaterialConditionalUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialConditionalUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked undesignated material conditional node *n* on a branch *b*, add
         an undesignated node with the negation of the antecedent and an undesignated node
@@ -810,7 +810,7 @@ class TableauxRules(object):
                 {'sentence':        s.rhs , 'designated': d},
             ]).tick(node)
 
-    class MaterialConditionalNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialConditionalNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked undesignated negated material conditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add an undesignated node with the antecedent to
@@ -841,7 +841,7 @@ class TableauxRules(object):
                 'b2': branch.has({'sentence': negative(s.rhs), 'designated': not d}),
             }
 
-    class MaterialBiconditionalDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialBiconditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated material biconditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add a designated node with the negation
@@ -884,7 +884,7 @@ class TableauxRules(object):
                 ]),
             }
 
-    class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated negated material biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*, add a designated node with the antecedent and a
@@ -1050,7 +1050,7 @@ class TableauxRules(object):
 
         operator = 'Biconditional'
 
-    class ExistentialDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ExistentialDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated existential node *n* on a branch *b* quantifying over
         variable *v* into sentence *s*, add a designated node to *b* with the substitution
@@ -1069,7 +1069,7 @@ class TableauxRules(object):
             r = si.substitute(c, v)
             branch.add({'sentence': r, 'designated': d}).tick(node)
 
-    class ExistentialNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ExistentialNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a designated node to *b*
@@ -1090,7 +1090,7 @@ class TableauxRules(object):
             sq = quantify(self.convert_to, v, negate(si))
             branch.add({'sentence': sq, 'designated': d}).tick(node)
 
-    class ExistentialUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ExistentialUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an undesignated existential node *n* on a branch *b*, for any constant *c* on
         *b* such that the result *r* of substituting *c* for the variable bound by the

@@ -2063,12 +2063,10 @@ class TableauxSystem(object):
         def example_node(self):
             raise NotImplementedError(NotImplemented)
 
-    class ConditionalNodeRule(NodeRule):
+    class FilterNodeRule(NodeRule):
         """
-        A conditional node rule has a fixed ``applies_to_node()`` method that searches open branches for nodes
-        that match the attribute conditions of the implementing class. This allows implementations to merely
-        define their attributes and implement ``the apply_to_node()`` method. This is the most common type of
-        rule for operator rules.
+        A ``FilterNodeRule`` filters potential nodes by matching
+        the attribute conditions of the implementing class.
 
         The following attribute conditions can be defined. If a condition is set to ``None``, then it
         will be vacuously met.
@@ -2169,7 +2167,7 @@ class TableauxSystem(object):
             return props
 
         def score_candidate(self, target):
-            score = super(TableauxSystem.ConditionalNodeRule, self).score_candidate(target)
+            score = super(TableauxSystem.FilterNodeRule, self).score_candidate(target)
             if score == 0:
                 complexity = self.branching_complexity(target['node'])
                 score = -1 * complexity

@@ -196,7 +196,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionNegatedDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConjunctionNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, negated conjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
@@ -288,7 +288,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class ConjunctionNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated nodes
@@ -347,7 +347,7 @@ class TableauxRules(object):
                 ]),
             }
 
-    class DisjunctionDesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class DisjunctionDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, designated, disjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
@@ -418,7 +418,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DisjunctionUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class DisjunctionUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked, undesignated disjunction node *n* on a branch *b*, make three
         new branches *b'*, *b''*, and *b'''* from b. On *b'* add undesignated nodes for
@@ -478,7 +478,7 @@ class TableauxRules(object):
                 ]),
             }
 
-    class DisjunctionNegatedUndesignated(logic.TableauxSystem.ConditionalNodeRule):
+    class DisjunctionNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
         Either the disjunction is designated, or at least one of the disjuncts
         has the value **N**. So, from an unticked, undesignated, negated
