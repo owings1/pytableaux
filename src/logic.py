@@ -1124,8 +1124,10 @@ class TableauxSystem(object):
 
             # flag to build models
             self.is_build_models = None
-            # build start time
-            self.build_start_time = None
+
+            # build timer
+            self.build_timer = StopWatch()
+
             # whether we ended pre-maturely (e.g. max_steps)
             self.is_premature = False
 
@@ -1151,16 +1153,16 @@ class TableauxSystem(object):
             Build the tableau. Returns self.
             """
             self.is_build_models = models
-            self.build_start_time = nowms()
             self.build_timeout = timeout
+            self.build_timer.start()
             while not self.finished:
                 if max_steps != None and len(self.history) >= max_steps:
                     self.is_premature = True
                     break
                 self.check_timeout()
                 self.step()
+            self.build_timer.stop()
             self.finish()
-            self.is_build_models = None
             return self
 
         def step(self):
@@ -1168,13 +1170,13 @@ class TableauxSystem(object):
                 return False
             if self.argument != None and not self.trunk_built:
                 raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.")
-            step_start_time = nowms()
+            step_timer = StopWatch(True)
             res = self.get_rule_and_target_to_apply()
             if res:
                 rule, target = res
                 rule.apply(target)
-                step_duration = nowms() - step_start_time
-                application = {'rule': rule, 'target': target, 'duration_ms': step_duration}
+                step_timer.stop()
+                application = {'rule': rule, 'target': target, 'duration_ms': step_timer.elapsed()}
                 self.history.append(application)
                 self.current_step += 1
                 return application
@@ -1263,9 +1265,8 @@ class TableauxSystem(object):
 
         def check_timeout(self):
             if self.build_timeout != None and self.build_timeout >= 0:
-                expiry = self.build_start_time + self.build_timeout
-                now = nowms()
-                if now > expiry:
+                if self.build_timer.elapsed() > self.build_timeout:
+                    self.build_timer.stop()
                     raise TableauxSystem.ProofTimeoutError('Timeout of {0}ms exceeded.'.format(str(self.build_timeout)))
                     
         def structure(self, branches, node_depth=0, track=None):
@@ -1441,6 +1442,7 @@ class TableauxSystem(object):
                 'closed_branches': len(self.branches) - num_open,
                 'rules_applied'  : len(self.history),
                 'rules_duration_ms' : sum((application['duration_ms'] for application in self.history)),
+                'build_duration_ms' : self.build_timer.elapsed(),
             }
             if self.valid:
                 self.stats['result'] = 'Valid'
@@ -1450,12 +1452,11 @@ class TableauxSystem(object):
                 self.stats['result'] = 'Invalid'
             if self.is_build_models:
                 self.build_models()
+            tree_timer = StopWatch(True)
             self.tree = self.structure(self.branches)
+            self.stats['tree_duration_ms'] = tree_timer.stop().elapsed()
             self.stats['distinct_nodes'] = self.tree['distinct_nodes']
-            if self.build_start_time != None:
-                self.stats['build_duration_ms'] = nowms() - self.build_start_time
-            else:
-                self.stats['build_duration_ms'] = None
+            
             return self
 
         def build_models(self):
@@ -1571,6 +1572,8 @@ class TableauxSystem(object):
             for node in best_haystack:
                 if limit != None and len(results) >= limit:
                     break
+                if ticked != None and self.is_ticked(node) != ticked:
+                    continue
                 if node.has_props(props):
                     results.append(node)
             return results
@@ -1823,6 +1826,8 @@ class TableauxSystem(object):
         def __init__(self, tableau, **opts):
             #: Reference to the tableau for which the rule is instantiated.
             self.tableau = tableau
+            self.search_timer = StopWatch()
+            self.apply_timer = StopWatch()
 
         def applies(self):
             # Whether the rule applies to the tableau. Implementations should return True/False or a target dict.
@@ -1880,6 +1885,7 @@ class TableauxSystem(object):
         """
 
         def applies(self):
+            #self.search_timer.start()
             for branch in self.tableau.open_branches():
                 target = self.applies_to_branch(branch)
                 if target:
