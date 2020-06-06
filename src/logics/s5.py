@@ -68,28 +68,43 @@ class TableauxRules(object):
     .. _S4: s4.html
     """
     
-    class Symmetric(logic.TableauxSystem.BranchRule):
+    class Symmetric(logic.TableauxSystem.NodeRule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
         """
-        
-        def applies_to_branch(self, branch):
-            nodes = {node for node in branch.get_nodes() if node.has('world1')}
-            for node in nodes:
-                n = branch.find({
-                    'world1': node.props['world2'],
-                    'world2': node.props['world1'],
-                })
-                if n == None:
-                    return { 
-                        'world1': node.props['world2'],
-                        'world2': node.props['world1'],
-                        'branch': branch,
-                        'node'  : node,
+
+        ticked = None
+
+        def __init__(self, *args, **opts):
+            super(TableauxRules.Symmetric, self).__init__(*args, **opts)
+            self.is_rank_optim = False
+
+        def applies_to_node(self, node, branch):
+            if node.has('world1') and node.has('world2'):
+                if not branch.has({'world1': node.props['world2'], 'world2': node.props['world1']}):
+                    return {
+                        'world1' : node.props['world2'],
+                        'world2' : node.props['world1'],
                     }
-                        
             return False
+
+        #def applies_to_branch(self, branch):
+        #    nodes = {node for node in branch.get_nodes() if node.has('world1')}
+        #    for node in nodes:
+        #        n = branch.find({
+        #            'world1': node.props['world2'],
+        #            'world2': node.props['world1'],
+        #        })
+        #        if n == None:
+        #            return { 
+        #                'world1': node.props['world2'],
+        #                'world2': node.props['world1'],
+        #                'branch': branch,
+        #                'node'  : node,
+        #            }
+        #                
+        #    return False
 
         def apply(self, target):
             target['branch'].add({
@@ -108,10 +123,7 @@ class TableauxRules(object):
         [
             t.TableauxRules.Reflexive,
         ],
-        [
-            Symmetric,
-            s4.TableauxRules.Transitive,
-        ],
+
         [
             # non-branching rules
             k.TableauxRules.IdentityIndiscernability,
@@ -126,6 +138,10 @@ class TableauxRules(object):
             k.TableauxRules.NecessityNegated,
             k.TableauxRules.ExistentialNegated,
             k.TableauxRules.UniversalNegated,
+        ],
+        [
+            Symmetric,
+            s4.TableauxRules.Transitive,
         ],
         [
             k.TableauxRules.Existential,
