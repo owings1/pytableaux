@@ -660,18 +660,20 @@ class TableauxRules(object):
         same world** on the branch.
         """
 
+        def __init__(self, *args, **opts):
+            super(TableauxRules.ContradictionClosure, self).__init__(*args, **opts)
+            self.targets = {}
+
+        def after_node_add(self, branch, node):
+            super(TableauxRules.ContradictionClosure, self).after_node_add(branch, node)
+            if node.has('sentence') and node.has('world'):
+                nnode = branch.find({'sentence': negative(self.sentence(node)), 'world': node.props['world']})
+                if nnode:
+                    self.targets[branch.id] = {'nodes': set([node, nnode]), 'type': 'Nodes'}
+                
         def applies_to_branch(self, branch):
-            for node in branch.get_nodes():
-                if node.has('sentence') and node.has('world'):
-                    n = branch.find({'sentence': negate(node.props['sentence']), 'world': node.props['world']})
-                    if n != None:
-                        return {'nodes': set([node, n]), 'type': 'Nodes'}
-            #for node in branch.find_all({'_operator': 'Negation'}):
-            #    if node.has('sentence') and node.has('world'):
-            #        n = branch.find({'sentence': node.props['sentence'].operand, 'world': node.props['world']})
-            #        if n != None:
-            #            return {'nodes': set([node, n]), 'type': 'Nodes'}
-            return False
+            if branch.id in self.targets:
+                return self.targets[branch.id]
 
         def example(self):
             a = atomic(0, 0)
@@ -1093,27 +1095,88 @@ class TableauxRules(object):
 
         quantifier = 'Universal'
 
+        def __init__(self, *args, **opts):
+            super(TableauxRules.Universal, self).__init__(*args, **opts)
+            self.timers.update({
+                'in_len_constants'         : logic.StopWatch(),
+                'in_get_targets_for_nodes' : logic.StopWatch(),
+                'in_new_constant'          : logic.StopWatch(),
+                'in_node_examime'          : logic.StopWatch(),
+            })
+            self.node_states = {}
+            self.consts = {}
+
+        def after_branch_add(self, branch):
+            super(TableauxRules.Universal, self).after_branch_add(branch)
+            if not branch.closed:
+                consumed = False
+                parent = branch.parent
+                if parent != None:
+                    if parent.id in self.node_states:
+                        self.node_states[branch.id] = {
+                            node_id : dict(self.node_states[parent.id][node_id])
+                            for node_id in self.node_states[parent.id]
+                        }
+                        self.consts[branch.id] = set(self.consts[parent.id])
+                        consumed = True
+                if not consumed:
+                    self.node_states[branch.id] = dict()
+                    self.consts[branch.id] = set()
+                    for node in branch.get_nodes(ticked=self.ticked):
+                        self.register_node(node, branch)
+
+        def after_node_add(self, branch, node):
+            super(TableauxRules.Universal, self).after_node_add(branch, node)
+            self.register_node(node, branch)
+
+        def register_node(self, node, branch):
+            if branch.id not in self.consts:
+                self.consts[branch.id] = set()
+            if branch.id not in self.node_states:
+                self.node_states[branch.id] = {}
+            if self.is_potential_node(node, branch):
+                if node.id not in self.node_states[branch.id]:
+                    self.node_states[branch.id][node.id] = {
+                        'applied'   : set(),
+                        'unapplied' : set(self.consts[branch.id]),
+                    }
+            for c in node.constants():
+                if c not in self.consts[branch.id]:
+                    for node_id in self.node_states[branch.id]:
+                        self.node_states[branch.id][node_id]['unapplied'].add(c)
+                    self.consts[branch.id].add(c)
+
+        def applies_to_node(self, node, branch):
+            return len(self.node_states[branch.id][node.id]['unapplied']) > 0
+
         def get_targets_for_node(self, node, branch):
-            s = self.sentence(node)
-            si = s.sentence
-            w = node.props['world']
-            v = s.variable
-            constants = branch.constants()
-            targets = list()
-            if len(constants):
-                # if the branch already has a constant, find all the substitutions not
-                # already on the branch.
-                for c in constants:
-                    r = si.substitute(c, v)
-                    target = {'sentence': r, 'world': w}
-                    if not branch.has(target):
+            with self.timers['in_get_targets_for_nodes']:
+                if not len(self.node_states[branch.id][node.id]['unapplied']):
+                    return
+                with self.timers['in_node_examime']:
+                    s = self.sentence(node)
+                    si = s.sentence
+                    w = node.props['world']
+                    v = s.variable
+                    constants = self.node_states[branch.id][node.id]['unapplied']#branch.constants()
+                targets = list()
+                if len(constants):
+                    # if the branch already has a constant, find all the substitutions not
+                    # already on the branch.
+                    with self.timers['in_len_constants']:
+                        for c in constants:#self.node_states[branch.id][node.id]['unapplied']:
+                            r = si.substitute(c, v)
+                            target = {'sentence': r, 'world': w}
+                            if not branch.has(target):
+                                target['constant'] = c
+                                targets.append(target)
+                else:
+                    # if the branch does not have any constants, pick a new one
+                    with self.timers['in_new_constant']:
+                        c = branch.new_constant()
+                        r = si.substitute(c, v)
+                        target = {'sentence': r, 'world': w, 'constant': c}
                         targets.append(target)
-            else:
-                # if the branch does not have any constants, pick a new one
-                c = branch.new_constant()
-                r = si.substitute(c, v)
-                target = {'sentence': r, 'world': w}
-                targets.append(target)
             return targets
 
         def score_candidate(self, target):
@@ -1122,7 +1185,14 @@ class TableauxRules(object):
 
         def apply_to_target(self, target):
             branch = target['branch']
-            branch.add({'sentence': target['sentence'], 'world': target['world']})
+            node = target['node']
+            s = target['sentence']
+            c = target['constant']
+            w = target['world']
+            branch.add({'sentence': s, 'world': w})
+            idx = self.node_states[branch.id][node.id]
+            idx['applied'].add(c)
+            idx['unapplied'].discard(c)
 
         def example(self):
             self.branch().add({'sentence': examples.quantified(self.quantifier), 'world': 0})
