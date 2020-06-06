@@ -1972,7 +1972,7 @@ class TableauxSystem(object):
             pass
 
         def get_candidate_targets_for_branch(self, branch):
-            # Implementation must return target with both branch and node properties.
+            # Implementation must return target with both 'branch' and 'node' properties.
             raise NotImplementedError(NotImplemented)
 
         def apply_to_target(self, target):
