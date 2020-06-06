@@ -1145,24 +1145,24 @@ class TableauxRules(object):
 
             # Make sure we apply once for each sentence.
             #
-            # TODO: Consider flanking quantifiers like SxPLyFxy. In this case PLyFac, PLyFab, etc.
+            # TODO: Consider flanking quantifiers like XxPLyFxy. In this case PLyFac, PLyFab, etc.
             #       will always be new sentences. This could lead to a failure to close.
             #
             #       1. PNLxFx
-            #       2. SxPSy(Fx & ~Fy)
+            #       2. XxPSy(Fx & ~Fy)
             #
             #       In S5 these are unsatisfiable, so the tree would go (ignoring extra access nodes):
             #                                |           :
             #       1. PNLxFx , w0           |  (4,5)    :
-            #       2. SxPSy(Fx & ~Fy) , w0  |  (3)      :
+            #       2. XxPXy(Fx & ~Fy) , w0  |  (3)      :
             #                                |           :
-            #       3. PSy(Fa & ~Fy) , w0    |  (6,7)    :   Existential (2) 
+            #       3. PXy(Fa & ~Fy) , w0    |  (6,7)    :   Existential (2) 
             #                                |           :
             #       4. NLxFx , w1            |           :
             #       5. w0,w1                 |           :   Possibility (1)    -- since track_count of NLxFx is 0
             #                                |           :
-            #       6. Sy(Fa & ~Fy), w2      |  (8)      :
-            #       7. w0,w2                 |           :   Possibility (3)    -- since track_count of Sy(Fa & ~Fy) is 0
+            #       6. Xy(Fa & ~Fy), w2      |  (8)      :
+            #       7. w0,w2                 |           :   Possibility (3)    -- since track_count of Xy(Fa & ~Fy) is 0
             #                                |           :
             #       8. Fa & ~Fb , w2         |  (9,10)   :   Existenial (6)
             #                                |           :
@@ -1182,18 +1182,20 @@ class TableauxRules(object):
             #      OK, this closes, but what about:
             #
             #       1. PNLxFx , w0                (3,4)
-            #       2. NSxPSy(Fx & ~Fy) , w0     
+            #       2. NXxPXy(Fx & ~Fy) , w0     
             #                                    
             #       3. NLxFx , w1                
             #       4. w0,w1                                   Possibility (1)    -- since sentence track_count of NLxFx is 0
             #                                    
-            #       5. SxPSy(Fx & ~Fy) , w1       (5)          Necessity (2,4)    -- could have been 3 since node track_count = 0
+            #       5. XxPXy(Fx & ~Fy) , w1       (5)          Necessity (2,4)    -- could have been 3 since node track_count = 0
             #                                    
-            #       6. PSy(Fa & ~Fy) , w1         (8)          Existential (5)
+            #       6. PXy(Fa & ~Fy) , w1         (8)          Existential (5)
             #
             #       7. w1,w1                                   Reflexive (4)
             #
             #       now we have group competition between Necessity and Possibility.
+            #
+            # TODO: redesign this group/candidate scoring
             #
             #       Necessity will check for:
             #         - node must be one of the least-applied-to
@@ -1219,7 +1221,7 @@ class TableauxRules(object):
             #           - sentence track count is 0, so candidate score is 1.
             #           - thus group score is 1.
             #
-            #       8. Sy(Fa & ~Fy) , w1         (9)            Possibility (6)
+            #       8. Xy(Fa & ~Fy) , w1         (9)            Possibility (6)
             #
             #       9. Fa & ~Fb , w1             (10,11)        Existential (8)
             #
@@ -1238,6 +1240,9 @@ class TableauxRules(object):
             if track_count == 0:
                 return 1
             return -1 * self.modal_complexity(s) * track_count
+
+            # Other ideas ....
+
             # Apply to the simplest possibility sentence, so we don't get stuck
             #ops = s.operators()
             # use full modal complexity, not just possbility NPNA vs NPA
