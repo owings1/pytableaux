@@ -1148,41 +1148,6 @@ class TableauxSystem(object):
             if argument != None:
                 self.set_argument(argument)
 
-        def build(self, models=False, timeout=None, max_steps=None):
-            """
-            Build the tableau. Returns self.
-            """
-            self.is_build_models = models
-            self.build_timeout = timeout
-            self.build_timer.start()
-            while not self.finished:
-                if max_steps != None and len(self.history) >= max_steps:
-                    self.is_premature = True
-                    break
-                self.check_timeout()
-                self.step()
-            self.build_timer.stop()
-            self.finish()
-            return self
-
-        def step(self):
-            if self.finished:
-                return False
-            if self.argument != None and not self.trunk_built:
-                raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.")
-            step_timer = StopWatch(True)
-            res = self.get_rule_and_target_to_apply()
-            if res:
-                rule, target = res
-                rule.apply(target)
-                step_timer.stop()
-                application = {'rule': rule, 'target': target, 'duration_ms': step_timer.elapsed()}
-                self.history.append(application)
-                self.current_step += 1
-                return application
-            self.finish()
-            return False
-
         def set_logic(self, logic):
             self.logic = get_logic(logic)
             opts = dict()
@@ -1200,22 +1165,62 @@ class TableauxSystem(object):
                 self.all_rules += rules
             return self
 
-        def get_rule_and_target_to_apply(self):
-            res = self.get_rule_and_target_from_group(self.closure_rules)
+        def build(self, models=False, timeout=None, max_steps=None):
+            """
+            Build the tableau. Returns self.
+            """
+            self.is_build_models = models
+            self.build_timeout = timeout
+            with self.build_timer:
+                while not self.finished:
+                    if max_steps != None and len(self.history) >= max_steps:
+                        self.is_premature = True
+                        break
+                    self.check_timeout()
+                    self.step()
+            self.finish()
+            return self
+
+        def step(self):
+            if self.finished:
+                return False
+            if self.argument != None and not self.trunk_built:
+                raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.")
+            with StopWatch() as step_timer:
+                res = self.get_application()
+                if res:
+                    rule, target = res
+                    with rule.apply_timer:
+                        rule.apply(target)
+                    application = {
+                        'rule'        : rule,
+                        'target'      : target,
+                        'duration_ms' : step_timer.elapsed(),
+                    }
+                    self.history.append(application)
+                    self.current_step += 1
+                else:
+                    application = False
+                    self.finish()
+            return application
+
+        def get_application(self):
+            res = self.get_group_application(self.closure_rules)
             if res:
                 return res
             for rules in self.rule_groups:
-                res = self.get_rule_and_target_from_group(rules)
+                res = self.get_group_application(rules)
                 if res != None:
                     return res
             return None
 
-        def get_rule_and_target_from_group(self, rules):
+        def get_group_application(self, rules):
             results = []
             group_scores = []
             for branch in self.open_branches():
                 for rule in rules:
-                    target = rule.get_target(branch)
+                    with rule.search_timer:
+                        target = rule.get_target(branch)
                     if target:
                         if not self.opts['is_group_optim']:
                             return (rule, target)
@@ -1445,6 +1450,17 @@ class TableauxSystem(object):
                 'rules_applied'  : len(self.history),
                 'rules_duration_ms' : sum((application['duration_ms'] for application in self.history)),
                 'build_duration_ms' : self.build_timer.elapsed(),
+                'rules' : [
+                    {
+                        'class'           : rule.__class__.__name__,
+                        'queries'         : rule.search_timer.times_started(),
+                        'search_time_ms'  : rule.search_timer.elapsed(),
+                        'apply_time_ms'   : rule.apply_timer.elapsed(),
+                        'search_time_avg' : rule.search_timer.elapsed_avg(),
+                        'apply_time_avg'  : rule.apply_timer.elapsed_avg(),
+                    }
+                    for rule in self.all_rules
+                ]
             }
             if self.valid:
                 self.stats['result'] = 'Valid'
@@ -2568,6 +2584,9 @@ class StopWatch(object):
             return self._elapsed + (nowms() - self._start_time)
         return self._elapsed
 
+    def elapsed_avg(self):
+        return self.elapsed() / max(1, self.times_started())
+
     def is_running(self):
         return self._is_running
 
@@ -2576,3 +2595,11 @@ class StopWatch(object):
 
     def __repr__(self):
         return self.elapsed().__repr__()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if self.is_running():
+            self.stop()
