@@ -1561,6 +1561,9 @@ class TableauxSystem(object):
                     haystack = self.node_index[prop][key]
                     if best_haystack == None or len(haystack) < len(best_haystack):
                         best_haystack = haystack
+                    # we could do no better
+                    if len(best_haystack) <= 1:
+                        break
             if ticked and (best_haystack == None or len(self.ticked_nodes) < len(best_haystack)):
                 best_haystack = self.ticked_nodes
             if best_haystack == None:
