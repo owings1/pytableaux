@@ -71,6 +71,10 @@ class TableauxRules(object):
 
         ticked = None
 
+        def __init__(self, *args, **opts):
+            super(TableauxRules.Reflexive, self).__init__(*args, **opts)
+            self.is_rank_optim = False
+
         def applies_to_node(self, node, branch):
             for world in node.worlds():
                 if not branch.has({'world1': world, 'world2': world}):
