@@ -114,9 +114,6 @@ class TableauxRules(object):
             t.TableauxRules.Reflexive,
         ],
         [
-            Transitive,
-        ],
-        [
             # non-branching rules
             k.TableauxRules.IdentityIndiscernability,
             k.TableauxRules.Assertion,
@@ -130,6 +127,9 @@ class TableauxRules(object):
             k.TableauxRules.NecessityNegated,
             k.TableauxRules.ExistentialNegated,
             k.TableauxRules.UniversalNegated,
+        ],
+        [
+            Transitive,
         ],
         [
             k.TableauxRules.Existential,
