@@ -530,18 +530,14 @@ class TestNode(object):
 
 class TestRule(object):
 
-    def test_base_applies_not_impl(self):
+    def test_base_not_impl_various(self):
         rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
         with pytest.raises(logic.NotImplementedError):
-            rule.applies()
-
-    def test_base_apply_not_impl(self):
-        rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
+            rule.get_candidate_targets(None)
+        with pytest.raises(logic.NotImplementedError):
+            rule.select_best_target(None, None)
         with pytest.raises(logic.NotImplementedError):
             rule.apply(None)
-
-    def test_base_example_not_impl(self):
-        rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
         with pytest.raises(logic.NotImplementedError):
             rule.example()
 
@@ -551,21 +547,21 @@ class TestRule(object):
         assert res == 'Rule'
 
 class TestBranchRule(object):
-
-    def test_applies_to_branch_not_impl(self):
-        rule = logic.TableauxSystem.BranchRule(logic.tableau(None, None))
-        with pytest.raises(logic.NotImplementedError):
-            rule.applies_to_branch(None)
-
-    def test_target_has_branch_when_returns_true_mock(self):
-        class MockRule(logic.TableauxSystem.BranchRule):
-            def applies_to_branch(self, branch):
-                return True
-        proof = logic.tableau(None, None)
-        branch = proof.branch()
-        rule = MockRule(proof)
-        res = rule.applies()
-        assert res['branch'] == branch
+    pass
+    #def test_applies_to_branch_not_impl(self):
+    #    rule = logic.TableauxSystem.BranchRule(logic.tableau(None, None))
+    #    with pytest.raises(logic.NotImplementedError):
+    #        rule.applies_to_branch(None)
+    #
+    #def test_target_has_branch_when_returns_true_mock(self):
+    #    class MockRule(logic.TableauxSystem.BranchRule):
+    #        def applies_to_branch(self, branch):
+    #            return True
+    #    proof = logic.tableau(None, None)
+    #    branch = proof.branch()
+    #    rule = MockRule(proof)
+    #    res = rule.applies()
+    #    assert res['branch'] == branch
 
 class TestClosureRule(object):
 

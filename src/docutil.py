@@ -88,9 +88,8 @@ def get_rule_example_html(lgc, ruleish):
     proof = logic.tableau(logic.get_logic(lgc), None)
     rule = proof.get_rule(ruleish)
     rule.example()
-    if len(proof.branches) == 1:
-        proof.branches[0].add({'ellipsis': True})
-    target = rule.applies()
+    proof.branches[0].add({'ellipsis': True})
+    target = rule.get_target(proof.branches[0])
     rule.apply(target)
     proof.finish()
     return writer.write(proof, sw=sw)

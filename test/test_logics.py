@@ -587,7 +587,7 @@ class TestLP(LogicTester):
         arg = argument('NBab', premises=['NBab'])
         proof = tableau(self.logic, arg)
         rule = proof.get_rule(self.logic.TableauxRules.BiconditionalNegatedUndesignated)
-        assert rule.applies()
+        assert rule.get_target(proof.branches[0])
 
     def test_invalid_lnc(self):
         proof = self.example_proof('Law of Non-contradiction')
@@ -979,7 +979,7 @@ class TestCPL(LogicTester):
             {'sentence': s2, 'world': 0},
         ])
         rule = proof.get_rule(proof.logic.TableauxRules.IdentityIndiscernability)
-        assert not rule.applies_to_branch(branch)
+        assert not rule.get_target(branch)
 
     def test_model_value_of_operated_opaque1(self):
         s1 = parse('La')
@@ -1125,7 +1125,7 @@ class TestK(LogicTester):
         branch.add({'sentence': parse('Imm'), 'world': 0})
         branch.add({'sentence': parse('Fs', vocabulary=examples.vocabulary), 'world': 0})
         rule = self.logic.TableauxRules.IdentityIndiscernability(proof)
-        res = rule.applies_to_branch(branch)
+        res = rule.get_target(branch)
         assert not res
         
     def test_valid_conjunction_introduction(self):
@@ -1573,7 +1573,7 @@ class TestD(LogicTester):
         proof = tableau(self.logic)
         branch = proof.branch()
         rule = proof.get_rule('Serial')
-        res = rule.applies_to_branch(branch)
+        res = rule.get_target(branch)
         assert not res
 
     def test_valid_serial_inf_1(self):

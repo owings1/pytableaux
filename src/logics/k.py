@@ -1425,7 +1425,7 @@ class TableauxRules(object):
         not appear on *b* at *w*, then add it.
         """
 
-        def applies_to_branch(self, branch):
+        def get_candidate_targets(self, branch):
             #nodes = set(branch.find_all({'_is_predicated': True}, ticked = False))
             nodes = {
                 node for node in branch.get_nodes(ticked = False)
@@ -1437,6 +1437,7 @@ class TableauxRules(object):
                 # checking length of the set excludes self-identity sentences.
                 len(set(self.sentence(node).parameters)) == 2
             }
+            cands = list()
             for inode in inodes:
                 w = inode.props['world']
                 pa, pb = inode.props['sentence'].parameters
@@ -1461,8 +1462,14 @@ class TableauxRules(object):
                         # if <s1,w> does not yet appear on b, ...
                         if not branch.has({'sentence': s1, 'world': w}):
                             # then the rule applies to <s',w,b>
-                            return {'sentence': s1, 'world': w, 'branch': branch}
-            return False
+                            target = {'sentence': s1, 'world': w, 'branch': branch}
+                            cands.append(target)
+            return cands
+
+        def select_best_target(self, targets, branch):
+            # TODO optimize
+            return targets[0]
+            #raise NotImplementedError(NotImplemented)
 
         def apply(self, target):
             target['branch'].add({'sentence': target['sentence'], 'world': target['world']})

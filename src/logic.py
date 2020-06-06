@@ -1201,10 +1201,9 @@ class TableauxSystem(object):
             return self
 
         def get_rule_and_target_to_apply(self):
-            for rule in self.closure_rules:
-                target = rule.applies()
-                if target:
-                    return (rule, target)
+            res = self.get_rule_and_target_from_group(self.closure_rules)
+            if res:
+                return res
             for rules in self.rule_groups:
                 res = self.get_rule_and_target_from_group(rules)
                 if res != None:
@@ -1214,20 +1213,21 @@ class TableauxSystem(object):
         def get_rule_and_target_from_group(self, rules):
             results = []
             group_scores = []
-            for rule in rules:
-                target = rule.applies()
-                if target:
-                    if not self.opts['is_group_optim']:
-                        return (rule, target)
-                    group_scores.append(rule.group_score(target))
-                    results.append((rule, target))
-            if len(results):
-                max_group_score = max(group_scores)
-                for i in range(len(results)):
-                    res = results[i]
-                    group_score = group_scores[i]
-                    if group_score == max_group_score:
-                        return res
+            for branch in self.open_branches():
+                for rule in rules:
+                    target = rule.get_target(branch)
+                    if target:
+                        if not self.opts['is_group_optim']:
+                            return (rule, target)
+                        group_scores.append(rule.group_score(target))
+                        results.append((rule, target))
+                if len(results):
+                    max_group_score = max(group_scores)
+                    for i in range(len(results)):
+                        res = results[i]
+                        group_score = group_scores[i]
+                        if group_score == max_group_score:
+                            return res
             return None
 
         def set_argument(self, argument):
@@ -1829,8 +1829,15 @@ class TableauxSystem(object):
             self.search_timer = StopWatch()
             self.apply_timer = StopWatch()
 
-        def applies(self):
-            # Whether the rule applies to the tableau. Implementations should return True/False or a target dict.
+        def get_target(self, branch):
+            cands = self.get_candidate_targets(branch)
+            if cands and len(cands):
+                return self.select_best_target(cands, branch)
+
+        def get_candidate_targets(self, branch):
+            raise NotImplementedError(NotImplemented)
+
+        def select_best_target(self, targets, branch):
             raise NotImplementedError(NotImplemented)
 
         def apply(self, target):
@@ -1883,24 +1890,8 @@ class TableauxSystem(object):
         return a dictionary with a ``branch`` key, which will then be passed to
         the ``applies()`` method.
         """
-
-        def applies(self):
-            #self.search_timer.start()
-            for branch in self.tableau.open_branches():
-                target = self.applies_to_branch(branch)
-                if target:
-                    if target == True:
-                        target = {'branch': branch}
-                    if 'branch' not in target:
-                        target['branch'] = branch
-                    if 'type' not in target:
-                        target['type'] = 'Branch'
-                    return target
-            return False
-
-        def applies_to_branch(self, branch):
-            # Abstract method that must be implemented in sub-classes. Should return a target object.
-            raise NotImplementedError(NotImplemented)
+        pass
+        # TODO remove
 
     class ClosureRule(BranchRule):
         """
@@ -1908,11 +1899,25 @@ class TableauxSystem(object):
         closed. Sub-classes should implement the ``applies_to_branch()`` method.
         """
 
-        def applies_to_branch(self, branch):
-            raise NotImplementedError(NotImplemented)
+        def get_candidate_targets(self, branch):
+            target = self.applies_to_branch(branch)
+            if target:
+                if target == True:
+                    target = {'branch': branch}
+                if 'branch' not in target:
+                    target['branch'] = branch
+                if 'type' not in target:
+                    target['type'] = 'Branch'
+                return [target]
+
+        def select_best_target(self, targets, branch):
+            return targets[0]
 
         def apply(self, target):
             target['branch'].close()
+
+        def applies_to_branch(self, branch):
+            raise NotImplementedError(NotImplemented)
 
     class SelectiveTrackingBranchRule(BranchRule):
 
@@ -1928,11 +1933,18 @@ class TableauxSystem(object):
             #else:
             #    self.is_rank_optim = True
 
-        def applies_to_branch(self, branch):
-            cands = self.get_candidate_targets_for_branch(branch)
-            if len(cands) == 0:
-                return False
-            return self.select_best_target_for_branch(branch, cands)
+        def get_candidate_targets(self, branch):
+            return self.get_candidate_targets_for_branch(branch)
+
+        def select_best_target(self, targets, branch):
+            return self.select_best_target_for_branch(branch, targets)
+
+        def get_candidate_targets_for_branch(self, branch):
+            # Implementation must return target with both 'branch' and 'node' properties.
+            raise NotImplementedError(NotImplemented)
+
+        def apply_to_target(self, target):
+            raise NotImplementedError(NotImplemented)
 
         def select_best_target_for_branch(self, branch, cands):
             # select the node to which we have applied the least for this branch.
@@ -1985,13 +1997,6 @@ class TableauxSystem(object):
         def on_branch_track(self, branch):
             pass
 
-        def get_candidate_targets_for_branch(self, branch):
-            # Implementation must return target with both 'branch' and 'node' properties.
-            raise NotImplementedError(NotImplemented)
-
-        def apply_to_target(self, target):
-            raise NotImplementedError(NotImplemented)
-
     class NodeRule(BranchRule):
         """
         A node rule has a fixed ``applies()`` method that searches open branches
@@ -1999,51 +2004,24 @@ class TableauxSystem(object):
         target dictionary with keys ``node`` and ``branch``.
         """
 
+        # The tick level of nodes to check.
         ticked = False
 
         branch_level = 1
 
         def __init__(self, *args, **opts):
             super(TableauxSystem.BranchRule, self).__init__(*args, **opts)
-            self.applicable_nodes = dict()
+            self.potential_nodes = dict()
             self.node_applications = dict()
             if 'is_rank_optim' in opts:
                 self.is_rank_optim = opts['is_rank_optim']
             else:
                 self.is_rank_optim = True
 
-        def after_branch_add(self, branch):
-            if not branch.closed:
-                consumed = False
-                parent = branch.parent
-                if parent != None:
-                    if parent.id in self.applicable_nodes:
-                        self.applicable_nodes[branch.id] = set(self.applicable_nodes[parent.id])
-                        self.node_applications[branch.id] = dict(self.node_applications[parent.id])
-                        consumed = True
-                if not consumed:
-                    self.applicable_nodes[branch.id] = set()
-                    self.node_applications[branch.id] = dict()
-                    for node in branch.get_nodes(ticked=self.ticked):
-                        self.after_node_add(branch, node)
-
-        def after_branch_close(self, branch):
-            del(self.applicable_nodes[branch.id])
-            del(self.node_applications[branch.id])
-
-        def after_node_add(self, branch, node):
-            if self.applies_to_node(node, branch):
-                self.applicable_nodes[branch.id].add(node)
-
-        def after_node_tick(self, branch, node):
-            if self.ticked == False:
-                self.applicable_nodes[branch.id].discard(node)
-
-        def applies(self):
+        def get_candidate_targets(self, branch):
             cands = list()
-            for branch_id in self.applicable_nodes:
-                branch = self.tableau.get_branch(branch_id)
-                for node in set(self.applicable_nodes[branch_id]):
+            if branch.id in self.potential_nodes:
+                for node in set(self.potential_nodes[branch.id]):
                     target = self.applies_to_node(node, branch)
                     if target:
                         if target == True:
@@ -2055,23 +2033,56 @@ class TableauxSystem(object):
                             target['type'] = 'Node'
                         if 'branch' not in target:
                             target['branch'] = branch
-                        if not self.is_rank_optim:
-                            return target
                         cands.append(target)
                     else:
-                        self.applicable_nodes[branch_id].discard(node)
-            if len(cands):
-                # score candidates
-                cand_scores = [self.score_candidate(target) for target in cands]
-                max_score = max(set(cand_scores))
-                for i in range(len(cands)):
-                    target = cands[i]
-                    candidate_score = cand_scores[i]
-                    if candidate_score == max_score:
-                        target['candidate_score'] = candidate_score
-                        return target
-            else:
-                return False
+                        if not self.is_potential_node(node, branch):
+                            self.potential_nodes[branch.id].discard(node)
+            return cands
+
+        def select_best_target(self, targets, branch):
+            if not self.is_rank_optim:
+                return targets[0]
+            # score candidates
+            cand_scores = [self.score_candidate(target) for target in targets]
+            max_score = max(set(cand_scores))
+            for i in range(len(targets)):
+                target = targets[i]
+                candidate_score = cand_scores[i]
+                if candidate_score == max_score:
+                    target['candidate_score'] = candidate_score
+                    return target
+
+        def after_branch_add(self, branch):
+            if not branch.closed:
+                consumed = False
+                parent = branch.parent
+                if parent != None:
+                    if parent.id in self.potential_nodes:
+                        self.potential_nodes[branch.id] = set(self.potential_nodes[parent.id])
+                        self.node_applications[branch.id] = dict(self.node_applications[parent.id])
+                        consumed = True
+                if not consumed:
+                    self.potential_nodes[branch.id] = set()
+                    self.node_applications[branch.id] = dict()
+                    for node in branch.get_nodes(ticked=self.ticked):
+                        if self.is_potential_node(node, branch):
+                            self.potential_nodes[branch.id].add(node)
+
+        def is_potential_node(self, node, branch):
+            # Default impl
+            return self.applies_to_node(node, branch)
+
+        def after_branch_close(self, branch):
+            del(self.potential_nodes[branch.id])
+            del(self.node_applications[branch.id])
+
+        def after_node_add(self, branch, node):
+            if self.is_potential_node(node, branch):
+                self.potential_nodes[branch.id].add(node)
+
+        def after_node_tick(self, branch, node):
+            if self.ticked == False:
+                self.potential_nodes[branch.id].discard(node)
 
         def group_score(self, target):
             # TODO: redesign candidate/group scoring, which will

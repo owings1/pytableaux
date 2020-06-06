@@ -83,15 +83,21 @@ class TableauxRules:
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
 
-        def applies_to_branch(self, branch):
+        def get_candidate_targets(self, branch):
             if len(self.tableau.history) and self.tableau.history[-1]['rule'] == self:
                 return False
             serial_worlds = {node.props['world1'] for node in branch.get_nodes() if node.has('world1')}
             worlds = branch.worlds() - serial_worlds
+            cands = list()
             if len(worlds):
                 world = worlds.pop()
-                return {'branch': branch, 'world': world, 'node': branch.find({'world1': world})}
-            return False
+                target = {'branch': branch, 'world': world, 'node': branch.find({'world1': world})}
+                cands.append(target)
+            return cands
+
+        def select_best_target(self, targets, branch):
+            #TODO: optimize
+            return targets[0]
 
         def apply(self, target):
             target['branch'].add({ 
@@ -110,10 +116,10 @@ class TableauxRules:
         rules.
         """
 
-        def applies_to_branch(self, branch):
+        def get_candidate_targets(self, branch):
             if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TableauxRules.Serial):
                 return False
-            return super(TableauxRules.IdentityIndiscernability, self).applies_to_branch(branch)
+            return super(TableauxRules.IdentityIndiscernability, self).get_candidate_targets(branch)
 
     closure_rules = list(k.TableauxRules.closure_rules)
 

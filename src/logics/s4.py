@@ -77,8 +77,9 @@ class TableauxRules(object):
         appear on *b*, then add *wRw''* to *b*.
         """
         
-        def applies_to_branch(self, branch):
+        def get_candidate_targets(self, branch):
             nodes = {node for node in branch.get_nodes() if node.has('world1')}
+            cands = list()
             for node in nodes:
                 for other_node in nodes:
                     if node.props['world2'] == other_node.props['world1']:
@@ -87,13 +88,18 @@ class TableauxRules(object):
                             'world2': other_node.props['world2'],
                         })
                         if n == None:
-                            return { 
+                            target = { 
                                 'world1': node.props['world1'],
                                 'world2': other_node.props['world2'],
                                 'branch': branch,
                                 'nodes' : set([node, other_node]),
+                                'type'  : 'Nodes',
                             }
-            return False
+                            cands.append(target)
+            return cands
+
+        def select_best_target(self, targets, branch):
+            return targets[0]
 
         def apply(self, target):
             target['branch'].add({
