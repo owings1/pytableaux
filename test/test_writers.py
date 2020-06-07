@@ -123,7 +123,7 @@ class TestAscii(object):
         # TODO: assert something
 
     def test_write_nec_dist_s4(self):
-        proof = tableau('S4', examples.argument('Necessity Distribution'))
+        proof = tableau('S4', examples.argument('Necessity Distribution 1'))
         proof.branches[0].add({'ellipsis': True})
         proof.build()
         res = asc.write(proof, standard)
@@ -142,7 +142,7 @@ class TestAsciiv(object):
         # TODO: assert something
 
     def test_write_nec_dist_s4(self):
-        proof = tableau('S4', examples.argument('Necessity Distribution'))
+        proof = tableau('S4', examples.argument('Necessity Distribution 1'))
         proof.branches[0].add({'ellipsis': True})
         proof.build()
         res = asv.write(proof, standard)

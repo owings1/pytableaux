@@ -1141,7 +1141,7 @@ class TestK(LogicTester):
         assert proof.valid
         
     def test_valid_nec_dist(self):
-        proof = self.example_proof('Necessity Distribution')
+        proof = self.example_proof('Necessity Distribution 1')
         assert proof.valid
 
     def test_valid_material_bicond_elim_1(self):
@@ -1169,7 +1169,7 @@ class TestK(LogicTester):
         assert proof.valid
 
     def test_valid_nec_elim(self):
-        proof = self.example_proof('Necessity Distribution')
+        proof = self.example_proof('Necessity Distribution 1')
         assert proof.valid
 
     def test_valid_modal_tranform_2(self):
