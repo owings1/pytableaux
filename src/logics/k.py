@@ -666,7 +666,7 @@ class TableauxRules(object):
 
         def after_node_add(self, branch, node):
             super(TableauxRules.ContradictionClosure, self).after_node_add(branch, node)
-            if node.has('sentence') and node.has('world'):
+            if node.has('sentence'):
                 nnode = branch.find({'sentence': negative(self.sentence(node)), 'world': node.props['world']})
                 if nnode:
                     self.targets[branch.id] = {'nodes': set([node, nnode]), 'type': 'Nodes'}
