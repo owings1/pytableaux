@@ -103,9 +103,6 @@ class TableauxRules(object):
     closure_rules = list(k.TableauxRules.closure_rules)
 
     rule_groups = [
-        #[
-        #    
-        #],
         [
             # non-branching rules
             k.TableauxRules.IdentityIndiscernability,
@@ -146,7 +143,7 @@ class TableauxRules(object):
             s4.TableauxRules.Transitive,
         ],
         [
-            # modal rules rules
+            # modal rules
             k.TableauxRules.Necessity,
             k.TableauxRules.Possibility,
         ],
