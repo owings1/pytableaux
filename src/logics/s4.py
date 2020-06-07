@@ -104,6 +104,21 @@ class TableauxRules(object):
             w2 = node.props['world2']
             self.track_access(w1, w2, branch)
 
+        def after_branch_add(self, branch):
+            super(TableauxRules.Transitive, self).after_branch_add(branch)
+            if not branch.closed:
+                consumed = False
+                parent = branch.parent
+                if parent != None:
+                    if parent.id in self.access:
+                        self.access[branch.id] = {w: set(self.access[parent.id][w]) for w in self.access[parent.id]}
+                        consumed = True
+                if not consumed:
+                    self.access[branch.id] = {}
+                    for node in branch.get_nodes(ticked=self.ticked):
+                        if self.is_potential_node(node, branch):
+                            self.track_access_node(node, branch)
+
         def after_node_add(self, branch, node):
             super(TableauxRules.Transitive, self).after_node_add(branch, node)
             if self.is_potential_node(node, branch):
@@ -144,9 +159,6 @@ class TableauxRules(object):
 
     rule_groups = [
         [
-            t.TableauxRules.Reflexive,
-        ],
-        [
             # non-branching rules
             k.TableauxRules.IdentityIndiscernability,
             k.TableauxRules.Assertion,
@@ -168,9 +180,6 @@ class TableauxRules(object):
             k.TableauxRules.Universal,
         ],
         [
-            Transitive,
-        ],
-        [
             # branching rules
             k.TableauxRules.ConjunctionNegated,
             k.TableauxRules.Disjunction, 
@@ -180,6 +189,12 @@ class TableauxRules(object):
             k.TableauxRules.Conditional,
             k.TableauxRules.Biconditional,
             k.TableauxRules.BiconditionalNegated,
+        ],
+        [
+            t.TableauxRules.Reflexive,
+        ],
+        [
+            Transitive,
         ],
         [
             # world creation rules 2
