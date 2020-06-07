@@ -1153,11 +1153,13 @@ class TableauxRules(object):
                     self.consts[branch.id].add(c)
 
         def applies_to_node(self, node, branch):
-            return len(self.node_states[branch.id][node.id]['unapplied']) > 0
+            # Apply if there are no constants on the branch, or if we have
+            # tracked a constant that we haven't applied to.
+            return len(self.consts[branch.id]) < 1 or len(self.node_states[branch.id][node.id]['unapplied']) > 0
 
         def get_targets_for_node(self, node, branch):
             with self.timers['in_get_targets_for_nodes']:
-                if not len(self.node_states[branch.id][node.id]['unapplied']):
+                if not self.applies_to_node(node, branch):
                     return
                 with self.timers['in_node_examime']:
                     s = self.sentence(node)

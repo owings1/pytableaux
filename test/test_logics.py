@@ -1075,6 +1075,12 @@ class TestCFOL(LogicTester):
         assert model.value_of(parse('NLa')) == 'T'
         assert model.is_countermodel_to(arg)
 
+    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
+        vocab = Vocabulary((('Pred', 0, 0, 1),))
+        proof = tableau(self.logic, argument('b', premises=['VxKFxKaNa'], vocabulary=vocab))
+        proof.build()
+        assert proof.valid
+
 class TestK(LogicTester):
 
     logic = get_logic('K')
@@ -1187,6 +1193,12 @@ class TestK(LogicTester):
     def test_invalid_nec_elim(self):
         proof = self.example_proof('Necessity Elimination')
         assert not proof.valid
+
+    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
+        vocab = Vocabulary((('Pred', 0, 0, 1),))
+        proof = tableau(self.logic, argument('b', premises=['VxKFxKaNa'], vocabulary=vocab))
+        proof.build()
+        assert proof.valid
 
     def test_read_model_proof_deny_antec(self):
         proof = self.example_proof('Denying the Antecedent')
