@@ -1504,8 +1504,9 @@ class TableauxSystem(object):
                         'name'            : rule.name,
                         'queries'         : rule.search_timer.times_started(),
                         'search_time_ms'  : rule.search_timer.elapsed(),
-                        'apply_time_ms'   : rule.apply_timer.elapsed(),
                         'search_time_avg' : rule.search_timer.elapsed_avg(),
+                        'apply_count'     : rule.apply_count,
+                        'apply_time_ms'   : rule.apply_timer.elapsed(),
                         'apply_time_avg'  : rule.apply_timer.elapsed_avg(),
                         'timers'          : {
                             name : {
@@ -1911,10 +1912,12 @@ class TableauxSystem(object):
             self.apply_timer = StopWatch()
             self.timers = {}
             self.name = self.__class__.__name__
+            self.apply_count = 0
 
         def apply(self, target):
             # Overrides must call super, otherwise implement ``apply_to_target``.
             self.apply_to_target(target)
+            self.apply_count += 1
 
         def get_target(self, branch):
             # This is the external API entry point.
