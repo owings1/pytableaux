@@ -687,20 +687,22 @@ class TableauxRules(object):
         A branch closes when a sentence of the form P{~a = a} appears on the branch *at any world*.
         """
 
+        def __init__(self, *args, **opts):
+            super(TableauxRules.SelfIdentityClosure, self).__init__(*args, **opts)
+            self.targets = {}
+
+        def after_node_add(self, branch, node):
+            super(TableauxRules.SelfIdentityClosure, self).after_node_add(branch, node)
+            if node.has('sentence'):
+                s = self.sentence(node)
+                if s.operator == 'Negation' and s.operand.predicate == Identity:
+                    a, b = s.operand.parameters
+                    if a == b:
+                        self.targets[branch.id] = {'node': node, 'type': 'Node'}
+
         def applies_to_branch(self, branch):
-            #for node in branch.find_all({'_operator': 'Negation'}):
-            #    s = self.sentence(node).operand
-            #    if s.predicate == Identity:
-            #        a, b = s.parameters
-            #        if a == b:
-            #            return {'node': node, 'type': 'Node'}
-            for node in branch.get_nodes():
-                if node.has('sentence'):
-                    s = self.sentence(node)
-                    if s.operator == 'Negation' and s.operand.predicate == Identity:
-                        a, b = s.operand.parameters
-                        if a == b:
-                            return {'node': node, 'type': 'Node'}
+            if branch.id in self.targets:
+                return self.targets[branch.id]
             return False
 
         def example(self):
