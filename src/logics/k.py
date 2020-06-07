@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2020 Doug Owings.
 # 
@@ -1114,6 +1115,8 @@ class TableauxRules(object):
 
         quantifier = 'Universal'
 
+        # TODO: support prenexing
+        #    ∀x∃y(Fx → Gy) will be infinite, but not ∃y∀x(Fx → Gy)
         def __init__(self, *args, **opts):
             super(TableauxRules.Universal, self).__init__(*args, **opts)
             self.timers.update({
@@ -1126,6 +1129,9 @@ class TableauxRules(object):
             self.consts = {}
 
         def after_branch_add(self, branch):
+            # TODO: refactor into something more general, perhaps a deep copy
+            #       routine. bugs have occurred when not copying the references
+            #       properly
             super(TableauxRules.Universal, self).after_branch_add(branch)
             if not branch.closed:
                 consumed = False
@@ -1133,7 +1139,10 @@ class TableauxRules(object):
                 if parent != None:
                     if parent.id in self.node_states:
                         self.node_states[branch.id] = {
-                            node_id : dict(self.node_states[parent.id][node_id])
+                            node_id : {
+                                k : set(self.node_states[parent.id][node_id][k])
+                                for k in self.node_states[parent.id][node_id]
+                            }
                             for node_id in self.node_states[parent.id]
                         }
                         self.consts[branch.id] = set(self.consts[parent.id])

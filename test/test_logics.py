@@ -22,6 +22,9 @@ import pytest
 from logic import *
 import examples
 
+def parsex(s):
+    return examples.parser.parse(s)
+
 def validities(logic):
     return get_logic(logic).example_validities()
 
@@ -1570,6 +1573,45 @@ class TestK(LogicTester):
         f2 = model.world_frame(1)
         assert s2 in f1.opaques
         assert s1 in f2.opaques
+
+    def test_universal_should_make_new_constant_with_one_there(self):
+
+        vocab = examples.vocabulary
+
+        s1 = parsex('VxUFxSyGy')
+        s2 = parsex('b')
+
+        s3 = parsex('NFm')
+
+        proof = tableau(self.logic, argument(s2, [s1]))
+        
+        univ = proof.get_rule('Universal')
+        b1 = proof.branches[0]
+
+        ap1 = proof.step()
+        assert ap1['rule'].name == 'Universal'
+
+        ap2 = proof.step()
+        assert ap2['rule'].name == 'Conditional'
+        assert b1.has({'sentence': s3, 'world': 0})
+        b2 = proof.branches[1]
+
+        # we don't apply now
+        assert not univ.get_target(b1)
+
+        # do some steps, but NOT on our b1
+        for i in range(10):
+            opens = {b for b in proof.open_branches() if b != b1}
+            for b in opens:
+                res = proof.get_branch_application(b)
+                if res:
+                    rule, target = res
+                    proof.do_application(rule, target, None)
+                    break
+
+        # we shouldn't apply now
+        target = univ.get_target(b1)
+        assert not target , target['sentence']
 
 class TestD(LogicTester):
 
