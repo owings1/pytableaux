@@ -1820,7 +1820,8 @@ class TableauxSystem(object):
             return self.tableau.branch(self)
 
         def __repr__(self):
-            return {'nodes': len(self.nodes), 'leaf': self.leaf, 'closed': self.closed}.__repr__()
+            leaf_id = self.leaf.id if self.leaf else None
+            return {'id': self.id, 'nodes': len(self.nodes), 'leaf': leaf_id, 'closed': self.closed}.__repr__()
 
     class Node(object):
         """
@@ -1920,15 +1921,18 @@ class TableauxSystem(object):
             self.apply_count += 1
 
         def get_target(self, branch):
-            # This is the external API entry point.
+            # This is the external API entry point. Implementations should not
+            # override this.
             cands = self.get_candidate_targets(branch)
             if cands and len(cands):
                 return self.select_best_target(cands, branch)
 
         def get_candidate_targets(self, branch):
+            # This is to be implemented in base classes
             raise NotImplementedError(NotImplemented)
 
         def select_best_target(self, targets, branch):
+            # This is to be implemented in base classes
             raise NotImplementedError(NotImplemented)
 
         def apply_to_target(self, target):
@@ -2003,9 +2007,7 @@ class TableauxSystem(object):
 
     class NodeRule(Rule):
         """
-        A node rule has a fixed ``applies()`` method that searches open branches
-        and queries the ``applies_to_node()`` method. If it applies, return a
-        target dictionary with keys ``node`` and ``branch``.
+        NodeRule base class.
         """
 
         # The tick level of nodes to check.
