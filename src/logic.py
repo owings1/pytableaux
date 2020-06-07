@@ -1480,7 +1480,7 @@ class TableauxSystem(object):
                 self.tree = self.structure(self.branches)
 
             with StopWatch() as models_timer:
-                if self.is_build_models:
+                if self.is_build_models and not self.is_premature:
                     self.build_models()
 
             self.stats = {
