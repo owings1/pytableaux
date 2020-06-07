@@ -90,15 +90,20 @@ class TableauxRules(object):
         .. _FDE closure Rule: fde.html#logics.fde.TableauxRules.Closure
         """
 
+        def __init__(self, *args, **opts):
+            super(TableauxRules.GlutClosure, self).__init__(*args, **opts)
+            self.targets = {}
+
+        def after_node_add(self, branch, node):
+            super(TableauxRules.GlutClosure, self).after_node_add(branch, node)
+            if node.has('sentence') and node.has('designated') and node.props['designated']:
+                nnode = branch.find({'sentence': negative(self.sentence(node)), 'designated': True})
+                if nnode:
+                    self.targets[branch.id] = {'nodes': set([node, nnode]), 'type': 'Nodes'}
+                
         def applies_to_branch(self, branch):
-            for node in branch.find_all({'designated': True, '_operator': 'Negation'}):
-                n = branch.find({
-                    'sentence'   : self.sentence(node).operand,
-                    'designated' : True,
-                })
-                if n:
-                    return {'nodes': set([node, n]), 'type': 'Nodes'}
-            return False
+            if branch.id in self.targets:
+                return self.targets[branch.id]
 
         def example(self):
             a = logic.atomic(0, 0)

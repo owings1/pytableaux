@@ -531,12 +531,20 @@ class TableauxRules(object):
         and the same sentence appears on a node marked *undesignated*.
         """
 
+        def __init__(self, *args, **opts):
+            super(TableauxRules.DesignationClosure, self).__init__(*args, **opts)
+            self.targets = {}
+
+        def after_node_add(self, branch, node):
+            super(TableauxRules.DesignationClosure, self).after_node_add(branch, node)
+            if node.has('sentence'):
+                nnode = branch.find({'sentence': self.sentence(node), 'designated': not node.props['designated']})
+                if nnode:
+                    self.targets[branch.id] = {'nodes': set([node, nnode]), 'type': 'Nodes'}
+                
         def applies_to_branch(self, branch):
-            for node in branch.find_all({'designated': True}):
-                n = branch.find({'sentence': self.sentence(node), 'designated': False})
-                if n != None:
-                    return {'nodes': set([node, n]), 'type': 'Nodes'}
-            return False
+            if branch.id in self.targets:
+                return self.targets[branch.id]
 
         def example(self):
             a = atomic(0, 0)
