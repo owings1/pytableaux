@@ -90,7 +90,7 @@
                         <div class="value">
                             <a class="step-rule-name step-rule-datum {{- helper.hidden_if(tableau.history|length) }}" data-step="0" href="javascript:">Build Trunk</a>
                             {% for application in tableau.history %}
-                                {% set rule_name = application['rule'].__class__.__name__ %}
+                                {% set rule_name = application['rule'].name %}
                                 <a class="step-rule-name step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}" href="javascript:">{{ rule_name }}</a>
                             {% endfor %}
                         </div>
