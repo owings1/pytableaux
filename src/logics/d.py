@@ -17,6 +17,7 @@
 # ------------------
 #
 # pytableaux - Deonitic Normal Modal Logic
+
 name = 'D'
 
 class Meta(object):
@@ -126,13 +127,7 @@ class TableauxRules:
             if not len(self.unserial_worlds[branch.id]):
                 return
 
-            # This tends to stop modal explosion better than the max worlds check,
-            # at least in its current form (all modal operators + worlds + 1).
-            if len(self.tableau.history) and self.tableau.history[-1]['rule'] == self:
-                return False
-
-            # As above, this is unnecessary
-            if self.max_worlds_exceeded(branch):
+            if self.should_stop(branch):
                 return
 
             return [{'world': w} for w in self.unserial_worlds[branch.id]]
@@ -143,23 +138,43 @@ class TableauxRules:
                 'world2': target['branch'].new_world(),
             })
 
+        def should_stop(self, branch):
+
+            # TODO: Shouldn't this check the history only relative to the branch?
+            #       Waiting to come up with a test case before fixing it.
+
+            # This tends to stop modal explosion better than the max worlds check,
+            # at least in its current form (all modal operators + worlds + 1).
+            if len(self.tableau.history) and self.tableau.history[-1]['rule'] == self:
+                return True
+
+            # As above, this is unnecessary
+            if self.max_worlds_exceeded(branch):
+                return True
+
+            return False
+
         def example(self):
             self.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
 
-    class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
-        """
-        The rule for identity indiscernability is the same as for `K`_, with the exception that
-        the rule does not apply if the Serial rule was the last rule to apply to the branch.
-        This prevents infinite repetition (back and forth) of the Serial and IdentityIndiscernability
-        rules.
-        """
-
-        # TODO: add a test case for this
-
-        #def get_targets_for_node(self, node, branch):
-        #    if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TableauxRules.Serial):
-        #        return False
-        #    return super(TableauxRules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
+    # NB: Since we have redesigned the modal rules, it is not obvious that we need this
+    #     alternate rule. So far I have not been able to think of a way to break it. I
+    #     am leaving it here just in case
+    #
+    #class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
+    #    """
+    #    The rule for identity indiscernability is the same as for `K`_, with the exception that
+    #    the rule does not apply if the Serial rule was the last rule to apply to the branch.
+    #    This prevents infinite repetition (back and forth) of the Serial and IdentityIndiscernability
+    #    rules.
+    #    """
+    #
+    #    
+    #
+    #    def get_targets_for_node(self, node, branch):
+    #        if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TableauxRules.Serial):
+    #            return False
+    #        return super(TableauxRules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
 
     closure_rules = list(k.TableauxRules.closure_rules)
 
@@ -199,8 +214,10 @@ class TableauxRules:
             k.TableauxRules.Possibility,
         ],
         [
-            # special ordering of serial rule
-            IdentityIndiscernability,
+            # See comment on rule above -- using K rule now
+            ## special ordering of serial rule
+            #IdentityIndiscernability,
+            k.TableauxRules.IdentityIndiscernability,
         ],
         [
             # special ordering of serial rule
