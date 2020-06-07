@@ -76,13 +76,13 @@ for notation_name in modules['notations']:
     notation_user_predicate_symbols[notation_name] = list(notation.symbol_sets['default'].chars('user_predicate'))
 
 def get_category_order(name):
-    return logic.get_logic(name).category_display_order
+    return logic.get_logic(name).Meta.category_display_order
 
 for name in modules['logics']:
     lgc = modules['logics'][name]
-    if lgc.category not in logic_categories:
-        logic_categories[lgc.category] = list()
-    logic_categories[lgc.category].append(name)
+    if lgc.Meta.category not in logic_categories:
+        logic_categories[lgc.Meta.category] = list()
+    logic_categories[lgc.Meta.category].append(name)
 
 for category in logic_categories.keys():
     logic_categories[category].sort(key=get_category_order)

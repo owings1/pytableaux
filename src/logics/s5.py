@@ -18,12 +18,13 @@
 #
 # pytableaux - S5 Normal Modal Logic
 name = 'S5'
-title = 'S5 Normal Modal Logic'
-description = 'Normal modal logic with a reflexive, symmetric, and transitive access relation'
-tags_list = ['bivalent', 'modal', 'first-order']
-tags = set(tags_list)
-category = 'Bivalent Modal'
-category_display_order = 5
+
+class Meta(object):
+    title = 'S5 Normal Modal Logic'
+    description = 'Normal modal logic with a reflexive, symmetric, and transitive access relation'
+    tags = ['bivalent', 'modal', 'first-order']
+    category = 'Bivalent Modal'
+    category_display_order = 5
 
 import logic
 from . import k, t, s4

@@ -18,12 +18,13 @@
 #
 # pytableaux - S4 Normal Modal Logic
 name = 'S4'
-title = 'S4 Normal Modal Logic'
-description = 'Normal modal logic with a reflexive and transitive access relation'
-tags_list = ['bivalent', 'modal', 'first-order']
-tags = set(tags_list)
-category = 'Bivalent Modal'
-category_display_order = 4
+
+class Meta(object):
+    title = 'S4 Normal Modal Logic'
+    description = 'Normal modal logic with a reflexive and transitive access relation'
+    tags = ['bivalent', 'modal', 'first-order']
+    category = 'Bivalent Modal'
+    category_display_order = 4
 
 import logic
 from . import k, t

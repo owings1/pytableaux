@@ -18,12 +18,13 @@
 #
 # pytableaux - Classical Predicate Logic
 name = 'CPL'
-title = 'Classical Predicate Logic'
-description = 'Standard bivalent logic with predication, without quantification'
-tags_list = ['bivalent', 'non-modal']
-tags = set(tags_list)
-category = 'Bivalent'
-category_display_order = 1
+
+class Meta(object):
+    title = 'Classical Predicate Logic'
+    description = 'Standard bivalent logic with predication, without quantification'
+    tags = ['bivalent', 'non-modal']
+    category = 'Bivalent'
+    category_display_order = 1
 
 import logic, examples
 from logic import negate, NotImplementedError

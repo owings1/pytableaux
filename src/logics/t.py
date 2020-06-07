@@ -18,12 +18,17 @@
 #
 # pytableaux - Reflexive Normal Modal Logic
 name = 'T'
-title = 'Reflexive Normal Modal Logic'
-description = 'Normal modal logic with a reflexive access relation'
-tags_list = ['bivalent', 'modal', 'first-order']
-tags = set(tags_list)
-category = 'Bivalent Modal'
-category_display_order = 3
+
+class Meta(object):
+
+    title    = 'Reflexive Normal Modal Logic'
+    category = 'Bivalent Modal'
+
+    description = 'Normal modal logic with a reflexive access relation'
+
+    tags = ['bivalent', 'modal', 'first-order']
+
+    category_display_order = 3
 
 import logic
 from . import k

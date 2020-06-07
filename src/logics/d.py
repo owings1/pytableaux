@@ -18,12 +18,17 @@
 #
 # pytableaux - Deonitic Normal Modal Logic
 name = 'D'
-title = 'Deontic Normal Modal Logic'
-description = 'Normal modal logic with a serial access relation'
-tags_list = ['bivalent', 'modal', 'first-order']
-tags = set(tags_list)
-category = 'Bivalent Modal'
-category_display_order = 2
+
+class Meta(object):
+
+    title    = 'Deontic Normal Modal Logic'
+    category = 'Bivalent Modal'
+
+    description = 'Normal modal logic with a serial access relation'
+
+    tags = ['bivalent', 'modal', 'first-order']
+
+    category_display_order = 2
 
 import logic
 from logic import atomic
@@ -69,13 +74,13 @@ class TableauxRules:
     .. _K: k.html
     """
 
-    class Serial(logic.TableauxSystem.Rule):
+    class Serial(k.MaxWorldTrackingFilterRule):
         """
         The Serial rule applies to a an open branch *b* when there is a world *w* that
         appears on *b*, but there is no world *w'* such that *w* accesses *w'*. The exception
         to this is when the Serial rule was the last rule to apply to the branch. This
         prevents infinite repetition of the Serial rule for open branches that are otherwise
-        finished. For this reason, even though the Serial rule is non-branching, it is ordered
+        finished. For this reason, the Serial rule is ordered
         last in the rules, so that all other rules are checked before it.
 
         For a node *n* on an open branch *b* on which appears a world *w* for which there is
@@ -83,23 +88,56 @@ class TableauxRules:
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
 
-        def get_candidate_targets(self, branch):
+        def __init__(self, *args, **opts):
+            super(TableauxRules.Serial, self).__init__(*args, **opts)
+            self.unserial_worlds = {}
+
+        def after_branch_add(self, branch):
+            super(TableauxRules.Serial, self).after_branch_add(branch)
+            if not branch.closed:
+                consumed = False
+                parent = branch.parent
+                if parent != None:
+                    if parent.id in self.unserial_worlds:
+                        self.unserial_worlds[branch.id] = set(self.unserial_worlds[parent.id])
+                        consumed = True
+                if not consumed:
+                    self.register_branch(branch)
+
+        def after_node_add(self, branch, node):
+            super(TableauxRules.Serial, self).after_node_add(branch, node)
+            self.register_node(node, branch)
+
+        def register_node(self, node, branch):
+            for w in node.worlds():
+                if branch.has({'world1': w}):
+                    self.unserial_worlds[branch.id].discard(w)
+                else:
+                    self.unserial_worlds[branch.id].add(w)
+
+        def register_branch(self, branch):
+            self.unserial_worlds[branch.id] = set()
+            for w in branch.worlds():
+                if not branch.has({'world1': w}):
+                    self.unserial_worlds[branch.id].add(w)
+
+        def get_targets_for_node(self, node, branch):
+
+            if not len(self.unserial_worlds[branch.id]):
+                return
+
+            # This tends to stop modal explosion better than the max worlds check,
+            # at least in its current form (all modal operators + worlds + 1).
             if len(self.tableau.history) and self.tableau.history[-1]['rule'] == self:
                 return False
-            serial_worlds = {node.props['world1'] for node in branch.get_nodes() if node.has('world1')}
-            worlds = branch.worlds() - serial_worlds
-            cands = list()
-            if len(worlds):
-                world = worlds.pop()
-                target = {'branch': branch, 'world': world, 'node': branch.find({'world1': world})}
-                cands.append(target)
-            return cands
 
-        def select_best_target(self, targets, branch):
-            #TODO: optimize
-            return targets[0]
+            # As above, this is unnecessary
+            if self.max_worlds_exceeded(branch):
+                return
 
-        def apply(self, target):
+            return [{'world': w} for w in self.unserial_worlds[branch.id]]
+
+        def apply_to_target(self, target):
             target['branch'].add({ 
                 'world1': target['world'], 
                 'world2': target['branch'].new_world(),
@@ -116,10 +154,12 @@ class TableauxRules:
         rules.
         """
 
-        def get_candidate_targets(self, branch):
-            if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TableauxRules.Serial):
-                return False
-            return super(TableauxRules.IdentityIndiscernability, self).get_candidate_targets(branch)
+        # TODO: add a test case for this
+
+        #def get_targets_for_node(self, node, branch):
+        #    if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TableauxRules.Serial):
+        #        return False
+        #    return super(TableauxRules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
 
     closure_rules = list(k.TableauxRules.closure_rules)
 
@@ -154,11 +194,8 @@ class TableauxRules:
             k.TableauxRules.BiconditionalNegated,
         ],
         [
-            # world creation rules 2
+            # modal rules
             k.TableauxRules.Necessity,
-        #],
-        #[
-            # world creation rules 1
             k.TableauxRules.Possibility,
         ],
         [

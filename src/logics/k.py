@@ -18,12 +18,13 @@
 #
 # pytableaux - Kripke Normal Modal Logic
 name = 'K'
-title = 'Kripke Normal Modal Logic'
-description = 'Base normal modal logic with no access relation restrictions'
-tags_list = ['bivalent', 'modal', 'first-order']
-tags = set(tags_list)
-category = 'Bivalent Modal'
-category_display_order = 1
+
+class Meta(object):
+    title = 'Kripke Normal Modal Logic'
+    description = 'Base normal modal logic with no access relation restrictions'
+    tags = ['bivalent', 'modal', 'first-order']
+    category = 'Bivalent Modal'
+    category_display_order = 1
 
 import logic, examples
 from logic import negate, negative, operate, quantify, atomic, constant, predicated, NotImplementedError

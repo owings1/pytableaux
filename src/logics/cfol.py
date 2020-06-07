@@ -18,12 +18,13 @@
 #
 # pytableaux - Classical First-Order Logic
 name = 'CFOL'
-title = 'Classical First Order Logic'
-description = 'Standard bivalent logic with full first-order quantification'
-tags_list = ['bivalent', 'non-modal', 'first-order']
-tags = set(tags_list)
-category = 'Bivalent'
-category_display_order = 2
+
+class Meta(object):
+    title = 'Classical First Order Logic'
+    description = 'Standard bivalent logic with full first-order quantification'
+    tags = ['bivalent', 'non-modal', 'first-order']
+    category = 'Bivalent'
+    category_display_order = 2
 
 import logic, examples
 from logic import negate, NotImplementedError

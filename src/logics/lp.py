@@ -18,12 +18,13 @@
 #
 # pytableaux - Logic of Paradox
 name = 'LP'
-title = 'Logic of Paradox'
-description = 'Three-valued logic (True, False, Both)'
-tags_list = ['many-valued', 'glutty', 'non-modal', 'first-order']
-tags = set(tags_list)
-category = 'Many-valued'
-category_display_order = 7
+
+class Meta(object):
+    title = 'Logic of Paradox'
+    description = 'Three-valued logic (True, False, Both)'
+    tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
+    category = 'Many-valued'
+    category_display_order = 7
 
 import logic
 from logic import negate, negative

@@ -20,16 +20,16 @@
             <ul class="details">
                 <li>
                     <span class="prop">Title</span>
-                    <span class="value logic-title {{ module|e }}">{{ logics[module].title|e }}</span>
+                    <span class="value logic-title {{ module|e }}">{{ logics[module].Meta.title|e }}</span>
                 </li>
                 <li>
                     <span class="prop">Description</span>
-                    <span class="value">{{ logics[module].description|e }}</span>
+                    <span class="value">{{ logics[module].Meta.description|e }}</span>
                 </li>
                 <li>
                     <span class="prop">Tags</span>
                     <span class="value tags">
-                        {% for tag in logics[module].tags_list -%}
+                        {% for tag in logics[module].Meta.tags -%}
                             <span class="tag">{{ tag|e }}</span>
                         {% endfor %}
                     </span>

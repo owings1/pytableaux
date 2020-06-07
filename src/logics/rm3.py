@@ -18,12 +18,13 @@
 #
 # pytableaux - R-mingle 3 logic
 name = 'RM3'
-title = 'R-mingle 3'
-description = 'Three-valued logic (True, False, Both) with a primitive Conditional operator'
-tags_list = ['many-valued', 'glutty', 'non-modal', 'first-order']
-tags = set(tags_list)
-category = 'Many-valued'
-category_display_order = 8
+
+class Meta(object):
+    title = 'R-mingle 3'
+    description = 'Three-valued logic (True, False, Both) with a primitive Conditional operator'
+    tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
+    category = 'Many-valued'
+    category_display_order = 8
 
 import logic
 from logic import negate, negative, operate

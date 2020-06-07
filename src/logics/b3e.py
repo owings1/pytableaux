@@ -18,12 +18,13 @@
 #
 # pytableaux - Bochvar 3 External logic
 name = 'B3E'
-title = 'Bochvar 3 External Logic'
-description = 'Three-valued logic (True, False, Neither) with assertion operator'
-tags_list = ['many-valued', 'gappy', 'non-modal', 'first-order']
-tags = set(tags_list)
-category = 'Many-valued'
-category_display_order = 4
+
+class Meta(object):
+    title = 'Bochvar 3 External Logic'
+    description = 'Three-valued logic (True, False, Neither) with assertion operator'
+    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
+    category = 'Many-valued'
+    category_display_order = 4
 
 import logic
 from logic import assertion, operate, negate

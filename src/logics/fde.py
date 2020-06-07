@@ -18,12 +18,13 @@
 #
 # pytableaux - First Degree Entailment Logic
 name = 'FDE'
-title = 'First Degree Entailment'
-description = 'Four-valued logic (True, False, Neither, Both)'
-tags_list = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
-tags = set(tags_list)
-category = 'Many-valued'
-category_display_order = 1
+
+class Meta(object):
+    title = 'First Degree Entailment'
+    description = 'Four-valued logic (True, False, Neither, Both)'
+    tags = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
+    category = 'Many-valued'
+    category_display_order = 1
 
 import logic, examples
 from logic import negate, negative, quantify, atomic, NotImplementedError

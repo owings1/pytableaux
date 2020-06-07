@@ -18,12 +18,13 @@
 #
 # pytableaux - Strong Kleene Logic
 name = 'K3'
-title = 'Strong Kleene 3-valued logic'
-description = 'Three-valued logic (True, False, Neither)'
-tags_list = list(['many-valued', 'gappy', 'non-modal', 'first-order'])
-tags = set(tags_list)
-category = 'Many-valued'
-category_display_order = 2
+
+class Meta(object):
+    title = 'Strong Kleene 3-valued logic'
+    description = 'Three-valued logic (True, False, Neither)'
+    tags = list(['many-valued', 'gappy', 'non-modal', 'first-order'])
+    category = 'Many-valued'
+    category_display_order = 2
 
 import logic
 from logic import negate, negative

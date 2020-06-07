@@ -104,7 +104,7 @@ class Writer(logic.TableauxSystem.Writer):
         ]
         
         lines += [
-            'Logic          : {0} - {1}'.format(tableau.logic.name, tableau.logic.title),
+            'Logic          : {0} - {1}'.format(tableau.logic.name, tableau.logic.Meta.title),
             'Result         : {0}'.format(tableau.stats['result']),
             'Branches       : {0}'.format(tableau.stats['branches'])
         ]
