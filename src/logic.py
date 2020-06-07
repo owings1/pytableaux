@@ -1207,54 +1207,61 @@ class TableauxSystem(object):
                 return False
             if self.argument != None and not self.trunk_built:
                 raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.")
+            application = None
             with StopWatch() as step_timer:
                 res = self.get_application()
                 if res:
                     rule, target = res
-                    with rule.apply_timer:
-                        rule.apply(target)
-                    application = {
-                        'rule'        : rule,
-                        'target'      : target,
-                        'duration_ms' : step_timer.elapsed(),
-                    }
-                    self.history.append(application)
-                    self.current_step += 1
+                    application = self.do_application(rule, target, step_timer)
                 else:
-                    application = False
                     self.finish()
             return application
 
         def get_application(self):
-            res = self.get_group_application(self.closure_rules)
+            for branch in self.open_branches():
+                res = self.get_branch_application(branch)
+                if res:
+                    return res
+            
+        def get_branch_application(self, branch):
+            res = self.get_group_application(branch, self.closure_rules)
             if res:
                 return res
             for rules in self.rule_groups:
-                res = self.get_group_application(rules)
-                if res != None:
+                res = self.get_group_application(branch, rules)
+                if res:
                     return res
-            return None
 
-        def get_group_application(self, rules):
+        def get_group_application(self, branch, rules):
             results = []
-            group_scores = []
-            for branch in self.open_branches():
-                for rule in rules:
-                    with rule.search_timer:
-                        target = rule.get_target(branch)
-                    if target:
-                        if not self.opts['is_group_optim']:
-                            return (rule, target)
-                        group_scores.append(rule.group_score(target))
-                        results.append((rule, target))
-                if len(results):
-                    max_group_score = max(group_scores)
-                    for i in range(len(results)):
-                        res = results[i]
-                        group_score = group_scores[i]
-                        if group_score == max_group_score:
-                            return res
-            return None
+            for rule in rules:
+                with rule.search_timer:
+                    target = rule.get_target(branch)
+                if target:
+                    if not self.opts['is_group_optim']:
+                        return (rule, target)
+                    results.append((rule, target))
+            if results:
+                return self.select_optim_group_application(results)
+
+        def select_optim_group_application(self, results):
+            group_scores = [rule.group_score(target) for rule, target in results]
+            max_group_score = max(group_scores)
+            for i in range(len(results)):
+                if group_scores[i] == max_group_score:
+                    return results[i]
+
+        def do_application(self, rule, target, step_timer):
+            with rule.apply_timer:
+                rule.apply(target)
+            application = {
+                'rule'        : rule,
+                'target'      : target,
+                'duration_ms' : step_timer.elapsed() if step_timer else 0,
+            }
+            self.history.append(application)
+            self.current_step += 1
+            return application
 
         def set_argument(self, argument):
             self.argument = argument
