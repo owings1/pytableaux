@@ -1581,7 +1581,7 @@ class TestD(LogicTester):
         rule.example()
         assert len(proof.branches) == 1
 
-    def test_Serial_applies_to_branch_empty(self):
+    def test_Serial_not_applies_to_branch_empty(self):
         proof = tableau(self.logic)
         branch = proof.branch()
         rule = proof.get_rule('Serial')
@@ -1694,7 +1694,7 @@ class TestS4(LogicTester):
         assert not proof.valid
 
     def test_valid_optimize_nec_rule1(self):
-        arg = argument('NLVxNFx', premises=['LMSxFx'], notation='polish', vocabulary=examples.vocabulary)
+        arg = argument('NLVxNFx', premises=['LMSxFx'], vocabulary=examples.vocabulary)
         proof = tableau(self.logic, arg)
         proof.build(timeout=1000)
         assert proof.valid
