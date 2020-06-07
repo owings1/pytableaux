@@ -136,16 +136,21 @@ class TableauxRules(object):
             k.TableauxRules.Biconditional,
             k.TableauxRules.BiconditionalNegated,
         ],
-        [
-            t.TableauxRules.Reflexive,
-            Symmetric,
-        ],
+        # Things seem to work better with the Transitive rule before
+        # the modal operator rules, and the other access rules after.
+        # However, if we put the Transitive after, then some trees
+        # fail to close. It is so far an open question whether this
+        # is a good idea.
         [
             s4.TableauxRules.Transitive,
         ],
         [
-            # modal rules
+            # modal operator rules
             k.TableauxRules.Necessity,
             k.TableauxRules.Possibility,
+        ],
+        [
+            t.TableauxRules.Reflexive,
+            Symmetric,
         ],
     ]

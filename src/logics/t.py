@@ -97,9 +97,6 @@ class TableauxRules(object):
 
     rule_groups = [
         [
-            Reflexive,
-        ],
-        [
             # non-branching rules
             k.TableauxRules.IdentityIndiscernability,
             k.TableauxRules.Assertion,
@@ -132,11 +129,11 @@ class TableauxRules(object):
             k.TableauxRules.BiconditionalNegated,
         ],
         [
-            # world creation rules 2
+            # modal rules
             k.TableauxRules.Necessity,
-        #],
-        #[
-            # world creation rules 1
             k.TableauxRules.Possibility,
+        ],
+        [
+            Reflexive,
         ],
     ]

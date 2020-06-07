@@ -1596,16 +1596,49 @@ class TestD(LogicTester):
         proof = self.example_proof('Reflexive Inference 1')
         assert not proof.valid
 
-    def test_invalid_optimize_nec_rule1(self):
-        arg = argument('NLVxNFx', premises=['LMSxFx'], notation='polish', vocabulary=examples.vocabulary)
+    def test_invalid_optimize_nec_rule1_max_steps_50(self):
+        arg = argument('NLVxNFx', premises=['LMSxFx'], vocabulary=examples.vocabulary)
         proof = tableau(self.logic, arg)
-        proof.build(timeout=1000)
-        assert not proof.valid
+        proof.build(max_steps=50)
+        assert proof.invalid
 
     def test_invalid_s4_cond_inf_2(self):
         proof = self.example_proof('S4 Conditional Inference 2')
         assert not proof.valid
 
+    def test_valid_long_serial_max_steps_50(self):
+        proof = tableau(self.logic, argument('MMMMMa', premises=['LLLLLa']))
+        proof.build(max_steps=50)
+        assert proof.valid
+
+    def test_verify_core_bugfix_branch_should_not_have_w1_with_more_than_one_w2(self):
+        proof = tableau(self.logic, argument('CaLMa'))
+        proof.build()
+
+        # sanity check
+        assert len(proof.branches) == 1
+
+        branch = proof.branches[0]
+
+        # use internal properties just to be sure, since the bug was with the .find method
+        access = {}
+        for node in list(branch.nodes):
+            if 'world1' in node.props:
+                w1 = node.props['world1']
+                w2 = node.props['world2']
+                if w1 not in access:
+                    # use a list to also make sure we don't have redundant nodes
+                    access[w1] = list()
+                access[w1].append(w2)
+        
+        for w1 in access:
+            assert len(access[w1]) == 1
+        assert len(access) == (len(branch.worlds()) - 1)
+
+        # sanity check
+        assert len(branch.worlds()) > 2
+            
+        
 class TestT(LogicTester):
 
     logic = get_logic('T')
@@ -1712,3 +1745,8 @@ class TestS5(LogicTester):
         model.add_access(0, 1)
         model.finish()
         assert 0 in model.visibles(1)
+
+    def test_valid_s4_complex_possibility_with_max_steps(self):
+        proof = tableau(self.logic, argument('MNb', premises=['LCaMMMNb', 'Ma']))
+        proof.build(max_steps=200)
+        assert proof.valid
