@@ -100,14 +100,6 @@ class TableauxRules(object):
         A branch is closed if a sentence and its negation appear on the branch.
         """
 
-        def applies_to_branch(self, branch):
-            for node in branch.get_nodes():
-                if node.has('sentence'):
-                    n = branch.find({'sentence': negate(node.props['sentence'])})
-                    if n != None:
-                        return {'nodes': set([node, n]), 'type': 'Nodes'}
-            return False
-
         def example(self):
             a = logic.atomic(0, 0)
             self.tableau.branch().update([
