@@ -1505,7 +1505,7 @@ class TableauxRules(object):
         operator   = 'Necessity'
         convert_to = 'Possibility'
 
-    class IdentityIndiscernability(IsModal, logic.TableauxSystem.Rule):
+    class IdentityIndiscernability(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,
@@ -1513,51 +1513,65 @@ class TableauxRules(object):
         not appear on *b* at *w*, then add it.
         """
 
-        def get_candidate_targets(self, branch):
-            #nodes = set(branch.find_all({'_is_predicated': True}, ticked = False))
-            nodes = {
-                node for node in branch.get_nodes(ticked = False)
-                if node.has('sentence') and self.sentence(node).is_predicated()
-            }
-            #inodes = set(branch.search_nodes({'_predicate': Identity}, nodes))
-            inodes = {
-                node for node in nodes if self.sentence(node).predicate == Identity and
-                # checking length of the set excludes self-identity sentences.
-                len(set(self.sentence(node).parameters)) == 2
-            }
-            cands = list()
-            for inode in inodes:
-                w = inode.props['world']
-                pa, pb = inode.props['sentence'].parameters
-                # find a node n with a sentence s having one of those parameters p.
-                for n in nodes:
-                    s = n.props['sentence']
-                    if pa in s.parameters:
-                        p = pa
-                        p1 = pb
-                    elif pb in s.parameters:
-                        p = pb
-                        p1 = pa
-                    else:
-                        # this continue statements does not register as covered. this line is covered
-                        # by test_identity_indiscernability_not_applies
-                        continue # pragma: no cover
-                    # let s1 be the replacement of p with the other parameter p1 into s.
-                    params = [p1 if param == p else param for param in s.parameters]
-                    s1 = predicated(s.predicate, params)
-                    # since we have SelfIdentityClosure, we don't need a = a
-                    if s.predicate != Identity or params[0] != params[1]:
-                        # if <s1,w> does not yet appear on b, ...
-                        if not branch.has({'sentence': s1, 'world': w}):
-                            # then the rule applies to <s',w,b>
-                            target = {'sentence': s1, 'world': w, 'branch': branch}
-                            cands.append(target)
-            return cands
+        predicate = 'Identity'
 
-        def select_best_target(self, targets, branch):
-            # TODO optimize
-            return targets[0]
-            #raise NotImplementedError(NotImplemented)
+        def __init__(self, *args, **opts):
+            super(TableauxRules.IdentityIndiscernability, self).__init__(*args, **opts)
+            self.predicated_nodes = {}
+
+        def after_branch_add(self, branch):
+            super(TableauxRules.IdentityIndiscernability, self).after_branch_add(branch)
+            if not branch.closed:
+                consumed = False
+                parent = branch.parent
+                if parent != None:
+                    if parent.id in self.predicated_nodes:
+                        self.predicated_nodes[branch.id] = set(self.predicated_nodes[parent.id])
+                        consumed = True
+                if not consumed:
+                    self.predicated_nodes[branch.id] = set()
+                    for node in branch.get_nodes(ticked=self.ticked):
+                        self.register_node(node, branch)
+
+        def after_node_add(self, branch, node):
+            super(TableauxRules.IdentityIndiscernability, self).after_node_add(branch, node)
+            self.register_node(node, branch)
+
+        def register_node(self, node, branch):
+            if branch.id not in self.predicated_nodes:
+                self.predicated_nodes[branch.id] = set()
+            if node.has('sentence') and self.sentence(node).is_predicated():
+                self.predicated_nodes[branch.id].add(node)
+
+        def get_targets_for_node(self, node, branch):
+            pnodes = self.predicated_nodes[branch.id]
+            targets = list()
+            w = node.props['world']
+            pa, pb = node.props['sentence'].parameters
+            # find a node n with a sentence s having one of those parameters p.
+            for n in pnodes:
+                s = n.props['sentence']
+                if pa in s.parameters:
+                    p = pa
+                    p1 = pb
+                elif pb in s.parameters:
+                    p = pb
+                    p1 = pa
+                else:
+                    # this continue statements does not register as covered. this line is covered
+                    # by test_identity_indiscernability_not_applies
+                    continue # pragma: no cover
+                # let s1 be the replacement of p with the other parameter p1 into s.
+                params = [p1 if param == p else param for param in s.parameters]
+                s1 = predicated(s.predicate, params)
+                # since we have SelfIdentityClosure, we don't need a = a
+                if s.predicate != Identity or params[0] != params[1]:
+                    # if <s1,w> does not yet appear on b, ...
+                    if not branch.has({'sentence': s1, 'world': w}):
+                        # then the rule applies to <s',w,b>
+                        target = {'sentence': s1, 'world': w, 'nodes': set([node, n]), 'type': 'Nodes'}
+                        targets.append(target)
+            return targets
 
         def apply(self, target):
             target['branch'].add({'sentence': target['sentence'], 'world': target['world']})
