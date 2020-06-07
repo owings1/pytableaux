@@ -639,11 +639,8 @@ class MaxWorldTrackingFilterRule(IsModal, logic.TableauxSystem.FilterNodeRule):
             return self.branch_max_worlds[origin.id]
 
     def max_worlds_reached(self, branch):
-        # TODO: should this logic move to the possibility rule instead?
-        #       after all, it's the one that will add a new world.
-        #
         # If we have already reached the max number of worlds projected for
-        # the branch (origin), return the empty list.
+        # the branch (origin).
         max_worlds = self.get_max_worlds(branch)
         return max_worlds != None and len(branch.worlds()) > max_worlds
 
