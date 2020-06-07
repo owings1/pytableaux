@@ -1167,9 +1167,9 @@ class TableauxSystem(object):
             return self
 
         def clear_rules(self):
-            self.closure_rules.clear()
-            self.rule_groups.clear()
-            self.all_rules.clear()
+            self.closure_rules = []
+            self.rule_groups = []
+            self.all_rules = []
             return self
 
         def add_closure_rule(self, Rule):
