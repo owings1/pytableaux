@@ -1378,13 +1378,17 @@ class TableauxRules(object):
             return self.modal_complexities[sentence]
 
         def group_score(self, target):
+
             if target['candidate_score'] > 0:
                 return 1
+
             branch = target['branch']
             s = self.sentence(target['node'])
             si = s.operand
-            #self.branching_complexity(target['node']), 
+
             return -1 * self.sentence_track_count(branch, si)
+
+            #self.branching_complexity(target['node']),
 
         def sentence_track_count(self, branch, sentence):
             if branch.id not in self.branch_sentence_track:
@@ -1561,7 +1565,7 @@ class TableauxRules(object):
                     p = pb
                     p1 = pa
                 else:
-                    # this continue statements does not register as covered. this line is covered
+                    # This continue statement does not register as covered. this line is covered
                     # by test_identity_indiscernability_not_applies
                     continue # pragma: no cover
                 # let s1 be the replacement of p with the other parameter p1 into s.
