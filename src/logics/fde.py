@@ -506,7 +506,6 @@ class TableauxSystem(logic.TableauxSystem):
         designated = node.props['designated']
         complexity = 0
         while len(operators):
-            print((operators, complexity, last_is_negated))
             operator = operators.pop(0)
             if operator == 'Negation':
                 if last_is_negated:

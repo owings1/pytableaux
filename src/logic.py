@@ -1127,8 +1127,9 @@ class TableauxSystem(object):
             # flag to build models
             self.is_build_models = None
 
-            # build timer
+            # build timers
             self.build_timer = StopWatch()
+            self.trunk_build_timer = StopWatch()
 
             # whether we ended pre-maturely (e.g. max_steps)
             self.is_premature = False
@@ -1138,6 +1139,12 @@ class TableauxSystem(object):
             if 'is_group_optim' not in self.opts:
                 self.opts['is_group_optim'] = True
 
+            self.rule_opts = {
+                'is_rank_optim': True
+            }
+            if 'is_rank_optim' in self.opts:
+                self.rule_opts['is_rank_optim'] = self.opts['is_rank_optim']
+            
             self.open_branchset = set()
             self.branch_dict = dict()
             self.trunk_built = False
@@ -1152,21 +1159,33 @@ class TableauxSystem(object):
 
         def set_logic(self, logic):
             self.logic = get_logic(logic)
-            opts = dict()
-            if 'is_rank_optim' in self.opts:
-                opts['is_rank_optim'] = self.opts['is_rank_optim']
-            else:
-                opts['is_rank_optim'] = True
-            self.rule_groups = [
-                [Rule(self, **opts) for Rule in rule_group]
-                for rule_group in self.logic.TableauxRules.rule_groups
-            ]
-            self.closure_rules = [Rule(self, **opts) for Rule in self.logic.TableauxRules.closure_rules]
-            self.all_rules = list(self.closure_rules)
-            for rules in self.rule_groups:
-                self.all_rules += rules
+            self.clear_rules()
+            for Rule in self.logic.TableauxRules.closure_rules:
+                self.add_closure_rule(Rule)
+            for Rules in self.logic.TableauxRules.rule_groups:
+                self.add_rule_group(Rules)
             return self
 
+        def clear_rules(self):
+            self.closure_rules.clear()
+            self.rule_groups.clear()
+            self.all_rules.clear()
+            return self
+
+        def add_closure_rule(self, Rule):
+            # Rules must be a class
+            rule = Rule(self, **self.rule_opts)
+            self.closure_rules.append(rule)
+            self.all_rules.append(rule)
+            return self
+
+        def add_rule_group(self, Rules):
+            # each of Rules must be a class
+            group = [Rule(self, **self.rule_opts) for Rule in Rules]
+            self.rule_groups.append(group)
+            self.all_rules.extend(group)
+            return self
+            
         def build(self, models=False, timeout=None, max_steps=None):
             """
             Build the tableau. Returns self.
@@ -1426,39 +1445,56 @@ class TableauxSystem(object):
         def build_trunk(self):
             if self.trunk_built:
                 raise TableauxSystem.TrunkAlreadyBuiltError("Trunk is already built.")
-            self.logic.TableauxSystem.build_trunk(self, self.argument)
-            self.trunk_built = True
-            self.current_step += 1
-            for rule in self.all_rules:
-                rule.after_trunk_build(self.branches)
+            with self.trunk_build_timer:
+                self.logic.TableauxSystem.build_trunk(self, self.argument)
+                self.trunk_built = True
+                self.current_step += 1
+                for rule in self.all_rules:
+                    rule.after_trunk_build(self.branches)
 
         def get_branch(self, branch_id):
             return self.branch_dict[branch_id]
 
         def finish(self):
             """
-            Mark the tableau as finished. Computes the ``valid`` property and builds the structure
-            into the ``tree`` property. Returns self.
+            Mark the tableau as finished. Computes the ``valid``, ``invalid``,
+             and ``stats`` properties, and builds the structure into the ``tree``
+            property. Returns self.
             """
             if self.finished:
                 return self
+
             self.finished = True
             num_open      = len(self.open_branches())
             self.valid    = num_open == 0
+            self.invalid  = not self.valid and not self.is_premature
+
+            with StopWatch() as tree_timer:
+                self.tree = self.structure(self.branches)
+
+            with StopWatch() as models_timer:
+                if self.is_build_models:
+                    self.build_models()
+
             self.stats = {
+                'result'            : self.result_word(),
                 'branches'          : len(self.branches),
                 'open_branches'     : num_open,
                 'closed_branches'   : len(self.branches) - num_open,
                 'rules_applied'     : len(self.history),
+                'distinct_nodes'    : self.tree['distinct_nodes'],
                 'rules_duration_ms' : sum((application['duration_ms'] for application in self.history)),
                 'build_duration_ms' : self.build_timer.elapsed(),
+                'trunk_duration_ms' : self.trunk_build_timer.elapsed(),
+                'tree_duration_ms'  : tree_timer.elapsed(),
+                'models_duration_ms': models_timer.elapsed(),
                 'rules_time_ms'     : sum([
                     sum([rule.search_timer.elapsed(), rule.apply_timer.elapsed()])
                     for rule in self.all_rules
                 ]),
                 'rules' : [
                     {
-                        'class'           : rule.__class__.__name__,
+                        'name'            : rule.name,
                         'queries'         : rule.search_timer.times_started(),
                         'search_time_ms'  : rule.search_timer.elapsed(),
                         'apply_time_ms'   : rule.apply_timer.elapsed(),
@@ -1466,9 +1502,9 @@ class TableauxSystem(object):
                         'apply_time_avg'  : rule.apply_timer.elapsed_avg(),
                         'timers'          : {
                             name : {
-                                'duration_ms': rule.timers[name].elapsed(),
-                                'duration_avg': rule.timers[name].elapsed_avg(),
-                                'times_started': rule.timers[name].times_started(),
+                                'duration_ms'   : rule.timers[name].elapsed(),
+                                'duration_avg'  : rule.timers[name].elapsed_avg(),
+                                'times_started' : rule.timers[name].times_started(),
                             }
                             for name in rule.timers
                         }
@@ -1476,20 +1512,15 @@ class TableauxSystem(object):
                     for rule in self.all_rules
                 ]
             }
-            if self.valid:
-                self.stats['result'] = 'Valid'
-            elif self.is_premature:
-                self.stats['result'] = 'Unfinished'
-            else:
-                self.stats['result'] = 'Invalid'
-            if self.is_build_models:
-                self.build_models()
-            with StopWatch() as tree_timer:
-                self.tree = self.structure(self.branches)
-                self.stats['tree_duration_ms'] = tree_timer.elapsed()
-            self.stats['distinct_nodes'] = self.tree['distinct_nodes']
-            
+
             return self
+
+        def result_word(self):
+            if self.valid:
+                return 'Valid'
+            if self.is_premature:
+                return 'Unfinished'
+            return 'Invalid'
 
         def build_models(self):
             for branch in list(self.open_branches()):
@@ -1650,6 +1681,8 @@ class TableauxSystem(object):
                 self.ticked_nodes.add(node)
                 node.ticked = True
                 if self.tableau != None and self.tableau.current_step != None:
+                    # TODO: move most of this to tableau class, this just just
+                    #       fire the event callback.
                     if node.ticked_step == None or self.tableau.current_step > node.ticked_step:
                         node.ticked_step = self.tableau.current_step
                     self.tableau.after_node_tick(self, node)
@@ -1818,13 +1851,13 @@ class TableauxSystem(object):
 
         def worlds(self):    
             worlds = set()
-            if 'world' in self.props and self.props['world'] != None:
+            if self.has('world'):
                 worlds.add(self.props['world'])
-            if 'world1' in self.props:
+            if self.has('world1'):
                 worlds.add(self.props['world1'])
-            if 'world2' in self.props:
+            if self.has('world2'):
                 worlds.add(self.props['world2'])
-            if 'worlds' in self.props:
+            if self.has('worlds'):
                 worlds.update(self.props['worlds'])
             return worlds
 
@@ -1862,8 +1895,14 @@ class TableauxSystem(object):
             self.search_timer = StopWatch()
             self.apply_timer = StopWatch()
             self.timers = {}
+            self.name = self.__class__.__name__
+
+        def apply(self, target):
+            # Overrides must call super, otherwise implement ``apply_to_target``.
+            self.apply_to_target(target)
 
         def get_target(self, branch):
+            # This is the external API entry point.
             cands = self.get_candidate_targets(branch)
             if cands and len(cands):
                 return self.select_best_target(cands, branch)
@@ -1874,8 +1913,8 @@ class TableauxSystem(object):
         def select_best_target(self, targets, branch):
             raise NotImplementedError(NotImplemented)
 
-        def apply(self, target):
-            # Apply the rule to the tableau. Assumes that applies() has returned true. Implementations should
+        def apply_to_target(self, target):
+            # Apply the rule to the target. Implementations should
             # modify the tableau directly, with no return value.
             raise NotImplementedError(NotImplemented)
 
@@ -1938,7 +1977,7 @@ class TableauxSystem(object):
         def select_best_target(self, targets, branch):
             return targets[0]
 
-        def apply(self, target):
+        def apply_to_target(self, target):
             target['branch'].close()
 
         def applies_to_branch(self, branch):
@@ -1965,7 +2004,18 @@ class TableauxSystem(object):
             else:
                 self.is_rank_optim = True
 
+        def apply(self, target):
+            # Override must call super
+            branch = target['branch']
+            node = target['node']
+            if node.id not in self.node_applications[branch.id]:
+                self.node_applications[branch.id][node.id] = 0
+            super(TableauxSystem.NodeRule, self).apply(target)
+            self.node_applications[branch.id][node.id] += 1
+
         def get_candidate_targets(self, branch):
+            # Implementations should be careful with overriding this method.
+            # Be sure you at least call ``extend_node_target()``.
             cands = list()
             if branch.id in self.potential_nodes:
                 for node in set(self.potential_nodes[branch.id]):
@@ -2026,9 +2076,12 @@ class TableauxSystem(object):
 
         def is_potential_node(self, node, branch):
             # Default impl
+            # TODO: we want to get rid of ``applies_to_node()`` method
             return self.applies_to_node(node, branch)
 
         def after_branch_add(self, branch):
+            super(TableauxSystem.NodeRule, self).after_branch_add(branch)
+            # TODO: make a general way to do this pattern repeated in many rules
             if not branch.closed:
                 consumed = False
                 parent = branch.parent
@@ -2041,15 +2094,16 @@ class TableauxSystem(object):
                     self.potential_nodes[branch.id] = set()
                     self.node_applications[branch.id] = dict()
                     for node in branch.get_nodes(ticked=self.ticked):
-                        #self.after_node_add(branch, node)
                         if self.is_potential_node(node, branch):
                             self.potential_nodes[branch.id].add(node)
 
         def after_branch_close(self, branch):
+            super(TableauxSystem.NodeRule, self).after_branch_close(branch)
             del(self.potential_nodes[branch.id])
             del(self.node_applications[branch.id])
 
         def after_node_add(self, branch, node):
+            super(TableauxSystem.NodeRule, self).after_node_add(branch, node)
             if self.is_potential_node(node, branch):
                 self.potential_nodes[branch.id].add(node)
 
@@ -2070,21 +2124,16 @@ class TableauxSystem(object):
             return self.score_candidate_map(target).values()
 
         def score_candidate_map(self, target):
+            # Will sum to 0 by default
             return {}
 
-        def apply(self, target):
-            branch = target['branch']
-            node = target['node']
-            if node.id not in self.node_applications[branch.id]:
-                self.node_applications[branch.id][node.id] = 0
-            res = self.apply_to_target(target)
-            self.node_applications[branch.id][node.id] += 1
-            return res
-
         def apply_to_target(self, target):
+            # Default implementation, to provide a more convenient
+            # method signature.
             return self.apply_to_node(target['node'], target['branch'])
 
         def applies_to_node(self, node, branch):
+            # TODO: get rid of this, and just use ``get_targets_for_node()``
             raise NotImplementedError(NotImplemented)
 
         def apply_to_node(self, node, branch):

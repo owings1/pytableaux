@@ -89,8 +89,8 @@ for category in logic_categories.keys():
 
 global_config = {
     'global': {
-        'server.socket_host'   : os.environ[envvar_host] if envvar_host in os.environ else default_host,
-        'server.socket_port'   : int(os.environ[envvar_port]) if envvar_port in os.environ else default_port,
+        'server.socket_host'   : os.environ[envvar_host] if is_envvar(envvar_host) else default_host,
+        'server.socket_port'   : int(os.environ[envvar_port]) if is_envvar(envvar_port) else default_port,
         'engine.autoreload.on' : is_debug
     }
 }
