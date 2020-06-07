@@ -135,6 +135,14 @@ class TableauxRules(object):
             k.TableauxRules.Universal,
         ],
         [
+            # modal rules
+            k.TableauxRules.Necessity,
+            k.TableauxRules.Possibility,
+        ],
+        [
+            Reflexive,
+        ],
+        [
             # branching rules
             k.TableauxRules.ConjunctionNegated,
             k.TableauxRules.Disjunction, 
@@ -144,13 +152,5 @@ class TableauxRules(object):
             k.TableauxRules.Conditional,
             k.TableauxRules.Biconditional,
             k.TableauxRules.BiconditionalNegated,
-        ],
-        [
-            # modal rules
-            k.TableauxRules.Necessity,
-            k.TableauxRules.Possibility,
-        ],
-        [
-            Reflexive,
         ],
     ]

@@ -177,20 +177,6 @@ class TableauxRules(object):
         [
             k.TableauxRules.Existential,
         ],
-        [
-            k.TableauxRules.Universal,
-        ],
-        [
-            # branching rules
-            k.TableauxRules.ConjunctionNegated,
-            k.TableauxRules.Disjunction, 
-            k.TableauxRules.MaterialConditional, 
-            k.TableauxRules.MaterialBiconditional,
-            k.TableauxRules.MaterialBiconditionalNegated,
-            k.TableauxRules.Conditional,
-            k.TableauxRules.Biconditional,
-            k.TableauxRules.BiconditionalNegated,
-        ],
         # Things seem to work better with the Transitive rule before
         # the modal operator rules, and the other access rules after.
         # However, if we put the Transitive after, then some trees
@@ -206,5 +192,19 @@ class TableauxRules(object):
         ],
         [
             t.TableauxRules.Reflexive,
+        ],
+        [
+            k.TableauxRules.Universal,
+        ],
+        [
+            # branching rules
+            k.TableauxRules.ConjunctionNegated,
+            k.TableauxRules.Disjunction, 
+            k.TableauxRules.MaterialConditional, 
+            k.TableauxRules.MaterialBiconditional,
+            k.TableauxRules.MaterialBiconditionalNegated,
+            k.TableauxRules.Conditional,
+            k.TableauxRules.Biconditional,
+            k.TableauxRules.BiconditionalNegated,
         ],
     ]
