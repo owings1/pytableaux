@@ -1152,14 +1152,14 @@ class TableauxRules(object):
                         self.node_states[branch.id][node_id]['unapplied'].add(c)
                     self.consts[branch.id].add(c)
 
-        def applies_to_node(self, node, branch):
+        def should_apply(self, node, branch):
             # Apply if there are no constants on the branch, or if we have
             # tracked a constant that we haven't applied to.
             return len(self.consts[branch.id]) < 1 or len(self.node_states[branch.id][node.id]['unapplied']) > 0
 
         def get_targets_for_node(self, node, branch):
             with self.timers['in_get_targets_for_nodes']:
-                if not self.applies_to_node(node, branch):
+                if not self.should_apply(node, branch):
                     return
                 with self.timers['in_node_examime']:
                     s = self.sentence(node)
@@ -1240,15 +1240,18 @@ class TableauxRules(object):
                 return False
             return super(TableauxRules.Possibility, self).is_potential_node(node, branch)
 
-        def applies_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             if self.max_worlds_exceeded(branch):
                 return False
-            return super(TableauxRules.Possibility, self).applies_to_node(node, branch)
-
-        def apply_to_node(self, node, branch):
             s  = self.sentence(node)
             si = s.operand
             w1 = node.props['world']
+            return {'sentence': si, 'world1': w1}
+            #return super(TableauxRules.Possibility, self).applies_to_node(node, branch)
+
+        def apply_to_node_target(self, node, branch, target):
+            si = target['sentence']
+            w1 = target['world1']
             w2 = branch.new_world()
             branch.update([
                 {'sentence': si, 'world': w2},
@@ -1434,8 +1437,11 @@ class TableauxRules(object):
 
         operator = 'Necessity'
 
+        def should_stop(self, branch):
+            return self.max_worlds_exceeded(branch)
+
         def is_potential_node(self, node, branch):
-            if self.max_worlds_exceeded(branch):
+            if self.should_stop(branch):
                 return False
             return super(TableauxRules.Necessity, self).is_potential_node(node, branch)
 
@@ -1447,7 +1453,7 @@ class TableauxRules(object):
         def get_targets_for_node(self, node, branch):
 
             # Check for max worlds reached
-            if self.max_worlds_exceeded(branch):
+            if self.should_stop(branch):
                 return
 
             # Only count least-applied-to nodes

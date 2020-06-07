@@ -81,17 +81,18 @@ class TableauxRules(object):
             super(TableauxRules.Symmetric, self).__init__(*args, **opts)
             self.is_rank_optim = False
 
-        def applies_to_node(self, node, branch):
-            if node.has('world1') and node.has('world2'):
-                if not branch.has({'world1': node.props['world2'], 'world2': node.props['world1']}):
-                    return {
-                        'world1' : node.props['world2'],
-                        'world2' : node.props['world1'],
-                    }
-            return False
+        def is_potential_node(self, node, branch):
+            return node.has('world1') and node.has('world2')
 
-        def apply(self, target):
-            target['branch'].add({
+        def get_target_for_node(self, node, branch):
+            if not branch.has({'world1': node.props['world2'], 'world2': node.props['world1']}):
+                return {
+                    'world1' : node.props['world2'],
+                    'world2' : node.props['world1'],
+                }
+
+        def apply_to_node_target(self, node, branch, target):
+            branch.add({
                 'world1': target['world1'],
                 'world2': target['world2'],
             })

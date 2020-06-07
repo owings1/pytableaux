@@ -593,23 +593,12 @@ class TestClosureRule(object):
 
 class TestNodeRule(object):
 
-    def test_applies_to_node_not_impl(self):
-        rule = logic.TableauxSystem.NodeRule(logic.tableau(None, None))
-        with pytest.raises(logic.NotImplementedError):
-            rule.applies_to_node(None, None)
-
-    def test_apply_to_node_not_impl(self):
+    def test_not_impl_various(self):
         rule = logic.TableauxSystem.NodeRule(logic.tableau(None, None))
         with pytest.raises(logic.NotImplementedError):
             rule.apply_to_node(None, None)
-
-    def test_example_node_not_impl(self):
-        rule = logic.TableauxSystem.NodeRule(logic.tableau(None, None))
         with pytest.raises(logic.NotImplementedError):
             rule.example_node()
-
-    def test_example_not_impl(self):
-        rule = logic.TableauxSystem.NodeRule(logic.tableau(None, None))
         with pytest.raises(logic.NotImplementedError):
             rule.example()
 
@@ -627,7 +616,7 @@ class TestFilterNodeRule(object):
         proof, rule = self.proof_with_rule(MockFilterRule)
         node = logic.TableauxSystem.Node()
         branch = proof.branch().add(node)
-        assert rule.applies_to_node(node, branch)
+        assert rule.get_target_for_node(node, branch)
 
     def test_default_does_not_apply_to_ticked_node(self):
 
@@ -638,7 +627,7 @@ class TestFilterNodeRule(object):
         node = logic.TableauxSystem.Node()
         branch = proof.branch().add(node)
         branch.tick(node)
-        assert not rule.applies_to_node(node, branch)
+        assert not rule.get_target_for_node(node, branch)
 
     def test_applies_to_ticked_node_with_prop_none(self):
 
@@ -649,7 +638,7 @@ class TestFilterNodeRule(object):
         node = logic.TableauxSystem.Node()
         branch = proof.branch().add(node)
         branch.tick(node)
-        assert rule.applies_to_node(node, branch)
+        assert rule.get_target_for_node(node, branch)
         
 class TestModel(object):
 

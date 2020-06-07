@@ -2037,14 +2037,6 @@ class TableauxSystem(object):
                             self.potential_nodes[branch.id].discard(node)
             return cands
 
-        def get_targets_for_node(self, node, branch):
-            target = self.get_target_for_node(node, branch)
-            if target:
-                return [target]
-
-        def get_target_for_node(self, node, branch):
-            return self.applies_to_node(node, branch)
-
         def extend_node_target(self, target, node, branch):
             if target == True:
                 target = {'node' : node}
@@ -2081,11 +2073,6 @@ class TableauxSystem(object):
                 if node_id in self.node_applications[branch_id]:
                     return self.node_applications[branch_id][node_id]
             return 0
-
-        def is_potential_node(self, node, branch):
-            # Default impl
-            # TODO: we want to get rid of ``applies_to_node()`` method
-            return self.applies_to_node(node, branch)
 
         def after_branch_add(self, branch):
             super(TableauxSystem.NodeRule, self).after_branch_add(branch)
@@ -2135,14 +2122,28 @@ class TableauxSystem(object):
             # Will sum to 0 by default
             return {}
 
+        def is_potential_node(self, node, branch):
+            # probably want to return true here
+            raise NotImplementedError(NotImplemented)
+
+        def get_targets_for_node(self, node, branch):
+            # Default implementation, delegates to ``get_target_for_node``
+            target = self.get_target_for_node(node, branch)
+            if target:
+                return [target]
+
+        def get_target_for_node(self, node, branch):
+            raise NotImplementedError(NotImplemented)
+
         def apply_to_target(self, target):
             # Default implementation, to provide a more convenient
             # method signature.
-            return self.apply_to_node(target['node'], target['branch'])
+            self.apply_to_node_target(target['node'], target['branch'], target)
 
-        def applies_to_node(self, node, branch):
-            # TODO: get rid of this, and just use ``get_targets_for_node()``
-            raise NotImplementedError(NotImplemented)
+        def apply_to_node_target(self, node, branch, target):
+            # Default implementation, to provide a more convenient
+            # method signature.
+            self.apply_to_node(node, branch)
 
         def apply_to_node(self, node, branch):
             raise NotImplementedError(NotImplemented)
@@ -2190,7 +2191,9 @@ class TableauxSystem(object):
         def is_potential_node(self, node, branch):
             return self.conditions_apply(node, branch)
 
-        def applies_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
+            # Default is to return True, which gets converted into a
+            # target along the way.
             return self.conditions_apply(node, branch)
 
         def conditions_apply(self, node, branch):
