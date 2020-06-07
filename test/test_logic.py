@@ -386,6 +386,20 @@ class TestVocabulary(object):
         s3 = logic.parse('MVyFmy', vocabulary=vocab)
         assert s2 == s3
 
+    def test_with_pred_defs_single_pred_with_length4_name_raises_pred_err(self):
+        with pytest.raises(logic.Vocabulary.PredicateError):
+            logic.Vocabulary(('Pred', 0, 0, 1))
+
+    def test_with_pred_defs_single_def_list(self):
+        vocab = logic.Vocabulary([('Pred', 0, 0, 2)])
+        predicate = vocab.get_predicate('Pred')
+        assert predicate.arity == 2
+
+    def test_with_pred_defs_single_def_tuple(self):
+        vocab = logic.Vocabulary((('Pred', 0, 0, 3),))
+        predicate = vocab.get_predicate('Pred')
+        assert predicate.arity == 3
+
 class TestTableauxSystem(object):
 
     def test_build_trunk_base_not_impl(self):

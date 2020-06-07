@@ -528,6 +528,8 @@ class Vocabulary(object):
         self.user_predicates_index = {}
         if predicate_defs:
             for info in predicate_defs:
+                if not isinstance(info, list) and not isinstance(info, tuple):
+                    raise Vocabulary.PredicateError('predicate_defs must be a list/tuple of lists/tuples.')
                 if len(info) != 4:
                     raise Vocabulary.PredicateError("Predicate declarations must be 4-tuples (name, index, subscript, arity).")
                 self.declare_predicate(*info)
