@@ -141,6 +141,8 @@ class TableauxRules(object):
         [
             t.TableauxRules.Reflexive,
             Symmetric,
+        ],
+        [
             s4.TableauxRules.Transitive,
         ],
         [
