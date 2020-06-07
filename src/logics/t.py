@@ -79,15 +79,32 @@ class TableauxRules(object):
         def __init__(self, *args, **opts):
             super(TableauxRules.Reflexive, self).__init__(*args, **opts)
             self.is_rank_optim = False
+            self.necessity_rule = None
 
-        def applies_to_node(self, node, branch):
+        def is_potential_node(self, node, branch):
+            return True
+
+        def get_target_for_node(self, node, branch):
+            # why apply when necessity will not apply
+            if self.necessity_should_stop(branch):
+                return
             for world in node.worlds():
                 if not branch.has({'world1': world, 'world2': world}):
                     return {'world': world}
             return False
             
-        def apply(self, target):
+        def apply_to_target(self, target):
             target['branch'].add({'world1': target['world'], 'world2': target['world']})
+
+        def necessity_should_stop(self, branch):
+            if self.necessity_rule == None:
+                if self.tableau:
+                    self.necessity_rule = self.tableau.get_rule(k.TableauxRules.Necessity)
+                if not self.necessity_rule:
+                    self.necessity_rule = False
+            if not self.necessity_rule:
+                return False
+            return self.necessity_rule.should_stop(branch)
 
         def example(self):
             s = logic.atomic(0, 0)
