@@ -529,6 +529,30 @@ class TestBranch(object):
         with pytest.raises(logic.TableauxSystem.BranchClosedError):
             b.make_model()
 
+    def test_branch_has_world1(self):
+        proof = logic.tableau(None)
+        branch = proof.branch().add({'world1': 4, 'world2': 1})
+        assert branch.has({'world1': 4})
+
+    def test_regression_branch_has_works_with_newly_added_node_on_after_node_add(self):
+
+        class MyRule(logic.TableauxSystem.Rule):
+
+            should_be = False
+            shouldnt_be = True
+
+            def after_node_add(self, branch, node):
+                self.should_be = branch.has({'world1': 7})
+                self.shouldnt_be = branch.has({'world1': 6})
+
+        proof = logic.tableau(None)
+        proof.add_rule_group([MyRule])
+        rule = proof.get_rule(MyRule)
+        proof.branch().add({'world1': 7})
+
+        assert rule.should_be
+        assert not rule.shouldnt_be
+
 class TestNode(object):
 
     def test_worlds_contains_worlds(self):
@@ -589,6 +613,44 @@ class TestNodeRule(object):
         with pytest.raises(logic.NotImplementedError):
             rule.example()
 
+class TestFilterNodeRule(object):
+
+    def proof_with_rule(self, Rule):
+        proof = logic.tableau(None).add_rule_group([Rule])
+        return (proof, proof.get_rule(Rule))
+        
+    def test_applies_to_empty_nodes_when_no_properties_defined(self):
+
+        class MockFilterRule(logic.TableauxSystem.FilterNodeRule):
+            pass
+
+        proof, rule = self.proof_with_rule(MockFilterRule)
+        node = logic.TableauxSystem.Node()
+        branch = proof.branch().add(node)
+        assert rule.applies_to_node(node, branch)
+
+    def test_default_does_not_apply_to_ticked_node(self):
+
+        class MockFilterRule(logic.TableauxSystem.FilterNodeRule):
+            pass
+
+        proof, rule = self.proof_with_rule(MockFilterRule)
+        node = logic.TableauxSystem.Node()
+        branch = proof.branch().add(node)
+        branch.tick(node)
+        assert not rule.applies_to_node(node, branch)
+
+    def test_applies_to_ticked_node_with_prop_none(self):
+
+        class MockFilterRule(logic.TableauxSystem.FilterNodeRule):
+            ticked = None
+
+        proof, rule = self.proof_with_rule(MockFilterRule)
+        node = logic.TableauxSystem.Node()
+        branch = proof.branch().add(node)
+        branch.tick(node)
+        assert rule.applies_to_node(node, branch)
+        
 class TestModel(object):
 
     def test_not_impl_various(self):

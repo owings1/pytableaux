@@ -1653,17 +1653,25 @@ class TableauxSystem(object):
             self.preds.update(node.predicates())
             self.atms.update(node.atomics())
             node.parent = self.leaf
+            self.leaf = node
+
+            # Add to index *before* after_node_add callback
+            self._add_to_index(node)
+
             if self.tableau != None:
+                # TODO: move the step property to tableau class?
                 node.step = self.tableau.current_step
                 self.tableau.after_node_add(self, node)
-            self.leaf = node
+
+            return self
+
+        def _add_to_index(self, node):
             for prop in self.node_index:
                 if prop in node.props:
                     key = str(node.props[prop])
                     if key not in self.node_index[prop]:
                         self.node_index[prop][key] = set()
-                    self.node_index[prop][key].add(node)                    
-            return self
+                    self.node_index[prop][key].add(node)
 
         def update(self, nodes):
             """
