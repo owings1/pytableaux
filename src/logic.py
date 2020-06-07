@@ -1293,7 +1293,7 @@ class TableauxSystem(object):
             Get a rule instance by name or class reference. Returns first occurrence.
             """
             for r in self.all_rules:
-                if r.__class__ == rule or r.__class__.__name__ == rule:
+                if r.__class__ == rule or r.name == rule or r.__class__.__name__ == rule:
                     return r
 
         def check_timeout(self):
