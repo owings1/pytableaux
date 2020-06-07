@@ -166,6 +166,15 @@ def fix_form_data(form_data):
                     form_data[param] = [form_data[param]]
     return form_data
 
+def debug_result(result):
+    if result:
+        result = dict(result)
+        if 'tableau' in result and 'body' in result['tableau']:
+            if len(result['tableau']['body']) > 255:
+                result['tableau'] = dict(result['tableau'])
+                result['tableau']['body'] = result['tableau']['body'][0:255] + '...'
+    return result
+
 class RequestDataError(Exception):
 
     def __init__(self, errors):
@@ -219,7 +228,7 @@ class App(object):
         debugs.extend([
             ('api_data', api_data),
             ('form_data', form_data),
-            ('result', result),
+            ('result', debug_result(result)),
         ])
 
         data.update({
