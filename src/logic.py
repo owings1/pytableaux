@@ -2125,6 +2125,9 @@ class TableauxSystem(object):
         #: The designation status (``True``/``False``) of the node.
         designation = None
 
+        #: The predicate name
+        predicate   = None
+        
         def is_potential_node(self, node, branch):
             return self.conditions_apply(node, branch)
 
@@ -2138,11 +2141,12 @@ class TableauxSystem(object):
                 modal = len(node.worlds()) > 0
                 if self.modal != modal:
                     return False
-            sentence = operator = quantifier = None
-            if 'sentence' in node.props:
+            sentence = operator = quantifier = predicate = None
+            if node.has('sentence'):
                 sentence = node.props['sentence']
                 operator = sentence.operator
                 quantifier = sentence.quantifier
+                predicate = sentence.predicate
             if self.negated != None:
                 negated = operator == 'Negation'
                 if not sentence or negated != self.negated:
@@ -2151,6 +2155,7 @@ class TableauxSystem(object):
                     sentence = sentence.operand
                     operator = sentence.operator
                     quantifier = sentence.quantifier
+                    predicate = sentence.predicate
             if self.operator != None:
                 if self.operator != operator:
                     return False
@@ -2159,6 +2164,9 @@ class TableauxSystem(object):
                     return False
             if self.designation != None:
                 if 'designated' not in node.props or node.props['designated'] != self.designation:
+                    return False
+            if self.predicate != None:
+                if predicate == None or self.predicate != predicate.name:
                     return False
             return True
 
