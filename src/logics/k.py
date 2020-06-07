@@ -1475,6 +1475,9 @@ class TableauxRules(object):
             # Pick the least branching complexity
             return -1 * self.branching_complexity(target['node'])
 
+            # greatest world?
+            # / max(1, target['world'])
+
             # Modal complexity?
             #return -1 * len(target['sentence'].operators())
 
@@ -1622,11 +1625,8 @@ class TableauxRules(object):
             BiconditionalNegated,
         ],
         [
-            # world creation rules 2
+            # modal operator rules
             Necessity,
-        #],
-        #[
-            # world creation rules 1
             Possibility,
         ],
     ]
