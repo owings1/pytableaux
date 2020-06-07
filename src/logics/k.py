@@ -607,6 +607,8 @@ class IsModal(object):
 
 class MaxWorldTrackingFilterRule(IsModal, logic.TableauxSystem.FilterNodeRule):
 
+    max_worlds_operators = set(Model.modal_operators)
+
     def __init__(self, *args, **opts):
         super(MaxWorldTrackingFilterRule, self).__init__(*args, **opts)
         # Track the maximum number of worlds that should be on the branch
@@ -616,23 +618,29 @@ class MaxWorldTrackingFilterRule(IsModal, logic.TableauxSystem.FilterNodeRule):
     def after_trunk_build(self, branches):
         super(MaxWorldTrackingFilterRule, self).after_trunk_build(branches)
         for branch in branches:
-            # Project the maximum number of worlds for a branch (origin) as
-            # the number of worlds already on the branch + the number of modal
-            # operators + 1.
             origin = branch.origin()
             # In most cases, we will have only one origin branch.
             if origin.id in self.branch_max_worlds:
                 return
-            branch_modal_operators_list = list()
-            # we only care about unticked nodes, since ticked nodes will have
-            # already created any worlds.
-            for node in branch.get_nodes(ticked=False):
-                if node.has('sentence'):
-                    ops = self.sentence(node).operators()
-                    branch_modal_operators_list.extend(
-                        [o for o in ops if o in Model.modal_operators]
-                    )
-            self.branch_max_worlds[origin.id] = len(branch.worlds()) + len(branch_modal_operators_list) + 1
+            self.branch_max_worlds[origin.id] = self.compute_max_worlds(branch)
+
+    def compute_max_worlds(self, branch):
+        # Project the maximum number of worlds for a branch (origin) as
+        # the number of worlds already on the branch + the number of modal
+        # operators + 1.
+        node_needed_worlds = sum([
+            self.compute_needed_worlds_for_node(node, branch)
+            for node in branch.get_nodes()
+        ])
+        return len(branch.worlds()) + node_needed_worlds + 1
+
+    def compute_needed_worlds_for_node(self, node, branch):
+        # we only care about unticked nodes, since ticked nodes will have
+        # already created any worlds.
+        if not branch.is_ticked(node) and node.has('sentence'):
+            ops = self.sentence(node).operators()
+            return len([o for o in ops if o in self.max_worlds_operators])
+        return 0
 
     def get_max_worlds(self, branch):
         origin = branch.origin()
