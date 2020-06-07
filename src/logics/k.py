@@ -1201,7 +1201,10 @@ class TableauxRules(object):
             idx['unapplied'].discard(c)
 
         def example(self):
-            self.branch().add({'sentence': examples.quantified(self.quantifier), 'world': 0})
+            node = {'sentence': examples.quantified(self.quantifier)}
+            if self.modal:
+                node['world'] = 0
+            self.branch().add(node)
 
     class UniversalNegated(ExistentialNegated):
         """
