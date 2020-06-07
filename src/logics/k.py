@@ -43,10 +43,6 @@ def substitute_params(params, old_value, new_value):
             new_params.append(p)
     return tuple(new_params)
 
-# LCaMNb
-# Ma
-# KMNbc
-
 class Model(logic.Model):
     """
     A K-model comprises a non-empty collection of K-frames, a world access
@@ -1116,7 +1112,9 @@ class TableauxRules(object):
         quantifier = 'Universal'
 
         # TODO: support prenexing
+        #
         #    ∀x∃y(Fx → Gy) will be infinite, but not ∃y∀x(Fx → Gy)
+
         def __init__(self, *args, **opts):
             super(TableauxRules.Universal, self).__init__(*args, **opts)
             self.timers.update({

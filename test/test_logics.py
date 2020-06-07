@@ -1576,6 +1576,8 @@ class TestK(LogicTester):
 
     def test_universal_should_make_new_constant_with_one_there(self):
 
+        # see commit 8889b92 for bug fix
+
         vocab = examples.vocabulary
 
         s1 = parsex('VxUFxSyGy')
@@ -1612,6 +1614,12 @@ class TestK(LogicTester):
         # we shouldn't apply now
         target = univ.get_target(b1)
         assert not target , target['sentence']
+
+    def test_nested_diamond_within_box1(self):
+        arg = argument('KMNbc', ['LCaMNb', 'Ma'])
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.invalid
 
 class TestD(LogicTester):
 
@@ -1762,6 +1770,12 @@ class TestS4(LogicTester):
         proof.build(max_steps=200)
         assert proof.valid
 
+    def test_nested_diamond_within_box1(self):
+        arg = argument('KMNbc', ['LCaMNb', 'Ma'])
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.invalid
+
 class TestS5(LogicTester):
 
     logic = get_logic('S5')
@@ -1792,3 +1806,9 @@ class TestS5(LogicTester):
         proof = tableau(self.logic, argument('MNb', premises=['LCaMMMNb', 'Ma']))
         proof.build(max_steps=200)
         assert proof.valid
+
+    def test_nested_diamond_within_box1(self):
+        arg = argument('KMNbc', ['LCaMNb', 'Ma'])
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.invalid
