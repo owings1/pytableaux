@@ -69,7 +69,7 @@ class TableauxRules(object):
     .. _S4: s4.html
     """
     
-    class Symmetric(logic.TableauxSystem.NodeRule):
+    class Symmetric(k.MaxWorldTrackingFilterRule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
@@ -85,6 +85,8 @@ class TableauxRules(object):
             return node.has('world1') and node.has('world2')
 
         def get_target_for_node(self, node, branch):
+            if self.should_stop(branch):
+                return
             if not branch.has({'world1': node.props['world2'], 'world2': node.props['world1']}):
                 return {
                     'world1' : node.props['world2'],
@@ -96,6 +98,9 @@ class TableauxRules(object):
                 'world1': target['world1'],
                 'world2': target['world2'],
             })
+
+        def should_stop(self, branch):
+            return self.max_worlds_reached(branch)
 
         def example(self):
             self.branch().update([

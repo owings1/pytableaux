@@ -71,7 +71,7 @@ class TableauxRules(object):
     .. _T: t.html
     """
     
-    class Transitive(logic.TableauxSystem.NodeRule):
+    class Transitive(k.MaxWorldTrackingFilterRule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* and for each
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
@@ -126,6 +126,8 @@ class TableauxRules(object):
                 self.track_access_node(node, branch)
 
         def get_targets_for_node(self, node, branch):
+            if self.should_stop(branch):
+                return
             w1 = node.props['world1']
             w2 = node.props['world2']
             targets = list()
@@ -139,6 +141,9 @@ class TableauxRules(object):
                         'type'  : 'Nodes',
                     })
             return targets
+
+        def should_stop(self, branch):
+            return self.max_worlds_reached(branch)
 
         def score_candidate(self, target):
             # Rank the highest world

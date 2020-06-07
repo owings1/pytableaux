@@ -639,8 +639,14 @@ class MaxWorldTrackingFilterRule(IsModal, logic.TableauxSystem.FilterNodeRule):
         if origin.id in self.branch_max_worlds:
             return self.branch_max_worlds[origin.id]
 
+    def max_worlds_reached(self, branch):
+        # If we have already reached or exceeded the max number of worlds
+        # projected for the branch (origin).
+        max_worlds = self.get_max_worlds(branch)
+        return max_worlds != None and len(branch.worlds()) >= max_worlds
+
     def max_worlds_exceeded(self, branch):
-        # If we have already reached the max number of worlds projected for
+        # If we have exceeded the max number of worlds projected for
         # the branch (origin).
         max_worlds = self.get_max_worlds(branch)
         return max_worlds != None and len(branch.worlds()) > max_worlds
@@ -1241,7 +1247,7 @@ class TableauxRules(object):
             return super(TableauxRules.Possibility, self).is_potential_node(node, branch)
 
         def get_target_for_node(self, node, branch):
-            if self.max_worlds_exceeded(branch):
+            if self.max_worlds_reached(branch):
                 return False
             s  = self.sentence(node)
             si = s.operand

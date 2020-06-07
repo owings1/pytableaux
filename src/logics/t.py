@@ -64,7 +64,7 @@ class TableauxRules(object):
     .. _K: k.html
     """
 
-    class Reflexive(logic.TableauxSystem.NodeRule):
+    class Reflexive(k.MaxWorldTrackingFilterRule):
         """
         The Reflexive rule applies to an open branch *b* when there is a node *n*
         on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
@@ -79,32 +79,25 @@ class TableauxRules(object):
         def __init__(self, *args, **opts):
             super(TableauxRules.Reflexive, self).__init__(*args, **opts)
             self.is_rank_optim = False
-            self.necessity_rule = None
 
         def is_potential_node(self, node, branch):
+            # TODO: caching filter
             return True
 
         def get_target_for_node(self, node, branch):
             # why apply when necessity will not apply
-            if self.necessity_should_stop(branch):
+            if self.should_stop(branch):
                 return
             for world in node.worlds():
                 if not branch.has({'world1': world, 'world2': world}):
                     return {'world': world}
             return False
             
-        def apply_to_target(self, target):
-            target['branch'].add({'world1': target['world'], 'world2': target['world']})
+        def apply_to_node_target(self, node, branch, target):
+            branch.add({'world1': target['world'], 'world2': target['world']})
 
-        def necessity_should_stop(self, branch):
-            if self.necessity_rule == None:
-                if self.tableau:
-                    self.necessity_rule = self.tableau.get_rule(k.TableauxRules.Necessity)
-                if not self.necessity_rule:
-                    self.necessity_rule = False
-            if not self.necessity_rule:
-                return False
-            return self.necessity_rule.should_stop(branch)
+        def should_stop(self, branch):
+            return self.max_worlds_reached(branch)
 
         def example(self):
             s = logic.atomic(0, 0)
