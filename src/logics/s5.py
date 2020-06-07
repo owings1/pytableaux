@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2020 Doug Owings.
 # 
@@ -28,6 +29,11 @@ class Meta(object):
 
 import logic
 from . import k, t, s4
+
+
+# Some problematic arguments for S5:
+#
+#   VxLUFxMSyLGy |- b       or   ∀x◻(Fx → ◇∃y◻Gy) |- B  (also bad for S4)
 
 class Model(s4.Model):
     """

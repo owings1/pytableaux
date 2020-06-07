@@ -1518,8 +1518,7 @@ class TableauxRules(object):
             return -1 * self.node_application_count(target['node'].id, target['branch'].id)
             #return -1 * min(target['track_count'], self.branching_complexity(target['node']))
 
-        def apply_to_target(self, target):
-            branch = target['branch']
+        def apply_to_node_target(self, node, branch, target):
             branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example(self):
@@ -1607,8 +1606,8 @@ class TableauxRules(object):
                         targets.append(target)
             return targets
 
-        def apply(self, target):
-            target['branch'].add({'sentence': target['sentence'], 'world': target['world']})
+        def apply_to_node_target(self, node, branch, target):
+            branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example(self):
             self.branch().update([ 
