@@ -4,7 +4,7 @@
     {% if opts['controls'] %}
         {%- include 'controls.html' -%}
     {% endif %}
-    {% if opts['models'] %}
+    {% if opts['models'] and not tableau.is_premature %}
         {%- include 'models.html' -%}
     {% endif %}
     <div class="html-writer-proof
