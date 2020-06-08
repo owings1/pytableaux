@@ -562,8 +562,8 @@ class TableauxSystem(logic.TableauxSystem):
     neg_branchable = set(['Conjunction', 'Material Biconditional', 'Biconditional'])
     pos_branchable = set(['Disjunction', 'Material Conditional', 'Conditional'])
 
-    @staticmethod
-    def build_trunk(tableau, argument):
+    @classmethod
+    def build_trunk(cls, tableau, argument):
         """
         To build the trunk for an argument, add a node with each premise, with
         world *w0*, followed by a node with the negation of the conclusion
@@ -1123,43 +1123,26 @@ class TableauxRules(object):
                 'in_new_constant'          : logic.StopWatch(),
                 'in_node_examime'          : logic.StopWatch(),
             })
-            self.node_states = {}
-            self.consts = {}
+            self.safeprop('node_states', {})
+            self.safeprop('consts', {})
 
-        def after_branch_add(self, branch):
-            # TODO: refactor into something more general, perhaps a deep copy
-            #       routine. bugs have occurred when not copying the references
-            #       properly
-            super(TableauxRules.Universal, self).after_branch_add(branch)
-            if not branch.closed:
-                consumed = False
-                parent = branch.parent
-                if parent != None:
-                    if parent.id in self.node_states:
-                        self.node_states[branch.id] = {
-                            node_id : {
-                                k : set(self.node_states[parent.id][node_id][k])
-                                for k in self.node_states[parent.id][node_id]
-                            }
-                            for node_id in self.node_states[parent.id]
-                        }
-                        self.consts[branch.id] = set(self.consts[parent.id])
-                        consumed = True
-                if not consumed:
-                    self.node_states[branch.id] = dict()
-                    self.consts[branch.id] = set()
-                    for node in branch.get_nodes(ticked=self.ticked):
-                        self.register_node(node, branch)
-
-        def after_node_add(self, branch, node):
-            super(TableauxRules.Universal, self).after_node_add(branch, node)
-            self.register_node(node, branch)
+        def register_branch(self, branch, parent):
+            super(TableauxRules.Universal, self).register_branch(branch, parent)
+            if parent != None and parent.id in self.node_states:
+                self.consts[branch.id] = set(self.consts[parent.id])
+                self.node_states[branch.id] = {
+                    node_id : {
+                        k : set(self.node_states[parent.id][node_id][k])
+                        for k in self.node_states[parent.id][node_id]
+                    }
+                    for node_id in self.node_states[parent.id]
+                }
+            else:
+                self.node_states[branch.id] = dict()
+                self.consts[branch.id] = set()
 
         def register_node(self, node, branch):
-            if branch.id not in self.consts:
-                self.consts[branch.id] = set()
-            if branch.id not in self.node_states:
-                self.node_states[branch.id] = {}
+            super(TableauxRules.Universal, self).register_node(node, branch)
             if self.is_potential_node(node, branch):
                 if node.id not in self.node_states[branch.id]:
                     # By tracking per node, we are tracking per world, a fortiori.
@@ -1172,6 +1155,15 @@ class TableauxRules(object):
                     for node_id in self.node_states[branch.id]:
                         self.node_states[branch.id][node_id]['unapplied'].add(c)
                     self.consts[branch.id].add(c)
+
+        def after_apply(self, target):
+            super(TableauxRules.Universal, self).after_apply(target)
+            branch = target['branch']
+            node = target['node']
+            c = target['constant']
+            idx = self.node_states[branch.id][node.id]
+            idx['applied'].add(c)
+            idx['unapplied'].discard(c)
 
         def should_apply(self, node, branch):
             # Apply if there are no constants on the branch, or if we have
@@ -1214,20 +1206,15 @@ class TableauxRules(object):
 
         def apply_to_target(self, target):
             branch = target['branch']
-            node = target['node']
             s = target['sentence']
-            c = target['constant']
             w = target['world']
             branch.add({'sentence': s, 'world': w})
-            idx = self.node_states[branch.id][node.id]
-            idx['applied'].add(c)
-            idx['unapplied'].discard(c)
 
-        def example(self):
+        def example_node(self):
             node = {'sentence': examples.quantified(self.quantifier)}
             if self.modal:
                 node['world'] = 0
-            self.branch().add(node)
+            return node
 
     class UniversalNegated(ExistentialNegated):
         """
@@ -1559,29 +1546,17 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.IdentityIndiscernability, self).__init__(*args, **opts)
-            self.predicated_nodes = {}
+            self.safeprop('predicated_nodes', {})
 
-        def after_branch_add(self, branch):
-            super(TableauxRules.IdentityIndiscernability, self).after_branch_add(branch)
-            if not branch.closed:
-                consumed = False
-                parent = branch.parent
-                if parent != None:
-                    if parent.id in self.predicated_nodes:
-                        self.predicated_nodes[branch.id] = set(self.predicated_nodes[parent.id])
-                        consumed = True
-                if not consumed:
-                    self.predicated_nodes[branch.id] = set()
-                    for node in branch.get_nodes(ticked=self.ticked):
-                        self.register_node(node, branch)
-
-        def after_node_add(self, branch, node):
-            super(TableauxRules.IdentityIndiscernability, self).after_node_add(branch, node)
-            self.register_node(node, branch)
+        def register_branch(self, branch, parent):
+            super(TableauxRules.IdentityIndiscernability, self).register_branch(branch, parent)
+            if parent != None and parent.id in self.predicated_nodes:
+                self.predicated_nodes[branch.id] = set(self.predicated_nodes[parent.id])
+            else:
+                self.predicated_nodes[branch.id] = set()
 
         def register_node(self, node, branch):
-            if branch.id not in self.predicated_nodes:
-                self.predicated_nodes[branch.id] = set()
+            super(TableauxRules.IdentityIndiscernability, self).register_node(node, branch)
             if node.has('sentence') and self.sentence(node).is_predicated():
                 self.predicated_nodes[branch.id].add(node)
 
@@ -1618,11 +1593,11 @@ class TableauxRules(object):
         def apply_to_node_target(self, node, branch, target):
             branch.add({'sentence': target['sentence'], 'world': target['world']})
 
-        def example(self):
-            self.branch().update([ 
+        def example_nodes(self):
+            return [ 
                 {'sentence': examples.predicated(), 'world': 0},
                 {'sentence': examples.identity(),   'world': 0},
-            ])
+            ]
 
     closure_rules = [
         ContradictionClosure,
@@ -1650,9 +1625,6 @@ class TableauxRules(object):
             Existential,
         ],
         [
-            Universal,
-        ],
-        [
             # branching rules
             ConjunctionNegated,
             Disjunction,
@@ -1667,5 +1639,8 @@ class TableauxRules(object):
             # modal operator rules
             Necessity,
             Possibility,
+        ],
+        [
+            Universal,
         ],
     ]

@@ -1068,8 +1068,8 @@ system_predicates = {
 
 class TableauxSystem(object):
 
-    @staticmethod
-    def build_trunk(tableau, argument):
+    @classmethod
+    def build_trunk(cls, tableau, argument):
         raise NotImplementedError(NotImplemented)
 
     @classmethod
@@ -1077,7 +1077,7 @@ class TableauxSystem(object):
         return 0
 
     @classmethod
-    def init_tableau(cls, tableau, opts):
+    def add_rules(cls, tableau, opts):
         for Rule in tableau.logic.TableauxRules.closure_rules:
             tableau.add_closure_rule(Rule)
         for Rules in tableau.logic.TableauxRules.rule_groups:
@@ -1099,6 +1099,10 @@ class TableauxSystem(object):
         """
         Represents a tableau proof of an argument for the given logic.
         """
+
+        default_opts = {
+            'is_group_optim' : True
+        }
 
         def __init__(self, logic, argument, **opts):
             #: A tableau is finished when no more rules can apply.
@@ -1142,15 +1146,8 @@ class TableauxSystem(object):
             self.is_premature = False
 
             # opts
-            self.opts = dict(opts)
-            if 'is_group_optim' not in self.opts:
-                self.opts['is_group_optim'] = True
-
-            self.rule_opts = {
-                'is_rank_optim': True
-            }
-            if 'is_rank_optim' in self.opts:
-                self.rule_opts['is_rank_optim'] = self.opts['is_rank_optim']
+            self.opts = dict(self.default_opts)
+            self.opts.update(opts)
             
             self.open_branchset = set()
             self.branch_dict = dict()
@@ -1167,7 +1164,7 @@ class TableauxSystem(object):
         def set_logic(self, logic):
             self.logic = get_logic(logic)
             self.clear_rules()
-            self.logic.TableauxSystem.init_tableau(self, self.rule_opts)
+            self.logic.TableauxSystem.add_rules(self, self.opts)
             return self
 
         def clear_rules(self):
@@ -1178,7 +1175,7 @@ class TableauxSystem(object):
 
         def add_closure_rule(self, rule):
             if not isinstance(rule, TableauxSystem.Rule):
-                rule = rule(self, **self.rule_opts)
+                rule = rule(self, **self.opts)
             self.closure_rules.append(rule)
             self.all_rules.append(rule)
             return self
@@ -1187,7 +1184,7 @@ class TableauxSystem(object):
             group = []
             for rule in rules:
                 if not isinstance(rule, TableauxSystem.Rule):
-                    rule = rule(self, **self.rule_opts)
+                    rule = rule(self, **self.opts)
                 group.append(rule)
             self.rule_groups.append(group)
             self.all_rules.extend(group)
@@ -1259,8 +1256,7 @@ class TableauxSystem(object):
                     return results[i]
 
         def do_application(self, rule, target, step_timer):
-            with rule.apply_timer:
-                rule.apply(target)
+            rule.apply(target)
             application = {
                 'rule'        : rule,
                 'target'      : target,
@@ -1910,7 +1906,7 @@ class TableauxSystem(object):
 
     class Rule(object):
         """
-        Base interface class for a tableau rule.
+        Base class for a tableau rule.
         """
 
         branch_level = 1
@@ -1918,6 +1914,8 @@ class TableauxSystem(object):
         default_opts = {
             'is_rank_optim' : True
         }
+
+        ticked = None
 
         def __init__(self, tableau, **opts):
             #: Reference to the tableau for which the rule is instantiated.
@@ -1935,8 +1933,10 @@ class TableauxSystem(object):
         def apply(self, target):
             # Concrete classes should implement ``apply_to_target()``
             # Any overrides must be sure to call super.
-            self.apply_to_target(target)
-            self.apply_count += 1
+            with self.apply_timer:
+                self.apply_to_target(target)
+                self.apply_count += 1
+                self.after_apply(target)
 
         def get_target(self, branch):
             # Concrete classes may choose to override this instead of implementing
@@ -1945,19 +1945,7 @@ class TableauxSystem(object):
             if cands and len(cands):
                 return self.select_best_target(cands, branch)
 
-        # Abstract methods
-
-        def get_candidate_targets(self, branch):
-            # Intermediate classes such as ClosureRule, NodeRule, (and its child
-            # FilterNodeRule) implement this and ``select_best_target()``, and
-            # define finer-grained methods for concrete classes to implement.
-            raise NotImplementedError(NotImplemented)
-
-        #def select_best_target(self, targets, branch):
-        #    # Intermediate classes such as ClosureRule, NodeRule, (and its child
-        #    # FilterNodeRule) implement this and ``get_candidate_targets()``, and
-        #    # define finer-grained methods for concrete classes to implement.
-        #    raise NotImplementedError(NotImplemented)
+        # General implementation
 
         def select_best_target(self, targets, branch):
 
@@ -1970,6 +1958,14 @@ class TableauxSystem(object):
                 if scores[i] == max_score:
                     return targets[i]
 
+        # Abstract methods
+
+        def get_candidate_targets(self, branch):
+            # Intermediate classes such as ClosureRule, NodeRule, (and its child
+            # FilterNodeRule) implement this and ``select_best_target()``, and
+            # define finer-grained methods for concrete classes to implement.
+            raise NotImplementedError(NotImplemented)
+
         def apply_to_target(self, target):
             # Apply the rule to the target. Implementations should
             # modify the tableau directly, with no return value.
@@ -1981,7 +1977,7 @@ class TableauxSystem(object):
             # Add example branches/nodes sufficient for applies() to return true.
             # Implementations should modify the tableau directly, with no return
             # value. Used for building examples/documentation.
-            self.tableau.branch().update(self.example_nodes())
+            self.branch().update(self.example_nodes())
 
         def example_nodes(self):
             return [self.example_node()]
@@ -2011,15 +2007,30 @@ class TableauxSystem(object):
             # Will sum to 0 by default
             return {}
 
+        # Delegating callbacks
+
+        def after_branch_add(self, branch):
+            # If you implement, be sure to call super, and be careful
+            # not to double-call ``register_branch()`` or ``register_node()``
+            self.register_branch(branch, branch.parent)
+            if not branch.parent:
+                for node in branch.get_nodes(ticked=self.ticked):
+                    self.register_node(self, node, branch)
+
+        def after_node_add(self, branch, node):
+            # If you implement, be sure to call super, and be careful
+            # not to double-call ``register_branch()`` or ``register_node()``
+            self.register_node(node, branch)
+
+        def register_branch(self, branch, parent):
+            pass
+
+        def register_node(self, node, branch):
+            pass
+
         # Tableau callbacks
 
         def after_trunk_build(self, branches):
-            pass
-
-        def after_branch_add(self, branch):
-            pass
-
-        def after_node_add(self, branch, node):
             pass
 
         def after_node_tick(self, branch, node):
@@ -2030,6 +2041,11 @@ class TableauxSystem(object):
 
         def __repr__(self):
             return self.__class__.__name__
+
+        # Other callbacks
+
+        def after_apply(self, target):
+            pass
 
         # Util methods
 
@@ -2042,6 +2058,11 @@ class TableauxSystem(object):
                 return self.tableau.branching_complexity(node)
             return 1
 
+        def safeprop(self, name, value=None):
+            if hasattr(self, name):
+                raise KeyError('Property {0} already exists'.format(str(name)))
+            self.__dict__[name] = value
+
     class ClosureRule(Rule):
         """
         A closure rule has a fixed ``apply()`` method that marks the branch as
@@ -2051,9 +2072,6 @@ class TableauxSystem(object):
         default_opts = {
             'is_rank_optim' : False
         }
-
-        #def __init__(self, *args, **opts):
-        #    super(TableauxSystem.ClosureRule, self).__init__(*args, **opts)
 
         def get_candidate_targets(self, branch):
             target = self.applies_to_branch(branch)
@@ -2084,37 +2102,28 @@ class TableauxSystem(object):
 
         def __init__(self, *args, **opts):
             super(TableauxSystem.NodeRule, self).__init__(*args, **opts)
-            self.potential_nodes = dict()
-            self.node_applications = dict()
+            self.safeprop('potential_nodes', {})
+            self.safeprop('node_applications', {})
 
-        def apply(self, target):
-            # Override must call super
-            branch = target['branch']
-            node = target['node']
-            if node.id not in self.node_applications[branch.id]:
-                self.node_applications[branch.id][node.id] = 0
-
-            super(TableauxSystem.NodeRule, self).apply(target)
-
-            self.node_applications[branch.id][node.id] += 1
+        # Implementation
 
         def get_candidate_targets(self, branch):
             # Implementations should be careful with overriding this method.
-            # Be sure you at least call ``extend_node_target()``.
+            # Be sure you at least call ``_extend_node_target()``.
             cands = list()
             if branch.id in self.potential_nodes:
                 for node in set(self.potential_nodes[branch.id]):
                     targets = self.get_targets_for_node(node, branch)
-                    if targets and len(targets):
+                    if targets:
                         for target in targets:
-                            target = self.extend_node_target(target, node, branch)
+                            target = self._extend_node_target(target, node, branch)
                             cands.append(target)
                     else:
                         if not self.is_potential_node(node, branch):
                             self.potential_nodes[branch.id].discard(node)
             return cands
 
-        def extend_node_target(self, target, node, branch):
+        def _extend_node_target(self, target, node, branch):
             if target == True:
                 target = {'node' : node}
             if 'node' not in target:
@@ -2124,6 +2133,41 @@ class TableauxSystem(object):
             if 'branch' not in target:
                 target['branch'] = branch
             return target
+
+        # Caching
+
+        def register_branch(self, branch, parent):
+            # Likely to be extended in concrete class - call super and pay attention
+            super(TableauxSystem.NodeRule, self).register_branch(branch, parent)
+            if parent != None and parent.id in self.potential_nodes:
+                self.potential_nodes[branch.id] = set(self.potential_nodes[parent.id])
+                self.node_applications[branch.id] = dict(self.node_applications[parent.id])
+            else:
+                self.potential_nodes[branch.id] = set()
+                self.node_applications[branch.id] = dict()
+
+        def register_node(self, node, branch):
+            # Likely to be extended in concrete class - call super and pay attention
+            super(TableauxSystem.NodeRule, self).register_node(node, branch)
+            if self.is_potential_node(node, branch):
+                self.potential_nodes[branch.id].add(node)
+                self.node_applications[branch.id][node.id] = 0
+
+        def after_apply(self, target):
+            super(TableauxSystem.NodeRule, self).after_apply(target)
+            self.node_applications[target['branch'].id][target['node'].id] += 1
+
+        def after_branch_close(self, branch):
+            super(TableauxSystem.NodeRule, self).after_branch_close(branch)
+            del(self.potential_nodes[branch.id])
+            del(self.node_applications[branch.id])
+
+        def after_node_tick(self, branch, node):
+            super(TableauxSystem.NodeRule, self).after_node_tick(branch, node)
+            if self.ticked == False and branch.id in self.potential_nodes:
+                self.potential_nodes[branch.id].discard(node)
+
+        # Util
 
         def min_application_count(self, branch_id):
             if branch_id in self.node_applications:
@@ -2141,41 +2185,21 @@ class TableauxSystem(object):
                     return self.node_applications[branch_id][node_id]
             return 0
 
-        def after_branch_add(self, branch):
-            super(TableauxSystem.NodeRule, self).after_branch_add(branch)
-            # TODO: make a general way to do this pattern repeated in many rules
-            if not branch.closed:
-                consumed = False
-                parent = branch.parent
-                if parent != None:
-                    if parent.id in self.potential_nodes:
-                        self.potential_nodes[branch.id] = set(self.potential_nodes[parent.id])
-                        self.node_applications[branch.id] = dict(self.node_applications[parent.id])
-                        consumed = True
-                if not consumed:
-                    self.potential_nodes[branch.id] = set()
-                    self.node_applications[branch.id] = dict()
-                    for node in branch.get_nodes(ticked=self.ticked):
-                        if self.is_potential_node(node, branch):
-                            self.potential_nodes[branch.id].add(node)
+        # Default
 
-        def after_branch_close(self, branch):
-            super(TableauxSystem.NodeRule, self).after_branch_close(branch)
-            del(self.potential_nodes[branch.id])
-            del(self.node_applications[branch.id])
+        def score_candidate(self, target):
+            score = super(TableauxSystem.NodeRule, self).score_candidate(target)
+            if score == 0:
+                complexity = self.branching_complexity(target['node'])
+                score = -1 * complexity
+            return score
 
-        def after_node_add(self, branch, node):
-            super(TableauxSystem.NodeRule, self).after_node_add(branch, node)
-            if self.is_potential_node(node, branch):
-                self.potential_nodes[branch.id].add(node)
-
-        def after_node_tick(self, branch, node):
-            if self.ticked == False:
-                self.potential_nodes[branch.id].discard(node)
+        # Abstract
 
         def is_potential_node(self, node, branch):
-            # probably want to return true here
             raise NotImplementedError(NotImplemented)
+
+        # Delegating abstract
 
         def get_targets_for_node(self, node, branch):
             # Default implementation, delegates to ``get_target_for_node``
@@ -2185,8 +2209,6 @@ class TableauxSystem(object):
 
         def get_target_for_node(self, node, branch):
             raise NotImplementedError(NotImplemented)
-
-        # Implementation options for ``apply_to_target()``
 
         def apply_to_target(self, target):
             # Default implementation, to provide a more convenient
@@ -2203,8 +2225,6 @@ class TableauxSystem(object):
             # New code should implement ``apply_to_node_target()`` instead,
             # which provides more flexibility.
             raise NotImplementedError(NotImplemented)
-
-
 
     class FilterNodeRule(NodeRule):
         """
@@ -2239,7 +2259,9 @@ class TableauxSystem(object):
 
         #: The predicate name
         predicate   = None
-        
+
+        # Implementation
+
         def is_potential_node(self, node, branch):
             return self.conditions_apply(node, branch)
 
@@ -2284,6 +2306,8 @@ class TableauxSystem(object):
                     return False
             return True
 
+        # Override
+
         def sentence(self, node):
             s = None
             if 'sentence' in node.props:
@@ -2291,6 +2315,8 @@ class TableauxSystem(object):
                 if self.negated:
                     s = s.operand
             return s
+
+        # Default
 
         def example_node(self):
             props = {}
@@ -2318,13 +2344,6 @@ class TableauxSystem(object):
             if sentence != None:
                 props['sentence'] = sentence
             return props
-
-        def score_candidate(self, target):
-            score = super(TableauxSystem.FilterNodeRule, self).score_candidate(target)
-            if score == 0:
-                complexity = self.branching_complexity(target['node'])
-                score = -1 * complexity
-            return score
 
     class Writer(object):
 

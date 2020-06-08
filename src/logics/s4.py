@@ -80,50 +80,39 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.Transitive, self).__init__(*args, **opts)
-            self.access = {}
+            self.safeprop('access', {})
 
-        def is_potential_node(self, node, branch):
-            return node.has('world1') and node.has('world2')
+        # Caching
 
-        def visibles(self, world, branch):
-            if branch.id in self.access:
-                access = self.access[branch.id]
-                if world in access:
-                    return access[world]
-            return set()
-
-        def track_access(self, w1, w2, branch):
-            if branch.id not in self.access:
+        def register_branch(self, branch, parent):
+            super(TableauxRules.Transitive, self).register_branch(branch, parent)
+            if parent != None and parent.id in self.access:
+                self.access[branch.id] = {
+                    w: set(self.access[parent.id][w])
+                    for w in self.access[parent.id]
+                }
+            else:
                 self.access[branch.id] = {}
-            access = self.access[branch.id]
-            if w1 not in access:
-                access[w1] = set()
-            access[w1].add(w2)
+
+        def register_node(self, node, branch):
+            super(TableauxRules.Transitive, self).register_node(node, branch)
+            if self.is_potential_node(node, branch):
+                self.track_access_node(node, branch)
 
         def track_access_node(self, node, branch):
             w1 = node.props['world1']
             w2 = node.props['world2']
             self.track_access(w1, w2, branch)
 
-        def after_branch_add(self, branch):
-            super(TableauxRules.Transitive, self).after_branch_add(branch)
-            if not branch.closed:
-                consumed = False
-                parent = branch.parent
-                if parent != None:
-                    if parent.id in self.access:
-                        self.access[branch.id] = {w: set(self.access[parent.id][w]) for w in self.access[parent.id]}
-                        consumed = True
-                if not consumed:
-                    self.access[branch.id] = {}
-                    for node in branch.get_nodes(ticked=self.ticked):
-                        if self.is_potential_node(node, branch):
-                            self.track_access_node(node, branch)
+        def track_access(self, w1, w2, branch):
+            if w1 not in self.access[branch.id]:
+                self.access[branch.id][w1] = set()
+            self.access[branch.id][w1].add(w2)
 
-        def after_node_add(self, branch, node):
-            super(TableauxRules.Transitive, self).after_node_add(branch, node)
-            if self.is_potential_node(node, branch):
-                self.track_access_node(node, branch)
+        # Implementated methods
+
+        def is_potential_node(self, node, branch):
+            return node.has('world1') and node.has('world2')
 
         def get_targets_for_node(self, node, branch):
             if self.should_stop(branch):
@@ -142,9 +131,6 @@ class TableauxRules(object):
                     })
             return targets
 
-        def should_stop(self, branch):
-            return self.max_worlds_reached(branch)
-
         def score_candidate(self, target):
             # Rank the highest world
             return target['world2']
@@ -155,11 +141,23 @@ class TableauxRules(object):
                 'world2': target['world2'],
             })
 
-        def example(self):
-            self.branch().update([
+        def example_nodes(self):
+            return [
                 {'world1': 0, 'world2': 1},
                 {'world1': 1, 'world2': 2},
-            ])
+            ]
+
+        # Other methods
+
+        def should_stop(self, branch):
+            return self.max_worlds_reached(branch)
+
+        def visibles(self, world, branch):
+            if branch.id in self.access:
+                access = self.access[branch.id]
+                if world in access:
+                    return access[world]
+            return set()
 
     closure_rules = list(k.TableauxRules.closure_rules)
 

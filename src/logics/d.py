@@ -91,35 +91,21 @@ class TableauxRules:
 
         def __init__(self, *args, **opts):
             super(TableauxRules.Serial, self).__init__(*args, **opts)
-            self.unserial_worlds = {}
+            self.safeprop('unserial_worlds', {})
 
-        def after_branch_add(self, branch):
-            super(TableauxRules.Serial, self).after_branch_add(branch)
-            if not branch.closed:
-                consumed = False
-                parent = branch.parent
-                if parent != None:
-                    if parent.id in self.unserial_worlds:
-                        self.unserial_worlds[branch.id] = set(self.unserial_worlds[parent.id])
-                        consumed = True
-                if not consumed:
-                    self.register_branch(branch)
-
-        def after_node_add(self, branch, node):
-            super(TableauxRules.Serial, self).after_node_add(branch, node)
-            self.register_node(node, branch)
+        def register_branch(self, branch, parent):
+            super(TableauxRules.Serial, self).register_branch(branch, parent)
+            if parent != None and parent.id in self.unserial_worlds:
+                self.unserial_worlds[branch.id] = set(self.unserial_worlds[parent.id])
+            else:
+                self.unserial_worlds[branch.id] = set()
 
         def register_node(self, node, branch):
+            super(TableauxRules.Serial, self).register_node(node, branch)
             for w in node.worlds():
                 if branch.has({'world1': w}):
                     self.unserial_worlds[branch.id].discard(w)
                 else:
-                    self.unserial_worlds[branch.id].add(w)
-
-        def register_branch(self, branch):
-            self.unserial_worlds[branch.id] = set()
-            for w in branch.worlds():
-                if not branch.has({'world1': w}):
                     self.unserial_worlds[branch.id].add(w)
 
         def get_targets_for_node(self, node, branch):
