@@ -600,7 +600,7 @@ class TestClosureRule(object):
 class TestNodeRule(object):
 
     def test_not_impl_various(self):
-        rule = logic.TableauxSystem.NodeRule(logic.tableau(None, None))
+        rule = logic.TableauxSystem.PotentialNodeRule(logic.tableau(None, None))
         with pytest.raises(logic.NotImplementedError):
             rule.apply_to_node(None, None)
         with pytest.raises(logic.NotImplementedError):

@@ -1961,7 +1961,7 @@ class TableauxSystem(object):
         # Abstract methods
 
         def get_candidate_targets(self, branch):
-            # Intermediate classes such as ClosureRule, NodeRule, (and its child
+            # Intermediate classes such as ClosureRule, PotentialNodeRule, (and its child
             # FilterNodeRule) implement this and ``select_best_target()``, and
             # define finer-grained methods for concrete classes to implement.
             raise NotImplementedError(NotImplemented)
@@ -2090,18 +2090,19 @@ class TableauxSystem(object):
         def applies_to_branch(self, branch):
             raise NotImplementedError(NotImplemented)
 
-    class NodeRule(Rule):
+    class PotentialNodeRule(Rule):
         """
-        NodeRule base class.
+        PotentialNodeRule base class. Caches potential nodes as they appear,
+        and tracks the number of applications to each node. Provides default
+        implementation of some methods, and delegates to finer-grained abstract
+        methods.
         """
 
-        # TODO: really should be called "PotentialNodeRule"
-
-        # The tick level of nodes to check.
+        # Override
         ticked = False
 
         def __init__(self, *args, **opts):
-            super(TableauxSystem.NodeRule, self).__init__(*args, **opts)
+            super(TableauxSystem.PotentialNodeRule, self).__init__(*args, **opts)
             self.safeprop('potential_nodes', {})
             self.safeprop('node_applications', {})
 
@@ -2138,7 +2139,7 @@ class TableauxSystem(object):
 
         def register_branch(self, branch, parent):
             # Likely to be extended in concrete class - call super and pay attention
-            super(TableauxSystem.NodeRule, self).register_branch(branch, parent)
+            super(TableauxSystem.PotentialNodeRule, self).register_branch(branch, parent)
             if parent != None and parent.id in self.potential_nodes:
                 self.potential_nodes[branch.id] = set(self.potential_nodes[parent.id])
                 self.node_applications[branch.id] = dict(self.node_applications[parent.id])
@@ -2148,22 +2149,22 @@ class TableauxSystem(object):
 
         def register_node(self, node, branch):
             # Likely to be extended in concrete class - call super and pay attention
-            super(TableauxSystem.NodeRule, self).register_node(node, branch)
+            super(TableauxSystem.PotentialNodeRule, self).register_node(node, branch)
             if self.is_potential_node(node, branch):
                 self.potential_nodes[branch.id].add(node)
                 self.node_applications[branch.id][node.id] = 0
 
         def after_apply(self, target):
-            super(TableauxSystem.NodeRule, self).after_apply(target)
+            super(TableauxSystem.PotentialNodeRule, self).after_apply(target)
             self.node_applications[target['branch'].id][target['node'].id] += 1
 
         def after_branch_close(self, branch):
-            super(TableauxSystem.NodeRule, self).after_branch_close(branch)
+            super(TableauxSystem.PotentialNodeRule, self).after_branch_close(branch)
             del(self.potential_nodes[branch.id])
             del(self.node_applications[branch.id])
 
         def after_node_tick(self, branch, node):
-            super(TableauxSystem.NodeRule, self).after_node_tick(branch, node)
+            super(TableauxSystem.PotentialNodeRule, self).after_node_tick(branch, node)
             if self.ticked == False and branch.id in self.potential_nodes:
                 self.potential_nodes[branch.id].discard(node)
 
@@ -2188,7 +2189,7 @@ class TableauxSystem(object):
         # Default
 
         def score_candidate(self, target):
-            score = super(TableauxSystem.NodeRule, self).score_candidate(target)
+            score = super(TableauxSystem.PotentialNodeRule, self).score_candidate(target)
             if score == 0:
                 complexity = self.branching_complexity(target['node'])
                 score = -1 * complexity
@@ -2226,7 +2227,7 @@ class TableauxSystem(object):
             # which provides more flexibility.
             raise NotImplementedError(NotImplemented)
 
-    class FilterNodeRule(NodeRule):
+    class FilterNodeRule(PotentialNodeRule):
         """
         A ``FilterNodeRule`` filters potential nodes by matching
         the attribute conditions of the implementing class.

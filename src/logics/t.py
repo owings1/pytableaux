@@ -78,7 +78,7 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.Reflexive, self).__init__(*args, **opts)
-            self.is_rank_optim = False
+            self.opts['is_rank_optim'] = False
 
         def is_potential_node(self, node, branch):
             # TODO: caching filter

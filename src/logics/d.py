@@ -93,6 +93,8 @@ class TableauxRules:
             super(TableauxRules.Serial, self).__init__(*args, **opts)
             self.safeprop('unserial_worlds', {})
 
+        # Cache
+
         def register_branch(self, branch, parent):
             super(TableauxRules.Serial, self).register_branch(branch, parent)
             if parent != None and parent.id in self.unserial_worlds:
@@ -107,6 +109,8 @@ class TableauxRules:
                     self.unserial_worlds[branch.id].discard(w)
                 else:
                     self.unserial_worlds[branch.id].add(w)
+
+        # Implementation
 
         def get_targets_for_node(self, node, branch):
 
@@ -124,6 +128,11 @@ class TableauxRules:
                 'world2': target['branch'].new_world(),
             })
 
+        def example(self):
+            self.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
+
+        # Util
+
         def should_stop(self, branch):
 
             # TODO: Shouldn't this check the history only relative to the branch?
@@ -139,9 +148,6 @@ class TableauxRules:
                 return True
 
             return False
-
-        def example(self):
-            self.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
 
     # NB: Since we have redesigned the modal rules, it is not obvious that we need this
     #     alternate rule. So far I have not been able to think of a way to break it. I

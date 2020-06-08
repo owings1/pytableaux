@@ -533,7 +533,9 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.DesignationClosure, self).__init__(*args, **opts)
-            self.targets = {}
+            self.safeprop('targets', {})
+
+        # Cache
 
         def after_node_add(self, branch, node):
             super(TableauxRules.DesignationClosure, self).after_node_add(branch, node)
@@ -541,17 +543,19 @@ class TableauxRules(object):
                 nnode = branch.find({'sentence': self.sentence(node), 'designated': not node.props['designated']})
                 if nnode:
                     self.targets[branch.id] = {'nodes': set([node, nnode]), 'type': 'Nodes'}
-                
+
+        # Implementation
+
         def applies_to_branch(self, branch):
             if branch.id in self.targets:
                 return self.targets[branch.id]
 
-        def example(self):
+        def example_nodes(self):
             a = atomic(0, 0)
-            self.branch().update([
+            return [
                 {'sentence': a, 'designated': True },
                 {'sentence': a, 'designated': False},
-            ])
+            ]
 
     class DoubleNegationDesignated(logic.TableauxSystem.FilterNodeRule):
         """
@@ -1138,10 +1142,10 @@ class TableauxRules(object):
             # keep designation neutral for inheritance below
             target['branch'].add({'sentence': target['sentence'], 'designated': self.designation})
 
-        def example(self):
+        def example_node(self):
             # keep quantifier and designation neutral for inheritance below
             s = examples.quantified(self.quantifier)
-            self.branch().add({'sentence': s, 'designated': self.designation})
+            return {'sentence': s, 'designated': self.designation}
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """

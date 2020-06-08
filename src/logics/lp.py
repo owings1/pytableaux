@@ -89,7 +89,7 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.GapClosure, self).__init__(*args, **opts)
-            self.targets = {}
+            self.safeprop('targets', {})
 
         def after_node_add(self, branch, node):
             super(TableauxRules.GapClosure, self).after_node_add(branch, node)
@@ -102,12 +102,12 @@ class TableauxRules(object):
             if branch.id in self.targets:
                 return self.targets[branch.id]
 
-        def example(self):
+        def example_nodes(self):
             a = logic.atomic(0, 0)
-            self.branch().update([
+            return [
                 {'sentence':        a , 'designated': False},
                 {'sentence': negate(a), 'designated': False},
-            ])
+            ]
 
     class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
         """

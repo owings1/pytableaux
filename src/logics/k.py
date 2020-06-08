@@ -610,7 +610,7 @@ class MaxWorldTrackingFilterRule(IsModal, logic.TableauxSystem.FilterNodeRule):
         super(MaxWorldTrackingFilterRule, self).__init__(*args, **opts)
         # Track the maximum number of worlds that should be on the branch
         # so we can halt on infinite branches.
-        self.branch_max_worlds = {}
+        self.safeprop('branch_max_worlds', {})
 
     def after_trunk_build(self, branches):
         super(MaxWorldTrackingFilterRule, self).after_trunk_build(branches)
@@ -671,7 +671,7 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.ContradictionClosure, self).__init__(*args, **opts)
-            self.targets = {}
+            self.safeprop('targets', {})
 
         def after_node_add(self, branch, node):
             super(TableauxRules.ContradictionClosure, self).after_node_add(branch, node)
@@ -684,12 +684,12 @@ class TableauxRules(object):
             if branch.id in self.targets:
                 return self.targets[branch.id]
 
-        def example(self):
+        def example_nodes(self):
             a = atomic(0, 0)
-            self.branch().update([
+            return [
                 {'sentence':        a , 'world': 0},
                 {'sentence': negate(a), 'world': 0},
-            ])
+            ]
 
     class SelfIdentityClosure(logic.TableauxSystem.ClosureRule):
         """
@@ -698,7 +698,7 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.SelfIdentityClosure, self).__init__(*args, **opts)
-            self.targets = {}
+            self.safeprop('targets', {})
 
         def after_node_add(self, branch, node):
             super(TableauxRules.SelfIdentityClosure, self).after_node_add(branch, node)
@@ -714,9 +714,9 @@ class TableauxRules(object):
                 return self.targets[branch.id]
             return False
 
-        def example(self):
+        def example_node(self):
             s = negate(examples.self_identity())
-            self.branch().add({'sentence': s, 'world': 0})
+            return {'sentence': s, 'world': 0}
 
     class NonExistenceClosure(logic.TableauxSystem.ClosureRule):
         """
@@ -725,7 +725,7 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.NonExistenceClosure, self).__init__(*args, **opts)
-            self.targets = {}
+            self.safeprop('targets', {})
 
         def after_node_add(self, branch, node):
             super(TableauxRules.NonExistenceClosure, self).after_node_add(branch, node)
@@ -739,9 +739,9 @@ class TableauxRules(object):
                 return self.targets[branch.id]
             return False
 
-        def example(self):
+        def example_node(self):
             s = logic.parse('NJm')
-            self.branch().add({'sentence': s, 'world': 0})
+            return {'sentence': s, 'world': 0}
 
     class DoubleNegation(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
@@ -1240,8 +1240,8 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.Possibility, self).__init__(*args, **opts)
-            self.branch_sentence_track = {}
-            self.modal_complexities = {}
+            self.safeprop('branch_sentence_track', {})
+            self.safeprop('modal_complexities', {})
 
         def is_potential_node(self, node, branch):
             if self.max_worlds_exceeded(branch):
@@ -1517,12 +1517,12 @@ class TableauxRules(object):
         def apply_to_node_target(self, node, branch, target):
             branch.add({'sentence': target['sentence'], 'world': target['world']})
 
-        def example(self):
+        def example_nodes(self):
             s = operate(self.operator, [atomic(0, 0)])
-            self.branch().update([
+            return [
                 {'sentence': s, 'world': 0},
                 {'world1': 0, 'world2': 1},
-            ])
+            ]
 
     class NecessityNegated(PossibilityNegated):
         """
