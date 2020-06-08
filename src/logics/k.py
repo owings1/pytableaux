@@ -1243,6 +1243,18 @@ class TableauxRules(object):
             self.safeprop('branch_sentence_track', {})
             self.safeprop('modal_complexities', {})
 
+        # Cache
+
+        def after_apply(self, target):
+            super(TableauxRules.Possibility, self).after_apply(target)
+            self.sentence_track_inc(target['branch'], target['sentence'])
+
+        def sentence_track_inc(self, branch, sentence):
+            self.sentence_track_count(branch, sentence)
+            self.branch_sentence_track[branch.id][sentence] += 1
+
+        # Implementation
+
         def is_potential_node(self, node, branch):
             if self.max_worlds_exceeded(branch):
                 return False
@@ -1255,7 +1267,6 @@ class TableauxRules(object):
             si = s.operand
             w1 = node.props['world']
             return {'sentence': si, 'world1': w1}
-            #return super(TableauxRules.Possibility, self).applies_to_node(node, branch)
 
         def apply_to_node_target(self, node, branch, target):
             si = target['sentence']
@@ -1265,11 +1276,9 @@ class TableauxRules(object):
                 {'sentence': si, 'world': w2},
                 {'world1': w1, 'world2': w2},
             ]).tick(node)
-            self.sentence_track_inc(branch, si)
 
-        # override
         def score_candidate(self, target):
-
+            # override
             branch = target['branch']
             s = self.sentence(target['node'])
             si = s.operand
@@ -1277,123 +1286,10 @@ class TableauxRules(object):
             # Don't bother checking for closure since we will always have a new world
 
             track_count = self.sentence_track_count(branch, si)
-
-            # Make sure we apply once for each sentence.
-            #
-            # TODO: Consider flanking quantifiers like XxPLyFxy. In this case PLyFac, PLyFab, etc.
-            #       will always be new sentences. This could lead to a failure to close.
-            #
-            #       1. PNLxFx
-            #       2. XxPSy(Fx & ~Fy)
-            #
-            #       In S5 these are unsatisfiable, so the tree would go (ignoring extra access nodes):
-            #                                |           :
-            #       1. PNLxFx , w0           |  (4,5)    :
-            #       2. XxPXy(Fx & ~Fy) , w0  |  (3)      :
-            #                                |           :
-            #       3. PXy(Fa & ~Fy) , w0    |  (6,7)    :   Existential (2) 
-            #                                |           :
-            #       4. NLxFx , w1            |           :
-            #       5. w0,w1                 |           :   Possibility (1)    -- since track_count of NLxFx is 0
-            #                                |           :
-            #       6. Xy(Fa & ~Fy), w2      |  (8)      :
-            #       7. w0,w2                 |           :   Possibility (3)    -- since track_count of Xy(Fa & ~Fy) is 0
-            #                                |           :
-            #       8. Fa & ~Fb , w2         |  (9,10)   :   Existenial (6)
-            #                                |           :
-            #       9. Fa , w2               |           :
-            #      10. ~Fb , w2              |           :   Conjunction (8)
-            #                                |           :
-            #      11  w2,w0                 |           :   Symmetric (7)
-            #      12. w2,w1                 |           :   Transitive (11,5)
-            #      13. w1,w2                 |           :   Symmetric (12)
-            #                                |           :
-            #      14. LxFx , w2             |           :   Necessity (4,13)
-            #                                |           :
-            #      15. Fb , w2               |           :   Universal (14)
-            #                                |           :
-            #          X                     |           :   ContradictionClosure (10,15)
-            #
-            #      OK, this closes, but what about:
-            #
-            #       1. PNLxFx , w0                (3,4)
-            #       2. NXxPXy(Fx & ~Fy) , w0     
-            #                                    
-            #       3. NLxFx , w1                
-            #       4. w0,w1                                   Possibility (1)    -- since sentence track_count of NLxFx is 0
-            #                                    
-            #       5. XxPXy(Fx & ~Fy) , w1       (5)          Necessity (2,4)    -- could have been 3 since node track_count = 0
-            #                                    
-            #       6. PXy(Fa & ~Fy) , w1         (8)          Existential (5)
-            #
-            #       7. w1,w1                                   Reflexive (4)
-            #
-            #       now we have group competition between Necessity and Possibility.
-            #
-            # TODO: redesign this group/candidate scoring
-            #
-            #       Necessity will check for:
-            #         - node must be one of the least-applied-to
-            #            - if candidate score > 0, then group score is 1
-            #               - if branch will close with this candidate, the candidate score is 1
-            #               - else candidate score is -1 * node branching complexity
-            #            - else group score is -1 * node track_count
-            #       Possibility will check for:
-            #            - if candidate score > 0, then group score is 1
-            #               - if sentence track_count is 0, then candidate score is 1
-            #               - else candidate score is -1 * sentence modal complexity * sentence track_count
-            #            - else group score is -1 * sentence track_count
-            #
-            #       Necessity will check 2 and 3
-            #           - the node track_count of 2 is 1, and of 3 is 0.
-            #           - the only least-applied-to node is 3.
-            #           - having LxFx , w1 on the branch will not immediately close it.
-            #           - thus the candidate score of 3 is -1 * 0 == 0.
-            #           - since the candidate score is less than 1, the group score is
-            #             -1 * node track_count, which is 0.
-            #
-            #       Possibility will check 6
-            #           - sentence track count is 0, so candidate score is 1.
-            #           - thus group score is 1.
-            #
-            #       8. Xy(Fa & ~Fy) , w1         (9)            Possibility (6)
-            #
-            #       9. Fa & ~Fb , w1             (10,11)        Existential (8)
-            #
-            #      10. Fa , w1
-            #      11. ~Fb, w1                                  Conjunction (9)
-            #
-            #      12. LxFx , w1                                Necessity (3,7)
-            #
-            #      13. Fa , w1                                  Universal (12)
-            #      14. Fb , w1                                  Universal (12)
-            #
-            #          X                                        ContradictionClosure (11, 14)
-            #
-            #       Whew!
-            #
             if track_count == 0:
                 return 1
+
             return -1 * self.modal_complexity(s) * track_count
-
-            # Other ideas ....
-
-            # Apply to the simplest possibility sentence, so we don't get stuck
-            #ops = s.operators()
-            # use full modal complexity, not just possbility NPNA vs NPA
-            #modal_ops = [operator for operator in ops if operator in Model.modal_operators]
-            #return -1 * len(modal_ops) * track_count
-
-            #possibility_ops = [operator for operator in ops if operator == self.operator]
-            #return -1 * len(possibility_ops) # * len(ops) # Also rank by simplest?
-            #return -1 * (len(possibility_ops) + self.branching_complexity(self.sentence(target['node']).operand))
-
-        def modal_complexity(self, sentence):
-            if sentence not in self.modal_complexities:
-                ops = sentence.operators()
-                modal_ops = [operator for operator in ops if operator in Model.modal_operators]
-                self.modal_complexities[sentence] = len(modal_ops)
-            return self.modal_complexities[sentence]
 
         def group_score(self, target):
 
@@ -1406,7 +1302,7 @@ class TableauxRules(object):
 
             return -1 * self.sentence_track_count(branch, si)
 
-            #self.branching_complexity(target['node']),
+        # Util
 
         def sentence_track_count(self, branch, sentence):
             if branch.id not in self.branch_sentence_track:
@@ -1415,9 +1311,12 @@ class TableauxRules(object):
                 self.branch_sentence_track[branch.id][sentence] = 0
             return self.branch_sentence_track[branch.id][sentence]
 
-        def sentence_track_inc(self, branch, sentence):
-            self.sentence_track_count(branch, sentence)
-            self.branch_sentence_track[branch.id][sentence] += 1
+        def modal_complexity(self, sentence):
+            if sentence not in self.modal_complexities:
+                ops = sentence.operators()
+                modal_ops = [operator for operator in ops if operator in Model.modal_operators]
+                self.modal_complexities[sentence] = len(modal_ops)
+            return self.modal_complexities[sentence]
 
     class PossibilityNegated(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
