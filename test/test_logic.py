@@ -444,7 +444,6 @@ class TestTableau(object):
         proof = logic.tableau('cpl', is_rank_optim=False)
         rule = proof.get_rule('Conjunction')
         assert not proof.opts['is_rank_optim']
-        assert not rule.is_rank_optim
 
     def test_timeout_1ms(self):
         proof = logic.tableau('cpl', examples.argument('Addition'))
@@ -456,6 +455,19 @@ class TestTableau(object):
         proof = logic.tableau(None, None)
         proof.finish()
         assert proof.stats['build_duration_ms'] == 0
+
+    def test_add_closure_rule_instance_mock(self):
+        class MockRule(logic.TableauxSystem.ClosureRule):
+            def applies_to_branch(self, branch):
+                return True
+        proof = logic.tableau(None)
+        rule = MockRule(proof)
+        proof.add_closure_rule(rule).branch()
+        proof.build()
+        assert proof.valid
+
+    #def test_add_rule_group_instance_mock(self):
+    #    class MockRule1(logic.TableauxSystem.):
 
 class TestBranch(object):
 
@@ -572,12 +584,6 @@ class TestRule(object):
         rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
         with pytest.raises(logic.NotImplementedError):
             rule.get_candidate_targets(None)
-        with pytest.raises(logic.NotImplementedError):
-            rule.select_best_target(None, None)
-        with pytest.raises(logic.NotImplementedError):
-            rule.apply(None)
-        with pytest.raises(logic.NotImplementedError):
-            rule.example()
 
     def test_base_repr_equals_rule(self):
         rule = logic.TableauxSystem.Rule(logic.tableau(None, None))

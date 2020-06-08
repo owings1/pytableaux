@@ -1410,7 +1410,7 @@ class TableauxRules(object):
 
         def group_score(self, target):
 
-            if target['candidate_score'] > 0:
+            if self.score_candidate(target) > 0:
                 return 1
 
             branch = target['branch']
@@ -1520,8 +1520,10 @@ class TableauxRules(object):
             #return -1 * len(target['sentence'].operators())
 
         def group_score(self, target):
-            if target['candidate_score'] > 0:
+
+            if self.score_candidate(target) > 0:
                 return 1
+
             return -1 * self.node_application_count(target['node'].id, target['branch'].id)
             #return -1 * min(target['track_count'], self.branching_complexity(target['node']))
 

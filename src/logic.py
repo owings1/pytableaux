@@ -1077,11 +1077,11 @@ class TableauxSystem(object):
         return 0
 
     @classmethod
-    def init_tableau(cls, proof, rule_opts):
-        for Rule in proof.logic.TableauxRules.closure_rules:
-            proof.add_closure_rule(Rule)
-        for Rules in proof.logic.TableauxRules.rule_groups:
-            proof.add_rule_group(Rules)
+    def init_tableau(cls, tableau, opts):
+        for Rule in tableau.logic.TableauxRules.closure_rules:
+            tableau.add_closure_rule(Rule)
+        for Rules in tableau.logic.TableauxRules.rule_groups:
+            tableau.add_rule_group(Rules)
 
     class TrunkAlreadyBuiltError(Exception):
         pass
@@ -1176,18 +1176,19 @@ class TableauxSystem(object):
             self.all_rules = []
             return self
 
-        def add_closure_rule(self, Rule):
-            # TODO: support instance
-            # Rules must be a class
-            rule = Rule(self, **self.rule_opts)
+        def add_closure_rule(self, rule):
+            if not isinstance(rule, TableauxSystem.Rule):
+                rule = rule(self, **self.rule_opts)
             self.closure_rules.append(rule)
             self.all_rules.append(rule)
             return self
 
-        def add_rule_group(self, Rules):
-            # TODO: support instance
-            # each of Rules must be a class
-            group = [Rule(self, **self.rule_opts) for Rule in Rules]
+        def add_rule_group(self, rules):
+            group = []
+            for rule in rules:
+                if not isinstance(rule, TableauxSystem.Rule):
+                    rule = rule(self, **self.rule_opts)
+                group.append(rule)
             self.rule_groups.append(group)
             self.all_rules.extend(group)
             return self
@@ -1309,6 +1310,7 @@ class TableauxSystem(object):
                     raise TableauxSystem.ProofTimeoutError('Timeout of {0}ms exceeded.'.format(str(self.build_timeout)))
                     
         def structure(self, branches, node_depth=0, track=None):
+            # TODO: move to utility method
             is_root = track == None
             if track == None:
                 track = {
@@ -1905,12 +1907,17 @@ class TableauxSystem(object):
             else:
                 parent_id = None
             return {'id': self.id, 'props': self.props, 'ticked': self.ticked, 'step': self.step, 'parent': parent_id}.__repr__()
-            return self.__dict__.__repr__()
 
     class Rule(object):
         """
         Base interface class for a tableau rule.
         """
+
+        branch_level = 1
+
+        default_opts = {
+            'is_rank_optim' : True
+        }
 
         def __init__(self, tableau, **opts):
             #: Reference to the tableau for which the rule is instantiated.
@@ -1920,52 +1927,91 @@ class TableauxSystem(object):
             self.timers = {}
             self.name = self.__class__.__name__
             self.apply_count = 0
+            self.opts = dict(self.default_opts)
+            self.opts.update(opts)
+
+        # External API
 
         def apply(self, target):
-            # Overrides must call super, otherwise implement ``apply_to_target``.
+            # Concrete classes should implement ``apply_to_target()``
+            # Any overrides must be sure to call super.
             self.apply_to_target(target)
             self.apply_count += 1
 
         def get_target(self, branch):
-            # This is the external API entry point. Implementations should not
-            # override this.
+            # Concrete classes may choose to override this instead of implementing
+            # ``get_candidate_targets()`` and ``select_best_target()``.
             cands = self.get_candidate_targets(branch)
             if cands and len(cands):
                 return self.select_best_target(cands, branch)
 
+        # Abstract methods
+
         def get_candidate_targets(self, branch):
-            # This is to be implemented in base classes
+            # Intermediate classes such as ClosureRule, NodeRule, (and its child
+            # FilterNodeRule) implement this and ``select_best_target()``, and
+            # define finer-grained methods for concrete classes to implement.
             raise NotImplementedError(NotImplemented)
 
+        #def select_best_target(self, targets, branch):
+        #    # Intermediate classes such as ClosureRule, NodeRule, (and its child
+        #    # FilterNodeRule) implement this and ``get_candidate_targets()``, and
+        #    # define finer-grained methods for concrete classes to implement.
+        #    raise NotImplementedError(NotImplemented)
+
         def select_best_target(self, targets, branch):
-            # This is to be implemented in base classes
-            raise NotImplementedError(NotImplemented)
+
+            if not self.opts['is_rank_optim']:
+                return targets[0]
+
+            scores = [self.score_candidate(target) for target in targets]
+            max_score = max(scores)
+            for i in range(len(targets)):
+                if scores[i] == max_score:
+                    return targets[i]
 
         def apply_to_target(self, target):
             # Apply the rule to the target. Implementations should
             # modify the tableau directly, with no return value.
             raise NotImplementedError(NotImplemented)
 
+        # Implementation options for ``example()``
+
         def example(self):
-            # Add example branches/nodes sufficient for applies() to return true. Implementations should modify
-            # the tableau directly, with no return value. Used for building examples/documentation.
+            # Add example branches/nodes sufficient for applies() to return true.
+            # Implementations should modify the tableau directly, with no return
+            # value. Used for building examples/documentation.
+            self.tableau.branch().update(self.example_nodes())
+
+        def example_nodes(self):
+            return [self.example_node()]
+
+        def example_node(self):
             raise NotImplementedError(NotImplemented)
 
-        def branch(self, parent=None):
-            # convenience for self.tableau.branch()
-            return self.tableau.branch(parent)
+        # Default implementation
+
+        def group_score(self, target):
+            return self.score_candidate(target) / max(1, self.branch_level)
 
         def sentence(self, node):
+            # Overriden in FilterNodeRule
             if 'sentence' in node.props:
                 return node.props['sentence']
 
-        def group_score(self, target):
-            return 0
+        # Candidate score implementation options `is_rank_optim`
 
-        def branching_complexity(self, node):
-            if self.tableau != None:
-                return self.tableau.branching_complexity(node)
-            return 1
+        def score_candidate(self, target):
+            return sum(self.score_candidate_list(target))
+
+        def score_candidate_list(self, target):
+            return self.score_candidate_map(target).values()
+
+        def score_candidate_map(self, target):
+            # Will sum to 0 by default
+            return {}
+
+        # Tableau callbacks
 
         def after_trunk_build(self, branches):
             pass
@@ -1985,11 +2031,29 @@ class TableauxSystem(object):
         def __repr__(self):
             return self.__class__.__name__
 
+        # Util methods
+
+        def branch(self, parent=None):
+            # convenience for self.tableau.branch()
+            return self.tableau.branch(parent)
+
+        def branching_complexity(self, node):
+            if self.tableau != None:
+                return self.tableau.branching_complexity(node)
+            return 1
+
     class ClosureRule(Rule):
         """
         A closure rule has a fixed ``apply()`` method that marks the branch as
         closed. Sub-classes should implement the ``applies_to_branch()`` method.
         """
+
+        default_opts = {
+            'is_rank_optim' : False
+        }
+
+        #def __init__(self, *args, **opts):
+        #    super(TableauxSystem.ClosureRule, self).__init__(*args, **opts)
 
         def get_candidate_targets(self, branch):
             target = self.applies_to_branch(branch)
@@ -2002,9 +2066,6 @@ class TableauxSystem(object):
                     target['type'] = 'Branch'
                 return [target]
 
-        def select_best_target(self, targets, branch):
-            return targets[0]
-
         def apply_to_target(self, target):
             target['branch'].close()
 
@@ -2016,19 +2077,15 @@ class TableauxSystem(object):
         NodeRule base class.
         """
 
+        # TODO: really should be called "PotentialNodeRule"
+
         # The tick level of nodes to check.
         ticked = False
-
-        branch_level = 1
 
         def __init__(self, *args, **opts):
             super(TableauxSystem.NodeRule, self).__init__(*args, **opts)
             self.potential_nodes = dict()
             self.node_applications = dict()
-            if 'is_rank_optim' in opts:
-                self.is_rank_optim = opts['is_rank_optim']
-            else:
-                self.is_rank_optim = True
 
         def apply(self, target):
             # Override must call super
@@ -2036,7 +2093,9 @@ class TableauxSystem(object):
             node = target['node']
             if node.id not in self.node_applications[branch.id]:
                 self.node_applications[branch.id][node.id] = 0
+
             super(TableauxSystem.NodeRule, self).apply(target)
+
             self.node_applications[branch.id][node.id] += 1
 
         def get_candidate_targets(self, branch):
@@ -2064,17 +2123,7 @@ class TableauxSystem(object):
                 target['type'] = 'Node'
             if 'branch' not in target:
                 target['branch'] = branch
-            target['candidate_score'] = self.score_candidate(target)
             return target
-
-        def select_best_target(self, targets, branch):
-            if not self.is_rank_optim:
-                return targets[0]
-            max_score = max(set([target['candidate_score'] for target in targets]))
-            for i in range(len(targets)):
-                target = targets[i]
-                if target['candidate_score'] == max_score:
-                    return target
 
         def min_application_count(self, branch_id):
             if branch_id in self.node_applications:
@@ -2124,22 +2173,6 @@ class TableauxSystem(object):
             if self.ticked == False:
                 self.potential_nodes[branch.id].discard(node)
 
-        def group_score(self, target):
-            # TODO: redesign candidate/group scoring, which will
-            #       require overhauling or replacing the applies() api.
-            # for now, propagate group score
-            return target['candidate_score'] / self.branch_level
-
-        def score_candidate(self, target):
-            return sum(self.score_candidate_list(target))
-
-        def score_candidate_list(self, target):
-            return self.score_candidate_map(target).values()
-
-        def score_candidate_map(self, target):
-            # Will sum to 0 by default
-            return {}
-
         def is_potential_node(self, node, branch):
             # probably want to return true here
             raise NotImplementedError(NotImplemented)
@@ -2153,6 +2186,8 @@ class TableauxSystem(object):
         def get_target_for_node(self, node, branch):
             raise NotImplementedError(NotImplemented)
 
+        # Implementation options for ``apply_to_target()``
+
         def apply_to_target(self, target):
             # Default implementation, to provide a more convenient
             # method signature.
@@ -2164,13 +2199,12 @@ class TableauxSystem(object):
             self.apply_to_node(node, branch)
 
         def apply_to_node(self, node, branch):
+            # Simpler signature to implement, mostly for legacy purposes.
+            # New code should implement ``apply_to_node_target()`` instead,
+            # which provides more flexibility.
             raise NotImplementedError(NotImplemented)
 
-        def example(self):
-            self.tableau.branch().add(self.example_node())
 
-        def example_node(self):
-            raise NotImplementedError(NotImplemented)
 
     class FilterNodeRule(NodeRule):
         """
