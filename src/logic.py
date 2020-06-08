@@ -1076,6 +1076,13 @@ class TableauxSystem(object):
     def branching_complexity(cls, node):
         return 0
 
+    @classmethod
+    def init_tableau(cls, proof, rule_opts):
+        for Rule in proof.logic.TableauxRules.closure_rules:
+            proof.add_closure_rule(Rule)
+        for Rules in proof.logic.TableauxRules.rule_groups:
+            proof.add_rule_group(Rules)
+
     class TrunkAlreadyBuiltError(Exception):
         pass
 
@@ -1160,10 +1167,7 @@ class TableauxSystem(object):
         def set_logic(self, logic):
             self.logic = get_logic(logic)
             self.clear_rules()
-            for Rule in self.logic.TableauxRules.closure_rules:
-                self.add_closure_rule(Rule)
-            for Rules in self.logic.TableauxRules.rule_groups:
-                self.add_rule_group(Rules)
+            self.logic.TableauxSystem.init_tableau(self, self.rule_opts)
             return self
 
         def clear_rules(self):
@@ -1173,6 +1177,7 @@ class TableauxSystem(object):
             return self
 
         def add_closure_rule(self, Rule):
+            # TODO: support instance
             # Rules must be a class
             rule = Rule(self, **self.rule_opts)
             self.closure_rules.append(rule)
@@ -1180,6 +1185,7 @@ class TableauxSystem(object):
             return self
 
         def add_rule_group(self, Rules):
+            # TODO: support instance
             # each of Rules must be a class
             group = [Rule(self, **self.rule_opts) for Rule in Rules]
             self.rule_groups.append(group)
