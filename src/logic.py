@@ -1758,28 +1758,9 @@ class TableauxSystem(object):
             filtered by ticked status, up to the limit, if given. Returns a list.
             """
             results = []
-            best_haystack = None
-            # reduce from node index
-            for prop in self.node_index:
-                key = None
-                if prop == 'w1Rw2':
-                    if 'world1' in props and 'world2' in props:
-                        key = str([props['world1'], props['world2']])
-                elif prop in props:
-                    key = str(props[prop])
-                if key != None:
-                    if key not in self.node_index[prop]:
-                        return results
-                    haystack = self.node_index[prop][key]
-                    if best_haystack == None or len(haystack) < len(best_haystack):
-                        best_haystack = haystack
-                    # we could do no better
-                    if len(best_haystack) <= 1:
-                        break
-            if ticked and (best_haystack == None or len(self.ticked_nodes) < len(best_haystack)):
-                best_haystack = self.ticked_nodes
-            if best_haystack == None:
-                best_haystack = self.nodes
+            best_haystack = self._select_index(props, ticked)
+            if not best_haystack:
+                return results
             for node in best_haystack:
                 if limit != None and len(results) >= limit:
                     break
@@ -1823,6 +1804,31 @@ class TableauxSystem(object):
                     if key not in self.node_index[prop]:
                         self.node_index[prop][key] = set()
                     self.node_index[prop][key].add(node)
+
+        def _select_index(self, props, ticked):
+            best_index = None
+            for prop in self.node_index:
+                key = None
+                if prop == 'w1Rw2':
+                    if 'world1' in props and 'world2' in props:
+                        key = str([props['world1'], props['world2']])
+                elif prop in props:
+                    key = str(props[prop])
+                if key != None:
+                    if key not in self.node_index[prop]:
+                        return False
+                    index = self.node_index[prop][key]
+                    if best_index == None or len(index) < len(best_index):
+                        best_index = index
+                    # we could do no better
+                    if len(best_index) == 1:
+                        break
+            if not best_index:
+                if ticked:
+                    best_index = self.ticked_nodes
+                else:
+                    best_index = self.nodes
+            return best_index
 
         def update(self, nodes):
             """
