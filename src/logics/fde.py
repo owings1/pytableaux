@@ -538,8 +538,8 @@ class TableauxRules(object):
 
         # Cache
 
-        def after_node_add(self, branch, node):
-            super(TableauxRules.DesignationClosure, self).after_node_add(branch, node)
+        def register_node(self, node, branch):
+            super(TableauxRules.DesignationClosure, self).register_node(node, branch)
             if node.has('sentence'):
                 nnode = branch.find({'sentence': self.sentence(node), 'designated': not node.props['designated']})
                 if nnode:

@@ -96,8 +96,8 @@ class TableauxRules(object):
             self.safeprop('targets', {})
             self.opts['is_rank_optim'] = False
 
-        def after_node_add(self, branch, node):
-            super(TableauxRules.GlutClosure, self).after_node_add(branch, node)
+        def register_node(self, node, branch):
+            super(TableauxRules.GlutClosure, self).register_node(node, branch)
             if node.has('sentence') and node.has('designated') and node.props['designated']:
                 nnode = branch.find({'sentence': negative(self.sentence(node)), 'designated': True})
                 if nnode:
