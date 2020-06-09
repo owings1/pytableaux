@@ -111,6 +111,10 @@ class SphinxUtil(object): # pragma: no cover
         logic.TableauxSystem.FilterNodeRule,
     ]
 
+    skip_build_trunk = [
+        logic.TableauxSystem.Tableau.build_trunk
+    ]
+
     @staticmethod
     def docs_post_process(app, exception):
         # Sphinx utility
@@ -198,19 +202,20 @@ class SphinxUtil(object): # pragma: no cover
                     print ('No example generated for ' + str(obj))
                     raise e
         elif what == 'method' and obj.__name__ == 'build_trunk':
-            try:
-                proof_html = get_build_trunk_example_html(obj.__module__, arg)
-                arg_html = get_argument_example_html(arg)
-                lines += [
-                    'Example:' ,
-                    '',
-                    '.. raw:: html',
-                    '',
-                    '    ' + arg_html,
-                    '',
-                    '    ' + proof_html,
-                ]
-            except Exception as e:
-                print ('Error making example for ' + str(obj))
-                print(str(e))
-                raise e
+            if obj not in SphinxUtil.skip_build_trunk:
+                try:
+                    proof_html = get_build_trunk_example_html(obj.__module__, arg)
+                    arg_html = get_argument_example_html(arg)
+                    lines += [
+                        'Example:' ,
+                        '',
+                        '.. raw:: html',
+                        '',
+                        '    ' + arg_html,
+                        '',
+                        '    ' + proof_html,
+                    ]
+                except Exception as e:
+                    print ('Error making example for ' + str(obj))
+                    print(str(e))
+                    raise e
