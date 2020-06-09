@@ -64,7 +64,7 @@ class TableauxRules(object):
     .. _K: k.html
     """
 
-    class Reflexive(k.MaxWorldTrackingFilterRule):
+    class Reflexive(k.IsModal, logic.TableauxSystem.PotentialNodeRule):
         """
         The Reflexive rule applies to an open branch *b* when there is a node *n*
         on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
@@ -78,6 +78,11 @@ class TableauxRules(object):
             super(TableauxRules.Reflexive, self).__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
             self.add_timer('is_potential_node')
+            self.safeprop('max_worlds_tracker', k.MaxWorldsTracker(self))
+
+        def after_trunk_build(self, branches):
+            super(TableauxRules.Reflexive, self).after_trunk_build(branches)
+            self.max_worlds_tracker.after_trunk_build(branches)
 
         def is_potential_node(self, node, branch):
             ret = None
@@ -102,7 +107,7 @@ class TableauxRules(object):
 
         def should_stop(self, branch):
             # why apply when necessity will not apply
-            return self.max_worlds_exceeded(branch)
+            return self.max_worlds_tracker.max_worlds_exceeded(branch)
 
         def example_node(self, branch):
             return {'sentence': logic.atomic(0, 0), 'world': 0}

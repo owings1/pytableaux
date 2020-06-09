@@ -75,7 +75,7 @@ class TableauxRules(object):
     .. _S4: s4.html
     """
     
-    class Symmetric(k.MaxWorldTrackingFilterRule):
+    class Symmetric(k.IsModal, logic.TableauxSystem.PotentialNodeRule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
@@ -87,6 +87,11 @@ class TableauxRules(object):
             super(TableauxRules.Symmetric, self).__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
             self.add_timer('is_potential_node')
+            self.safeprop('max_worlds_tracker', k.MaxWorldsTracker(self))
+
+        def after_trunk_build(self, branches):
+            super(TableauxRules.Symmetric, self).after_trunk_build(branches)
+            self.max_worlds_tracker.after_trunk_build(branches)
 
         def is_potential_node(self, node, branch):
             ret = None
@@ -114,7 +119,7 @@ class TableauxRules(object):
 
         def should_stop(self, branch):
             # why apply when necessity will not apply
-            return self.max_worlds_reached(branch)
+            return self.max_worlds_tracker.max_worlds_reached(branch)
 
         def example_node(self, branch):
             return {'world1': 0, 'world2': 1}

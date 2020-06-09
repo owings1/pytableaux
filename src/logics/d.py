@@ -75,7 +75,7 @@ class TableauxRules:
     .. _K: k.html
     """
 
-    class Serial(k.MaxWorldTrackingFilterRule):
+    class Serial(k.IsModal, logic.TableauxSystem.PotentialNodeRule):
         """
         The Serial rule applies to a an open branch *b* when there is a world *w* that
         appears on *b*, but there is no world *w'* such that *w* accesses *w'*. The exception
@@ -92,6 +92,11 @@ class TableauxRules:
         def __init__(self, *args, **opts):
             super(TableauxRules.Serial, self).__init__(*args, **opts)
             self.safeprop('unserial_worlds', {})
+            self.safeprop('max_worlds_tracker', k.MaxWorldsTracker(self))
+
+        def after_trunk_build(self, branches):
+            super(TableauxRules.Serial, self).after_trunk_build(branches)
+            self.max_worlds_tracker.after_trunk_build(branches)
 
         # Cache
 
@@ -111,6 +116,9 @@ class TableauxRules:
                     self.unserial_worlds[branch.id].add(w)
 
         # Implementation
+
+        def is_potential_node(self, node, branch):
+            return len(node.worlds()) > 0
 
         def get_targets_for_node(self, node, branch):
 
@@ -144,7 +152,7 @@ class TableauxRules:
                 return True
 
             # As above, this is unnecessary
-            if self.max_worlds_exceeded(branch):
+            if self.max_worlds_tracker.max_worlds_exceeded(branch):
                 return True
 
             return False

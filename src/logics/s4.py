@@ -71,7 +71,7 @@ class TableauxRules(object):
     .. _T: t.html
     """
     
-    class Transitive(k.MaxWorldTrackingFilterRule):
+    class Transitive(k.IsModal, logic.TableauxSystem.PotentialNodeRule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* and for each
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
@@ -81,6 +81,11 @@ class TableauxRules(object):
         def __init__(self, *args, **opts):
             super(TableauxRules.Transitive, self).__init__(*args, **opts)
             self.safeprop('access', {})
+            self.safeprop('max_worlds_tracker', k.MaxWorldsTracker(self))
+
+        def after_trunk_build(self, branches):
+            super(TableauxRules.Transitive, self).after_trunk_build(branches)
+            self.max_worlds_tracker.after_trunk_build(branches)
 
         # Caching
 
@@ -150,7 +155,7 @@ class TableauxRules(object):
         # Other methods
 
         def should_stop(self, branch):
-            return self.max_worlds_reached(branch)
+            return self.max_worlds_tracker.max_worlds_reached(branch)
 
         def visibles(self, world, branch):
             if branch.id in self.access:

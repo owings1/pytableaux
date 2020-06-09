@@ -600,20 +600,23 @@ class TableauxSystem(logic.TableauxSystem):
         return complexity
 
 class IsModal(object):
-    modal = True            
+    modal = True
 
-class MaxWorldTrackingFilterRule(IsModal, logic.TableauxSystem.FilterNodeRule):
+class MaxWorldsTracker(object):
 
     max_worlds_operators = set(Model.modal_operators)
 
-    def __init__(self, *args, **opts):
-        super(MaxWorldTrackingFilterRule, self).__init__(*args, **opts)
+    def __init__(self, rule):
+        self.rule = rule
         # Track the maximum number of worlds that should be on the branch
         # so we can halt on infinite branches.
-        self.safeprop('branch_max_worlds', {})
+        self.branch_max_worlds = {}
+
+    def sentence(self, node):
+        # Delegate
+        return self.rule.sentence(node)
 
     def after_trunk_build(self, branches):
-        super(MaxWorldTrackingFilterRule, self).after_trunk_build(branches)
         for branch in branches:
             origin = branch.origin()
             # In most cases, we will have only one origin branch.
@@ -1227,7 +1230,7 @@ class TableauxRules(object):
         quantifier = 'Universal'
         convert_to = 'Existential'
 
-    class Possibility(MaxWorldTrackingFilterRule):
+    class Possibility(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -1242,6 +1245,11 @@ class TableauxRules(object):
             super(TableauxRules.Possibility, self).__init__(*args, **opts)
             self.safeprop('branch_sentence_track', {})
             self.safeprop('modal_complexities', {})
+            self.safeprop('max_worlds_tracker', MaxWorldsTracker(self))
+
+        def after_trunk_build(self, branches):
+            super(TableauxRules.Possibility, self).after_trunk_build(branches)
+            self.max_worlds_tracker.after_trunk_build(branches)
 
         # Cache
 
@@ -1256,12 +1264,12 @@ class TableauxRules(object):
         # Implementation
 
         def is_potential_node(self, node, branch):
-            if self.max_worlds_exceeded(branch):
+            if self.max_worlds_tracker.max_worlds_exceeded(branch):
                 return False
             return super(TableauxRules.Possibility, self).is_potential_node(node, branch)
 
         def get_target_for_node(self, node, branch):
-            if self.max_worlds_reached(branch):
+            if self.max_worlds_tracker.max_worlds_reached(branch):
                 return False
             s  = self.sentence(node)
             si = s.operand
@@ -1335,7 +1343,7 @@ class TableauxRules(object):
             sn = operate(self.convert_to, [negate(s.operand)])
             branch.add({'sentence': sn, 'world': w}).tick(node)
 
-    class Necessity(MaxWorldTrackingFilterRule):
+    class Necessity(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -1353,9 +1361,14 @@ class TableauxRules(object):
                 'check_target_condtn2',
             )
             self.safeprop('node_worlds_applied', {})
+            self.safeprop('max_worlds_tracker', MaxWorldsTracker(self))
+
+        def after_trunk_build(self, branches):
+            super(TableauxRules.Necessity, self).after_trunk_build(branches)
+            self.max_worlds_tracker.after_trunk_build(branches)
 
         def should_stop(self, branch):
-            return self.max_worlds_exceeded(branch)
+            return self.max_worlds_tracker.max_worlds_exceeded(branch)
 
         def is_potential_node(self, node, branch):
             if self.should_stop(branch):
