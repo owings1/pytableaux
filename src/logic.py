@@ -1583,6 +1583,7 @@ class TableauxSystem(object):
                 'world'      : dict(),
                 'world1'     : dict(),
                 'world2'     : dict(),
+                'w1Rw2'      : dict(),
             }
 
         def has(self, props, ticked=None):
@@ -1591,6 +1592,9 @@ class TableauxSystem(object):
             optionally filtered by ticked status.
             """
             return self.find(props, ticked=ticked) != None
+
+        def has_access(self, *worlds):
+            return str(list(worlds)) in self.node_index['w1Rw2']
 
         def has_any(self, props_list, ticked=None):
             """
@@ -1630,8 +1634,13 @@ class TableauxSystem(object):
             best_haystack = None
             # reduce from node index
             for prop in self.node_index:
-                if prop in props:
+                key = None
+                if prop == 'w1Rw2':
+                    if 'world1' in props and 'world2' in props:
+                        key = str([props['world1'], props['world2']])
+                elif prop in props:
                     key = str(props[prop])
+                if key != None:
                     if key not in self.node_index[prop]:
                         return results
                     haystack = self.node_index[prop][key]
@@ -1679,8 +1688,13 @@ class TableauxSystem(object):
 
         def _add_to_index(self, node):
             for prop in self.node_index:
-                if prop in node.props:
+                key = None
+                if prop == 'w1Rw2':
+                    if 'world1' in node.props and 'world2' in node.props:
+                        key = str([node.props['world1'], node.props['world2']])
+                elif prop in node.props:
                     key = str(node.props[prop])
+                if key:
                     if key not in self.node_index[prop]:
                         self.node_index[prop][key] = set()
                     self.node_index[prop][key].add(node)
