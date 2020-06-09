@@ -195,9 +195,6 @@ class TableauxRules:
             k.TableauxRules.Existential,
         ],
         [
-            k.TableauxRules.Universal,
-        ],
-        [
             # modal rules
             k.TableauxRules.Necessity,
             k.TableauxRules.Possibility,
@@ -218,6 +215,9 @@ class TableauxRules:
             ## special ordering of serial rule
             #IdentityIndiscernability,
             k.TableauxRules.IdentityIndiscernability,
+        ],
+        [
+            k.TableauxRules.Universal,
         ],
         [
             # special ordering of serial rule

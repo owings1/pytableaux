@@ -621,13 +621,9 @@ class TableauxRules(object):
             MaterialConditionalUndesignated,
             ConditionalNegatedDesignated,
             BiconditionalNegatedDesignated,
-            ExistentialDesignated,
             ExistentialNegatedDesignated,
-            ExistentialUndesignated,
             ExistentialNegatedUndesignated,
-            UniversalDesignated,
             UniversalNegatedDesignated,
-            UniversalUndesignated,
             UniversalNegatedUndesignated,
             DoubleNegationDesignated,
             DoubleNegationUndesignated,
@@ -650,5 +646,13 @@ class TableauxRules(object):
             BiconditionalDesignated,
             BiconditionalNegatedUndesignated,
             BiconditionalUndesignated,
+        ],
+        [
+            ExistentialDesignated,
+            ExistentialUndesignated,
+        ],
+        [
+            UniversalDesignated,
+            UniversalUndesignated,
         ],
     ]

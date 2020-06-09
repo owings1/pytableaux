@@ -162,9 +162,6 @@ class TableauxRules(object):
             t.TableauxRules.Reflexive,
         ],
         [
-            k.TableauxRules.Universal,
-        ],
-        [
             # branching rules
             k.TableauxRules.ConjunctionNegated,
             k.TableauxRules.Disjunction, 
@@ -174,6 +171,9 @@ class TableauxRules(object):
             k.TableauxRules.Conditional,
             k.TableauxRules.Biconditional,
             k.TableauxRules.BiconditionalNegated,
+        ],
+        [
+            k.TableauxRules.Universal,
         ],
         [
             Symmetric,

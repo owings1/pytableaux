@@ -751,13 +751,9 @@ class TableauxRules(object):
             AssertionNegatedUndesignated,
             ConjunctionDesignated, 
             DisjunctionNegatedDesignated,
-            ExistentialDesignated,
             ExistentialNegatedDesignated,
-            ExistentialUndesignated,
             ExistentialNegatedUndesignated,
-            UniversalDesignated,
             UniversalNegatedDesignated,
-            UniversalUndesignated,
             UniversalNegatedUndesignated,
             DoubleNegationDesignated,
             DoubleNegationUndesignated,
@@ -792,4 +788,12 @@ class TableauxRules(object):
             # five-branching rules (formerly)
             DisjunctionNegatedUndesignated,
         ],
+        [
+            ExistentialDesignated,
+            ExistentialUndesignated,
+        ],
+        [
+            UniversalDesignated,
+            UniversalUndesignated,
+        ]
     ]

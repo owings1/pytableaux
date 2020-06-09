@@ -640,13 +640,9 @@ class TableauxRules(object):
             MaterialConditionalUndesignated,
             ConditionalNegatedDesignated,
             ConditionalUndesignated,
-            ExistentialDesignated,
             ExistentialNegatedDesignated,
-            ExistentialUndesignated,
             ExistentialNegatedUndesignated,
-            UniversalDesignated,
             UniversalNegatedDesignated,
-            UniversalUndesignated,
             UniversalNegatedUndesignated,
             DoubleNegationDesignated,
             DoubleNegationUndesignated,
@@ -672,5 +668,13 @@ class TableauxRules(object):
             # 3 branching rules
             ConditionalDesignated,
             BiconditionalDesignated,
-        ]
+        ],
+        [
+            ExistentialDesignated,
+            ExistentialUndesignated,
+        ],
+        [
+            UniversalDesignated,
+            UniversalUndesignated,
+        ],
     ]
