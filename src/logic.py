@@ -1479,12 +1479,12 @@ class TableauxSystem(object):
             self.valid    = len(self.open_branches()) == 0
             self.invalid  = not self.valid and not self.is_premature
 
-            with self.tree_timer:
-                self.tree = make_tree_structure(self.branches)
-
             with self.models_timer:
                 if self.is_build_models and not self.is_premature:
                     self._build_models()
+
+            with self.tree_timer:
+                self.tree = make_tree_structure(self.branches)
 
             self.stats = self._compute_stats()
 

@@ -466,6 +466,11 @@ class TestTableau(object):
         proof.build()
         assert proof.valid
 
+    def test_regress_structure_has_model_id(self):
+        proof = logic.tableau('CPL', examples.argument('Triviality 1'))
+        proof.build(models=True)
+        assert proof.tree['model_id']
+
     #def test_add_rule_group_instance_mock(self):
     #    class MockRule1(logic.TableauxSystem.):
 
