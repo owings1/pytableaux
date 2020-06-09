@@ -102,7 +102,7 @@ class TableauxRules(object):
             if branch.id in self.targets:
                 return self.targets[branch.id]
 
-        def example_nodes(self):
+        def example_nodes(self, branch):
             a = logic.atomic(0, 0)
             return [
                 {'sentence':        a , 'designated': False},

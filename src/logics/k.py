@@ -684,7 +684,7 @@ class TableauxRules(object):
             if branch.id in self.targets:
                 return self.targets[branch.id]
 
-        def example_nodes(self):
+        def example_nodes(self, branch):
             a = atomic(0, 0)
             return [
                 {'sentence':        a , 'world': 0},
@@ -714,7 +714,7 @@ class TableauxRules(object):
                 return self.targets[branch.id]
             return False
 
-        def example_node(self):
+        def example_node(self, branch):
             s = negate(examples.self_identity())
             return {'sentence': s, 'world': 0}
 
@@ -739,7 +739,7 @@ class TableauxRules(object):
                 return self.targets[branch.id]
             return False
 
-        def example_node(self):
+        def example_node(self, branch):
             s = logic.parse('NJm')
             return {'sentence': s, 'world': 0}
 
@@ -1210,7 +1210,7 @@ class TableauxRules(object):
             w = target['world']
             branch.add({'sentence': s, 'world': w})
 
-        def example_node(self):
+        def example_node(self, branch):
             node = {'sentence': examples.quantified(self.quantifier)}
             if self.modal:
                 node['world'] = 0
@@ -1451,7 +1451,7 @@ class TableauxRules(object):
         def apply_to_node_target(self, node, branch, target):
             branch.add({'sentence': target['sentence'], 'world': target['world']})
 
-        def example_nodes(self):
+        def example_nodes(self, branch):
             s = operate(self.operator, [atomic(0, 0)])
             return [
                 {'sentence': s, 'world': 0},
@@ -1527,7 +1527,7 @@ class TableauxRules(object):
         def apply_to_node_target(self, node, branch, target):
             branch.add({'sentence': target['sentence'], 'world': target['world']})
 
-        def example_nodes(self):
+        def example_nodes(self, branch):
             return [ 
                 {'sentence': examples.predicated(), 'world': 0},
                 {'sentence': examples.identity(),   'world': 0},

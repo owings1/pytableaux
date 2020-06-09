@@ -118,7 +118,7 @@ class TableauxRules(object):
             # why apply when necessity will not apply
             return self.max_worlds_reached(branch)
 
-        def example_node(self):
+        def example_node(self, branch):
             return {'world1': 0, 'world2': 1}
 
     closure_rules = list(k.TableauxRules.closure_rules)

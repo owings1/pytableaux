@@ -550,7 +550,7 @@ class TableauxRules(object):
             if branch.id in self.targets:
                 return self.targets[branch.id]
 
-        def example_nodes(self):
+        def example_nodes(self, branch):
             a = atomic(0, 0)
             return [
                 {'sentence': a, 'designated': True },
@@ -1142,7 +1142,7 @@ class TableauxRules(object):
             # keep designation neutral for inheritance below
             target['branch'].add({'sentence': target['sentence'], 'designated': self.designation})
 
-        def example_node(self):
+        def example_node(self, branch):
             # keep quantifier and designation neutral for inheritance below
             s = examples.quantified(self.quantifier)
             return {'sentence': s, 'designated': self.designation}

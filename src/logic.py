@@ -1991,12 +1991,13 @@ class TableauxSystem(object):
             # Add example branches/nodes sufficient for applies() to return true.
             # Implementations should modify the tableau directly, with no return
             # value. Used for building examples/documentation.
-            self.branch().update(self.example_nodes())
+            branch = self.branch()
+            branch.update(self.example_nodes(branch))
 
-        def example_nodes(self):
-            return [self.example_node()]
+        def example_nodes(self, branch):
+            return [self.example_node(branch)]
 
-        def example_node(self):
+        def example_node(self, branch):
             raise NotImplementedError(NotImplemented)
 
         # Default implementation
@@ -2333,7 +2334,7 @@ class TableauxSystem(object):
 
         # Default
 
-        def example_node(self):
+        def example_node(self, branch):
             props = {}
             if self.modal:
                 props['world'] = 0

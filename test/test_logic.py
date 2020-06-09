@@ -604,7 +604,7 @@ class TestNodeRule(object):
         with pytest.raises(logic.NotImplementedError):
             rule.apply_to_node(None, None)
         with pytest.raises(logic.NotImplementedError):
-            rule.example_node()
+            rule.example_node(None)
         with pytest.raises(logic.NotImplementedError):
             rule.example()
 

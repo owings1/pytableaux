@@ -101,7 +101,7 @@ class TableauxRules(object):
         A branch is closed if a sentence and its negation appear on the branch.
         """
 
-        def example_nodes(self):
+        def example_nodes(self, branch):
             a = logic.atomic(0, 0)
             return [
                 {'sentence':        a },
@@ -113,7 +113,7 @@ class TableauxRules(object):
         A branch is closed if a sentence of the form P{~ a = a} appears on the branch.
         """
 
-        def example_node(self):
+        def example_node(self, branch):
             return {'sentence': negate(examples.self_identity())}
 
     class NonExistenceClosure(NonModal, k.TableauxRules.NonExistenceClosure):
@@ -121,7 +121,7 @@ class TableauxRules(object):
         A branch is closed if a sentence of the form P{~!a} appears on the branch.
         """
 
-        def example_node(self):
+        def example_node(self, branch):
             return {'sentence': logic.parse('NJm')}
 
     class DoubleNegation(NonModal, k.TableauxRules.DoubleNegation):
@@ -266,7 +266,7 @@ class TableauxRules(object):
         not appear on *b*, then add it.
         """
 
-        def example_nodes(self):
+        def example_nodes(self, branch):
             return [
                 {'sentence': examples.predicated()},
                 {'sentence': examples.identity()  },

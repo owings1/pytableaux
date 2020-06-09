@@ -141,7 +141,7 @@ class TableauxRules(object):
                 'world2': target['world2'],
             })
 
-        def example_nodes(self):
+        def example_nodes(self, branch):
             return [
                 {'world1': 0, 'world2': 1},
                 {'world1': 1, 'world2': 2},

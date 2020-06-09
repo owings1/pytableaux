@@ -60,7 +60,7 @@ class TestFDE(LogicTester):
     def test_ConjunctionNegatedDesignated_example_node(self):
         proof = tableau(self.logic)
         rule = proof.get_rule('ConjunctionNegatedDesignated')
-        props = rule.example_node()
+        props = rule.example_node(proof.branch())
         assert props['sentence'].operator == 'Negation'
         assert props['sentence'].operand.operator == 'Conjunction'
         assert props['designated']
@@ -1100,17 +1100,17 @@ class TestK(LogicTester):
 
     def test_Possibility_example_node(self):
         rule = self.logic.TableauxRules.Possibility(empty_proof())
-        props = rule.example_node()
+        props = rule.example_node(rule.branch())
         assert props['world'] == 0
 
     def test_Existential_example_node(self):
         rule = self.logic.TableauxRules.Existential(empty_proof())
-        props = rule.example_node()
+        props = rule.example_node(rule.branch())
         assert props['sentence'].quantifier == 'Existential'
 
     def test_DisjunctionNegated_example_node(self):
         rule = self.logic.TableauxRules.DisjunctionNegated(empty_proof())
-        props = rule.example_node()
+        props = rule.example_node(rule.branch())
         assert props['sentence'].operator == 'Negation'
 
     def test_Universal_example(self):
