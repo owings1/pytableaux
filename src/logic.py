@@ -1295,7 +1295,9 @@ class TableauxSystem(object):
             on the rules.
 
             If the ``is_group_optim`` option is **disabled**, then the first
-            non-empty target returned by a rule is selected.
+            non-empty target returned by a rule is selected. The target is
+            updated with the keys `group_score` = ``None``, `total_group_targets` = `1`,
+            and `min_group_score` = ``None``.
 
             If the ``is_group_optim`` option is **enabled**, then all non-empty
             targets from the rules are collected, and the ``select_optim_group_application()``
@@ -1312,6 +1314,11 @@ class TableauxSystem(object):
                     target = rule.get_target(branch)
                 if target:
                     if not self.opts['is_group_optim']:
+                        target.update({
+                            'group_score'         : None,
+                            'total_group_targets' : 1,
+                            'min_group_score'     : None,
+                        })
                         return (rule, target)
                     results.append((rule, target))
             if results:
@@ -1328,14 +1335,27 @@ class TableauxSystem(object):
             method. The target with the max score is selected. If there is a tie,
             the the first target is selected.
 
+            The target is updated with the following keys:
+            
+            - group_score
+            - total_group_targets
+            - min_group_score
+
             The return value an element of ``results``, which is a (rule, target)
             pair.
             """
             group_scores = [rule.group_score(target) for rule, target in results]
             max_group_score = max(group_scores)
+            min_group_score = min(group_scores)
             for i in range(len(results)):
                 if group_scores[i] == max_group_score:
-                    return results[i]
+                    rule, target = results[i]
+                    target.update({
+                        'group_score'         : max_group_score,
+                        'total_group_targets' : len(results),
+                        'min_group_score'     : min_group_score,
+                    })
+                    return (rule, target)
 
         def do_application(self, rule, target, step_timer):
             """
@@ -1537,7 +1557,7 @@ class TableauxSystem(object):
                 'rules' : [
                     self._compute_rule_stats(rule)
                     for rule in self.all_rules
-                ]
+                ],
             }
 
         def _compute_rule_stats(self, rule):
@@ -1557,7 +1577,7 @@ class TableauxSystem(object):
                         'times_started' : rule.timers[name].times_started(),
                     }
                     for name in rule.timers
-                }
+                },
             }
 
         def _check_timeout(self):
@@ -2003,32 +2023,48 @@ class TableauxSystem(object):
         # External API
 
         def apply(self, target):
-            # Concrete classes should implement ``apply_to_target()``
-            # Any overrides must be sure to call super.
+            # Concrete classes should not override this, but should implement
+            # ``apply_to_target()`` instead.
             with self.apply_timer:
                 self.apply_to_target(target)
                 self.apply_count += 1
                 self.after_apply(target)
 
         def get_target(self, branch):
-            # Concrete classes may choose to override this instead of implementing
-            # ``get_candidate_targets()`` and ``select_best_target()``.
+            # Concrete classes should not override this, but should implement
+            # ``get_candidate_targets()`` instead.
             cands = self.get_candidate_targets(branch)
-            if cands and len(cands):
-                return self.select_best_target(cands, branch)
+            if cands:
+                return self._select_best_target(cands, branch)
 
-        # General implementation
-
-        def select_best_target(self, targets, branch):
-
+        def _select_best_target(self, targets, branch):
+            # Selects the best target. Augment the target with the following
+            # keys:
+            #  'candidate_score'
+            #  'total_candidates'
+            #  'min_candidate_score'
+            
             if not self.opts['is_rank_optim']:
-                return targets[0]
+                target = targets[0]
+                target.update({
+                    'candidate_score'     : None,
+                    'total_candidates'    : len(targets),
+                    'min_candidate_score' : None,
+                })
+                return target
 
             scores = [self.score_candidate(target) for target in targets]
             max_score = max(scores)
+            min_score = min(scores)
             for i in range(len(targets)):
                 if scores[i] == max_score:
-                    return targets[i]
+                    target = targets[i]
+                    target.update({
+                        'candidate_score'     : max_score,
+                        'total_candidates'    : len(targets),
+                        'min_candidate_score' : min_score,
+                    })
+                    return target
 
         # Abstract methods
 
@@ -2061,6 +2097,7 @@ class TableauxSystem(object):
         # Default implementation
 
         def group_score(self, target):
+            # Called in tableau
             return self.score_candidate(target) / max(1, self.branch_level)
 
         def sentence(self, node):
