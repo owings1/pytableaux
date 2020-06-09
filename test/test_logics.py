@@ -43,6 +43,11 @@ def empty_proof():
 
 class LogicTester(object):
 
+    vocab = Vocabulary([
+        ('PredF', 0, 0, 1),
+        ('PredG', 1, 0, 1),
+    ])
+
     def example_proof(self, name, **kw):
         return example_proof(self.logic, name, **kw)
 
@@ -1821,3 +1826,77 @@ class TestS5(LogicTester):
         proof = tableau(self.logic, arg)
         proof.build()
         assert proof.invalid
+
+    def test_valid_optimize_nec_rule1(self):
+        arg = argument('NLVxNFx', premises=['LMSxFx'], notation='polish', vocabulary=examples.vocabulary)
+        proof = tableau(self.logic, arg)
+        proof.build(timeout=1000)
+        assert proof.valid
+
+    def test_intermediate_mix_modal_quantifiers1(self):
+        # For this we needed to put Universal and Existential rules
+        # in the same group, and toward the end.
+        vocab = Vocabulary([
+            ('PredF', 0, 0, 1),
+            ('PredG', 1, 0, 1),
+        ])
+        arg = argument('MSxGx', ['VxLSyUFxMGy', 'Fm'], vocabulary=vocab)
+        proof = tableau(self.logic, arg)
+        proof.build(max_steps=100)
+        assert proof.valid
+
+class TestMaxConstantsTracker(LogicTester):
+
+    logic = get_logic('S5')
+
+    class MockRule(TableauxSystem.FilterNodeRule):
+
+        def __init__(self, *args, **opts):
+            super(TestMaxConstantsTracker.MockRule, self).__init__(*args, **opts)
+            self.mtr = get_logic('K').MaxConstantsTracker(self)
+
+        def after_trunk_build(self, branches):
+            super(TestMaxConstantsTracker.MockRule, self).after_trunk_build(branches)
+            self.mtr.after_trunk_build(branches)
+
+        def register_branch(self, branch, parent):
+            super(TestMaxConstantsTracker.MockRule, self).register_branch(branch, parent)
+            self.mtr.register_branch(branch, parent)
+
+        def register_node(self, node, branch):
+            super(TestMaxConstantsTracker.MockRule, self).register_node(node, branch)
+            self.mtr.register_node(node, branch)
+
+    Rule = MockRule
+
+    def test_argument_trunk_two_qs_returns_3(self):
+        arg = argument('NLVxNFx', ['LMSxFx'], vocabulary=self.vocab)
+        proof = tableau(self.logic)
+        proof.add_rule_group([self.Rule])
+        proof.set_argument(arg)
+        rule = proof.get_rule(self.Rule)
+        branch = proof.branches[0]
+        assert rule.mtr._compute_max_constants(branch) == 3
+
+    def compute_for_node_one_q_returns_1(self):
+        s =  parse('LxFx', vocabulary=self.vocab)
+        n = {'sentence': s, 'world': 0}
+        node = TableauxSystem.Node(n)
+        proof = tableau(None)
+        rule = Rule(proof)
+        branch = proof.branch()
+        branch.add(node)
+        res = rule.mtr._compute_needed_constants_for_node(node, branch)
+        assert res == 1
+
+    def compute_for_branch_two_nodes_one_q_each_returns_3(self):
+        s1 = parse('LxFx', vocabulary=self.vocab)
+        s2 = parse('SxFx', vocabulary=self.vocab)
+        n1 = {'sentence': s, 'world': 0}
+        n2 = {'sentence': s, 'world': 0}
+        proof = tableau(None)
+        rule = Rule(proof)
+        branch = proof.branch()
+        branch.update([n1, n2])
+        res = rule.mtr._compute_max_constants(branch)
+        assert res == 3

@@ -602,6 +602,9 @@ class TableauxSystem(logic.TableauxSystem):
 class IsModal(object):
     modal = True
 
+# TODO: Make a pattern for the helpers that makes it
+#       easier to register their callbacks.
+
 class MaxWorldsTracker(object):
 
     max_worlds_operators = set(Model.modal_operators)
@@ -656,7 +659,105 @@ class MaxWorldsTracker(object):
         # If we have exceeded the max number of worlds projected for
         # the branch (origin).
         max_worlds = self.get_max_worlds(branch)
-        return max_worlds != None and len(branch.worlds()) > max_worlds
+        if max_worlds != None and len(branch.worlds()) > max_worlds:
+            print(('max worlds exceeded', self.rule.name, max_worlds))
+            return True
+
+class MaxConstantsTracker(object):
+
+    def __init__(self, rule):
+        self.rule = rule
+        # Track the maximum number of constats that should be on the branch
+        # (per world) so we can halt on infinite branches.
+        self.branch_max_constants = {}
+        # Track the constants at each world
+        self.world_constants = {}
+
+    def after_trunk_build(self, branches):
+        """
+        Must be called by rule implementation.
+        """
+        for branch in branches:
+            origin = branch.origin()
+            # In most cases, we will have only one origin branch.
+            if origin.id in self.branch_max_constants:
+                return
+            self.branch_max_constants[origin.id] = self._compute_max_constants(branch)
+
+    def register_branch(self, branch, parent):
+        """
+        Must be called by rule implementation.
+        """
+        if parent != None and parent.id in self.world_constants:
+            self.world_constants[branch.id] = {
+                world : set(self.world_constants[parent.id][world])
+                for world in self.world_constants[parent.id]
+            }
+        else:
+            self.world_constants[branch.id] = {}
+
+    def register_node(self, node, branch):
+        """
+        Must be called by rule implementation.
+        """
+        if node.has('sentence'):
+            world = node.props['world']
+            if world == None:
+                world = 0
+            if world not in self.world_constants[branch.id]:
+                self.world_constants[branch.id][world] = set()
+            self.world_constants[branch.id][world].update(node.constants())
+
+    def get_max_constants(self, branch):
+        """
+        Get the projected max number of constants (per world) for the branch.
+        """
+        origin = branch.origin()
+        if origin.id in self.branch_max_constants:
+            return self.branch_max_constants[origin.id]
+        return 1
+
+    def get_branch_constants_at_world(self, branch, world):
+        """
+        Get the cached set of constants at a world for the branch.
+        """
+        if world not in self.world_constants[branch.id]:
+            self.world_constants[branch.id][world] = set()
+        return self.world_constants[branch.id][world]
+
+    def max_constants_reached(self, branch, world=0):
+        """
+        Whether we have already reached or exceeded the max number of constants
+        projected for the branch (origin) at the given world.
+        """
+        max_constants = self.get_max_constants(branch)
+        world_constants = self.get_branch_constants_at_world(branch, world)
+        return max_constants != None and len(world_constants) >= max_constants
+
+    def max_constants_exceeded(self, branch, world=0):
+        """
+        Whether we have exceeded the max number of constants projected for
+        the branch (origin) at the given world.
+        """
+        max_constants = self.get_max_constants(branch)
+        world_constants = self.get_branch_constants_at_world(branch, world)
+        if max_constants != None and len(world_constants) > max_constants:
+            return True
+
+    def _compute_max_constants(self, branch):
+        # Project the maximum number of constants for a branch (origin) as
+        # the number of constants already on the branch (min 1) * the number of
+        # quantifiers (min 1) + 1.
+        node_needed_constants = sum([
+            self._compute_needed_constants_for_node(node, branch)
+            for node in branch.get_nodes()
+        ])
+        return max(1, len(branch.constants())) * max(1, node_needed_constants) + 1
+
+    def _compute_needed_constants_for_node(self, node, branch):
+        if node.has('sentence'):
+            return len(node.props['sentence'].quantifiers())
+        return 0
 
 class TableauxRules(object):
     """
@@ -1070,14 +1171,46 @@ class TableauxRules(object):
 
         quantifier = 'Existential'
 
-        def apply_to_node(self, node, branch):
+        def __init__(self, *args, **opts):
+            super(TableauxRules.Existential, self).__init__(*args, **opts)
+            self.safeprop('world_consts', {})
+            self.safeprop('max_constants_tracker', MaxConstantsTracker(self))
+
+        def after_trunk_build(self, branches):
+            super(TableauxRules.Existential, self).after_trunk_build(branches)
+            self.max_constants_tracker.after_trunk_build(branches)
+
+        def register_branch(self, branch, parent):
+            super(TableauxRules.Existential, self).register_branch(branch, parent)
+            self.max_constants_tracker.register_branch(branch, parent)
+
+        def register_node(self, node, branch):
+            super(TableauxRules.Existential, self).register_node(node, branch)
+            self.max_constants_tracker.register_node(node, branch)
+
+        def should_apply(self, branch, world):
+            return not self.max_constants_tracker.max_constants_exceeded(branch, world)
+
+        def get_target_for_node(self, node, branch):
+
             w = node.props['world']
+
+            if not self.should_apply(branch, w):
+                return
+
             s = self.sentence(node)
-            v = node.props['sentence'].variable
+            v = s.variable
             c = branch.new_constant()
             si = s.sentence
             r = si.substitute(c, v)
-            branch.add({'sentence': r, 'world': w}).tick(node)
+            return {
+                'sentence' : r,
+                'world'    : w,
+                'constant' : c,
+            }
+
+        def apply_to_node_target(self, node, branch, target):
+            branch.add({'sentence': target['sentence'], 'world': target['world']}).tick(node)
 
         # this actually hurts
         #def score_candidate(self, target):
@@ -1127,9 +1260,17 @@ class TableauxRules(object):
             )
             self.safeprop('node_states', {})
             self.safeprop('consts', {})
+            self.safeprop('max_constants_tracker', MaxConstantsTracker(self))
+
+        # Caching / callbacks
+
+        def after_trunk_build(self, branches):
+            super(TableauxRules.Universal, self).after_trunk_build(branches)
+            self.max_constants_tracker.after_trunk_build(branches)
 
         def register_branch(self, branch, parent):
             super(TableauxRules.Universal, self).register_branch(branch, parent)
+            self.max_constants_tracker.register_branch(branch, parent)
             if parent != None and parent.id in self.node_states:
                 self.consts[branch.id] = set(self.consts[parent.id])
                 self.node_states[branch.id] = {
@@ -1145,6 +1286,7 @@ class TableauxRules(object):
 
         def register_node(self, node, branch):
             super(TableauxRules.Universal, self).register_node(node, branch)
+            self.max_constants_tracker.register_node(node, branch)
             if self.is_potential_node(node, branch):
                 if node.id not in self.node_states[branch.id]:
                     # By tracking per node, we are tracking per world, a fortiori.
@@ -1167,10 +1309,7 @@ class TableauxRules(object):
             idx['applied'].add(c)
             idx['unapplied'].discard(c)
 
-        def should_apply(self, node, branch):
-            # Apply if there are no constants on the branch, or if we have
-            # tracked a constant that we haven't applied to.
-            return len(self.consts[branch.id]) < 1 or len(self.node_states[branch.id][node.id]['unapplied']) > 0
+        # Implementation
 
         def get_targets_for_node(self, node, branch):
             with self.timers['in_get_targets_for_nodes']:
@@ -1206,17 +1345,26 @@ class TableauxRules(object):
             node_apply_count = self.node_application_count(target['node'], target['branch'])
             return float(1 / (node_apply_count + 1))
 
-        def apply_to_target(self, target):
-            branch = target['branch']
-            s = target['sentence']
-            w = target['world']
-            branch.add({'sentence': s, 'world': w})
+        def apply_to_node_target(self, node, branch, target):
+            branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example_node(self, branch):
             node = {'sentence': examples.quantified(self.quantifier)}
             if self.modal:
                 node['world'] = 0
             return node
+
+        # Util
+
+        def should_apply(self, node, branch):
+            if self.max_constants_tracker.max_constants_exceeded(branch, node.props['world']):
+                return False
+            # Apply if there are no constants on the branch
+            if not self.consts[branch.id]:
+                return True
+            # Apply if we have tracked a constant that we haven't applied to.
+            if self.node_states[branch.id][node.id]['unapplied']:
+                return True
 
     class UniversalNegated(ExistentialNegated):
         """
