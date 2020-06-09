@@ -21,7 +21,7 @@ The *logic* module is the base module for the Python API.
 .. autoclass:: logic::TableauxSystem.ClosureRule
   :members:
 
-.. autoclass:: logic::TableauxSystem.NodeRule
+.. autoclass:: logic::TableauxSystem.PotentialNodeRule
   :members:
 
 .. autoclass:: logic::TableauxSystem.FilterNodeRule
