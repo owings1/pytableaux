@@ -772,8 +772,8 @@ class TableauxRules(object):
             super(TableauxRules.ContradictionClosure, self).__init__(*args, **opts)
             self.safeprop('targets', {})
 
-        def after_node_add(self, branch, node):
-            super(TableauxRules.ContradictionClosure, self).after_node_add(branch, node)
+        def register_node(self, node, branch):
+            super(TableauxRules.ContradictionClosure, self).register_node(node, branch)
             if node.has('sentence'):
                 nnode = branch.find({'sentence': negative(self.sentence(node)), 'world': node.props['world']})
                 if nnode:
@@ -799,8 +799,8 @@ class TableauxRules(object):
             super(TableauxRules.SelfIdentityClosure, self).__init__(*args, **opts)
             self.safeprop('targets', {})
 
-        def after_node_add(self, branch, node):
-            super(TableauxRules.SelfIdentityClosure, self).after_node_add(branch, node)
+        def register_node(self, node, branch):
+            super(TableauxRules.SelfIdentityClosure, self).register_node(node, branch)
             if node.has('sentence'):
                 s = self.sentence(node)
                 if s.operator == 'Negation' and s.operand.predicate == Identity:
@@ -826,8 +826,8 @@ class TableauxRules(object):
             super(TableauxRules.NonExistenceClosure, self).__init__(*args, **opts)
             self.safeprop('targets', {})
 
-        def after_node_add(self, branch, node):
-            super(TableauxRules.NonExistenceClosure, self).after_node_add(branch, node)
+        def register_node(self, node, branch):
+            super(TableauxRules.NonExistenceClosure, self).register_node(node, branch)
             if node.has('sentence'):
                 s = self.sentence(node)
                 if s.operator == 'Negation' and s.operand.predicate == Existence:
