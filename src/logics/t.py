@@ -74,15 +74,21 @@ class TableauxRules(object):
         is *w*.
         """
 
-        ticked = None
-
         def __init__(self, *args, **opts):
             super(TableauxRules.Reflexive, self).__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
+            self.timers.update({
+                'is_potential_node': logic.StopWatch()
+            })
 
         def is_potential_node(self, node, branch):
-            # TODO: caching filter
-            return True
+            ret = None
+            with self.timers['is_potential_node']:
+                for w in node.worlds():
+                    if not branch.has_access(w, w):
+                        ret = True
+                        break
+            return ret
 
         def get_target_for_node(self, node, branch):
             # why apply when necessity will not apply
@@ -97,11 +103,11 @@ class TableauxRules(object):
             branch.add({'world1': target['world'], 'world2': target['world']})
 
         def should_stop(self, branch):
-            return self.max_worlds_reached(branch)
+            # why apply when necessity will not apply
+            return self.max_worlds_exceeded(branch)
 
-        def example(self):
-            s = logic.atomic(0, 0)
-            self.branch().add({'sentence': s, 'world': 0})
+        def example_node(self):
+            return {'sentence': logic.atomic(0, 0), 'world': 0}
 
     closure_rules = list(k.TableauxRules.closure_rules)
 

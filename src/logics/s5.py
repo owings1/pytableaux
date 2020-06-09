@@ -86,9 +86,18 @@ class TableauxRules(object):
         def __init__(self, *args, **opts):
             super(TableauxRules.Symmetric, self).__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
+            self.timers.update({
+                'is_potential_node': logic.StopWatch()
+            })
 
         def is_potential_node(self, node, branch):
-            return node.has('world1') and node.has('world2')
+            ret = None
+            with self.timers['is_potential_node']:
+                if node.has('world1') and node.has('world2'):
+                    w1 = node.props['world1']
+                    w2 = node.props['world2']
+                    ret = not branch.has_access(w2, w1)
+            return ret
 
         def get_target_for_node(self, node, branch):
             if self.should_stop(branch):
@@ -106,12 +115,11 @@ class TableauxRules(object):
             })
 
         def should_stop(self, branch):
+            # why apply when necessity will not apply
             return self.max_worlds_reached(branch)
 
-        def example(self):
-            self.branch().update([
-                {'world1': 0, 'world2': 1},
-            ])
+        def example_node(self):
+            return {'world1': 0, 'world2': 1}
 
     closure_rules = list(k.TableauxRules.closure_rules)
 
