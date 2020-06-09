@@ -681,26 +681,51 @@ class Vocabulary(object):
 
     class Sentence(object):
 
+        #: The operator, if any.
         operator   = None
+
+        #: The quantifier, if any.
         quantifier = None
+
+        #: The predicate, if any.
         predicate  = None
 
         def is_sentence(self):
+            """
+            Whether this is a sentence.
+            """
             return True
 
         def is_atomic(self):
+            """
+            Whether this is an atomic sentence.
+            """
             return isinstance(self, Vocabulary.AtomicSentence)
 
         def is_predicated(self):
+            """
+            Whether this is a predicated sentence.
+            """
             return isinstance(self, Vocabulary.PredicatedSentence)
 
         def is_quantified(self):
+            """
+            Whether this a quantified sentence.
+            """
             return isinstance(self, Vocabulary.QuantifiedSentence)
 
         def is_operated(self):
+            """
+            Whether this is an operated sentence.
+            """
             return isinstance(self, Vocabulary.OperatedSentence)
 
         def is_literal(self):
+            """
+            Whether the sentence is a literal. Here a literal is either a
+            predicated sentence, the negation of a predicated sentence,
+            an atomic sentence, or the negation of an atomic sentence.
+            """
             return self.is_atomic() or self.is_predicated() or (
                 self.is_operated() and self.operator == 'Negation' and (
                     self.operand.is_atomic() or
@@ -712,21 +737,39 @@ class Vocabulary(object):
             raise NotImplementedError(NotImplemented)
 
         def constants(self):
+            """
+            Set of constants, recursive.
+            """
             raise NotImplementedError(NotImplemented)
 
         def variables(self):
+            """
+            Set of variables, recursive.
+            """
             raise NotImplementedError(NotImplemented)
 
         def atomics(self):
+            """
+            Set of atomic sentences, recursive.
+            """
             raise NotImplementedError(NotImplemented)
 
         def predicates(self):
+            """
+            Set of predicates, recursive.
+            """
             raise NotImplementedError(NotImplemented)
 
         def operators(self):
+            """
+            List of operators, recursive.
+            """
             raise NotImplementedError(NotImplemented)
 
         def quantifiers(self):
+            """
+            List of quantifiers, recursive.
+            """
             raise NotImplementedError(NotImplemented)
 
         def hash_tuple(self):
@@ -1931,6 +1974,11 @@ class TableauxSystem(object):
             Convenience method for ``tableau.branch()``.
             """
             return self.tableau.branch(self)
+
+        def create_node(self, props):
+            if isinstance(props, TableauxSystem.Node):
+                return props
+            return TableauxSystem.Node(props=props)
 
         def __repr__(self):
             return {
