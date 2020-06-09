@@ -1344,6 +1344,16 @@ class TableauxRules(object):
 
         operator = 'Necessity'
 
+        def __init__(self, *args, **opts):
+            super(TableauxRules.Necessity, self).__init__(*args, **opts)
+            self.timers.update({
+                'get_targets_for_node': logic.StopWatch(),
+                'make_target'         : logic.StopWatch(),
+                'check_target_condtn1': logic.StopWatch(),
+                'check_target_condtn2': logic.StopWatch(),
+            })
+            self.safeprop('node_worlds_applied', {})
+
         def should_stop(self, branch):
             return self.max_worlds_exceeded(branch)
 
@@ -1357,6 +1367,19 @@ class TableauxRules(object):
             min_apply_count = self.min_application_count(branch.id)
             return min_apply_count >= node_apply_count
 
+        def register_node(self, node, branch):
+            super(TableauxRules.Necessity, self).register_node(node, branch)
+            #if self.is_potential_node(node, branch):
+            if branch.id not in self.node_worlds_applied:
+                self.node_worlds_applied[branch.id] = set()
+
+        def after_apply(self, target):
+            super(TableauxRules.Necessity, self).after_apply(target)
+            branch = target['branch']
+            node = target['node']
+            world = target['world']
+            self.node_worlds_applied[branch.id].add((node.id, world))
+            
         def get_targets_for_node(self, node, branch):
 
             # Check for max worlds reached
@@ -1367,20 +1390,32 @@ class TableauxRules(object):
             if not self.is_least_applied_to(node, branch):
                 return
 
-            targets = list()
-            worlds = branch.worlds()
-            s = self.sentence(node)
-            si = s.operand
-            w1 = node.props['world']
-            for w2 in worlds:
-                anode = branch.find({'world1': w1, 'world2': w2})
-                if anode != None and not branch.has({'sentence': si, 'world': w2}):
-                    targets.append({
-                        'sentence' : si,
-                        'world'    : w2,
-                        'nodes'    : set([node, anode]),
-                        'type'     : 'Nodes',
-                    })
+            with self.timers['get_targets_for_node']:
+                targets = list()
+                worlds = branch.worlds()
+                s = self.sentence(node)
+                si = s.operand
+                w1 = node.props['world']
+                for anode in branch.find_all({'world1': w1}):
+                    w2 = anode.props['world2']
+                    if (node.id, w2) in self.node_worlds_applied[branch.id]:
+                        #print(self.node_worlds_applied)
+                        continue
+                    with self.timers['check_target_condtn1']:
+                        meets_condtn = branch.has_access(w1, w2)
+                    if not meets_condtn:
+                        continue
+                    with self.timers['check_target_condtn2']:
+                        meets_condtn = not branch.has({'sentence': si, 'world': w2})
+                    if meets_condtn:
+                        with self.timers['make_target']:
+                            anode = branch.find({'world1': w1, 'world2': w2})
+                            targets.append({
+                                'sentence' : si,
+                                'world'    : w2,
+                                'nodes'    : set([node, anode]),
+                                'type'     : 'Nodes',
+                            })
             return targets
 
         def score_candidate(self, target):
