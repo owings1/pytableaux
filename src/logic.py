@@ -1552,38 +1552,32 @@ class TableauxSystem(object):
             branch.closed_step = self.current_step
             self.open_branchset.remove(branch)
             for rule in self.all_rules:
-                rule.after_branch_close(branch)
-                for helper in rule.helpers:
-                    helper.after_branch_close(branch)
+                rule._after_branch_close(branch)
 
-        def after_node_add(self, branch, node):
+        def after_node_add(self, node, branch):
             # Called from the branch instance in the add/update methods.
             node.step = self.current_step
             for rule in self.all_rules:
-                rule.after_node_add(branch, node)
+                rule._after_node_add(node, branch)
 
-        def after_node_tick(self, branch, node):
+        def after_node_tick(self, node, branch):
             # Called from the branch instance in the tick method.
             if node.ticked_step == None or self.current_step > node.ticked_step:
                 node.ticked_step = self.current_step
             for rule in self.all_rules:
-                rule.after_node_tick(branch, node)
-                for helper in rule.helpers:
-                    helper.after_node_tick(branch, node)
+                rule._after_node_tick(node, branch)
 
         # Callbacks called internally
 
         def _after_branch_add(self, branch):
             # Called from add_branch()
             for rule in self.all_rules:
-                rule.after_branch_add(branch)
+                rule._after_branch_add(branch)
 
         def _after_trunk_build(self):
             # Called from build_trunk()
             for rule in self.all_rules:
-                rule.after_trunk_build(self.branches)
-                for helper in rule.helpers:
-                    helper.after_trunk_build(self.branches)
+                rule._after_trunk_build(self.branches)
 
         # Interal util methods
 
@@ -1799,8 +1793,7 @@ class TableauxSystem(object):
             """
             Add a node (Node object or dict of props). Returns self.
             """
-            if not isinstance(node, TableauxSystem.Node):
-                node = TableauxSystem.Node(props=node)
+            node = self.create_node(node)
             self.nodes.append(node)
             self.consts.update(node.constants())
             self.ws.update(node.worlds())
@@ -1814,7 +1807,7 @@ class TableauxSystem(object):
 
             # Tableau callback
             if self.tableau != None:
-                self.tableau.after_node_add(self, node)
+                self.tableau.after_node_add(node, self)
 
             return self
 
@@ -1848,7 +1841,7 @@ class TableauxSystem(object):
                 node.ticked = True
                 # Tableau callback
                 if self.tableau != None:
-                    self.tableau.after_node_tick(self, node)
+                    self.tableau.after_node_tick(node, self)
             return self
 
         def close(self):
@@ -1879,7 +1872,7 @@ class TableauxSystem(object):
             """
             Return a copy of the branch.
             """
-            branch = TableauxSystem.Branch(self.tableau)
+            branch = self.__class__(self.tableau)
             branch.nodes = list(self.nodes)
             branch.ticked_nodes = set(self.ticked_nodes)
             branch.consts = set(self.consts)
@@ -1955,7 +1948,7 @@ class TableauxSystem(object):
             if self.closed:
                 raise TableauxSystem.BranchClosedError('Cannot build a model from a closed branch')
             model.read_branch(self)
-            if self.tableau.argument != None and not self.tableau.is_premature:
+            if self.tableau.argument != None:
                 model.is_countermodel = model.is_countermodel_to(self.tableau.argument)
             self.model = model
             return model
@@ -2178,11 +2171,14 @@ class TableauxSystem(object):
             # Will sum to 0 by default
             return {}
 
-        # Consumed callbacks -- do not implement
+        # Private callbacks -- do not implement
 
-        def after_branch_add(self, branch):
-            # If you implement, be sure to call super, and be careful
-            # not to double-call ``register_branch()`` or ``register_node()``
+        def _after_trunk_build(self, branches):
+            self.after_trunk_build(branches)
+            for helper in self.helpers:
+                helper.after_trunk_build(branches)
+
+        def _after_branch_add(self, branch):
             self.register_branch(branch, branch.parent)
             for helper in self.helpers:
                 helper.register_branch(branch, branch.parent)
@@ -2190,14 +2186,23 @@ class TableauxSystem(object):
                 for node in branch.get_nodes(ticked=self.ticked):
                     self.register_node(self, node, branch)
                     for helper in self.helpers:
+                        #for node in branch.get_nodes(ticked=helper.ticked):
                         helper.register_node(node, branch)
 
-        def after_node_add(self, branch, node):
-            # If you implement, be sure to call super, and be careful
-            # not to double-call ``register_branch()`` or ``register_node()``
+        def _after_branch_close(self, branch):
+            self.after_branch_close(branch)
+            for helper in self.helpers:
+                helper.after_branch_close(branch)
+
+        def _after_node_add(self, node, branch):
             self.register_node(node, branch)
             for helper in self.helpers:
                 helper.register_node(node, branch)
+
+        def _after_node_tick(self, node, branch):
+            self.after_node_tick(node, branch)
+            for helper in self.helpers:
+                helper.after_node_tick(node, branch)
 
         # Implementable callbacks -- always call super, or use a helper.
 
@@ -2210,7 +2215,7 @@ class TableauxSystem(object):
         def after_trunk_build(self, branches):
             pass
 
-        def after_node_tick(self, branch, node):
+        def after_node_tick(self, node, branch):
             pass
 
         def after_branch_close(self, branch):
@@ -2249,6 +2254,8 @@ class TableauxSystem(object):
 
     class RuleHelper(object):
 
+        ticked = None
+
         def __init__(self, rule):
             self.rule = rule
 
@@ -2261,7 +2268,7 @@ class TableauxSystem(object):
         def after_trunk_build(self, branches):
             pass
 
-        def after_node_tick(self, branch, node):
+        def after_node_tick(self, node, branch):
             pass
 
         def after_branch_close(self, branch):
@@ -2370,8 +2377,8 @@ class TableauxSystem(object):
             del(self.potential_nodes[branch.id])
             del(self.node_applications[branch.id])
 
-        def after_node_tick(self, branch, node):
-            super(TableauxSystem.PotentialNodeRule, self).after_node_tick(branch, node)
+        def after_node_tick(self, node, branch):
+            super(TableauxSystem.PotentialNodeRule, self).after_node_tick(node, branch)
             if self.ticked == False and branch.id in self.potential_nodes:
                 self.potential_nodes[branch.id].discard(node)
 
