@@ -254,9 +254,7 @@ class TableauxRules(object):
             DisjunctionNegated,
             MaterialConditionalNegated,
             ConditionalNegated,
-            Existential,
             ExistentialNegated,
-            Universal,
             UniversalNegated,
         ],
         [
@@ -269,5 +267,10 @@ class TableauxRules(object):
             Conditional,
             Biconditional,
             BiconditionalNegated,
-        ],
+        #],
+        #[
+
+            Existential,
+            Universal,
+        ]
     ]

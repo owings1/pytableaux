@@ -439,6 +439,15 @@ class TestK3W(LogicTester):
         proof = tableau(self.logic, argument('AUabNUab')).build()
         assert not proof.valid
 
+    def test_optimize1(self):
+        proof = tableau(self.logic)
+        proof.branch().update([
+            {'sentence': parse('ANaUab'), 'designated': False},
+            {'sentence': parse('NANaUab'), 'designated': False},
+        ])
+        step = proof.step()
+        assert step['rule'].name == 'DisjunctionNegatedUndesignated'
+        
 class TestB3E(LogicTester):
 
     logic = get_logic('B3E')
