@@ -86,9 +86,7 @@ class TableauxRules(object):
         def __init__(self, *args, **opts):
             super(TableauxRules.Symmetric, self).__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
-            self.timers.update({
-                'is_potential_node': logic.StopWatch()
-            })
+            self.add_timer('is_potential_node')
 
         def is_potential_node(self, node, branch):
             ret = None

@@ -1117,12 +1117,12 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.Universal, self).__init__(*args, **opts)
-            self.timers.update({
-                'in_len_constants'         : logic.StopWatch(),
-                'in_get_targets_for_nodes' : logic.StopWatch(),
-                'in_new_constant'          : logic.StopWatch(),
-                'in_node_examime'          : logic.StopWatch(),
-            })
+            self.add_timer(
+                'in_len_constants'        ,
+                'in_get_targets_for_nodes',
+                'in_new_constant'         ,
+                'in_node_examime'         ,
+            )
             self.safeprop('node_states', {})
             self.safeprop('consts', {})
 
@@ -1346,12 +1346,12 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.Necessity, self).__init__(*args, **opts)
-            self.timers.update({
-                'get_targets_for_node': logic.StopWatch(),
-                'make_target'         : logic.StopWatch(),
-                'check_target_condtn1': logic.StopWatch(),
-                'check_target_condtn2': logic.StopWatch(),
-            })
+            self.add_timer(
+                'get_targets_for_node',
+                'make_target'         ,
+                'check_target_condtn1',
+                'check_target_condtn2',
+            )
             self.safeprop('node_worlds_applied', {})
 
         def should_stop(self, branch):

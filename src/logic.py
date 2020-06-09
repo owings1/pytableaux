@@ -2134,6 +2134,12 @@ class TableauxSystem(object):
                 raise KeyError('Property {0} already exists'.format(str(name)))
             self.__dict__[name] = value
 
+        def add_timer(self, *names):
+            for name in names:
+                if name in self.timers:
+                    raise KeyError('Timer {0} already exists'.format(str(name)))
+                self.timers[name] = StopWatch()
+
     class ClosureRule(Rule):
         """
         A closure rule has a fixed ``apply()`` method that marks the branch as

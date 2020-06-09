@@ -77,9 +77,7 @@ class TableauxRules(object):
         def __init__(self, *args, **opts):
             super(TableauxRules.Reflexive, self).__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
-            self.timers.update({
-                'is_potential_node': logic.StopWatch()
-            })
+            self.add_timer('is_potential_node')
 
         def is_potential_node(self, node, branch):
             ret = None
@@ -95,7 +93,7 @@ class TableauxRules(object):
             if self.should_stop(branch):
                 return
             for world in node.worlds():
-                if not branch.has({'world1': world, 'world2': world}):
+                if not branch.has_access(world, world):
                     return {'world': world}
             return False
             
