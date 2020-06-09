@@ -551,14 +551,14 @@ class TestBranch(object):
         branch = proof.branch().add({'world1': 4, 'world2': 1})
         assert branch.has({'world1': 4})
 
-    def test_regression_branch_has_works_with_newly_added_node_on_after_node_add(self):
+    def test_regression_branch_has_works_with_newly_added_node_on_register_node(self):
 
         class MyRule(logic.TableauxSystem.Rule):
 
             should_be = False
             shouldnt_be = True
 
-            def after_node_add(self, branch, node):
+            def register_node(self, node, branch):
                 self.should_be = branch.has({'world1': 7})
                 self.shouldnt_be = branch.has({'world1': 6})
 
