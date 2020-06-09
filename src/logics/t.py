@@ -78,11 +78,7 @@ class TableauxRules(object):
             super(TableauxRules.Reflexive, self).__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
             self.add_timer('is_potential_node')
-            self.safeprop('max_worlds_tracker', k.MaxWorldsTracker(self))
-
-        def after_trunk_build(self, branches):
-            super(TableauxRules.Reflexive, self).after_trunk_build(branches)
-            self.max_worlds_tracker.after_trunk_build(branches)
+            self.add_helper('max_worlds_tracker', k.MaxWorldsTracker(self))
 
         def is_potential_node(self, node, branch):
             ret = None

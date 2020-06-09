@@ -1510,6 +1510,8 @@ class TableauxSystem(object):
             self.open_branchset.remove(branch)
             for rule in self.all_rules:
                 rule.after_branch_close(branch)
+                for helper in rule.helpers:
+                    helper.after_branch_close(branch)
 
         def after_node_add(self, branch, node):
             # Called from the branch instance in the add/update methods.
@@ -1523,6 +1525,8 @@ class TableauxSystem(object):
                 node.ticked_step = self.current_step
             for rule in self.all_rules:
                 rule.after_node_tick(branch, node)
+                for helper in rule.helpers:
+                    helper.after_node_tick(branch, node)
 
         # Callbacks called internally
 
@@ -1535,6 +1539,8 @@ class TableauxSystem(object):
             # Called from build_trunk()
             for rule in self.all_rules:
                 rule.after_trunk_build(self.branches)
+                for helper in rule.helpers:
+                    helper.after_trunk_build(self.branches)
 
         # Interal util methods
 
@@ -2018,6 +2024,7 @@ class TableauxSystem(object):
             self.search_timer = StopWatch()
             self.apply_timer = StopWatch()
             self.timers = {}
+            self.helpers = []
             self.name = self.__class__.__name__
             self.apply_count = 0
             self.opts = dict(self.default_opts)
@@ -2123,28 +2130,34 @@ class TableauxSystem(object):
             # Will sum to 0 by default
             return {}
 
-        # Delegating callbacks
+        # Consumed callbacks -- do not implement
 
         def after_branch_add(self, branch):
             # If you implement, be sure to call super, and be careful
             # not to double-call ``register_branch()`` or ``register_node()``
             self.register_branch(branch, branch.parent)
+            for helper in self.helpers:
+                helper.register_branch(branch, branch.parent)
             if not branch.parent:
                 for node in branch.get_nodes(ticked=self.ticked):
                     self.register_node(self, node, branch)
+                    for helper in self.helpers:
+                        helper.register_node(node, branch)
 
         def after_node_add(self, branch, node):
             # If you implement, be sure to call super, and be careful
             # not to double-call ``register_branch()`` or ``register_node()``
             self.register_node(node, branch)
+            for helper in self.helpers:
+                helper.register_node(node, branch)
+
+        # Implementable callbacks -- always call super, or use a helper.
 
         def register_branch(self, branch, parent):
             pass
 
         def register_node(self, node, branch):
             pass
-
-        # Tableau callbacks
 
         def after_trunk_build(self, branches):
             pass
@@ -2154,11 +2167,6 @@ class TableauxSystem(object):
 
         def after_branch_close(self, branch):
             pass
-
-        def __repr__(self):
-            return self.__class__.__name__
-
-        # Other callbacks
 
         def after_apply(self, target):
             pass
@@ -2182,6 +2190,37 @@ class TableauxSystem(object):
                 if name in self.timers:
                     raise KeyError('Timer {0} already exists'.format(str(name)))
                 self.timers[name] = StopWatch()
+
+        def add_helper(self, name, helper):
+            self.safeprop(name, helper)
+            self.helpers.append(helper)
+            return helper
+
+        def __repr__(self):
+            return self.name
+
+    class RuleHelper(object):
+
+        def __init__(self, rule):
+            self.rule = rule
+
+        def register_branch(self, branch, parent):
+            pass
+
+        def register_node(self, node, branch):
+            pass
+
+        def after_trunk_build(self, branches):
+            pass
+
+        def after_node_tick(self, branch, node):
+            pass
+
+        def after_branch_close(self, branch):
+            pass
+
+        def after_apply(self, target):
+            pass
 
     class ClosureRule(Rule):
         """

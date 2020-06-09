@@ -81,11 +81,7 @@ class TableauxRules(object):
         def __init__(self, *args, **opts):
             super(TableauxRules.Transitive, self).__init__(*args, **opts)
             self.safeprop('access', {})
-            self.safeprop('max_worlds_tracker', k.MaxWorldsTracker(self))
-
-        def after_trunk_build(self, branches):
-            super(TableauxRules.Transitive, self).after_trunk_build(branches)
-            self.max_worlds_tracker.after_trunk_build(branches)
+            self.add_helper('max_worlds_tracker', k.MaxWorldsTracker(self))
 
         # Caching
 
@@ -120,7 +116,7 @@ class TableauxRules(object):
             return node.has('world1') and node.has('world2')
 
         def get_targets_for_node(self, node, branch):
-            if self.should_stop(branch):
+            if not self.should_apply(branch):
                 return
             w1 = node.props['world1']
             w2 = node.props['world2']
@@ -154,8 +150,8 @@ class TableauxRules(object):
 
         # Other methods
 
-        def should_stop(self, branch):
-            return self.max_worlds_tracker.max_worlds_reached(branch)
+        def should_apply(self, branch):
+            return not self.max_worlds_tracker.max_worlds_reached(branch)
 
         def visibles(self, world, branch):
             if branch.id in self.access:

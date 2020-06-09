@@ -92,11 +92,7 @@ class TableauxRules:
         def __init__(self, *args, **opts):
             super(TableauxRules.Serial, self).__init__(*args, **opts)
             self.safeprop('unserial_worlds', {})
-            self.safeprop('max_worlds_tracker', k.MaxWorldsTracker(self))
-
-        def after_trunk_build(self, branches):
-            super(TableauxRules.Serial, self).after_trunk_build(branches)
-            self.max_worlds_tracker.after_trunk_build(branches)
+            self.add_helper('max_worlds_tracker', k.MaxWorldsTracker(self))
 
         # Cache
 

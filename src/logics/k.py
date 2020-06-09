@@ -605,7 +605,7 @@ class IsModal(object):
 # TODO: Make a pattern for the helpers that makes it
 #       easier to register their callbacks.
 
-class MaxWorldsTracker(object):
+class MaxWorldsTracker(logic.TableauxSystem.RuleHelper):
 
     max_worlds_operators = set(Model.modal_operators)
 
@@ -660,10 +660,9 @@ class MaxWorldsTracker(object):
         # the branch (origin).
         max_worlds = self.get_max_worlds(branch)
         if max_worlds != None and len(branch.worlds()) > max_worlds:
-            print(('max worlds exceeded', self.rule.name, max_worlds))
             return True
 
-class MaxConstantsTracker(object):
+class MaxConstantsTracker(logic.TableauxSystem.RuleHelper):
 
     def __init__(self, rule):
         self.rule = rule
@@ -672,41 +671,6 @@ class MaxConstantsTracker(object):
         self.branch_max_constants = {}
         # Track the constants at each world
         self.world_constants = {}
-
-    def after_trunk_build(self, branches):
-        """
-        Must be called by rule implementation.
-        """
-        for branch in branches:
-            origin = branch.origin()
-            # In most cases, we will have only one origin branch.
-            if origin.id in self.branch_max_constants:
-                return
-            self.branch_max_constants[origin.id] = self._compute_max_constants(branch)
-
-    def register_branch(self, branch, parent):
-        """
-        Must be called by rule implementation.
-        """
-        if parent != None and parent.id in self.world_constants:
-            self.world_constants[branch.id] = {
-                world : set(self.world_constants[parent.id][world])
-                for world in self.world_constants[parent.id]
-            }
-        else:
-            self.world_constants[branch.id] = {}
-
-    def register_node(self, node, branch):
-        """
-        Must be called by rule implementation.
-        """
-        if node.has('sentence'):
-            world = node.props['world']
-            if world == None:
-                world = 0
-            if world not in self.world_constants[branch.id]:
-                self.world_constants[branch.id][world] = set()
-            self.world_constants[branch.id][world].update(node.constants())
 
     def get_max_constants(self, branch):
         """
@@ -730,6 +694,8 @@ class MaxConstantsTracker(object):
         Whether we have already reached or exceeded the max number of constants
         projected for the branch (origin) at the given world.
         """
+        if world == None:
+            world = 0
         max_constants = self.get_max_constants(branch)
         world_constants = self.get_branch_constants_at_world(branch, world)
         return max_constants != None and len(world_constants) >= max_constants
@@ -739,10 +705,40 @@ class MaxConstantsTracker(object):
         Whether we have exceeded the max number of constants projected for
         the branch (origin) at the given world.
         """
+        if world == None:
+            world = 0
         max_constants = self.get_max_constants(branch)
         world_constants = self.get_branch_constants_at_world(branch, world)
         if max_constants != None and len(world_constants) > max_constants:
             return True
+
+    # Helper implementation
+
+    def after_trunk_build(self, branches):
+        for branch in branches:
+            origin = branch.origin()
+            # In most cases, we will have only one origin branch.
+            if origin.id in self.branch_max_constants:
+                return
+            self.branch_max_constants[origin.id] = self._compute_max_constants(branch)
+
+    def register_branch(self, branch, parent):
+        if parent != None and parent.id in self.world_constants:
+            self.world_constants[branch.id] = {
+                world : set(self.world_constants[parent.id][world])
+                for world in self.world_constants[parent.id]
+            }
+        else:
+            self.world_constants[branch.id] = {}
+
+    def register_node(self, node, branch):
+        if node.has('sentence'):
+            world = node.props['world']
+            if world == None:
+                world = 0
+            if world not in self.world_constants[branch.id]:
+                self.world_constants[branch.id][world] = set()
+            self.world_constants[branch.id][world].update(node.constants())
 
     def _compute_max_constants(self, branch):
         # Project the maximum number of constants for a branch (origin) as
@@ -1174,19 +1170,7 @@ class TableauxRules(object):
         def __init__(self, *args, **opts):
             super(TableauxRules.Existential, self).__init__(*args, **opts)
             self.safeprop('world_consts', {})
-            self.safeprop('max_constants_tracker', MaxConstantsTracker(self))
-
-        def after_trunk_build(self, branches):
-            super(TableauxRules.Existential, self).after_trunk_build(branches)
-            self.max_constants_tracker.after_trunk_build(branches)
-
-        def register_branch(self, branch, parent):
-            super(TableauxRules.Existential, self).register_branch(branch, parent)
-            self.max_constants_tracker.register_branch(branch, parent)
-
-        def register_node(self, node, branch):
-            super(TableauxRules.Existential, self).register_node(node, branch)
-            self.max_constants_tracker.register_node(node, branch)
+            self.add_helper('max_constants_tracker', MaxConstantsTracker(self))
 
         def should_apply(self, branch, world):
             return not self.max_constants_tracker.max_constants_exceeded(branch, world)
@@ -1260,17 +1244,12 @@ class TableauxRules(object):
             )
             self.safeprop('node_states', {})
             self.safeprop('consts', {})
-            self.safeprop('max_constants_tracker', MaxConstantsTracker(self))
+            self.add_helper('max_constants_tracker', MaxConstantsTracker(self))
 
-        # Caching / callbacks
-
-        def after_trunk_build(self, branches):
-            super(TableauxRules.Universal, self).after_trunk_build(branches)
-            self.max_constants_tracker.after_trunk_build(branches)
+        # Caching
 
         def register_branch(self, branch, parent):
             super(TableauxRules.Universal, self).register_branch(branch, parent)
-            self.max_constants_tracker.register_branch(branch, parent)
             if parent != None and parent.id in self.node_states:
                 self.consts[branch.id] = set(self.consts[parent.id])
                 self.node_states[branch.id] = {
@@ -1286,7 +1265,6 @@ class TableauxRules(object):
 
         def register_node(self, node, branch):
             super(TableauxRules.Universal, self).register_node(node, branch)
-            self.max_constants_tracker.register_node(node, branch)
             if self.is_potential_node(node, branch):
                 if node.id not in self.node_states[branch.id]:
                     # By tracking per node, we are tracking per world, a fortiori.
@@ -1392,11 +1370,7 @@ class TableauxRules(object):
             super(TableauxRules.Possibility, self).__init__(*args, **opts)
             self.safeprop('branch_sentence_track', {})
             self.safeprop('modal_complexities', {})
-            self.safeprop('max_worlds_tracker', MaxWorldsTracker(self))
-
-        def after_trunk_build(self, branches):
-            super(TableauxRules.Possibility, self).after_trunk_build(branches)
-            self.max_worlds_tracker.after_trunk_build(branches)
+            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
 
         # Cache
 
@@ -1508,11 +1482,7 @@ class TableauxRules(object):
                 'check_target_condtn2',
             )
             self.safeprop('node_worlds_applied', {})
-            self.safeprop('max_worlds_tracker', MaxWorldsTracker(self))
-
-        def after_trunk_build(self, branches):
-            super(TableauxRules.Necessity, self).after_trunk_build(branches)
-            self.max_worlds_tracker.after_trunk_build(branches)
+            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
 
         def should_stop(self, branch):
             return self.max_worlds_tracker.max_worlds_exceeded(branch)

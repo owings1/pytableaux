@@ -1098,6 +1098,12 @@ class TestCFOL(LogicTester):
         proof.build()
         assert proof.valid
 
+    def test_invalid_existential_inside_univ_max_steps(self):
+        arg = argument('b', ['VxUFxSyFy'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        proof.build(max_steps=100)
+        assert proof.invalid
+
 class TestK(LogicTester):
 
     logic = get_logic('K')
@@ -1635,6 +1641,12 @@ class TestK(LogicTester):
         proof.build()
         assert proof.invalid
 
+    def test_invalid_existential_inside_univ_max_steps(self):
+        arg = argument('b', ['VxUFxSyFy'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        proof.build(max_steps=100)
+        assert proof.invalid
+
 class TestD(LogicTester):
 
     logic = get_logic('D')
@@ -1853,19 +1865,7 @@ class TestMaxConstantsTracker(LogicTester):
 
         def __init__(self, *args, **opts):
             super(TestMaxConstantsTracker.MockRule, self).__init__(*args, **opts)
-            self.mtr = get_logic('K').MaxConstantsTracker(self)
-
-        def after_trunk_build(self, branches):
-            super(TestMaxConstantsTracker.MockRule, self).after_trunk_build(branches)
-            self.mtr.after_trunk_build(branches)
-
-        def register_branch(self, branch, parent):
-            super(TestMaxConstantsTracker.MockRule, self).register_branch(branch, parent)
-            self.mtr.register_branch(branch, parent)
-
-        def register_node(self, node, branch):
-            super(TestMaxConstantsTracker.MockRule, self).register_node(node, branch)
-            self.mtr.register_node(node, branch)
+            self.add_helper('mtr', get_logic('K').MaxConstantsTracker(self))
 
     Rule = MockRule
 

@@ -87,11 +87,7 @@ class TableauxRules(object):
             super(TableauxRules.Symmetric, self).__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
             self.add_timer('is_potential_node')
-            self.safeprop('max_worlds_tracker', k.MaxWorldsTracker(self))
-
-        def after_trunk_build(self, branches):
-            super(TableauxRules.Symmetric, self).after_trunk_build(branches)
-            self.max_worlds_tracker.after_trunk_build(branches)
+            self.add_helper('max_worlds_tracker', k.MaxWorldsTracker(self))
 
         def is_potential_node(self, node, branch):
             ret = None
@@ -103,7 +99,7 @@ class TableauxRules(object):
             return ret
 
         def get_target_for_node(self, node, branch):
-            if self.should_stop(branch):
+            if not self.should_apply(branch):
                 return
             if not branch.has({'world1': node.props['world2'], 'world2': node.props['world1']}):
                 return {
@@ -117,9 +113,9 @@ class TableauxRules(object):
                 'world2': target['world2'],
             })
 
-        def should_stop(self, branch):
+        def should_apply(self, branch):
             # why apply when necessity will not apply
-            return self.max_worlds_tracker.max_worlds_reached(branch)
+            return not self.max_worlds_tracker.max_worlds_reached(branch)
 
         def example_node(self, branch):
             return {'world1': 0, 'world2': 1}
@@ -141,9 +137,6 @@ class TableauxRules(object):
             k.TableauxRules.NecessityNegated,
             k.TableauxRules.ExistentialNegated,
             k.TableauxRules.UniversalNegated,
-        ],
-        [
-            
         ],
         # Things seem to work better with the Transitive rule before
         # the modal operator rules, and the other access rules after.
