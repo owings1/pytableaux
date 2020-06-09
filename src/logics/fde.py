@@ -533,6 +533,7 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.DesignationClosure, self).__init__(*args, **opts)
+            self.opts['is_rank_optim'] = False
             self.safeprop('targets', {})
 
         # Cache

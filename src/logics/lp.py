@@ -89,6 +89,7 @@ class TableauxRules(object):
 
         def __init__(self, *args, **opts):
             super(TableauxRules.GapClosure, self).__init__(*args, **opts)
+            self.opts['is_rank_optim'] = False
             self.safeprop('targets', {})
 
         def after_node_add(self, branch, node):

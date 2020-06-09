@@ -94,6 +94,7 @@ class TableauxRules(object):
         def __init__(self, *args, **opts):
             super(TableauxRules.GlutClosure, self).__init__(*args, **opts)
             self.safeprop('targets', {})
+            self.opts['is_rank_optim'] = False
 
         def after_node_add(self, branch, node):
             super(TableauxRules.GlutClosure, self).after_node_add(branch, node)
