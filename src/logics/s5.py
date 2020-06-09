@@ -143,7 +143,7 @@ class TableauxRules(object):
             k.TableauxRules.UniversalNegated,
         ],
         [
-            k.TableauxRules.Existential,
+            
         ],
         # Things seem to work better with the Transitive rule before
         # the modal operator rules, and the other access rules after.
@@ -173,6 +173,7 @@ class TableauxRules(object):
             k.TableauxRules.BiconditionalNegated,
         ],
         [
+            k.TableauxRules.Existential,
             k.TableauxRules.Universal,
         ],
         [
