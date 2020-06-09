@@ -1111,6 +1111,9 @@ class TableauxSystem(object):
             #: An argument is proved (valid) when its finished tableau has no open branches.
             self.valid = None
 
+            #: An argument is disproved (invalid) when its finished tableau has at least one open branch.
+            self.invalid = None
+
             #: The set of branches on the tableau.
             self.branches = list()
 
@@ -1141,6 +1144,8 @@ class TableauxSystem(object):
             # build timers
             self.build_timer = StopWatch()
             self.trunk_build_timer = StopWatch()
+            self.tree_timer = StopWatch()
+            self.models_timer = StopWatch()
 
             # whether we ended pre-maturely (e.g. max_steps)
             self.is_premature = False
@@ -1148,11 +1153,13 @@ class TableauxSystem(object):
             # opts
             self.opts = dict(self.default_opts)
             self.opts.update(opts)
-            
+
             self.open_branchset = set()
             self.branch_dict = dict()
             self.trunk_built = False
             self.current_step = 0
+
+            # Cache for the branching complexities
             self.branching_complexities = dict()
 
             if logic != None:
@@ -1162,6 +1169,9 @@ class TableauxSystem(object):
                 self.set_argument(argument)
 
         def set_logic(self, logic):
+            """
+            Set the logic for the tableau.
+            """
             self.logic = get_logic(logic)
             self.clear_rules()
             self.logic.TableauxSystem.add_rules(self, self.opts)
@@ -1201,16 +1211,25 @@ class TableauxSystem(object):
                     if max_steps != None and len(self.history) >= max_steps:
                         self.is_premature = True
                         break
-                    self.check_timeout()
+                    self._check_timeout()
                     self.step()
             self.finish()
             return self
 
         def step(self):
+            """
+            Find, execute, and return the next rule application. If no rule can
+            be applied, the ``finish()`` method is called, and ``None`` is returned.
+            If the tableau is already finished when this method is called, return
+            ``False``.
+
+            Internally, this calls the ``get_application()`` method to get the
+            rule application, and, if non-empty, calls the ``do_application()``
+            method.
+            """
             if self.finished:
                 return False
-            if self.argument != None and not self.trunk_built:
-                raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.")
+            self._check_trunk_built()
             application = None
             with StopWatch() as step_timer:
                 res = self.get_application()
@@ -1222,12 +1241,23 @@ class TableauxSystem(object):
             return application
 
         def get_application(self):
+            """
+            Find and return the next available rule application. If no rule
+            cal be applied, return ``None``. This iterates over the open
+            branches and calls ``get_branch_application()``, returning the
+            first non-empty result.
+            """
             for branch in self.open_branches():
                 res = self.get_branch_application(branch)
                 if res:
                     return res
             
         def get_branch_application(self, branch):
+            """
+            Find and return the next available rule application for the given
+            open branch. This first checks the closure rules, then iterates
+            over the rule groups. The first non-empty result is returned.
+            """
             res = self.get_group_application(branch, self.closure_rules)
             if res:
                 return res
@@ -1237,6 +1267,25 @@ class TableauxSystem(object):
                     return res
 
         def get_group_application(self, branch, rules):
+            """
+            Find and return the next available rule application for the given
+            open branch and rule group. The ``rules`` parameter is a list of
+            rules, and is assumed to be either the closure rules, or one of the
+            rule groups of the tableau. This calls the ``get_target()`` method
+            on the rules.
+
+            If the ``is_group_optim`` option is **disabled**, then the first
+            non-empty target returned by a rule is selected.
+
+            If the ``is_group_optim`` option is **enabled**, then all non-empty
+            targets from the rules are collected, and the ``select_optim_group_application()``
+            method is called to select the result.
+
+            The return value is either a non-empty list of results, or ``None``.
+            Each result is a pair (tuple). The first element is the rule, and
+            the second element is the target returned by the rule's `get_target()`
+            method.
+            """
             results = []
             for rule in rules:
                 with rule.search_timer:
@@ -1249,6 +1298,19 @@ class TableauxSystem(object):
                 return self.select_optim_group_application(results)
 
         def select_optim_group_application(self, results):
+            """
+            Choose the best rule to apply from among the list of results. The
+            ``results`` parameter is assumed to be a non-empty list, where each
+            element is a pair (tuple) of rule, target.
+
+            Internally, this calls the ``group_score()`` method on each rule,
+            passing it the target that the rule returned by its ``get_target()``
+            method. The target with the max score is selected. If there is a tie,
+            the the first target is selected.
+
+            The return value an element of ``results``, which is a (rule, target)
+            pair.
+            """
             group_scores = [rule.group_score(target) for rule, target in results]
             max_group_score = max(group_scores)
             for i in range(len(results)):
@@ -1256,6 +1318,23 @@ class TableauxSystem(object):
                     return results[i]
 
         def do_application(self, rule, target, step_timer):
+            """
+            Perform the application of the rule. This calls ``rule.apply()``
+            with the target. The ``target`` should be what was returned by the
+            rule's ``get_target()`` method.
+
+            Internally, this creates an entry in the tableau's history, and
+            increments the ``current_step`` property. The history entry is
+            a dictionary with `rule`, `target`, and `duration_ms` keys, and
+            is the return value of this method.
+
+            This method is called internally by the ``step()`` method, which
+            creates a ``StopWatch`` to track the combined time it takes to
+            complete both the ``get_target()`` and ``apply()`` methods. The
+            elapsed time is then stored in the history entry. This method will
+            accept ``None`` for the ``step_timer`` parameter, however, this means
+            the timing statistics will be inaccurate.
+            """
             rule.apply(target)
             application = {
                 'rule'        : rule,
@@ -1273,21 +1352,26 @@ class TableauxSystem(object):
             return self
 
         def after_branch_close(self, branch):
+            # Called from the branch instance in the close method.
             self.open_branchset.remove(branch)
             for rule in self.all_rules:
                 rule.after_branch_close(branch)
 
         def after_node_add(self, branch, node):
+            # Called from the branch instance in the add/update methods.
             for rule in self.all_rules:
                 rule.after_node_add(branch, node)
 
         def after_node_tick(self, branch, node):
+            # CAlled from the branch instance in the tick method.
             for rule in self.all_rules:
                 rule.after_node_tick(branch, node)
 
         def open_branches(self):
             """
-            Return the set of open branches on the tableau.
+            Return the set of open branches on the tableau. This does **not** make
+            a copy of the set, and so should be copied by the caller if modifications
+            may occur.
             """
             return self.open_branchset
 
@@ -1299,145 +1383,11 @@ class TableauxSystem(object):
                 if r.__class__ == rule or r.name == rule or r.__class__.__name__ == rule:
                     return r
 
-        def check_timeout(self):
-            if self.build_timeout != None and self.build_timeout >= 0:
-                if self.build_timer.elapsed() > self.build_timeout:
-                    self.build_timer.stop()
-                    raise TableauxSystem.ProofTimeoutError('Timeout of {0}ms exceeded.'.format(str(self.build_timeout)))
-                    
-        def structure(self, branches, node_depth=0, track=None):
-            # TODO: move to utility method
-            is_root = track == None
-            if track == None:
-                track = {
-                    'pos'            : 0,
-                    'depth'          : 0,
-                    'distinct_nodes' : 0,
-                }
-            track['pos'] += 1
-            structure = {
-                # the nodes on this structure.
-                'nodes'                 : [],
-                # this child structures.
-                'children'              : [],
-                # whether this is a terminal (childless) structure.
-                'leaf'                  : False,
-                # whether this is a terminal structure that is closed.
-                'closed'                : False,
-                # whether this is a terminal structure that is open.
-                'open'                  : False,
-                # the pre-ordered tree left value.
-                'left'                  : track['pos'],
-                # the pre-ordered tree right value.
-                'right'                 : None,
-                # the total node count of all descendants.
-                'descendant_node_count' : 0,
-                # the node count plus descendant node count.
-                'structure_node_count'  : 0,
-                # the depth of this structure (ancestor structure count).
-                'depth'                 : track['depth'],
-                # whether this structure or a descendant is open.
-                'has_open'              : False,
-                # whether this structure or a descendant is closed.
-                'has_closed'            : False,
-                # if closed, the step number at which it closed.
-                'closed_step'           : None,
-                # the step number at which this structure first appears.
-                'step'                  : None,
-                # the number of descendant terminal structures, or 1.
-                'width'                 : 0,
-                # 0.5x the width of the first child structure, plus 0.5x the
-                # width of the last child structure (if distinct from the first),
-                # plus the sum of the widths of the other (distinct) children.
-                'balanced_line_width'   : None,
-                # 0.5x the width of the first child structure divided by the
-                # width of this structure.
-                'balanced_line_margin'  : None,
-                # the branch id, only set for leaves
-                'branch_id'             : None,
-                # the model id, if exists, only set for leaves
-                'model_id'              : None,
-                # whether this is the one and only branch
-                'is_only_branch'        : False,
-            }
-            while True:
-                relevant = [branch for branch in branches if len(branch.nodes) > node_depth]
-                for branch in relevant:
-                    if branch.closed:
-                        structure['has_closed'] = True
-                    else:
-                        structure['has_open'] = True
-                    if structure['has_open'] and structure['has_closed']:
-                        break
-                distinct_nodes = []
-                distinct_nodeset = set()
-                for branch in relevant:
-                    node = branch.nodes[node_depth]
-                    if node not in distinct_nodeset:
-                        distinct_nodeset.add(node)
-                        distinct_nodes.append(node)
-                if len(distinct_nodes) == 1:
-                    node = relevant[0].nodes[node_depth]
-                    structure['nodes'].append(node)
-                    if structure['step'] == None or structure['step'] > node.step:
-                        structure['step'] = node.step
-                    node_depth += 1
-                    continue
-                break
-            track['distinct_nodes'] += len(structure['nodes'])
-            if len(branches) == 1:
-                branch = branches[0]
-                structure['closed'] = branch.closed
-                structure['open'] = not branch.closed
-                if structure['closed']:
-                    structure['closed_step'] = branch.closed_step
-                    structure['has_closed'] = True
-                else:
-                    structure['has_open'] = True
-                structure['width'] = 1
-                structure['leaf'] = True
-                structure['branch_id'] = branch.id
-                if branch.model != None:
-                    structure['model_id'] = branch.model.id
-                if track['depth'] == 0:
-                    structure['is_only_branch'] = True
-            else:
-                inbetween_widths = 0
-                track['depth'] += 1
-                first_width = 0
-                last_width = 0
-                for i, node in enumerate(distinct_nodes):
-                    child_branches = [branch for branch in branches if branch.nodes[node_depth] == node]
-                    # recurse
-                    child = self.structure(child_branches, node_depth, track)
-                    structure['descendant_node_count'] = len(child['nodes']) + child['descendant_node_count']
-                    structure['width'] += child['width']
-                    structure['children'].append(child)
-                    if i == 0:
-                        structure['branch_step'] = child['step']
-                        first_width = float(child['width']) / 2
-                    elif i == len(distinct_nodes) - 1:
-                        last_width = float(child['width']) / 2
-                    else:
-                        inbetween_widths += child['width']
-                    structure['branch_step'] = min(structure['branch_step'], child['step'])
-                if structure['width'] > 0:
-                    structure['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / structure['width']
-                    structure['balanced_line_margin'] = first_width / structure['width']
-                else:
-                    structure['balanced_line_width'] = 0
-                    structure['balanced_line_margin'] = 0
-                track['depth'] -= 1
-            structure['structure_node_count'] = structure['descendant_node_count'] + len(structure['nodes'])
-            track['pos'] += 1
-            structure['right'] = track['pos']
-            if is_root:
-                structure['distinct_nodes'] = track['distinct_nodes']
-            return structure
-
         def branch(self, parent=None):
             """
-            Return a new branch on the tableau containing the nodes of the given branch, if any.
+            Return a new branch on the tableau, as a copy of ``parent``, if given.
+            This calls the ``after_branch_add`` callback on all the rules of the
+            tableau.
             """
             if parent == None:
                 branch = TableauxSystem.Branch(self)
@@ -1454,6 +1404,12 @@ class TableauxSystem(object):
             return branch
 
         def build_trunk(self):
+            """
+            Build the trunk of the tableau. Delegates to the ``build_trunk()`` method
+            of the logic's ``TableauxSystem``. This is called automatically when the
+            tableau is instantiated with a logic and an argument, or when instantiated
+            with a logic, and the ``set_argument()`` method is called.
+            """
             if self.trunk_built:
                 raise TableauxSystem.TrunkAlreadyBuiltError("Trunk is already built.")
             with self.trunk_build_timer:
@@ -1464,31 +1420,43 @@ class TableauxSystem(object):
                     rule.after_trunk_build(self.branches)
 
         def get_branch(self, branch_id):
+            """
+            Get a branch by its id. Raises ``KeyError`` if not found.
+            """
             return self.branch_dict[branch_id]
 
         def finish(self):
             """
             Mark the tableau as finished. Computes the ``valid``, ``invalid``,
-             and ``stats`` properties, and builds the structure into the ``tree``
+            and ``stats`` properties, and builds the structure into the ``tree``
             property. Returns self.
+
+            This is safe to call multiple times. If the tableau is already finished,
+            this will be a no-op.
             """
             if self.finished:
                 return self
 
             self.finished = True
-            num_open      = len(self.open_branches())
-            self.valid    = num_open == 0
+            self.valid    = len(self.open_branches()) == 0
             self.invalid  = not self.valid and not self.is_premature
 
-            with StopWatch() as tree_timer:
-                self.tree = self.structure(self.branches)
+            with self.tree_timer:
+                self.tree = make_tree_structure(self.branches)
 
-            with StopWatch() as models_timer:
+            with self.models_timer:
                 if self.is_build_models and not self.is_premature:
                     self.build_models()
 
-            self.stats = {
-                'result'            : self.result_word(),
+            self.stats = self._compute_stats()
+
+            return self
+
+        def _compute_stats(self):
+            # Compute the stats property after the tableau is finished.
+            num_open = len(self.open_branches())
+            return {
+                'result'            : self._result_word(),
                 'branches'          : len(self.branches),
                 'open_branches'     : num_open,
                 'closed_branches'   : len(self.branches) - num_open,
@@ -1497,37 +1465,49 @@ class TableauxSystem(object):
                 'rules_duration_ms' : sum((application['duration_ms'] for application in self.history)),
                 'build_duration_ms' : self.build_timer.elapsed(),
                 'trunk_duration_ms' : self.trunk_build_timer.elapsed(),
-                'tree_duration_ms'  : tree_timer.elapsed(),
-                'models_duration_ms': models_timer.elapsed(),
+                'tree_duration_ms'  : self.tree_timer.elapsed(),
+                'models_duration_ms': self.models_timer.elapsed(),
                 'rules_time_ms'     : sum([
                     sum([rule.search_timer.elapsed(), rule.apply_timer.elapsed()])
                     for rule in self.all_rules
                 ]),
                 'rules' : [
-                    {
-                        'name'            : rule.name,
-                        'queries'         : rule.search_timer.times_started(),
-                        'search_time_ms'  : rule.search_timer.elapsed(),
-                        'search_time_avg' : rule.search_timer.elapsed_avg(),
-                        'apply_count'     : rule.apply_count,
-                        'apply_time_ms'   : rule.apply_timer.elapsed(),
-                        'apply_time_avg'  : rule.apply_timer.elapsed_avg(),
-                        'timers'          : {
-                            name : {
-                                'duration_ms'   : rule.timers[name].elapsed(),
-                                'duration_avg'  : rule.timers[name].elapsed_avg(),
-                                'times_started' : rule.timers[name].times_started(),
-                            }
-                            for name in rule.timers
-                        }
-                    }
+                    self._compute_rule_stats(rule)
                     for rule in self.all_rules
                 ]
             }
 
-            return self
+        def _compute_rule_stats(self, rule):
+            # Compute the stats for a rule after the tableau is finished.
+            return {
+                'name'            : rule.name,
+                'queries'         : rule.search_timer.times_started(),
+                'search_time_ms'  : rule.search_timer.elapsed(),
+                'search_time_avg' : rule.search_timer.elapsed_avg(),
+                'apply_count'     : rule.apply_count,
+                'apply_time_ms'   : rule.apply_timer.elapsed(),
+                'apply_time_avg'  : rule.apply_timer.elapsed_avg(),
+                'timers'          : {
+                    name : {
+                        'duration_ms'   : rule.timers[name].elapsed(),
+                        'duration_avg'  : rule.timers[name].elapsed_avg(),
+                        'times_started' : rule.timers[name].times_started(),
+                    }
+                    for name in rule.timers
+                }
+            }
 
-        def result_word(self):
+        def _check_timeout(self):
+            if self.build_timeout != None and self.build_timeout >= 0:
+                if self.build_timer.elapsed() > self.build_timeout:
+                    self.build_timer.stop()
+                    raise TableauxSystem.ProofTimeoutError('Timeout of {0}ms exceeded.'.format(str(self.build_timeout)))
+
+        def _check_trunk_built(self):
+            if self.argument != None and not self.trunk_built:
+                raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.")
+
+        def _result_word(self):
             if self.valid:
                 return 'Valid'
             if self.is_premature:
@@ -1536,10 +1516,14 @@ class TableauxSystem(object):
 
         def build_models(self):
             for branch in list(self.open_branches()):
-                self.check_timeout()
+                self._check_timeout()
                 branch.make_model()
 
         def branching_complexity(self, node):
+            """
+            Convenience caching method for the logic's ``TableauxSystem.branching_complexity()``
+            method. If the tableau has no logic, then ``0`` is returned.
+            """
             if node.id not in self.branching_complexities:
                 if self.logic != None:
                     self.branching_complexities[node.id] = self.logic.TableauxSystem.branching_complexity(node)
@@ -1553,7 +1537,9 @@ class TableauxSystem(object):
                 'branches'      : len(self.branches),
                 'rules_applied' : len(self.history),
                 'finished'      : self.finished,
-                'valid'         : self.valid
+                'valid'         : self.valid,
+                'invalid'       : self.invalid,
+                'is_premature'  : self.is_premature,
             }.__repr__()
 
     class Branch(object):
@@ -1932,6 +1918,8 @@ class TableauxSystem(object):
         ticked = None
 
         def __init__(self, tableau, **opts):
+            if not isinstance(tableau, TableauxSystem.Tableau):
+                raise BadArgumentError('Must instantiate rule with a tableau instance.')
             #: Reference to the tableau for which the rule is instantiated.
             self.tableau = tableau
             self.search_timer = StopWatch()
@@ -2069,9 +2057,7 @@ class TableauxSystem(object):
             return self.tableau.branch(parent)
 
         def branching_complexity(self, node):
-            if self.tableau != None:
-                return self.tableau.branching_complexity(node)
-            return 1
+            return self.tableau.branching_complexity(node)
 
         def safeprop(self, name, value=None):
             if hasattr(self, name):
@@ -2715,6 +2701,138 @@ class Parser(object):
 
     def typeof(self, c):
         return self.symbol_set.typeof(c)
+
+
+def make_tree_structure(branches, node_depth=0, track=None):
+    is_root = track == None
+    if track == None:
+        track = {
+            'pos'            : 0,
+            'depth'          : 0,
+            'distinct_nodes' : 0,
+        }
+    track['pos'] += 1
+    structure = {
+        # the nodes on this structure.
+        'nodes'                 : [],
+        # this child structures.
+        'children'              : [],
+        # whether this is a terminal (childless) structure.
+        'leaf'                  : False,
+        # whether this is a terminal structure that is closed.
+        'closed'                : False,
+        # whether this is a terminal structure that is open.
+        'open'                  : False,
+        # the pre-ordered tree left value.
+        'left'                  : track['pos'],
+        # the pre-ordered tree right value.
+        'right'                 : None,
+        # the total node count of all descendants.
+        'descendant_node_count' : 0,
+        # the node count plus descendant node count.
+        'structure_node_count'  : 0,
+        # the depth of this structure (ancestor structure count).
+        'depth'                 : track['depth'],
+        # whether this structure or a descendant is open.
+        'has_open'              : False,
+        # whether this structure or a descendant is closed.
+        'has_closed'            : False,
+        # if closed, the step number at which it closed.
+        'closed_step'           : None,
+        # the step number at which this structure first appears.
+        'step'                  : None,
+        # the number of descendant terminal structures, or 1.
+        'width'                 : 0,
+        # 0.5x the width of the first child structure, plus 0.5x the
+        # width of the last child structure (if distinct from the first),
+        # plus the sum of the widths of the other (distinct) children.
+        'balanced_line_width'   : None,
+        # 0.5x the width of the first child structure divided by the
+        # width of this structure.
+        'balanced_line_margin'  : None,
+        # the branch id, only set for leaves
+        'branch_id'             : None,
+        # the model id, if exists, only set for leaves
+        'model_id'              : None,
+        # whether this is the one and only branch
+        'is_only_branch'        : False,
+    }
+    while True:
+        relevant = [branch for branch in branches if len(branch.nodes) > node_depth]
+        for branch in relevant:
+            if branch.closed:
+                structure['has_closed'] = True
+            else:
+                structure['has_open'] = True
+            if structure['has_open'] and structure['has_closed']:
+                break
+        distinct_nodes = []
+        distinct_nodeset = set()
+        for branch in relevant:
+            node = branch.nodes[node_depth]
+            if node not in distinct_nodeset:
+                distinct_nodeset.add(node)
+                distinct_nodes.append(node)
+        if len(distinct_nodes) == 1:
+            node = relevant[0].nodes[node_depth]
+            structure['nodes'].append(node)
+            if structure['step'] == None or structure['step'] > node.step:
+                structure['step'] = node.step
+            node_depth += 1
+            continue
+        break
+    track['distinct_nodes'] += len(structure['nodes'])
+    if len(branches) == 1:
+        branch = branches[0]
+        structure['closed'] = branch.closed
+        structure['open'] = not branch.closed
+        if structure['closed']:
+            structure['closed_step'] = branch.closed_step
+            structure['has_closed'] = True
+        else:
+            structure['has_open'] = True
+        structure['width'] = 1
+        structure['leaf'] = True
+        structure['branch_id'] = branch.id
+        if branch.model != None:
+            structure['model_id'] = branch.model.id
+        if track['depth'] == 0:
+            structure['is_only_branch'] = True
+    else:
+        inbetween_widths = 0
+        track['depth'] += 1
+        first_width = 0
+        last_width = 0
+        for i, node in enumerate(distinct_nodes):
+            child_branches = [branch for branch in branches if branch.nodes[node_depth] == node]
+
+            # recurse
+            child = make_tree_structure(child_branches, node_depth, track)
+
+            structure['descendant_node_count'] = len(child['nodes']) + child['descendant_node_count']
+            structure['width'] += child['width']
+            structure['children'].append(child)
+            if i == 0:
+                structure['branch_step'] = child['step']
+                first_width = float(child['width']) / 2
+            elif i == len(distinct_nodes) - 1:
+                last_width = float(child['width']) / 2
+            else:
+                inbetween_widths += child['width']
+            structure['branch_step'] = min(structure['branch_step'], child['step'])
+        if structure['width'] > 0:
+            structure['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / structure['width']
+            structure['balanced_line_margin'] = first_width / structure['width']
+        else:
+            structure['balanced_line_width'] = 0
+            structure['balanced_line_margin'] = 0
+        track['depth'] -= 1
+    structure['structure_node_count'] = structure['descendant_node_count'] + len(structure['nodes'])
+    track['pos'] += 1
+    structure['right'] = track['pos']
+    if is_root:
+        structure['distinct_nodes'] = track['distinct_nodes']
+    return structure
 
 class StopWatch(object):
 
