@@ -612,11 +612,10 @@ class MaxWorldsTracker(object):
         # so we can halt on infinite branches.
         self.branch_max_worlds = {}
 
-    def sentence(self, node):
-        # Delegate
-        return self.rule.sentence(node)
-
     def after_trunk_build(self, branches):
+        """
+        Must be called by rule.
+        """
         for branch in branches:
             origin = branch.origin()
             # In most cases, we will have only one origin branch.
@@ -638,7 +637,7 @@ class MaxWorldsTracker(object):
         # we only care about unticked nodes, since ticked nodes will have
         # already created any worlds.
         if not branch.is_ticked(node) and node.has('sentence'):
-            ops = self.sentence(node).operators()
+            ops = node.props['sentence'].operators()
             return len([o for o in ops if o in self.max_worlds_operators])
         return 0
 
