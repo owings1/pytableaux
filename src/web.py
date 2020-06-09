@@ -450,6 +450,8 @@ class App(object):
         if 'group_optimizations' not in body:
             body['group_optimizations'] = True
 
+        odata['options']['debug'] = is_debug
+
         errors = {}
         try:
             selected_logic = logic.get_logic(body['logic'])

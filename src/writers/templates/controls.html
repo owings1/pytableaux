@@ -117,16 +117,54 @@
                             {% endfor %}
                         </div>
                     </li>
-                    <li>
-                        <span class="prop">Duration</span>
-                        <div class="value">
-                            {%- for application in tableau.history %}
-                                <span class="step-rule-duration step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}">
-                                    {{- application['duration_ms']|e }}ms
-                                </span>
-                            {%- endfor %}
-                        </div>
-                    </li>
+                    {% if opts['debug'] -%}
+                        <li>
+                            <span class="prop">Group Score</span>
+                            <div class="value">
+                                <span class="step-rule-group-score step-rule-datum {{- helper.hidden_if(tableau.history|length) }}"
+                                    data-step="0">n/a</span>
+                                {%- for application in tableau.history %}
+                                    {% set target = application['target'] %}
+                                    <span class="step-rule-group-score step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}">
+                                        {% if target['is_group_optim'] -%}
+                                            {{- target['group_score']|round(2) }} (min score: {{ target['min_group_score']|round(2) }}) of {{ target['total_group_targets']|e }} total
+                                        {% else -%}
+                                            n/a
+                                        {% endif -%}
+                                    </span>
+                                {%- endfor %}
+                            </div>
+                        </li>
+                        <li>
+                            <span class="prop">Rank</span>
+                            <div class="value">
+                                <span class="step-rule-candidate-score step-rule-datum {{- helper.hidden_if(tableau.history|length) }}"
+                                    data-step="0">n/a</span>
+                                {%- for application in tableau.history %}
+                                    {% set target = application['target'] %}
+                                    <span class="step-rule-candidate-score step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}">
+                                        {% if target['is_rank_optim'] -%}
+                                            {{- target['candidate_score']|round(2) }} (min score: {{ target['min_candidate_score']|round(2) }}) of {{ target['total_candidates']|e }} total
+                                        {% else -%}
+                                            n/a
+                                        {% endif -%}
+                                    </span>
+                                {%- endfor %}
+                            </div>
+                        </li>
+                        <li>
+                            <span class="prop">Duration</span>
+                            <div class="value">
+                                <span class="step-rule-duration step-rule-datum {{- helper.hidden_if(tableau.history|length) }}"
+                                    data-step="0">{{ tableau.stats['trunk_duration_ms']|e }}</span>
+                                {%- for application in tableau.history %}
+                                    <span class="step-rule-duration step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}">
+                                        {{- application['duration_ms']|e }}ms
+                                    </span>
+                                {%- endfor %}
+                            </div>
+                        </li>
+                    {% endif -%}
                 </ul>
             </div>
             <h4 class="part-header">Filter</h4>

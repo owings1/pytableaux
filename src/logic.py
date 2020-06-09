@@ -1318,6 +1318,7 @@ class TableauxSystem(object):
                             'group_score'         : None,
                             'total_group_targets' : 1,
                             'min_group_score'     : None,
+                            'is_group_optim'      : False,
                         })
                         return (rule, target)
                     results.append((rule, target))
@@ -1340,6 +1341,7 @@ class TableauxSystem(object):
             - group_score
             - total_group_targets
             - min_group_score
+            - is_group_optim
 
             The return value an element of ``results``, which is a (rule, target)
             pair.
@@ -1354,6 +1356,7 @@ class TableauxSystem(object):
                         'group_score'         : max_group_score,
                         'total_group_targets' : len(results),
                         'min_group_score'     : min_group_score,
+                        'is_group_optim'      : True,
                     })
                     return (rule, target)
 
@@ -2043,6 +2046,7 @@ class TableauxSystem(object):
             #  'candidate_score'
             #  'total_candidates'
             #  'min_candidate_score'
+            #  'is_rank_optim'
             
             if not self.opts['is_rank_optim']:
                 target = targets[0]
@@ -2050,6 +2054,7 @@ class TableauxSystem(object):
                     'candidate_score'     : None,
                     'total_candidates'    : len(targets),
                     'min_candidate_score' : None,
+                    'is_rank_optim'       : False,
                 })
                 return target
 
@@ -2063,6 +2068,7 @@ class TableauxSystem(object):
                         'candidate_score'     : max_score,
                         'total_candidates'    : len(targets),
                         'min_candidate_score' : min_score,
+                        'is_rank_optim'       : True,
                     })
                     return target
 
