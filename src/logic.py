@@ -1346,26 +1346,16 @@ class TableauxSystem(object):
             return application
 
         def set_argument(self, argument):
+            """
+            Set the argument for the tableau. Return self.
+
+            If the tableau has a logic set, then ``build_trunk()`` is automatically
+            called.
+            """
             self.argument = argument
             if self.logic != None:
                 self.build_trunk()
             return self
-
-        def after_branch_close(self, branch):
-            # Called from the branch instance in the close method.
-            self.open_branchset.remove(branch)
-            for rule in self.all_rules:
-                rule.after_branch_close(branch)
-
-        def after_node_add(self, branch, node):
-            # Called from the branch instance in the add/update methods.
-            for rule in self.all_rules:
-                rule.after_node_add(branch, node)
-
-        def after_node_tick(self, branch, node):
-            # CAlled from the branch instance in the tick method.
-            for rule in self.all_rules:
-                rule.after_node_tick(branch, node)
 
         def open_branches(self):
             """
@@ -1385,7 +1375,7 @@ class TableauxSystem(object):
 
         def branch(self, parent=None):
             """
-            Return a new branch on the tableau, as a copy of ``parent``, if given.
+            Create a new branch on the tableau, as a copy of ``parent``, if given.
             This calls the ``after_branch_add`` callback on all the rules of the
             tableau.
             """
@@ -1394,14 +1384,20 @@ class TableauxSystem(object):
             else:
                 branch = parent.copy()
                 branch.parent = parent
+            self.add_branch(branch)
+            return branch
+
+        def add_branch(self, branch):
+            """
+            Add a new branch to the tableau. Returns self.
+            """
             branch.index = len(self.branches)
             self.branches.append(branch)
             if not branch.closed:
                 self.open_branchset.add(branch)
             self.branch_dict[branch.id] = branch
-            for rule in self.all_rules:
-                rule.after_branch_add(branch)
-            return branch
+            self._after_branch_add(branch)
+            return self
 
         def build_trunk(self):
             """
@@ -1410,8 +1406,7 @@ class TableauxSystem(object):
             tableau is instantiated with a logic and an argument, or when instantiated
             with a logic, and the ``set_argument()`` method is called.
             """
-            if self.trunk_built:
-                raise TableauxSystem.TrunkAlreadyBuiltError("Trunk is already built.")
+            self._check_trunk_not_built()
             with self.trunk_build_timer:
                 self.logic.TableauxSystem.build_trunk(self, self.argument)
                 self.trunk_built = True
@@ -1446,11 +1441,47 @@ class TableauxSystem(object):
 
             with self.models_timer:
                 if self.is_build_models and not self.is_premature:
-                    self.build_models()
+                    self._build_models()
 
             self.stats = self._compute_stats()
 
             return self
+
+        def branching_complexity(self, node):
+            """
+            Convenience caching method for the logic's ``TableauxSystem.branching_complexity()``
+            method. If the tableau has no logic, then ``0`` is returned.
+            """
+            if node.id not in self.branching_complexities:
+                if self.logic != None:
+                    self.branching_complexities[node.id] = self.logic.TableauxSystem.branching_complexity(node)
+                else:
+                    return 0
+            return self.branching_complexities[node.id]
+
+        def after_branch_close(self, branch):
+            # Called from the branch instance in the close method.
+            self.open_branchset.remove(branch)
+            for rule in self.all_rules:
+                rule.after_branch_close(branch)
+
+        def after_node_add(self, branch, node):
+            # Called from the branch instance in the add/update methods.
+            node.step = self.current_step
+            for rule in self.all_rules:
+                rule.after_node_add(branch, node)
+
+        def after_node_tick(self, branch, node):
+            # Called from the branch instance in the tick method.
+            if node.ticked_step == None or self.current_step > node.ticked_step:
+                node.ticked_step = self.current_step
+            for rule in self.all_rules:
+                rule.after_node_tick(branch, node)
+
+        def _after_branch_add(self, branch):
+            # Call from add_branch()
+            for rule in self.all_rules:
+                rule.after_branch_add(branch)
 
         def _compute_stats(self):
             # Compute the stats property after the tableau is finished.
@@ -1507,29 +1538,25 @@ class TableauxSystem(object):
             if self.argument != None and not self.trunk_built:
                 raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.")
 
+        def _check_trunk_not_built(self):
+            if self.trunk_built:
+                raise TableauxSystem.TrunkAlreadyBuiltError("Trunk is already built.")
+
+        def _check_not_started(self):
+            pass
+
         def _result_word(self):
             if self.valid:
                 return 'Valid'
-            if self.is_premature:
-                return 'Unfinished'
-            return 'Invalid'
+            if self.invalid:
+                return 'Invalid'
+            return 'Unfinished'
 
-        def build_models(self):
+        def _build_models(self):
+            # Build models for the open branches
             for branch in list(self.open_branches()):
                 self._check_timeout()
                 branch.make_model()
-
-        def branching_complexity(self, node):
-            """
-            Convenience caching method for the logic's ``TableauxSystem.branching_complexity()``
-            method. If the tableau has no logic, then ``0`` is returned.
-            """
-            if node.id not in self.branching_complexities:
-                if self.logic != None:
-                    self.branching_complexities[node.id] = self.logic.TableauxSystem.branching_complexity(node)
-                else:
-                    return 0
-            return self.branching_complexities[node.id]
             
         def __repr__(self):
             return {
@@ -1665,9 +1692,8 @@ class TableauxSystem(object):
             # Add to index *before* after_node_add callback
             self._add_to_index(node)
 
+            # Tableau callback
             if self.tableau != None:
-                # TODO: move the step property to tableau class?
-                node.step = self.tableau.current_step
                 self.tableau.after_node_add(self, node)
 
             return self
@@ -1700,11 +1726,8 @@ class TableauxSystem(object):
             if node not in self.ticked_nodes:
                 self.ticked_nodes.add(node)
                 node.ticked = True
-                if self.tableau != None and self.tableau.current_step != None:
-                    # TODO: move most of this to tableau class, this just just
-                    #       fire the event callback.
-                    if node.ticked_step == None or self.tableau.current_step > node.ticked_step:
-                        node.ticked_step = self.tableau.current_step
+                # Tableau callback
+                if self.tableau != None:
                     self.tableau.after_node_tick(self, node)
             return self
 
