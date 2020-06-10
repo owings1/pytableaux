@@ -220,6 +220,8 @@ class MaxWorldsTracker(RuleHelper):
     branches after the trunk is built.
     """
 
+    modal_operators = set(logic.Model.modal_operators)
+
     def get_max_worlds(self, branch):
         """
         Get the maximum worlds projected for the branch.
@@ -238,12 +240,22 @@ class MaxWorldsTracker(RuleHelper):
 
     def max_worlds_exceeded(self, branch):
         """
-        Whether we have exceeded the max number of worlds projected for
-        the branch (origin).
+        Whether we have exceeded the max number of worlds projected for the
+        branch (origin).
         """
         max_worlds = self.get_max_worlds(branch)
-        if max_worlds != None and len(branch.worlds()) > max_worlds:
-            return True
+        return max_worlds != None and len(branch.worlds()) > max_worlds
+
+    def modal_complexity(self, sentence):
+        """
+        Compute and cache the modal complexity of a sentence by counting its
+        modal operators.
+        """
+        if sentence not in self.modal_complexities:
+            self.modal_complexities[sentence] = len([
+                o for o in sentence.operators() if o in self.modal_operators
+            ])
+        return self.modal_complexities[sentence]
 
     # Helper implementation
 
@@ -251,6 +263,8 @@ class MaxWorldsTracker(RuleHelper):
         # Track the maximum number of worlds that should be on the branch
         # so we can halt on infinite branches.
         self.branch_max_worlds = {}
+        # Cache the modal complexities
+        self.modal_complexities = {}
 
     def after_trunk_build(self, branches):
         for branch in branches:
@@ -261,8 +275,6 @@ class MaxWorldsTracker(RuleHelper):
             self.branch_max_worlds[origin.id] = self._compute_max_worlds(branch)
 
     # Private util
-
-    modal_operators = set(logic.Model.modal_operators)
 
     def _compute_max_worlds(self, branch):
         # Project the maximum number of worlds for a branch (origin) as
@@ -278,8 +290,7 @@ class MaxWorldsTracker(RuleHelper):
         # we only care about unticked nodes, since ticked nodes will have
         # already created any worlds.
         if not branch.is_ticked(node) and node.has('sentence'):
-            ops = node.props['sentence'].operators()
-            return len([o for o in ops if o in self.modal_operators])
+            return self.modal_complexity(node.props['sentence'])
         return 0
 
 class UnserialWorldsTracker(RuleHelper):
@@ -383,8 +394,8 @@ class PredicatedNodesTracker(RuleHelper):
 
 class AppliedNodesWorldsTracker(RuleHelper):
     """
-    Track the nodes applied to by the rule for each world on the branch.
-    The rule's target must have `branch`, `node`, and `world` keys.
+    Track the nodes applied to by the rule for each world on the branch. The
+    rule's target must have `branch`, `node`, and `world` keys.
     """
 
     def is_applied(self, node, world, branch):
@@ -405,3 +416,36 @@ class AppliedNodesWorldsTracker(RuleHelper):
     def after_apply(self, target):
         pair = (target['node'].id, target['world'])
         self.node_worlds_applied[target['branch'].id].add(pair)
+
+class AppliedSentenceCounter(RuleHelper):
+    """
+    Count the times the rule has applied for a sentence per branch. This tracks
+    the `sentence` property of the rule's target. The target should also include
+    the `branch` key.
+    """
+
+    def get_count(self, sentence, branch):
+        """
+        Return the count for the given sentence and branch.
+        """
+        if sentence not in self.counts[branch.id]:
+            return 0
+        return self.counts[branch.id][sentence]
+
+    # helper implementation
+
+    def setup(self):
+        self.counts = {}
+
+    def register_branch(self, branch, parent):
+        if parent != None and parent.id in self.counts:
+            self.counts[branch.id] = dict(self.counts[parent.id])
+        else:
+            self.counts[branch.id] = {}
+
+    def after_apply(self, target):
+        branch = target['branch']
+        sentence = target['sentence']
+        if sentence not in self.counts[branch.id]:
+            self.counts[branch.id][sentence] = 0
+        self.counts[branch.id][sentence] += 1

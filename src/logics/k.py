@@ -1161,33 +1161,20 @@ class TableauxRules(object):
 
         operator = 'Possibility'
 
-        sentence_track = None
-
         def setup(self):
-            self.safeprop('branch_sentence_track', {})
-            self.safeprop('modal_complexities', {})
-            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
+            self.add_helper('applied_sentences', helpers.AppliedSentenceCounter(self))
+            self.add_helper('max_worlds', helpers.MaxWorldsTracker(self))
 
-        # Cache
-
-        def after_apply(self, target):
-            super(TableauxRules.Possibility, self).after_apply(target)
-            self.sentence_track_inc(target['branch'], target['sentence'])
-
-        def sentence_track_inc(self, branch, sentence):
-            self.sentence_track_count(branch, sentence)
-            self.branch_sentence_track[branch.id][sentence] += 1
-
-        # Implementation
+        # rule implementation
 
         def is_potential_node(self, node, branch):
-            if self.max_worlds_tracker.max_worlds_exceeded(branch):
+            if not self._should_apply(branch):
                 return False
             return super(TableauxRules.Possibility, self).is_potential_node(node, branch)
 
         def get_target_for_node(self, node, branch):
-            if self.max_worlds_tracker.max_worlds_reached(branch):
-                return False
+            if not self._should_apply(branch):
+                return
             s  = self.sentence(node)
             si = s.operand
             w1 = node.props['world']
@@ -1210,11 +1197,11 @@ class TableauxRules(object):
 
             # Don't bother checking for closure since we will always have a new world
 
-            track_count = self.sentence_track_count(branch, si)
+            track_count = self.applied_sentences.get_count(si, branch)
             if track_count == 0:
                 return 1
 
-            return -1 * self.modal_complexity(s) * track_count
+            return -1 * self.max_worlds.modal_complexity(s) * track_count
 
         def group_score(self, target):
 
@@ -1225,23 +1212,12 @@ class TableauxRules(object):
             s = self.sentence(target['node'])
             si = s.operand
 
-            return -1 * self.sentence_track_count(branch, si)
+            return -1 * self.applied_sentences.get_count(si, branch)
 
-        # Util
+        # private util
 
-        def sentence_track_count(self, branch, sentence):
-            if branch.id not in self.branch_sentence_track:
-                self.branch_sentence_track[branch.id] = {}
-            if sentence not in self.branch_sentence_track[branch.id]:
-                self.branch_sentence_track[branch.id][sentence] = 0
-            return self.branch_sentence_track[branch.id][sentence]
-
-        def modal_complexity(self, sentence):
-            if sentence not in self.modal_complexities:
-                ops = sentence.operators()
-                modal_ops = [operator for operator in ops if operator in Model.modal_operators]
-                self.modal_complexities[sentence] = len(modal_ops)
-            return self.modal_complexities[sentence]
+        def _should_apply(self, branch):
+            return not self.max_worlds.max_worlds_exceeded(branch)
 
     class PossibilityNegated(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
