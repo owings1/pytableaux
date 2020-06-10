@@ -339,6 +339,41 @@ class TestFDE(LogicTester):
         proof.build(max_steps=100)
         assert proof.invalid
 
+    def test_observed_model_error_with_quantifiers_and_modals(self):
+        arg = argument('b', ['VxUFxSyMFy'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        proof.build(models=True, max_steps=100)
+        assert proof.invalid
+
+    def test_observed_value_of_universal_with_diamond_min_arg_is_an_empty_sequence(self):
+        arg = argument('b', ['VxUFxSyMFy'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        proof.build(models=False, max_steps=100)
+        assert proof.invalid
+        branch = proof.branches[-1]
+        model = self.logic.Model()
+        model.read_branch(branch)
+        s1 = arg.premises[0]
+        assert model.value_of(s1) in model.designated_values
+
+    def test_observed_as_above_reconstruct1(self):
+        # solution was to add all constants in set_opaque_value
+        s1 = parse('MFs', vocabulary=self.vocab) # designated
+        s2 = parse('MFo', vocabulary=self.vocab) # designated
+        s3 = parse('MFn', vocabulary=self.vocab) # designated
+        s4 = parse('b') # undesignated
+        s5 = parse('SyMFy', vocabulary=self.vocab) # designated
+        s6 = parse('VxUFxSyMFy', vocabulary=self.vocab) # designated
+        model = self.logic.Model()
+        model.set_opaque_value(s1, 'T')
+        model.set_opaque_value(s2, 'T')
+        model.set_opaque_value(s3, 'T')
+        model.set_literal_value(s4, 'F')
+        assert model.value_of(s3) == 'T'
+        assert s3 in model.opaques
+        assert model.value_of(s5) in model.designated_values
+
+        
 class TestK3(LogicTester):
 
     logic = get_logic('K3')
@@ -461,6 +496,9 @@ class TestK3W(LogicTester):
         assert step['rule'].name == 'DisjunctionNegatedUndesignated'
 
     def test_models_with_opaques_observed_fail(self):
+        # this was because sorting of constants had not been implemented.
+        # it was only observed when we were sorting predicated sentences
+        # that ended up in the opaques of a model.
         arg = argument('VxMFx', ['VxUFxSyMFy', 'Fm'], vocabulary=self.vocab)
         proof = tableau(self.logic, arg)
         proof.build(models=True, max_steps=100)
@@ -1119,6 +1157,18 @@ class TestCFOL(LogicTester):
         proof = tableau(self.logic, arg)
         proof.build(max_steps=100)
         assert proof.invalid
+
+    def test_quantified_opaque_is_countermodel(self):
+        # for this we needed to add constants that occur within opaque sentences.
+        # the use of the existential is important given the way the K model
+        # computes quantified values (short-circuit), as opposed to FDE (min/max).
+        arg = argument('b', ['SxUNFxSyMFy'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        proof.build(models=True)
+        # this assert is so our test has integrity
+        assert len(proof.branches) == 2
+        assert proof.branches[0].model.is_countermodel_to(arg)
+        assert proof.branches[1].model.is_countermodel_to(arg)
 
 class TestK(LogicTester):
 

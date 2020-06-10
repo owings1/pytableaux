@@ -252,6 +252,7 @@ class Model(logic.Model):
             if node.has('sentence'):
                 self.predicates.update(node.predicates())
                 self.all_atomics.update(node.atomics())
+                self.constants.update(node.constants())
                 sentence = node.props['sentence']
                 is_literal = self.is_sentence_literal(sentence)
                 is_opaque = self.is_sentence_opaque(sentence)
@@ -320,6 +321,12 @@ class Model(logic.Model):
     def set_opaque_value(self, sentence, value):
         if sentence in self.opaques and self.opaques[sentence] != value:
             raise Model.ModelValueError('Inconsistent value {0} for sentence {1}'.format(str(value), str(sentence)))
+        # We might have a quantified opaque sentence, in which case we will need
+        # to still check every subsitution, so we want the constants, as well
+        # as other lexical items.
+        self.predicates.update(sentence.predicates())
+        self.all_atomics.update(sentence.atomics())
+        self.constants.update(sentence.constants())
         self.opaques[sentence] = value
         
     def set_atomic_value(self, sentence, value):

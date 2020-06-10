@@ -459,6 +459,12 @@ class Model(logic.Model):
         frame = self.world_frame(world)
         if sentence in frame.opaques and frame.opaques[sentence] != value:
             raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
+        # We might have a quantified opaque sentence, in which case we will need
+        # to still check every subsitution, so we want the constants.
+        # NB: in FDE we added the atomics to all_atomics, but we don't have that
+        #     here since we do frames -- will that be a problem?
+        self.constants.update(sentence.constants())
+        self.predicates.update(sentence.predicates())
         frame.opaques[sentence] = value
 
     def set_atomic_value(self, sentence, value, world=0, **kw):
@@ -1074,10 +1080,7 @@ class TableauxRules(object):
 
         quantifier = 'Universal'
 
-        # TODO: support prenexing
-        #
-        #    ∀x∃y(Fx → Gy) will be infinite, but not ∃y∀x(Fx → Gy)
-
+        
         def setup(self):
             self.add_timer(
                 'in_len_constants'        ,
