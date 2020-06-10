@@ -459,7 +459,16 @@ class TestK3W(LogicTester):
         ])
         step = proof.step()
         assert step['rule'].name == 'DisjunctionNegatedUndesignated'
-        
+
+    def test_models_with_opaques_observed_fail(self):
+        arg = argument('VxMFx', ['VxUFxSyMFy', 'Fm'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        proof.build(models=True, max_steps=100)
+        assert proof.invalid
+        for branch in proof.open_branches():
+            model = branch.model
+            model.get_data()
+
 class TestB3E(LogicTester):
 
     logic = get_logic('B3E')

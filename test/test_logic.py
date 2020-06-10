@@ -400,6 +400,25 @@ class TestVocabulary(object):
         predicate = vocab.get_predicate('Pred')
         assert predicate.arity == 3
 
+    def test_sorting_constants(self):
+        c1 = logic.constant(1, 0)
+        c2 = logic.constant(2, 0)
+        res = list(sorted([c2, c1]))
+        assert res[0] == c1
+        assert res[1] == c2
+
+    def test_sorting_predicated_sentences(self):
+        c1 = logic.constant(1, 0)
+        c2 = logic.constant(2, 0)
+        vocab = logic.Vocabulary()
+        p = vocab.declare_predicate('PredF', 0, 0, 1)
+        s1 = logic.predicated(p, [c1])
+        s2 = logic.predicated(p, [c2])
+        sentences = [s2, s1]
+        res = list(sorted(sentences))
+        assert res[0] == s1
+        assert res[1] == s2
+
 class TestTableauxSystem(object):
 
     def test_build_trunk_base_not_impl(self):
