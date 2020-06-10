@@ -146,6 +146,74 @@ class MaxConstantsTracker(RuleHelper):
             return len(node.props['sentence'].quantifiers())
         return 0
 
+class NodeAppliedConstants(RuleHelper):
+    """
+    Track the applied and unapplied constants per branch for each potential node.
+    The rule's target should have `branch`, `node` and `constant` properties.
+
+    Only nodes that are applicable according to the rule's ``is_potential_node()``
+    method are tracked.
+    """
+
+    def get_applied(self, node, branch):
+        """
+        Return the set of constants that have been applied to the node for the
+        branch.
+        """
+        return self.node_states[branch.id][node.id]['applied']
+
+    def get_unapplied(self, node, branch):
+        """
+        Return the set of constants that have not been applied to the node for
+        the branch.
+        """
+        return self.node_states[branch.id][node.id]['unapplied']
+
+    # helper implementation
+
+    def setup(self):
+        self.node_states = {}
+        self.consts = {}
+
+    def register_branch(self, branch, parent):
+        if parent != None and parent.id in self.node_states:
+            self.consts[branch.id] = set(self.consts[parent.id])
+            self.node_states[branch.id] = {
+                node_id : {
+                    k : set(self.node_states[parent.id][node_id][k])
+                    for k in self.node_states[parent.id][node_id]
+                }
+                for node_id in self.node_states[parent.id]
+            }
+        else:
+            self.node_states[branch.id] = dict()
+            self.consts[branch.id] = set()
+
+    def register_node(self, node, branch):
+        if self._should_track_node(node, branch):
+            if node.id not in self.node_states[branch.id]:
+                # By tracking per node, we are tracking per world, a fortiori.
+                self.node_states[branch.id][node.id] = {
+                    'applied'   : set(),
+                    'unapplied' : set(self.consts[branch.id]),
+                }
+        for c in node.constants():
+            if c not in self.consts[branch.id]:
+                for node_id in self.node_states[branch.id]:
+                    self.node_states[branch.id][node_id]['unapplied'].add(c)
+                self.consts[branch.id].add(c)
+
+    def after_apply(self, target):
+        idx = self.node_states[target['branch'].id][target['node'].id]
+        c = target['constant']
+        idx['applied'].add(c)
+        idx['unapplied'].discard(c)
+
+    # private util
+
+    def _should_track_node(self, node, branch):
+        return self.rule.is_potential_node(node, branch)
+
 class MaxWorldsTracker(RuleHelper):
     """
     Project the maximum number of worlds required for a branch by examining the

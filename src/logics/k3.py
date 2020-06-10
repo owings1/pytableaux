@@ -98,7 +98,7 @@ class TableauxRules(object):
         # tracker implementation
 
         def check_for_target(self, node, branch):
-            if node.has('sentence') and node.has('designated') and node.props['designated']:
+            if node.has('sentence', 'designated') and node.props['designated']:
                 nnode = branch.find({'sentence': negative(self.sentence(node)), 'designated': True})
                 if nnode:
                    return {'nodes': set([node, nnode]), 'type': 'Nodes'}

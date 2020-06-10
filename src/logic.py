@@ -2136,7 +2136,7 @@ class TableauxSystem(object):
             with self.apply_timer:
                 self.apply_to_target(target)
                 self.apply_count += 1
-                self.after_apply(target)
+                self._after_apply(target)
 
         def get_target(self, branch):
             # Concrete classes should not override this, but should implement
@@ -2259,6 +2259,11 @@ class TableauxSystem(object):
             self.after_node_tick(node, branch)
             for helper in self.helpers:
                 helper.after_node_tick(node, branch)
+
+        def _after_apply(self, target):
+            self.after_apply(target)
+            for helper in self.helpers:
+                helper.after_apply(target)
 
         # Implementable callbacks -- always call super, or use a helper.
 

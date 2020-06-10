@@ -20,10 +20,14 @@
 name = 'FDE'
 
 class Meta(object):
-    title = 'First Degree Entailment'
-    description = 'Four-valued logic (True, False, Neither, Both)'
-    tags = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
+
+    title    = 'First Degree Entailment'
     category = 'Many-valued'
+
+    description = 'Four-valued logic (True, False, Neither, Both)'
+
+    tags = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
+    
     category_display_order = 1
 
 import logic, examples, helpers
@@ -538,7 +542,7 @@ class TableauxRules(object):
         # tracker implementation
 
         def check_for_target(self, node, branch):
-            if node.has('sentence'):
+            if node.has('sentence', 'designated'):
                 nnode = branch.find({'sentence': self.sentence(node), 'designated': not node.props['designated']})
                 if nnode:
                     return {'nodes': set([node, nnode]), 'type': 'Nodes'}

@@ -21,10 +21,14 @@
 name = 'K'
 
 class Meta(object):
-    title = 'Kripke Normal Modal Logic'
-    description = 'Base normal modal logic with no access relation restrictions'
-    tags = ['bivalent', 'modal', 'first-order']
+
+    title    = 'Kripke Normal Modal Logic'
     category = 'Bivalent Modal'
+
+    description = 'Base normal modal logic with no access relation restrictions'
+
+    tags = ['bivalent', 'modal', 'first-order']
+    
     category_display_order = 1
 
 import logic, examples, helpers
@@ -1005,17 +1009,13 @@ class TableauxRules(object):
         quantifier = 'Existential'
 
         def setup(self):
-            self.safeprop('world_consts', {})
-            self.add_helper('max_constants_tracker', helpers.MaxConstantsTracker(self))
-
-        def should_apply(self, branch, world):
-            return not self.max_constants_tracker.max_constants_exceeded(branch, world)
+            self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
 
         def get_target_for_node(self, node, branch):
 
             w = node.props['world']
 
-            if not self.should_apply(branch, w):
+            if not self._should_apply(branch, w):
                 return
 
             s = self.sentence(node)
@@ -1023,6 +1023,7 @@ class TableauxRules(object):
             c = branch.new_constant()
             si = s.sentence
             r = si.substitute(c, v)
+
             return {
                 'sentence' : r,
                 'world'    : w,
@@ -1031,6 +1032,9 @@ class TableauxRules(object):
 
         def apply_to_node_target(self, node, branch, target):
             branch.add({'sentence': target['sentence'], 'world': target['world']}).tick(node)
+
+        def _should_apply(self, branch, world):
+            return not self.max_constants.max_constants_exceeded(branch, world)
 
         # this actually hurts
         #def score_candidate(self, target):
@@ -1077,65 +1081,23 @@ class TableauxRules(object):
                 'in_new_constant'         ,
                 'in_node_examime'         ,
             )
-            self.safeprop('node_states', {})
-            self.safeprop('consts', {})
-            self.add_helper('max_constants_tracker', helpers.MaxConstantsTracker(self))
-
-        # Caching
-
-        def register_branch(self, branch, parent):
-            super(TableauxRules.Universal, self).register_branch(branch, parent)
-            if parent != None and parent.id in self.node_states:
-                self.consts[branch.id] = set(self.consts[parent.id])
-                self.node_states[branch.id] = {
-                    node_id : {
-                        k : set(self.node_states[parent.id][node_id][k])
-                        for k in self.node_states[parent.id][node_id]
-                    }
-                    for node_id in self.node_states[parent.id]
-                }
-            else:
-                self.node_states[branch.id] = dict()
-                self.consts[branch.id] = set()
-
-        def register_node(self, node, branch):
-            super(TableauxRules.Universal, self).register_node(node, branch)
-            if self.is_potential_node(node, branch):
-                if node.id not in self.node_states[branch.id]:
-                    # By tracking per node, we are tracking per world, a fortiori.
-                    self.node_states[branch.id][node.id] = {
-                        'applied'   : set(),
-                        'unapplied' : set(self.consts[branch.id]),
-                    }
-            for c in node.constants():
-                if c not in self.consts[branch.id]:
-                    for node_id in self.node_states[branch.id]:
-                        self.node_states[branch.id][node_id]['unapplied'].add(c)
-                    self.consts[branch.id].add(c)
-
-        def after_apply(self, target):
-            super(TableauxRules.Universal, self).after_apply(target)
-            branch = target['branch']
-            node = target['node']
-            c = target['constant']
-            idx = self.node_states[branch.id][node.id]
-            idx['applied'].add(c)
-            idx['unapplied'].discard(c)
+            self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
+            self.add_helper('applied_constants', helpers.NodeAppliedConstants(self))
 
         # Implementation
 
         def get_targets_for_node(self, node, branch):
             with self.timers['in_get_targets_for_nodes']:
-                if not self.should_apply(node, branch):
+                if not self._should_apply(node, branch):
                     return
                 with self.timers['in_node_examime']:
                     s = self.sentence(node)
                     si = s.sentence
                     w = node.props['world']
                     v = s.variable
-                    constants = self.node_states[branch.id][node.id]['unapplied']
+                    constants = self.applied_constants.get_unapplied(node, branch)
                 targets = list()
-                if len(constants):
+                if constants:
                     # if the branch already has a constant, find all the substitutions not
                     # already on the branch.
                     with self.timers['in_len_constants']:
@@ -1167,16 +1129,16 @@ class TableauxRules(object):
                 node['world'] = 0
             return node
 
-        # Util
+        # private util
 
-        def should_apply(self, node, branch):
-            if self.max_constants_tracker.max_constants_exceeded(branch, node.props['world']):
+        def _should_apply(self, node, branch):
+            if self.max_constants.max_constants_exceeded(branch, node.props['world']):
                 return False
             # Apply if there are no constants on the branch
-            if not self.consts[branch.id]:
+            if not branch.constants():
                 return True
             # Apply if we have tracked a constant that we haven't applied to.
-            if self.node_states[branch.id][node.id]['unapplied']:
+            if self.applied_constants.get_unapplied(node, branch):
                 return True
 
     class UniversalNegated(ExistentialNegated):
