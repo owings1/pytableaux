@@ -1403,22 +1403,10 @@ class TableauxRules(object):
         predicate = 'Identity'
 
         def setup(self):
-            self.safeprop('predicated_nodes', {})
-
-        def register_branch(self, branch, parent):
-            super(TableauxRules.IdentityIndiscernability, self).register_branch(branch, parent)
-            if parent != None and parent.id in self.predicated_nodes:
-                self.predicated_nodes[branch.id] = set(self.predicated_nodes[parent.id])
-            else:
-                self.predicated_nodes[branch.id] = set()
-
-        def register_node(self, node, branch):
-            super(TableauxRules.IdentityIndiscernability, self).register_node(node, branch)
-            if node.has('sentence') and self.sentence(node).is_predicated():
-                self.predicated_nodes[branch.id].add(node)
+            self.add_helper('predicated_nodes', helpers.PredicatedNodesTracker(self))
 
         def get_targets_for_node(self, node, branch):
-            pnodes = self.predicated_nodes[branch.id]
+            pnodes = self.predicated_nodes.get_predicated(branch)
             targets = list()
             w = node.props['world']
             pa, pb = node.props['sentence'].parameters
@@ -1451,9 +1439,10 @@ class TableauxRules(object):
             branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example_nodes(self, branch):
-            return [ 
-                {'sentence': examples.predicated(), 'world': 0},
-                {'sentence': examples.identity(),   'world': 0},
+            world = 0 if self.modal else None
+            return [
+                {'sentence': examples.predicated(), 'world': world},
+                {'sentence': examples.identity(),   'world': world},
             ]
 
     closure_rules = [
