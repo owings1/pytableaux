@@ -1276,43 +1276,24 @@ class TableauxRules(object):
                 'check_target_condtn1',
                 'check_target_condtn2',
             )
-            self.safeprop('node_worlds_applied', {})
             self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
+            self.add_helper('node_worlds_applied', helpers.AppliedNodesWorldsTracker(self))
 
-        def should_stop(self, branch):
-            return self.max_worlds_tracker.max_worlds_exceeded(branch)
+        # rule implementation
 
         def is_potential_node(self, node, branch):
-            if self.should_stop(branch):
+            if not self._should_apply(branch):
                 return False
             return super(TableauxRules.Necessity, self).is_potential_node(node, branch)
-
-        def is_least_applied_to(self, node, branch):
-            node_apply_count = self.node_application_count(node.id, branch.id)
-            min_apply_count = self.min_application_count(branch.id)
-            return min_apply_count >= node_apply_count
-
-        def register_node(self, node, branch):
-            super(TableauxRules.Necessity, self).register_node(node, branch)
-            #if self.is_potential_node(node, branch):
-            if branch.id not in self.node_worlds_applied:
-                self.node_worlds_applied[branch.id] = set()
-
-        def after_apply(self, target):
-            super(TableauxRules.Necessity, self).after_apply(target)
-            branch = target['branch']
-            node = target['node']
-            world = target['world']
-            self.node_worlds_applied[branch.id].add((node.id, world))
             
         def get_targets_for_node(self, node, branch):
 
             # Check for max worlds reached
-            if self.should_stop(branch):
+            if not self._should_apply(branch):
                 return
 
             # Only count least-applied-to nodes
-            if not self.is_least_applied_to(node, branch):
+            if not self._is_least_applied_to(node, branch):
                 return
 
             with self.timers['get_targets_for_node']:
@@ -1323,7 +1304,7 @@ class TableauxRules(object):
                 w1 = node.props['world']
                 for anode in branch.find_all({'world1': w1}):
                     w2 = anode.props['world2']
-                    if (node.id, w2) in self.node_worlds_applied[branch.id]:
+                    if self.node_worlds_applied.is_applied(node, w2, branch):
                         continue
                     with self.timers['check_target_condtn1']:
                         meets_condtn = branch.has_access(w1, w2)
@@ -1381,6 +1362,16 @@ class TableauxRules(object):
                 {'sentence': s, 'world': 0},
                 {'world1': 0, 'world2': 1},
             ]
+
+        # private util
+
+        def _should_apply(self, branch):
+            return not self.max_worlds_tracker.max_worlds_exceeded(branch)
+
+        def _is_least_applied_to(self, node, branch):
+            node_apply_count = self.node_application_count(node.id, branch.id)
+            min_apply_count = self.min_application_count(branch.id)
+            return min_apply_count >= node_apply_count
 
     class NecessityNegated(PossibilityNegated):
         """

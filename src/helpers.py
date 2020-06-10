@@ -354,3 +354,54 @@ class VisibleWorldsIndex(RuleHelper):
             if w1 not in self.index[branch.id]:
                 self.index[branch.id][w1] = set()
             self.index[branch.id][w1].add(w2)
+
+class PredicatedNodesTracker(RuleHelper):
+    """
+    Track all predicated nodes on the branch.
+    """
+
+    def get_predicated(self, branch):
+        """
+        Return all predicated nodes on the branch.
+        """
+        return self.predicated_nodes[branch.id]
+
+    # helper implementation
+
+    def setup(self):
+        self.predicated_nodes = {}
+
+    def register_branch(self, branch, parent):
+        if parent != None and parent.id in self.predicated_nodes:
+            self.predicated_nodes[branch.id] = set(self.predicated_nodes[parent.id])
+        else:
+            self.predicated_nodes[branch.id] = set()
+
+    def register_node(self, node, branch):
+        if node.has('sentence') and node.props['sentence'].is_predicated():
+            self.predicated_nodes[branch.id].add(node)
+
+class AppliedNodesWorldsTracker(RuleHelper):
+    """
+    Track the nodes applied to by the rule for each world on the branch.
+    The rule's target must have `branch`, `node`, and `world` keys.
+    """
+
+    def is_applied(self, node, world, branch):
+        """
+        Whether the rule has applied to the node for the world and branch.
+        """
+        return (node.id, world) in self.node_worlds_applied[branch.id]
+
+    # helper implementation
+
+    def setup(self):
+        self.node_worlds_applied = {}
+
+    def register_node(self, node, branch):
+        if branch.id not in self.node_worlds_applied:
+            self.node_worlds_applied[branch.id] = set()
+
+    def after_apply(self, target):
+        pair = (target['node'].id, target['world'])
+        self.node_worlds_applied[target['branch'].id].add(pair)
