@@ -21,6 +21,7 @@ import pytest
 
 from logic import *
 import examples
+import helpers
 
 def parsex(s):
     return examples.parser.parse(s)
@@ -1863,9 +1864,8 @@ class TestMaxConstantsTracker(LogicTester):
 
     class MockRule(TableauxSystem.FilterNodeRule):
 
-        def __init__(self, *args, **opts):
-            super(TestMaxConstantsTracker.MockRule, self).__init__(*args, **opts)
-            self.add_helper('mtr', get_logic('K').MaxConstantsTracker(self))
+        def setup(self):
+            self.add_helper('mtr', helpers.MaxConstantsTracker(self))
 
     Rule = MockRule
 

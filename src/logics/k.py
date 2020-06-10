@@ -27,7 +27,7 @@ class Meta(object):
     category = 'Bivalent Modal'
     category_display_order = 1
 
-import logic, examples
+import logic, examples, helpers
 from logic import negate, negative, operate, quantify, atomic, constant, predicated, NotImplementedError
 from . import fde
 
@@ -602,158 +602,6 @@ class TableauxSystem(logic.TableauxSystem):
 class IsModal(object):
     modal = True
 
-# TODO: Make a pattern for the helpers that makes it
-#       easier to register their callbacks.
-
-class MaxWorldsTracker(logic.TableauxSystem.RuleHelper):
-
-    max_worlds_operators = set(Model.modal_operators)
-
-    def __init__(self, rule):
-        self.rule = rule
-        # Track the maximum number of worlds that should be on the branch
-        # so we can halt on infinite branches.
-        self.branch_max_worlds = {}
-
-    def after_trunk_build(self, branches):
-        """
-        Must be called by rule.
-        """
-        for branch in branches:
-            origin = branch.origin()
-            # In most cases, we will have only one origin branch.
-            if origin.id in self.branch_max_worlds:
-                return
-            self.branch_max_worlds[origin.id] = self.compute_max_worlds(branch)
-
-    def compute_max_worlds(self, branch):
-        # Project the maximum number of worlds for a branch (origin) as
-        # the number of worlds already on the branch + the number of modal
-        # operators + 1.
-        node_needed_worlds = sum([
-            self.compute_needed_worlds_for_node(node, branch)
-            for node in branch.get_nodes()
-        ])
-        return len(branch.worlds()) + node_needed_worlds + 1
-
-    def compute_needed_worlds_for_node(self, node, branch):
-        # we only care about unticked nodes, since ticked nodes will have
-        # already created any worlds.
-        if not branch.is_ticked(node) and node.has('sentence'):
-            ops = node.props['sentence'].operators()
-            return len([o for o in ops if o in self.max_worlds_operators])
-        return 0
-
-    def get_max_worlds(self, branch):
-        origin = branch.origin()
-        if origin.id in self.branch_max_worlds:
-            return self.branch_max_worlds[origin.id]
-
-    def max_worlds_reached(self, branch):
-        # If we have already reached or exceeded the max number of worlds
-        # projected for the branch (origin).
-        max_worlds = self.get_max_worlds(branch)
-        return max_worlds != None and len(branch.worlds()) >= max_worlds
-
-    def max_worlds_exceeded(self, branch):
-        # If we have exceeded the max number of worlds projected for
-        # the branch (origin).
-        max_worlds = self.get_max_worlds(branch)
-        if max_worlds != None and len(branch.worlds()) > max_worlds:
-            return True
-
-class MaxConstantsTracker(logic.TableauxSystem.RuleHelper):
-
-    def __init__(self, rule):
-        self.rule = rule
-        # Track the maximum number of constats that should be on the branch
-        # (per world) so we can halt on infinite branches.
-        self.branch_max_constants = {}
-        # Track the constants at each world
-        self.world_constants = {}
-
-    def get_max_constants(self, branch):
-        """
-        Get the projected max number of constants (per world) for the branch.
-        """
-        origin = branch.origin()
-        if origin.id in self.branch_max_constants:
-            return self.branch_max_constants[origin.id]
-        return 1
-
-    def get_branch_constants_at_world(self, branch, world):
-        """
-        Get the cached set of constants at a world for the branch.
-        """
-        if world not in self.world_constants[branch.id]:
-            self.world_constants[branch.id][world] = set()
-        return self.world_constants[branch.id][world]
-
-    def max_constants_reached(self, branch, world=0):
-        """
-        Whether we have already reached or exceeded the max number of constants
-        projected for the branch (origin) at the given world.
-        """
-        if world == None:
-            world = 0
-        max_constants = self.get_max_constants(branch)
-        world_constants = self.get_branch_constants_at_world(branch, world)
-        return max_constants != None and len(world_constants) >= max_constants
-
-    def max_constants_exceeded(self, branch, world=0):
-        """
-        Whether we have exceeded the max number of constants projected for
-        the branch (origin) at the given world.
-        """
-        if world == None:
-            world = 0
-        max_constants = self.get_max_constants(branch)
-        world_constants = self.get_branch_constants_at_world(branch, world)
-        if max_constants != None and len(world_constants) > max_constants:
-            return True
-
-    # Helper implementation
-
-    def after_trunk_build(self, branches):
-        for branch in branches:
-            origin = branch.origin()
-            # In most cases, we will have only one origin branch.
-            if origin.id in self.branch_max_constants:
-                return
-            self.branch_max_constants[origin.id] = self._compute_max_constants(branch)
-
-    def register_branch(self, branch, parent):
-        if parent != None and parent.id in self.world_constants:
-            self.world_constants[branch.id] = {
-                world : set(self.world_constants[parent.id][world])
-                for world in self.world_constants[parent.id]
-            }
-        else:
-            self.world_constants[branch.id] = {}
-
-    def register_node(self, node, branch):
-        if node.has('sentence'):
-            world = node.props['world']
-            if world == None:
-                world = 0
-            if world not in self.world_constants[branch.id]:
-                self.world_constants[branch.id][world] = set()
-            self.world_constants[branch.id][world].update(node.constants())
-
-    def _compute_max_constants(self, branch):
-        # Project the maximum number of constants for a branch (origin) as
-        # the number of constants already on the branch (min 1) * the number of
-        # quantifiers (min 1) + 1.
-        node_needed_constants = sum([
-            self._compute_needed_constants_for_node(node, branch)
-            for node in branch.get_nodes()
-        ])
-        return max(1, len(branch.constants())) * max(1, node_needed_constants) + 1
-
-    def _compute_needed_constants_for_node(self, node, branch):
-        if node.has('sentence'):
-            return len(node.props['sentence'].quantifiers())
-        return 0
 
 class TableauxRules(object):
     """
@@ -768,20 +616,17 @@ class TableauxRules(object):
         same world** on the branch.
         """
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.ContradictionClosure, self).__init__(*args, **opts)
-            self.safeprop('targets', {})
+        def setup(self):
+            self.add_helper('checker', helpers.NodeTargetCheckHelper(self))
 
-        def register_node(self, node, branch):
-            super(TableauxRules.ContradictionClosure, self).register_node(node, branch)
+        def check_for_target(self, node, branch):
             if node.has('sentence'):
                 nnode = branch.find({'sentence': negative(self.sentence(node)), 'world': node.props['world']})
                 if nnode:
-                    self.targets[branch.id] = {'nodes': set([node, nnode]), 'type': 'Nodes'}
+                    return {'nodes': set([node, nnode]), 'type': 'Nodes'}
                 
         def applies_to_branch(self, branch):
-            if branch.id in self.targets:
-                return self.targets[branch.id]
+            return self.checker.cached_target(branch)
 
         def example_nodes(self, branch):
             a = atomic(0, 0)
@@ -795,23 +640,19 @@ class TableauxRules(object):
         A branch closes when a sentence of the form P{~a = a} appears on the branch *at any world*.
         """
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.SelfIdentityClosure, self).__init__(*args, **opts)
-            self.safeprop('targets', {})
+        def setup(self):
+            self.add_helper('checker', helpers.NodeTargetCheckHelper(self))
 
-        def register_node(self, node, branch):
-            super(TableauxRules.SelfIdentityClosure, self).register_node(node, branch)
+        def check_for_target(self, node, branch):
             if node.has('sentence'):
                 s = self.sentence(node)
                 if s.operator == 'Negation' and s.operand.predicate == Identity:
                     a, b = s.operand.parameters
                     if a == b:
-                        self.targets[branch.id] = {'node': node, 'type': 'Node'}
+                        return {'node': node, 'type': 'Node'}
 
         def applies_to_branch(self, branch):
-            if branch.id in self.targets:
-                return self.targets[branch.id]
-            return False
+            return self.checker.cached_target(branch)
 
         def example_node(self, branch):
             s = negate(examples.self_identity())
@@ -822,21 +663,17 @@ class TableauxRules(object):
         A branch closes when a sentence of the form P{~!a} appears on the branch *at any world*.
         """
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.NonExistenceClosure, self).__init__(*args, **opts)
-            self.safeprop('targets', {})
+        def setup(self):
+            self.add_helper('checker', helpers.NodeTargetCheckHelper(self))
 
-        def register_node(self, node, branch):
-            super(TableauxRules.NonExistenceClosure, self).register_node(node, branch)
+        def check_for_target(self, node, branch):
             if node.has('sentence'):
                 s = self.sentence(node)
                 if s.operator == 'Negation' and s.operand.predicate == Existence:
-                    self.targets[branch.id] = {'node': node, 'type': 'Node'}
+                    return {'node': node, 'type': 'Node'}
 
         def applies_to_branch(self, branch):
-            if branch.id in self.targets:
-                return self.targets[branch.id]
-            return False
+            return self.checker.cached_target(branch)
 
         def example_node(self, branch):
             s = logic.parse('NJm')
@@ -1167,10 +1004,9 @@ class TableauxRules(object):
 
         quantifier = 'Existential'
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.Existential, self).__init__(*args, **opts)
+        def setup(self):
             self.safeprop('world_consts', {})
-            self.add_helper('max_constants_tracker', MaxConstantsTracker(self))
+            self.add_helper('max_constants_tracker', helpers.MaxConstantsTracker(self))
 
         def should_apply(self, branch, world):
             return not self.max_constants_tracker.max_constants_exceeded(branch, world)
@@ -1234,8 +1070,7 @@ class TableauxRules(object):
         #
         #    ∀x∃y(Fx → Gy) will be infinite, but not ∃y∀x(Fx → Gy)
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.Universal, self).__init__(*args, **opts)
+        def setup(self):
             self.add_timer(
                 'in_len_constants'        ,
                 'in_get_targets_for_nodes',
@@ -1244,7 +1079,7 @@ class TableauxRules(object):
             )
             self.safeprop('node_states', {})
             self.safeprop('consts', {})
-            self.add_helper('max_constants_tracker', MaxConstantsTracker(self))
+            self.add_helper('max_constants_tracker', helpers.MaxConstantsTracker(self))
 
         # Caching
 
@@ -1366,11 +1201,10 @@ class TableauxRules(object):
 
         sentence_track = None
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.Possibility, self).__init__(*args, **opts)
+        def setup(self):
             self.safeprop('branch_sentence_track', {})
             self.safeprop('modal_complexities', {})
-            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
+            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
 
         # Cache
 
@@ -1473,8 +1307,7 @@ class TableauxRules(object):
 
         operator = 'Necessity'
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.Necessity, self).__init__(*args, **opts)
+        def setup(self):
             self.add_timer(
                 'get_targets_for_node',
                 'make_target'         ,
@@ -1482,7 +1315,7 @@ class TableauxRules(object):
                 'check_target_condtn2',
             )
             self.safeprop('node_worlds_applied', {})
-            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
+            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
 
         def should_stop(self, branch):
             return self.max_worlds_tracker.max_worlds_exceeded(branch)
@@ -1529,7 +1362,6 @@ class TableauxRules(object):
                 for anode in branch.find_all({'world1': w1}):
                     w2 = anode.props['world2']
                     if (node.id, w2) in self.node_worlds_applied[branch.id]:
-                        #print(self.node_worlds_applied)
                         continue
                     with self.timers['check_target_condtn1']:
                         meets_condtn = branch.has_access(w1, w2)
@@ -1608,8 +1440,7 @@ class TableauxRules(object):
 
         predicate = 'Identity'
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.IdentityIndiscernability, self).__init__(*args, **opts)
+        def setup(self):
             self.safeprop('predicated_nodes', {})
 
         def register_branch(self, branch, parent):

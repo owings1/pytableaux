@@ -2076,6 +2076,7 @@ class TableauxSystem(object):
             self.apply_count = 0
             self.opts = dict(self.default_opts)
             self.opts.update(opts)
+            self.setup()
 
         # External API
 
@@ -2232,6 +2233,11 @@ class TableauxSystem(object):
 
         # Util methods
 
+        def setup(self):
+            # convenience instead of overriding ``__init__``. should
+            # only be used by concrete classes. called in constructor.
+            pass
+
         def branch(self, parent=None):
             # convenience for self.tableau.branch()
             return self.tableau.branch(parent)
@@ -2264,6 +2270,10 @@ class TableauxSystem(object):
 
         def __init__(self, rule):
             self.rule = rule
+            self.setup()
+
+        def setup(self):
+            pass
 
         def register_branch(self, branch, parent):
             pass

@@ -32,6 +32,7 @@ class Meta(object):
     category_display_order = 2
 
 import logic
+import helpers
 from logic import atomic
 from . import k
 
@@ -89,10 +90,9 @@ class TableauxRules:
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.Serial, self).__init__(*args, **opts)
+        def setup(self):
             self.safeprop('unserial_worlds', {})
-            self.add_helper('max_worlds_tracker', k.MaxWorldsTracker(self))
+            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
 
         # Cache
 

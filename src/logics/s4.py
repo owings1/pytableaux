@@ -27,6 +27,7 @@ class Meta(object):
     category_display_order = 4
 
 import logic
+import helpers
 from . import k, t
 
 class Model(t.Model):
@@ -78,10 +79,9 @@ class TableauxRules(object):
         appear on *b*, then add *wRw''* to *b*.
         """
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.Transitive, self).__init__(*args, **opts)
+        def setup(self):
             self.safeprop('access', {})
-            self.add_helper('max_worlds_tracker', k.MaxWorldsTracker(self))
+            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
 
         # Caching
 

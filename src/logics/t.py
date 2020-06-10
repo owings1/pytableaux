@@ -31,6 +31,7 @@ class Meta(object):
     category_display_order = 3
 
 import logic
+import helpers
 from . import k
 
 class Model(k.Model):
@@ -74,11 +75,10 @@ class TableauxRules(object):
         is *w*.
         """
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.Reflexive, self).__init__(*args, **opts)
+        def setup(self):
             self.opts['is_rank_optim'] = False
             self.add_timer('is_potential_node')
-            self.add_helper('max_worlds_tracker', k.MaxWorldsTracker(self))
+            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
 
         def is_potential_node(self, node, branch):
             ret = None

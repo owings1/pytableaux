@@ -28,6 +28,7 @@ class Meta(object):
     category_display_order = 5
 
 import logic
+import helpers
 from . import k, t, s4
 
 
@@ -83,11 +84,10 @@ class TableauxRules(object):
 
         ticked = None
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.Symmetric, self).__init__(*args, **opts)
+        def setup(self):
             self.opts['is_rank_optim'] = False
             self.add_timer('is_potential_node')
-            self.add_helper('max_worlds_tracker', k.MaxWorldsTracker(self))
+            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
 
         def is_potential_node(self, node, branch):
             ret = None
