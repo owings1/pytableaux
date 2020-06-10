@@ -162,6 +162,7 @@ class TableauxRules:
     rule_groups = [
         [
             # non-branching rules
+            k.TableauxRules.IdentityIndiscernability,
             k.TableauxRules.Conjunction, 
             k.TableauxRules.DisjunctionNegated, 
             k.TableauxRules.MaterialConditionalNegated,
@@ -173,7 +174,7 @@ class TableauxRules:
             k.TableauxRules.UniversalNegated,
         ],
         [
-            k.TableauxRules.Existential,
+            
         ],
         [
             # modal rules
@@ -191,13 +192,14 @@ class TableauxRules:
             k.TableauxRules.Biconditional,
             k.TableauxRules.BiconditionalNegated,
         ],
+        #[
+        #    # See comment on rule above -- using K rule now
+        #    ## special ordering of serial rule
+        #    #IdentityIndiscernability,
+        #    
+        #],
         [
-            # See comment on rule above -- using K rule now
-            ## special ordering of serial rule
-            #IdentityIndiscernability,
-            k.TableauxRules.IdentityIndiscernability,
-        ],
-        [
+            k.TableauxRules.Existential,
             k.TableauxRules.Universal,
         ],
         [

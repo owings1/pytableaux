@@ -1799,17 +1799,40 @@ class TestT(LogicTester):
 
     def test_invalid_s4_material_inf_1(self):
         proof = self.example_proof('S4 Material Inference 1')
-        assert not proof.valid
+        assert proof.invalid
 
     def test_valid_optimize_nec_rule1(self):
-        arg = argument('NLVxNFx', premises=['LMSxFx'], notation='polish', vocabulary=examples.vocabulary)
+        arg = argument('NLVxNFx', ['LMSxFx'], vocabulary=self.vocab)
         proof = tableau(self.logic, arg)
         proof.build(timeout=1000)
         assert proof.valid
 
     def test_invalid_s4_cond_inf_2(self):
         proof = self.example_proof('S4 Conditional Inference 2')
-        assert not proof.valid
+        assert proof.invalid
+
+    def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
+        #
+        # Rule ordering benchmark result:
+        #
+        #          [# non-branching rules]
+        #                [S4:Transitive]
+        #          [Necessity, Possibility]
+        #                [T:Reflexive]
+        #          [# branching rules]
+        #        - [Existential, Universal]
+        #                [S5:Symmetric]
+        #            [D:Serial],
+        #      S5: 8 branches, 142 steps
+        #      S4: 8 branches, 132 steps
+        #       T: 8 branches, 91 steps
+        #       D: 8 branches, 57 steps
+        # 
+        arg = argument('b', ['LVxSyUFxLMGy'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        # 200 might be agressive
+        proof.build(max_steps=200)
+        assert proof.invalid
 
 class TestS4(LogicTester):
 
@@ -1833,10 +1856,10 @@ class TestS4(LogicTester):
 
     def test_invalid_s5_cond_inf_1(self):
         proof = self.example_proof('S5 Conditional Inference 1')
-        assert not proof.valid
+        assert proof.invalid
 
     def test_valid_optimize_nec_rule1(self):
-        arg = argument('NLVxNFx', premises=['LMSxFx'], vocabulary=examples.vocabulary)
+        arg = argument('NLVxNFx', ['LMSxFx'], vocabulary=self.vocab)
         proof = tableau(self.logic, arg)
         proof.build(timeout=1000)
         assert proof.valid
@@ -1866,6 +1889,29 @@ class TestS4(LogicTester):
         arg = argument('KMNbc', ['LCaMNb', 'Ma'])
         proof = tableau(self.logic, arg)
         proof.build()
+        assert proof.invalid
+
+    def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
+        #
+        # Rule ordering benchmark result:
+        #
+        #          [# non-branching rules]
+        #                [S4:Transitive]
+        #          [Necessity, Possibility]
+        #                [T:Reflexive]
+        #          [# branching rules]
+        #        - [Existential, Universal]
+        #                [S5:Symmetric]
+        #            [D:Serial],
+        #      S5: 8 branches, 142 steps
+        #      S4: 8 branches, 132 steps
+        #       T: 8 branches, 91 steps
+        #       D: 8 branches, 57 steps
+        # 
+        arg = argument('b', ['LVxSyUFxLMGy'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        # 200 might be agressive
+        proof.build(max_steps=200)
         assert proof.invalid
 
 class TestS5(LogicTester):
@@ -1923,6 +1969,29 @@ class TestS5(LogicTester):
         proof.build(max_steps=100)
         assert proof.valid
 
+    def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
+        #
+        # Rule ordering benchmark result:
+        #
+        #          [# non-branching rules]
+        #                [S4:Transitive]
+        #          [Necessity, Possibility]
+        #                [T:Reflexive]
+        #          [# branching rules]
+        #        - [Existential, Universal]
+        #                [S5:Symmetric]
+        #            [D:Serial],
+        #      S5: 8 branches, 142 steps
+        #      S4: 8 branches, 132 steps
+        #       T: 8 branches, 91 steps
+        #       D: 8 branches, 57 steps
+        # 
+        arg = argument('b', ['LVxSyUFxLMGy'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        # 200 might be agressive
+        proof.build(max_steps=200)
+        assert proof.invalid
+        
 class TestMaxConstantsTracker(LogicTester):
 
     logic = get_logic('S5')

@@ -129,9 +129,9 @@ class TableauxRules(object):
             k.TableauxRules.ExistentialNegated,
             k.TableauxRules.UniversalNegated,
         ],
-        [
-            k.TableauxRules.Existential,
-        ],
+        #[
+        #    
+        #],
         [
             # modal rules
             k.TableauxRules.Necessity,
@@ -152,6 +152,7 @@ class TableauxRules(object):
             k.TableauxRules.BiconditionalNegated,
         ],
         [
+            k.TableauxRules.Existential,
             k.TableauxRules.Universal,
         ],
     ]

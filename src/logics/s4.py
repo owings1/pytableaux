@@ -151,9 +151,6 @@ class TableauxRules(object):
             k.TableauxRules.ExistentialNegated,
             k.TableauxRules.UniversalNegated,
         ],
-        [
-            k.TableauxRules.Existential,
-        ],
         # Things seem to work better with the Transitive rule before
         # the modal operator rules, and the other access rules after.
         # However, if we put the Transitive after, then some trees
@@ -182,6 +179,7 @@ class TableauxRules(object):
             k.TableauxRules.BiconditionalNegated,
         ],
         [
+            k.TableauxRules.Existential,
             k.TableauxRules.Universal,
         ],
     ]

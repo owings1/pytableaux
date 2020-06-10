@@ -1087,14 +1087,17 @@ class TableauxRules(object):
                 'in_get_targets_for_nodes',
                 'in_new_constant'         ,
                 'in_node_examime'         ,
+                'in_should_apply'         ,
             )
             self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
             self.add_helper('applied_constants', helpers.NodeAppliedConstants(self))
 
         def get_targets_for_node(self, node, branch):
+            with self.timers['in_should_apply']:
+                should_apply = self._should_apply(node, branch)
+            if not should_apply:
+                return
             with self.timers['in_get_targets_for_nodes']:
-                if not self._should_apply(node, branch):
-                    return
                 with self.timers['in_node_examime']:
                     s = self.sentence(node)
                     si = s.sentence
@@ -1435,9 +1438,6 @@ class TableauxRules(object):
             UniversalNegated,
         ],
         [
-            Existential,
-        ],
-        [
             # branching rules
             ConjunctionNegated,
             Disjunction,
@@ -1454,6 +1454,7 @@ class TableauxRules(object):
             Possibility,
         ],
         [
+            Existential,
             Universal,
         ],
     ]
