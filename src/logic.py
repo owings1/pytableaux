@@ -2146,13 +2146,12 @@ class TableauxSystem(object):
                 return self._select_best_target(cands, branch)
 
         def _select_best_target(self, targets, branch):
-            # Selects the best target. Augment the target with the following
-            # keys:
-            #  'candidate_score'
-            #  'total_candidates'
-            #  'min_candidate_score'
-            #  'is_rank_optim'
-            
+            # Selects the best target. Augment the target with the following keys:
+            #
+            #  - candidate_score
+            #  - total_candidates
+            #  - min_candidate_score
+            #  - is_rank_optim
             if not self.opts['is_rank_optim']:
                 target = targets[0]
                 target.update({
