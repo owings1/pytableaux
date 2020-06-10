@@ -333,6 +333,12 @@ class TestFDE(LogicTester):
         assert node.props['sentence'].operators() == ['Conjunction', 'Conjunction']
         assert proof.branching_complexity(node) == 2
 
+    def test_invalid_existential_inside_univ_max_steps(self):
+        arg = argument('b', ['VxUFxSyFy'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        proof.build(max_steps=100)
+        assert proof.invalid
+
 class TestK3(LogicTester):
 
     logic = get_logic('K3')

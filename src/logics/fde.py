@@ -1074,14 +1074,32 @@ class TableauxRules(object):
         quantifier  = 'Existential'
         designation = True
 
-        def apply_to_node(self, node, branch):
+        def setup(self):
+            self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
+
+        def get_target_for_node(self, node, branch):
+
+            if not self._should_apply(branch):
+                return
+
             s = self.sentence(node)
-            si = s.sentence
-            d = self.designation
             v = s.variable
             c = branch.new_constant()
+            si = s.sentence
             r = si.substitute(c, v)
-            branch.add({'sentence': r, 'designated': d}).tick(node)
+
+            return {
+                'sentence' : r,
+                'constant' : c,
+            }
+
+        def apply_to_node_target(self, node, branch, target):
+            branch.add({'sentence': target['sentence'], 'designated': self.designation}).tick(node)
+
+        # private util
+
+        def _should_apply(self, branch):
+            return not self.max_constants.max_constants_exceeded(branch)
 
     class ExistentialNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
@@ -1116,23 +1134,33 @@ class TableauxRules(object):
         quantifier  = 'Existential'
         designation = False
 
+        def setup(self):
+            self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
+            self.add_helper('applied_constants', helpers.NodeAppliedConstants(self))
+
         def get_targets_for_node(self, node, branch):
-            s = self.sentence(node)
+            if not self._should_apply(node, branch):
+                return
             d = self.designation
+            s = self.sentence(node)
             v = s.variable
             si = s.sentence
             constants = branch.constants()
             targets = list()
-            if len(constants):
+            if constants:
+                # if the branch already has a constant, find all the substitutions not
+                # already on the branch.
                 for c in constants:
                     r = si.substitute(c, v)
                     target = {'sentence': r, 'designated': d}
                     if not branch.has(target):
+                        target['constant'] = c
                         targets.append(target)
             else:
+                 # if the branch does not have any constants, pick a new one
                 c = branch.new_constant()
                 r = si.substitute(c, v)
-                target = {'sentence': r, 'designated': d}
+                target = {'sentence': r, 'designated': d, 'constant': c}
                 targets.append(target)
             return targets
 
@@ -1140,14 +1168,26 @@ class TableauxRules(object):
             node_apply_count = self.node_application_count(target['node'], target['branch'])
             return float(1 / (node_apply_count + 1))
             
-        def apply_to_target(self, target):
+        def apply_to_node_target(self, node, branch, target):
             # keep designation neutral for inheritance below
-            target['branch'].add({'sentence': target['sentence'], 'designated': self.designation})
+            branch.add({'sentence': target['sentence'], 'designated': target['designated']})
 
         def example_node(self, branch):
             # keep quantifier and designation neutral for inheritance below
             s = examples.quantified(self.quantifier)
             return {'sentence': s, 'designated': self.designation}
+
+        # private util
+
+        def _should_apply(self, node, branch):
+            if self.max_constants.max_constants_exceeded(branch):
+                return False
+            # Apply if there are no constants on the branch
+            if not branch.constants():
+                return True
+            # Apply if we have tracked a constant that we haven't applied to.
+            if self.applied_constants.get_unapplied(node, branch):
+                return True
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """

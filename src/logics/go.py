@@ -719,6 +719,8 @@ class TableauxRules(object):
         negated     = True
         convert_to  = 'Existential'
 
+        # Since this is a ticking rule, it is unlikely we need special halting checks.
+
         # NB: since the rule always uses a new constant, scoring the targets
         # would require complex predicting of whether the branch might close,
         # e.g. by checking for universal statements that might result in closure.
