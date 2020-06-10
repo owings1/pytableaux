@@ -2018,11 +2018,23 @@ class TableauxSystem(object):
             self.ticked_step = None
             self.id = id(self)
 
-        def has(self, prop):
+        def has(self, *names):
             """
-            Whether the node as a non-None property of the given name.
+            Whether the node has a non-None property of all the given names.
             """
-            return prop in self.props and self.props[prop] != None
+            for name in names:
+                if name not in self.props or self.props[name] == None:
+                    return False
+            return True
+
+        def has_any(self, *names):
+            """
+            Whether the node has a non-None property of any of the given names.
+            """
+            for name in names:
+                if name in self.props and self.props[name] != None:
+                    return True
+            return False
 
         def has_props(self, props):
             """
