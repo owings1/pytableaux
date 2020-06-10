@@ -733,7 +733,11 @@ class Vocabulary(object):
                 )
             )
 
-        def substitute(self, constant, variable):
+        def substitute(self, new_param, old_param):
+            """
+            Recursively substitute ``new_param`` for all occurrences of ``old_param``.
+            May return self, or a new sentence.
+            """
             raise NotImplementedError(NotImplemented)
 
         def constants(self):
@@ -810,7 +814,7 @@ class Vocabulary(object):
             self.index     = index
             self.subscript = subscript
 
-        def substitute(self, constant, variable):
+        def substitute(self, new_param, old_param):
             return self
 
         def constants(self):
@@ -866,11 +870,11 @@ class Vocabulary(object):
             self.parameters = parameters
             self.vocabulary = vocabulary
 
-        def substitute(self, constant, variable):
+        def substitute(self, new_param, old_param):
             params = []
             for param in self.parameters:
-                if param == variable:
-                    params.append(constant)
+                if param == old_param:
+                    params.append(new_param)
                 else:
                     params.append(param)
             return predicated(self.predicate, params)
@@ -905,13 +909,13 @@ class Vocabulary(object):
             self.quantifier = quantifier
             self.variable   = variable
             self.sentence   = sentence
+            self._qindex    = quantifiers_list.index(self.quantifier)
 
-        def substitute(self, constant, variable):
-            
-            #if self.sentence.is_quantified():
-            #    return Vocabulary.QuantifiedSentence(self.sentence.quantifier, self.sentence.variable, self.sentence.substitute(constant, variable))
-            return Vocabulary.QuantifiedSentence(self.quantifier, self.variable, self.sentence.substitute(constant, variable))
-            #return self.sentence.substitute(constant, variable)
+        def substitute(self, new_param, old_param):
+            # Always return a new sentence.
+            si = self.sentence
+            r = si.substitute(new_param, old_param)
+            return Vocabulary.QuantifiedSentence(self.quantifier, self.variable, r)
 
         def constants(self):
             return self.sentence.constants()
@@ -932,7 +936,7 @@ class Vocabulary(object):
             return [self.quantifier] + self.sentence.quantifiers()
 
         def hash_tuple(self):
-            return (6, quantifiers_list.index(self.quantifier), self.variable, self.sentence)
+            return (6, self._qindex, self.variable, self.sentence)
 
         def __hash__(self):
             return hash(self.hash_tuple())
@@ -952,12 +956,16 @@ class Vocabulary(object):
             self.operands = operands
             if len(operands) == 1:
                 self.operand = operands[0]
+                if operator == 'Negation':
+                    self.negatum = self.operand
             elif len(operands) > 1:
                 self.lhs = operands[0]
                 self.rhs = operands[-1]
 
-        def substitute(self, constant, variable):
-            return operate(self.operator, [operand.substitute(constant, variable) for operand in self.operands])
+        def substitute(self, new_param, old_param):
+            # Always return a new sentence
+            new_operands = [operand.substitute(new_param, old_param) for operand in self.operands]
+            return operate(self.operator, new_operands)
 
         def constants(self):
             c = set()
@@ -1106,7 +1114,7 @@ class Vocabulary(object):
 
 system_predicates = {
     'Identity'  : Vocabulary.Predicate('Identity',  -1, 0, 2),
-    'Existence' : Vocabulary.Predicate('Existence', -2, 0, 1)
+    'Existence' : Vocabulary.Predicate('Existence', -2, 0, 1),
 }
 
 class TableauxSystem(object):
@@ -1690,12 +1698,12 @@ class TableauxSystem(object):
             self.model = None
             self.parent = None
             self.node_index = {
-                'sentence'   : dict(),
-                'designated' : dict(),
-                'world'      : dict(),
-                'world1'     : dict(),
-                'world2'     : dict(),
-                'w1Rw2'      : dict(),
+                'sentence'   : {},
+                'designated' : {},
+                'world'      : {},
+                'world1'     : {},
+                'world2'     : {},
+                'w1Rw2'      : {},
             }
 
         def has(self, props, ticked=None):
@@ -1791,44 +1799,6 @@ class TableauxSystem(object):
                 self.tableau.after_node_add(node, self)
 
             return self
-
-        def _add_to_index(self, node):
-            for prop in self.node_index:
-                key = None
-                if prop == 'w1Rw2':
-                    if 'world1' in node.props and 'world2' in node.props:
-                        key = str([node.props['world1'], node.props['world2']])
-                elif prop in node.props:
-                    key = str(node.props[prop])
-                if key:
-                    if key not in self.node_index[prop]:
-                        self.node_index[prop][key] = set()
-                    self.node_index[prop][key].add(node)
-
-        def _select_index(self, props, ticked):
-            best_index = None
-            for prop in self.node_index:
-                key = None
-                if prop == 'w1Rw2':
-                    if 'world1' in props and 'world2' in props:
-                        key = str([props['world1'], props['world2']])
-                elif prop in props:
-                    key = str(props[prop])
-                if key != None:
-                    if key not in self.node_index[prop]:
-                        return False
-                    index = self.node_index[prop][key]
-                    if best_index == None or len(index) < len(best_index):
-                        best_index = index
-                    # we could do no better
-                    if len(best_index) == 1:
-                        break
-            if not best_index:
-                if ticked:
-                    best_index = self.ticked_nodes
-                else:
-                    best_index = self.nodes
-            return best_index
 
         def update(self, nodes):
             """
@@ -1975,9 +1945,52 @@ class TableauxSystem(object):
             return self.tableau.branch(self)
 
         def create_node(self, props):
+            """
+            Create a new node. Does not add it to the branch. If ``props`` is a
+            node instance, return it. Otherwise create a new node from the props
+            and return it.
+            """
             if isinstance(props, TableauxSystem.Node):
                 return props
             return TableauxSystem.Node(props=props)
+
+        def _add_to_index(self, node):
+            for prop in self.node_index:
+                key = None
+                if prop == 'w1Rw2':
+                    if 'world1' in node.props and 'world2' in node.props:
+                        key = str([node.props['world1'], node.props['world2']])
+                elif prop in node.props:
+                    key = str(node.props[prop])
+                if key:
+                    if key not in self.node_index[prop]:
+                        self.node_index[prop][key] = set()
+                    self.node_index[prop][key].add(node)
+
+        def _select_index(self, props, ticked):
+            best_index = None
+            for prop in self.node_index:
+                key = None
+                if prop == 'w1Rw2':
+                    if 'world1' in props and 'world2' in props:
+                        key = str([props['world1'], props['world2']])
+                elif prop in props:
+                    key = str(props[prop])
+                if key != None:
+                    if key not in self.node_index[prop]:
+                        return False
+                    index = self.node_index[prop][key]
+                    if best_index == None or len(index) < len(best_index):
+                        best_index = index
+                    # we could do no better
+                    if len(best_index) == 1:
+                        break
+            if not best_index:
+                if ticked:
+                    best_index = self.ticked_nodes
+                else:
+                    best_index = self.nodes
+            return best_index
 
         def __repr__(self):
             return {
@@ -1989,7 +2002,7 @@ class TableauxSystem(object):
 
     class Node(object):
         """
-        Represents a node on a branch.
+        A tableau node.
         """
 
         def __init__(self, props={}, parent=None):
@@ -2006,15 +2019,25 @@ class TableauxSystem(object):
             self.id = id(self)
 
         def has(self, prop):
+            """
+            Whether the node as a non-None property of the given name.
+            """
             return prop in self.props and self.props[prop] != None
 
         def has_props(self, props):
+            """
+            Whether the node properties match all those give in ``props`` (dict).
+            """
             for prop in props:
                 if prop not in self.props or not props[prop] == self.props[prop]:
                     return False
             return True
 
-        def worlds(self):    
+        def worlds(self):
+            """
+            Return the set of worlds referenced in the node properties. This combines
+            the properties `world`, `world1`, `world2`, and `worlds`.
+            """
             worlds = set()
             if self.has('world'):
                 worlds.add(self.props['world'])
@@ -2027,16 +2050,31 @@ class TableauxSystem(object):
             return worlds
 
         def atomics(self):
+            """
+            Return the set of atomics (recusive) of the node's `sentence`
+            property, if any. If the node does not have a sentence, return
+            an empty set.
+            """
             if self.has('sentence'):
                 return self.props['sentence'].atomics()
             return set()
 
         def constants(self):
+            """
+            Return the set of constants (recusive) of the node's `sentence`
+            property, if any. If the node does not have a sentence, return
+            the empty set.
+            """
             if self.has('sentence'):
                 return self.props['sentence'].constants()
             return set()
 
         def predicates(self):
+            """
+            Return the set of constants (recusive) of the node's `sentence`
+            property, if any. If the node does not have a sentence, return
+            the empty set.
+            """
             if self.has('sentence'):
                 return self.props['sentence'].predicates()
             return set()
