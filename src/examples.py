@@ -148,6 +148,10 @@ def self_identity():
     a = logic.constant(0, 0)
     return logic.predicated('Identity', [a, a])
 
+def existence():
+    a = logic.constant(0, 0)
+    return logic.predicated('Existence', [a])
+
 def quantified(quantifier):
     x = logic.variable(0, 0)
     x_is_f = logic.predicated(test_pred_data[0][0], [x], vocabulary)

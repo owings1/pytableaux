@@ -41,7 +41,7 @@ class Model(logic.Model):
     FDE Model.
     """
 
-    #: The admissable values
+    #: The admissible values
     truth_values = set(['F', 'N', 'B', 'T'])
 
     #: The designated values

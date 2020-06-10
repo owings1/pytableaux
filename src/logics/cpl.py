@@ -100,29 +100,32 @@ class TableauxRules(object):
         """
         A branch is closed if a sentence and its negation appear on the branch.
         """
+        pass
 
-        def example_nodes(self, branch):
-            a = logic.atomic(0, 0)
-            return [
-                {'sentence':        a },
-                {'sentence': negate(a)},
-            ]
+        #def example_nodes(self, branch):
+        #    a = logic.atomic(0, 0)
+        #    return [
+        #        {'sentence':        a },
+        #        {'sentence': negate(a)},
+        #    ]
 
     class SelfIdentityClosure(NonModal, k.TableauxRules.SelfIdentityClosure):
         """
         A branch is closed if a sentence of the form P{~ a = a} appears on the branch.
         """
+        pass
 
-        def example_node(self, branch):
-            return {'sentence': negate(examples.self_identity())}
+        #def example_node(self, branch):
+        #    return {'sentence': negate(examples.self_identity())}
 
     class NonExistenceClosure(NonModal, k.TableauxRules.NonExistenceClosure):
         """
         A branch is closed if a sentence of the form P{~!a} appears on the branch.
         """
+        pass
 
-        def example_node(self, branch):
-            return {'sentence': logic.parse('NJm')}
+        #def example_node(self, branch):
+        #    return {'sentence': logic.parse('NJm')}
 
     class DoubleNegation(NonModal, k.TableauxRules.DoubleNegation):
         """
@@ -265,12 +268,13 @@ class TableauxRules(object):
         if the replacement of that constant for the other constant of *s* is a sentence that does
         not appear on *b*, then add it.
         """
+        pass
 
-        def example_nodes(self, branch):
-            return [
-                {'sentence': examples.predicated()},
-                {'sentence': examples.identity()  },
-            ]
+        #def example_nodes(self, branch):
+        #    return [
+        #        {'sentence': examples.predicated()},
+        #        {'sentence': examples.identity()  },
+        #    ]
 
     closure_rules = [
         ContradictionClosure,

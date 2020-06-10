@@ -32,7 +32,7 @@ class Meta(object):
     category_display_order = 1
 
 import logic, examples, helpers
-from logic import negate, negative, operate, quantify, atomic, constant, predicated, NotImplementedError
+from logic import negate, negative, NotImplementedError
 from . import fde
 
 Identity  = logic.get_system_predicate('Identity')
@@ -53,7 +53,7 @@ class Model(logic.Model):
     relation, and a set of constants (the domain).
     """
 
-    #: The admissable values
+    #: The admissible values
     truth_values = set(['F', 'T'])
 
     #: A set of pairs of worlds.
@@ -606,7 +606,6 @@ class TableauxSystem(logic.TableauxSystem):
 class IsModal(object):
     modal = True
 
-
 class TableauxRules(object):
     """
     Rules for modal operators employ *world* indexes as well access-type
@@ -614,7 +613,7 @@ class TableauxRules(object):
     connectives.
     """
 
-    class ContradictionClosure(logic.TableauxSystem.ClosureRule):
+    class ContradictionClosure(IsModal, logic.TableauxSystem.ClosureRule):
         """
         A branch closes when a sentence and its negation both appear on a node **with the
         same world** on the branch.
@@ -633,13 +632,14 @@ class TableauxRules(object):
             return self.checker.cached_target(branch)
 
         def example_nodes(self, branch):
-            a = atomic(0, 0)
+            a = logic.atomic(0, 0)
+            w = 0 if self.modal else None
             return [
-                {'sentence':        a , 'world': 0},
-                {'sentence': negate(a), 'world': 0},
+                {'sentence':        a , 'world': w},
+                {'sentence': negate(a), 'world': w},
             ]
 
-    class SelfIdentityClosure(logic.TableauxSystem.ClosureRule):
+    class SelfIdentityClosure(IsModal, logic.TableauxSystem.ClosureRule):
         """
         A branch closes when a sentence of the form P{~a = a} appears on the branch *at any world*.
         """
@@ -660,9 +660,10 @@ class TableauxRules(object):
 
         def example_node(self, branch):
             s = negate(examples.self_identity())
-            return {'sentence': s, 'world': 0}
+            w = 0 if self.modal else None
+            return {'sentence': s, 'world': w}
 
-    class NonExistenceClosure(logic.TableauxSystem.ClosureRule):
+    class NonExistenceClosure(IsModal, logic.TableauxSystem.ClosureRule):
         """
         A branch closes when a sentence of the form P{~!a} appears on the branch *at any world*.
         """
@@ -680,8 +681,9 @@ class TableauxRules(object):
             return self.checker.cached_target(branch)
 
         def example_node(self, branch):
-            s = logic.parse('NJm')
-            return {'sentence': s, 'world': 0}
+            s = negate(examples.existence())
+            w = 0 if self.modal else None
+            return {'sentence': s, 'world': w}
 
     class DoubleNegation(IsModal, logic.TableauxSystem.FilterNodeRule):
         """
@@ -1033,6 +1035,8 @@ class TableauxRules(object):
         def apply_to_node_target(self, node, branch, target):
             branch.add({'sentence': target['sentence'], 'world': target['world']}).tick(node)
 
+        # private util
+
         def _should_apply(self, branch, world):
             return not self.max_constants.max_constants_exceeded(branch, world)
 
@@ -1057,7 +1061,7 @@ class TableauxRules(object):
             v = s.variable
             si = s.sentence
             # keep conversion neutral for inheritance below
-            sq = quantify(self.convert_to, v, negate(si))
+            sq = logic.quantify(self.convert_to, v, negate(si))
             branch.add({'sentence': sq, 'world': w}).tick(node)
 
     class Universal(IsModal, logic.TableauxSystem.FilterNodeRule):
@@ -1083,8 +1087,6 @@ class TableauxRules(object):
             )
             self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
             self.add_helper('applied_constants', helpers.NodeAppliedConstants(self))
-
-        # Implementation
 
         def get_targets_for_node(self, node, branch):
             with self.timers['in_get_targets_for_nodes']:
@@ -1124,10 +1126,9 @@ class TableauxRules(object):
             branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example_node(self, branch):
-            node = {'sentence': examples.quantified(self.quantifier)}
-            if self.modal:
-                node['world'] = 0
-            return node
+            s = examples.quantified(self.quantifier)
+            w = 0 if self.modal else None
+            return {'sentence': s, 'world': w}
 
         # private util
 
@@ -1164,8 +1165,6 @@ class TableauxRules(object):
         def setup(self):
             self.add_helper('applied_sentences', helpers.AppliedSentenceCounter(self))
             self.add_helper('max_worlds', helpers.MaxWorldsTracker(self))
-
-        # rule implementation
 
         def is_potential_node(self, node, branch):
             if not self._should_apply(branch):
@@ -1233,7 +1232,7 @@ class TableauxRules(object):
         def apply_to_node(self, node, branch):
             w = node.props['world']
             s = self.sentence(node)
-            sn = operate(self.convert_to, [negate(s.operand)])
+            sn = logic.operate(self.convert_to, [negate(s.operand)])
             branch.add({'sentence': sn, 'world': w}).tick(node)
 
     class Necessity(IsModal, logic.TableauxSystem.FilterNodeRule):
@@ -1252,10 +1251,8 @@ class TableauxRules(object):
                 'check_target_condtn1',
                 'check_target_condtn2',
             )
-            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
+            self.add_helper('max_worlds', helpers.MaxWorldsTracker(self))
             self.add_helper('node_worlds_applied', helpers.AppliedNodesWorldsTracker(self))
-
-        # rule implementation
 
         def is_potential_node(self, node, branch):
             if not self._should_apply(branch):
@@ -1333,7 +1330,7 @@ class TableauxRules(object):
             branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example_nodes(self, branch):
-            s = operate(self.operator, [atomic(0, 0)])
+            s = logic.operate(self.operator, [logic.atomic(0, 0)])
             return [
                 {'sentence': s, 'world': 0},
                 {'world1': 0, 'world2': 1},
@@ -1342,7 +1339,7 @@ class TableauxRules(object):
         # private util
 
         def _should_apply(self, branch):
-            return not self.max_worlds_tracker.max_worlds_exceeded(branch)
+            return not self.max_worlds.max_worlds_exceeded(branch)
 
         def _is_least_applied_to(self, node, branch):
             node_apply_count = self.node_application_count(node.id, branch.id)
@@ -1392,7 +1389,7 @@ class TableauxRules(object):
                     continue # pragma: no cover
                 # let s1 be the replacement of p with the other parameter p1 into s.
                 params = [p1 if param == p else param for param in s.parameters]
-                s1 = predicated(s.predicate, params)
+                s1 = logic.predicated(s.predicate, params)
                 # since we have SelfIdentityClosure, we don't need a = a
                 if s.predicate != Identity or params[0] != params[1]:
                     # if <s1,w> does not yet appear on b, ...
