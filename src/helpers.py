@@ -242,3 +242,47 @@ class UnserialWorldsTracker(RuleHelper):
                 self.unserial_worlds[branch.id].discard(w)
             else:
                 self.unserial_worlds[branch.id].add(w)
+
+class VisibleWorldsIndex(RuleHelper):
+    """
+    Index the visible worlds for each world on the branch.
+    """
+
+    def get_visibles(self, branch, world):
+        """
+        Get all the worlds on the branch that are visible to the given world.
+        """
+        if world in self.index[branch.id]:
+            return self.index[branch.id][world]
+        return set()
+
+    def get_intransitives(self, branch, w1, w2):
+        """
+        Get all the worlds on the branch that are visible to w2, but are not
+        visible to w1.
+        """
+        # TODO: can we make this more efficient? for each world pair,
+        #       track the intransitives?
+        return self.get_visibles(branch, w2).difference(self.get_visibles(branch, w1))
+
+    # helper implementation
+
+    def setup(self):
+        self.index = {}
+
+    def register_branch(self, branch, parent):
+        if parent != None and parent.id in self.index:
+            self.index[branch.id] = {
+                w: set(self.index[parent.id][w])
+                for w in self.index[parent.id]
+            }
+        else:
+            self.index[branch.id] = {}
+
+    def register_node(self, node, branch):
+        if node.has('world1', 'world2'):
+            w1 = node.props['world1']
+            w2 = node.props['world2']
+            if w1 not in self.index[branch.id]:
+                self.index[branch.id][w1] = set()
+            self.index[branch.id][w1].add(w2)

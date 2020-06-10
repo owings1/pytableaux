@@ -20,14 +20,17 @@
 name = 'S4'
 
 class Meta(object):
-    title = 'S4 Normal Modal Logic'
-    description = 'Normal modal logic with a reflexive and transitive access relation'
-    tags = ['bivalent', 'modal', 'first-order']
+
+    title    = 'S4 Normal Modal Logic'
     category = 'Bivalent Modal'
+
+    description = 'Normal modal logic with a reflexive and transitive access relation'
+
+    tags = ['bivalent', 'modal', 'first-order']
+    
     category_display_order = 4
 
-import logic
-import helpers
+import logic, helpers
 from . import k, t
 
 class Model(t.Model):
@@ -80,49 +83,23 @@ class TableauxRules(object):
         """
 
         def setup(self):
-            self.safeprop('access', {})
             self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
+            self.add_helper('visibles', helpers.VisibleWorldsIndex(self))
 
-        # Caching
-
-        def register_branch(self, branch, parent):
-            super(TableauxRules.Transitive, self).register_branch(branch, parent)
-            if parent != None and parent.id in self.access:
-                self.access[branch.id] = {
-                    w: set(self.access[parent.id][w])
-                    for w in self.access[parent.id]
-                }
-            else:
-                self.access[branch.id] = {}
-
-        def register_node(self, node, branch):
-            super(TableauxRules.Transitive, self).register_node(node, branch)
-            if self.is_potential_node(node, branch):
-                self.track_access_node(node, branch)
-
-        def track_access_node(self, node, branch):
-            w1 = node.props['world1']
-            w2 = node.props['world2']
-            self.track_access(w1, w2, branch)
-
-        def track_access(self, w1, w2, branch):
-            if w1 not in self.access[branch.id]:
-                self.access[branch.id][w1] = set()
-            self.access[branch.id][w1].add(w2)
-
-        # Implementated methods
+        # rule implmentation
 
         def is_potential_node(self, node, branch):
-            return node.has('world1') and node.has('world2')
+            return node.has('world1', 'world2')
 
         def get_targets_for_node(self, node, branch):
-            if not self.should_apply(branch):
+            if not self._should_apply(branch):
                 return
             w1 = node.props['world1']
             w2 = node.props['world2']
             targets = list()
-            for w3 in self.visibles(w2, branch).difference(self.visibles(w1, branch)):
-                if not branch.has({'world1': w1, 'world2': w3}):
+            for w3 in self.visibles.get_intransitives(branch, w1, w2):
+                # sanity check
+                if not branch.has_access(w1, w3):
                     targets.append({
                         'world1': w1,
                         'world2': w3,
@@ -136,29 +113,25 @@ class TableauxRules(object):
             # Rank the highest world
             return target['world2']
 
-        def apply_to_target(self, target):
-            target['branch'].add({
+        def apply_to_node_target(self, node, branch, target):
+            branch.add({
                 'world1': target['world1'],
                 'world2': target['world2'],
             })
 
         def example_nodes(self, branch):
+            w1 = branch.new_world()
+            w2 = w1 + 1
+            w3 = w2 + 1
             return [
-                {'world1': 0, 'world2': 1},
-                {'world1': 1, 'world2': 2},
+                {'world1': w1, 'world2': w2},
+                {'world1': w2, 'world2': w3},
             ]
 
-        # Other methods
+        # private util
 
-        def should_apply(self, branch):
+        def _should_apply(self, branch):
             return not self.max_worlds_tracker.max_worlds_reached(branch)
-
-        def visibles(self, world, branch):
-            if branch.id in self.access:
-                access = self.access[branch.id]
-                if world in access:
-                    return access[world]
-            return set()
 
     closure_rules = list(k.TableauxRules.closure_rules)
 

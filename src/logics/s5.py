@@ -89,6 +89,8 @@ class TableauxRules(object):
             self.add_timer('is_potential_node')
             self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
 
+        # rule implementation
+
         def is_potential_node(self, node, branch):
             ret = None
             with self.timers['is_potential_node']:
@@ -99,7 +101,7 @@ class TableauxRules(object):
             return ret
 
         def get_target_for_node(self, node, branch):
-            if not self.should_apply(branch):
+            if not self._should_apply(branch):
                 return
             if not branch.has({'world1': node.props['world2'], 'world2': node.props['world1']}):
                 return {
@@ -113,12 +115,14 @@ class TableauxRules(object):
                 'world2': target['world2'],
             })
 
-        def should_apply(self, branch):
-            # why apply when necessity will not apply
-            return not self.max_worlds_tracker.max_worlds_reached(branch)
-
         def example_node(self, branch):
             return {'world1': 0, 'world2': 1}
+
+        # private util
+
+        def _should_apply(self, branch):
+            # why apply when necessity will not apply
+            return not self.max_worlds_tracker.max_worlds_reached(branch)
 
     closure_rules = list(k.TableauxRules.closure_rules)
 

@@ -30,8 +30,7 @@ class Meta(object):
 
     category_display_order = 3
 
-import logic
-import helpers
+import logic, helpers
 from . import k
 
 class Model(k.Model):
@@ -80,6 +79,8 @@ class TableauxRules(object):
             self.add_timer('is_potential_node')
             self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
 
+        # rule implementation
+
         def is_potential_node(self, node, branch):
             ret = None
             with self.timers['is_potential_node']:
@@ -91,7 +92,7 @@ class TableauxRules(object):
 
         def get_target_for_node(self, node, branch):
             # why apply when necessity will not apply
-            if self.should_stop(branch):
+            if not self._should_apply(branch):
                 return
             for world in node.worlds():
                 if not branch.has_access(world, world):
@@ -101,12 +102,14 @@ class TableauxRules(object):
         def apply_to_node_target(self, node, branch, target):
             branch.add({'world1': target['world'], 'world2': target['world']})
 
-        def should_stop(self, branch):
-            # why apply when necessity will not apply
-            return self.max_worlds_tracker.max_worlds_exceeded(branch)
-
         def example_node(self, branch):
-            return {'sentence': logic.atomic(0, 0), 'world': 0}
+            return {'sentence': logic.atomic(0, 0), 'world': branch.new_world()}
+
+        # private util
+
+        def _should_apply(self, branch):
+            # why apply when necessity will not apply
+            return not self.max_worlds_tracker.max_worlds_exceeded(branch)
 
     closure_rules = list(k.TableauxRules.closure_rules)
 
