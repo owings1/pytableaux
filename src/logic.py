@@ -429,7 +429,29 @@ class Vocabulary(object):
 
     """
 
-    class Predicate(object):
+    class HashTupleOrdered(object):
+
+        def hash_tuple(self):
+            raise NotImplementedError(NotImplemented)
+
+        def __lt__(self, other):
+            return self.hash_tuple() < other.hash_tuple()
+
+        def __le__(self, other):
+            return self.hash_tuple() <= other.hash_tuple()
+
+        def __gt__(self, other):
+            return self.hash_tuple() > other.hash_tuple()
+
+        def __ge__(self, other):
+            return self.hash_tuple() >= other.hash_tuple()
+
+        def __cmp__(self, other):
+            # Python 2 only
+            #return cmp(self.hash_tuple(), other.hash_tuple())
+            return (self.hash_tuple() > other.hash_tuple()) - (self.hash_tuple() < other.hash_tuple())
+
+    class Predicate(HashTupleOrdered):
 
         def __init__(self, name, index, subscript, arity):
             if index >= num_predicate_symbols:
@@ -453,29 +475,11 @@ class Vocabulary(object):
         def is_system_predicate(self):
             return self.index < 0
 
-        # TODO: make this DRY with Sentence
         def __eq__(self, other):
             return other != None and self.__dict__ == other.__dict__
-
+        
         def __ne__(self, other):
             return other == None or self.__dict__ != other.__dict__
-
-        def __lt__(self, other):
-            return self.hash_tuple() < other.hash_tuple()
-
-        def __le__(self, other):
-            return self.hash_tuple() <= other.hash_tuple()
-
-        def __gt__(self, other):
-            return self.hash_tuple() > other.hash_tuple()
-
-        def __ge__(self, other):
-            return self.hash_tuple() >= other.hash_tuple()
-
-        def __cmp__(self, other):
-            # Python 2 only
-            #return cmp(self.hash_tuple(), other.hash_tuple())
-            return (self.hash_tuple() > other.hash_tuple()) - (self.hash_tuple() < other.hash_tuple())
 
         def __hash__(self):
             return hash(self.hash_tuple())
@@ -638,7 +642,7 @@ class Vocabulary(object):
     def list_user_predicates(self):
         return list(self.user_predicates_list)
 
-    class Parameter(object):
+    class Parameter(HashTupleOrdered):
 
         def __init__(self, index, subscript):
             self.index = index
@@ -651,7 +655,7 @@ class Vocabulary(object):
             return isinstance(self, Vocabulary.Variable)
 
         def __repr__(self):
-            return (self.index, self.subscript).__repr__()
+            return (self.__class__.__name__, self.index, self.subscript).__repr__()
 
     class Constant(Parameter):
 
@@ -660,11 +664,17 @@ class Vocabulary(object):
                 raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
             super(Vocabulary.Constant, self).__init__(index, subscript)
 
+        def hash_tuple(self):
+            return (2, self.index, self.subscript)
+
         def __eq__(self, other):
-            return isinstance(other, Vocabulary.Constant) and self.__dict__ == other.__dict__
+            return other != None and isinstance(other, Vocabulary.Constant) and self.__dict__ == other.__dict__
+
+        def __ne__(self, other):
+            return other == None or not isinstance(other, Vocabulary.Constant) or self.__dict__ != other.__dict__
 
         def __hash__(self):
-            return hash((2, self.index, self.subscript))
+            return hash(self.hash_tuple())
 
     class Variable(Parameter):
 
@@ -673,13 +683,19 @@ class Vocabulary(object):
                 raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
             super(Vocabulary.Variable, self).__init__(index, subscript)
 
+        def hash_tuple(self):
+            return (3, self.index, self.subscript)
+
         def __eq__(self, other):
-            return isinstance(other, Vocabulary.Variable) and self.__dict__ == other.__dict__
+            return other != None and isinstance(other, Vocabulary.Variable) and self.__dict__ == other.__dict__
+
+        def __ne__(self, other):
+            return other == None or not isinstance(other, Vocabulary.Variable) or self.__dict__ != other.__dict__
 
         def __hash__(self):
-            return hash((3, self.index, self.subscript))
+            return hash(self.hash_tuple())
 
-    class Sentence(object):
+    class Sentence(HashTupleOrdered):
 
         #: The operator, if any.
         operator   = None
@@ -776,31 +792,11 @@ class Vocabulary(object):
             """
             raise NotImplementedError(NotImplemented)
 
-        def hash_tuple(self):
-            raise NotImplementedError(NotImplemented)
-
         def __eq__(self, other):
             return other != None and self.__dict__ == other.__dict__
 
         def __ne__(self, other):
             return other == None or self.__dict__ != other.__dict__
-
-        def __lt__(self, other):
-            return self.hash_tuple() < other.hash_tuple()
-
-        def __le__(self, other):
-            return self.hash_tuple() <= other.hash_tuple()
-
-        def __gt__(self, other):
-            return self.hash_tuple() > other.hash_tuple()
-
-        def __ge__(self, other):
-            return self.hash_tuple() >= other.hash_tuple()
-
-        def __cmp__(self, other):
-            # Python 2 only
-            #return cmp(self.hash_tuple(), other.hash_tuple())
-            return (self.hash_tuple() > other.hash_tuple()) - (self.hash_tuple() < other.hash_tuple())
 
         def __repr__(self):
             from notations import polish
