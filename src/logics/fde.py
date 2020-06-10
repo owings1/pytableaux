@@ -26,7 +26,7 @@ class Meta(object):
     category = 'Many-valued'
     category_display_order = 1
 
-import logic, examples
+import logic, examples, helpers
 from logic import negate, negative, quantify, atomic, NotImplementedError
 
 Identity = logic.get_system_predicate('Identity')
@@ -531,25 +531,22 @@ class TableauxRules(object):
         and the same sentence appears on a node marked *undesignated*.
         """
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.DesignationClosure, self).__init__(*args, **opts)
+        def setup(self):
             self.opts['is_rank_optim'] = False
-            self.safeprop('targets', {})
+            self.add_helper('tracker', helpers.NodeTargetCheckHelper(self))
 
-        # Cache
+        # tracker implementation
 
-        def register_node(self, node, branch):
-            super(TableauxRules.DesignationClosure, self).register_node(node, branch)
+        def check_for_target(self, node, branch):
             if node.has('sentence'):
                 nnode = branch.find({'sentence': self.sentence(node), 'designated': not node.props['designated']})
                 if nnode:
-                    self.targets[branch.id] = {'nodes': set([node, nnode]), 'type': 'Nodes'}
+                    return {'nodes': set([node, nnode]), 'type': 'Nodes'}
 
-        # Implementation
+        # rule implementation
 
         def applies_to_branch(self, branch):
-            if branch.id in self.targets:
-                return self.targets[branch.id]
+            return self.tracker.cached_target(branch)
 
         def example_nodes(self, branch):
             a = atomic(0, 0)

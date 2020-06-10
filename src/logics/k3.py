@@ -26,7 +26,7 @@ class Meta(object):
     category = 'Many-valued'
     category_display_order = 2
 
-import logic
+import logic, helpers
 from logic import negate, negative
 from . import fde
 
@@ -91,21 +91,22 @@ class TableauxRules(object):
         .. _FDE closure Rule: fde.html#logics.fde.TableauxRules.Closure
         """
 
-        def __init__(self, *args, **opts):
-            super(TableauxRules.GlutClosure, self).__init__(*args, **opts)
-            self.safeprop('targets', {})
+        def setup(self):
             self.opts['is_rank_optim'] = False
+            self.add_helper('tracker', helpers.NodeTargetCheckHelper(self))
 
-        def register_node(self, node, branch):
-            super(TableauxRules.GlutClosure, self).register_node(node, branch)
+        # tracker implementation
+
+        def check_for_target(self, node, branch):
             if node.has('sentence') and node.has('designated') and node.props['designated']:
                 nnode = branch.find({'sentence': negative(self.sentence(node)), 'designated': True})
                 if nnode:
-                    self.targets[branch.id] = {'nodes': set([node, nnode]), 'type': 'Nodes'}
-                
+                   return {'nodes': set([node, nnode]), 'type': 'Nodes'}
+
+        # rule implementation
+
         def applies_to_branch(self, branch):
-            if branch.id in self.targets:
-                return self.targets[branch.id]
+            return self.tracker.cached_target(branch)
 
         def example_nodes(self, branch):
             a = logic.atomic(0, 0)

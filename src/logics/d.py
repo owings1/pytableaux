@@ -91,53 +91,38 @@ class TableauxRules:
         """
 
         def setup(self):
-            self.safeprop('unserial_worlds', {})
             self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
+            self.add_helper('unserial_tracker', helpers.UnserialWorldsTracker(self))
 
-        # Cache
-
-        def register_branch(self, branch, parent):
-            super(TableauxRules.Serial, self).register_branch(branch, parent)
-            if parent != None and parent.id in self.unserial_worlds:
-                self.unserial_worlds[branch.id] = set(self.unserial_worlds[parent.id])
-            else:
-                self.unserial_worlds[branch.id] = set()
-
-        def register_node(self, node, branch):
-            super(TableauxRules.Serial, self).register_node(node, branch)
-            for w in node.worlds():
-                if branch.has({'world1': w}):
-                    self.unserial_worlds[branch.id].discard(w)
-                else:
-                    self.unserial_worlds[branch.id].add(w)
-
-        # Implementation
+        # rule implementation
 
         def is_potential_node(self, node, branch):
-            return len(node.worlds()) > 0
+            return node.has_any('world', 'world1', 'world2')
 
         def get_targets_for_node(self, node, branch):
 
-            if not len(self.unserial_worlds[branch.id]):
+            unserials = self.unserial_tracker.get_unserial_worlds(branch)
+
+            if not unserials:
                 return
 
-            if self.should_stop(branch):
+            if not self._should_apply(branch):
                 return
 
-            return [{'world': w} for w in self.unserial_worlds[branch.id]]
+            return [{'world': w} for w in unserials]
 
-        def apply_to_target(self, target):
-            target['branch'].add({ 
+        def apply_to_node_target(self, node, branch, target):
+            branch.add({ 
                 'world1': target['world'], 
-                'world2': target['branch'].new_world(),
+                'world2': branch.new_world(),
             })
 
-        def example(self):
-            self.branch().add({ 'sentence' : atomic(0, 0), 'world' : 0 })
+        def example_node(self, branch):
+            return {'sentence': atomic(0, 0), 'world': branch.new_world()}
 
-        # Util
+        # util
 
-        def should_stop(self, branch):
+        def _should_apply(self, branch):
 
             # TODO: Shouldn't this check the history only relative to the branch?
             #       Waiting to come up with a test case before fixing it.
@@ -145,13 +130,13 @@ class TableauxRules:
             # This tends to stop modal explosion better than the max worlds check,
             # at least in its current form (all modal operators + worlds + 1).
             if len(self.tableau.history) and self.tableau.history[-1]['rule'] == self:
-                return True
+                return False
 
             # As above, this is unnecessary
             if self.max_worlds_tracker.max_worlds_exceeded(branch):
-                return True
+                return False
 
-            return False
+            return True
 
     # NB: Since we have redesigned the modal rules, it is not obvious that we need this
     #     alternate rule. So far I have not been able to think of a way to break it. I

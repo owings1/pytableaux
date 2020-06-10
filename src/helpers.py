@@ -213,3 +213,32 @@ class MaxWorldsTracker(RuleHelper):
             ops = node.props['sentence'].operators()
             return len([o for o in ops if o in self.modal_operators])
         return 0
+
+class UnserialWorldsTracker(RuleHelper):
+    """
+    Track the unserial worlds on the branch.
+    """
+
+    def get_unserial_worlds(self, branch):
+        """
+        Get the set of unserial worlds on the branch.
+        """
+        return self.unserial_worlds[branch.id]
+
+    # helper implementation
+
+    def setup(self):
+        self.unserial_worlds = {}
+
+    def register_branch(self, branch, parent):
+        if parent != None and parent.id in self.unserial_worlds:
+            self.unserial_worlds[branch.id] = set(self.unserial_worlds[parent.id])
+        else:
+            self.unserial_worlds[branch.id] = set()
+
+    def register_node(self, node, branch):
+        for w in node.worlds():
+            if branch.has({'world1': w}):
+                self.unserial_worlds[branch.id].discard(w)
+            else:
+                self.unserial_worlds[branch.id].add(w)
