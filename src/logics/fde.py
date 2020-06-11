@@ -1083,10 +1083,13 @@ class TableauxRules(object):
 
         def setup(self):
             self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
+            self.add_helper('quit_flagger', helpers.QuitFlagHelper(self))
 
         def get_target_for_node(self, node, branch):
 
             if not self._should_apply(branch):
+                if not self.quit_flagger.has_flagged(branch):
+                    return {'flag': True}
                 return
 
             s = self.sentence(node)
@@ -1101,7 +1104,10 @@ class TableauxRules(object):
             }
 
         def apply_to_node_target(self, node, branch, target):
-            branch.add({'sentence': target['sentence'], 'designated': self.designation}).tick(node)
+            if 'flag' in target and target['flag']:
+                branch.add(self.max_constants.quit_flag(branch))
+            else:
+                branch.add({'sentence': target['sentence'], 'designated': self.designation}).tick(node)
 
         # private util
 
@@ -1144,9 +1150,13 @@ class TableauxRules(object):
         def setup(self):
             self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
             self.add_helper('applied_constants', helpers.NodeAppliedConstants(self))
+            self.add_helper('quit_flagger', helpers.QuitFlagHelper(self))
 
         def get_targets_for_node(self, node, branch):
             if not self._should_apply(node, branch):
+                if self.max_constants.max_constants_exceeded(branch):
+                    if not self.quit_flagger.has_flagged(branch):
+                        return [{'flag': True}]
                 return
             d = self.designation
             s = self.sentence(node)
@@ -1172,12 +1182,17 @@ class TableauxRules(object):
             return targets
 
         def score_candidate(self, target):
+            if 'flag' in target and target['flag']:
+                return 1
             node_apply_count = self.node_application_count(target['node'], target['branch'])
             return float(1 / (node_apply_count + 1))
             
         def apply_to_node_target(self, node, branch, target):
-            # keep designation neutral for inheritance below
-            branch.add({'sentence': target['sentence'], 'designated': target['designated']})
+            if 'flag' in target and target['flag']:
+                branch.add(self.max_constants.quit_flag(branch))
+            else:
+                # keep designation neutral for inheritance below
+                branch.add({'sentence': target['sentence'], 'designated': target['designated']})
 
         def example_node(self, branch):
             # keep quantifier and designation neutral for inheritance below

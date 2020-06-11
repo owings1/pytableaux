@@ -1018,12 +1018,15 @@ class TableauxRules(object):
 
         def setup(self):
             self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
+            self.add_helper('quit_flagger', helpers.QuitFlagHelper(self))
 
         def get_target_for_node(self, node, branch):
 
             w = node.props['world']
 
             if not self._should_apply(branch, w):
+                if not self.quit_flagger.has_flagged(branch):
+                    return {'flag': True}
                 return
 
             s = self.sentence(node)
@@ -1039,7 +1042,10 @@ class TableauxRules(object):
             }
 
         def apply_to_node_target(self, node, branch, target):
-            branch.add({'sentence': target['sentence'], 'world': target['world']}).tick(node)
+            if 'flag' in target and target['flag']:
+                branch.add(self.max_constants.quit_flag(branch))
+            else:
+                branch.add({'sentence': target['sentence'], 'world': target['world']}).tick(node)
 
         # private util
 
@@ -1091,17 +1097,21 @@ class TableauxRules(object):
             )
             self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
             self.add_helper('applied_constants', helpers.NodeAppliedConstants(self))
+            self.add_helper('quit_flagger', helpers.QuitFlagHelper(self))
 
         def get_targets_for_node(self, node, branch):
+            w = node.props['world']
             with self.timers['in_should_apply']:
                 should_apply = self._should_apply(node, branch)
             if not should_apply:
+                if self.max_constants.max_constants_exceeded(branch, w):
+                    if not self.quit_flagger.has_flagged(branch):
+                        return [{'flag': True}]
                 return
             with self.timers['in_get_targets_for_nodes']:
                 with self.timers['in_node_examime']:
                     s = self.sentence(node)
                     si = s.sentence
-                    w = node.props['world']
                     v = s.variable
                     constants = self.applied_constants.get_unapplied(node, branch)
                 targets = list()
@@ -1129,7 +1139,10 @@ class TableauxRules(object):
             return float(1 / (node_apply_count + 1))
 
         def apply_to_node_target(self, node, branch, target):
-            branch.add({'sentence': target['sentence'], 'world': target['world']})
+            if 'flag' in target and target['flag']:
+                branch.add(self.max_constants.quit_flag(branch))
+            else:
+                branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example_node(self, branch):
             s = examples.quantified(self.quantifier)
@@ -1171,14 +1184,17 @@ class TableauxRules(object):
         def setup(self):
             self.add_helper('applied_sentences', helpers.AppliedSentenceCounter(self))
             self.add_helper('max_worlds', helpers.MaxWorldsTracker(self))
+            self.add_helper('quit_flagger', helpers.QuitFlagHelper(self))
 
         def is_potential_node(self, node, branch):
-            if not self._should_apply(branch):
+            if self.quit_flagger.has_flagged(branch):
                 return False
             return super(TableauxRules.Possibility, self).is_potential_node(node, branch)
 
         def get_target_for_node(self, node, branch):
             if not self._should_apply(branch):
+                if not self.quit_flagger.has_flagged(branch):
+                    return {'flag': True}
                 return
             s  = self.sentence(node)
             si = s.operand
@@ -1186,15 +1202,20 @@ class TableauxRules(object):
             return {'sentence': si, 'world1': w1}
 
         def apply_to_node_target(self, node, branch, target):
-            si = target['sentence']
-            w1 = target['world1']
-            w2 = branch.new_world()
-            branch.update([
-                {'sentence': si, 'world': w2},
-                {'world1': w1, 'world2': w2},
-            ]).tick(node)
+            if 'flag' in target and target['flag']:
+                branch.add(self.max_worlds.quit_flag(branch))
+            else:
+                si = target['sentence']
+                w1 = target['world1']
+                w2 = branch.new_world()
+                branch.update([
+                    {'sentence': si, 'world': w2},
+                    {'world1': w1, 'world2': w2},
+                ]).tick(node)
 
         def score_candidate(self, target):
+            if 'flag' in target and target['flag']:
+                return 1
             # override
             branch = target['branch']
             s = self.sentence(target['node'])
@@ -1259,9 +1280,10 @@ class TableauxRules(object):
             )
             self.add_helper('max_worlds', helpers.MaxWorldsTracker(self))
             self.add_helper('node_worlds_applied', helpers.AppliedNodesWorldsTracker(self))
+            self.add_helper('quit_flagger', helpers.QuitFlagHelper(self))
 
         def is_potential_node(self, node, branch):
-            if not self._should_apply(branch):
+            if self.quit_flagger.has_flagged(branch):
                 return False
             return super(TableauxRules.Necessity, self).is_potential_node(node, branch)
             
@@ -1269,6 +1291,8 @@ class TableauxRules(object):
 
             # Check for max worlds reached
             if not self._should_apply(branch):
+                if not self.quit_flagger.has_flagged(branch):
+                    return [{'flag': True}]
                 return
 
             # Only count least-applied-to nodes
@@ -1304,6 +1328,8 @@ class TableauxRules(object):
 
         def score_candidate(self, target):
 
+            if 'flag' in target and target['flag']:
+                return 1
             # We are already restricted to least-applied-to nodes by ``get_targets_for_node()``
 
             # Check for closure
@@ -1333,7 +1359,10 @@ class TableauxRules(object):
             #return -1 * min(target['track_count'], self.branching_complexity(target['node']))
 
         def apply_to_node_target(self, node, branch, target):
-            branch.add({'sentence': target['sentence'], 'world': target['world']})
+            if 'flag' in target and target['flag']:
+                branch.add(self.max_worlds.quit_flag(branch))
+            else:
+                branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example_nodes(self, branch):
             s = logic.operate(self.operator, [logic.atomic(0, 0)])

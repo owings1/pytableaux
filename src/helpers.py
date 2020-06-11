@@ -48,6 +48,35 @@ class NodeTargetCheckHelper(RuleHelper):
         if target:
             self.targets[branch.id] = target
 
+class QuitFlagHelper(RuleHelper):
+    """
+    Track the application of a flag node by the rule for each branch. A branch
+    is considered flagged when the target has a non-empty `flag` property.
+    """
+
+    def has_flagged(self, branch):
+        """
+        Whether the branch has been flagged.
+        """
+        if branch.id in self.flagged:
+            return self.flagged[branch.id]
+        return False
+
+    # Helper implementation
+
+    def setup(self):
+        self.flagged = {}
+
+    def register_branch(self, branch, parent):
+        if parent != None and parent.id in self.flagged:
+            self.flagged[branch.id] = self.flagged[parent.id]
+        else:
+            self.flagged[branch.id] = False
+
+    def after_apply(self, target):
+        if 'flag' in target and target['flag']:
+            self.flagged[target['branch'].id] = True
+
 class MaxConstantsTracker(RuleHelper):
     """
     Project the maximum number of constants per world required for a branch
@@ -93,6 +122,13 @@ class MaxConstantsTracker(RuleHelper):
         world_constants = self.get_branch_constants_at_world(branch, world)
         if max_constants != None and len(world_constants) > max_constants:
             return True
+
+    def quit_flag(self, branch):
+        """
+        Generate a quit flag node for the branch.
+        """
+        info = '{0}:MaxConstants({1})'.format(self.rule.name, str(self.get_max_constants(branch)))
+        return {'is_flag': True, 'flag': 'quit', 'info': info}
 
     # Helper implementation
 
@@ -204,6 +240,8 @@ class NodeAppliedConstants(RuleHelper):
                 self.consts[branch.id].add(c)
 
     def after_apply(self, target):
+        if 'flag' in target and target['flag']:
+            return
         idx = self.node_states[target['branch'].id][target['node'].id]
         c = target['constant']
         idx['applied'].add(c)
@@ -256,6 +294,13 @@ class MaxWorldsTracker(RuleHelper):
                 o for o in sentence.operators() if o in self.modal_operators
             ])
         return self.modal_complexities[sentence]
+
+    def quit_flag(self, branch):
+        """
+        Generate a quit flag node for the branch.
+        """
+        info = '{0}:MaxWorlds({1})'.format(self.rule.name, str(self.get_max_worlds(branch)))
+        return {'is_flag': True, 'flag': 'quit', 'info': info}
 
     # Helper implementation
 
@@ -414,6 +459,8 @@ class AppliedNodesWorldsTracker(RuleHelper):
             self.node_worlds_applied[branch.id] = set()
 
     def after_apply(self, target):
+        if 'flag' in target and target['flag']:
+            return
         pair = (target['node'].id, target['world'])
         self.node_worlds_applied[target['branch'].id].add(pair)
 
@@ -444,6 +491,8 @@ class AppliedSentenceCounter(RuleHelper):
             self.counts[branch.id] = {}
 
     def after_apply(self, target):
+        if 'flag' in target and target['flag']:
+            return
         branch = target['branch']
         sentence = target['sentence']
         if sentence not in self.counts[branch.id]:

@@ -54,6 +54,14 @@
     content: '\2297';
     font-size: 1.4em;
 }
+.html-writer-proof .node-props .flag.quit::after {
+    width: 24px;
+    height: 24px;
+    background-size: 24px 24px;
+    background-image: url(../img/quit-flag-yellow.svg);
+    content: '';
+    display: inline-block;
+}
 .html-writer-proof .node-props .ellipsis::after {
     content: '\22EE';
 }

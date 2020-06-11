@@ -8,10 +8,12 @@ https://freeicons.io/icon-list/navigation-set-arrows
 plus-medium.svg
 minus-medium.svg
 book.svg
+quit-flag.svg
 Creative Commons (Attribution 3.0 Unported)
 Raj Dev https://freeicons.io/profile/714
 https://freeicons.io/icon-list/essentials-free-ui-icons-2
 https://freeicons.io/business-and-online-icons/book-icon-icon
+https://freeicons.io/icon-list/documents-icons
 
 cluster.svg
 Creative Commons (Attribution 3.0 Unported)
@@ -43,3 +45,4 @@ Copyright (c) 2010, NHN Corporation (http://www.nhncorp.com),
 with Reserved Font Name Nanum, Naver Nanum, NanumGothic, Naver NanumGothic, NanumMyeongjo, 
 Naver NanumMyeongjo, NanumBrush, Naver NanumBrush, NanumPen, Naver NanumPen
 http://scripts.sil.org/OFL
+

@@ -24,7 +24,7 @@
                 <span class="ellipsis"></span>
             {% endif -%}
             {% if node.has('is_flag') -%}
-                <span class="flag {{ node.props['flag']|e }}"></span>
+                <span class="flag {{ node.props['flag']|e }}" title="{{ node.props['info']|e }}"></span>
             {% endif -%}
         </span>
     </div>
