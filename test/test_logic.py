@@ -589,6 +589,18 @@ class TestBranch(object):
         assert rule.should_be
         assert not rule.shouldnt_be
 
+    def test_select_index_non_indexed_prop(self):
+        branch = logic.TableauxSystem.Branch()
+        branch.add({'foo': 'bar'})
+        idx = branch._select_index({'foo': 'bar'}, None)
+        assert idx == branch.nodes
+
+    def test_close_adds_flag_node(self):
+        branch = logic.TableauxSystem.Branch()
+        branch.close()
+        print(branch.nodes)
+        assert branch.has({'is_flag': True, 'flag': 'closure'})
+
 class TestNode(object):
 
     def test_worlds_contains_worlds(self):
@@ -601,6 +613,12 @@ class TestNode(object):
         node = logic.TableauxSystem.Node({'foo': 1})
         res = node.__repr__()
         assert 'foo' in res
+
+    def test_clousre_flag_node_has_is_flag(self):
+        branch = logic.TableauxSystem.Branch()
+        branch.close()
+        node = branch.nodes[0]
+        assert node.has('is_flag')
 
 class TestRule(object):
 

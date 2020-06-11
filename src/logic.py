@@ -1821,6 +1821,7 @@ class TableauxSystem(object):
             Close the branch. Returns self.
             """
             self.closed = True
+            self.add({'is_flag': True, 'flag': 'closure'})
             # Tableau callback
             if self.tableau != None:
                 self.tableau.after_branch_close(self)

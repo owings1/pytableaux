@@ -1,3 +1,4 @@
+{%- import 'node.html' as nw -%}
 {% macro write_structure(sw, structure, is_child = False) -%}
     <div class="structure 
         {{- ' zoomed' if not is_child -}}
@@ -21,34 +22,9 @@
         {% if is_child %}
             <div class="vertical-line" data-step="{{ structure['step'] }}"></div>
         {% endif %}
-        {% for node in structure['nodes'] %}
-            <div class="node {{- ' ticked' if node.ticked }}"
-                data-node-id="{{ node.id }}"
-                data-step="{{ node.step }}"
-                {% if node.ticked %}
-                    data-ticked-step="{{ node.ticked_step }}"
-                {% endif %}
-                data-ticked="{{ '1' if node.ticked else '0' }}">
-                <span class="node-props {{- ' ticked' if node.ticked}}">
-                    {% if node.has('sentence') %}
-                        {% set sentence_raw = sw.write(node.props['sentence'], drop_parens = True) %}
-                        <span class="sentence">{{ sentence_raw if sw.symbol_set.name == 'html' else sentence_raw|e }}</span>
-                        {% if node.has('world') %}
-                            <span class="world">, w<span class="subscript">{{ node.props['world'] }}</span></span>
-                        {% endif %}
-                    {% endif %}
-                    {% if node.has('designated') %}
-                        <span class="designation {{ 'designated' if node.props['designated'] else 'undesignated' }}"></span>
-                    {% endif %}
-                    {% if node.has('world1') and node.has('world2') %}
-                        <span class="access">w<span class="subscript">{{ node.props['world1'] }}</span>Rw<span class="subscript">{{ node.props['world2'] }}</span></span>
-                    {% endif %}
-                    {% if node.has('ellipsis') %}
-                        <span class="ellipsis"></span>
-                    {% endif %}
-                </span>
-            </div>
-        {% endfor %}
+        {% for node in structure['nodes'] -%}
+            {{ nw.write_node(sw, node) -}}
+        {% endfor -%}
         </div>
         {% if structure['children']|length %}
             <div class="vertical-line" data-step="{{ structure['branch_step'] }}"></div>

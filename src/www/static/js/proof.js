@@ -429,18 +429,18 @@
                 }
             })
 
-            if ($s.hasClass(Cls.Closed)) {
-                // handle close marker pseudo elements via class
-                const sCloseStep = +$s.attr(Attrib.CloseStep)
-                if (sCloseStep <= n) {
-                    $s.removeClass(Cls.HideClosed)
-                    if (sCloseStep == n && Math.abs(n - prevStep) == 1) {
-                        highlightDelay = Anim.Fast
-                    }
-                } else {
-                    $s.addClass(Cls.HideClosed)
-                }
-            }
+            //if ($s.hasClass(Cls.Closed)) {
+            //    // handle close marker pseudo elements via class
+            //    const sCloseStep = +$s.attr(Attrib.CloseStep)
+            //    if (sCloseStep <= n) {
+            //        $s.removeClass(Cls.HideClosed)
+            //        if (sCloseStep == n && Math.abs(n - prevStep) == 1) {
+            //            highlightDelay = Anim.Fast
+            //        }
+            //    } else {
+            //        $s.addClass(Cls.HideClosed)
+            //    }
+            //}
         })
 
         // hide nodes, vertical lines
