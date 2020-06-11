@@ -1,5 +1,8 @@
+# Python2 support is retired
+
 FROM alpine:latest
 
+RUN echo "Python 2 support is retired" >&2 && exit 1
 WORKDIR /mnt/app
 EXPOSE 8080
 
