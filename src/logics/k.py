@@ -124,7 +124,6 @@ class Model(logic.Model):
             self.denotation = {}
             self.domain = set()
             self.property_classes = {Identity: set(), Existence: set()}
-            self.anti_property_classes = {}
 
         def get_data(self):
             return {
@@ -171,6 +170,7 @@ class Model(logic.Model):
                             for sentence in sorted(list(self.opaques.keys()))
                         ]
                     },
+                    # TODO: include (instead?) domain and property class data
                     'Predicates' : {
                         'description' : 'predicate extensions',
                         'datatype'    : 'list',
@@ -468,8 +468,17 @@ class Model(logic.Model):
         assert not todo
 
     def generate_property_classes(self, world):
-        # TODO: WIP - need to implement
-        pass
+        # TODO: WIP
+        frame = self.world_frame(world)
+        for predicate in self.predicates:
+            # Skip identity
+            if predicate == Identity:
+                continue
+            frame.property_classes[predicate] = set()
+            property_class = frame.property_classes[predicate]
+            for params in self.get_extension(predicate, world=world):
+                ptuple = tuple(self.get_denotum(param, world=world) for param in params)
+                property_class.add(ptuple)
 
     def get_identicals(self, c, **kw):
         identity_extension = self.get_extension(Identity, **kw)
