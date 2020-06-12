@@ -90,10 +90,6 @@ def nowms():
 class BadArgumentError(Exception):
     pass
 
-# TODO: get rid of this in favor of built-in class.
-class NotImplementedError(Exception):
-    pass
-
 def atomic(index, subscript):
     """Return an atomic sentence represented by the given index and subscript integers.
     Examples::
@@ -433,7 +429,7 @@ class Vocabulary(object):
     class HashTupleOrdered(object):
 
         def hash_tuple(self):
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def __lt__(self, other):
             return self.hash_tuple() < other.hash_tuple()
@@ -755,43 +751,43 @@ class Vocabulary(object):
             Recursively substitute ``new_param`` for all occurrences of ``old_param``.
             May return self, or a new sentence.
             """
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def constants(self):
             """
             Set of constants, recursive.
             """
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def variables(self):
             """
             Set of variables, recursive.
             """
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def atomics(self):
             """
             Set of atomic sentences, recursive.
             """
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def predicates(self):
             """
             Set of predicates, recursive.
             """
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def operators(self):
             """
             List of operators, recursive.
             """
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def quantifiers(self):
             """
             List of quantifiers, recursive.
             """
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def __eq__(self, other):
             return other != None and self.__dict__ == other.__dict__
@@ -1036,7 +1032,7 @@ class Vocabulary(object):
             elif sentence.is_operated():
                 return self.write_operated(sentence, symbol_set = symbol_set)
             else:
-                raise NotImplementedError(NotImplemented)
+                raise NotImplementedError()
 
         def write_atomic(self, sentence, symbol_set = None):
             symset = self.symset(symbol_set)
@@ -1059,7 +1055,7 @@ class Vocabulary(object):
             return s
 
         def write_operated(self, sentence, symbol_set = None):
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def write_operator(self, operator, symbol_set = None):
             symset = self.symset(symbol_set)
@@ -1080,7 +1076,7 @@ class Vocabulary(object):
             elif param.is_variable():
                 return self.write_variable(param, symbol_set = symbol_set)
             else:
-                raise NotImplementedError(NotImplemented)
+                raise NotImplementedError()
 
         def write_constant(self, constant, symbol_set = None):
             symset = self.symset(symbol_set)
@@ -1118,7 +1114,7 @@ class TableauxSystem(object):
 
     @classmethod
     def build_trunk(cls, tableau, argument):
-        raise NotImplementedError(NotImplemented)
+        raise NotImplementedError()
 
     @classmethod
     def branching_complexity(cls, node):
@@ -2180,12 +2176,12 @@ class TableauxSystem(object):
             # Intermediate classes such as ClosureRule, PotentialNodeRule, (and its child
             # FilterNodeRule) implement this and ``select_best_target()``, and
             # define finer-grained methods for concrete classes to implement.
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def apply_to_target(self, target):
             # Apply the rule to the target. Implementations should
             # modify the tableau directly, with no return value.
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         # Implementation options for ``example()``
 
@@ -2200,7 +2196,7 @@ class TableauxSystem(object):
             return [self.example_node(branch)]
 
         def example_node(self, branch):
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         # Default implementation
 
@@ -2370,7 +2366,7 @@ class TableauxSystem(object):
             target['branch'].close()
 
         def applies_to_branch(self, branch):
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
     class PotentialNodeRule(Rule):
         """
@@ -2480,7 +2476,7 @@ class TableauxSystem(object):
         # Abstract
 
         def is_potential_node(self, node, branch):
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         # Delegating abstract
 
@@ -2491,7 +2487,7 @@ class TableauxSystem(object):
                 return [target]
 
         def get_target_for_node(self, node, branch):
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
         def apply_to_target(self, target):
             # Default implementation, to provide a more convenient
@@ -2507,7 +2503,7 @@ class TableauxSystem(object):
             # Simpler signature to implement, mostly for legacy purposes.
             # New code should implement ``apply_to_node_target()`` instead,
             # which provides more flexibility.
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
     class FilterNodeRule(PotentialNodeRule):
         """
@@ -2650,7 +2646,7 @@ class TableauxSystem(object):
             return self.write_tableau(tableau, sw, opts)
 
         def write_tableau(self, tableau, sw, opts):
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
 class Model(object):
 
@@ -2683,7 +2679,7 @@ class Model(object):
         self.is_countermodel = None
 
     def read_branch(self, branch):
-        raise NotImplementedError(NotImplemented)
+        raise NotImplementedError()
 
     def value_of(self, sentence, **kw):
         if self.is_sentence_opaque(sentence):
@@ -2698,31 +2694,31 @@ class Model(object):
             return self.value_of_quantified(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
-        raise NotImplementedError(NotImplemented)
+        raise NotImplementedError()
 
     def is_sentence_opaque(self, sentence, **kw):
         return False
 
     def value_of_opaque(self, sentence, **kw):
-        raise NotImplementedError(NotImplemented)
+        raise NotImplementedError()
 
     def value_of_atomic(self, sentence, **kw):
-        raise NotImplementedError(NotImplemented)
+        raise NotImplementedError()
 
     def value_of_predicated(self, sentence, **kw):
-        raise NotImplementedError(NotImplemented)
+        raise NotImplementedError()
 
     def value_of_operated(self, sentence, **kw):
         operator = sentence.operator
         if operator in self.truth_functional_operators:
             return self.truth_function(operator, *[self.value_of(operand, **kw) for operand in sentence.operands])
-        raise NotImplementedError(NotImplemented)
+        raise NotImplementedError()
 
     def value_of_quantified(self, sentence, **kw):
-        raise NotImplementedError(NotImplemented)
+        raise NotImplementedError()
 
     def is_countermodel_to(self, argument):
-        raise NotImplementedError(NotImplemented)
+        raise NotImplementedError()
 
     def get_data(self):
         return dict()

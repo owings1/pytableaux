@@ -31,7 +31,7 @@ class Meta(object):
     category_display_order = 1
 
 import logic, examples, helpers
-from logic import negate, negative, quantify, atomic, NotImplementedError
+from logic import negate, negative, quantify, atomic
 
 Identity = logic.get_system_predicate('Identity')
 Existence = logic.get_system_predicate('Existence')
@@ -316,7 +316,7 @@ class Model(logic.Model):
         elif sentence.is_predicated():
             self.set_predicated_value(sentence, value)
         else:
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
     def set_opaque_value(self, sentence, value):
         if sentence in self.opaques and self.opaques[sentence] != value:
@@ -422,7 +422,7 @@ class Model(logic.Model):
                 self.truth_function('Conditional', b, a)
             )
         else:
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
 class TableauxSystem(logic.TableauxSystem):
     """

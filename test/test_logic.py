@@ -260,17 +260,17 @@ class TestVocabulary(object):
         s = logic.Vocabulary.Sentence()
         c = logic.constant(0, 0)
         v = logic.variable(0, 0)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             s.substitute(c, v)
 
     def test_base_constants_not_implemented(self):
         s = logic.Vocabulary.Sentence()
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             s.constants()
 
     def test_base_variables_not_implemented(self):
         s = logic.Vocabulary.Sentence()
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             s.variables()
 
     def test_atomic_index_too_large(self):
@@ -350,13 +350,13 @@ class TestVocabulary(object):
 
     def test_base_sentence_not_implemented_various(self):
         s = logic.Vocabulary.Sentence()
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             s.atomics()
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             s.predicates()
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             s.hash_tuple()
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             s.operators()
 
     def test_atomic_less_than_predicated(self):
@@ -423,7 +423,7 @@ class TestTableauxSystem(object):
 
     def test_build_trunk_base_not_impl(self):
         proof = logic.tableau(None, None)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             logic.TableauxSystem.build_trunk(proof, None)
 
 def mock_sleep_5ms():
@@ -624,7 +624,7 @@ class TestRule(object):
 
     def test_base_not_impl_various(self):
         rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             rule.get_candidate_targets(None)
 
     def test_base_repr_equals_rule(self):
@@ -636,18 +636,18 @@ class TestClosureRule(object):
 
     def test_applies_to_branch_not_impl(self):
         rule = logic.TableauxSystem.ClosureRule(logic.tableau(None, None))
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             rule.applies_to_branch(None)
 
 class TestNodeRule(object):
 
     def test_not_impl_various(self):
         rule = logic.TableauxSystem.PotentialNodeRule(logic.tableau(None, None))
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             rule.apply_to_node(None, None)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             rule.example_node(None)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             rule.example()
 
 class TestFilterNodeRule(object):
@@ -692,22 +692,22 @@ class TestModel(object):
 
     def test_not_impl_various(self):
         model = logic.Model()
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.read_branch(None)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.truth_function(None, None)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.value_of_opaque(None)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.value_of_predicated(None)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             s = logic.negate(logic.atomic(0, 0))
             model.value_of_operated(s)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.value_of_quantified(None)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.is_countermodel_to(None)
-        with pytest.raises(logic.NotImplementedError):
+        with pytest.raises(NotImplementedError):
             model.value_of_atomic(None)
 
     def test_get_data_empty(self):

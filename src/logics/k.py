@@ -32,7 +32,7 @@ class Meta(object):
     category_display_order = 1
 
 import logic, examples, helpers
-from logic import negate, negative, NotImplementedError
+from logic import negate, negative
 from . import fde
 
 Identity  = logic.get_system_predicate('Identity')
@@ -499,7 +499,7 @@ class Model(logic.Model):
         elif sentence.is_predicated():
             self.set_predicated_value(sentence, value, **kw)
         else:
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
     def set_opaque_value(self, sentence, value, world=0, **kw):
         frame = self.world_frame(world)
@@ -609,7 +609,7 @@ class Model(logic.Model):
         elif operator == 'Necessity':
             return self.value_of_necessity(sentence, **kw)
         else:
-            raise NotImplementedError(NotImplemented)
+            raise NotImplementedError()
 
     def value_of_quantified(self, sentence, **kw):
         q = sentence.quantifier

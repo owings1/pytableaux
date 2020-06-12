@@ -27,7 +27,7 @@ class Meta(object):
     category_display_order = 2
 
 import logic, examples
-from logic import negate, NotImplementedError
+from logic import negate
 from . import k, cpl
 
 class Model(k.Model):
@@ -63,7 +63,7 @@ class Model(k.Model):
         return data
 
     def add_access(self, w1, w2):
-        raise NotImplementedError(NotImplemented)
+        raise NotImplementedError()
 
 class TableauxSystem(cpl.TableauxSystem):
     """
