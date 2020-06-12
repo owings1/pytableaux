@@ -453,32 +453,27 @@ class Model(logic.Model):
             extension.update(to_add)
 
     def generate_denotation(self, world):
-        #: TODO: WIP
         frame = self.world_frame(world)
         todo = set(self.constants)
-        for c1 in self.constants:
-            if c1 in todo:
-                o = Model.Denotum()
-                frame.domain.add(o)
-                frame.denotation[c1] = o
-                todo.remove(c1)
-                for c2 in self.get_identicals(c1, world=world):
-                    frame.denotation[c2] = o
-                    todo.remove(c2)
+        for c in self.constants:
+            if c in todo:
+                denotum = Model.Denotum()
+                frame.domain.add(denotum)
+                denoters = {c}.union(self.get_identicals(c, world=world))
+                frame.denotation.update({c: denotum for c in denoters})
+                todo -= denoters
         assert not todo
 
     def generate_property_classes(self, world):
-        # TODO: WIP
         frame = self.world_frame(world)
         for predicate in self.predicates:
-            # Skip identity
-            if predicate == Identity:
+            # Skip identity and existence
+            if predicate == Identity or predicate == Existence:
                 continue
-            frame.property_classes[predicate] = set()
-            property_class = frame.property_classes[predicate]
-            for params in self.get_extension(predicate, world=world):
-                ptuple = tuple(self.get_denotum(param, world=world) for param in params)
-                property_class.add(ptuple)
+            frame.property_classes[predicate] = {
+                tuple(self.get_denotum(param, world=world) for param in params)
+                for params in self.get_extension(predicate, world=world)
+            }
 
     def get_identicals(self, c, **kw):
         identity_extension = self.get_extension(Identity, **kw)
