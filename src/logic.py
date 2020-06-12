@@ -634,9 +634,15 @@ class Vocabulary(object):
         return predicate
         
     def list_predicates(self):
+        """
+        List all predicates in the vocabulary, including system predicates.
+        """
         return system_predicates_list + self.user_predicates_list
 
     def list_user_predicates(self):
+        """
+        List all predicates in the vocabulary, excluding system predicates.
+        """
         return list(self.user_predicates_list)
 
     class Parameter(HashTupleOrdered):
@@ -1147,56 +1153,64 @@ class TableauxSystem(object):
         Represents a tableau proof of an argument for the given logic.
         """
 
+        #: A tableau is finished when no more rules can apply.
+        finished = False
+
+        #: An argument is proved (valid) when its finished tableau has no
+        #: open branches.
+        valid = None
+
+        #: An argument is disproved (invalid) when its finished tableau has
+        #: at least one open branch, and it was not ended prematurely.
+        invalid = None
+
+        #: Whether the tableau ended prematurely.
+        is_premature = False
+
+        #: The branches on the tableau.
+        branches = list()
+
+        #: The history of rule applications.
+        history = list()
+
+        #: A tree structure of the tableau, generated after the proof is finished.
+        tree = dict()
+
         default_opts = {
-            'is_group_optim' : True
+            'is_group_optim'  : True,
+            'is_build_models' : False,
+            'build_timeout'   : None,
+            'max_steps'       : None,
         }
 
         def __init__(self, logic, argument, **opts):
 
-            #: A tableau is finished when no more rules can apply.
             self.finished = False
-
-            #: An argument is proved (valid) when its finished tableau has no open branches.
             self.valid = None
-
-            #: An argument is disproved (invalid) when its finished tableau has at least one open branch.
             self.invalid = None
+            self.is_premature = False
 
-            #: The set of branches on the tableau.
-            self.branches = list()
-
-            #: A tree-map structure of the tableau, generated after the proof is finished.
-            self.tree = dict()
-
-            # A history of rule applications.
+            self.branches = []
             self.history = []
 
-            #: A reference to the logic, if given
+            self.tree = dict()
+
+            # A reference to the logic, if given.
             self.logic = None
 
-            #: The argument of the tableau, if given
+            # The argument of the tableau, if given.
             self.argument = None
 
-            # All rule instances of the logic
+            # Rules
             self.all_rules = []
-
-            # The closure rules
             self.closure_rules = []
-
-            # The rule groups
             self.rule_groups = []
-
-            # flag to build models
-            self.is_build_models = None
 
             # build timers
             self.build_timer = StopWatch()
             self.trunk_build_timer = StopWatch()
             self.tree_timer = StopWatch()
             self.models_timer = StopWatch()
-
-            # whether we ended pre-maturely (e.g. max_steps)
-            self.is_premature = False
 
             # opts
             self.opts = dict(self.default_opts)
@@ -1264,17 +1278,13 @@ class TableauxSystem(object):
             self.all_rules.extend(group)
             return self
             
-        def build(self, models=False, timeout=None, max_steps=None):
+        def build(self, **opts):
             """
             Build the tableau. Returns self.
             """
-            self.is_build_models = models
-            self.build_timeout = timeout
+            self.opts.update(opts)
             with self.build_timer:
                 while not self.finished:
-                    if max_steps != None and len(self.history) >= max_steps:
-                        self.is_premature = True
-                        break
                     self._check_timeout()
                     self.step()
             self.finish()
@@ -1296,7 +1306,11 @@ class TableauxSystem(object):
             self._check_trunk_built()
             application = None
             with StopWatch() as step_timer:
-                res = self.get_application()
+                res = None
+                if self._is_max_steps_exceeded():
+                    self.is_premature = True
+                else:
+                    res = self.get_application()
                 if res:
                     rule, target = res
                     application = self.do_application(rule, target, step_timer)
@@ -1524,7 +1538,7 @@ class TableauxSystem(object):
             self.invalid  = not self.valid and not self.is_premature
 
             with self.models_timer:
-                if self.is_build_models and not self.is_premature:
+                if self.opts['is_build_models'] and not self.is_premature:
                     self._build_models()
 
             with self.tree_timer:
@@ -1628,10 +1642,15 @@ class TableauxSystem(object):
             }
 
         def _check_timeout(self):
-            if self.build_timeout != None and self.build_timeout >= 0:
-                if self.build_timer.elapsed() > self.build_timeout:
+            timeout = self.opts['build_timeout']
+            if timeout != None and timeout >= 0:
+                if self.build_timer.elapsed() > timeout:
                     self.build_timer.stop()
-                    raise TableauxSystem.ProofTimeoutError('Timeout of {0}ms exceeded.'.format(str(self.build_timeout)))
+                    raise TableauxSystem.ProofTimeoutError('Timeout of {0}ms exceeded.'.format(str(timeout)))
+
+        def _is_max_steps_exceeded(self):
+            max_steps = self.opts['max_steps']
+            return max_steps != None and len(self.history) >= max_steps
 
         def _check_trunk_built(self):
             if self.argument != None and not self.trunk_built:

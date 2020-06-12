@@ -36,7 +36,7 @@ def example_proof(logic, name, is_build=True, is_models=True):
     arg = examples.argument(name)
     proof = tableau(logic, arg)
     if is_build:
-        proof.build(models=is_models)
+        proof.build(is_build_models=is_models)
     return proof
 
 def empty_proof():
@@ -293,7 +293,7 @@ class TestFDE(LogicTester):
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
         arg = argument('a', premises=['NLa', 'b'])
         proof = tableau(self.logic, arg)
-        proof.build(models=True)
+        proof.build(is_build_models=True)
         model = proof.branches[0].model
         assert model.value_of(parse('a')) == 'F'
         assert model.value_of(parse('La')) == 'F'
@@ -347,13 +347,13 @@ class TestFDE(LogicTester):
     def test_observed_model_error_with_quantifiers_and_modals(self):
         arg = argument('b', ['VxUFxSyMFy'], vocabulary=self.vocab)
         proof = tableau(self.logic, arg)
-        proof.build(models=True, max_steps=100)
+        proof.build(is_build_models=True, max_steps=100)
         assert proof.invalid
 
     def test_observed_value_of_universal_with_diamond_min_arg_is_an_empty_sequence(self):
         arg = argument('b', ['VxUFxSyMFy'], vocabulary=self.vocab)
         proof = tableau(self.logic, arg)
-        proof.build(models=False, max_steps=100)
+        proof.build(is_build_models=False, max_steps=100)
         assert proof.invalid
         branch = proof.branches[-1]
         model = self.logic.Model()
@@ -506,7 +506,7 @@ class TestK3W(LogicTester):
         # that ended up in the opaques of a model.
         arg = argument('VxMFx', ['VxUFxSyMFy', 'Fm'], vocabulary=self.vocab)
         proof = tableau(self.logic, arg)
-        proof.build(models=True, max_steps=100)
+        proof.build(is_build_models=True, max_steps=100)
         assert proof.invalid
         for branch in proof.open_branches():
             model = branch.model
@@ -1143,8 +1143,8 @@ class TestCFOL(LogicTester):
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
         arg = argument('a', premises=['NLa', 'b'])
-        proof = tableau(self.logic, arg)
-        proof.build(models=True)
+        proof = tableau(self.logic, arg, is_build_models=True)
+        proof.build()
         model = proof.branches[0].model
         assert model.value_of(parse('a'))   == 'F'
         assert model.value_of(parse('La'))  == 'F'
@@ -1168,8 +1168,8 @@ class TestCFOL(LogicTester):
         # the use of the existential is important given the way the K model
         # computes quantified values (short-circuit), as opposed to FDE (min/max).
         arg = argument('b', ['SxUNFxSyMFy'], vocabulary=self.vocab)
-        proof = tableau(self.logic, arg)
-        proof.build(models=True)
+        proof = tableau(self.logic, arg, is_build_models=True)
+        proof.build()
         # this assert is so our test has integrity
         assert len(proof.branches) == 2
         assert proof.branches[0].model.is_countermodel_to(arg)
@@ -1873,7 +1873,7 @@ class TestT(LogicTester):
     def test_valid_optimize_nec_rule1(self):
         arg = argument('NLVxNFx', ['LMSxFx'], vocabulary=self.vocab)
         proof = tableau(self.logic, arg)
-        proof.build(timeout=1000)
+        proof.build(build_timeout=1000)
         assert proof.valid
 
     def test_invalid_s4_cond_inf_2(self):
@@ -1930,7 +1930,7 @@ class TestS4(LogicTester):
     def test_valid_optimize_nec_rule1(self):
         arg = argument('NLVxNFx', ['LMSxFx'], vocabulary=self.vocab)
         proof = tableau(self.logic, arg)
-        proof.build(timeout=1000)
+        proof.build(build_timeout=1000)
         assert proof.valid
 
     def test_model_finish_transitity_visibles(self):
@@ -1946,7 +1946,7 @@ class TestS4(LogicTester):
 
     def test_invalid_problematic_1_with_timeout(self):
         proof = tableau(self.logic, argument('b', premises=['LMa']))
-        proof.build(timeout=2000)
+        proof.build(build_timeout=2000)
         assert not proof.valid
 
     def test_valid_s4_complex_possibility_with_max_steps(self):
@@ -2023,7 +2023,7 @@ class TestS5(LogicTester):
     def test_valid_optimize_nec_rule1(self):
         arg = argument('NLVxNFx', premises=['LMSxFx'], notation='polish', vocabulary=examples.vocabulary)
         proof = tableau(self.logic, arg)
-        proof.build(timeout=1000)
+        proof.build(build_timeout=1000)
         assert proof.valid
 
     def test_intermediate_mix_modal_quantifiers1(self):

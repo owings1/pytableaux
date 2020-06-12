@@ -468,7 +468,7 @@ class TestTableau(object):
         proof = logic.tableau('cpl', examples.argument('Addition'))
         proof.step = mock_sleep_5ms
         with pytest.raises(logic.TableauxSystem.ProofTimeoutError):
-            proof.build(timeout=1)
+            proof.build(build_timeout=1)
 
     def test_finish_empty_sets_build_duration_ms_0(self):
         proof = logic.tableau(None, None)
@@ -487,7 +487,7 @@ class TestTableau(object):
 
     def test_regress_structure_has_model_id(self):
         proof = logic.tableau('CPL', examples.argument('Triviality 1'))
-        proof.build(models=True)
+        proof.build(is_build_models=True)
         assert proof.tree['model_id']
 
     #def test_add_rule_group_instance_mock(self):

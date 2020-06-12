@@ -483,18 +483,15 @@ class App(object):
         if len(errors) > 0:
             raise RequestDataError(errors)
 
-        build_opts = {
-            'models'    : odata['options']['models'],
-            'timeout'   : maxtimeout,
-            'max_steps' : body['max_steps'],
-        }
-
         proof_opts = {
             'is_rank_optim'  : body['rank_optimizations'],
             'is_group_optim' : body['group_optimizations'],
+            'build_timeout'  : maxtimeout,
+            'is_build_models': odata['options']['models'],
+            'max_steps'      : body['max_steps'],
         }
         proof = logic.tableau(selected_logic, arg, **proof_opts)
-        proof.build(**build_opts)
+        proof.build()
 
         return {
             'tableau': {
