@@ -709,6 +709,12 @@ class Vocabulary(object):
         #: The predicate, if any.
         predicate  = None
 
+        #: The type (class name).
+        type       = None
+
+        def __init__(self):
+            self.type = self.__class__.__name__
+
         def is_sentence(self):
             """
             Whether this is a sentence.
@@ -810,6 +816,7 @@ class Vocabulary(object):
         def __init__(self, index, subscript):
             if index >= num_atomic_symbols:
                 raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
+            super(Vocabulary.AtomicSentence, self).__init__()
             self.index     = index
             self.subscript = subscript
 
@@ -865,6 +872,7 @@ class Vocabulary(object):
                         predicate.arity, str([predicate.index, predicate.subscript]), len(parameters)
                     )
                 )
+            super(Vocabulary.PredicatedSentence, self).__init__()
             self.predicate  = predicate
             self.parameters = parameters
             self.vocabulary = vocabulary
@@ -905,6 +913,7 @@ class Vocabulary(object):
     class QuantifiedSentence(Sentence):
 
         def __init__(self, quantifier, variable, sentence):
+            super(Vocabulary.QuantifiedSentence, self).__init__()
             self.quantifier = quantifier
             self.variable   = variable
             self.sentence   = sentence
@@ -951,6 +960,7 @@ class Vocabulary(object):
                         arity(operator), operator, len(operands)
                     )
                 )
+            super(Vocabulary.OperatedSentence, self).__init__()
             self.operator = operator
             self.operands = operands
             if len(operands) == 1:

@@ -348,9 +348,9 @@ class App(object):
 
         if len(errors) > 0:
             raise RequestDataError(errors)
-            
+
         return {
-            'type'     : sentence.__class__.__name__,
+            'type'     : sentence.type,
             'rendered' : {
                 notation: {
                     'default': modules['notations'][notation].write(sentence),
