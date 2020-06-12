@@ -90,6 +90,7 @@ def nowms():
 class BadArgumentError(Exception):
     pass
 
+# TODO: get rid of this in favor of built-in class.
 class NotImplementedError(Exception):
     pass
 
@@ -2654,6 +2655,9 @@ class TableauxSystem(object):
 class Model(object):
 
     class ModelValueError(Exception):
+        pass
+
+    class DenotationError(ModelValueError):
         pass
 
     # Default set

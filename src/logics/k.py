@@ -78,9 +78,17 @@ class Model(logic.Model):
         0: 'F',
     }
 
-    # wip: real domain (fixed)
-    domain = set()
-    denotation = {}
+    # WIP - Generating "objects" like k-constants for a domain, dentation, and
+    #       predicate "property" extensions.
+    #
+    #       With the current implemtation of how values are set and checked
+    #       dynamically for integrity, we can't easily generate a useful
+    #       domain until we know the model is finished.
+    #
+    #       For now, the purpose of this WIP feature is merely informational.
+
+    class Denotum(object):
+        pass
 
     class Frame(object):
         """
@@ -99,15 +107,24 @@ class Model(logic.Model):
         #: A map of predicates to their extension.
         extensions = {}
 
+        # TODO: WIP
+        domain = set()
+        denotation = {}
+
         def __init__(self, world):
 
             self.world = world
             self.atomics = {}
             self.opaques = {}
             self.extensions = {Identity: set(), Existence: set()}
-
             # Track the anti-extensions to ensure integrity
             self.anti_extensions = {}
+
+            # TODO: WIP
+            self.denotation = {}
+            self.domain = set()
+            self.property_classes = {Identity: set(), Existence: set()}
+            self.anti_property_classes = {}
 
         def get_data(self):
             return {
@@ -249,10 +266,6 @@ class Model(logic.Model):
         # ensure there is a w0
         self.world_frame(0)
 
-        # TODO: implement real domain and denotation, think of identity necessity
-        self.domain = set()
-        self.denotation = {}
-
     def value_of_operated(self, sentence, **kw):
         """
         The value of a sentence with a truth-functional operator `w` is determined by
@@ -271,6 +284,9 @@ class Model(logic.Model):
         A sentence for predicate `P` is true at `w` iff the tuple of the parameters
         is in the extension of `P` at `w`.
         """
+        for param in sentence.parameters:
+            if param not in self.constants:
+                raise Model.DenotationError('Parameter {0} is not in the constants'.format(str(param)))
         if tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw):
             return 'T'
         return 'F'
@@ -386,14 +402,22 @@ class Model(logic.Model):
         # track all atomics and opaques
         atomics = set()
         opaques = set()
+
         for world in self.frames:
+
             frame = self.world_frame(world)
             atomics.update(frame.atomics.keys())
             opaques.update(frame.opaques.keys())
+
+            # TODO: WIP
+            self.generate_denotation(world)
+            self.generate_property_classes(world)
+
             for predicate in self.predicates:
                 self.agument_extension_with_identicals(predicate, world)
             self.ensure_self_identity(world)
             self.ensure_self_existence(world)
+
         # make sure each atomic and opaque is assigned a value in each frame
         for world in self.frames:
             frame = self.world_frame(world)
@@ -428,14 +452,32 @@ class Model(logic.Model):
                         to_add.add(new_params)
             extension.update(to_add)
 
+    def generate_denotation(self, world):
+        #: TODO: WIP
+        frame = self.world_frame(world)
+        todo = set(self.constants)
+        for c1 in self.constants:
+            if c1 in todo:
+                o = Model.Denotum()
+                frame.domain.add(o)
+                frame.denotation[c1] = o
+                todo.remove(c1)
+                for c2 in self.get_identicals(c1, world=world):
+                    frame.denotation[c2] = o
+                    todo.remove(c2)
+        assert not todo
+
+    def generate_property_classes(self, world):
+        # TODO: WIP - need to implement
+        pass
+
     def get_identicals(self, c, **kw):
         identity_extension = self.get_extension(Identity, **kw)
         identicals = set()
         for params in identity_extension:
             if c in params:
                 identicals.update(params)
-        if c in identicals:
-            identicals.remove(c)
+        identicals.discard(c)
         return identicals
 
     def is_sentence_literal(self, sentence):
@@ -511,6 +553,22 @@ class Model(logic.Model):
         if predicate not in frame.anti_extensions:
             frame.anti_extensions[predicate] = set()
         return frame.anti_extensions[predicate]
+
+    def get_domain(self, world=0, **kw):
+        # TODO: wip
+        return self.world_frame(world).domain
+
+    def get_denotation(self, world=0, **kw):
+        # TODO: wip
+        return self.world_frame(world).denotation
+
+    def get_denotum(self, c, world=0, **kw):
+        # TODO: wip
+        den = self.get_denotation(world=world)
+        try:
+            return den[c]
+        except KeyError:
+            raise Model.DenotationError('Constant {0} does not have a reference at w{1}'.format(str(c), str(world)))
 
     def add_access(self, w1, w2):
         self.access.add((w1, w2))

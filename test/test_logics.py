@@ -52,6 +52,11 @@ class LogicTester(object):
     def example_proof(self, name, **kw):
         return example_proof(self.logic, name, **kw)
 
+    def p(self, s, **kw):
+        if 'vocabulary' not in kw:
+            kw['vocabulary'] = self.vocab
+        return parse(s, **kw)
+
 class TestFDE(LogicTester):
 
     logic = get_logic('FDE')
@@ -1169,6 +1174,70 @@ class TestCFOL(LogicTester):
         assert len(proof.branches) == 2
         assert proof.branches[0].model.is_countermodel_to(arg)
         assert proof.branches[1].model.is_countermodel_to(arg)
+
+    def test_model_identity_predication1(self):
+        model = self.logic.Model()
+        s1 = parse('Fm', vocabulary=self.vocab)
+        s2 = parse('Imn')
+        s3 = parse('Fn', vocabulary=self.vocab)
+        model.set_literal_value(s1, 'T')
+        model.set_literal_value(s2, 'T')
+        model.finish()
+        assert model.value_of(s3) == 'T'
+
+    def test_model_identity_predication2(self):
+        model = self.logic.Model()
+        s1 = parse('Fm', vocabulary=self.vocab)
+        s2 = parse('Inm')
+        s3 = parse('Fn', vocabulary=self.vocab)
+        model.set_literal_value(s1, 'T')
+        model.set_literal_value(s2, 'T')
+        model.finish()
+        assert model.value_of(s3) == 'T'
+
+    def test_model_self_identity1(self):
+        model = self.logic.Model()
+        # here we make sure the constant m is registered
+        s1 = self.p('Fm')
+        model.set_literal_value(s1, 'F')
+        model.finish()
+        s2 = self.p('Imm')
+        assert model.value_of(s2) == 'T'
+
+    def test_model_raises_denotation_error(self):
+        model = self.logic.Model()
+        model.finish()
+        s1 = self.p('Imm')
+        with pytest.raises(Model.DenotationError):
+            model.value_of(s1)
+
+    def test_model_get_identicals_singleton_two_identical_constants(self):
+        model = self.logic.Model()
+        s1 = self.p('Imn')
+        c1, c2 = s1.parameters
+        model.set_literal_value(s1, 'T')
+        model.finish()
+        identicals = model.get_identicals(c1)
+        assert len(identicals) == 1
+        assert c2 in identicals
+
+    def test_model_singleton_domain_two_identical_constants(self):
+        model = self.logic.Model()
+        s1 = self.p('Imn')
+        model.set_literal_value(s1, 'T')
+        model.finish()
+        d = model.get_domain()
+        assert len(d) == 1
+
+    def test_model_same_denotum_two_identical_constants(self):
+        model = self.logic.Model()
+        s1 = self.p('Imn')
+        c1, c2 = s1.parameters
+        model.set_literal_value(s1, 'T')
+        model.finish()
+        d1 = model.get_denotum(c1)
+        d2 = model.get_denotum(c2)
+        assert d1 is d2
 
 class TestK(LogicTester):
 
