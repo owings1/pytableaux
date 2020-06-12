@@ -1999,7 +1999,7 @@ class TableauxSystem(object):
         A tableau node.
         """
 
-        def __init__(self, props={}, parent=None):
+        def __init__(self, props={}):
             #: A dictionary of properties for the node.
             self.props = {
                 'world'      : None,
@@ -2007,7 +2007,7 @@ class TableauxSystem(object):
             }
             self.props.update(props)
             self.ticked = False
-            self.parent = parent
+            self.parent = None
             self.step = None
             self.ticked_step = None
             self.id = id(self)
@@ -2091,7 +2091,7 @@ class TableauxSystem(object):
                 'props'  : self.props,
                 'ticked' : self.ticked,
                 'step'   : self.step,
-                'parent' : self.parent.id if self.parent else None
+                'parent' : self.parent.id if self.parent else None,
             }.__repr__()
 
     class Rule(object):
@@ -2105,6 +2105,7 @@ class TableauxSystem(object):
             'is_rank_optim' : True
         }
 
+        # For compatibility in `_after_branch_add()`
         ticked = None
 
         def __init__(self, tableau, **opts):
@@ -2236,7 +2237,6 @@ class TableauxSystem(object):
                 for node in branch.get_nodes(ticked=self.ticked):
                     self.register_node(self, node, branch)
                     for helper in self.helpers:
-                        #for node in branch.get_nodes(ticked=helper.ticked):
                         helper.register_node(node, branch)
 
         def _after_branch_close(self, branch):
@@ -2641,7 +2641,7 @@ class TableauxSystem(object):
             
             if sw == None:
                 if notation == None:
-                    raise Exception("Must specify either notation or sw.")
+                    raise BadArgumentError("Must specify either notation or sw.")
                 sw = notation.Writer(symbol_set)
             return self.write_tableau(tableau, sw, opts)
 
@@ -2741,6 +2741,9 @@ class Parser(object):
     # - Atomic sentence (proposition) symbols
 
     class ParseError(Exception):
+        pass
+
+    class ParserThreadError(ParseError):
         pass
 
     class UnboundVariableError(ParseError):
@@ -2852,7 +2855,7 @@ class Parser(object):
     def parse(self, string):
         # parse an input string, and return a sentence.
         if self.is_parsing:
-            raise Exception('Parser is already parsing -- not thread safe.')
+            raise Parser.ParserThreadError('Parser is already parsing -- not thread safe.')
         self.is_parsing = True
         self.bound_vars = set()
         try:
@@ -3128,7 +3131,7 @@ class StopWatch(object):
 
     def start(self):
         if self._is_running:
-            raise StopWatch.StateError('StopWatch already started')
+            raise StopWatch.StateError('StopWatch already started.')
         self._start_time = nowms()
         self._is_running = True
         self._times_started += 1
@@ -3136,7 +3139,7 @@ class StopWatch(object):
 
     def stop(self):
         if not self._is_running:
-            raise StopWatch.StateError('StopWatch already stopped')
+            raise StopWatch.StateError('StopWatch already stopped.')
         self._is_running = False
         self._elapsed += nowms() - self._start_time
         return self
