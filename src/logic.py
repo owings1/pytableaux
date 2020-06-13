@@ -2134,6 +2134,9 @@ class TableauxSystem(object):
             'is_rank_optim' : True
         }
 
+        # for helper
+        ticking = None
+
         # For compatibility in `_after_branch_add()`
         ticked = None
 
@@ -2150,6 +2153,7 @@ class TableauxSystem(object):
             self.apply_count = 0
             self.opts = dict(self.default_opts)
             self.opts.update(opts)
+            self.add_helper('adz', TableauxSystem.AdzHelper(self))
             self.setup()
 
         # External API
@@ -2392,6 +2396,31 @@ class TableauxSystem(object):
         def after_apply(self, target):
             pass
 
+    class AdzHelper(RuleHelper):
+
+        def apply_to_target(self, target):
+            branch = target['branch']
+            for i in range(len(target['adds'])):
+                if i == 0:
+                    continue
+                b = branch.branch()
+                b.update(target['adds'][i])
+                if self.rule.ticking:
+                    b.tick(target['node'])
+            branch.update(target['adds'][0])
+            if self.rule.ticking:
+                branch.tick(target['node'])
+
+        def closure_score(self, target):
+            close_count = 0
+            for nodes in target['adds']:
+                nodes = [target['branch'].create_node(node) for node in nodes]
+                for rule in self.rule.tableau.closure_rules:
+                    if rule.nodes_will_close_branch(nodes, target['branch']):
+                        close_count += 1
+                        break
+            return float(close_count / min(1, len(target['adds'])))
+
     class ClosureRule(Rule):
         """
         A closure rule has a fixed ``apply()`` method that marks the branch as
@@ -2418,6 +2447,14 @@ class TableauxSystem(object):
 
         def applies_to_branch(self, branch):
             raise NotImplementedError()
+
+        def nodes_will_close_branch(self, nodes, branch):
+            for node in nodes:
+                if self.node_will_close_branch(node, branch):
+                    return True
+
+        def node_will_close_branch(self, node, branch):
+            pass
 
     class PotentialNodeRule(Rule):
         """
