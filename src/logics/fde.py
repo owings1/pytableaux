@@ -571,7 +571,7 @@ class TableauxRules(object):
         # tracker implementation
 
         def check_for_target(self, node, branch):
-            nnode = self._find_closing_node(self, node, branch)
+            nnode = self._find_closing_node(node, branch)
             if nnode:
                 return {'nodes': set([node, nnode]), 'type': 'Nodes'}
 
