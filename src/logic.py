@@ -2454,7 +2454,7 @@ class TableauxSystem(object):
                     return True
 
         def node_will_close_branch(self, node, branch):
-            pass
+            raise NotImplementedError()
 
     class PotentialNodeRule(Rule):
         """
