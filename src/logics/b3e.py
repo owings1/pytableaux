@@ -77,7 +77,7 @@ class TableauxSystem(fde.TableauxSystem):
     """
 
     # operator => negated => designated
-    branchables = dict(fde.TableauxSystem.branchables)
+    branchables = dict(k3w.TableauxSystem.branchables)
     branchables.update({
         # reduction
         'Conditional': {
