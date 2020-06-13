@@ -2355,6 +2355,11 @@ class TableauxSystem(object):
             self.helpers.append(helper)
             return helper
 
+        def add_helpers(self, helpers):
+            for name in helpers:
+                self.add_helper(name, helpers[name])
+            return self
+
         def __repr__(self):
             return self.name
 
