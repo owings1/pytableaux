@@ -102,10 +102,16 @@ class TableauxRules(object):
         # tracker implementation
 
         def check_for_target(self, node, branch):
-            if node.has('sentence', 'designated') and node.props['designated']:
-                nnode = branch.find({'sentence': negative(self.sentence(node)), 'designated': True})
-                if nnode:
-                   return {'nodes': set([node, nnode]), 'type': 'Nodes'}
+            nnode = self._find_closing_node(node, branch)
+            if nnode:
+               return {'nodes': set([node, nnode]), 'type': 'Nodes'}
+
+        # adz implementation
+
+        def node_will_close_branch(self, node, branch):
+            if self._find_closing_node(node, branch):
+                return True
+            return False
 
         # rule implementation
 
@@ -118,6 +124,15 @@ class TableauxRules(object):
                 {'sentence':        a , 'designated': True},
                 {'sentence': negate(a), 'designated': True},
             ]
+
+        # private util
+
+        def _find_closing_node(self, node, branch):
+            if node.has('sentence', 'designated') and node.props['designated']:
+                return branch.find({
+                    'sentence'   : negative(node.props['sentence']),
+                    'designated' : True,
+                })
 
     class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
         """

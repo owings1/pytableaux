@@ -571,10 +571,16 @@ class TableauxRules(object):
         # tracker implementation
 
         def check_for_target(self, node, branch):
-            if node.has('sentence', 'designated'):
-                nnode = branch.find({'sentence': self.sentence(node), 'designated': not node.props['designated']})
-                if nnode:
-                    return {'nodes': set([node, nnode]), 'type': 'Nodes'}
+            nnode = self._find_closing_node(self, node, branch)
+            if nnode:
+                return {'nodes': set([node, nnode]), 'type': 'Nodes'}
+
+        # adz implementation
+
+        def node_will_close_branch(self, node, branch):
+            if self._find_closing_node(node, branch):
+                return True
+            return False
 
         # rule implementation
 
@@ -588,6 +594,15 @@ class TableauxRules(object):
                 {'sentence': a, 'designated': False},
             ]
 
+        # private util
+
+        def _find_closing_node(self, node, branch):
+            if node.has('sentence', 'designated'):
+                return branch.find({
+                    'sentence'   : node.props['sentence'],
+                    'designated' : not node.props['designated'],
+                })
+            
     class DoubleNegationDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         From an unticked designated negated negation node *n* on a branch *b*, add a designated
