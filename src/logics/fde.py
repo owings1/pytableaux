@@ -437,6 +437,22 @@ class TableauxSystem(logic.TableauxSystem):
 
     # operator => negated => designated
     branchables = {
+        'Negation': {
+            True : {
+                True  : 0,
+                False : 0,
+            },
+        },
+        'Assertion': {
+            False : {
+                True  : 0,
+                False : 0,
+            },
+            True : {
+                True  : 0,
+                False : 0,
+            },
+        },
         'Conjunction': {
             False : {
                 True  : 0,
@@ -522,10 +538,13 @@ class TableauxSystem(logic.TableauxSystem):
         while len(operators):
             operator = operators.pop(0)
             if operator == 'Negation':
-                if last_is_negated:
-                    last_is_negated = False
+                #if last_is_negated:
+                #    last_is_negated = False
+                #    continue
+                #last_is_negated = True
+                if not last_is_negated:
+                    last_is_negated = True
                     continue
-                last_is_negated = True
             if operator in cls.branchables:
                 complexity += cls.branchables[operator][last_is_negated][designated]
                 last_is_negated = False

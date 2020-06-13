@@ -117,6 +117,22 @@ class TableauxSystem(fde.TableauxSystem):
     """
     # operator => negated => designated
     branchables = {
+        'Negation': {
+            True : {
+                True  : 0,
+                False : 0,
+            },
+        },
+        'Assertion': {
+            False : {
+                True  : 0,
+                False : 0,
+            },
+            True : {
+                True  : 0,
+                False : 0,
+            },
+        },
         'Conjunction': {
             False : {
                 True  : 0,
