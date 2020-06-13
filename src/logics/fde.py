@@ -250,9 +250,7 @@ class Model(logic.Model):
     def read_branch(self, branch):
         for node in branch.nodes:
             if node.has('sentence'):
-                self.predicates.update(node.predicates())
-                self.all_atomics.update(node.atomics())
-                self.constants.update(node.constants())
+                self._collect_node(node)
                 sentence = node.props['sentence']
                 is_literal = self.is_sentence_literal(sentence)
                 is_opaque = self.is_sentence_opaque(sentence)
@@ -292,6 +290,11 @@ class Model(logic.Model):
                     else:
                         self.set_literal_value(sentence, value)
         self.finish()
+
+    def _collect_node(self, node):
+        self.predicates.update(node.predicates())
+        self.all_atomics.update(node.atomics())
+        self.constants.update(node.constants())
 
     def finish(self):
         # TODO: consider augmenting the logic with identity and existence predicate
