@@ -396,7 +396,7 @@ def get_system_predicate(name):
 
 def truth_table(logic, operator):
     model = get_logic(logic).Model()
-    inputs = list(itertools.product(*[model.truth_values_list for x in range(arity(operator))]))
+    inputs = model.truth_table_inputs(arity(operator))
     outputs = [model.truth_function(operator, *values) for values in inputs]
     return {'inputs': inputs, 'outputs': outputs}
 
@@ -2724,6 +2724,9 @@ class Model(object):
 
     def truth_function(self, operator, a, b=None):
         raise NotImplementedError()
+
+    def truth_table_inputs(self, narity):
+        return tuple(itertools.product(*[self.truth_values_list for x in range(narity)]))
 
     def is_sentence_opaque(self, sentence, **kw):
         return False
