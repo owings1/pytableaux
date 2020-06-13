@@ -936,6 +936,42 @@ class TestGO(LogicTester):
         node, = branch.get_nodes()
         assert self.logic.TableauxSystem.branching_complexity(node) == 0
 
+class TestP3(LogicTester):
+
+    logic = get_logic('P3')
+
+    def test_double_negation_designated_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule(self.logic.TableauxRules.DoubleNegationDesignated)
+        rule.example()
+        proof.build()
+        assert len(proof.history) == 1
+        assert proof.history[0]['rule'] == rule
+        assert proof.branches[0].has_all([
+            {'sentence': parse('a'), 'designated': False},
+            {'sentence': parse('Na'), 'designated': False},
+        ])
+
+    def test_conjunction_undesignated_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule(self.logic.TableauxRules.ConjunctionUndesignated)
+        rule.example()
+        proof.build()
+        assert len(proof.history) == 1
+        assert proof.history[0]['rule'] == rule
+
+    def test_material_conditional_designated_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule(self.logic.TableauxRules.MaterialConditionalDesignated)
+        rule.example()
+        proof.build()
+        assert len(proof.history) > 0
+        assert proof.history[0]['rule'] == rule
+
+    def test_invalid_lem(self):
+        proof = self.example_proof('Law of Excluded Middle')
+        assert proof.invalid
+        
 class TestCPL(LogicTester):
 
     logic = get_logic('CPL')
