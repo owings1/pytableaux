@@ -20,10 +20,14 @@
 name = 'K3'
 
 class Meta(object):
-    title = 'Strong Kleene 3-valued logic'
-    description = 'Three-valued logic (True, False, Neither)'
-    tags = list(['many-valued', 'gappy', 'non-modal', 'first-order'])
+
+    title    = 'Strong Kleene 3-valued logic'
     category = 'Many-valued'
+
+    description = 'Three-valued logic (T, F, N)'
+
+    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
+    
     category_display_order = 2
 
 import logic, helpers

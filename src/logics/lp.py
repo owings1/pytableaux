@@ -20,11 +20,15 @@
 name = 'LP'
 
 class Meta(object):
-    title = 'Logic of Paradox'
-    description = 'Three-valued logic (True, False, Both)'
-    tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
+
+    title    = 'Logic of Paradox'
     category = 'Many-valued'
-    category_display_order = 7
+
+    description = 'Three-valued logic (T, F, B)'
+
+    tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
+    
+    category_display_order = 8
 
 import logic, helpers
 from logic import negate, negative
