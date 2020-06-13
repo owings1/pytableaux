@@ -2167,37 +2167,54 @@ class TableauxSystem(object):
             # ``get_candidate_targets()`` instead.
             cands = self.get_candidate_targets(branch)
             if cands:
+                self._extend_branch_targets(cands, branch)
                 return self._select_best_target(cands, branch)
 
-        def _select_best_target(self, targets, branch):
-            # Selects the best target. Augment the target with the following keys:
+        def _extend_branch_targets(self, targets, branch):
+            # Augment the targets with the following keys:
             #
+            #  - branch
+            #  - is_rank_optim
             #  - candidate_score
             #  - total_candidates
             #  - min_candidate_score
-            #  - is_rank_optim
-            if not self.opts['is_rank_optim']:
-                target = targets[0]
-                target.update({
-                    'candidate_score'     : None,
-                    'total_candidates'    : len(targets),
-                    'min_candidate_score' : None,
-                    'is_rank_optim'       : False,
-                })
-                return target
+            #  - max_candidate_score
 
-            scores = [self.score_candidate(target) for target in targets]
+            for target in targets:
+                if 'branch' not in target:
+                    target['branch'] = branch
+
+            if self.opts['is_rank_optim']:
+                scores = [self.score_candidate(target) for target in targets]
+            else:
+                scores = [0]
             max_score = max(scores)
             min_score = min(scores)
             for i in range(len(targets)):
-                if scores[i] == max_score:
-                    target = targets[i]
+                target = targets[i]
+                if self.opts['is_rank_optim']:
                     target.update({
-                        'candidate_score'     : max_score,
+                        'is_rank_optim'       : True,
+                        'candidate_score'     : scores[i],
                         'total_candidates'    : len(targets),
                         'min_candidate_score' : min_score,
-                        'is_rank_optim'       : True,
+                        'max_candidate_score' : max_score,
                     })
+                else:
+                    target.update({
+                        'is_rank_optim'       : False,
+                        'candidate_score'     : None,
+                        'total_candidates'    : len(targets),
+                        'min_candidate_score' : None,
+                        'max_candidate_score' : None
+                    })
+
+        def _select_best_target(self, targets, branch):
+            # Selects the best target. Assumes targets have been extended.
+            for target in targets:
+                if not self.opts['is_rank_optim']:
+                    return target
+                if target['candidate_score'] == target['max_candidate_score']:
                     return target
 
         # Abstract methods
