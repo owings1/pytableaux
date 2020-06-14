@@ -530,7 +530,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': disj, 'designated': self.designation},
+                        {'sentence': negate(disj), 'designated': self.designation},
                     ],
                 ],
             }
@@ -558,7 +558,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(disj), 'designated': self.designation},
+                        {'sentence': disj, 'designated': self.designation},
                     ],
                 ],
             }
@@ -650,7 +650,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': conj, 'designated': self.designation},
+                        {'sentence': negate(conj), 'designated': self.designation},
                     ],
                 ],
             }
@@ -682,7 +682,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(conj), 'designated': self.designation},
+                        {'sentence': conj, 'designated': self.designation},
                     ],
                 ],
             }
