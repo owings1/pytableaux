@@ -971,7 +971,31 @@ class TestP3(LogicTester):
     def test_invalid_lem(self):
         proof = self.example_proof('Law of Excluded Middle')
         assert proof.invalid
-        
+
+    def test_invalid_demorgan_1(self):
+        proof = self.example_proof('DeMorgan 1')
+        assert proof.invalid
+
+    def test_invalid_demorgan_2(self):
+        proof = self.example_proof('DeMorgan 2')
+        assert proof.invalid
+
+    def test_invalid_demorgan_3(self):
+        proof = self.example_proof('DeMorgan 3')
+        assert not proof.valid
+
+    def test_invalid_demorgan_4(self):
+        proof = self.example_proof('DeMorgan 4')
+        assert proof.invalid
+
+    def test_invalid_demorgan_5(self):
+        proof = self.example_proof('DeMorgan 5')
+        assert proof.invalid
+
+    def test_valid_demorgan_6(self):
+        proof = self.example_proof('DeMorgan 6')
+        assert proof.valid
+
 class TestCPL(LogicTester):
 
     logic = get_logic('CPL')
