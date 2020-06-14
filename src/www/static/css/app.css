@@ -356,7 +356,6 @@ body {
     border: 1px solid #cccccc;
     text-align: center;
 }
-.pt-app ul.item-symbols li,
 .pt-app .predicateSymbol.hidden {
     display: none;
 }
