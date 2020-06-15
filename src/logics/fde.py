@@ -671,6 +671,7 @@ class TableauxRules(object):
         node to *b* with the operand of *n*, then tick *n*.
         """
 
+        negated     = False
         designation = False
 
     class AssertionNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
@@ -709,6 +710,7 @@ class TableauxRules(object):
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
 
+        negated     = True
         designation = False
 
     class ConjunctionDesignated(logic.TableauxSystem.FilterNodeRule):
@@ -1227,6 +1229,7 @@ class TableauxRules(object):
             c = branch.new_constant()
 
             return {
+                # GO.UniversalNegatedDesignated adds an additional branch
                 'adds': [
                     self.get_new_nodes_for_constant(c, node, branch)
                 ],

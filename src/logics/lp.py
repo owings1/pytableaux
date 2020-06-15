@@ -30,7 +30,7 @@ class Meta(object):
     
     category_display_order = 8
 
-import logic, helpers
+import logic
 from logic import negate, negative
 from . import fde
 
