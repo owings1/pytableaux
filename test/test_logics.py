@@ -968,6 +968,14 @@ class TestP3(LogicTester):
         assert len(proof.history) > 0
         assert proof.history[0]['rule'] == rule
 
+    def test_universal_negated_designated_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule(self.logic.TableauxRules.UniversalNegatedDesignated)
+        rule.example()
+        proof.build()
+        assert len(proof.history) > 0
+        assert proof.history[0]['rule'] == rule
+
     def test_invalid_lem(self):
         proof = self.example_proof('Law of Excluded Middle')
         assert proof.invalid

@@ -1095,11 +1095,6 @@ class TableauxRules(object):
             DisjunctionUndesignated,
             DisjunctionNegatedDesignated,
 
-            ExistentialNegatedDesignated,
-            ExistentialNegatedUndesignated,
-            UniversalNegatedDesignated,
-            UniversalNegatedUndesignated,
-
             DoubleNegationDesignated,
             
             # reduction rules (thus, non-branching)
@@ -1139,10 +1134,14 @@ class TableauxRules(object):
         ],
         [
             ExistentialDesignated,
-            ExistentialUndesignated,
+            UniversalUndesignated,
+            UniversalNegatedDesignated,
+            UniversalNegatedUndesignated,
         ],
         [
             UniversalDesignated,
-            UniversalUndesignated,
+            ExistentialUndesignated,
+            ExistentialNegatedDesignated,
+            ExistentialNegatedUndesignated,
         ]
     ]
