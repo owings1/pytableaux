@@ -87,6 +87,9 @@ class TableauxSystem(fde.TableauxSystem):
         },
     })
 
+class DefaultNodeRule(fde.DefaultNodeRule):
+    pass
+
 class TableauxRules(object):
     """
     The closure rules for RM3 are the `FDE closure rule`_, and the `LP closure rule`_.
@@ -274,7 +277,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConditionalDesignated(logic.TableauxSystem.FilterNodeRule):
+    class ConditionalDesignated(DefaultNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add an undesignated
@@ -288,7 +291,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 3
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
@@ -309,12 +311,6 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
     class ConditionalNegatedDesignated(lp.TableauxRules.ConditionalNegatedDesignated):
         """
         This rule is the same as the `FDE ConditionalNegatedDesignated rule`_.
@@ -323,7 +319,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConditionalUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class ConditionalUndesignated(DefaultNodeRule):
         """
         From an unticked, undesignated, conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'*, add a designated node
@@ -336,7 +332,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 2
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
@@ -353,12 +348,6 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
     class ConditionalNegatedUndesignated(lp.TableauxRules.ConditionalNegatedUndesignated):
         """
         This rule is the same as the `FDE ConditionalNegatedDesignated rule`_.
@@ -367,7 +356,7 @@ class TableauxRules(object):
         """
         pass
 
-    class BiconditionalDesignated(logic.TableauxSystem.FilterNodeRule):
+    class BiconditionalDesignated(DefaultNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated
@@ -380,7 +369,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 3
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
@@ -403,12 +391,6 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
     class BiconditionalNegatedDesignated(lp.TableauxRules.BiconditionalNegatedDesignated):
         """
         This rule is the same as the `FDE BiconditionalNegatedDesignated rule`_.
@@ -417,7 +399,7 @@ class TableauxRules(object):
         """
         pass
 
-    class BiconditionalUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class BiconditionalUndesignated(DefaultNodeRule):
         """
         From an unticked undesignated biconditional node *n* on a branch *b*, add a
         conjunction undesignated node to *b*, with first conjunct being a conditional
@@ -429,7 +411,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 2
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
@@ -446,13 +427,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class BiconditionalNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class BiconditionalNegatedUndesignated(DefaultNodeRule):
         """
         From an unticked undesignated negated biconditional node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'* add an undesignated node
@@ -465,7 +440,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 2
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
@@ -481,12 +455,6 @@ class TableauxRules(object):
                     ],
                 ],
             }
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
 
     class ExistentialDesignated(lp.TableauxRules.ExistentialDesignated):
         """
