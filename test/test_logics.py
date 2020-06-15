@@ -451,6 +451,22 @@ class TestK3W(LogicTester):
         proof.step()
         assert branch.has({'sentence': parse('NKCabCba'), 'designated': True})
 
+    def test_conditional_designated_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule(self.logic.TableauxRules.ConditionalDesignated)
+        rule.example()
+        proof.build()
+        assert len(proof.history) > 0
+        assert proof.history[0]['rule'] == rule
+
+    def test_conditional_undesignated_example(self):
+        proof = tableau(self.logic)
+        rule = proof.get_rule(self.logic.TableauxRules.ConditionalUndesignated)
+        rule.example()
+        proof.build()
+        assert len(proof.history) > 0
+        assert proof.history[0]['rule'] == rule
+
     def test_valid_cond_contraction(self):
         proof = self.example_proof('Conditional Contraction')
         assert proof.valid
