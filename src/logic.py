@@ -1903,12 +1903,6 @@ class TableauxSystem(object):
                 return 0
             return max(worlds) + 1
 
-        def constants(self):
-            """
-            Return the set of constants that appear on the branch.
-            """
-            return self.consts
-
         def predicates(self):
             """
             Return the set of predicates that appear on the branch.
@@ -1920,6 +1914,12 @@ class TableauxSystem(object):
             Return the set of atomics that appear on the branch.
             """
             return self.atms
+
+        def constants(self):
+            """
+            Return the set of constants that appear on the branch.
+            """
+            return self.consts
 
         def new_constant(self):
             """
@@ -2210,7 +2210,7 @@ class TableauxSystem(object):
                         'candidate_score'     : None,
                         'total_candidates'    : len(targets),
                         'min_candidate_score' : None,
-                        'max_candidate_score' : None
+                        'max_candidate_score' : None,
                     })
 
         def _select_best_target(self, targets, branch):
