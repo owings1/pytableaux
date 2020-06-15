@@ -479,6 +479,10 @@ class TestTableau(object):
         class MockRule(logic.TableauxSystem.ClosureRule):
             def applies_to_branch(self, branch):
                 return True
+            def check_for_target(self, node, branch):
+                return True
+            def node_will_close_branch(self, node, branch):
+                return True
         proof = logic.tableau(None)
         rule = MockRule(proof)
         proof.add_closure_rule(rule).branch()

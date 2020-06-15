@@ -564,10 +564,6 @@ class TableauxRules(object):
         and the same sentence appears on a node marked *undesignated*.
         """
 
-        def setup(self):
-            self.opts['is_rank_optim'] = False
-            self.add_helper('tracker', helpers.NodeTargetCheckHelper(self))
-
         # tracker implementation
 
         def check_for_target(self, node, branch):
@@ -575,16 +571,15 @@ class TableauxRules(object):
             if nnode:
                 return {'nodes': set([node, nnode]), 'type': 'Nodes'}
 
-        # adz implementation
+        # rule implementation
 
         def node_will_close_branch(self, node, branch):
             if self._find_closing_node(node, branch):
                 return True
             return False
 
-        # rule implementation
-
         def applies_to_branch(self, branch):
+            # Delegate to tracker
             return self.tracker.cached_target(branch)
 
         def example_nodes(self, branch):

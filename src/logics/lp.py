@@ -91,21 +91,22 @@ class TableauxRules(object):
         .. _FDE closure Rule: fde.html#logics.fde.TableauxRules.Closure
         """
 
-        def setup(self):
-            self.opts['is_rank_optim'] = False
-            self.add_helper('tracker', helpers.NodeTargetCheckHelper(self))
-
         # tracker implementation
 
         def check_for_target(self, node, branch):
-            if node.has('sentence', 'designated') and not node.props['designated']:
-                nnode = branch.find({'sentence': negative(self.sentence(node)), 'designated': False})
-                if nnode:
-                    return {'nodes': set([node, nnode]), 'type': 'Nodes'}
+            nnode = self._find_closing_node(node, branch)
+            if nnode:
+                return {'nodes': set([node, nnode]), 'type': 'Nodes'}
 
         # rule implementation
 
+        def node_will_close_branch(self, node, branch):
+            if self._find_closing_node(node, branch):
+                return True
+            return False
+
         def applies_to_branch(self, branch):
+            # Delegate to tracker
             return self.tracker.cached_target(branch)
 
         def example_nodes(self, branch):
@@ -114,6 +115,15 @@ class TableauxRules(object):
                 {'sentence':        a , 'designated': False},
                 {'sentence': negate(a), 'designated': False},
             ]
+
+        # private util
+
+        def _find_closing_node(self, node, branch):
+            if node.has('sentence', 'designated') and not node.props['designated']:
+                return branch.find({
+                    'sentence'   : negative(node.props['sentence']),
+                    'designated' : False
+                })
 
     class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
         """

@@ -687,17 +687,19 @@ class TableauxRules(object):
         same world** on the branch.
         """
 
-        def setup(self):
-            self.add_helper('checker', helpers.NodeTargetCheckHelper(self))
+        # tracker implementation
 
         def check_for_target(self, node, branch):
-            if node.has('sentence'):
-                nnode = branch.find({'sentence': negative(self.sentence(node)), 'world': node.props['world']})
-                if nnode:
-                    return {'nodes': set([node, nnode]), 'type': 'Nodes'}
-                
-        def applies_to_branch(self, branch):
-            return self.checker.cached_target(branch)
+            nnode = self._find_closing_node(node, branch)
+            if nnode:
+                return {'nodes': set([node, nnode]), 'type': 'Nodes'}
+
+        # rule implementation
+
+        def node_will_close_branch(self, node, branch):
+            if self._find_closing_node(node, branch):
+                return True
+            return False
 
         def example_nodes(self, branch):
             a = logic.atomic(0, 0)
@@ -707,24 +709,42 @@ class TableauxRules(object):
                 {'sentence': negate(a), 'world': w},
             ]
 
+        def applies_to_branch(self, branch):
+            # Delegate to tracker
+            return self.tracker.cached_target(branch)
+
+        # private util
+
+        def _find_closing_node(self, node, branch):
+            if node.has('sentence'):
+                return branch.find({
+                    'sentence' : negative(node.props['sentence']),
+                    'world'    : node.props['world'],
+                })
+                
     class SelfIdentityClosure(IsModal, logic.TableauxSystem.ClosureRule):
         """
         A branch closes when a sentence of the form P{~a = a} appears on the branch *at any world*.
         """
 
-        def setup(self):
-            self.add_helper('checker', helpers.NodeTargetCheckHelper(self))
+        # tracker implementation
 
         def check_for_target(self, node, branch):
+            if self.node_will_close_branch(node, branch):
+                return {'node': node, 'type': 'Node'}
+
+        # rule implementation
+
+        def node_will_close_branch(self, node, branch):
             if node.has('sentence'):
-                s = self.sentence(node)
+                s = node.props['sentence']
                 if s.operator == 'Negation' and s.operand.predicate == Identity:
-                    a, b = s.operand.parameters
-                    if a == b:
-                        return {'node': node, 'type': 'Node'}
+                    a, b = node.props['sentence'].operand.parameters
+                    return a == b
 
         def applies_to_branch(self, branch):
-            return self.checker.cached_target(branch)
+            # Delegate to tracker
+            return self.tracker.cached_target(branch)
 
         def example_node(self, branch):
             s = negate(examples.self_identity())
@@ -736,17 +756,22 @@ class TableauxRules(object):
         A branch closes when a sentence of the form P{~!a} appears on the branch *at any world*.
         """
 
-        def setup(self):
-            self.add_helper('checker', helpers.NodeTargetCheckHelper(self))
+        # tracker implementation
 
         def check_for_target(self, node, branch):
+            if self.node_will_close_branch(node, branch):
+                return {'node': node, 'type': 'Node'}
+
+        # rule implementation
+
+        def node_will_close_branch(self, node, branch):
             if node.has('sentence'):
-                s = self.sentence(node)
-                if s.operator == 'Negation' and s.operand.predicate == Existence:
-                    return {'node': node, 'type': 'Node'}
+                s = node.props['sentence']
+                return s.operator == 'Negation' and s.operand.predicate == Existence
 
         def applies_to_branch(self, branch):
-            return self.checker.cached_target(branch)
+            # Delegate to tracker
+            return self.tracker.cached_target(branch)
 
         def example_node(self, branch):
             s = negate(examples.existence())
