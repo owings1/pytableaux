@@ -288,50 +288,32 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 3
+        ticking      = True
 
-        def apply_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
-            b1 = branch
-            b2 = self.branch(branch)
-            b3 = self.branch(branch)
-            b1.update([
-                {'sentence':        lhs , 'designated': False},
-            ]).tick(node)
-            b2.update([
-                {'sentence': negate(rhs), 'designated': False},
-            ]).tick(node)
-            b3.update([
-                {'sentence':        lhs , 'designated': True},
-                {'sentence': negate(lhs), 'designated': True},
-                {'sentence':        rhs , 'designated': True},
-                {'sentence': negate(rhs), 'designated': True},
-            ]).tick(node)
-
-        def score_candidate_map(self, target):
-            branch = target['branch']
-            lhs, rhs = self.sentence(target['node']).operands
             return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence':          lhs , 'designated': True},
-                    # LP closure
-                    {'sentence': negative(lhs), 'designated': False},
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence': negative(rhs), 'designated': True},
-                    # LP closure
-                    {'sentence':          rhs , 'designated': False},
-                ]),
-                'b3': branch.has_any([
-                    # FDE closure
-                    {'sentence':          lhs , 'designated': False},
-                    {'sentence': negative(lhs), 'designated': False},
-                    {'sentence':          rhs , 'designated': False},
-                    {'sentence': negative(rhs), 'designated': False},
-                    # LP closure - n/a
-                ]),
+                'adds': [
+                    [
+                        {'sentence':        lhs , 'designated': False},
+                    ],
+                    [
+                        {'sentence': negate(rhs), 'designated': False},
+                    ],
+                    [
+                        {'sentence':        lhs , 'designated': True},
+                        {'sentence': negate(lhs), 'designated': True},
+                        {'sentence':        rhs , 'designated': True},
+                        {'sentence': negate(rhs), 'designated': True},
+                    ],
+                ],
             }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class ConditionalNegatedDesignated(lp.TableauxRules.ConditionalNegatedDesignated):
         """
@@ -354,39 +336,28 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 2
+        ticking      = True
 
-        def apply_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
-            b1 = branch
-            b2 = self.branch(branch)
-            b1.update([
-                {'sentence': lhs, 'designated': True},
-                {'sentence': rhs, 'designated': False},
-            ]).tick(node)
-            b2.update([
-                {'sentence': negate(lhs), 'designated': False},
-                {'sentence': negate(rhs), 'designated': True},
-            ]).tick(node)
-
-        def score_candidate_map(self, target):
-            branch = target['branch']
-            lhs, rhs = self.sentence(target['node']).operands
             return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence': lhs, 'designated': False},
-                    {'sentence': rhs, 'designated': True},
-                    # LP closure
-                    {'sentence': negative(rhs), 'designated': False},
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence': negative(lhs), 'designated': True},
-                    {'sentence': negative(rhs), 'designated': False},
-                    # LP closure
-                    {'sentence': lhs, 'designated': False},
-                ])
+                'adds': [
+                    [
+                        {'sentence': lhs, 'designated': True},
+                        {'sentence': rhs, 'designated': False},
+                    ],
+                    [
+                        {'sentence': negate(lhs), 'designated': False},
+                        {'sentence': negate(rhs), 'designated': True},
+                    ],
+                ],
             }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class ConditionalNegatedUndesignated(lp.TableauxRules.ConditionalNegatedUndesignated):
         """
@@ -409,56 +380,34 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 3
+        ticking      = True
 
-        def apply_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
-            b1 = branch
-            b2 = self.branch(branch)
-            b3 = self.branch(branch)
-            b1.update([
-                {'sentence': lhs, 'designated': False},
-                {'sentence': rhs, 'designated': False},
-            ]).tick(node)
-            b2.update([
-                {'sentence': negate(lhs), 'designated': False},
-                {'sentence': negate(rhs), 'designated': False},
-            ]).tick(node)
-            b3.update([
-                {'sentence':        lhs , 'designated': True},
-                {'sentence': negate(lhs), 'designated': True},
-                {'sentence':        rhs , 'designated': True},
-                {'sentence': negate(rhs), 'designated': True},
-            ]).tick(node)
-
-        def score_candidate_map(self, target):
-            branch = target['branch']
-            lhs, rhs = self.sentence(target['node']).operands
             return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence': lhs, 'designated': True},
-                    {'sentence': rhs, 'designated': True},
-                    # LP closure
-                    {'sentence': negative(lhs), 'designated': False},
-                    {'sentence': negative(rhs), 'designated': False},
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence': negative(lhs), 'designated': True},
-                    {'sentence': negative(rhs), 'designated': True},
-                    # LP closure
-                    {'sentence': lhs, 'designated': False},
-                    {'sentence': rhs, 'designated': False},
-                ]),
-                'b3': branch.has_any([
-                    # FDE closure
-                    {'sentence':          lhs , 'designated': False},
-                    {'sentence': negative(lhs), 'designated': False},
-                    {'sentence':          rhs , 'designated': False},
-                    {'sentence': negative(rhs), 'designated': False},
-                    # LP closure - n/a
-                ]),
+                'adds': [
+                    [
+                        {'sentence': lhs, 'designated': False},
+                        {'sentence': rhs, 'designated': False},
+                    ],
+                    [
+                        {'sentence': negate(lhs), 'designated': False},
+                        {'sentence': negate(rhs), 'designated': False},
+                    ],
+                    [
+                        {'sentence':        lhs , 'designated': True},
+                        {'sentence': negate(lhs), 'designated': True},
+                        {'sentence':        rhs , 'designated': True},
+                        {'sentence': negate(rhs), 'designated': True},
+                    ],
+                ],
             }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class BiconditionalNegatedDesignated(lp.TableauxRules.BiconditionalNegatedDesignated):
         """
@@ -480,39 +429,28 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 2
+        ticking      = True
 
-        def apply_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
-            s_cond1 = operate('Conditional', [lhs, rhs])
-            s_cond2 = operate('Conditional', [rhs, lhs])
-            b1 = branch
-            b2 = self.branch(branch)
-            b1.update([
-                {'sentence': s_cond1, 'designated': False},
-            ]).tick(node)
-            b2.update([
-                {'sentence': s_cond2, 'designated': False},
-            ]).tick(node)
-
-        def score_candidate_map(self, target):
-            branch = target['branch']
-            lhs, rhs = self.sentence(target['node']).operands
-            s_cond1 = operate('Conditional', [lhs, rhs])
-            s_cond2 = operate('Conditional', [rhs, lhs])
+            cond1 = operate('Conditional', [lhs, rhs])
+            cond2 = operate('Conditional', [rhs, lhs])
             return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence':          s_cond1 , 'designated': True},
-                    # LP closure
-                    {'sentence': negative(s_cond1), 'designated': False},
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence':          s_cond2 , 'designated': True},
-                    # LP closure
-                    {'sentence': negative(s_cond2), 'designated': False},
-                ]),
+                'adds': [
+                    [
+                        {'sentence': cond1, 'designated': False},
+                    ],
+                    [
+                        {'sentence': cond2, 'designated': False},
+                    ],
+                ],
             }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class BiconditionalNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
@@ -527,41 +465,28 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 2
+        ticking      = True
 
-        def apply_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             lhs, rhs = self.sentence(node).operands
-            b1 = branch
-            b2 = self.branch(branch)
-            b1.update([
-                {'sentence': lhs, 'designated': False},
-                {'sentence': rhs, 'designated': False},
-            ]).tick(node)
-            b2.update([
-                {'sentence': negate(lhs), 'designated': False},
-                {'sentence': negate(rhs), 'designated': False},
-            ]).tick(node)
-
-        def score_candidate_map(self, target):
-            branch = target['branch']
-            lhs, rhs = self.sentence(target['node']).operands
             return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence': lhs, 'designated': True},
-                    {'sentence': rhs, 'designated': True},
-                    # LP closure
-                    {'sentence': negative(lhs), 'designated': False},
-                    {'sentence': negative(rhs), 'designated': False},
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence': negative(lhs), 'designated': True},
-                    {'sentence': negative(rhs), 'designated': True},
-                    # LP closure
-                    {'sentence': lhs, 'designated': False},
-                    {'sentence': rhs, 'designated': False},
-                ]),
+                'adds': [
+                    [
+                        {'sentence': lhs, 'designated': False},
+                        {'sentence': rhs, 'designated': False},
+                    ],
+                    [
+                        {'sentence': negate(lhs), 'designated': False},
+                        {'sentence': negate(rhs), 'designated': False},
+                    ],
+                ],
             }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class ExistentialDesignated(lp.TableauxRules.ExistentialDesignated):
         """
