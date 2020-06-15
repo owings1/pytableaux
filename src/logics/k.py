@@ -674,7 +674,7 @@ class TableauxSystem(logic.TableauxSystem):
 class IsModal(object):
     modal = True
 
-class DefaultOperatorRule(IsModal, logic.TableauxSystem.FilterNodeRule):
+class DefaultNodeRule(IsModal, logic.TableauxSystem.FilterNodeRule):
 
     ticking = True
 
@@ -788,7 +788,7 @@ class TableauxRules(object):
             w = 0 if self.modal else None
             return {'sentence': s, 'world': w}
 
-    class DoubleNegation(DefaultOperatorRule):
+    class DoubleNegation(DefaultNodeRule):
         """
         From an unticked double negation node *n* with world *w* on a branch *b*, add a
         node to *b* with *w* and the double-negatum of *n*, then tick *n*.
@@ -809,7 +809,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Assertion(DefaultOperatorRule):
+    class Assertion(DefaultNodeRule):
         """
         From an unticked assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
@@ -829,7 +829,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class AssertionNegated(DefaultOperatorRule):
+    class AssertionNegated(DefaultNodeRule):
         """
         From an unticked, negated assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the negation of the assertion of *n* and world *w*,
@@ -851,7 +851,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Conjunction(DefaultOperatorRule):
+    class Conjunction(DefaultNodeRule):
         """
         From an unticked conjunction node *n* with world *w* on a branch *b*, for each conjunct,
         add a node with world *w* to *b* with the conjunct, then tick *n*.
@@ -871,7 +871,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class ConjunctionNegated(DefaultOperatorRule):
+    class ConjunctionNegated(DefaultNodeRule):
         """
         From an unticked negated conjunction node *n* with world *w* on a branch *b*, for each
         conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
@@ -893,7 +893,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Disjunction(DefaultOperatorRule):
+    class Disjunction(DefaultNodeRule):
         """
         From an unticked disjunction node *n* with world *w* on a branch *b*, for each disjunct,
         make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
@@ -914,7 +914,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class DisjunctionNegated(DefaultOperatorRule):
+    class DisjunctionNegated(DefaultNodeRule):
         """
         From an unticked negated disjunction node *n* with world *w* on a branch *b*, for each
         disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
@@ -935,7 +935,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class MaterialConditional(DefaultOperatorRule):
+    class MaterialConditional(DefaultNodeRule):
         """
         From an unticked material conditional node *n* with world *w* on a branch *b*, make two
         new branches *b'* and *b''* from *b*, add a node with world *w* and the negation of the
@@ -961,7 +961,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class MaterialConditionalNegated(DefaultOperatorRule):
+    class MaterialConditionalNegated(DefaultNodeRule):
         """
         From an unticked negated material conditional node *n* with world *w* on a branch *b*,
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
@@ -985,7 +985,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class MaterialBiconditional(DefaultOperatorRule):
+    class MaterialBiconditional(DefaultNodeRule):
         """
         From an unticked material biconditional node *n* with world *w* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add two nodes with world *w* to *b'*, one with
@@ -1014,7 +1014,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class MaterialBiconditionalNegated(DefaultOperatorRule):
+    class MaterialBiconditionalNegated(DefaultNodeRule):
         """
         From an unticked negated material biconditional node *n* with world *w* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add two nodes with *w* to *b'*, one with
@@ -1097,7 +1097,7 @@ class TableauxRules(object):
         negated  = True
         operator = 'Biconditional'
 
-    class Existential(DefaultOperatorRule):
+    class Existential(DefaultNodeRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
@@ -1130,6 +1130,9 @@ class TableauxRules(object):
                 ],
             }
 
+        def score_candidate(self, target):
+            return -1 * self.branching_complexity(target['node'])
+
         # default - overridden in inherited classes below
 
         def get_new_nodes_for_constant(self, c, node, branch):
@@ -1156,7 +1159,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class ExistentialNegated(DefaultOperatorRule):
+    class ExistentialNegated(DefaultNodeRule):
         """
         From an unticked negated existential node *n* with world *w* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
@@ -1184,7 +1187,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Universal(DefaultOperatorRule):
+    class Universal(DefaultNodeRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -1306,7 +1309,7 @@ class TableauxRules(object):
 
         convert_to = 'Existential'
 
-    class Possibility(DefaultOperatorRule):
+    class Possibility(DefaultNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -1395,7 +1398,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class PossibilityNegated(DefaultOperatorRule):
+    class PossibilityNegated(DefaultNodeRule):
         """
         From an unticked negated possibility node *n* with world *w* on a branch *b*, add a
         necessity node to *b* with *w*, whose operand is the negation of the negated 
@@ -1421,7 +1424,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Necessity(DefaultOperatorRule):
+    class Necessity(DefaultNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -1570,7 +1573,7 @@ class TableauxRules(object):
 
         convert_to = 'Possibility'
 
-    class IdentityIndiscernability(DefaultOperatorRule):
+    class IdentityIndiscernability(DefaultNodeRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,
