@@ -20,10 +20,14 @@
 name = 'CPL'
 
 class Meta(object):
-    title = 'Classical Predicate Logic'
-    description = 'Standard bivalent logic with predication, without quantification'
-    tags = ['bivalent', 'non-modal']
+
+    title    = 'Classical Predicate Logic'
     category = 'Bivalent'
+
+    description = 'Standard bivalent logic with predication, without quantification'
+
+    tags = ['bivalent', 'non-modal']
+
     category_display_order = 1
 
 import logic, examples
@@ -102,30 +106,17 @@ class TableauxRules(object):
         """
         pass
 
-        #def example_nodes(self, branch):
-        #    a = logic.atomic(0, 0)
-        #    return [
-        #        {'sentence':        a },
-        #        {'sentence': negate(a)},
-        #    ]
-
     class SelfIdentityClosure(NonModal, k.TableauxRules.SelfIdentityClosure):
         """
         A branch is closed if a sentence of the form P{~ a = a} appears on the branch.
         """
         pass
 
-        #def example_node(self, branch):
-        #    return {'sentence': negate(examples.self_identity())}
-
     class NonExistenceClosure(NonModal, k.TableauxRules.NonExistenceClosure):
         """
         A branch is closed if a sentence of the form P{~!a} appears on the branch.
         """
         pass
-
-        #def example_node(self, branch):
-        #    return {'sentence': logic.parse('NJm')}
 
     class DoubleNegation(NonModal, k.TableauxRules.DoubleNegation):
         """
@@ -269,12 +260,6 @@ class TableauxRules(object):
         not appear on *b*, then add it.
         """
         pass
-
-        #def example_nodes(self, branch):
-        #    return [
-        #        {'sentence': examples.predicated()},
-        #        {'sentence': examples.identity()  },
-        #    ]
 
     closure_rules = [
         ContradictionClosure,
