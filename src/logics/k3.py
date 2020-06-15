@@ -190,18 +190,7 @@ class TableauxRules(object):
 
         .. _FDE ConjunctionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionNegatedDesignated
         """
-
-        def score_candidate_map(self, target):
-            scores = super(TableauxRules.ConjunctionNegatedDesignated, self).score_candidate_map(target)
-            if self.designation:
-                # only apply to implementations for designated rules
-                branch = target['branch']
-                s = self.sentence(target['node'])
-                scores.update({
-                    'b1': scores['b1'] or branch.has({'sentence': s.lhs, 'designated': True}),
-                    'b2': scores['b2'] or branch.has({'sentence': s.rhs, 'designated': True}),
-                })
-            return scores
+        pass
 
     class ConjunctionUndesignated(fde.TableauxRules.ConjunctionUndesignated):
         """
@@ -209,18 +198,7 @@ class TableauxRules(object):
 
         .. _FDE ConjunctionUndesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionUndesignated
         """
-
-        def score_candidate_map(self, target):
-            scores = super(TableauxRules.ConjunctionUndesignated, self).score_candidate_map(target)
-            if self.designation:
-                # only apply to implementations for designated rules
-                branch = target['branch']
-                s = self.sentence(target['node'])
-                scores.update({
-                    'b1': scores['b1'] or branch.has({'sentence': negative(s.lhs), 'designated': True}),
-                    'b2': scores['b2'] or branch.has({'sentence': negative(s.rhs), 'designated': True}),
-                })
-            return scores
+        pass
 
     class ConjunctionNegatedUndesignated(fde.TableauxRules.ConjunctionNegatedUndesignated):
         """
@@ -276,18 +254,7 @@ class TableauxRules(object):
 
         .. _FDE MaterialConditionalDesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalDesignated
         """
-
-        def score_candidate_map(self, target):
-            scores = super(TableauxRules.MaterialConditionalDesignated, self).score_candidate_map(target)
-            if self.designation:
-                # only apply to implementations for designated rules
-                branch = target['branch']
-                s = self.sentence(target['node'])
-                scores.update({
-                    'b1': scores['b1'] or branch.has({'sentence':          s.lhs , 'designated': True}),
-                    'b2': scores['b2'] or branch.has({'sentence': negative(s.rhs), 'designated': True}),
-                })
-            return scores
+        pass
 
     class MaterialConditionalNegatedDesignated(fde.TableauxRules.MaterialConditionalNegatedDesignated):
         """
@@ -319,24 +286,7 @@ class TableauxRules(object):
 
         .. _FDE MaterialBiconditionalDesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalDesignated
         """
-
-        def score_candidate_map(self, target):
-            scores = super(TableauxRules.MaterialBiconditionalDesignated, self).score_candidate_map(target)
-            if self.designation:
-                # only apply to implementations for designated rules
-                branch = target['branch']
-                s = self.sentence(target['node'])
-                scores.update({
-                    'b1': scores['b1'] or branch.has_any([
-                        {'sentence': s.lhs, 'designated': True},
-                        {'sentence': s.rhs, 'designated': True},
-                    ]),
-                    'b2': scores['b2'] or branch.has_any([
-                        {'sentence': negative(s.lhs), 'designated': True},
-                        {'sentence': negative(s.rhs), 'designated': True},
-                    ]),
-                })
-            return scores
+        pass
 
     class MaterialBiconditionalNegatedDesignated(fde.TableauxRules.MaterialBiconditionalNegatedDesignated):
         """
@@ -344,24 +294,7 @@ class TableauxRules(object):
 
         .. _FDE MaterialBiconditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalNegatedDesignated
         """
-
-        def score_candidate_map(self, target):
-            scores = super(TableauxRules.MaterialBiconditionalNegatedDesignated, self).score_candidate_map(target)
-            if self.designation:
-                # only apply to implementations for designated rules
-                branch = target['branch']
-                s = self.sentence(target['node'])
-                scores.update({
-                    'b1': scores['b1'] or branch.has_any([
-                        {'sentence': negative(s.lhs), 'designated': True},
-                        {'sentence':          s.rhs , 'designated': True},
-                    ]),
-                    'b2': scores['b2'] or branch.has_any([
-                        {'sentence':          s.lhs , 'designated': True},
-                        {'sentence': negative(s.rhs), 'designated': True},
-                    ]),
-                })
-            return scores
+        pass
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
         """
