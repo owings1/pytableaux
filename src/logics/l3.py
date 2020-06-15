@@ -287,42 +287,30 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 2
+        ticking      = True
 
-        def apply_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            s_disj = operate('Disjunction', [negate(s.lhs), s.rhs])
-            b1 = branch
-            b2 = self.branch(branch)
-            b1.add(
-                { 'sentence' : s_disj, 'designated' : True }
-            ).tick(node)
-            b2.update([
-                {'sentence':        s.lhs,  'designated': False},
-                {'sentence': negate(s.lhs), 'designated': False},
-                {'sentence':        s.rhs,  'designated': False},
-                {'sentence': negate(s.rhs), 'designated': False},
-            ]).tick(node)
-
-        def score_candidate_map(self, target):
-            branch = target['branch']
-            s = self.sentence(target['node'])
-            s_disj = operate('Disjunction', [negative(s.lhs), s.rhs])
+            disj = operate('Disjunction', [negate(s.lhs), s.rhs])
             return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence':          s_disj , 'designated': False},
-                    # K3 closure
-                    {'sentence': negative(s_disj), 'designated': True},
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence' :          s.lhs , 'designated' : True},
-                    {'sentence' : negative(s.lhs), 'designated' : True},
-                    {'sentence' :          s.rhs , 'designated' : True},
-                    {'sentence' : negative(s.rhs), 'designated' : True},
-                    # K3 closure - n/a
-                ]),
+                'adds': [
+                    [
+                        {'sentence': disj, 'designated': True},
+                    ],
+                    [
+                        {'sentence':        s.lhs,  'designated': False},
+                        {'sentence': negate(s.lhs), 'designated': False},
+                        {'sentence':        s.rhs,  'designated': False},
+                        {'sentence': negate(s.rhs), 'designated': False},
+                    ],
+                ],
             }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class ConditionalNegatedDesignated(k3.TableauxRules.ConditionalNegatedDesignated):
         """
@@ -345,41 +333,29 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 2
+        ticking      = True
 
-        def apply_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            b1 = branch
-            b2 = self.branch(branch)
-            b1.update([
-                {'sentence': s.lhs, 'designated': True},
-                {'sentence': s.rhs, 'designated': False},
-            ]).tick(node)
-            b2.update([
-                {'sentence':        s.lhs , 'designated': False},
-                {'sentence': negate(s.lhs), 'designated': False},
-                {'sentence': negate(s.rhs), 'designated': True},
-            ]).tick(node)
-
-        def score_candidate_map(self, target):
-            branch = target['branch']
-            s = self.sentence(target['node'])
             return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence': s.lhs, 'designated': False},
-                    {'sentence': s.rhs, 'designated': True},
-                    # K3 closure
-                    {'sentence': negative(s.lhs), 'designated': True},
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence':          s.lhs , 'designated': True},
-                    {'sentence': negative(s.lhs), 'designated': True},
-                    {'sentence': negative(s.rhs), 'designated': False},
-                    # K3 closure
-                    {'sentence': s.rhs, 'designated': True},
-                ]),
+                'adds': [
+                    [
+                        {'sentence': s.lhs, 'designated': True},
+                        {'sentence': s.rhs, 'designated': False},
+                    ],
+                    [
+                        {'sentence':        s.lhs , 'designated': False},
+                        {'sentence': negate(s.lhs), 'designated': False},
+                        {'sentence': negate(s.rhs), 'designated': True},
+                    ],
+                ],
             }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class ConditionalNegatedUndesignated(k3.TableauxRules.ConditionalNegatedUndesignated):
         """
@@ -402,42 +378,30 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 2
+        ticking      = True
 
-        def apply_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            s_mbicond = operate('Material Biconditional', s.operands)
-            b1 = branch
-            b2 = self.branch(branch)
-            b1.update([
-                {'sentence': s_mbicond, 'designated': True},
-            ]).tick(node)
-            b2.update([
-                {'sentence':        s.lhs,  'designated': False},
-                {'sentence': negate(s.lhs), 'designated': False},
-                {'sentence':        s.rhs,  'designated': False},
-                {'sentence': negate(s.rhs), 'designated': False},
-            ]).tick(node)
-
-        def score_candidate_map(self, target):
-            branch = target['branch']
-            s = self.sentence(target['node'])
-            s_mbicond = operate('Material Biconditional', s.operands)
+            bicond = operate('Material Biconditional', s.operands)
             return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence': s_mbicond, 'designated': False},
-                    # K3 closure
-                    {'sentence': negative(s_mbicond), 'designated': True},
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence':          s.lhs,  'designated': True},
-                    {'sentence': negative(s.lhs), 'designated': True},
-                    {'sentence':          s.rhs,  'designated': True},
-                    {'sentence': negative(s.rhs), 'designated': True},
-                    # K3 closure - n/a
-                ]),
+                'adds': [
+                    [
+                        {'sentence': bicond, 'designated': True},
+                    ],
+                    [
+                        {'sentence':        s.lhs,  'designated': False},
+                        {'sentence': negate(s.lhs), 'designated': False},
+                        {'sentence':        s.rhs,  'designated': False},
+                        {'sentence': negate(s.rhs), 'designated': False},
+                    ],
+                ],
             }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class BiconditionalNegatedDesignated(k3.TableauxRules.BiconditionalNegatedDesignated):
         """
@@ -459,36 +423,28 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 2
+        ticking      = True
 
-        def apply_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            b1, b2 = branch, self.branch(branch)
-            s_cond1 = operate('Conditional', [s.lhs, s.rhs])
-            s_cond2 = operate('Conditional', [s.rhs, s.lhs])
-            b1.update([
-                {'sentence': s_cond1, 'designated': False},
-            ]).tick(node)
-            b2.update([
-                {'sentence': s_cond2, 'designated': False},
-            ]).tick(node)
-
-        def score_candidate_map(self, target):
-            branch = target['branch']
-            s = self.sentence(target['node'])
-            s_cond1 = operate('Conditional', [s.lhs, s.rhs])
-            s_cond2 = operate('Conditional', [s.rhs, s.lhs])
+            cond1 = operate('Conditional', [s.lhs, s.rhs])
+            cond2 = operate('Conditional', [s.rhs, s.lhs])
             return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence': s_cond1, 'designated': True},
-                    # K3 closure - n/a
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence': s_cond2, 'designated': True},
-                    # K3 closure - n/a
-                ])
+                'adds': [
+                    [
+                        {'sentence': cond1, 'designated': False},
+                    ],
+                    [
+                        {'sentence': cond2, 'designated': False},
+                    ],
+                ],
             }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class BiconditionalNegatedUndesignated(k3.TableauxRules.BiconditionalNegatedUndesignated):
         """
@@ -504,41 +460,30 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 2
+        ticking      = True
 
-        def apply_to_node(self, node, branch):
+        def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            s_mbicond = operate('Material Biconditional', s.operands)
-            b1 = branch
-            b2 = self.branch(branch)
-            b1.update([
-                {'sentence': negate(s_mbicond), 'designated': False},
-            ]).tick(node)
-            b2.update([
-                {'sentence':        s.lhs,  'designated': False},
-                {'sentence': negate(s.lhs), 'designated': False},
-                {'sentence':        s.rhs,  'designated': False},
-                {'sentence': negate(s.rhs), 'designated': False},
-            ]).tick(node)
-
-        def score_candidate_map(self, target):
-            branch = target['branch']
-            s = self.sentence(target['node'])
-            s_mbicond = operate('Material Biconditional', s.operands)
+            bicond = operate('Material Biconditional', s.operands)
             return {
-                'b1': branch.has_any([
-                    # FDE closure
-                    {'sentence': negative(s_mbicond), 'designated': True},
-                    # K3 closure - n/a
-                ]),
-                'b2': branch.has_any([
-                    # FDE closure
-                    {'sentence':          s.lhs,  'designated': True},
-                    {'sentence': negative(s.lhs), 'designated': True},
-                    {'sentence':          s.rhs,  'designated': True},
-                    {'sentence': negative(s.rhs), 'designated': True},
-                    # K3 closure - n/a
-                ]),
+                'adds': [
+                    [
+                        {'sentence': negate(bicond), 'designated': False},
+                    ],
+                    [
+                        {'sentence':        s.lhs,  'designated': False},
+                        {'sentence': negate(s.lhs), 'designated': False},
+                        {'sentence':        s.rhs,  'designated': False},
+                        {'sentence': negate(s.rhs), 'designated': False},
+                    ],
+                ],
             }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class ExistentialDesignated(k3.TableauxRules.ExistentialDesignated):
         """
