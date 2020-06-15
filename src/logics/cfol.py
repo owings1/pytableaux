@@ -20,10 +20,14 @@
 name = 'CFOL'
 
 class Meta(object):
-    title = 'Classical First Order Logic'
-    description = 'Standard bivalent logic with full first-order quantification'
-    tags = ['bivalent', 'non-modal', 'first-order']
+
+    title    = 'Classical First Order Logic'
     category = 'Bivalent'
+
+    description = 'Standard bivalent logic with full first-order quantification'
+
+    tags = ['bivalent', 'non-modal', 'first-order']
+    
     category_display_order = 2
 
 import logic, examples

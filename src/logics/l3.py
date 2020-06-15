@@ -21,10 +21,14 @@
 name = 'L3'
 
 class Meta(object):
-    title = u'Łukasiewicz 3-valued Logic'
-    description = 'Three-valued logic (True, False, Neither) with a primitive Conditional operator'
-    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
+
+    title    = u'Łukasiewicz 3-valued Logic'
     category = 'Many-valued'
+
+    description = 'Three-valued logic (True, False, Neither) with a primitive Conditional operator'
+
+    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
+
     category_display_order = 6
 
 from . import fde, k3

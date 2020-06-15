@@ -20,10 +20,14 @@
 name = 'B3E'
 
 class Meta(object):
-    title = 'Bochvar 3 External Logic'
-    description = 'Three-valued logic (True, False, Neither) with assertion operator'
-    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
+
+    title    = 'Bochvar 3 External Logic'
     category = 'Many-valued'
+
+    description = 'Three-valued logic (True, False, Neither) with assertion operator'
+
+    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
+    
     category_display_order = 4
 
 import logic
