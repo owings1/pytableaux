@@ -601,6 +601,23 @@ class TestBranch(object):
         print(branch.nodes)
         assert branch.has({'is_flag': True, 'flag': 'closure'})
 
+    def test_constants_or_new_returns_pair_no_constants(self):
+        branch = logic.TableauxSystem.Branch()
+        res = branch.constants_or_new()
+        assert len(res) == 2
+        constants, is_new = res
+        assert len(constants) == 1
+        assert is_new
+
+    def test_constants_or_new_returns_pair_with_constants(self):
+        branch = logic.TableauxSystem.Branch()
+        branch.add({'sentence': logic.parse('Imn')})
+        res = branch.constants_or_new()
+        assert len(res) == 2
+        constants, is_new = res
+        assert len(constants) == 2
+        assert not is_new
+
 class TestNode(object):
 
     def test_worlds_contains_worlds(self):
