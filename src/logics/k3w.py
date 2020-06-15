@@ -148,7 +148,10 @@ class TableauxSystem(fde.TableauxSystem):
             },
         },
     }
-        
+
+class DefaultNodeRule(fde.DefaultNodeRule):
+    pass
+
 class TableauxRules(object):
     """
     The Tableaux System for K3W contains the `FDE closure rule`_, and the
@@ -217,7 +220,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
+    class ConjunctionNegatedDesignated(DefaultNodeRule):
         """
         From an unticked, designated, negated conjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
@@ -232,7 +235,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 3
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -252,12 +254,6 @@ class TableauxRules(object):
                     ],
                 ],
             }
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
 
         # If you try this 2-branching version, don't forget to
         # reorder the rules!
@@ -287,7 +283,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class ConjunctionNegatedUndesignated(DefaultNodeRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated nodes
@@ -301,7 +297,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 3
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -322,13 +317,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class DisjunctionDesignated(logic.TableauxSystem.FilterNodeRule):
+    class DisjunctionDesignated(DefaultNodeRule):
         """
         From an unticked, designated, disjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
@@ -342,7 +331,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 3
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -362,12 +350,6 @@ class TableauxRules(object):
                     ],
                 ],
             }
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
             
     class DisjunctionNegatedDesignated(k3.TableauxRules.DisjunctionNegatedDesignated):
         """
@@ -377,7 +359,7 @@ class TableauxRules(object):
         """
         pass
 
-    class DisjunctionUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class DisjunctionUndesignated(DefaultNodeRule):
         """
         From an unticked, undesignated disjunction node *n* on a branch *b*, make three
         new branches *b'*, *b''*, and *b'''* from b. On *b'* add undesignated nodes for
@@ -390,7 +372,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 3
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -411,13 +392,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class DisjunctionNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class DisjunctionNegatedUndesignated(DefaultNodeRule):
         """
         Either the disjunction is designated, or at least one of the disjuncts
         has the value **N**. So, from an unticked, undesignated, negated
@@ -433,7 +408,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 3
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -453,13 +427,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class MaterialConditionalDesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialConditionalDesignated(DefaultNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -468,7 +436,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -481,13 +448,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class MaterialConditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialConditionalNegatedDesignated(DefaultNodeRule):
         """
         This rule reduces to a negated disjunction.
         """
@@ -497,7 +458,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -510,17 +470,12 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
     class MaterialConditionalUndesignated(MaterialConditionalDesignated):
         """
         This rule reduces to a disjunction.
         """
 
+        negated     = False
         designation = False
 
     class MaterialConditionalNegatedUndesignated(MaterialConditionalNegatedDesignated):
@@ -528,9 +483,10 @@ class TableauxRules(object):
         This rule reduces to a negated disjunction.
         """
 
+        negated     = True
         designation = False
 
-    class MaterialBiconditionalDesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialBiconditionalDesignated(DefaultNodeRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -539,7 +495,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -554,13 +509,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialBiconditionalNegatedDesignated(DefaultNodeRule):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
@@ -570,7 +519,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -584,12 +532,6 @@ class TableauxRules(object):
                     ],
                 ],
             }
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
         """
