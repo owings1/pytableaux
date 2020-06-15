@@ -2458,6 +2458,10 @@ class TableauxSystem(object):
             'is_rank_optim' : False
         }
 
+        def __init__(self, *args, **opts):
+            super().__init__(*args, **opts)
+            self.add_helper('tracker', TableauxSystem.NodeTargetCheckHelper(self))
+
         def get_candidate_targets(self, branch):
             target = self.applies_to_branch(branch)
             if target:
@@ -2481,6 +2485,11 @@ class TableauxSystem(object):
                     return True
 
         def node_will_close_branch(self, node, branch):
+            raise NotImplementedError()
+
+        # tracker
+
+        def check_for_target(self, node, branch):
             raise NotImplementedError()
 
     class PotentialNodeRule(Rule):
