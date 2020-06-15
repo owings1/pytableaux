@@ -1112,7 +1112,9 @@ class TableauxRules(object):
         then tick *n*.
         """
 
-        operator = 'Conditional'
+        negated     = False
+        operator    = 'Conditional'
+        designation = True
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
         """
@@ -1123,7 +1125,9 @@ class TableauxRules(object):
         the consequent to *b*, then tick *n*.
         """
 
-        operator = 'Conditional'
+        negated     = True
+        operator    = 'Conditional'
+        designation = True
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         """
@@ -1134,7 +1138,9 @@ class TableauxRules(object):
         with the consequent to *b*, then tick *n*.
         """
 
-        operator = 'Conditional'
+        negated     = False
+        operator    = 'Conditional'
+        designation = False
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
         """
@@ -1146,7 +1152,9 @@ class TableauxRules(object):
         tick *n*.
         """
 
-        operator = 'Conditional'
+        negated     = True
+        operator    = 'Conditional'
+        designation = False
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         """
@@ -1159,7 +1167,9 @@ class TableauxRules(object):
         consequent to *b''*, then tick *n*.
         """
 
-        operator = 'Biconditional'
+        negated     = False
+        operator    = 'Biconditional'
+        designation = True
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
         """
@@ -1172,7 +1182,9 @@ class TableauxRules(object):
         then tick *n*.
         """
 
-        operator = 'Biconditional'
+        negated     = True
+        operator    = 'Biconditional'
+        designation = True
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
         """
@@ -1185,7 +1197,9 @@ class TableauxRules(object):
         the consequent to *b''*, then tick *n*.
         """
 
-        operator = 'Biconditional'
+        negated     = False
+        operator    = 'Biconditional'
+        designation = False
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
         """
@@ -1198,7 +1212,9 @@ class TableauxRules(object):
         consequent to *b''*, then tick *n*.
         """
 
-        operator = 'Biconditional'
+        negated     = True
+        operator    = 'Biconditional'
+        designation = False
 
     class ExistentialDesignated(logic.TableauxSystem.FilterNodeRule):
         """
