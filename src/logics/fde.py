@@ -1310,57 +1310,57 @@ class TableauxRules(object):
         quantifier  = 'Existential'
         designation = False
 
+        branch_level = 1
+        ticking      = False
+
         def setup(self):
-            self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
-            self.add_helper('applied_constants', helpers.NodeAppliedConstants(self))
-            self.add_helper('quit_flagger', helpers.QuitFlagHelper(self))
+            self.add_helpers({
+                'max_constants'     : helpers.MaxConstantsTracker(self),
+                'applied_constants' : helpers.NodeAppliedConstants(self),
+                'quit_flagger'      : helpers.QuitFlagHelper(self),
+            })
 
         def get_targets_for_node(self, node, branch):
+
             if not self._should_apply(node, branch):
-                if self.max_constants.max_constants_exceeded(branch):
-                    if not self.quit_flagger.has_flagged(branch):
-                        return [{'flag': True}]
+                if self._should_flag(branch):
+                    return [self._get_flag_target(branch)]
                 return
-            d = self.designation
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            constants = branch.constants()
-            targets = list()
-            if constants:
-                # if the branch already has a constant, find all the substitutions not
-                # already on the branch.
-                for c in constants:
-                    r = si.substitute(c, v)
-                    target = {'sentence': r, 'designated': d}
-                    if not branch.has(target):
-                        target['constant'] = c
-                        targets.append(target)
-            else:
-                 # if the branch does not have any constants, pick a new one
-                c = branch.new_constant()
-                r = si.substitute(c, v)
-                target = {'sentence': r, 'designated': d, 'constant': c}
-                targets.append(target)
+
+            targets = []
+
+            constants, is_new = branch.constants_or_new()
+            for c in constants:
+                new_nodes = self.get_new_nodes_for_constant(c, node, branch)
+                if is_new or not branch.has_all(new_nodes):
+                    targets.append({
+                        'constant' : c,
+                        'adds'     : [new_nodes],
+                    })
+
             return targets
 
         def score_candidate(self, target):
             if 'flag' in target and target['flag']:
                 return 1
+            if self.adz.closure_score(target) == 1:
+                return 1
             node_apply_count = self.node_application_count(target['node'], target['branch'])
             return float(1 / (node_apply_count + 1))
-            
-        def apply_to_node_target(self, node, branch, target):
-            if 'flag' in target and target['flag']:
-                branch.add(self.max_constants.quit_flag(branch))
-            else:
-                # keep designation neutral for inheritance below
-                branch.add({'sentence': target['sentence'], 'designated': target['designated']})
 
-        def example_node(self, branch):
-            # keep quantifier and designation neutral for inheritance below
-            s = examples.quantified(self.quantifier)
-            return {'sentence': s, 'designated': self.designation}
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        # default - overridden in inherited classes below
+
+        def get_new_nodes_for_constant(self, c, node, branch):
+            s = self.sentence(node)
+            v = s.variable
+            si = s.sentence
+            r = si.substitute(c, v)
+            return [
+                {'sentence': r, 'designated': self.designation},
+            ]
 
         # private util
 
@@ -1373,6 +1373,22 @@ class TableauxRules(object):
             # Apply if we have tracked a constant that we haven't applied to.
             if self.applied_constants.get_unapplied(node, branch):
                 return True
+
+        def _should_flag(self, branch):
+            return (
+                self.max_constants.max_constants_exceeded(branch) and
+                not self.quit_flagger.has_flagged(branch)
+            )
+
+        def _get_flag_target(self, branch):
+            return {
+                'flag': True,
+                'adds': [
+                    [
+                        self.max_constants.quit_flag(branch),
+                    ],
+                ],
+            }
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """
