@@ -974,7 +974,7 @@ class TableauxRules(object):
         """
 
         negated     = True
-        quantifier   = 'Universal'
+        quantifier  = 'Universal'
         designation = True
 
         branch_level = 1

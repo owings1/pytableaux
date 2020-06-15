@@ -1228,7 +1228,6 @@ class TableauxRules(object):
 
             return {
                 'adds': [
-                    # This is extended with another branch in UniversalNegatedUndesignated
                     self.get_new_nodes_for_constant(c, node, branch)
                 ],
             }
