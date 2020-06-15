@@ -1939,6 +1939,17 @@ class TableauxSystem(object):
                 c = constant(index, subscript)
             return c
 
+        def constants_or_new(self):
+            """
+            Return ``(constants, is_new)``, where ``constants`` is either the
+            branch constants, or, if no constants are on the branch, a singleton
+            containing a new constants, and ``is_new`` indicates whether it is
+            a new constant.
+            """
+            if self.constants():
+                return (self.constants(), False)
+            return ({self.new_constant()}, True)
+
         def make_model(self):
             """
             Make a model from the open branch.
