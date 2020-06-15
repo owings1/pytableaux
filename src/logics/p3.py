@@ -217,6 +217,9 @@ class TableauxSystem(fde.TableauxSystem):
         },
     }
 
+class DefaultNodeRule(fde.DefaultNodeRule):
+    pass
+
 class TableauxRules(object):
     """
     The Tableaux System for P3 contains the `FDE closure rule`_, and the
@@ -230,7 +233,7 @@ class TableauxRules(object):
     .. _FDE: fde.html
     """
 
-    class DoubleNegationDesignated(logic.TableauxSystem.FilterNodeRule):
+    class DoubleNegationDesignated(DefaultNodeRule):
         """
         From an unticked, designated, double-negation node `n` on a branch `b`,
         add two undesignated nodes to `b`, one with the double-negatum, and one
@@ -241,7 +244,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -255,13 +257,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class DoubleNegationUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class DoubleNegationUndesignated(DefaultNodeRule):
         """
         From an unticked, undesignated, double-negation node `n` on a branch `b`,
         make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -273,7 +269,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 2
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -288,12 +283,6 @@ class TableauxRules(object):
                     ],
                 ],
             }
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
 
     class AssertionDesignated(k3.TableauxRules.AssertionDesignated):
         """
@@ -327,7 +316,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ConjunctionDesignated(logic.TableauxSystem.FilterNodeRule):
+    class ConjunctionDesignated(DefaultNodeRule):
         """
         From an unticked, designated conjunction node `n` on a branch `b`, add
         four undesignated nodes to `b`, one for each conjunct, and one for the
@@ -338,7 +327,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -353,13 +341,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class ConjunctionNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
+    class ConjunctionNegatedDesignated(DefaultNodeRule):
         """
         From an unticked, designated, negated conjunction node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -374,7 +356,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 2
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -391,13 +372,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class ConjunctionUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class ConjunctionUndesignated(DefaultNodeRule):
         """
         From an unticked, undesignated conjunction node `n` on a branch `b`, make
         four branches `b'`, `b''`, `b'''`, and `b''''` from `b`. On `b'`, add a
@@ -411,7 +386,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 4
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -432,13 +406,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class ConjunctionNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class ConjunctionNegatedUndesignated(DefaultNodeRule):
         """
         From an unticked, undesignated, negated conjunction node `n` on a branch
         `b`, make three branches `b'`, `b''`, and `b'''` from `b`. On `b'`, add
@@ -453,7 +421,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 3
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -473,12 +440,6 @@ class TableauxRules(object):
                     ],
                 ],
             }
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
 
     class DisjunctionDesignated(k3.TableauxRules.DisjunctionDesignated):
         """
@@ -512,7 +473,7 @@ class TableauxRules(object):
         """
         pass
 
-    class MaterialConditionalDesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialConditionalDesignated(DefaultNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -521,7 +482,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -533,14 +493,8 @@ class TableauxRules(object):
                     ],
                 ],
             }
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
             
-    class MaterialConditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialConditionalNegatedDesignated(DefaultNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -550,7 +504,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -563,13 +516,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class MaterialConditionalUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialConditionalUndesignated(DefaultNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -578,7 +525,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -591,13 +537,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class MaterialConditionalNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialConditionalNegatedUndesignated(DefaultNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -607,7 +547,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -620,13 +559,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class MaterialBiconditionalDesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialBiconditionalDesignated(DefaultNodeRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -635,7 +568,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
@@ -650,13 +582,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialBiconditionalNegatedDesignated(DefaultNodeRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -666,7 +592,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         conjunct_op = 'Material Conditional'
 
@@ -683,13 +608,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class MaterialBiconditionalUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialBiconditionalUndesignated(DefaultNodeRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -698,7 +617,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 1
-        ticking      = True
 
         conjunct_op = 'Material Conditional'
 
@@ -715,13 +633,7 @@ class TableauxRules(object):
                 ],
             }
 
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
-
-    class MaterialBiconditionalNegatedUndesignated(logic.TableauxSystem.FilterNodeRule):
+    class MaterialBiconditionalNegatedUndesignated(DefaultNodeRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -731,7 +643,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 1
-        ticking      = True
 
         conjunct_op = 'Material Conditional'
 
@@ -747,12 +658,6 @@ class TableauxRules(object):
                     ],
                 ],
             }
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
-
-        def score_candidate(self, target):
-            return self.adz.closure_score(target)
 
     class ConditionalDesignated(MaterialConditionalDesignated):
         """
@@ -822,7 +727,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
+    class ExistentialNegatedDesignated(DefaultNodeRule):
         """
         TODO
         """
@@ -868,9 +773,6 @@ class TableauxRules(object):
                 return 1
             node_apply_count = self.node_application_count(target['node'], target['branch'])
             return float(1 / (node_apply_count + 1))
-            
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
 
         # default - overridden in inherited classes below
 
@@ -966,7 +868,7 @@ class TableauxRules(object):
                 {'sentence': negate(r), 'designated': False},
             ]
 
-    class UniversalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
+    class UniversalNegatedDesignated(DefaultNodeRule):
         """
         From an unticked, negated universal node `n` on a branch `b`, add a
         designated node to `b` with the quantified sentence, substituting a
@@ -978,7 +880,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = True
 
         def setup(self):
             self.add_helpers({
@@ -1001,9 +902,6 @@ class TableauxRules(object):
                     self.get_new_nodes_for_constant(c, node, branch)
                 ],
             }
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
 
         # default - overridden in inherited classes below
 
