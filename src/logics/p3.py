@@ -54,13 +54,41 @@ class Model(k3.Model):
 
         .. _K3: k3.html
         """
-        return super(Model, self).value_of_operated(sentence, **kw)
+        return super().value_of_operated(sentence, **kw)
+
+    def value_of_universal(self, sentence, **kw):
+        """
+        The universal quantifier is thought of like `generalized conjunction`.
+        Since P{A & B} is defined as {~(~A V ~B)}, we can generalize conjunction
+        in the following way. Take the set of values of the sentence resulting
+        from the substitution of the variable with each constant. Then apply
+        the negation function to each of those values. Then take the maximum
+        of those values (the `generalized disjunction`), and apply the negation
+        function to that minimum value. The result is the value of the universal
+        sentence.
+        """
+        v = sentence.variable
+        si = sentence.sentence
+        values = {
+            self.truth_function(
+                'Negation',
+                self.value_of(si.substitute(c, v), **kw)
+            )
+            for c in self.constants
+        }
+        return self.truth_function('Negation', max(values))
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Negation':
             return self.back_cycle(a)
         if operator == 'Conjunction':
-            return self.truth_function('Negation', *(self.truth_function('Negation', x) for x in (a, b)))
+            return self.truth_function(
+                'Negation',
+                self.truth_function(
+                    'Disjunction',
+                    *(self.truth_function('Negation', x) for x in (a, b))
+                )
+            )
         return super().truth_function(operator, a, b)
         
     def back_cycle(self, value):
@@ -794,14 +822,95 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedDesignated(k3.TableauxRules.ExistentialNegatedDesignated):
+    class ExistentialNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
-        This rule is the same as the `FDE ExistentialNegatedDesignated rule`_.
-
-        .. _FDE ExistentialNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ExistentialNegatedDesignated
+        TODO
         """
-        pass
 
+        negated     = True
+        quantifier  = 'Existential'
+        designation = True
+
+        branch_level = 1
+        ticking      = False
+
+        def setup(self):
+            self.add_helpers({
+                'max_constants'     : helpers.MaxConstantsTracker(self),
+                'applied_constants' : helpers.NodeAppliedConstants(self),
+                'quit_flagger'      : helpers.QuitFlagHelper(self),
+            })
+
+        def get_targets_for_node(self, node, branch):
+
+            if not self._should_apply(node, branch):
+                if self._should_flag(branch):
+                    return [self._get_flag_target(branch)]
+                return
+
+            targets = []
+
+            constants, is_new = branch.constants_or_new()
+            for c in constants:
+                new_nodes = self.get_new_nodes_for_constant(c, node, branch)
+                if is_new or not branch.has_all(new_nodes):
+                    targets.append({
+                        'constant' : c,
+                        'adds'     : [new_nodes],
+                    })
+
+            return targets
+
+        def score_candidate(self, target):
+            if 'flag' in target and target['flag']:
+                return 1
+            if self.adz.closure_score(target) == 1:
+                return 1
+            node_apply_count = self.node_application_count(target['node'], target['branch'])
+            return float(1 / (node_apply_count + 1))
+            
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        # default - overridden in inherited classes below
+
+        def get_new_nodes_for_constant(self, c, node, branch):
+            s = self.sentence(node)
+            v = s.variable
+            si = s.sentence
+            r = si.substitute(c, v)
+            return [
+                {'sentence': negate(r), 'designated': True},
+            ]
+
+        # private util
+
+        def _should_apply(self, node, branch):
+            if self.max_constants.max_constants_exceeded(branch):
+                return False
+            # Apply if there are no constants on the branch
+            if not branch.constants():
+                return True
+            # Apply if we have tracked a constant that we haven't applied to.
+            if self.applied_constants.get_unapplied(node, branch):
+                return True
+
+        def _should_flag(self, branch):
+            return (
+                self.max_constants.max_constants_exceeded(branch) and
+                not self.quit_flagger.has_flagged(branch)
+            )
+
+        def _get_flag_target(self, branch):
+            return {
+                'flag': True,
+                'adds': [
+                    [
+                        self.max_constants.quit_flag(branch),
+                    ],
+                ],
+            }
+            
     class ExistentialUndesignated(k3.TableauxRules.ExistentialUndesignated):
         """
         This rule is the same as the `FDE ExistentialUndesignated rule`_.
@@ -810,45 +919,167 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedUndesignated(k3.TableauxRules.ExistentialNegatedUndesignated):
+    class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """
-        This rule is the same as the `FDE ExistentialNegatedUndesignated rule`_.
+        TODO
+        """
 
-        .. _FDE ExistentialNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.ExistentialNegatedUndesignated
-        """
-        pass
+        negated     = True
+        quantifier  = 'Existential'
+        designation = True
 
-    class UniversalDesignated(k3.TableauxRules.UniversalDesignated):
-        """
-        This rule is the same as the `FDE UniversalDesignated rule`_.
+        # Override ExistentialNegatedDesignated
 
-        .. _FDE UniversalDesignated rule: fde.html#logics.fde.TableauxRules.UniversalDesignated
-        """
-        pass
+        def get_new_nodes_for_constant(self, c, node, branch):
+            s = self.sentence(node)
+            v = s.variable
+            si = s.sentence
+            r = si.substitute(c, v)
+            return [
+                {'sentence': negate(r), 'designated': False}
+            ]
 
-    class UniversalNegatedDesignated(k3.TableauxRules.UniversalNegatedDesignated):
+    class UniversalDesignated(ExistentialNegatedDesignated):
         """
-        This rule is the same as the `FDE UniversalNegatedDesignated rule`_.
+        From a designated universal node `n` on a branch `b`, if there are no
+        constants on `b`, add two undesignated nodes to `b`, one with the
+        quantified sentence, substituting a new constant for the variable, and
+        the other with the negation of that sentence. If there are constants
+        already on `b`, then use any of those constants instead of a new one,
+        provided that the both the nodes to be added do not already appear on
+        `b`. The node is never ticked.
+        """
 
-        .. _FDE UniversalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.UniversalNegatedDesignated
-        """
-        pass
+        negated     = False
+        quantifier  = 'Universal'
+        designation = True
 
-    class UniversalUndesignated(k3.TableauxRules.UniversalUndesignated):
-        """
-        This rule is the same as the `FDE UniversalUndesignated rule`_.
+        # Override ExistentialNegatedDesignated
 
-        .. _FDE UniversalUndesignated rule: fde.html#logics.fde.TableauxRules.UniversalUndesignated
-        """
-        pass
+        def get_new_nodes_for_constant(self, c, node, branch):
+            s = self.sentence(node)
+            v = s.variable
+            si = s.sentence
+            r = si.substitute(c, v)
+            return [
+                {'sentence':        r , 'designated': False},
+                {'sentence': negate(r), 'designated': False},
+            ]
 
-    class UniversalNegatedUndesignated(k3.TableauxRules.UniversalNegatedUndesignated):
+    class UniversalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
-        This rule is the same as the `FDE UniversalNegatedUndesignated rule`_.
+        From an unticked, negated universal node `n` on a branch `b`, add a
+        designated node to `b` with the quantified sentence, substituting a
+        constant new to `b` for the variable. Then tick `n`.
+        """
 
-        .. _FDE UniversalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.UniversalNegatedUndesignated
+        negated     = True
+        quantifier   = 'Universal'
+        designation = True
+
+        branch_level = 1
+        ticking      = True
+
+        def setup(self):
+            self.add_helpers({
+                'max_constants' : helpers.MaxConstantsTracker(self),
+                'quit_flagger'  : helpers.QuitFlagHelper(self),
+            })
+
+        def get_target_for_node(self, node, branch):
+
+            if not self._should_apply(branch):
+                if not self.quit_flagger.has_flagged(branch):
+                    return self._get_flag_target(branch)
+                return
+
+            c = branch.new_constant()
+
+            return {
+                'adds': [
+                    # This is extended with another branch in UniversalNegatedUndesignated
+                    [
+                        self.get_new_nodes_for_constant(c, node, branch)
+                    ]
+                ],
+            }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        # default - overridden in inherited classes below
+
+        def get_new_nodes_for_constant(self, c, node, branch):
+            s = self.sentence(node)
+            v = s.variable
+            si = s.sentence
+            r = si.substitute(c, v)
+            return [
+                # Keep designation neutral for UniversalUndesignated
+                {'sentence': r, 'designated': self.designation},
+            ]
+
+        # private util
+
+        def _should_apply(self, branch):
+            return not self.max_constants.max_constants_exceeded(branch)
+
+        def _get_flag_target(self, branch):
+            return {
+                'flag': True,
+                'adds': [
+                    [
+                        self.max_constants.quit_flag(branch),
+                    ]
+                ],
+            }
+
+    class UniversalUndesignated(UniversalNegatedDesignated):
         """
-        pass
+        From an unticked, undesignated universal node `n` on a branch `b`, add
+        an undesignated node to `b` with the quantified sentence, substituting
+        a constant new to `b` for the variable. Then tick `n`.
+        """
+
+        negated     = False
+        designation = False
+
+
+    class UniversalNegatedUndesignated(UniversalNegatedDesignated):
+        """
+        From an unticked, undesignated, negated universal node `n` on a branch
+        `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
+        node with the negation of the quantified sentence, substituing a constant
+        new to `b` for the variable. On `b''` add a designated node with the
+        negatum of `n`. Then tick `n`.
+        """
+
+        negated     = True
+        designation = False
+
+        branch_level = 2
+
+        def get_new_nodes_for_constant(self, c, node, branch):
+            s = self.sentence(node)
+            v = s.variable
+            si = s.sentence
+            r = si.substitute(c, v)
+            return [
+                {'sentence': r, 'designated': True},
+            ]
+
+        def get_target_for_node(self, node, branch):
+
+            target = super().get_target_for_node(node, branch)
+
+            if target:
+                if 'flag' not in target or not target['flag']:
+                    # Add the extra branch with the quantified sentence.
+                    target['adds'].append([
+                        {'sentence': self.sentence(node), 'designated': True},
+                    ])
+            return target
+
 
     closure_rules = list(k3.TableauxRules.closure_rules)
 
