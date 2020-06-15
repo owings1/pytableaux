@@ -1208,38 +1208,60 @@ class TableauxRules(object):
         quantifier  = 'Existential'
         designation = True
 
+        branch_level = 1
+        ticking      = True
+
         def setup(self):
-            self.add_helper('max_constants', helpers.MaxConstantsTracker(self))
-            self.add_helper('quit_flagger', helpers.QuitFlagHelper(self))
+            self.add_helpers({
+                'max_constants' : helpers.MaxConstantsTracker(self),
+                'quit_flagger'  : helpers.QuitFlagHelper(self),
+            })
 
         def get_target_for_node(self, node, branch):
 
             if not self._should_apply(branch):
                 if not self.quit_flagger.has_flagged(branch):
-                    return {'flag': True}
+                    return self._get_flag_target(branch)
                 return
 
-            s = self.sentence(node)
-            v = s.variable
             c = branch.new_constant()
-            si = s.sentence
-            r = si.substitute(c, v)
 
             return {
-                'sentence' : r,
-                'constant' : c,
+                'adds': [
+                    # This is extended with another branch in UniversalNegatedUndesignated
+                    self.get_new_nodes_for_constant(c, node, branch)
+                ],
             }
 
-        def apply_to_node_target(self, node, branch, target):
-            if 'flag' in target and target['flag']:
-                branch.add(self.max_constants.quit_flag(branch))
-            else:
-                branch.add({'sentence': target['sentence'], 'designated': self.designation}).tick(node)
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        # default - overridden in inherited classes below
+
+        def get_new_nodes_for_constant(self, c, node, branch):
+            s = self.sentence(node)
+            v = s.variable
+            si = s.sentence
+            r = si.substitute(c, v)
+            return [
+                # Keep designation neutral for UniversalUndesignated
+                {'sentence': r, 'designated': self.designation},
+            ]
 
         # private util
 
         def _should_apply(self, branch):
             return not self.max_constants.max_constants_exceeded(branch)
+
+        def _get_flag_target(self, branch):
+            return {
+                'flag': True,
+                'adds': [
+                    [
+                        self.max_constants.quit_flag(branch),
+                    ]
+                ],
+            }
 
     class ExistentialNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
@@ -1251,16 +1273,31 @@ class TableauxRules(object):
 
         negated     = True
         quantifier  = 'Existential'
-        convert_to  = 'Universal'
         designation = True
 
-        def apply_to_node(self, node, branch):
+        branch_level = 1
+        ticking      = True
+
+        convert_to  = 'Universal'
+
+        def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            d = self.designation
             v = s.variable
             si = s.sentence
             sq = quantify(self.convert_to, v, negate(si))
-            branch.add({'sentence': sq, 'designated': d}).tick(node)
+            return {
+                'adds': [
+                    [
+                        {'sentence': sq, 'designated': self.designation},
+                    ],
+                ],
+            }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class ExistentialUndesignated(logic.TableauxSystem.FilterNodeRule):
         """
@@ -1347,8 +1384,9 @@ class TableauxRules(object):
         """
 
         quantifier  = 'Existential'
-        convert_to  = 'Universal'
         designation = False
+
+        convert_to  = 'Universal'
 
     class UniversalDesignated(ExistentialUndesignated):
         """
@@ -1371,8 +1409,9 @@ class TableauxRules(object):
         """
 
         quantifier  = 'Universal'
-        convert_to  = 'Existential'
         designation = True
+
+        convert_to  = 'Existential'
 
     class UniversalUndesignated(ExistentialDesignated):
         """
@@ -1393,8 +1432,9 @@ class TableauxRules(object):
         """
 
         quantifier  = 'Universal'
-        convert_to  = 'Existential'
         designation = False
+
+        convert_to  = 'Existential'
 
     closure_rules = [
         DesignationClosure,
