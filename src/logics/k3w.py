@@ -555,27 +555,62 @@ class TableauxRules(object):
                 ]),
             }
 
-    class MaterialConditionalDesignated(k3.TableauxRules.MaterialConditionalDesignated):
+    class MaterialConditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         This rule reduces to a disjunction.
         """
 
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            sd = operate('Disjunction', [negate(s.lhs), s.rhs])
-            branch.add({'sentence': sd, 'designated': d}).tick(node)
+        operator    = 'Material Conditional'
+        designation = True
 
-    class MaterialConditionalNegatedDesignated(k3.TableauxRules.MaterialConditionalNegatedDesignated):
+        branch_level = 1
+        ticking      = True
+
+        def get_target_for_node(self, node, branch):
+            s = self.sentence(node)
+            disj = operate('Disjunction', [negate(s.lhs), s.rhs])
+            return {
+                'adds': [
+                    [
+                        {'sentence': disj, 'designated': self.designation},
+                    ],
+                ],
+            }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
+
+    class MaterialConditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         This rule reduces to a negated disjunction.
         """
 
-        def apply_to_node(self, node, branch):
+        negated     = True
+        operator    = 'Material Conditional'
+        designation = True
+
+        branch_level = 1
+        ticking      = True
+
+        def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            d = self.designation
-            sd = operate('Disjunction', [negate(s.lhs), s.rhs])
-            branch.add({'sentence': negate(sd), 'designated': d}).tick(node)
+            disj = operate('Disjunction', [negate(s.lhs), s.rhs])
+            return {
+                'adds': [
+                    [
+                        {'sentence': negate(disj), 'designated': self.designation},
+                    ],
+                ],
+            }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class MaterialConditionalUndesignated(MaterialConditionalDesignated):
         """
@@ -591,39 +626,66 @@ class TableauxRules(object):
 
         designation = False
 
-    class MaterialBiconditionalDesignated(k3.TableauxRules.MaterialBiconditionalDesignated):
+    class MaterialBiconditionalDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
 
-        def apply_to_node(self, node, branch):
-            s = self.sentence(node)
-            d = self.designation
-            branch.add({
-                'sentence' : operate('Conjunction', [
-                    operate('Material Conditional', s.operands),
-                    operate('Material Conditional', list(reversed(s.operands)))
-                ]),
-                'designated' : d
-            }).tick(node)
+        operator    = 'Material Biconditional'
+        designation = True
 
-    class MaterialBiconditionalNegatedDesignated(k3.TableauxRules.MaterialBiconditionalNegatedDesignated):
+        branch_level = 1
+        ticking      = True
+
+        def get_target_for_node(self, node, branch):
+            s = self.sentence(node)
+            cond1 = operate('Material Conditional', s.operands)
+            cond2 = operate('Material Conditional', list(reversed(s.operands)))
+            conj = operate('Conjunction', [cond1, cond2])
+            return {
+                'adds': [
+                    [
+                        {'sentence': conj, 'designated': self.designation}
+                    ],
+                ],
+            }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
+
+    class MaterialBiconditionalNegatedDesignated(logic.TableauxSystem.FilterNodeRule):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
 
-        def apply_to_node(self, node, branch):
+        negated     = True
+        operator    = 'Material Biconditional'
+        designation = True
+
+        branch_level = 1
+        ticking      = True
+
+        def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            d = self.designation
-            branch.add({
-                'sentence' : negate(
-                    operate('Conjunction', [
-                        operate('Material Conditional', s.operands),
-                        operate('Material Conditional', list(reversed(s.operands)))
-                    ])
-                ),
-                'designated' : d
-            }).tick(node)
+            cond1 = operate('Material Conditional', s.operands)
+            cond2 = operate('Material Conditional', list(reversed(s.operands)))
+            conj = operate('Conjunction', [cond1, cond2])
+            return {
+                'adds': [
+                    [
+                        {'sentence': negate(conj), 'designated': self.designation}
+                    ],
+                ],
+            }
+
+        def apply_to_target(self, target):
+            self.adz.apply_to_target(target)
+
+        def score_candidate(self, target):
+            return self.adz.closure_score(target)
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
         """
