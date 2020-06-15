@@ -1097,7 +1097,7 @@ class TableauxRules(object):
         negated  = True
         operator = 'Biconditional'
 
-    class Existential(IsModal, logic.TableauxSystem.FilterNodeRule):
+    class Existential(DefaultOperatorRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
@@ -1129,9 +1129,6 @@ class TableauxRules(object):
                     self.get_new_nodes_for_constant(c, node, branch)
                 ],
             }
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
 
         # default - overridden in inherited classes below
 
@@ -1170,7 +1167,6 @@ class TableauxRules(object):
         quantifier = 'Existential'
 
         branch_level = 1
-        ticking      = True
 
         convert_to = 'Universal'
 
@@ -1188,7 +1184,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Universal(IsModal, logic.TableauxSystem.FilterNodeRule):
+    class Universal(DefaultOperatorRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -1197,6 +1193,9 @@ class TableauxRules(object):
         """
 
         quantifier = 'Universal'
+
+        branch_level = 1
+        ticking      = False
 
         def setup(self):
             self.add_timer(
@@ -1227,9 +1226,6 @@ class TableauxRules(object):
                 # branch.constants_or_new() instead of unapplied constants
 
                 with self.timers['in_node_examime']:
-                    s = self.sentence(node)
-                    si = s.sentence
-                    v = s.variable
                     constants = self.applied_constants.get_unapplied(node, branch)
 
                 targets = []
@@ -1257,9 +1253,6 @@ class TableauxRules(object):
                 return 1
             node_apply_count = self.node_application_count(target['node'], target['branch'])
             return float(1 / (node_apply_count + 1))
-
-        def apply_to_target(self, target):
-            self.adz.apply_to_target(target)
 
         # private util
 
@@ -1313,7 +1306,7 @@ class TableauxRules(object):
 
         convert_to = 'Existential'
 
-    class Possibility(IsModal, logic.TableauxSystem.FilterNodeRule):
+    class Possibility(DefaultOperatorRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -1321,6 +1314,8 @@ class TableauxRules(object):
         """
 
         operator = 'Possibility'
+
+        branch_level = 1
 
         def setup(self):
             self.add_helpers({
@@ -1332,33 +1327,35 @@ class TableauxRules(object):
         def is_potential_node(self, node, branch):
             if self.quit_flagger.has_flagged(branch):
                 return False
-            return super(TableauxRules.Possibility, self).is_potential_node(node, branch)
+            return super().is_potential_node(node, branch)
 
         def get_target_for_node(self, node, branch):
+
             if not self._should_apply(branch):
                 if not self.quit_flagger.has_flagged(branch):
-                    return {'flag': True}
+                    return self._get_flag_target(branch)
                 return
+
             s  = self.sentence(node)
             si = s.operand
             w1 = node.props['world']
-            return {'sentence': si, 'world1': w1}
+            w2 = branch.new_world()
 
-        def apply_to_node_target(self, node, branch, target):
-            if 'flag' in target and target['flag']:
-                branch.add(self.max_worlds.quit_flag(branch))
-            else:
-                si = target['sentence']
-                w1 = target['world1']
-                w2 = branch.new_world()
-                branch.update([
-                    {'sentence': si, 'world': w2},
-                    {'world1': w1, 'world2': w2},
-                ]).tick(node)
+            return {
+                'sentence' : si,
+                'adds'     : [
+                    [
+                        {'sentence': si, 'world': w2},
+                        {'world1': w1, 'world2': w2},
+                    ]
+                ]
+            }
 
         def score_candidate(self, target):
+
             if 'flag' in target and target['flag']:
                 return 1
+
             # override
             branch = target['branch']
             s = self.sentence(target['node'])
@@ -1374,7 +1371,7 @@ class TableauxRules(object):
 
         def group_score(self, target):
 
-            if self.score_candidate(target) > 0:
+            if target['candidate_score'] > 0:
                 return 1
 
             branch = target['branch']
@@ -1387,6 +1384,16 @@ class TableauxRules(object):
 
         def _should_apply(self, branch):
             return not self.max_worlds.max_worlds_exceeded(branch)
+
+        def _get_flag_target(self, branch):
+            return {
+                'flag': True,
+                'adds': [
+                    [
+                        self.max_worlds.quit_flag(branch),
+                    ],
+                ],
+            }
 
     class PossibilityNegated(DefaultOperatorRule):
         """
@@ -1414,7 +1421,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Necessity(IsModal, logic.TableauxSystem.FilterNodeRule):
+    class Necessity(DefaultOperatorRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -1422,6 +1429,9 @@ class TableauxRules(object):
         """
 
         operator = 'Necessity'
+
+        branch_level = 1
+        ticking      = False
 
         def setup(self):
             self.add_timer(
@@ -1439,14 +1449,14 @@ class TableauxRules(object):
         def is_potential_node(self, node, branch):
             if self.quit_flagger.has_flagged(branch):
                 return False
-            return super(TableauxRules.Necessity, self).is_potential_node(node, branch)
+            return super().is_potential_node(node, branch)
             
         def get_targets_for_node(self, node, branch):
 
             # Check for max worlds reached
             if not self._should_apply(branch):
                 if not self.quit_flagger.has_flagged(branch):
-                    return [{'flag': True}]
+                    return [self._get_flag_target(branch)]
                 return
 
             # Only count least-applied-to nodes
@@ -1454,21 +1464,30 @@ class TableauxRules(object):
                 return
 
             with self.timers['get_targets_for_node']:
-                targets = list()
+
+                targets = []
+
                 worlds = branch.worlds()
                 s = self.sentence(node)
                 si = s.operand
                 w1 = node.props['world']
+
                 for anode in branch.find_all({'world1': w1}):
+
                     w2 = anode.props['world2']
+
                     if self.node_worlds_applied.is_applied(node, w2, branch):
                         continue
+
                     with self.timers['check_target_condtn1']:
                         meets_condtn = branch.has_access(w1, w2)
+
                     if not meets_condtn:
                         continue
+
                     with self.timers['check_target_condtn2']:
                         meets_condtn = not branch.has({'sentence': si, 'world': w2})
+
                     if meets_condtn:
                         with self.timers['make_target']:
                             anode = branch.find({'world1': w1, 'world2': w2})
@@ -1477,6 +1496,11 @@ class TableauxRules(object):
                                 'world'    : w2,
                                 'nodes'    : set([node, anode]),
                                 'type'     : 'Nodes',
+                                'adds'     : [
+                                    [
+                                        {'sentence': si, 'world': w2}
+                                    ]
+                                ]
                             })
             return targets
 
@@ -1484,10 +1508,11 @@ class TableauxRules(object):
 
             if 'flag' in target and target['flag']:
                 return 1
+
             # We are already restricted to least-applied-to nodes by ``get_targets_for_node()``
 
             # Check for closure
-            if target['branch'].has({'sentence': negative(target['sentence']), 'world': target['world']}):
+            if self.adz.closure_score(target) == 1:
                 return 1
 
             # not applied to yet
@@ -1498,12 +1523,6 @@ class TableauxRules(object):
             # Pick the least branching complexity
             return -1 * self.branching_complexity(target['node'])
 
-            # greatest world?
-            # / max(1, target['world'])
-
-            # Modal complexity?
-            #return -1 * len(target['sentence'].operators())
-
         def group_score(self, target):
 
             if self.score_candidate(target) > 0:
@@ -1511,12 +1530,6 @@ class TableauxRules(object):
 
             return -1 * self.node_application_count(target['node'].id, target['branch'].id)
             #return -1 * min(target['track_count'], self.branching_complexity(target['node']))
-
-        def apply_to_node_target(self, node, branch, target):
-            if 'flag' in target and target['flag']:
-                branch.add(self.max_worlds.quit_flag(branch))
-            else:
-                branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example_nodes(self, branch):
             s = logic.operate(self.operator, [logic.atomic(0, 0)])
@@ -1535,6 +1548,16 @@ class TableauxRules(object):
             min_apply_count = self.min_application_count(branch.id)
             return min_apply_count >= node_apply_count
 
+        def _get_flag_target(self, branch):
+            return {
+                'flag': True,
+                'adds': [
+                    [
+                        self.max_worlds.quit_flag(branch),
+                    ],
+                ],
+            }
+
     class NecessityNegated(PossibilityNegated):
         """
         From an unticked negated necessity node *n* with world *w* on a branch *b*, add a
@@ -1547,7 +1570,7 @@ class TableauxRules(object):
 
         convert_to = 'Possibility'
 
-    class IdentityIndiscernability(IsModal, logic.TableauxSystem.FilterNodeRule):
+    class IdentityIndiscernability(DefaultOperatorRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,
@@ -1556,6 +1579,9 @@ class TableauxRules(object):
         """
 
         predicate = 'Identity'
+
+        branch_level = 1
+        ticking      = False
 
         def setup(self):
             self.add_helper('predicated_nodes', helpers.PredicatedNodesTracker(self))
@@ -1586,12 +1612,16 @@ class TableauxRules(object):
                     # if <s1,w> does not yet appear on b, ...
                     if not branch.has({'sentence': s1, 'world': w}):
                         # then the rule applies to <s',w,b>
-                        target = {'sentence': s1, 'world': w, 'nodes': set([node, n]), 'type': 'Nodes'}
-                        targets.append(target)
+                        targets.append({
+                            'type'  : 'Nodes',
+                            'nodes' : set([node, n]),
+                            'adds'  : [
+                                [
+                                    {'sentence': s1, 'world': w}
+                                ]
+                            ]
+                        })
             return targets
-
-        def apply_to_node_target(self, node, branch, target):
-            branch.add({'sentence': target['sentence'], 'world': target['world']})
 
         def example_nodes(self, branch):
             world = 0 if self.modal else None
