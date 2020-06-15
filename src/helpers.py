@@ -21,33 +21,6 @@ import logic
 
 RuleHelper = logic.TableauxSystem.RuleHelper
 
-class NodeTargetCheckHelper(RuleHelper):
-    """
-    Calls the rule's ``check_for_target(node, branch)`` when a node is added to
-    a branch. If a target is returned, it is cached relative to the branch. The
-    rule can then call ``cached_target(branch)``  on the helper to retrieve the
-    target. This is used primarily in closure rules for performance.
-
-    NB: The rule must implement ``check_for_target(self, node, branch)``.
-    """
-
-    def cached_target(self, branch):
-        """
-        Return the cached target for the branch, if any.
-        """
-        if branch.id in self.targets:
-            return self.targets[branch.id]
-
-    # Helper Implementation
-
-    def setup(self):
-        self.targets = {}
-
-    def register_node(self, node, branch):
-        target = self.rule.check_for_target(node, branch)
-        if target:
-            self.targets[branch.id] = target
-
 class QuitFlagHelper(RuleHelper):
     """
     Track the application of a flag node by the rule for each branch. A branch
