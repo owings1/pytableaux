@@ -471,3 +471,58 @@ class AppliedSentenceCounter(RuleHelper):
         if sentence not in self.counts[branch.id]:
             self.counts[branch.id][sentence] = 0
         self.counts[branch.id][sentence] += 1
+
+class NewConstantStoppingRule(logic.TableauxSystem.FilterNodeRule):
+    """
+    Default rule implementation for a one-constant instantiating rule. The rule
+    will check the ``MaxConstantsTracker``. If the max constants have been
+    exceeded for the branch and world, emits a quit flag using the ``QuitFlagHelper``.
+    Concrete classes must implement ``get_new_nodes_for_constant()``.
+
+    This rule inherits from ``FilterNodeRule`` and implements the
+    ``get_target_for_node()`` method.
+    """
+
+    # To be implemented
+
+    def get_new_nodes_for_constant(self, c, node, branch):
+        raise NotImplementedError()
+
+    # node rule implementation
+
+    def __init__(self, *args, **opts):
+        super().__init__(*args, **opts)
+        self.add_helpers({
+            'max_constants' : MaxConstantsTracker(self),
+            'quit_flagger'  : QuitFlagHelper(self),
+        })
+
+    def get_target_for_node(self, node, branch):
+
+        if not self._should_apply(branch, node.props['world']):
+            if not self.quit_flagger.has_flagged(branch):
+                return self._get_flag_target(branch)
+            return
+
+        c = branch.new_constant()
+
+        return {
+            'adds': [
+                self.get_new_nodes_for_constant(c, node, branch)
+            ],
+        }
+
+    # private util
+
+    def _should_apply(self, branch, world):
+        return not self.max_constants.max_constants_exceeded(branch, world)
+
+    def _get_flag_target(self, branch):
+        return {
+            'flag': True,
+            'adds': [
+                [
+                    self.max_constants.quit_flag(branch),
+                ]
+            ],
+        }

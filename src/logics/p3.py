@@ -868,7 +868,7 @@ class TableauxRules(object):
                 {'sentence': negate(r), 'designated': False},
             ]
 
-    class UniversalNegatedDesignated(DefaultNodeRule):
+    class UniversalNegatedDesignated(DefaultNodeRule, helpers.NewConstantStoppingRule):
         """
         From an unticked, negated universal node `n` on a branch `b`, add a
         designated node to `b` with the quantified sentence, substituting a
@@ -881,29 +881,10 @@ class TableauxRules(object):
 
         branch_level = 1
 
-        def setup(self):
-            self.add_helpers({
-                'max_constants' : helpers.MaxConstantsTracker(self),
-                'quit_flagger'  : helpers.QuitFlagHelper(self),
-            })
+        def score_candidate(self, target):
+            return -1 * self.branching_complexity(target['node'])
 
-        def get_target_for_node(self, node, branch):
-
-            if not self._should_apply(branch):
-                if not self.quit_flagger.has_flagged(branch):
-                    return self._get_flag_target(branch)
-                return
-
-            c = branch.new_constant()
-
-            return {
-                'adds': [
-                    # This is extended with another branch in UniversalNegatedUndesignated
-                    self.get_new_nodes_for_constant(c, node, branch)
-                ],
-            }
-
-        # default - overridden in inherited classes below
+        # NewConstantStoppingRule implementation
 
         def get_new_nodes_for_constant(self, c, node, branch):
             s = self.sentence(node)
@@ -914,21 +895,6 @@ class TableauxRules(object):
                 # Keep designation neutral for UniversalUndesignated
                 {'sentence': r, 'designated': self.designation},
             ]
-
-        # private util
-
-        def _should_apply(self, branch):
-            return not self.max_constants.max_constants_exceeded(branch)
-
-        def _get_flag_target(self, branch):
-            return {
-                'flag': True,
-                'adds': [
-                    [
-                        self.max_constants.quit_flag(branch),
-                    ]
-                ],
-            }
 
     class UniversalUndesignated(UniversalNegatedDesignated):
         """

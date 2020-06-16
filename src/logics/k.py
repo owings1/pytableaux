@@ -1097,7 +1097,7 @@ class TableauxRules(object):
         negated  = True
         operator = 'Biconditional'
 
-    class Existential(DefaultNodeRule):
+    class Existential(DefaultNodeRule, helpers.NewConstantStoppingRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
@@ -1107,33 +1107,11 @@ class TableauxRules(object):
         quantifier = 'Existential'
 
         branch_level = 1
-        ticking      = True
-
-        def setup(self):
-            self.add_helpers({
-                'max_constants' : helpers.MaxConstantsTracker(self),
-                'quit_flagger'  : helpers.QuitFlagHelper(self),
-            })
-
-        def get_target_for_node(self, node, branch):
-
-            if not self._should_apply(branch, node.props['world']):
-                if not self.quit_flagger.has_flagged(branch):
-                    return self._get_flag_target(branch)
-                return
-
-            c = branch.new_constant()
-
-            return {
-                'adds': [
-                    self.get_new_nodes_for_constant(c, node, branch)
-                ],
-            }
 
         def score_candidate(self, target):
             return -1 * self.branching_complexity(target['node'])
 
-        # default - overridden in inherited classes below
+        # NewConstantStoppingRule implementation
 
         def get_new_nodes_for_constant(self, c, node, branch):
             s = self.sentence(node)
@@ -1143,21 +1121,6 @@ class TableauxRules(object):
             return [
                 {'sentence': r, 'world': node.props['world']},
             ]
-
-        # private util
-
-        def _should_apply(self, branch, world):
-            return not self.max_constants.max_constants_exceeded(branch, world)
-
-        def _get_flag_target(self, branch):
-            return {
-                'flag': True,
-                'adds': [
-                    [
-                        self.max_constants.quit_flag(branch),
-                    ]
-                ],
-            }
 
     class ExistentialNegated(DefaultNodeRule):
         """
