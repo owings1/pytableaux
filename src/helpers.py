@@ -526,3 +526,87 @@ class NewConstantStoppingRule(logic.TableauxSystem.FilterNodeRule):
                 ]
             ],
         }
+
+class AllConstantsStoppingRule(logic.TableauxSystem.FilterNodeRule):
+
+    # To be implemented
+
+    def get_new_nodes_for_constant(self, c, node, branch):
+        raise NotImplementedError()
+
+    def __init__(self, *args, **opts):
+        super().__init__(*args, **opts)
+        self.add_timer(
+            'in_get_targets_for_nodes',
+            'in_node_examime'         ,
+            'in_should_apply'         ,
+        )
+        self.add_helpers({
+            'max_constants'     : MaxConstantsTracker(self),
+            'applied_constants' : NodeAppliedConstants(self),
+            'quit_flagger'      : QuitFlagHelper(self),
+        })
+
+    # rule implementation
+
+    def get_targets_for_node(self, node, branch):
+
+        with self.timers['in_should_apply']:
+            should_apply = self._should_apply(node, branch)
+
+        if not should_apply:
+            if self._should_flag(branch, node.props['world']):
+                return [self._get_flag_target(branch)]
+            return
+
+        with self.timers['in_get_targets_for_nodes']:
+
+            with self.timers['in_node_examime']:
+                constants = self.applied_constants.get_unapplied(node, branch)
+
+            targets = []
+
+            if constants:
+                is_new = False
+            else:
+                is_new = True
+                constants = {branch.new_constant()}
+
+            for c in constants:
+                new_nodes = self.get_new_nodes_for_constant(c, node, branch)
+                if is_new or not branch.has_all(new_nodes):
+                    targets.append({
+                        'constant' : c,
+                        'adds'     : [new_nodes],
+                    })
+
+        return targets
+
+    # private util
+
+    def _should_apply(self, node, branch):
+        if self.max_constants.max_constants_exceeded(branch, node.props['world']):
+            return False
+        # Apply if there are no constants on the branch
+        if not branch.constants():
+            return True
+        # Apply if we have tracked a constant that we haven't applied to.
+        if self.applied_constants.get_unapplied(node, branch):
+            return True
+
+    def _should_flag(self, branch, world):
+        # Slight difference with FDE here -- using world
+        return (
+            self.max_constants.max_constants_exceeded(branch, world) and
+            not self.quit_flagger.has_flagged(branch)
+        )
+
+    def _get_flag_target(self, branch):
+        return {
+            'flag': True,
+            'adds': [
+                [
+                    self.max_constants.quit_flag(branch),
+                ],
+            ],
+        }

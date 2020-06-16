@@ -1150,7 +1150,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Universal(DefaultNodeRule):
+    class Universal(DefaultNodeRule, helpers.AllConstantsStoppingRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -1163,55 +1163,6 @@ class TableauxRules(object):
         branch_level = 1
         ticking      = False
 
-        def setup(self):
-            self.add_timer(
-                'in_get_targets_for_nodes',
-                'in_node_examime'         ,
-                'in_should_apply'         ,
-            )
-            self.add_helpers({
-                'max_constants'     : helpers.MaxConstantsTracker(self),
-                'applied_constants' : helpers.NodeAppliedConstants(self),
-                'quit_flagger'      : helpers.QuitFlagHelper(self),
-            })
-
-        def get_targets_for_node(self, node, branch):
-
-            with self.timers['in_should_apply']:
-                should_apply = self._should_apply(node, branch)
-
-            if not should_apply:
-                # Slight difference with FDE here -- using world
-                if self._should_flag(branch, node.props['world']):
-                    return [self._get_flag_target(branch)]
-                return
-
-            with self.timers['in_get_targets_for_nodes']:
-
-                # This differs from FDE implementation -- there we use
-                # branch.constants_or_new() instead of unapplied constants
-
-                with self.timers['in_node_examime']:
-                    constants = self.applied_constants.get_unapplied(node, branch)
-
-                targets = []
-
-                if constants:
-                    is_new = False
-                else:
-                    is_new = True
-                    constants = {branch.new_constant()}
-
-                for c in constants:
-                    new_nodes = self._get_new_nodes_for_constant(c, node, branch)
-                    if is_new or not branch.has_all(new_nodes):
-                        targets.append({
-                            'constant' : c,
-                            'adds'     : [new_nodes],
-                        })
-
-            return targets
-
         def score_candidate(self, target):
             if 'flag' in target and target['flag']:
                 return 1
@@ -1220,9 +1171,9 @@ class TableauxRules(object):
             node_apply_count = self.node_application_count(target['node'], target['branch'])
             return float(1 / (node_apply_count + 1))
 
-        # private util
+        # AllConstantsStoppingRule implementation
 
-        def _get_new_nodes_for_constant(self, c, node, branch):
+        def get_new_nodes_for_constant(self, c, node, branch):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
@@ -1230,34 +1181,6 @@ class TableauxRules(object):
             return [
                 {'sentence': r, 'world': node.props['world']},
             ]
-
-        def _should_apply(self, node, branch):
-            # Slight difference with FDE here -- using world
-            if self.max_constants.max_constants_exceeded(branch, node.props['world']):
-                return False
-            # Apply if there are no constants on the branch
-            if not branch.constants():
-                return True
-            # Apply if we have tracked a constant that we haven't applied to.
-            if self.applied_constants.get_unapplied(node, branch):
-                return True
-
-        def _should_flag(self, branch, world):
-            # Slight difference with FDE here -- using world
-            return (
-                self.max_constants.max_constants_exceeded(branch, world) and
-                not self.quit_flagger.has_flagged(branch)
-            )
-
-        def _get_flag_target(self, branch):
-            return {
-                'flag': True,
-                'adds': [
-                    [
-                        self.max_constants.quit_flag(branch),
-                    ],
-                ],
-            }
 
     class UniversalNegated(ExistentialNegated):
         """

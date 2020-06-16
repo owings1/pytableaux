@@ -727,7 +727,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedDesignated(DefaultNodeRule):
+    class ExistentialNegatedDesignated(DefaultNodeRule, helpers.AllConstantsStoppingRule):
         """
         TODO
         """
@@ -739,33 +739,6 @@ class TableauxRules(object):
         branch_level = 1
         ticking      = False
 
-        def setup(self):
-            self.add_helpers({
-                'max_constants'     : helpers.MaxConstantsTracker(self),
-                'applied_constants' : helpers.NodeAppliedConstants(self),
-                'quit_flagger'      : helpers.QuitFlagHelper(self),
-            })
-
-        def get_targets_for_node(self, node, branch):
-
-            if not self._should_apply(node, branch):
-                if self._should_flag(branch):
-                    return [self._get_flag_target(branch)]
-                return
-
-            targets = []
-
-            constants, is_new = branch.constants_or_new()
-            for c in constants:
-                new_nodes = self.get_new_nodes_for_constant(c, node, branch)
-                if is_new or not branch.has_all(new_nodes):
-                    targets.append({
-                        'constant' : c,
-                        'adds'     : [new_nodes],
-                    })
-
-            return targets
-
         def score_candidate(self, target):
             if 'flag' in target and target['flag']:
                 return 1
@@ -773,8 +746,6 @@ class TableauxRules(object):
                 return 1
             node_apply_count = self.node_application_count(target['node'], target['branch'])
             return float(1 / (node_apply_count + 1))
-
-        # default - overridden in inherited classes below
 
         def get_new_nodes_for_constant(self, c, node, branch):
             s = self.sentence(node)
@@ -784,34 +755,6 @@ class TableauxRules(object):
             return [
                 {'sentence': negate(r), 'designated': True},
             ]
-
-        # private util
-
-        def _should_apply(self, node, branch):
-            if self.max_constants.max_constants_exceeded(branch):
-                return False
-            # Apply if there are no constants on the branch
-            if not branch.constants():
-                return True
-            # Apply if we have tracked a constant that we haven't applied to.
-            if self.applied_constants.get_unapplied(node, branch):
-                return True
-
-        def _should_flag(self, branch):
-            return (
-                self.max_constants.max_constants_exceeded(branch) and
-                not self.quit_flagger.has_flagged(branch)
-            )
-
-        def _get_flag_target(self, branch):
-            return {
-                'flag': True,
-                'adds': [
-                    [
-                        self.max_constants.quit_flag(branch),
-                    ],
-                ],
-            }
             
     class ExistentialUndesignated(k3.TableauxRules.ExistentialUndesignated):
         """
