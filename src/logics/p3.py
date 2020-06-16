@@ -729,7 +729,12 @@ class TableauxRules(object):
 
     class ExistentialNegatedDesignated(DefaultNodeRule, helpers.AllConstantsStoppingRule):
         """
-        TODO
+        From an unticked, designated, negated existential node `n` on a branch
+        `b`, for any constant `c` on `b`, let `r` be the result of substituting
+        `c` for the variable bound by the sentence of `n`. If the negation of `r`
+        does not appear on `b`, then add a designated node with the negation of
+        `r` to `b`. If there are no constants yet on `b`, use a new constant.
+        The node `n` is never ticked.
         """
 
         negated     = True
@@ -766,7 +771,10 @@ class TableauxRules(object):
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """
-        TODO
+        From an unticked, undesignated, negated existential node `n` on a branch
+        `b`, for a new constant `c` for `b`, let `r` be the result of substituting
+        `c` for the variable bound by the sentence of `n`. Add an undesignated
+        node to `b` with the negation of `r`. Then tick `n`.
         """
 
         negated     = True
