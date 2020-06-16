@@ -92,7 +92,7 @@ class TableauxRules(object):
         A branch closes when a sentence and its negation both appear as designated nodes.
         This rule is **in addition to** the `FDE closure rule`_.
 
-        .. _FDE closure Rule: fde.html#logics.fde.TableauxRules.Closure
+        .. _FDE closure Rule: fde.html#logics.fde.TableauxRules.DesignationClosure
         """
 
         # tracker implementation

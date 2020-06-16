@@ -20,15 +20,19 @@
 name = 'GO'
 
 class Meta(object):
-    title = 'Gappy Object 3-valued Logic'
-    description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
-    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
+
+    title    = 'Gappy Object 3-valued Logic'
     category = 'Many-valued'
+
+    description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
+
+    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
+
     category_display_order = 5
 
-import logic, math, examples
+import logic, examples
 from . import fde, k3, b3e
-from logic import negate, negative, operate, quantify
+from logic import negate, operate, quantify
 
 def gap(v):
     return min(v, 1 - v)
@@ -204,8 +208,8 @@ class TableauxRules(object):
     Most of the operators rules are unique to GO, with a few rules that are
     the same as `FDE`_. The rules for assertion mirror those of `B3E`_.
     
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
-    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
+    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
+    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure
     """
 
     class DoubleNegationDesignated(k3.TableauxRules.DoubleNegationDesignated):

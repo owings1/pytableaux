@@ -31,7 +31,7 @@ class Meta(object):
     category_display_order = 3
 
 import logic
-from logic import negate, negative, operate
+from logic import negate, operate
 from . import fde, k3
 
 class Model(k3.Model):
@@ -159,8 +159,8 @@ class TableauxRules(object):
     However, many rules for K3W are different from `FDE`_, given
     the behavior of the *N* value.
     
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
-    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
+    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
+    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure
     .. _FDE: fde.html
     """
 

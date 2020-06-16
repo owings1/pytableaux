@@ -116,8 +116,8 @@ class TableauxRules(object):
     The operator rules are mostly a mix of `FDE`_ and `K3W`_ rules, but with different
     rules for the assertion, conditional and biconditional operators.
 
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
-    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
+    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
+    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure
     .. _FDE: fde.html
     .. _K3W: k3w.html
     """

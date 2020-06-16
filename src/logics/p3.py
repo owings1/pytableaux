@@ -228,8 +228,8 @@ class TableauxRules(object):
     from `FDE`_, given the non-standard negation. Notably, an undesignated
     double-negation will branch.
     
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
-    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
+    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
+    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure
     .. _FDE: fde.html
     """
 

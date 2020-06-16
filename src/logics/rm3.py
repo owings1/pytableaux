@@ -97,8 +97,8 @@ class TableauxRules(object):
     rules. The biconditional rules are borrowed from `L3_`, since they are
     simplification rules.
 
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
-    .. _LP closure rule: lp.html#logics.lp.TableauxRules.Closure
+    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
+    .. _LP closure rule: lp.html#logics.lp.TableauxRules.GapClosure
     """
 
     class DoubleNegationDesignated(lp.TableauxRules.DoubleNegationDesignated):

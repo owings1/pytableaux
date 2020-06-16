@@ -98,8 +98,8 @@ class TableauxRules(object):
     The operator rules for Ł3 are mostly the rules for `FDE`_, with the exception
     of the rules for the conditional and biconditional operators.
 
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.Closure
-    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.Closure
+    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
+    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure
     .. _FDE: fde.html
     """
 
