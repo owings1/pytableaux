@@ -886,18 +886,13 @@ class TableauxRules(object):
                 {'sentence': r, 'designated': True},
             ]
 
-        def get_target_for_node(self, node, branch):
-
-            target = super().get_target_for_node(node, branch)
-
-            if target:
-                if 'flag' not in target or not target['flag']:
+        def add_to_adds(self, node, branch):
+            return [
+                [
                     # Add the extra branch with the quantified sentence.
-                    target['adds'].append([
-                        {'sentence': self.sentence(node), 'designated': True},
-                    ])
-            return target
-
+                    {'sentence': self.sentence(node), 'designated': True},
+                ]
+            ]
 
     closure_rules = list(k3.TableauxRules.closure_rules)
 

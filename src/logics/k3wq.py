@@ -425,23 +425,16 @@ class TableauxRules(object):
                 {'sentence': negate(r), 'designated': False},
             ]
 
-        # NewConstantStoppingRule override
+        def add_to_adds(self, node, branch):
+            return [
+                [
+                    self._get_translation_node(node, branch)
+                ]
+            ]
 
-        def get_target_for_node(self, node, branch):
+        # private util
 
-            target = super().get_target_for_node(node, branch)
-
-            if target:
-                if 'flag' not in target or not target['flag']:
-                    # Add the extra branch with the quantified sentence.
-                    target['adds'].append([
-                        self.get_translation_node(node, branch)
-                    ])
-            return target
-
-        # default, overriden in UniversalNegatedUndesignated
-
-        def get_translation_node(self, node, branch):
+        def _get_translation_node(self, node, branch):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
@@ -524,9 +517,28 @@ class TableauxRules(object):
 
         branch_level = 2
 
-        # override UniversalNegatedUndesignated
+        # NewConstantStoppingRule implementation
 
-        def get_translation_node(self, node, branch):
+        def get_new_nodes_for_constant(self, c, node, branch):
+            s = self.sentence(node)
+            v = s.variable
+            si = s.sentence
+            r = si.substitute(c, v)
+            return [
+                {'sentence':        r , 'designated': False},
+                {'sentence': negate(r), 'designated': False},
+            ]
+
+        def add_to_adds(self, node, branch):
+            return [
+                [
+                    self._get_translation_node(node, branch)
+                ]
+            ]
+
+        # private util
+
+        def _get_translation_node(self, node, branch):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
