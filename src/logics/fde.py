@@ -401,8 +401,10 @@ class Model(logic.Model):
         if operator == 'Assertion':
             return a
         if operator == 'Negation':
-            if a == 'F' or a == 'T':
-                return self.cvals[1 - self.nvals[a]]
+            if a == 'F':
+                return 'T'
+            if a == 'T':
+                return 'F'
             return a
         elif operator == 'Conjunction':
             return self.cvals[min(self.nvals[a], self.nvals[b])]
