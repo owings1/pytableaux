@@ -562,6 +562,23 @@ class DefaultNodeRule(logic.TableauxSystem.FilterNodeRule):
     def score_candidate(self, target):
         return self.adz.closure_score(target)
 
+class DefaultNewConstantRule(DefaultNodeRule, helpers.NewConstantStoppingRule):
+
+    def score_candidate(self, target):
+        return -1 * self.branching_complexity(target['node'])
+
+class DefaultAllConstantsRule(DefaultNodeRule, helpers.AllConstantsStoppingRule):
+
+    ticking = False
+
+    def score_candidate(self, target):
+        if 'flag' in target and target['flag']:
+            return 1
+        if self.adz.closure_score(target) == 1:
+            return 1
+        node_apply_count = self.node_application_count(target['node'], target['branch'])
+        return float(1 / (node_apply_count + 1))
+
 class TableauxRules(object):
     """
     In general, rules for connectives consist of four rules per connective:
@@ -1138,7 +1155,7 @@ class TableauxRules(object):
         operator    = 'Biconditional'
         designation = False
 
-    class ExistentialDesignated(DefaultNodeRule, helpers.NewConstantStoppingRule):
+    class ExistentialDesignated(DefaultNewConstantRule):
         """
         From an unticked designated existential node *n* on a branch *b* quantifying over
         variable *v* into sentence *s*, add a designated node to *b* with the substitution
@@ -1149,9 +1166,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-
-        def score_candidate(self, target):
-            return -1 * self.branching_complexity(target['node'])
 
         # NewConstantStoppingRule implementation
 
@@ -1194,7 +1208,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class ExistentialUndesignated(DefaultNodeRule, helpers.AllConstantsStoppingRule):
+    class ExistentialUndesignated(DefaultAllConstantsRule):
         """
         From an undesignated existential node *n* on a branch *b*, for any constant *c* on
         *b* such that the result *r* of substituting *c* for the variable bound by the
@@ -1207,15 +1221,6 @@ class TableauxRules(object):
         designation = False
 
         branch_level = 1
-        ticking      = False
-
-        def score_candidate(self, target):
-            if 'flag' in target and target['flag']:
-                return 1
-            if self.adz.closure_score(target) == 1:
-                return 1
-            node_apply_count = self.node_application_count(target['node'], target['branch'])
-            return float(1 / (node_apply_count + 1))
 
         # AllConstantsStoppingRule implementation
 
