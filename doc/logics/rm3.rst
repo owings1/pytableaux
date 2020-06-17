@@ -42,5 +42,11 @@ It is similar to `LP`_, with a different conditional operator.
 
     * The argument P{B}, therefore P{A $ B} is valid in `LP`_, but not in RM3.
 
+    For further reading, see:
+
+    * Belnap, N. D., McRobbie, M. A. `Relevant Analytic Tableaux`_.  Studia Logica,
+      Vol. 38, No. 2. 1979.
+
 .. _FDE: fde.html
 .. _LP: lp.html
+.. _Relevant Analytic Tableaux: http://www.pitt.edu/~belnap/77relevantanalytictableaux.pdf

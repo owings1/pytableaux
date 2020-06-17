@@ -2,9 +2,9 @@
 B3E - Bochvar 3-valued External Logic
 *************************************
 
-B3E is a three-valued logic with values **T**, **F**, and **N**.
-B3E is similar to `K3W`_, with a special Assertion operator, that always results in
-a classical value (**T** or **F**).
+B3E is a three-valued logic with values **T**, **F**, and **N**. B3E is similar
+to `K3W`_, with a special Assertion operator, that always results in a classical
+value (**T** or **F**).
 
 .. contents:: :local:
 
@@ -43,6 +43,15 @@ a classical value (**T** or **F**).
     * The assertion operator can expression alternate versions of validities that
       fail in `K3W`_. For example, P{A} implies P{A V \*B} in B3E, which fails in
       `K3W`_.
+
+    * D. A. Bochvar published his paper in 1938. An English translation by Merrie
+      Bergmann was published in 1981. *On a three-valued logical calculus and its
+      application to the analysis of the paradoxes of the classical extended
+      functional calculus.* History and Philosophy of Logic, 2(1-2):87–112, 1981.
+
+    For further reading, see:
+
+    * Beall, Jc `Off-topic: a new interpretation of Weak Kleene logic <http://entailments.net/papers/beall-ajl-wk3-interp.pdf>`_. 2016.
 
 .. _CPL: cpl.html
 .. _K3: k3.html

@@ -58,8 +58,10 @@ class Model(k3.Model):
 
     def value_of_universal(self, sentence, **kw):
         """
+        NB: P3 did not originally define quantification. This is a novel construction.
+
         The universal quantifier is thought of like `generalized conjunction`.
-        Since P{A & B} is defined as {~(~A V ~B)}, we can generalize conjunction
+        Since P{A & B} is defined as P{~(~A V ~B)}, we can generalize conjunction
         in the following way. Take the set of values of the sentence resulting
         from the substitution of the variable with each constant. Then apply
         the negation function to each of those values. Then take the maximum

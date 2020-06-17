@@ -2,7 +2,9 @@
 P3 - Post 3-valued logic
 ************************
 
-[Description forthcoming ...]
+Emil Post's three-valued logic (**T**, **F**, and **N**) has a deviant negation
+that performs a *cyclic shift* in value. The result is a system much different
+from classical logic, as well as more well-known many-valued systems.
 
 .. contents:: :local:
 
@@ -14,6 +16,8 @@ P3 - Post 3-valued logic
     .. autoclass:: Model
 
         .. automethod:: value_of_operated(sentence)
+
+        .. automethod:: value_of_universal(sentence)
 
     Tableaux System
     ===============
@@ -35,7 +39,20 @@ P3 - Post 3-valued logic
     Notes
     =====
 
-    [Notes forthcoming ...]
+    - E. L. Post `Introduction to a General Theory of Elementary Propositions`_
+      American Journal of Mathematics, vol. 43. 1921.
+
+    - Rescher, Nicholas. Many-valued Logic. United Kingdom, McGraw-Hill, 1969.
+
+    - `Wikipedia entry on Emil Post <https://en.wikipedia.org/wiki/Emil_Leon_Post>`_.
+
+    - Here is a picture of Emil Leon Post (from `Wikimedia Commons <https://en.wikipedia.org/wiki/File:Emil_Leon_Post.jpg>`_
+      in the public domain):
+
+      .. raw:: html
+
+          <img src="../_static/img/Emil_Leon_Post.jpg">
 
 .. _CPL: cpl.html
 .. _K3: k3.html
+.. _Introduction to a General Theory of Elementary Propositions: https://www.jstor.org/stable/2370324?origin=crossref&seq=1#metadata_info_tab_contents

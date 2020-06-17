@@ -2,7 +2,9 @@
 K3WQ - Weak Kleene Logic with alternate quantification
 ******************************************************
 
-[Description forthcoming ...]
+This is a version of `K3W`_ with a different treatment of the quantifiers
+in terms of generalized conjunction/disjunction. This yeilds some interesting
+rules for the quantifiers, given the behavior of those operators in `K3W`_.
 
 .. contents:: :local:
 
@@ -14,6 +16,10 @@ K3WQ - Weak Kleene Logic with alternate quantification
     .. autoclass:: Model
 
         .. automethod:: value_of_operated(sentence)
+
+        .. automethod:: value_of_existential(sentence)
+
+        .. automethod:: value_of_universal(sentence)
 
     Tableaux System
     ===============
@@ -35,7 +41,7 @@ K3WQ - Weak Kleene Logic with alternate quantification
     Notes
     =====
 
-    [Notes forthcoming ...]
+    - Standard interdefinability of the quantifiers is preserved.
 
 .. _CPL: cpl.html
 .. _K3: k3.html

@@ -51,7 +51,19 @@ values is:
 
     For futher reading see:
 
+    - Anderson, A., Belnap, N. D., et al. `Entailment`_: The Logic of Relevance and
+      Necessity. United Kingdom, Princeton University Press, 1975.
+    
+    * Belnap, N. D., McRobbie, M. A. `Relevant Analytic Tableaux`_.  Studia Logica,
+      Vol. 38, No. 2, 1979.
+
+    - Priest, Graham. `An Introduction to Non-Classical Logic`_: From If to Is.
+      Cambridge University Press, 2008.
+
     - `Stanford Encyclopedia on Paraconsistent Logic`_
 
 
 .. _Stanford Encyclopedia on Paraconsistent Logic: http://plato.stanford.edu/entries/logic-paraconsistent/
+.. _Entailment: https://www.google.com/books/edition/_/8LRGswEACAAJ?hl=en
+.. _An Introduction to Non-Classical Logic: https://www.google.com/books/edition/_/rMXVbmAw3YwC?hl=en
+.. _Relevant Analytic Tableaux: http://www.pitt.edu/~belnap/77relevantanalytictableaux.pdf

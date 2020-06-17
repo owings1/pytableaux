@@ -77,7 +77,11 @@ class Model(k3w.Model):
 
     def value_of_universal(self, sentence, **kw):
         """
-        TODO
+        A universal sentence is interpreted in terms of `generalized conjunction`.
+        If we order the values least to greatest as **N**, **F**, **T**, then we
+        can define the value of a universal in terms of the `minimum` value of
+        the set of values for the substitution of each constant in the model for
+        the variable.
         """
         v = sentence.variable
         si = sentence.sentence
@@ -89,7 +93,11 @@ class Model(k3w.Model):
 
     def value_of_existential(self, sentence, **kw):
         """
-        TODO
+        A universal sentence is interpreted in terms of `generalized conjunction`.
+        If we order the values least to greatest as **N**, **T**, **F**, then we
+        can define the value of a universal in terms of the `maximum` value of
+        the set of values for the substitution of each constant in the model for
+        the variable.
         """
         v = sentence.variable
         si = sentence.sentence
@@ -370,7 +378,10 @@ class TableauxRules(object):
 
     class ExistentialDesignated(DefaultNewConstantRule):
         """
-        TODO
+        From an untick, designated existential node `n` on a branch `b`, add
+        two designated nodes to `b`. One node is the result of universally
+        quantifying over the disjunction of the inner sentence with its negation.
+        The other node is a substitution of a constant new to `b`. Then tick `n`.
         """
 
         negated     = False
@@ -404,7 +415,12 @@ class TableauxRules(object):
 
     class ExistentialUndesignated(DefaultNewConstantRule):
         """
-        TODO
+        From an unticked, undesignated existential node `n` on a branch `b`, make
+        two branches `b'` and `b''` from `b`. On `b'` add two undesignated nodes,
+        one with the substituion of a constant new to `b` for the inner sentence,
+        and the other with the negation of that sentence. On `b''` add a designated
+        node with universal quantifier over the negation of the inner sentence.
+        Then tick `n`.
         """
 
         negated     = False
@@ -443,7 +459,10 @@ class TableauxRules(object):
 
     class ExistentialNegatedUndesignated(DefaultNewConstantRule):
         """"
-        TODO
+        From an unticked, undesignated, negated existential node `n` on a branch
+        `b`, add an undesignated node to `b` with the negation of the inner
+        sentence, substituting a constant new to `b` for the variable. Then
+        tick `n`.
         """
 
         negated     = True
@@ -473,7 +492,11 @@ class TableauxRules(object):
 
     class UniversalNegatedDesignated(DefaultNewConstantRule):
         """
-        TODO
+        From an unticked, designated, negated universal node `n` on a branch `b`,
+        add two designated nodes to `b`. The first node is a universally quantified
+        disjunction of the inner sentence and its negation. The second node is the
+        negation of the inner sentence, substitutin a constant new to `b` for the
+        variable. Then tick `n`.
         """
 
         negated     = True
@@ -508,7 +531,11 @@ class TableauxRules(object):
 
     class UniversalNegatedUndesignated(ExistentialUndesignated):
         """
-        TODO
+        From an unticked, undesignated, negated universal node `n` on a branch `b`,
+        make two branches `b'` and `b''` from `b`. On `b'` add two undesignated nodes,
+        one with the substitution of a constant new to `b` for the inner sentence
+        of `n`, and the other with the negation of that sentence. On `b''`, add
+        a designated node with the negatum of `n`. Then tick `n`.
         """
 
         negated     = True
