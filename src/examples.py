@@ -53,7 +53,6 @@ args = {
     'Disjunctive Syllogism'            : [[ 'Aab', 'Nb' ], 'a'  ],
     'Disjunctive Syllogism 2'          : [[ 'ANab', 'Nb'], 'Na' ],
     'Existential from Universal'       : [[ 'SxFx' ], 'VxFx' ],
-    'Existential from Negated Universal' : [[ 'NVxFx' ], 'SxNFx' ],
     'Existential Syllogism'            : [[ 'VxCFxGx', 'Fn'  ],  'Gn'],
     'Explosion'                        : [[ 'KaNa' ], 'b' ],
     'Extracting a Disjunct 1'          : [[ 'Aab'  ], 'b'    ],
@@ -84,11 +83,13 @@ args = {
     'Necessity Distribution 1'         : 'ULUabULaLb',
     'Necessity Distribution 2'         : [['LUab'], 'ULaLb'],
     'Necessity Elimination'            : [[ 'La'  ], 'a' ],
-    'Negated Existential from Universal' : [[ 'VxFx' ], 'NSxNFx' ],
-    'Negated Universal from Existential' : [[ 'SxFx' ], 'NVxNFx' ],
     'NP Collapse 1'                    : [[ 'LMa' ], 'Ma'],
     'Possibility Addition'             : [[ 'a'   ], 'Ma'],
     'Possibility Distribution'         : [[ 'KMaMb' ], 'MKab'],
+    'Quantifier Interdefinability 1'   : [[ 'VxFx'  ], 'NSxNFx' ],
+    'Quantifier Interdefinability 2'   : [[ 'NVxFx' ], 'SxNFx'  ],
+    'Quantifier Interdefinability 3'   : [[ 'SxFx'  ], 'NVxNFx' ],
+    'Quantifier Interdefinability 4'   : [[ 'NSxFx' ], 'VxNFx'  ],
     'Reflexive Inference 1'            : 'CLaa',
     'S4 Conditional Inference 1'       : 'ULaLLa',
     'S4 Conditional Inference 2'       : [['LUaMNb', 'Ma'], 'MNb'],
@@ -106,7 +107,6 @@ args = {
     'Triviality 2'                     : [[ 'a' ], 'b' ],
     'Universal Predicate Syllogism'    : [[ 'VxVyCFxFy', 'Fm'], 'Fn'],
     'Universal from Existential'       : [[ 'SxFx' ], 'VxFx' ],
-    'Universal from Negated Existential' : [[ 'NSxFx' ], 'VxNFx' ],
 }
 
 args_list = sorted(args.keys())
@@ -156,11 +156,12 @@ def existence():
 
 def quantified(quantifier):
     x = logic.variable(0, 0)
-    x_is_f = logic.predicated(test_pred_data[0][0], [x], vocabulary)
-    if quantifier == 'Universal':
-        x_is_g = logic.predicated(test_pred_data[1][0], [x], vocabulary)
-        s = logic.operate('Material Conditional', [x_is_f, x_is_g])
-        return logic.quantify(quantifier, x, s)
+    p = vocabulary.get_predicate(index = 0, subscript = 0)
+    x_is_f = logic.predicated(p, [x], vocabulary)
+    #if quantifier == 'Universal':
+    #    x_is_g = logic.predicated(test_pred_data[1][0], [x], vocabulary)
+    #    s = logic.operate('Material Conditional', [x_is_f, x_is_g])
+    #    return logic.quantify(quantifier, x, s)
     return logic.quantify(quantifier, x, x_is_f)
 
 def operated(operator):

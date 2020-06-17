@@ -89,7 +89,7 @@ class TestFDE(LogicTester):
         assert proof.valid
 
     def test_valid_univ_from_neg_exist_1(self):
-        proof = self.example_proof('Universal from Negated Existential')
+        proof = self.example_proof('Quantifier Interdefinability 4')
         assert proof.valid
 
     def test_valid_neg_assert_a_implies_a(self):
@@ -528,6 +528,54 @@ class TestK3W(LogicTester):
             model = branch.model
             model.get_data()
 
+class TestK3WQ(LogicTester):
+
+    logic = get_logic('K3WQ')
+
+    def test_valid_quantifier_interdefinability_1(self):
+        proof = self.example_proof('Quantifier Interdefinability 1')
+        assert proof.valid
+
+    def test_valid_quantifier_interdefinability_2(self):
+        proof = self.example_proof('Quantifier Interdefinability 2')
+        assert proof.valid
+        
+    def test_valid_quantifier_interdefinability_3(self):
+        proof = self.example_proof('Quantifier Interdefinability 3')
+        assert proof.valid
+
+    def test_valid_quantifier_interdefinability_4(self):
+        proof = self.example_proof('Quantifier Interdefinability 4')
+        assert proof.valid
+
+    def test_valid_existential_to_if_a_then_a(self):
+        arg = argument('CFmFm', ['SxFx'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
+
+    def test_invalid_existential_from_predicate_sentence_countermodel(self):
+        arg = argument('SxFx', ['Fm'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        proof.build(is_build_models=True)
+        assert proof.invalid
+        branch = list(proof.open_branches())[0]
+        model = branch.model
+        assert model.value_of(self.p('Fn')) == 'N'
+        assert model.value_of(self.p('Fm')) == 'T'
+        assert model.value_of(self.p('SxFx')) in {'F', 'N'}
+        assert model.is_countermodel_to(arg)
+
+    def test_invalid_universal_from_predicate_sentence_countermodel(self):
+        arg = argument('VxFx', ['Fm'], vocabulary=self.vocab)
+        proof = tableau(self.logic, arg)
+        proof.build(is_build_models=True)
+        assert proof.invalid
+        branch = list(proof.open_branches())[0]
+        model = branch.model
+        assert model.value_of(self.p('Fm')) == 'T'
+        assert model.value_of(self.p('VxFx')) in {'F', 'N'}
+        assert model.is_countermodel_to(arg)
+
 class TestB3E(LogicTester):
 
     logic = get_logic('B3E')
@@ -916,11 +964,11 @@ class TestGO(LogicTester):
         assert branch.has({'sentence': parse('a'), 'designated': True})
 
     def test_valid_neg_exist_from_univ(self):
-        proof = self.example_proof('Negated Existential from Universal')
+        proof = self.example_proof('Quantifier Interdefinability 1')
         assert proof.valid
 
     def test_valid_neg_univ_from_exist(self):
-        proof = self.example_proof('Negated Universal from Existential')
+        proof = self.example_proof('Quantifier Interdefinability 3')
         assert proof.valid
 
     def test_valid_demorgan_3(self):
@@ -932,11 +980,11 @@ class TestGO(LogicTester):
         assert not proof.valid
 
     def test_invalid_exist_from_neg_univ(self):
-        proof = self.example_proof('Existential from Negated Universal')
+        proof = self.example_proof('Quantifier Interdefinability 2')
         assert not proof.valid
 
     def test_invalid_univ_from_neg_exist(self):
-        proof = self.example_proof('Universal from Negated Existential')
+        proof = self.example_proof('Quantifier Interdefinability 4')
         assert not proof.valid
 
     def test_valid_prior_b3e_rule_defect2(self):
