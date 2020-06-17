@@ -28,7 +28,7 @@ class Meta(object):
 
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
 
-    category_display_order = 7
+    category_display_order = 8
 
 import logic, helpers
 from logic import negate, negative, operate
@@ -218,6 +218,12 @@ class TableauxSystem(fde.TableauxSystem):
     }
 
 class DefaultNodeRule(fde.DefaultNodeRule):
+    pass
+
+class DefaultNewConstantRule(fde.DefaultNewConstantRule):
+    pass
+
+class DefaultAllConstantsRule(fde.DefaultAllConstantsRule):
     pass
 
 class TableauxRules(object):
@@ -727,7 +733,7 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedDesignated(DefaultNodeRule, helpers.AllConstantsStoppingRule):
+    class ExistentialNegatedDesignated(DefaultAllConstantsRule):
         """
         From an unticked, designated, negated existential node `n` on a branch
         `b`, for any constant `c` on `b`, let `r` be the result of substituting
@@ -742,15 +748,8 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-        ticking      = False
 
-        def score_candidate(self, target):
-            if 'flag' in target and target['flag']:
-                return 1
-            if self.adz.closure_score(target) == 1:
-                return 1
-            node_apply_count = self.node_application_count(target['node'], target['branch'])
-            return float(1 / (node_apply_count + 1))
+        # AllConstantsStoppingRule implementation
 
         def get_new_nodes_for_constant(self, c, node, branch):
             s = self.sentence(node)
@@ -769,19 +768,23 @@ class TableauxRules(object):
         """
         pass
 
-    class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
+    class ExistentialNegatedUndesignated(DefaultAllConstantsRule):
         """
         From an unticked, undesignated, negated existential node `n` on a branch
         `b`, for a new constant `c` for `b`, let `r` be the result of substituting
-        `c` for the variable bound by the sentence of `n`. Add an undesignated
-        node to `b` with the negation of `r`. Then tick `n`.
+        `c` for the variable bound by the sentence of `n`. If the negation of `r`
+        does not appear on `b`, then add an undesignated node with the negation
+        of `r` to `b`. If there are no constants yet on `b`, use a new constant.
+        The node `n` is never ticked.
         """
 
         negated     = True
         quantifier  = 'Existential'
         designation = True
 
-        # Override ExistentialNegatedDesignated
+        branch_level = 1
+
+        # AllConstantsStoppingRule implementation
 
         def get_new_nodes_for_constant(self, c, node, branch):
             s = self.sentence(node)
@@ -792,7 +795,7 @@ class TableauxRules(object):
                 {'sentence': negate(r), 'designated': False}
             ]
 
-    class UniversalDesignated(ExistentialNegatedDesignated):
+    class UniversalDesignated(DefaultAllConstantsRule):
         """
         From a designated universal node `n` on a branch `b`, if there are no
         constants on `b`, add two undesignated nodes to `b`, one with the
@@ -807,7 +810,9 @@ class TableauxRules(object):
         quantifier  = 'Universal'
         designation = True
 
-        # Override ExistentialNegatedDesignated
+        branch_level = 1
+
+        # AllConstantsStoppingRule implementation
 
         def get_new_nodes_for_constant(self, c, node, branch):
             s = self.sentence(node)
@@ -819,7 +824,7 @@ class TableauxRules(object):
                 {'sentence': negate(r), 'designated': False},
             ]
 
-    class UniversalNegatedDesignated(DefaultNodeRule, helpers.NewConstantStoppingRule):
+    class UniversalNegatedDesignated(DefaultNewConstantRule):
         """
         From an unticked, negated universal node `n` on a branch `b`, add a
         designated node to `b` with the quantified sentence, substituting a
@@ -831,9 +836,6 @@ class TableauxRules(object):
         designation = True
 
         branch_level = 1
-
-        def score_candidate(self, target):
-            return -1 * self.branching_complexity(target['node'])
 
         # NewConstantStoppingRule implementation
 
@@ -858,7 +860,7 @@ class TableauxRules(object):
         designation = False
 
 
-    class UniversalNegatedUndesignated(UniversalNegatedDesignated):
+    class UniversalNegatedUndesignated(DefaultNewConstantRule):
         """
         From an unticked, undesignated, negated universal node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -868,9 +870,12 @@ class TableauxRules(object):
         """
 
         negated     = True
+        quantifier  = 'Universal'
         designation = False
 
         branch_level = 2
+
+        # NewConstantStoppingRule implementation
 
         def get_new_nodes_for_constant(self, c, node, branch):
             s = self.sentence(node)
