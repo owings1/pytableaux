@@ -65,19 +65,29 @@ def get_truth_tables_for_logic(lgc):
             htm += get_truth_table_html(lgc, operator)
     return htm
 
+def htmlunescape(s):
+    try:
+        s1 = html.unescape(s)
+    except AttributeError: # pragma: no cover
+        s1 = HTMLParser().unescape(s)
+    return s1
+
 def get_replace_sentence_expressions_result(text):
     is_found = False
     replaced = list()
     for s in re.findall(r'P{(.*?)}', text):
-        try:
-            s1 = html.unescape(s)
-        except AttributeError: # pragma: no cover
-            s1 = HTMLParser().unescape(s)
+        s1 = htmlunescape(s)
         replaced.append(s1)
         is_found = True
         sentence = sp.parse(s1)
         s2 = sw.write(sentence, drop_parens=True)
         text = text.replace(u'P{' + s + '}', s2)
+    for s in re.findall(r'O{(.*?)}', text):
+        s1 = htmlunescape(s)
+        replaced.append(s1)
+        is_found = True
+        s2 = sw.write_operator(s1)
+        text = text.replace(u'O{' + s + '}', s2)
     return {
         'is_found' : is_found,
         'text'     : text,
