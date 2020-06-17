@@ -506,11 +506,20 @@ class NewConstantStoppingRule(logic.TableauxSystem.FilterNodeRule):
 
         c = branch.new_constant()
 
-        return {
+        target = {
             'adds': [
                 self.get_new_nodes_for_constant(c, node, branch)
             ],
         }
+
+        more_adds = self.add_to_adds(node, branch)
+        if more_adds:
+            target['adds'].extend(more_adds)
+
+        return target
+
+    def add_to_adds(self, node, branch):
+        pass
 
     # private util
 
