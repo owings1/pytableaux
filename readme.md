@@ -33,6 +33,7 @@ Many-valued
 - **FDE** - First Degree Entailment
 - **K3** - Strong Kleene Logic
 - **K3W** - Weak Kleene Logic
+- **K3WQ** - Weak Kleene with alternate quantification
 - **B3E** - Bochvar 3-valued External Logic
 - **GO** - Gappy Object Logic
 - **L3** - Łukasiewicz 3-valued Logic

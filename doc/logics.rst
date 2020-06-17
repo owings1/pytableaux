@@ -32,6 +32,7 @@ Many-valued
     logics/fde
     logics/k3
     logics/k3w
+    logics/k3wq
     logics/b3e
     logics/go
     logics/l3
