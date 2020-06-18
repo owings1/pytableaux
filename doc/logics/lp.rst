@@ -63,8 +63,15 @@ the **N** value.
 
     * DeMorgan laws are valid.
 
+    References
+    ==========
+    
+    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and Many-valued Logic.
+      United Kingdom, Oxford University Press, 2003.
+
     For futher reading see:
 
-    - `Stanford Encyclopedia entry on paraconsistent logic <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
+    * `Stanford Encyclopedia entry on paraconsistent logic <http://plato.stanford.edu/entries/logic-paraconsistent/>`_
 
 .. _FDE: fde.html
+.. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en

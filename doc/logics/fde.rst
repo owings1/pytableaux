@@ -49,18 +49,24 @@ values is:
 
     * DeMorgan laws are valid, as well as Conditional Contraction (P{A $ (A $ B)} implies P{A $ B}).
 
+    References
+    ==========
+
+    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and Many-valued Logic.
+      United Kingdom, Oxford University Press, 2003.
+
+    * Priest, Graham. `An Introduction to Non-Classical Logic`_: From If to Is.
+      Cambridge University Press, 2008.
+
     For futher reading see:
 
-    - Anderson, A., Belnap, N. D., et al. `Entailment`_: The Logic of Relevance and
+    * Anderson, A., Belnap, N. D., et al. `Entailment`_: The Logic of Relevance and
       Necessity. United Kingdom, Princeton University Press, 1975.
     
     * Belnap, N. D., McRobbie, M. A. `Relevant Analytic Tableaux`_.  Studia Logica,
       Vol. 38, No. 2, 1979.
 
-    - Priest, Graham. `An Introduction to Non-Classical Logic`_: From If to Is.
-      Cambridge University Press, 2008.
-
-    - `Stanford Encyclopedia on Paraconsistent Logic`_
+    * `Stanford Encyclopedia on Paraconsistent Logic`_
 
 
 .. _Stanford Encyclopedia on Paraconsistent Logic: http://plato.stanford.edu/entries/logic-paraconsistent/

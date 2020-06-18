@@ -42,6 +42,12 @@ It is similar to `LP`_, with a different conditional operator.
 
     * The argument P{B}, therefore P{A $ B} is valid in `LP`_, but not in RM3.
 
+    References
+    ==========
+
+    * Beall, Jc, et al. `Possibilities and Paradox`_: An Introduction to Modal and Many-valued Logic.
+      United Kingdom, Oxford University Press, 2003.
+
     For further reading, see:
 
     * Belnap, N. D., McRobbie, M. A. `Relevant Analytic Tableaux`_.  Studia Logica,
@@ -50,3 +56,4 @@ It is similar to `LP`_, with a different conditional operator.
 .. _FDE: fde.html
 .. _LP: lp.html
 .. _Relevant Analytic Tableaux: http://www.pitt.edu/~belnap/77relevantanalytictableaux.pdf
+.. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en

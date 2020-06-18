@@ -36,6 +36,7 @@ Many-valued
     logics/b3e
     logics/go
     logics/l3
+    logics/g3
     logics/p3
     logics/lp
     logics/rm3

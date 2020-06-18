@@ -242,6 +242,6 @@ on `Bitbucket`_.
 
 .. _dissertation: https://bytebucket.org/owings1/dissertation/raw/master/output/dissertation.pdf
 
-.. _Possibilities and Paradox: https://global.oup.com/academic/product/possibilities-and-paradox-9780199259878?q=Possibilities%20and%20Paradox
+.. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en
 
 .. _Bitbucket: https://bitbucket.org/owings1/pytableaux

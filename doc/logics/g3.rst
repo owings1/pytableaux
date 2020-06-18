@@ -2,7 +2,7 @@
 G3 - Gödel 3-valued logic
 *************************
 
-WIP [forthcoming]
+Gödel 3-valued logic (**T**, **F**, and **N**) with classical-like negation.
 
 .. contents:: :local:
 
@@ -32,10 +32,14 @@ WIP [forthcoming]
     * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
       are models where *C* also has the value **T**.
 
-    Notes
-    =====
+    References
+    ==========
 
-    -[forthcoming]
+    - Heyting, Arend. `Intuitionism`_: An Introduction. Netherlands, North-Holland, 1966.
+
+    - Rescher, Nicholas. `Many-valued Logic`_. United Kingdom, McGraw-Hill, 1969.
 
 .. _CPL: cpl.html
 .. _K3: k3.html
+.. _Many-valued Logic: https://www.google.com/books/edition/_/ZyTXAAAAMAAJ?hl=en
+.. _Intuitionism: https://www.google.com/books/edition/Intuitionism/qfp_-Fo9yWMC?hl=en&gbpv=0

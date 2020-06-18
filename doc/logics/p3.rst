@@ -36,13 +36,13 @@ from classical logic, as well as more well-known many-valued systems.
     * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
       are models where *C* also has the value **T**.
 
-    Notes
-    =====
+    References
+    ==========
 
     - E. L. Post `Introduction to a General Theory of Elementary Propositions`_
       American Journal of Mathematics, vol. 43. 1921.
 
-    - Rescher, Nicholas. Many-valued Logic. United Kingdom, McGraw-Hill, 1969.
+    - Rescher, Nicholas. `Many-valued Logic`_. United Kingdom, McGraw-Hill, 1969.
 
     - `Wikipedia entry on Emil Post <https://en.wikipedia.org/wiki/Emil_Leon_Post>`_.
 
@@ -56,3 +56,4 @@ from classical logic, as well as more well-known many-valued systems.
 .. _CPL: cpl.html
 .. _K3: k3.html
 .. _Introduction to a General Theory of Elementary Propositions: https://www.jstor.org/stable/2370324?origin=crossref&seq=1#metadata_info_tab_contents
+.. _Many-valued Logic: https://www.google.com/books/edition/_/ZyTXAAAAMAAJ?hl=en
