@@ -112,6 +112,11 @@ def get_build_trunk_example_html(lgc, arg):
 def get_argument_example_html(arg):
     return 'Argument: <i>' + '</i>, <i>'.join([sw.write(p, drop_parens=True) for p in arg.premises]) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>'
 
+def rulesheet(lgc):
+    lgc = logic.get_logic(lgc)
+    # TODO: generate rule "cheat sheet"
+    pass
+
 class SphinxUtil(object): # pragma: no cover
 
     skip_rules = [
