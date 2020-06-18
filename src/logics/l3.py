@@ -53,8 +53,8 @@ class Model(k3.Model):
         return super(Model, self).value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
-        if operator == 'Conditional' or operator == 'Biconditional':
-            if a == 'N' and a == b:
+        if operator == 'Conditional':
+            if a == 'N' and b == 'N':
                 return 'T'
         return super(Model, self).truth_function(operator, a, b)
 
@@ -231,19 +231,19 @@ class TableauxRules(object):
         """
         pass
 
-    class MaterialConditionalNegatedUndesignated(k3.TableauxRules.MaterialConditionalNegatedUndesignated):
-        """
-        This rule is the same as the `FDE MaterialConditionalNegatedUndesignated rule`_.
-
-        .. _FDE MaterialConditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalNegatedUndesignated
-        """
-        pass
-
     class MaterialConditionalUndesignated(k3.TableauxRules.MaterialConditionalUndesignated):
         """
         This rule is the same as the `FDE MaterialConditionalUndesignated rule`_.
 
         .. _FDE MaterialConditionalUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalUndesignated
+        """
+        pass
+
+    class MaterialConditionalNegatedUndesignated(k3.TableauxRules.MaterialConditionalNegatedUndesignated):
+        """
+        This rule is the same as the `FDE MaterialConditionalNegatedUndesignated rule`_.
+
+        .. _FDE MaterialConditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalNegatedUndesignated
         """
         pass
 

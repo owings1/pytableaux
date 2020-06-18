@@ -191,7 +191,8 @@ class SphinxUtil(object): # pragma: no cover
     @staticmethod
     def make_tableau_examples(app, what, name, obj, options, lines):
         # Sphinx utility
-        arg = examples.argument('Material Modus Ponens')
+        #arg = examples.argument('Material Modus Ponens')
+        arg = logic.argument('b', ['a1', 'a2'])
         if what == 'class':
             mro = inspect.getmro(obj)
             if logic.TableauxSystem.Rule in mro and obj not in SphinxUtil.skip_rules:
