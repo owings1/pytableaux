@@ -31,7 +31,7 @@ class Meta(object):
     category_display_order = 1
 
 import logic, examples, helpers
-from logic import negate, negative, quantify, atomic
+from logic import negate, negative, quantify, operate, atomic
 
 Identity = logic.get_system_predicate('Identity')
 Existence = logic.get_system_predicate('Existence')
@@ -255,36 +255,47 @@ class Model(logic.Model):
                 is_literal = self.is_sentence_literal(sentence)
                 is_opaque = self.is_sentence_opaque(sentence)
                 if is_literal or is_opaque:
-                    d = node.props['designated']
-                    if sentence.is_operated() and sentence.operator == 'Negation':
-                        # the negative of s is the negatum of s
-                        nnode = branch.find({'sentence': sentence.operand})
-                    else:
-                        # the negative of s is the negation of s
-                        nnode = branch.find({'sentence': negate(sentence)})
-                    if nnode != None:
-                        # both s and its negative are on the branch
-                        nd = nnode.props['designated']
-                        if d and not nd:
-                            # only s is designated
-                            value = 'T'
-                        elif not d and nd:
-                            # only the negative of s is designated
-                            value = 'F'
-                        elif d and nd:
-                            # both sentences are designated
-                            value = 'B'
+                    if sentence.operator == 'Negation':
+                        # If the sentence is negated, set the value of the negatum
+                        sentence = sentence.negatum
+                        if node.props['designated']:
+                            if branch.has({'sentence': sentence, 'designated': True}):
+                                # If the node is designated, and the negatum is
+                                # also designated on b, the value is B
+                                value = 'B'
+                            else:
+                                # If the node is designated, but the negatum is
+                                # not also designated on b, the value is F
+                                value = 'F'
                         else:
-                            # both sentences are undesignated
-                            value = 'N'
+                            if branch.has({'sentence': sentence, 'designated': False}):
+                                # If the node is undesignated, and the negatum is
+                                # also undesignated on b, the value is N
+                                value = 'N'
+                            else:
+                                # If the node is undesignated, but the negatum is
+                                # not also undesignated on b, the value is T
+                                value = 'T'
                     else:
-                        # the negative of s is not on the branch
-                        if d:
-                            # any designated value will work
-                            value = 'T'
+                        # If the sentence is unnegated, set the value of the sentence
+                        if node.props['designated']:
+                            if branch.has({'sentence': negate(sentence), 'designated': True}):
+                                # If the node is designated, and its negation is
+                                # also designated on b, the value is B
+                                value = 'B'
+                            else:
+                                # If the node is designated, but the negation is
+                                # not also designated on b, the value is T
+                                value = 'T'
                         else:
-                            # any undesignated value will work
-                            value = 'F'
+                            if branch.has({'sentence': negate(sentence), 'designated': False}):
+                                # If the node is undesignated, and its negation is
+                                # also undesignated on b, the value is N
+                                value = 'N'
+                            else:
+                                # If the node is undesginated, but the negation is
+                                # not also undesignated on b, the value is F
+                                value = 'F'
                     if is_opaque:
                         self.set_opaque_value(sentence, value)
                     else:
@@ -310,6 +321,8 @@ class Model(logic.Model):
         return sentence.is_literal()
 
     def set_literal_value(self, sentence, value):
+        if value not in self.truth_values:
+            raise Model.ModelValueError('Non-existent value {0} for sentence {1}'.format(str(value), str(sentence)))
         if self.is_sentence_opaque(sentence):
             self.set_opaque_value(sentence, value)
         elif sentence.is_operated() and sentence.operator == 'Negation':
@@ -322,6 +335,8 @@ class Model(logic.Model):
             raise NotImplementedError()
 
     def set_opaque_value(self, sentence, value):
+        if value not in self.truth_values:
+            raise Model.ModelValueError('Non-existent value {0} for sentence {1}'.format(str(value), str(sentence)))
         if sentence in self.opaques and self.opaques[sentence] != value:
             raise Model.ModelValueError('Inconsistent value {0} for sentence {1}'.format(str(value), str(sentence)))
         # We might have a quantified opaque sentence, in which case we will need
@@ -333,11 +348,15 @@ class Model(logic.Model):
         self.opaques[sentence] = value
         
     def set_atomic_value(self, sentence, value):
+        if value not in self.truth_values:
+            raise Model.ModelValueError('Non-existent value {0} for sentence {1}'.format(str(value), str(sentence)))
         if sentence in self.atomics and self.atomics[sentence] != value:
             raise Model.ModelValueError('Inconsistent value {0} for sentence {1}'.format(str(value), str(sentence)))
         self.atomics[sentence] = value
 
     def set_predicated_value(self, sentence, value):
+        if value not in self.truth_values:
+            raise Model.ModelValueError('Non-existent value {0} for sentence {1}'.format(str(value), str(sentence)))
         predicate = sentence.predicate
         params = tuple(sentence.parameters)
         for param in params:
@@ -345,7 +364,7 @@ class Model(logic.Model):
                 self.constants.add(param)
         extension = self.get_extension(predicate)
         anti_extension = self.get_anti_extension(predicate)
-        if 'N' in self.truth_values and value == 'N':
+        if value == 'N':
             if params in extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
             if params in anti_extension:
@@ -358,7 +377,7 @@ class Model(logic.Model):
             if params in extension:
                 raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
             anti_extension.add(params)
-        elif 'B' in self.truth_values and value == 'B':
+        elif value == 'B':
             extension.add(params)
             anti_extension.add(params)
         self.predicates.add(predicate)
@@ -579,6 +598,33 @@ class DefaultAllConstantsRule(DefaultNodeRule, helpers.AllConstantsStoppingRule)
         node_apply_count = self.node_application_count(target['node'], target['branch'])
         return float(1 / (node_apply_count + 1))
 
+class ConjunctionReducingRule(DefaultNodeRule):
+
+    branch_level = 1
+
+    conjunct_op = NotImplemented
+
+    def get_target_for_node(self, node, branch):
+
+        if self.conjunct_op is NotImplemented:
+            raise NotImplementedError()
+
+        lhs, rhs = self.sentence(node).operands
+        cond1 = operate(self.conjunct_op, [lhs, rhs])
+        cond2 = operate(self.conjunct_op, [rhs, lhs])
+
+        sc = operate('Conjunction', [cond1, cond2])
+
+        if self.negated:
+            sc = negate(sc)
+
+        return {
+            'adds': [
+                [
+                    {'sentence': sc, 'designated': self.designation},
+                ],
+            ],
+        }
 class TableauxRules(object):
     """
     In general, rules for connectives consist of four rules per connective:
