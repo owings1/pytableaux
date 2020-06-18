@@ -49,6 +49,8 @@ args = {
     'DeMorgan 4'                       : [[ 'ANaNb' ], 'NKab'  ],
     'DeMorgan 5'                       : [[ 'Aab'   ], 'NKNaNb' ],
     'DeMorgan 6'                       : [[ 'Kab'   ], 'NANaNb' ],
+    'DeMorgan 7'                       : [[ 'NKNaNb' ], 'Aab' ],
+    'DeMorgan 8'                       : [[ 'NANaNb' ], 'Kab' ],
     'Denying the Antecedent'           : [[ 'Cab', 'Na' ], 'b'  ],
     'Disjunctive Syllogism'            : [[ 'Aab', 'Nb' ], 'a'  ],
     'Disjunctive Syllogism 2'          : [[ 'ANab', 'Nb'], 'Na' ],

@@ -700,6 +700,78 @@ class TestL3(LogicTester):
         proof = tableau(self.logic, argument('AUabNUab')).build()
         assert not proof.valid
 
+class TestG3(LogicTester):
+
+    logic = get_logic('G3')
+
+    def test_invalid_demorgan_8_model(self):
+        proof = self.example_proof('DeMorgan 8')
+        assert proof.invalid
+        model = list(proof.open_branches())[0].model
+        assert model.is_countermodel_to(proof.argument)
+
+    def test_valid_demorgan_6(self):
+        proof = self.example_proof('DeMorgan 6')
+        assert proof.valid
+
+    def test_invalid_lem(self):
+        proof = self.example_proof('Law of Excluded Middle')
+        assert proof.invalid
+
+    def test_invalid_not_not_a_arrow_a(self):
+        # Rescher p.45
+        arg = argument('UNNaa')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.invalid
+
+    def test_invalid_not_a_arrow_not_b_arrow_b_arrow_a(self):
+        # Rescher p.45
+        arg = argument('UUNaNbUba')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.invalid
+
+    def test_valid_a_arrow_b_or_b_arrow_a(self):
+        # Rescher p.45
+        arg = argument('AUabUba')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
+
+    def test_valid_not_not_a_arrow_a_arrow_a_or_not_a(self):
+        # Rescher p.45
+        arg = argument('UUNNaaAaNa')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
+
+    def test_valid_a_dblarrow_a(self):
+        arg = argument('Baa')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
+
+    def test_valid_a_dblarrow_b_thus_a_arrow_b_and_b_arrow_a(self):
+        arg = argument('KUabUba', ['Bab'])
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
+
+    def test_valid_a_arrow_b_and_b_arrow_a_thus_a_dblarrow_b(self):
+        arg = argument('Bab', ['KUabUba'])
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
+
+    def test_valid_not_a_arrow_b_or_not_b_arrow_a_thus_not_a_dblarrow_b(self):
+        arg = argument('NBab', ['ANUabNUba'])
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
+
+    def test_valid_not_a_dblarrow_b_thus_not_a_arrow_b_or_not_b_arrow_a(self):
+        arg = argument('ANUabNUba', ['NBab'])
+        proof = tableau(self.logic, arg).build()
+        assert proof.valid
+
 class TestLP(LogicTester):
 
     logic = get_logic('LP')
