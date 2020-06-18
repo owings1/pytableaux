@@ -18,9 +18,6 @@
 # ------------------
 #
 # pytableaux - Gödel 3-valued logic
-
-# WIP
-
 name = 'G3'
 
 class Meta(object):
@@ -32,7 +29,7 @@ class Meta(object):
 
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
 
-    category_order = 8
+    category_display_order = 8
 
 import logic, helpers
 from logic import negate, negative, operate
@@ -54,7 +51,6 @@ class Model(l3.Model):
         """
         return super().value_of_operated(sentence, **kw)
 
-
     def truth_function(self, operator, a, b=None):
         if operator == 'Negation':
             if a == 'N':
@@ -70,26 +66,26 @@ class TableauxSystem(fde.TableauxSystem):
     """
     branchables = dict(fde.TableauxSystem.branchables)
     branchables.update({
-        #'Conditional': {
-        #    False  : {
-        #        True  : 1,
-        #        False : 1,
-        #    },
-        #    True : {
-        #        True  : 0,
-        #        False : 1,
-        #    },
-        #},
-        #'Biconditional': {
-        #    False  : {
-        #        True  : 1,
-        #        False : 1,
-        #    },
-        #    True : {
-        #        True  : 1,
-        #        False : 1,
-        #    },
-        #},
+        'Conditional': {
+            False  : {
+                True  : 1,
+                False : 1,
+            },
+            True : {
+                True  : 1,
+                False : 1,
+            },
+        },
+        'Biconditional': {
+            False  : {
+                True  : 0,
+                False : 0,
+            },
+            True : {
+                True  : 0,
+                False : 0,
+            },
+        },
     })
 
 class DefaultNodeRule(fde.DefaultNodeRule):
@@ -106,21 +102,47 @@ class TableauxRules(object):
     .. _FDE: fde.html
     """
 
-    #class DoubleNegationDesignated(l3.TableauxRules.DoubleNegationDesignated):
-    #    """
-    #    This rule is the same as the `FDE DoubleNegationDesignated rule`_.
-    #
-    #    .. _FDE DoubleNegationDesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationDesignated
-    #    """
-    #    pass
-    #
-    #class DoubleNegationUndesignated(l3.TableauxRules.DoubleNegationUndesignated):
-    #    """
-    #    This rule is the same as the `FDE DoubleNegationUndesignated rule`_.
-    #
-    #    .. _FDE DoubleNegationUndesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationUndesignated
-    #    """
-    #    pass
+    class DoubleNegationDesignated(DefaultNodeRule):
+        """
+        From an unticked, designated double-negation node `n` on a branch `b`,
+        add an undesignated node with the negatum of `n`. Then tick `n`.
+        """
+
+        negated     = True
+        operator    = 'Negation'
+        designation = True
+    
+        branch_level = 1
+
+        def get_target_for_node(self, node, branch):
+            return {
+                'adds': [
+                    [
+                        {'sentence': self.sentence(node), 'designated': False},
+                    ]
+                ]
+            }
+
+    class DoubleNegationUndesignated(l3.TableauxRules.DoubleNegationUndesignated):
+        """
+        From an unticked, undesignated double-negation node `n` on a branch `b`,
+        add a designated node with the negatum of `n`. Then tick `n`.
+        """
+
+        negated     = True
+        operator    = 'Negation'
+        designation = False
+
+        branch_level = 1
+
+        def get_target_for_node(self, node, branch):
+            return {
+                'adds': [
+                    [
+                        {'sentence': self.sentence(node), 'designated': True},
+                    ]
+                ]
+            }
 
     class AssertionDesignated(l3.TableauxRules.AssertionDesignated):
         """
@@ -282,83 +304,123 @@ class TableauxRules(object):
         """
         pass
 
-    #class ConditionalDesignated(DefaultNodeRule):
-    #    """
-    #    TODO
-    #    """
-    #
-    #    operator    = 'Conditional'
-    #    designation = True
-    #
-    #    branch_level = 2
-    #
-    #class ConditionalNegatedDesignated(l3.TableauxRules.ConditionalNegatedDesignated):
-    #    """
-    #    This rule is the same as the `FDE ConditionalNegatedDesignated rule`_.
-    #
-    #    .. _FDE ConditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ConditionalNegatedDesignated
-    #    """
-    #    # TODO
-    #    pass
-    #
-    #class ConditionalUndesignated(DefaultNodeRule):
-    #    """
-    #    TODO
-    #    """
-    #
-    #    operator    = 'Conditional'
-    #    designation = False
-    #
-    #    branch_level = 2
-    #
-    #
-    #class ConditionalNegatedUndesignated(l3.TableauxRules.ConditionalNegatedUndesignated):
-    #    """
-    #    This rule is the same as the `FDE ConditionalNegatedUndesignated rule`_.
-    #
-    #    .. _FDE ConditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.ConditionalNegatedUndesignated
-    #    """
-    #    pass
-    #    
-    #class BiconditionalDesignated(DefaultNodeRule):
-    #    """
-    #    TODO
-    #    """
-    #
-    #    operator    = 'Biconditional'
-    #    designation = True
-    #
-    #    branch_level = 2
-    #
-    #class BiconditionalNegatedDesignated(l3.TableauxRules.BiconditionalNegatedDesignated):
-    #    """
-    #    This rule is the same as the `FDE BiconditionalNegatedDesignated rule`_.
-    #
-    #    .. _FDE BiconditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.BiconditionalNegatedDesignated
-    #    """
-    #    # TODO
-    #    pass
-    #
-    #class BiconditionalUndesignated(DefaultNodeRule):
-    #    """
-    #    TODO
-    #    """
-    #
-    #    operator    = 'Biconditional'
-    #    designation = False
-    #
-    #    branch_level = 2
-    #
-    #class BiconditionalNegatedUndesignated(DefaultNodeRule):
-    #    """
-    #    TODO
-    #    """
-    #
-    #    negated     = True
-    #    operator    = 'Biconditional'
-    #    designation = False
-    #
-    #    branch_level = 2
+    class ConditionalDesignated(l3.TableauxRules.ConditionalDesignated):
+        """
+        This rule is the same as the `L3 ConditionalDesignated rule`_.
+
+        .. _L3 ConditionalDesignated rule: l3.html#logics.l3.TableauxRules.ConditionalDesignated
+        """
+        pass
+
+    class ConditionalNegatedDesignated(DefaultNodeRule):
+        """
+        From an unticked, designated, negated conditional node `n` on a branch
+        `b`, make two branches `b'` and `b''` from `b`. On `b'` add two designated
+        nodes, one with the antecedent, and one with the negation of the consequent.
+        On `b''` add two undesignated nodes, one with the antecedent, and one with
+        the negation of the antecedent, and one designated node with the negation
+        of the consequent. Then tick `n`.
+        """
+
+        negated     = True
+        operator    = 'Conditional'
+        designation = True
+
+        branch_level = 2
+
+        def get_target_for_node(self, node, branch):
+            lhs, rhs = self.sentence(node).operands
+            return {
+                'adds': [
+                    [
+                        {'sentence': lhs        , 'designated': True},
+                        {'sentence': negate(rhs), 'designated': True},
+                    ],
+                    [
+                        {'sentence': lhs        , 'designated': False},
+                        {'sentence': negate(lhs), 'designated': False},
+                        {'sentence': negate(rhs), 'designated': True},
+                    ],
+                ],
+            }
+    
+    class ConditionalUndesignated(l3.TableauxRules.ConditionalUndesignated):
+        """
+        This rule is the same as the `L3 ConditionalUndesignated rule`_.
+
+        .. _L3 ConditionalUndesignated rule: l3.html#logics.l3.TableauxRules.ConditionalUndesignated
+        """
+        pass
+    
+    class ConditionalNegatedUndesignated(l3.TableauxRules.ConditionalNegatedUndesignated):
+        """
+        From an unticked, undesignated, negated conditional node `n` on a branch
+        `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
+        node with the negation of the antecedent. On `b''` add an undesignated
+        node with the negation of the consequent. Then tick `n`.
+        """
+
+        negated     = True
+        operator    = 'Conditional'
+        designation = False
+
+        branch_level = 2
+
+        def get_target_for_node(self, node, branch):
+            lhs, rhs = self.sentence(node).operands
+            return {
+                'adds': [
+                    [
+                        {'sentence': negate(lhs), 'designated': True},
+                    ],
+                    [
+                        {'sentence': negate(rhs), 'designated': False},
+                    ],
+                ],
+            }
+
+    class BiconditionalDesignated(fde.ConjunctionReducingRule):
+        """
+        This rule reduces to a conjunction of conditionals.
+        """
+    
+        operator    = 'Biconditional'
+        designation = True
+
+        conjunct_op = 'Conditional'
+
+    class BiconditionalNegatedDesignated(fde.ConjunctionReducingRule):
+        """
+        This rule reduces to a conjunction of conditionals.
+        """
+    
+        negated     = True
+        operator    = 'Biconditional'
+        designation = True
+    
+        conjunct_op = 'Conditional'
+
+    class BiconditionalUndesignated(fde.ConjunctionReducingRule):
+        """
+        This rule reduces to a conjunction of conditionals.
+        """
+    
+        negated     = False
+        operator    = 'Biconditional'
+        designation = False
+
+        conjunct_op = 'Conditional'
+
+    class BiconditionalNegatedUndesignated(fde.ConjunctionReducingRule):
+        """
+        This rule reduces to a conjunction of conditionals.
+        """
+    
+        negated     = True
+        operator    = 'Biconditional'
+        designation = False
+
+        conjunct_op = 'Conditional'
 
     class ExistentialDesignated(l3.TableauxRules.ExistentialDesignated):
         """
@@ -440,16 +502,18 @@ class TableauxRules(object):
             MaterialConditionalNegatedDesignated,
             MaterialConditionalUndesignated,
 
-            #ConditionalNegatedDesignated,
-            #BiconditionalNegatedDesignated,
+            BiconditionalDesignated,
+            BiconditionalNegatedUndesignated,
+            BiconditionalUndesignated,
+            BiconditionalNegatedDesignated,
 
             ExistentialNegatedDesignated,
             ExistentialNegatedUndesignated,
             UniversalNegatedDesignated,
             UniversalNegatedUndesignated,
 
-            #DoubleNegationDesignated,
-            #DoubleNegationUndesignated,
+            DoubleNegationDesignated,
+            DoubleNegationUndesignated,
         ],
         [
             # branching rules
@@ -463,12 +527,13 @@ class TableauxRules(object):
             MaterialBiconditionalNegatedDesignated,
             MaterialBiconditionalUndesignated,
             MaterialBiconditionalNegatedUndesignated,
-            #ConditionalDesignated,
-            #ConditionalUndesignated,
-            #ConditionalNegatedUndesignated,
-            #BiconditionalDesignated,
-            #BiconditionalNegatedUndesignated,
-            #BiconditionalUndesignated,
+
+            ConditionalDesignated,
+            ConditionalUndesignated,
+            ConditionalNegatedUndesignated,
+            ConditionalNegatedDesignated,
+
+
         ],
         [
             ExistentialDesignated,

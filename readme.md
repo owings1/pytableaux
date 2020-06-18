@@ -37,6 +37,8 @@ Many-valued
 - **B3E** - Bochvar 3-valued External Logic
 - **GO** - Gappy Object Logic
 - **L3** - Łukasiewicz 3-valued Logic
+- **G3** - Gödel 3-valued Logic
+- **P3** - Emil Post 3-valued Logic
 - **LP** - Logic of Paradox
 - **RM3** - R-mingle 3
 
