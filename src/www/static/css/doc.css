@@ -49,3 +49,8 @@ body {
 .contents > ul li p {
     margin-block-end: 0;
 }
+
+.subscript {
+    vertical-align: sub;
+    font-size: 80%;
+}
