@@ -97,37 +97,6 @@ class Model(k3.Model):
         i = self.truth_values_list.index(value)
         return self.truth_values_list[i - 1]
 
-    def read_branch(self, branch):
-        for node in branch.nodes:
-            if node.has('sentence'):
-                self._collect_node(node)
-                sentence = node.props['sentence']
-                is_literal = self.is_sentence_literal(sentence)
-                is_opaque = self.is_sentence_opaque(sentence)
-                if is_literal or is_opaque:
-                    if sentence.operator == 'Negation':
-                        sentence = sentence.negatum
-                        if node.props['designated']:
-                            value = 'F'
-                        else:
-                            if branch.has({'sentence': sentence, 'designated': False}):
-                                value = 'N'
-                            else:
-                                value = 'T'
-                    else:
-                        if node.props['designated']:
-                            value = 'T'
-                        else:
-                            if branch.has({'sentence': negate(sentence), 'designated': False}):
-                                value = 'N'
-                            else:
-                                value = 'F'
-                    if is_opaque:
-                        self.set_opaque_value(sentence, value)
-                    else:
-                        self.set_literal_value(sentence, value)
-        self.finish()
-
 class TableauxSystem(fde.TableauxSystem):
     """
     P3's Tableaux System inherits directly from the `FDE system`_, employing
@@ -567,7 +536,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class MaterialBiconditionalDesignated(DefaultNodeRule):
+    class MaterialBiconditionalDesignated(fde.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -575,22 +544,9 @@ class TableauxRules(object):
         operator    = 'Material Biconditional'
         designation = True
 
-        branch_level = 1
+        conjunct_op = 'Material Conditional'
 
-        def get_target_for_node(self, node, branch):
-            s = self.sentence(node)
-            cond1 = operate('Material Conditional', [s.lhs, s.rhs])
-            cond2 = operate('Material Conditional', [s.rhs, s.lhs])
-            conj = operate('Conjunction', [cond1, cond2])
-            return {
-                'adds': [
-                    [
-                        {'sentence': conj, 'designated': self.designation},
-                    ],
-                ],
-            }
-
-    class MaterialBiconditionalNegatedDesignated(DefaultNodeRule):
+    class MaterialBiconditionalNegatedDesignated(fde.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -599,24 +555,9 @@ class TableauxRules(object):
         operator    = 'Material Biconditional'
         designation = True
 
-        branch_level = 1
-
         conjunct_op = 'Material Conditional'
 
-        def get_target_for_node(self, node, branch):
-            s = self.sentence(node)
-            cond1 = operate(self.conjunct_op, [s.lhs, s.rhs])
-            cond2 = operate(self.conjunct_op, [s.rhs, s.lhs])
-            conj = operate('Conjunction', [cond1, cond2])
-            return {
-                'adds': [
-                    [
-                        {'sentence': negate(conj), 'designated': self.designation},
-                    ],
-                ],
-            }
-
-    class MaterialBiconditionalUndesignated(DefaultNodeRule):
+    class MaterialBiconditionalUndesignated(fde.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -624,24 +565,9 @@ class TableauxRules(object):
         operator    = 'Material Biconditional'
         designation = False
 
-        branch_level = 1
-
         conjunct_op = 'Material Conditional'
 
-        def get_target_for_node(self, node, branch):
-            s = self.sentence(node)
-            cond1 = operate(self.conjunct_op, [s.lhs, s.rhs])
-            cond2 = operate(self.conjunct_op, [s.rhs, s.lhs])
-            conj = operate('Conjunction', [cond1, cond2])
-            return {
-                'adds': [
-                    [
-                        {'sentence': conj, 'designated': self.designation},
-                    ],
-                ],
-            }
-
-    class MaterialBiconditionalNegatedUndesignated(DefaultNodeRule):
+    class MaterialBiconditionalNegatedUndesignated(fde.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -650,22 +576,7 @@ class TableauxRules(object):
         operator    = 'Material Biconditional'
         designation = False
 
-        branch_level = 1
-
         conjunct_op = 'Material Conditional'
-
-        def get_target_for_node(self, node, branch):
-            s = self.sentence(node)
-            cond1 = operate(self.conjunct_op, [s.lhs, s.rhs])
-            cond2 = operate(self.conjunct_op, [s.rhs, s.lhs])
-            conj = operate('Conjunction', [cond1, cond2])
-            return {
-                'adds': [
-                    [
-                        {'sentence': negate(conj), 'designated': self.designation},
-                    ],
-                ],
-            }
 
     class ConditionalDesignated(MaterialConditionalDesignated):
         """
