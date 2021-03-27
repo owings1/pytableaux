@@ -23,16 +23,21 @@ import importlib
 import traceback
 import os.path
 import cherrypy as server
+from cherrypy._cpdispatch import Dispatcher
 from jinja2 import Environment, PackageLoader
-import prometheus_client
+import prometheus_client as prom
 
 ProofTimeoutError = logic.TableauxSystem.ProofTimeoutError
 # http://python-future.org/compatible_idioms.html#basestring
 from past.builtins import basestring
 
+default_app_name = 'pytableaux'
 default_host = '127.0.0.1'
 default_port = 8080
 default_metrics_port = 8181
+default_maxtimeout = 30000
+
+envvar_app_name = 'PT_APPNAME'
 envvar_host = 'PT_HOST'
 envvar_port = 'PT_PORT'
 envvar_debug = 'PT_DEBUG'
@@ -40,13 +45,13 @@ envvar_maxtimeout = 'PT_MAXTIMEOUT'
 envvar_ganalytics_id = 'PT_GOOGLE_ANALYTICS_ID'
 envvar_metrics_port = 'PT_METRICS_PORT'
 index_filename = 'index.html'
-default_maxtimeout = 30000
 
 def is_envvar(envvar):
     return envvar in os.environ and len(os.environ[envvar]) > 0
 
 is_debug = is_envvar(envvar_debug)
 is_google_analytics = is_envvar(envvar_ganalytics_id)
+app_name = os.environ[envvar_app_name] if is_envvar(envvar_app_name) else default_app_name
 maxtimeout = int(os.environ[envvar_maxtimeout]) if is_envvar(envvar_maxtimeout) else default_maxtimeout
 google_analytics_id = os.environ[envvar_ganalytics_id] if is_google_analytics else None
 metrics_port = int(os.environ[envvar_metrics_port]) if is_envvar(envvar_metrics_port) else default_metrics_port
@@ -91,6 +96,20 @@ for name in modules['logics']:
 for category in logic_categories.keys():
     logic_categories[category].sort(key=get_category_order)
 
+class AppDispatcher(Dispatcher):
+    def __call__(self, path_info):
+        metrics['app_requests_count'].labels(app_name, path_info).inc()
+        print(path_info)
+        return Dispatcher.__call__(self, path_info)
+
+metrics = {
+    'app_requests_count' : prom.Counter(
+        'app_requests_count',
+        'total app http requests count',
+        ['app_name', 'endpoint']
+    )
+}
+
 global_config = {
     'global': {
         'server.socket_host'   : os.environ[envvar_host] if is_envvar(envvar_host) else default_host,
@@ -98,7 +117,11 @@ global_config = {
         'engine.autoreload.on' : is_debug
     }
 }
+
 config = {
+    '/' : {
+        'request.dispatch': AppDispatcher()
+    },
     '/static' : {
         'tools.staticdir.on'  : True,
         'tools.staticdir.dir' : static_dir
@@ -185,7 +208,7 @@ class RequestDataError(Exception):
         self.errors = errors
 
 class App(object):
-                
+
     @server.expose
     def index(self, *args, **form_data):
 
@@ -248,6 +271,7 @@ class App(object):
     @server.tools.json_in()
     @server.tools.json_out()
     def api(self, action=None):
+
         if server.request.method == 'POST':
             try:
                 result = None
@@ -581,7 +605,7 @@ class App(object):
 
 def main(): # pragma: no cover
     print("Staring metrics on port", metrics_port)
-    prometheus_client.start_http_server(metrics_port)
+    prom.start_http_server(metrics_port)
     server.config.update(global_config)
     server.quickstart(App(), '/', config)
 
