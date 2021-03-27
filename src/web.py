@@ -24,6 +24,7 @@ import traceback
 import os.path
 import cherrypy as server
 from jinja2 import Environment, PackageLoader
+import prometheus_client
 
 ProofTimeoutError = logic.TableauxSystem.ProofTimeoutError
 # http://python-future.org/compatible_idioms.html#basestring
@@ -31,11 +32,13 @@ from past.builtins import basestring
 
 default_host = '127.0.0.1'
 default_port = 8080
+default_metrics_port = 8181
 envvar_host = 'PT_HOST'
 envvar_port = 'PT_PORT'
 envvar_debug = 'PT_DEBUG'
 envvar_maxtimeout = 'PT_MAXTIMEOUT'
 envvar_ganalytics_id = 'PT_GOOGLE_ANALYTICS_ID'
+envvar_metrics_port = 'PT_METRICS_PORT'
 index_filename = 'index.html'
 default_maxtimeout = 30000
 
@@ -46,6 +49,7 @@ is_debug = is_envvar(envvar_debug)
 is_google_analytics = is_envvar(envvar_ganalytics_id)
 maxtimeout = int(os.environ[envvar_maxtimeout]) if is_envvar(envvar_maxtimeout) else default_maxtimeout
 google_analytics_id = os.environ[envvar_ganalytics_id] if is_google_analytics else None
+metrics_port = int(os.environ[envvar_metrics_port]) if is_envvar(envvar_metrics_port) else default_metrics_port
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(current_dir, 'www', 'static')
@@ -576,6 +580,8 @@ class App(object):
         return vocab
 
 def main(): # pragma: no cover
+    print("Staring metrics on port", metrics_port)
+    prometheus_client.start_http_server(metrics_port)
     server.config.update(global_config)
     server.quickstart(App(), '/', config)
 

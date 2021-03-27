@@ -5,7 +5,7 @@ EXPOSE 8080
 
 # Required packages
 RUN apk add --no-cache --update python3 curl py3-pip && pip3 install --upgrade pip
-RUN pip3 install --no-cache-dir future jinja2 cherrypy pytest coverage
+RUN pip3 install --no-cache-dir future jinja2 cherrypy pytest coverage prometheus_client
 
 # For documentation generation
 RUN apk add --no-cache --update python3-dev build-base && pip3 install --no-cache-dir Sphinx 
