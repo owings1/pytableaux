@@ -31,49 +31,77 @@ ProofTimeoutError = logic.TableauxSystem.ProofTimeoutError
 # http://python-future.org/compatible_idioms.html#basestring
 from past.builtins import basestring
 
-default_app_name = 'pytableaux'
-default_host = '127.0.0.1'
-default_port = 8080
-default_metrics_port = 8181
-default_maxtimeout = 30000
+CWD = os.path.dirname(os.path.abspath(__file__))
 
-envvar_app_name = 'PT_APPNAME'
-envvar_host = 'PT_HOST'
-envvar_port = 'PT_PORT'
-envvar_debug = 'PT_DEBUG'
-envvar_maxtimeout = 'PT_MAXTIMEOUT'
-envvar_ganalytics_id = 'PT_GOOGLE_ANALYTICS_ID'
-envvar_metrics_port = 'PT_METRICS_PORT'
-index_filename = 'index.html'
+consts = {
+    'index_filename' : 'index.html',
+    'view_path'      : 'www/views',
+    'static_dir'     : os.path.join(CWD, 'www/static'),
+    'favicon_file'   : os.path.join(CWD, 'www/static/img/favicon-60x60.png'),
+    'static_dir_doc' : os.path.join(CWD, '..', 'doc/_build/html')
+}
 
-def is_envvar(envvar):
-    return envvar in os.environ and len(os.environ[envvar]) > 0
+optdefs = {
+    'app_name' : {
+        'default' : 'pytableaux',
+        'envvar'  : 'PT_APPNAME',
+        'type'    : 'string'
+    },
+    'host' : {
+        'default' : '127.0.0.1',
+        'envvar'  : 'PT_HOST',
+        'type'    : 'string'
+    },
+    'port' : {
+        'default' : 8080,
+        'envvar'  : 'PT_PORT',
+        'type'    : 'int'
+    },
+    'metrics_port' : {
+        'default' : 8181,
+        'envvar'  : 'PT_METRICS_PORT',
+        'type'    : 'int'
+    },
+    'is_debug' : {
+        'default' : False,
+        'envvar'  : 'PT_DEBUG',
+        'type'    : 'boolean'
+    },
+    'maxtimeout' : {
+        'default' : 30000,
+        'envvar'  : 'PT_MAXTIMEOUT',
+        'type'    : 'int'
+    },
+    'google_analytics_id' : {
+        'default' : None,
+        'envvar'  : 'PT_GOOGLE_ANALYTICS_ID',
+        'type'    : 'string'
+    }
+}
 
-is_debug = is_envvar(envvar_debug)
-is_google_analytics = is_envvar(envvar_ganalytics_id)
-app_name = os.environ[envvar_app_name] if is_envvar(envvar_app_name) else default_app_name
-maxtimeout = int(os.environ[envvar_maxtimeout]) if is_envvar(envvar_maxtimeout) else default_maxtimeout
-google_analytics_id = os.environ[envvar_ganalytics_id] if is_google_analytics else None
-metrics_port = int(os.environ[envvar_metrics_port]) if is_envvar(envvar_metrics_port) else default_metrics_port
+metrics = {
+    'app_requests_count' : prom.Counter(
+        'app_requests_count',
+        'total app http requests count',
+        ['app_name', 'endpoint']
+    )
+}
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-static_dir = os.path.join(current_dir, 'www', 'static')
-static_dir_doc = os.path.join(current_dir, '..', 'doc', '_build', 'html')
-favicon_file = os.path.join(static_dir, 'img/favicon-60x60.png')
-view_path = 'www/views'
-template_cache = dict()
+#####################################################
+#                                                   #
+# Module Info                                       #
+#                                                   #
+#####################################################
 
-jinja_env = Environment(loader=PackageLoader('logic', view_path))
+modules = dict()
+logic_categories = dict()
+notation_user_predicate_symbols = dict()
 
 available_module_names = {
     'logics'    : ['cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'l3', 'g3', 'p3', 'lp', 'rm3', 'k', 'd', 't', 's4', 's5'],
     'notations' : ['standard', 'polish'],
     'writers'   : ['html', 'ascii']
 }
-
-modules = dict()
-notation_user_predicate_symbols = dict()
-logic_categories = dict()
 
 for package in available_module_names:
     modules[package] = {}
@@ -96,25 +124,46 @@ for name in modules['logics']:
 for category in logic_categories.keys():
     logic_categories[category].sort(key=get_category_order)
 
+#####################################################
+#                                                   #
+# Options                                           #
+#                                                   #
+#####################################################
+
+def get_opt_value(name, defn):
+    if defn['envvar'] in os.environ:
+        v = os.environ[defn['envvar']]
+        if defn['type'] == 'int':
+            v = int(v)
+        elif defn['type'] == 'boolean':
+            v = str(v).lower() in ('true', 'yes', '1')
+        else:
+            # string
+            v = str(v)
+        return v
+    return defn['default']
+
+opts = {
+    name: get_opt_value(name, optdefs[name]) for name in optdefs.keys()
+}
+
+#####################################################
+#                                                   #
+# Server Config                                     #
+#                                                   #
+#####################################################
+
 class AppDispatcher(Dispatcher):
     def __call__(self, path_info):
-        metrics['app_requests_count'].labels(app_name, path_info).inc()
+        metrics['app_requests_count'].labels(opts['app_name'], path_info).inc()
         print(path_info)
         return Dispatcher.__call__(self, path_info)
 
-metrics = {
-    'app_requests_count' : prom.Counter(
-        'app_requests_count',
-        'total app http requests count',
-        ['app_name', 'endpoint']
-    )
-}
-
 global_config = {
     'global': {
-        'server.socket_host'   : os.environ[envvar_host] if is_envvar(envvar_host) else default_host,
-        'server.socket_port'   : int(os.environ[envvar_port]) if is_envvar(envvar_port) else default_port,
-        'engine.autoreload.on' : is_debug
+        'server.socket_host'   : opts['host'],
+        'server.socket_port'   : opts['port'],
+        'engine.autoreload.on' : opts['is_debug']
     }
 }
 
@@ -124,16 +173,16 @@ config = {
     },
     '/static' : {
         'tools.staticdir.on'  : True,
-        'tools.staticdir.dir' : static_dir
+        'tools.staticdir.dir' : consts['static_dir']
     },
     '/doc': {
         'tools.staticdir.on'    : True,
-        'tools.staticdir.dir'   : static_dir_doc,
-        'tools.staticdir.index' : index_filename
+        'tools.staticdir.dir'   : consts['static_dir_doc'],
+        'tools.staticdir.index' : consts['index_filename']
     },
     '/favicon.ico': {
         'tools.staticfile.on': True,
-        'tools.staticfile.filename': favicon_file
+        'tools.staticfile.filename': consts['favicon_file']
     }
 }
 
@@ -169,19 +218,34 @@ base_view_data = {
     'version'             : logic.version,
     'copyright'           : logic.copyright,
     'source_href'         : logic.source_href,
-    'is_debug'            : is_debug,
-    'is_google_analytics' : is_google_analytics,
-    'google_analytics_id' : google_analytics_id,
+    'is_debug'            : opts['is_debug'],
+    'is_google_analytics' : not not opts['google_analytics_id'],
+    'google_analytics_id' : opts['google_analytics_id'],
 }
 
+#####################################################
+#                                                   #
+# Templates                                         #
+#                                                   #
+#####################################################
+
+jinja_env = Environment(loader=PackageLoader('logic', consts['view_path']))
+template_cache = dict()
+
 def get_template(view):
-    if is_debug or (view not in template_cache):
+    if opts['is_debug'] or (view not in template_cache):
         template_cache[view] = jinja_env.get_template(view + '.html')
     return template_cache[view]
 
 def render(view, data={}):
     raw_html = get_template(view).render(data)
     return raw_html
+
+#####################################################
+#                                                   #
+# Generic                                           #
+#                                                   #
+#####################################################
 
 def fix_form_data(form_data):
     form_data = dict(form_data)
@@ -206,6 +270,12 @@ class RequestDataError(Exception):
 
     def __init__(self, errors):
         self.errors = errors
+
+#####################################################
+#                                                   #
+# Webapp                                            #
+#                                                   #
+#####################################################
 
 class App(object):
 
@@ -478,7 +548,7 @@ class App(object):
         if 'group_optimizations' not in body:
             body['group_optimizations'] = True
 
-        odata['options']['debug'] = is_debug
+        odata['options']['debug'] = opts['is_debug']
 
         errors = {}
         try:
@@ -514,7 +584,7 @@ class App(object):
         proof_opts = {
             'is_rank_optim'  : body['rank_optimizations'],
             'is_group_optim' : body['group_optimizations'],
-            'build_timeout'  : maxtimeout,
+            'build_timeout'  : opts['maxtimeout'],
             'is_build_models': odata['options']['models'],
             'max_steps'      : body['max_steps'],
         }
@@ -603,9 +673,15 @@ class App(object):
             raise RequestDataError(errors)
         return vocab
 
+#####################################################
+#                                                   #
+# Main                                              #
+#                                                   #
+#####################################################
+
 def main(): # pragma: no cover
-    print("Staring metrics on port", metrics_port)
-    prom.start_http_server(metrics_port)
+    print("Staring metrics on port", opts['metrics_port'])
+    prom.start_http_server(opts['metrics_port'])
     server.config.update(global_config)
     server.quickstart(App(), '/', config)
 
