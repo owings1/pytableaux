@@ -18,43 +18,105 @@
 #
 # pytableaux - Web Interface
 
-import examples, logic, json, os
+import examples, logic, json, os, time
 import importlib
 import traceback
 import os.path
 import cherrypy as server
+from cherrypy._cpdispatch import Dispatcher
 from jinja2 import Environment, PackageLoader
+import prometheus_client as prom
 
 ProofTimeoutError = logic.TableauxSystem.ProofTimeoutError
 # http://python-future.org/compatible_idioms.html#basestring
 from past.builtins import basestring
 
-default_host = '127.0.0.1'
-default_port = 8080
-envvar_host = 'PT_HOST'
-envvar_port = 'PT_PORT'
-envvar_debug = 'PT_DEBUG'
-envvar_maxtimeout = 'PT_MAXTIMEOUT'
-envvar_ganalytics_id = 'PT_GOOGLE_ANALYTICS_ID'
-index_filename = 'index.html'
-default_maxtimeout = 30000
+CWD = os.path.dirname(os.path.abspath(__file__))
 
-def is_envvar(envvar):
-    return envvar in os.environ and len(os.environ[envvar]) > 0
+consts = {
+    'index_filename' : 'index.html',
+    'view_path'      : 'www/views',
+    'static_dir'     : os.path.join(CWD, 'www/static'),
+    'favicon_file'   : os.path.join(CWD, 'www/static/img/favicon-60x60.png'),
+    'static_dir_doc' : os.path.join(CWD, '..', 'doc/_build/html')
+}
 
-is_debug = is_envvar(envvar_debug)
-is_google_analytics = is_envvar(envvar_ganalytics_id)
-maxtimeout = int(os.environ[envvar_maxtimeout]) if is_envvar(envvar_maxtimeout) else default_maxtimeout
-google_analytics_id = os.environ[envvar_ganalytics_id] if is_google_analytics else None
+optdefs = {
+    'app_name' : {
+        'default' : 'pytableaux',
+        'envvar'  : 'PT_APPNAME',
+        'type'    : 'string'
+    },
+    'host' : {
+        'default' : '127.0.0.1',
+        'envvar'  : 'PT_HOST',
+        'type'    : 'string'
+    },
+    'port' : {
+        'default' : 8080,
+        'envvar'  : 'PT_PORT',
+        'type'    : 'int'
+    },
+    'metrics_port' : {
+        'default' : 8181,
+        'envvar'  : 'PT_METRICS_PORT',
+        'type'    : 'int'
+    },
+    'is_debug' : {
+        'default' : False,
+        'envvar'  : 'PT_DEBUG',
+        'type'    : 'boolean'
+    },
+    'maxtimeout' : {
+        'default' : 30000,
+        'envvar'  : 'PT_MAXTIMEOUT',
+        'type'    : 'int'
+    },
+    'google_analytics_id' : {
+        'default' : None,
+        'envvar'  : 'PT_GOOGLE_ANALYTICS_ID',
+        'type'    : 'string'
+    }
+}
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-static_dir = os.path.join(current_dir, 'www', 'static')
-static_dir_doc = os.path.join(current_dir, '..', 'doc', '_build', 'html')
-favicon_file = os.path.join(static_dir, 'img/favicon-60x60.png')
-view_path = 'www/views'
-template_cache = dict()
+#####################################################
+#                                                   #
+# Metrics                                           #
+#                                                   #
+#####################################################
 
-jinja_env = Environment(loader=PackageLoader('logic', view_path))
+metrics = {
+    'app_requests_count' : prom.Counter(
+        'app_requests_count',
+        'total app http requests',
+        ['app_name', 'endpoint']
+    ),
+    'proofs_completed_count' : prom.Counter(
+        'proofs_completed_count',
+        'total proofs completed',
+        ['app_name', 'logic', 'result']
+    ),
+    'proofs_inprogress_count' : prom.Gauge(
+        'proofs_inprogress_count',
+        'total proofs in progress',
+        ['app_name', 'logic']
+    ),
+    'proofs_execution_time' : prom.Summary(
+        'proofs_execution_time',
+        'total proof execution time',
+        ['app_name', 'logic']
+    )
+}
+
+#####################################################
+#                                                   #
+# Modules Info                                      #
+#                                                   #
+#####################################################
+
+modules = dict()
+logic_categories = dict()
+notation_user_predicate_symbols = dict()
 
 available_module_names = {
     'logics'    : ['cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'l3', 'g3', 'p3', 'lp', 'rm3', 'k', 'd', 't', 's4', 's5'],
@@ -62,53 +124,98 @@ available_module_names = {
     'writers'   : ['html', 'ascii']
 }
 
-modules = dict()
-notation_user_predicate_symbols = dict()
-logic_categories = dict()
-
-for package in available_module_names:
-    modules[package] = {}
-    for name in available_module_names[package]:
-        modules[package][name] = importlib.import_module(package + '.' + name)
-
-for notation_name in modules['notations']:
-    notation = modules['notations'][notation_name]
-    notation_user_predicate_symbols[notation_name] = list(notation.symbol_sets['default'].chars('user_predicate'))
-
 def get_category_order(name):
     return logic.get_logic(name).Meta.category_display_order
 
-for name in modules['logics']:
-    lgc = modules['logics'][name]
-    if lgc.Meta.category not in logic_categories:
-        logic_categories[lgc.Meta.category] = list()
-    logic_categories[lgc.Meta.category].append(name)
+def populate_modules_info():
+    
+    for package in available_module_names:
+        modules[package] = {}
+        for name in available_module_names[package]:
+            modules[package][name] = importlib.import_module(package + '.' + name)
 
-for category in logic_categories.keys():
-    logic_categories[category].sort(key=get_category_order)
+    for notation_name in modules['notations']:
+        notation = modules['notations'][notation_name]
+        notation_user_predicate_symbols[notation_name] = list(notation.symbol_sets['default'].chars('user_predicate'))
+
+    for name in modules['logics']:
+        lgc = modules['logics'][name]
+        if lgc.Meta.category not in logic_categories:
+            logic_categories[lgc.Meta.category] = list()
+        logic_categories[lgc.Meta.category].append(name)
+
+    for category in logic_categories.keys():
+        logic_categories[category].sort(key=get_category_order)
+
+populate_modules_info()
+
+#####################################################
+#                                                   #
+# Options                                           #
+#                                                   #
+#####################################################
+
+def get_opt_value(name, defn):
+    if defn['envvar'] in os.environ:
+        v = os.environ[defn['envvar']]
+        if defn['type'] == 'int':
+            v = int(v)
+        elif defn['type'] == 'boolean':
+            v = str(v).lower() in ('true', 'yes', '1')
+        else:
+            # string
+            v = str(v)
+        return v
+    return defn['default']
+
+opts = {
+    name: get_opt_value(name, optdefs[name]) for name in optdefs.keys()
+}
+
+#####################################################
+#                                                   #
+# Server Config                                     #
+#                                                   #
+#####################################################
+
+class AppDispatcher(Dispatcher):
+    def __call__(self, path_info):
+        metrics['app_requests_count'].labels(opts['app_name'], path_info).inc()
+        print(path_info)
+        return Dispatcher.__call__(self, path_info.split('?')[0])
 
 global_config = {
     'global': {
-        'server.socket_host'   : os.environ[envvar_host] if is_envvar(envvar_host) else default_host,
-        'server.socket_port'   : int(os.environ[envvar_port]) if is_envvar(envvar_port) else default_port,
-        'engine.autoreload.on' : is_debug
+        'server.socket_host'   : opts['host'],
+        'server.socket_port'   : opts['port'],
+        'engine.autoreload.on' : opts['is_debug']
     }
 }
+
 config = {
+    '/' : {
+        'request.dispatch': AppDispatcher()
+    },
     '/static' : {
         'tools.staticdir.on'  : True,
-        'tools.staticdir.dir' : static_dir
+        'tools.staticdir.dir' : consts['static_dir']
     },
     '/doc': {
         'tools.staticdir.on'    : True,
-        'tools.staticdir.dir'   : static_dir_doc,
-        'tools.staticdir.index' : index_filename
+        'tools.staticdir.dir'   : consts['static_dir_doc'],
+        'tools.staticdir.index' : consts['index_filename']
     },
     '/favicon.ico': {
         'tools.staticfile.on': True,
-        'tools.staticfile.filename': favicon_file
+        'tools.staticfile.filename': consts['favicon_file']
     }
 }
+
+#####################################################
+#                                                   #
+# Static Data                                       #
+#                                                   #
+#####################################################
 
 browser_data = {
     'example_predicates'              : examples.test_pred_data,
@@ -142,19 +249,34 @@ base_view_data = {
     'version'             : logic.version,
     'copyright'           : logic.copyright,
     'source_href'         : logic.source_href,
-    'is_debug'            : is_debug,
-    'is_google_analytics' : is_google_analytics,
-    'google_analytics_id' : google_analytics_id,
+    'is_debug'            : opts['is_debug'],
+    'is_google_analytics' : not not opts['google_analytics_id'],
+    'google_analytics_id' : opts['google_analytics_id'],
 }
 
+#####################################################
+#                                                   #
+# Templates                                         #
+#                                                   #
+#####################################################
+
+jinja_env = Environment(loader=PackageLoader('logic', consts['view_path']))
+template_cache = dict()
+
 def get_template(view):
-    if is_debug or (view not in template_cache):
+    if opts['is_debug'] or (view not in template_cache):
         template_cache[view] = jinja_env.get_template(view + '.html')
     return template_cache[view]
 
 def render(view, data={}):
     raw_html = get_template(view).render(data)
     return raw_html
+
+#####################################################
+#                                                   #
+# Generic                                           #
+#                                                   #
+#####################################################
 
 def fix_form_data(form_data):
     form_data = dict(form_data)
@@ -180,8 +302,14 @@ class RequestDataError(Exception):
     def __init__(self, errors):
         self.errors = errors
 
+#####################################################
+#                                                   #
+# Webapp                                            #
+#                                                   #
+#####################################################
+
 class App(object):
-                
+
     @server.expose
     def index(self, *args, **form_data):
 
@@ -244,6 +372,7 @@ class App(object):
     @server.tools.json_in()
     @server.tools.json_out()
     def api(self, action=None):
+
         if server.request.method == 'POST':
             try:
                 result = None
@@ -450,7 +579,7 @@ class App(object):
         if 'group_optimizations' not in body:
             body['group_optimizations'] = True
 
-        odata['options']['debug'] = is_debug
+        odata['options']['debug'] = opts['is_debug']
 
         errors = {}
         try:
@@ -483,15 +612,53 @@ class App(object):
         if len(errors) > 0:
             raise RequestDataError(errors)
 
+        proof_start_time = time.time()
+
+        metrics['proofs_inprogress_count'].labels(
+            opts['app_name'], selected_logic.name
+        ).inc()
+
         proof_opts = {
             'is_rank_optim'  : body['rank_optimizations'],
             'is_group_optim' : body['group_optimizations'],
-            'build_timeout'  : maxtimeout,
+            'build_timeout'  : opts['maxtimeout'],
             'is_build_models': odata['options']['models'],
             'max_steps'      : body['max_steps'],
         }
+
         proof = logic.tableau(selected_logic, arg, **proof_opts)
-        proof.build()
+
+        try:
+
+            proof.build()
+
+        except:
+
+            metrics['proofs_inprogress_count'].labels(
+                opts['app_name'], selected_logic.name
+            ).dec()
+
+            proof_time = time.time() - proof_start_time
+
+            metrics['proofs_execution_time'].labels(
+                opts['app_name'], selected_logic.name
+            ).observe(proof_time)
+
+            raise
+
+        proof_time = time.time() - proof_start_time
+
+        metrics['proofs_inprogress_count'].labels(
+            opts['app_name'], selected_logic.name
+        ).dec()
+
+        metrics['proofs_execution_time'].labels(
+            opts['app_name'], selected_logic.name
+        ).observe(proof_time)
+
+        metrics['proofs_completed_count'].labels(
+            opts['app_name'], selected_logic.name, proof.stats['result']
+        ).inc()
 
         return {
             'tableau': {
@@ -575,7 +742,15 @@ class App(object):
             raise RequestDataError(errors)
         return vocab
 
+#####################################################
+#                                                   #
+# Main                                              #
+#                                                   #
+#####################################################
+
 def main(): # pragma: no cover
+    print("Staring metrics on port", opts['metrics_port'])
+    prom.start_http_server(opts['metrics_port'])
     server.config.update(global_config)
     server.quickstart(App(), '/', config)
 
