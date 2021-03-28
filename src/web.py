@@ -18,7 +18,7 @@
 #
 # pytableaux - Web Interface
 
-import examples, logic, json, os
+import examples, logic, json, os, time
 import importlib
 import traceback
 import os.path
@@ -79,17 +79,38 @@ optdefs = {
     }
 }
 
+#####################################################
+#                                                   #
+# Metrics                                           #
+#                                                   #
+#####################################################
+
 metrics = {
     'app_requests_count' : prom.Counter(
         'app_requests_count',
-        'total app http requests count',
+        'total app http requests',
         ['app_name', 'endpoint']
+    ),
+    'proofs_completed_count' : prom.Counter(
+        'proofs_completed_count',
+        'total proofs completed',
+        ['app_name', 'logic', 'result']
+    ),
+    'proofs_inprogress_count' : prom.Gauge(
+        'proofs_inprogress_count',
+        'total proofs in progress',
+        ['app_name', 'logic']
+    ),
+    'proofs_execution_time' : prom.Summary(
+        'proofs_execution_time',
+        'total proof execution time',
+        ['app_name', 'logic']
     )
 }
 
 #####################################################
 #                                                   #
-# Module Info                                       #
+# Modules Info                                      #
 #                                                   #
 #####################################################
 
@@ -103,26 +124,30 @@ available_module_names = {
     'writers'   : ['html', 'ascii']
 }
 
-for package in available_module_names:
-    modules[package] = {}
-    for name in available_module_names[package]:
-        modules[package][name] = importlib.import_module(package + '.' + name)
-
-for notation_name in modules['notations']:
-    notation = modules['notations'][notation_name]
-    notation_user_predicate_symbols[notation_name] = list(notation.symbol_sets['default'].chars('user_predicate'))
-
 def get_category_order(name):
     return logic.get_logic(name).Meta.category_display_order
 
-for name in modules['logics']:
-    lgc = modules['logics'][name]
-    if lgc.Meta.category not in logic_categories:
-        logic_categories[lgc.Meta.category] = list()
-    logic_categories[lgc.Meta.category].append(name)
+def populate_modules_info():
+    
+    for package in available_module_names:
+        modules[package] = {}
+        for name in available_module_names[package]:
+            modules[package][name] = importlib.import_module(package + '.' + name)
 
-for category in logic_categories.keys():
-    logic_categories[category].sort(key=get_category_order)
+    for notation_name in modules['notations']:
+        notation = modules['notations'][notation_name]
+        notation_user_predicate_symbols[notation_name] = list(notation.symbol_sets['default'].chars('user_predicate'))
+
+    for name in modules['logics']:
+        lgc = modules['logics'][name]
+        if lgc.Meta.category not in logic_categories:
+            logic_categories[lgc.Meta.category] = list()
+        logic_categories[lgc.Meta.category].append(name)
+
+    for category in logic_categories.keys():
+        logic_categories[category].sort(key=get_category_order)
+
+populate_modules_info()
 
 #####################################################
 #                                                   #
@@ -157,7 +182,7 @@ class AppDispatcher(Dispatcher):
     def __call__(self, path_info):
         metrics['app_requests_count'].labels(opts['app_name'], path_info).inc()
         print(path_info)
-        return Dispatcher.__call__(self, path_info)
+        return Dispatcher.__call__(self, path_info.split('?')[0])
 
 global_config = {
     'global': {
@@ -185,6 +210,12 @@ config = {
         'tools.staticfile.filename': consts['favicon_file']
     }
 }
+
+#####################################################
+#                                                   #
+# Static Data                                       #
+#                                                   #
+#####################################################
 
 browser_data = {
     'example_predicates'              : examples.test_pred_data,
@@ -581,6 +612,12 @@ class App(object):
         if len(errors) > 0:
             raise RequestDataError(errors)
 
+        proof_start_time = time.time()
+
+        metrics['proofs_inprogress_count'].labels(
+            opts['app_name'], selected_logic.name
+        ).inc()
+
         proof_opts = {
             'is_rank_optim'  : body['rank_optimizations'],
             'is_group_optim' : body['group_optimizations'],
@@ -588,8 +625,40 @@ class App(object):
             'is_build_models': odata['options']['models'],
             'max_steps'      : body['max_steps'],
         }
+
         proof = logic.tableau(selected_logic, arg, **proof_opts)
-        proof.build()
+
+        try:
+
+            proof.build()
+
+        except:
+
+            metrics['proofs_inprogress_count'].labels(
+                opts['app_name'], selected_logic.name
+            ).dec()
+
+            proof_time = time.time() - proof_start_time
+
+            metrics['proofs_execution_time'].labels(
+                opts['app_name'], selected_logic.name
+            ).observe(proof_time)
+
+            raise
+
+        proof_time = time.time() - proof_start_time
+
+        metrics['proofs_inprogress_count'].labels(
+            opts['app_name'], selected_logic.name
+        ).dec()
+
+        metrics['proofs_execution_time'].labels(
+            opts['app_name'], selected_logic.name
+        ).observe(proof_time)
+
+        metrics['proofs_completed_count'].labels(
+            opts['app_name'], selected_logic.name, proof.stats['result']
+        ).inc()
 
         return {
             'tableau': {
