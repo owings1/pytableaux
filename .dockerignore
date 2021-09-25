@@ -9,3 +9,7 @@ doc/_build
 /htmlcov
 **/__pycache__
 **/.pytest_cache
+/extras
+/res
+.vscode
+/settings.json
