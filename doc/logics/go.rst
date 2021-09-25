@@ -56,7 +56,7 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
     Further Reading
     ===============
 
-    - Doug Owings (2012). `_Indeterminacy and Logical Atoms`_. *Ph.D. Thesis, University of Connecticut*.
+    - Doug Owings (2012). `Indeterminacy and Logical Atoms`_. *Ph.D. Thesis, University of Connecticut*.
 
     - `Colin Caret`_. (2017). `Hybridized Paracomplete and Paraconsistent Logics`_. *The Australasian 
       Journal of Logic*, 14.
