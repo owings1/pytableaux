@@ -53,8 +53,16 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
       at the University of Connecticut, under `Professor Jc Beall`_.
 
 
-.. _Professor Jc Beall: http://entailments.net
+    Further Reading
+    ===============
 
+    - Doug Owings (2012). `_Indeterminacy and Logical Atoms`_. *Ph.D. Thesis, University of Connecticut*.
+
+    - `Colin Caret`_. (2017). `Hybridized Paracomplete and Paraconsistent Logics`_. *The Australasian 
+      Journal of Logic*, 14.
+
+.. _Professor Jc Beall: http://entailments.net
+.. _Colin Caret: https://sites.google.com/view/colincaret
 .. _Indeterminacy and Logical Atoms: https://github.com/owings1/dissertation/raw/master/output/dissertation.pdf
 .. _K3: k3.html
 .. _K3 Predication: k3.html#predication
@@ -62,3 +70,4 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
 .. _B3E: b3e.html
 .. _FDE: fde.html
 .. _CPL: cpl.html
+.. _Hybridized Paracomplete and Paraconsistent Logics: https://ojs.victoria.ac.nz/ajl/article/view/4035/3588
