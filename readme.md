@@ -52,7 +52,7 @@ Bivalent Modal
 
 ## Contributing
 
-Please file any issues on [bitbucket][issues].
+Please file any issues on [github][issues].
 
 ## Copyright & License
 
@@ -62,4 +62,4 @@ Copyright (C) 2014-2020 Doug Owings. Released under the [GNU Affero General Publ
 [doc]: http://logic.dougowings.net/doc/
 [license]: https://www.gnu.org/licenses/agpl-3.0.en.html
 [dockerhub]: https://hub.docker.com/r/owings1/pytableaux/
-[issues]: https://bitbucket.org/owings1/pytableaux/issues
+[issues]: https://github.com/owings1/pytableaux/issues

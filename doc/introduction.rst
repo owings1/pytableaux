@@ -179,11 +179,11 @@ To install natively:
 
     1. Download the source, for example::
 
-        git clone https://bitbucket.org/owings1/pytableaux
+        git clone https://github.com/owings1/pytableaux
     
     2. Install dependencies::
 
-        pip install future jinja2 cherrypy
+        pip install future jinja2 cherrypy prometheus_client
 
     3. Launch the web interface, for example::
 
@@ -214,13 +214,7 @@ To run the tests:
 
 To build the Docker image yourself:
 
-    1. For Python3::
-
-        docker build -f res/python3.dockerfile .
-
-    2. For Python2::
-
-        docker build -f res/python2.dockerfile .
+    docker build -f res/python3.dockerfile .
 
 Parsing
 =======
@@ -240,8 +234,8 @@ Doug Owings at doug at dougowings dot net. You can also submit issues and merge 
 on `Bitbucket`_.
 
 
-.. _dissertation: https://bytebucket.org/owings1/dissertation/raw/master/output/dissertation.pdf
+.. _dissertation: https://github.com/owings1/dissertation/raw/master/output/dissertation.pdf
 
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en
 
-.. _Bitbucket: https://bitbucket.org/owings1/pytableaux
+.. _Bitbucket: https://github.com/owings1/pytableaux

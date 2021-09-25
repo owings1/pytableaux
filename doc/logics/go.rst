@@ -55,7 +55,7 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
 
 .. _Professor Jc Beall: http://entailments.net
 
-.. _Indeterminacy and Logical Atoms: https://bitbucket.org/owings1/dissertation/raw/master/output/dissertation.pdf
+.. _Indeterminacy and Logical Atoms: https://github.com/owings1/dissertation/raw/master/output/dissertation.pdf
 
 .. _K3: k3.html
 
