@@ -329,7 +329,7 @@ class Model(logic.Model):
 
     def value_of_necessity(self, sentence, world=0, **kw):
         """
-        A possibility sentence is true at `w` iff its operand is true at `w'` for
+        A necessity sentence is true at `w` iff its operand is true at `w'` for
         each `w'` such that `<w, w'>` is in the access relation.
         """
         for w2 in self.visibles(world):

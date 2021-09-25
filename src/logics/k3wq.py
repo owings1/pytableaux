@@ -93,9 +93,9 @@ class Model(k3w.Model):
 
     def value_of_existential(self, sentence, **kw):
         """
-        A universal sentence is interpreted in terms of `generalized conjunction`.
+        An existential sentence is interpreted in terms of `generalized disjunction`.
         If we order the values least to greatest as **N**, **T**, **F**, then we
-        can define the value of a universal in terms of the `maximum` value of
+        can define the value of an existential in terms of the `maximum` value of
         the set of values for the substitution of each constant in the model for
         the variable.
         """
@@ -129,7 +129,7 @@ class TableauxRules(object):
     The Tableaux System for K3WQ contains the `FDE closure rule`_, and the
     `K3 closure rule`_. All of the operator rules are the same as `K3W`_. The
     rules for the quantifiers, however, are different.
-    
+
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
     .. _K3 closure rule: k3.html#logics.k3w.TableauxRules.GlutClosure
     .. _FDE: fde.html
@@ -378,7 +378,7 @@ class TableauxRules(object):
 
     class ExistentialDesignated(DefaultNewConstantRule):
         """
-        From an untick, designated existential node `n` on a branch `b`, add
+        From an unticked, designated existential node `n` on a branch `b`, add
         two designated nodes to `b`. One node is the result of universally
         quantifying over the disjunction of the inner sentence with its negation.
         The other node is a substitution of a constant new to `b`. Then tick `n`.
@@ -495,7 +495,7 @@ class TableauxRules(object):
         From an unticked, designated, negated universal node `n` on a branch `b`,
         add two designated nodes to `b`. The first node is a universally quantified
         disjunction of the inner sentence and its negation. The second node is the
-        negation of the inner sentence, substitutin a constant new to `b` for the
+        negation of the inner sentence, substituting a constant new to `b` for the
         variable. Then tick `n`.
         """
 
