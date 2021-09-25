@@ -73,3 +73,4 @@ values is:
 .. _Entailment: https://www.google.com/books/edition/_/8LRGswEACAAJ?hl=en
 .. _An Introduction to Non-Classical Logic: https://www.google.com/books/edition/_/rMXVbmAw3YwC?hl=en
 .. _Relevant Analytic Tableaux: http://www.pitt.edu/~belnap/77relevantanalytictableaux.pdf
+.. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en

@@ -5,3 +5,4 @@
 /local
 .coverage
 /htmlcov
+.vscode/settings.json
