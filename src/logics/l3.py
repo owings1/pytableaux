@@ -37,7 +37,7 @@ from logic import operate, negate, negative
 
 class Model(k3.Model):
     """
-    An L3 model is just like a `K3 model`_ with different tables for the conditional
+    An Ł3 model is just like a `K3 model`_ with different tables for the conditional
     and bi-conditional operators.
 
     .. _K3 model: k3.html#logics.k3.Model

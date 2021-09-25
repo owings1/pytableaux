@@ -734,7 +734,8 @@ class TableauxRules(object):
                 
     class SelfIdentityClosure(IsModal, logic.TableauxSystem.ClosureRule):
         """
-        A branch closes when a sentence of the form P{~a = a} appears on the branch *at any world*.
+        A branch closes when a sentence of the form P{~a = a} appears on the
+        branch *at any world*.
         """
 
         # tracker implementation
@@ -763,7 +764,8 @@ class TableauxRules(object):
 
     class NonExistenceClosure(IsModal, logic.TableauxSystem.ClosureRule):
         """
-        A branch closes when a sentence of the form P{~!a} appears on the branch *at any world*.
+        A branch closes when a sentence of the form P{~!a} appears on the branch
+        *at any world*.
         """
 
         # tracker implementation
@@ -1404,7 +1406,7 @@ class TableauxRules(object):
             if self.adz.closure_score(target) == 1:
                 return 1
 
-            # not applied to yet
+            # Not applied to yet
             node_apply_count = self.node_application_count(target['node'].id, target['branch'].id)
             if node_apply_count == 0:
                 return 1

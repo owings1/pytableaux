@@ -128,7 +128,7 @@ class TableauxRules(object):
     """
     The Tableaux System for K3WQ contains the `FDE closure rule`_, and the
     `K3 closure rule`_. All of the operator rules are the same as `K3W`_. The
-    rules for the quantifiers, however, are different
+    rules for the quantifiers, however, are different.
     
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
     .. _K3 closure rule: k3.html#logics.k3w.TableauxRules.GlutClosure
