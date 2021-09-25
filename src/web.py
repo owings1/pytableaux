@@ -24,7 +24,7 @@ import traceback
 import os.path
 import cherrypy as server
 from cherrypy._cpdispatch import Dispatcher
-from jinja2 import Environment, PackageLoader
+from jinja2 import Environment, FileSystemLoader
 import prometheus_client as prom
 
 ProofTimeoutError = logic.TableauxSystem.ProofTimeoutError
@@ -35,7 +35,7 @@ CWD = os.path.dirname(os.path.abspath(__file__))
 
 consts = {
     'index_filename' : 'index.html',
-    'view_path'      : 'www/views',
+    'view_path'      : os.path.join(CWD, 'www/views'),
     'static_dir'     : os.path.join(CWD, 'www/static'),
     'favicon_file'   : os.path.join(CWD, 'www/static/img/favicon-60x60.png'),
     'static_dir_doc' : os.path.join(CWD, '..', 'doc/_build/html')
@@ -260,7 +260,7 @@ base_view_data = {
 #                                                   #
 #####################################################
 
-jinja_env = Environment(loader=PackageLoader('logic', consts['view_path']))
+jinja_env = Environment(loader=FileSystemLoader(consts['view_path']))
 template_cache = dict()
 
 def get_template(view):
