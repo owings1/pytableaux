@@ -15,7 +15,7 @@ RUN pip3 install --upgrade pip && \
     pip3 install --no-cache-dir \
     future jinja2 cherrypy pytest coverage prometheus_client Sphinx
 
-COPY --chown=appuser . .
+COPY --chown=appuser:appgroup . .
 
 # Generate documentation
 RUN cd doc && make clean html
