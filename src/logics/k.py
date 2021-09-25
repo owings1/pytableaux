@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
-# Copyright (C) 2014-2020 Doug Owings.
+# Copyright (C) 2014-2021 Doug Owings.
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by

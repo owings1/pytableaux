@@ -1,5 +1,5 @@
 # pytableaux, a multi-logic proof generator.
-# Copyright (C) 2014-2020 Doug Owings.
+# Copyright (C) 2014-2021 Doug Owings.
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -29,7 +29,7 @@ base_dir = os.path.abspath(os.path.join(current_dir, '..'))
 with open(os.path.join(base_dir, 'VERSION'), 'r') as f:
     version = f.read().strip()
 
-copyright = '2014-2020, Doug Owings. Released under the GNU Affero General Public License v3 or later'
+copyright = '2014-2021, Doug Owings. Released under the GNU Affero General Public License v3 or later'
 source_href = 'https://github.com/owings1/pytableaux'
 
 default_notation = 'polish'
