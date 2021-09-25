@@ -107,6 +107,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE DoubleNegationDesignated rule`_.
 
+        //ruledoc//fde//DoubleNegationDesignated//
+
         .. _FDE DoubleNegationDesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationDesignated
         """
         pass
@@ -114,6 +116,8 @@ class TableauxRules(object):
     class DoubleNegationUndesignated(k3.TableauxRules.DoubleNegationUndesignated):
         """
         This rule is the same as the `FDE DoubleNegationUndesignated rule`_.
+
+        //ruledoc//fde//DoubleNegationUndesignated//
 
         .. _FDE DoubleNegationUndesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationUndesignated
         """
@@ -123,6 +127,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE AssertionDesignated rule`_.
 
+        //ruledoc//fde//AssertionDesignated//
+
         .. _FDE AssertionDesignated rule: fde.html#logics.fde.TableauxRules.AssertionDesignated
         """
         pass
@@ -130,6 +136,8 @@ class TableauxRules(object):
     class AssertionNegatedDesignated(k3.TableauxRules.AssertionNegatedDesignated):
         """
         This rule is the same as the `FDE AssertionNegatedDesignated rule`_.
+
+        //ruledoc//fde//AssertionNegatedDesignated//
 
         .. _FDE AssertionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.AssertionNegatedDesignated
         """
@@ -139,6 +147,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE AssertionUndesignated rule`_.
 
+        //ruledoc//fde//AssertionUndesignated//
+
         .. _FDE AssertionUndesignated rule: fde.html#logics.fde.TableauxRules.AssertionUndesignated
         """
         pass
@@ -146,6 +156,8 @@ class TableauxRules(object):
     class AssertionNegatedUndesignated(k3.TableauxRules.AssertionNegatedUndesignated):
         """
         This rule is the same as the `FDE AssertionNegatedUndesignated rule`_.
+
+        //ruledoc//fde//AssertionNegatedUndesignated//
 
         .. _FDE AssertionNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.AssertionNegatedUndesignated
         """
@@ -155,6 +167,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE ConjunctionDesignated rule`_.
 
+        //ruledoc//fde//ConjunctionDesignated//
+
         .. _FDE ConjunctionDesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionDesignated
         """
         pass
@@ -162,6 +176,8 @@ class TableauxRules(object):
     class ConjunctionNegatedDesignated(k3.TableauxRules.ConjunctionNegatedDesignated):
         """
         This rule is the same as the `FDE ConjunctionNegatedDesignated rule`_.
+
+        //ruledoc//fde//ConjunctionNegatedDesignated//
 
         .. _FDE ConjunctionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionNegatedDesignated
         """
@@ -171,6 +187,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE ConjunctionUndesignated rule`_.
 
+        //ruledoc//fde//ConjunctionUndesignated//
+
         .. _FDE ConjunctionUndesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionUndesignated
         """
         pass
@@ -178,6 +196,8 @@ class TableauxRules(object):
     class ConjunctionNegatedUndesignated(k3.TableauxRules.ConjunctionNegatedUndesignated):
         """
         This rule is the same as the `FDE ConjunctionNegatedUndesignated rule`_.
+
+        //ruledoc//fde//ConjunctionNegatedUndesignated//
 
         .. _FDE ConjunctionNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionNegatedUndesignated
         """
@@ -187,6 +207,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE DisjunctionDesignated rule`_.
 
+        //ruledoc//fde//DisjunctionDesignated//
+
         .. _FDE DisjunctionDesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionDesignated
         """
         pass
@@ -194,6 +216,8 @@ class TableauxRules(object):
     class DisjunctionNegatedDesignated(k3.TableauxRules.DisjunctionNegatedDesignated):
         """
         This rule is the same as the `FDE DisjunctionNegatedDesignated rule`_.
+
+        //ruledoc//fde//DisjunctionNegatedDesignated//
 
         .. _FDE DisjunctionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionNegatedDesignated
         """
@@ -203,6 +227,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE DisjunctionUndesignated rule`_.
 
+        //ruledoc//fde//DisjunctionUndesignated//
+
         .. _FDE DisjunctionUndesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionUndesignated
         """
         pass
@@ -210,6 +236,8 @@ class TableauxRules(object):
     class DisjunctionNegatedUndesignated(k3.TableauxRules.DisjunctionNegatedUndesignated):
         """
         This rule is the same as the `FDE DisjunctionNegatedUndesignated rule`_.
+
+        //ruledoc//fde//DisjunctionNegatedUndesignated//
 
         .. _FDE DisjunctionNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionNegatedUndesignated
         """
@@ -219,6 +247,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE MaterialConditionalDesignated rule`_.
 
+        //ruledoc//fde//MaterialConditionalDesignated//
+
         .. _FDE MaterialConditionalDesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalDesignated
         """
         pass
@@ -226,6 +256,8 @@ class TableauxRules(object):
     class MaterialConditionalNegatedDesignated(k3.TableauxRules.MaterialConditionalNegatedDesignated):
         """
         This rule is the same as the `FDE MaterialConditionalNegatedDesignated rule`_.
+
+        //ruledoc//fde//MaterialConditionalNegatedDesignated//
 
         .. _FDE MaterialConditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalNegatedDesignated
         """
@@ -235,6 +267,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE MaterialConditionalUndesignated rule`_.
 
+        //ruledoc//fde//MaterialConditionalUndesignated//
+
         .. _FDE MaterialConditionalUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalUndesignated
         """
         pass
@@ -242,6 +276,8 @@ class TableauxRules(object):
     class MaterialConditionalNegatedUndesignated(k3.TableauxRules.MaterialConditionalNegatedUndesignated):
         """
         This rule is the same as the `FDE MaterialConditionalNegatedUndesignated rule`_.
+
+        //ruledoc//fde//MaterialConditionalNegatedUndesignated//
 
         .. _FDE MaterialConditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalNegatedUndesignated
         """
@@ -251,6 +287,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE MaterialBiconditionalDesignated rule`_.
 
+        //ruledoc//fde//MaterialBiconditionalDesignated//
+
         .. _FDE MaterialBiconditionalDesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalDesignated
         """
         pass
@@ -258,6 +296,8 @@ class TableauxRules(object):
     class MaterialBiconditionalNegatedDesignated(k3.TableauxRules.MaterialBiconditionalNegatedDesignated):
         """
         This rule is the same as the `FDE MaterialBiconditionalNegatedDesignated rule`_.
+
+        //ruledoc//fde//MaterialBiconditionalNegatedDesignated//
 
         .. _FDE MaterialBiconditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalNegatedDesignated
         """
@@ -267,6 +307,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE MaterialBiconditionalUndesignated rule`_.
 
+        //ruledoc//fde//MaterialBiconditionalUndesignated//
+
         .. _FDE MaterialBiconditionalUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalUndesignated
         """
         pass
@@ -274,6 +316,8 @@ class TableauxRules(object):
     class MaterialBiconditionalNegatedUndesignated(k3.TableauxRules.MaterialBiconditionalNegatedUndesignated):
         """
         This rule is the same as the `FDE MaterialBiconditionalNegatedUndesignated rule`_.
+
+        //ruledoc//fde//MaterialBiconditionalNegatedUndesignated//
 
         .. _FDE MaterialBiconditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalNegatedUndesignated
         """
@@ -316,6 +360,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE ConditionalNegatedDesignated rule`_.
 
+        //ruledoc//fde//ConditionalNegatedDesignated//
+
         .. _FDE ConditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ConditionalNegatedDesignated
         """
         pass
@@ -353,6 +399,8 @@ class TableauxRules(object):
     class ConditionalNegatedUndesignated(k3.TableauxRules.ConditionalNegatedUndesignated):
         """
         This rule is the same as the `FDE ConditionalNegatedUndesignated rule`_.
+
+        //ruledoc//fde//ConditionalNegatedUndesignated//
 
         .. _FDE ConditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.ConditionalNegatedUndesignated
         """
@@ -392,6 +440,8 @@ class TableauxRules(object):
     class BiconditionalNegatedDesignated(k3.TableauxRules.BiconditionalNegatedDesignated):
         """
         This rule is the same as the `FDE BiconditionalNegatedDesignated rule`_.
+
+        //ruledoc//fde//BiconditionalNegatedDesignated//
 
         .. _FDE BiconditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.BiconditionalNegatedDesignated
         """
@@ -461,6 +511,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE ExistentialDesignated rule`_.
 
+        //ruledoc//fde//ExistentialDesignated//
+
         .. _FDE ExistentialDesignated rule: fde.html#logics.fde.TableauxRules.ExistentialDesignated
         """
         pass
@@ -468,6 +520,8 @@ class TableauxRules(object):
     class ExistentialNegatedDesignated(k3.TableauxRules.ExistentialNegatedDesignated):
         """
         This rule is the same as the `FDE ExistentialNegatedDesignated rule`_.
+
+        //ruledoc//fde//ExistentialNegatedDesignated//
 
         .. _FDE ExistentialNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ExistentialNegatedDesignated
         """
@@ -477,6 +531,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE ExistentialUndesignated rule`_.
 
+        //ruledoc//fde//ExistentialUndesignated//
+
         .. _FDE ExistentialUndesignated rule: fde.html#logics.fde.TableauxRules.ExistentialUndesignated
         """
         pass
@@ -484,6 +540,8 @@ class TableauxRules(object):
     class ExistentialNegatedUndesignated(k3.TableauxRules.ExistentialNegatedUndesignated):
         """
         This rule is the same as the `FDE ExistentialNegatedUndesignated rule`_.
+
+        //ruledoc//fde//ExistentialNegatedUndesignated//
 
         .. _FDE ExistentialNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.ExistentialNegatedUndesignated
         """
@@ -493,6 +551,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE UniversalDesignated rule`_.
 
+        //ruledoc//fde//UniversalDesignated//
+
         .. _FDE UniversalDesignated rule: fde.html#logics.fde.TableauxRules.UniversalDesignated
         """
         pass
@@ -500,6 +560,8 @@ class TableauxRules(object):
     class UniversalNegatedDesignated(k3.TableauxRules.UniversalNegatedDesignated):
         """
         This rule is the same as the `FDE UniversalNegatedDesignated rule`_.
+
+        //ruledoc//fde//UniversalNegatedDesignated//
 
         .. _FDE UniversalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.UniversalNegatedDesignated
         """
@@ -509,6 +571,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE UniversalUndesignated rule`_.
 
+        //ruledoc//fde//UniversalUndesignated//
+
         .. _FDE UniversalUndesignated rule: fde.html#logics.fde.TableauxRules.UniversalUndesignated
         """
         pass
@@ -516,6 +580,8 @@ class TableauxRules(object):
     class UniversalNegatedUndesignated(k3.TableauxRules.UniversalNegatedUndesignated):
         """
         This rule is the same as the `FDE UniversalNegatedUndesignated rule`_.
+
+        //ruledoc//fde//UniversalNegatedUndesignated//
 
         .. _FDE UniversalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.UniversalNegatedUndesignated
         """

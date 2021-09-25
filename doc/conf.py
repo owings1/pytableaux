@@ -274,6 +274,7 @@ copyright = logic.copyright
 
 def setup(app):
     #app.connect('autodoc-process-docstring', sub_sentences)
+    app.connect('autodoc-process-docstring', docutil.SphinxUtil.insert_ruledocs)
     app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_tableau_examples)
     app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_truth_tables)
     app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_truth_tables_models)

@@ -140,6 +140,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE DoubleNegationDesignated rule`_.
 
+        //ruledoc//fde//DoubleNegationDesignated//
+
         .. _FDE DoubleNegationDesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationDesignated
         """
         pass
@@ -147,6 +149,8 @@ class TableauxRules(object):
     class DoubleNegationUndesignated(k3w.TableauxRules.DoubleNegationUndesignated):
         """
         This rule is the same as the `FDE DoubleNegationUndesignated rule`_.
+
+        //ruledoc//fde//DoubleNegationUndesignated//
 
         .. _FDE DoubleNegationUndesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationUndesignated
         """
@@ -156,6 +160,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE AssertionDesignated rule`_.
 
+        //ruledoc//fde//AssertionDesignated//
+
         .. _FDE AssertionDesignated rule: fde.html#logics.fde.TableauxRules.AssertionDesignated
         """
         pass
@@ -163,6 +169,8 @@ class TableauxRules(object):
     class AssertionNegatedDesignated(k3w.TableauxRules.AssertionNegatedDesignated):
         """
         This rule is the same as the `FDE AssertionNegatedDesignated rule`_.
+
+        //ruledoc//fde//AssertionNegatedDesignated//
 
         .. _FDE AssertionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.AssertionNegatedDesignated
         """
@@ -172,6 +180,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE AssertionUndesignated rule`_.
 
+        //ruledoc//fde//AssertionUndesignated//
+
         .. _FDE AssertionUndesignated rule: fde.html#logics.fde.TableauxRules.AssertionUndesignated
         """
         pass
@@ -179,6 +189,8 @@ class TableauxRules(object):
     class AssertionNegatedUndesignated(k3w.TableauxRules.AssertionNegatedUndesignated):
         """
         This rule is the same as the `FDE AssertionNegatedUndesignated rule`_.
+
+        //ruledoc//fde//AssertionNegatedUndesignated//
 
         .. _FDE AssertionNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.AssertionNegatedUndesignated
         """
@@ -188,6 +200,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE ConjunctionDesignated rule`_.
 
+        //ruledoc//fde//ConjunctionDesignated//
+
         .. _FDE ConjunctionDesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionDesignated
         """
         pass
@@ -195,6 +209,8 @@ class TableauxRules(object):
     class ConjunctionNegatedDesignated(k3w.TableauxRules.ConjunctionNegatedDesignated):
         """
         This rule is the same as the `K3W ConjunctionNegatedDesignated rule`_.
+
+        //ruledoc//k3w//ConjunctionNegatedDesignated//
 
         .. _K3W ConjunctionNegatedDesignated rule: k3w.html#logics.k3w.TableauxRules.ConjunctionNegatedDesignated
         """
@@ -204,6 +220,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE ConjunctionUndesignated rule`_.
 
+        //ruledoc//fde//ConjunctionUndesignated//
+
         .. _FDE ConjunctionUndesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionUndesignated
         """
         pass
@@ -211,6 +229,8 @@ class TableauxRules(object):
     class ConjunctionNegatedUndesignated(k3w.TableauxRules.ConjunctionNegatedUndesignated):
         """
         This rule is the same as the `K3W ConjunctionNegatedUndesignated rule`_.
+
+        //ruledoc//k3w//ConjunctionNegatedUndesignated//
 
         .. _K3W ConjunctionNegatedUndesignated rule: k3w.html#logics.k3w.TableauxRules.ConjunctionNegatedUndesignated
         """
@@ -220,6 +240,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `K3W DisjunctionDesignated rule`_.
 
+        //ruledoc//k3w//DisjunctionDesignated//
+
         .. _K3W DisjunctionDesignated rule: k3w.html#logics.k3w.TableauxRules.DisjunctionDesignated
         """
         pass
@@ -227,6 +249,8 @@ class TableauxRules(object):
     class DisjunctionNegatedDesignated(k3w.TableauxRules.DisjunctionNegatedDesignated):
         """
         This rule is the same as the `FDE DisjunctionNegatedDesignated rule`_.
+
+        //ruledoc//fde//DisjunctionNegatedDesignated//
 
         .. _FDE DisjunctionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionNegatedDesignated
         """
@@ -236,6 +260,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `K3W DisjunctionUndesignated rule`_.
 
+        //ruledoc//k3w//DisjunctionUndesignated//
+
         .. _K3W DisjunctionUndesignated rule: k3w.html#logics.k3w.TableauxRules.DisjunctionUndesignated
         """
         pass
@@ -243,6 +269,8 @@ class TableauxRules(object):
     class DisjunctionNegatedUndesignated(k3w.TableauxRules.DisjunctionNegatedUndesignated):
         """
         This rule is the same as the `K3W DisjunctionNegatedUndesignated rule`_.
+
+        //ruledoc//k3w//DisjunctionNegatedUndesignated//
 
         .. _K3W DisjunctionNegatedUndesignated rule: k3w.html#logics.k3w.TableauxRules.DisjunctionNegatedUndesignated
         """
@@ -252,6 +280,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `K3W MaterialConditionalDesignated rule`_.
 
+        //ruledoc//k3w//MaterialConditionalDesignated//
+
         .. _K3W MaterialConditionalDesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialConditionalDesignated
         """
         pass
@@ -259,6 +289,8 @@ class TableauxRules(object):
     class MaterialConditionalNegatedDesignated(k3w.TableauxRules.MaterialConditionalNegatedDesignated):
         """
         This rule is the same as the `K3W MaterialConditionalNegatedDesignated rule`_.
+
+        //ruledoc//k3w//MaterialConditionalNegatedDesignated//
 
         .. _K3W MaterialConditionalNegatedDesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialConditionalNegatedDesignated
         """
@@ -268,6 +300,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `K3W MaterialConditionalUndesignated rule`_.
 
+        //ruledoc//k3w//MaterialConditionalUndesignated//
+
         .. _K3W MaterialConditionalUndesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialConditionalUndesignated
         """
         pass
@@ -275,6 +309,8 @@ class TableauxRules(object):
     class MaterialConditionalNegatedUndesignated(k3w.TableauxRules.MaterialConditionalNegatedUndesignated):
         """
         This rule is the same as the `K3W MaterialConditionalNegatedUndesignated rule`_.
+
+        //ruledoc//k3w//MaterialConditionalNegatedUndesignated//
 
         .. _K3W MaterialConditionalNegatedUndesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialConditionalNegatedUndesignated
         """
@@ -284,6 +320,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `K3W MaterialBiconditionalDesignated rule`_.
 
+        //ruledoc//k3w//MaterialBiconditionalDesignated//
+
         .. _K3W MaterialBiconditionalDesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialBiconditionalDesignated
         """
         pass
@@ -291,6 +329,8 @@ class TableauxRules(object):
     class MaterialBiconditionalNegatedDesignated(k3w.TableauxRules.MaterialBiconditionalNegatedDesignated):
         """
         This rule is the same as the `K3W MaterialBiconditionalNegatedDesignated rule`_.
+
+        //ruledoc//k3w//MaterialBiconditionalNegatedDesignated//
 
         .. _K3W MaterialBiconditionalNegatedDesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialBiconditionalNegatedDesignated
         """
@@ -300,6 +340,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `K3W MaterialBiconditionalUndesignated rule`_.
 
+        //ruledoc//k3w//MaterialBiconditionalUndesignated//
+
         .. _K3W MaterialBiconditionalUndesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialBiconditionalUndesignated
         """
         pass
@@ -307,6 +349,8 @@ class TableauxRules(object):
     class MaterialBiconditionalNegatedUndesignated(k3w.TableauxRules.MaterialBiconditionalNegatedUndesignated):
         """
         This rule is the same as the `K3W MaterialBiconditionalNegatedUndesignated rule`_.
+
+        //ruledoc//k3w//MaterialBiconditionalNegatedUndesignated//
 
         .. _K3W MaterialBiconditionalNegatedUndesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialBiconditionalNegatedUndesignated
         """
@@ -316,6 +360,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `K3W ConditionalDesignated rule`_.
 
+        //ruledoc//k3w//ConditionalDesignated//
+
         .. _K3W ConditionalDesignated rule: k3w.html#logics.k3w.TableauxRules.ConditionalDesignated
         """
         pass
@@ -323,6 +369,8 @@ class TableauxRules(object):
     class ConditionalNegatedDesignated(k3w.TableauxRules.ConditionalNegatedDesignated):
         """
         This rule is the same as the `K3W ConditionalNegatedDesignated rule`_.
+
+        //ruledoc//k3w//ConditionalNegatedDesignated//
 
         .. _K3W ConditionalNegatedDesignated rule: k3w.html#logics.k3w.TableauxRules.ConditionalNegatedDesignated
         """
@@ -332,6 +380,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `K3W ConditionalUndesignated rule`_.
 
+        //ruledoc//k3w//ConditionalUndesignated//
+
         .. _K3W ConditionalUndesignated rule: k3w.html#logics.k3w.TableauxRules.ConditionalUndesignated
         """
         pass
@@ -339,6 +389,8 @@ class TableauxRules(object):
     class ConditionalNegatedUndesignated(k3w.TableauxRules.ConditionalNegatedUndesignated):
         """
         This rule is the same as the `K3W ConditionalNegatedUndesignated rule`_.
+
+        //ruledoc//k3w//ConditionalNegatedUndesignated//
 
         .. _K3W ConditionalNegatedUndesignated rule: k3w.html#logics.k3w.TableauxRules.ConditionalNegatedUndesignated
         """
@@ -348,6 +400,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `K3W BiconditionalDesignated rule`_.
 
+        //ruledoc//k3w//BiconditionalDesignated//
+
         .. _K3W BiconditionalDesignated rule: k3w.html#logics.k3w.TableauxRules.BiconditionalDesignated
         """
         pass
@@ -355,6 +409,8 @@ class TableauxRules(object):
     class BiconditionalNegatedDesignated(k3w.TableauxRules.BiconditionalNegatedDesignated):
         """
         This rule is the same as the `K3W BiconditionalNegatedDesignated rule`_.
+
+        //ruledoc//k3w//BiconditionalNegatedDesignated//
 
         .. _K3W BiconditionalNegatedDesignated rule: k3w.html#logics.k3w.TableauxRules.BiconditionalNegatedDesignated
         """
@@ -364,6 +420,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `K3W BiconditionalUndesignated rule`_.
 
+        //ruledoc//k3w//BiconditionalUndesignated//
+
         .. _K3W BiconditionalUndesignated rule: k3w.html#logics.k3w.TableauxRules.BiconditionalUndesignated
         """
         pass
@@ -371,6 +429,8 @@ class TableauxRules(object):
     class BiconditionalNegatedUndesignated(k3w.TableauxRules.BiconditionalNegatedUndesignated):
         """
         This rule is the same as the `K3W BiconditionalNegatedUndesignated rule`_.
+
+        //ruledoc//k3w//BiconditionalNegatedUndesignated//
 
         .. _K3W BiconditionalNegatedUndesignated rule: k3w.html#logics.k3w.TableauxRules.BiconditionalNegatedUndesignated
         """
@@ -409,6 +469,8 @@ class TableauxRules(object):
     class ExistentialNegatedDesignated(k3w.TableauxRules.ExistentialNegatedDesignated):
         """
         This rule is the same as the `FDE ExistentialNegatedDesignated rule`_.
+
+        //ruledoc//fde//ExistentialNegatedDesignated//
 
         .. _FDE ExistentialNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ExistentialNegatedDesignated
         """
@@ -486,6 +548,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `FDE UniversalDesignated rule`_.
 
+        //ruledoc//fde//UniversalDesignated//
+
         .. _FDE UniversalDesignated rule: fde.html#logics.fde.TableauxRules.UniversalDesignated
         """
         pass
@@ -524,6 +588,8 @@ class TableauxRules(object):
     class UniversalUndesignated(k3w.TableauxRules.UniversalUndesignated):
         """
         This rule is the same as the `FDE UniversalUndesignated rule`_.
+
+        //ruledoc//fde//UniversalUndesignated//
 
         .. _FDE UniversalUndesignated rule: fde.html#logics.fde.TableauxRules.UniversalUndesignated
         """

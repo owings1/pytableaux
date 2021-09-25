@@ -86,6 +86,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `CPL DoubleNegation rule`_.
 
+        //ruledoc//cpl//DoubleNegation//
+
         .. _CPL DoubleNegation rule: cpl.html#logics.cpl.TableauxRules.DoubleNegation
         """
         pass
@@ -93,6 +95,8 @@ class TableauxRules(object):
     class Assertion(cpl.TableauxRules.Assertion):
         """
         This rule is the same as the `CPL Assertion rule`_.
+
+        //ruledoc//cpl//Assertion//
 
         .. _CPL Assertion rule: cpl.html#logics.cpl.TableauxRules.Assertion
         """
@@ -102,6 +106,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `CPL AssertionNegated rule`_.
 
+        //ruledoc//cpl//AssertionNegated//
+
         .. _CPL AssertionNegated rule: cpl.html#logics.cpl.TableauxRules.AssertionNegated
         """
         pass
@@ -109,6 +115,8 @@ class TableauxRules(object):
     class Conjunction(cpl.TableauxRules.Conjunction):
         """
         This rule is the same as the `CPL Conjunction rule`_.
+
+        //ruledoc//cpl//Conjunction//
 
         .. _CPL Conjunction rule: cpl.html#logics.cpl.TableauxRules.Conjunction
         """
@@ -118,6 +126,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `CPL ConjunctionNegated rule`_.
 
+        //ruledoc//cpl//ConjunctionNegated//
+
         .. _CPL ConjunctionNegated rule: cpl.html#logics.cpl.TableauxRules.ConjunctionNegated
         """
         pass
@@ -125,6 +135,8 @@ class TableauxRules(object):
     class Disjunction(cpl.TableauxRules.Disjunction):
         """
         This rule is the same as the `CPL Disjunction rule`_.
+
+        //ruledoc//cpl//Disjunction//
 
         .. _CPL Disjunction rule: cpl.html#logics.cpl.TableauxRules.Disjunction
         """
@@ -134,6 +146,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `CPL DisjunctionNegated rule`_.
 
+        //ruledoc//cpl//DisjunctionNegated//
+
         .. _CPL DisjunctionNegated rule: cpl.html#logics.cpl.TableauxRules.DisjunctionNegated
         """
         pass
@@ -141,6 +155,8 @@ class TableauxRules(object):
     class MaterialConditional(cpl.TableauxRules.MaterialConditional):
         """
         This rule is the same as the `CPL MaterialConditional rule`_.
+
+        //ruledoc//cpl//MaterialConditional//
 
         .. _CPL MaterialConditional rule: cpl.html#logics.cpl.TableauxRules.MaterialConditional
         """
@@ -150,6 +166,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `CPL MaterialConditionalNegated rule`_.
 
+        //ruledoc//cpl//MaterialConditionalNegated//
+
         .. _CPL MaterialConditionalNegated rule: cpl.html#logics.cpl.TableauxRules.MaterialConditionalNegated
         """
         pass
@@ -157,6 +175,8 @@ class TableauxRules(object):
     class MaterialBiconditional(cpl.TableauxRules.MaterialBiconditional):
         """
         This rule is the same as the `CPL DoubleNegation rule`_.
+
+        //ruledoc//cpl//MaterialBiconditional//
 
         .. _CPL MaterialBiconditional rule: cpl.html#logics.cpl.TableauxRules.MaterialBiconditional
         """
@@ -166,6 +186,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `CPL MaterialBiconditionalNegated rule`_.
 
+        //ruledoc//cpl//MaterialBiconditionalNegated//
+
         .. _CPL MaterialBiconditionalNegated rule: cpl.html#logics.cpl.TableauxRules.MaterialBiconditionalNegated
         """
         pass
@@ -173,6 +195,8 @@ class TableauxRules(object):
     class Conditional(cpl.TableauxRules.Conditional):
         """
         This rule is the same as the `CPL Conditional rule`_.
+
+        //ruledoc//cpl//Conditional//
 
         .. _CPL Conditional rule: cpl.html#logics.cpl.TableauxRules.Conditional
         """
@@ -182,6 +206,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `CPL ConditionalNegated rule`_.
 
+        //ruledoc//cpl//ConditionalNegated//
+
         .. _CPL ConditionalNegated rule: cpl.html#logics.cpl.TableauxRules.ConditionalNegated
         """
         pass
@@ -190,6 +216,8 @@ class TableauxRules(object):
         """
         This rule is the same as the `CPL Biconditional rule`_.
 
+        //ruledoc//cpl//Biconditional//
+
         .. _CPL Biconditional rule: cpl.html#logics.cpl.TableauxRules.Biconditional
         """
         pass
@@ -197,6 +225,8 @@ class TableauxRules(object):
     class BiconditionalNegated(cpl.TableauxRules.BiconditionalNegated):
         """
         This rule is the same as the `CPL BiconditionalNegated rule`_.
+
+        //ruledoc//cpl//BiconditionalNegated//
 
         .. _CPL BiconditionalNegated rule: cpl.html#logics.cpl.TableauxRules.BiconditionalNegated
         """
@@ -239,6 +269,8 @@ class TableauxRules(object):
     class IdentityIndiscernability(cpl.TableauxRules.IdentityIndiscernability):
         """
         This rule is the same as the `CPL IdentityIndiscernability rule`_.
+
+        //ruledoc//cpl//IdentityIndiscernability//
 
         .. _CPL IdentityIndiscernability rule: cpl.html#logics.cpl.TableauxRules.IdentityIndiscernability
         """

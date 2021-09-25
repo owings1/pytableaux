@@ -43,6 +43,12 @@ jinja_env = Environment(
 )
 truth_table_template = jinja_env.get_template('truth_table.html')
 
+class BadExpressionError(Exception):
+    pass
+
+class RuleNotFoundError(Exception):
+    pass
+
 def get_truth_table_html(lgc, operator):
     lgc = logic.get_logic(lgc)
     table = logic.truth_table(lgc, operator)
@@ -110,7 +116,16 @@ def get_build_trunk_example_html(lgc, arg):
     return writer.write(proof, sw=sw)
 
 def get_argument_example_html(arg):
-    return 'Argument: <i>' + '</i>, <i>'.join([sw.write(p, drop_parens=True) for p in arg.premises]) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>'
+    return 'Argument: <i>' + '</i>, <i>'.join(
+        [sw.write(p, drop_parens=True) for p in arg.premises]
+    ) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>'
+
+def get_ruledoc(lgc, name):
+    lgc = logic.get_logic(lgc)
+    for n, member in inspect.getmembers(lgc.TableauxRules):
+        if n == name:
+            return [line.strip() for line in member.__doc__.split('\n')]
+    raise RuleNotFoundError(str(('Rule not found', lgc.name, name)))
 
 def rulesheet(lgc):
     lgc = logic.get_logic(lgc)
@@ -133,6 +148,7 @@ class SphinxUtil(object): # pragma: no cover
     @staticmethod
     def docs_post_process(app, exception):
         # Sphinx utility
+        print('Running post-process')
         builddir = doc_dir + '/_build/html'
         files = list()
         for f in os.listdir(builddir):
@@ -147,7 +163,8 @@ class SphinxUtil(object): # pragma: no cover
             result = get_replace_sentence_expressions_result(text)
             if result['is_found']:
                 for sr in result['replaced']:
-                    print('replacing {0} in {1}'.format(sr, fil))
+                    #print('replacing {0} in {1}'.format(sr, fil))
+                    pass
                 with codecs.open(builddir + '/' + fil, 'w', 'utf-8') as f:
                     f.write(result['text'])
 
@@ -194,9 +211,33 @@ class SphinxUtil(object): # pragma: no cover
         lines[pos:pos] = SphinxUtil.get_truth_tables_lines_for_logic(logic_name)
 
     @staticmethod
+    def insert_ruledocs(app, what, name, obj, options, lines):
+        # Sphinx utility
+        if what == 'class':
+            idx = 0
+            rpl = {}
+            try:
+                for line in lines:
+                    if '//ruledoc//' in line:
+                        #print(name, '-', 'Inserting rule doc for', line)
+                        m = re.findall(r'//ruledoc//(.*?)//(.*)//', line)
+                        if not m:
+                            raise BadExpressionError(line)
+                        logic_name, rule_name = m[0]
+                        rpl[idx] = get_ruledoc(logic_name, rule_name)
+                    idx += 1
+                for idx in rpl:
+                    pos = idx + 1
+                    lines[idx:pos] = rpl[idx]
+            except Exception as e:
+                print(str(e))
+                print('Failed to generated rule doc for', name, '-', line)
+                raise e
+
+
+    @staticmethod
     def make_tableau_examples(app, what, name, obj, options, lines):
         # Sphinx utility
-        #arg = examples.argument('Material Modus Ponens')
         arg = logic.argument('b', ['a1', 'a2'])
         if what == 'class':
             mro = inspect.getmro(obj)
