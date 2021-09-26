@@ -1,0 +1,19 @@
+{{ app_name }} Web Feedback
+============================
+
+Details
+--------
+
+Date: {{ date }}
+IP: {{ ip }}
+
+Form Data
+----------
+
+Name: {{ form_data['name'] }}
+Email: {{ form_data['email'] }}
+
+Message
+--------
+
+{{ form_data['message'] }}

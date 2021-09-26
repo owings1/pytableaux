@@ -1,0 +1,56 @@
+<html>
+<head>
+<style>
+    .feedback_email table.feedback_info th,
+    .feedback_email table.feedback_info td {
+        padding: 5px;
+        border: 1px solid #cccccc;
+    }
+    .feedback_email table.feedback_info th {
+        font-weight: bold;
+    }
+    /*.feedback_email .feedback_message {
+        white-space: pre;
+    }*/
+</style>
+</head>
+<body>
+<div class="feedback_email">
+    <h2>Feedback response</h2>
+    <table class="feedback_info">
+        <thead>
+            <tr>
+                <th colspan="2">Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Date</td>
+                <td>{{ date }}</td>
+            </tr>
+            <tr>
+                <td>IP</td>
+                <td>{{ ip }}</td>
+            </tr>
+        <tbody>
+        <thead>
+            <tr>
+                <th colspan="2">Form Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Name</td>
+                <td>{{ form_data['name'] }}</td>
+            </tr>
+            <tr>
+                <td>Email</td>
+                <td>{{ form_data['email'] }}</td>
+            </tr>
+        </tbody>
+    </table>
+    <h3>Message</h3>
+    <div class="feedback_message">{{ form_data['message'] }}</div>
+</div>
+</body>
+</html>

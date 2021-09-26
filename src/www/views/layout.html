@@ -18,7 +18,13 @@
     <div class="header-wrapper">
         <div class="header">
             <a href="/">pytableaux {{ version }}</a>
-            <span class="right"><a href="/doc" target="_blank">documentation</a> | <a href="{{ source_href }}" target="_blank">source</a></span>
+            <span class="right">
+                <a href="/doc" target="_blank">documentation</a> | 
+                <a href="{{ source_href }}" target="_blank">source</a>
+                {%- if is_feedback %}
+                    | <a href="/feedback">feedback</a>
+                {%- endif -%}
+            </span>
         </div>
     </div>
     <div class="pt-content">

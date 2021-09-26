@@ -1,0 +1,31 @@
+{%- extends 'layout.html' -%}
+{%- import 'helper.html' as helper -%}
+{%- block content -%}
+<div class="pt-app">
+    <h2>Submit Feedback</h2>
+    {%- if is_submitted -%}
+        <div class="feedback_submitted">Thank you for your feedback. <a href="/">Return to home</a>.</div>
+    {%- else -%}
+        {% if errors %}
+            {% include 'errors.html' %}
+        {% endif %}
+        <form method="POST" class="feedback">
+            <div class="input">
+                <label for="name">Your name</label>
+                <input class="" id="input_name" type="text" name="name"/>
+            </div>
+            <div class="input">
+                <label for="name">Your email</label>
+                <input class="" id="input_email" type="text" name="email"/>
+            </div>
+            <div class="input">
+                <label for="feedback_content">Feedback</label>
+                <textarea id="input_feedback_content" name="message"></textarea>
+            </div>
+            <div class="input submit">
+                <input id="input_submit" type="submit" value="Submit"/>
+            </div>
+        </form>
+    {%- endif -%}
+</div>
+{%- endblock -%}
