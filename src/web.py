@@ -18,13 +18,11 @@
 #
 # pytableaux - Web Interface
 
-import examples, logic, json, os, time
+import examples, logic, json, os, re, time
 import importlib
 import logging
 import os.path
-import re
-import smtplib
-import ssl
+import smtplib, ssl, threading
 import traceback
 import cherrypy as server
 from cherrypy._cpdispatch import Dispatcher
@@ -97,7 +95,7 @@ optdefs = {
         'type'    : 'boolean',
     },
     'feedback_to_address': {
-        'default'  : None,
+        'default' : None,
         'envvar'  : 'PT_FEEDBACK_TOADDRESS',
         'type'    : 'string',
     },
@@ -150,6 +148,11 @@ optdefs = {
         'default' : None,
         'envvar'  : ('PT_SMTP_PASSWORD', 'SMTP_PASSWORD'),
         'type'    : 'string',
+    },
+    'mailroom_interval': {
+        'default' : 30,
+        'envvar'  : 'PT_MAILROOM_INTERVAL',
+        'type'    : 'int',
     },
 }
 
@@ -236,7 +239,7 @@ populate_modules_info()
 #                                                   #
 #####################################################
 
-def get_opt_value(name, defn):
+def get_opt_value(defn):
     evtype = type(defn['envvar'])
     if evtype == str:
         envvars = (defn['envvar'],)
@@ -256,7 +259,7 @@ def get_opt_value(name, defn):
     return defn['default']
 
 opts = {
-    name: get_opt_value(name, optdefs[name]) for name in optdefs.keys()
+    name: get_opt_value(optdefs[name]) for name in optdefs.keys()
 }
 
 # Logger
@@ -438,90 +441,163 @@ class ConfigError(Exception):
 
 #####################################################
 #                                                   #
-# SMTP                                              #
+# Mailroom                                          #
 #                                                   #
 #####################################################
 
-if opts['smtp_host']:
-    logger.info('Intializing SMTP settings')
-    if opts['feedback_enabled']:
-        if not opts['feedback_to_address']:
-            raise ConfigError('Feedback is enabled but to address is not set')
-        if not opts['feedback_from_address']:
-            raise ConfigError('Feedback is enabled but from address is not set')
-        if not is_valid_email(opts['feedback_to_address']):
-            raise ConfigError('Invalid feedback to address:', str(opts['feedback_to_address']))
-        if not is_valid_email(opts['feedback_from_address']):
-            raise ConfigError('Invalid feedback from address:', str(opts['feedback_from_address']))
-    if opts['smtp_starttls']:
-        smtp_tlscontext = ssl.SSLContext()
-        if opts['smtp_tlscertfile']:
-            logger.info('Loading TLS certificate for SMTP')
-            smtp_tlscontext.load_cert_chain(
-                opts['smtp_tlscertfile'],
-                keyfile = opts['smtp_tlskeyfile'],
-                password = opts['smtp_tlskeypass'],
-            )
-    else:
-        logger.warn('TLS disabled for SMTP, messages will NOT be encrypted')
+class Mailroom(object):
 
-mailqueue = []
-def queue_email(from_addr, to_addrs, msg):
-    if not opts['smtp_host']:
-        raise InternalError('SMTP not configured')
-    mailqueue.append({
-        'from_addr' : from_addr,
-        'to_addrs'  : to_addrs,
-        'msg'       : msg,
-    })
-
-def smtp_mailroom():
-    if not mailqueue:
-        return
-    logger.info(
-        'Connecting to SMTP server {0}:{1}'.format(
-            opts['smtp_host'], str(opts['smtp_port'])
-        )
-    )
-    smtp = smtplib.SMTP(
-        host=opts['smtp_host'],
-        port=opts['smtp_port'],
-        local_hostname=opts['smtp_helo'],
-    )
-    try:
-        smtp.ehlo()
+    def __init__(self, opts):
+        self.opts = opts
+        self.loaded = False
+        self.enabled = bool(opts['smtp_host'])
+        self.queue = list()
+        self.started = False
+        self.should_stop = False
+        
+    def reload(self):
+        opts = self.opts
+        self.enabled = bool(opts['smtp_host'])
+        if not self.enabled:
+            logger.warn('SMTP not enabled, not starting mailroom')
+            return
+        logger.info('Intializing SMTP settings')
+        if opts['feedback_enabled']:
+            if not opts['feedback_to_address']:
+                raise ConfigError(
+                    'Feedback is enabled but to address is not set'
+                )
+            if not opts['feedback_from_address']:
+                raise ConfigError(
+                    'Feedback is enabled but from address is not set'
+                )
+            if not is_valid_email(opts['feedback_to_address']):
+                raise ConfigError(
+                    'Invalid feedback to address: {0}'.format(
+                        str(opts['feedback_to_address'])
+                    )
+                )
+            if not is_valid_email(opts['feedback_from_address']):
+                raise ConfigError(
+                    'Invalid feedback from address: {0}'.format(
+                        str(opts['feedback_from_address'])
+                    )
+                )
         if opts['smtp_starttls']:
-            logger.info('Starting SMTP TLS session')
-            resp = smtp.starttls(context = smtp_tlscontext)
-            logger.debug('Starttls response: {0}'.format(str(resp)))
+            self.tlscontext = ssl.SSLContext()
+            if opts['smtp_tlscertfile']:
+                logger.info('Loading TLS client certificate for SMTP')
+                self.tlscontext.load_cert_chain(
+                    opts['smtp_tlscertfile'],
+                    keyfile = opts['smtp_tlskeyfile'],
+                    password = opts['smtp_tlskeypass'],
+                )
         else:
-            logger.warn('TLS disabled, not encrypting email')
-        if (opts['smtp_username']):
-            logger.debug('Logging into SMTP server with {0}'.format(opts['smtp_username']))
-            smtp.login(opts['smtp_username'], opts['smtp_password'])
-        i, total = (0, len(mailqueue))
-        requeue = []
-        while mailqueue:
-            job = mailqueue.pop(0)
-            try:
-                logger.info('Sending message {0} of {1}'.format(str(i + 1), str(total)))
-                smtp.sendmail(**job)
-            except Exception as merr:
-                traceback.print_exc()
-                logger.error('Sendmail failed with error: {0}'.format(str(merr)))
-                requeue.append(job)
-            i += 1
-        logger.info('Disconnecting from SMTP server')
-        smtp.quit()
-    except Exception as err:
-        logger.error('SMTP failed with error {0}'.format(str(err)))
+            logger.warn('TLS disabled for SMTP, messages will NOT be encrypted')
+        self.loaded = True
+
+    def start(self):
+        if not self.loaded:
+            self.reload()
+        if not self.enabled:
+            return
+        self.should_stop = False
+        self._thread = threading.Thread(target = self.runner)
+        self._thread.daemon = True
+        self._thread.start()
+
+    def enqueue(self, from_addr, to_addrs, msg):
+        if not self.enabled:
+            raise ConfigError('SMTP not configured, cannot enqueue message')
+        self.queue.append({
+            'from_addr' : from_addr,
+            'to_addrs'  : to_addrs,
+            'msg'       : msg,
+        })
+
+    def runner(self):
+        if not self.enabled:
+            raise ConfigError('SMTP not configured, cannot start Mailroom.')
+        if self.started:
+            raise InternalError('Mailroom already running')
+        self.started = True
+        interval = self.opts['mailroom_interval']
+        logger.info(
+            'Starting SMTP Mailroom with interval {0}s'.format(
+                str(interval)
+            )
+        )
+        while True:
+            self._mailproc()
+            i = 0
+            while i < interval:
+                time.sleep(1)
+                if self.should_stop:
+                    logger.info('Mailroom received quit signal, stopping')
+                    self.started = False
+                    return
+                i += 1
+
+    def _mailproc(self):
+        if not self.queue:
+            return
+        opts = self.opts
+        logger.info(
+            'Connecting to SMTP server {0}:{1}'.format(
+                opts['smtp_host'], str(opts['smtp_port'])
+            )
+        )
+        smtp = smtplib.SMTP(
+            host = opts['smtp_host'],
+            port = opts['smtp_port'],
+            local_hostname = opts['smtp_helo'],
+        )
         try:
+            smtp.ehlo()
+            if opts['smtp_starttls']:
+                logger.info('Starting SMTP TLS session')
+                resp = smtp.starttls(context = self.tlscontext)
+                logger.debug('Starttls response: {0}'.format(str(resp)))
+            else:
+                logger.warn('TLS disabled, not encrypting email')
+            if (opts['smtp_username']):
+                logger.debug(
+                    'Logging into SMTP server with {0}'.format(
+                        opts['smtp_username']
+                    )
+                )
+                smtp.login(opts['smtp_username'], opts['smtp_password'])
+            i, total = (0, len(self.queue))
+            requeue = []
+            while self.queue:
+                job = self.queue.pop(0)
+                try:
+                    logger.info(
+                        'Sending message {0} of {1}'.format(
+                            str(i + 1), str(total)
+                        )
+                    )
+                    smtp.sendmail(**job)
+                except Exception as merr:
+                    traceback.print_exc()
+                    logger.error(
+                        'Sendmail failed with error: {0}'.format(str(merr))
+                    )
+                    requeue.append(job)
+                i += 1
+            logger.info('Disconnecting from SMTP server')
             smtp.quit()
         except Exception as err:
-            logger.warn('Failed to quit SMTP connection: {0}'.format(str(err)))
-    if requeue:
-        logger.info('Requeuing {0} failed messages'.format(len(requeue)))
-        mailqueue.extend(requeue)
+            logger.error('SMTP failed with error {0}'.format(str(err)))
+            try:
+                smtp.quit()
+            except Exception as err:
+                logger.warn('Failed to quit SMTP connection: {0}'.format(str(err)))
+        if requeue:
+            logger.info('Requeuing {0} failed messages'.format(len(requeue)))
+            self.queue.extend(requeue)
+
+mailroom = Mailroom(opts)
 
 #####################################################
 #                                                   #
@@ -600,34 +676,29 @@ class App(object):
             except RequestDataError as err:
                 errors.update(err.errors)
             if len(errors) == 0:
-                try:
-                    date = datetime.now()
-                    data.update({
-                        'date'      : str(date),
-                        'ip'        : get_remote_ip(server.request),
-                        'form_data' : form_data,
-                    })
-                    msg_txt = render('feedback-email.txt', data)
-                    msg_html = render('feedback-email', data)
-                    msg = MIMEMultipart('alternative')
-                    msg['From'] = '{0} Feedback <{1}>'.format(
-                        opts['app_name'],
-                        opts['feedback_from_address'],
-                    )
-                    msg['To'] = opts['feedback_to_address']
-                    msg['Subject'] = 'Feedback from {0}'.format(form_data['name'])
-                    msg.attach(MIMEText(msg_txt, 'plain'))
-                    msg.attach(MIMEText(msg_html, 'html'))
-                    queue_email(
-                        opts['feedback_from_address'],
-                        (opts['feedback_to_address'],),
-                        msg.as_string(),
-                    )
-                    # TODO: move to independent thead.
-                    smtp_mailroom()
-                    is_submitted = True
-                except:
-                    raise
+                date = datetime.now()
+                data.update({
+                    'date'      : str(date),
+                    'ip'        : get_remote_ip(server.request),
+                    'form_data' : form_data,
+                })
+                msg_txt = render('feedback-email.txt', data)
+                msg_html = render('feedback-email', data)
+                msg = MIMEMultipart('alternative')
+                msg['From'] = '{0} Feedback <{1}>'.format(
+                    opts['app_name'],
+                    opts['feedback_from_address'],
+                )
+                msg['To'] = opts['feedback_to_address']
+                msg['Subject'] = 'Feedback from {0}'.format(form_data['name'])
+                msg.attach(MIMEText(msg_txt, 'plain'))
+                msg.attach(MIMEText(msg_html, 'html'))
+                mailroom.enqueue(
+                    opts['feedback_from_address'],
+                    (opts['feedback_to_address'],),
+                    msg.as_string(),
+                )
+                is_submitted = True
         data.update({
             'errors'       : errors,
             'is_submitted' : is_submitted,
@@ -1017,6 +1088,7 @@ class App(object):
 
 def main(): # pragma: no cover
     logger.info('Staring metrics on port {0}'.format(str(opts['metrics_port'])))
+    mailroom.start()
     prom.start_http_server(opts['metrics_port'])
     server.config.update(global_config)
     server.quickstart(App(), '/', config)
