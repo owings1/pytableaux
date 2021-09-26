@@ -16,14 +16,12 @@
 #
 # ------------------
 #
-# pytableaux - Web Interface
+# pytableaux - Web Application
 
-import examples, logic, json, os, re, time
-import importlib
-import logging
+import examples, logic, www.conf
+from www.mailroom import Mailroom
+import json, os, re, time
 import os.path
-import smtplib, ssl, threading
-import traceback
 import cherrypy as server
 from cherrypy._cpdispatch import Dispatcher
 from datetime import datetime
@@ -36,257 +34,46 @@ ProofTimeoutError = logic.TableauxSystem.ProofTimeoutError
 # http://python-future.org/compatible_idioms.html#basestring
 from past.builtins import basestring
 
-re_email = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-
 app_dir = os.path.dirname(os.path.abspath(__file__))
 
+def apath(*args):
+    return os.path.join(app_dir, *args)
 consts = {
     'index_filename' : 'index.html',
-    'view_path'      : os.path.join(app_dir, 'www/views'),
-    'static_dir'     : os.path.join(app_dir, 'www/static'),
-    'favicon_file'   : os.path.join(app_dir, 'www/static/img/favicon-60x60.png'),
-    'static_dir_doc' : os.path.join(app_dir, '..', 'doc/_build/html'),
+    'view_path'      : apath('www/views'),
+    'static_dir'     : apath('www/static'),
+    'favicon_file'   : apath('www/static/img/favicon-60x60.png'),
+    'static_dir_doc' : apath('..', 'doc/_build/html'),
 }
 
-optdefs = {
-    'app_name' : {
-        'default' : 'pytableaux',
-        'envvar'  : 'PT_APPNAME',
-        'type'    : 'string',
-    },
-    'host' : {
-        'default' : '127.0.0.1',
-        'envvar'  : 'PT_HOST',
-        'type'    : 'string'
-    },
-    'port' : {
-        'default' : 8080,
-        'envvar'  : 'PT_PORT',
-        'type'    : 'int',
-    },
-    'metrics_port' : {
-        'default' : 8181,
-        'envvar'  : 'PT_METRICS_PORT',
-        'type'    : 'int',
-    },
-    'is_debug' : {
-        'default' : False,
-        'envvar'  : ('PT_DEBUG', 'DEBUG'),
-        'type'    : 'boolean',
-    },
-    'loglevel': {
-        'default' : 'info',
-        'envvar'  : ('PT_LOGLEVEL', 'LOGLEVEL'),
-        'type'    : 'string',
-    },
-    'maxtimeout' : {
-        'default' : 30000,
-        'envvar'  : 'PT_MAXTIMEOUT',
-        'type'    : 'int',
-    },
-    'google_analytics_id' : {
-        'default' : None,
-        'envvar'  : 'PT_GOOGLE_ANALYTICS_ID',
-        'type'    : 'string',
-    },
-    'feedback_enabled': {
-        'default' : False,
-        'envvar'  : 'PT_FEEDBACK',
-        'type'    : 'boolean',
-    },
-    'feedback_to_address': {
-        'default' : None,
-        'envvar'  : 'PT_FEEDBACK_TOADDRESS',
-        'type'    : 'string',
-    },
-    'feedback_from_address': {
-        'default'  : None,
-        'envvar'  : 'PT_FEEDBACK_FROMADDRESS',
-        'type'    : 'string',
-    },
-    'smtp_host': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_HOST', 'SMTP_HOST'),
-        'type'    : 'string',
-    },
-    'smtp_port': {
-        'default' : 587,
-        'envvar'  : ('PT_SMTP_PORT', 'SMTP_PORT'),
-        'type'    : 'int',
-    },
-    'smtp_helo': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_HELO', 'SMTP_HELO'),
-        'type'    : 'string',
-    },
-    'smtp_starttls': {
-        'default' : True,
-        'envvar'  : ('PT_SMTP_STARTTLS', 'SMTP_STARTTLS'),
-        'type'    : 'boolean',
-    },
-    'smtp_tlscertfile': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_TLSCERTFILE', 'SMTP_TLSCERTFILE'),
-        'type'    : 'string',
-    },
-    'smtp_tlskeyfile': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_TLSKEYFILE', 'SMTP_TLSKEYFILE'),
-        'type'    : 'string',
-    },
-    'smtp_tlskeypass': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_TLSKEYPASS', 'SMTP_TLSKEYPASS'),
-        'type'    : 'string',
-    },
-    'smtp_username': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_USERNAME', 'SMTP_USERNAME'),
-        'type'    : 'string',
-    },
-    'smtp_password': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_PASSWORD', 'SMTP_PASSWORD'),
-        'type'    : 'string',
-    },
-    'mailroom_interval': {
-        'default' : 30,
-        'envvar'  : 'PT_MAILROOM_INTERVAL',
-        'type'    : 'int',
-    },
-}
+##################
+## www.conf     ##
+##################
 
-#####################################################
-#                                                   #
-# Metrics                                           #
-#                                                   #
-#####################################################
+opts = www.conf.opts
+logger = www.conf.logger
+metrics = www.conf.metrics
+re_email = www.conf.re_email
+cp_global_config = www.conf.cp_global_config
 
-metrics = {
-    'app_requests_count' : prom.Counter(
-        'app_requests_count',
-        'total app http requests',
-        ['app_name', 'endpoint'],
-    ),
-    'proofs_completed_count' : prom.Counter(
-        'proofs_completed_count',
-        'total proofs completed',
-        ['app_name', 'logic', 'result'],
-    ),
-    'proofs_inprogress_count' : prom.Gauge(
-        'proofs_inprogress_count',
-        'total proofs in progress',
-        ['app_name', 'logic'],
-    ),
-    'proofs_execution_time' : prom.Summary(
-        'proofs_execution_time',
-        'total proof execution time',
-        ['app_name', 'logic'],
-    )
-}
+# Modules Info
+available = www.conf.available
+modules = www.conf.modules
+logic_categories = www.conf.logic_categories
+# nups: "notation-user-predicate-symbols"
+nups = www.conf.nups
 
-#####################################################
-#                                                   #
-# Modules Info                                      #
-#                                                   #
-#####################################################
+#################
+## Mailroom    ##
+#################
 
-modules = dict()
-logic_categories = dict()
-notation_user_predicate_symbols = dict()
+mailroom = Mailroom(opts)
 
-available_module_names = {
-    'logics'    : [
-        'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go',
-        'l3', 'g3', 'p3', 'lp', 'rm3', 'k', 'd', 't', 's4', 's5'
-    ],
-    'notations' : ['standard', 'polish'],
-    'writers'   : ['html', 'ascii'],
-}
-
-def populate_modules_info():
-    
-    for package in available_module_names:
-        modules[package] = {}
-        for name in available_module_names[package]:
-            modules[package][name] = importlib.import_module(
-                '.'.join((package, name))
-            )
-
-    for notation_name in modules['notations']:
-        notation = modules['notations'][notation_name]
-        notation_user_predicate_symbols[notation_name] = list(
-            notation.symbol_sets['default'].chars('user_predicate')
-        )
-
-    for name in modules['logics']:
-        lgc = modules['logics'][name]
-        if lgc.Meta.category not in logic_categories:
-            logic_categories[lgc.Meta.category] = list()
-        logic_categories[lgc.Meta.category].append(name)
-
-    def get_category_order(name):
-        return logic.get_logic(name).Meta.category_display_order
-
-    for category in logic_categories.keys():
-        logic_categories[category].sort(key = get_category_order)
-
-populate_modules_info()
-
-#####################################################
-#                                                   #
-# Options                                           #
-#                                                   #
-#####################################################
-
-def get_opt_value(defn):
-    evtype = type(defn['envvar'])
-    if evtype == str:
-        envvars = (defn['envvar'],)
-    else:
-        envvars = defn['envvar']
-    for varname in envvars:
-        if varname in os.environ:
-            v = os.environ[varname]
-            if defn['type'] == 'int':
-                v = int(v)
-            elif defn['type'] == 'boolean':
-                v = str(v).lower() in ('true', 'yes', '1')
-            else:
-                # string
-                v = str(v)
-            return v
-    return defn['default']
-
-opts = {
-    name: get_opt_value(optdefs[name]) for name in optdefs.keys()
-}
-
-# Logger
-def init_logger(logger):
-    ch = logging.StreamHandler()
-    formatter = logging.Formatter(
-        # Similar to cherrypy's format for consistency.
-        '[%(asctime)s] %(name)s.%(levelname)s %(message)s',
-        datefmt='%d/%b/%Y:%H:%M:%S',
-    )
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-    if hasattr(logging, opts['loglevel'].upper()):
-        logger.setLevel(getattr(logging, opts['loglevel'].upper()))
-    else:
-        logger.setLevel(getattr(logging, optdefs['loglevel']['default'].upper()))
-        logger.warn('Ingoring invalid loglevel: {0}'.format(opts['loglevel']))
-        opts['loglevel'] = optdefs['loglevel']['default'].upper()
-logger = logging.Logger('APP')
-init_logger(logger)
-
-
-#####################################################
-#                                                   #
-# Server Config                                     #
-#                                                   #
-#####################################################
+#############################
+#                           #
+# Cherrypy Server Config    #
+#                           #
+#############################
 
 class AppDispatcher(Dispatcher):
     def __call__(self, path_info):
@@ -294,15 +81,7 @@ class AppDispatcher(Dispatcher):
         logger.debug('path_info:', path_info)
         return Dispatcher.__call__(self, path_info.split('?')[0])
 
-global_config = {
-    'global': {
-        'server.socket_host'   : opts['host'],
-        'server.socket_port'   : opts['port'],
-        'engine.autoreload.on' : opts['is_debug'],
-    },
-}
-
-config = {
+cp_config = {
     '/' : {
         'request.dispatch': AppDispatcher(),
     },
@@ -321,23 +100,29 @@ config = {
     },
 }
 
-#####################################################
-#                                                   #
-# Static Data                                       #
-#                                                   #
-#####################################################
+#####################
+#                   #
+# Static Data       #
+#                   #
+#####################
 
 browser_data = {
-    'example_predicates'              : examples.test_pred_data,
-    'notation_user_predicate_symbols' : notation_user_predicate_symbols,
-    'num_predicate_symbols'           : logic.num_predicate_symbols,
+    'example_predicates'    : examples.test_pred_data,
+    # nups: "notation-user-predicate-symbols"
+    'nups'                  : nups,
+    'num_predicate_symbols' : logic.num_predicate_symbols,
     'example_arguments' : {
         arg.title : {
             notation: {
-                'premises'   : [modules['notations'][notation].write(premise) for premise in arg.premises],
-                'conclusion' : modules['notations'][notation].write(arg.conclusion),
+                'premises'   : [
+                    modules['notations'][notation].write(premise)
+                    for premise in arg.premises
+                ],
+                'conclusion' : modules['notations'][notation].write(
+                    arg.conclusion
+                ),
             }
-            for notation in available_module_names['notations']
+            for notation in available['notations']
         }
         for arg in examples.arguments()
     }
@@ -348,29 +133,30 @@ base_view_data = {
     'browser_json'        : json.dumps(browser_data, indent = 2),
     'copyright'           : logic.copyright,
     'example_args_list'   : examples.args_list,
+    'feedback_to_address' : opts['feedback_to_address'],
     'google_analytics_id' : opts['google_analytics_id'],
     'is_debug'            : opts['is_debug'],
     'is_feedback'         : opts['feedback_enabled'],
     'is_google_analytics' : bool(opts['google_analytics_id']),
     'logic_categories'    : logic_categories,
-    'logic_modules'       : available_module_names['logics'],
+    'logic_modules'       : available['logics'],
     'logics'              : modules['logics'],
-    'notation_modules'    : available_module_names['notations'],
+    'notation_modules'    : available['notations'],
     'notations'           : modules['notations'],
     'operators_list'      : logic.operators_list,
     'quantifiers'         : logic.quantifiers_list,
     'source_href'         : logic.source_href,
     'system_predicates'   : logic.system_predicates,
     'version'             : logic.version,
-    'writer_modules'      : available_module_names['writers'],
+    'writer_modules'      : available['writers'],
     'writers'             : modules['writers'],
 }
 
-#####################################################
-#                                                   #
-# Templates                                         #
-#                                                   #
-#####################################################
+###################
+#                 #
+# Templates       #
+#                 #
+###################
 
 jenv = Environment(loader = FileSystemLoader(consts['view_path']))
 template_cache = dict()
@@ -385,11 +171,11 @@ def get_template(view):
 def render(view, data={}):
     return get_template(view).render(data)
 
-#####################################################
-#                                                   #
-# Generic                                           #
-#                                                   #
-#####################################################
+#####################
+#                   #
+# Miscellaneous     #
+#                   #
+#####################
 
 def fix_form_data(form_data):
     form_data = dict(form_data)
@@ -407,8 +193,11 @@ def debug_result(result):
         if 'tableau' in result and 'body' in result['tableau']:
             if len(result['tableau']['body']) > 255:
                 result['tableau'] = dict(result['tableau'])
-                result['tableau']['body'] = '{0}...'.format(result['tableau']['body'][0:255])
+                result['tableau']['body'] = '{0}...'.format(
+                    result['tableau']['body'][0:255]
+                )
     return result
+
 
 def is_valid_email(value):
     return re.fullmatch(re_email, value)
@@ -433,177 +222,11 @@ class RequestDataError(Exception):
     def __init__(self, errors):
         self.errors = errors
 
-class InternalError(Exception):
-    pass
-
-class ConfigError(Exception):
-    pass
-
-#####################################################
-#                                                   #
-# Mailroom                                          #
-#                                                   #
-#####################################################
-
-class Mailroom(object):
-
-    def __init__(self, opts):
-        self.opts = opts
-        self.loaded = False
-        self.enabled = bool(opts['smtp_host'])
-        self.queue = list()
-        self.started = False
-        self.should_stop = False
-        
-    def reload(self):
-        opts = self.opts
-        self.enabled = bool(opts['smtp_host'])
-        if not self.enabled:
-            logger.warn('SMTP not enabled, not starting mailroom')
-            return
-        logger.info('Intializing SMTP settings')
-        if opts['feedback_enabled']:
-            if not opts['feedback_to_address']:
-                raise ConfigError(
-                    'Feedback is enabled but to address is not set'
-                )
-            if not opts['feedback_from_address']:
-                raise ConfigError(
-                    'Feedback is enabled but from address is not set'
-                )
-            if not is_valid_email(opts['feedback_to_address']):
-                raise ConfigError(
-                    'Invalid feedback to address: {0}'.format(
-                        str(opts['feedback_to_address'])
-                    )
-                )
-            if not is_valid_email(opts['feedback_from_address']):
-                raise ConfigError(
-                    'Invalid feedback from address: {0}'.format(
-                        str(opts['feedback_from_address'])
-                    )
-                )
-        if opts['smtp_starttls']:
-            self.tlscontext = ssl.SSLContext()
-            if opts['smtp_tlscertfile']:
-                logger.info('Loading TLS client certificate for SMTP')
-                self.tlscontext.load_cert_chain(
-                    opts['smtp_tlscertfile'],
-                    keyfile = opts['smtp_tlskeyfile'],
-                    password = opts['smtp_tlskeypass'],
-                )
-        else:
-            logger.warn('TLS disabled for SMTP, messages will NOT be encrypted')
-        self.loaded = True
-
-    def start(self):
-        if not self.loaded:
-            self.reload()
-        if not self.enabled:
-            return
-        self.should_stop = False
-        self._thread = threading.Thread(target = self.runner)
-        self._thread.daemon = True
-        self._thread.start()
-
-    def enqueue(self, from_addr, to_addrs, msg):
-        if not self.enabled:
-            raise ConfigError('SMTP not configured, cannot enqueue message')
-        self.queue.append({
-            'from_addr' : from_addr,
-            'to_addrs'  : to_addrs,
-            'msg'       : msg,
-        })
-
-    def runner(self):
-        if not self.enabled:
-            raise ConfigError('SMTP not configured, cannot start Mailroom.')
-        if self.started:
-            raise InternalError('Mailroom already running')
-        self.started = True
-        interval = self.opts['mailroom_interval']
-        logger.info(
-            'Starting SMTP Mailroom with interval {0}s'.format(
-                str(interval)
-            )
-        )
-        while True:
-            self._mailproc()
-            i = 0
-            while i < interval:
-                time.sleep(1)
-                if self.should_stop:
-                    logger.info('Mailroom received quit signal, stopping')
-                    self.started = False
-                    return
-                i += 1
-
-    def _mailproc(self):
-        if not self.queue:
-            return
-        opts = self.opts
-        logger.info(
-            'Connecting to SMTP server {0}:{1}'.format(
-                opts['smtp_host'], str(opts['smtp_port'])
-            )
-        )
-        smtp = smtplib.SMTP(
-            host = opts['smtp_host'],
-            port = opts['smtp_port'],
-            local_hostname = opts['smtp_helo'],
-        )
-        try:
-            smtp.ehlo()
-            if opts['smtp_starttls']:
-                logger.info('Starting SMTP TLS session')
-                resp = smtp.starttls(context = self.tlscontext)
-                logger.debug('Starttls response: {0}'.format(str(resp)))
-            else:
-                logger.warn('TLS disabled, not encrypting email')
-            if (opts['smtp_username']):
-                logger.debug(
-                    'Logging into SMTP server with {0}'.format(
-                        opts['smtp_username']
-                    )
-                )
-                smtp.login(opts['smtp_username'], opts['smtp_password'])
-            i, total = (0, len(self.queue))
-            requeue = []
-            while self.queue:
-                job = self.queue.pop(0)
-                try:
-                    logger.info(
-                        'Sending message {0} of {1}'.format(
-                            str(i + 1), str(total)
-                        )
-                    )
-                    smtp.sendmail(**job)
-                except Exception as merr:
-                    traceback.print_exc()
-                    logger.error(
-                        'Sendmail failed with error: {0}'.format(str(merr))
-                    )
-                    requeue.append(job)
-                i += 1
-            logger.info('Disconnecting from SMTP server')
-            smtp.quit()
-        except Exception as err:
-            logger.error('SMTP failed with error {0}'.format(str(err)))
-            try:
-                smtp.quit()
-            except Exception as err:
-                logger.warn('Failed to quit SMTP connection: {0}'.format(str(err)))
-        if requeue:
-            logger.info('Requeuing {0} failed messages'.format(len(requeue)))
-            self.queue.extend(requeue)
-
-mailroom = Mailroom(opts)
-
-#####################################################
-#                                                   #
-# Webapp                                            #
-#                                                   #
-#####################################################
+#####################
+#                   #
+# Webapp            #
+#                   #
+#####################
 
 class App(object):
 
@@ -666,24 +289,33 @@ class App(object):
         return render(view, data)
 
     def feedback(self, **form_data):
-        view = 'feedback'
-        data = dict(base_view_data)
-        is_submitted = False
+
         errors = {}
+        debugs = list()
+
+        data = dict(base_view_data)
+
+        is_submitted = False
+
+        view = 'feedback'
+        
+        data.update({
+            'form_data': form_data,
+        })
+        
         if len(form_data):
+
             try:
                 validate_feedback_form(form_data)
             except RequestDataError as err:
                 errors.update(err.errors)
+
             if len(errors) == 0:
                 date = datetime.now()
                 data.update({
-                    'date'      : str(date),
-                    'ip'        : get_remote_ip(server.request),
-                    'form_data' : form_data,
+                    'date' : str(date),
+                    'ip'   : get_remote_ip(server.request),
                 })
-                msg_txt = render('feedback-email.txt', data)
-                msg_html = render('feedback-email', data)
                 msg = MIMEMultipart('alternative')
                 msg['From'] = '{0} Feedback <{1}>'.format(
                     opts['app_name'],
@@ -691,6 +323,8 @@ class App(object):
                 )
                 msg['To'] = opts['feedback_to_address']
                 msg['Subject'] = 'Feedback from {0}'.format(form_data['name'])
+                msg_txt = render('feedback-email.txt', data)
+                msg_html = render('feedback-email', data)
                 msg.attach(MIMEText(msg_txt, 'plain'))
                 msg.attach(MIMEText(msg_html, 'html'))
                 mailroom.enqueue(
@@ -699,6 +333,10 @@ class App(object):
                     msg.as_string(),
                 )
                 is_submitted = True
+
+        debugs.extend([
+            ('form_data', form_data),
+        ])
         data.update({
             'errors'       : errors,
             'is_submitted' : is_submitted,
@@ -823,7 +461,7 @@ class App(object):
                     'default': modules['notations'][notation].write(sentence),
                     'html'   : modules['notations'][notation].write(sentence, 'html'),
                 }
-                for notation in available_module_names['notations']
+                for notation in available['notations']
             }
         }
 
@@ -937,7 +575,8 @@ class App(object):
         except Exception as err:
             errors['Output notation'] = str(err)
         try:
-            proof_writer = modules['writers'][odata['format']].Writer(**odata['options'])
+            pwmod = modules['writers'][odata['format']]
+            proof_writer = pwmod.Writer(**odata['options'])
         except Exception as err:
             errors['Output format'] = str(err)
 
@@ -1002,7 +641,10 @@ class App(object):
             'tableau': {
                 'logic' : selected_logic.name,
                 'argument': {
-                    'premises'   : [sw.write(premise) for premise in arg.premises],
+                    'premises'   : [
+                        sw.write(premise)
+                        for premise in arg.premises
+                    ],
                     'conclusion' : sw.write(arg.conclusion),
                 },
                 'valid'  : proof.valid,
@@ -1087,11 +729,13 @@ class App(object):
 #####################################################
 
 def main(): # pragma: no cover
-    logger.info('Staring metrics on port {0}'.format(str(opts['metrics_port'])))
+    logger.info(
+        'Staring metrics on port {0}'.format(str(opts['metrics_port']))
+    )
     mailroom.start()
     prom.start_http_server(opts['metrics_port'])
-    server.config.update(global_config)
-    server.quickstart(App(), '/', config)
+    server.config.update(cp_global_config)
+    server.quickstart(App(), '/', cp_config)
 
 if  __name__ == '__main__': # pragma: no cover
     main()

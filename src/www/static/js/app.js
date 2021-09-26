@@ -284,7 +284,8 @@
         function addPredicate(index, subscript, name, arity) {
             const thisNotation = currentNotation()
             var html = ''
-            $.each(AppData.notation_user_predicate_symbols, function(notation, symbols) {
+            // nups: "notation-user-predicate-symbols"
+            $.each(AppData.nups, function(notation, symbols) {
                 var classes = ['predicateSymbol', 'notation-' + notation]
                 if (notation != thisNotation)
                     classes.push('hidden')
