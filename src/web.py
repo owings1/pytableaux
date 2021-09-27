@@ -182,7 +182,6 @@ def get_remote_ip(req):
     return req.remote.ip
 
 class RequestDataError(Exception):
-
     def __init__(self, errors):
         self.errors = errors
 
@@ -196,6 +195,7 @@ class App(object):
     def index(self, *args, **form_data):
 
         errors = dict()
+        warns  = dict()
         debugs = list()
 
         data = dict(base_view_data)
@@ -246,6 +246,7 @@ class App(object):
             'user_predicates'      : vocab.user_predicates,
             'user_predicates_list' : vocab.user_predicates_list,
             'debugs'               : debugs,
+            'warns'                : warns,
         })
 
         return render(view, data)
@@ -253,6 +254,7 @@ class App(object):
     def feedback(self, **form_data):
 
         errors = dict()
+        warns  = dict()
         debugs = list()
 
         data = dict(base_view_data)
@@ -262,9 +264,11 @@ class App(object):
         view = 'feedback'
         
         data.update({
-            'form_data': form_data,
+            'form_data' : form_data,
         })
-        
+
+        req = server.request
+
         if len(form_data):
 
             try:
@@ -275,8 +279,9 @@ class App(object):
             if len(errors) == 0:
                 date = datetime.now()
                 data.update({
-                    'date' : str(date),
-                    'ip'   : get_remote_ip(server.request),
+                    'date'    : str(date),
+                    'ip'      : get_remote_ip(req),
+                    'headers' : req.headers,
                 })
                 msg = MIMEMultipart('alternative')
                 msg['From'] = '{0} Feedback <{1}>'.format(
@@ -296,11 +301,19 @@ class App(object):
                 )
                 is_submitted = True
 
+        else:
+            if not mailroom.last_was_success:
+                warns['Mailroom'] = ' '.join((
+                    'The most recent email was unsuccessful.',
+                    'You might want to send an email instead.',
+                ))
+
         debugs.extend([
             ('form_data', form_data),
         ])
         data.update({
             'errors'       : errors,
+            'warns'        : warns,
             'is_submitted' : is_submitted,
         })
         return render(view, data)

@@ -13,6 +13,9 @@
         {% if errors %}
             {% include 'errors.html' %}
         {% endif %}
+        {% if warns %}
+            {% include 'warns.html' %}
+        {% endif %}
         <form class="argument" action="/" method="post">
             <input type="hidden" name="api-json"/>
             <div class="fieldset logic">

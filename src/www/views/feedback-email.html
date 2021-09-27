@@ -26,12 +26,18 @@
         <tbody>
             <tr>
                 <td>Date</td>
-                <td>{{ date }}</td>
+                <td>{{ date|e }}</td>
             </tr>
             <tr>
                 <td>IP</td>
-                <td>{{ ip }}</td>
+                <td>{{ ip|e }}</td>
             </tr>
+            {% for header in headers.keys() %}
+                <tr>
+                    <td>{{ header|e }}</td>
+                    <td>{{ headers[header]|e }}</td>
+                </tr>
+            {% endfor %}
         <tbody>
         <thead>
             <tr>
@@ -41,16 +47,16 @@
         <tbody>
             <tr>
                 <td>Name</td>
-                <td>{{ form_data['name'] }}</td>
+                <td>{{ form_data['name']|e }}</td>
             </tr>
             <tr>
                 <td>Email</td>
-                <td>{{ form_data['email'] }}</td>
+                <td>{{ form_data['email']|e }}</td>
             </tr>
         </tbody>
     </table>
     <h3>Message</h3>
-    <div class="feedback_message">{{ form_data['message'] }}</div>
+    <div class="feedback_message">{{ form_data['message']|e }}</div>
 </div>
 </body>
 </html>

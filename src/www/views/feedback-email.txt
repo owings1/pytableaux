@@ -6,6 +6,9 @@ Details
 
 Date: {{ date }}
 IP: {{ ip }}
+{% for header in headers.keys() -%}
+{{ header|e }}: {{ headers[header]|e }}
+{% endfor %}
 
 Form Data
 ----------

@@ -18,6 +18,7 @@
 #
 # pytableaux - Web App SMTP Mailroom
 import re, smtplib, ssl, threading, time, traceback
+from collections import deque
 from www.conf import logger, re_email
 
 class ConfigError(Exception):
@@ -35,9 +36,11 @@ class Mailroom(object):
         self.opts = opts
         self.loaded = False
         self.enabled = bool(opts['smtp_host'])
-        self.queue = list()
+        self.queue = deque()
+        self.failqueue = deque()
         self.started = False
         self.should_stop = False
+        self.last_was_success = True
         
     def reload(self):
         opts = self.opts
@@ -106,21 +109,44 @@ class Mailroom(object):
             raise InternalSMTPError('Mailroom already running')
         self.started = True
         interval = self.opts['mailroom_interval']
+        requeue_interval = self.opts['mailroom_requeue_interval']
         logger.info(
-            'Starting SMTP Mailroom with interval {0}s'.format(
-                str(interval)
+            'Starting SMTP Mailroom with interval {0}s, requeue {1}s'.format(
+                str(interval), str(requeue_interval)
             )
         )
+        qi = 0
+        rqi = 0
         while True:
-            self._mailproc()
-            i = 0
-            while i < interval:
+            if rqi >= requeue_interval:
+                if self.failqueue:
+                    logger.info(
+                        'Requeuing {0} previously failed messages'.format(
+                            str(len(self.failqueue))
+                        )
+                    )
+                    self.queue.extend(self.failqueue)
+                    self.failqueue.clear()
+                rqi = 0
+            if qi >= interval:
+                self._mailproc()
+                qi = 0
+            while qi < interval:
                 time.sleep(1)
                 if self.should_stop:
                     logger.info('Mailroom received quit signal, stopping')
+                    if self.queue:
+                        logger.warn(
+                            'Dumping {0} unprocessed messages'.format(str(len(self.queue)))
+                        )
+                        try:
+                            logger.warn('\n'.join(['\n', *[str(job['msg']) for job in self.queue]]))
+                        except Exception as e:
+                            logger.error(str(e))
                     self.started = False
                     return
-                i += 1
+                qi += 1
+                rqi += 1
 
     def _mailproc(self):
         if not self.queue:
@@ -131,30 +157,37 @@ class Mailroom(object):
                 opts['smtp_host'], str(opts['smtp_port'])
             )
         )
-        smtp = smtplib.SMTP(
-            host = opts['smtp_host'],
-            port = opts['smtp_port'],
-            local_hostname = opts['smtp_helo'],
-        )
+        smtp = None
+        total = len(self.queue)
+        requeue = []
         try:
-            smtp.ehlo()
-            if opts['smtp_starttls']:
-                logger.info('Starting SMTP TLS session')
-                resp = smtp.starttls(context = self.tlscontext)
-                logger.debug('Starttls response: {0}'.format(str(resp)))
-            else:
-                logger.warn('TLS disabled, not encrypting email')
-            if (opts['smtp_username']):
-                logger.debug(
-                    'Logging into SMTP server with {0}'.format(
-                        opts['smtp_username']
-                    )
+            try:
+                smtp = smtplib.SMTP(
+                    host = opts['smtp_host'],
+                    port = opts['smtp_port'],
+                    local_hostname = opts['smtp_helo'],
                 )
-                smtp.login(opts['smtp_username'], opts['smtp_password'])
-            i, total = (0, len(self.queue))
-            requeue = []
+                smtp.ehlo()
+                if opts['smtp_starttls']:
+                    logger.info('Starting SMTP TLS session')
+                    resp = smtp.starttls(context = self.tlscontext)
+                    logger.debug('Starttls response: {0}'.format(str(resp)))
+                else:
+                    logger.warn('TLS disabled, not encrypting email')
+                if (opts['smtp_username']):
+                    logger.debug(
+                        'Logging into SMTP server with {0}'.format(
+                            opts['smtp_username']
+                        )
+                    )
+                    smtp.login(opts['smtp_username'], opts['smtp_password'])
+            except:
+                requeue.extend(self.queue)
+                self.queue.clear()
+                raise
+            i = 0
             while self.queue:
-                job = self.queue.pop(0)
+                job = self.queue.popleft()
                 try:
                     logger.info(
                         'Sending message {0} of {1}'.format(
@@ -173,10 +206,14 @@ class Mailroom(object):
             smtp.quit()
         except Exception as err:
             logger.error('SMTP failed with error {0}'.format(str(err)))
-            try:
-                smtp.quit()
-            except Exception as err:
-                logger.warn('Failed to quit SMTP connection: {0}'.format(str(err)))
+            if smtp:
+                try:
+                    smtp.quit()
+                except Exception as err:
+                    logger.warn('Failed to quit SMTP connection: {0}'.format(str(err)))
         if requeue:
             logger.info('Requeuing {0} failed messages'.format(len(requeue)))
-            self.queue.extend(requeue)
+            self.failqueue.extend(requeue)
+            if len(requeue) == total:
+                # All messages failed.
+                self.last_was_success = False

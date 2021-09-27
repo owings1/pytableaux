@@ -71,18 +71,18 @@ body {
     padding: 20px;
     margin: 30px 0;
 }
-.pt-app .errors {
-    background-color: rgb(255, 190, 202);
+.pt-app .errors,
+.pt-app .warns {
     padding: 5px 10px;
-    border: 1px solid red;
     margin-bottom: 10px;
 }
-.pt-app .errors h3 {
-    color: red;
+.pt-app .errors h3,
+.pt-app .warns h3 {
     margin: 0;
 }
-.pt-app .errors dt {
-    display: inline-block;
+.pt-app .errors dt,
+.pt-app .warns dt {
+    /* display: inline-block; */
     float: left;
     width: 100px;
     text-align: right;
@@ -90,12 +90,27 @@ body {
     clear: both;
     font-style: italic;
 }
-.pt-app .errors dd {
-    display: inline-block;
+.pt-app .errors dd,
+.pt-app .warns dd {
+    /* display: inline-block; */
     margin: 0;
     padding: 10px;
     float: left;
     font-weight: bold;
+}
+.pt-app .errors {
+    background-color: rgb(255, 190, 202);
+    border: 1px solid red;
+}
+.pt-app .warns {
+    background-color: rgb(254, 255, 204);
+    border: 1px solid yellow;
+}
+.pt-app .errors h3 {
+    color: red;
+}
+.pt-app .warns h3 {
+    color: yellow;
 }
 .pt-app .fieldset {
     clear: both;
@@ -137,7 +152,7 @@ body {
     width: 22px;
     height: 22px;
     background-size: 22px 22px;
-    display: inline-block;
+    /* display: inline-block; */
     float: right;
 }
 .pt-app .heading.collapsed .legend::after {
@@ -209,7 +224,7 @@ body {
 
 .pt-app .collapser-heading::after {
     background-size: 16px 16px;
-    display: inline-block;
+    /* display: inline-block; */
     width: 16px;
     height: 16px;
     float: right;
@@ -239,9 +254,9 @@ body {
     margin-right: 28px;
     margin-top: 8px;
 }
-.pt-app a#clear_argument {
+/* .pt-app a#clear_argument {
 
-}
+} */
 .pt-app #logic-select-panel {
     margin-bottom: 10px;
 }
@@ -261,7 +276,7 @@ body {
     float: left;
     background-color: #eee;
     padding: 2px 3px;
-    display: inline-block;
+    /* display: inline-block; */
     clear: both;
     min-width: 12px;
     border: 1px solid #cccccc;
@@ -454,6 +469,9 @@ body {
     white-space: pre;
     font-family: monospace;
     overflow-x: scroll;
+}
+.pt-app .feedback_view {
+    max-width: 800px;
 }
 .pt-app #input_feedback_content {
     width: 600px;

@@ -2,6 +2,7 @@
 {%- import 'helper.html' as helper -%}
 {%- block content -%}
 <div class="pt-app">
+<div class="feedback_view">
     <h2>Submit Feedback</h2>
     {%- if is_submitted -%}
         <div class="feedback_submitted">
@@ -31,23 +32,27 @@
                 If you prefer to email directly, you can send an email to <i>{{ feedback_to_address }}</i>.
             </p>
         </div>
+        {% if warns %}
+            {% include 'warns.html' %}
+        {% endif %}
         <form method="POST" class="feedback">
             <div class="input">
                 <label for="name">Your name</label>
-                <input class="" id="input_name" type="text" name="name" value="{{ form_data['name'] }}"/>
+                <input class="" id="input_name" type="text" name="name" required="required" value="{{ form_data['name'] }}"/>
             </div>
             <div class="input">
                 <label for="name">Your email</label>
-                <input class="" id="input_email" type="email" name="email" value="{{ form_data['email'] }}"/>
+                <input class="" id="input_email" type="email" name="email" required="required" value="{{ form_data['email'] }}"/>
             </div>
             <div class="input">
                 <label for="feedback_content">Feedback</label>
-                <textarea id="input_feedback_content" name="message">{{ form_data['message'] }}</textarea>
+                <textarea id="input_feedback_content" name="message" required="required">{{ form_data['message'] }}</textarea>
             </div>
             <div class="input submit">
                 <input id="input_submit" type="submit" value="Submit"/>
             </div>
         </form>
     {%- endif -%}
+</div>
 </div>
 {%- endblock -%}

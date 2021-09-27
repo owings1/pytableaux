@@ -1,0 +1,11 @@
+{%- if warns -%}
+<div class="warns">
+    <dl>
+        {% for key in warns %}
+            <dt>{{ key }}:</dt>
+            <dd>{{ warns[key]|e }}</dd>
+        {% endfor %}
+    </dl>
+    <div class="clear"></div>
+</div>
+{%- endif -%}
