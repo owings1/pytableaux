@@ -1160,7 +1160,65 @@ class TestMH(LogicTester):
         self.assert_invalid('UNbNa', 'NAaNa', 'Uab')
 
 class TestNH(LogicTester):
+
     logic = get_logic('NH')
+
+    def test_hnh_ax1(self):
+        self.assert_axiom('UaUba')
+
+    def test_hnh_ax2(self):
+        self.assert_axiom('UUaUbcUUabUac')
+
+    def test_hnh_ax3(self):
+        self.assert_axiom('UKaba')
+
+    def test_hnh_ax4(self):
+        self.assert_axiom('UKabb')
+
+    def test_hnh_ax5(self):
+        self.assert_axiom('UUabUUacUaKbc')
+
+    def test_hnh_ax6(self):
+        self.assert_axiom('UaAab')
+
+    def test_hnh_ax7(self):
+        self.assert_axiom('UbAab')
+
+    def test_hnh_ax8(self):
+        self.assert_axiom('UUacUUbcUAabc')
+
+    def test_hnh_ax9(self):
+        self.assert_axiom('BNNaa')
+
+    def test_hnh_ax17(self):
+        self.assert_axiom('NKKaNaNKaNa')
+
+    def test_hnh_ax18(self):
+        self.assert_axiom('NKUabNUab')
+
+    def test_hnh_ax19(self):
+        self.assert_axiom('UNKaNaUUbaUNaNb')
+
+    def test_hnh_ax20(self):
+        self.assert_axiom('BKNaNbNAab')
+
+    def test_hnh_ax21(self):
+        self.assert_axiom('BANaNbANKabKKaNaKbNb')
+
+    def test_hnh_ax22(self):
+        self.assert_axiom('UKNKaNaNaUab')
+
+    def test_hnh_ax23(self):
+        self.assert_axiom('UKaKNKbNbNbNUab')
+
+    def test_efq_invalid(self):
+        self.assert_invalid('b', 'KaNa')
+
+    def test_lem_valid(self):
+        self.assert_valid('AbNb', 'a')
+
+    def test_dem_invalid(self):
+        self.assert_invalid('NAab', 'ANaNb')
 
 class TestP3(LogicTester):
 
