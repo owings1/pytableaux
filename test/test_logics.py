@@ -1072,6 +1072,96 @@ class TestGO(LogicTester):
         node, = branch.get_nodes()
         assert self.logic.TableauxSystem.branching_complexity(node) == 0
 
+
+class TestMH(LogicTester):
+
+    logic = get_logic('MH')
+
+    def assert_axiom(self, ax):
+        arg = argument(ax, notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
+
+    def assert_valid(self, conc, *prems):
+        arg = argument(conc, prems, notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
+
+    def assert_invalid(self, conc, *prems):
+        arg = argument(conc, prems, notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert not proof.valid
+
+    def test_nmh_ax1(self):
+        self.assert_axiom('UaUba')
+
+    def test_nmh_ax2(self):
+        self.assert_axiom('UUaUbcUUabUac')
+
+    def test_nmh_ax3(self):
+        self.assert_axiom('UKaba')
+
+    def test_nmh_ax4(self):
+        self.assert_axiom('UKabb')
+
+    def test_nmh_ax5(self):
+        self.assert_axiom('UUabUUacUaKbc')
+
+    def test_nmh_ax6(self):
+        self.assert_axiom('UaAab')
+
+    def test_nmh_ax7(self):
+        self.assert_axiom('UbAab')
+
+    def test_nmh_ax8(self):
+        self.assert_axiom('UUacUUbcUAabc')
+
+    def test_nmh_ax9(self):
+        self.assert_axiom('BNNaa')
+
+    def test_nmh_ax10(self):
+        self.assert_axiom('AAaNaNAaNa')
+
+    def test_nmh_ax11(self):
+        self.assert_axiom('AUabNUab')
+
+    def test_nmh_ax12(self):
+        self.assert_axiom('UAaNaUUabUNbNa')
+
+    def test_nmh_ax13(self):
+        self.assert_axiom('BNKabANaNb')
+
+    def test_nmh_ax14(self):
+        self.assert_axiom('BNAabAKNaNbKNAaNaNAbNb')
+
+    def test_nmh_ax15(self):
+        self.assert_axiom('UANaNAaNaUab')
+
+    def test_nmh_ax16(self):
+        self.assert_axiom('UKaANbNAbNbNUab')
+
+    def test_mp(self):
+        proof = self.example_proof('Conditional Modus Ponens')
+        assert proof.valid
+
+    def test_inden(self):
+        self.assert_axiom('Uaa')
+
+    def test_ifn(self):
+        self.assert_axiom('BNAaNaNANaNNa')
+
+    def test_adj(self):
+        self.assert_valid('Kab', 'a', 'b')
+
+    def test_p_invalid(self):
+        self.assert_invalid('UNbNa', 'NAaNa', 'Uab')
+
+class TestNH(LogicTester):
+    logic = get_logic('NH')
+
 class TestP3(LogicTester):
 
     logic = get_logic('P3')
