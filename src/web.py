@@ -68,6 +68,10 @@ cp_config = {
         'tools.staticfile.on': True,
         'tools.staticfile.filename': consts['favicon_file'],
     },
+    '/robots.txt': {
+        'tools.staticfile.on': True,
+        'tools.staticfile.filename': consts['robotstxt_file'],
+    },
 }
 
 #####################
