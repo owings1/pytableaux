@@ -320,7 +320,7 @@
     font-weight: bold;
     src: url("fonts/charmonman/Charmonman-Bold.ttf") format("truetype");
 }
-@font-face {
+/* @font-face {
     font-family: "NanumMyeongjo";
     font-weight: 100 400;
     src: url("fonts/nanum_myeongjo/NanumMyeongjo-Regular.ttf") format("truetype");
@@ -334,7 +334,7 @@
     font-family: "NanumMyeongjo";
     font-weight: 800 900;
     src: url("fonts/nanum_myeongjo/NanumMyeongjo-ExtraBold.ttf") format("truetype");
-}
+} */
 
 .html-writer-models .model ul.details li .prop {
     font-weight: bold;
@@ -383,7 +383,7 @@
 }
 .html-writer-models .model .set > .values::before,
 .html-writer-models .model .set > .values::after {
-    font-family: "NanumMyeongjo", "cursive";
+    /* font-family: "NanumMyeongjo", "cursive"; */
     font-size: 14px;
 }
 .html-writer-models .model .set.non-empty > .values::before {
@@ -400,11 +400,11 @@
     content: " = \2205";
 }
 .html-writer-models .model .tuple > .values::before {
-    font-family: "NanumMyeongjo", "cursive";
+    /* font-family: "NanumMyeongjo", "cursive"; */
     content: "<";
 }
 .html-writer-models .model .tuple > .values::after {
-    font-family: "NanumMyeongjo", "cursive";
+    /* font-family: "NanumMyeongjo", "cursive"; */
     content: ">";
 }
 .html-writer-models .model .function > ul.values,
@@ -465,9 +465,9 @@
 .html-writer-models .model .list.frames > ul.values > li {
     margin-bottom: 10px;
 }
-.html-writer-models .model .is-countermodel {
+/* .html-writer-models .model .is-countermodel {
     
-}
+} */
 .html-writer-models .model .is-countermodel.yes {
     color: green;
 }
