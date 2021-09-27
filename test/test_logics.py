@@ -57,6 +57,24 @@ class LogicTester(object):
             kw['vocabulary'] = self.vocab
         return parse(s, **kw)
 
+    def assert_axiom(self, ax):
+        arg = argument(ax, notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
+
+    def assert_valid(self, conc, *prems):
+        arg = argument(conc, prems, notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert proof.valid
+
+    def assert_invalid(self, conc, *prems):
+        arg = argument(conc, prems, notation='polish')
+        proof = tableau(self.logic, arg)
+        proof.build()
+        assert not proof.valid
+
 class TestFDE(LogicTester):
 
     logic = get_logic('FDE')
@@ -1077,70 +1095,52 @@ class TestMH(LogicTester):
 
     logic = get_logic('MH')
 
-    def assert_axiom(self, ax):
-        arg = argument(ax, notation='polish')
-        proof = tableau(self.logic, arg)
-        proof.build()
-        assert proof.valid
-
-    def assert_valid(self, conc, *prems):
-        arg = argument(conc, prems, notation='polish')
-        proof = tableau(self.logic, arg)
-        proof.build()
-        assert proof.valid
-
-    def assert_invalid(self, conc, *prems):
-        arg = argument(conc, prems, notation='polish')
-        proof = tableau(self.logic, arg)
-        proof.build()
-        assert not proof.valid
-
-    def test_nmh_ax1(self):
+    def test_hmh_ax1(self):
         self.assert_axiom('UaUba')
 
-    def test_nmh_ax2(self):
+    def test_hmh_ax2(self):
         self.assert_axiom('UUaUbcUUabUac')
 
-    def test_nmh_ax3(self):
+    def test_hmh_ax3(self):
         self.assert_axiom('UKaba')
 
-    def test_nmh_ax4(self):
+    def test_hmh_ax4(self):
         self.assert_axiom('UKabb')
 
-    def test_nmh_ax5(self):
+    def test_hmh_ax5(self):
         self.assert_axiom('UUabUUacUaKbc')
 
-    def test_nmh_ax6(self):
+    def test_hmh_ax6(self):
         self.assert_axiom('UaAab')
 
-    def test_nmh_ax7(self):
+    def test_hmh_ax7(self):
         self.assert_axiom('UbAab')
 
-    def test_nmh_ax8(self):
+    def test_hmh_ax8(self):
         self.assert_axiom('UUacUUbcUAabc')
 
-    def test_nmh_ax9(self):
+    def test_hmh_ax9(self):
         self.assert_axiom('BNNaa')
 
-    def test_nmh_ax10(self):
+    def test_hmh_ax10(self):
         self.assert_axiom('AAaNaNAaNa')
 
-    def test_nmh_ax11(self):
+    def test_hmh_ax11(self):
         self.assert_axiom('AUabNUab')
 
-    def test_nmh_ax12(self):
+    def test_hmh_ax12(self):
         self.assert_axiom('UAaNaUUabUNbNa')
 
-    def test_nmh_ax13(self):
+    def test_hmh_ax13(self):
         self.assert_axiom('BNKabANaNb')
 
-    def test_nmh_ax14(self):
+    def test_hmh_ax14(self):
         self.assert_axiom('BNAabAKNaNbKNAaNaNAbNb')
 
-    def test_nmh_ax15(self):
+    def test_hmh_ax15(self):
         self.assert_axiom('UANaNAaNaUab')
 
-    def test_nmh_ax16(self):
+    def test_hmh_ax16(self):
         self.assert_axiom('UKaANbNAbNbNUab')
 
     def test_mp(self):
