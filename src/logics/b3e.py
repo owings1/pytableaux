@@ -28,7 +28,7 @@ class Meta(object):
 
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     
-    category_display_order = 5
+    category_display_order = 50
 
 import logic
 from logic import assertion, operate, negate

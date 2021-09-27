@@ -28,7 +28,7 @@ class Meta(object):
 
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
 
-    category_display_order = 6
+    category_display_order = 60
 
 import logic, examples
 from . import fde, k3, b3e

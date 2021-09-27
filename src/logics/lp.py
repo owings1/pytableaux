@@ -28,7 +28,7 @@ class Meta(object):
 
     tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
     
-    category_display_order = 8
+    category_display_order = 100
 
 import logic
 from logic import negate, negative
