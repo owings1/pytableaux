@@ -18,9 +18,9 @@
 #
 # pytableaux - Web App Configuration
 import logic
-
-import logging, os, importlib
+import importlib, logging, os, os.path
 import prometheus_client as prom
+from jinja2 import Environment, FileSystemLoader
 
 ## Option definitions
 
@@ -130,6 +130,12 @@ optdefs = {
         'envvar'  : 'PT_MAILROOM_INTERVAL',
         'type'    : 'int',
         'min'     : 1,
+    },
+    'mailroom_requeue_interval': {
+        'default' : 3600,
+        'envvar'  : 'PT_MAILROOM_REQUEUEINTERVAL',
+        'type'    : 'int',
+        'min'     : 60,
     },
 }
 
@@ -278,3 +284,22 @@ cp_global_config = {
         'engine.autoreload.on' : opts['is_debug'],
     },
 }
+
+#  Path info
+
+app_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+
+def apath(*args):
+    return os.path.join(app_dir, *args)
+
+consts = {
+    'index_filename' : 'index.html',
+    'view_path'      : apath('www/views'),
+    'static_dir'     : apath('www/static'),
+    'favicon_file'   : apath('www/static/img/favicon-60x60.png'),
+    'static_dir_doc' : apath('..', 'doc/_build/html'),
+}
+
+# Jinja2
+
+jenv = Environment(loader = FileSystemLoader(consts['view_path']))

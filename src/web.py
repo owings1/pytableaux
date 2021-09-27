@@ -18,62 +18,32 @@
 #
 # pytableaux - Web Application
 
-import examples, logic, www.conf
-from www.mailroom import Mailroom
-import json, os, re, time
-import os.path
+import examples, logic
+import json, re, time
+
 import cherrypy as server
+import prometheus_client as prom
+
 from cherrypy._cpdispatch import Dispatcher
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from jinja2 import Environment, FileSystemLoader
-import prometheus_client as prom
+from past.builtins import basestring
+from www.mailroom import Mailroom
+
+from www.conf import available, consts, cp_global_config, jenv
+from www.conf import logger, logic_categories, metrics, modules
+from www.conf import nups, opts, re_email
 
 ProofTimeoutError = logic.TableauxSystem.ProofTimeoutError
-# http://python-future.org/compatible_idioms.html#basestring
-from past.builtins import basestring
-
-app_dir = os.path.dirname(os.path.abspath(__file__))
-
-def apath(*args):
-    return os.path.join(app_dir, *args)
-consts = {
-    'index_filename' : 'index.html',
-    'view_path'      : apath('www/views'),
-    'static_dir'     : apath('www/static'),
-    'favicon_file'   : apath('www/static/img/favicon-60x60.png'),
-    'static_dir_doc' : apath('..', 'doc/_build/html'),
-}
-
-##################
-## www.conf     ##
-##################
-
-opts = www.conf.opts
-logger = www.conf.logger
-metrics = www.conf.metrics
-re_email = www.conf.re_email
-cp_global_config = www.conf.cp_global_config
-
-# Modules Info
-available = www.conf.available
-modules = www.conf.modules
-logic_categories = www.conf.logic_categories
-# nups: "notation-user-predicate-symbols"
-nups = www.conf.nups
-
-#################
-## Mailroom    ##
-#################
+# shorthand
+ntmods = modules['notations']
 
 mailroom = Mailroom(opts)
 
-#############################
-#                           #
-# Cherrypy Server Config    #
-#                           #
-#############################
+##############################
+## Cherrypy Server Config   ##
+##############################
 
 class AppDispatcher(Dispatcher):
     def __call__(self, path_info):
@@ -101,9 +71,7 @@ cp_config = {
 }
 
 #####################
-#                   #
-# Static Data       #
-#                   #
+## Static Data     ##
 #####################
 
 browser_data = {
@@ -113,16 +81,16 @@ browser_data = {
     'num_predicate_symbols' : logic.num_predicate_symbols,
     'example_arguments' : {
         arg.title : {
-            notation: {
+            nt: {
                 'premises'   : [
-                    modules['notations'][notation].write(premise)
+                    ntmods[nt].write(premise)
                     for premise in arg.premises
                 ],
-                'conclusion' : modules['notations'][notation].write(
+                'conclusion' : ntmods[nt].write(
                     arg.conclusion
                 ),
             }
-            for notation in available['notations']
+            for nt in available['notations']
         }
         for arg in examples.arguments()
     }
@@ -138,11 +106,12 @@ base_view_data = {
     'is_debug'            : opts['is_debug'],
     'is_feedback'         : opts['feedback_enabled'],
     'is_google_analytics' : bool(opts['google_analytics_id']),
+    'issues_href'         : logic.issues_href,
     'logic_categories'    : logic_categories,
     'logic_modules'       : available['logics'],
     'logics'              : modules['logics'],
     'notation_modules'    : available['notations'],
-    'notations'           : modules['notations'],
+    'notations'           : ntmods,
     'operators_list'      : logic.operators_list,
     'quantifiers'         : logic.quantifiers_list,
     'source_href'         : logic.source_href,
@@ -153,12 +122,9 @@ base_view_data = {
 }
 
 ###################
-#                 #
-# Templates       #
-#                 #
+## Templates     ##
 ###################
 
-jenv = Environment(loader = FileSystemLoader(consts['view_path']))
 template_cache = dict()
 
 def get_template(view):
@@ -168,13 +134,11 @@ def get_template(view):
         template_cache[view] = jenv.get_template(view)
     return template_cache[view]
 
-def render(view, data={}):
+def render(view, data = {}):
     return get_template(view).render(data)
 
 #####################
-#                   #
-# Miscellaneous     #
-#                   #
+## Miscellaneous   ##
 #####################
 
 def fix_form_data(form_data):
@@ -203,7 +167,7 @@ def is_valid_email(value):
     return re.fullmatch(re_email, value)
 
 def validate_feedback_form(form_data):
-    errors = {}
+    errors = dict()
     if not is_valid_email(form_data['email']):
         errors['Email'] = 'Invalid email address'
     if not len(form_data['name']):
@@ -222,18 +186,16 @@ class RequestDataError(Exception):
     def __init__(self, errors):
         self.errors = errors
 
-#####################
-#                   #
-# Webapp            #
-#                   #
-#####################
+###################
+## Webapp        ##
+###################
 
 class App(object):
 
     @server.expose
     def index(self, *args, **form_data):
 
-        errors = {}
+        errors = dict()
         debugs = list()
 
         data = dict(base_view_data)
@@ -290,7 +252,7 @@ class App(object):
 
     def feedback(self, **form_data):
 
-        errors = {}
+        errors = dict()
         debugs = list()
 
         data = dict(base_view_data)
@@ -342,6 +304,7 @@ class App(object):
             'is_submitted' : is_submitted,
         })
         return render(view, data)
+
     feedback.exposed = opts['feedback_enabled'] and bool(opts['smtp_host'])
 
     @server.expose
@@ -349,13 +312,16 @@ class App(object):
     @server.tools.json_out()
     def api(self, action=None):
 
-        if server.request.method == 'POST':
+        req = server.request
+        res = server.response
+
+        if req.method == 'POST':
             try:
                 result = None
                 if action == 'parse':
-                    result = self.api_parse(server.request.json)
+                    result = self.api_parse(req.json)
                 elif action == 'prove':
-                    result = self.api_prove(server.request.json)
+                    result = self.api_prove(req.json)
                 if result:
                     return {
                         'status'  : 200,
@@ -363,14 +329,14 @@ class App(object):
                         'result'  : result,
                     }
             except ProofTimeoutError as err: # pragma: no cover
-                server.response.statis = 408
+                res.status = 408
                 return {
                     'status'  : 408,
                     'message' : str(err),
                     'error'   : err.__class__.__name__,
                 }
             except RequestDataError as err:
-                server.response.status = 400
+                res.status = 400
                 return {
                     'status'  : 400,
                     'message' : 'Request data errors',
@@ -378,14 +344,14 @@ class App(object):
                     'errors'  : err.errors,
                 }
             except Exception as err: # pragma: no cover
-                server.response.status = 500
+                res.status = 500
                 return {
                     'status'  : 500,
                     'message' : str(err),
                     'error'   : err.__class__.__name__,
                 }
                 #traceback.print_exc()
-        server.response.status = 404
+        res.status = 404
         return {'message': 'Not found', 'status': 404}
 
     def api_parse(self, body):
@@ -432,9 +398,9 @@ class App(object):
         if 'input' not in body:
             body['input'] = ''
 
-        errors = {}
+        errors = dict()
         try:
-            input_notation = modules['notations'][body['notation']]
+            input_notation = ntmods[body['notation']]
         except KeyError:
             errors['Notation'] = 'Invalid notation'
 
@@ -445,7 +411,7 @@ class App(object):
             vocab = logic.Vocabulary()
 
         if len(errors) == 0:
-            parser = input_notation.Parser(vocabulary=vocab)
+            parser = input_notation.Parser(vocabulary = vocab)
             try:
                 sentence = parser.parse(body['input'])
             except Exception as err:
@@ -457,11 +423,11 @@ class App(object):
         return {
             'type'     : sentence.type,
             'rendered' : {
-                notation: {
-                    'default': modules['notations'][notation].write(sentence),
-                    'html'   : modules['notations'][notation].write(sentence, 'html'),
+                nt: {
+                    'default': ntmods[nt].write(sentence),
+                    'html'   : ntmods[nt].write(sentence, 'html'),
                 }
-                for notation in available['notations']
+                for nt in available['notations']
             }
         }
 
@@ -557,7 +523,7 @@ class App(object):
 
         odata['options']['debug'] = opts['is_debug']
 
-        errors = {}
+        errors = dict()
         try:
             selected_logic = logic.get_logic(body['logic'])
         except Exception as err:
@@ -679,7 +645,7 @@ class App(object):
         errors = dict()
 
         try:
-            notation = modules['notations'][adata['notation']]
+            notation = ntmods[adata['notation']]
         except Exception as e:
             errors['Notation'] = str(e)
 
@@ -710,7 +676,7 @@ class App(object):
 
     def parse_predicates_data(self, predicates):
         vocab = logic.Vocabulary()
-        errors = {}
+        errors = dict()
         i = 1
         for pdata in predicates:
             try:
@@ -722,11 +688,9 @@ class App(object):
             raise RequestDataError(errors)
         return vocab
 
-#####################################################
-#                                                   #
-# Main                                              #
-#                                                   #
-#####################################################
+#############
+## Main    ##
+#############
 
 def main(): # pragma: no cover
     logger.info(

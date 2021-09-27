@@ -18,7 +18,7 @@
 #
 # pytableaux - logic base module
 
-import importlib, notations, os, itertools, time
+import importlib, os, itertools, time
 from types import ModuleType
 
 # http://python-future.org/compatible_idioms.html#basestring
@@ -31,6 +31,7 @@ with open(os.path.join(base_dir, 'VERSION'), 'r') as f:
 
 copyright = '2014-2021, Doug Owings. Released under the GNU Affero General Public License v3 or later'
 source_href = 'https://github.com/owings1/pytableaux'
+issues_href = 'https://github.com/owings1/pytableaux/issues'
 
 default_notation = 'polish'
 
@@ -73,9 +74,9 @@ system_predicates_list  = [
 ]
 
 system_predicates_index = {
-    # negative indexes for system predicates, value is subscript : name.
+    # Negative indexes for system predicates. Value is subscript : name.
     -1 : { 0 : 'Identity'  },
-    -2 : { 0 : 'Existence' }
+    -2 : { 0 : 'Existence' },
 }
 
 # The number of symbols is fixed to allow multiple notations.
@@ -102,7 +103,7 @@ def atomic(index, subscript):
         a4 = atomic(0, 4)
         
         c3 = atomic(2, 3)
-        assert sentence2 == parse('c3', notation='polish') # c has index 2 in polish notation
+        assert sentence2 == parse('c3', notation='polish') # 'c' has index 2 in polish notation
 
     """
     return Vocabulary.AtomicSentence(index, subscript)
@@ -206,9 +207,9 @@ def variable(index, subscript):
 
 def predicated(predicate, parameters, vocabulary=None):
     """
-    Return a predicate sentence for the given predicate and parameters. ``predicate`` can 
-    either be the name of a predicate or a predicate object. Examples using system predicates
-    (Existence, Identity)::
+    Return a predicate sentence for the given predicate and parameters.
+    ``predicate`` can  either be the name of a predicate or a predicate object.
+    Examples using system predicates (Existence, Identity)::
 
         m = constant(0, 0)
         sentence = predicated('Existence', [m])
@@ -220,12 +221,14 @@ def predicated(predicate, parameters, vocabulary=None):
 
         vocab = Vocabulary([('is tall', 0, 0, 1)])
         m = constant(0, 0)
+
         # m is tall
         sentence = predicated('is tall', [m], vocab)
 
         vocab.declare_predicate(name='is between', index=1, subscript=0, arity=3)
         n = constant(1, 0)
         o = constant(2, 0)
+
         # m is between n and o
         sentence2 = predicated('is between', [m, n, o], vocab)
 
@@ -238,8 +241,10 @@ def quantify(quantifier, variable, sentence):
     inner sentence. Example using the Identity system predicate::
 
         x = variable(0, 0)
+
         # x is identical to x
         open_sentence = predicated('Identity', [x, x])
+
         # for all x, x is identical to x
         sentence = quantify('Universal', x, open_sentence)
 
@@ -250,15 +255,19 @@ def quantify(quantifier, variable, sentence):
             ('is unmarried' , 1, 0, 1)
         ])
         x = variable(0, 0)
+
         # x is a bachelor
         open_sentence = predicated('is a bachelor', [x], vocab)
+
         # there exists an x, such that x is a bachelor
         sentence = quantify('Existential', x, open_sentence)
 
         # x is unmarried
         open_sentence2 = predicated('is unmarried', [x], vocab)
+
         # if x is a bachelor, then x is unmarried
         open_sentence3 = operate('Conditional', [open_sentence, open_sentence2])
+
         # for all x, if x is a bachelor then x is unmarried
         sentence2 = quantify('Universal', x, open_sentence3)
 
@@ -267,9 +276,9 @@ def quantify(quantifier, variable, sentence):
 
 def parse(string, vocabulary=None, notation=None):
     """
-    Parse a string and return a sentence. If ``vocabulary`` is passed, the parser will
-    use its user-defined predicates. The ``notation`` parameter can be either a notation 
-    module or a string of the module name. Example::
+    Parse a string and return a sentence. If ``vocabulary`` is passed, the parser
+    will use its user-defined predicates. The ``notation`` parameter can be either
+    a notation module or a string of the module name. Example::
 
         sentence1 = parse('Kab', notation='polish')
         assert sentence1 == operate('Conjunction', [atomic(0, 0), atomic(1, 0)])
@@ -335,9 +344,9 @@ def tableau(logic, arg=None, **opts):
         proof = tableau(cfol, arg)
         proof.build()
         if proof.valid:
-            print "Valid"
+            print("Valid")
         else:
-            print "Invalid"
+            print("Invalid")
 
     """
     return TableauxSystem.Tableau(logic, arg, **opts)
@@ -415,8 +424,8 @@ def _get_module(package, arg):
 
 class Vocabulary(object):
     """
-    Create a new vocabulary. *predicate_defs* is a list of tuples (name, index, subscript, arity)
-    defining user predicates. Example::
+    Create a new vocabulary. *predicate_defs* is a list of tuples (name, index,
+    subscript, arity) defining user predicates. Example::
 
         vocab = Vocabulary([
             ('is tall',        0, 0, 1),
@@ -444,7 +453,7 @@ class Vocabulary(object):
             return self.hash_tuple() >= other.hash_tuple()
 
         def __cmp__(self, other):
-            # Python 2 only
+            # Python 2 only (deprecated)
             #return cmp(self.hash_tuple(), other.hash_tuple())
             return (self.hash_tuple() > other.hash_tuple()) - (self.hash_tuple() < other.hash_tuple())
 
@@ -452,15 +461,25 @@ class Vocabulary(object):
 
         def __init__(self, name, index, subscript, arity):
             if index >= num_predicate_symbols:
-                raise Vocabulary.IndexTooLargeError("Predicate index too large {0}".format(str(index)))
+                raise Vocabulary.IndexTooLargeError(
+                    "Predicate index too large {0}".format(str(index))
+                )
             if arity == None or not isinstance(arity, int):
-                raise Vocabulary.PredicateArityError('Predicate arity must be an integer')
+                raise Vocabulary.PredicateArityError(
+                    'Predicate arity must be an integer'
+                )
             if arity < 1:
-                raise Vocabulary.PredicateArityError('Invalid predicate arity {0}'.format(str(arity)))
+                raise Vocabulary.PredicateArityError(
+                    'Invalid predicate arity {0}'.format(str(arity))
+                )
             if subscript == None or not isinstance(subscript, int):
-                raise Vocabulary.PredicateSubscriptError('Predicate subscript must be an integer')
+                raise Vocabulary.PredicateSubscriptError(
+                    'Predicate subscript must be an integer'
+                )
             if subscript < 0:
-                raise Vocabulary.PredicateSubscriptError('Invalid predicate subscript {0}'.format(str(subscript)))
+                raise Vocabulary.PredicateSubscriptError(
+                    'Invalid predicate subscript {0}'.format(str(subscript))
+                )
             self.name      = name
             self.arity     = arity
             self.index     = index
@@ -530,9 +549,13 @@ class Vocabulary(object):
         if predicate_defs:
             for info in predicate_defs:
                 if not isinstance(info, list) and not isinstance(info, tuple):
-                    raise Vocabulary.PredicateError('predicate_defs must be a list/tuple of lists/tuples.')
+                    raise Vocabulary.PredicateError(
+                        'predicate_defs must be a list/tuple of lists/tuples.'
+                    )
                 if len(info) != 4:
-                    raise Vocabulary.PredicateError("Predicate declarations must be 4-tuples (name, index, subscript, arity).")
+                    raise Vocabulary.PredicateError(
+                        'Predicate declarations must be 4-tuples (name, index, subscript, arity).'
+                    )
                 self.declare_predicate(*info)
 
     def copy(self):
@@ -545,8 +568,8 @@ class Vocabulary(object):
 
     def get_predicate(self, name=None, index=None, subscript=None):
         """
-        Get a defined predicate, either by name, or by index and subscript. This includes system
-        predicates::
+        Get a defined predicate, either by name, or by index and subscript. This
+        includes system predicates::
 
             vocab = Vocabulary()
             predicate = vocab.get_predicate('Identity')
@@ -585,7 +608,9 @@ class Vocabulary(object):
         Declare a user-defined predicate::
 
             vocab = Vocabulary()
-            predicate = vocab.declare_predicate(name='is tall', index=0, subscript=0, arity=1)
+            predicate = vocab.declare_predicate(
+                name='is tall', index=0, subscript=0, arity=1
+            )
             assert predicate == vocab.get_predicate('is tall')
             assert predicate == vocab.get_predicate(index=0, subscript=0)
             
@@ -599,15 +624,23 @@ class Vocabulary(object):
 
         """
         if name in system_predicates:
-            raise Vocabulary.PredicateAlreadyDeclaredError("Cannot declare system predicate '{0}'".format(name))
+            raise Vocabulary.PredicateAlreadyDeclaredError(
+                "Cannot declare system predicate '{0}'".format(name)
+            )
         if name in self.user_predicates:
-            raise Vocabulary.PredicateAlreadyDeclaredError("Predicate '{0}' already declared".format(name))
+            raise Vocabulary.PredicateAlreadyDeclaredError(
+                "Predicate '{0}' already declared".format(name)
+            )
         try:
             self.get_predicate(index=index, subscript=subscript)
         except Vocabulary.NoSuchPredicateError:
             pass
         else:
-            raise Vocabulary.PredicateAlreadyDeclaredError("Predicate for {0},{1} already declared".format(str(index), str(subscript)))
+            raise Vocabulary.PredicateAlreadyDeclaredError(
+                "Predicate for {0},{1} already declared".format(
+                    str(index), str(subscript)
+                )
+            )
         predicate = Vocabulary.Predicate(name, index, subscript, arity)
         self.add_predicate(predicate)
         return predicate
@@ -617,15 +650,21 @@ class Vocabulary(object):
         Add a predicate instance::
 
             vocab1 = Vocabulary()
-            predicate = vocab1.declare_predicate(name='is tall', index=0, subscript=0, arity=1)
+            predicate = vocab1.declare_predicate(
+                name='is tall', index=0, subscript=0, arity=1
+            )
             vocab2 = Vocabulary()
             vocab2.add_predicate(predicate)
             assert vocab2.get_predicate('is tall') == predicate
         """
         if not isinstance(predicate, Vocabulary.Predicate):
-            raise Vocabulary.PredicateError('Predicate must be an instance of Vocabulary.Predicate')
+            raise Vocabulary.PredicateError(
+                'Predicate must be an instance of Vocabulary.Predicate'
+            )
         if predicate.index < 0:
-            raise Vocabulary.PredicateError('Cannot add a system predicate to a vocabulary')
+            raise Vocabulary.PredicateError(
+                'Cannot add a system predicate to a vocabulary'
+            )
         self.user_predicates[predicate.name] = predicate
         self.user_predicates_index[str([predicate.index, predicate.subscript])] = predicate
         if predicate not in self.user_predicates_set:
@@ -815,7 +854,9 @@ class Vocabulary(object):
 
         def __init__(self, index, subscript):
             if index >= num_atomic_symbols:
-                raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
+                raise Vocabulary.IndexTooLargeError(
+                    "Index too large {0}".format(str(index))
+                )
             super(Vocabulary.AtomicSentence, self).__init__()
             self.index     = index
             self.subscript = subscript
@@ -863,7 +904,9 @@ class Vocabulary(object):
                 if predicate in system_predicates:
                     predicate = system_predicates[predicate]
                 elif vocabulary is None:
-                    raise Vocabulary.NoSuchPredicateError("'{0}' is not a system predicate, and no vocabulary was passed.".format(predicate))
+                    raise Vocabulary.NoSuchPredicateError(
+                        "'{0}' is not a system predicate, and no vocabulary was passed.".format(predicate)
+                    )
                 else:
                     predicate = vocabulary.get_predicate(predicate)    
             if len(parameters) != predicate.arity:
@@ -1052,7 +1095,9 @@ class Vocabulary(object):
 
         def write_atomic(self, sentence, symbol_set = None):
             symset = self.symset(symbol_set)
-            return symset.charof('atomic', sentence.index) + self.write_subscript(sentence.subscript, symbol_set = symbol_set)
+            return symset.charof('atomic', sentence.index) + self.write_subscript(
+                sentence.subscript, symbol_set = symbol_set
+            )
 
         def write_quantified(self, sentence, symbol_set = None):
             symset = self.symset(symbol_set)
@@ -1487,7 +1532,7 @@ class TableauxSystem(object):
         def branch(self, parent = None):
             """
             Create a new branch on the tableau, as a copy of ``parent``, if given.
-            This calls the ``after_branch_add`` callback on all the rules of the
+            This calls the ``after_branch_add(`` callback on all the rules of the
             tableau.
             """
             if parent == None:
@@ -1595,12 +1640,12 @@ class TableauxSystem(object):
         # Callbacks called internally
 
         def _after_branch_add(self, branch):
-            # Called from add_branch()
+            # Called from ``add_branch()``
             for rule in self.all_rules:
                 rule._after_branch_add(branch)
 
         def _after_trunk_build(self):
-            # Called from build_trunk()
+            # Called from ``build_trunk()``
             for rule in self.all_rules:
                 rule._after_trunk_build(self.branches)
 
@@ -1941,7 +1986,7 @@ class TableauxSystem(object):
 
         def constants_or_new(self):
             """
-            Return ``(constants, is_new)``, where ``constants`` is either the
+            Return a tuple ``(constants, is_new)``, where ``constants`` is either the
             branch constants, or, if no constants are on the branch, a singleton
             containing a new constants, and ``is_new`` indicates whether it is
             a new constant.
@@ -1956,7 +2001,9 @@ class TableauxSystem(object):
             """
             model = self.tableau.logic.Model()
             if self.closed:
-                raise TableauxSystem.BranchClosedError('Cannot build a model from a closed branch')
+                raise TableauxSystem.BranchClosedError(
+                    'Cannot build a model from a closed branch'
+                )
             model.read_branch(self)
             if self.tableau.argument != None:
                 model.is_countermodel = model.is_countermodel_to(self.tableau.argument)
@@ -2054,7 +2101,7 @@ class TableauxSystem(object):
 
         def has(self, *names):
             """
-            Whether the node has a non-None property of all the given names.
+            Whether the node has a non-``None`` property of all the given names.
             """
             for name in names:
                 if name not in self.props or self.props[name] == None:
@@ -2063,7 +2110,7 @@ class TableauxSystem(object):
 
         def has_any(self, *names):
             """
-            Whether the node has a non-None property of any of the given names.
+            Whether the node has a non-``None`` property of any of the given names.
             """
             for name in names:
                 if name in self.props and self.props[name] != None:
@@ -2145,10 +2192,10 @@ class TableauxSystem(object):
             'is_rank_optim' : True
         }
 
-        # for helper
+        # For helper
         ticking = None
 
-        # For compatibility in `_after_branch_add()`
+        # For compatibility in ``_after_branch_add()``
         ticked = None
 
         def __init__(self, tableau, **opts):
@@ -2235,9 +2282,9 @@ class TableauxSystem(object):
         # Abstract methods
 
         def get_candidate_targets(self, branch):
-            # Intermediate classes such as ClosureRule, PotentialNodeRule, (and its child
-            # FilterNodeRule) implement this and ``select_best_target()``, and
-            # define finer-grained methods for concrete classes to implement.
+            # Intermediate classes such as ``ClosureRule``, ``PotentialNodeRule``,
+            # (and its child ``FilterNodeRule``) implement this and ``select_best_target()``,
+            # and define finer-grained methods for concrete classes to implement.
             raise NotImplementedError()
 
         def apply_to_target(self, target):
@@ -2248,7 +2295,7 @@ class TableauxSystem(object):
         # Implementation options for ``example()``
 
         def example(self):
-            # Add example branches/nodes sufficient for applies() to return true.
+            # Add example branches/nodes sufficient for ``applies()`` to return true.
             # Implementations should modify the tableau directly, with no return
             # value. Used for building examples/documentation.
             branch = self.branch()
@@ -2271,7 +2318,7 @@ class TableauxSystem(object):
             if 'sentence' in node.props:
                 return node.props['sentence']
 
-        # Candidate score implementation options `is_rank_optim`
+        # Candidate score implementation options ``is_rank_optim``
 
         def score_candidate(self, target):
             return sum(self.score_candidate_list(target))
@@ -2320,7 +2367,7 @@ class TableauxSystem(object):
             for helper in self.helpers:
                 helper.after_apply(target)
 
-        # Implementable callbacks -- always call super, or use a helper.
+        # Implementable callbacks -- always call ``super()``, or use a helper.
 
         def register_branch(self, branch, parent):
             pass
@@ -2343,12 +2390,12 @@ class TableauxSystem(object):
         # Util methods
 
         def setup(self):
-            # convenience instead of overriding ``__init__``. should
+            # Convenience instead of overriding ``__init__``. Should
             # only be used by concrete classes. called in constructor.
             pass
 
         def branch(self, parent=None):
-            # convenience for self.tableau.branch()
+            # Convenience for ``self.tableau.branch()``.
             return self.tableau.branch(parent)
 
         def branching_complexity(self, node):
@@ -2505,7 +2552,7 @@ class TableauxSystem(object):
 
     class PotentialNodeRule(Rule):
         """
-        PotentialNodeRule base class. Caches potential nodes as they appear,
+        ``PotentialNodeRule`` base class. Caches potential nodes as they appear,
         and tracks the number of applications to each node. Provides default
         implementation of some methods, and delegates to finer-grained abstract
         methods.
@@ -2645,8 +2692,8 @@ class TableauxSystem(object):
         A ``FilterNodeRule`` filters potential nodes by matching
         the attribute conditions of the implementing class.
 
-        The following attribute conditions can be defined. If a condition is set to ``None``, then it
-        will be vacuously met.
+        The following attribute conditions can be defined. If a condition is
+        set to ``None``, then it will be vacuously met.
         """
 
         #: The ticked status of the node, default is ``False``.
@@ -2680,7 +2727,7 @@ class TableauxSystem(object):
             return self.conditions_apply(node, branch)
 
         def get_target_for_node(self, node, branch):
-            # Default is to return True, which gets converted into a
+            # Default is to return ``True``, which gets converted into a
             # target along the way.
             return self.conditions_apply(node, branch)
 
@@ -2849,7 +2896,13 @@ class Model(object):
     def value_of_operated(self, sentence, **kw):
         operator = sentence.operator
         if operator in self.truth_functional_operators:
-            return self.truth_function(operator, *[self.value_of(operand, **kw) for operand in sentence.operands])
+            return self.truth_function(
+                operator,
+                *[
+                    self.value_of(operand, **kw)
+                    for operand in sentence.operands
+                ]
+            )
         raise NotImplementedError()
 
     def value_of_quantified(self, sentence, **kw):
@@ -2862,19 +2915,21 @@ class Model(object):
         return dict()
 
 class Parser(object):
-    # The base Parser class handles parsing operations common to all notations (Polish and Standard).
-    # This consists of all parsing except for operator expressions, as well as the following classes
-    # of symbols:
+    # The base ``Parser`` class handles parsing operations common to all notations
+    # (Polish and Standard). This consists of all parsing except for operator
+    # expressions, as well as the following classes of symbols:
     # 
     # - Whitespace symbols: the *space* character.
     # - Subscript symbols: digit characters.
     # 
-    # Each specific notation defines its own characters for each of the following classes of symbols:
+    # Each specific notation defines its own characters for each of the following
+    # classes of symbols:
     # 
     # - Constant symbols
     # - Variable symbols
-    # - Predicate symbols, including system-defined predicates, and user-defined predicate.
-    # - Quanitfier symbols
+    # - Predicate symbols, including system-defined predicates, and user-defined
+    #   predicates.
+    # - Quantifier symbols
     # - Operator symbols
     # - Atomic sentence (proposition) symbols
 
@@ -2942,48 +2997,52 @@ class Parser(object):
         self.is_parsing = False
 
     def chomp(self):
-        # proceeed through whitepsace
+        # Proceeed through whitepsace.
         while self.has_current() and self.typeof(self.current()) == 'whitespace':
             self.pos += 1
 
     def current(self):
-        # get the current character, or None if after last
+        # Get the current character, or ``None`` if after last.
         return self.next(0)
 
     def assert_current(self):
-        # raise a parse error if after last
+        # Raise a ``ParseError`` if after last.
         if not self.has_current():
-            raise Parser.ParseError('Unexpected end of input at position {0}.'.format(self.pos))
+            raise Parser.ParseError(
+                'Unexpected end of input at position {0}.'.format(self.pos)
+            )
         return self.typeof(self.current())
 
     def assert_current_is(self, *ctypes):
         self.assert_current()
         ctype = self.typeof(self.current())
         if ctype not in ctypes:
-            raise Parser.ParseError("Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos))
+            raise Parser.ParseError(
+                "Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos)
+            )
         return ctype
 
     def has_next(self, n=1):
-        # check whether there is n-many characters after the current. if n = 0,
+        # Check whether there are n-many characters after the current.
         return (len(self.s) > self.pos + n)
 
     def has_current(self):
-        # check whether there is a current character, or return False if after last.
+        # check whether there is a current character, or return ``False``` if after last.
         return self.has_next(0)
 
     def next(self, n=1):
-        # get the nth character after the current, of None if n is after last.
+        # Get the nth character after the current, of ``None``` if ``n``` is after last.
         if self.has_next(n):
             return self.s[self.pos+n]
         return None
 
     def advance(self, n=1):
-        # advance the current pointer n many characters, and then eat whitespace.
+        # Advance the current pointer n-many characters, and then eat whitespace.
         self.pos += n  
         self.chomp()
 
     def argument(self, conclusion=None, premises=[], title=None):
-        # parse a conclusion and premises, and return an argument.
+        # Parse a conclusion and premises, and return an argument.
         return argument(
             conclusion = self.parse(conclusion),
             premises = [self.parse(s) for s in premises],
@@ -2991,9 +3050,11 @@ class Parser(object):
         )
 
     def parse(self, string):
-        # parse an input string, and return a sentence.
+        # Parse an input string, and return a sentence.
         if self.is_parsing:
-            raise Parser.ParserThreadError('Parser is already parsing -- not thread safe.')
+            raise Parser.ParserThreadError(
+                'Parser is already parsing -- not thread safe.'
+            )
         self.is_parsing = True
         self.bound_vars = set()
         try:
@@ -3005,7 +3066,9 @@ class Parser(object):
             s = self.read()
             self.chomp()
             if self.has_current():
-                raise Parser.ParseError("Unexpected character '{0}' at position {1}.".format(self.current(), self.pos))
+                raise Parser.ParseError(
+                    "Unexpected character '{0}' at position {1}.".format(self.current(), self.pos)
+                )
             self.is_parsing = False
             self.bound_vars = set()
         except:
@@ -3015,10 +3078,11 @@ class Parser(object):
         return s
 
     def read_item(self, ctype = None):
-        # read an item and its subscript starting from the current character, which must be
-        # in the list of characters given. returns a list containing the index of the current
-        # character in the chars list, and the subscript of that item. this is a generic way
-        # to read predicates, atomics, variables, constants, etc.
+        # Read an item and its subscript starting from the current character,
+        # which must be in the list of characters given. Returns a list containing
+        # the index of the current character in the chars list, and the subscript
+        # of that item. This is a generic way to read predicates, atomics, variables,
+        # constants, etc.
         if ctype == None:
             ctype = self.typeof(self.current())
         else:
@@ -3029,10 +3093,11 @@ class Parser(object):
         return {'index': index, 'subscript': subscript}
 
     def read_subscript(self):
-        # read the subscript starting from the current character. if the current character
-        # is not a digit, or we are after last, then the subscript is 0. otherwise, all
-        # consecutive digit characters are read (whitepsace allowed), and then converted
-        # to an integer, which is then returned.
+        # Read the subscript starting from the current character. If the current
+        # character is not a digit, or we are after last, then the subscript is
+        # ``0```. Otherwise, all consecutive digit characters are read
+        # (whitespace allowed), and then converted to an integer, which is then
+        # returned.
         sub = []
         while self.current() and self.typeof(self.current()) == 'digit':
             sub.append(self.current())
@@ -3042,19 +3107,19 @@ class Parser(object):
         return int(''.join(sub))
 
     def read_atomic(self):
-        # read an atomic sentence starting from the current character.
+        # Read an atomic sentence starting from the current character.
         return atomic(**self.read_item())
 
     def read_variable(self):
-        # read a variable starting from the current character.
+        # Read a variable starting from the current character.
         return variable(**self.read_item())
 
     def read_constant(self):
-        # read a constant starting from the current character.
+        # Read a constant starting from the current character.
         return constant(**self.read_item())
 
     def read_predicate(self):
-        # read a predicate starting from the current character.
+        # Read a predicate starting from the current character.
         pchar = self.current()
         cpos = self.pos
         try:
@@ -3063,10 +3128,11 @@ class Parser(object):
             raise Parser.ParseError("Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos))
 
     def read_parameters(self, num):
-        # read the parameters (constants or variables) of a predicate sentence, starting
-        # from the current character. if the number of parameters is not equal to num (arity),
-        # then a parse error is raised. if variables appear that are not in self.bound_vars,
-        # then an unbound variable error is raised. return a list of parameter objects (either
+        # Read the parameters (constants or variables) of a predicate sentence,
+        # starting from the current character. If the number of parameters is
+        # not equal to ``num``` (arity), then a ``ParseError``` is raised. If
+        # variables appear that are not in ``self.bound_vars```, then an unbound
+        # variable error is raised. Returns a list of parameter objects (either
         # variables or constants).
         parameters = []
         while len(parameters) < num:
@@ -3082,7 +3148,9 @@ class Parser(object):
             v = self.read_variable()
             if v not in list(self.bound_vars):
                 var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
-                raise Parser.UnboundVariableError("Unbound variable '{0}' at position {1}.".format(var_str, cpos))
+                raise Parser.UnboundVariableError(
+                    "Unbound variable '{0}' at position {1}.".format(var_str, cpos)
+                )
             return v
 
     def read_predicate_sentence(self):
@@ -3098,12 +3166,16 @@ class Parser(object):
         v = self.read_variable()
         if v in list(self.bound_vars):
             var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
-            raise Parser.BoundVariableError("Cannot rebind variable '{0}' at position {1}.".format(var_str, self.pos))
+            raise Parser.BoundVariableError(
+                "Cannot rebind variable '{0}' at position {1}.".format(var_str, self.pos)
+            )
         self.bound_vars.add(v)
         sentence = self.read()
         if v not in list(sentence.variables()):
             var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
-            raise Parser.BoundVariableError("Unused bound variable '{0}' at position {1}.".format(var_str, self.pos))
+            raise Parser.BoundVariableError(
+                "Unused bound variable '{0}' at position {1}.".format(var_str, self.pos)
+            )
         self.bound_vars.remove(v)
         return quantify(quantifier, v, sentence)
 
@@ -3117,7 +3189,9 @@ class Parser(object):
         elif ctype == 'atomic':
             s = self.read_atomic()
         else:
-            raise Parser.ParseError("Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos))
+            raise Parser.ParseError(
+                "Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos)
+            )
         return s
 
     def typeof(self, c):
@@ -3224,7 +3298,11 @@ def make_tree_structure(branches, node_depth=0, track=None):
         first_width = 0
         last_width = 0
         for i, node in enumerate(distinct_nodes):
-            child_branches = [branch for branch in branches if branch.nodes[node_depth] == node]
+
+            child_branches = [
+                branch for branch in branches
+                if branch.nodes[node_depth] == node
+            ]
 
             # recurse
             child = make_tree_structure(child_branches, node_depth, track)
