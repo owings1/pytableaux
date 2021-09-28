@@ -293,12 +293,12 @@ def apath(*args):
     return os.path.join(app_dir, *args)
 
 consts = {
-    'index_filename' : 'index.html',
-    'view_path'      : apath('www/views'),
-    'static_dir'     : apath('www/static'),
     'favicon_file'   : apath('www/static/img/favicon-60x60.png'),
+    'index_filename' : 'index.html',
     'robotstxt_file' : apath('www/static/robots.txt'),
+    'static_dir'     : apath('www/static'),
     'static_dir_doc' : apath('..', 'doc/_build/html'),
+    'view_path'      : apath('www/views'),
 }
 
 # Jinja2
