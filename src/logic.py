@@ -303,12 +303,13 @@ def parse(string, vocabulary=None, notation=None):
         assert sentence == predicated(vocab.get_predicate('is tall'), [constant(0, 0)])
 
     """
-    if vocabulary is None:
-        vocabulary = Vocabulary()
-    if notation == None:
-        notation = default_notation
-    notation = _get_module('notations', notation)
-    return notation.Parser(vocabulary).parse(string)
+    return create_parser(vocabulary, notation).parse(string)
+    # if vocabulary is None:
+    #     vocabulary = Vocabulary()
+    # if notation == None:
+    #     notation = default_notation
+    # notation = _get_module('notations', notation)
+    # return notation.Parser(vocabulary).parse(string)
 
 class argument(object):
     """
@@ -375,7 +376,6 @@ class argument(object):
 
     def __ne__(self, other):
         return not isinstance(other, self.__class__) or hash(self) != hash(other)
-
 
 def tableau(logic, arg=None, **opts):
     """
@@ -469,6 +469,20 @@ def get_system_predicate(name):
         assert get_system_predicate('Identity').arity == 2
     """
     return Vocabulary.get_system_predicate(name)
+
+def create_swriter(notation=None, symbol_set=None, **kw):
+    if notation == None:
+        notation = default_notation
+    notation = _get_module('notations', notation)
+    return notation.Writer(symbol_set = symbol_set)
+
+def create_parser(vocabulary=None, notation=None):
+    if vocabulary is None:
+        vocabulary = Vocabulary()
+    if notation == None:
+        notation = default_notation
+    notation = _get_module('notations', notation)
+    return notation.Parser(vocabulary)
 
 class Vocabulary(object):
     """
@@ -1134,6 +1148,10 @@ class Vocabulary(object):
 
     class Writer(object):
 
+        # Base sentence writer, implemented by notations.
+
+        # TODO: cleanup sentence writer, proof writer, parser, symbol set design b.s.
+
         symbol_sets = {}
         symbol_set = None
 
@@ -1145,7 +1163,8 @@ class Vocabulary(object):
                 if self.symbol_set == None:
                     symbol_set = 'default'
                 else:
-                    return self.symbol_set
+                    # could have been set by manually after init
+                    symbol_set = self.symbol_set
             if isinstance(symbol_set, basestring):
                 return self.symbol_sets[symbol_set]
             else:
@@ -2933,27 +2952,45 @@ class TableauxSystem(object):
         def write(self, tableau, notation = None, symbol_set = None, sw = None, **options):
             opts = dict(self.defaults)
             opts.update(options)
-            
-            if sw == None:
-                if notation == None:
-                    raise BadArgumentError("Must specify either notation or sw.")
-                sw = notation.Writer(symbol_set)
-            return self.write_tableau(tableau, sw, opts)
 
-        def write_tableau(self, tableau, sw, opts):
+            # A setence write (sw) takes precedence over notation/symbol_set
+            if not sw and 'sw' in opts:
+                sw = opts['sw']
+
+            if not sw:
+                if not notation and 'notation' in opts:
+                    notation = self.defaults['notation']
+                if not notation:
+                    raise BadArgumentError("Must specify either notation or sw.")
+                notation = _get_module('notations', notation)
+                if not symbol_set and 'symbol_set' in opts:
+                    symbol_set = self.defaults['symbol_set']
+                sw = notation.Writer(symbol_set)
+
+            return self._write_tableau(tableau, sw, opts)
+
+        def _write_tableau(self, tableau, sw, opts):
             raise NotImplementedError()
 
 # TODO: Move these truth table methods -- we are only using them
 #       in docutil and tests. There is a Model class below...
-def truth_table(logic, operator):
+def truth_table(logic, operator, reverse=False):
     model = get_logic(logic).Model()
     inputs = model.truth_table_inputs(arity(operator))
-    outputs = [model.truth_function(operator, *values) for values in inputs]
+    if reverse:
+        inputs = tuple(reversed(inputs))
+    outputs = [
+        model.truth_function(operator, *values)
+        for values in inputs
+    ]
     return {'inputs': inputs, 'outputs': outputs}
 
-def truth_tables(logic):
+def truth_tables(logic, **kw):
     model = get_logic(logic).Model()
-    return {operator: truth_table(logic, operator) for operator in model.truth_functional_operators}
+    return {
+        operator: truth_table(logic, operator, **kw)
+        for operator in model.truth_functional_operators
+    }
 
 class Model(object):
 

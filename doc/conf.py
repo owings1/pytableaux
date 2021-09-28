@@ -11,18 +11,19 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-
 import sys
-import os
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-pytableaux_home = os.path.abspath('..')
 
-sys.path.insert(0, os.path.join(pytableaux_home, 'src'))
+sys.path.insert(1, '../src')
+
+import docutil, logic
 
 # -- General configuration ------------------------------------------------
+
+copyright = logic.copyright
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
@@ -32,7 +33,7 @@ sys.path.insert(0, os.path.join(pytableaux_home, 'src'))
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.viewcode'
+    'sphinx.ext.viewcode',
 ]
 
 autodoc_member_order = 'bysource'
@@ -57,8 +58,7 @@ project = u'pytableaux'
 # built documents.
 #
 # The short X.Y version.
-with open(os.path.join(pytableaux_home, 'VERSION'), 'r') as f:
-    version = f.read().strip()
+version = logic.version
 
 # The full version, including alpha/beta/rc tags.
 release = version
@@ -101,17 +101,23 @@ pygments_style = 'sphinx'
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
 
-
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'default'
+#html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {}
+
+# https://github.com/readthedocs/sphinx_rtd_theme
+if html_theme == 'sphinx_rtd_them':
+    html_theme_options.update({
+        'style_external_links': True,
+    })
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -137,6 +143,7 @@ html_theme = 'default'
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
 html_static_path = ['../src/www/static', 'res']
+
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
@@ -185,7 +192,6 @@ html_show_sphinx = False
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'pytableauxdoc'
-
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -265,19 +271,27 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-
-import logic
-import codecs
-import docutil
-
-copyright = logic.copyright
-
 def setup(app):
-    #app.connect('autodoc-process-docstring', sub_sentences)
-    app.connect('autodoc-process-docstring', docutil.SphinxUtil.insert_ruledocs)
-    app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_tableau_examples)
-    app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_truth_tables)
-    app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_truth_tables_models)
-    app.connect('build-finished', docutil.SphinxUtil.docs_post_process)
-    app.add_css_file('css/doc.css')
-    app.add_css_file('css/proof.css')
+
+    docutil.init_sphinx(app, {
+        'html_theme': html_theme,
+    })
+    # docutil.opts.update({
+    #     'html_theme': html_theme,
+    # })
+    # #app.connect('autodoc-process-docstring', sub_sentences)
+    # app.connect('autodoc-process-docstring', docutil.SphinxUtil.insert_ruledocs)
+    # app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_tableau_examples)
+    # #app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_truth_tables)
+    # app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_truth_tables_models)
+    # app.connect('build-finished', docutil.SphinxUtil.docs_post_process)
+
+    # app.add_css_file('css/doc.css')
+
+    # if html_theme == 'sphinx_rtd_theme':
+    #     themecss = 'doc.rtd.css'
+    # elif html_theme == 'default':
+    #     themecss = 'doc.default.css'
+    # app.add_css_file('/'.join(['css', themecss]))
+
+    # app.add_css_file('css/proof.css')

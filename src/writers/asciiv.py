@@ -63,15 +63,15 @@ name = 'ASCII-V'
 
 class Writer(logic.TableauxSystem.Writer):
 
-    def write(self, tableau, notation, symbol_set = None):
-        return self.write_structure(tableau.tree, notation, symbol_set = symbol_set)
+    def _write_tableau(self, tableau, sw, opts):
+        return self.__write_structure(tableau.tree, sw, opts)
 
-    def write_structure(self, structure, notation, indent = 0, symbol_set = None):
+    def __write_structure(self, structure, sw, opts, indent = 0):
         node_strs = []
         for node in structure['nodes']:
             s = ''
             if 'sentence' in node.props:
-                s += notation.write(node.props['sentence'], symbol_set = symbol_set)
+                s += sw.write(node.props['sentence'])
                 if 'world' in node.props:
                     s += ', w' + str(node.props['world'])
             if 'designated' in node.props:
@@ -89,5 +89,5 @@ class Writer(logic.TableauxSystem.Writer):
             s += ' (X)'
         i = len(s) + 1
         for child in structure['children']:
-            s += "\n" + self.write_structure(child, notation, indent = i, symbol_set = symbol_set)
+            s += "\n" + self.__write_structure(child, sw, opts, indent = i)
         return s

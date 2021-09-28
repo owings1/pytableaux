@@ -34,26 +34,21 @@
     text-align: center;
     margin: 0.2em 0;
 }
+
+/* Designation markers */
 .html-writer-proof .node-props .designation.designated::after {
     content: '\2295';
 }
 .html-writer-proof .node-props .designation.undesignated::after {
     content: '\2296';
 }
-/*
-.html-writer-proof .structure.closed > .node-segment > .node:last-child::after {
-    display: block;
-    text-align: center;
-    font-size: 1.6em;
-    margin: auto;
-    width: 2em;
-    content: '\2297';
-}
-*/
+
+/* Close marker */
 .html-writer-proof .node-props .flag.closure::after {
     content: '\2297';
     font-size: 1.4em;
 }
+/*  Quit flag marker, e.g. K Necessity, or max constants rules (see QuitFlagHelper).  */
 .html-writer-proof .node-props .flag.quit::after {
     width: 24px;
     height: 24px;
@@ -62,6 +57,7 @@
     content: '';
     display: inline-block;
 }
+/* Ellipsis, used in rule example docs */
 .html-writer-proof .node-props .ellipsis::after {
     content: '\22EE';
 }
@@ -102,6 +98,7 @@
 .html-writer-proof .world {
     font-style: italic;
 }
+/* Branch coloring */
 .html-writer-proof.color-open .structure.has-open > .node-segment {
     color: red;
 }
@@ -112,9 +109,7 @@
 .html-writer-proof .structure.closed.highlight-closed > .node-segment > .node:last-child::after {
     background-color: yellow;
 }
-.html-writer-proof .structure.closed.hide-closed > .node-segment > .node:last-child::after {
-    display: none;
-}
+
 .html-writer-proof .node.highlight-ticked > .node-props.ticked {
     border-width: 3px;
     padding: 2px;
@@ -130,7 +125,9 @@
     width: 16px;
     height: 16px;
 }
-.html-writer-proof .structure.leaf.inspected > .node-segment::after {
+
+/* Selected branch indicator, at the leaf. Only show if controls or models options are enabled */
+.html-writer-proof:is(.with-controls, .with-models) .structure.leaf.inspected > .node-segment::after {
     width: 16px;
     height: 16px;
     background-size: 16px 16px;
@@ -301,6 +298,7 @@
 }
 
 /* Models */
+
 .html-writer-models .model > ul > li.in-summary {
     display: block;
 }
@@ -392,6 +390,7 @@
 .html-writer-models .model .set.non-empty > .values::after {
     content: "}";
 }
+
 .html-writer-models .model .set.empty > .values::after,
 .html-writer-models .model .function.empty::after {
     content: "\2205";

@@ -16,263 +16,377 @@
 #
 # ------------------
 #
-# pytableaux - documenation utility functions
-import logic, writers, notations, examples
-import writers.html, notations.standard
-import inspect
-import codecs
-import json
-import os
-import re
-import html
+# pytableaux - documentation utility functions
+import examples, logic, writers.html
+import codecs, inspect, os, re, traceback
 from jinja2 import Environment, FileSystemLoader
-from html.parser import HTMLParser
+from html import unescape as htmlunescape
+from os.path import join as pjoin
+from past.builtins import basestring
+from inspect import getmro
 
-writer = writers.html.Writer()
-sp = notations.standard.Parser(examples.vocabulary)
-sw = notations.standard.Writer('html')
+# Alias
+from logic import argument, create_parser, create_swriter, get_logic, tableau
+TabSys = logic.TableauxSystem
+Rule = TabSys.Rule
 
-doc_dir = os.path.dirname(os.path.abspath(__file__)) + '/../doc'
+defaults = {
+    'html_theme'       : 'default',
+    'truth_tables_rev' : True,
+    'write_notation'   : 'standard',
+    'parse_notation'   : 'standard',
+    'vocabulary'       : examples.vocabulary,
+}
 
-templates_dir = doc_dir + '/templates'
-
-jinja_env = Environment(
+doc_dir = pjoin(logic.base_dir, 'doc')
+templates_dir = pjoin(doc_dir, 'templates')
+build_dir = pjoin(doc_dir, '_build/html')
+jenv = Environment(
     loader = FileSystemLoader(templates_dir),
     trim_blocks = True,
     lstrip_blocks = True,
 )
-truth_table_template = jinja_env.get_template('truth_table.html')
+truth_table_template = jenv.get_template('truth_table.html')
+
+# Don't build rules for abstract classes
+# TODO: shouldn't this check rule groups?
+skip_rules = [
+    TabSys.Rule,
+    TabSys.ClosureRule,
+    TabSys.PotentialNodeRule,
+    TabSys.FilterNodeRule,
+]
+
+skip_build_trunk = [
+    TabSys.Tableau.build_trunk
+]
+
+def init_sphinx(app, opts):
+
+    helper = Helper(opts)
+
+    helper.connect_sphinx(app, 'autodoc-process-docstring',
+        'sphinx_regex_line_replace',
+        'sphinx_obj_lines_append',
+    )
+    helper.connect_sphinx(app, 'build-finished',
+        'sphinx_docs_post_process',
+    )
+
+    app.add_css_file('css/doc.css')
+
+    if opts['html_theme'] == 'sphinx_rtd_theme':
+        themecss = 'doc.rtd.css'
+    elif opts['html_theme'] == 'default':
+        themecss = 'doc.default.css'
+    app.add_css_file('/'.join(['css', themecss]))
+
+    app.add_css_file('css/proof.css')
+
+class Helper(object):
+
+    def __init__(self, opts):
+        self.opts = dict(defaults)
+        self.opts.update(opts)
+        self.parser = create_parser(
+            notation = self.opts['parse_notation'],
+            vocabulary = self.opts['vocabulary'],
+        )
+        self.sw = create_swriter(
+            notation = self.opts['write_notation'],
+            symbol_set = 'html',
+        )
+        self.pw = writers.html.Writer(sw = self.sw)
+        # https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
+        self._listeners = dict()
+        self._connids = dict()
+
+    # TODO: generate rule "cheat sheet"
+
+    ## ==============
+    ##  Doc Lines   :
+    ## ==============
+
+    def lines_rule_example(self, rule, lgc=None):
+        """
+        Generate the rule examples.
+        """
+        return [
+            'Example:',
+            '',
+            '.. raw:: html',
+            '',
+            cat('    ', self.html_rule_example(rule, lgc=None)),
+        ]
+
+    def lines_trunk_example(self, lgc):
+        """
+        Generate the build trunk examples.
+        """
+        return [
+            'Example:',
+            '',
+            '.. raw:: html',
+            '',
+            cat('    ', self.html_trunk_example(lgc)),
+        ]
+
+    def lines_rule_docstring(self, rule, lgc=None):
+        """
+        Retrieve docstring lines for replacing //ruledoc//... references.
+        """
+        lgc = get_logic(lgc or get_obj_logic(rule))
+        for name, member in inspect.getmembers(lgc.TableauxRules):
+            if name == rule or member == rule:
+                return [line.strip() for line in member.__doc__.split('\n')]
+        raise RuleNotFoundError(
+            'Rule not found: {0}, Logic: {1}'.format(str(rule), lgc.name)
+        )
+
+    def lines_logic_truth_tables(self, lgc):
+        """
+        Generate the truth tables for a logic.
+        """
+        lgc = get_logic(lgc)
+        tables = [
+            self.html_truth_table(lgc, operator)
+            for operator in logic.operators_list
+            if operator in lgc.Model.truth_functional_operators
+        ]
+        return [
+            '.. raw:: html',
+            '',
+            cat('    ', *tables),
+            '    <div class="clear"></div>',
+            ''
+        ]
+
+    def doc_replace_lexicals(self, doc):
+        """
+        Replace P{A & B} notations with rendered HTML. Operates on the complete
+        HTML doc at the end of the build.
+        """
+        is_change = False
+        sw = self.sw
+        for s in re.findall(r'P{(.*?)}', doc):
+            s1 = htmlunescape(s)
+            is_change = True
+            sentence = self.parser.parse(s1)
+            s2 = sw.write(sentence, drop_parens = True)
+            doc = doc.replace(u'P{' + s + '}', s2)
+        for s in re.findall(r'O{(.*?)}', doc):
+            s1 = htmlunescape(s)
+            is_change = True
+            s2 = sw.write_operator(s1)
+            doc = doc.replace(u'O{' + s + '}', s2)
+        return (is_change, doc)
+
+    ## =========================
+    ## Sphinx Event Handlers   :
+    ## =========================
+
+    # See https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
+
+    def connect_sphinx(self, app, event, *methods):
+        """
+        Attach a listener to a Sphinx event. We handle our own listeners so we
+        can do proper error handling. Each of `methods` can be a function or
+        name of a Helper method.  One handler per event is attached to Sphinx,
+        which is a lambda wrapper for ``__dispatch_sphinx()``.
+
+        """
+        if event not in self._listeners:
+            self._listeners[event] = []
+        for func in [
+            getattr(self, method) if isinstance(method, basestring) else method
+            for method in methods
+        ]:
+            self._listeners[event].append(func)
+            print('Connecting {0} to {1}'.format(func.__name__, event))
+        if event not in self._connids:
+            dispatch = lambda *args: self.__dispatch_sphinx(event, args)
+            self._connids[event] = app.connect(event, dispatch)
+        return self
+
+    def sphinx_regex_line_replace(self, app, what, name, obj, options, lines):
+        """
+        Replace a line matching a regex with 1 or more lines in a docstring.
+        """
+        defns = [
+            (
+                '//ruledoc//',
+                r'//ruledoc//(.*?)//(.*)//',
+                lambda lgc, rule: self.lines_rule_docstring(rule, lgc),
+            ),
+            (
+                '//truth_tables//',
+                r'//truth_tables//(.*?)//',
+                self.lines_logic_truth_tables,
+            ),
+        ]
+        i = 0
+        rpl = {}
+        for line in lines:
+            for indic, regex, func in defns:
+                if indic in line:
+                    match = re.findall(regex, line)
+                    if not match:
+                        raise BadExpressionError(line)
+                    if isinstance(match[0], basestring):
+                        # Corner case of one capture group
+                        match[0] = (match[0],)
+                    rpl[i] = func(*match[0])
+                    break
+            i += 1
+        for i in rpl:
+            pos = i + 1
+            lines[i:pos] = rpl[i]
+
+    def sphinx_obj_lines_append(self, app, what, name, obj, options, lines):
+        """
+        Append lines to a docstring.
+        """
+        defns = [
+            (
+                lambda: (
+                    what == 'class' and obj not in skip_rules and
+                    Rule in getmro(obj)
+                ),
+                self.lines_rule_example,
+            ),
+            (
+                lambda: (
+                    what == 'method' and obj not in skip_build_trunk and
+                    obj.__name__ == 'build_trunk'
+                ),
+                self.lines_trunk_example,
+            )
+        ]
+        for check, func in defns:
+            if check():
+                lines += func(obj)
+
+    def sphinx_docs_post_process(self, app, exception):
+        """
+        Modify the final HTML documents.
+        """
+        defns = [
+            (self.doc_replace_lexicals,),
+        ]
+        print('Running post-process')
+        for file in [
+            pjoin(dir, file) for dir in [build_dir, pjoin(build_dir, 'logics')]
+            for file in os.listdir(dir) if file.endswith('.html')
+        ]:
+            should_write = False
+            with codecs.open(file, 'r+', 'utf-8') as f:
+                doc = f.read()
+                for func, in defns:
+                    is_change, doc = func(doc)
+                    should_write = should_write or is_change
+                if should_write:
+                    f.seek(0)
+                    f.write(doc)
+                    f.truncate()
+
+    ## ===================
+    ## HTML Subroutines  :
+    ## ===================
+
+    def html_trunk_example(self, lgc):
+        """
+        Returns rendered tableau HTML with argument and build_trunk example.
+        """
+        lgc = get_obj_logic(lgc)
+        arg = argument('b', ['a1', 'a2'])
+        sw = self.sw
+        return cat(
+            'Argument: <i>',
+            '</i>, <i>'.join(sw.write(p, drop_parens=True) for p in arg.premises),
+            '</i> &there4; <i>', sw.write(arg.conclusion), '</i>',
+            '\n',
+            self.pw.write(logic.tableau(lgc, arg).finish()),
+        )
+
+    def html_rule_example(self, rule, lgc=None):
+        """
+        Returns rendered tableau HTML for a rule's example application.
+        """
+        lgc = get_logic(lgc or get_obj_logic(rule))
+        proof = tableau(lgc)
+        rule = proof.get_rule(rule)
+        rule.example()
+        proof.branches[0].add({'ellipsis': True})
+        target = rule.get_target(proof.branches[0])
+        rule.apply(target)
+        proof.finish()
+        return self.pw.write(proof)
+
+    def html_truth_table(self, lgc, operator):
+        """
+        Returns rendered truth table HTML for a single operator.
+        """
+        lgc = get_logic(lgc)
+        table = logic.truth_table(lgc, operator, reverse = self.opts['truth_tables_rev'])
+        return truth_table_template.render({
+            'arity'      : logic.arity(operator),
+            'sw'         : self.sw,
+            'num_values' : len(lgc.Model.truth_values),
+            'table'      : table,
+            'operator'   : operator,
+            # Theme hint for conditional class class name.
+            'theme'      : self.opts['html_theme'],
+        })
+
+    ## ================
+    ## Dispatcher     :
+    ## ================
+
+    def __dispatch_sphinx(self, event, args):
+        for func in self._listeners[event]:
+            try:
+                func(*args)
+            except Exception as e:
+                if event == 'autodoc-process-docstring' and len(args) > 2:
+                    arginfo = str({'what': args[1], 'name': args[2]})
+                else:
+                    arginfo = str(args)
+                print('\n', '\n'.join((
+                    'Failed running method {0} for event {1}'.format(
+                        func.__name__, event
+                    ),
+                    'Exception Class: {0}, Args: {1}'.format(
+                        e.__class__.__name__, str(e.args)
+                    ),
+                    'Event Arguments: {0}'.format(arginfo),
+                )))
+                print('Printing traceback')
+                traceback.print_exc()
+                raise e
+
+# Misc util
+
+def cat(*args):
+    return ''.join(args)
+
+def get_obj_logic(obj):
+    try:
+        return get_logic(obj)
+    except:
+        pass
+    if hasattr(obj, '__module__'):
+        # class or instance, its module is likely a logic
+        return get_logic(obj.__module__)
+    # Assume it's a string
+    parts = obj.split('.')
+    if parts[0] == 'logics':
+        # logics.fde, etc.
+        return get_logic('.'.join(parts[0:2]))
+    # Last resort
+    return get_logic(parts[0])
 
 class BadExpressionError(Exception):
     pass
 
 class RuleNotFoundError(Exception):
     pass
-
-def get_truth_table_html(lgc, operator):
-    lgc = logic.get_logic(lgc)
-    table = logic.truth_table(lgc, operator)
-    return truth_table_template.render({
-        'arity'      : logic.arity(operator),
-        'sentence'   : examples.operated(operator),
-        'sw'         : sw,
-        'values'     : lgc.Model.truth_values_list,
-        #'value_chars': lgc.Model.truth_value_chars,
-        'num_values' : len(lgc.Model.truth_values),
-        'table'      : table,
-        'operator'   : operator,
-    })
-
-def get_truth_tables_for_logic(lgc):
-    lgc = logic.get_logic(lgc)
-    htm = ''
-    for operator in logic.operators_list:
-        if operator in lgc.Model.truth_functional_operators:
-            htm += get_truth_table_html(lgc, operator)
-    return htm
-
-def htmlunescape(s):
-    try:
-        s1 = html.unescape(s)
-    except AttributeError: # pragma: no cover
-        s1 = HTMLParser().unescape(s)
-    return s1
-
-def get_replace_sentence_expressions_result(text):
-    is_found = False
-    replaced = list()
-    for s in re.findall(r'P{(.*?)}', text):
-        s1 = htmlunescape(s)
-        replaced.append(s1)
-        is_found = True
-        sentence = sp.parse(s1)
-        s2 = sw.write(sentence, drop_parens=True)
-        text = text.replace(u'P{' + s + '}', s2)
-    for s in re.findall(r'O{(.*?)}', text):
-        s1 = htmlunescape(s)
-        replaced.append(s1)
-        is_found = True
-        s2 = sw.write_operator(s1)
-        text = text.replace(u'O{' + s + '}', s2)
-    return {
-        'is_found' : is_found,
-        'text'     : text,
-        'replaced' : replaced,
-    }
-
-def get_rule_example_html(lgc, ruleish):
-    proof = logic.tableau(logic.get_logic(lgc), None)
-    rule = proof.get_rule(ruleish)
-    rule.example()
-    proof.branches[0].add({'ellipsis': True})
-    target = rule.get_target(proof.branches[0])
-    rule.apply(target)
-    proof.finish()
-    return writer.write(proof, sw=sw)
-
-def get_build_trunk_example_html(lgc, arg):
-    proof = logic.tableau(logic.get_logic(lgc), arg)
-    proof.finish()
-    return writer.write(proof, sw=sw)
-
-def get_argument_example_html(arg):
-    return 'Argument: <i>' + '</i>, <i>'.join(
-        [sw.write(p, drop_parens=True) for p in arg.premises]
-    ) + '</i> &there4; <i>' + sw.write(arg.conclusion) + '</i>'
-
-def get_ruledoc(lgc, name):
-    lgc = logic.get_logic(lgc)
-    for n, member in inspect.getmembers(lgc.TableauxRules):
-        if n == name:
-            return [line.strip() for line in member.__doc__.split('\n')]
-    raise RuleNotFoundError(str(('Rule not found', lgc.name, name)))
-
-def rulesheet(lgc):
-    lgc = logic.get_logic(lgc)
-    # TODO: generate rule "cheat sheet"
-    pass
-
-class SphinxUtil(object): # pragma: no cover
-
-    skip_rules = [
-        logic.TableauxSystem.Rule,
-        logic.TableauxSystem.ClosureRule,
-        logic.TableauxSystem.PotentialNodeRule,
-        logic.TableauxSystem.FilterNodeRule,
-    ]
-
-    skip_build_trunk = [
-        logic.TableauxSystem.Tableau.build_trunk
-    ]
-
-    @staticmethod
-    def docs_post_process(app, exception):
-        # Sphinx utility
-        print('Running post-process')
-        builddir = doc_dir + '/_build/html'
-        files = list()
-        for f in os.listdir(builddir):
-            if f.endswith('.html'):
-                files.append(f)
-        for f in os.listdir(builddir + '/logics'):
-            if f.endswith('.html'):
-                files.append('logics/' + f)
-        for fil in files:
-            with codecs.open(builddir + '/' + fil, 'r', 'utf-8') as f:
-                text = f.read()
-            result = get_replace_sentence_expressions_result(text)
-            if result['is_found']:
-                for sr in result['replaced']:
-                    #print('replacing {0} in {1}'.format(sr, fil))
-                    pass
-                with codecs.open(builddir + '/' + fil, 'w', 'utf-8') as f:
-                    f.write(result['text'])
-
-    @staticmethod
-    def get_truth_tables_lines_for_logic(lgc):
-        lgc = logic.get_logic(lgc)
-        new_lines = ['']
-        for operator in logic.operators_list:
-            if operator in lgc.Model.truth_functional_operators:
-                htm = get_truth_table_html(lgc, operator)
-                new_lines += ['    ' + line for line in htm.split('\n')]
-        new_lines += [
-            '    <div class="clear"></div>',
-            ''
-        ]
-        return new_lines
-
-    @staticmethod
-    def make_truth_tables(app, what, name, obj, options, lines):
-        # Sphinx utility
-        srch = '/truth_tables/'
-        if what == 'module' and hasattr(obj, 'Model'):
-            if hasattr(obj.Model, 'truth_functional_operators') and srch in lines:
-                idx = lines.index(srch)
-                pos = idx + 1
-                lines[idx] = '.. raw:: html'
-                lines[pos:pos] = SphinxUtil.get_truth_tables_lines_for_logic(obj)
-
-    @staticmethod
-    def make_truth_tables_models(app, what, name, obj, options, lines):
-        # Sphinx utility
-        is_found = False
-        idx = 0
-        for line in lines:
-            if '//truth_tables//' in line:
-                is_found = True
-                break
-            idx += 1
-        if not is_found:
-            return
-        pos = idx + 1
-        logic_name, = re.findall(r'//truth_tables//(.*)//', lines[idx])
-        lines[idx] = '.. raw:: html'
-        lines[pos:pos] = SphinxUtil.get_truth_tables_lines_for_logic(logic_name)
-
-    @staticmethod
-    def insert_ruledocs(app, what, name, obj, options, lines):
-        # Sphinx utility
-        if what == 'class':
-            idx = 0
-            rpl = {}
-            try:
-                for line in lines:
-                    if '//ruledoc//' in line:
-                        #print(name, '-', 'Inserting rule doc for', line)
-                        m = re.findall(r'//ruledoc//(.*?)//(.*)//', line)
-                        if not m:
-                            raise BadExpressionError(line)
-                        logic_name, rule_name = m[0]
-                        rpl[idx] = get_ruledoc(logic_name, rule_name)
-                    idx += 1
-                for idx in rpl:
-                    pos = idx + 1
-                    lines[idx:pos] = rpl[idx]
-            except Exception as e:
-                print(str(e))
-                print('Failed to generated rule doc for', name, '-', line)
-                raise e
-
-
-    @staticmethod
-    def make_tableau_examples(app, what, name, obj, options, lines):
-        # Sphinx utility
-        arg = logic.argument('b', ['a1', 'a2'])
-        if what == 'class':
-            mro = inspect.getmro(obj)
-            if logic.TableauxSystem.Rule in mro and obj not in SphinxUtil.skip_rules:
-                proof = None
-                try:
-                    proof_html = get_rule_example_html(obj.__module__, obj)
-                    lines += [
-                        'Example:',
-                        '',
-                        '.. raw:: html',
-                        '',
-                        '    ' + proof_html,
-                    ]
-                except StopIteration:
-                    pass
-                except Exception as e:
-                    print (str(e))
-                    print ('No example generated for ' + str(obj))
-                    raise e
-        elif what == 'method' and obj.__name__ == 'build_trunk':
-            if obj not in SphinxUtil.skip_build_trunk:
-                try:
-                    proof_html = get_build_trunk_example_html(obj.__module__, arg)
-                    arg_html = get_argument_example_html(arg)
-                    lines += [
-                        'Example:' ,
-                        '',
-                        '.. raw:: html',
-                        '',
-                        '    ' + arg_html,
-                        '',
-                        '    ' + proof_html,
-                    ]
-                except Exception as e:
-                    print ('Error making example for ' + str(obj))
-                    print(str(e))
-                    raise e

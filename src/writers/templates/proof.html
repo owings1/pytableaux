@@ -9,7 +9,9 @@
     {% endif %}
     <div class="html-writer-proof
         {{- ' color-open' if opts['color_open'] }}
-        {{- ' with-controls' if opts['controls'] }}"
+        {{- ' with-controls' if opts['controls'] }}
+        {{- ' with-models' if opts['models'] }}
+        {{- ' static-doc' if opts['static_doc'] }}"
         data-step="{{ tableau.history|length }}"
         data-num-steps="{{ tableau.history|length }}"
         data-current-width-pct="100">

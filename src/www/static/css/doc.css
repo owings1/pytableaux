@@ -1,13 +1,21 @@
 body {
     font-size: 95%;
 }
+
+.clear {
+    clear: both;
+}
+
+.subscript {
+    vertical-align: sub;
+    font-size: 80%;
+}
+
+/* Truth Tables */
 .truth-table-wrapper {
     float: left;
     margin-right: 15px;
     margin-bottom: 15px;
-}
-.clear {
-    clear: both;
 }
 .truth-table {
     border-collapse: collapse;
@@ -20,42 +28,26 @@ body {
     font-size: 90%;
     font-weight: normal;
 }
-.truth-table td.value-header {
+.truth-table th.value-header,
+.truth-table th.operator-symbol {
     font-weight: bold;
 }
-
-.truth-table td.value-header.row {
-    font-weight: bold;
+.truth-table th.value-header.row {
     border-bottom: 1px solid black;
 }
-.truth-table td.value-header.column {
+.truth-table th.value-header.column {
     text-align: right;
     border-right: 1px solid black;
 }
-
-.truth-table td.operator-symbol {
+.truth-table th.operator-symbol {
     font-size: 110%;
 }
-.truth-table td.operator-symbol.arity-1 {
+.truth-table th.operator-symbol.arity-1 {
     border-bottom: 1px solid black;
 }
-.truth-table td.operator-symbol.arity-2 {
+.truth-table th.operator-symbol.arity-2 {
     text-align: right;
 }
 .truth-table td {
     padding: 10px;
-}
-
-.contents > ul li p {
-    margin-block-end: 0;
-}
-
-.subscript {
-    vertical-align: sub;
-    font-size: 80%;
-}
-
-/* Increase the font size of Tableaux Rule links */
-#tableaux-system dl.class dd a.reference.internal {
-    font-size: 140%;
 }

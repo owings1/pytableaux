@@ -30,20 +30,20 @@ class Writer(logic.TableauxSystem.Writer):
 
     name = name
 
-    def write_tableau(self, tableau, sw, opts):
+    def _write_tableau(self, tableau, sw, opts):
         s = ''
         if 'controls' in opts and opts['controls']:
-            s += self.write_status(tableau, sw, opts)
+            s += self.__write_status(tableau, sw, opts)
             s += '\n\n'
         s += '\n'.join([
             'Proof',
             '=====',
             ''
         ])
-        s += self.write_structure(tableau.tree, sw, opts)
+        s += self.__write_structure(tableau.tree, sw, opts)
         return s
 
-    def write_structure(self, structure, sw, opts, indent = 0, indents=[]):
+    def __write_structure(self, structure, sw, opts, indent = 0, indents=[]):
         node_strs = []
         for node in structure['nodes']:
             s = ''
@@ -77,13 +77,13 @@ class Writer(logic.TableauxSystem.Writer):
         for child in structure['children']:
             inds = list(indents)
             inds.append(i - indent)
-            s += "\n" + self.write_structure(child, sw, opts, indent = i, indents=inds)
+            s += "\n" + self.__write_structure(child, sw, opts, indent = i, indents=inds)
             s += '\n'
             for ind in inds:
                 s += ' ' * (ind - 1) + HCHAR
         return s
 
-    def write_status(self, tableau, sw, opts):
+    def __write_status(self, tableau, sw, opts):
         lines = []
         if tableau.argument != None:
             lines += [

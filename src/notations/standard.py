@@ -149,7 +149,7 @@ class Writer(logic.Vocabulary.Writer):
             self.write_parameter(params[1], symbol_set = symbol_set)
         ]
         return ''.join(joins)
-            
+
 class Parser(logic.Parser):
 
     symbol_sets = {'default': symbol_sets['default']}

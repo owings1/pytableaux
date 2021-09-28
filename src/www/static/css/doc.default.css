@@ -1,0 +1,27 @@
+/* Truth Tables */
+
+/* Reset some background colors */ 
+/* .truth-table th:is(.value-header, .operator-symbol, .blank) { */
+.truth-table th {
+    background-color: inherit;
+}
+.truth-table th.operator-name {
+    background-color: #ede;
+}
+
+/* Rule Docs */
+
+/* Increase the font size of Tableaux Rule links */
+#tableaux-system dl.class dd a.reference.internal {
+    font-size: 140%;
+}
+
+/* Fix the TOC margins on inside pages */
+.contents.local.topic ul {
+    margin: 0;
+}
+
+
+.contents > ul li p {
+    margin-block-end: 0;
+}

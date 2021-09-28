@@ -231,11 +231,11 @@ Contributing
 
 To contribute in any way (documentation, code, testing, suggestions, etc.), contact
 Doug Owings at doug at dougowings dot net. You can also submit issues and merge requests
-on `Bitbucket`_.
+on `GitHub`_.
 
 
 .. _dissertation: https://github.com/owings1/dissertation/raw/master/output/dissertation.pdf
 
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en
 
-.. _Bitbucket: https://github.com/owings1/pytableaux
+.. _GitHub: https://github.com/owings1/pytableaux

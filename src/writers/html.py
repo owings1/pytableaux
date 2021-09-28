@@ -33,7 +33,7 @@ class Writer(logic.TableauxSystem.Writer):
         lstrip_blocks = True
     )
 
-    def write_tableau(self, tableau, sw, opts):
+    def _write_tableau(self, tableau, sw, opts):
         if tableau.argument != None:
             premises = [sw.write(premise, drop_parens = True) for premise in tableau.argument.premises]
             conclusion = sw.write(tableau.argument.conclusion, drop_parens = True)

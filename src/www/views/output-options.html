@@ -44,6 +44,11 @@
     <input type="checkbox" id="options_group_optimizations" name="options.group_optimizations"
         value="true" {{- helper.checkbox_default(form_data, 'options.group_optimizations', True) }}/>
 </div>
+<div class="input">
+    <label for="options_controls">Controls</label>
+    <input type="checkbox" id="options_controls" name="options.controls" class="options"
+        value="true" {{- helper.checkbox_default(form_data, 'options.controls', True) }}/>
+</div>
 {% endif -%}
 <div class="input submit">
     <input type="submit" value="Go"/>
