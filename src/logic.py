@@ -447,16 +447,6 @@ def get_system_predicate(name):
     """
     return Vocabulary.get_system_predicate(name)
 
-def truth_table(logic, operator):
-    model = get_logic(logic).Model()
-    inputs = model.truth_table_inputs(arity(operator))
-    outputs = [model.truth_function(operator, *values) for values in inputs]
-    return {'inputs': inputs, 'outputs': outputs}
-
-def truth_tables(logic):
-    model = get_logic(logic).Model()
-    return {operator: truth_table(logic, operator) for operator in model.truth_functional_operators}
-
 def _get_module(package, arg):    
     if isinstance(arg, ModuleType):
         return arg
@@ -1218,25 +1208,11 @@ class TableauxSystem(object):
 
     @classmethod
     def add_rules(cls, tableau, opts):
-        for Rule in tableau.logic.TableauxRules.closure_rules:
+        TabRules = tableau.logic.TableauxRules
+        for Rule in TabRules.closure_rules:
             tableau.add_closure_rule(Rule)
-        for Rules in tableau.logic.TableauxRules.rule_groups:
+        for Rules in TabRules.rule_groups:
             tableau.add_rule_group(Rules)
-
-    class TableauStateError(Exception):
-        pass
-
-    class ProofTimeoutError(Exception):
-        pass
-
-    class TrunkAlreadyBuiltError(TableauStateError):
-        pass
-
-    class TrunkNotBuiltError(TableauStateError):
-        pass
-
-    class BranchClosedError(TableauStateError):
-        pass
 
     class Tableau(object):
         """
@@ -1285,10 +1261,14 @@ class TableauxSystem(object):
 
             self.tree = dict()
 
-            # A reference to the logic, if given.
+            #: A reference to the logic, if given. To set the logic after
+            #: constructing, it is recommended to use ``set_logic()`` instead
+            #: of setting this property directly.
             self.logic = None
 
-            # The argument of the tableau, if given.
+            #: The argument of the tableau, if given. To set the argument after
+            #: constructing, it is recommended to use ``set_argument()`` instead
+            #: of setting this property directly.
             self.argument = None
 
             # Rules
@@ -1325,17 +1305,29 @@ class TableauxSystem(object):
             Set the logic for the tableau. Assumes building has not started.
             Returns self.
             """
-            self._check_not_started()
+            self.__check_not_started()
             self.logic = get_logic(logic)
             self.clear_rules()
             self.logic.TableauxSystem.add_rules(self, self.opts)
+            return self
+
+        def set_argument(self, argument):
+            """
+            Set the argument for the tableau. Return self.
+
+            If the tableau has a logic set, then ``build_trunk()`` is automatically
+            called.
+            """
+            self.argument = argument
+            if self.logic != None:
+                self.build_trunk()
             return self
 
         def clear_rules(self):
             """
             Clear the rules. Assumes building has not started. Returns self.
             """
-            self._check_not_started()
+            self.__check_not_started()
             self.closure_rules = []
             self.rule_groups = []
             self.all_rules = []
@@ -1346,7 +1338,7 @@ class TableauxSystem(object):
             Add a closure rule. The ``rule`` parameter can be either a class
             or instance. Returns self.
             """
-            self._check_not_started()
+            self.__check_not_started()
             if not isinstance(rule, TableauxSystem.Rule):
                 rule = rule(self, **self.opts)
             self.closure_rules.append(rule)
@@ -1358,7 +1350,7 @@ class TableauxSystem(object):
             Add a rule group. The ``rules`` parameter should be list of rule
             instances or classes. Returns self.
             """
-            self._check_not_started()
+            self.__check_not_started()
             group = []
             for rule in rules:
                 if not isinstance(rule, TableauxSystem.Rule):
@@ -1375,7 +1367,7 @@ class TableauxSystem(object):
             self.opts.update(opts)
             with self.build_timer:
                 while not self.finished:
-                    self._check_timeout()
+                    self.__check_timeout()
                     self.step()
             self.finish()
             return self
@@ -1393,11 +1385,11 @@ class TableauxSystem(object):
             """
             if self.finished:
                 return False
-            self._check_trunk_built()
+            self.__check_trunk_built()
             application = None
             with StopWatch() as step_timer:
                 res = None
-                if self._is_max_steps_exceeded():
+                if self.__is_max_steps_exceeded():
                     self.is_premature = True
                 else:
                     res = self.get_application()
@@ -1535,18 +1527,6 @@ class TableauxSystem(object):
             self.history.append(application)
             self.current_step += 1
             return application
-
-        def set_argument(self, argument):
-            """
-            Set the argument for the tableau. Return self.
-
-            If the tableau has a logic set, then ``build_trunk()`` is automatically
-            called.
-            """
-            self.argument = argument
-            if self.logic != None:
-                self.build_trunk()
-            return self
 
         def open_branches(self):
             """
@@ -2306,7 +2286,7 @@ class TableauxSystem(object):
                         'max_candidate_score' : None,
                     })
 
-        def _select_best_target(self, targets, branch):
+        def __select_best_target(self, targets, branch):
             # Selects the best target. Assumes targets have been extended.
             for target in targets:
                 if not self.opts['is_rank_optim']:
@@ -2841,6 +2821,21 @@ class TableauxSystem(object):
                 props['sentence'] = sentence
             return props
 
+    class TableauStateError(Exception):
+        pass
+
+    class ProofTimeoutError(Exception):
+        pass
+
+    class TrunkAlreadyBuiltError(TableauStateError):
+        pass
+
+    class TrunkNotBuiltError(TableauStateError):
+        pass
+
+    class BranchClosedError(TableauStateError):
+        pass
+
     class Writer(object):
 
         def __init__(self, **opts):
@@ -2864,6 +2859,18 @@ class TableauxSystem(object):
 
         def write_tableau(self, tableau, sw, opts):
             raise NotImplementedError()
+
+# TODO: Move these truth table methods -- we are only using them
+#       in docutil and tests. There is a Model class below...
+def truth_table(logic, operator):
+    model = get_logic(logic).Model()
+    inputs = model.truth_table_inputs(arity(operator))
+    outputs = [model.truth_function(operator, *values) for values in inputs]
+    return {'inputs': inputs, 'outputs': outputs}
+
+def truth_tables(logic):
+    model = get_logic(logic).Model()
+    return {operator: truth_table(logic, operator) for operator in model.truth_functional_operators}
 
 class Model(object):
 
@@ -3367,6 +3374,7 @@ def make_tree_structure(branches, node_depth=0, track=None):
         s['distinct_nodes'] = track['distinct_nodes']
     return s
 
+# TODO: move this to a utils module
 class StopWatch(object):
 
     class StateError(Exception):
