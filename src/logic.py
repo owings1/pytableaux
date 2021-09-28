@@ -49,7 +49,7 @@ operators = {
     'Necessity'              : 1,
 }
 
-# default display ordering
+# Default display ordering
 operators_list = [
     'Assertion'              ,
     'Negation'               ,
@@ -92,7 +92,8 @@ class BadArgumentError(Exception):
     pass
 
 def atomic(index, subscript):
-    """Return an atomic sentence represented by the given index and subscript integers.
+    """
+    Return an atomic sentence represented by the given index and subscript integers.
     Examples::
 
         a  = atomic(index=0, subscript=0)
@@ -109,7 +110,8 @@ def atomic(index, subscript):
     return Vocabulary.AtomicSentence(index, subscript)
 
 def negate(sentence):
-    """Negate a sentence and return the negated sentence. This is shorthand for 
+    """
+    Negate a sentence and return the negated sentence. This is shorthand for 
     ``operate('Negation', [sentence])``. Example::
 
         a = atomic(0, 0)
@@ -120,12 +122,19 @@ def negate(sentence):
     return Vocabulary.OperatedSentence('Negation', [sentence])
 
 def negative(sentence):
-    """Either negate this sentence, or, if it is a negated sentence, return its
-    negatum. Example::
+    """
+    Either negate this sentence, or, if it is a negated sentence, return its
+    negatum, i.e., "un-negate" the sentence. Example::
 
+        # A
         a = atomic(0, 0)
+
+        # ~A
         s1 = negate(a)
+
+        # A again
         s2 = negative(s1)
+
         assert s2 == a
     """
     if sentence.is_operated() and sentence.operator == 'Negation':
@@ -133,7 +142,8 @@ def negative(sentence):
     return negate(sentence)
 
 def assertion(sentence):
-    """Apply the assertion operator to the sentence. This is shorthand for
+    """
+    Apply the assertion operator to the sentence. This is shorthand for
     ``operate('Assertion', [sentence])``. Example::
 
         a = atomic(0, 0)
@@ -302,23 +312,43 @@ def parse(string, vocabulary=None, notation=None):
 
 class argument(object):
     """
-    Create an argument::
+    Create an argument. You can pass in strings to be parsed, or sentence objects.
+    The default notation for parsing is `polish`, or you can choose `standard`::
+
+        arg1 = argument(conclusion='b', premises=['KaNa'])
+
+        arg2 = argument(conclusion='B', premises=['A & ~A'], notation='standard')
+
+        assert arg1 == arg2
+
+    An argument must have a non-empty conclusion, but premises are optional::
+
+        arg = argument('AaNa')
+
+    Using low-level APIs::
 
         a = atomic(0, 0)
         b = atomic(1, 0)
-        # if a then b
-        premise2 = operate('Conditional', [a, b])
-        # from a, and if a then b, it follows that b
-        arg = argument(conclusion=b, premises=[a, premise2])
+        a_then_b = operate('Conditional', [a, b])
 
-    You can also pass a notation (and optionally, a vocabulary) to parse sentence::
+        # Modus Ponens
+        arg = argument(conclusion=b, premises=[a, a_then_b])
 
-        arg = argument(conclusion='B', premises=['(A > B)', 'A'], notation='standard')
+    Two arguments are considered equal just when their conclusions are equal, and their
+    premises are equal (and in the same order)::
+
+        arg1 = argument('Kab', ['a', 'b'])
+        arg2 = argument('Kab', ['a', 'b'])
+        assert arg2 == arg1
+
+        arg3 = argument('Kab', ['b', 'a'])
+        assert arg3 != arg1
+
+        # The title is not considered in equality.
+        arg4 = argument('Kab', ['a', 'b'], title='My Argument')
+        assert arg4 == arg1
+        assert arg4.title != arg1.title
     """
-
-    class MissingNotationError(Exception):
-        pass
-
     def __init__(self, conclusion=None, premises=None, title=None, notation=None, vocabulary=None):
         self.premises = []
         if premises != None:
@@ -359,6 +389,7 @@ def arity(operator):
         assert arity('Negation') == 1
         assert arity(operate('Negation', [atomic(0, 0)]).operator) == 1
 
+    Note: to get the arity of a predicate, use ``predicate.arity``.
     """
     return operators[operator]
 
@@ -367,8 +398,11 @@ def is_constant(obj):
     Check whether a parameter is a constant. Example::
 
         assert is_constant(constant(0, 0))
+
         assert not is_constant(variable(0, 0))
-        assert not is_constant([0, 0]) # must be an instance of Vocabulary.Constant
+
+        # must be an instance of Vocabulary.Constant
+        assert not is_constant([0, 0])
 
     """
     return isinstance(obj, Vocabulary.Constant)
@@ -378,8 +412,11 @@ def is_variable(obj):
     Check whether a parameter is a variable. Example::
 
         assert is_constant(variable(0, 0))
+
         assert not is_constant(constant(0, 0))
-        assert not is_constant([0, 0]) # must be an instance of Vocabulary.Variable
+
+        # must be an instance of Vocabulary.Variable
+        assert not is_constant([0, 0])
 
     """
     return isinstance(obj, Vocabulary.Variable)
@@ -388,10 +425,17 @@ def get_logic(arg):
     """
     Get the logic module from the specified name. Example::
 
-        assert get_logic('fde') == logics.fde
-        assert get_logic('logics.fde') == logics.fde
-        assert get_logic('FDE') == logics.fde
-        assert get_logic(logics.fde) == logics.fde
+        fde = get_logic('fde')
+
+        # same as importing the module directly
+        import logics.fde
+        assert fde == logics.fde
+
+        # case-insensitive
+        assert get_logic('FDE') == fde
+
+        # returns the module if passed
+        assert get_logic(get_logic('fde')) == fde
     """
     return _get_module('logics', arg)
 
@@ -808,45 +852,51 @@ class Vocabulary(object):
             """
             Set of constants, recursive.
             """
-            raise NotImplementedError()
+            return set()
 
         def variables(self):
             """
             Set of variables, recursive.
             """
-            raise NotImplementedError()
+            return set()
 
         def atomics(self):
             """
             Set of atomic sentences, recursive.
             """
-            raise NotImplementedError()
+            return set()
 
         def predicates(self):
             """
             Set of predicates, recursive.
             """
-            raise NotImplementedError()
+            return set()
 
         def operators(self):
             """
             List of operators, recursive.
             """
-            raise NotImplementedError()
+            # TODO: Explain why operators and quantifiers are returned as a list,
+            #       while everything else is returned as a set. I believe is has
+            #       something to do tableau rule optimization, or maybe reading
+            #       models. In any case, there might be a more consistent way.
+            return list()
 
         def quantifiers(self):
             """
             List of quantifiers, recursive.
             """
-            raise NotImplementedError()
-
         def __eq__(self, other):
             return other != None and self.__dict__ == other.__dict__
 
         def __ne__(self, other):
             return other == None or self.__dict__ != other.__dict__
+            return list()
 
         def __repr__(self):
+            # TODO: Consider removing this way of representing. I think it was
+            #       useful in the early stages, but there are several reaons
+            #       to abandon it: performance, consisitency, design, etc.
             from notations import polish
             return polish.write(self)
 
@@ -864,23 +914,8 @@ class Vocabulary(object):
         def substitute(self, new_param, old_param):
             return self
 
-        def constants(self):
-            return set()
-
-        def variables(self):
-            return set()
-
         def atomics(self):
             return set([self])
-
-        def predicates(self):
-            return set()
-
-        def operators(self):
-            return list()
-
-        def quantifiers(self):
-            return list()
 
         def next(self):
             if self.index < num_atomic_symbols - 1:
