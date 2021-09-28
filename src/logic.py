@@ -370,14 +370,10 @@ def tableau(logic, arg=None, **opts):
     """
     Create a tableau for the given logic and argument. Example::
 
-        from logics import cfol
-        proof = tableau(cfol, arg)
+        arg = argument(premises=['a'], conclusion=['b'])
+        proof = tableau('fde', arg)
         proof.build()
-        if proof.valid:
-            print("Valid")
-        else:
-            print("Invalid")
-
+        assert proof.invalid
     """
     return TableauxSystem.Tableau(logic, arg, **opts)
 
@@ -737,7 +733,9 @@ class Vocabulary(object):
 
         def __init__(self, index, subscript):
             if index >= num_const_symbols:
-                raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
+                raise Vocabulary.IndexTooLargeError(
+                    "Index too large {0}".format(str(index))
+                )
             super(Vocabulary.Constant, self).__init__(index, subscript)
 
         def hash_tuple(self):
@@ -756,7 +754,9 @@ class Vocabulary(object):
 
         def __init__(self, index, subscript):
             if index >= num_var_symbols:
-                raise Vocabulary.IndexTooLargeError("Index too large {0}".format(str(index)))
+                raise Vocabulary.IndexTooLargeError(
+                    "Index too large {0}".format(str(index))
+                )
             super(Vocabulary.Variable, self).__init__(index, subscript)
 
         def hash_tuple(self):
@@ -774,25 +774,19 @@ class Vocabulary(object):
     class Sentence(HashTupleOrdered):
 
         #: The operator, if any.
-        operator   = None
+        operator = None
 
         #: The quantifier, if any.
         quantifier = None
 
         #: The predicate, if any.
-        predicate  = None
+        predicate = None
 
         #: The type (class name).
-        type       = None
+        type = None
 
         def __init__(self):
             self.type = self.__class__.__name__
-
-        def is_sentence(self):
-            """
-            Whether this is a sentence.
-            """
-            return True
 
         def is_atomic(self):
             """
@@ -960,17 +954,9 @@ class Vocabulary(object):
         def variables(self):
             return {param for param in self.parameters if is_variable(param)}
 
-        def atomics(self):
-            return set()
-
         def predicates(self):
             return set([self.predicate])
 
-        def operators(self):
-            return list()
-
-        def quantifiers(self):
-            return list()
 
         def hash_tuple(self):
             return (5, self.predicate) + tuple((param for param in self.parameters))
@@ -1021,7 +1007,9 @@ class Vocabulary(object):
 
         def __init__(self, operator, operands):
             if operator not in operators:
-                raise Vocabulary.NoSuchOperatorError("Unknown operator '{0}'.".format(operator))
+                raise Vocabulary.NoSuchOperatorError(
+                    "Unknown operator '{0}'.".format(operator)
+                )
             if len(operands) != arity(operator):
                 raise Vocabulary.OperatorArityMismatchError(
                     "Expecting {0} operands for operator '{1}', got {2}.".format(
@@ -1230,16 +1218,33 @@ class TableauxSystem(object):
         #: at least one open branch, and it was not ended prematurely.
         invalid = None
 
-        #: Whether the tableau ended prematurely.
+        #: Whether the tableau ended prematurely. This can happen when the
+        #: `max_steps` or `build_timeout` options are exceeded.
         is_premature = False
 
-        #: The branches on the tableau.
+        #: The branches on the tableau. The branches are stored as list to
+        #: maintain a consisten ordering. Since a tableau really consists of
+        #: a `set`, and are represented internally as such, this will always
+        #: be a list of unique branches.
         branches = list()
 
-        #: The history of rule applications.
+        #: The history of rule applications. Each application is a map (`dict`)
+        #: with the following keys:
+        #:
+        #: - `rule` - The :class:`~logic.TableauxSystem.Rule` instance that was applied.
+        #:
+        #: - `target` - A `dict` containing information about the elements to
+        #:    which the rule was applied, as well as any auxilliary information
+        #:    that may be tracked for various rules and optimizations. There is
+        #:    no hard constraint on what keys are in a target, but all current
+        #:    implementations at least provide a `branch` key.
+        #:
+        #: - `duration_ms` - The duration in milliseconds of the application,
+        #:    or `0` if no step timer was associated.
         history = list()
 
-        #: A tree structure of the tableau, generated after the proof is finished.
+        #: A tree structure of the tableau. This is generated only after the
+        #: proof is finished.
         tree = dict()
 
         default_opts = {
@@ -1577,7 +1582,7 @@ class TableauxSystem(object):
             tableau is instantiated with a logic and an argument, or when instantiated
             with a logic, and the ``set_argument()`` method is called.
             """
-            self._check_trunk_not_built()
+            self.__check_trunk_not_built()
             with self.trunk_build_timer:
                 self.logic.TableauxSystem.build_trunk(self, self.argument)
                 self.trunk_built = True
@@ -1609,12 +1614,12 @@ class TableauxSystem(object):
 
             with self.models_timer:
                 if self.opts['is_build_models'] and not self.is_premature:
-                    self._build_models()
+                    self.__build_models()
 
             with self.tree_timer:
                 self.tree = make_tree_structure(self.branches)
 
-            self.stats = self._compute_stats()
+            self.stats = self.__compute_stats()
 
             return self
 
@@ -1666,11 +1671,11 @@ class TableauxSystem(object):
 
         # Interal util methods
 
-        def _compute_stats(self):
+        def __compute_stats(self):
             # Compute the stats property after the tableau is finished.
             num_open = len(self.open_branches())
             return {
-                'result'            : self._result_word(),
+                'result'            : self.__result_word(),
                 'branches'          : len(self.branches),
                 'open_branches'     : num_open,
                 'closed_branches'   : len(self.branches) - num_open,
@@ -1686,12 +1691,12 @@ class TableauxSystem(object):
                     for rule in self.all_rules
                 ]),
                 'rules' : [
-                    self._compute_rule_stats(rule)
+                    self.__compute_rule_stats(rule)
                     for rule in self.all_rules
                 ],
             }
 
-        def _compute_rule_stats(self, rule):
+        def __compute_rule_stats(self, rule):
             # Compute the stats for a rule after the tableau is finished.
             return {
                 'name'            : rule.name,
@@ -1711,40 +1716,42 @@ class TableauxSystem(object):
                 },
             }
 
-        def _check_timeout(self):
+        def __check_timeout(self):
             timeout = self.opts['build_timeout']
             if timeout != None and timeout >= 0:
                 if self.build_timer.elapsed() > timeout:
                     self.build_timer.stop()
-                    raise TableauxSystem.ProofTimeoutError('Timeout of {0}ms exceeded.'.format(str(timeout)))
+                    raise TableauxSystem.ProofTimeoutError(
+                        'Timeout of {0}ms exceeded.'.format(str(timeout))
+                    )
 
-        def _is_max_steps_exceeded(self):
+        def __is_max_steps_exceeded(self):
             max_steps = self.opts['max_steps']
             return max_steps != None and len(self.history) >= max_steps
 
-        def _check_trunk_built(self):
+        def __check_trunk_built(self):
             if self.argument != None and not self.trunk_built:
                 raise TableauxSystem.TrunkNotBuiltError("Trunk is not built.")
 
-        def _check_trunk_not_built(self):
+        def __check_trunk_not_built(self):
             if self.trunk_built:
                 raise TableauxSystem.TrunkAlreadyBuiltError("Trunk is already built.")
 
-        def _check_not_started(self):
+        def __check_not_started(self):
             if self.current_step > 0:
                 raise TableauxSystem.TableauStateError("Proof has already started building.")
 
-        def _result_word(self):
+        def __result_word(self):
             if self.valid:
                 return 'Valid'
             if self.invalid:
                 return 'Invalid'
             return 'Unfinished'
 
-        def _build_models(self):
+        def __build_models(self):
             # Build models for the open branches
             for branch in list(self.open_branches()):
-                self._check_timeout()
+                self.__check_timeout()
                 branch.make_model()
             
         def __repr__(self):
@@ -1874,7 +1881,7 @@ class TableauxSystem(object):
             self.leaf = node
 
             # Add to index *before* after_node_add callback
-            self._add_to_index(node)
+            self.__add_to_index(node)
 
             # Tableau callback
             if self.tableau != None:
@@ -2050,7 +2057,7 @@ class TableauxSystem(object):
                 return props
             return TableauxSystem.Node(props=props)
 
-        def _add_to_index(self, node):
+        def __add_to_index(self, node):
             for prop in self.node_index:
                 key = None
                 if prop == 'w1Rw2':
@@ -2064,6 +2071,7 @@ class TableauxSystem(object):
                     self.node_index[prop][key].add(node)
 
         def _select_index(self, props, ticked):
+            # TODO: Mangle with __, but we are using this in a test.
             best_index = None
             for prop in self.node_index:
                 key = None
@@ -2244,10 +2252,10 @@ class TableauxSystem(object):
             # ``get_candidate_targets()`` instead.
             cands = self.get_candidate_targets(branch)
             if cands:
-                self._extend_branch_targets(cands, branch)
-                return self._select_best_target(cands, branch)
+                self.__extend_branch_targets(cands, branch)
+                return self.__select_best_target(cands, branch)
 
-        def _extend_branch_targets(self, targets, branch):
+        def __extend_branch_targets(self, targets, branch):
             # Augment the targets with the following keys:
             #
             #  - branch
