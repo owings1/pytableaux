@@ -49,31 +49,58 @@ class LogicTester(object):
         ('PredG', 1, 0, 1),
     ])
 
+    default_notation = 'polish'
+
     def example_proof(self, name, **kw):
         return example_proof(self.logic, name, **kw)
 
     def p(self, s, **kw):
         if 'vocabulary' not in kw:
             kw['vocabulary'] = self.vocab
+        if 'notation' not in kw:
+            kw['notation'] = self.default_notation
         return parse(s, **kw)
 
-    def assert_axiom(self, ax):
-        arg = argument(ax, notation='polish')
+    def parg(self, conc, *prems, **kw):
+        if 'vocabulary' not in kw:
+            kw['vocabulary'] = self.vocab
+        if 'notation' not in kw:
+            kw['notation'] = self.default_notation
+        return argument(conclusion=conc, premises=prems, **kw)
+
+    def get_rule(self, rule):
+        return tableau(self.logic).get_rule(rule)
+
+    def assert_axiom(self, ax, **kw):
+        arg = self.parg(ax, **kw)
         proof = tableau(self.logic, arg)
         proof.build()
         assert proof.valid
+        return proof
 
-    def assert_valid(self, conc, *prems):
-        arg = argument(conc, prems, notation='polish')
+    def assert_valid(self, conc, *prems, **kw):
+        arg = self.parg(conc, *prems, **kw)
         proof = tableau(self.logic, arg)
         proof.build()
         assert proof.valid
+        return proof
 
-    def assert_invalid(self, conc, *prems):
-        arg = argument(conc, prems, notation='polish')
+    def assert_invalid(self, conc, *prems, **kw):
+        arg = self.parg(conc, *prems, **kw)
         proof = tableau(self.logic, arg)
         proof.build()
-        assert not proof.valid
+        assert proof.invalid
+        return proof
+
+    def assert_valid_eg(self, name):
+        proof = self.example_proof(name)
+        assert proof.valid
+        return proof
+
+    def assert_invalid_eg(self, name):
+        proof = self.example_proof(name)
+        assert proof.invalid
+        return proof
 
 class TestFDE(LogicTester):
 
@@ -107,38 +134,28 @@ class TestFDE(LogicTester):
         assert proof.valid
 
     def test_valid_univ_from_neg_exist_1(self):
-        proof = self.example_proof('Quantifier Interdefinability 4')
-        assert proof.valid
+        self.assert_valid_eg('Quantifier Interdefinability 4')
 
     def test_valid_neg_assert_a_implies_a(self):
-        arg = argument(premises=['NTa'], conclusion='Na', notation='polish')
-        proof = tableau(self.logic, arg)
-        proof.build()
-        assert proof.valid
+        self.assert_valid('Na', 'NTa')
 
     def test_valid_demorgan_1(self):
-        proof = self.example_proof('DeMorgan 1')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 1')
 
     def test_valid_demorgan_2(self):
-        proof = self.example_proof('DeMorgan 2')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 2')
 
     def test_valid_demorgan_3(self):
-        proof = self.example_proof('DeMorgan 3')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 3')
 
     def test_valid_demorgan_4(self):
-        proof = self.example_proof('DeMorgan 4')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 4')
 
     def test_invalid_lem(self):
-        proof = self.example_proof('Law of Excluded Middle')
-        assert not proof.valid
+        self.assert_invalid_eg('Law of Excluded Middle')
 
     def test_invalid_mat_bicond_elim_3(self):
-        proof = self.example_proof('Material Biconditional Elimination 3')
-        assert not proof.valid
+        self.assert_invalid_eg('Material Biconditional Elimination 3')
 
     def test_invalid_lem_model_is_countermodel_to(self):
         proof = self.example_proof('Law of Excluded Middle')
@@ -153,8 +170,7 @@ class TestFDE(LogicTester):
         assert not model.is_countermodel_to(arg)
 
     def test_invalid_univ_from_exist(self):
-        proof = self.example_proof('Universal from Existential')
-        assert not proof.valid
+        self.assert_invalid_eg('Universal from Existential')
 
     def test_invalid_lnc_build_model(self):
         proof = self.example_proof('Law of Non-contradiction')
@@ -396,7 +412,6 @@ class TestFDE(LogicTester):
         assert s3 in model.opaques
         assert model.value_of(s5) in model.designated_values
 
-        
 class TestK3(LogicTester):
 
     logic = get_logic('K3')
@@ -410,28 +425,22 @@ class TestK3(LogicTester):
         assert proof.valid
         
     def test_valid_bicond_elim_1(self):
-        proof = self.example_proof('Biconditional Elimination 1')
-        assert proof.valid
+        self.assert_valid_eg('Biconditional Elimination 1')
 
     def test_invalid_lem(self):
-        proof = self.example_proof('Law of Excluded Middle')
-        assert not proof.valid
+        self.assert_invalid_eg('Law of Excluded Middle')
 
     def test_valid_demorgan_1(self):
-        proof = self.example_proof('DeMorgan 1')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 1')
 
     def test_valid_demorgan_2(self):
-        proof = self.example_proof('DeMorgan 2')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 2')
 
     def test_valid_demorgan_3(self):
-        proof = self.example_proof('DeMorgan 3')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 3')
 
     def test_valid_demorgan_4(self):
-        proof = self.example_proof('DeMorgan 4')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 4')
 
 class TestK3W(LogicTester):
 
@@ -486,44 +495,31 @@ class TestK3W(LogicTester):
         assert proof.history[0]['rule'] == rule
 
     def test_valid_cond_contraction(self):
-        proof = self.example_proof('Conditional Contraction')
-        assert proof.valid
+        self.assert_valid_eg('Conditional Contraction')
 
     def test_invalid_addition(self):
-        proof = self.example_proof('Addition')
-        assert not proof.valid
+        self.assert_invalid_eg('Addition')
 
     def test_invalid_prior_rule_defect(self):
-        arg = argument('ANAabNa', premises=['Na'], notation='polish')
-        proof = tableau(self.logic, arg)
-        proof.build()
-        assert not proof.valid
+        self.assert_invalid('ANAabNa', 'Na')
 
     def test_invalid_asserted_addition(self):
-        arg = argument('AaTb', premises=['a'], notation='polish')
-        proof = tableau(self.logic, arg)
-        proof.build()
-        assert not proof.valid
+        self.assert_invalid('AaTb', 'a')
 
     def test_valid_demorgan_1(self):
-        proof = self.example_proof('DeMorgan 1')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 1')
 
     def test_valid_demorgan_2(self):
-        proof = self.example_proof('DeMorgan 2')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 2')
 
     def test_valid_demorgan_3(self):
-        proof = self.example_proof('DeMorgan 3')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 3')
 
     def test_valid_demorgan_4(self):
-        proof = self.example_proof('DeMorgan 4')
-        assert proof.valid
+        self.assert_valid_eg('DeMorgan 4')
 
     def test_invalid_cond_lem(self):
-        proof = tableau(self.logic, argument('AUabNUab')).build()
-        assert not proof.valid
+        self.assert_invalid('AUabNUab')
 
     def test_optimize1(self):
         proof = tableau(self.logic)
@@ -551,31 +547,31 @@ class TestK3WQ(LogicTester):
     logic = get_logic('K3WQ')
 
     def test_valid_quantifier_interdefinability_1(self):
-        proof = self.example_proof('Quantifier Interdefinability 1')
-        assert proof.valid
+        self.assert_valid_eg('Quantifier Interdefinability 1')
 
     def test_valid_quantifier_interdefinability_2(self):
-        proof = self.example_proof('Quantifier Interdefinability 2')
-        assert proof.valid
+        self.assert_valid_eg('Quantifier Interdefinability 2')
         
     def test_valid_quantifier_interdefinability_3(self):
-        proof = self.example_proof('Quantifier Interdefinability 3')
-        assert proof.valid
+        self.assert_valid_eg('Quantifier Interdefinability 3')
 
     def test_valid_quantifier_interdefinability_4(self):
-        proof = self.example_proof('Quantifier Interdefinability 4')
-        assert proof.valid
+        self.assert_valid_eg('Quantifier Interdefinability 4')
 
     def test_valid_existential_to_if_a_then_a(self):
-        arg = argument('CFmFm', ['SxFx'], vocabulary=self.vocab)
-        proof = tableau(self.logic, arg).build()
-        assert proof.valid
+        self.assert_valid('CFmFm', 'SxFx')
+        # arg = argument('CFmFm', ['SxFx'], vocabulary=self.vocab)
+        # proof = tableau(self.logic, arg).build()
+        # assert proof.valid
 
     def test_invalid_existential_from_predicate_sentence_countermodel(self):
         arg = argument('SxFx', ['Fm'], vocabulary=self.vocab)
         proof = tableau(self.logic, arg)
         proof.build(is_build_models=True)
         assert proof.invalid
+        proof2 = self.assert_invalid('SxFx', 'Fm')
+        
+        # arg = proof.argument
         branch = list(proof.open_branches())[0]
         model = branch.model
         assert model.value_of(self.p('Fn')) == 'N'
@@ -617,24 +613,19 @@ class TestB3E(LogicTester):
         assert tbl['outputs'][7] == 'F'
         
     def test_valid_cond_contraction(self):
-        proof = self.example_proof('Conditional Contraction')
-        assert proof.valid
+        self.assert_valid_eg('Conditional Contraction')
 
     def test_valid_bicond_elim_1(self):
-        proof = self.example_proof('Biconditional Elimination 1')
-        assert proof.valid
+        self.assert_valid_eg('Biconditional Elimination 1')
 
     def test_valid_bicond_elim_3(self):
-        proof = self.example_proof('Biconditional Elimination 3')
-        assert proof.valid
+        self.assert_valid_eg('Biconditional Elimination 3')
 
     def test_valid_bicond_intro_1(self):
-        proof = self.example_proof('Biconditional Introduction 1')
-        assert proof.valid
+        self.assert_valid_eg('Biconditional Introduction 1')
 
     def test_invalid_lem(self):
-        proof = self.example_proof('Law of Excluded Middle')
-        assert not proof.valid
+        self.assert_invalid_eg('Law of Excluded Middle')
 
     def test_invalid_prior_rule_defect(self):
         arg = argument('ANAabNa', premises=['Na'], notation='polish')

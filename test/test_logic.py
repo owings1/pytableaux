@@ -23,42 +23,50 @@ import logic
 import examples
 import time
 
+# Aliases
+Vocab = logic.Vocabulary
+TabSys = logic.TableauxSystem
+Branch = TabSys.Branch
+
+from logic import argument, atomic, constant, get_logic, parse
+from pytest import raises
+
 def test_parse_standard():
-    s = logic.parse('A & B', notation='standard')
+    s = parse('A & B', notation='standard')
     assert s.is_operated
     assert s.operator == 'Conjunction'
 
 def test_parse_polish():
-    s = logic.parse('Kab', notation='polish')
+    s = parse('Kab', notation='polish')
     assert s.is_operated
     assert s.operator == 'Conjunction'
 
 def test_argument_no_prems_1_std_untitled():
-    a = logic.argument(conclusion='A', notation='standard')
+    a = argument(conclusion='A', notation='standard')
     assert len(a.premises) == 0
     assert a.conclusion.is_atomic()
 
 def test_argument_prems_preparsed_titled():
-    premises = [logic.parse('Aab'), logic.parse('Nb')]
-    conclusion = logic.parse('a')
-    a = logic.argument(conclusion=conclusion, premises=premises, title='TestArgument')
+    premises = [parse('Aab'), parse('Nb')]
+    conclusion = parse('a')
+    a = argument(conclusion=conclusion, premises=premises, title='TestArgument')
     assert len(a.premises) == 2
     assert a.title == 'TestArgument'
 
 def test_argument_parse_prems_preparsed_conclusion():
     premises = ['Aab', 'Nb']
-    conclusion = logic.parse('a')
-    a = logic.argument(conclusion=conclusion, premises=premises, notation='polish')
+    conclusion = parse('a')
+    a = argument(conclusion=conclusion, premises=premises, notation='polish')
     assert len(a.premises) == 2
     assert a.conclusion == conclusion
 
 def test_argument_repr_untitled():
-    a = logic.argument(conclusion='a', notation='polish')
+    a = argument(conclusion='a', notation='polish')
     res = a.__repr__()
     assert 'title' not in res
 
 def test_argument_repr_titled():
-    a = logic.argument(conclusion='a', notation='polish', title='TestArg')
+    a = argument(conclusion='a', notation='polish', title='TestArg')
     res = a.__repr__()
     assert 'title' in res
 
@@ -74,121 +82,98 @@ def test_truth_tables_cpl():
     assert tbls['Negation']['outputs'][0] == 'T'
 
 def test_get_logic_cpl_case_insensitive():
-    lgc1 = logic.get_logic('cpl')
-    lgc2 = logic.get_logic('CPL')
-    assert lgc1 == lgc2
+    assert get_logic('cpl') == get_logic('CPL')
 
 def test_get_logic_none_bad_argument():
-    with pytest.raises(logic.BadArgumentError):
-        logic.get_logic(None)
+    with raises(logic.BadArgumentError):
+        get_logic(None)
 
 class TestVocabulary(object):
 
     def test_predicate_error_pred_defs_duple(self):
-        with pytest.raises(logic.Vocabulary.PredicateError):
-            logic.Vocabulary(predicate_defs=[('foo', 4)])
+        with raises(Vocab.PredicateError):
+            Vocab(predicate_defs=[('foo', 4)])
 
     def test_get_predicate_by_name_sys_identity(self):
-        v = logic.Vocabulary()
-        p = v.get_predicate('Identity')
-        assert p.name == 'Identity'
+        assert Vocab().get_predicate('Identity').name == 'Identity'
 
     def test_get_predicate_by_index_subscript_sys_identity(self):
-        v = logic.Vocabulary()
-        p = v.get_predicate(-1, subscript=0)
         # TODO: after refactor test for get_predicate(-1, 0)
-        assert p.name == 'Identity'
+        assert Vocab().get_predicate(-1, subscript=0).name == 'Identity'
 
     def test_get_predicate_no_such_predicate_error_bad_name(self):
-        v = logic.Vocabulary()
-        with pytest.raises(logic.Vocabulary.NoSuchPredicateError):
-            v.get_predicate('NonExistentPredicate')
+        with raises(Vocab.NoSuchPredicateError):
+            Vocab().get_predicate('NonExistentPredicate')
 
     def test_get_predicate_no_such_predicate_error_bad_custom_index(self):
-        v = logic.Vocabulary()
-        with pytest.raises(logic.Vocabulary.NoSuchPredicateError):
-            v.get_predicate(index=1, subscript=2)
+        with raises(Vocab.NoSuchPredicateError):
+            Vocab().get_predicate(index=1, subscript=2)
 
     def test_get_predicate_no_such_predicate_error_bad_sys_index(self):
-        v = logic.Vocabulary()
-        with pytest.raises(logic.Vocabulary.NoSuchPredicateError):
-            v.get_predicate(index=-1, subscript=2)
+        with raises(Vocab.NoSuchPredicateError):
+            Vocab().get_predicate(index=-1, subscript=2)
 
     def test_get_predicate_no_such_predicate_error_not_enough_info(self):
-        v = logic.Vocabulary()
-        with pytest.raises(logic.Vocabulary.PredicateError):
-            v.get_predicate(index=-1)
+        with raises(Vocab.PredicateError):
+            Vocab().get_predicate(index=-1)
 
     def test_declare_predicate1(self):
-        v = logic.Vocabulary()
-        p = v.declare_predicate('MyPredicate', 0, 0, 1)
+        p = Vocab().declare_predicate('MyPredicate', 0, 0, 1)
         assert p.name == 'MyPredicate'
         assert p.index == 0
         assert p.subscript == 0
         assert p.arity == 1
 
     def test_vocab_copy_get_predicate(self):
-        v = logic.Vocabulary()
+        v = Vocab()
         predicate = v.declare_predicate('MyPredicate', 0, 0, 1)
         v2 = v.copy()
         assert v2.get_predicate('MyPredicate') == predicate
 
-    def test_python2_cmp_self_0(self):
-        v = logic.Vocabulary()
-        predicate = v.declare_predicate('MyPredicate', 0, 0, 1)
-        assert predicate.__cmp__(predicate) == 0
-
     def test_add_predicate_raises_non_predicate(self):
-        v = logic.Vocabulary()
-        with pytest.raises(logic.Vocabulary.PredicateError):
-            v.add_predicate('foo')
+        with raises(Vocab.PredicateError):
+            Vocab().add_predicate('foo')
 
     def test_add_predicate_raises_sys_predicate(self):
-        v = logic.Vocabulary()
         pred = logic.get_system_predicate('Identity')
-        with pytest.raises(logic.Vocabulary.PredicateError):
-            v.add_predicate(pred)
+        with raises(Vocab.PredicateError):
+            Vocab().add_predicate(pred)
 
     def test_declare_predicate_already_declared_sys(self):
-        v = logic.Vocabulary()
-        with pytest.raises(logic.Vocabulary.PredicateAlreadyDeclaredError):
-            v.declare_predicate('Identity', 0, 0, 2)
+        with raises(Vocab.PredicateAlreadyDeclaredError):
+            Vocab().declare_predicate('Identity', 0, 0, 2)
 
     def test_declare_predicate_already_declared_user_name(self):
-        v = logic.Vocabulary()
+        v = Vocab()
         v.declare_predicate('MyPredicate', 0, 0, 1)
-        with pytest.raises(logic.Vocabulary.PredicateAlreadyDeclaredError):
+        with raises(Vocab.PredicateAlreadyDeclaredError):
             v.declare_predicate('MyPredicate', 0, 0, 1)
 
     def test_declare_predicate_already_declared_user_index_subscript(self):
-        v = logic.Vocabulary()
+        v = Vocab()
         v.declare_predicate('MyPredicate', 0, 0, 1)
-        with pytest.raises(logic.Vocabulary.PredicateAlreadyDeclaredError):
+        with raises(Vocab.PredicateAlreadyDeclaredError):
             v.declare_predicate('MyPredicate2', 0, 0, 1)
 
     def test_declare_predicate_index_too_large(self):
-        v = logic.Vocabulary()
-        with pytest.raises(logic.Vocabulary.IndexTooLargeError):
-            v.declare_predicate('MyPredicate', logic.num_predicate_symbols, 0, 1)
+        with raises(Vocab.IndexTooLargeError):
+            Vocab().declare_predicate('MyPredicate', logic.num_predicate_symbols, 0, 1)
 
     def test_declare_predicate_arity_non_int(self):
-        v = logic.Vocabulary()
-        with pytest.raises(logic.Vocabulary.PredicateArityError):
-            v.declare_predicate('MyPredicate', 0, 0, None)
+        with raises(Vocab.PredicateArityError):
+            Vocab().declare_predicate('MyPredicate', 0, 0, None)
 
     def test_declare_predicate_arity_0_error(self):
-        v = logic.Vocabulary()
-        with pytest.raises(logic.Vocabulary.PredicateArityError):
-            v.declare_predicate('MyPredicate', 0, 0, 0)
+        with raises(Vocab.PredicateArityError):
+            Vocab().declare_predicate('MyPredicate', 0, 0, 0)
 
     def test_new_predicate_subscript_non_int(self):
-        v = logic.Vocabulary()
-        with pytest.raises(logic.Vocabulary.PredicateSubscriptError):
-            logic.Vocabulary.Predicate('MyPredicate', 0, None, 1)
+        with raises(Vocab.PredicateSubscriptError):
+            Vocab.Predicate('MyPredicate', 0, None, 1)
 
     def test_new_predicate_subscript_less_than_0_error(self):
-        with pytest.raises(logic.Vocabulary.PredicateSubscriptError):
-            logic.Vocabulary.Predicate('MyPredicate', 0, -1, 1)
+        with raises(Vocab.PredicateSubscriptError):
+            Vocab.Predicate('MyPredicate', 0, -1, 1)
 
     def test_predicate_is_system_predicate_true(self):
         assert logic.get_system_predicate('Identity').is_system_predicate()
@@ -197,220 +182,210 @@ class TestVocabulary(object):
         assert logic.get_system_predicate('Identity') == logic.get_system_predicate('Identity')
 
     def test_predicate_system_less_than_user(self):
-        v = logic.Vocabulary()
-        predicate = v.declare_predicate('MyPredicate', 0, 0, 1)
-        assert logic.get_system_predicate('Identity') < predicate
+        pred = Vocab().declare_predicate('MyPredicate', 0, 0, 1)
+        assert logic.get_system_predicate('Identity') < pred
 
     def test_predicate_system_less_than_or_equal_to_user(self):
-        v = logic.Vocabulary()
-        predicate = v.declare_predicate('MyPredicate', 0, 0, 1)
-        assert logic.get_system_predicate('Identity') <= predicate
+        pred = Vocab().declare_predicate('MyPredicate', 0, 0, 1)
+        assert logic.get_system_predicate('Identity') <= pred
 
     def test_predicate_user_greater_than_system(self):
-        v = logic.Vocabulary()
-        predicate = v.declare_predicate('MyPredicate', 0, 0, 1)
-        assert predicate > logic.get_system_predicate('Identity')
+        pred = Vocab().declare_predicate('MyPredicate', 0, 0, 1)
+        assert pred > logic.get_system_predicate('Identity')
 
     def test_predicate_user_greater_than_or_equal_to_system(self):
-        v = logic.Vocabulary()
-        predicate = v.declare_predicate('MyPredicate', 0, 0, 1)
-        assert predicate >= logic.get_system_predicate('Identity')
+        pred = Vocab().declare_predicate('MyPredicate', 0, 0, 1)
+        assert pred >= logic.get_system_predicate('Identity')
 
     def test_list_predicates_contains_identity(self):
-        v = logic.Vocabulary()
-        names = v.list_predicates()
-        assert 'Identity' in names
+        assert 'Identity' in Vocab().list_predicates()
 
     def test_list_predicates_contains_user_pred(self):
-        v = logic.Vocabulary()
+        v = Vocab()
         v.declare_predicate('MyPredicate', 0, 0, 1)
-        names = v.list_predicates()
-        assert 'MyPredicate' in names
+        assert 'MyPredicate' in v.list_predicates()
 
     def test_list_user_predicates_contains_user_pred(self):
-        v = logic.Vocabulary()
+        v = Vocab()
         v.declare_predicate('MyPredicate', 0, 0, 1)
-        names = v.list_user_predicates()
-        assert 'MyPredicate' in names
+        assert 'MyPredicate' in v.list_user_predicates()
 
     def test_list_user_predicates_not_contains_sys(self):
-        v = logic.Vocabulary()
+        v = Vocab()
         v.declare_predicate('MyPredicate', 0, 0, 1)
-        names = v.list_user_predicates()
-        assert 'Identity' not in names
+        assert 'Identity' not in v.list_user_predicates()
 
     def test_constant_index_too_large(self):
-        with pytest.raises(logic.Vocabulary.IndexTooLargeError):
-            logic.constant(logic.num_const_symbols, 0)
+        with raises(Vocab.IndexTooLargeError):
+            constant(logic.num_const_symbols, 0)
 
     def test_constant_is_constant_not_variable(self):
-        c = logic.constant(0, 0)
+        c = constant(0, 0)
         assert c.is_constant()
         assert not c.is_variable()
 
     def test_variable_index_too_large(self):
-        with pytest.raises(logic.Vocabulary.IndexTooLargeError):
+        with raises(Vocab.IndexTooLargeError):
             logic.variable(logic.num_var_symbols, 0)
 
-    def test_sentence_is_sentence(self):
-        s = logic.parse('a')
-        assert s.is_sentence()
+    # def test_sentence_is_sentence(self):
+    #     s = parse('a')
+    #     assert s.is_sentence()
 
     def test_base_substitute_not_implemented(self):
-        s = logic.Vocabulary.Sentence()
-        c = logic.constant(0, 0)
+        s = Vocab.Sentence()
+        c = constant(0, 0)
         v = logic.variable(0, 0)
-        with pytest.raises(NotImplementedError):
+        with raises(NotImplementedError):
             s.substitute(c, v)
 
-    def test_base_constants_not_implemented(self):
-        s = logic.Vocabulary.Sentence()
-        with pytest.raises(NotImplementedError):
-            s.constants()
+    # def test_base_constants_not_implemented(self):
+    #     s = Vocab.Sentence()
+    #     with raises(NotImplementedError):
+    #         s.constants()
 
-    def test_base_variables_not_implemented(self):
-        s = logic.Vocabulary.Sentence()
-        with pytest.raises(NotImplementedError):
-            s.variables()
+    # def test_base_variables_not_implemented(self):
+    #     s = Vocab.Sentence()
+    #     with raises(NotImplementedError):
+    #         s.variables()
 
     def test_atomic_index_too_large(self):
-        with pytest.raises(logic.Vocabulary.IndexTooLargeError):
-            logic.atomic(logic.num_atomic_symbols, 0)
+        with raises(Vocab.IndexTooLargeError):
+            atomic(logic.num_atomic_symbols, 0)
         
     def test_atomic_substitute(self):
-        s = logic.atomic(0, 0)
-        c = logic.constant(0, 0)
+        s = atomic(0, 0)
+        c = constant(0, 0)
         v = logic.variable(0, 0)
         res = s.substitute(c, v)
         assert res == s
 
     def test_atomic_constants_empty(self):
-        s = logic.atomic(0, 0)
+        s = atomic(0, 0)
         res = s.constants()
         assert len(res) == 0
 
     def test_atomic_variables_empty(self):
-        s = logic.atomic(0, 0)
+        s = atomic(0, 0)
         res = s.variables()
         assert len(res) == 0
 
     def test_atomic_next_a0_to_b0(self):
-        s = logic.atomic(0, 0)
+        s = atomic(0, 0)
         res = s.next()
         assert res.index == 1
         assert res.subscript == 0
 
     def test_atomic_next_e0_to_a1(self):
-        s = logic.atomic(logic.num_atomic_symbols - 1, 0)
+        s = atomic(logic.num_atomic_symbols - 1, 0)
         res = s.next()
         assert res.index == 0
         assert res.subscript == 1
 
     def test_predicated_no_such_predicate_no_vocab(self):
-        params = [logic.constant(0, 0), logic.constant(1, 0)]
-        with pytest.raises(logic.Vocabulary.NoSuchPredicateError):
+        params = [constant(0, 0), constant(1, 0)]
+        with raises(Vocab.NoSuchPredicateError):
             logic.predicated('MyPredicate', params)
 
     def test_predicated_arity_mismatch_identity(self):
-        params = [logic.constant(0, 0)]
-        with pytest.raises(logic.Vocabulary.PredicateArityMismatchError):
+        params = [constant(0, 0)]
+        with raises(Vocab.PredicateArityMismatchError):
             logic.predicated('Identity', params)
 
     def test_predicated_substitute_a_for_x_identity(self):
-        s = logic.predicated('Identity', [logic.variable(0, 0), logic.constant(1, 0)])
-        res = s.substitute(logic.constant(0, 0), logic.variable(0, 0))
-        assert res.parameters[0] == logic.constant(0, 0)
-        assert res.parameters[1] == logic.constant(1, 0)
+        s = logic.predicated('Identity', [logic.variable(0, 0), constant(1, 0)])
+        res = s.substitute(constant(0, 0), logic.variable(0, 0))
+        assert res.parameters[0] == constant(0, 0)
+        assert res.parameters[1] == constant(1, 0)
 
     def test_quantified_substitute_inner_quantified(self):
         x = logic.variable(0, 0)
         y = logic.variable(1, 0)
-        m = logic.constant(0, 0)
+        m = constant(0, 0)
         s1 = logic.predicated('Identity', [x, y])
         s2 = logic.quantify('Existential', x, s1)
         s3 = logic.quantify('Existential', y, s2)
         res = s3.sentence.substitute(m, y)
-        check = logic.parse('SxIxm')
+        check = parse('SxIxm')
         assert res == check
 
     def test_operated_no_such_operator(self):
-        s = logic.atomic(0, 0)
-        with pytest.raises(logic.Vocabulary.NoSuchOperatorError):
+        s = atomic(0, 0)
+        with raises(Vocab.NoSuchOperatorError):
             logic.operate('Misjunction', [s, s])
 
     def test_operated_arity_mismatch_negation(self):
-        s = logic.atomic(0, 0)
-        with pytest.raises(logic.Vocabulary.OperatorArityMismatchError):
+        s = atomic(0, 0)
+        with raises(Vocab.OperatorArityMismatchError):
             logic.operate('Negation', [s, s])
 
     def test_constant_repr_contains_subscript(self):
-        c = logic.constant(0, 8)
+        c = constant(0, 8)
         res = str(c)
         assert '8' in res
 
     def test_base_sentence_not_implemented_various(self):
-        s = logic.Vocabulary.Sentence()
-        with pytest.raises(NotImplementedError):
-            s.atomics()
-        with pytest.raises(NotImplementedError):
-            s.predicates()
-        with pytest.raises(NotImplementedError):
-            s.hash_tuple()
-        with pytest.raises(NotImplementedError):
-            s.operators()
+        s = Vocab.Sentence()
+        # with raises(NotImplementedError):
+        #     s.atomics()
+        # with raises(NotImplementedError):
+        #     s.predicates()
+        with raises(NotImplementedError):
+            s.sort_tuple()
+        # with raises(NotImplementedError):
+        #     s.operators()
 
     def test_atomic_less_than_predicated(self):
-        s1 = logic.atomic(0, 4)
+        s1 = atomic(0, 4)
         s2 = examples.predicated()
         assert s1 < s2
         assert s1 <= s2
         assert s2 > s1
         assert s2 >= s1
 
-    def test_atomic_cmp_self_0_compat(self):
-        s = logic.atomic(0, 0)
-        assert s.__cmp__(s) == 0
-
     def test_sentence_operators_collection(self):
-        s = logic.parse('KAMVxJxNbTNNImn')
+        s = parse('KAMVxJxNbTNNImn')
         ops = s.operators()
         assert len(ops) == 7
         assert ','.join(ops) == 'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
 
     def test_complex_quantified_substitution(self):
-        vocab = logic.Vocabulary()
+        vocab = Vocab()
         vocab.declare_predicate('MyPred', 0, 0, 2)
-        s1 = logic.parse('SxMVyFxy', vocabulary=vocab)
-        m = logic.constant(0, 0)
+        s1 = parse('SxMVyFxy', vocabulary=vocab)
+        m = constant(0, 0)
         s2 = s1.sentence.substitute(m, s1.variable)
-        s3 = logic.parse('MVyFmy', vocabulary=vocab)
+        s3 = parse('MVyFmy', vocabulary=vocab)
         assert s2 == s3
 
     def test_with_pred_defs_single_pred_with_length4_name_raises_pred_err(self):
-        with pytest.raises(logic.Vocabulary.PredicateError):
-            logic.Vocabulary(('Pred', 0, 0, 1))
+        with raises(Vocab.PredicateError):
+            Vocab(('Pred', 0, 0, 1))
 
     def test_with_pred_defs_single_def_list(self):
-        vocab = logic.Vocabulary([('Pred', 0, 0, 2)])
+        vocab = Vocab([('Pred', 0, 0, 2)])
         predicate = vocab.get_predicate('Pred')
         assert predicate.arity == 2
 
     def test_with_pred_defs_single_def_tuple(self):
-        vocab = logic.Vocabulary((('Pred', 0, 0, 3),))
+        vocab = Vocab((('Pred', 0, 0, 3),))
         predicate = vocab.get_predicate('Pred')
         assert predicate.arity == 3
 
     def test_sorting_constants(self):
-        c1 = logic.constant(1, 0)
-        c2 = logic.constant(2, 0)
+        c1 = constant(1, 0)
+        c2 = constant(2, 0)
         res = list(sorted([c2, c1]))
         assert res[0] == c1
         assert res[1] == c2
 
     def test_sorting_predicated_sentences(self):
-        c1 = logic.constant(1, 0)
-        c2 = logic.constant(2, 0)
-        vocab = logic.Vocabulary()
+        """
+        Lexical items should be sortable for models.
+        """
+        c1 = constant(1, 0)
+        c2 = constant(2, 0)
+        vocab = Vocab()
         p = vocab.declare_predicate('PredF', 0, 0, 1)
         s1 = logic.predicated(p, [c1])
         s2 = logic.predicated(p, [c2])
@@ -423,8 +398,8 @@ class TestTableauxSystem(object):
 
     def test_build_trunk_base_not_impl(self):
         proof = logic.tableau(None, None)
-        with pytest.raises(NotImplementedError):
-            logic.TableauxSystem.build_trunk(proof, None)
+        with raises(NotImplementedError):
+            TabSys.build_trunk(proof, None)
 
 def mock_sleep_5ms():
     time.sleep(0.005)
@@ -440,7 +415,7 @@ class TestTableau(object):
 
     def test_build_trunk_already_built_error(self):
         proof = logic.tableau('cpl', examples.argument('Addition'))
-        with pytest.raises(logic.TableauxSystem.TrunkAlreadyBuiltError):
+        with raises(TabSys.TrunkAlreadyBuiltError):
             proof.build_trunk()
 
     def test_repr_contains_finished(self):
@@ -456,7 +431,7 @@ class TestTableau(object):
     def test_step_raises_trunk_not_built_with_hacked_arg_prop(self):
         proof = logic.tableau('cpl')
         proof.argument = examples.argument('Addition')
-        with pytest.raises(logic.TableauxSystem.TrunkNotBuiltError):
+        with raises(TabSys.TrunkNotBuiltError):
             proof.step()
 
     def test_construct_sets_is_rank_optim_option(self):
@@ -467,7 +442,7 @@ class TestTableau(object):
     def test_timeout_1ms(self):
         proof = logic.tableau('cpl', examples.argument('Addition'))
         proof.step = mock_sleep_5ms
-        with pytest.raises(logic.TableauxSystem.ProofTimeoutError):
+        with raises(TabSys.ProofTimeoutError):
             proof.build(build_timeout=1)
 
     def test_finish_empty_sets_build_duration_ms_0(self):
@@ -476,7 +451,7 @@ class TestTableau(object):
         assert proof.stats['build_duration_ms'] == 0
 
     def test_add_closure_rule_instance_mock(self):
-        class MockRule(logic.TableauxSystem.ClosureRule):
+        class MockRule(TabSys.ClosureRule):
             def applies_to_branch(self, branch):
                 return True
             def check_for_target(self, node, branch):
@@ -495,68 +470,68 @@ class TestTableau(object):
         assert proof.tree['model_id']
 
     #def test_add_rule_group_instance_mock(self):
-    #    class MockRule1(logic.TableauxSystem.):
+    #    class MockRule1(TabSys.):
 
 class TestBranch(object):
 
     def test_new_world_returns_w0(self):
-        b = logic.TableauxSystem.Branch()
+        b = Branch()
         res = b.new_world()
         assert res == 0
 
     def test_new_constant_returns_m(self):
-        b = logic.TableauxSystem.Branch()
+        b = Branch()
         res = b.new_constant()
-        check = logic.constant(0, 0)
+        check = constant(0, 0)
         assert res == check
 
     def test_new_constant_returns_m1_after_s0(self):
-        b = logic.TableauxSystem.Branch()
+        b = Branch()
         i = 0
         while i < logic.num_const_symbols:
-            c = logic.constant(i, 0)
+            c = constant(i, 0)
             sen = logic.predicated('Identity', [c, c])
             b.add({'sentence': sen})
             i += 1
         res = b.new_constant()
-        check = logic.constant(0, 1)
+        check = constant(0, 1)
         assert res == check
 
     def test_repr_contains_closed(self):
-        b = logic.TableauxSystem.Branch()
+        b = Branch()
         res = b.__repr__()
         assert 'closed' in res
 
     def test_has_all_true_1(self):
-        b = logic.TableauxSystem.Branch()
-        s1 = logic.atomic(0, 0)
-        s2 = logic.atomic(1, 0)
-        s3 = logic.atomic(2, 0)
+        b = Branch()
+        s1 = atomic(0, 0)
+        s2 = atomic(1, 0)
+        s3 = atomic(2, 0)
         b.update([{'sentence': s1}, {'sentence': s2}, {'sentence': s3}])
         check = [{'sentence': s1, 'sentence': s2}]
         assert b.has_all(check)
 
     def test_has_all_false_1(self):
-        b = logic.TableauxSystem.Branch()
-        s1 = logic.atomic(0, 0)
-        s2 = logic.atomic(1, 0)
-        s3 = logic.atomic(2, 0)
+        b = Branch()
+        s1 = atomic(0, 0)
+        s2 = atomic(1, 0)
+        s3 = atomic(2, 0)
         b.update([{'sentence': s1}, {'sentence': s3}])
         check = [{'sentence': s1, 'sentence': s2}]
         assert not b.has_all(check)
 
     def test_atomics_1(self):
-        b = logic.TableauxSystem.Branch()
-        s1 = logic.atomic(0, 0)
-        s2 = logic.negate(logic.atomic(1, 0))
-        s3 = logic.atomic(1, 0)
+        b = Branch()
+        s1 = atomic(0, 0)
+        s2 = logic.negate(atomic(1, 0))
+        s3 = atomic(1, 0)
         b.update([{'sentence': s1}, {'sentence': s2}])
         res = b.atomics()
         assert s1 in res
         assert s3 in res
 
     def test_predicates(self):
-        b = logic.TableauxSystem.Branch()
+        b = Branch()
         s1 = examples.predicated()
         s2 = logic.negate(logic.negate(s1))
         b.add({'sentence': s2})
@@ -566,7 +541,7 @@ class TestBranch(object):
         proof = logic.tableau('cpl', examples.argument('Addition'))
         proof.build()
         b = list(proof.branches)[0]
-        with pytest.raises(logic.TableauxSystem.BranchClosedError):
+        with raises(TabSys.BranchClosedError):
             b.make_model()
 
     def test_branch_has_world1(self):
@@ -576,7 +551,7 @@ class TestBranch(object):
 
     def test_regression_branch_has_works_with_newly_added_node_on_register_node(self):
 
-        class MyRule(logic.TableauxSystem.Rule):
+        class MyRule(TabSys.Rule):
 
             should_be = False
             shouldnt_be = True
@@ -594,19 +569,19 @@ class TestBranch(object):
         assert not rule.shouldnt_be
 
     def test_select_index_non_indexed_prop(self):
-        branch = logic.TableauxSystem.Branch()
+        branch = Branch()
         branch.add({'foo': 'bar'})
         idx = branch._select_index({'foo': 'bar'}, None)
         assert idx == branch.nodes
 
     def test_close_adds_flag_node(self):
-        branch = logic.TableauxSystem.Branch()
+        branch = Branch()
         branch.close()
         print(branch.nodes)
         assert branch.has({'is_flag': True, 'flag': 'closure'})
 
     def test_constants_or_new_returns_pair_no_constants(self):
-        branch = logic.TableauxSystem.Branch()
+        branch = Branch()
         res = branch.constants_or_new()
         assert len(res) == 2
         constants, is_new = res
@@ -614,8 +589,8 @@ class TestBranch(object):
         assert is_new
 
     def test_constants_or_new_returns_pair_with_constants(self):
-        branch = logic.TableauxSystem.Branch()
-        branch.add({'sentence': logic.parse('Imn')})
+        branch = Branch()
+        branch.add({'sentence': parse('Imn')})
         res = branch.constants_or_new()
         assert len(res) == 2
         constants, is_new = res
@@ -625,18 +600,18 @@ class TestBranch(object):
 class TestNode(object):
 
     def test_worlds_contains_worlds(self):
-        node = logic.TableauxSystem.Node({'worlds': set([0, 1])})
+        node = TabSys.Node({'worlds': set([0, 1])})
         res = node.worlds()
         assert 0 in res
         assert 1 in res
 
     def test_repr_contains_prop_key(self):
-        node = logic.TableauxSystem.Node({'foo': 1})
+        node = TabSys.Node({'foo': 1})
         res = node.__repr__()
         assert 'foo' in res
 
     def test_clousre_flag_node_has_is_flag(self):
-        branch = logic.TableauxSystem.Branch()
+        branch = Branch()
         branch.close()
         node = branch.nodes[0]
         assert node.has('is_flag')
@@ -644,31 +619,31 @@ class TestNode(object):
 class TestRule(object):
 
     def test_base_not_impl_various(self):
-        rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
-        with pytest.raises(NotImplementedError):
+        rule = TabSys.Rule(logic.tableau(None, None))
+        with raises(NotImplementedError):
             rule.get_candidate_targets(None)
 
     def test_base_repr_equals_rule(self):
-        rule = logic.TableauxSystem.Rule(logic.tableau(None, None))
+        rule = TabSys.Rule(logic.tableau(None, None))
         res = rule.__repr__()
         assert res == 'Rule'
 
 class TestClosureRule(object):
 
     def test_applies_to_branch_not_impl(self):
-        rule = logic.TableauxSystem.ClosureRule(logic.tableau(None, None))
-        with pytest.raises(NotImplementedError):
+        rule = TabSys.ClosureRule(logic.tableau(None, None))
+        with raises(NotImplementedError):
             rule.applies_to_branch(None)
 
 class TestNodeRule(object):
 
     def test_not_impl_various(self):
-        rule = logic.TableauxSystem.PotentialNodeRule(logic.tableau(None, None))
-        with pytest.raises(NotImplementedError):
+        rule = TabSys.PotentialNodeRule(logic.tableau(None, None))
+        with raises(NotImplementedError):
             rule.apply_to_node(None, None)
-        with pytest.raises(NotImplementedError):
+        with raises(NotImplementedError):
             rule.example_node(None)
-        with pytest.raises(NotImplementedError):
+        with raises(NotImplementedError):
             rule.example()
 
 class TestFilterNodeRule(object):
@@ -679,32 +654,32 @@ class TestFilterNodeRule(object):
         
     def test_applies_to_empty_nodes_when_no_properties_defined(self):
 
-        class MockFilterRule(logic.TableauxSystem.FilterNodeRule):
+        class MockFilterRule(TabSys.FilterNodeRule):
             pass
 
         proof, rule = self.proof_with_rule(MockFilterRule)
-        node = logic.TableauxSystem.Node()
+        node = TabSys.Node()
         branch = proof.branch().add(node)
         assert rule.get_target_for_node(node, branch)
 
     def test_default_does_not_apply_to_ticked_node(self):
 
-        class MockFilterRule(logic.TableauxSystem.FilterNodeRule):
+        class MockFilterRule(TabSys.FilterNodeRule):
             pass
 
         proof, rule = self.proof_with_rule(MockFilterRule)
-        node = logic.TableauxSystem.Node()
+        node = TabSys.Node()
         branch = proof.branch().add(node)
         branch.tick(node)
         assert not rule.get_target_for_node(node, branch)
 
     def test_applies_to_ticked_node_with_prop_none(self):
 
-        class MockFilterRule(logic.TableauxSystem.FilterNodeRule):
+        class MockFilterRule(TabSys.FilterNodeRule):
             ticked = None
 
         proof, rule = self.proof_with_rule(MockFilterRule)
-        node = logic.TableauxSystem.Node()
+        node = TabSys.Node()
         branch = proof.branch().add(node)
         branch.tick(node)
         assert rule.get_target_for_node(node, branch)
@@ -713,22 +688,22 @@ class TestModel(object):
 
     def test_not_impl_various(self):
         model = logic.Model()
-        with pytest.raises(NotImplementedError):
+        with raises(NotImplementedError):
             model.read_branch(None)
-        with pytest.raises(NotImplementedError):
+        with raises(NotImplementedError):
             model.truth_function(None, None)
-        with pytest.raises(NotImplementedError):
+        with raises(NotImplementedError):
             model.value_of_opaque(None)
-        with pytest.raises(NotImplementedError):
+        with raises(NotImplementedError):
             model.value_of_predicated(None)
-        with pytest.raises(NotImplementedError):
-            s = logic.negate(logic.atomic(0, 0))
+        with raises(NotImplementedError):
+            s = logic.negate(atomic(0, 0))
             model.value_of_operated(s)
-        with pytest.raises(NotImplementedError):
+        with raises(NotImplementedError):
             model.value_of_quantified(None)
-        with pytest.raises(NotImplementedError):
+        with raises(NotImplementedError):
             model.is_countermodel_to(None)
-        with pytest.raises(NotImplementedError):
+        with raises(NotImplementedError):
             model.value_of_atomic(None)
 
     def test_get_data_empty(self):
