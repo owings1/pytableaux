@@ -366,6 +366,17 @@ class argument(object):
             return [self.premises, self.conclusion].__repr__()
         return [self.premises, self.conclusion, {'title': self.title}].__repr__()
 
+    def __hash__(self):
+        return hash((self.conclusion,) + tuple(self.premises))
+
+    # Use hash for equality, which does not include the title
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and hash(self) == hash(other)
+
+    def __ne__(self, other):
+        return not isinstance(other, self.__class__) or hash(self) != hash(other)
+
+
 def tableau(logic, arg=None, **opts):
     """
     Create a tableau for the given logic and argument. Example::
@@ -417,6 +428,22 @@ def is_variable(obj):
     """
     return isinstance(obj, Vocabulary.Variable)
 
+def is_predicate(obj):
+    """
+    Check whether a parameter is a predicate. Example::
+
+        assert is_predicate(get_system_predicate('Identity'))
+
+        assert not is_predicate(constant(0, 0))
+
+        s = parse('a = a', notation='standard')
+        assert is_predicate(s.predicate)
+
+        # must be an instance of Vocabulary.Predicate
+        assert not is_predicate('Identity') 
+    """
+    return isinstance(obj, Vocabulary.Predicate)
+
 def get_logic(arg):
     """
     Get the logic module from the specified name. Example::
@@ -465,49 +492,77 @@ class Vocabulary(object):
 
     """
 
-    class HashTupleOrdered(object):
+    class LexicalItem(object):
+        # Base LexicalItem class for comparison, hashing, and sorting.
 
-        def hash_tuple(self):
+        def sort_tuple(self):
+            # Sort tuple should always consist of numbers, or tuples with numbers.
+            # This is also used in hashing, so equal objects should have equal hashes.
             raise NotImplementedError()
 
+        def ident(self):
+            # Equality/inequality identifier. By default, this delegates to sort_tuple.
+            return self.sort_tuple()
+
+        # Sorting implementation. The Vocabulary class defines canonical ordering for
+        # each type of lexical item, so we can sort lists with mixed classes, e.g.
+        # constants and variables, different sentence types, etc. This class takes
+        # care of ensuring different types are not considered equal (e.g. constant(0, 0),
+        # variable(0, 0), atomic(0, 0)) and are still sorted properly.
+        #
+        # This is the reason for _lexrank, and __lexorder, on the Vocabulary class,
+        # as well as similar properties on QuantifiedSentence (for quantifiers), and
+        # OperatedSentence (for operators). Basically anything that cannot be
+        # converted to a number by which we can meaningfully sort needs to be
+        # considered specially, i.e. classes, operators, and quantifiers.
         def __lt__(self, other):
-            return self.hash_tuple() < other.hash_tuple()
+            a, b = self.__getcmp(other)
+            return a < b
 
         def __le__(self, other):
-            return self.hash_tuple() <= other.hash_tuple()
+            a, b = self.__getcmp(other)
+            return a <= b
 
         def __gt__(self, other):
-            return self.hash_tuple() > other.hash_tuple()
+            a, b = self.__getcmp(other)
+            return a > b
 
         def __ge__(self, other):
-            return self.hash_tuple() >= other.hash_tuple()
+            a, b = self.__getcmp(other)
+            return a >= b
 
-        def __cmp__(self, other):
-            # Python 2 only (deprecated)
-            #return cmp(self.hash_tuple(), other.hash_tuple())
-            return (self.hash_tuple() > other.hash_tuple()) - (self.hash_tuple() < other.hash_tuple())
+        def __getcmp(self, other):
+            r1, r2 = Vocabulary._lexrank(self, other)
+            if r1 == r2:
+                return (self.sort_tuple(), other.sort_tuple())
+            return (r1, r2)
 
-    class Predicate(HashTupleOrdered):
-
-
-        def hash_tuple(self):
-            return (1, self.index, self.subscript, self.arity)
-
+        # Default equals and hash implementation is based on sort_tuple.
+        #
+        # https://docs.python.org/3/reference/datamodel.html#object.__hash__
+        #
+        # - If a class does not define __eq__ it should not define __hash__.
+        #
+        # - A class that overrides __eq__ and does not  __hash__ will have its
+        #    __hash__ implicitly set to None.
+        #
 
         def __eq__(self, other):
-            return other != None and self.__dict__ == other.__dict__
-        
+            return (
+                isinstance(other, self.__class__) and
+                self.ident() == other.ident()
+            )
+
         def __ne__(self, other):
-            return other == None or self.__dict__ != other.__dict__
+            return (
+                not isinstance(other, self.__class__) or
+                self.ident() != other.ident()
+            )
 
         def __hash__(self):
-            return hash(self.hash_tuple())
-            )
+            return hash(self.sort_tuple())
 
-            )
-
-
-    class Parameter(HashTupleOrdered):
+    class Parameter(LexicalItem):
 
         def __init__(self, index, subscript):
             self.index = index
@@ -518,6 +573,10 @@ class Vocabulary(object):
 
         def is_variable(self):
             return isinstance(self, Vocabulary.Variable)
+
+        def sort_tuple(self):
+            # Sort constants and variables by index, subscript
+            return (self.index, self.subscript)
 
         def __repr__(self):
             return (self.__class__.__name__, self.index, self.subscript).__repr__()
@@ -531,18 +590,6 @@ class Vocabulary(object):
                 )
             super(Vocabulary.Constant, self).__init__(index, subscript)
 
-        def hash_tuple(self):
-            return (2, self.index, self.subscript)
-
-        def __eq__(self, other):
-            return other != None and isinstance(other, Vocabulary.Constant) and self.__dict__ == other.__dict__
-
-        def __ne__(self, other):
-            return other == None or not isinstance(other, Vocabulary.Constant) or self.__dict__ != other.__dict__
-
-        def __hash__(self):
-            return hash(self.hash_tuple())
-
     class Variable(Parameter):
 
         def __init__(self, index, subscript):
@@ -552,11 +599,8 @@ class Vocabulary(object):
                 )
             super(Vocabulary.Variable, self).__init__(index, subscript)
 
-        def hash_tuple(self):
-            return (3, self.index, self.subscript)
+    class Predicate(LexicalItem):
 
-        def __eq__(self, other):
-            return other != None and isinstance(other, Vocabulary.Variable) and self.__dict__ == other.__dict__
         def __init__(self, name, index, subscript, arity):
             if index >= num_predicate_symbols:
                 raise Vocabulary.IndexTooLargeError(
@@ -583,15 +627,20 @@ class Vocabulary(object):
             self.index     = index
             self.subscript = subscript
 
-        def __ne__(self, other):
-            return other == None or not isinstance(other, Vocabulary.Variable) or self.__dict__ != other.__dict__
         def is_system_predicate(self):
             return self.index < 0
 
-        def __hash__(self):
-            return hash(self.hash_tuple())
+        def sort_tuple(self):
+            # Sort predicates by index, subscript, arity
+            return (self.index, self.subscript, self.arity)
 
-    class Sentence(HashTupleOrdered):
+        def __repr__(self):
+            # Include the name for informational purposes, though it does not count
+            # for its hash identity.
+            name = self.name if self.name else '[Untitled]'
+            return ((self.__class__.__name__, name) + self.sort_tuple()).__repr__()
+
+    class Sentence(LexicalItem):
 
         #: The operator, if any.
         operator = None
@@ -690,11 +739,6 @@ class Vocabulary(object):
             """
             List of quantifiers, recursive.
             """
-        def __eq__(self, other):
-            return other != None and self.__dict__ == other.__dict__
-
-        def __ne__(self, other):
-            return other == None or self.__dict__ != other.__dict__
             return list()
 
         def __repr__(self):
@@ -730,11 +774,9 @@ class Vocabulary(object):
                 subscript = self.subscript + 1
             return Vocabulary.AtomicSentence(index, subscript)
 
-        def hash_tuple(self):
-            return (4, self.index, self.subscript)
-
-        def __hash__(self):
-            return hash(self.hash_tuple())
+        def sort_tuple(self):
+            # Sort atomic sentences by index, subscript
+            return (self.index, self.subscript)
 
     class PredicatedSentence(Sentence):
 
@@ -777,12 +819,9 @@ class Vocabulary(object):
         def predicates(self):
             return set([self.predicate])
 
-
-        def hash_tuple(self):
-            return (5, self.predicate) + tuple((param for param in self.parameters))
-
-        def __hash__(self):
-            return hash(self.hash_tuple())
+        def sort_tuple(self):
+            # Sort predicated sentences by their predicate, then by their parameters
+            return self.predicate.sort_tuple() + tuple(param.sort_tuple() for param in self.parameters)
 
     class QuantifiedSentence(Sentence):
 
@@ -791,7 +830,6 @@ class Vocabulary(object):
             self.quantifier = quantifier
             self.variable   = variable
             self.sentence   = sentence
-            self._qindex    = quantifiers_list.index(self.quantifier)
 
         def substitute(self, new_param, old_param):
             # Always return a new sentence.
@@ -817,11 +855,14 @@ class Vocabulary(object):
         def quantifiers(self):
             return [self.quantifier] + self.sentence.quantifiers()
 
-        def hash_tuple(self):
-            return (6, self._qindex, self.variable, self.sentence)
+        def sort_tuple(self):
+            # Sort quantified sentences first by their quanitfier, using fixed
+            # lexical order (below), then by their variable, followed by their
+            # inner sentence.
+            return (self.__lexorder[self.quantifier], self.variable.sort_tuple(), self.sentence.sort_tuple())
 
-        def __hash__(self):
-            return hash(self.hash_tuple())
+        # Lexical sorting order.
+        __lexorder = {'Existential': 0, 'Universal': 1}
 
     class OperatedSentence(Sentence):
 
@@ -889,8 +930,21 @@ class Vocabulary(object):
                 qts.extend(operand.quantifiers())
             return qts
 
-        def hash_tuple(self):
-            return (7, operators_list.index(self.operator)) + tuple((operand for operand in self.operands))
+        def sort_tuple(self):
+            # Sort operated sentences first by their operator, using fixed
+            # lexical order (below), then by their operands.
+            return (self.__lexorder[self.operator],) + tuple(s.sort_tuple() for s in self.operands)
+
+        # Lexical sorting order. Perhaps there is a better way to do this. We don't want
+        # anything else accidentally changing the lexical order, e.g. web view ordering.
+        # But yes, it's ugly. Probably the long-term solution is to make operators dynamic
+        # features like predicates, instead of fixed.
+        __lexorder = {
+            'Assertion': 10, 'Negation': 20, 'Conjunction': 30, 'Disjunction': 40,
+            'Material Conditional': 50, 'Material Biconditional': 60, 'Conditional': 70,
+            'Biconditional': 80, 'Possibility': 90, 'Necessity': 100,
+        }
+
     @staticmethod
     def get_system_predicate(name):
         return system_predicates[name]
@@ -1043,8 +1097,17 @@ class Vocabulary(object):
         """
         return list(self.user_predicates_list)
 
-        def __hash__(self):
-            return hash(self.hash_tuple())
+    @staticmethod
+    def _lexrank(*items):
+        # Returns the value of __lexorder (below) for the class of each item.
+        return (__class__.__lexorder[clas] for clas in (it.__class__ for it in items))
+
+    # Canonical order or all the concrete LexicalItem classes.
+    __lexorder = {
+        Predicate: 10, Constant: 20, Variable: 30, AtomicSentence: 40,
+        PredicatedSentence: 50, QuantifiedSentence: 60, OperatedSentence: 70,
+    }
+
     class PredicateError(Exception):
         pass
 
