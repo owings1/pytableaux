@@ -1638,7 +1638,7 @@ class TableauxSystem(object):
             if not branch.closed:
                 self.open_branchset.add(branch)
             self.branch_dict[branch.id] = branch
-            self._after_branch_add(branch)
+            self.__after_branch_add(branch)
             return self
 
         def build_trunk(self):
@@ -1653,7 +1653,7 @@ class TableauxSystem(object):
                 self.logic.TableauxSystem.build_trunk(self, self.argument)
                 self.trunk_built = True
                 self.current_step += 1
-                self._after_trunk_build()
+                self.__after_trunk_build()
             return self
 
         def get_branch(self, branch_id):
@@ -1707,12 +1707,14 @@ class TableauxSystem(object):
             # Called from the branch instance in the close method.
             branch.closed_step = self.current_step
             self.open_branchset.remove(branch)
+            # Propagate event to rules
             for rule in self.all_rules:
                 rule._after_branch_close(branch)
 
         def after_node_add(self, node, branch):
             # Called from the branch instance in the add/update methods.
             node.step = self.current_step
+            # Propagate event to rules
             for rule in self.all_rules:
                 rule._after_node_add(node, branch)
 
@@ -1720,18 +1722,21 @@ class TableauxSystem(object):
             # Called from the branch instance in the tick method.
             if node.ticked_step == None or self.current_step > node.ticked_step:
                 node.ticked_step = self.current_step
+            # Propagate event to rules
             for rule in self.all_rules:
                 rule._after_node_tick(node, branch)
 
         # Callbacks called internally
 
-        def _after_branch_add(self, branch):
+        def __after_branch_add(self, branch):
             # Called from ``add_branch()``
+            # Propagate event to rules
             for rule in self.all_rules:
                 rule._after_branch_add(branch)
 
-        def _after_trunk_build(self):
+        def __after_trunk_build(self):
             # Called from ``build_trunk()``
+            # Propagate event to rules
             for rule in self.all_rules:
                 rule._after_trunk_build(self.branches)
 
@@ -2284,6 +2289,13 @@ class TableauxSystem(object):
         # For helper
         ticking = None
 
+        # TODO: We may be able to remove this `ticked` property, since it looks
+        #  like the only time this class uses it is if "not branch.parent", which
+        #  seems like the only typical (read actual) case would be on trunk build.
+        #  Furthermore, I believe it is just a (vacuous) optimization, instead
+        #  of always using None for the filter in _after_branch_add. But tests
+        #  will have to be performed.
+
         # For compatibility in ``_after_branch_add()``
         ticked = None
 
@@ -2311,7 +2323,7 @@ class TableauxSystem(object):
             with self.apply_timer:
                 self.apply_to_target(target)
                 self.apply_count += 1
-                self._after_apply(target)
+                self.__after_apply(target)
 
         def get_target(self, branch):
             # Concrete classes should not override this, but should implement
@@ -2427,6 +2439,7 @@ class TableauxSystem(object):
                 helper.after_trunk_build(branches)
 
         def _after_branch_add(self, branch):
+            # Called by Tableau.
             self.register_branch(branch, branch.parent)
             for helper in self.helpers:
                 helper.register_branch(branch, branch.parent)
@@ -2437,21 +2450,26 @@ class TableauxSystem(object):
                         helper.register_node(node, branch)
 
         def _after_branch_close(self, branch):
+            # Called by Tableau.
             self.after_branch_close(branch)
             for helper in self.helpers:
                 helper.after_branch_close(branch)
 
         def _after_node_add(self, node, branch):
+            # Called by Tableau.
             self.register_node(node, branch)
             for helper in self.helpers:
                 helper.register_node(node, branch)
 
         def _after_node_tick(self, node, branch):
+            # Called by Tableau.
             self.after_node_tick(node, branch)
             for helper in self.helpers:
                 helper.after_node_tick(node, branch)
 
-        def _after_apply(self, target):
+        # Called internally
+
+        def __after_apply(self, target):
             self.after_apply(target)
             for helper in self.helpers:
                 helper.after_apply(target)
