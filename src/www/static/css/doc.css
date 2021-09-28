@@ -54,3 +54,8 @@ body {
     vertical-align: sub;
     font-size: 80%;
 }
+
+/* Increase the font size of Tableaux Rule links */
+#tableaux-system dl.class dd a.reference.internal {
+    font-size: 140%;
+}

@@ -30,5 +30,10 @@ MH - Paracomplete Hybrid Logic
     * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
       are models where *C* also has the value **T**.
 
+
+
 .. _K3: k3.html
 .. _CPL: cpl.html
+
+..
+    - Maximal Weakly-Intuitionistic Logics: https://www.jstor.org/stable/20015812

@@ -136,7 +136,7 @@ html_theme = 'default'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
-html_static_path = ['../src/www/static/css', 'res']
+html_static_path = ['../src/www/static', 'res']
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
@@ -279,5 +279,5 @@ def setup(app):
     app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_truth_tables)
     app.connect('autodoc-process-docstring', docutil.SphinxUtil.make_truth_tables_models)
     app.connect('build-finished', docutil.SphinxUtil.docs_post_process)
-    app.add_css_file('doc.css')
-    app.add_css_file('proof.css')
+    app.add_css_file('css/doc.css')
+    app.add_css_file('css/proof.css')
