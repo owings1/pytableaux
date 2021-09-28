@@ -470,15 +470,6 @@ def get_system_predicate(name):
     """
     return Vocabulary.get_system_predicate(name)
 
-def _get_module(package, arg):    
-    if isinstance(arg, ModuleType):
-        return arg
-    if isinstance(arg, basestring):
-        if '.' not in arg:
-            arg = package + '.' + arg
-        return importlib.import_module(arg.lower())
-    raise BadArgumentError("Argument must be module or string")
-
 class Vocabulary(object):
     """
     Create a new vocabulary. *predicate_defs* is a list of tuples (name, index,
@@ -3465,6 +3456,16 @@ def make_tree_structure(branches, node_depth=0, track=None):
     if is_root:
         s['distinct_nodes'] = track['distinct_nodes']
     return s
+
+# util
+def _get_module(package, arg):    
+    if isinstance(arg, ModuleType):
+        return arg
+    if isinstance(arg, basestring):
+        if '.' not in arg:
+            arg = package + '.' + arg
+        return importlib.import_module(arg.lower())
+    raise BadArgumentError("Argument must be module or string")
 
 # TODO: move this to a utils module
 class StopWatch(object):
