@@ -46,12 +46,12 @@ class Model(k3.Model):
 
         //truth_tables//mh//
         """
-        return super(Model, self).value_of_operated(sentence, **kw)
+        return super().value_of_operated(sentence, **kw)
 
     def is_sentence_opaque(self, sentence):
         if sentence.is_quantified():
             return True
-        return super(Model, self).is_sentence_opaque(sentence)
+        return super().is_sentence_opaque(sentence)
 
     def truth_function(self, operator, a, b = None):
         if operator == 'Disjunction':
@@ -61,7 +61,7 @@ class Model(k3.Model):
             if a == 'T' and b != 'T':
                 return 'F'
             return 'T'
-        return super(Model, self).truth_function(operator, a, b)
+        return super().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

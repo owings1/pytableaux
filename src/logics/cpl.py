@@ -51,7 +51,7 @@ class Model(k.Model):
 
         //truth_tables//cpl//
         """
-        return super(Model, self).value_of_operated(sentence, **kw)
+        return super().value_of_operated(sentence, **kw)
 
     def is_sentence_opaque(self, sentence):
         """
@@ -62,7 +62,7 @@ class Model(k.Model):
             return True
         if sentence.operator in self.modal_operators:
             return True
-        return super(Model, self).is_sentence_opaque(sentence)
+        return super().is_sentence_opaque(sentence)
 
     def get_data(self):
         data = self.world_frame(0).get_data()['value']

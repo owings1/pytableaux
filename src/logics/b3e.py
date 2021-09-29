@@ -67,7 +67,7 @@ class Model(k3w.Model):
         we use the standard `internal` readings of O{Conjunction} and O{Disjunction},
         and use the `internal` reading for O{Conditional} and O{Biconditional}.
         """
-        return super(Model, self).value_of_operated(sentence, **kw)
+        return super().value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Assertion':
@@ -80,7 +80,7 @@ class Model(k3w.Model):
             )
         elif operator == 'Biconditional':
             return fde.Model.truth_function(self, operator, a, b)
-        return super(Model, self).truth_function(operator, a, b)
+        return super().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

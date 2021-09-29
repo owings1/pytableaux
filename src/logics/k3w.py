@@ -52,12 +52,12 @@ class Model(k3.Model):
 
         //truth_tables//k3w//
         """
-        return super(Model, self).value_of_operated(sentence, **kw)
+        return super().value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         if logic.arity(operator) == 2 and (a == 'N' or b == 'N'):
             return 'N'
-        return super(Model, self).truth_function(operator, a, b)
+        return super().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

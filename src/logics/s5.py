@@ -49,7 +49,7 @@ class Model(s4.Model):
 
     def finish(self):
         while True:
-            super(Model, self).finish()
+            super().finish()
             to_add = set()
             for w1 in self.frames:
                 for w2 in self.visibles(w1):

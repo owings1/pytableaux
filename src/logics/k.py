@@ -254,7 +254,7 @@ class Model(logic.Model):
 
     def __init__(self):
 
-        super(Model, self).__init__()
+        super().__init__()
 
         self.frames = {}
         self.access = set()
@@ -277,7 +277,7 @@ class Model(logic.Model):
             return self.value_of_opaque(sentence, **kw)
         elif sentence.operator in self.modal_operators:
             return self.value_of_modal(sentence, **kw)
-        return super(Model, self).value_of_operated(sentence, **kw)
+        return super().value_of_operated(sentence, **kw)
 
     def value_of_predicated(self, sentence, **kw):
         """
@@ -617,7 +617,7 @@ class Model(logic.Model):
             return self.value_of_existential(sentence, **kw)
         elif q == 'Universal':
             return self.value_of_universal(sentence, **kw)
-        return super(Model, self).value_of_quantified(sentence, **kw)
+        return super().value_of_quantified(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         return self.fde.truth_function(operator, a, b)

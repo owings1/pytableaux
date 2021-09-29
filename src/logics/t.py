@@ -46,7 +46,7 @@ class Model(k.Model):
     def finish(self):
         for w in self.frames:
             self.add_access(w, w)
-        super(Model, self).finish()
+        super().finish()
 
 class TableauxSystem(k.TableauxSystem):
     """

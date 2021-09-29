@@ -50,13 +50,13 @@ class Model(k3.Model):
 
         //truth_tables//l3//
         """
-        return super(Model, self).value_of_operated(sentence, **kw)
+        return super().value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Conditional':
             if a == 'N' and b == 'N':
                 return 'T'
-        return super(Model, self).truth_function(operator, a, b)
+        return super().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """

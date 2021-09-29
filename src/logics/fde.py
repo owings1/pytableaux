@@ -78,7 +78,7 @@ class Model(logic.Model):
 
     def __init__(self):
 
-        super(Model, self).__init__()
+        super().__init__()
 
         self.extensions = {}
         self.anti_extensions = {}
@@ -99,7 +99,7 @@ class Model(logic.Model):
 
         //truth_tables//fde//
         """
-        return super(Model, self).value_of_operated(sentence, **kw)
+        return super().value_of_operated(sentence, **kw)
 
     def value_of_predicated(self, sentence, **kw):
         """
@@ -156,7 +156,7 @@ class Model(logic.Model):
         """
         if sentence.operator in self.modal_operators:
             return True
-        return super(Model, self).is_sentence_opaque(sentence)
+        return super().is_sentence_opaque(sentence)
 
     def is_countermodel_to(self, argument):
         """
@@ -412,7 +412,7 @@ class Model(logic.Model):
             return self.value_of_existential(sentence, **kw)
         elif q == 'Universal':
             return self.value_of_universal(sentence, **kw)
-        return super(Model, self).value_of_quantified(sentence, **kw)
+        return super().value_of_quantified(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
 

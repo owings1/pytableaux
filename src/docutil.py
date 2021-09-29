@@ -85,7 +85,7 @@ def init_sphinx(app, opts):
 
 class Helper(object):
 
-    def __init__(self, opts):
+    def __init__(self, opts={}):
         self.opts = dict(defaults)
         self.opts.update(opts)
         self.parser = create_parser(

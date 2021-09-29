@@ -304,12 +304,6 @@ def parse(string, vocabulary=None, notation=None):
 
     """
     return create_parser(vocabulary, notation).parse(string)
-    # if vocabulary is None:
-    #     vocabulary = Vocabulary()
-    # if notation == None:
-    #     notation = default_notation
-    # notation = _get_module('notations', notation)
-    # return notation.Parser(vocabulary).parse(string)
 
 class argument(object):
     """
@@ -593,7 +587,7 @@ class Vocabulary(object):
                 raise Vocabulary.IndexTooLargeError(
                     "Index too large {0}".format(str(index))
                 )
-            super(Vocabulary.Constant, self).__init__(index, subscript)
+            super().__init__(index, subscript)
 
     class Variable(Parameter):
 
@@ -602,7 +596,7 @@ class Vocabulary(object):
                 raise Vocabulary.IndexTooLargeError(
                     "Index too large {0}".format(str(index))
                 )
-            super(Vocabulary.Variable, self).__init__(index, subscript)
+            super().__init__(index, subscript)
 
     class Predicate(LexicalItem):
 
@@ -760,7 +754,7 @@ class Vocabulary(object):
                 raise Vocabulary.IndexTooLargeError(
                     "Index too large {0}".format(str(index))
                 )
-            super(Vocabulary.AtomicSentence, self).__init__()
+            super().__init__()
             self.index     = index
             self.subscript = subscript
 
@@ -801,7 +795,7 @@ class Vocabulary(object):
                         predicate.arity, str([predicate.index, predicate.subscript]), len(parameters)
                     )
                 )
-            super(Vocabulary.PredicatedSentence, self).__init__()
+            super().__init__()
             self.predicate  = predicate
             self.parameters = parameters
             self.vocabulary = vocabulary
@@ -831,7 +825,7 @@ class Vocabulary(object):
     class QuantifiedSentence(Sentence):
 
         def __init__(self, quantifier, variable, sentence):
-            super(Vocabulary.QuantifiedSentence, self).__init__()
+            super().__init__()
             self.quantifier = quantifier
             self.variable   = variable
             self.sentence   = sentence
@@ -882,7 +876,7 @@ class Vocabulary(object):
                         arity(operator), operator, len(operands)
                     )
                 )
-            super(Vocabulary.OperatedSentence, self).__init__()
+            super().__init__()
             self.operator = operator
             self.operands = operands
             if len(operands) == 1:
@@ -2679,7 +2673,7 @@ class TableauxSystem(object):
         ticked = False
 
         def __init__(self, *args, **opts):
-            super(TableauxSystem.PotentialNodeRule, self).__init__(*args, **opts)
+            super().__init__(*args, **opts)
             self.safeprop('potential_nodes', {})
             self.safeprop('node_applications', {})
 
@@ -2716,7 +2710,7 @@ class TableauxSystem(object):
 
         def register_branch(self, branch, parent):
             # Likely to be extended in concrete class - call super and pay attention
-            super(TableauxSystem.PotentialNodeRule, self).register_branch(branch, parent)
+            super().register_branch(branch, parent)
             if parent != None and parent.id in self.potential_nodes:
                 self.potential_nodes[branch.id] = set(self.potential_nodes[parent.id])
                 self.node_applications[branch.id] = dict(self.node_applications[parent.id])
@@ -2726,22 +2720,22 @@ class TableauxSystem(object):
 
         def register_node(self, node, branch):
             # Likely to be extended in concrete class - call super and pay attention
-            super(TableauxSystem.PotentialNodeRule, self).register_node(node, branch)
+            super().register_node(node, branch)
             if self.is_potential_node(node, branch):
                 self.potential_nodes[branch.id].add(node)
                 self.node_applications[branch.id][node.id] = 0
 
         def after_apply(self, target):
-            super(TableauxSystem.PotentialNodeRule, self).after_apply(target)
+            super().after_apply(target)
             self.node_applications[target['branch'].id][target['node'].id] += 1
 
         def after_branch_close(self, branch):
-            super(TableauxSystem.PotentialNodeRule, self).after_branch_close(branch)
+            super().after_branch_close(branch)
             del(self.potential_nodes[branch.id])
             del(self.node_applications[branch.id])
 
         def after_node_tick(self, node, branch):
-            super(TableauxSystem.PotentialNodeRule, self).after_node_tick(node, branch)
+            super().after_node_tick(node, branch)
             if self.ticked == False and branch.id in self.potential_nodes:
                 self.potential_nodes[branch.id].discard(node)
 
@@ -2766,7 +2760,7 @@ class TableauxSystem(object):
         # Default
 
         def score_candidate(self, target):
-            score = super(TableauxSystem.PotentialNodeRule, self).score_candidate(target)
+            score = super().score_candidate(target)
             if score == 0:
                 complexity = self.branching_complexity(target['node'])
                 score = -1 * complexity

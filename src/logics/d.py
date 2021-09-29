@@ -58,7 +58,7 @@ class Model(k.Model):
             for w1 in needs_world:
                 self.add_access(w1, w2)
             self.add_access(w2, w2)
-        super(Model, self).finish()
+        super().finish()
 
 class TableauxSystem(k.TableauxSystem):
     """

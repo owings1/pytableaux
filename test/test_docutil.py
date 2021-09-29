@@ -15,35 +15,28 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # ------------------
-#
 # pytableaux - docutil test cases
-import pytest
-
 import docutil
-import examples
 
-def test_get_truth_table_html_negation_cpl():
-    res = docutil.get_truth_table_html('cpl', 'Negation')
+helper = docutil.Helper()
+
+def test_html_truth_table_negation_cpl():
+    res = helper.html_truth_table('cpl', 'Negation')
     assert len(res) > 0
 
-def test_get_truth_tables_for_logic():
-    res = docutil.get_truth_tables_for_logic('cpl')
+def test_lines_logic_truth_tables():
+    res = helper.lines_logic_truth_tables('cpl')
     assert len(res) > 0
 
-def test_get_replace_sentence_expressions_result_1():
+def test_doc_replace_lexicals():
     sstr = 'P{A > B}'
-    res = docutil.get_replace_sentence_expressions_result(sstr)
-    assert res['is_found']
-    assert sstr not in res['text']
-
-def test_get_rule_example_html_1():
-    res = docutil.get_rule_example_html('cpl', 'ContradictionClosure')
+    res = helper.doc_replace_lexicals(sstr)
     assert len(res) > 0
 
-def test_get_build_trunk_example_html_1():
-    res = docutil.get_build_trunk_example_html('cpl', examples.argument('Addition'))
+def test_rule_example_html_1():
+    res = helper.html_rule_example('GlutClosure', 'k3')
     assert len(res) > 0
 
-def test_get_argument_example_html_1():
-    res = docutil.get_argument_example_html(examples.argument('Addition'))
+def test_lines_trunk_example():
+    res = helper.lines_trunk_example('cpl')
     assert len(res) > 0

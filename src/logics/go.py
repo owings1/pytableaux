@@ -65,7 +65,7 @@ class Model(k3.Model):
         the Law of Excluded Middle fails for atomic sentences P{A V ~A}, complex sentences -- those
         with at least one binary connective -- do obey the law: P{(A V A) V ~(A V A)}.
         """
-        return super(Model, self).value_of_operated(sentence, **kw)
+        return super().value_of_operated(sentence, **kw)
 
     def value_of_existential(self, sentence, **kw):
         """
@@ -110,7 +110,7 @@ class Model(k3.Model):
             return self.cvals[min(crunch(self.nvals[a]), crunch(self.nvals[b]))]
         elif operator == 'Conditional':
             return self.cvals[crunch(max(1 - self.nvals[a], self.nvals[b], gap(self.nvals[a]) + gap(self.nvals[b])))]
-        return super(Model, self).truth_function(operator, a, b)
+        return super().truth_function(operator, a, b)
 
 class TableauxSystem(fde.TableauxSystem):
     """
