@@ -37,14 +37,20 @@ from . import fde
 class Model(fde.Model):
     """
     A K3 model is like an :class:`FDE model <logics.fde.Model>` without the **B** value.
-
-    .. _FDE model: fde.html#logics.fde.Model
     """
 
     #: The set of admissible values for sentences in a model.
+    #:
+    #: :type: set
+    #: :value: {T, N, F}
+    #: :meta hide-value:
     truth_values = set(['F', 'N', 'T'])
 
-    #: There is one *designated* value, **T** in K3
+    #: There (singleton) set of designated values in model.
+    #:
+    #: :type: set
+    #: :value: {T}
+    #: :meta hide-value:
     designated_values = set(['T'])
 
     truth_values_list = ['F', 'N', 'T']
@@ -61,15 +67,6 @@ class Model(fde.Model):
         0.5 : 'N',
         1   : 'T',
     }
-
-    def value_of_operated(self, sentence, **kw):
-        """
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
-
-        //truth_tables//k3//
-        """
-        return super().value_of_operated(sentence, **kw)
 
 class TableauxSystem(fde.TableauxSystem):
     """
@@ -130,6 +127,9 @@ class TableauxRules(object):
                     'sentence'   : negative(node.props['sentence']),
                     'designated' : True,
                 })
+
+    class DesignationClosure(fde.TableauxRules.DesignationClosure):
+        pass
 
     class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
         """
@@ -238,8 +238,6 @@ class TableauxRules(object):
         //ruledoc//fde//DisjunctionNegatedDesignated//
         """
         pass
-        # operator    = 'Disjunction'
-        # designation = True
 
     class DisjunctionUndesignated(fde.TableauxRules.DisjunctionUndesignated):
         """
@@ -249,8 +247,6 @@ class TableauxRules(object):
         //ruledoc//fde//DisjunctionUndesignated//
         """
         pass
-        # operator    = 'Disjunction'
-        # designation = False
 
     class DisjunctionNegatedUndesignated(fde.TableauxRules.DisjunctionNegatedUndesignated):
         """
@@ -260,8 +256,6 @@ class TableauxRules(object):
         //ruledoc//fde//DisjunctionNegatedUndesignated//
         """
         pass
-        # operator    = 'Disjunction'
-        # designation = False
 
     class MaterialConditionalDesignated(fde.TableauxRules.MaterialConditionalDesignated):
         """
@@ -325,8 +319,6 @@ class TableauxRules(object):
         //ruledoc//fde//MaterialBiconditionalUndesignated//
         """
         pass
-        # negated     = False
-        # designation = False
 
     class MaterialBiconditionalNegatedUndesignated(fde.TableauxRules.MaterialBiconditionalNegatedUndesignated):
         """
@@ -336,8 +328,6 @@ class TableauxRules(object):
         //ruledoc//fde//MaterialBiconditionalNegatedUndesignated//
         """
         pass
-        # negated     = True
-        # designation = False
 
     class ConditionalDesignated(fde.TableauxRules.ConditionalDesignated):
         """
@@ -347,7 +337,6 @@ class TableauxRules(object):
         //ruledoc//fde//ConditionalDesignated//
         """
         pass
-        # operator = 'Conditional'
 
     class ConditionalNegatedDesignated(fde.TableauxRules.ConditionalNegatedDesignated):
         """
@@ -357,7 +346,6 @@ class TableauxRules(object):
         //ruledoc//fde//ConditionalNegatedDesignated//
         """
         pass
-        # operator = 'Conditional'
 
     class ConditionalUndesignated(fde.TableauxRules.ConditionalUndesignated):
         """
@@ -367,7 +355,6 @@ class TableauxRules(object):
         //ruledoc//fde//ConditionalUndesignated//
         """
         pass
-        # operator = 'Conditional'
 
     class ConditionalNegatedUndesignated(fde.TableauxRules.ConditionalNegatedUndesignated):
         """
@@ -377,7 +364,6 @@ class TableauxRules(object):
         //ruledoc//fde//ConditionalNegatedUndesignated//
         """
         pass
-        # operator = 'Conditional'
         
     class BiconditionalDesignated(fde.TableauxRules.BiconditionalDesignated):
         """
@@ -387,7 +373,6 @@ class TableauxRules(object):
         //ruledoc//fde//BiconditionalDesignated//
         """
         pass
-        # operator = 'Biconditional'
 
     class BiconditionalNegatedDesignated(fde.TableauxRules.BiconditionalNegatedDesignated):
         """
@@ -397,7 +382,6 @@ class TableauxRules(object):
         //ruledoc//fde//BiconditionalNegatedDesignated//
         """
         pass
-        # operator = 'Biconditional'
 
     class BiconditionalUndesignated(fde.TableauxRules.BiconditionalUndesignated):
         """
@@ -407,7 +391,6 @@ class TableauxRules(object):
         //ruledoc//fde//BiconditionalUndesignated//
         """
         pass
-        # operator = 'Biconditional'
 
     class BiconditionalNegatedUndesignated(fde.TableauxRules.BiconditionalNegatedUndesignated):
         """
@@ -417,7 +400,6 @@ class TableauxRules(object):
         //ruledoc//fde//BiconditionalNegatedUndesignated//
         """
         pass
-        # operator = 'Biconditional'
 
     class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
         """
@@ -492,7 +474,7 @@ class TableauxRules(object):
         pass
 
     closure_rules = [
-        *fde.TableauxRules.closure_rules,
+        DesignationClosure,
         GlutClosure,
     ]
 

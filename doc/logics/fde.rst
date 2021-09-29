@@ -2,6 +2,8 @@
 FDE - First Degree Entailment
 *****************************
 
+.. contents:: :local:
+
 FDE is a 4-valued logic (**T**, **F**, **N** and **B**). A common interpretation of these
 values is:
 
@@ -9,8 +11,6 @@ values is:
 - **F**: just false
 - **N**: neither true nor false
 - **B**: both true and false
-
-.. contents:: :local:
 
 .. automodule:: logics.fde
 
@@ -28,6 +28,35 @@ values is:
         .. autoattribute:: anti_extensions
 
         .. autoattribute:: atomics
+
+        .. method:: value_of_operated(sentence)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            //truth_tables//fde//
+
+        .. method:: value_of_predicated(sentence)
+
+            A sentence with *n*-ary predicate :math:`P` over parameters :math:`<a_0,...,a_n>`
+            has the value:
+
+            * :math:`T` iff :math:`<a_0,..,a_n>` is in the *extension* of :math:`P` and
+              not in the *anti-extension* of :math:`P`.
+
+            * :math:`F` iff :math:`<a_0,...,a_n>` is in the *anti-extension* of :math:`P`
+              and not in the *extension* of :math:`P`.
+
+            * :math:`B` iff :math:`<a_0,...,a_n>` is in **both** the extension and anti-extension
+              of :math:`P`.
+
+            * :math:`N` iff :math:`<a_0,...,a_n>` is in **neither** in the extension nor the 
+              anti-extension of :math:`P`.
+
+            Note, for FDE, there is no *exclusivity* nor *exhaustion* constraint on a predicate's
+            extension and anti-extension. This means that :math:`<a_0,...,a_n>` could be in *neither*
+            the extension nor the anti-extension of a predicate, or it could be in *both* the extension
+            and the anti-extension.
 
     Tableaux System
     ===============

@@ -41,20 +41,23 @@ class Model(logic.Model):
     FDE Model.
     """
 
-    #: The admissible values
-    truth_values = ['F', 'N', 'B', 'T']
+    #: The set of admissible values for sentences in a model.
+    #:
+    #: :type: set
+    #: :value: {T, B, N, F}
+    #: :meta hide-value:
+    truth_values = set(['F', 'N', 'B', 'T'])
 
-    #: The designated values
+    #: The set of designated values in a model.
+    #:
+    #: :type: set
+    #: :value: {T, B}
+    #: :meta hide-value:
     designated_values = set(['B', 'T'])
 
-    #: Ordered truth values. The ``truth_values`` attribute is mangled to a set
-    #: in the constructor.
-    truth_values_list = list(truth_values)
+    #: Ordered truth values.
+    truth_values_list = ['F', 'N', 'B', 'T']
 
-    # atomics = {}
-    # opaques = {}
-    # extensions = {}
-    # truth_values_list = ['F', 'N', 'B', 'T']
     unassigned_value = 'N'
 
     nvals = {
@@ -76,17 +79,24 @@ class Model(logic.Model):
         super().__init__()
 
         #: A map of predicates to their extension.
+        #:
+        #: :type: dict
         self.extensions = {}
-        #: A map of predicates to their anti-extension.
-        self.anti_extensions = {}
-        #: An assignment of each atomic sentence to a value.
-        self.atomics = {}
-        #: An assignment of each opaque (un-interpreted) sentence to a value.
-        self.opaques = {}
 
-        #: Store ``truth_values`` as a set. It is presented as a list intially
-        #: only for documentation.
-        self.truth_values = set(self.truth_values_list)
+        #: A map of predicates to their anti-extension.
+        #:
+        #: :type: dict
+        self.anti_extensions = {}
+
+        #: An assignment of each atomic sentence to a value.
+        #:
+        #: :type: dict
+        self.atomics = {}
+
+        #: An assignment of each opaque (un-interpreted) sentence to a value.
+        #:
+        #: :type: dict
+        self.opaques = {}
 
         #: Track set of atomics for performance.
         self.all_atomics = set()
@@ -95,14 +105,14 @@ class Model(logic.Model):
         #: Track set of predicates for performance.
         self.predicates = set()
 
-    def value_of_operated(self, sentence, **kw):
-        """
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
+    # def value_of_operated(self, sentence, **kw):
+    #     """
+    #     The value of a sentence with a truth-functional operator is determined by
+    #     the values of its operands according to the following tables.
 
-        //truth_tables//fde//
-        """
-        return super().value_of_operated(sentence, **kw)
+    #     //truth_tables//fde//
+    #     """
+    #     return super().value_of_operated(sentence, **kw)
 
     def value_of_predicated(self, sentence, **kw):
         """

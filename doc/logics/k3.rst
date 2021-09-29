@@ -45,7 +45,7 @@ as :class:`FDE <logics.fde>` without the **B** value.
             * :math:`F` iff :math:`<a_0,...,a_n>` is in the *anti-extension* of :math:`P`
               and not in the *extension* of :math:`P`.
 
-            * :math:`N` iff :math:`<a_0,...,a_n>` is neither in the extension nor the 
+            * :math:`N` iff :math:`<a_0,...,a_n>` is in **neither** the extension nor the 
               anti-extension of :math:`P`.
 
             Note, unlike :class:`FDE <logics.fde>`, there is an *exclusivity constraint*

@@ -48,36 +48,9 @@ jenv = Environment(
 )
 truth_table_template = jenv.get_template('truth_table.html')
 
-# Don't build rules for abstract classes
-# TODO: shouldn't this check rule groups?
-skip_rules = [
-    TabSys.Rule,
-    TabSys.ClosureRule,
-    TabSys.PotentialNodeRule,
-    TabSys.FilterNodeRule,
-]
-
-skip_build_trunk = [
-    TabSys.Tableau.build_trunk
-]
-
 def init_sphinx(app, opts):
 
     helper = Helper(opts)
-
-    # helper.replace_defns = [
-    #     (
-    #         '//ruledoc//',
-    #         r'(\s*)//ruledoc//(.*?)//(.*)//',
-    #         lambda indent, lgc, rule: helper.lines_rule_docstring(rule, lgc = lgc, indent = indent),
-    #     ),
-    #     (
-    #         '//truth_tables//',
-    #         r'(\s*)//truth_tables//(.*?)//',
-    #         lambda indent, lgc: helper.lines_logic_truth_tables(lgc, indent = indent),
-    #         #helper.lines_logic_truth_tables,
-    #     ),
-    # ]
 
     helper.connect_sphinx(app, 'autodoc-process-docstring',
         'sphinx_obj_lines_append_autodoc',
@@ -134,17 +107,6 @@ class Helper(object):
         """
         plines = self.html_rule_example(rule, lgc=None).split('\n')
         return indent_lines(['Example:', '', *rawblock(plines)], indent = indent)
-        # lines = [
-        #     'Example:', '', '.. raw:: html', '', *indent_lines(plines, indent = 4), ''
-        # ]
-        # return indent_lines(lines, indent = indent)
-        # return [
-        #     'Example:',
-        #     '',
-        #     '.. raw:: html',
-        #     '',
-        #     cat('    ', self.html_rule_example(rule, lgc=None)),
-        # ]
 
     def lines_trunk_example(self, lgc, indent=None):
         """
@@ -153,13 +115,6 @@ class Helper(object):
         """
         plines = self.html_trunk_example(lgc).split('\n')
         return indent_lines(['Example:', '', *rawblock(plines)], indent = indent)
-        # return indent_lines([
-        #     'Example:',
-        #     '',
-        #     '.. raw:: html',
-        #     '',
-        #     cat('    ', self.html_trunk_example(lgc)),
-        # ])
 
     def lines_logic_truth_tables(self, lgc, indent=None):
         """
@@ -175,20 +130,6 @@ class Helper(object):
         lines = '\n'.join(tables).split('\n')
         lines.append('<div class="clear"></div>')
         return rawblock(lines, indent = indent)
-        # lines = ['.. raw:: html', '', *indent_lines(tablelines, 4), '']
-        # return indent_lines(lines, indent = indent)
-        # return indent_lines([
-        #     '.. raw:: html',
-        #     '',
-        #     *indent_lines(tablelines, '    '),
-        #     '',
-        # ], indent = indent)
-        # return [
-        #     cat(indent, '.. raw:: html'),
-        #     '',
-        #     *('    '.join((indent, line)) for line in tablelines),
-        #     ''
-        # ]
 
     def lines_rule_docstring(self, rule, lgc=None, indent=None):
         """
@@ -240,7 +181,6 @@ class Helper(object):
         can do proper error handling. Each of `methods` can be a function or
         name of a Helper method.  One handler per event is attached to Sphinx,
         which is a lambda wrapper for ``__dispatch_sphinx()``.
-
         """
         if event not in self._listeners:
             self._listeners[event] = []
@@ -261,7 +201,6 @@ class Helper(object):
         from autodoc extraction or straight from source. In the latter case,
         it is important to observe correct indenting for new lines.
         """
-        # defns = self.replace_defns
         defns = [
             (
                 '//ruledoc//',
@@ -272,7 +211,6 @@ class Helper(object):
                 '//truth_tables//',
                 r'(\s*)//truth_tables//(.*?)//',
                 lambda indent, lgc: self.lines_logic_truth_tables(lgc, indent = indent),
-                #helper.lines_logic_truth_tables,
             ),
         ]
         proclines = lines[0].split('\n') if is_source else lines
@@ -295,12 +233,6 @@ class Helper(object):
             pos = i + 1
             proclines[i:pos] = rpl[i]
         if rpl and is_source:
-            # print('\n\n\n\n')
-            # print(proclines)
-            # print('\n\n\n\n')
-            # print('\n'.join(proclines))
-            # print('\n\n\n\n')
-            # print(match[0])
             lines[0] ='\n'.join(proclines)
 
     def sphinx_regex_line_replace_source(self, app, docname, lines):
@@ -308,52 +240,25 @@ class Helper(object):
         Replace a line matching a regex with 1 or more lines in a docstring.
         """
         self.sphinx_regex_line_replace_common(lines, is_source = True)
-        # return
-        # defns = self.replace_defns
-        # i = 0
-        # rpl = {}
-        # if docname == 'logics/k3':
-        #     print('\n\n\n\n')
-        #     print(len(lines))
-        #     print('\n\n')
-        #     l2 = lines[0].split('\n')
-        #     print('\n\n\n\n')
-        #     # print(l2)
-        #     print('\n\n')
-        #     print(len(l2))
-        # proclines = lines[0].split('\n')
-        # for line in proclines:
-        #     for indic, regex, func in defns:
-        #         #print(lines)
-        #         if indic in line:
-        #             match = re.findall(regex, line)
-        #             if not match:
-        #                 raise BadExpressionError(line)
-        #             if isinstance(match[0], basestring):
-        #                 # Corner case of one capture group
-        #                 match[0] = (match[0],)
-        #             rpl[i] = func(*match[0])
-        #             break
-        #     i += 1
-        # for i in rpl:
-        #     pos = i + 1
-        #     proclines[i:pos] = rpl[i]
-        # if rpl:
-        #     if docname == 'logics/k3':
-        #         print('\n\n\n\n')
-        #         print(proclines)
-        #         print('\n\n\n\n')
-        #         print('\n'.join(proclines))
-        #         print('\n\n\n\n')
-        #         print(match[0])
-        #     lines[0] ='\n'.join(proclines)
-        #     #print(lines)
 
     def sphinx_regex_line_replace_autodoc(self, app, what, name, obj, options, lines):
         """
         Regex line replace for autodoc event. Delegate to common method.
         """
         self.sphinx_regex_line_replace_common(lines, is_source = False)
+
+    # Don't build rules for abstract classes
+    # TODO: shouldn't this check rule groups?
+    skip_rules = [
+        TabSys.Rule,
+        TabSys.ClosureRule,
+        TabSys.PotentialNodeRule,
+        TabSys.FilterNodeRule,
+    ]
+
+    skip_build_trunk = [
+        TabSys.Tableau.build_trunk
+    ]
 
     def sphinx_obj_lines_append_autodoc(self, app, what, name, obj, options, lines):
         """
@@ -363,14 +268,14 @@ class Helper(object):
         defns = [
             (
                 lambda: (
-                    what == 'class' and obj not in skip_rules and
+                    what == 'class' and obj not in self.skip_rules and
                     Rule in getmro(obj)
                 ),
                 self.lines_rule_example,
             ),
             (
                 lambda: (
-                    what == 'method' and obj not in skip_build_trunk and
+                    what == 'method' and obj not in self.skip_build_trunk and
                     obj.__name__ == 'build_trunk'
                 ),
                 self.lines_trunk_example,
