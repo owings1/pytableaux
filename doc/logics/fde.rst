@@ -18,7 +18,16 @@ values is:
     =========
 
     .. autoclass:: Model
-        :members:
+
+        .. autoattribute:: truth_values
+
+        .. autoattribute:: designated_values
+
+        .. autoattribute:: extensions
+
+        .. autoattribute:: anti_extensions
+
+        .. autoattribute:: atomics
 
     Tableaux System
     ===============
@@ -28,6 +37,8 @@ values is:
 
     .. autoclass:: TableauxRules
         :members:
+
+    .. _fde-consequence:
 
     Logical Consequence
     ===================

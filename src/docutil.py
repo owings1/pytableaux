@@ -65,10 +65,29 @@ def init_sphinx(app, opts):
 
     helper = Helper(opts)
 
+    # helper.replace_defns = [
+    #     (
+    #         '//ruledoc//',
+    #         r'(\s*)//ruledoc//(.*?)//(.*)//',
+    #         lambda indent, lgc, rule: helper.lines_rule_docstring(rule, lgc = lgc, indent = indent),
+    #     ),
+    #     (
+    #         '//truth_tables//',
+    #         r'(\s*)//truth_tables//(.*?)//',
+    #         lambda indent, lgc: helper.lines_logic_truth_tables(lgc, indent = indent),
+    #         #helper.lines_logic_truth_tables,
+    #     ),
+    # ]
+
     helper.connect_sphinx(app, 'autodoc-process-docstring',
-        'sphinx_regex_line_replace',
-        'sphinx_obj_lines_append',
+        'sphinx_obj_lines_append_autodoc',
+        'sphinx_regex_line_replace_autodoc',
     )
+
+    helper.connect_sphinx(app, 'source-read',
+        'sphinx_regex_line_replace_source',
+    )
+
     helper.connect_sphinx(app, 'build-finished',
         'sphinx_docs_post_process',
     )
@@ -97,6 +116,7 @@ class Helper(object):
             symbol_set = 'html',
         )
         self.pw = writers.html.Writer(sw = self.sw)
+        self.replace_defns = []
         # https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
         self._listeners = dict()
         self._connids = dict()
@@ -107,45 +127,44 @@ class Helper(object):
     ##  Doc Lines   :
     ## ==============
 
-    def lines_rule_example(self, rule, lgc=None):
+    def lines_rule_example(self, rule, lgc=None, indent=None):
         """
-        Generate the rule examples.
+        Generate the rule examples. Lines are returned properly indented
+        if indent is specified.
         """
-        return [
-            'Example:',
-            '',
-            '.. raw:: html',
-            '',
-            cat('    ', self.html_rule_example(rule, lgc=None)),
-        ]
+        plines = self.html_rule_example(rule, lgc=None).split('\n')
+        return indent_lines(['Example:', '', *rawblock(plines)], indent = indent)
+        # lines = [
+        #     'Example:', '', '.. raw:: html', '', *indent_lines(plines, indent = 4), ''
+        # ]
+        # return indent_lines(lines, indent = indent)
+        # return [
+        #     'Example:',
+        #     '',
+        #     '.. raw:: html',
+        #     '',
+        #     cat('    ', self.html_rule_example(rule, lgc=None)),
+        # ]
 
-    def lines_trunk_example(self, lgc):
+    def lines_trunk_example(self, lgc, indent=None):
         """
-        Generate the build trunk examples.
+        Generate the build trunk examples. Lines are returned properly indented
+        if indent is specified.
         """
-        return [
-            'Example:',
-            '',
-            '.. raw:: html',
-            '',
-            cat('    ', self.html_trunk_example(lgc)),
-        ]
+        plines = self.html_trunk_example(lgc).split('\n')
+        return indent_lines(['Example:', '', *rawblock(plines)], indent = indent)
+        # return indent_lines([
+        #     'Example:',
+        #     '',
+        #     '.. raw:: html',
+        #     '',
+        #     cat('    ', self.html_trunk_example(lgc)),
+        # ])
 
-    def lines_rule_docstring(self, rule, lgc=None):
+    def lines_logic_truth_tables(self, lgc, indent=None):
         """
-        Retrieve docstring lines for replacing //ruledoc//... references.
-        """
-        lgc = get_logic(lgc or get_obj_logic(rule))
-        for name, member in inspect.getmembers(lgc.TableauxRules):
-            if name == rule or member == rule:
-                return [line.strip() for line in member.__doc__.split('\n')]
-        raise RuleNotFoundError(
-            'Rule not found: {0}, Logic: {1}'.format(str(rule), lgc.name)
-        )
-
-    def lines_logic_truth_tables(self, lgc):
-        """
-        Generate the truth tables for a logic.
+        Generate the truth tables for a logic. Lines are returned properly
+        indented if indent is specified.
         """
         lgc = get_logic(lgc)
         tables = [
@@ -153,13 +172,41 @@ class Helper(object):
             for operator in logic.operators_list
             if operator in lgc.Model.truth_functional_operators
         ]
-        return [
-            '.. raw:: html',
-            '',
-            cat('    ', *tables),
-            '    <div class="clear"></div>',
-            ''
-        ]
+        lines = '\n'.join(tables).split('\n')
+        lines.append('<div class="clear"></div>')
+        return rawblock(lines, indent = indent)
+        # lines = ['.. raw:: html', '', *indent_lines(tablelines, 4), '']
+        # return indent_lines(lines, indent = indent)
+        # return indent_lines([
+        #     '.. raw:: html',
+        #     '',
+        #     *indent_lines(tablelines, '    '),
+        #     '',
+        # ], indent = indent)
+        # return [
+        #     cat(indent, '.. raw:: html'),
+        #     '',
+        #     *('    '.join((indent, line)) for line in tablelines),
+        #     ''
+        # ]
+
+    def lines_rule_docstring(self, rule, lgc=None, indent=None):
+        """
+        Retrieve docstring lines for replacing //ruledoc//... references.
+        Lines are returned properly indented if indent is specified.
+        """
+        lgc = get_logic(lgc or get_obj_logic(rule))
+        found = None
+        for name, member in inspect.getmembers(lgc.TableauxRules):
+            if name == rule or member == rule:
+                found = member
+                break
+        if not found:
+            raise RuleNotFoundError(
+                'Rule not found: {0}, Logic: {1}'.format(str(rule), lgc.name)
+            )
+        lines = [line.strip() for line in found.__doc__.split('\n')]
+        return indent_lines(lines, indent = indent)
 
     def doc_replace_lexicals(self, doc):
         """
@@ -208,26 +255,32 @@ class Helper(object):
             self._connids[event] = app.connect(event, dispatch)
         return self
 
-    def sphinx_regex_line_replace(self, app, what, name, obj, options, lines):
+    def sphinx_regex_line_replace_common(self, lines, is_source=False):
         """
-        Replace a line matching a regex with 1 or more lines in a docstring.
+        Replace a line matching a regex with 1 or more lines. Lines could come
+        from autodoc extraction or straight from source. In the latter case,
+        it is important to observe correct indenting for new lines.
         """
+        # defns = self.replace_defns
         defns = [
             (
                 '//ruledoc//',
-                r'//ruledoc//(.*?)//(.*)//',
-                lambda lgc, rule: self.lines_rule_docstring(rule, lgc),
+                r'(\s*)//ruledoc//(.*?)//(.*)//',
+                lambda indent, lgc, rule: self.lines_rule_docstring(rule, lgc = lgc, indent = indent),
             ),
             (
                 '//truth_tables//',
-                r'//truth_tables//(.*?)//',
-                self.lines_logic_truth_tables,
+                r'(\s*)//truth_tables//(.*?)//',
+                lambda indent, lgc: self.lines_logic_truth_tables(lgc, indent = indent),
+                #helper.lines_logic_truth_tables,
             ),
         ]
+        proclines = lines[0].split('\n') if is_source else lines
         i = 0
         rpl = {}
-        for line in lines:
+        for line in proclines:
             for indic, regex, func in defns:
+                #print(lines)
                 if indic in line:
                     match = re.findall(regex, line)
                     if not match:
@@ -240,11 +293,72 @@ class Helper(object):
             i += 1
         for i in rpl:
             pos = i + 1
-            lines[i:pos] = rpl[i]
+            proclines[i:pos] = rpl[i]
+        if rpl and is_source:
+            # print('\n\n\n\n')
+            # print(proclines)
+            # print('\n\n\n\n')
+            # print('\n'.join(proclines))
+            # print('\n\n\n\n')
+            # print(match[0])
+            lines[0] ='\n'.join(proclines)
 
-    def sphinx_obj_lines_append(self, app, what, name, obj, options, lines):
+    def sphinx_regex_line_replace_source(self, app, docname, lines):
         """
-        Append lines to a docstring.
+        Replace a line matching a regex with 1 or more lines in a docstring.
+        """
+        self.sphinx_regex_line_replace_common(lines, is_source = True)
+        # return
+        # defns = self.replace_defns
+        # i = 0
+        # rpl = {}
+        # if docname == 'logics/k3':
+        #     print('\n\n\n\n')
+        #     print(len(lines))
+        #     print('\n\n')
+        #     l2 = lines[0].split('\n')
+        #     print('\n\n\n\n')
+        #     # print(l2)
+        #     print('\n\n')
+        #     print(len(l2))
+        # proclines = lines[0].split('\n')
+        # for line in proclines:
+        #     for indic, regex, func in defns:
+        #         #print(lines)
+        #         if indic in line:
+        #             match = re.findall(regex, line)
+        #             if not match:
+        #                 raise BadExpressionError(line)
+        #             if isinstance(match[0], basestring):
+        #                 # Corner case of one capture group
+        #                 match[0] = (match[0],)
+        #             rpl[i] = func(*match[0])
+        #             break
+        #     i += 1
+        # for i in rpl:
+        #     pos = i + 1
+        #     proclines[i:pos] = rpl[i]
+        # if rpl:
+        #     if docname == 'logics/k3':
+        #         print('\n\n\n\n')
+        #         print(proclines)
+        #         print('\n\n\n\n')
+        #         print('\n'.join(proclines))
+        #         print('\n\n\n\n')
+        #         print(match[0])
+        #     lines[0] ='\n'.join(proclines)
+        #     #print(lines)
+
+    def sphinx_regex_line_replace_autodoc(self, app, what, name, obj, options, lines):
+        """
+        Regex line replace for autodoc event. Delegate to common method.
+        """
+        self.sphinx_regex_line_replace_common(lines, is_source = False)
+
+    def sphinx_obj_lines_append_autodoc(self, app, what, name, obj, options, lines):
+        """
+        Append lines to a docstring extracted from the autodoc extention. For injecting
+        into doc source files, use a regex line replacement.
         """
         defns = [
             (
@@ -368,6 +482,25 @@ class Helper(object):
 
 def cat(*args):
     return ''.join(args)
+
+def rawblock(lines, indent=None):
+    """
+    Make a raw html block from the lines. Returns a new list of lines.
+    """
+    return indent_lines(
+        ['.. raw:: html', '', *indent_lines(lines, 4), ''],
+        indent = indent,
+    )
+
+def indent_lines(lines, indent=None):
+    """
+    Indent non-empty lines. Indent can be string or number of spaces.
+    """
+    if not indent:
+        indent = ''
+    elif isinstance(indent, int):
+        indent *= ' '
+    return [cat(indent, line) if len(line) else line for line in lines]
 
 def get_obj_logic(obj):
     try:

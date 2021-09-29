@@ -33,6 +33,8 @@ respectively.
     .. autoclass:: TableauxRules
         :members:
 
+    .. _cpl-consequence:
+
     Logical Consequence
     ===================
 

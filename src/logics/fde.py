@@ -42,24 +42,19 @@ class Model(logic.Model):
     """
 
     #: The admissible values
-    truth_values = set(['F', 'N', 'B', 'T'])
+    truth_values = ['F', 'N', 'B', 'T']
 
     #: The designated values
     designated_values = set(['B', 'T'])
 
-    #: An assignment of each atomic sentence to a value.
-    atomics = {}
+    #: Ordered truth values. The ``truth_values`` attribute is mangled to a set
+    #: in the constructor.
+    truth_values_list = list(truth_values)
 
-    #: An assignment of each opaque (un-interpreted) sentence to a value.
-    opaques = {}
-
-    #: A map of predicates to their extension.
-    extensions = {}
-
-    #: A map of predicates to their anti-extension.
-    anti_extensions = {}
-
-    truth_values_list = ['F', 'N', 'B', 'T']
+    # atomics = {}
+    # opaques = {}
+    # extensions = {}
+    # truth_values_list = ['F', 'N', 'B', 'T']
     unassigned_value = 'N'
 
     nvals = {
@@ -80,17 +75,25 @@ class Model(logic.Model):
 
         super().__init__()
 
+        #: A map of predicates to their extension.
         self.extensions = {}
+        #: A map of predicates to their anti-extension.
         self.anti_extensions = {}
+        #: An assignment of each atomic sentence to a value.
         self.atomics = {}
+        #: An assignment of each opaque (un-interpreted) sentence to a value.
         self.opaques = {}
 
+        #: Store ``truth_values`` as a set. It is presented as a list intially
+        #: only for documentation.
+        self.truth_values = set(self.truth_values_list)
+
+        #: Track set of atomics for performance.
         self.all_atomics = set()
+        #: Track set of constants for performance.
         self.constants = set()
-        self.predicates = set([
-            #Identity,
-            #Existence,
-        ])
+        #: Track set of predicates for performance.
+        self.predicates = set()
 
     def value_of_operated(self, sentence, **kw):
         """
@@ -366,16 +369,24 @@ class Model(logic.Model):
         anti_extension = self.get_anti_extension(predicate)
         if value == 'N':
             if params in extension:
-                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
+                raise Model.ModelValueError(
+                    'Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params))
+                )
             if params in anti_extension:
-                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
+                raise Model.ModelValueError(
+                    'Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params))
+                )
         elif value == 'T':
             if params in anti_extension:
-                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
+                raise Model.ModelValueError(
+                    'Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params))
+                )
             extension.add(params)
         elif value == 'F':
             if params in extension:
-                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
+                raise Model.ModelValueError(
+                    'Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params))
+                )
             anti_extension.add(params)
         elif value == 'B':
             extension.add(params)
