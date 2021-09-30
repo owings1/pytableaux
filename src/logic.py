@@ -3163,7 +3163,7 @@ class Parser(object):
         else:
             self.symbol_set = self.symbol_sets[symbol_set]
         self.vocabulary = vocabulary
-        self.is_parsing = False
+        self.__state = self.__State(self)
 
     def chomp(self):
         # Proceeed through whitepsace.
@@ -3220,13 +3220,7 @@ class Parser(object):
 
     def parse(self, string):
         # Parse an input string, and return a sentence.
-        if self.is_parsing:
-            raise Parser.ParserThreadError(
-                'Parser is already parsing -- not thread safe.'
-            )
-        self.is_parsing = True
-        self.bound_vars = set()
-        try:
+        with self.__state:
             self.s   = list(string)
             self.pos = 0
             self.chomp()
@@ -3238,12 +3232,6 @@ class Parser(object):
                 raise Parser.ParseError(
                     "Unexpected character '{0}' at position {1}.".format(self.current(), self.pos)
                 )
-            self.is_parsing = False
-            self.bound_vars = set()
-        except:
-            self.is_parsing = False
-            self.bound_vars = set()
-            raise
         return s
 
     def read(self):
@@ -3373,6 +3361,24 @@ class Parser(object):
 
     def typeof(self, c):
         return self.symbol_set.typeof(c)
+
+    class __State(object):
+
+        def __init__(self, inst):
+            self.inst = inst
+            self.is_parsing = False
+            
+        def __enter__(self):
+            if self.is_parsing:
+                raise Parser.ParserThreadError(
+                    'Parser is already parsing -- not thread safe.'
+                )
+            self.inst.bound_vars = set()
+            self.is_parsing = True
+
+        def __exit__(self, type, value, traceback):
+            self.is_parsing = False
+            self.inst.bound_vars = set()
 
 def make_tree_structure(branches, node_depth=0, track=None):
     is_root = track == None
