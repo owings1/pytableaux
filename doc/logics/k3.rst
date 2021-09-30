@@ -5,7 +5,7 @@ K3 - Strong Kleene Logic
 .. contents:: :local:
 
 K3 is a three-valued logic (**T**, **F**, and **N**). It can be understood
-as :class:`FDE <logics.fde>` without the **B** value.
+as {@FDE} without the **B** value.
 
 .. automodule:: logics.k3
 
@@ -33,7 +33,7 @@ as :class:`FDE <logics.fde>` without the **B** value.
 
         .. method:: value_of_predicated(sentence)
 
-            Like :class:`FDE <logics.fde>`, K3 predication defines a predicate's *extenstion*
+            Like {@FDE}, K3 predication defines a predicate's *extenstion*
             and *anti-extension*. The value of a predicated sentence is determined as follows:
 
             A sentence with *n*-ary predicate :math:`P` over parameters {@metuple}
@@ -48,7 +48,7 @@ as :class:`FDE <logics.fde>` without the **B** value.
             * :math:`N` iff {@metuple} is in **neither** the extension nor the 
               anti-extension of :math:`P`.
 
-            Note, unlike :class:`FDE <logics.fde>`, there is an *exclusivity constraint*
+            Note, unlike {@FDE}, there is an *exclusivity constraint*
             on a predicate's extension/anti-extension. This means that {@metuple}
             cannot be in **both** the extension and the anti-extension of `P`.
 
@@ -82,9 +82,9 @@ as :class:`FDE <logics.fde>` without the **B** value.
 
     Some notable features of K3 include:
 
-    * Everything valid in :class:`FDE <logics.fde>` is valid in K3.
+    * Everything valid in {@FDE} is valid in K3.
 
-    * Like :class:`FDE <logics.fde>`, the Law of Excluded Middle, and Conditional Identity :s:`(A $ A)` fail.
+    * Like {@FDE}, the Law of Excluded Middle, and Conditional Identity :s:`(A $ A)` fail.
 
     * Some cassical validities, such as *Modus Ponens*, *Modus Tollens*, *Disjunctive Syllogism*,
       and *DeMorgan* laws, are valid.

@@ -1,28 +1,42 @@
+************************
 Python API
-=============================
+************************
 
 The *logic* module is the base module for the Python API.
 
+.. contents:: :local:
+
+Core API
+==========
+
+The core API provides high-level methods for basic usage, with convience
+wrappers for nested classes, that encapsulates things like parsing
+sentences and building proofs for difference logics.
+
 .. automodule:: logic
-   :members:
- 
-.. autoclass:: logic::TableauxSystem.Tableau
-   :members:
 
-.. autoclass:: logic::TableauxSystem.Branch
-  :members:
+    Basic Usage
+    -----------
 
-.. autoclass:: logic::TableauxSystem.Node
-  :members:
+    .. autoclass:: Argument
 
-.. autoclass:: logic::TableauxSystem.Rule
-  :members:
+    .. autofunction:: tableau
 
-.. autoclass:: logic::TableauxSystem.ClosureRule
-  :members:
+    .. autofunction:: parse
 
-.. autoclass:: logic::TableauxSystem.PotentialNodeRule
-  :members:
+    .. autofunction:: render
 
-.. autoclass:: logic::TableauxSystem.FilterNodeRule
-  :members:
+    Sentence Construction
+    ---------------------
+
+    .. autofunction:: atomic
+
+    .. autofunction:: constant
+
+    .. autofunction:: predicated
+
+    .. autofunction:: variable
+
+    .. autofunction:: quantify
+
+    .. autofunction:: operate

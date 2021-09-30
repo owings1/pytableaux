@@ -49,7 +49,9 @@ defaults = {
 # Autodoc directives:
 #    https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#directives
 # Built-in roles:
-#    https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html?highlight=ref#role-ref
+#    https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html
+# Sphinx events:
+#    https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
 
 doc_dir = pjoin(logic.base_dir, 'doc')
 templates_dir = pjoin(doc_dir, 'templates')
@@ -61,11 +63,6 @@ jenv = Environment(
 )
 truth_table_template = jenv.get_template('truth_table.html')
 
-# for replacements
-# lgclist = [
-#     'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
-#     'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
-# ]
 lgclist = [
     bname(file).upper() for file in
     os.listdir(pjoin(doc_dir, 'logics'))
@@ -205,7 +202,7 @@ class Helper(object):
             for method in methods
         ]:
             self._listeners[event].append(func)
-            print('Connecting {0} to {1}'.format(func.__name__, event))
+            logger.info('Connecting {0} to {1}'.format(func.__name__, event))
         if event not in self._connids:
             dispatch = lambda *args: self.__dispatch_sphinx(event, args)
             self._connids[event] = app.connect(event, dispatch)
@@ -463,9 +460,6 @@ class Helper(object):
     @sphinx_role_defaults
     def role_lexrender_oper(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
         return self.lexrender_common(text, opts, what = 'operator')
-        # if not text.startswith('oper.'):
-        #     text = '.'.join(('oper', text))
-        # return self.role_render_sentence(name, rawtext, text, *args)
 
     ## ================
     ## Dispatcher     :

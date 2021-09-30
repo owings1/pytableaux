@@ -689,7 +689,7 @@ class App(object):
         if len(errors) > 0:
             raise RequestDataError(errors)
 
-        return (logic.argument(conclusion, premises), vocab)
+        return (logic.Argument(conclusion, premises), vocab)
 
     def parse_predicates_data(self, predicates):
         vocab = logic.Vocabulary()

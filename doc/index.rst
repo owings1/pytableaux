@@ -23,7 +23,15 @@ Contents:
 
    logic
 
+.. toctree::
+   :maxdepth: 2
 
+   tableaux
+
+.. toctree::
+   :maxdepth: 2
+
+   symbols
 
 Indices and tables
 ==================

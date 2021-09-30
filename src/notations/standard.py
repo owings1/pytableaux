@@ -155,6 +155,7 @@ class Parser(logic.Parser):
     symbol_sets = {'default': symbol_sets['default']}
 
     def parse(self, string):
+        # override
         try:
             s = super(Parser, self).parse(string)
         except logic.Parser.ParseError as e:
@@ -174,18 +175,19 @@ class Parser(logic.Parser):
             return s
 
     def read(self):
+        # override
         ctype = self.assert_current()
         if ctype == 'operator':
-            s = self.read_operator_sentence()
+            s = self.__read_operator_sentence()
         elif ctype == 'paren_open':
-            s = self.read_from_open_paren()
+            s = self.__read_from_open_paren()
         elif ctype == 'variable' or ctype == 'constant':
-            s = self.read_infix_predicate_sentence()
+            s = self.__read_infix_predicate_sentence()
         else:
             s = super(Parser, self).read()
         return s
 
-    def read_operator_sentence(self):
+    def __read_operator_sentence(self):
         operator = self.symbol_set.indexof('operator', self.current())
         arity = logic.arity(operator)
         # only unary operators can be prefix operators
@@ -195,7 +197,7 @@ class Parser(logic.Parser):
         operand = self.read()
         return logic.operate(operator, [operand])
 
-    def read_infix_predicate_sentence(self):
+    def __read_infix_predicate_sentence(self):
         params = [self.read_parameter()]
         self.assert_current_is('user_predicate', 'system_predicate')
         ppos = self.pos
@@ -205,7 +207,7 @@ class Parser(logic.Parser):
         params += self.read_parameters(predicate.arity - 1)
         return logic.predicated(predicate, params)
 
-    def read_from_open_paren(self):
+    def __read_from_open_paren(self):
         # if we have an open parenthesis, then we demand a binary infix operator sentence.
         # scan ahead to:
         #   - find the corresponding close parenthesis position
