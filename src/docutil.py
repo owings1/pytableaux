@@ -20,10 +20,10 @@
 import examples, logic, writers.html
 import codecs, inspect, os, re, traceback
 from jinja2 import Environment, FileSystemLoader
-from html import unescape as htmlunescape
+from html import unescape as htmlun
 from os.path import join as pjoin, basename as bname
 from past.builtins import basestring
-from inspect import getmro
+from inspect import getmro, getsource, isclass, ismethod
 
 from sphinx.util import logging
 from docutils import nodes
@@ -32,7 +32,9 @@ from docutils.parsers.rst import Directive, directives, roles
 logger = logging.getLogger(__name__)
 
 # Alias
-from logic import argument, create_parser, create_swriter, get_logic, tableau
+from logic import argument, arity, create_parser, create_swriter, get_logic, \
+    operators_list, tableau
+
 TabSys = logic.TableauxSystem
 Rule = TabSys.Rule
 
@@ -64,7 +66,7 @@ jenv = Environment(
 truth_table_template = jenv.get_template('truth_table.html')
 
 lgclist = [
-    bname(file).upper() for file in
+    bname('.'.join(file.split('.')[0:-1])).upper() for file in
     os.listdir(pjoin(doc_dir, 'logics'))
     if file.endswith('.rst')
 ]
@@ -79,6 +81,7 @@ def init_sphinx(app, opts):
     helper.connect_sphinx(app, 'autodoc-process-docstring',
         'sphinx_obj_lines_append_autodoc',
         'sphinx_regex_line_replace_autodoc',
+        'sphinx_regex_simple_replace_autodoc',
     )
 
     helper.connect_sphinx(app, 'source-read',
@@ -182,6 +185,40 @@ class Helper(object):
         lines = [line.strip() for line in found.__doc__.split('\n')]
         return indent_lines(lines, indent = indent)
 
+    def lines_inherited_ruledoc(self, rule, indent=None):
+        """
+        Generate entire doc block for an inherited rule.
+        """
+        prule = getmro(rule)[1]
+        plgc = get_obj_logic(prule)
+        lines = [
+            '*This rule is the same as* :class:`{0} {1}'.format(plgc.name, prule.__name__),
+            '<{0}.{1}>`'.format(prule.__module__, prule.__qualname__),
+            '',
+            *self.lines_rule_docstring(prule, lgc=plgc),
+            '',
+        ]
+        return indent_lines(lines, indent = indent)
+
+    def lines_opers_table(self, indent=None):
+        sympol, symstd, symhtml = (
+            symset.chars('operator') for symset in (
+                create_parser('polish').symbol_set,
+                create_parser('standard').symbol_set,
+                create_swriter('standard').symset('html'),
+            )
+        )
+        lines = [
+            '"Operator Name","Arity","Polish","Standard","HTML"'
+        ] + [
+            '"{0}","{1}","``{2}``","``{3}``","{4}"'.format(*row)
+            for row in (
+                (o, str(arity(o)), sympol[o], symstd[o], htmlun(symhtml[o]))
+                for o in operators_list
+            )
+        ]
+        return indent_lines(lines, indent = indent)
+
     ## =========================
     ## Sphinx Event Handlers   :
     ## =========================
@@ -223,7 +260,7 @@ class Helper(object):
                 )
             ),
             # Meta-tuple params - {@metuple}
-            ('{@metuple}', ':math:`\\\\langle a_0,..,a_n\\\\rangle`'),
+            ('{@metuple}', ':math:`\\\\langle a_0,...,a_n\\\\rangle`'),
         ]
         text = '\n'.join(lines)
         for regex, repl in defns:
@@ -236,6 +273,9 @@ class Helper(object):
 
     def sphinx_regex_simple_replace_source(self, app, docname, lines):
         self.sphinx_regex_simple_replace_common(lines, is_source = True)
+
+    def sphinx_regex_simple_replace_autodoc(self, app, what, name, obj, options, lines):
+        self.sphinx_regex_simple_replace_common(lines, is_source = False)
 
     def sphinx_regex_line_replace_common(self, lines, is_source=False):
         """
@@ -262,6 +302,11 @@ class Helper(object):
                     self.lines_logic_truth_tables(lgc, indent = indent)
                 ),
             ),
+            (
+                '//lexsym_opers_csv//',
+                r'(\s*)//lexsym_opers_csv//',
+                self.lines_opers_table,
+            )
         ]
         proclines = lines[0].split('\n') if is_source else lines
         i = 0
@@ -307,7 +352,7 @@ class Helper(object):
         TabSys.FilterNodeRule,
     ]
 
-    skip_build_trunk = [
+    skip_trunks = [
         TabSys.Tableau.build_trunk
     ]
 
@@ -318,22 +363,20 @@ class Helper(object):
         """
         defns = [
             (
-                lambda: (
-                    what == 'class' and obj not in self.skip_rules and
-                    Rule in getmro(obj)
-                ),
+                self.should_inherit_ruledoc,
+                self.lines_inherited_ruledoc,
+            ),
+            (
+                Rule in safemro(obj) and obj not in self.skip_rules,
                 self.lines_rule_example,
             ),
             (
-                lambda: (
-                    what == 'method' and obj not in self.skip_build_trunk and
-                    obj.__name__ == 'build_trunk'
-                ),
+                TabSys.build_trunk in methmro(obj) and obj not in self.skip_trunks,
                 self.lines_trunk_example,
             )
         ]
         for check, func in defns:
-            if check():
+            if check and (not callable(check) or check(obj)):
                 lines += func(obj)
 
     ## ===================
@@ -390,6 +433,18 @@ class Helper(object):
     ## ================
 
     def lexrender_common(self, text, opts, what=None):
+        """
+        From: https://docutils.sourceforge.io/docs/howto/rst-roles.html
+
+        Role functions return a tuple of two values:
+
+        * A list of nodes which will be inserted into the document tree at the
+        point where the interpreted role was encountered (can be an empty
+        list).
+
+        * A list of system messages, which will be inserted into the document tree
+        immediately after the end of the current block (can also be empty).
+        """
         sw = self.sw
         parse = self.parser.parse
         if text.startswith('oper.'):
@@ -406,56 +461,14 @@ class Helper(object):
             raw = sw.write_operator(text)
         else:
             raise UnknownLexTypeError('Unknown lexical type: {0}'.format(what))
-        rendered = htmlunescape(raw)
+        rendered = htmlun(raw)
         node = nodes.inline(text = rendered)
         set_classes(opts)
         return ([node], [])
 
     @sphinx_role_defaults
     def role_lexrender_auto(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
-        """
-        From: https://docutils.sourceforge.io/docs/howto/rst-roles.html
-
-        * ``text``: The interpreted text content.
-
-        * ``options``: A dictionary of directive options for customization
-        (from the `"role" directive`_), to be interpreted by the role
-        function.  Used for additional attributes for the generated elements
-        and other functionality.
-
-        * ``content``: A list of strings, the directive content for
-        customization (from the `"role" directive`_).  To be interpreted by
-        the role function.
-
-        Role functions return a tuple of two values:
-
-        * A list of nodes which will be inserted into the document tree at the
-        point where the interpreted role was encountered (can be an empty
-        list).
-
-        * A list of system messages, which will be inserted into the document tree
-        immediately after the end of the current block (can also be empty).
-        """
         return self.lexrender_common(text, opts)
-        if text.startswith('oper.'):
-            ostr = text.split('.', 1)[1]
-            sraw = self.sw.write_operator(ostr)
-        else:
-            sentence = self.parser.parse(text)
-            sraw = self.sw.write(sentence)
-        rendered = htmlunescape(sraw)
-        node = nodes.inline(text = rendered)
-        set_classes(options)
-        # print('\n'.join((
-        #     '---',
-        #     'name:', name,
-        #     'rawtext:', rawtext,
-        #     'text:', text,
-        #     'options:', str(options),
-        #     'content:', str(content),
-        #     '---',
-        # )))
-        return ([node], [])
 
     @sphinx_role_defaults
     def role_lexrender_oper(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
@@ -494,62 +507,30 @@ class Helper(object):
                 traceback.print_exc()
                 raise e
 
-    def sphinx_filter_signature(self, app, what, name, obj, options, signature, return_annotation):
-        raise NotImplementedError()
-        if what == 'class' and name.startswith('logics.') and '.TableauxRules.' in name:
-            # check if it is in use in rule groups
-            lgc = get_obj_logic(obj)
-            isfound = False
-            if obj in lgc.TableauxRules.closure_rules:
-                print('CLUSRE', name, lgc.name)
-                isfound = True
-            if not isfound:
-                for grp in lgc.TableauxRules.rule_groups:
-                    if obj in grp:
-                        print('Found', name, lgc.name)
-                        isfound = True
-                        break
-            if not isfound:
-                print('NOTFOUND', name, lgc.name)
-                return
-            
-            if signature=='(*args, **opts)':
-                ret = ('()', return_annotation)
-                ret = ('', return_annotation)
-                print((signature, return_annotation), '=>', ret)
-                return '(*args)', return_annotation
-                return ret
-                #eturn ('()', return_annotation)
-        return signature
+    ## Other
+    def should_inherit_ruledoc(self, rule):
+        """
+        if a rule:
+            - is included in TableauRules groups for the module it belongs to
+            - inherits from a rule class that belongs to another logic module
+            - the parent class is in the other logic's rule goups
+            - there is no implementation besides pass
+            - there is no dockblock
+        then:
+            - add a template message like *This rule is the same as* :class:...
+            - append the parent rule's dock
+            - add a hidden indicator in that it was generated
+        """
+        # print('Checking:', str(rule))
+        check = (
+            isnodoc(rule) and isnocode(rule) and
+            selfgrouped(rule) and parentgrouped(rule)
+        )
+        if check:
+            print('INHERIT', str(rule))
+            return True
+        return False
 
-    def sphinx_docs_post_process(self, app, exception):
-        """
-        Post process
-        """
-        raise NotImplementedError()
-        defns = [
-            # (self.doc_replace_lexicals,),
-        ]
-        if not defns:
-            return
-        if exception:
-            print('Not running post process due to exception')
-            return
-        print('Running post-process')
-        for file in [
-            pjoin(dir, file) for dir in [build_dir, pjoin(build_dir, 'logics')]
-            for file in os.listdir(dir) if file.endswith('.html')
-        ]:
-            should_write = False
-            with codecs.open(file, 'r+', 'utf-8') as f:
-                doc = f.read()
-                for func, in defns:
-                    is_change, doc = func(doc)
-                    should_write = should_write or is_change
-                if should_write:
-                    f.seek(0)
-                    f.write(doc)
-                    f.truncate()
 
 # Misc util
 
@@ -575,6 +556,22 @@ def indent_lines(lines, indent=None):
         indent *= ' '
     return [cat(indent, line) if len(line) else line for line in lines]
 
+def safemro(obj):
+    """Try to get the mro of the class, else empty list"""
+    try:
+        return getmro(obj)
+    except:
+        return []
+
+def methmro(meth):
+    """Get the methods of the same name of the mro (safe) of the class the method is bound to"""
+    try:
+        clsmro = getmro(meth.__self__)
+        meths = [getattr(c, meth.__name__, None) for c in clsmro]
+        return [m for m in meths if m]
+    except:
+        return []
+
 def get_obj_logic(obj):
     try:
         return get_logic(obj)
@@ -590,6 +587,75 @@ def get_obj_logic(obj):
         return get_logic('.'.join(parts[0:2]))
     # Last resort
     return get_logic(parts[0])
+
+def isnodoc(obj):
+    return not bool(getattr(obj, '__doc__', False))
+
+def isnocode(obj):
+    try:
+        lines = [
+            line for line in [line.strip() for line in getsource(obj).split('\n')] if line
+        ]
+        isblock = False
+        isfirst = True
+        for line in lines:
+            # print('line:'+line)
+            if isfirst:
+                isfirst = False
+                regex = r'^(class|def) {0}(\([a-zA-Z0-9_.]+\))?:$'.format(obj.__name__)
+                # print('regex: ', regex)
+                m = re.findall(regex, line)
+                # print('m: ', str(m))
+                if not m:
+                    # print('oh nod')
+                    return False
+                continue
+            if line.startswith('#'):
+                continue
+            if line == 'pass':
+                continue
+            if line.startswith('"""'):
+                # not perfect, but more likely to produce false negatives
+                # than false positives
+                isblock = not isblock
+                continue
+            if isblock:
+                continue
+            # print('uh on')
+            return False
+        return True
+    except:
+        # raise
+        return False
+
+def rulegrouped(rule, lgc):
+    if Rule not in safemro(rule):
+        return False
+    try:
+        lgc = get_logic(lgc)
+        rcls = lgc.TableauxRules
+        if rule in rcls.closure_rules:
+            return True
+        for grp in rcls.rule_groups:
+            if rule in grp:
+                return True
+        return False
+    except:
+        return False
+
+def selfgrouped(rule):
+    try:
+        return rulegrouped(rule, get_obj_logic(rule))
+    except:
+        return False
+
+def parentgrouped(rule):
+    try:
+        parent = getmro(rule)[1]
+        plgc = get_obj_logic(parent)
+        return rulegrouped(parent, plgc)
+    except:
+        return False
 
 def set_classes(options):
     """
@@ -611,19 +677,7 @@ class RuleNotFoundError(Exception):
 
 class UnknownLexTypeError(Exception):
     pass
-"""
-if a rule:
-    - is included in TableauRules groups for the module it belongs to
-    - inherits from a rule class that belongs to another logic module
-    - the parent class is in the other logic's rule goups
-    - there is no implementation besides pass
-    - there is no dockblock
-then:
-    - add a template message like *This rule is the same as* :class:...
-    - append the parent rule's dock
-    - add a hidden indicator in that it was generated
-    
-"""
+
 
 
 # class ParseRenderDirective(Directive):
@@ -645,4 +699,59 @@ then:
 #         )))
 #         node = nodes.inline(text=self.sw.write(self.sp.parse('A V ~A')))
 #         return [node]
+# def sphinx_filter_signature(self, app, what, name, obj, options, signature, return_annotation):
+#     raise NotImplementedError()
+#     if what == 'class' and name.startswith('logics.') and '.TableauxRules.' in name:
+#         # check if it is in use in rule groups
+#         lgc = get_obj_logic(obj)
+#         isfound = False
+#         if obj in lgc.TableauxRules.closure_rules:
+#             print('CLUSRE', name, lgc.name)
+#             isfound = True
+#         if not isfound:
+#             for grp in lgc.TableauxRules.rule_groups:
+#                 if obj in grp:
+#                     print('Found', name, lgc.name)
+#                     isfound = True
+#                     break
+#         if not isfound:
+#             print('NOTFOUND', name, lgc.name)
+#             return
         
+#         if signature=='(*args, **opts)':
+#             ret = ('()', return_annotation)
+#             ret = ('', return_annotation)
+#             print((signature, return_annotation), '=>', ret)
+#             return '(*args)', return_annotation
+#             return ret
+#             #eturn ('()', return_annotation)
+#     return signature
+
+# def sphinx_docs_post_process(self, app, exception):
+#     """
+#     Post process
+#     """
+#     raise NotImplementedError()
+#     defns = [
+#         # (self.doc_replace_lexicals,),
+#     ]
+#     if not defns:
+#         return
+#     if exception:
+#         print('Not running post process due to exception')
+#         return
+#     print('Running post-process')
+#     for file in [
+#         pjoin(dir, file) for dir in [build_dir, pjoin(build_dir, 'logics')]
+#         for file in os.listdir(dir) if file.endswith('.html')
+#     ]:
+#         should_write = False
+#         with codecs.open(file, 'r+', 'utf-8') as f:
+#             doc = f.read()
+#             for func, in defns:
+#                 is_change, doc = func(doc)
+#                 should_write = should_write or is_change
+#             if should_write:
+#                 f.seek(0)
+#                 f.write(doc)
+#                 f.truncate()
