@@ -19,12 +19,11 @@ Contents:
    logics
 
 .. toctree::
+   :caption: Python API
    :maxdepth: 2
 
    core-api
    tableaux
-
-   
 
 Indices and tables
 ==================

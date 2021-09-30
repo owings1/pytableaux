@@ -1,13 +1,8 @@
 ************************
-Python API
+Core API
 ************************
 
-The *logic* module is the base module for the Python API.
-
 .. contents:: :local:
-
-Core API
-==========
 
 The core API provides high-level methods for basic usage, with convience
 wrappers for nested classes, that encapsulates things like parsing

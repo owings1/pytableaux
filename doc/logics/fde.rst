@@ -4,7 +4,7 @@ FDE - First Degree Entailment
 
 .. contents:: :local:
 
-FDE is a 4-valued logic (**T**, **F**, **N** and **B**). A common interpretation of these
+FDE is a 4-valued logic (:m:`T`, **F**, **N** and **B**). A common interpretation of these
 values is:
 
 - **T**: just true
