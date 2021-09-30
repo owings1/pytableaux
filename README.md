@@ -50,9 +50,49 @@ Bivalent Modal
 - **S4** - S4 Normal Modal Logic
 - **S5** - S5 Normal Modal Logic
 
+## Dependencies
+
+See [res/python3.dockerfile][dockerfile].
+
+```bash
+pip3 install future jinja2 cherrypy prometheus_client
+```
+
+## Development
+
+Test dependencies:
+
+```bash
+pip3 install pytest coverage
+```
+
+Run tests:
+
+```bash
+python3 -m pytest test
+```
+
+Doc dependencies:
+
+```bash
+pip3 install Sphinx sphinx_rtd_theme
+```
+
+Build docs:
+
+```bash
+cd doc && make clean html
+```
+
+Build docker image
+
+```bash
+docker build -f res/python3.dockerfile .
+```
+
 ## Contributing
 
-Please file any issues on [github][issues].
+You can file any issues on [github][issues], or contact me directly at [doug@dougowings.net][mailto].
 
 ## Copyright & License
 
@@ -63,3 +103,5 @@ Copyright (C) 2014-2021 Doug Owings. Released under the [GNU Affero General Publ
 [license]: https://www.gnu.org/licenses/agpl-3.0.en.html
 [dockerhub]: https://hub.docker.com/r/owings1/pytableaux/
 [issues]: https://github.com/owings1/pytableaux/issues
+[dockerfile]: res/python3.dockerfile
+[mailto]: mailto:doug@dougowings.net

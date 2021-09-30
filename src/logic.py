@@ -106,6 +106,7 @@ def atomic(index, subscript):
         c3 = atomic(2, 3)
         assert sentence2 == parse('c3', notation='polish') # 'c' has index 2 in polish notation
 
+    :rtype: Vocabulary.AtomicSentence
     """
     return Vocabulary.AtomicSentence(index, subscript)
 
@@ -118,6 +119,7 @@ def negate(sentence):
         # not a
         sentence = negate(a)
 
+    :rtype: Vocabulary.OperatedSentence
     """
     return Vocabulary.OperatedSentence('Negation', [sentence])
 
@@ -136,6 +138,8 @@ def negative(sentence):
         s2 = negative(s1)
 
         assert s2 == a
+
+    :rtype: Vocabulary.Sentence
     """
     if sentence.is_operated() and sentence.operator == 'Negation':
         return sentence.operand
@@ -149,6 +153,7 @@ def assertion(sentence):
         a = atomic(0, 0)
         sentence = assertion(a)
 
+    :rtype: Vocabulary.OperatedSentence
     """
     return Vocabulary.OperatedSentence('Assertion', [sentence])
 
@@ -194,6 +199,7 @@ def operate(operator, operands):
     | Necessity              | 1     |
     +------------------------+-------+
 
+    :rtype: Vocabulary.OperatedSentence
     """
     return Vocabulary.OperatedSentence(operator, operands)
 
@@ -203,6 +209,7 @@ def constant(index, subscript):
 
         m = constant(0, 0)
 
+    :rtype: Vocabulary.Constant
     """
     return Vocabulary.Constant(index, subscript)
 
@@ -212,6 +219,7 @@ def variable(index, subscript):
 
         x = variable(0, 0)
 
+    :rtype: Vocabulary.Variable
     """
     return Vocabulary.Variable(index, subscript)
 
@@ -242,6 +250,7 @@ def predicated(predicate, parameters, vocabulary=None):
         # m is between n and o
         sentence2 = predicated('is between', [m, n, o], vocab)
 
+    :rtype: Vocabulary.PredicatedSentence
     """
     return Vocabulary.PredicatedSentence(predicate, parameters, vocabulary)
 
@@ -281,6 +290,7 @@ def quantify(quantifier, variable, sentence):
         # for all x, if x is a bachelor then x is unmarried
         sentence2 = quantify('Universal', x, open_sentence3)
 
+    :rtype: Vocabulary.QuantifiedSentence
     """
     return Vocabulary.QuantifiedSentence(quantifier, variable, sentence)
 
@@ -302,6 +312,7 @@ def parse(string, vocabulary=None, notation=None):
         sentence = parse('Fm', vocab, 'polish')
         assert sentence == predicated(vocab.get_predicate('is tall'), [constant(0, 0)])
 
+    :rtype: Parser
     """
     return create_parser(vocabulary, notation).parse(string)
 
@@ -379,6 +390,8 @@ def tableau(logic, arg=None, **opts):
         proof = tableau('fde', arg)
         proof.build()
         assert proof.invalid
+
+    :rtype: TableauxSystem.Tableau
     """
     return TableauxSystem.Tableau(logic, arg, **opts)
 
