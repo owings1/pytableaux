@@ -85,137 +85,165 @@ num_const_symbols     = 4
 num_atomic_symbols    = 5
 num_predicate_symbols = 4
 
+## =============
+##  Basic Usage
+## =============
+
+class Argument(object):
+    """
+    Create an argument. Parsing is performed with the default notation (Polish)
+    unless otherwise specifed. Example::
+
+        arg1 = Argument('b', ['KaNa'])
+        arg2 = Argument('B', ['A & ~A'], notation='standard')
+        assert arg1 == arg2
+
+    An argument must have a non-empty conclusion, but premises are optional::
+
+        arg = Argument('AaNa')
+
+    You can also pass in sentence objects directly::
+
+        arg1 = Argument('A V ~A', notation='standard')
+        arg2 = Argument(arg1.conclusion)
+        assert arg1 == arg2
+    """
+    def __init__(self, conclusion, premises=None, notation=None, vocabulary=None, title=None):
+        self.premises = []
+        if premises != None:
+            for premise in premises:
+                if isinstance(premise, basestring):
+                    premise = parse(premise, notation=notation, vocabulary=vocabulary)
+                self.premises.append(premise)
+        if isinstance(conclusion, basestring):
+            conclusion = parse(conclusion, notation=notation, vocabulary=vocabulary)
+        self.conclusion = conclusion
+        self.title      = title
+
+    def __repr__(self):
+        if self.title is None:
+            return [self.premises, self.conclusion].__repr__()
+        return [self.premises, self.conclusion, {'title': self.title}].__repr__()
+
+    def __hash__(self):
+        return hash((self.conclusion,) + tuple(self.premises))
+
+    def __eq__(self, other):
+        """
+        Two arguments are considered equal just when their conclusions are equal, and their
+        premises are equal (and in the same order)::
+
+        arg1 = Argument('Kab', ['a', 'b'])
+        arg2 = Argument('Kab', ['a', 'b'])
+        assert arg2 == arg1
+
+        arg3 = Argument('Kab', ['b', 'a'])
+        assert arg3 != arg1
+
+        # The title is not considered in equality.
+        arg4 = Argument('Kab', ['a', 'b'], title='My Argument')
+        assert arg4 == arg1
+        assert arg4.title != arg1.title
+        """
+        return isinstance(other, self.__class__) and hash(self) == hash(other)
+
+    def __ne__(self, other):
+        return not isinstance(other, self.__class__) or hash(self) != hash(other)
+
+# deprecated, for compatibility
+argument = Argument
+
+def tableau(logic, arg=None, **opts):
+    """
+    Create a tableau for the given logic and argument. Example::
+
+        arg = Argument(premises=['a'], conclusion='b')
+        proof = tableau('fde', arg)
+        proof.build()
+        assert proof.invalid
+
+    :param str logic: The logic.
+    :param Argument arg: The argument instance.
+    :rtype: TableauxSystem.Tableau
+    """
+    return TableauxSystem.Tableau(logic, arg, **opts)
+
+def render(proof, format='html', notation=None, **opts):
+    """
+    Render a tableau proof. Example::
+
+        nt = 'standard'
+        arg = Argument('B', ['A', 'A > B'], notation=nt)
+        proof = tableau('CPL', arg).build()
+        text = render(proof, notation=nt)
+
+    :param TableauxSystem.Tableau proof: The built tableau proof instance.
+    :param str format: The output format. Currently *html* is the only
+        useful one.
+    :param str notation: The notation to use, either *polish* or *standard*.
+        Default is ``default_notation``.
+    :param any opts: Additional options to pass to the proof writer.
+    :return: The output string.
+    :rtype: str
+    """
+    sw = create_swriter(notation, **opts)
+    pw = _get_module('writers', format).Writer(sw = sw, **opts)
+    return pw.write(proof)
+
+def parse(string, notation=None, vocabulary=None):
+    """
+    Parse a string and return a sentence. If ``vocabulary`` is passed, the parser
+    will use its user-defined predicates. The ``notation`` parameter can be either
+    a notation module or a string of the module name. Example::
+
+        sentence1 = parse('Kab', notation='polish')
+        assert sentence1 == operate('Conjunction', [atomic(0, 0), atomic(1, 0)])
+        sentence2 = parse('A & B', notation='standard')
+        assert sentence2 == sentence1
+
+    Example using user-defined predicates from a vocabulary::
+    
+        vocab = Vocabulary([('is tall', 0, 0, 1)])
+        # m is tall
+        sentence = parse('Fm', vocab, 'polish')
+        assert sentence == predicated(vocab.get_predicate('is tall'), [constant(0, 0)])
+
+    :rtype: Parser
+    """
+    return create_parser(vocabulary, notation).parse(string)
+
+## ========================
+##  Sentence Construction
+## ========================
+
 def atomic(index, subscript):
     """
     Return an atomic sentence represented by the given index and subscript integers.
     Examples::
 
-        a  = atomic(index=0, subscript=0)
-        a0 = atomic(0, 0)
-        assert a == a0
+        s1 = atomic(0, 0)
+        s2 = parse('a', notation='polish')
+        assert s1 == s2
         
-        b  = atomic(1, 0)
-        a4 = atomic(0, 4)
-        
-        c3 = atomic(2, 3)
-        assert sentence2 == parse('c3', notation='polish') # 'c' has index 2 in polish notation
-
-    :rtype: Vocabulary.AtomicSentence
-    """
-    return Vocabulary.AtomicSentence(index, subscript)
-
-def negate(sentence):
-    """
-    Negate a sentence and return the negated sentence. This is shorthand for 
-    ``operate('Negation', [sentence])``. Example::
-
-        a = atomic(0, 0)
-        # not a
-        sentence = negate(a)
-
-    :rtype: Vocabulary.OperatedSentence
-    """
-    return Vocabulary.OperatedSentence('Negation', [sentence])
-
-def negative(sentence):
-    """
-    Either negate this sentence, or, if it is a negated sentence, return its
-    negatum, i.e., "un-negate" the sentence. Example::
-
-        # A
-        a = atomic(0, 0)
-
-        # ~A
-        s1 = negate(a)
-
-        # A again
-        s2 = negative(s1)
-
-        assert s2 == a
+        s3 = atomic(2, 3)
+        s4 = parse('C3', notation='standard')
+        assert s3 == s4
 
     :rtype: Vocabulary.Sentence
     """
-    if sentence.is_operated() and sentence.operator == 'Negation':
-        return sentence.operand
-    return negate(sentence)
-
-def assertion(sentence):
-    """
-    Apply the assertion operator to the sentence. This is shorthand for
-    ``operate('Assertion', [sentence])``. Example::
-
-        a = atomic(0, 0)
-        sentence = assertion(a)
-
-    :rtype: Vocabulary.OperatedSentence
-    """
-    return Vocabulary.OperatedSentence('Assertion', [sentence])
-
-def operate(operator, operands):
-    """Apply an operator to a list of sentences (operands).
-    Examples::
-
-        a = atomic(0, 0)
-        b = atomic(1, 0)
-
-        # a or b
-        sentence2 = operate('Disjunction', [a, b])
-
-        # a or b, and not b
-        sentence4 = operate('Conjunction', [sentence2, negate(b)])
-
-        # if a or b, and not b, then a
-        sentence5 = operate('Conditional', [sentence4, a])
-
-    Available operators are:
-
-    +------------------------+-------+
-    | Operator Name          | Arity |
-    +========================+=======+
-    | Assertion              | 1     |
-    +------------------------+-------+
-    | Negation               | 1     |
-    +------------------------+-------+
-    | Conjunction            | 2     |
-    +------------------------+-------+
-    | Disjunction            | 2     |
-    +------------------------+-------+
-    | Material Conditional   | 2     |
-    +------------------------+-------+
-    | Material Biconditional | 2     |
-    +------------------------+-------+
-    | Conditional            | 2     |
-    +------------------------+-------+
-    | Biconditional          | 2     |
-    +------------------------+-------+
-    | Possibility            | 1     |
-    +------------------------+-------+
-    | Necessity              | 1     |
-    +------------------------+-------+
-
-    :rtype: Vocabulary.OperatedSentence
-    """
-    return Vocabulary.OperatedSentence(operator, operands)
+    return Vocabulary.AtomicSentence(index, subscript)
 
 def constant(index, subscript):
-    """Return a constant representend by the given index and subscript integers.
+    """
+    Return a constant representend by the given index and subscript integers.
     Example::
 
-        m = constant(0, 0)
+        c1 = constant(0, 0)
+        c2 = parse('a', )
 
     :rtype: Vocabulary.Constant
     """
     return Vocabulary.Constant(index, subscript)
-
-def variable(index, subscript):
-    """
-    Return a variable representend by the given index and subscript integers::
-
-        x = variable(0, 0)
-
-    :rtype: Vocabulary.Variable
-    """
-    return Vocabulary.Variable(index, subscript)
 
 def predicated(predicate, parameters, vocabulary=None):
     """
@@ -244,9 +272,19 @@ def predicated(predicate, parameters, vocabulary=None):
         # m is between n and o
         sentence2 = predicated('is between', [m, n, o], vocab)
 
-    :rtype: Vocabulary.PredicatedSentence
+    :rtype: Vocabulary.Sentence
     """
     return Vocabulary.PredicatedSentence(predicate, parameters, vocabulary)
+
+def variable(index, subscript):
+    """
+    Return a variable representend by the given index and subscript integers::
+
+        x = variable(0, 0)
+
+    :rtype: Vocabulary.Variable
+    """
+    return Vocabulary.Variable(index, subscript)
 
 def quantify(quantifier, variable, sentence):
     """
@@ -284,110 +322,80 @@ def quantify(quantifier, variable, sentence):
         # for all x, if x is a bachelor then x is unmarried
         sentence2 = quantify('Universal', x, open_sentence3)
 
-    :rtype: Vocabulary.QuantifiedSentence
+    :rtype: Vocabulary.Sentence
     """
     return Vocabulary.QuantifiedSentence(quantifier, variable, sentence)
 
-def parse(string, vocabulary=None, notation=None):
+def operate(operator, operands):
     """
-    Parse a string and return a sentence. If ``vocabulary`` is passed, the parser
-    will use its user-defined predicates. The ``notation`` parameter can be either
-    a notation module or a string of the module name. Example::
-
-        sentence1 = parse('Kab', notation='polish')
-        assert sentence1 == operate('Conjunction', [atomic(0, 0), atomic(1, 0)])
-        sentence2 = parse('A & B', notation='standard')
-        assert sentence2 == sentence1
-
-    Example using user-defined predicates from a vocabulary::
-    
-        vocab = Vocabulary([('is tall', 0, 0, 1)])
-        # m is tall
-        sentence = parse('Fm', vocab, 'polish')
-        assert sentence == predicated(vocab.get_predicate('is tall'), [constant(0, 0)])
-
-    :rtype: Parser
-    """
-    return create_parser(vocabulary, notation).parse(string)
-
-class argument(object):
-    """
-    Create an argument. You can pass in strings to be parsed, or sentence objects.
-    The default notation for parsing is `polish`, or you can choose `standard`::
-
-        arg1 = argument(conclusion='b', premises=['KaNa'])
-
-        arg2 = argument(conclusion='B', premises=['A & ~A'], notation='standard')
-
-        assert arg1 == arg2
-
-    An argument must have a non-empty conclusion, but premises are optional::
-
-        arg = argument('AaNa')
-
-    Using low-level APIs::
+    Apply an operator to a list of sentences (operands). Examples::
 
         a = atomic(0, 0)
         b = atomic(1, 0)
-        a_then_b = operate('Conditional', [a, b])
 
-        # Modus Ponens
-        arg = argument(conclusion=b, premises=[a, a_then_b])
+        # a or b
+        sentence2 = operate('Disjunction', [a, b])
 
-    Two arguments are considered equal just when their conclusions are equal, and their
-    premises are equal (and in the same order)::
+        # a or b, and not b
+        sentence4 = operate('Conjunction', [sentence2, negate(b)])
 
-        arg1 = argument('Kab', ['a', 'b'])
-        arg2 = argument('Kab', ['a', 'b'])
-        assert arg2 == arg1
+        # if a or b, and not b, then a
+        sentence5 = operate('Conditional', [sentence4, a])
 
-        arg3 = argument('Kab', ['b', 'a'])
-        assert arg3 != arg1
+    See :ref:`operators-table`.
 
-        # The title is not considered in equality.
-        arg4 = argument('Kab', ['a', 'b'], title='My Argument')
-        assert arg4 == arg1
-        assert arg4.title != arg1.title
+    :rtype: Vocabulary.Sentence
     """
-    def __init__(self, conclusion=None, premises=None, title=None, notation=None, vocabulary=None):
-        self.premises = []
-        if premises != None:
-            for premise in premises:
-                if isinstance(premise, basestring):
-                    premise = parse(premise, vocabulary, notation)
-                self.premises.append(premise)
-        if isinstance(conclusion, basestring):
-            conclusion = parse(conclusion, vocabulary, notation)
-        self.conclusion = conclusion
-        self.title      = title
+    return Vocabulary.OperatedSentence(operator, operands)
 
-    def __repr__(self):
-        if self.title is None:
-            return [self.premises, self.conclusion].__repr__()
-        return [self.premises, self.conclusion, {'title': self.title}].__repr__()
-
-    def __hash__(self):
-        return hash((self.conclusion,) + tuple(self.premises))
-
-    # Use hash for equality, which does not include the title
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and hash(self) == hash(other)
-
-    def __ne__(self, other):
-        return not isinstance(other, self.__class__) or hash(self) != hash(other)
-
-def tableau(logic, arg=None, **opts):
+def negate(sentence):
     """
-    Create a tableau for the given logic and argument. Example::
+    Negate a sentence and return the negated sentence. This is shorthand for 
+    ``operate('Negation', [sentence])``. Example::
 
-        arg = argument(premises=['a'], conclusion=['b'])
-        proof = tableau('fde', arg)
-        proof.build()
-        assert proof.invalid
+        s1 = atomic(0, 0)
+        s2 = negate(s1)
+        s3 = parse('Na', notation='polish')
+        assert s2 == s3
 
-    :rtype: TableauxSystem.Tableau
+    :rtype: Vocabulary.OperatedSentence
     """
-    return TableauxSystem.Tableau(logic, arg, **opts)
+    return Vocabulary.OperatedSentence('Negation', [sentence])
+
+def negative(sentence):
+    """
+    Either negate this sentence, or, if it is a negated sentence, return its
+    negatum, i.e., "un-negate" the sentence. Example::
+
+        s1 = atomic(0, 0)
+        s2 = negate(s1)
+        s3 = negative(s2)
+        assert s1 == s3
+
+    :return: The sentence.
+    :rtype: Vocabulary.Sentence
+    """
+    if sentence.is_operated() and sentence.operator == 'Negation':
+        return sentence.operand
+    return negate(sentence)
+
+def assertion(sentence):
+    """
+    Apply the assertion operator to the sentence. This is shorthand for
+    ``operate('Assertion', [sentence])``. Example::
+
+        s1 = atomic(0, 0)
+        s2 = assertion(s1)
+        s3 = parse('Ta', notation='polish')
+        assert s2 == s3
+
+    :rtype: Vocabulary.OperatedSentence
+    """
+    return Vocabulary.OperatedSentence('Assertion', [sentence])
+
+## =====================
+##  Lexical Inspection
+## ====================
 
 def arity(operator):
     """
@@ -398,6 +406,11 @@ def arity(operator):
         assert arity(operate('Negation', [atomic(0, 0)]).operator) == 1
 
     Note: to get the arity of a predicate, use ``predicate.arity``.
+
+    :param str operator: The operator.
+    :return: The arity of the operator.
+    :rtype: int
+    :raises KeyError: if the operator does not exist.
     """
     return operators[operator]
 
@@ -412,6 +425,9 @@ def is_constant(obj):
         # must be an instance of Vocabulary.Constant
         assert not is_constant([0, 0])
 
+    :param any obj: The object to check.
+    :return: Whether it is a constant.
+    :rtype: bool
     """
     return isinstance(obj, Vocabulary.Constant)
 
@@ -445,6 +461,10 @@ def is_predicate(obj):
     """
     return isinstance(obj, Vocabulary.Predicate)
 
+## ===================
+##  Utility Functions
+## ===================
+
 def get_logic(arg):
     """
     Get the logic module from the specified name. Example::
@@ -472,15 +492,18 @@ def get_system_predicate(name):
     return Vocabulary.get_system_predicate(name)
 
 def create_swriter(notation=None, symbol_set=None, **kw):
-    if notation == None:
+    if not notation:
         notation = default_notation
     notation = _get_module('notations', notation)
     return notation.Writer(symbol_set = symbol_set)
 
-def create_parser(vocabulary=None, notation=None):
-    if vocabulary is None:
+def create_parser(notation=None, vocabulary=None):
+    if isinstance(notation, Vocabulary) or isinstance(vocabulary, basestring):
+        # Accept inverted args for backwards compatibility.
+        notation, vocabulary = (vocabulary, notation)
+    if not vocabulary:
         vocabulary = Vocabulary()
-    if notation == None:
+    if not notation:
         notation = default_notation
     notation = _get_module('notations', notation)
     return notation.Parser(vocabulary)
@@ -2956,6 +2979,7 @@ class TableauxSystem(object):
         def document_footer(self):
             return ''
 
+        # TODO: simplify when the options are passed, should be only in constructor.
         def write(self, tableau, notation = None, symbol_set = None, sw = None, **options):
             opts = dict(self.defaults)
             opts.update(options)
@@ -3102,18 +3126,6 @@ class Parser(object):
     # - Operator symbols
     # - Atomic sentence (proposition) symbols
 
-    class ParseError(Exception):
-        pass
-
-    class ParserThreadError(ParseError):
-        pass
-
-    class UnboundVariableError(ParseError):
-        pass
-
-    class BoundVariableError(ParseError):
-        pass
-
     class SymbolSet(object):
 
         def __init__(self, name, m):
@@ -3165,10 +3177,241 @@ class Parser(object):
         self.vocabulary = vocabulary
         self.__state = self.__State(self)
 
-    def chomp(self):
-        # Proceeed through whitepsace.
-        while self.has_current() and self.typeof(self.current()) == 'whitespace':
-            self.pos += 1
+    def parse(self, string):
+        """
+        Parse a sentence from an input string.
+
+        :param str string: The input string.
+        :return: The parsed sentence.
+        :rtype: Vocabulary.Sentence
+        :raises Parser.ParseError:
+        """
+        with self.__state:
+            self.s   = list(string)
+            self.pos = 0
+            self.chomp()
+            if not self.has_current():
+                raise Parser.ParseError('Input cannot be empty.')
+            s = self.read()
+            self.chomp()
+            if self.has_current():
+                raise Parser.ParseError(
+                    "Unexpected character '{0}' at position {1}.".format(self.current(), self.pos)
+                )
+        return s
+
+    def argument(self, conclusion=None, premises=[], title=None):
+        """
+        Parse the input strings and create an argument.
+
+        :param str conclusion: The argument's conclusion.
+        :param list premises: List of premise strings, if any.
+        :param str title: The title to pass to the argument's constructor.
+        :return: The argument.
+        :rtype: argument
+        :raises Parser.ParseError:
+        """
+        return argument(
+            conclusion = self.parse(conclusion),
+            premises = [self.parse(s) for s in premises],
+            title = title
+        )
+
+    ## ==========================================
+    ##  Medium-level parsing methods - Sentences
+    ## ==========================================
+
+    def read(self):
+        """
+        Internal entrypoint for reading a sentence. Implementation is recursive.
+        This provides the default implementation for prefix notation sentences,
+        i.e. atomic, predicated, and quantified sentences.
+
+        This does not parse operated sentences, Subclasses *must* override
+        this method, and delegate to ``super()`` for the default implementation
+        when appropriate.
+
+        :rtype: Vocabulary.Sentence
+        :meta private:
+        :raises Parser.ParseError:
+        """
+        ctype = self.assert_current()
+        if ctype == 'user_predicate' or ctype == 'system_predicate':
+            s = self.read_predicate_sentence()
+        elif ctype == 'quantifier':
+            s = self.read_quantified_sentence()
+        elif ctype == 'atomic':
+            s = self.read_atomic()
+        else:
+            raise Parser.ParseError(
+                "Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos)
+            )
+        return s
+
+    def read_atomic(self):
+        """
+        Read an atomic sentence starting from the current character.
+
+        :rtype: Vocabulary.AtomicSentence
+        :meta private:
+        """
+        return atomic(**self.read_item())
+
+    def read_predicate_sentence(self):
+        """
+        Read predicated sentence starting from the current character.
+
+        :rtype: Vocabulary.PredicatedSentence
+        :meta private:
+        """
+        predicate = self.read_predicate()
+        params = self.read_parameters(predicate.arity)
+        return predicated(predicate, params)
+
+    def read_quantified_sentence(self):
+        """
+        Read quantified sentence starting from the current character.
+
+        :rtype: Vocabulary.PredicatedSentence
+        :meta private:
+        """
+        self.assert_current_is('quantifier')
+        quantifier = self.symbol_set.indexof('quantifier', self.current())
+        self.advance()
+        v = self.read_variable()
+        if v in list(self.bound_vars):
+            var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
+            raise Parser.BoundVariableError(
+                "Cannot rebind variable '{0}' at position {1}.".format(var_str, self.pos)
+            )
+        self.bound_vars.add(v)
+        sentence = self.read()
+        if v not in list(sentence.variables()):
+            var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
+            raise Parser.BoundVariableError(
+                "Unused bound variable '{0}' at position {1}.".format(var_str, self.pos)
+            )
+        self.bound_vars.remove(v)
+        return quantify(quantifier, v, sentence)
+
+    ## ==========================================
+    ##  Medium-level parsing methods - Parameters
+    ## ==========================================
+
+    def read_predicate(self):
+        """
+        Read a predicate starting from the current character.
+
+        :rtype: Vocabulary.Predicate
+        :meta private:
+        """
+        pchar = self.current()
+        cpos = self.pos
+        try:
+            return self.vocabulary.get_predicate(**self.read_item())
+        except Vocabulary.NoSuchPredicateError:
+            raise Parser.ParseError(
+                "Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos)
+            )
+
+    def read_parameters(self, num):
+        """
+        Read the given number of parameters (constants or variables) starting
+        from the current character.
+
+        :param int num: The number of parameters to read, which should equal the
+            predicate's arity.
+        :return: A list of `Vocabulary.Parameter` objects.
+        :rtype: list
+        :meta private:
+        """
+        parameters = []
+        while len(parameters) < num:
+            parameters.append(self.read_parameter())
+        return parameters
+
+    def read_parameter(self):
+        """
+        Read a single parameter (constant or variable) from the current character.
+
+        :rtype: Vocabulary.Parameter
+        :raises Parser.UnboundVariableError: if a variable appears that has not
+            been bound by a quantifier.
+        :meta private:
+        """
+        ctype = self.assert_current_is('constant', 'variable')
+        if ctype == 'constant':
+            return self.read_constant()
+        else:
+            cpos = self.pos
+            v = self.read_variable()
+            if v not in list(self.bound_vars):
+                var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
+                raise Parser.UnboundVariableError(
+                    "Unbound variable '{0}' at position {1}.".format(var_str, cpos)
+                )
+            return v
+
+    def read_variable(self):
+        """
+        Read a variable starting from the current character.
+
+        :rtype: Vocabulary.Variable
+        :meta private:
+        """
+        return variable(**self.read_item())
+
+    def read_constant(self):
+        """
+        Read a constant starting from the current character.
+
+        :rtype: Vocabulary.Constant
+        :meta private:
+        """
+        return constant(**self.read_item())
+
+    def read_subscript(self):
+        """
+        Read the subscript starting from the current character. If the current
+        character is not a digit, or we are after last, then the subscript is
+        ``0```. Otherwise, all consecutive digit characters are read
+        (whitespace allowed), and then converted to an integer, which is then
+        returned.
+
+        :rtype: int
+        :meta private:
+        """
+        sub = []
+        while self.current() and self.typeof(self.current()) == 'digit':
+            sub.append(self.current())
+            self.advance()
+        if not len(sub):
+            sub.append('0')
+        return int(''.join(sub))
+
+    def read_item(self, ctype = None):
+        """
+        Read an item and its subscript starting from the current character,
+        which must be in the list of characters given. Returns a list containing
+        the index of the current character in the chars list, and the subscript
+        of that item. This is a generic way to read predicates, atomics, variables,
+        constants, etc.
+
+        :rtype: dict
+        :meta private:
+        """
+        if ctype == None:
+            ctype = self.typeof(self.current())
+        else:
+            self.assert_current_is(ctype)
+        index = self.symbol_set.indexof(ctype, self.current())
+        self.advance()
+        subscript = self.read_subscript()
+        return {'index': index, 'subscript': subscript}
+
+    ## ============================
+    ##  Low-level parsing methods
+    ## ============================
 
     def current(self):
         # Get the current character, or ``None`` if after last.
@@ -3193,6 +3436,7 @@ class Parser(object):
 
     def has_next(self, n=1):
         # Check whether there are n-many characters after the current.
+        self.__state.check_started()
         return (len(self.s) > self.pos + n)
 
     def has_current(self):
@@ -3207,171 +3451,50 @@ class Parser(object):
 
     def advance(self, n=1):
         # Advance the current pointer n-many characters, and then eat whitespace.
+        self.__state.check_started()
         self.pos += n  
         self.chomp()
+        return self
 
-    def argument(self, conclusion=None, premises=[], title=None):
-        # Parse a conclusion and premises, and return an argument.
-        return argument(
-            conclusion = self.parse(conclusion),
-            premises = [self.parse(s) for s in premises],
-            title = title
-        )
-
-    def parse(self, string):
-        # Parse an input string, and return a sentence.
-        with self.__state:
-            self.s   = list(string)
-            self.pos = 0
-            self.chomp()
-            if not self.has_current():
-                raise Parser.ParseError('Input cannot be empty.')
-            s = self.read()
-            self.chomp()
-            if self.has_current():
-                raise Parser.ParseError(
-                    "Unexpected character '{0}' at position {1}.".format(self.current(), self.pos)
-                )
-        return s
-
-    def read(self):
-        """
-        Internal entrypoint for reading a sentence. This function is:
-
-        - called recursively.
-        - overridden by subclasses.
-
-        :rtype: Vocabulary.Sentence
-        :meta private:
-        """
-        
-        ctype = self.assert_current()
-        if ctype == 'user_predicate' or ctype == 'system_predicate':
-            s = self.read_predicate_sentence()
-        elif ctype == 'quantifier':
-            s = self.read_quantified_sentence()
-        elif ctype == 'atomic':
-            s = self.read_atomic()
-        else:
-            raise Parser.ParseError(
-                "Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos)
-            )
-        return s
-    def read_item(self, ctype = None):
-        # Read an item and its subscript starting from the current character,
-        # which must be in the list of characters given. Returns a list containing
-        # the index of the current character in the chars list, and the subscript
-        # of that item. This is a generic way to read predicates, atomics, variables,
-        # constants, etc.
-        if ctype == None:
-            ctype = self.typeof(self.current())
-        else:
-            self.assert_current_is(ctype)
-        index = self.symbol_set.indexof(ctype, self.current())
-        self.advance()
-        subscript = self.read_subscript()
-        return {'index': index, 'subscript': subscript}
-
-    def read_subscript(self):
-        # Read the subscript starting from the current character. If the current
-        # character is not a digit, or we are after last, then the subscript is
-        # ``0```. Otherwise, all consecutive digit characters are read
-        # (whitespace allowed), and then converted to an integer, which is then
-        # returned.
-        sub = []
-        while self.current() and self.typeof(self.current()) == 'digit':
-            sub.append(self.current())
-            self.advance()
-        if not len(sub):
-            sub.append('0')
-        return int(''.join(sub))
-
-    def read_atomic(self):
-        # Read an atomic sentence starting from the current character.
-        return atomic(**self.read_item())
-
-    def read_variable(self):
-        # Read a variable starting from the current character.
-        return variable(**self.read_item())
-
-    def read_constant(self):
-        # Read a constant starting from the current character.
-        return constant(**self.read_item())
-
-    def read_predicate(self):
-        # Read a predicate starting from the current character.
-        pchar = self.current()
-        cpos = self.pos
-        try:
-            return self.vocabulary.get_predicate(**self.read_item())
-        except Vocabulary.NoSuchPredicateError:
-            raise Parser.ParseError("Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos))
-
-    def read_parameters(self, num):
-        # Read the parameters (constants or variables) of a predicate sentence,
-        # starting from the current character. If the number of parameters is
-        # not equal to ``num``` (arity), then a ``ParseError``` is raised. If
-        # variables appear that are not in ``self.bound_vars```, then an unbound
-        # variable error is raised. Returns a list of parameter objects (either
-        # variables or constants).
-        parameters = []
-        while len(parameters) < num:
-            parameters.append(self.read_parameter())
-        return parameters
-
-    def read_parameter(self):
-        ctype = self.assert_current_is('constant', 'variable')
-        if ctype == 'constant':
-            return self.read_constant()
-        else:
-            cpos = self.pos
-            v = self.read_variable()
-            if v not in list(self.bound_vars):
-                var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
-                raise Parser.UnboundVariableError(
-                    "Unbound variable '{0}' at position {1}.".format(var_str, cpos)
-                )
-            return v
-
-    def read_predicate_sentence(self):
-        # read a predicate sentence.
-        predicate = self.read_predicate()
-        params = self.read_parameters(predicate.arity)
-        return predicated(predicate, params)
-
-    def read_quantified_sentence(self):
-        self.assert_current_is('quantifier')
-        quantifier = self.symbol_set.indexof('quantifier', self.current())
-        self.advance()
-        v = self.read_variable()
-        if v in list(self.bound_vars):
-            var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
-            raise Parser.BoundVariableError(
-                "Cannot rebind variable '{0}' at position {1}.".format(var_str, self.pos)
-            )
-        self.bound_vars.add(v)
-        sentence = self.read()
-        if v not in list(sentence.variables()):
-            var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
-            raise Parser.BoundVariableError(
-                "Unused bound variable '{0}' at position {1}.".format(var_str, self.pos)
-            )
-        self.bound_vars.remove(v)
-        return quantify(quantifier, v, sentence)
+    def chomp(self):
+        # Proceeed through whitepsace.
+        while self.has_current() and self.typeof(self.current()) == 'whitespace':
+            self.pos += 1
+        return self
 
     def typeof(self, c):
         return self.symbol_set.typeof(c)
+
+    class ParseError(Exception):
+        pass
+
+    class ParserThreadError(ParseError):
+        pass
+
+    class IllegalStateError(ParseError):
+        pass
+
+    class UnboundVariableError(ParseError):
+        pass
+
+    class BoundVariableError(ParseError):
+        pass
 
     class __State(object):
 
         def __init__(self, inst):
             self.inst = inst
             self.is_parsing = False
-            
+
+        def check_started(self):
+            if not self.is_parsing:
+                raise Parser.IllegalStateError(
+                    'Illegal method call -- not parsing'
+                )
         def __enter__(self):
             if self.is_parsing:
                 raise Parser.ParserThreadError(
-                    'Parser is already parsing -- not thread safe.'
+                    'Parser is already parsing -- not thread safe'
                 )
             self.inst.bound_vars = set()
             self.is_parsing = True
