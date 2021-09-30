@@ -40,14 +40,14 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
     Notes
     =====
 
-    - GO has some similarities to `K3`_. Material Identity P{A $ A} and the
-      Law of Excluded Middle P{A V ~A} fail.
+    - GO has some similarities to `K3`_. Material Identity :s:`A $ A` and the
+      Law of Excluded Middle :s:`A V ~A` fail.
 
-    - Unlike `K3`_, there are logical truths, e.g. The Law of Non Contradiction P{~(A & ~A)}.
+    - Unlike `K3`_, there are logical truths, e.g. The Law of Non Contradiction :s:`~(A & ~A)`.
 
     - GO contains an additional conditional operator besides the material conditional,
       which is similar to `L3`_. However, this conditional is *non-primitive*, unlike `L3`_,
-      and it obeys contraction (P{A $ (A $ B)} implies P{A $ B}).
+      and it obeys contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
 
     - This logic was developed as part of this author's dissertation, `Indeterminacy and Logical Atoms`_
       at the University of Connecticut, under `Professor Jc Beall`_.

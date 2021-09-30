@@ -37,10 +37,10 @@ It is similar to `LP`_, with a different conditional operator.
     Notes
     =====
 
-    * With the conditional operator, Modus Ponens (P{A}, P{A $ B}, therefore P{B}) is
+    * With the conditional operator, Modus Ponens (:s:`A`, :s:`A $ B`, therefore :s:`B`) is
       valid in RM3, but it fails in `LP`_.
 
-    * The argument P{B}, therefore P{A $ B} is valid in `LP`_, but not in RM3.
+    * The argument :s:`B`, therefore :s:`A $ B` is valid in `LP`_, but not in RM3.
 
     References
     ==========

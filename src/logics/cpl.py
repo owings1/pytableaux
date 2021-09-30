@@ -108,13 +108,13 @@ class TableauxRules(object):
 
     class SelfIdentityClosure(NonModal, k.TableauxRules.SelfIdentityClosure):
         """
-        A branch is closed if a sentence of the form P{~ a = a} appears on the branch.
+        A branch is closed if a sentence of the form :s:`~ a = a` appears on the branch.
         """
         pass
 
     class NonExistenceClosure(NonModal, k.TableauxRules.NonExistenceClosure):
         """
-        A branch is closed if a sentence of the form P{~!a} appears on the branch.
+        A branch is closed if a sentence of the form :s:`~!a` appears on the branch.
         """
         pass
 

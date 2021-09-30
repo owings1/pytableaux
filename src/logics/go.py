@@ -60,10 +60,10 @@ class Model(k3.Model):
         can have the non-classical **N** value.
 
         This property of "classical containment" means, that we can define a conditional operator
-        that satisfies Identity P{A $ A}. It also allows us to give a formal description of
+        that satisfies Identity :s:`A $ A`. It also allows us to give a formal description of
         a subset of sentences that obey all principles of classical logic. For example, although
-        the Law of Excluded Middle fails for atomic sentences P{A V ~A}, complex sentences -- those
-        with at least one binary connective -- do obey the law: P{(A V A) V ~(A V A)}.
+        the Law of Excluded Middle fails for atomic sentences :s:`A V ~A`, complex sentences -- those
+        with at least one binary connective -- do obey the law: :s:`(A V A) V ~(A V A)`.
         """
         return super().value_of_operated(sentence, **kw)
 

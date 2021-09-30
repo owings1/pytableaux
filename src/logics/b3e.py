@@ -52,20 +52,20 @@ class Model(k3w.Model):
         The value of a sentence with a truth-functional operator is determined by
         the values of its operands according to the following tables.
 
-        Note that the conditional operator O{Conditional} is definable in terms of the
-        assertion operator O{Assertion}, as P{~\\*A V \\*B}.
+        Note that the conditional operator :oper:`Conditional` is definable in terms of the
+        assertion operator :oper:`Assertion`, as :s:`~*A V *B`.
 
         //truth_tables//b3e//
 
-        Bochvar also defined `external` versions of O{Conjunction} and O{Disjunction}
+        Bochvar also defined `external` versions of :oper:`Conjunction` and :oper:`Disjunction`
         using the assertion operator:
 
-        * External conjunction: P{\\*A & \\*B}
-        * External disjunction: P{\\*A V \\*B}
+        * External conjunction: :s:`*A & *B`
+        * External disjunction: :s:`*A V *B`
 
         These connectives always result in a classical value. For compatibility,
-        we use the standard `internal` readings of O{Conjunction} and O{Disjunction},
-        and use the `internal` reading for O{Conditional} and O{Biconditional}.
+        we use the standard `internal` readings of :oper:`Conjunction` and :oper:`Disjunction`,
+        and use the `internal` reading for :oper:`Conditional` and :oper:`Biconditional`.
         """
         return super().value_of_operated(sentence, **kw)
 

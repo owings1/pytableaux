@@ -734,7 +734,7 @@ class TableauxRules(object):
                 
     class SelfIdentityClosure(IsModal, logic.TableauxSystem.ClosureRule):
         """
-        A branch closes when a sentence of the form P{~a = a} appears on the
+        A branch closes when a sentence of the form :s:`~a = a` appears on the
         branch *at any world*.
         """
 
@@ -764,7 +764,7 @@ class TableauxRules(object):
 
     class NonExistenceClosure(IsModal, logic.TableauxSystem.ClosureRule):
         """
-        A branch closes when a sentence of the form P{~!a} appears on the branch
+        A branch closes when a sentence of the form :s:`~!a` appears on the branch
         *at any world*.
         """
 

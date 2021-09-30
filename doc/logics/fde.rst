@@ -38,23 +38,23 @@ values is:
 
         .. method:: value_of_predicated(sentence)
 
-            A sentence with *n*-ary predicate :math:`P` over parameters :math:`<a_0,...,a_n>`
+            A sentence with *n*-ary predicate :math:`P` over parameters {@metuple}
             has the value:
 
-            * :math:`T` iff :math:`<a_0,..,a_n>` is in the *extension* of :math:`P` and
+            * {v.T} iff {@metuple} is in the *extension* of :math:`P` and
               not in the *anti-extension* of :math:`P`.
 
-            * :math:`F` iff :math:`<a_0,...,a_n>` is in the *anti-extension* of :math:`P`
+            * {v.F} iff {@metuple} is in the *anti-extension* of :math:`P`
               and not in the *extension* of :math:`P`.
 
-            * :math:`B` iff :math:`<a_0,...,a_n>` is in **both** the extension and anti-extension
+            * {v.B} iff {@metuple} is in **both** the extension and anti-extension
               of :math:`P`.
 
-            * :math:`N` iff :math:`<a_0,...,a_n>` is in **neither** in the extension nor the 
+            * {v.N} iff {@metuple} is in **neither** in the extension nor the 
               anti-extension of :math:`P`.
 
             Note, for FDE, there is no *exclusivity* nor *exhaustion* constraint on a predicate's
-            extension and anti-extension. This means that :math:`<a_0,...,a_n>` could be in *neither*
+            extension and anti-extension. This means that {@metuple} could be in *neither*
             the extension nor the anti-extension of a predicate, or it could be in *both* the extension
             and the anti-extension.
 
@@ -72,22 +72,22 @@ values is:
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined in terms of the *designated* values **T** and **B**:
+    **Logical Consequence** is defined in terms of the *designated* values {v.T} and {v.B}:
 
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
-      (**T** or **B**) are models where *C* also has a *designated* value.
+      ({v.T} or {v.B}) are models where *C* also has a *designated* value.
 
     Notes
     =====
 
     Some notable features of FDE include:
 
-    * No logical truths. The means that the Law of Excluded Middle P{A V ~A}, and the
-      Law of Non-Contradiction P{~(A & ~A)} fail, as well as Conditional Identity P{A $ A}.
+    * No logical truths. The means that the Law of Excluded Middle :s:`A V ~A`, and the
+      Law of Non-Contradiction :s:`~(A & ~A)` fail, as well as Conditional Identity :s:`A $ A`.
   
     * Failure of Modus Ponens, Modus Tollens, Disjunctive Syllogism, and other Classical validities.
 
-    * DeMorgan laws are valid, as well as Conditional Contraction (P{A $ (A $ B)} implies P{A $ B}).
+    * DeMorgan laws are valid, as well as Conditional Contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
 
     References
     ==========

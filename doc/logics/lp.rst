@@ -54,10 +54,10 @@ the **N** value.
 
     * Everything valid in `FDE`_ is valid in LP.
 
-    * Like `FDE`_, the Law of Non-Contradiction fails P{~(A & ~A)}.
+    * Like `FDE`_, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
 
-    * Unlike `FDE`_, LP has some logical truths. For example, the Law of Excluded Middle (P{(A V ~A)}),
-      and Conditional Identity (P{(A $ A)}).
+    * Unlike `FDE`_, LP has some logical truths. For example, the Law of Excluded Middle (:s:`(A V ~A)`),
+      and Conditional Identity (:s:`(A $ A)`).
 
     * Many classical validities fail, such as Modus Ponens, Modus Tollens, and Disjunctive Syllogism.
 

@@ -56,10 +56,10 @@ if html_theme == 'sphinx_rtd_theme':
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
-html_use_smartypants = True
+html_use_smartypants = False
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
-html_show_sphinx = True
+html_show_sphinx = False
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -86,6 +86,9 @@ master_doc = 'index'
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
 add_module_names = False
+
+def sphinxcontrib_autodoc_filterparams(fun, param):
+    raise NotImplementedError()
 
 def setup(app):
     docutil.init_sphinx(app, {

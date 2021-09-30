@@ -4,7 +4,7 @@ L3 - Łukasiewicz 3-valued Logic
 
 Ł3 is a three-valued logic with values **T**, **F**, and **N**. It is
 similar to `K3`_, but with a different, primitive conditional 
-operator that respects the Law of Conditional Identity (P{A $ A}).
+operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
 .. contents:: :local:
 

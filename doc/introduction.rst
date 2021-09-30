@@ -145,15 +145,15 @@ fixed number of sentences (arity):
 For many logics, the *Conditional* operator is the same as the *Material Conditional*
 operator (and likewise, the *Biconditional* is equivalent to the *Material Biconditional*).
 This comes from the fact that the *Material Conditional* is defined in terms of a
-disjunction, i.e. P{(A > B)} is equivalent to P{(~A V B)}. However, some logics, like L3,
+disjunction, i.e. :s:`(A > B)` is equivalent to :s:`(~A V B)`. However, some logics, like L3,
 define a separate *Conditional* operator, intended to better preserve intuitive
-classical inferences such as *Identity* (P{(A > A)}). For this reason, the *Conditional*
+classical inferences such as *Identity* (:s:`(A > A)`). For this reason, the *Conditional*
 is treated as a separate operator. Thus, in logics that do not define a distinct *Conditional*,
 it will be equivalent to the *Material Conditional*.
 
 Similar reasoning motivates the *Assertion* operator. Most logics do not define an *Assertion*
 operator, but given that some do (e.g. Bochvar), we introduce it to the vocabulary, treating
-it as a transparent operator (P{\*A} == P{A}) in logics that do not traditionally define it.
+it as a transparent operator (:s:`*A` == :s:`A`) in logics that do not traditionally define it.
 
 
 Installation

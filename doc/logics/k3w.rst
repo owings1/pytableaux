@@ -41,7 +41,7 @@ known as Bochvar Internal (B3). A common interpretation of these values is:
     Notes
     =====
 
-    Addition fails in K3W. That is P{A} does not imply P{A V B}.
+    Addition fails in K3W. That is :s:`A` does not imply :s:`A V B`.
 
     For further reading, see:
 

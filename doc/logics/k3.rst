@@ -36,24 +36,24 @@ as :class:`FDE <logics.fde>` without the **B** value.
             Like :class:`FDE <logics.fde>`, K3 predication defines a predicate's *extenstion*
             and *anti-extension*. The value of a predicated sentence is determined as follows:
 
-            A sentence with *n*-ary predicate :math:`P` over parameters :math:`<a_0,...,a_n>`
+            A sentence with *n*-ary predicate :math:`P` over parameters {@metuple}
             has the value:
 
-            * :math:`T` iff :math:`<a_0,..,a_n>` is in the *extension* of :math:`P` and
+            * :math:`T` iff {@metuple} is in the *extension* of :math:`P` and
               not in the *anti-extension* of :math:`P`.
 
-            * :math:`F` iff :math:`<a_0,...,a_n>` is in the *anti-extension* of :math:`P`
+            * :math:`F` iff {@metuple} is in the *anti-extension* of :math:`P`
               and not in the *extension* of :math:`P`.
 
-            * :math:`N` iff :math:`<a_0,...,a_n>` is in **neither** the extension nor the 
+            * :math:`N` iff {@metuple} is in **neither** the extension nor the 
               anti-extension of :math:`P`.
 
             Note, unlike :class:`FDE <logics.fde>`, there is an *exclusivity constraint*
-            on a predicate's extension/anti-extension. This means that :math:`<a_0,...,a_n>`
+            on a predicate's extension/anti-extension. This means that {@metuple}
             cannot be in **both** the extension and the anti-extension of `P`.
 
-            Like `FDE`_, there is no *exhaustion constraint*: there are permissible K3 models
-            where some tuple :math:`<a_0,...,a_n>` is in **neither** the extension nor the
+            Like {@FDE}, there is no *exhaustion constraint*: there are permissible K3 models
+            where some tuple {@metuple} is in **neither** the extension nor the
             anti-extension of some predicate :math:`P`.
 
     Tableaux System
@@ -84,7 +84,7 @@ as :class:`FDE <logics.fde>` without the **B** value.
 
     * Everything valid in :class:`FDE <logics.fde>` is valid in K3.
 
-    * Like :class:`FDE <logics.fde>`, the Law of Excluded Middle, and Conditional Identity P{(A $ A)} fail.
+    * Like :class:`FDE <logics.fde>`, the Law of Excluded Middle, and Conditional Identity :s:`(A $ A)` fail.
 
     * Some cassical validities, such as *Modus Ponens*, *Modus Tollens*, *Disjunctive Syllogism*,
       and *DeMorgan* laws, are valid.

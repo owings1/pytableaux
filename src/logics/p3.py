@@ -48,7 +48,7 @@ class Model(k3.Model):
 
         Most notable is the behavior of negation. Disjunction is the same as in
         `K3`_, but conjunction is quite different, which is defined in terms of
-        disjunction in the standard way (P{~(~A V ~B)}).
+        disjunction in the standard way (:s:`~(~A V ~B)`).
 
         //truth_tables//p3//
 
@@ -61,7 +61,7 @@ class Model(k3.Model):
         NB: P3 did not originally define quantification. This is a novel construction.
 
         The universal quantifier is thought of like `generalized conjunction`.
-        Since P{A & B} is defined as P{~(~A V ~B)}, we can generalize conjunction
+        Since :s:`A & B` is defined as :s:`~(~A V ~B)`, we can generalize conjunction
         in the following way. Take the set of values of the sentence resulting
         from the substitution of the variable with each constant. Then apply
         the negation function to each of those values. Then take the maximum
