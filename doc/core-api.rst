@@ -40,3 +40,29 @@ sentences and building proofs for difference logics.
     .. autofunction:: quantify
 
     .. autofunction:: operate
+
+    .. autofunction:: negate
+
+    .. autofunction:: assertion
+
+    .. autofunction:: negative
+
+    Type Inspection
+    ---------------
+
+    .. autofunction:: is_constant
+
+    .. autofunction:: is_variable
+
+    .. autofunction:: is_predicate
+
+    .. autofunction:: arity
+
+    Utilities
+    ---------
+
+    .. autofunction:: create_parser
+
+    .. autofunction:: get_logic
+
+    .. autofunction:: get_system_predicate

@@ -36,9 +36,9 @@ version = logic.version
 # The full version, including alpha/beta/rc tags.
 release = version
 
-#pygments_style = 'colorful'
+pygments_style = 'colorful'
 #pygments_style = 'xcode'
-pygments_style = 'material'
+#pygments_style = 'material'
 
 # html_theme = 'default'
 html_theme = 'sphinx_rtd_theme'
@@ -72,10 +72,10 @@ htmlhelp_basename = 'pytableauxdoc'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', 'templates/*']
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+#templates_path = ['_templates']
 
 # The suffix of source filenames.
 source_suffix = '.rst'

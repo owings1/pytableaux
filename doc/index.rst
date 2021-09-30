@@ -21,7 +21,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   logic
+   core-api
 
 .. toctree::
    :maxdepth: 2

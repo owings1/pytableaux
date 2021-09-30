@@ -251,27 +251,28 @@ def predicated(predicate, parameters, vocabulary=None):
     ``predicate`` can  either be the name of a predicate or a predicate object.
     Examples using system predicates (Existence, Identity)::
 
-        m = constant(0, 0)
-        sentence = predicated('Existence', [m])
+        c1 = constant(0, 0)
+        s1 = predicated('Existence', [c1])
 
-        n = constant(1, 0)
-        sentence2 = predicated('Identity', [m, n])
+        c2 = constant(1, 0)
+        s3 = predicated('Identity', [c1, c2])
 
-    Examples using a vocabulary of user-defined predicates::
+    Example using a vocabulary with user-defined predicate::
 
-        vocab = Vocabulary([('is tall', 0, 0, 1)])
-        m = constant(0, 0)
-
-        # m is tall
-        sentence = predicated('is tall', [m], vocab)
-
+        vocab = Vocabulary()
         vocab.declare_predicate(name='is between', index=1, subscript=0, arity=3)
-        n = constant(1, 0)
-        o = constant(2, 0)
+        c1 = constant(1, 0)
+        c2 = constant(2, 0)
+        c3 = constant(3, 0)
+        s1 = predicated('is between', [c1, c2, c3], vocab)
 
-        # m is between n and o
-        sentence2 = predicated('is between', [m, n, o], vocab)
-
+    :param str predicate: The predicate name or object.
+    :param list parameters: The list of parameter objects. Must be the same
+        number as the predicate's arity.
+    :type parameters: list(Vocabulary.Parameter)
+    :param Vocabulary vocabulary: The vocabulary instance for user-defined
+        predicates.
+    :return: The predicated sentence.
     :rtype: Vocabulary.Sentence
     """
     return Vocabulary.PredicatedSentence(predicate, parameters, vocabulary)
@@ -330,59 +331,43 @@ def operate(operator, operands):
     """
     Apply an operator to a list of sentences (operands). Examples::
 
-        a = atomic(0, 0)
-        b = atomic(1, 0)
+        s1 = atomic(0, 0)
+        s2 = atomic(1, 0)
+        s3 = operate('Disjunction', [s1, s2])
+        s4 = parse('A V B', notation='standard')
+        assert s3 == s4
 
-        # a or b
-        sentence2 = operate('Disjunction', [a, b])
-
-        # a or b, and not b
-        sentence4 = operate('Conjunction', [sentence2, negate(b)])
-
-        # if a or b, and not b, then a
-        sentence5 = operate('Conditional', [sentence4, a])
+        s5 = operate('Negation', [s1])
+        s6 = parse('Na', notation='polish')
+        assert s5 == s6
 
     See :ref:`operators-table`.
 
+    :param str operator: The operator name.
+    :param list operands: The operands.
+    :type operands: list(Vocabulary.Sentence)
     :rtype: Vocabulary.Sentence
     """
     return Vocabulary.OperatedSentence(operator, operands)
 
 def negate(sentence):
     """
-    Negate a sentence and return the negated sentence. This is shorthand for 
-    ``operate('Negation', [sentence])``. Example::
+    Negate a sentence and return the negated sentence. Example::
 
         s1 = atomic(0, 0)
         s2 = negate(s1)
         s3 = parse('Na', notation='polish')
         assert s2 == s3
 
+    :param Vocabulary.Sentence sentence: The sentence to negate.
+    :return: The negated sentence.
     :rtype: Vocabulary.OperatedSentence
     """
     return Vocabulary.OperatedSentence('Negation', [sentence])
 
-def negative(sentence):
-    """
-    Either negate this sentence, or, if it is a negated sentence, return its
-    negatum, i.e., "un-negate" the sentence. Example::
-
-        s1 = atomic(0, 0)
-        s2 = negate(s1)
-        s3 = negative(s2)
-        assert s1 == s3
-
-    :return: The sentence.
-    :rtype: Vocabulary.Sentence
-    """
-    if sentence.is_operated() and sentence.operator == 'Negation':
-        return sentence.operand
-    return negate(sentence)
-
 def assertion(sentence):
     """
-    Apply the assertion operator to the sentence. This is shorthand for
-    ``operate('Assertion', [sentence])``. Example::
+    Apply the assertion operator to the sentence. Example::
 
         s1 = atomic(0, 0)
         s2 = assertion(s1)
@@ -393,17 +378,58 @@ def assertion(sentence):
     """
     return Vocabulary.OperatedSentence('Assertion', [sentence])
 
+def negative(sentence):
+    """
+    Either negate a sentence, or, if it is a negated sentence, return its
+    negatum, i.e., "un-negate" the sentence. Example::
+
+        s1 = atomic(0, 0)
+        s2 = negate(s1)
+        s3 = negative(s2)
+        assert s1 == s3
+
+    :param Vocabulary.Sentence sentence: The sentence to negate or "un-negate".
+    :return: The resulting sentence.
+    :rtype: Vocabulary.Sentence
+    """
+    if sentence.is_operated() and sentence.operator == 'Negation':
+        return sentence.operand
+    return negate(sentence)
+
 ## =====================
 ##  Lexical Inspection
 ## ====================
 
+def is_constant(obj):
+    """
+    Check whether an object is a constant. 
+
+    :param any obj: The object to check.
+    :rtype: bool
+    """
+    return isinstance(obj, Vocabulary.Constant)
+
+def is_variable(obj):
+    """
+    Check whether an object is a variable
+
+    :param any obj: The object to check.
+    :rtype: bool
+    """
+    return isinstance(obj, Vocabulary.Variable)
+
+def is_predicate(obj):
+    """
+    Check whether an object is a predicate.
+
+    :param any obj: The object to check.
+    :rtype: bool
+    """
+    return isinstance(obj, Vocabulary.Predicate)
+
 def arity(operator):
     """
-    Get the arity of an operator. Examples::
-
-        assert arity('Conjunction') == 2
-        assert arity('Negation') == 1
-        assert arity(operate('Negation', [atomic(0, 0)]).operator) == 1
+    Get the arity of an operator.
 
     Note: to get the arity of a predicate, use ``predicate.arity``.
 
@@ -414,90 +440,24 @@ def arity(operator):
     """
     return operators[operator]
 
-def is_constant(obj):
-    """
-    Check whether a parameter is a constant. Example::
-
-        assert is_constant(constant(0, 0))
-
-        assert not is_constant(variable(0, 0))
-
-        # must be an instance of Vocabulary.Constant
-        assert not is_constant([0, 0])
-
-    :param any obj: The object to check.
-    :return: Whether it is a constant.
-    :rtype: bool
-    """
-    return isinstance(obj, Vocabulary.Constant)
-
-def is_variable(obj):
-    """
-    Check whether a parameter is a variable. Example::
-
-        assert is_constant(variable(0, 0))
-
-        assert not is_constant(constant(0, 0))
-
-        # must be an instance of Vocabulary.Variable
-        assert not is_constant([0, 0])
-
-    """
-    return isinstance(obj, Vocabulary.Variable)
-
-def is_predicate(obj):
-    """
-    Check whether a parameter is a predicate. Example::
-
-        assert is_predicate(get_system_predicate('Identity'))
-
-        assert not is_predicate(constant(0, 0))
-
-        s = parse('a = a', notation='standard')
-        assert is_predicate(s.predicate)
-
-        # must be an instance of Vocabulary.Predicate
-        assert not is_predicate('Identity') 
-    """
-    return isinstance(obj, Vocabulary.Predicate)
-
 ## ===================
 ##  Utility Functions
 ## ===================
 
-def get_logic(arg):
-    """
-    Get the logic module from the specified name. Example::
-
-        fde = get_logic('fde')
-
-        # same as importing the module directly
-        import logics.fde
-        assert fde == logics.fde
-
-        # case-insensitive
-        assert get_logic('FDE') == fde
-
-        # returns the module if passed
-        assert get_logic(get_logic('fde')) == fde
-    """
-    return _get_module('logics', arg)
-
-def get_system_predicate(name):
-    """
-    Get a system predicate by name. Example::
-
-        assert get_system_predicate('Identity').arity == 2
-    """
-    return Vocabulary.get_system_predicate(name)
-
-def create_swriter(notation=None, symbol_set=None, **kw):
-    if not notation:
-        notation = default_notation
-    notation = _get_module('notations', notation)
-    return notation.Writer(symbol_set = symbol_set)
-
 def create_parser(notation=None, vocabulary=None):
+    """
+    Create a sentence parser with the given spec. This is
+    useful if you parsing many sentences with the same notation
+    and vocabulary.
+
+    :param str notation: The parser notation. Uses the default notation
+        if not passed.
+    :param Vocabulary vocabulary: The vocabulary instance containing any
+        custom predicate definitions. If not passed, a new instance is
+        created.
+    :return: The parser instance
+    :rtype: Parser
+    """
     if isinstance(notation, Vocabulary) or isinstance(vocabulary, basestring):
         # Accept inverted args for backwards compatibility.
         notation, vocabulary = (vocabulary, notation)
@@ -507,6 +467,39 @@ def create_parser(notation=None, vocabulary=None):
         notation = default_notation
     notation = _get_module('notations', notation)
     return notation.Parser(vocabulary)
+
+def get_logic(name):
+    """
+    Get the logic module from the specified name. The following
+    inputs all return the {@FDE} logic module: *'fde'*, *'FDE'*,
+    *'logics.fde'*. If a module is passed, it is returned.
+
+    :param str name: The logic name.
+    :return: The module for the given logic.
+    :rtype: module
+    :raises ModuleNotFoundError:
+    """
+    return _get_module('logics', name)
+
+def get_system_predicate(name):
+    """
+    Get a system predicate by name. Example::
+
+        pred = get_system_predicate('Identity')
+        assert pred.arity == 2
+
+    :param str name: The predicate name.
+    :return: The predicate instance.
+    :rtype: Vocabulary.Predicate
+    :raises KeyError: if the system predicate does not exist.
+    """
+    return Vocabulary.get_system_predicate(name)
+
+def create_swriter(notation=None, symbol_set=None, **kw):
+    if not notation:
+        notation = default_notation
+    notation = _get_module('notations', notation)
+    return notation.Writer(symbol_set = symbol_set)
 
 class Vocabulary(object):
     """
@@ -1904,8 +1897,8 @@ class TableauxSystem(object):
                 'world1'     : {},
                 'world2'     : {},
                 'w1Rw2'      : {},
-            }
 
+            }
         def has(self, props, ticked=None):
             """
             Check whether there is a node on the branch that matches the given properties,
