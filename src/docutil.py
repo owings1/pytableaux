@@ -21,9 +21,15 @@ import examples, logic, writers.html
 import codecs, inspect, os, re, traceback
 from jinja2 import Environment, FileSystemLoader
 from html import unescape as htmlunescape
-from os.path import join as pjoin
+from os.path import join as pjoin, basename as bname
 from past.builtins import basestring
 from inspect import getmro
+
+from sphinx.util import logging
+from docutils import nodes
+from docutils.parsers.rst import Directive, directives, roles
+
+logger = logging.getLogger(__name__)
 
 # Alias
 from logic import argument, create_parser, create_swriter, get_logic, tableau
@@ -38,6 +44,13 @@ defaults = {
     'vocabulary'       : examples.vocabulary,
 }
 
+# Python domain:
+#    https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html?#the-python-domain
+# Autodoc directives:
+#    https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#directives
+# Built-in roles:
+#    https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html?highlight=ref#role-ref
+
 doc_dir = pjoin(logic.base_dir, 'doc')
 templates_dir = pjoin(doc_dir, 'templates')
 build_dir = pjoin(doc_dir, '_build/html')
@@ -48,10 +61,24 @@ jenv = Environment(
 )
 truth_table_template = jenv.get_template('truth_table.html')
 
+# for replacements
+# lgclist = [
+#     'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
+#     'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
+# ]
+lgclist = [
+    bname(file).upper() for file in
+    os.listdir(pjoin(doc_dir, 'logics'))
+    if file.endswith('.rst')
+]
+
 def init_sphinx(app, opts):
 
     helper = Helper(opts)
 
+    # helper.connect_sphinx(app, 'autodoc-process-signature',
+    #     'sphinx_filter_signature',
+    # )
     helper.connect_sphinx(app, 'autodoc-process-docstring',
         'sphinx_obj_lines_append_autodoc',
         'sphinx_regex_line_replace_autodoc',
@@ -59,11 +86,15 @@ def init_sphinx(app, opts):
 
     helper.connect_sphinx(app, 'source-read',
         'sphinx_regex_line_replace_source',
+        'sphinx_regex_simple_replace_source',
     )
 
     helper.connect_sphinx(app, 'build-finished',
-        'sphinx_docs_post_process',
+
     )
+
+    app.add_role('s', helper.role_lexrender_auto)
+    app.add_role('oper', helper.role_lexrender_oper)
 
     app.add_css_file('css/doc.css')
 
@@ -74,6 +105,11 @@ def init_sphinx(app, opts):
     app.add_css_file('/'.join(['css', themecss]))
 
     app.add_css_file('css/proof.css')
+
+def sphinx_role_defaults(func):
+    func.options = {'class': directives.class_option}
+    func.content = True
+    return func
 
 class Helper(object):
 
@@ -149,26 +185,6 @@ class Helper(object):
         lines = [line.strip() for line in found.__doc__.split('\n')]
         return indent_lines(lines, indent = indent)
 
-    def doc_replace_lexicals(self, doc):
-        """
-        Replace P{A & B} notations with rendered HTML. Operates on the complete
-        HTML doc at the end of the build.
-        """
-        is_change = False
-        sw = self.sw
-        for s in re.findall(r'P{(.*?)}', doc):
-            s1 = htmlunescape(s)
-            is_change = True
-            sentence = self.parser.parse(s1)
-            s2 = sw.write(sentence, drop_parens = True)
-            doc = doc.replace(u'P{' + s + '}', s2)
-        for s in re.findall(r'O{(.*?)}', doc):
-            s1 = htmlunescape(s)
-            is_change = True
-            s2 = sw.write_operator(s1)
-            doc = doc.replace(u'O{' + s + '}', s2)
-        return (is_change, doc)
-
     ## =========================
     ## Sphinx Event Handlers   :
     ## =========================
@@ -195,22 +211,59 @@ class Helper(object):
             self._connids[event] = app.connect(event, dispatch)
         return self
 
+    def sphinx_regex_simple_replace_common(self, lines, is_source=False):
+        logicmatch = '|'.join(v.upper() for v in lgclist)
+        defns = [
+            # Truth values
+            (r'{v.([TBNF])}', ':math:`\\1`'),
+            # Logic class links like {@FDE}
+            (
+                r'{{@({0})}}'.format(logicmatch),
+                lambda pat: (
+                    ':class:`{0} <logics.{1}>`'.format(
+                        pat.group(1), pat.group(1).lower()
+                    )
+                )
+            ),
+            # Meta-tuple params - {@metuple}
+            ('{@metuple}', ':math:`\\\\langle a_0,..,a_n\\\\rangle`'),
+        ]
+        text = '\n'.join(lines)
+        for regex, repl in defns:
+            text = re.sub(regex, repl, text)
+        if is_source:
+            lines[0]= text
+        else:
+            lines.clear()
+            lines.extend(text.split('\n'))
+
+    def sphinx_regex_simple_replace_source(self, app, docname, lines):
+        self.sphinx_regex_simple_replace_common(lines, is_source = True)
+
     def sphinx_regex_line_replace_common(self, lines, is_source=False):
         """
         Replace a line matching a regex with 1 or more lines. Lines could come
         from autodoc extraction or straight from source. In the latter case,
         it is important to observe correct indenting for new lines.
+
+        This matches the first occurrence in a line and replaces that line with
+        the line(s) returned. So these kinds of matches should generally be
+        the only thing on a line.
         """
         defns = [
             (
                 '//ruledoc//',
                 r'(\s*)//ruledoc//(.*?)//(.*)//',
-                lambda indent, lgc, rule: self.lines_rule_docstring(rule, lgc = lgc, indent = indent),
+                lambda indent, lgc, rule: (
+                    self.lines_rule_docstring(rule, lgc = lgc, indent = indent)
+                ),
             ),
             (
                 '//truth_tables//',
                 r'(\s*)//truth_tables//(.*?)//',
-                lambda indent, lgc: self.lines_logic_truth_tables(lgc, indent = indent),
+                lambda indent, lgc: (
+                    self.lines_logic_truth_tables(lgc, indent = indent)
+                ),
             ),
         ]
         proclines = lines[0].split('\n') if is_source else lines
@@ -220,13 +273,14 @@ class Helper(object):
             for indic, regex, func in defns:
                 #print(lines)
                 if indic in line:
-                    match = re.findall(regex, line)
-                    if not match:
+                    matches = re.findall(regex, line)
+                    if not matches:
                         raise BadExpressionError(line)
-                    if isinstance(match[0], basestring):
+                    match = matches[0]
+                    if isinstance(match, basestring):
                         # Corner case of one capture group
-                        match[0] = (match[0],)
-                    rpl[i] = func(*match[0])
+                        match = (match,)
+                    rpl[i] = func(*match)
                     break
             i += 1
         for i in rpl:
@@ -285,29 +339,6 @@ class Helper(object):
             if check():
                 lines += func(obj)
 
-    def sphinx_docs_post_process(self, app, exception):
-        """
-        Modify the final HTML documents.
-        """
-        defns = [
-            (self.doc_replace_lexicals,),
-        ]
-        print('Running post-process')
-        for file in [
-            pjoin(dir, file) for dir in [build_dir, pjoin(build_dir, 'logics')]
-            for file in os.listdir(dir) if file.endswith('.html')
-        ]:
-            should_write = False
-            with codecs.open(file, 'r+', 'utf-8') as f:
-                doc = f.read()
-                for func, in defns:
-                    is_change, doc = func(doc)
-                    should_write = should_write or is_change
-                if should_write:
-                    f.seek(0)
-                    f.write(doc)
-                    f.truncate()
-
     ## ===================
     ## HTML Subroutines  :
     ## ===================
@@ -358,6 +389,85 @@ class Helper(object):
         })
 
     ## ================
+    ## Custom Roles   :
+    ## ================
+
+    def lexrender_common(self, text, opts, what=None):
+        sw = self.sw
+        parse = self.parser.parse
+        if text.startswith('oper.'):
+            what = 'operator'
+            text = text.split('.')[1]
+        # elif text.startswith('pred.'):
+        #     what = 'pred'
+        #     text = text.split('.')[1]
+        elif not what:
+            what = 'sentence'
+        if what == 'sentence':
+            raw = sw.write(parse(text))
+        elif what == 'operator':
+            raw = sw.write_operator(text)
+        else:
+            raise UnknownLexTypeError('Unknown lexical type: {0}'.format(what))
+        rendered = htmlunescape(raw)
+        node = nodes.inline(text = rendered)
+        set_classes(opts)
+        return ([node], [])
+
+    @sphinx_role_defaults
+    def role_lexrender_auto(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
+        """
+        From: https://docutils.sourceforge.io/docs/howto/rst-roles.html
+
+        * ``text``: The interpreted text content.
+
+        * ``options``: A dictionary of directive options for customization
+        (from the `"role" directive`_), to be interpreted by the role
+        function.  Used for additional attributes for the generated elements
+        and other functionality.
+
+        * ``content``: A list of strings, the directive content for
+        customization (from the `"role" directive`_).  To be interpreted by
+        the role function.
+
+        Role functions return a tuple of two values:
+
+        * A list of nodes which will be inserted into the document tree at the
+        point where the interpreted role was encountered (can be an empty
+        list).
+
+        * A list of system messages, which will be inserted into the document tree
+        immediately after the end of the current block (can also be empty).
+        """
+        return self.lexrender_common(text, opts)
+        if text.startswith('oper.'):
+            ostr = text.split('.', 1)[1]
+            sraw = self.sw.write_operator(ostr)
+        else:
+            sentence = self.parser.parse(text)
+            sraw = self.sw.write(sentence)
+        rendered = htmlunescape(sraw)
+        node = nodes.inline(text = rendered)
+        set_classes(options)
+        # print('\n'.join((
+        #     '---',
+        #     'name:', name,
+        #     'rawtext:', rawtext,
+        #     'text:', text,
+        #     'options:', str(options),
+        #     'content:', str(content),
+        #     '---',
+        # )))
+        return ([node], [])
+
+    @sphinx_role_defaults
+    def role_lexrender_oper(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
+        return self.lexrender_common(text, opts, what = 'operator')
+        # if not text.startswith('oper.'):
+        #     text = '.'.join(('oper', text))
+        # return self.role_render_sentence(name, rawtext, text, *args)
+
+    ## ================
     ## Dispatcher     :
     ## ================
 
@@ -366,8 +476,15 @@ class Helper(object):
             try:
                 func(*args)
             except Exception as e:
+                extra = ''
                 if event == 'autodoc-process-docstring' and len(args) > 2:
                     arginfo = str({'what': args[1], 'name': args[2]})
+                elif event == 'source-read' and len(args) > 2:
+                    arginfo = '\n'.join((
+                        '',
+                        'docname: {0}\n'.format(args[1]),
+                        'content: \n\n{0}'.format('\n'.join(args[2])),
+                    ))
                 else:
                     arginfo = str(args)
                 print('\n', '\n'.join((
@@ -382,6 +499,63 @@ class Helper(object):
                 print('Printing traceback')
                 traceback.print_exc()
                 raise e
+
+    def sphinx_filter_signature(self, app, what, name, obj, options, signature, return_annotation):
+        raise NotImplementedError()
+        if what == 'class' and name.startswith('logics.') and '.TableauxRules.' in name:
+            # check if it is in use in rule groups
+            lgc = get_obj_logic(obj)
+            isfound = False
+            if obj in lgc.TableauxRules.closure_rules:
+                print('CLUSRE', name, lgc.name)
+                isfound = True
+            if not isfound:
+                for grp in lgc.TableauxRules.rule_groups:
+                    if obj in grp:
+                        print('Found', name, lgc.name)
+                        isfound = True
+                        break
+            if not isfound:
+                print('NOTFOUND', name, lgc.name)
+                return
+            
+            if signature=='(*args, **opts)':
+                ret = ('()', return_annotation)
+                ret = ('', return_annotation)
+                print((signature, return_annotation), '=>', ret)
+                return '(*args)', return_annotation
+                return ret
+                #eturn ('()', return_annotation)
+        return signature
+
+    def sphinx_docs_post_process(self, app, exception):
+        """
+        Post process
+        """
+        raise NotImplementedError()
+        defns = [
+            # (self.doc_replace_lexicals,),
+        ]
+        if not defns:
+            return
+        if exception:
+            print('Not running post process due to exception')
+            return
+        print('Running post-process')
+        for file in [
+            pjoin(dir, file) for dir in [build_dir, pjoin(build_dir, 'logics')]
+            for file in os.listdir(dir) if file.endswith('.html')
+        ]:
+            should_write = False
+            with codecs.open(file, 'r+', 'utf-8') as f:
+                doc = f.read()
+                for func, in defns:
+                    is_change, doc = func(doc)
+                    should_write = should_write or is_change
+                if should_write:
+                    f.seek(0)
+                    f.write(doc)
+                    f.truncate()
 
 # Misc util
 
@@ -423,8 +597,58 @@ def get_obj_logic(obj):
     # Last resort
     return get_logic(parts[0])
 
+def set_classes(options):
+    """
+    From: https://github.com/docutils-mirror/docutils/blob/master/docutils/parsers/rst/roles.py#L385
+
+    Auxiliary function to set options['classes'] and delete
+    options['class'].
+    """
+    if 'class' in options:
+        assert 'classes' not in options
+        options['classes'] = options['class']
+        del options['class']
+
 class BadExpressionError(Exception):
     pass
 
 class RuleNotFoundError(Exception):
     pass
+
+class UnknownLexTypeError(Exception):
+    pass
+"""
+if a rule:
+    - is included in TableauRules groups for the module it belongs to
+    - inherits from a rule class that belongs to another logic module
+    - the parent class is in the other logic's rule goups
+    - there is no implementation besides pass
+    - there is no dockblock
+then:
+    - add a template message like *This rule is the same as* :class:...
+    - append the parent rule's dock
+    - add a hidden indicator in that it was generated
+    
+"""
+
+
+# class ParseRenderDirective(Directive):
+#     sp = create_parser(
+#         notation = 'standard',
+#         vocabulary = examples.vocabulary,
+#     )
+#     sw = create_swriter(
+#         notation = 'standard',
+#         symbol_set = 'html',
+#     )
+#     has_content = True
+#     required_arguments = 0
+#     optional_arguments = 2
+#     final_argument_whitespace = False
+#     def run(self):
+#         print('\n'.join((
+#             '\ncontent:\n', str(self.content),
+#         )))
+#         node = nodes.inline(text=self.sw.write(self.sp.parse('A V ~A')))
+#         return [node]
+        
