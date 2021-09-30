@@ -22,21 +22,18 @@ Contents:
    :maxdepth: 2
 
    core-api
-
-.. toctree::
-   :maxdepth: 2
-
    tableaux
 
-.. toctree::
-   :maxdepth: 2
-
-   symbols
+   
 
 Indices and tables
 ==================
 
-* :ref:`genindex`
-* :ref:`modindex`
+.. toctree::
+   :maxdepth: 1
+
+   symbols
+   glossary
+
 * :ref:`search`
 

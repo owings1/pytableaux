@@ -20,7 +20,7 @@
 import examples, logic, writers.html
 import codecs, inspect, os, re, traceback
 from jinja2 import Environment, FileSystemLoader
-from html import unescape as htmlun
+from html import escape as htmlesc, unescape as htmlun
 from os.path import join as pjoin, basename as bname
 from past.builtins import basestring
 from inspect import getmro, getsource, isclass, ismethod
@@ -95,6 +95,7 @@ def init_sphinx(app, opts):
 
     app.add_role('s', helper.role_lexrender_auto)
     app.add_role('oper', helper.role_lexrender_oper)
+    app.add_role('m', helper.role_lexrender_meta)
 
     app.add_css_file('css/doc.css')
 
@@ -474,6 +475,35 @@ class Helper(object):
     def role_lexrender_oper(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
         return self.lexrender_common(text, opts, what = 'operator')
 
+    @sphinx_role_defaults
+    def role_lexrender_meta(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
+        
+        ismath = True
+        bs = '\\'
+        if text == 'ntuple':
+            # ntuple
+            rend = cat(bs, 'langle a_0,...,a_n', bs, 'rangle')
+            #rend = ':math:`\\\\langle a_0,...,a_n\\\\rangle`'
+        elif text in ('T', 'F', 'N', 'B'):
+            rend = text
+        else:
+            if '.' in text:
+                pfx, text = text.split('.', 1)
+            else:
+                raise UnknownLexTypeError('Unspecified metalexical type: {0}'.format(text))
+            if pfx == 'v':
+                # truth-values
+                # escape for safety
+                rend = htmlesc(text)
+            else:
+                raise UnknownLexTypeError('Unknown metalexical type: {0}'.format(pfx))
+        if ismath:
+            node = nodes.math(text = rend)
+        else:
+            node = nodes.inline(text = rend)
+        set_classes(opts)
+        return ([node], [])
+
     ## ================
     ## Dispatcher     :
     ## ================
@@ -527,7 +557,7 @@ class Helper(object):
             selfgrouped(rule) and parentgrouped(rule)
         )
         if check:
-            print('INHERIT', str(rule))
+            # print('INHERIT', str(rule))
             return True
         return False
 

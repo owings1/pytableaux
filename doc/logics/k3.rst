@@ -4,8 +4,8 @@ K3 - Strong Kleene Logic
 
 .. contents:: :local:
 
-K3 is a three-valued logic (**T**, **F**, and **N**). It can be understood
-as {@FDE} without the **B** value.
+K3 is a three-valued logic (:m:`T`, :m:`F`, and :m:`N`). It can be understood
+as {@FDE} without the :m:`B` value. :m:`v.B`
 
 .. automodule:: logics.k3
 
@@ -36,24 +36,24 @@ as {@FDE} without the **B** value.
             Like {@FDE}, K3 predication defines a predicate's *extenstion*
             and *anti-extension*. The value of a predicated sentence is determined as follows:
 
-            A sentence with *n*-ary predicate :math:`P` over parameters {@metuple}
+            A sentence with *n*-ary predicate :math:`P` over parameters :m:`ntuple`
             has the value:
 
-            * :math:`T` iff {@metuple} is in the *extension* of :math:`P` and
+            * :m:`T` iff :m:`ntuple` is in the *extension* of :math:`P` and
               not in the *anti-extension* of :math:`P`.
 
-            * :math:`F` iff {@metuple} is in the *anti-extension* of :math:`P`
+            * :m:`F` iff :m:`ntuple` is in the *anti-extension* of :math:`P`
               and not in the *extension* of :math:`P`.
 
-            * :math:`N` iff {@metuple} is in **neither** the extension nor the 
+            * :m:`N` iff :m:`ntuple` is in **neither** the extension nor the 
               anti-extension of :math:`P`.
 
             Note, unlike {@FDE}, there is an *exclusivity constraint*
-            on a predicate's extension/anti-extension. This means that {@metuple}
+            on a predicate's extension/anti-extension. This means that :m:`ntuple`
             cannot be in **both** the extension and the anti-extension of `P`.
 
             Like {@FDE}, there is no *exhaustion constraint*: there are permissible K3 models
-            where some tuple {@metuple} is in **neither** the extension nor the
+            where some tuple :m:`ntuple` is in **neither** the extension nor the
             anti-extension of some predicate :math:`P`.
 
     Tableaux System
@@ -71,11 +71,11 @@ as {@FDE} without the **B** value.
     **Logical Consequence** is defined just like in :ref:`CPL <cpl-consequence>`:
 
         | :math:`C` is a **Logical Consequence** of :math:`A` iff,
-        | in all models where the value of :math:`A`is :math:`T`,
-        | then value of :math:`C` is also :math:`T`.
+        | in all models where the value of :math:`A`is :m:`T`,
+        | then value of :math:`C` is also :m:`T`.
 
     Alternatively, we can use the :ref:`FDE formulation <fde-consequence>`
-    in terms of *designated* values, since K3 has only the designated value :math:`**T**``.
+    in terms of *designated* values, since K3 has only the designated value :m:`T`.
 
     Notes
     =====
@@ -89,11 +89,6 @@ as {@FDE} without the **B** value.
     * Some cassical validities, such as *Modus Ponens*, *Modus Tollens*, *Disjunctive Syllogism*,
       and *DeMorgan* laws, are valid.
 
-
-.. glossary::
-
-    exclusitivity constraint
-        An exclusitivity constraint ...
 
 .. _FDE: fde.html
 .. _CPL: cpl.html
