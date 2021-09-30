@@ -85,12 +85,6 @@ num_const_symbols     = 4
 num_atomic_symbols    = 5
 num_predicate_symbols = 4
 
-def nowms():
-    return int(round(time.time() * 1000))
-
-class BadArgumentError(Exception):
-    pass
-
 def atomic(index, subscript):
     """
     Return an atomic sentence represented by the given index and subscript integers.
@@ -757,6 +751,12 @@ class Vocabulary(object):
             # TODO: Consider removing this way of representing. I think it was
             #       useful in the early stages, but there are several reaons
             #       to abandon it: performance, consisitency, design, etc.
+            # UPDATE:
+            #   Error messages, e.g. in models, convert the sentence to a string,
+            #   so removing this would make it harder to interpret errors. We could
+            #   either find another way to represent them that is still helpful
+            #   in errors, or generalize error handling and leave it to decide how
+            #   to represent sentences.
             from notations import polish
             return polish.write(self)
 
@@ -3246,6 +3246,29 @@ class Parser(object):
             raise
         return s
 
+    def read(self):
+        """
+        Internal entrypoint for reading a sentence. This function is:
+
+        - called recursively.
+        - overridden by subclasses.
+
+        :rtype: Vocabulary.Sentence
+        :meta private:
+        """
+        
+        ctype = self.assert_current()
+        if ctype == 'user_predicate' or ctype == 'system_predicate':
+            s = self.read_predicate_sentence()
+        elif ctype == 'quantifier':
+            s = self.read_quantified_sentence()
+        elif ctype == 'atomic':
+            s = self.read_atomic()
+        else:
+            raise Parser.ParseError(
+                "Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos)
+            )
+        return s
     def read_item(self, ctype = None):
         # Read an item and its subscript starting from the current character,
         # which must be in the list of characters given. Returns a list containing
@@ -3347,21 +3370,6 @@ class Parser(object):
             )
         self.bound_vars.remove(v)
         return quantify(quantifier, v, sentence)
-
-    def read(self):
-        # read a sentence.
-        ctype = self.assert_current()
-        if ctype == 'user_predicate' or ctype == 'system_predicate':
-            s = self.read_predicate_sentence()
-        elif ctype == 'quantifier':
-            s = self.read_quantified_sentence()
-        elif ctype == 'atomic':
-            s = self.read_atomic()
-        else:
-            raise Parser.ParseError(
-                "Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos)
-            )
-        return s
 
     def typeof(self, c):
         return self.symbol_set.typeof(c)
@@ -3510,6 +3518,12 @@ def _get_module(package, arg):
             arg = package + '.' + arg
         return importlib.import_module(arg.lower())
     raise BadArgumentError("Argument must be module or string")
+
+def nowms():
+    return int(round(time.time() * 1000))
+
+class BadArgumentError(Exception):
+    pass
 
 # TODO: move this to a utils module
 class StopWatch(object):

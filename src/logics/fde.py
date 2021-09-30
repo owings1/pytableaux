@@ -36,7 +36,11 @@ from logic import negate, negative, quantify, operate, atomic
 Identity = logic.get_system_predicate('Identity')
 Existence = logic.get_system_predicate('Existence')
 
-class Model(logic.Model):
+# Aliases
+from logic import Model as BaseModel
+ModelValueError = BaseModel.ModelValueError
+
+class Model(BaseModel):
     """
     FDE Model.
     """
@@ -78,7 +82,8 @@ class Model(logic.Model):
 
         super().__init__()
 
-        #: A map of predicates to their extension.
+        #: A mapping from each predicate to its extension. An extension for an
+        #: *n*-ary predicate is a set of *n*-tuples of constants.
         #:
         #: :type: dict
         self.extensions = {}
@@ -88,7 +93,7 @@ class Model(logic.Model):
         #: :type: dict
         self.anti_extensions = {}
 
-        #: An assignment of each atomic sentence to a value.
+        #: An assignment of each atomic sentence to a truth value.
         #:
         #: :type: dict
         self.atomics = {}
@@ -105,29 +110,7 @@ class Model(logic.Model):
         #: Track set of predicates for performance.
         self.predicates = set()
 
-    # def value_of_operated(self, sentence, **kw):
-    #     """
-    #     The value of a sentence with a truth-functional operator is determined by
-    #     the values of its operands according to the following tables.
-
-    #     //truth_tables//fde//
-    #     """
-    #     return super().value_of_operated(sentence, **kw)
-
     def value_of_predicated(self, sentence, **kw):
-        """
-        A sentence with predicate `P` with parameters `<p,...>` has the value:
-
-        * **T** iff `<p,...>` is in the extension of `P` and not in the anti-extension of `P`.
-        * **F** iff `<p,...>` is in the anti-extension of `P` and not in the extension of `P`.
-        * **B** iff `<p,...>` is in both the extension and anti-extension of `P`.
-        * **N** iff `<p,...>` is neither in the extension nor anti-extension of `P`.
-
-        Note, for FDE, there is no exclusivity or exhaustion constraint on a predicate's
-        extension/anti-extension. This means that `<p,...>` could be in neither the extension
-        nor the anti-extension of a predicate, or it could be in both the extension and the
-        anti-extension.
-        """
         params = tuple(sentence.parameters)
         predicate = sentence.predicate
         extension = self.get_extension(predicate)
@@ -321,8 +304,8 @@ class Model(logic.Model):
         self.constants.update(node.constants())
 
     def finish(self):
-        # TODO: consider augmenting the logic with identity and existence predicate
-        #       restrictions. in that case, new tableaux rules need to be written.
+        # TODO: consider augmenting the logic with Identity and Existence predicate
+        #       restrictions. In that case, new tableaux rules need to be written.
         for s in self.all_atomics:
             if s not in self.atomics:
                 self.set_literal_value(s, self.unassigned_value)
@@ -335,7 +318,7 @@ class Model(logic.Model):
 
     def set_literal_value(self, sentence, value):
         if value not in self.truth_values:
-            raise Model.ModelValueError('Non-existent value {0} for sentence {1}'.format(str(value), str(sentence)))
+            self._raise_value('UnknownForSentence', value, sentence)
         if self.is_sentence_opaque(sentence):
             self.set_opaque_value(sentence, value)
         elif sentence.is_operated() and sentence.operator == 'Negation':
@@ -349,9 +332,9 @@ class Model(logic.Model):
 
     def set_opaque_value(self, sentence, value):
         if value not in self.truth_values:
-            raise Model.ModelValueError('Non-existent value {0} for sentence {1}'.format(str(value), str(sentence)))
+            self._raise_value('UnknownForSentence', value, sentence)
         if sentence in self.opaques and self.opaques[sentence] != value:
-            raise Model.ModelValueError('Inconsistent value {0} for sentence {1}'.format(str(value), str(sentence)))
+            self._raise_value('ConflictForSentence', value, sentence)
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants, as well
         # as other lexical items.
@@ -362,14 +345,14 @@ class Model(logic.Model):
         
     def set_atomic_value(self, sentence, value):
         if value not in self.truth_values:
-            raise Model.ModelValueError('Non-existent value {0} for sentence {1}'.format(str(value), str(sentence)))
+            self._raise_value('UnknownForSentence', value, sentence)
         if sentence in self.atomics and self.atomics[sentence] != value:
-            raise Model.ModelValueError('Inconsistent value {0} for sentence {1}'.format(str(value), str(sentence)))
+            self._raise_value('ConflictForSentence', value, sentence)
         self.atomics[sentence] = value
 
     def set_predicated_value(self, sentence, value):
         if value not in self.truth_values:
-            raise Model.ModelValueError('Non-existent value {0} for sentence {1}'.format(str(value), str(sentence)))
+            self._raise_value('UnknownForSentence', value, sentence)
         predicate = sentence.predicate
         params = tuple(sentence.parameters)
         for param in params:
@@ -379,24 +362,16 @@ class Model(logic.Model):
         anti_extension = self.get_anti_extension(predicate)
         if value == 'N':
             if params in extension:
-                raise Model.ModelValueError(
-                    'Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params))
-                )
+                self._raise_value('ConflictForExtension', value, params)
             if params in anti_extension:
-                raise Model.ModelValueError(
-                    'Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params))
-                )
+                self._raise_value('ConflictForAntiExtension', value, params)
         elif value == 'T':
             if params in anti_extension:
-                raise Model.ModelValueError(
-                    'Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params))
-                )
+                self._raise_value('ConflictForAntiExtension', value, params)
             extension.add(params)
         elif value == 'F':
             if params in extension:
-                raise Model.ModelValueError(
-                    'Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params))
-                )
+                self._raise_value('ConflictForExtension', value, params)
             anti_extension.add(params)
         elif value == 'B':
             extension.add(params)
@@ -469,6 +444,26 @@ class Model(logic.Model):
         else:
             raise NotImplementedError()
 
+    _error_formats = {
+        ModelValueError: {
+            'UnknownForSentence':
+                'Non-existent value {0} for sentence {1}',
+            'ConflictForSentence':
+                'Inconsistent value {0} for sentence {1}',
+            'ConflictForExtension':
+                'Cannot set value {0} for tuple {1} already in extension',
+            'ConflictForAnitExtension':
+                'Cannot set value {0} for tuple {1} already in anti-extension',
+        },
+    }
+
+    def _raise_value(self, fmt, *args):
+        ErrorClass = ModelValueError
+        if fmt in self._error_formats[ErrorClass]:
+            fmt = self._error_formats[ErrorClass][fmt]
+        raise ErrorClass(fmt, *(str(arg) for arg in args))
+
+
 class TableauxSystem(logic.TableauxSystem):
     """
     Nodes for FDE have a boolean *designation* property, and a branch is closed iff
@@ -480,10 +475,7 @@ class TableauxSystem(logic.TableauxSystem):
     # operator => negated => designated
     branchables = {
         'Negation': {
-            True : {
-                True  : 0,
-                False : 0,
-            },
+            True: {True: 0, False: 0},
         },
         'Assertion': {
             False : {
@@ -646,6 +638,7 @@ class ConjunctionReducingRule(DefaultNodeRule):
                 ],
             ],
         }
+
 class TableauxRules(object):
     """
     In general, rules for connectives consist of four rules per connective:
@@ -699,11 +692,9 @@ class TableauxRules(object):
         From an unticked designated negated negation node *n* on a branch *b*, add a designated
         node to *b* with the double-negatum of *n*, then tick *n*.
         """
-
         negated     = True
         operator    = 'Negation'
         designation = True
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -722,7 +713,6 @@ class TableauxRules(object):
         From an unticked undesignated negated negation node *n* on a branch *b*, add an
         undesignated node to *b* with the double-negatum of *n*, then tick *n*.
         """
-
         negated     = True
         designation = False
 
@@ -731,10 +721,8 @@ class TableauxRules(object):
         From an unticked, designated, assertion node *n* on a branch *b*, add a designated
         node to *b* with the operand of *b*, then tick *n*.
         """
-
         operator   = 'Assertion'
         designation = True
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -753,7 +741,6 @@ class TableauxRules(object):
         From an unticked, undesignated, assertion node *n* on a branch *b*, add an undesignated
         node to *b* with the operand of *n*, then tick *n*.
         """
-
         negated     = False
         designation = False
 
@@ -762,11 +749,9 @@ class TableauxRules(object):
         From an unticked, designated, negated assertion node *n* on branch *b*, add a designated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
-
         negated     = True
         operator    = 'Assertion'
         designation = True
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -785,7 +770,6 @@ class TableauxRules(object):
         From an unticked, undesignated, negated assertion node *n* on branch *b*, add an undesignated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
-
         negated     = True
         designation = False
 
@@ -794,10 +778,8 @@ class TableauxRules(object):
         From an unticked designated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add a designated node with *c* to *b*, then tick *n*.
         """
-
         operator    = 'Conjunction'
         designation = True
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -817,11 +799,9 @@ class TableauxRules(object):
         *c*, make a new branch *b'* from *b* and add a designated node with the negation of *c* to *b'*,
         then tick *n*.
         """
-
         negated     = True
         operator    = 'Conjunction'
         designation = True
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -841,10 +821,8 @@ class TableauxRules(object):
         *c*, make a new branch *b'* from *b* and add an undesignated node with *c* to *b'*,
         then tick *n*.
         """
-
         operator    = 'Conjunction'
         designation = False
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -863,11 +841,9 @@ class TableauxRules(object):
         From an unticked undesignated negated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add an undesignated node with the negation of *c* to *b*, then tick *n*.
         """
-
         negated     = True
         operator    = 'Conjunction'
         designation = False
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -896,7 +872,6 @@ class TableauxRules(object):
         From an unticked designated negated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add a designated node with the negation of *d* to *b*, then tick *n*.
         """
-
         operator    = 'Disjunction'
         designation = True
 
@@ -905,7 +880,6 @@ class TableauxRules(object):
         From an unticked undesignated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add an undesignated node with *d* to *b*, then tick *n*.
         """
-
         operator    = 'Disjunction'
         designation = False
 
@@ -915,7 +889,6 @@ class TableauxRules(object):
         *d*, make a new branch *b'* from *b* and add an undesignated node with the negation of *d* to
         *b'*, then tick *n*.
         """
-
         operator    = 'Disjunction'
         designation = False
 
@@ -926,10 +899,8 @@ class TableauxRules(object):
         of the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
-
         operator    = 'Material Conditional'
         designation = True
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -952,11 +923,9 @@ class TableauxRules(object):
         a designated node with the antecedent, and a designated node with the negation of the
         consequent to *b*, then tick *n*.
         """
-
         negated     = True
         operator    = 'Material Conditional'
         designation = True
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -977,10 +946,8 @@ class TableauxRules(object):
         an undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
-
         operator    = 'Material Conditional'
         designation = False
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -1002,11 +969,9 @@ class TableauxRules(object):
         *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
         tick *n*.
         """
-
         negated     = True
         operator    = 'Material Conditional'
         designation = False
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -1031,10 +996,8 @@ class TableauxRules(object):
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
-
         operator    = 'Material Biconditional'
         designation = True
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -1061,11 +1024,9 @@ class TableauxRules(object):
         with the negation of the antecedent and a designated node with the consequent to *b''*,
         then tick *n*.
         """
-
         negated     = True
         operator    = 'Material Biconditional'
         designation = True
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -1092,7 +1053,6 @@ class TableauxRules(object):
         undesignated node with the antecedent and an undesignated node with the negation of
         the consequent to *b''*, then tick *n*.
         """
-
         negated     = False
         designation = False
 
@@ -1104,7 +1064,6 @@ class TableauxRules(object):
         and add an undesignated node with the antecedent and an undesignated node with the
         consequent to *b''*, then tick *n*.
         """
-
         negated     = True
         designation = False
 
@@ -1117,7 +1076,6 @@ class TableauxRules(object):
         the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
-
         negated     = False
         operator    = 'Conditional'
         designation = True
@@ -1130,7 +1088,6 @@ class TableauxRules(object):
         designated node with the antecedent, and a designated node with the negation of
         the consequent to *b*, then tick *n*.
         """
-
         negated     = True
         operator    = 'Conditional'
         designation = True
@@ -1143,7 +1100,6 @@ class TableauxRules(object):
         undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
-
         negated     = False
         operator    = 'Conditional'
         designation = False
@@ -1157,7 +1113,6 @@ class TableauxRules(object):
         *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
         tick *n*.
         """
-
         negated     = True
         operator    = 'Conditional'
         designation = False
@@ -1172,7 +1127,6 @@ class TableauxRules(object):
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
-
         negated     = False
         operator    = 'Biconditional'
         designation = True
@@ -1187,7 +1141,6 @@ class TableauxRules(object):
         with the negation of the antecedent and a designated node with the consequent to *b''*,
         then tick *n*.
         """
-
         negated     = True
         operator    = 'Biconditional'
         designation = True
@@ -1202,7 +1155,6 @@ class TableauxRules(object):
         undesignated node with the antecedent and an undesignated node with the negation of
         the consequent to *b''*, then tick *n*.
         """
-
         negated     = False
         operator    = 'Biconditional'
         designation = False
@@ -1217,7 +1169,6 @@ class TableauxRules(object):
         and add an undesignated node with the antecedent and an undesignated node with the
         consequent to *b''*, then tick *n*.
         """
-
         negated     = True
         operator    = 'Biconditional'
         designation = False
@@ -1228,7 +1179,6 @@ class TableauxRules(object):
         variable *v* into sentence *s*, add a designated node to *b* with the substitution
         into *s* of a new constant not yet appearing on *b* for *v*, then tick *n*.
         """
-
         quantifier  = 'Existential'
         designation = True
 
@@ -1253,13 +1203,10 @@ class TableauxRules(object):
         that universally quantifies over *v* into the negation of *s* (i.e. change
         'not exists x: A' to 'for all x: not A'), then tick *n*.
         """
-
         negated     = True
         quantifier  = 'Existential'
         designation = True
-
         branch_level = 1
-
         convert_to  = 'Universal'
 
         def get_target_for_node(self, node, branch):
@@ -1283,10 +1230,8 @@ class TableauxRules(object):
         If there are no constants yet on *b*, then instantiate with a new constant. The node
         *n* is never ticked.
         """
-
         quantifier  = 'Existential'
         designation = False
-
         branch_level = 1
 
         # AllConstantsStoppingRule implementation
@@ -1307,10 +1252,8 @@ class TableauxRules(object):
         that universally quantifies over *v* into the negation of *s* (i.e. change 'not
         exists x: A' to 'for all x: not A'), then tick *n*.
         """
-
         quantifier  = 'Existential'
         designation = False
-
         convert_to  = 'Universal'
 
     class UniversalDesignated(ExistentialUndesignated):
@@ -1321,7 +1264,6 @@ class TableauxRules(object):
         are no constants yet on *b*, then instantiate with a new constant. The node *n* is
         never ticked.
         """
-
         quantifier  = 'Universal'
         designation = True
 
@@ -1332,10 +1274,8 @@ class TableauxRules(object):
         with the existential quantifier over *v* into the negation of *s* (i.e. change
         'not all x: A' to 'exists x: not A'), then tick *n*.
         """
-
         quantifier  = 'Universal'
         designation = True
-
         convert_to  = 'Existential'
 
     class UniversalUndesignated(ExistentialDesignated):
@@ -1344,7 +1284,6 @@ class TableauxRules(object):
         into sentence *s*, add an undesignated node to *b* with the result of substituting into
         *s* a constant new to *b* for *v*, then tick *n*.
         """
-
         quantifier  = 'Universal'
         designation = False
 
@@ -1355,10 +1294,8 @@ class TableauxRules(object):
         with the existential quantifier over *v* into the negation of *s* (i.e. change
         'not all x: A' to 'exists x: not A'), then tick *n*.
         """
-
         quantifier  = 'Universal'
         designation = False
-
         convert_to  = 'Existential'
 
     closure_rules = [
