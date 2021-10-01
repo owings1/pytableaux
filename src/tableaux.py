@@ -77,7 +77,7 @@ class Tableau(object):
         'max_steps'       : None,
     }
 
-    def __init__(self, logic, argument, **opts):
+    def __init__(self, logic, argument=None, **opts):
 
         self.finished = False
         self.valid = None

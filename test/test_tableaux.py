@@ -1,7 +1,8 @@
 
 from errors import *
 
-from tableaux import TableauxSystem as TabSys, Branch, Tableau
+from tableaux import TableauxSystem as TabSys, Branch, Node, Tableau, \
+    FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
 from lexicals import Atomic, Constant, Predicated
 import examples
 
@@ -66,7 +67,7 @@ class TestTableau(object):
         assert proof.stats['build_duration_ms'] == 0
 
     def test_add_closure_rule_instance_mock(self):
-        class MockRule(TabSys.ClosureRule):
+        class MockRule(ClosureRule):
             def applies_to_branch(self, branch):
                 return True
             def check_for_target(self, node, branch):
@@ -85,7 +86,7 @@ class TestTableau(object):
         assert proof.tree['model_id']
 
     #def test_add_rule_group_instance_mock(self):
-    #    class MockRule1(TabSys.):
+    #    class MockRule1():
 
 class TestBranch(object):
 
@@ -96,7 +97,7 @@ class TestBranch(object):
 
     def test_new_constant_returns_m(self):
         b = Branch()
-        res = b.new_Constant()
+        res = b.new_constant()
         check = Constant(0, 0)
         assert res == check
 
@@ -108,7 +109,7 @@ class TestBranch(object):
             sen = Predicated('Identity', [c, c])
             b.add({'sentence': sen})
             i += 1
-        res = b.new_Constant()
+        res = b.new_constant()
         check = Constant(0, 1)
         assert res == check
 
@@ -166,7 +167,7 @@ class TestBranch(object):
 
     def test_regression_branch_has_works_with_newly_added_node_on_register_node(self):
 
-        class MyRule(TabSys.Rule):
+        class MyRule(Rule):
 
             should_be = False
             shouldnt_be = True
@@ -205,7 +206,7 @@ class TestBranch(object):
 
     def test_constants_or_new_returns_pair_with_constants(self):
         branch = Branch()
-        s1 = Predicated('Indentity', [Constant(0, 0), Constant(1, 0)])
+        s1 = Predicated('Identity', [Constant(0, 0), Constant(1, 0)])
         branch.add({'sentence': s1})
         res = branch.constants_or_new()
         assert len(res) == 2
@@ -216,13 +217,13 @@ class TestBranch(object):
 class TestNode(object):
 
     def test_worlds_contains_worlds(self):
-        node = TabSys.Node({'worlds': set([0, 1])})
+        node = Node({'worlds': set([0, 1])})
         res = node.worlds()
         assert 0 in res
         assert 1 in res
 
     def test_repr_contains_prop_key(self):
-        node = TabSys.Node({'foo': 1})
+        node = Node({'foo': 1})
         res = node.__repr__()
         assert 'foo' in res
 
@@ -235,26 +236,26 @@ class TestNode(object):
 class TestRule(object):
 
     def test_base_not_impl_various(self):
-        rule = TabSys.Rule(Tableau(None, None))
+        rule = Rule(Tableau(None, None))
         with raises(NotImplementedError):
             rule.get_candidate_targets(None)
 
     def test_base_repr_equals_rule(self):
-        rule = TabSys.Rule(Tableau(None, None))
+        rule = Rule(Tableau(None, None))
         res = rule.__repr__()
         assert res == 'Rule'
 
 class TestClosureRule(object):
 
     def test_applies_to_branch_not_impl(self):
-        rule = TabSys.ClosureRule(Tableau(None, None))
+        rule = ClosureRule(Tableau(None, None))
         with raises(NotImplementedError):
             rule.applies_to_branch(None)
 
 class TestNodeRule(object):
 
     def test_not_impl_various(self):
-        rule = TabSys.PotentialNodeRule(Tableau(None, None))
+        rule = PotentialNodeRule(Tableau(None, None))
         with raises(NotImplementedError):
             rule.apply_to_node(None, None)
         with raises(NotImplementedError):
@@ -270,32 +271,32 @@ class TestFilterNodeRule(object):
         
     def test_applies_to_empty_nodes_when_no_properties_defined(self):
 
-        class MockFilterRule(TabSys.FilterNodeRule):
+        class MockFilterRule(FilterNodeRule):
             pass
 
         proof, rule = self.proof_with_rule(MockFilterRule)
-        node = TabSys.Node()
+        node = Node()
         branch = proof.branch().add(node)
         assert rule.get_target_for_node(node, branch)
 
     def test_default_does_not_apply_to_ticked_node(self):
 
-        class MockFilterRule(TabSys.FilterNodeRule):
+        class MockFilterRule(FilterNodeRule):
             pass
 
         proof, rule = self.proof_with_rule(MockFilterRule)
-        node = TabSys.Node()
+        node = Node()
         branch = proof.branch().add(node)
         branch.tick(node)
         assert not rule.get_target_for_node(node, branch)
 
     def test_applies_to_ticked_node_with_prop_none(self):
 
-        class MockFilterRule(TabSys.FilterNodeRule):
+        class MockFilterRule(FilterNodeRule):
             ticked = None
 
         proof, rule = self.proof_with_rule(MockFilterRule)
-        node = TabSys.Node()
+        node = Node()
         branch = proof.branch().add(node)
         branch.tick(node)
         assert rule.get_target_for_node(node, branch)
