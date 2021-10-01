@@ -98,6 +98,8 @@ class LexicalItem(object):
         LexicalItem.__lexorder = {
             Predicate: 10, Constant: 20, Variable: 30, AtomicSentence: 40,
             PredicatedSentence: 50, QuantifiedSentence: 60, OperatedSentence: 70,
+            # Abstract, just a safety measure
+            Parameter: 416, Sentence: 417, LexicalItem: 418,
         }
         # This method self-destucts.
         delattr(LexicalItem, '_initorder')
