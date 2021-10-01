@@ -18,28 +18,27 @@
 #
 # pytableaux - parsers test cases
 import pytest
-
+from pytest import raises
+from errors import *
 import examples
-
-from logic import *
-from notations import standard, polish
+from parsers import create_parser, parse, parse_argument as argument
 
 voc = examples.vocabulary
-std = standard.Parser(voc)
-pol = polish.Parser(voc)
+std = create_parser(notn='standard', vocab=voc)
+pol = create_parser(notn='polish', vocab=voc)
 
 def test_parse_standard():
-    s = parse('A & B', notation='standard')
+    s = parse('A & B', notn='standard')
     assert s.is_operated
     assert s.operator == 'Conjunction'
 
 def test_parse_polish():
-    s = parse('Kab', notation='polish')
+    s = parse('Kab', notn='polish')
     assert s.is_operated
     assert s.operator == 'Conjunction'
 
 def test_argument_no_prems_1_std_untitled():
-    a = argument(conclusion='A', notation='standard')
+    a = argument(conclusion='A', notn='standard')
     assert len(a.premises) == 0
     assert a.conclusion.is_atomic()
 
@@ -53,20 +52,20 @@ def test_argument_prems_preparsed_titled():
 def test_argument_parse_prems_preparsed_conclusion():
     premises = ['Aab', 'Nb']
     conclusion = parse('a')
-    a = argument(conclusion=conclusion, premises=premises, notation='polish')
+    a = argument(conclusion=conclusion, premises=premises, notn='polish')
     assert len(a.premises) == 2
     assert a.conclusion == conclusion
 
 def test_argument_repr_untitled():
-    a = argument(conclusion='a', notation='polish')
+    a = argument(conclusion='a', notn='polish')
     res = a.__repr__()
     assert 'title' not in res
 
 def test_argument_repr_titled():
-    a = argument(conclusion='a', notation='polish', title='TestArg')
+    a = argument(conclusion='a', notn='polish', title='TestArg')
     res = a.__repr__()
     assert 'title' in res
-    
+
 class TestStandard(object):
 
     def test_parse_atomic(self):
@@ -87,7 +86,7 @@ class TestStandard(object):
         assert s.operator == 'Conjunction'
 
     def test_fail_missing_close_paren(self):
-        with pytest.raises(Parser.ParseError):
+        with raises(ParseError):
             std.parse('(A & B')
 
     def test_complex_quantified_1(self):
@@ -110,27 +109,27 @@ class TestStandard(object):
         assert s.predicate.name == 'Identity'
 
     def test_binary_prefix_error(self):
-        with pytest.raises(Parser.ParseError):
+        with raises(ParseError):
             std.parse('&AB')
 
     def test_unary_infix_pred_error(self):
-        with pytest.raises(Parser.ParseError):
+        with raises(ParseError):
             std.parse('aF')
 
     def test_undefined_pred_error(self):
-        with pytest.raises(Parser.ParseError):
+        with raises(ParseError):
             std.parse('F1ab')
 
     def test_unbound_var_error(self):
-        with pytest.raises(Parser.ParseError):
+        with raises(ParseError):
             std.parse('Fx')
 
     def test_rebind_var_error(self):
-        with pytest.raises(Parser.ParseError):
+        with raises(ParseError):
             std.parse('LxLxFx')
 
     def test_unused_var_error(self):
-        with pytest.raises(Parser.ParseError):
+        with raises(ParseError):
             std.parse('LxFa')
 
 class TestPolish(object):
@@ -145,9 +144,9 @@ class TestPolish(object):
         assert s.operator == 'Negation'
 
     def test_unexpected_constant_error(self):
-        with pytest.raises(Parser.ParseError):
+        with raises(ParseError):
             pol.parse('m')
 
     def test_empty_error(self):
-        with pytest.raises(Parser.ParseError):
+        with raises(ParseError):
             pol.parse('')

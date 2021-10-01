@@ -3,7 +3,7 @@ from errors import ParseError, ParserThreadError, IllegalStateError, \
 from lexicals import Argument, AtomicSentence, PredicatedSentence, \
     QuantifiedSentence, OperatedSentence, Constant, Variable, operators, Vocabulary
 from fixed import default_notation
-from utils import SymbolSet
+from utils import isstr, SymbolSet
 from past.builtins import basestring
 
 def create_parser(notn=None, vocab=None, **opts):
@@ -28,6 +28,9 @@ def parse(input, *args, **kw):
     Convenience wrapper for ``create_parser().parse()``.
     """
     return create_parser(*args, **kw).parse(input)
+
+def parse_argument(conclusion, premises=None, title=None, **kw):
+    return create_parser(**kw).argument(conclusion, premises, title)
 
 class BaseParser(object):
 
@@ -76,7 +79,7 @@ class BaseParser(object):
                 )
         return s
 
-    def argument(self, conclusion=None, premises=[], title=None):
+    def argument(self, conclusion, premises=None, title=None):
         """
         Parse the input strings and create an argument.
 
@@ -87,10 +90,16 @@ class BaseParser(object):
         :rtype: argument
         :raises Parser.ParseError:
         """
+        if isstr(conclusion):
+            conc = self.parse(conclusion)
+        else:
+            conc = conclusion
+        prems = []
+        if premises:
+            for s in premises:
+                prems.append(self.parse(s) if isstr(s) else s)
         return Argument(
-            conclusion = self.parse(conclusion),
-            premises = [self.parse(s) for s in premises],
-            title = title
+            conclusion = conc, premises = prems, title = title
         )
 
     ## ==========================================

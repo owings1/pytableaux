@@ -45,6 +45,15 @@ def get_logic(name):
     """
     return get_module('logics', name)
 
+def nowms():
+    return int(round(time.time() * 1000))
+
+def cat(*args):
+    return ''.join(args)
+
+def isstr(arg):
+    return isinstance(arg, basestring)
+
 class SymbolSet(object):
 
     def __init__(self, notn, name):
@@ -145,8 +154,3 @@ class StopWatch(object):
         if self.is_running():
             self.stop()
 
-def nowms():
-    return int(round(time.time() * 1000))
-
-def cat(*args):
-    return ''.join(args)
