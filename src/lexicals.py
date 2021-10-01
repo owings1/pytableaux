@@ -11,68 +11,8 @@ from utils import cat, SymbolSet
 
 from past.builtins import basestring
 
-class Argument(object):
-    """
-    Create an argument. Parsing is performed with the default notation (Polish)
-    unless otherwise specifed. Example::
-
-        arg1 = Argument('b', ['KaNa'])
-        arg2 = Argument('B', ['A & ~A'], notation='standard')
-        assert arg1 == arg2
-
-    An argument must have a non-empty conclusion, but premises are optional::
-
-        arg = Argument('AaNa')
-
-    You can also pass in sentence objects directly::
-
-        arg1 = Argument('A V ~A', notation='standard')
-        arg2 = Argument(arg1.conclusion)
-        assert arg1 == arg2
-    """
-    def __init__(self, conclusion, premises=None, notation=None, vocabulary=None, title=None):
-        self.premises = []
-        if premises != None:
-            for premise in premises:
-                if isinstance(premise, basestring):
-                    raise NotImplementedError('parsing not yet implemented')
-                    premise = parse(premise, notation=notation, vocabulary=vocabulary)
-                self.premises.append(premise)
-        if isinstance(conclusion, basestring):
-            raise NotImplementedError('parsing not yet implemented')
-            conclusion = parse(conclusion, notation=notation, vocabulary=vocabulary)
-        self.conclusion = conclusion
-        self.title      = title
-
-    def __repr__(self):
-        if self.title is None:
-            return [self.premises, self.conclusion].__repr__()
-        return [self.premises, self.conclusion, {'title': self.title}].__repr__()
-
-    def __hash__(self):
-        return hash((self.conclusion,) + tuple(self.premises))
-
-    def __eq__(self, other):
-        """
-        Two arguments are considered equal just when their conclusions are equal, and their
-        premises are equal (and in the same order)::
-
-        arg1 = Argument('Kab', ['a', 'b'])
-        arg2 = Argument('Kab', ['a', 'b'])
-        assert arg2 == arg1
-
-        arg3 = Argument('Kab', ['b', 'a'])
-        assert arg3 != arg1
-
-        # The title is not considered in equality.
-        arg4 = Argument('Kab', ['a', 'b'], title='My Argument')
-        assert arg4 == arg1
-        assert arg4.title != arg1.title
-        """
-        return isinstance(other, self.__class__) and hash(self) == hash(other)
-
-    def __ne__(self, other):
-        return not isinstance(other, self.__class__) or hash(self) != hash(other)
+def operarity(oper):
+    return operators[oper]
 
 class LexicalItem(object):
     # Base LexicalItem class for comparison, hashing, and sorting.
@@ -711,18 +651,52 @@ class Vocabulary(object):
         PredicatedSentence: 50, QuantifiedSentence: 60, OperatedSentence: 70,
     }
 
-def create_lexwriter(notn=None, vocab=None, format=None):
+class Argument(object):
+    """
+    Create an argument from sentence objects. For parsing strings into arguments,
+    see ``Parser.argument``.
+    """
+    def __init__(self, conclusion, premises=None, title=None):
+        self.premises = []
+        if premises:
+            for premise in premises:
+                if not isinstance(premise, Sentence):
+                    raise TypeError('premises must be Sentence objects')
+                self.premises.append(premise)
+        if not isinstance(conclusion, Sentence):
+            raise TypeError('conclusion must be Sentence object')
+        self.conclusion = conclusion
+        self.title      = title
+
+    def __repr__(self):
+        if self.title is None:
+            return [self.premises, self.conclusion].__repr__()
+        return [self.premises, self.conclusion, {'title': self.title}].__repr__()
+
+    def __hash__(self):
+        return hash((self.conclusion,) + tuple(self.premises))
+
+    def __eq__(self, other):
+        """
+        Two arguments are considered equal just when their conclusions are equal, and their
+        premises are equal (and in the same order) The title is not considered in equality.
+        """
+        return isinstance(other, self.__class__) and hash(self) == hash(other)
+
+    def __ne__(self, other):
+        return not isinstance(other, self.__class__) or hash(self) != hash(other)
+
+def create_lexwriter(notn=None, format=None, **opts):
     if not notn:
         notn = default_notation
-    if not vocab:
-        vocab = Vocabulary()
     if not format:
         format = 'ascii'
+    print(('Creating symbol set', str(notn), str(format)))
     symbol_set = SymbolSet(notn, format)
     if notn == 'polish':
-        return PolishLexWriter(symbol_set)
+        return PolishLexWriter(symbol_set, **opts)
     if notn == 'standard':
-        return StandardLexWriter(symbol_set)
+        return StandardLexWriter(symbol_set, **opts)
     raise BadArgumentError('Invalid notation: {0}'.format(str(notn)))
 
 class BaseLexWriter(object):
@@ -843,10 +817,12 @@ class PolishLexWriter(BaseLexWriter):
 
 class StandardLexWriter(BaseLexWriter):
 
+    __defaults = {'drop_parens': True}
+
     def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
+        super().__init__(*args, **self.__defaults, **kw)
         opts = self.opts
-        self.drop_parens = 'drop_parens' in opts and bool(opts['drop_parens'])
+        self.drop_parens = bool(opts['drop_parens'])
 
     def write(self, item):
         if self.drop_parens and isinstance(item, OperatedSentence):

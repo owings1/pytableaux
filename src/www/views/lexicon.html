@@ -3,16 +3,16 @@
     <div class="input select">
         <label for="input_notation">Notation</label>
         <select id="input_notation" name="input_notation">
-            {% for module in notation_modules -%}
-                <option value="{{ module|e }}" {{ helper.select_opt(form_data, 'input_notation', module) }}>
-                    {{- notations[module].name -}}
+            {% for parser_name in parser_symsets -%}
+                <option value="{{ parser_name|e }}" {{ helper.select_opt(form_data, 'input_notation', parser_name) }}>
+                    {{- parser_name -}}
                 </option>
             {% endfor %}
         </select>
     </div>
     <div class="lexicon-panel">
-        {%- for module in notation_modules -%}
-            {%- set symset = notations[module].symbol_sets['default'] %}
+        {%- for parser_name in parser_symsets -%}
+            {%- set symset = parser_symsets[parser_name] %}
             <div class="lexicon hidden notation-{{ module|e }}">
                 <span class="label">Atomics</span>
                 <ul class="item-symbols">
@@ -39,8 +39,8 @@
         {% endfor %}
     </div>
     <div class="lexicon-panel last">
-        {%- for module in notation_modules -%}
-            {%- set symset = notations[module].symbol_sets['default'] %}
+        {%- for parser_name in parser_symsets -%}
+            {%- set symset = parser_symsets[parser_name] %}
             <div class="lexicon hidden notation-{{ module|e }}">
                 <span class="label">Constants</span>
                 <ul class="item-symbols">
@@ -71,8 +71,8 @@
                     {% for name in system_predicates -%}
                         <tr class="systemPredicate">
                             <td>
-                                {% for module in notation_modules %}
-                                    {%- set symset = notations[module].symbol_sets['default'] -%}
+                                {% for parser_name in parser_symsets %}
+                                    {%- set symset = parser_symsets[parser_name] -%}
                                     {%- set symbol = symset.charof('system_predicate', name) -%}
                                     {%- set subscript = system_predicates[name].subscript -%}
                                     <span class="predicateSymbol notation-{{module}} hidden">
@@ -91,8 +91,8 @@
                         {%- set name = form_data['user_predicate_names[]'][loop.index0] -%}
                         {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
                         {%- call helper.predicate_row(index, subscript, name, arity) %}
-                            {% for module in notation_modules -%}
-                                {%- set symset = notations[module].symbol_sets['default'] -%}
+                            {% for parser_name in parser_symsets -%}
+                                {%- set symset = parser_symsets[parser_name] -%}
                                 {{- helper.predicate_symbol(module, symset.charof('user_predicate', index), subscript) }}
                             {% endfor -%}
                         {%- endcall -%}

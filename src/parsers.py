@@ -6,7 +6,7 @@ from fixed import default_notation
 from utils import SymbolSet
 from past.builtins import basestring
 
-def create_parser(notn=None, vocab=None):
+def create_parser(notn=None, vocab=None, **opts):
     if isinstance(notn, Vocabulary) or isinstance(vocab, basestring):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
@@ -15,9 +15,9 @@ def create_parser(notn=None, vocab=None):
     if not notn:
         notn = default_notation
     if notn == 'polish':
-        return PolishParser(vocab)
+        return PolishParser(vocab, **opts)
     elif notn == 'standard':
-        return StandardParser(vocab)
+        return StandardParser(vocab, **opts)
     raise UnknownNotationError('Unknown parser: {0}'.format(str(notn)))
 
 class BaseParser(object):
@@ -39,8 +39,9 @@ class BaseParser(object):
     # - Quantifier symbols
     # - Operator symbols
     # - Atomic sentence (proposition) symbols
-    def __init__(self, vocabulary):
+    def __init__(self, vocabulary, **opts):
         self.vocabulary = vocabulary
+        self.opts = opts
         self.__state = self.__State(self)
 
     def parse(self, string):

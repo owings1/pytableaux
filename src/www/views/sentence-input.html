@@ -20,7 +20,8 @@
 </div>
 <div class="sentence input conclusion">
     <label for="conclusion">Conclusion</label>
-    <input id="conclusion" class="sentence conclusion" type="text" name="conclusion" value="{{ form_data['conclusion'] }}" />
+    <input id="conclusion" class="sentence conclusion" type="text"
+        name="conclusion" value="{{ form_data['conclusion'] }}" />
     {%- set status = '' -%}
     {%- set message = '' -%}
     {%- if errors and 'Conclusion' in errors -%}

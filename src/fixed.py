@@ -62,6 +62,9 @@ num_const_symbols     = 4
 num_atomic_symbols    = 5
 num_predicate_symbols = 4
 
+parser_names = ['polish', 'standard']
+lexwriter_names = ['polish', 'standard']
+tabwriter_names = ['html']
 symbols_data = {
     'polish' : {
         'ascii' : {
@@ -158,6 +161,10 @@ symbols_data = {
     }
 }
 
-for notn in symbols_data:
-    symbols_data[notn]['default'] = symbols_data[notn]['ascii']
-symbols_data[notn]
+lexwriter_formats = set(('html', 'default', 'ascii'))
+symbols_data['polish']['html'] = symbols_data['polish']['ascii']
+def _populate():
+    for notn in symbols_data:
+        if 'default' not in symbols_data[notn]:
+            symbols_data[notn]['default'] = symbols_data[notn]['ascii']
+_populate()

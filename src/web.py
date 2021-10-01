@@ -18,8 +18,16 @@
 #
 # pytableaux - Web Application
 
-import examples, logic
-import json, re, time
+import examples, fixed
+from errors import ProofTimeoutError, UnknownNotationError
+from fixed import num_predicate_symbols, issues_href, source_href, version, \
+    quantifiers_list, operators_list, parser_names, lexwriter_names, \
+    lexwriter_formats, tabwriter_names
+from lexicals import system_predicates, Argument, Vocabulary, create_lexwriter
+from parsers import create_parser
+from tableaux import Tableau, create_tabwriter
+from utils import get_logic
+import json, re, time, traceback
 
 import cherrypy as server
 import prometheus_client as prom
@@ -31,13 +39,12 @@ from email.mime.multipart import MIMEMultipart
 from past.builtins import basestring
 from www.mailroom import Mailroom
 
-from www.conf import available, consts, cp_global_config, jenv
-from www.conf import logger, logic_categories, metrics, modules
-from www.conf import nups, opts, re_email
+from www.conf import available, consts, cp_global_config, jenv, \
+    logger, logic_categories, metrics, modules, example_arguments, \
+    nups, opts, re_email, parser_symsets
 
-ProofTimeoutError = logic.TableauxSystem.ProofTimeoutError
 # shorthand
-ntmods = modules['notations']
+# ntmods = modules['notations']
 
 mailroom = Mailroom(opts)
 
@@ -48,7 +55,7 @@ mailroom = Mailroom(opts)
 class AppDispatcher(Dispatcher):
     def __call__(self, path_info):
         metrics['app_requests_count'].labels(opts['app_name'], path_info).inc()
-        logger.debug('path_info:', path_info)
+        logger.debug('path_info:' + path_info)
         return Dispatcher.__call__(self, path_info.split('?')[0])
 
 cp_config = {
@@ -82,47 +89,36 @@ browser_data = {
     'example_predicates'    : examples.test_pred_data,
     # nups: "notation-user-predicate-symbols"
     'nups'                  : nups,
-    'num_predicate_symbols' : logic.num_predicate_symbols,
-    'example_arguments' : {
-        arg.title : {
-            nt: {
-                'premises'   : [
-                    ntmods[nt].write(premise)
-                    for premise in arg.premises
-                ],
-                'conclusion' : ntmods[nt].write(
-                    arg.conclusion
-                ),
-            }
-            for nt in available['notations']
-        }
-        for arg in examples.arguments()
-    }
+    'num_predicate_symbols' : num_predicate_symbols,
+    'example_arguments'     : example_arguments,
 }
 
 base_view_data = {
     'app_name'            : opts['app_name'],
     'browser_json'        : json.dumps(browser_data, indent = 2),
-    'copyright'           : logic.copyright,
+    'copyright'           : fixed.copyright,
     'example_args_list'   : examples.args_list,
     'feedback_to_address' : opts['feedback_to_address'],
     'google_analytics_id' : opts['google_analytics_id'],
     'is_debug'            : opts['is_debug'],
     'is_feedback'         : opts['feedback_enabled'],
     'is_google_analytics' : bool(opts['google_analytics_id']),
-    'issues_href'         : logic.issues_href,
+    'issues_href'         : issues_href,
+    'lexwriter_names'     : lexwriter_names,
     'logic_categories'    : logic_categories,
     'logic_modules'       : available['logics'],
     'logics'              : modules['logics'],
-    'notation_modules'    : available['notations'],
-    'notations'           : ntmods,
-    'operators_list'      : logic.operators_list,
-    'quantifiers'         : logic.quantifiers_list,
-    'source_href'         : logic.source_href,
-    'system_predicates'   : logic.system_predicates,
-    'version'             : logic.version,
-    'writer_modules'      : available['writers'],
-    'writers'             : modules['writers'],
+    'parser_names'        : parser_names,
+    'parser_symsets'      : parser_symsets,
+    # 'notations'           : ntmods,
+    'operators_list'      : operators_list,
+    'quantifiers'         : quantifiers_list,
+    'source_href'         : source_href,
+    'system_predicates'   : system_predicates,
+    'tabwriter_names'     : tabwriter_names,
+    'version'             : version,
+    # 'writer_modules'      : available['writers'],
+    # 'writers'             : modules['writers'],
 }
 
 ###################
@@ -150,7 +146,6 @@ def fix_form_data(form_data):
     if len(form_data):
         for param in form_data:
             if param.endswith('[]'):
-                # http://python-future.org/compatible_idioms.html#basestring
                 if isinstance(form_data[param], basestring):
                     form_data[param] = [form_data[param]]
     return form_data
@@ -165,7 +160,6 @@ def debug_result(result):
                     result['tableau']['body'][0:255]
                 )
     return result
-
 
 def is_valid_email(value):
     return re.fullmatch(re_email, value)
@@ -185,9 +179,25 @@ def get_remote_ip(req):
     # TODO: use proxy forward header
     return req.remote.ip
 
+def errstr(err):
+    if isinstance(err, Exception):
+        return '{0}: {1}'.format(err.__class__.name, str(err))
+    return str(err)
+
 class RequestDataError(Exception):
     def __init__(self, errors):
         self.errors = errors
+
+########################
+## Static LexWriters  ##
+########################
+lexwriters = {
+    notn: {
+        format: create_lexwriter(notn=notn, format=format)
+        for format in lexwriter_formats
+    }
+    for notn in lexwriter_names 
+}
 
 ###################
 ## Webapp        ##
@@ -204,7 +214,7 @@ class App(object):
 
         data = dict(base_view_data)
 
-        vocab = logic.Vocabulary()
+        vocab = Vocabulary()
 
         view = 'argument'
 
@@ -345,11 +355,16 @@ class App(object):
                         'message' : 'OK',
                         'result'  : result,
                     }
+            except Exception as err:
+                logger.debug(errstr(err))
+                if opts['is_debug']:
+                    traceback.print_exc()
+                raise err
             except ProofTimeoutError as err: # pragma: no cover
                 res.status = 408
                 return {
                     'status'  : 408,
-                    'message' : str(err),
+                    'message' : errstr(err),
                     'error'   : err.__class__.__name__,
                 }
             except RequestDataError as err:
@@ -364,7 +379,7 @@ class App(object):
                 res.status = 500
                 return {
                     'status'  : 500,
-                    'message' : str(err),
+                    'message' : errstr(err),
                     'error'   : err.__class__.__name__,
                 }
                 #traceback.print_exc()
@@ -416,23 +431,26 @@ class App(object):
             body['input'] = ''
 
         errors = dict()
-        try:
-            input_notation = ntmods[body['notation']]
-        except KeyError:
+        if body['notation'] not in parser_names:
             errors['Notation'] = 'Invalid notation'
+        # try:
+        #     input_notation = ntmods[body['notation']]
+        # except KeyError:
+        #     errors['Notation'] = 'Invalid notation'
 
         try:
             vocab = self.parse_predicates_data(body['predicates'])
         except RequestDataError as err:
             errors.update(err.errors)
-            vocab = logic.Vocabulary()
+            vocab = Vocabulary()
 
         if len(errors) == 0:
-            parser = input_notation.Parser(vocabulary = vocab)
+            parser = create_parser(body['notation'], vocab)
+            # parser = input_notation.Parser(vocabulary = vocab)
             try:
                 sentence = parser.parse(body['input'])
             except Exception as err:
-                errors['Sentence'] = str(err)
+                errors['Sentence'] = errstr(err)
 
         if len(errors) > 0:
             raise RequestDataError(errors)
@@ -440,12 +458,20 @@ class App(object):
         return {
             'type'     : sentence.type,
             'rendered' : {
-                nt: {
-                    'default': ntmods[nt].write(sentence),
-                    'html'   : ntmods[nt].write(sentence, 'html'),
+                notn: {
+                    fmt: lexwriters[notn][fmt].write(sentence)
+                    for fmt in lexwriters[notn]
                 }
-                for nt in available['notations']
-            }
+                for notn in lexwriters
+            },
+            # 'rendered' : {
+            #     nt: {
+            #         # TODO - REFACTOR
+            #         'default': ntmods[nt].write(sentence),
+            #         'html'   : ntmods[nt].write(sentence, 'html'),
+            #     }
+            #     for nt in available['notations']
+            # }
         }
 
     def api_prove(self, body):
@@ -542,32 +568,43 @@ class App(object):
 
         errors = dict()
         try:
-            selected_logic = logic.get_logic(body['logic'])
+            selected_logic = get_logic(body['logic'])
         except Exception as err:
-            errors['Logic'] = str(err)
+            errors['Logic'] = errstr(err)
         try:
             arg, v = self.parse_argument_data(body['argument'])
         except RequestDataError as err:
             errors.update(err.errors)
         try:
-            output_notation = modules['notations'][odata['notation']]
+            logger.debug(str(lexwriters))
+            lwmap = lexwriters[odata['notation']]
             try:
-                sw = output_notation.Writer(odata['symbol_set'])
+                lw = lwmap[odata['symbol_set']]
+            # # TODO: Refactor
+            # output_notation = modules['notations'][odata['notation']]
+            # try:
+            #     sw = output_notation.Writer(odata['symbol_set'])
+            except KeyError as err:
+                errors['Symbol Set'] = 'Bad notation: {0}'.format(str(odata['symbol_set']))
             except Exception as err:
-                errors['Symbol Set'] = str(err)
+                logger.debug(str((err, err.__class__, err.args)))
+                if opts['is_debug']:
+                    traceback.print_exc()
+                errors['Symbol Set'] = errstr(err)
         except Exception as err:
-            errors['Output notation'] = str(err)
+            errors['Output notation'] = errstr(err)
         try:
-            pwmod = modules['writers'][odata['format']]
-            proof_writer = pwmod.Writer(**odata['options'])
+            tabwriter = create_tabwriter(notn=odata['notation'], format=odata['format'], **odata['options'])
+            # pwmod = modules['writers'][odata['format']]
+            # proof_writer = pwmod.Writer(**odata['options'])
         except Exception as err:
-            errors['Output format'] = str(err)
+            errors['Output format'] = errstr(err)
 
         if body['max_steps'] != None:
             try:
                 body['max_steps'] = int(body['max_steps'])
             except Exception as err:
-                errors['Max steps'] = str(err)
+                errors['Max steps'] = errstr(err)
 
         if len(errors) > 0:
             raise RequestDataError(errors)
@@ -586,7 +623,7 @@ class App(object):
             'max_steps'      : body['max_steps'],
         }
 
-        proof = logic.tableau(selected_logic, arg, **proof_opts)
+        proof = Tableau(selected_logic, arg, **proof_opts)
 
         try:
 
@@ -625,22 +662,22 @@ class App(object):
                 'logic' : selected_logic.name,
                 'argument': {
                     'premises'   : [
-                        sw.write(premise)
+                        lw.write(premise)
                         for premise in arg.premises
                     ],
-                    'conclusion' : sw.write(arg.conclusion),
+                    'conclusion' : lw.write(arg.conclusion),
                 },
                 'valid'  : proof.valid,
-                'header' : proof_writer.document_header(),
-                'footer' : proof_writer.document_footer(),
-                'body'   : proof_writer.write(proof, sw=sw),
+                'header' : tabwriter.document_header(),
+                'footer' : tabwriter.document_footer(),
+                'body'   : tabwriter.write(proof),
                 'stats'  : proof.stats,
                 'result' : proof.stats['result'],
                 'writer' : {
-                    'name'       : proof_writer.name,
+                    'name'       : tabwriter.name,
                     'format'     : odata['format'],
                     'symbol_set' : odata['symbol_set'],
-                    'options'    : proof_writer.defaults,
+                    'options'    : tabwriter.opts,
                 }
             }
         }
@@ -657,12 +694,13 @@ class App(object):
         if 'premises' not in adata:
             adata['premises'] = list()
 
-        vocab = logic.Vocabulary()
+        vocab = Vocabulary()
 
         errors = dict()
 
         try:
-            notation = ntmods[adata['notation']]
+            if adata['notation'] not in parser_names:
+                raise UnknownNotationError('Invalid parser notation')
         except Exception as e:
             errors['Notation'] = str(e)
 
@@ -671,7 +709,7 @@ class App(object):
                 vocab = self.parse_predicates_data(adata['predicates'])
             except RequestDataError as err:
                 errors.update(err.errors)
-            parser = notation.Parser(vocabulary = vocab)
+            parser = create_parser(notn=adata['notation'], vocab=vocab)
             i = 1
             premises = []
             for premise in adata['premises']:
@@ -689,10 +727,10 @@ class App(object):
         if len(errors) > 0:
             raise RequestDataError(errors)
 
-        return (logic.Argument(conclusion, premises), vocab)
+        return (Argument(conclusion, premises), vocab)
 
     def parse_predicates_data(self, predicates):
-        vocab = logic.Vocabulary()
+        vocab = Vocabulary()
         errors = dict()
         i = 1
         for pdata in predicates:
@@ -710,6 +748,7 @@ class App(object):
 #############
 
 def main(): # pragma: no cover
+    # logger.debug(str(('lexwriters', lexwriters)))
     logger.info(
         'Staring metrics on port {0}'.format(str(opts['metrics_port']))
     )

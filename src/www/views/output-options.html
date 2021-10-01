@@ -1,9 +1,9 @@
 <div class="input select">
     <label for="format">Format</label>
     <select id="format" name="format">
-        {% for module in writer_modules -%}
-            <option value="{{ module }}" {{- helper.select_opt(form_data, 'format', module) }}>
-                {{- writers[module].name|e -}}
+        {% for name in tabwriter_names -%}
+            <option value="{{ name }}" {{- helper.select_opt(form_data, 'format', name) }}>
+                {{- name|e -}}
             </option>
         {% endfor %}
     </select>
@@ -11,9 +11,9 @@
 <div class="input select">
     <label for="output_notation">Notation</label>
     <select id="output_notation" name="output_notation">
-        {% for module in notation_modules -%}
-            <option value="{{ module }}" {{- helper.select_opt(form_data, 'output_notation', module) }}>
-                {{- notations[module].name|e -}}
+        {% for name in lexwriter_names -%}
+            <option value="{{ name }}" {{- helper.select_opt(form_data, 'output_notation', name) }}>
+                {{- name|e -}}
             </option>
         {% endfor %}
     </select>

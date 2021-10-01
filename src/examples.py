@@ -18,8 +18,9 @@
 #
 # pytableaux - example arguments
 
-import logic
-from notations import polish
+from lexicals import Vocabulary, Constant, Variable, AtomicSentence, \
+    PredicatedSentence, OperatedSentence, QuantifiedSentence, operarity
+from parsers import create_parser
 
 # polish notation
 args = {
@@ -120,8 +121,8 @@ test_pred_data = [
     ['H-ness', 2, 0, 1]
 ]
 
-vocabulary = logic.Vocabulary(test_pred_data)
-parser = polish.Parser(vocabulary)
+vocabulary = Vocabulary(test_pred_data)
+parser = create_parser(notn='polish', vocab=vocabulary)
 
 def argument(name):
     info = args[name]
@@ -139,36 +140,36 @@ def arguments(names=None):
     return [argument(name) for name in names]
 
 def predicated():
-    c = logic.constant(0, 0)
+    c = Constant(0, 0)
     p = vocabulary.get_predicate(index = 0, subscript = 0)
-    return logic.predicated(p, [c])
+    return PredicatedSentence(p, [c])
 
 def identity():
-    a = logic.constant(0, 0)
-    b = logic.constant(1, 0)
-    return logic.predicated('Identity', [a, b])
+    a = Constant(0, 0)
+    b = Constant(1, 0)
+    return PredicatedSentence('Identity', [a, b])
 
 def self_identity():
-    a = logic.constant(0, 0)
-    return logic.predicated('Identity', [a, a])
+    a = Constant(0, 0)
+    return PredicatedSentence('Identity', [a, a])
 
 def existence():
-    a = logic.constant(0, 0)
-    return logic.predicated('Existence', [a])
+    a = Constant(0, 0)
+    return PredicatedSentence('Existence', [a])
 
 def quantified(quantifier):
-    x = logic.variable(0, 0)
+    x = Variable(0, 0)
     p = vocabulary.get_predicate(index = 0, subscript = 0)
-    x_is_f = logic.predicated(p, [x], vocabulary)
+    x_is_f = PredicatedSentence(p, [x], vocabulary)
     #if quantifier == 'Universal':
     #    x_is_g = logic.predicated(test_pred_data[1][0], [x], vocabulary)
     #    s = logic.operate('Material Conditional', [x_is_f, x_is_g])
     #    return logic.quantify(quantifier, x, s)
-    return logic.quantify(quantifier, x, x_is_f)
+    return QuantifiedSentence(quantifier, x, x_is_f)
 
 def operated(operator):
-    a = logic.atomic(0, 0)
+    a = AtomicSentence(0, 0)
     operands = [a]
-    for x in range(logic.arity(operator) - 1):
+    for x in range(operarity(operator) - 1):
         operands.append(operands[-1].next())
-    return logic.operate(operator, operands)
+    return OperatedSentence(operator, operands)

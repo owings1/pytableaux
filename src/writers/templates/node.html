@@ -1,4 +1,4 @@
-{% macro write_node(sw, node) -%}
+{% macro write_node(lw, node) -%}
     <div class="node {{- ' ticked' if node.ticked }}"
         data-node-id="{{ node.id }}"
         data-step="{{ node.step }}"
@@ -8,8 +8,8 @@
         data-ticked="{{ '1' if node.ticked else '0' }}">
         <span class="node-props {{- ' ticked' if node.ticked}}">
             {% if node.has('sentence') -%}
-                {% set sentence_raw = sw.write(node.props['sentence'], drop_parens = True) -%}
-                <span class="sentence">{{ sentence_raw if sw.symbol_set.name == 'html' else sentence_raw|e }}</span>
+                {% set sentence_raw = lw.write(node.props['sentence']) -%}
+                <span class="sentence">{{ sentence_raw if lw.format == 'html' else sentence_raw|e }}</span>
                 {% if node.has('world') -%}
                     <span class="world">, w<span class="subscript">{{ node.props['world'] }}</span></span>
                 {% endif -%}

@@ -18,6 +18,10 @@
 #
 # pytableaux - Web App Configuration
 from utils import get_logic, SymbolSet
+from fixed import parser_names
+from parsers import create_parser
+from lexicals import create_lexwriter
+import examples
 import importlib, logging, os, os.path
 import prometheus_client as prom
 from jinja2 import Environment, FileSystemLoader
@@ -143,18 +147,20 @@ optdefs = {
 
 available = {
     'logics'    : [
-        'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
-        'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
+        # 'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
+        # 'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
+        'fde'
     ],
-    'parsers' : ['standard', 'polish'],
-    'writers'   : ['html', 'ascii'],
+    'writers'   : ['html'],
 }
 modules = dict()
 logic_categories = dict()
 # nups: "notation-user-predicate-symbols"
 nups = dict()
 
-def populate_modules_info():
+parser_symsets = {}
+example_arguments = {}
+def __populate_info():
     
     for package in available:
         modules[package] = {}
@@ -163,9 +169,20 @@ def populate_modules_info():
                 '.'.join((package, name))
             )
 
-    for parser_name in modules['parsers']:
-        nups[parser_name] = list(
-            SymbolSet(parser_name, 'default').chars('user_predicate')
+    exargs = examples.arguments()
+    for arg in exargs:
+        example_arguments[arg.title] = {}
+    for notn in parser_names:
+        w = create_lexwriter(notn=notn, format='ascii')
+        for arg in exargs:
+            example_arguments[arg.title][notn] = {
+                'premises': [w.write(s) for s in arg.premises],
+                'conlusion': w.write(arg.conclusion),
+            }
+        p = create_parser(notn=notn)
+        parser_symsets[notn] = p.symbol_set
+        nups[notn] = list(
+            p.symbol_set.chars('user_predicate')
         )
 
     for name in modules['logics']:
@@ -180,7 +197,7 @@ def populate_modules_info():
     for category in logic_categories.keys():
         logic_categories[category].sort(key = get_category_order)
 
-populate_modules_info()
+__populate_info()
 
 ## Logging
 
@@ -239,7 +256,10 @@ opts = {
 }
 
 # Set loglevel from opts
-if hasattr(logging, opts['loglevel'].upper()):
+if opts['is_debug']:
+    logger.setLevel(10)
+    logger.info('Setting debug loglevel {0}'.format(str(logger.getEffectiveLevel())))
+elif hasattr(logging, opts['loglevel'].upper()):
     logger.setLevel(getattr(logging, opts['loglevel'].upper()))
 else:
     logger.setLevel(getattr(logging, optdefs['loglevel']['default'].upper()))
