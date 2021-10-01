@@ -48,8 +48,8 @@ class BaseParser(object):
     # - Quantifier symbols
     # - Operator symbols
     # - Atomic sentence (proposition) symbols
-    def __init__(self, vocabulary, **opts):
-        self.vocabulary = vocabulary
+    def __init__(self, vocab, **opts):
+        self.vocab = vocab
         self.opts = opts
         self.__state = self.__State(self)
 
@@ -184,7 +184,7 @@ class BaseParser(object):
         pchar = self.current()
         cpos = self.pos
         try:
-            return self.vocabulary.get_predicate(**self.read_item())
+            return self.vocab.get_predicate(**self.read_item())
         except NoSuchPredicateError:
             raise ParseError(
                 "Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos)

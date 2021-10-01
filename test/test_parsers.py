@@ -28,6 +28,45 @@ voc = examples.vocabulary
 std = standard.Parser(voc)
 pol = polish.Parser(voc)
 
+def test_parse_standard():
+    s = parse('A & B', notation='standard')
+    assert s.is_operated
+    assert s.operator == 'Conjunction'
+
+def test_parse_polish():
+    s = parse('Kab', notation='polish')
+    assert s.is_operated
+    assert s.operator == 'Conjunction'
+
+def test_argument_no_prems_1_std_untitled():
+    a = argument(conclusion='A', notation='standard')
+    assert len(a.premises) == 0
+    assert a.conclusion.is_atomic()
+
+def test_argument_prems_preparsed_titled():
+    premises = [parse('Aab'), parse('Nb')]
+    conclusion = parse('a')
+    a = argument(conclusion=conclusion, premises=premises, title='TestArgument')
+    assert len(a.premises) == 2
+    assert a.title == 'TestArgument'
+
+def test_argument_parse_prems_preparsed_conclusion():
+    premises = ['Aab', 'Nb']
+    conclusion = parse('a')
+    a = argument(conclusion=conclusion, premises=premises, notation='polish')
+    assert len(a.premises) == 2
+    assert a.conclusion == conclusion
+
+def test_argument_repr_untitled():
+    a = argument(conclusion='a', notation='polish')
+    res = a.__repr__()
+    assert 'title' not in res
+
+def test_argument_repr_titled():
+    a = argument(conclusion='a', notation='polish', title='TestArg')
+    res = a.__repr__()
+    assert 'title' in res
+    
 class TestStandard(object):
 
     def test_parse_atomic(self):
