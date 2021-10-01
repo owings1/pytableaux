@@ -7,6 +7,9 @@ from utils import SymbolSet
 from past.builtins import basestring
 
 def create_parser(notn=None, vocab=None, **opts):
+    """
+    TODO: doc
+    """
     if isinstance(notn, Vocabulary) or isinstance(vocab, basestring):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
@@ -19,6 +22,12 @@ def create_parser(notn=None, vocab=None, **opts):
     elif notn == 'standard':
         return StandardParser(vocab, **opts)
     raise UnknownNotationError('Unknown parser: {0}'.format(str(notn)))
+
+def parse(input, *args, **kw):
+    """
+    Convenience wrapper for ``create_parser().parse()``.
+    """
+    return create_parser(*args, **kw).parse(input)
 
 class BaseParser(object):
 

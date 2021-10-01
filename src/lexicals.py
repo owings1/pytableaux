@@ -51,7 +51,7 @@ class LexicalItem(object):
         return a >= b
 
     def __getcmp(self, other):
-        r1, r2 = Vocabulary._lexrank(self, other)
+        r1, r2 = LexicalItem._lexrank(self, other)
         if r1 == r2:
             return (self.sort_tuple(), other.sort_tuple())
         return (r1, r2)
@@ -81,6 +81,27 @@ class LexicalItem(object):
     def __hash__(self):
         return hash(self.sort_tuple())
 
+    def __repr__(self):
+        """
+        Default representation with lex-order + sort-tuple.
+        """
+        return (LexicalItem.__lexorder[self.__class__], self.sort_tuple()).__repr__()
+
+    @staticmethod
+    def _lexrank(*items):
+        # Returns the value of __lexorder (below) for the class of each item.
+        return tuple(LexicalItem.__lexorder[clas] for clas in (it.__class__ for it in items))
+
+    @staticmethod
+    def _initorder():
+        # Canonical order or all the concrete LexicalItem classes.
+        LexicalItem.__lexorder = {
+            Predicate: 10, Constant: 20, Variable: 30, AtomicSentence: 40,
+            PredicatedSentence: 50, QuantifiedSentence: 60, OperatedSentence: 70,
+        }
+        # This method self-destucts.
+        delattr(LexicalItem, '_initorder')
+
 class Parameter(LexicalItem):
 
     def __init__(self, index, subscript):
@@ -96,9 +117,6 @@ class Parameter(LexicalItem):
     def sort_tuple(self):
         # Sort constants and variables by index, subscript
         return (self.index, self.subscript)
-
-    def __repr__(self):
-        return (self.__class__.__name__, self.index, self.subscript).__repr__()
 
 class Constant(Parameter):
 
@@ -152,12 +170,6 @@ class Predicate(LexicalItem):
     def sort_tuple(self):
         # Sort predicates by index, subscript, arity
         return (self.index, self.subscript, self.arity)
-
-    def __repr__(self):
-        # Include the name for informational purposes, though it does not count
-        # for its hash identity.
-        name = self.name if self.name else '[Untitled]'
-        return ((self.__class__.__name__, name) + self.sort_tuple()).__repr__()
 
 class Sentence(LexicalItem):
 
@@ -295,19 +307,6 @@ class Sentence(LexicalItem):
         List of quantifiers, recursive.
         """
         return list()
-
-    def __repr__(self):
-        # TODO: Consider removing this way of representing. I think it was
-        #       useful in the early stages, but there are several reaons
-        #       to abandon it: performance, consisitency, design, etc.
-        # UPDATE:
-        #   Error messages, e.g. in models, convert the sentence to a string,
-        #   so removing this would make it harder to interpret errors. We could
-        #   either find another way to represent them that is still helpful
-        #   in errors, or generalize error handling and leave it to decide how
-        #   to represent sentences.
-        from notations import polish
-        return polish.write(self)
 
 class AtomicSentence(Sentence):
 
@@ -507,6 +506,9 @@ class OperatedSentence(Sentence):
         'Biconditional': 80, 'Possibility': 90, 'Necessity': 100,
     }
 
+# Initialize order.
+LexicalItem._initorder()
+
 class Vocabulary(object):
     """
     Create a new vocabulary. *predicate_defs* is a list of tuples (name, index,
@@ -666,17 +668,6 @@ class Vocabulary(object):
         List all predicates in the vocabulary, excluding system predicates.
         """
         return list(self.user_predicates_list)
-
-    @staticmethod
-    def _lexrank(*items):
-        # Returns the value of __lexorder (below) for the class of each item.
-        return (__class__.__lexorder[clas] for clas in (it.__class__ for it in items))
-
-    # Canonical order or all the concrete LexicalItem classes.
-    __lexorder = {
-        Predicate: 10, Constant: 20, Variable: 30, AtomicSentence: 40,
-        PredicatedSentence: 50, QuantifiedSentence: 60, OperatedSentence: 70,
-    }
 
 class Argument(object):
     """
