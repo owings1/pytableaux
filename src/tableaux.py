@@ -46,7 +46,7 @@ class Tableau(object):
     is_premature = False
 
     #: The branches on the tableau. The branches are stored as list to
-    #: maintain a consisten ordering. Since a tableau really consists of
+    #: maintain a consistent ordering. Since a tableau really consists of
     #: a `set`, and are represented internally as such, this will always
     #: be a list of unique branches.
     branches = list()

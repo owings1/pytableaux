@@ -1,27 +1,30 @@
-        
-
+from models import BaseModel, truth_table, truth_tables
+from lexicals import Atomic
+from utils import get_logic
+from errors import *
+from pytest import raises
 def test_truth_table_cpl_negation():
-    tbl = logic.truth_table('cpl', 'Negation')
+    tbl = truth_table('cpl', 'Negation')
     assert len(tbl['inputs']) == 2
     assert len(tbl['outputs']) == 2
     assert tbl['inputs'][0][0] == 'F'
     assert tbl['outputs'][0] == 'T'
 
 def test_truth_tables_cpl():
-    tbls = logic.truth_tables('cpl')
+    tbls = truth_tables('cpl')
     assert tbls['Negation']['outputs'][0] == 'T'
 
 def test_get_logic_cpl_case_insensitive():
     assert get_logic('cpl') == get_logic('CPL')
 
 def test_get_logic_none_bad_argument():
-    with raises(logic.BadArgumentError):
+    with raises(TypeError):
         get_logic(None)
-        
+
 class TestModel(object):
 
     def test_not_impl_various(self):
-        model = logic.Model()
+        model = BaseModel()
         with raises(NotImplementedError):
             model.read_branch(None)
         with raises(NotImplementedError):
@@ -31,7 +34,7 @@ class TestModel(object):
         with raises(NotImplementedError):
             model.value_of_predicated(None)
         with raises(NotImplementedError):
-            s = logic.negate(atomic(0, 0))
+            s = Atomic(0, 0).negate()
             model.value_of_operated(s)
         with raises(NotImplementedError):
             model.value_of_quantified(None)
@@ -41,6 +44,6 @@ class TestModel(object):
             model.value_of_atomic(None)
 
     def test_get_data_empty(self):
-        model = logic.Model()
+        model = BaseModel()
         res = model.get_data()
         assert len(res) == 0

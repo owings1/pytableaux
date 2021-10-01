@@ -1,3 +1,5 @@
+from utils import get_logic
+from lexicals import operarity
 import itertools
 
 class BaseModel(object):
@@ -77,3 +79,22 @@ class BaseModel(object):
 
     def get_data(self):
         return dict()
+
+
+def truth_table(logic, operator, reverse=False):
+    model = get_logic(logic).Model()
+    inputs = model.truth_table_inputs(operarity(operator))
+    if reverse:
+        inputs = tuple(reversed(inputs))
+    outputs = [
+        model.truth_function(operator, *values)
+        for values in inputs
+    ]
+    return {'inputs': inputs, 'outputs': outputs}
+
+def truth_tables(logic, **kw):
+    model = get_logic(logic).Model()
+    return {
+        operator: truth_table(logic, operator, **kw)
+        for operator in model.truth_functional_operators
+    }
