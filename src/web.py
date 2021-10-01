@@ -174,7 +174,7 @@ def get_remote_ip(req):
 
 def errstr(err):
     if isinstance(err, Exception):
-        return '{0}: {1}'.format(err.__class__.name, str(err))
+        return '{0}: {1}'.format(err.__class__.__name__, str(err))
     return str(err)
 
 class RequestDataError(Exception):
@@ -348,10 +348,6 @@ class App(object):
                         'message' : 'OK',
                         'result'  : result,
                     }
-            except Exception as err:
-                if opts['is_debug']:
-                    traceback.print_exc()
-                raise err
             except ProofTimeoutError as err: # pragma: no cover
                 res.status = 408
                 return {

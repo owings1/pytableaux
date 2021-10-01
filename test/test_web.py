@@ -20,7 +20,6 @@
 import pytest
 
 import web
-import logic
 import cherrypy
 import json
 from cherrypy.test import helper

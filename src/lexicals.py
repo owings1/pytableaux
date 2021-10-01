@@ -711,7 +711,6 @@ def create_lexwriter(notn=None, format=None, **opts):
         notn = default_notation
     if not format:
         format = 'ascii'
-    print(('Creating symbol set', str(notn), str(format)))
     symbol_set = SymbolSet(notn, format)
     if notn == 'polish':
         return PolishLexWriter(symbol_set, **opts)
