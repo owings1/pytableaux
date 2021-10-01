@@ -78,3 +78,11 @@ class BoundVariableError(ParseError):
 
 class UnknownNotationError(ParseError):
     pass
+
+# smtp mailroom
+
+class EmailConfigError(Exception):
+    pass
+
+class InternalSMTPError(Exception):
+    pass

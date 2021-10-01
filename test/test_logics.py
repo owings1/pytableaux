@@ -22,11 +22,10 @@ from errors import *
 from utils import get_logic
 from lexicals import Vocabulary, Atomic, Constant, Predicated, Quantified, \
     Operated, Variable, get_system_predicate
-from tableaux import Tableau, Rule, Branch, FilterNodeRule, Node
+from tableaux import Tableau, Rule, Branch, FilterNodeRule, Node, MaxConstantsTracker
 from parsers import parse, parse_argument
 from models import truth_table
 import examples
-import helpers
 
 def parsex(s):
     return examples.parser.parse(s)
@@ -2416,7 +2415,7 @@ class TestMaxConstantsTracker(LogicTester):
     class MockRule(FilterNodeRule):
 
         def setup(self):
-            self.add_helper('mtr', helpers.MaxConstantsTracker(self))
+            self.add_helper('mtr', MaxConstantsTracker(self))
 
     Rule = MockRule
 

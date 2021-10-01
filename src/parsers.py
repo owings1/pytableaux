@@ -6,9 +6,37 @@ from fixed import default_notation
 from utils import isstr, SymbolSet
 from past.builtins import basestring
 
+def parse(input, *args, **kw):
+    """
+    Parse a string and return a sentence.
+    Convenience wrapper for ``create_parser().parse()``.
+
+    :rtype: Sentence
+    """
+    return create_parser(*args, **kw).parse(input)
+
+def parse_argument(conclusion, premises=None, title=None, **kw):
+    """
+    Parse conclusion, and optional premises, and return an argument.
+    Convenience wrapper for ``create_parser().parse_argument()``.
+
+    :rtype: Argument
+    """
+    return create_parser(**kw).argument(conclusion, premises, title)
+
 def create_parser(notn=None, vocab=None, **opts):
     """
-    TODO: doc
+    Create a sentence parser with the given spec. This is
+    useful if you parsing many sentences with the same notation
+    and vocabulary.
+
+    :param str notn: The parser notation. Uses the default notation
+        if not passed.
+    :param Vocabulary vocab: The vocabulary instance containing any
+        custom predicate definitions. If not passed, a new instance is
+        created.
+    :return: The parser instance
+    :rtype: BaseParser
     """
     if isinstance(notn, Vocabulary) or isinstance(vocab, basestring):
         # Accept inverted args for backwards compatibility.
@@ -22,15 +50,6 @@ def create_parser(notn=None, vocab=None, **opts):
     elif notn == 'standard':
         return StandardParser(vocab, **opts)
     raise UnknownNotationError('Unknown parser: {0}'.format(str(notn)))
-
-def parse(input, *args, **kw):
-    """
-    Convenience wrapper for ``create_parser().parse()``.
-    """
-    return create_parser(*args, **kw).parse(input)
-
-def parse_argument(conclusion, premises=None, title=None, **kw):
-    return create_parser(**kw).argument(conclusion, premises, title)
 
 class BaseParser(object):
 

@@ -242,19 +242,26 @@ class Sentence(LexicalItem):
 
     def negate(self):
         """
-        Convenience method to negate the sentence.
+        Negate this sentence, returning the new sentence.
+
+        :rtype: OperatedSentence
         """
         return OperatedSentence('Negation', [self])
 
     def negative(self):
         """
-        TODO: doc
+        Either negate this sentence, or, if this is already a negated sentence
+        return its negatum, i.e., "un-negate" the sentence.
+
+        :rtype: Sentence
         """
         return self.negatum if self.is_negated() else self.negate()
 
     def asserted(self):
         """
-        TODO: doc
+        Apply the assertion operator to this sentence, and return the new sentence.
+
+        :rtype: Sentence
         """
         return OperatedSentence('Assertion', [self])
 
@@ -386,6 +393,44 @@ class PredicatedSentence(Sentence):
         return self.predicate.sort_tuple() + tuple(param.sort_tuple() for param in self.parameters)
 
 class QuantifiedSentence(Sentence):
+
+    # -- docs copied from previous api
+
+    # Return a quanitified sentence for the given quantifier, bound variable and
+    # inner sentence. Example using the Identity system predicate::
+
+    #     x = variable(0, 0)
+
+    #     # x is identical to x
+    #     open_sentence = predicated('Identity', [x, x])
+
+    #     # for all x, x is identical to x
+    #     sentence = quantify('Universal', x, open_sentence)
+
+    # Examples using a vocabulary of user-defined predicates::
+
+    #     vocab = Vocabulary([
+    #         ('is a bachelor', 0, 0, 1),
+    #         ('is unmarried' , 1, 0, 1)
+    #     ])
+    #     x = variable(0, 0)
+
+    #     # x is a bachelor
+    #     open_sentence = predicated('is a bachelor', [x], vocab)
+
+    #     # there exists an x, such that x is a bachelor
+    #     sentence = quantify('Existential', x, open_sentence)
+
+    #     # x is unmarried
+    #     open_sentence2 = predicated('is unmarried', [x], vocab)
+
+    #     # if x is a bachelor, then x is unmarried
+    #     open_sentence3 = operate('Conditional', [open_sentence, open_sentence2])
+
+    #     # for all x, if x is a bachelor then x is unmarried
+    #     sentence2 = quantify('Universal', x, open_sentence3)
+
+    # :rtype: Vocabulary.Sentence
 
     def __init__(self, quantifier, variable, sentence):
         super().__init__()
@@ -903,13 +948,28 @@ system_predicates = {
 
 def get_system_predicate(name):
     """
-    TODO: doc
+    Get a system predicate by name. Example::
+
+        pred = get_system_predicate('Identity')
+        assert pred.arity == 2
+
+    :param str name: The predicate name.
+    :return: The predicate instance.
+    :rtype: Vocabulary.Predicate
+    :raises KeyError: if the system predicate does not exist.
     """
     return system_predicates[name]
 
 def operarity(oper):
     """
-    TODO: doc
+    Get the arity of an operator.
+
+    Note: to get the arity of a predicate, use ``predicate.arity``.
+
+    :param str operator: The operator.
+    :return: The arity of the operator.
+    :rtype: int
+    :raises KeyError: if the operator does not exist.
     """
     return operators[oper]
 

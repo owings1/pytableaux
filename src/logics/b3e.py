@@ -94,25 +94,13 @@ class TableauxSystem(fde.TableauxSystem):
     branchables.update({
         # reduction
         'Conditional': {
-            False  : {
-                True  : 0,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 0,
-            },
+            False : {True: 0, False: 0},
+            True  : {True: 0, False: 0},
         },
         # reduction
         'Biconditional': {
-            False  : {
-                True  : 0,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 0,
-            },
+            False : {True: 0, False: 0},
+            True  : {True: 0, False: 0},
         },
     })
 

@@ -150,7 +150,7 @@ available = {
         'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
         'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
     ],
-    'writers'   : ['html'],
+    # 'writers'   : ['html'],
 }
 modules = dict()
 logic_categories = dict()
