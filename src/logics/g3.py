@@ -31,8 +31,6 @@ class Meta(object):
 
     category_display_order = 90
 
-import logic, helpers
-from logic import negate, negative, operate
 from . import fde, l3
 
 class Model(l3.Model):
@@ -376,12 +374,12 @@ class TableauxRules(object):
                 'adds': [
                     [
                         {'sentence': lhs        , 'designated': True},
-                        {'sentence': negate(rhs), 'designated': True},
+                        {'sentence': rhs.negate(), 'designated': True},
                     ],
                     [
                         {'sentence': lhs        , 'designated': False},
-                        {'sentence': negate(lhs), 'designated': False},
-                        {'sentence': negate(rhs), 'designated': True},
+                        {'sentence': lhs.negate(), 'designated': False},
+                        {'sentence': rhs.negate(), 'designated': True},
                     ],
                 ],
             }
@@ -415,10 +413,10 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(lhs), 'designated': True},
+                        {'sentence': lhs.negate(), 'designated': True},
                     ],
                     [
-                        {'sentence': negate(rhs), 'designated': False},
+                        {'sentence': rhs.negate(), 'designated': False},
                     ],
                 ],
             }

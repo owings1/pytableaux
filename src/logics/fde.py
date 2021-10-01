@@ -31,8 +31,7 @@ class Meta(object):
     category_display_order = 10
 
 from errors import ModelValueError
-from lexicals import AtomicSentence as Atomic, OperatedSentence as Operated, \
-    QuantifiedSentence as Quantified, get_system_predicate
+from lexicals import Atomic, Operated, Quantified, get_system_predicate
 from models import BaseModel
 from tableaux import TableauxSystem as BaseSystem, ClosureRule, FilterNodeRule, \
     AllConstantsStoppingRule, NewConstantStoppingRule

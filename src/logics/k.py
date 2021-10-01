@@ -31,12 +31,17 @@ class Meta(object):
     
     category_display_order = 1
 
-import logic, examples, helpers
-from logic import negate, negative
+from lexicals import get_system_predicate, Atomic, Operated, Quantified, Predicated
+from models import BaseModel
+from tableaux import TableauxSystem, FilterNodeRule, ClosureRule, AllConstantsStoppingRule, \
+    NewConstantStoppingRule, AppliedSentenceCounter, MaxWorldsTracker, QuitFlagHelper, \
+    AppliedNodesWorldsTracker, PredicatedNodesTracker
+import examples
+
 from . import fde
 
-Identity  = logic.get_system_predicate('Identity')
-Existence = logic.get_system_predicate('Existence')
+Identity  = get_system_predicate('Identity')
+Existence = get_system_predicate('Existence')
 
 def substitute_params(params, old_value, new_value):
     new_params = []
@@ -47,7 +52,7 @@ def substitute_params(params, old_value, new_value):
             new_params.append(p)
     return tuple(new_params)
 
-class Model(logic.Model):
+class Model(BaseModel):
     """
     A K-model comprises a non-empty collection of K-frames, a world access
     relation, and a set of constants (the domain).
@@ -622,7 +627,7 @@ class Model(logic.Model):
     def truth_function(self, operator, a, b=None):
         return self.fde.truth_function(operator, a, b)
 
-class TableauxSystem(logic.TableauxSystem):
+class TableauxSystem(TableauxSystem):
     """
     Modal tableaux are similar to classical tableaux, with the addition of a
     *world* index for each sentence node, as well as *access* nodes representing
@@ -644,7 +649,7 @@ class TableauxSystem(logic.TableauxSystem):
         branch = tableau.branch()
         for premise in argument.premises:
             branch.add({'sentence': premise, 'world': 0})
-        branch.add({'sentence': negate(argument.conclusion), 'world': 0})
+        branch.add({'sentence': argument.conclusion.negate(), 'world': 0})
 
     @classmethod
     def branching_complexity(cls, node):
@@ -674,7 +679,7 @@ class TableauxSystem(logic.TableauxSystem):
 class IsModal(object):
     modal = True
 
-class DefaultNodeRule(IsModal, logic.TableauxSystem.FilterNodeRule):
+class DefaultNodeRule(IsModal, FilterNodeRule):
 
     ticking = True
 
@@ -691,7 +696,7 @@ class TableauxRules(object):
     connectives.
     """
 
-    class ContradictionClosure(IsModal, logic.TableauxSystem.ClosureRule):
+    class ContradictionClosure(IsModal, ClosureRule):
         """
         A branch closes when a sentence and its negation both appear on a node **with the
         same world** on the branch.
@@ -712,11 +717,11 @@ class TableauxRules(object):
             return False
 
         def example_nodes(self, branch):
-            a = logic.atomic(0, 0)
+            a = Atomic(0, 0)
             w = 0 if self.modal else None
             return [
-                {'sentence':        a , 'world': w},
-                {'sentence': negate(a), 'world': w},
+                {'sentence': a         , 'world': w},
+                {'sentence': a.negate(), 'world': w},
             ]
 
         def applies_to_branch(self, branch):
@@ -728,11 +733,11 @@ class TableauxRules(object):
         def _find_closing_node(self, node, branch):
             if node.has('sentence'):
                 return branch.find({
-                    'sentence' : negative(node.props['sentence']),
+                    'sentence' : node.props['sentence'].negative(),
                     'world'    : node.props['world'],
                 })
                 
-    class SelfIdentityClosure(IsModal, logic.TableauxSystem.ClosureRule):
+    class SelfIdentityClosure(IsModal, ClosureRule):
         """
         A branch closes when a sentence of the form :s:`~a = a` appears on the
         branch *at any world*.
@@ -758,11 +763,11 @@ class TableauxRules(object):
             return self.tracker.cached_target(branch)
 
         def example_node(self, branch):
-            s = negate(examples.self_identity())
+            s = examples.self_identity().negate()
             w = 0 if self.modal else None
             return {'sentence': s, 'world': w}
 
-    class NonExistenceClosure(IsModal, logic.TableauxSystem.ClosureRule):
+    class NonExistenceClosure(IsModal, ClosureRule):
         """
         A branch closes when a sentence of the form :s:`~!a` appears on the branch
         *at any world*.
@@ -786,7 +791,7 @@ class TableauxRules(object):
             return self.tracker.cached_target(branch)
 
         def example_node(self, branch):
-            s = negate(examples.existence())
+            s = examples.existence().negate()
             w = 0 if self.modal else None
             return {'sentence': s, 'world': w}
 
@@ -795,10 +800,8 @@ class TableauxRules(object):
         From an unticked double negation node *n* with world *w* on a branch *b*, add a
         node to *b* with *w* and the double-negatum of *n*, then tick *n*.
         """
-
         negated  = True
         operator = 'Negation'
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -816,9 +819,7 @@ class TableauxRules(object):
         From an unticked assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
         """
-
         operator = 'Assertion'
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -837,10 +838,8 @@ class TableauxRules(object):
         add a node to *b* with the negation of the assertion of *n* and world *w*,
         then tick *n*.
         """
-
         negated  = True
         operator = 'Assertion'
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -848,7 +847,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(s.operand), 'world': node.props['world']},
+                        {'sentence': s.operand.negate(), 'world': node.props['world']},
                     ],
                 ],
             }
@@ -858,9 +857,7 @@ class TableauxRules(object):
         From an unticked conjunction node *n* with world *w* on a branch *b*, for each conjunct,
         add a node with world *w* to *b* with the conjunct, then tick *n*.
         """
-
         operator = 'Conjunction'
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -879,17 +876,15 @@ class TableauxRules(object):
         conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
         the conjunct to *b*, then tick *n*.
         """
-
         negated  = True
         operator = 'Conjunction'
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(operand), 'world': node.props['world']},
+                        {'sentence': operand.negate(), 'world': node.props['world']},
                     ]
                     for operand in self.sentence(node).operands
                 ],
@@ -901,9 +896,7 @@ class TableauxRules(object):
         make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
         then tick *n*.
         """
-
         operator = 'Disjunction'
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -921,17 +914,15 @@ class TableauxRules(object):
         From an unticked negated disjunction node *n* with world *w* on a branch *b*, for each
         disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
         """
-
         negated  = True
         operator = 'Disjunction'
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(operand), 'world': node.props['world']}
+                        {'sentence': operand.negate(), 'world': node.props['world']}
                         for operand in self.sentence(node).operands
                     ],
                 ],
@@ -944,9 +935,7 @@ class TableauxRules(object):
         antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
         *n*.
         """
-
         operator = 'Material Conditional'
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -955,7 +944,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(s.lhs), 'world': w},
+                        {'sentence': s.lhs.negate(), 'world': w},
                     ],
                     [
                         {'sentence':        s.rhs , 'world': w},
@@ -969,10 +958,8 @@ class TableauxRules(object):
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
         of the consequent, then tick *n*.
         """
-
         negated  = True
         operator = 'Material Conditional'
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -982,7 +969,7 @@ class TableauxRules(object):
                 'adds': [
                     [
                         {'sentence':        s.lhs , 'world': w}, 
-                        {'sentence': negate(s.rhs), 'world': w},
+                        {'sentence': s.rhs.negate(), 'world': w},
                     ],
                 ],
             }
@@ -995,9 +982,7 @@ class TableauxRules(object):
         nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
         tick *n*.
         """
-
         operator = 'Material Biconditional'
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -1006,8 +991,8 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(s.lhs), 'world': w},
-                        {'sentence': negate(s.rhs), 'world': w},
+                        {'sentence': s.lhs.negate(), 'world': w},
+                        {'sentence': s.rhs.negate(), 'world': w},
                     ],
                     [
                         {'sentence': s.rhs, 'world': w},
@@ -1024,10 +1009,8 @@ class TableauxRules(object):
         *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
         then tick *n*.
         """
-
         negated  = True
         operator = 'Material Biconditional'
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -1037,10 +1020,10 @@ class TableauxRules(object):
                 'adds': [
                     [
                         {'sentence':        s.lhs , 'world': w},
-                        {'sentence': negate(s.rhs), 'world': w},
+                        {'sentence': s.rhs.negate(), 'world': w},
                     ],
                     [
-                        {'sentence': negate(s.rhs), 'world': w},
+                        {'sentence': s.rhs.negate(), 'world': w},
                         {'sentence':        s.lhs , 'world': w},
                     ],
                 ],
@@ -1055,7 +1038,6 @@ class TableauxRules(object):
         antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
         *n*.
         """
-
         negated  = False
         operator = 'Conditional'
 
@@ -1067,7 +1049,6 @@ class TableauxRules(object):
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
         of the consequent, then tick *n*.
         """
-
         negated  = True
         operator = 'Conditional'
 
@@ -1081,7 +1062,6 @@ class TableauxRules(object):
         nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
         tick *n*.
         """
-
         negated  = False
         operator = 'Biconditional'
 
@@ -1095,19 +1075,16 @@ class TableauxRules(object):
         *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
         then tick *n*.
         """
-
         negated  = True
         operator = 'Biconditional'
 
-    class Existential(DefaultNodeRule, helpers.NewConstantStoppingRule):
+    class Existential(DefaultNodeRule, NewConstantStoppingRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
         into *s* of *v* with a constant new to *b*, then tick *n*.
         """
-
         quantifier = 'Existential'
-
         branch_level = 1
 
         def score_candidate(self, target):
@@ -1130,12 +1107,9 @@ class TableauxRules(object):
         quantifying over variable *v* into sentence *s*, add a universally quantified
         node to *b* with world *w* over *v* into the negation of *s*, then tick *n*.
         """
-
         negated    = True
         quantifier = 'Existential'
-
         branch_level = 1
-
         convert_to = 'Universal'
 
         def get_target_for_node(self, node, branch):
@@ -1143,7 +1117,7 @@ class TableauxRules(object):
             v = s.variable
             si = s.sentence
             # keep conversion neutral for inheritance below
-            sq = logic.quantify(self.convert_to, v, negate(si))
+            sq = Quantified(self.convert_to, v, si.negate())
             return {
                 'adds': [
                     [
@@ -1152,16 +1126,14 @@ class TableauxRules(object):
                 ],
             }
 
-    class Universal(DefaultNodeRule, helpers.AllConstantsStoppingRule):
+    class Universal(DefaultNodeRule, AllConstantsStoppingRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
         exists) for *v* into *s* does not appear at *w* on *b*, add a node with *w* and *r* to
         *b*. The node *n* is never ticked.
         """
-
         quantifier = 'Universal'
-
         branch_level = 1
         ticking      = False
 
@@ -1191,10 +1163,8 @@ class TableauxRules(object):
         quantified node to *b* with world *w* over *v* into the negation of *s*,
         then tick *n*.
         """
-
         negated    = True
         quantifier = 'Universal'
-
         convert_to = 'Existential'
 
     class Possibility(DefaultNodeRule):
@@ -1203,16 +1173,14 @@ class TableauxRules(object):
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
         world1 *w* and world2 *w'* to *b*, then tick *n*.
         """
-
         operator = 'Possibility'
-
         branch_level = 1
 
         def setup(self):
             self.add_helpers({
-                'applied_sentences' : helpers.AppliedSentenceCounter(self),
-                'max_worlds'        : helpers.MaxWorldsTracker(self),
-                'quit_flagger'      : helpers.QuitFlagHelper(self),
+                'applied_sentences' : AppliedSentenceCounter(self),
+                'max_worlds'        : MaxWorldsTracker(self),
+                'quit_flagger'      : QuitFlagHelper(self),
             })
 
         def is_potential_node(self, node, branch):
@@ -1292,18 +1260,15 @@ class TableauxRules(object):
         necessity node to *b* with *w*, whose operand is the negation of the negated 
         possibilium of *n*, then tick *n*.
         """
-
         negated    = True
         operator   = 'Possibility'
-
         branch_level = 1
-
         convert_to = 'Necessity'
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
             si = s.operand
-            sm = logic.operate(self.convert_to, [negate(si)])
+            sm = Operated(self.convert_to, [si.negate()])
             return {
                 'adds': [
                     [
@@ -1318,9 +1283,7 @@ class TableauxRules(object):
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
         with *s* at *w2*, add it to *b*. The node *n* is never ticked.
         """
-
         operator = 'Necessity'
-
         branch_level = 1
         ticking      = False
 
@@ -1332,9 +1295,9 @@ class TableauxRules(object):
                 'check_target_condtn2',
             )
             self.add_helpers({
-                'max_worlds'          : helpers.MaxWorldsTracker(self),
-                'node_worlds_applied' : helpers.AppliedNodesWorldsTracker(self),
-                'quit_flagger'        : helpers.QuitFlagHelper(self),
+                'max_worlds'          : MaxWorldsTracker(self),
+                'node_worlds_applied' : AppliedNodesWorldsTracker(self),
+                'quit_flagger'        : QuitFlagHelper(self),
             })
 
         def is_potential_node(self, node, branch):
@@ -1358,7 +1321,7 @@ class TableauxRules(object):
 
                 targets = []
 
-                worlds = branch.worlds()
+                # worlds = branch.worlds()
                 s = self.sentence(node)
                 si = s.operand
                 w1 = node.props['world']
@@ -1423,7 +1386,7 @@ class TableauxRules(object):
             #return -1 * min(target['track_count'], self.branching_complexity(target['node']))
 
         def example_nodes(self, branch):
-            s = logic.operate(self.operator, [logic.atomic(0, 0)])
+            s = Operated(self.operator, [Atomic(0, 0)])
             return [
                 {'sentence': s, 'world': 0},
                 {'world1': 0, 'world2': 1},
@@ -1455,10 +1418,8 @@ class TableauxRules(object):
         possibility node whose operand is the negation of the negated necessitatum of *n*,
         then tick *n*.
         """
-
         negated    = True
         operator   = 'Necessity'
-
         convert_to = 'Possibility'
 
     class IdentityIndiscernability(DefaultNodeRule):
@@ -1468,14 +1429,12 @@ class TableauxRules(object):
         if the replacement of that constant for the other constant of *s* is a sentence that does
         not appear on *b* at *w*, then add it.
         """
-
         predicate = 'Identity'
-
         branch_level = 1
         ticking      = False
 
         def setup(self):
-            self.add_helper('predicated_nodes', helpers.PredicatedNodesTracker(self))
+            self.add_helper('predicated_nodes', PredicatedNodesTracker(self))
 
         def get_targets_for_node(self, node, branch):
             pnodes = self.predicated_nodes.get_predicated(branch)
@@ -1497,7 +1456,7 @@ class TableauxRules(object):
                     continue # pragma: no cover
                 # let s1 be the replacement of p with the other parameter p1 into s.
                 params = [p1 if param == p else param for param in s.parameters]
-                s1 = logic.predicated(s.predicate, params)
+                s1 = Predicated(s.predicate, params)
                 # since we have SelfIdentityClosure, we don't need a = a
                 if s.predicate != Identity or params[0] != params[1]:
                     # if <s1,w> does not yet appear on b, ...

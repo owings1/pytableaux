@@ -30,8 +30,6 @@ class Meta(object):
 
     category_display_order = 1
 
-import logic, examples
-from logic import negate
 from . import k
 
 class Model(k.Model):
@@ -87,7 +85,7 @@ class TableauxSystem(k.TableauxSystem):
         branch = tableau.branch()
         for premise in argument.premises:
             branch.add({'sentence': premise})
-        branch.add({'sentence': negate(argument.conclusion)})
+        branch.add({'sentence': argument.conclusion.negate()})
 
 class NonModal(object):
     modal = False

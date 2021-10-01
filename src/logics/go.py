@@ -30,9 +30,9 @@ class Meta(object):
 
     category_display_order = 60
 
-import logic, examples
+from lexicals import Operated, Quantified
+
 from . import fde, k3, b3e
-from logic import negate, operate, quantify
 
 def gap(v):
     return min(v, 1 - v)
@@ -268,7 +268,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(self.sentence(node)), 'designated': True},
+                        {'sentence': self.sentence(node).negate(), 'designated': True},
                     ]
                 ]
             }
@@ -353,8 +353,8 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(s.lhs), 'designated': False},
-                        {'sentence':        s.rhs , 'designated': False},
+                        {'sentence': s.lhs.negate(), 'designated': False},
+                        {'sentence': s.rhs         , 'designated': False},
                     ]
                 ]
             }
@@ -397,12 +397,12 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(s.lhs), 'designated': False},
-                        {'sentence':        s.rhs , 'designated': False},
+                        {'sentence': s.lhs.negate(), 'designated': False},
+                        {'sentence': s.rhs         , 'designated': False},
                     ],
                     [
-                        {'sentence':        s.lhs , 'designated': False},
-                        {'sentence': negate(s.rhs), 'designated': False},
+                        {'sentence': s.lhs         , 'designated': False},
+                        {'sentence': s.rhs.negate(), 'designated': False},
                     ],
                 ],
             }
@@ -438,7 +438,7 @@ class TableauxRules(object):
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            disj = operate('Disjunction', [negate(s.lhs), s.rhs])
+            disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
             return {
                 'adds': [
                     [
@@ -447,8 +447,8 @@ class TableauxRules(object):
                     [
                         {'sentence':        s.lhs , 'designated': False},
                         {'sentence':        s.rhs , 'designated': False},
-                        {'sentence': negate(s.lhs), 'designated': False},
-                        {'sentence': negate(s.rhs), 'designated': False},
+                        {'sentence': s.lhs.negate(), 'designated': False},
+                        {'sentence': s.rhs.negate(), 'designated': False},
                     ],
                 ],
             }
@@ -468,16 +468,16 @@ class TableauxRules(object):
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            disj = operate('Disjunction', [negate(s.lhs), s.rhs])
+            disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
             return {
                 'adds': [
                     [
-                        {'sentence': s.lhs,'designated' : True },
-                        {'sentence': s.rhs,'designated' : False},
+                        {'sentence': s.lhs,  'designated' : True },
+                        {'sentence': s.rhs,  'designated' : False},
                     ],
                     [
-                        {'sentence': negate(s.lhs), 'designated': False},
-                        {'sentence': negate(s.rhs), 'designated': True },
+                        {'sentence': s.lhs.negate(), 'designated': False},
+                        {'sentence': s.rhs.negate(), 'designated': True },
                     ],
                 ],
             }
@@ -512,8 +512,8 @@ class TableauxRules(object):
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            cond1 = operate('Conditional', [s.lhs, s.rhs])
-            cond2 = operate('Conditional', [s.rhs, s.lhs])
+            cond1 = Operated('Conditional', [s.lhs, s.rhs])
+            cond2 = Operated('Conditional', [s.rhs, s.lhs])
             return {
                 'adds': [
                     [
@@ -537,15 +537,15 @@ class TableauxRules(object):
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            cond1 = operate('Conditional', [s.lhs, s.rhs])
-            cond2 = operate('Conditional', [s.rhs, s.lhs])
+            cond1 = Operated('Conditional', [s.lhs, s.rhs])
+            cond2 = Operated('Conditional', [s.rhs, s.lhs])
             return {
                 'adds': [
                     [
-                        {'sentence': negate(cond1), 'designated': True},
+                        {'sentence': cond1.negate(), 'designated': True},
                     ],
                     [
-                        {'sentence': negate(cond2), 'designated': True},
+                        {'sentence': cond2.negate(), 'designated': True},
                     ],
                 ],
             }
@@ -586,9 +586,9 @@ class TableauxRules(object):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
-            si_lem_fail = negate(operate('Disjunction', [si, negate(si)]))
-            si_disj = operate('Disjunction', [negate(si), si_lem_fail])
-            sq = quantify(self.convert_to, v, si_disj)
+            si_lem_fail = Operated('Disjunction', [si, si.negate()]).negate()
+            si_disj = Operated('Disjunction', [si.negate(), si_lem_fail])
+            sq = Quantified(self.convert_to, v, si_disj)
             return {
                 'adds': [
                     [
@@ -647,8 +647,8 @@ class TableauxRules(object):
             si = s.sentence
             r = si.substitute(c, v)
             return [
-                {'sentence':        r , 'designated': not d},
-                {'sentence': negate(r), 'designated': not d},
+                {'sentence': r         , 'designated': not d},
+                {'sentence': r.negate(), 'designated': not d},
             ]
 
         def get_target_for_node(self, node, branch):
@@ -669,7 +669,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
-            sq = quantify(self.convert_to, v, negate(si))
+            sq = Quantified(self.convert_to, v, si.negate())
             return {'sentence': sq, 'designated': self.designation}
             
     class UniversalUndesignated(ExistentialUndesignated):

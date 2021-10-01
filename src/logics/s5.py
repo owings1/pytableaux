@@ -27,8 +27,8 @@ class Meta(object):
     category = 'Bivalent Modal'
     category_display_order = 5
 
-import logic
-import helpers
+from tableaux import PotentialNodeRule, MaxWorldsTracker
+
 from . import k, t, s4
 
 
@@ -76,7 +76,7 @@ class TableauxRules(object):
     .. _S4: s4.html
     """
     
-    class Symmetric(k.IsModal, logic.TableauxSystem.PotentialNodeRule):
+    class Symmetric(k.IsModal, PotentialNodeRule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
@@ -87,7 +87,7 @@ class TableauxRules(object):
         def setup(self):
             self.opts['is_rank_optim'] = False
             self.add_timer('is_potential_node')
-            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
+            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
 
         # rule implementation
 

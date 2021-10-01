@@ -30,8 +30,7 @@ class Meta(object):
     
     category_display_order = 50
 
-import logic
-from logic import assertion, operate, negate
+from lexicals import Operated
 from . import k3, k3w, fde
 
 def gap(v):
@@ -387,13 +386,13 @@ class TableauxRules(object):
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            sn = operate(
+            sn = Operated(
                 'Disjunction',
-                [negate(assertion(s.lhs)), assertion(s.rhs)]
+                [s.lhs.asserted().negate(), s.rhs.asserted()]
             )
             # keep negated neutral for inheritance below
             if self.negated:
-                sn = negate(sn)
+                sn = sn.negate()
             return {
                 'adds': [
                     [
@@ -464,18 +463,18 @@ class TableauxRules(object):
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
             d = self.designation
-            sn1 = operate('Disjunction', [
-                negate(assertion(s.lhs)),
-                assertion(s.rhs)
+            sn1 = Operated('Disjunction', [
+                s.lhs.asserted().negate(),
+                s.rhs.asserted(),
             ])
-            sn2 = operate('Disjunction', [
-                negate(assertion(s.rhs)),
-                assertion(s.lhs)
+            sn2 = Operated('Disjunction', [
+                s.rhs.asserted().negate(),
+                s.lhs.asserted(),
             ])
             # keep negated neutral for inheritance below
             if self.negated:
-                sn1 = negate(sn1)
-                sn2 = negate(sn2)
+                sn1 = sn1.negate(),
+                sn2 = sn2.negate(),
             return {
                 'adds': [
                     [

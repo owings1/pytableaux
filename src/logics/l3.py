@@ -31,9 +31,8 @@ class Meta(object):
 
     category_display_order = 80
 
+from lexicals import Operated
 from . import fde, k3
-import logic
-from logic import operate, negate, negative
 
 class Model(k3.Model):
     """
@@ -103,224 +102,76 @@ class TableauxRules(object):
     .. _FDE: fde.html
     """
 
-    class DoubleNegationDesignated(k3.TableauxRules.DoubleNegationDesignated):
-        """
-        This rule is the same as the `FDE DoubleNegationDesignated rule`_.
-
-        //ruledoc//fde//DoubleNegationDesignated//
-
-        .. _FDE DoubleNegationDesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationDesignated
-        """
+    class GlutClosure(k3.TableauxRules.GlutClosure):
         pass
 
-    class DoubleNegationUndesignated(k3.TableauxRules.DoubleNegationUndesignated):
-        """
-        This rule is the same as the `FDE DoubleNegationUndesignated rule`_.
-
-        //ruledoc//fde//DoubleNegationUndesignated//
-
-        .. _FDE DoubleNegationUndesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationUndesignated
-        """
+    class DesignationClosure(fde.TableauxRules.DesignationClosure):
         pass
 
-    class AssertionDesignated(k3.TableauxRules.AssertionDesignated):
-        """
-        This rule is the same as the `FDE AssertionDesignated rule`_.
-
-        //ruledoc//fde//AssertionDesignated//
-
-        .. _FDE AssertionDesignated rule: fde.html#logics.fde.TableauxRules.AssertionDesignated
-        """
+    class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
         pass
 
-    class AssertionNegatedDesignated(k3.TableauxRules.AssertionNegatedDesignated):
-        """
-        This rule is the same as the `FDE AssertionNegatedDesignated rule`_.
-
-        //ruledoc//fde//AssertionNegatedDesignated//
-
-        .. _FDE AssertionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.AssertionNegatedDesignated
-        """
+    class DoubleNegationUndesignated(fde.TableauxRules.DoubleNegationUndesignated):
         pass
 
-    class AssertionUndesignated(k3.TableauxRules.AssertionUndesignated):
-        """
-        This rule is the same as the `FDE AssertionUndesignated rule`_.
-
-        //ruledoc//fde//AssertionUndesignated//
-
-        .. _FDE AssertionUndesignated rule: fde.html#logics.fde.TableauxRules.AssertionUndesignated
-        """
+    class AssertionDesignated(fde.TableauxRules.AssertionDesignated):
         pass
 
-    class AssertionNegatedUndesignated(k3.TableauxRules.AssertionNegatedUndesignated):
-        """
-        This rule is the same as the `FDE AssertionNegatedUndesignated rule`_.
-
-        //ruledoc//fde//AssertionNegatedUndesignated//
-
-        .. _FDE AssertionNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.AssertionNegatedUndesignated
-        """
+    class AssertionNegatedDesignated(fde.TableauxRules.AssertionNegatedDesignated):
         pass
 
-    class ConjunctionDesignated(k3.TableauxRules.ConjunctionDesignated):
-        """
-        This rule is the same as the `FDE ConjunctionDesignated rule`_.
-
-        //ruledoc//fde//ConjunctionDesignated//
-
-        .. _FDE ConjunctionDesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionDesignated
-        """
+    class AssertionUndesignated(fde.TableauxRules.AssertionUndesignated):
         pass
 
-    class ConjunctionNegatedDesignated(k3.TableauxRules.ConjunctionNegatedDesignated):
-        """
-        This rule is the same as the `FDE ConjunctionNegatedDesignated rule`_.
-
-        //ruledoc//fde//ConjunctionNegatedDesignated//
-
-        .. _FDE ConjunctionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionNegatedDesignated
-        """
+    class AssertionNegatedUndesignated(fde.TableauxRules.AssertionNegatedUndesignated):
         pass
 
-    class ConjunctionUndesignated(k3.TableauxRules.ConjunctionUndesignated):
-        """
-        This rule is the same as the `FDE ConjunctionUndesignated rule`_.
-
-        //ruledoc//fde//ConjunctionUndesignated//
-
-        .. _FDE ConjunctionUndesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionUndesignated
-        """
+    class ConjunctionDesignated(fde.TableauxRules.ConjunctionDesignated):
         pass
 
-    class ConjunctionNegatedUndesignated(k3.TableauxRules.ConjunctionNegatedUndesignated):
-        """
-        This rule is the same as the `FDE ConjunctionNegatedUndesignated rule`_.
-
-        //ruledoc//fde//ConjunctionNegatedUndesignated//
-
-        .. _FDE ConjunctionNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionNegatedUndesignated
-        """
+    class ConjunctionNegatedDesignated(fde.TableauxRules.ConjunctionNegatedDesignated):
         pass
 
-    class DisjunctionDesignated(k3.TableauxRules.DisjunctionDesignated):
-        """
-        This rule is the same as the `FDE DisjunctionDesignated rule`_.
-
-        //ruledoc//fde//DisjunctionDesignated//
-
-        .. _FDE DisjunctionDesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionDesignated
-        """
+    class ConjunctionUndesignated(fde.TableauxRules.ConjunctionUndesignated):
         pass
 
-    class DisjunctionNegatedDesignated(k3.TableauxRules.DisjunctionNegatedDesignated):
-        """
-        This rule is the same as the `FDE DisjunctionNegatedDesignated rule`_.
-
-        //ruledoc//fde//DisjunctionNegatedDesignated//
-
-        .. _FDE DisjunctionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionNegatedDesignated
-        """
+    class ConjunctionNegatedUndesignated(fde.TableauxRules.ConjunctionNegatedUndesignated):
         pass
 
-    class DisjunctionUndesignated(k3.TableauxRules.DisjunctionUndesignated):
-        """
-        This rule is the same as the `FDE DisjunctionUndesignated rule`_.
-
-        //ruledoc//fde//DisjunctionUndesignated//
-
-        .. _FDE DisjunctionUndesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionUndesignated
-        """
+    class DisjunctionDesignated(fde.TableauxRules.DisjunctionDesignated):
         pass
 
-    class DisjunctionNegatedUndesignated(k3.TableauxRules.DisjunctionNegatedUndesignated):
-        """
-        This rule is the same as the `FDE DisjunctionNegatedUndesignated rule`_.
-
-        //ruledoc//fde//DisjunctionNegatedUndesignated//
-
-        .. _FDE DisjunctionNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionNegatedUndesignated
-        """
+    class DisjunctionNegatedDesignated(fde.TableauxRules.DisjunctionNegatedDesignated):
         pass
 
-    class MaterialConditionalDesignated(k3.TableauxRules.MaterialConditionalDesignated):
-        """
-        This rule is the same as the `FDE MaterialConditionalDesignated rule`_.
-
-        //ruledoc//fde//MaterialConditionalDesignated//
-
-        .. _FDE MaterialConditionalDesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalDesignated
-        """
+    class DisjunctionUndesignated(fde.TableauxRules.DisjunctionUndesignated):
         pass
 
-    class MaterialConditionalNegatedDesignated(k3.TableauxRules.MaterialConditionalNegatedDesignated):
-        """
-        This rule is the same as the `FDE MaterialConditionalNegatedDesignated rule`_.
-
-        //ruledoc//fde//MaterialConditionalNegatedDesignated//
-
-        .. _FDE MaterialConditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalNegatedDesignated
-        """
+    class DisjunctionNegatedUndesignated(fde.TableauxRules.DisjunctionNegatedUndesignated):
         pass
 
-    class MaterialConditionalUndesignated(k3.TableauxRules.MaterialConditionalUndesignated):
-        """
-        This rule is the same as the `FDE MaterialConditionalUndesignated rule`_.
-
-        //ruledoc//fde//MaterialConditionalUndesignated//
-
-        .. _FDE MaterialConditionalUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalUndesignated
-        """
+    class MaterialConditionalDesignated(fde.TableauxRules.MaterialConditionalDesignated):
         pass
 
-    class MaterialConditionalNegatedUndesignated(k3.TableauxRules.MaterialConditionalNegatedUndesignated):
-        """
-        This rule is the same as the `FDE MaterialConditionalNegatedUndesignated rule`_.
-
-        //ruledoc//fde//MaterialConditionalNegatedUndesignated//
-
-        .. _FDE MaterialConditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialConditionalNegatedUndesignated
-        """
+    class MaterialConditionalNegatedDesignated(fde.TableauxRules.MaterialConditionalNegatedDesignated):
         pass
 
-    class MaterialBiconditionalDesignated(k3.TableauxRules.MaterialBiconditionalDesignated):
-        """
-        This rule is the same as the `FDE MaterialBiconditionalDesignated rule`_.
-
-        //ruledoc//fde//MaterialBiconditionalDesignated//
-
-        .. _FDE MaterialBiconditionalDesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalDesignated
-        """
+    class MaterialConditionalUndesignated(fde.TableauxRules.MaterialConditionalUndesignated):
         pass
 
-    class MaterialBiconditionalNegatedDesignated(k3.TableauxRules.MaterialBiconditionalNegatedDesignated):
-        """
-        This rule is the same as the `FDE MaterialBiconditionalNegatedDesignated rule`_.
-
-        //ruledoc//fde//MaterialBiconditionalNegatedDesignated//
-
-        .. _FDE MaterialBiconditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalNegatedDesignated
-        """
+    class MaterialConditionalNegatedUndesignated(fde.TableauxRules.MaterialConditionalNegatedUndesignated):
         pass
 
-    class MaterialBiconditionalUndesignated(k3.TableauxRules.MaterialBiconditionalUndesignated):
-        """
-        This rule is the same as the `FDE MaterialBiconditionalUndesignated rule`_.
-
-        //ruledoc//fde//MaterialBiconditionalUndesignated//
-
-        .. _FDE MaterialBiconditionalUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalUndesignated
-        """
+    class MaterialBiconditionalDesignated(fde.TableauxRules.MaterialBiconditionalDesignated):
         pass
 
-    class MaterialBiconditionalNegatedUndesignated(k3.TableauxRules.MaterialBiconditionalNegatedUndesignated):
-        """
-        This rule is the same as the `FDE MaterialBiconditionalNegatedUndesignated rule`_.
+    class MaterialBiconditionalNegatedDesignated(fde.TableauxRules.MaterialBiconditionalNegatedDesignated):
+        pass
 
-        //ruledoc//fde//MaterialBiconditionalNegatedUndesignated//
+    class MaterialBiconditionalUndesignated(fde.TableauxRules.MaterialBiconditionalUndesignated):
+        pass
 
-        .. _FDE MaterialBiconditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.MaterialBiconditionalNegatedUndesignated
-        """
+    class MaterialBiconditionalNegatedUndesignated(fde.TableauxRules.MaterialBiconditionalNegatedUndesignated):
         pass
 
     class ConditionalDesignated(DefaultNodeRule):
@@ -333,37 +184,28 @@ class TableauxRules(object):
         a node with the consequent, and a node with the negation of the consequent.
         Then tick *n*.
         """
-
         operator    = 'Conditional'
         designation = True
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            disj = operate('Disjunction', [negate(s.lhs), s.rhs])
+            disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
             return {
                 'adds': [
                     [
                         {'sentence': disj, 'designated': True},
                     ],
                     [
-                        {'sentence':        s.lhs,  'designated': False},
-                        {'sentence': negate(s.lhs), 'designated': False},
-                        {'sentence':        s.rhs,  'designated': False},
-                        {'sentence': negate(s.rhs), 'designated': False},
+                        {'sentence': s.lhs         , 'designated': False},
+                        {'sentence': s.lhs.negate(), 'designated': False},
+                        {'sentence': s.rhs         , 'designated': False},
+                        {'sentence': s.rhs.negate(), 'designated': False},
                     ],
                 ],
             }
 
-    class ConditionalNegatedDesignated(k3.TableauxRules.ConditionalNegatedDesignated):
-        """
-        This rule is the same as the `FDE ConditionalNegatedDesignated rule`_.
-
-        //ruledoc//fde//ConditionalNegatedDesignated//
-
-        .. _FDE ConditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ConditionalNegatedDesignated
-        """
+    class ConditionalNegatedDesignated(fde.TableauxRules.ConditionalNegatedDesignated):
         pass
 
     class ConditionalUndesignated(DefaultNodeRule):
@@ -374,10 +216,8 @@ class TableauxRules(object):
         add undesignated nodes for the antecedent and its negation, and a designated
         with the negation of the consequent. Then tick *n*.   
         """
-
         operator    = 'Conditional'
         designation = False
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -389,21 +229,14 @@ class TableauxRules(object):
                         {'sentence': s.rhs, 'designated': False},
                     ],
                     [
-                        {'sentence':        s.lhs , 'designated': False},
-                        {'sentence': negate(s.lhs), 'designated': False},
-                        {'sentence': negate(s.rhs), 'designated': True},
+                        {'sentence': s.lhs         , 'designated': False},
+                        {'sentence': s.lhs.negate(), 'designated': False},
+                        {'sentence': s.rhs.negate(), 'designated': True},
                     ],
                 ],
             }
 
-    class ConditionalNegatedUndesignated(k3.TableauxRules.ConditionalNegatedUndesignated):
-        """
-        This rule is the same as the `FDE ConditionalNegatedUndesignated rule`_.
-
-        //ruledoc//fde//ConditionalNegatedUndesignated//
-
-        .. _FDE ConditionalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.ConditionalNegatedUndesignated
-        """
+    class ConditionalNegatedUndesignated(fde.TableauxRules.ConditionalNegatedUndesignated):
         pass
         
     class BiconditionalDesignated(DefaultNodeRule):
@@ -414,37 +247,28 @@ class TableauxRules(object):
         nodes, with the antecedent, the negation of the antecedent, the consequent,
         and the negation of the consequent, respectively. Then tick *n*.
         """
-
         operator    = 'Biconditional'
         designation = True
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            bicond = operate('Material Biconditional', s.operands)
+            bicond = Operated('Material Biconditional', s.operands)
             return {
                 'adds': [
                     [
                         {'sentence': bicond, 'designated': True},
                     ],
                     [
-                        {'sentence':        s.lhs,  'designated': False},
-                        {'sentence': negate(s.lhs), 'designated': False},
-                        {'sentence':        s.rhs,  'designated': False},
-                        {'sentence': negate(s.rhs), 'designated': False},
+                        {'sentence': s.lhs         , 'designated': False},
+                        {'sentence': s.lhs.negate(), 'designated': False},
+                        {'sentence': s.rhs         , 'designated': False},
+                        {'sentence': s.rhs.negate(), 'designated': False},
                     ],
                 ],
             }
 
-    class BiconditionalNegatedDesignated(k3.TableauxRules.BiconditionalNegatedDesignated):
-        """
-        This rule is the same as the `FDE BiconditionalNegatedDesignated rule`_.
-
-        //ruledoc//fde//BiconditionalNegatedDesignated//
-
-        .. _FDE BiconditionalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.BiconditionalNegatedDesignated
-        """
+    class BiconditionalNegatedDesignated(fde.TableauxRules.BiconditionalNegatedDesignated):
         pass
 
     class BiconditionalUndesignated(DefaultNodeRule):
@@ -454,16 +278,14 @@ class TableauxRules(object):
         node with the same operands. On *b''* add an undesignated conditional node
         with the reversed operands. Then tick *n*.
         """
-
         operator    = 'Biconditional'
         designation = False
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            cond1 = operate('Conditional', [s.lhs, s.rhs])
-            cond2 = operate('Conditional', [s.rhs, s.lhs])
+            cond1 = Operated('Conditional', [s.lhs, s.rhs])
+            cond2 = Operated('Conditional', [s.rhs, s.lhs])
             return {
                 'adds': [
                     [
@@ -483,111 +305,56 @@ class TableauxRules(object):
         nodes, with the antecedent, the negation of the antecedent, the consequent,
         and the negation of the consequent, respectively. Then tick *n*.
         """
-
         negated     = True
         operator    = 'Biconditional'
         designation = False
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            bicond = operate('Material Biconditional', s.operands)
+            bicond = Operated('Material Biconditional', s.operands)
             return {
                 'adds': [
                     [
-                        {'sentence': negate(bicond), 'designated': False},
+                        {'sentence': bicond.negate(), 'designated': False},
                     ],
                     [
-                        {'sentence':        s.lhs,  'designated': False},
-                        {'sentence': negate(s.lhs), 'designated': False},
-                        {'sentence':        s.rhs,  'designated': False},
-                        {'sentence': negate(s.rhs), 'designated': False},
+                        {'sentence': s.lhs         , 'designated': False},
+                        {'sentence': s.lhs.negate(), 'designated': False},
+                        {'sentence': s.rhs         , 'designated': False},
+                        {'sentence': s.rhs.negate(), 'designated': False},
                     ],
                 ],
             }
 
-    class ExistentialDesignated(k3.TableauxRules.ExistentialDesignated):
-        """
-        This rule is the same as the `FDE ExistentialDesignated rule`_.
-
-        //ruledoc//fde//ExistentialDesignated//
-
-        .. _FDE ExistentialDesignated rule: fde.html#logics.fde.TableauxRules.ExistentialDesignated
-        """
+    class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
         pass
 
-    class ExistentialNegatedDesignated(k3.TableauxRules.ExistentialNegatedDesignated):
-        """
-        This rule is the same as the `FDE ExistentialNegatedDesignated rule`_.
-
-        //ruledoc//fde//ExistentialNegatedDesignated//
-
-        .. _FDE ExistentialNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ExistentialNegatedDesignated
-        """
+    class ExistentialNegatedDesignated(fde.TableauxRules.ExistentialNegatedDesignated):
         pass
 
-    class ExistentialUndesignated(k3.TableauxRules.ExistentialUndesignated):
-        """
-        This rule is the same as the `FDE ExistentialUndesignated rule`_.
-
-        //ruledoc//fde//ExistentialUndesignated//
-
-        .. _FDE ExistentialUndesignated rule: fde.html#logics.fde.TableauxRules.ExistentialUndesignated
-        """
+    class ExistentialUndesignated(fde.TableauxRules.ExistentialUndesignated):
         pass
 
-    class ExistentialNegatedUndesignated(k3.TableauxRules.ExistentialNegatedUndesignated):
-        """
-        This rule is the same as the `FDE ExistentialNegatedUndesignated rule`_.
-
-        //ruledoc//fde//ExistentialNegatedUndesignated//
-
-        .. _FDE ExistentialNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.ExistentialNegatedUndesignated
-        """
+    class ExistentialNegatedUndesignated(fde.TableauxRules.ExistentialNegatedUndesignated):
         pass
 
-    class UniversalDesignated(k3.TableauxRules.UniversalDesignated):
-        """
-        This rule is the same as the `FDE UniversalDesignated rule`_.
-
-        //ruledoc//fde//UniversalDesignated//
-
-        .. _FDE UniversalDesignated rule: fde.html#logics.fde.TableauxRules.UniversalDesignated
-        """
+    class UniversalDesignated(fde.TableauxRules.UniversalDesignated):
         pass
 
-    class UniversalNegatedDesignated(k3.TableauxRules.UniversalNegatedDesignated):
-        """
-        This rule is the same as the `FDE UniversalNegatedDesignated rule`_.
-
-        //ruledoc//fde//UniversalNegatedDesignated//
-
-        .. _FDE UniversalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.UniversalNegatedDesignated
-        """
+    class UniversalNegatedDesignated(fde.TableauxRules.UniversalNegatedDesignated):
         pass
 
-    class UniversalUndesignated(k3.TableauxRules.UniversalUndesignated):
-        """
-        This rule is the same as the `FDE UniversalUndesignated rule`_.
-
-        //ruledoc//fde//UniversalUndesignated//
-
-        .. _FDE UniversalUndesignated rule: fde.html#logics.fde.TableauxRules.UniversalUndesignated
-        """
+    class UniversalUndesignated(fde.TableauxRules.UniversalUndesignated):
         pass
 
-    class UniversalNegatedUndesignated(k3.TableauxRules.UniversalNegatedUndesignated):
-        """
-        This rule is the same as the `FDE UniversalNegatedUndesignated rule`_.
-
-        //ruledoc//fde//UniversalNegatedUndesignated//
-
-        .. _FDE UniversalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.UniversalNegatedUndesignated
-        """
+    class UniversalNegatedUndesignated(fde.TableauxRules.UniversalNegatedUndesignated):
         pass
 
-    closure_rules = list(k3.TableauxRules.closure_rules)
+    closure_rules = [
+        GlutClosure,
+        DesignationClosure,
+    ]
 
     rule_groups = [
         [

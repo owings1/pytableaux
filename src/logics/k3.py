@@ -30,8 +30,7 @@ class Meta(object):
     
     category_display_order = 20
 
-import logic
-from logic import negate, negative
+from tableaux import ClosureRule
 from . import fde
 
 class Model(fde.Model):
@@ -83,7 +82,7 @@ class TableauxRules(object):
     closure rule.
     """
 
-    class GlutClosure(logic.TableauxSystem.ClosureRule):
+    class GlutClosure(ClosureRule):
         """
         A branch closes when a sentence and its negation both appear as designated nodes.
         This rule is **in addition to** the :class:`FDE DesignationClosure rule
@@ -116,7 +115,7 @@ class TableauxRules(object):
             a = logic.atomic(0, 0)
             return [
                 {'sentence':        a , 'designated': True},
-                {'sentence': negate(a), 'designated': True},
+                {'sentence': a.negate(), 'designated': True},
             ]
 
         # private util
@@ -124,7 +123,7 @@ class TableauxRules(object):
         def __find_closing_node(self, node, branch):
             if node.has('sentence', 'designated') and node.props['designated']:
                 return branch.find({
-                    'sentence'   : negative(node.props['sentence']),
+                    'sentence'   : node.props['sentence'].negative(),
                     'designated' : True,
                 })
 

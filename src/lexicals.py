@@ -11,9 +11,6 @@ from utils import cat, SymbolSet
 
 from past.builtins import basestring
 
-def operarity(oper):
-    return operators[oper]
-
 class LexicalItem(object):
     # Base LexicalItem class for comparison, hashing, and sorting.
 
@@ -216,6 +213,12 @@ class Sentence(LexicalItem):
             )
         )
 
+    def is_negated(self):
+        """
+        TODO: doc
+        """
+        return isinstance(self, OperatedSentence) and self.operator == 'Negation'
+
     def substitute(self, new_param, old_param):
         """
         Recursively substitute ``new_param`` for all occurrences of ``old_param``.
@@ -228,6 +231,30 @@ class Sentence(LexicalItem):
         Convenience method to negate the sentence.
         """
         return OperatedSentence('Negation', [self])
+
+    def negative(self):
+        """
+        TODO: doc
+        """
+        return self.negatum if self.is_negated() else self.negate()
+
+    def asserted(self):
+        """
+        TODO: doc
+        """
+        return OperatedSentence('Assertion', [self])
+
+    def disjoin(self, rhs):
+        """
+        TODO: doc
+        """
+        return OperatedSentence('Disjunction', [self, rhs])
+
+    def conjoin(self, rhs):
+        """
+        TODO: doc
+        """
+        return OperatedSentence('Conjunction', [self, rhs])
 
     def constants(self):
         """
@@ -883,5 +910,20 @@ system_predicates = {
 }
 
 def get_system_predicate(name):
+    """
+    TODO: doc
+    """
     return system_predicates[name]
 
+def operarity(oper):
+    """
+    TODO: doc
+    """
+    return operators[oper]
+
+# Shorthand
+
+Atomic = AtomicSentence
+Predicated = PredicatedSentence
+Operated = OperatedSentence
+Quantified = QuantifiedSentence

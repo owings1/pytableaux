@@ -30,7 +30,8 @@ class Meta(object):
     
     category_display_order = 4
 
-import logic, helpers
+from tableaux import PotentialNodeRule, MaxWorldsTracker, VisibleWorldsIndex
+
 from . import k, t
 
 class Model(t.Model):
@@ -75,7 +76,7 @@ class TableauxRules(object):
     .. _T: t.html
     """
     
-    class Transitive(k.IsModal, logic.TableauxSystem.PotentialNodeRule):
+    class Transitive(k.IsModal, PotentialNodeRule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* and for each
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
@@ -83,8 +84,8 @@ class TableauxRules(object):
         """
 
         def setup(self):
-            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
-            self.add_helper('visibles', helpers.VisibleWorldsIndex(self))
+            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
+            self.add_helper('visibles', VisibleWorldsIndex(self))
 
         # rule implmentation
 

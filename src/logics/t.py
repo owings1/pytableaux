@@ -30,7 +30,9 @@ class Meta(object):
 
     category_display_order = 3
 
-import logic, helpers
+from lexicals import Atomic
+from tableaux import PotentialNodeRule, MaxWorldsTracker
+
 from . import k
 
 class Model(k.Model):
@@ -64,7 +66,7 @@ class TableauxRules(object):
     .. _K: k.html
     """
 
-    class Reflexive(k.IsModal, logic.TableauxSystem.PotentialNodeRule):
+    class Reflexive(k.IsModal, PotentialNodeRule):
         """
         The Reflexive rule applies to an open branch *b* when there is a node *n*
         on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
@@ -77,7 +79,7 @@ class TableauxRules(object):
         def setup(self):
             self.opts['is_rank_optim'] = False
             self.add_timer('is_potential_node')
-            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
+            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
 
         # rule implementation
 
@@ -103,7 +105,7 @@ class TableauxRules(object):
             branch.add({'world1': target['world'], 'world2': target['world']})
 
         def example_node(self, branch):
-            return {'sentence': logic.atomic(0, 0), 'world': branch.new_world()}
+            return {'sentence': Atomic(0, 0), 'world': branch.new_world()}
 
         # private util
 

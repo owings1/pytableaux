@@ -31,9 +31,8 @@ class Meta(object):
 
     category_display_order = 2
 
-import logic
-import helpers
-from logic import atomic
+from tableaux import PotentialNodeRule, MaxWorldsTracker, UnserialWorldsTracker
+from lexicals import Atomic
 from . import k
 
 class Model(k.Model):
@@ -76,7 +75,7 @@ class TableauxRules:
     .. _K: k.html
     """
 
-    class Serial(k.IsModal, logic.TableauxSystem.PotentialNodeRule):
+    class Serial(k.IsModal, PotentialNodeRule):
         """
         The Serial rule applies to a an open branch *b* when there is a world *w* that
         appears on *b*, but there is no world *w'* such that *w* accesses *w'*. The exception
@@ -91,8 +90,8 @@ class TableauxRules:
         """
 
         def setup(self):
-            self.add_helper('max_worlds_tracker', helpers.MaxWorldsTracker(self))
-            self.add_helper('unserial_tracker', helpers.UnserialWorldsTracker(self))
+            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
+            self.add_helper('unserial_tracker', UnserialWorldsTracker(self))
 
         # rule implementation
 
@@ -118,7 +117,7 @@ class TableauxRules:
             })
 
         def example_node(self, branch):
-            return {'sentence': atomic(0, 0), 'world': branch.new_world()}
+            return {'sentence': Atomic(0, 0), 'world': branch.new_world()}
 
         # util
 

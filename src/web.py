@@ -43,9 +43,6 @@ from www.conf import available, consts, cp_global_config, jenv, \
     logger, logic_categories, metrics, modules, example_arguments, \
     nups, opts, re_email, parser_symsets
 
-# shorthand
-# ntmods = modules['notations']
-
 mailroom = Mailroom(opts)
 
 ##############################
@@ -55,7 +52,6 @@ mailroom = Mailroom(opts)
 class AppDispatcher(Dispatcher):
     def __call__(self, path_info):
         metrics['app_requests_count'].labels(opts['app_name'], path_info).inc()
-        logger.debug('path_info:' + path_info)
         return Dispatcher.__call__(self, path_info.split('?')[0])
 
 cp_config = {
@@ -110,15 +106,12 @@ base_view_data = {
     'logics'              : modules['logics'],
     'parser_names'        : parser_names,
     'parser_symsets'      : parser_symsets,
-    # 'notations'           : ntmods,
     'operators_list'      : operators_list,
     'quantifiers'         : quantifiers_list,
     'source_href'         : source_href,
     'system_predicates'   : system_predicates,
     'tabwriter_names'     : tabwriter_names,
     'version'             : version,
-    # 'writer_modules'      : available['writers'],
-    # 'writers'             : modules['writers'],
 }
 
 ###################
@@ -356,7 +349,6 @@ class App(object):
                         'result'  : result,
                     }
             except Exception as err:
-                logger.debug(errstr(err))
                 if opts['is_debug']:
                     traceback.print_exc()
                 raise err
@@ -433,10 +425,6 @@ class App(object):
         errors = dict()
         if body['notation'] not in parser_names:
             errors['Notation'] = 'Invalid notation'
-        # try:
-        #     input_notation = ntmods[body['notation']]
-        # except KeyError:
-        #     errors['Notation'] = 'Invalid notation'
 
         try:
             vocab = self.parse_predicates_data(body['predicates'])
@@ -446,7 +434,6 @@ class App(object):
 
         if len(errors) == 0:
             parser = create_parser(body['notation'], vocab)
-            # parser = input_notation.Parser(vocabulary = vocab)
             try:
                 sentence = parser.parse(body['input'])
             except Exception as err:
@@ -464,14 +451,6 @@ class App(object):
                 }
                 for notn in lexwriters
             },
-            # 'rendered' : {
-            #     nt: {
-            #         # TODO - REFACTOR
-            #         'default': ntmods[nt].write(sentence),
-            #         'html'   : ntmods[nt].write(sentence, 'html'),
-            #     }
-            #     for nt in available['notations']
-            # }
         }
 
     def api_prove(self, body):
@@ -580,10 +559,6 @@ class App(object):
             lwmap = lexwriters[odata['notation']]
             try:
                 lw = lwmap[odata['symbol_set']]
-            # # TODO: Refactor
-            # output_notation = modules['notations'][odata['notation']]
-            # try:
-            #     sw = output_notation.Writer(odata['symbol_set'])
             except KeyError as err:
                 errors['Symbol Set'] = 'Bad notation: {0}'.format(str(odata['symbol_set']))
             except Exception as err:
@@ -595,8 +570,6 @@ class App(object):
             errors['Output notation'] = errstr(err)
         try:
             tabwriter = create_tabwriter(notn=odata['notation'], format=odata['format'], **odata['options'])
-            # pwmod = modules['writers'][odata['format']]
-            # proof_writer = pwmod.Writer(**odata['options'])
         except Exception as err:
             errors['Output format'] = errstr(err)
 
@@ -748,7 +721,6 @@ class App(object):
 #############
 
 def main(): # pragma: no cover
-    # logger.debug(str(('lexwriters', lexwriters)))
     logger.info(
         'Staring metrics on port {0}'.format(str(opts['metrics_port']))
     )
