@@ -8,6 +8,69 @@ from errors import PredicateError, IndexTooLargeError, PredicateArityError, \
 
 from past.builtins import basestring
 
+class Argument(object):
+    """
+    Create an argument. Parsing is performed with the default notation (Polish)
+    unless otherwise specifed. Example::
+
+        arg1 = Argument('b', ['KaNa'])
+        arg2 = Argument('B', ['A & ~A'], notation='standard')
+        assert arg1 == arg2
+
+    An argument must have a non-empty conclusion, but premises are optional::
+
+        arg = Argument('AaNa')
+
+    You can also pass in sentence objects directly::
+
+        arg1 = Argument('A V ~A', notation='standard')
+        arg2 = Argument(arg1.conclusion)
+        assert arg1 == arg2
+    """
+    def __init__(self, conclusion, premises=None, notation=None, vocabulary=None, title=None):
+        self.premises = []
+        if premises != None:
+            for premise in premises:
+                if isinstance(premise, basestring):
+                    raise NotImplementedError('parsing not yet implemented')
+                    premise = parse(premise, notation=notation, vocabulary=vocabulary)
+                self.premises.append(premise)
+        if isinstance(conclusion, basestring):
+            raise NotImplementedError('parsing not yet implemented')
+            conclusion = parse(conclusion, notation=notation, vocabulary=vocabulary)
+        self.conclusion = conclusion
+        self.title      = title
+
+    def __repr__(self):
+        if self.title is None:
+            return [self.premises, self.conclusion].__repr__()
+        return [self.premises, self.conclusion, {'title': self.title}].__repr__()
+
+    def __hash__(self):
+        return hash((self.conclusion,) + tuple(self.premises))
+
+    def __eq__(self, other):
+        """
+        Two arguments are considered equal just when their conclusions are equal, and their
+        premises are equal (and in the same order)::
+
+        arg1 = Argument('Kab', ['a', 'b'])
+        arg2 = Argument('Kab', ['a', 'b'])
+        assert arg2 == arg1
+
+        arg3 = Argument('Kab', ['b', 'a'])
+        assert arg3 != arg1
+
+        # The title is not considered in equality.
+        arg4 = Argument('Kab', ['a', 'b'], title='My Argument')
+        assert arg4 == arg1
+        assert arg4.title != arg1.title
+        """
+        return isinstance(other, self.__class__) and hash(self) == hash(other)
+
+    def __ne__(self, other):
+        return not isinstance(other, self.__class__) or hash(self) != hash(other)
+
 class LexicalItem(object):
     # Base LexicalItem class for comparison, hashing, and sorting.
 
@@ -216,6 +279,12 @@ class Sentence(LexicalItem):
         May return self, or a new sentence.
         """
         raise NotImplementedError()
+
+    def negate(self):
+        """
+        Convenience method to negate the sentence.
+        """
+        return OperatedSentence('Negation', [self])
 
     def constants(self):
         """

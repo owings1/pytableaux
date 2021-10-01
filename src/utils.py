@@ -18,10 +18,10 @@
 # ------------------
 #
 # pytableaux - utils module
+from fixed import symbols_data
 import importlib, time
 from types import ModuleType
 from past.builtins import basestring
-
 
 def get_module(package, arg):    
     if isinstance(arg, ModuleType):
@@ -44,6 +44,47 @@ def get_logic(name):
     :raises ModuleNotFoundError:
     """
     return get_module('logics', name)
+
+class SymbolSet(object):
+
+    def __init__(self, notn, name):
+        self.m = m = symbols_data[notn][name]
+        self.name = name
+        self.types = {}
+        self.index = {}
+        self.reverse = {}
+        
+        for ctype in m:
+            if isinstance(m[ctype], dict):
+                self.types.update({c: ctype for c in m[ctype].values()})
+                self.index[ctype] = dict(m[ctype])
+                self.reverse[ctype] = {m[ctype][k]: k for k in m[ctype]}
+            else:
+                self.types.update({c: ctype for c in m[ctype]})
+                self.index[ctype] = {i: c for i, c in enumerate(m[ctype])}
+                self.reverse[ctype] = {c: i for i, c in enumerate(m[ctype])}
+
+    def typeof(self, c):
+        if c in self.types:
+            return self.types[c]
+        return None
+
+    def charof(self, ctype, index, subscript = None, skip_zero = True):
+        s = self.index[ctype][index]
+        if subscript != None:
+            s += self.subfor(subscript, skip_zero = skip_zero)
+        return s
+
+    def indexof(self, ctype, ref):
+        return self.reverse[ctype][ref]
+
+    def subfor(self, subscript, skip_zero = True):
+        if skip_zero and subscript == 0:
+            return ''
+        return ''.join([self.charof('digit', int(d)) for d in list(str(subscript))])
+
+    def chars(self, ctype):
+        return self.m[ctype]
 
 class StopWatch(object):
 

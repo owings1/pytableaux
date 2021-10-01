@@ -30,15 +30,15 @@ class Meta(object):
     
     category_display_order = 10
 
-import logic, examples, helpers
-from logic import negate, negative, quantify, operate, atomic
+from errors import ModelValueError
+from lexicals import AtomicSentence as Atomic, OperatedSentence as Operated, \
+    QuantifiedSentence as Quantified, get_system_predicate
+from models import BaseModel
+from tableaux import TableauxSystem as BaseSystem, ClosureRule, FilterNodeRule, \
+    AllConstantsStoppingRule, NewConstantStoppingRule
 
-Identity = logic.get_system_predicate('Identity')
-Existence = logic.get_system_predicate('Existence')
-
-# Aliases
-from logic import Model as BaseModel
-ModelValueError = BaseModel.ModelValueError
+Identity = get_system_predicate('Identity')
+Existence = get_system_predicate('Existence')
 
 class Model(BaseModel):
     """
@@ -275,7 +275,7 @@ class Model(BaseModel):
                     else:
                         # If the sentence is unnegated, set the value of the sentence
                         if node.props['designated']:
-                            if branch.has({'sentence': negate(sentence), 'designated': True}):
+                            if branch.has({'sentence': sentence.negate(), 'designated': True}):
                                 # If the node is designated, and its negation is
                                 # also designated on b, the value is B
                                 value = 'B'
@@ -284,7 +284,7 @@ class Model(BaseModel):
                                 # not also designated on b, the value is T
                                 value = 'T'
                         else:
-                            if branch.has({'sentence': negate(sentence), 'designated': False}):
+                            if branch.has({'sentence': sentence.negate(), 'designated': False}):
                                 # If the node is undesignated, and its negation is
                                 # also undesignated on b, the value is N
                                 value = 'N'
@@ -464,7 +464,7 @@ class Model(BaseModel):
         raise ErrorClass(fmt, *(str(arg) for arg in args))
 
 
-class TableauxSystem(logic.TableauxSystem):
+class TableauxSystem(BaseSystem):
     """
     Nodes for FDE have a boolean *designation* property, and a branch is closed iff
     the same sentence appears on both a designated and undesignated node. This allows
@@ -584,7 +584,7 @@ class TableauxSystem(logic.TableauxSystem):
                 last_is_negated = False
         return complexity
 
-class DefaultNodeRule(logic.TableauxSystem.FilterNodeRule):
+class DefaultNodeRule(FilterNodeRule):
 
     ticking = True
 
@@ -594,12 +594,12 @@ class DefaultNodeRule(logic.TableauxSystem.FilterNodeRule):
     def score_candidate(self, target):
         return self.adz.closure_score(target)
 
-class DefaultNewConstantRule(DefaultNodeRule, helpers.NewConstantStoppingRule):
+class DefaultNewConstantRule(DefaultNodeRule, NewConstantStoppingRule):
 
     def score_candidate(self, target):
         return -1 * self.branching_complexity(target['node'])
 
-class DefaultAllConstantsRule(DefaultNodeRule, helpers.AllConstantsStoppingRule):
+class DefaultAllConstantsRule(DefaultNodeRule, AllConstantsStoppingRule):
 
     ticking = False
 
@@ -623,13 +623,13 @@ class ConjunctionReducingRule(DefaultNodeRule):
             raise NotImplementedError()
 
         lhs, rhs = self.sentence(node).operands
-        cond1 = operate(self.conjunct_op, [lhs, rhs])
-        cond2 = operate(self.conjunct_op, [rhs, lhs])
+        cond1 = Operated(self.conjunct_op, [lhs, rhs])
+        cond2 = Operated(self.conjunct_op, [rhs, lhs])
 
-        sc = operate('Conjunction', [cond1, cond2])
+        sc = Operated('Conjunction', [cond1, cond2])
 
         if self.negated:
-            sc = negate(sc)
+            sc = sc.negate()
 
         return {
             'adds': [
@@ -647,7 +647,7 @@ class TableauxRules(object):
     to double negation only, one designated rule, and one undesignated rule.
     """
 
-    class DesignationClosure(logic.TableauxSystem.ClosureRule):
+    class DesignationClosure(ClosureRule):
         """
         A branch closes when a sentence appears on a node marked *designated*,
         and the same sentence appears on a node marked *undesignated*.
@@ -672,7 +672,7 @@ class TableauxRules(object):
             return self.tracker.cached_target(branch)
 
         def example_nodes(self, branch):
-            a = atomic(0, 0)
+            a = Atomic(0, 0)
             return [
                 {'sentence': a, 'designated': True },
                 {'sentence': a, 'designated': False},
@@ -760,7 +760,7 @@ class TableauxRules(object):
                 'adds': [
                     [
                         # keep designation neutral for inheritance below
-                        {'sentence': negate(s.operand), 'designated': self.designation}
+                        {'sentence': s.operand.negate(), 'designated': self.designation}
                     ]
                 ]
             }
@@ -809,7 +809,7 @@ class TableauxRules(object):
                 'adds': [
                     [
                         # keep designation neutral for inheritance below
-                        {'sentence': negate(operand), 'designated': self.designation},
+                        {'sentence': operand.negate(), 'designated': self.designation},
                     ]
                     for operand in self.sentence(node).operands
                 ]
@@ -851,7 +851,7 @@ class TableauxRules(object):
                 'adds': [
                     [
                         # keep designation neutral for inheritance below
-                        {'sentence': negate(operand), 'designated': self.designation}
+                        {'sentence': operand.negate(), 'designated': self.designation}
                         for operand in self.sentence(node).operands
                     ]
                 ]
@@ -909,10 +909,10 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(s.lhs), 'designated': d},
+                        {'sentence': s.lhs.negate(), 'designated': d},
                     ],
                     [
-                        {'sentence':        s.rhs , 'designated': d},
+                        {'sentence': s.rhs         , 'designated': d},
                     ],
                 ],
             }
@@ -934,8 +934,8 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence':        s.lhs , 'designated': d},
-                        {'sentence': negate(s.rhs), 'designated': d},
+                        {'sentence': s.lhs          , 'designated': d},
+                        {'sentence': s.rhs.negate() , 'designated': d},
                     ],
                 ],
             }
@@ -956,8 +956,8 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(s.lhs), 'designated': d},
-                        {'sentence':        s.rhs , 'designated': d},
+                        {'sentence': s.lhs.negate(), 'designated': d},
+                        {'sentence': s.rhs         , 'designated': d},
                     ],
                 ],
             }
@@ -980,10 +980,10 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence':        s.lhs , 'designated': d},
+                        {'sentence': s.lhs        , 'designated': d},
                     ],
                     [
-                        {'sentence': negate(s.rhs), 'designated': d},
+                        {'sentence': s.rhs.negate(), 'designated': d},
                     ],
                 ],
             }
@@ -1006,8 +1006,8 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': negate(s.lhs), 'designated': d},
-                        {'sentence': negate(s.rhs), 'designated': d},
+                        {'sentence': s.lhs.negate(), 'designated': d},
+                        {'sentence': s.rhs.negate(), 'designated': d},
                     ],
                     [
                         {'sentence': s.rhs, 'designated': d},
@@ -1035,12 +1035,12 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence':        s.lhs , 'designated': d},
-                        {'sentence': negate(s.rhs), 'designated': d},
+                        {'sentence': s.lhs         , 'designated': d},
+                        {'sentence': s.rhs.negate(), 'designated': d},
                     ],
                     [
-                        {'sentence': negate(s.lhs), 'designated': d},
-                        {'sentence':        s.rhs , 'designated': d},
+                        {'sentence': s.lhs.negate(), 'designated': d},
+                        {'sentence': s.rhs         , 'designated': d},
                     ],
                 ],
             }
@@ -1213,7 +1213,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
-            sq = quantify(self.convert_to, v, negate(si))
+            sq = Quantified(self.convert_to, v, si.negate())
             return {
                 'adds': [
                     [

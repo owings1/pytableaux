@@ -1,3 +1,5 @@
+default_notation = 'polish'
+
 # name : arity
 operators = {
     'Assertion'              : 1,
@@ -47,3 +49,102 @@ num_var_symbols       = 4
 num_const_symbols     = 4
 num_atomic_symbols    = 5
 num_predicate_symbols = 4
+
+symbols_data = {
+    'polish' : {
+        'ascii' : {
+            'atomic'   : ['a', 'b', 'c', 'd', 'e'],
+            'operator' : {
+                'Assertion'              : 'T',
+                'Negation'               : 'N',
+                'Conjunction'            : 'K',
+                'Disjunction'            : 'A',
+                'Material Conditional'   : 'C',
+                'Material Biconditional' : 'E',
+                'Conditional'            : 'U',
+                'Biconditional'          : 'B',
+                'Possibility'            : 'M',
+                'Necessity'              : 'L',
+            },
+            'variable'   : ['x', 'y', 'z', 'v'],
+            'constant'   : ['m', 'n', 'o', 's'],
+            'quantifier' : {
+                'Universal'   : 'V',
+                'Existential' : 'S',
+            },
+            'system_predicate'  : {
+                'Identity'  : 'I',
+                'Existence' : 'J',
+            },
+            'user_predicate' : ['F', 'G', 'H', 'O'],
+            'whitespace'     : [' '],
+            'digit' : list('0123456789'),
+        },
+    },
+    'standard': {
+        'ascii': {
+            'atomic' : ['A', 'B', 'C', 'D', 'E'],
+            'operator' : {
+                'Assertion'              :  '*',
+                'Negation'               :  '~',
+                'Conjunction'            :  '&',
+                'Disjunction'            :  'V',
+                'Material Conditional'   :  '>',
+                'Material Biconditional' :  '<',
+                'Conditional'            :  '$',
+                'Biconditional'          :  '%',
+                'Possibility'            :  'P',
+                'Necessity'              :  'N',
+            },
+            'variable' : ['x', 'y', 'z', 'v'],
+            'constant' : ['a', 'b', 'c', 'd'],
+            'quantifier' : {
+                'Universal'   : 'L',
+                'Existential' : 'X',
+            },
+            'system_predicate'  : {
+                'Identity'  : '=',
+                'Existence' : '!',
+            },
+            'user_predicate'  : ['F', 'G', 'H', 'O'],
+            'paren_open'      : ['('],
+            'paren_close'     : [')'],
+            'whitespace'      : [' '],
+            'digit'           : list('0123456789'),
+        },
+        'html': {
+            'atomic'   : ['A', 'B', 'C', 'D', 'E'],
+            'operator' : {
+                'Assertion'              : '&deg;'   ,
+                'Negation'               : '&not;'   ,
+                'Conjunction'            : '&and;'   ,
+                'Disjunction'            : '&or;'    ,
+                'Material Conditional'   : '&sup;'   ,
+                'Material Biconditional' : '&equiv;' ,
+                'Conditional'            : '&rarr;'  ,
+                'Biconditional'          : '&harr;'  ,
+                'Possibility'            : '&#9671;' ,
+                'Necessity'              : '&#9723;' ,
+            },
+            'variable'   : ['x', 'y', 'z', 'v'],
+            'constant'   : ['a', 'b', 'c', 'd'],
+            'quantifier' : {
+                'Universal'   : '&forall;' ,
+                'Existential' : '&exist;'  ,
+            },
+            'system_predicate'  : {
+                'Identity'  : '=',
+                'Existence' : 'E!',
+                'NegatedIdentity' : '&ne;',
+            },
+            'user_predicate'  : ['F', 'G', 'H', 'O'],
+            'paren_open'      : ['('],
+            'paren_close'     : [')'],
+            'whitespace'      : [' '],
+            'digit'           : list('0123456789'),
+        }
+    }
+}
+
+for notn in symbols_data:
+    symbols_data[notn]['default'] = symbols_data[notn]['ascii']

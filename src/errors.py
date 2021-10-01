@@ -52,3 +52,29 @@ class TrunkNotBuiltError(TableauStateError):
 
 class BranchClosedError(TableauStateError):
     pass
+
+# models
+class ModelValueError(Exception):
+    pass
+
+class DenotationError(ModelValueError):
+    pass
+
+# parsers
+class ParseError(Exception):
+    pass
+
+class ParserThreadError(ParseError):
+    pass
+
+class IllegalStateError(ParseError):
+    pass
+
+class UnboundVariableError(ParseError):
+    pass
+
+class BoundVariableError(ParseError):
+    pass
+
+class UnknownNotationError(ParseError):
+    pass

@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - Web App Configuration
-import logic
+from utils import get_logic, SymbolSet
 import importlib, logging, os, os.path
 import prometheus_client as prom
 from jinja2 import Environment, FileSystemLoader
@@ -146,7 +146,7 @@ available = {
         'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
         'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
     ],
-    'notations' : ['standard', 'polish'],
+    'parsers' : ['standard', 'polish'],
     'writers'   : ['html', 'ascii'],
 }
 modules = dict()
@@ -163,10 +163,9 @@ def populate_modules_info():
                 '.'.join((package, name))
             )
 
-    for notation_name in modules['notations']:
-        notation = modules['notations'][notation_name]
-        nups[notation_name] = list(
-            notation.symbol_sets['default'].chars('user_predicate')
+    for parser_name in modules['parsers']:
+        nups[parser_name] = list(
+            SymbolSet(parser_name, 'default').chars('user_predicate')
         )
 
     for name in modules['logics']:
@@ -176,7 +175,7 @@ def populate_modules_info():
         logic_categories[lgc.Meta.category].append(name)
 
     def get_category_order(name):
-        return logic.get_logic(name).Meta.category_display_order
+        return get_logic(name).Meta.category_display_order
 
     for category in logic_categories.keys():
         logic_categories[category].sort(key = get_category_order)
