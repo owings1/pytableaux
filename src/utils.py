@@ -18,7 +18,32 @@
 # ------------------
 #
 # pytableaux - utils module
-import time
+import importlib, time
+from types import ModuleType
+from past.builtins import basestring
+
+
+def get_module(package, arg):    
+    if isinstance(arg, ModuleType):
+        return arg
+    if isinstance(arg, basestring):
+        if '.' not in arg:
+            arg = package + '.' + arg
+        return importlib.import_module(arg.lower())
+    raise TypeError("Argument must be module or string")
+
+def get_logic(name):
+    """
+    Get the logic module from the specified name. The following
+    inputs all return the {@FDE} logic module: *'fde'*, *'FDE'*,
+    *'logics.fde'*. If a module is passed, it is returned.
+
+    :param str name: The logic name.
+    :return: The module for the given logic.
+    :rtype: module
+    :raises ModuleNotFoundError:
+    """
+    return get_module('logics', name)
 
 class StopWatch(object):
 
