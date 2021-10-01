@@ -17,6 +17,7 @@
 # ------------------
 #
 # pytableaux - documentation utility functions
+from utils import cat
 import examples, logic, writers.html
 import codecs, inspect, os, re, traceback
 from jinja2 import Environment, FileSystemLoader
@@ -564,8 +565,7 @@ class Helper(object):
 
 # Misc util
 
-def cat(*args):
-    return ''.join(args)
+
 
 def rawblock(lines, indent=None):
     """

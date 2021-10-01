@@ -1,10 +1,13 @@
 from fixed import num_atomic_symbols, num_const_symbols, num_predicate_symbols, \
-    num_var_symbols, operators, system_predicates_index, system_predicates_list
+    num_var_symbols, operators, system_predicates_index, system_predicates_list, \
+    default_notation, quantifiers
 
 from errors import PredicateError, IndexTooLargeError, PredicateArityError, \
     PredicateSubscriptError, PredicateAlreadyDeclaredError, NoSuchPredicateError, \
-    PredicateArityMismatchError, PredicateIndexMismatchError, OperatorError, \
-    NoSuchOperatorError, OperatorArityMismatchError
+    PredicateArityMismatchError, NoSuchOperatorError, OperatorArityMismatchError, \
+    BadArgumentError
+
+from utils import cat, SymbolSet
 
 from past.builtins import basestring
 
@@ -708,114 +711,195 @@ class Vocabulary(object):
         PredicatedSentence: 50, QuantifiedSentence: 60, OperatedSentence: 70,
     }
 
-    class Writer(object):
+def create_lexwriter(notn=None, vocab=None, format=None):
+    if not notn:
+        notn = default_notation
+    if not vocab:
+        vocab = Vocabulary()
+    if not format:
+        format = 'ascii'
+    symbol_set = SymbolSet(notn, format)
+    if notn == 'polish':
+        return PolishLexWriter(symbol_set)
+    if notn == 'standard':
+        return StandardLexWriter(symbol_set)
+    raise BadArgumentError('Invalid notation: {0}'.format(str(notn)))
 
-        # Base sentence writer, implemented by notations.
+class BaseLexWriter(object):
 
-        # TODO: cleanup sentence writer, proof writer, parser, symbol set design b.s.
+    # Base lex writer.
 
-        symbol_sets = {}
-        symbol_set = None
+    def __init__(self, symbol_set, **opts):
+        self.symbol_set = symbol_set
+        self.format = symbol_set.name
+        self.opts = opts
 
-        def __init__(self, symbol_set = None):
-            self.symbol_set = self.symset(symbol_set)
+    def write(self, item):
+        if isinstance(item, basestring):
+            if item in operators:
+                return self.write_operator(item)
+            if item in quantifiers:
+                return self.write_quantifier(item)
+            raise TypeError('Unknown lexical type: {0}'.format(item))
+        if isinstance(item, Parameter):
+            return self.write_parameter(item)
+        if isinstance(item, Predicate):
+            return self.write_sentence(item)
+        if isinstance(item, Sentence):
+            return self.write_sentence(item)
+        raise TypeError('Unknown lexical type: {0}'.format(item))
 
-        def symset(self, symbol_set = None):
-            if symbol_set == None:
-                if self.symbol_set == None:
-                    symbol_set = 'default'
-                else:
-                    # could have been set by manually after init
-                    symbol_set = self.symbol_set
-            if isinstance(symbol_set, basestring):
-                return self.symbol_sets[symbol_set]
+    def write_operator(self, operator):
+        return self.charof('operator', operator)
+
+    def write_quantifier(self, quantifier):
+        return self.charof('quantifier', quantifier)
+
+    def write_parameter(self, param):
+        if param.is_constant():
+            return self.write_constant(param)
+        if param.is_variable():
+            return self.write_variable(param)
+        raise TypeError('Unknown lexical type: {0}'.format(str(param)))
+
+    def write_constant(self, constant):
+        return cat(
+            self.charof('constant', constant.index),
+            self.write_subscript(constant.subscript),
+        )
+
+    def write_variable(self, variable):
+        return cat(
+            self.charof('variable', variable.index),
+            self.write_subscript(variable.subscript),
+        )
+
+    def write_predicate(self, predicate):
+        if predicate.name in system_predicates:
+            typ, key = ('system_predicate', predicate.name)
+        else:
+            typ, key = ('user_predicate', predicate.index)
+        return cat(
+            self.charof(typ, key),
+            self.write_subscript(predicate.subscript),
+        )
+
+    def write_sentence(self, sentence):
+        if sentence.is_atomic():
+            return self.write_atomic(sentence)
+        if sentence.is_predicated():
+            return self.write_predicated(sentence)
+        if sentence.is_quantified():
+            return self.write_quantified(sentence)
+        if sentence.is_operated():
+            return self.write_operated(sentence)
+        raise TypeError('Unknown sentence type: {0}'.format(str(sentence)))
+
+    def write_atomic(self, sentence):
+        return cat(
+            self.charof('atomic', sentence.index),
+            self.write_subscript(sentence.subscript)
+        )
+
+    def write_quantified(self, sentence):
+        return ''.join([
+            self.write_quantifier(sentence.quantifier),
+            self.write_variable(sentence.variable),
+            self.write_sentence(sentence.sentence),
+        ])
+
+    def write_predicated(self, sentence):
+        s = self.write_predicate(sentence.predicate)
+        for param in sentence.parameters:
+            s += self.write_parameter(param)
+        return s
+
+    def write_operated(self, sentence):
+        raise NotImplementedError()
+
+    def charof(self, *args, **kw):
+        return self.symbol_set.charof(*args, **kw)
+
+    def write_subscript(self, subscript):
+        symset = self.symbol_set
+        if self.format == 'html':
+            if subscript != 0:
+                return ''.join([
+                    '<span class="subscript">',
+                    symset.subfor(subscript, skip_zero = True),
+                    '</span>'
+                ])
+            return ''
+        else:
+            return symset.subfor(subscript, skip_zero = True)
+
+class PolishLexWriter(BaseLexWriter):
+
+    def write_operated(self, sentence):
+        return cat(
+            self.write_operator(sentence.operator),
+            *(self.write_sentence(s) for s in sentence.operands),
+        )
+
+class StandardLexWriter(BaseLexWriter):
+
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        opts = self.opts
+        self.drop_parens = 'drop_parens' in opts and bool(opts['drop_parens'])
+
+    def write(self, item):
+        if self.drop_parens and isinstance(item, OperatedSentence):
+            return self.write_operated(item, drop_parens = True)
+        return super().write(item)
+
+    def write_predicated(self, sentence):
+        # Infix notation for predicates of arity > 1
+        if sentence.predicate.arity < 2:
+            return super().write_predicated(sentence)
+        # For Identity, add spaces (a = b instead of a=b)
+        ws = self.charof('whitespace', 0) if sentence.predicate.name == 'Identity' else ''
+        return cat(
+            self.write_parameter(sentence.parameters[0]),
+            ws,
+            self.write_predicate(sentence.predicate),
+            ws,
+            *(self.write_parameter(param) for param in sentence.parameters[1:]),
+        )
+
+    def write_operated(self, sentence, drop_parens = False):
+        oper = sentence.operator
+        arity = operators[oper]
+        if arity == 1:
+            operand = sentence.operand
+            if (self.format == 'html' and
+                oper == 'Negation' and
+                operand.is_predicated() and
+                operand.predicate.name == 'Identity'):
+                return self.__write_html_negated_identity(sentence)
             else:
-                return symbol_set
-
-        def write(self, sentence, symbol_set = None, **opts):
-            if sentence.is_atomic():
-                return self.write_atomic(sentence, symbol_set = symbol_set)
-            elif sentence.is_quantified():
-                return self.write_quantified(sentence, symbol_set = symbol_set)
-            elif sentence.is_predicated():
-                return self.write_predicated(sentence, symbol_set = symbol_set)
-            elif sentence.is_operated():
-                return self.write_operated(sentence, symbol_set = symbol_set)
-            else:
-                raise NotImplementedError()
-
-        def write_atomic(self, sentence, symbol_set = None):
-            symset = self.symset(symbol_set)
-            return symset.charof('atomic', sentence.index) + self.write_subscript(
-                sentence.subscript, symbol_set = symbol_set
-            )
-
-        def write_quantified(self, sentence, symbol_set = None):
-            symset = self.symset(symbol_set)
+                return self.write_operator(oper) + self.write(operand)
+        elif arity == 2:
             return ''.join([
-                symset.charof('quantifier', sentence.quantifier),
-                symset.charof('variable', sentence.variable.index),
-                self.write_subscript(sentence.variable.subscript, symbol_set = symbol_set),
-                self.write(sentence.sentence, symbol_set = symbol_set)
+                self.charof('paren_open', 0) if not drop_parens else '',
+                self.charof('whitespace', 0).join([
+                    self.write(sentence.lhs),
+                    self.write_operator(oper),
+                    self.write(sentence.rhs),
+                ]),
+                self.charof('paren_close', 0) if not drop_parens else '',
             ])
+        raise NotImplementedError('No support for operators of arity {0}'.format(str(arity)))
 
-        def write_predicated(self, sentence, symbol_set = None):
-            symset = self.symset(symbol_set)
-            s = self.write_predicate(sentence.predicate, symbol_set = symbol_set)
-            for param in sentence.parameters:
-                s += self.write_parameter(param, symbol_set = symbol_set)
-            return s
-
-        def write_operated(self, sentence, symbol_set = None):
-            raise NotImplementedError()
-
-        def write_operator(self, operator, symbol_set = None):
-            symset = self.symset(symbol_set)
-            return symset.charof('operator', operator)
-
-        def write_predicate(self, predicate, symbol_set = None):
-            symset = self.symset(symbol_set)
-            if predicate.name in system_predicates:
-                s = symset.charof('system_predicate', predicate.name)
-            else:
-                s = symset.charof('user_predicate', predicate.index)
-            s += self.write_subscript(predicate.subscript, symbol_set = symbol_set)
-            return s
-
-        def write_parameter(self, param, symbol_set = None):
-            if param.is_constant():
-                return self.write_constant(param, symbol_set = symbol_set)
-            elif param.is_variable():
-                return self.write_variable(param, symbol_set = symbol_set)
-            else:
-                raise NotImplementedError()
-
-        def write_constant(self, constant, symbol_set = None):
-            symset = self.symset(symbol_set)
-            return ''.join([
-                symset.charof('constant', constant.index),
-                self.write_subscript(constant.subscript, symbol_set = symbol_set)
-            ])
-
-        def write_variable(self, variable, symbol_set = None):
-            symset = self.symset(symbol_set)
-            return ''.join([
-                symset.charof('variable', variable.index),
-                self.write_subscript(variable.subscript, symbol_set = symbol_set)
-            ])
-
-        def write_subscript(self, subscript, symbol_set = None):
-            symset = self.symset(symbol_set)
-            if symset.name == 'html':
-                if subscript != 0:
-                    return ''.join([
-                        '<span class="subscript">',
-                        symset.subfor(subscript, skip_zero = True),
-                        '</span>'
-                    ])
-                return ''
-            else:
-                return symset.subfor(subscript, skip_zero = True)
+    def __write_html_negated_identity(self, sentence):
+        params = sentence.operand.parameters
+        return cat(
+            self.write_parameter(params[0]),
+            self.charof('whitespace', 0),
+            self.charof('system_predicate', 'NegatedIdentity'),
+            self.charof('whitespace', 0),
+            self.write_parameter(params[1]),
+        )
 
 system_predicates = {
     'Identity'  : Predicate('Identity',  -1, 0, 2),
@@ -824,3 +908,4 @@ system_predicates = {
 
 def get_system_predicate(name):
     return system_predicates[name]
+

@@ -1,3 +1,13 @@
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.abspath(os.path.join(current_dir, '..'))
+with open(os.path.join(base_dir, 'VERSION'), 'r') as f:
+    version = f.read().strip()
+
+copyright = '2014-2021, Doug Owings. Released under the GNU Affero General Public License v3 or later'
+source_href = 'https://github.com/owings1/pytableaux'
+issues_href = 'https://github.com/owings1/pytableaux/issues'
+
 default_notation = 'polish'
 
 # name : arity
@@ -32,6 +42,8 @@ quantifiers_list = [
     'Universal'  ,
     'Existential',
 ]
+
+quantifiers = set(quantifiers_list)
 
 system_predicates_list  = [
     'Identity' ,
@@ -148,3 +160,4 @@ symbols_data = {
 
 for notn in symbols_data:
     symbols_data[notn]['default'] = symbols_data[notn]['ascii']
+symbols_data[notn]

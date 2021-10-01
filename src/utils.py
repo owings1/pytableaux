@@ -147,3 +147,6 @@ class StopWatch(object):
 
 def nowms():
     return int(round(time.time() * 1000))
+
+def cat(*args):
+    return ''.join(args)
