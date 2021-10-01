@@ -17,8 +17,7 @@
 # ------------------
 #
 # pytableaux - documentation utility functions
-from utils import cat
-import examples, logic, writers.html
+
 import codecs, inspect, os, re, traceback
 from jinja2 import Environment, FileSystemLoader
 from html import escape as htmlesc, unescape as htmlun
@@ -31,13 +30,14 @@ from docutils import nodes
 from docutils.parsers.rst import Directive, directives, roles
 
 logger = logging.getLogger(__name__)
-
-# Alias
-from logic import argument, arity, create_parser, create_swriter, get_logic, \
-    operators_list, tableau
-
-TabSys = logic.TableauxSystem
-Rule = TabSys.Rule
+from utils import cat, get_logic
+import examples
+from lexicals import Argument, operarity, create_lexwriter
+from parsers import create_parser, parse_argument
+from tableaux import Tableau, TableauxSystem as TabSys, Rule, ClosureRule, \
+    PotentialNodeRule, FilterNodeRule, create_tabwriter
+from models import truth_table
+from fixed import base_dir, operators_list
 
 defaults = {
     'html_theme'       : 'default',
@@ -56,7 +56,7 @@ defaults = {
 # Sphinx events:
 #    https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
 
-doc_dir = pjoin(logic.base_dir, 'doc')
+doc_dir = pjoin(base_dir, 'doc')
 templates_dir = pjoin(doc_dir, 'templates')
 build_dir = pjoin(doc_dir, '_build/html')
 jenv = Environment(
@@ -118,15 +118,20 @@ class Helper(object):
     def __init__(self, opts={}):
         self.opts = dict(defaults)
         self.opts.update(opts)
+        # print('\n\n', str(self.opts))
         self.parser = create_parser(
-            notation = self.opts['parse_notation'],
-            vocabulary = self.opts['vocabulary'],
+            notn = self.opts['parse_notation'],
+            vocab = self.opts['vocabulary'],
         )
-        self.sw = create_swriter(
-            notation = self.opts['write_notation'],
-            symbol_set = 'html',
+        # print('\n\n', self.parser.__class__.__name__)
+        self.lw = create_lexwriter(
+            notn = self.opts['write_notation'],
+            format = 'html',
         )
-        self.pw = writers.html.Writer(sw = self.sw)
+        self.pw = create_tabwriter(
+            notn = self.opts['write_notation'],
+            format = 'html',
+        )
         self.replace_defns = []
         # https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
         self._listeners = dict()
@@ -162,7 +167,7 @@ class Helper(object):
         lgc = get_logic(lgc)
         tables = [
             self.html_truth_table(lgc, operator)
-            for operator in logic.operators_list
+            for operator in operators_list
             if operator in lgc.Model.truth_functional_operators
         ]
         lines = '\n'.join(tables).split('\n')
@@ -205,9 +210,9 @@ class Helper(object):
     def lines_opers_table(self, indent=None):
         sympol, symstd, symhtml = (
             symset.chars('operator') for symset in (
-                create_parser('polish').symbol_set,
-                create_parser('standard').symbol_set,
-                create_swriter('standard').symset('html'),
+                create_parser('polish',  format='ascii').symbol_set,
+                create_parser('standard', format='ascii').symbol_set,
+                create_lexwriter('standard', format='html').symbol_set,
             )
         )
         lines = [
@@ -215,7 +220,7 @@ class Helper(object):
         ] + [
             '"{0}","{1}","``{2}``","``{3}``","{4}"'.format(*row)
             for row in (
-                (o, str(arity(o)), sympol[o], symstd[o], htmlun(symhtml[o]))
+                (o, str(operarity(o)), sympol[o], symstd[o], htmlun(symhtml[o]))
                 for o in operators_list
             )
         ]
@@ -348,14 +353,14 @@ class Helper(object):
     # Don't build rules for abstract classes
     # TODO: shouldn't this check rule groups?
     skip_rules = [
-        TabSys.Rule,
-        TabSys.ClosureRule,
-        TabSys.PotentialNodeRule,
-        TabSys.FilterNodeRule,
+        Rule,
+        ClosureRule,
+        PotentialNodeRule,
+        FilterNodeRule,
     ]
 
     skip_trunks = [
-        TabSys.Tableau.build_trunk
+        Tableau.build_trunk
     ]
 
     def sphinx_obj_lines_append_autodoc(self, app, what, name, obj, options, lines):
@@ -390,14 +395,14 @@ class Helper(object):
         Returns rendered tableau HTML with argument and build_trunk example.
         """
         lgc = get_obj_logic(lgc)
-        arg = argument('b', ['a1', 'a2'])
-        sw = self.sw
+        arg = parse_argument('b', ['a1', 'a2'], notn='polish')
+        lw = self.lw
         return cat(
             'Argument: <i>',
-            '</i>, <i>'.join(sw.write(p, drop_parens=True) for p in arg.premises),
-            '</i> &there4; <i>', sw.write(arg.conclusion), '</i>',
+            '</i>, <i>'.join(lw.write(p) for p in arg.premises),
+            '</i> &there4; <i>', lw.write(arg.conclusion), '</i>',
             '\n',
-            self.pw.write(logic.tableau(lgc, arg).finish()),
+            self.pw.write(Tableau(lgc, arg).finish()),
         )
 
     def html_rule_example(self, rule, lgc=None):
@@ -405,7 +410,7 @@ class Helper(object):
         Returns rendered tableau HTML for a rule's example application.
         """
         lgc = get_logic(lgc or get_obj_logic(rule))
-        proof = tableau(lgc)
+        proof = Tableau(lgc)
         rule = proof.get_rule(rule)
         rule.example()
         proof.branches[0].add({'ellipsis': True})
@@ -419,13 +424,13 @@ class Helper(object):
         Returns rendered truth table HTML for a single operator.
         """
         lgc = get_logic(lgc)
-        table = logic.truth_table(lgc, operator, reverse = self.opts['truth_tables_rev'])
+        table = truth_table(lgc, operator, reverse = self.opts['truth_tables_rev'])
         return truth_table_template.render({
-            'arity'      : logic.arity(operator),
-            'sw'         : self.sw,
+            'arity'      : operarity(operator),
             'num_values' : len(lgc.Model.truth_values),
             'table'      : table,
             'operator'   : operator,
+            'lw'         : self.lw,
             # Theme hint for conditional class class name.
             'theme'      : self.opts['html_theme'],
         })
@@ -447,7 +452,7 @@ class Helper(object):
         * A list of system messages, which will be inserted into the document tree
         immediately after the end of the current block (can also be empty).
         """
-        sw = self.sw
+        lw = self.lw
         parse = self.parser.parse
         if text.startswith('oper.'):
             what = 'operator'
@@ -458,9 +463,9 @@ class Helper(object):
         elif not what:
             what = 'sentence'
         if what == 'sentence':
-            raw = sw.write(parse(text))
+            raw = lw.write(parse(text))
         elif what == 'operator':
-            raw = sw.write_operator(text)
+            raw = lw.write_operator(text)
         else:
             raise UnknownLexTypeError('Unknown lexical type: {0}'.format(what))
         rendered = htmlun(raw)
@@ -562,10 +567,7 @@ class Helper(object):
             return True
         return False
 
-
 # Misc util
-
-
 
 def rawblock(lines, indent=None):
     """

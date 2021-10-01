@@ -28,11 +28,6 @@ def test_lines_logic_truth_tables():
     res = helper.lines_logic_truth_tables('cpl')
     assert len(res) > 0
 
-# def test_doc_replace_lexicals():
-#     sstr = 'P{A > B}'
-#     res = helper.doc_replace_lexicals(sstr)
-#     assert len(res) > 0
-
 def test_rule_example_html_1():
     res = helper.html_rule_example('GlutClosure', 'k3')
     assert len(res) > 0

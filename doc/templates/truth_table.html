@@ -16,13 +16,13 @@
                 <tr>
                     <th class="blank"></th>
                     <th class="operator-symbol arity-1">
-                        {{ sw.write_operator(operator) }}
+                        {{ lw.write_operator(operator) }}
                     </th>
                 </tr>
             {% elif arity == 2 %}
                 <tr>
                     <th class="operator-symbol arity-2">
-                        {{ sw.write_operator(operator) }}
+                        {{ lw.write_operator(operator) }}
                     </th>
                     {% for x in range(num_values) %}
                         <th class="value-header row">

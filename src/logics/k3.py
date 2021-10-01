@@ -30,6 +30,7 @@ class Meta(object):
     
     category_display_order = 20
 
+from lexicals import Atomic
 from tableaux import ClosureRule
 from . import fde
 
@@ -112,7 +113,7 @@ class TableauxRules(object):
             return self.tracker.cached_target(branch)
 
         def example_nodes(self, branch):
-            a = logic.atomic(0, 0)
+            a = Atomic(0, 0)
             return [
                 {'sentence':        a , 'designated': True},
                 {'sentence': a.negate(), 'designated': True},

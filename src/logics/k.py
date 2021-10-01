@@ -36,6 +36,7 @@ from models import BaseModel
 from tableaux import TableauxSystem, FilterNodeRule, ClosureRule, AllConstantsStoppingRule, \
     NewConstantStoppingRule, AppliedSentenceCounter, MaxWorldsTracker, QuitFlagHelper, \
     AppliedNodesWorldsTracker, PredicatedNodesTracker
+from errors import DenotationError, ModelValueError
 import examples
 
 from . import fde
@@ -291,7 +292,7 @@ class Model(BaseModel):
         """
         for param in sentence.parameters:
             if param not in self.constants:
-                raise Model.DenotationError('Parameter {0} is not in the constants'.format(str(param)))
+                raise DenotationError('Parameter {0} is not in the constants'.format(str(param)))
         if tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw):
             return 'T'
         return 'F'
@@ -509,7 +510,7 @@ class Model(BaseModel):
     def set_opaque_value(self, sentence, value, world=0, **kw):
         frame = self.world_frame(world)
         if sentence in frame.opaques and frame.opaques[sentence] != value:
-            raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
+            raise ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants.
         # NB: in FDE we added the atomics to all_atomics, but we don't have that
@@ -521,7 +522,7 @@ class Model(BaseModel):
     def set_atomic_value(self, sentence, value, world=0, **kw):
         frame = self.world_frame(world)
         if sentence in frame.atomics and frame.atomics[sentence] != value:
-            raise Model.ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
+            raise ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
         frame.atomics[sentence] = value
 
     def set_predicated_value(self, sentence, value, **kw):
@@ -536,11 +537,11 @@ class Model(BaseModel):
         anti_extension = self.get_anti_extension(predicate, **kw)
         if value == 'F':
             if params in extension:
-                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
+                raise ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
             anti_extension.add(params)
         if value == 'T':
             if params in anti_extension:
-                raise Model.ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
+                raise ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
             extension.add(params)
 
     def get_extension(self, predicate, world=0, **kw):
@@ -577,7 +578,7 @@ class Model(BaseModel):
         try:
             return den[c]
         except KeyError:
-            raise Model.DenotationError('Constant {0} does not have a reference at w{1}'.format(str(c), str(world)))
+            raise DenotationError('Constant {0} does not have a reference at w{1}'.format(str(c), str(world)))
 
     def add_access(self, w1, w2):
         self.access.add((w1, w2))

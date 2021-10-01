@@ -166,7 +166,6 @@ class TableauxRules(object):
         From an unticked, designated, negated assertion node *n* on a branch *b*,
         add an undesignated node to *b* with the assertion of *n*, then tick *n*.
         """
-
         negated     = True
         operator    = 'Assertion'
         designation = True
@@ -188,7 +187,6 @@ class TableauxRules(object):
         From an unticked, undesignated assertion node *n* on a branch *b*, add
         an undesignated node to *b* with the assertion of *n*, then tick *n*.
         """
-
         negated     = False
         designation = False
 
@@ -197,7 +195,6 @@ class TableauxRules(object):
         From an unticked, undesignated, negated assertion node *n* on a branch *b*, add
         a designated node to *b* with the assertion of *n*, then tick *n*.
         """
-
         negated     = True
         designation = False
 
@@ -378,10 +375,8 @@ class TableauxRules(object):
         first disjunction is the negation of the assertion of the antecedent,
         and the second disjunct is the assertion of the consequent. Then tick *n*.
         """
-        
         operator    = 'Conditional'
         designation = True
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -408,11 +403,9 @@ class TableauxRules(object):
         add a designated node with the antecedent, and an undesigntated node
         with the consequent to *b*. Then tick *n*.
         """
-
         negated     = True
         operator    = 'Conditional'
         designation = True
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -432,7 +425,6 @@ class TableauxRules(object):
         add a designated node with the antecedent, and an undesigntated node
         with the consequent to *b*. Then tick *n*.
         """
-
         negated     = False
         designation = False
 
@@ -442,7 +434,6 @@ class TableauxRules(object):
         add an undesignated node to *b* with a negated material conditional, where the
         operands are preceded by the Assertion operator, then tick *n*.
         """
-
         negated     = True
         designation = False
 
@@ -454,10 +445,8 @@ class TableauxRules(object):
         is the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
-
         operator    = 'Biconditional'
         designation = True
-
         branch_level = 2
 
         def get_target_for_node(self, node, branch):
@@ -473,8 +462,8 @@ class TableauxRules(object):
             ])
             # keep negated neutral for inheritance below
             if self.negated:
-                sn1 = sn1.negate(),
-                sn2 = sn2.negate(),
+                sn1 = sn1.negate()
+                sn2 = sn2.negate()
             return {
                 'adds': [
                     [
@@ -493,7 +482,6 @@ class TableauxRules(object):
         is the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
-
         negated     = True
         designation = True
 
@@ -505,7 +493,6 @@ class TableauxRules(object):
         is the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
-
         negated     = False
         designation = False
 
@@ -517,7 +504,6 @@ class TableauxRules(object):
         is the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
-
         negated     = True
         designation = False
 
