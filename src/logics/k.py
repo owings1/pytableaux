@@ -33,11 +33,15 @@ class Meta(object):
 
 from lexicals import get_system_predicate, Atomic, Operated, Quantified, Predicated
 from models import BaseModel
-from tableaux import TableauxSystem, FilterNodeRule, ClosureRule, AllConstantsStoppingRule, \
-    NewConstantStoppingRule, AppliedSentenceCounter, MaxWorldsTracker, QuitFlagHelper, \
-    AppliedNodesWorldsTracker, PredicatedNodesTracker
-from errors import DenotationError, ModelValueError
+
+from tableaux import TableauxSystem
+from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
+    NewConstantStoppingRule
+from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
+    MaxWorldsTracker, PredicatedNodesTracker, QuitFlagHelper
 import examples
+
+from errors import DenotationError, ModelValueError
 
 from . import fde
 

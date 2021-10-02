@@ -1,6 +1,6 @@
 import os
-current_dir = os.path.dirname(os.path.abspath(__file__))
-base_dir = os.path.abspath(os.path.join(current_dir, '..'))
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.abspath(os.path.join(_current_dir, '..'))
 with open(os.path.join(base_dir, 'VERSION'), 'r') as f:
     version = f.read().strip()
 

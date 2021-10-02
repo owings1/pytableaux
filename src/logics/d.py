@@ -31,7 +31,8 @@ class Meta(object):
 
     category_display_order = 2
 
-from tableaux import PotentialNodeRule, MaxWorldsTracker, UnserialWorldsTracker
+from proof.rules import PotentialNodeRule
+from proof.helpers import MaxWorldsTracker, UnserialWorldsTracker
 from lexicals import Atomic
 from . import k
 

@@ -32,10 +32,10 @@ from docutils.parsers.rst import Directive, directives, roles
 logger = logging.getLogger(__name__)
 from utils import cat, get_logic
 import examples
-from lexicals import Argument, operarity, create_lexwriter
+from lexicals import operarity, create_lexwriter
 from parsers import create_parser, parse_argument
-from tableaux import Tableau, TableauxSystem as TabSys, Rule, ClosureRule, \
-    PotentialNodeRule, FilterNodeRule, create_tabwriter
+from tableaux import Tableau, TableauxSystem as TabSys, create_tabwriter
+from proof.rules import Rule, ClosureRule, PotentialNodeRule, FilterNodeRule
 from models import truth_table
 from fixed import base_dir, operators_list
 
@@ -208,6 +208,9 @@ class Helper(object):
         return indent_lines(lines, indent = indent)
 
     def lines_opers_table(self, indent=None):
+        """
+        Build the csv table for the operators reference table.
+        """
         sympol, symstd, symhtml = (
             symset.chars('operator') for symset in (
                 create_parser('polish',  format='ascii').symbol_set,

@@ -31,7 +31,7 @@ class Meta(object):
     category_display_order = 100
 
 from lexicals import Atomic
-from tableaux import ClosureRule
+from proof.rules import ClosureRule
 from . import fde
 
 class Model(fde.Model):

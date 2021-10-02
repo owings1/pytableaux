@@ -1,31 +1,70 @@
-# pytableaux, a multi-logic proof generator.
-# Copyright (C) 2014-2021 Doug Owings.
-# 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-# 
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# ------------------
-#
-# pytableaux - rule helpers
-import logic
+from models import BaseModel
 
-RuleHelper = logic.TableauxSystem.RuleHelper
+class AdzHelper(object):
 
-class QuitFlagHelper(RuleHelper):
+    def __init__(self, rule):
+        self.rule = rule
+
+    def apply_to_target(self, target):
+        branch = target['branch']
+        for i in range(len(target['adds'])):
+            if i == 0:
+                continue
+            b = branch.branch()
+            b.update(target['adds'][i])
+            if self.rule.ticking:
+                b.tick(target['node'])
+        branch.update(target['adds'][0])
+        if self.rule.ticking:
+            branch.tick(target['node'])
+
+    def closure_score(self, target):
+        close_count = 0
+        for nodes in target['adds']:
+            nodes = [target['branch'].create_node(node) for node in nodes]
+            for rule in self.rule.tableau.closure_rules:
+                if rule.nodes_will_close_branch(nodes, target['branch']):
+                    close_count += 1
+                    break
+        return float(close_count / min(1, len(target['adds'])))
+
+class NodeTargetCheckHelper(object):
+    """
+    Calls the rule's ``check_for_target(node, branch)`` when a node is added to
+    a branch. If a target is returned, it is cached relative to the branch. The
+    rule can then call ``cached_target(branch)``  on the helper to retrieve the
+    target. This is used primarily in closure rules for performance.
+
+    NB: The rule must implement ``check_for_target(self, node, branch)``.
+    """
+
+    def __init__(self, rule):
+        self.rule = rule
+        self.targets = {}
+
+    def cached_target(self, branch):
+        """
+        Return the cached target for the branch, if any.
+        """
+        if branch.id in self.targets:
+            return self.targets[branch.id]
+
+    # Helper Implementation
+
+    def register_node(self, node, branch):
+        target = self.rule.check_for_target(node, branch)
+        if target:
+            self.targets[branch.id] = target
+
+class QuitFlagHelper(object):
     """
     Track the application of a flag node by the rule for each branch. A branch
-    is considered flagged when the target has a non-empty `flag` property.
+    is considered flagged when the target has a non-empty ``flag`` property.
     """
+
+    def __init__(self, rule):
+        self.rule = rule
+        self.flagged = {}
 
     def has_flagged(self, branch):
         """
@@ -37,9 +76,6 @@ class QuitFlagHelper(RuleHelper):
 
     # Helper implementation
 
-    def setup(self):
-        self.flagged = {}
-
     def register_branch(self, branch, parent):
         if parent != None and parent.id in self.flagged:
             self.flagged[branch.id] = self.flagged[parent.id]
@@ -50,11 +86,22 @@ class QuitFlagHelper(RuleHelper):
         if 'flag' in target and target['flag']:
             self.flagged[target['branch'].id] = True
 
-class MaxConstantsTracker(RuleHelper):
+class MaxConstantsTracker(object):
     """
     Project the maximum number of constants per world required for a branch
     by examining the branches after the trunk is built.
     """
+
+    def __init__(self, rule):
+        self.rule = rule
+        #: Track the maximum number of constants that should be on the branch
+        #: (per world) so we can halt on infinite branches. Map from ``branch.id```
+        #: to ``int```.
+        #: :type: dict({int: int})
+        self.branch_max_constants = {}
+        #: Track the constants at each world.
+        #: :type: dict{int: set(Constant)}
+        self.world_constants = {}
 
     def get_max_constants(self, branch):
         """
@@ -68,6 +115,10 @@ class MaxConstantsTracker(RuleHelper):
     def get_branch_constants_at_world(self, branch, world):
         """
         Get the cached set of constants at a world for the branch.
+
+        :param Branch branch:
+        :param int world:
+        :rtype: bool
         """
         if world not in self.world_constants[branch.id]:
             self.world_constants[branch.id][world] = set()
@@ -77,6 +128,10 @@ class MaxConstantsTracker(RuleHelper):
         """
         Whether we have already reached or exceeded the max number of constants
         projected for the branch (origin) at the given world.
+
+        :param Branch branch:
+        :param int world:
+        :rtype: bool
         """
         if world == None:
             world = 0
@@ -88,6 +143,10 @@ class MaxConstantsTracker(RuleHelper):
         """
         Whether we have exceeded the max number of constants projected for
         the branch (origin) at the given world.
+
+        :param Branch branch:
+        :param int world:
+        :rtype: bool
         """
         if world == None:
             world = 0
@@ -98,19 +157,21 @@ class MaxConstantsTracker(RuleHelper):
 
     def quit_flag(self, branch):
         """
-        Generate a quit flag node for the branch.
+        Generate a quit flag node for the branch. Return value is a ``dict`` with the
+        following keys:
+
+        - *is_flag*: ``True``
+        - *flag*: ``'quit'``
+        - *info*: ``'RuleName:MaxConstants({n})'`` where *RuleName* is ``rule.name``,
+            and ``n`` is the computed max allowed constants for the branch.
+
+        :param Branch branch:
+        :rtype: dict
         """
         info = '{0}:MaxConstants({1})'.format(self.rule.name, str(self.get_max_constants(branch)))
         return {'is_flag': True, 'flag': 'quit', 'info': info}
 
     # Helper implementation
-
-    def setup(self):
-        # Track the maximum number of constats that should be on the branch
-        # (per world) so we can halt on infinite branches.
-        self.branch_max_constants = {}
-        # Track the constants at each world
-        self.world_constants = {}
 
     def after_trunk_build(self, branches):
         for branch in branches:
@@ -141,9 +202,11 @@ class MaxConstantsTracker(RuleHelper):
     # Private util
 
     def _compute_max_constants(self, branch):
-        # Project the maximum number of constants for a branch (origin) as
-        # the number of constants already on the branch (min 1) * the number of
-        # quantifiers (min 1) + 1.
+        """
+        Project the maximum number of constants for a branch (origin) as
+        the number of constants already on the branch (min 1) * the number of
+        quantifiers (min 1) + 1.
+        """
         node_needed_constants = sum([
             self._compute_needed_constants_for_node(node, branch)
             for node in branch.get_nodes()
@@ -155,7 +218,7 @@ class MaxConstantsTracker(RuleHelper):
             return len(node.props['sentence'].quantifiers())
         return 0
 
-class NodeAppliedConstants(RuleHelper):
+class NodeAppliedConstants(object):
     """
     Track the applied and unapplied constants per branch for each potential node.
     The rule's target should have `branch`, `node` and `constant` properties.
@@ -163,6 +226,11 @@ class NodeAppliedConstants(RuleHelper):
     Only nodes that are applicable according to the rule's ``is_potential_node()``
     method are tracked.
     """
+
+    def __init__(self, rule):
+        self.rule = rule
+        self.node_states = {}
+        self.consts = {}
 
     def get_applied(self, node, branch):
         """
@@ -180,10 +248,6 @@ class NodeAppliedConstants(RuleHelper):
 
     # helper implementation
 
-    def setup(self):
-        self.node_states = {}
-        self.consts = {}
-
     def register_branch(self, branch, parent):
         if parent != None and parent.id in self.node_states:
             self.consts[branch.id] = set(self.consts[parent.id])
@@ -199,7 +263,7 @@ class NodeAppliedConstants(RuleHelper):
             self.consts[branch.id] = set()
 
     def register_node(self, node, branch):
-        if self._should_track_node(node, branch):
+        if self.__should_track_node(node, branch):
             if node.id not in self.node_states[branch.id]:
                 # By tracking per node, we are tracking per world, a fortiori.
                 self.node_states[branch.id][node.id] = {
@@ -222,16 +286,24 @@ class NodeAppliedConstants(RuleHelper):
 
     # private util
 
-    def _should_track_node(self, node, branch):
+    def __should_track_node(self, node, branch):
         return self.rule.is_potential_node(node, branch)
 
-class MaxWorldsTracker(RuleHelper):
+class MaxWorldsTracker(object):
     """
     Project the maximum number of worlds required for a branch by examining the
     branches after the trunk is built.
     """
 
-    modal_operators = set(logic.Model.modal_operators)
+    modal_operators = set(BaseModel.modal_operators)
+
+    def __init__(self, rule):
+        self.rule = rule
+        # Track the maximum number of worlds that should be on the branch
+        # so we can halt on infinite branches.
+        self.branch_max_worlds = {}
+        # Cache the modal complexities
+        self.modal_complexities = {}
 
     def get_max_worlds(self, branch):
         """
@@ -277,44 +349,41 @@ class MaxWorldsTracker(RuleHelper):
 
     # Helper implementation
 
-    def setup(self):
-        # Track the maximum number of worlds that should be on the branch
-        # so we can halt on infinite branches.
-        self.branch_max_worlds = {}
-        # Cache the modal complexities
-        self.modal_complexities = {}
-
     def after_trunk_build(self, branches):
         for branch in branches:
             origin = branch.origin()
             # In most cases, we will have only one origin branch.
             if origin.id in self.branch_max_worlds:
                 return
-            self.branch_max_worlds[origin.id] = self._compute_max_worlds(branch)
+            self.branch_max_worlds[origin.id] = self.__compute_max_worlds(branch)
 
     # Private util
 
-    def _compute_max_worlds(self, branch):
+    def __compute_max_worlds(self, branch):
         # Project the maximum number of worlds for a branch (origin) as
         # the number of worlds already on the branch + the number of modal
         # operators + 1.
         node_needed_worlds = sum([
-            self._compute_needed_worlds_for_node(node, branch)
+            self.__compute_needed_worlds_for_node(node, branch)
             for node in branch.get_nodes()
         ])
         return len(branch.worlds()) + node_needed_worlds + 1
 
-    def _compute_needed_worlds_for_node(self, node, branch):
+    def __compute_needed_worlds_for_node(self, node, branch):
         # we only care about unticked nodes, since ticked nodes will have
         # already created any worlds.
         if not branch.is_ticked(node) and node.has('sentence'):
             return self.modal_complexity(node.props['sentence'])
         return 0
 
-class UnserialWorldsTracker(RuleHelper):
+class UnserialWorldsTracker(object):
     """
     Track the unserial worlds on the branch.
     """
+
+    def __init__(self, rule):
+        self.rule = rule
+        self.unserial_worlds = {}
 
     def get_unserial_worlds(self, branch):
         """
@@ -323,9 +392,6 @@ class UnserialWorldsTracker(RuleHelper):
         return self.unserial_worlds[branch.id]
 
     # helper implementation
-
-    def setup(self):
-        self.unserial_worlds = {}
 
     def register_branch(self, branch, parent):
         if parent != None and parent.id in self.unserial_worlds:
@@ -340,10 +406,14 @@ class UnserialWorldsTracker(RuleHelper):
             else:
                 self.unserial_worlds[branch.id].add(w)
 
-class VisibleWorldsIndex(RuleHelper):
+class VisibleWorldsIndex(object):
     """
     Index the visible worlds for each world on the branch.
     """
+
+    def __init__(self, rule):
+        self.rule = rule
+        self.index = {}
 
     def get_visibles(self, branch, world):
         """
@@ -364,9 +434,6 @@ class VisibleWorldsIndex(RuleHelper):
 
     # helper implementation
 
-    def setup(self):
-        self.index = {}
-
     def register_branch(self, branch, parent):
         if parent != None and parent.id in self.index:
             self.index[branch.id] = {
@@ -384,10 +451,14 @@ class VisibleWorldsIndex(RuleHelper):
                 self.index[branch.id][w1] = set()
             self.index[branch.id][w1].add(w2)
 
-class PredicatedNodesTracker(RuleHelper):
+class PredicatedNodesTracker(object):
     """
     Track all predicated nodes on the branch.
     """
+
+    def __init__(self, rule):
+        self.rule = rule
+        self.predicated_nodes = {}
 
     def get_predicated(self, branch):
         """
@@ -396,9 +467,6 @@ class PredicatedNodesTracker(RuleHelper):
         return self.predicated_nodes[branch.id]
 
     # helper implementation
-
-    def setup(self):
-        self.predicated_nodes = {}
 
     def register_branch(self, branch, parent):
         if parent != None and parent.id in self.predicated_nodes:
@@ -410,11 +478,15 @@ class PredicatedNodesTracker(RuleHelper):
         if node.has('sentence') and node.props['sentence'].is_predicated():
             self.predicated_nodes[branch.id].add(node)
 
-class AppliedNodesWorldsTracker(RuleHelper):
+class AppliedNodesWorldsTracker(object):
     """
     Track the nodes applied to by the rule for each world on the branch. The
     rule's target must have `branch`, `node`, and `world` keys.
     """
+
+    def __init__(self, rule):
+        self.rule = rule
+        self.node_worlds_applied = {}
 
     def is_applied(self, node, world, branch):
         """
@@ -423,9 +495,6 @@ class AppliedNodesWorldsTracker(RuleHelper):
         return (node.id, world) in self.node_worlds_applied[branch.id]
 
     # helper implementation
-
-    def setup(self):
-        self.node_worlds_applied = {}
 
     def register_node(self, node, branch):
         if branch.id not in self.node_worlds_applied:
@@ -437,12 +506,16 @@ class AppliedNodesWorldsTracker(RuleHelper):
         pair = (target['node'].id, target['world'])
         self.node_worlds_applied[target['branch'].id].add(pair)
 
-class AppliedSentenceCounter(RuleHelper):
+class AppliedSentenceCounter(object):
     """
     Count the times the rule has applied for a sentence per branch. This tracks
     the `sentence` property of the rule's target. The target should also include
     the `branch` key.
     """
+
+    def __init__(self, rule):
+        self.rule = rule
+        self.counts = {}
 
     def get_count(self, sentence, branch):
         """
@@ -453,9 +526,6 @@ class AppliedSentenceCounter(RuleHelper):
         return self.counts[branch.id][sentence]
 
     # helper implementation
-
-    def setup(self):
-        self.counts = {}
 
     def register_branch(self, branch, parent):
         if parent != None and parent.id in self.counts:
@@ -471,151 +541,3 @@ class AppliedSentenceCounter(RuleHelper):
         if sentence not in self.counts[branch.id]:
             self.counts[branch.id][sentence] = 0
         self.counts[branch.id][sentence] += 1
-
-class NewConstantStoppingRule(logic.TableauxSystem.FilterNodeRule):
-    """
-    Default rule implementation for a one-constant instantiating rule. The rule
-    will check the ``MaxConstantsTracker``. If the max constants have been
-    exceeded for the branch and world, emits a quit flag using the ``QuitFlagHelper``.
-    Concrete classes must implement ``get_new_nodes_for_constant()``.
-
-    This rule inherits from ``FilterNodeRule`` and implements the
-    ``get_target_for_node()`` method.
-    """
-
-    # To be implemented
-
-    def get_new_nodes_for_constant(self, c, node, branch):
-        raise NotImplementedError()
-
-    # node rule implementation
-
-    def __init__(self, *args, **opts):
-        super().__init__(*args, **opts)
-        self.add_helpers({
-            'max_constants' : MaxConstantsTracker(self),
-            'quit_flagger'  : QuitFlagHelper(self),
-        })
-
-    def get_target_for_node(self, node, branch):
-
-        if not self._should_apply(branch, node.props['world']):
-            if not self.quit_flagger.has_flagged(branch):
-                return self._get_flag_target(branch)
-            return
-
-        c = branch.new_constant()
-
-        target = {
-            'adds': [
-                self.get_new_nodes_for_constant(c, node, branch)
-            ],
-        }
-
-        more_adds = self.add_to_adds(node, branch)
-        if more_adds:
-            target['adds'].extend(more_adds)
-
-        return target
-
-    def add_to_adds(self, node, branch):
-        pass
-
-    # private util
-
-    def _should_apply(self, branch, world):
-        return not self.max_constants.max_constants_exceeded(branch, world)
-
-    def _get_flag_target(self, branch):
-        return {
-            'flag': True,
-            'adds': [
-                [
-                    self.max_constants.quit_flag(branch),
-                ]
-            ],
-        }
-
-class AllConstantsStoppingRule(logic.TableauxSystem.FilterNodeRule):
-
-    # To be implemented
-
-    def get_new_nodes_for_constant(self, c, node, branch):
-        raise NotImplementedError()
-
-    def __init__(self, *args, **opts):
-        super().__init__(*args, **opts)
-        self.add_timer(
-            'in_get_targets_for_nodes',
-            'in_node_examime'         ,
-            'in_should_apply'         ,
-        )
-        self.add_helpers({
-            'max_constants'     : MaxConstantsTracker(self),
-            'applied_constants' : NodeAppliedConstants(self),
-            'quit_flagger'      : QuitFlagHelper(self),
-        })
-
-    # rule implementation
-
-    def get_targets_for_node(self, node, branch):
-
-        with self.timers['in_should_apply']:
-            should_apply = self._should_apply(node, branch)
-
-        if not should_apply:
-            if self._should_flag(branch, node.props['world']):
-                return [self._get_flag_target(branch)]
-            return
-
-        with self.timers['in_get_targets_for_nodes']:
-
-            with self.timers['in_node_examime']:
-                constants = self.applied_constants.get_unapplied(node, branch)
-
-            targets = []
-
-            if constants:
-                is_new = False
-            else:
-                is_new = True
-                constants = {branch.new_constant()}
-
-            for c in constants:
-                new_nodes = self.get_new_nodes_for_constant(c, node, branch)
-                if is_new or not branch.has_all(new_nodes):
-                    targets.append({
-                        'constant' : c,
-                        'adds'     : [new_nodes],
-                    })
-
-        return targets
-
-    # private util
-
-    def _should_apply(self, node, branch):
-        if self.max_constants.max_constants_exceeded(branch, node.props['world']):
-            return False
-        # Apply if there are no constants on the branch
-        if not branch.constants():
-            return True
-        # Apply if we have tracked a constant that we haven't applied to.
-        if self.applied_constants.get_unapplied(node, branch):
-            return True
-
-    def _should_flag(self, branch, world):
-        # Slight difference with FDE here -- using world
-        return (
-            self.max_constants.max_constants_exceeded(branch, world) and
-            not self.quit_flagger.has_flagged(branch)
-        )
-
-    def _get_flag_target(self, branch):
-        return {
-            'flag': True,
-            'adds': [
-                [
-                    self.max_constants.quit_flag(branch),
-                ],
-            ],
-        }

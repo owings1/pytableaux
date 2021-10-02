@@ -27,7 +27,8 @@ class Meta(object):
     category = 'Bivalent Modal'
     category_display_order = 5
 
-from tableaux import PotentialNodeRule, MaxWorldsTracker
+from proof.rules import PotentialNodeRule
+from proof.helpers import MaxWorldsTracker
 
 from . import k, t, s4
 

@@ -30,7 +30,8 @@ class Meta(object):
     
     category_display_order = 4
 
-from tableaux import PotentialNodeRule, MaxWorldsTracker, VisibleWorldsIndex
+from proof.rules import PotentialNodeRule
+from proof.helpers import MaxWorldsTracker, VisibleWorldsIndex
 
 from . import k, t
 

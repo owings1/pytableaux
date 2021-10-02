@@ -36,7 +36,7 @@ def create_parser(notn=None, vocab=None, **opts):
         custom predicate definitions. If not passed, a new instance is
         created.
     :return: The parser instance
-    :rtype: BaseParser
+    :rtype: Parser
     """
     if isinstance(notn, Vocabulary) or isinstance(vocab, basestring):
         # Accept inverted args for backwards compatibility.
@@ -51,10 +51,24 @@ def create_parser(notn=None, vocab=None, **opts):
         return StandardParser(vocab, **opts)
     raise UnknownNotationError('Unknown parser: {0}'.format(str(notn)))
 
-class BaseParser(object):
+class Parser(object):
+    def parse(self, input):
+        """
+        Parse a sentence from an input string.
 
-    # The base ``Parser`` class handles parsing operations common to all notations
-    # (Polish and Standard). This consists of all parsing except for operator
+        :param str input: The input string.
+        :return: The parsed sentence.
+        :rtype: Sentence
+        :raises errors.ParseError:
+        """
+        raise NotImplementedError()
+    def argument(self, conclusion, premises=None, title=None):
+        raise NotImplementedError()
+
+class BaseParser(Parser):
+
+    # The base ``Parser`` class handles parsing operations common to both Polish
+    # and standard notation. This consists of all parsing except for operator
     # expressions, as well as the following classes of symbols:
     # 
     # - Whitespace symbols: the *space* character.
@@ -75,26 +89,18 @@ class BaseParser(object):
         self.opts = opts
         self.__state = self.__State(self)
 
-    def parse(self, string):
-        """
-        Parse a sentence from an input string.
-
-        :param str string: The input string.
-        :return: The parsed sentence.
-        :rtype: Vocabulary.Sentence
-        :raises Parser.ParseError:
-        """
+    def parse(self, input):
         with self.__state:
-            self.s   = list(string)
+            self.s = list(input)
             self.pos = 0
-            self.chomp()
-            if not self.has_current():
+            self._chomp()
+            if not self._has_current():
                 raise ParseError('Input cannot be empty.')
-            s = self.read()
-            self.chomp()
-            if self.has_current():
+            s = self._read()
+            self._chomp()
+            if self._has_current():
                 raise ParseError(
-                    "Unexpected character '{0}' at position {1}.".format(self.current(), self.pos)
+                    "Unexpected character '{0}' at position {1}.".format(self._current(), self.pos)
                 )
         return s
 
@@ -125,7 +131,7 @@ class BaseParser(object):
     ##  Medium-level parsing methods - Sentences
     ## ==========================================
 
-    def read(self):
+    def _read(self):
         """
         Internal entrypoint for reading a sentence. Implementation is recursive.
         This provides the default implementation for prefix notation sentences,
@@ -139,57 +145,57 @@ class BaseParser(object):
         :meta private:
         :raises Parser.ParseError:
         """
-        ctype = self.assert_current()
+        ctype = self._assert_current()
         if ctype == 'user_predicate' or ctype == 'system_predicate':
-            s = self.read_predicate_sentence()
+            s = self._read_predicate_sentence()
         elif ctype == 'quantifier':
-            s = self.read_quantified_sentence()
+            s = self._read_quantified_sentence()
         elif ctype == 'atomic':
-            s = self.read_atomic()
+            s = self._read_atomic()
         else:
             raise ParseError(
-                "Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos)
+                "Unexpected {0} '{1}' at position {2}.".format(ctype, self._current(), self.pos)
             )
         return s
 
-    def read_atomic(self):
+    def _read_atomic(self):
         """
         Read an atomic sentence starting from the current character.
 
         :rtype: Vocabulary.AtomicSentence
         :meta private:
         """
-        return AtomicSentence(**self.read_item())
+        return AtomicSentence(**self._read_item())
 
-    def read_predicate_sentence(self):
+    def _read_predicate_sentence(self):
         """
         Read predicated sentence starting from the current character.
 
         :rtype: Vocabulary.PredicatedSentence
         :meta private:
         """
-        predicate = self.read_predicate()
-        params = self.read_parameters(predicate.arity)
+        predicate = self._read_predicate()
+        params = self._read_parameters(predicate.arity)
         return PredicatedSentence(predicate, params)
 
-    def read_quantified_sentence(self):
+    def _read_quantified_sentence(self):
         """
         Read quantified sentence starting from the current character.
 
         :rtype: Vocabulary.PredicatedSentence
         :meta private:
         """
-        self.assert_current_is('quantifier')
-        quantifier = self.symbol_set.indexof('quantifier', self.current())
-        self.advance()
-        v = self.read_variable()
+        self._assert_current_is('quantifier')
+        quantifier = self.symbol_set.indexof('quantifier', self._current())
+        self._advance()
+        v = self._read_variable()
         if v in list(self.bound_vars):
             var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
             raise BoundVariableError(
                 "Cannot rebind variable '{0}' at position {1}.".format(var_str, self.pos)
             )
         self.bound_vars.add(v)
-        sentence = self.read()
+        sentence = self._read()
         if v not in list(sentence.variables()):
             var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
             raise BoundVariableError(
@@ -202,23 +208,23 @@ class BaseParser(object):
     ##  Medium-level parsing methods - Parameters
     ## ==========================================
 
-    def read_predicate(self):
+    def _read_predicate(self):
         """
         Read a predicate starting from the current character.
 
         :rtype: Vocabulary.Predicate
         :meta private:
         """
-        pchar = self.current()
+        pchar = self._current()
         cpos = self.pos
         try:
-            return self.vocab.get_predicate(**self.read_item())
+            return self.vocab.get_predicate(**self._read_item())
         except NoSuchPredicateError:
             raise ParseError(
                 "Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos)
             )
 
-    def read_parameters(self, num):
+    def _read_parameters(self, num):
         """
         Read the given number of parameters (constants or variables) starting
         from the current character.
@@ -231,10 +237,10 @@ class BaseParser(object):
         """
         parameters = []
         while len(parameters) < num:
-            parameters.append(self.read_parameter())
+            parameters.append(self._read_parameter())
         return parameters
 
-    def read_parameter(self):
+    def _read_parameter(self):
         """
         Read a single parameter (constant or variable) from the current character.
 
@@ -243,12 +249,12 @@ class BaseParser(object):
             been bound by a quantifier.
         :meta private:
         """
-        ctype = self.assert_current_is('constant', 'variable')
+        ctype = self._assert_current_is('constant', 'variable')
         if ctype == 'constant':
-            return self.read_constant()
+            return self._read_constant()
         else:
             cpos = self.pos
-            v = self.read_variable()
+            v = self._read_variable()
             if v not in list(self.bound_vars):
                 var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
                 raise UnboundVariableError(
@@ -256,25 +262,25 @@ class BaseParser(object):
                 )
             return v
 
-    def read_variable(self):
+    def _read_variable(self):
         """
         Read a variable starting from the current character.
 
         :rtype: Vocabulary.Variable
         :meta private:
         """
-        return Variable(**self.read_item())
+        return Variable(**self._read_item())
 
-    def read_constant(self):
+    def _read_constant(self):
         """
         Read a constant starting from the current character.
 
         :rtype: Vocabulary.Constant
         :meta private:
         """
-        return Constant(**self.read_item())
+        return Constant(**self._read_item())
 
-    def read_subscript(self):
+    def _read_subscript(self):
         """
         Read the subscript starting from the current character. If the current
         character is not a digit, or we are after last, then the subscript is
@@ -286,14 +292,14 @@ class BaseParser(object):
         :meta private:
         """
         sub = []
-        while self.current() and self.typeof(self.current()) == 'digit':
-            sub.append(self.current())
-            self.advance()
+        while self._current() and self._typeof(self._current()) == 'digit':
+            sub.append(self._current())
+            self._advance()
         if not len(sub):
             sub.append('0')
         return int(''.join(sub))
 
-    def read_item(self, ctype = None):
+    def _read_item(self, ctype = None):
         """
         Read an item and its subscript starting from the current character,
         which must be in the list of characters given. Returns a list containing
@@ -305,68 +311,68 @@ class BaseParser(object):
         :meta private:
         """
         if ctype == None:
-            ctype = self.typeof(self.current())
+            ctype = self._typeof(self._current())
         else:
-            self.assert_current_is(ctype)
-        index = self.symbol_set.indexof(ctype, self.current())
-        self.advance()
-        subscript = self.read_subscript()
+            self._assert_current_is(ctype)
+        index = self.symbol_set.indexof(ctype, self._current())
+        self._advance()
+        subscript = self._read_subscript()
         return {'index': index, 'subscript': subscript}
 
     ## ============================
     ##  Low-level parsing methods
     ## ============================
 
-    def current(self):
+    def _current(self):
         # Get the current character, or ``None`` if after last.
-        return self.next(0)
+        return self._next(0)
 
-    def assert_current(self):
+    def _assert_current(self):
         # Raise a ``ParseError`` if after last.
-        if not self.has_current():
+        if not self._has_current():
             raise ParseError(
                 'Unexpected end of input at position {0}.'.format(self.pos)
             )
-        return self.typeof(self.current())
+        return self._typeof(self._current())
 
-    def assert_current_is(self, *ctypes):
-        self.assert_current()
-        ctype = self.typeof(self.current())
+    def _assert_current_is(self, *ctypes):
+        self._assert_current()
+        ctype = self._typeof(self._current())
         if ctype not in ctypes:
             raise ParseError(
-                "Unexpected {0} '{1}' at position {2}.".format(ctype, self.current(), self.pos)
+                "Unexpected {0} '{1}' at position {2}.".format(ctype, self._current(), self.pos)
             )
         return ctype
 
-    def has_next(self, n=1):
+    def _has_next(self, n=1):
         # Check whether there are n-many characters after the current.
         self.__state.check_started()
         return (len(self.s) > self.pos + n)
 
-    def has_current(self):
+    def _has_current(self):
         # check whether there is a current character, or return ``False``` if after last.
-        return self.has_next(0)
+        return self._has_next(0)
 
-    def next(self, n=1):
+    def _next(self, n=1):
         # Get the nth character after the current, of ``None``` if ``n``` is after last.
-        if self.has_next(n):
+        if self._has_next(n):
             return self.s[self.pos+n]
         return None
 
-    def advance(self, n=1):
+    def _advance(self, n=1):
         # Advance the current pointer n-many characters, and then eat whitespace.
         self.__state.check_started()
         self.pos += n  
-        self.chomp()
+        self._chomp()
         return self
 
-    def chomp(self):
+    def _chomp(self):
         # Proceeed through whitepsace.
-        while self.has_current() and self.typeof(self.current()) == 'whitespace':
+        while self._has_current() and self._typeof(self._current()) == 'whitespace':
             self.pos += 1
         return self
 
-    def typeof(self, c):
+    def _typeof(self, c):
         return self.symbol_set.typeof(c)
 
     class __State(object):
@@ -396,15 +402,15 @@ class PolishParser(BaseParser):
 
     symbol_set = SymbolSet('polish', 'ascii')
 
-    def read(self):
-        ctype = self.assert_current()
+    def _read(self):
+        ctype = self._assert_current()
         if ctype == 'operator':
-            operator = self.symbol_set.indexof('operator', self.current())
-            self.advance()
-            operands = [self.read() for x in range(operators[operator])]
+            operator = self.symbol_set.indexof('operator', self._current())
+            self._advance()
+            operands = [self._read() for x in range(operators[operator])]
             s = OperatedSentence(operator, operands)
         else:
-            s = super().read()
+            s = super()._read()
         return s
 
 class StandardParser(BaseParser):
@@ -431,9 +437,9 @@ class StandardParser(BaseParser):
         else:
             return s
 
-    def read(self):
+    def _read(self):
         # override
-        ctype = self.assert_current()
+        ctype = self._assert_current()
         if ctype == 'operator':
             s = self.__read_operator_sentence()
         elif ctype == 'paren_open':
@@ -441,32 +447,32 @@ class StandardParser(BaseParser):
         elif ctype == 'variable' or ctype == 'constant':
             s = self.__read_infix_predicate_sentence()
         else:
-            s = super().read()
+            s = super()._read()
         return s
 
     def __read_operator_sentence(self):
-        operator = self.symbol_set.indexof('operator', self.current())
+        operator = self.symbol_set.indexof('operator', self._current())
         arity = operators[operator]
         # only unary operators can be prefix operators
         if arity != 1:
             raise ParseError(
                 "Unexpected non-prefix operator symbol '{0}' at position {1}.".format(
-                    self.current(), self.pos
+                    self._current(), self.pos
                 )
             )
-        self.advance()
-        operand = self.read()
+        self._advance()
+        operand = self._read()
         return OperatedSentence(operator, [operand])
 
     def __read_infix_predicate_sentence(self):
-        params = [self.read_parameter()]
-        self.assert_current_is('user_predicate', 'system_predicate')
+        params = [self._read_parameter()]
+        self._assert_current_is('user_predicate', 'system_predicate')
         ppos = self.pos
-        predicate = self.read_predicate()
+        predicate = self._read_predicate()
         if predicate.arity < 2:
             raise ParseError(
                 "Unexpected {0}-ary predicate at position {1}. Infix notation requires arity > 1.".format(predicate.arity, ppos))
-        params += self.read_parameters(predicate.arity - 1)
+        params += self._read_parameters(predicate.arity - 1)
         return PredicatedSentence(predicate, params)
 
     def __read_from_open_paren(self):
@@ -479,10 +485,12 @@ class StandardParser(BaseParser):
         depth = 1
         length = 1
         while depth:
-            if not self.has_next(length):
-                raise ParseError('Unterminated open parenthesis at position {0}.'.format(self.pos))
-            peek = self.next(length)
-            ptype = self.typeof(peek)
+            if not self._has_next(length):
+                raise ParseError(
+                    'Unterminated open parenthesis at position {0}.'.format(self.pos)
+                )
+            peek = self._next(length)
+            ptype = self._typeof(peek)
             if ptype == 'paren_close':
                 depth -= 1
             elif ptype == 'paren_open':
@@ -491,7 +499,9 @@ class StandardParser(BaseParser):
                 peek_operator = self.symbol_set.indexof('operator', peek)
                 if operators[peek_operator] == 2 and depth == 1:
                     if operator != None:
-                        raise ParseError('Unexpected binary operator at position {0}.'.format(self.pos + length))
+                        raise ParseError(
+                            'Unexpected binary operator at position {0}.'.format(self.pos + length)
+                        )
                     operator_pos = self.pos + length
                     operator = peek_operator
             length += 1
@@ -502,10 +512,10 @@ class StandardParser(BaseParser):
         # now we can divide the string into lhs and rhs
         lhs_start = self.pos + 1
         # move past the open paren
-        self.advance()
+        self._advance()
         # read the lhs
-        lhs = self.read()
-        self.chomp()
+        lhs = self._read()
+        self._chomp()
         if self.pos != operator_pos:
             raise ParseError(
                 ''.join([
@@ -516,12 +526,12 @@ class StandardParser(BaseParser):
                 )
             )
         # move past the operator
-        self.advance()
+        self._advance()
         # read the rhs
-        rhs = self.read()
-        self.chomp()
+        rhs = self._read()
+        self._chomp()
         # now we should have a close paren
-        self.assert_current_is('paren_close')
+        self._assert_current_is('paren_close')
         # move past the close paren
-        self.advance()
+        self._advance()
         return OperatedSentence(operator, [lhs, rhs])

@@ -30,11 +30,14 @@ class Meta(object):
     
     category_display_order = 10
 
-from errors import ModelValueError
-from lexicals import Atomic, Operated, Quantified, get_system_predicate
 from models import BaseModel
-from tableaux import TableauxSystem as BaseSystem, ClosureRule, FilterNodeRule, \
-    AllConstantsStoppingRule, NewConstantStoppingRule
+from lexicals import Atomic, Operated, Quantified, get_system_predicate
+
+from tableaux import TableauxSystem as BaseSystem
+from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
+    NewConstantStoppingRule
+
+from errors import ModelValueError
 
 Identity = get_system_predicate('Identity')
 Existence = get_system_predicate('Existence')

@@ -31,7 +31,7 @@ class Meta(object):
     category_display_order = 20
 
 from lexicals import Atomic
-from tableaux import ClosureRule
+from proof.rules import ClosureRule
 from . import fde
 
 class Model(fde.Model):
@@ -94,7 +94,7 @@ class TableauxRules(object):
 
         def check_for_target(self, node, branch):
             """
-            Tracker implementation. See :class:`<logic.TableauxSystem.NodeTargetCheckHelper>`
+            Tracker implementation. See :class:`<rules.helpers.NodeTargetCheckHelper>`
 
             :meta private:
             """
