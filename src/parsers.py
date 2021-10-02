@@ -400,7 +400,7 @@ class BaseParser(Parser):
 
 class PolishParser(BaseParser):
 
-    symbol_set = SymbolSet('polish', 'ascii')
+    symbol_set = SymbolSet('polish.ascii')
 
     def _read(self):
         ctype = self._assert_current()
@@ -415,7 +415,7 @@ class PolishParser(BaseParser):
 
 class StandardParser(BaseParser):
 
-    symbol_set = SymbolSet('standard', 'ascii')
+    symbol_set = SymbolSet('standard.ascii')
 
     def parse(self, string):
         # override

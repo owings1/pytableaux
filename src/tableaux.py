@@ -1,14 +1,9 @@
-from errors import BadArgumentError, BranchClosedError, ProofTimeoutError, \
-    TableauStateError, TrunkAlreadyBuiltError, TrunkNotBuiltError
-from fixed import num_const_symbols, base_dir, default_notation
-from lexicals import AtomicSentence, Constant, OperatedSentence, operators, \
-    BaseLexWriter, create_lexwriter
+from fixed import num_const_symbols
+from lexicals import Constant
 from utils import get_logic, StopWatch
 
-from proof.helpers import AdzHelper
-
-# TODO: used by ClosureRule, NewConstantStoppingRule
-from proof.helpers import NodeTargetCheckHelper, QuitFlagHelper, MaxConstantsTracker
+from errors import BranchClosedError, ProofTimeoutError, \
+    TableauStateError, TrunkAlreadyBuiltError, TrunkNotBuiltError
 
 from inspect import isclass
 
@@ -1036,101 +1031,6 @@ class Node(object):
             'step'   : self.step,
             'parent' : self.parent.id if self.parent else None,
         }.__repr__()
-
-class TableauWriter(object):
-
-    def __init__(self, lw, **opts):
-        # Extra check during refactor
-        if not isinstance(lw, BaseLexWriter):
-            raise TypeError('lw must be a BaseLexWriter instance')
-        self.opts = opts
-        self.lw = lw
-
-    def document_header(self):
-        return ''
-
-    def document_footer(self):
-        return ''
-
-    # TODO: simplify when the options are passed, should be only in constructor.
-    def write(self, tableau):
-        return self._write_tableau(tableau)
-        # self.opts = dict(self.defaults)
-        # self.opts.update(options)
-        # # Extra check during refactor
-        # if not isinstance(tableau, Tableau):
-        #     raise TypeError('tableau must be a Tableau instance')
-        
-        # # A setence write (sw) takes precedence over notation/symbol_set
-        # if not sw and 'sw' in opts:
-        #     sw = opts['sw']
-
-        # if not sw:
-        #     if not notation and 'notation' in opts:
-        #         notation = self.defaults['notation']
-        #     if not notation:
-        #         raise BadArgumentError("Must specify either notation or sw.")
-        #     notation = get_module('notations', notation)
-        #     if not symbol_set and 'symbol_set' in opts:
-        #         symbol_set = self.defaults['symbol_set']
-        #     sw = notation.Writer(symbol_set)
-
-        # return self._write_tableau(tableau, sw, opts)
-
-    def _write_tableau(self, tableau, sw, opts):
-        raise NotImplementedError()
-
-def create_tabwriter(notn=None, format=None, **opts):
-    if not notn:
-        notn = default_notation
-    if not format:
-        format = 'ascii'
-    lw = create_lexwriter(notn=notn, format=format, **opts)
-    if format == 'html':
-        return HtmlTableauWriter(lw, **opts)
-    raise BadArgumentError('Unknown output format: {0}'.format(str(format)))
-
-class HtmlTableauWriter(TableauWriter):
-
-    name = 'HTML'
-
-    @staticmethod
-    def _get_template(file):
-        if not getattr(HtmlTableauWriter, 'jenv', False):
-            from jinja2 import Environment, FileSystemLoader
-            templates_dir = '/'.join((base_dir, 'src/writers/templates'))
-            HtmlTableauWriter.jenv = Environment(
-                loader = FileSystemLoader(templates_dir),
-                trim_blocks = True,
-                lstrip_blocks = True,
-            )
-        return HtmlTableauWriter.jenv.get_template(file)
-
-    __defaults = {}
-
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **self.__defaults, **kw)
-
-    def get_template(self, file):
-        return HtmlTableauWriter._get_template(file)
-
-    def _write_tableau(self, tableau):
-        lw = self.lw
-        if tableau.argument:
-            premises = [lw.write(premise) for premise in tableau.argument.premises]
-            conclusion = lw.write(tableau.argument.conclusion)
-        else:
-            premises = None
-            conclusion = None
-        return self.get_template('proof.html').render({
-            'tableau'    : tableau,
-            'lw'         : lw,
-            'opts'       : self.opts,
-            'premises'   : premises,
-            'conclusion' : conclusion,
-            # compatibility during refactor
-            'sw': lw,
-        })
 
 def make_tree_structure(branches, node_depth=0, track=None):
     is_root = track == None

@@ -34,7 +34,8 @@ from utils import cat, get_logic
 import examples
 from lexicals import operarity, create_lexwriter
 from parsers import create_parser, parse_argument
-from tableaux import Tableau, TableauxSystem as TabSys, create_tabwriter
+from tableaux import Tableau, TableauxSystem as TabSys
+from proof.writers import create_tabwriter
 from proof.rules import Rule, ClosureRule, PotentialNodeRule, FilterNodeRule
 from models import truth_table
 from fixed import base_dir, operators_list
@@ -126,11 +127,11 @@ class Helper(object):
         # print('\n\n', self.parser.__class__.__name__)
         self.lw = create_lexwriter(
             notn = self.opts['write_notation'],
-            format = 'html',
+            enc = 'html',
         )
         self.pw = create_tabwriter(
             notn = self.opts['write_notation'],
-            format = 'html',
+            enc = 'html',
         )
         self.replace_defns = []
         # https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
@@ -213,9 +214,9 @@ class Helper(object):
         """
         sympol, symstd, symhtml = (
             symset.chars('operator') for symset in (
-                create_parser('polish',  format='ascii').symbol_set,
-                create_parser('standard', format='ascii').symbol_set,
-                create_lexwriter('standard', format='html').symbol_set,
+                create_parser('polish',  enc='ascii').symbol_set,
+                create_parser('standard', enc='ascii').symbol_set,
+                create_lexwriter('standard', enc='html').symbol_set,
             )
         )
         lines = [
@@ -460,17 +461,14 @@ class Helper(object):
         if text.startswith('oper.'):
             what = 'operator'
             text = text.split('.')[1]
-        # elif text.startswith('pred.'):
-        #     what = 'pred'
-        #     text = text.split('.')[1]
+        elif text.startswith('pred.'):
+            what = 'pred'
+            text = text.split('.')[1]
         elif not what:
             what = 'sentence'
         if what == 'sentence':
-            raw = lw.write(parse(text))
-        elif what == 'operator':
-            raw = lw.write_operator(text)
-        else:
-            raise UnknownLexTypeError('Unknown lexical type: {0}'.format(what))
+            raw = parse(text)
+        lw.write(text)
         rendered = htmlun(raw)
         node = nodes.inline(text = rendered)
         set_classes(opts)

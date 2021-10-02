@@ -1,7 +1,7 @@
-import os
-_current_dir = os.path.dirname(os.path.abspath(__file__))
-base_dir = os.path.abspath(os.path.join(_current_dir, '..'))
-with open(os.path.join(base_dir, 'VERSION'), 'r') as f:
+from os import path
+package_dir = path.dirname(path.abspath(__file__))
+base_dir = path.abspath(path.join(package_dir, '..'))
+with open(path.join(base_dir, 'VERSION'), 'r') as f:
     version = f.read().strip()
 
 copyright = '2014-2021, Doug Owings. Released under the GNU Affero General Public License v3 or later'
@@ -62,12 +62,16 @@ num_const_symbols     = 4
 num_atomic_symbols    = 5
 num_predicate_symbols = 4
 
-parser_names = ['polish', 'standard']
-lexwriter_names = ['polish', 'standard']
+parser_names = ['standard', 'polish']
+lexwriter_names = ['standard', 'polish']
+lexwriter_encodings = ['html', 'ascii']
 tabwriter_names = ['html']
 symbols_data = {
-    'polish' : {
-        'ascii' : {
+    'polish.ascii' : {
+        'name'    : 'polish.ascii',
+        'encoding': 'ascii',
+        'parse'   : True,
+        'lexicals' : {
             'atomic'   : ['a', 'b', 'c', 'd', 'e'],
             'operator' : {
                 'Assertion'              : 'T',
@@ -96,8 +100,11 @@ symbols_data = {
             'digit' : list('0123456789'),
         },
     },
-    'standard': {
-        'ascii': {
+    'standard.ascii': {
+        'name'    : 'standard.ascii',
+        'encoding': 'ascii',
+        'parse'   : True,
+        'lexicals': {
             'atomic' : ['A', 'B', 'C', 'D', 'E'],
             'operator' : {
                 'Assertion'              :  '*',
@@ -127,7 +134,12 @@ symbols_data = {
             'whitespace'      : [' '],
             'digit'           : list('0123456789'),
         },
-        'html': {
+    },
+    'standard.html': {
+        'name'    : 'standard.html',
+        'encoding': 'html',
+        'parse'   : False,
+        'lexicals': {
             'atomic'   : ['A', 'B', 'C', 'D', 'E'],
             'operator' : {
                 'Assertion'              : '&deg;'   ,
@@ -157,14 +169,7 @@ symbols_data = {
             'paren_close'     : [')'],
             'whitespace'      : [' '],
             'digit'           : list('0123456789'),
-        }
-    }
+        },
+    },
 }
-
-lexwriter_formats = set(('html', 'default', 'ascii'))
-symbols_data['polish']['html'] = symbols_data['polish']['ascii']
-def _populate():
-    for notn in symbols_data:
-        if 'default' not in symbols_data[notn]:
-            symbols_data[notn]['default'] = symbols_data[notn]['ascii']
-_populate()
+symbols_data['polish.html'] = symbols_data['polish.ascii']

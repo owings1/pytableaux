@@ -9,7 +9,7 @@
         <span class="node-props {{- ' ticked' if node.ticked}}">
             {% if node.has('sentence') -%}
                 {% set sentence_raw = lw.write(node.props['sentence']) -%}
-                <span class="sentence">{{ sentence_raw if lw.format == 'html' else sentence_raw|e }}</span>
+                <span class="sentence">{{ sentence_raw if lw.encoding == 'html' else sentence_raw|e }}</span>
                 {% if node.has('world') -%}
                     <span class="world">, w<span class="subscript">{{ node.props['world'] }}</span></span>
                 {% endif -%}

@@ -130,7 +130,7 @@
             $('.fieldset-contents', $Ctx).removeClass('uncollapsed').addClass('collapsed').hide('fast')
             $('.heading', $Ctx).removeClass('uncollapsed').addClass('collapsed')
             if (!isVisible) {
-                $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
+                $contents.removeClass('collapsed').addClass('uncollapsed').show('fast')
                 $heading.removeClass('collapsed').addClass('uncollapsed')
             }
         }
@@ -146,7 +146,7 @@
             const $contents = $wrapper.find('.collapser-contents')
             if ($heading.hasClass('collapsed')) {
                 $heading.add($wrapper).removeClass('collapsed').addClass('uncollapsed')
-                $contents.removeClass('collapsed').addClass('uncollapsed').show('medium')
+                $contents.removeClass('collapsed').addClass('uncollapsed').show('fast')
             } else {
                 $heading.add($wrapper).removeClass('uncollapsed').addClass('collapsed')
                 $contents.removeClass('uncollapsed').addClass('collapsed').hide('fast')

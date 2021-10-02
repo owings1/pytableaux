@@ -56,22 +56,28 @@ def isstr(arg):
 
 class SymbolSet(object):
 
-    def __init__(self, notn, name):
-        self.m = m = symbols_data[notn][name]
-        self.name = name
+    def __init__(self, data):
+        if isstr(data):
+            self.name = data
+            data = symbols_data[data]
+        self.data = data
+        self.name = data['name']
+        self.encoding = data['encoding']
+        self.can_parse = data['parse']
         self.types = {}
         self.index = {}
         self.reverse = {}
         
-        for ctype in m:
-            if isinstance(m[ctype], dict):
-                self.types.update({c: ctype for c in m[ctype].values()})
-                self.index[ctype] = dict(m[ctype])
-                self.reverse[ctype] = {m[ctype][k]: k for k in m[ctype]}
+        for ctype in data['lexicals']:
+            cvals = data['lexicals'][ctype]
+            if isinstance(cvals, dict):
+                self.types.update({c: ctype for c in cvals.values()})
+                self.index[ctype] = dict(cvals)
+                self.reverse[ctype] = {cvals[k]: k for k in cvals}
             else:
-                self.types.update({c: ctype for c in m[ctype]})
-                self.index[ctype] = {i: c for i, c in enumerate(m[ctype])}
-                self.reverse[ctype] = {c: i for i, c in enumerate(m[ctype])}
+                self.types.update({c: ctype for c in cvals})
+                self.index[ctype] = {i: c for i, c in enumerate(cvals)}
+                self.reverse[ctype] = {c: i for i, c in enumerate(cvals)}
 
     def typeof(self, c):
         if c in self.types:
@@ -93,7 +99,7 @@ class SymbolSet(object):
         return ''.join([self.charof('digit', int(d)) for d in list(str(subscript))])
 
     def chars(self, ctype):
-        return self.m[ctype]
+        return self.data['lexicals'][ctype]
 
 class StopWatch(object):
 

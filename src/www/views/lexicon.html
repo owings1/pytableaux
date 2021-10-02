@@ -13,7 +13,7 @@
     <div class="lexicon-panel">
         {%- for parser_name in parser_symsets -%}
             {%- set symset = parser_symsets[parser_name] %}
-            <div class="lexicon hidden notation-{{ module|e }}">
+            <div class="lexicon hidden notation-{{ parser_name|e }}">
                 <span class="label">Atomics</span>
                 <ul class="item-symbols">
                     {% for char in symset.chars('atomic') -%}
@@ -41,7 +41,7 @@
     <div class="lexicon-panel last">
         {%- for parser_name in parser_symsets -%}
             {%- set symset = parser_symsets[parser_name] %}
-            <div class="lexicon hidden notation-{{ module|e }}">
+            <div class="lexicon hidden notation-{{ parser_name|e }}">
                 <span class="label">Constants</span>
                 <ul class="item-symbols">
                     {% for char in symset.chars('constant') -%}
@@ -75,7 +75,7 @@
                                     {%- set symset = parser_symsets[parser_name] -%}
                                     {%- set symbol = symset.charof('system_predicate', name) -%}
                                     {%- set subscript = system_predicates[name].subscript -%}
-                                    <span class="predicateSymbol notation-{{module}} hidden">
+                                    <span class="predicateSymbol notation-{{parser_name}} hidden">
                                         {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript|e }}</span>{% endif -%}
                                     </span>
                                 {% endfor %}
@@ -93,7 +93,7 @@
                         {%- call helper.predicate_row(index, subscript, name, arity) %}
                             {% for parser_name in parser_symsets -%}
                                 {%- set symset = parser_symsets[parser_name] -%}
-                                {{- helper.predicate_symbol(module, symset.charof('user_predicate', index), subscript) }}
+                                {{- helper.predicate_symbol(parser_name, symset.charof('user_predicate', index), subscript) }}
                             {% endfor -%}
                         {%- endcall -%}
                     {%- endfor %}

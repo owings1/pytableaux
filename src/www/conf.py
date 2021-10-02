@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - Web App Configuration
-from utils import get_logic, SymbolSet
+from utils import get_logic
 from fixed import parser_names
 from parsers import create_parser
 from lexicals import create_lexwriter
@@ -172,11 +172,11 @@ def __populate_info():
     for arg in exargs:
         example_arguments[arg.title] = {}
     for notn in parser_names:
-        w = create_lexwriter(notn=notn, format='ascii')
+        w = create_lexwriter(notn=notn, enc='ascii')
         for arg in exargs:
             example_arguments[arg.title][notn] = {
                 'premises': [w.write(s) for s in arg.premises],
-                'conlusion': w.write(arg.conclusion),
+                'conclusion': w.write(arg.conclusion),
             }
         p = create_parser(notn=notn)
         parser_symsets[notn] = p.symbol_set

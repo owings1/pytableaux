@@ -21,8 +21,11 @@
 <div class="input select">
     <label for="symbol_set">Symbol Set</label>
     <select id="symbol_set" name="symbol_set">
-        <option value="html" {{- helper.select_opt(form_data, 'symbol_set', 'html') }}>HTML</option>
-        <option value="default" {{- helper.select_opt(form_data, 'symbol_set', 'default') }}>Default</option>
+        {% for name in lexwriter_encodings -%}
+            <option value="{{ name }}" {{- helper.select_opt(form_data, 'symbol_set', name) }}>
+                {{- name|e -}}
+            </option>
+        {% endfor %}
     </select>
 </div>
 <div class="input">

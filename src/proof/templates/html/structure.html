@@ -1,5 +1,5 @@
 {%- import 'node.html' as nw -%}
-{% macro write_structure(sw, structure, is_child = False) -%}
+{% macro write_structure(lw, structure, is_child = False) -%}
     <div class="structure 
         {{- ' zoomed' if not is_child -}}
         {{- ' has-open' if structure['has_open'] -}}
@@ -23,7 +23,7 @@
             <div class="vertical-line" data-step="{{ structure['step'] }}"></div>
         {% endif %}
         {% for node in structure['nodes'] -%}
-            {{ nw.write_node(sw, node) -}}
+            {{ nw.write_node(lw, node) -}}
         {% endfor -%}
         </div>
         {% if structure['children']|length %}
@@ -36,7 +36,7 @@
             {% for child in structure['children'] %}
                 {% set child_width = (100 / structure['width']) * child['width'] %}
                 <div class="child-wrapper" style="width: {{ child_width }}%;" data-step="{{ child['step'] }}" data-current-width-pct="{{ child_width }}%">
-                    {{ write_structure(sw, child, is_child = True) }}
+                    {{ write_structure(lw, child, is_child = True) }}
                 </div>
             {% endfor %}
         {% endif %}

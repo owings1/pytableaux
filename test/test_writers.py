@@ -24,7 +24,8 @@ from lexicals import create_lexwriter, Atomic, Operated, Sentence, \
 from parsers import parse
 from errors import *
 from utils import SymbolSet
-from tableaux import Tableau, create_tabwriter
+from tableaux import Tableau
+from proof.writers import create_tabwriter
 import examples
 
 # Sentence Writers
@@ -32,12 +33,12 @@ import examples
 std = create_lexwriter(notn='standard')
 pol = create_lexwriter(notn='polish')
 
-stdhtm = create_lexwriter(notn='standard', format='html')
+stdhtm = create_lexwriter(notn='standard', enc='html')
 class TestBase(object):
 
     def test_write_operated_not_impl(self):
         s = Operated('Negation', [Atomic(0, 0)])
-        symset = SymbolSet('standard', 'default')
+        symset = SymbolSet('standard.ascii')
         w = BaseLexWriter(symset)
         with pytest.raises(NotImplementedError):
             w.write(s) 
@@ -60,17 +61,17 @@ class TestStandard(object):
             std.write(s)
 
     def test_write_predicate_sys(self):
-        res = std.write_predicate(system_predicates['Identity'])
+        res = std.write(system_predicates['Identity'])
         assert res == '='
 
     def test_write_parameter_not_impl_base_param(self):
         param = Parameter(0, 0)
         with pytest.raises(TypeError):
-            std.write_parameter(param)
+            std.write(param)
 
     def test_write_subscript_html(self):
 
-        res = stdhtm.write_subscript(1)
+        res = stdhtm._write_subscript(1)
         assert '>1</span>' in res
 
     def test_write_neg_ident_html(self):
@@ -82,7 +83,7 @@ class TestStandard(object):
         operators['Schmoogation'] = 3
         with pytest.raises(NotImplementedError):
             try:
-                std.write_operated(Operated('Schmoogation', [parse('a'), parse('a'), parse('a')]))
+                std.write(Operated('Schmoogation', [parse('a'), parse('a'), parse('a')]))
             except:
                 del operators['Schmoogation']
                 raise

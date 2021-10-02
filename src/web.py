@@ -22,10 +22,11 @@ import examples, fixed
 from errors import ProofTimeoutError, UnknownNotationError
 from fixed import num_predicate_symbols, issues_href, source_href, version, \
     quantifiers_list, operators_list, parser_names, lexwriter_names, \
-    lexwriter_formats, tabwriter_names
+    lexwriter_encodings, tabwriter_names
 from lexicals import system_predicates, Argument, Vocabulary, create_lexwriter
 from parsers import create_parser
-from tableaux import Tableau, create_tabwriter
+from tableaux import Tableau
+from proof.writers import create_tabwriter
 from utils import get_logic
 import json, re, time, traceback
 
@@ -101,6 +102,7 @@ base_view_data = {
     'is_google_analytics' : bool(opts['google_analytics_id']),
     'issues_href'         : issues_href,
     'lexwriter_names'     : lexwriter_names,
+    'lexwriter_encodings' : lexwriter_encodings,
     'logic_categories'    : logic_categories,
     'logic_modules'       : available['logics'],
     'logics'              : modules['logics'],
@@ -186,8 +188,8 @@ class RequestDataError(Exception):
 ########################
 lexwriters = {
     notn: {
-        format: create_lexwriter(notn=notn, format=format)
-        for format in lexwriter_formats
+        enc: create_lexwriter(notn=notn, enc=enc)
+        for enc in lexwriter_encodings
     }
     for notn in lexwriter_names 
 }
@@ -523,7 +525,7 @@ class App(object):
             if odata['format'] == 'html':
                 odata['symbol_set'] = 'html'
             else:
-                odata['symbol_set'] = 'default'
+                odata['symbol_set'] = 'ascii'
         if 'options' not in odata:
             odata['options'] = dict()
         if 'color_open' not in odata['options']:
@@ -551,21 +553,25 @@ class App(object):
         except RequestDataError as err:
             errors.update(err.errors)
         try:
-            logger.debug(str(lexwriters))
             lwmap = lexwriters[odata['notation']]
             try:
                 lw = lwmap[odata['symbol_set']]
             except KeyError as err:
-                errors['Symbol Set'] = 'Bad notation: {0}'.format(str(odata['symbol_set']))
+                errors['Symbol Set'] = 'Unsupported encoding: {0}'.format(str(odata['symbol_set']))
             except Exception as err:
-                logger.debug(str((err, err.__class__, err.args)))
                 if opts['is_debug']:
                     traceback.print_exc()
                 errors['Symbol Set'] = errstr(err)
         except Exception as err:
             errors['Output notation'] = errstr(err)
         try:
-            tabwriter = create_tabwriter(notn=odata['notation'], format=odata['format'], **odata['options'])
+            tabwriter = create_tabwriter(
+                notn=odata['notation'],
+                format=odata['format'],
+                # lw=lw,
+                enc=odata['symbol_set'],
+                **odata['options'],
+            )
         except Exception as err:
             errors['Output format'] = errstr(err)
 

@@ -6,7 +6,7 @@
             {% if tableau.stats['open_branches'] > 0 %}
                 <div class="message select-a-branch">Select an open branch to view model</div>
                 {% for branch in tableau.open_branches() %}
-                    {{ model_helper.write_model(sw, branch) }}
+                    {{ model_helper.write_model(lw, branch) }}
                 {% endfor %}
             {% else %}
                 <div class="message no-models">No open branches</div>

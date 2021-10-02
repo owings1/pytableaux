@@ -20,7 +20,7 @@
                             <span class="prop">Argument</span>
                             <div class="value">
                                 {% for premise in premises -%}
-                                    {% if sw.symbol_set.name == 'html' -%}
+                                    {% if lw.format == 'html' -%}
                                         {{ premise }}
                                     {% else -%}
                                         {{ premise|e }}
@@ -29,7 +29,7 @@
                                     {{ '----------<br>' if loop.last -}}
                                 {% endfor -%}
                                 &there4;
-                                {% if sw.symbol_set.name == 'html' -%}
+                                {% if lw.format == 'html' -%}
                                     {{ conclusion }}
                                 {% else -%}
                                     {{ conclusion|e }}
