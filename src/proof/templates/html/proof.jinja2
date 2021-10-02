@@ -1,11 +1,11 @@
-{%- import 'helper.html' as helper -%}
-{%- import 'structure.html' as structure -%}
+{%- import 'helper.jinja2' as helper -%}
+{%- import 'structure.jinja2' as structure -%}
 <div class="html-writer">
     {% if opts['controls'] %}
-        {%- include 'controls.html' -%}
+        {%- include 'controls.jinja2' -%}
     {% endif %}
     {% if opts['models'] and not tableau.is_premature %}
-        {%- include 'models.html' -%}
+        {%- include 'models.jinja2' -%}
     {% endif %}
     <div class="html-writer-proof
         {{- ' color-open' if opts['color_open'] }}

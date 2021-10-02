@@ -131,7 +131,7 @@ class Helper(object):
         )
         self.pw = create_tabwriter(
             notn = self.opts['write_notation'],
-            enc = 'html',
+            format = 'html',
         )
         self.replace_defns = []
         # https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events

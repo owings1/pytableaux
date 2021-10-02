@@ -1,4 +1,4 @@
-{%- import 'node.html' as nw -%}
+{%- import 'node.jinja2' as nw -%}
 {% macro write_structure(lw, structure, is_child = False) -%}
     <div class="structure 
         {{- ' zoomed' if not is_child -}}

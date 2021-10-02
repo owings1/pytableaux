@@ -1,0 +1,35 @@
+{% set desc = [logic.name, logic.Meta.title]|join(' - ') %}
+{% set col1len = 17 %}
+{% set col2len = desc|length %}
+{% set f = "%-" + ((1 + col2len)|string) + 's' %}
+{% set rowlen = col1len + col2len + 2 %}
+{% set rowline = '-' * rowlen %}
++{{ '-' * rowlen }}+
+| Summary {{ ' ' * (rowlen - 9) }}|
+|{{ '=' * rowlen }}|
+|          Logic | {{ f | format(desc) }}|
+|         Result | {{ f | format(stats.result) }}|
+|       Branches | {{ f | format(stats.branches) }}|
+|  Open Branches | {{ f | format(stats.open_branches) }}|
+|          Nodes | {{ f | format(stats.distinct_nodes) }}|
+|  Rules Applied | {{ f | format(stats.rules_applied) }}|
++{{ '-' * rowlen }}+
+
+{% if argument %}
+{% set col1len = 3 %}
+{% set col2len = ((premises + [conclusion])|map('length')|list + [8])|max %}
+{% set f = "%-" + ((col2len)|string) + 's' %}
+{% set rowlen = col1len + col2len + 3 %}
+{% set rowline = '-' * rowlen %}
++{{ '-' * rowlen }}+
+| Argument {{ ' ' * (rowlen - 10) }}|
+|{{ '=' * rowlen }}|
+{% for premise in premises -%}
+    | [P]  {{ f | format(premise) }}|
+{% endfor -%}
+{% if premises -%}
+    |{{ '-' * rowlen }}|
+{% endif -%}
+| [C]  {{ f | format(conclusion) }}|
++{{ '-' * rowlen }}+
+{% endif -%}

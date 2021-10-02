@@ -1,6 +1,3 @@
-class BadArgumentError(Exception):
-    pass
-
 # lexicals
 
 class PredicateError(Exception):

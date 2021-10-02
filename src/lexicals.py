@@ -4,8 +4,7 @@ from fixed import num_atomic_symbols, num_const_symbols, num_predicate_symbols, 
 
 from errors import PredicateError, IndexTooLargeError, PredicateArityError, \
     PredicateSubscriptError, PredicateAlreadyDeclaredError, NoSuchPredicateError, \
-    PredicateArityMismatchError, NoSuchOperatorError, OperatorArityMismatchError, \
-    BadArgumentError
+    PredicateArityMismatchError, NoSuchOperatorError, OperatorArityMismatchError
 
 from utils import cat, SymbolSet
 
@@ -762,7 +761,7 @@ def create_lexwriter(notn=None, enc=None, **opts):
         return PolishLexWriter(symbol_set, **opts)
     if notn == 'standard':
         return StandardLexWriter(symbol_set, **opts)
-    raise BadArgumentError('Invalid notation: {0}'.format(str(notn)))
+    raise ValueError('Invalid notation: {0}'.format(str(notn)))
 
 class LexWriter(object):
 

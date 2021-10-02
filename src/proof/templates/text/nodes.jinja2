@@ -1,0 +1,16 @@
+{% macro write_node(node) %}
+{% set props = node.props -%}
+{{ lw.write(props.sentence) if node.has('sentence') -}}
+{{ ' w' ~ props.world if node.has('world') -}}
+{{ ' [+]' if props.designated -}}
+{{ ' [-]' if props.designated == False -}}
+{{ 'w' ~ props.world1 ~ 'Rw' ~ props.world2 if node.has('world1', 'world2') -}}
+{{ ' ...' if node.has('ellipsis') -}}
+{{ ' *' if node.ticked -}}
+{{ '(x)' if props.flag == 'closure' else '; ' -}}
+{% endmacro %}
+{{ '-- ' if structure.depth -}}
+{%- for node in structure.nodes -%}
+    {{ write_node(node) }}
+{%- endfor -%}
+{{ ' .' if structure.children -}}
