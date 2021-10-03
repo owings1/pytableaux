@@ -70,6 +70,8 @@ class Tableau(object):
     #: proof is finished.
     tree = dict()
 
+    models = None
+
     default_opts = {
         'is_group_optim'  : True,
         'is_build_models' : False,
@@ -127,6 +129,18 @@ class Tableau(object):
 
         if argument != None:
             self.set_argument(argument)
+
+    def build(self, **opts):
+        """
+        Build the tableau. Returns self.
+        """
+        self.opts.update(opts)
+        with self.build_timer:
+            while not self.finished:
+                self.__check_timeout()
+                self.step()
+        self.finish()
+        return self
 
     def set_logic(self, logic):
         """
@@ -187,18 +201,6 @@ class Tableau(object):
         self.rule_groups.append(group)
         self.all_rules.extend(group)
         return self
-        
-    def build(self, **opts):
-        """
-        Build the tableau. Returns self.
-        """
-        self.opts.update(opts)
-        with self.build_timer:
-            while not self.finished:
-                self.__check_timeout()
-                self.step()
-        self.finish()
-        return self
 
     def step(self):
         """
@@ -239,7 +241,7 @@ class Tableau(object):
             res = self.get_branch_application(branch)
             if res:
                 return res
-        
+
     def get_branch_application(self, branch):
         """
         Find and return the next available rule application for the given
@@ -577,10 +579,11 @@ class Tableau(object):
         return 'Unfinished'
 
     def __build_models(self):
+        self.models = set()
         # Build models for the open branches
         for branch in list(self.open_branches()):
             self.__check_timeout()
-            branch.make_model()
+            self.models.add(branch.make_model())
         
     def __repr__(self):
         return {
@@ -621,8 +624,8 @@ class Branch(object):
             'world1'     : {},
             'world2'     : {},
             'w1Rw2'      : {},
-
         }
+
     def has(self, props, ticked=None):
         """
         Check whether there is a node on the branch that matches the given properties,

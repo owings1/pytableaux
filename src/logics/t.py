@@ -61,7 +61,7 @@ class TableauxSystem(k.TableauxSystem):
 
 class TableauxRules(object):
     """
-    The Tableaux Rules for T contain the rules for `K`_, as well as an additional
+    The Tableaux Rules for T contain the rules for :ref:`K`, as well as an additional
     Reflexive rule, which operates on the accessibility relation for worlds.
 
     .. _K: k.html

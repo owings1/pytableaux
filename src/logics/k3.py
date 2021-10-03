@@ -79,7 +79,7 @@ class TableauxSystem(fde.TableauxSystem):
         
 class TableauxRules(object):
     """
-    The Tableaux System for K3 contains all the rules from {@FDE}, as well as an additional
+    The Tableaux System for K3 contains all the rules from :ref:`FDE`, as well as an additional
     closure rule.
     """
 

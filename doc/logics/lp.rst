@@ -1,8 +1,10 @@
+.. _LP:
+
 *********************
 LP - Logic of Paradox
 *********************
 
-LP is a 3-valued logic (**T**, **F**, and **B**). It can be understood as `FDE`_ without
+LP is a 3-valued logic (**T**, **F**, and **B**). It can be understood as :ref:`FDE` without
 the **N** value.
 
 .. contents:: :local:
@@ -18,15 +20,15 @@ the **N** value.
 
         .. method:: value_of_predicated(sentence)
 
-            A sentence with predicate `P` with parameters `<p,...>` has the value:
+            A sentence with predicate `P` with parameters :m:`ntuple` has the value:
 
-            * **T** iff `<p,...>` is in the extension of `P` and not in the anti-extension of `P`.
-            * **F** iff `<p,...>` is in the anti-extension of `P` and not in the extension of `P`.
-            * **B** iff `<p,...>` is in both the extension and anti-extension of `P`.
+            * **T** iff :m:`ntuple` is in the extension of `P` and not in the anti-extension of `P`.
+            * **F** iff :m:`ntuple` is in the anti-extension of `P` and not in the extension of `P`.
+            * **B** iff :m:`ntuple` is in both the extension and anti-extension of `P`.
 
-            Note, unlike `FDE`_, there is an exhaustion constraint on a predicate's
-            extension/anti-extension. This means that `<p,...>` must be in either the
-            extension and the anti-extension of `P`. Like `FDE`_, there is no exclusion
+            Note, unlike :ref:`FDE`, there is an exhaustion constraint on a predicate's
+            extension/anti-extension. This means that :m:`ntuple` must be in either the
+            extension and the anti-extension of `P`. Like :ref:`FDE`, there is no exclusion
             restraint.
 
     Tableaux System
@@ -41,7 +43,7 @@ the **N** value.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined, just as in `FDE`_, in terms of *designated* values **T**
+    **Logical Consequence** is defined, just as in :ref:`FDE`, in terms of *designated* values **T**
     and **B**:
 
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
@@ -52,11 +54,11 @@ the **N** value.
 
     Some notable features of LP include:
 
-    * Everything valid in `FDE`_ is valid in LP.
+    * Everything valid in :ref:`FDE` is valid in LP.
 
-    * Like `FDE`_, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
+    * Like :ref:`FDE`, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
 
-    * Unlike `FDE`_, LP has some logical truths. For example, the Law of Excluded Middle (:s:`(A V ~A)`),
+    * Unlike :ref:`FDE`, LP has some logical truths. For example, the Law of Excluded Middle (:s:`(A V ~A)`),
       and Conditional Identity (:s:`(A $ A)`).
 
     * Many classical validities fail, such as Modus Ponens, Modus Tollens, and Disjunctive Syllogism.

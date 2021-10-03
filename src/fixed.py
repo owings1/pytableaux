@@ -1,14 +1,17 @@
 from os import path
-package_dir = path.dirname(path.abspath(__file__))
-base_dir = path.abspath(path.join(package_dir, '..'))
-with open(path.join(base_dir, 'VERSION'), 'r') as f:
-    version = f.read().strip()
+
+
+__version__ = '2.0.0'
+
+version_info = __version__.split('.')
 
 copyright = '2014-2021, Doug Owings. Released under the GNU Affero General Public License v3 or later'
 source_href = 'https://github.com/owings1/pytableaux'
 issues_href = 'https://github.com/owings1/pytableaux/issues'
+package_dir = path.dirname(path.abspath(__file__))
 
-default_notation = 'polish'
+# compatibility
+version = __version__
 
 # name : arity
 operators = {
@@ -54,6 +57,9 @@ system_predicates_index = {
     # Negative indexes for system predicates. Value is subscript : name.
     -1 : { 0 : 'Identity'  },
     -2 : { 0 : 'Existence' },
+    # Also tuples
+    (-1, 0): 'Identity',
+    (-2, 0): 'Existence',
 }
 
 # The number of symbols is fixed to allow multiple notations.
@@ -62,10 +68,11 @@ num_const_symbols     = 4
 num_atomic_symbols    = 5
 num_predicate_symbols = 4
 
+default_notation = 'polish'
 parser_names = ['standard', 'polish']
 lexwriter_names = ['standard', 'polish']
 lexwriter_encodings = ['html', 'ascii']
-tabwriter_names = ['html']
+tabwriter_names = ['html', 'text']
 symbols_data = {
     'polish.ascii' : {
         'name'    : 'polish.ascii',

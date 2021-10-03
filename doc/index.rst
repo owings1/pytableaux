@@ -6,12 +6,14 @@
 pytableaux documentation
 ========================
 
+To access the site, visit https://logic.dougowings.net
+
 Contents:
 
 .. toctree::
    :maxdepth: 2
    
-   introduction
+   about
 
 .. toctree::
    :maxdepth: 3
@@ -19,11 +21,11 @@ Contents:
    logics
 
 .. toctree::
-   :caption: Python API
    :maxdepth: 2
 
-   core-api
-   tableaux
+   quickstart
+
+   api
 
 Indices and tables
 ==================

@@ -1,8 +1,10 @@
+.. _D:
+
 ******************************
 D - Deontic Normal Modal Logic
 ******************************
 
-Deontic logic, also known as the Logic of Obligation, is an extension of `K`_, with
+Deontic logic, also known as the Logic of Obligation, is an extension of :ref:`K`, with
 a *serial* accessibility relation, which states that for every world *w*, there is
 a world *w'* such that *w* accesses *w'*.
 
@@ -28,7 +30,7 @@ a world *w'* such that *w* accesses *w'*.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined just as in `K`_:
+    **Logical Consequence** is defined just as in :ref:`K`:
 
     - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
       at *w0* are models where *C* also has the value **T** at *w0*.
@@ -39,7 +41,5 @@ a world *w'* such that *w* accesses *w'*.
     For further reading, see
 
     * `Stanford Encyclopedia on Deontic Logic`_
-
-.. _K: k.html
 
 .. _Stanford Encyclopedia on Deontic Logic: http://plato.stanford.edu/entries/logic-deontic/

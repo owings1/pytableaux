@@ -2,11 +2,10 @@ from fixed import num_atomic_symbols, num_const_symbols, num_predicate_symbols, 
     num_var_symbols, operators, system_predicates_index, system_predicates_list, \
     default_notation, quantifiers
 
-from errors import PredicateError, IndexTooLargeError, PredicateArityError, \
-    PredicateSubscriptError, PredicateAlreadyDeclaredError, NoSuchPredicateError, \
-    PredicateArityMismatchError, NoSuchOperatorError, OperatorArityMismatchError
+from errors import NotFoundError, \
+    NoSuchOperatorError, OperatorArityMismatchError
 
-from utils import cat, SymbolSet
+from utils import cat, isint, isstr, SymbolSet
 
 from past.builtins import basestring
 
@@ -123,7 +122,7 @@ class Constant(Parameter):
 
     def __init__(self, index, subscript):
         if index >= num_const_symbols:
-            raise IndexTooLargeError(
+            raise ValueError(
                 "Index too large {0}".format(str(index))
             )
         super().__init__(index, subscript)
@@ -132,7 +131,7 @@ class Variable(Parameter):
 
     def __init__(self, index, subscript):
         if index >= num_var_symbols:
-            raise IndexTooLargeError(
+            raise ValueError(
                 "Index too large {0}".format(str(index))
             )
         super().__init__(index, subscript)
@@ -141,24 +140,24 @@ class Predicate(LexicalItem):
 
     def __init__(self, name, index, subscript, arity):
         if index >= num_predicate_symbols:
-            raise IndexTooLargeError(
-                "Predicate index too large {0}".format(str(index))
+            raise ValueError(
+                "Predicate index too large: {0}".format(str(index))
             )
         if arity == None or not isinstance(arity, int):
-            raise PredicateArityError(
+            raise TypeError(
                 'Predicate arity must be an integer'
             )
         if arity < 1:
-            raise PredicateArityError(
-                'Invalid predicate arity {0}'.format(str(arity))
+            raise ValueError(
+                'Predicate arity cannot be < 1'
             )
         if subscript == None or not isinstance(subscript, int):
-            raise PredicateSubscriptError(
+            raise TypeError(
                 'Predicate subscript must be an integer'
             )
         if subscript < 0:
-            raise PredicateSubscriptError(
-                'Invalid predicate subscript {0}'.format(str(subscript))
+            raise ValueError(
+                'Subscript cannot be < 0'
             )
         self.name      = name
         self.arity     = arity
@@ -320,7 +319,7 @@ class AtomicSentence(Sentence):
 
     def __init__(self, index, subscript):
         if index >= num_atomic_symbols:
-            raise IndexTooLargeError(
+            raise ValueError(
                 "Index too large {0}".format(str(index))
             )
         super().__init__()
@@ -349,17 +348,17 @@ class AtomicSentence(Sentence):
 class PredicatedSentence(Sentence):
 
     def __init__(self, predicate, parameters, vocabulary=None):
-        if isinstance(predicate, basestring):
+        if isstr(predicate):
             if predicate in system_predicates:
                 predicate = system_predicates[predicate]
             elif vocabulary is None:
-                raise NoSuchPredicateError(
+                raise NotFoundError(
                     "'{0}' is not a system predicate, and no vocabulary was passed.".format(predicate)
                 )
             else:
                 predicate = vocabulary.get_predicate(predicate)    
         if len(parameters) != predicate.arity:
-            raise PredicateArityMismatchError(
+            raise TypeError(
                 'Expecting {0} parameters for predicate {1}, got {2} instead.'.format(
                     predicate.arity, str([predicate.index, predicate.subscript]), len(parameters)
                 )
@@ -579,11 +578,11 @@ class Vocabulary(object):
         if predicate_defs:
             for info in predicate_defs:
                 if not isinstance(info, list) and not isinstance(info, tuple):
-                    raise PredicateError(
+                    raise TypeError(
                         'predicate_defs must be a list/tuple of lists/tuples.'
                     )
                 if len(info) != 4:
-                    raise PredicateError(
+                    raise TypeError(
                         'Predicate declarations must be 4-tuples (name, index, subscript, arity).'
                     )
                 self.declare_predicate(*info)
@@ -611,28 +610,49 @@ class Vocabulary(object):
             assert vocab.get_predicate('is tall') == vocab.get_predicate(index=0, subscript=0)
 
         """
-        if name == None and index != None and isinstance(index, basestring):
-            name = index
-            index = None
-        elif index == None and name != None and isinstance(name, int):
-            index = name
-            name = None
-        if name != None:
+        print('1', str((name, index, subscript)))
+        if isstr(name):
             if name in system_predicates:
                 return system_predicates[name]
             if name in self.user_predicates:
                 return self.user_predicates[name]
-            raise NoSuchPredicateError(name)
-        if index != None and subscript != None:
-            idx = str([index, subscript])
-            if index < 0:
-                if subscript not in system_predicates_index[index]:
-                    raise NoSuchPredicateError(idx)
-                return system_predicates[system_predicates_index[index][subscript]]
-            if idx not in self.user_predicates_index:
-                raise NoSuchPredicateError(idx)
-            return self.user_predicates_index[idx]
-        raise PredicateError('Not enough information to get predicate')
+            raise NotFoundError('Predicate {0} not found'.format(name))
+        if isint(name) and isint(index) and subscript == None:
+            # allow for get_predicate(0, 0)
+            index, subscript = name, index
+        print('2', str((name, index, subscript)))
+        if not isint(index) or not isint(subscript):
+            raise TypeError('index, subscript must be integers')
+        key = (index, subscript)
+        if key in self.user_predicates_index:
+            return self.user_predicates_index[key]
+        if key in system_predicates_index:
+            name = system_predicates_index[key]
+            return system_predicates[name]
+        raise NotFoundError('Predicate at {0} not found'.format(str(key)))
+
+        # if name == None and index != None and isstr(index):
+        #     name = index
+        #     index = None
+        # elif index == None and name != None and isinstance(name, int):
+        #     index = name
+        #     name = None
+        # if name != None:
+        #     if name in system_predicates:
+        #         return system_predicates[name]
+        #     if name in self.user_predicates:
+        #         return self.user_predicates[name]
+        #     raise NotFoundError(name)
+        # if index != None and subscript != None:
+        #     idx = str([index, subscript])
+        #     if index < 0:
+        #         if subscript not in system_predicates_index[index]:
+        #             raise NotFoundError(idx)
+        #         return system_predicates[system_predicates_index[index][subscript]]
+        #     if idx not in self.user_predicates_index:
+        #         raise NotFoundError(idx)
+        #     return self.user_predicates_index[idx]
+        # raise ValueError('Not enough information to get predicate')
 
     def declare_predicate(self, name, index, subscript, arity):
         """
@@ -648,26 +668,26 @@ class Vocabulary(object):
             # predicates cannot be re-declared
             try:
                 vocab.declare_predicate('is tall', index=1, subscript=2, arity=3)
-            except PredicateAlreadyDeclaredError:
+            except ValueError:
                 assert True
             else:
                 assert False
 
         """
         if name in system_predicates:
-            raise PredicateAlreadyDeclaredError(
+            raise ValueError(
                 "Cannot declare system predicate '{0}'".format(name)
             )
         if name in self.user_predicates:
-            raise PredicateAlreadyDeclaredError(
+            raise ValueError(
                 "Predicate '{0}' already declared".format(name)
             )
         try:
             self.get_predicate(index=index, subscript=subscript)
-        except NoSuchPredicateError:
+        except NotFoundError:
             pass
         else:
-            raise PredicateAlreadyDeclaredError(
+            raise ValueError(
                 "Predicate for {0},{1} already declared".format(
                     str(index), str(subscript)
                 )
@@ -689,15 +709,16 @@ class Vocabulary(object):
             assert vocab2.get_predicate('is tall') == predicate
         """
         if not isinstance(predicate, Predicate):
-            raise PredicateError(
+            raise TypeError(
                 'Predicate must be an instance of Predicate'
             )
         if predicate.index < 0:
-            raise PredicateError(
+            raise TypeError(
                 'Cannot add a system predicate to a vocabulary'
             )
         self.user_predicates[predicate.name] = predicate
-        self.user_predicates_index[str([predicate.index, predicate.subscript])] = predicate
+        key = (predicate.index, predicate.subscript)
+        self.user_predicates_index[key] = predicate
         if predicate not in self.user_predicates_set:
             self.user_predicates_set.add(predicate)
             self.user_predicates_list.append(predicate.name)

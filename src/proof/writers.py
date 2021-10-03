@@ -7,11 +7,16 @@ from copy import deepcopy
 
 from jinja2 import Environment, FileSystemLoader
 
+default_format = 'text'
+
+def write_tableau(tableau, *args, **kw):
+    return create_tabwriter(*args, **kw).write(tableau)
+
 def create_tabwriter(notn=None, format=None, **opts):
     if not notn:
         notn = default_notation
     if not format:
-        format = 'ascii'
+        format = default_format
     if 'lw' not in opts:
         lwopts = {}
         if 'enc' not in opts and format == 'html':

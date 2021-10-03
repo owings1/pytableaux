@@ -9,9 +9,9 @@
 import sys
 sys.path.insert(1, '../src')
 
-import docutil, logic
+import docutil, fixed
 
-copyright = logic.copyright
+copyright = fixed.copyright
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -32,7 +32,7 @@ project = u'pytableaux'
 # built documents.
 #
 # The short X.Y version.
-version = logic.version
+version = fixed.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
 

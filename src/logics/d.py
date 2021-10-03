@@ -70,7 +70,7 @@ class TableauxSystem(k.TableauxSystem):
 
 class TableauxRules:
     """
-    The Tableaux Rules for D contain the rules for `K`_, as well as an additional
+    The Tableaux Rules for D contain the rules for :ref:`K`, as well as an additional
     Serial rule, which operates on the accessibility relation for worlds.
 
     .. _K: k.html
@@ -144,7 +144,7 @@ class TableauxRules:
     #
     #class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
     #    """
-    #    The rule for identity indiscernability is the same as for `K`_, with the exception that
+    #    The rule for identity indiscernability is the same as for :ref:`K`, with the exception that
     #    the rule does not apply if the Serial rule was the last rule to apply to the branch.
     #    This prevents infinite repetition (back and forth) of the Serial and IdentityIndiscernability
     #    rules.

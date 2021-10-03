@@ -206,7 +206,7 @@ class TableauxRules(object):
     """
     The closure rules for GO are the `FDE closure rule`_, and the `K3 closure rule`_.
     Most of the operators rules are unique to GO, with a few rules that are
-    the same as `FDE`_. The rules for assertion mirror those of `B3E`_.
+    the same as :ref:`FDE`. The rules for assertion mirror those of :ref:`B3E`.
     
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
     .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure

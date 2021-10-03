@@ -69,12 +69,12 @@ class Model(k.Model):
 
 class TableauxSystem(cpl.TableauxSystem):
     """
-    CFOL's Tableaux System inherits directly from `CPL`_'s.
+    CFOL's Tableaux System inherits directly from :ref:`CPL`'s.
     """
 
 class TableauxRules(object):
     """
-    The Tableaux System for CFOL contains all the rules from `CPL`_, including the
+    The Tableaux System for CFOL contains all the rules from :ref:`CPL`, including the
     `CPL closure rules`_, as well as additional rules for the quantifiers.
 
     .. _CPL closure rules: cpl.html#logics.cpl.TableauxRules.Closure

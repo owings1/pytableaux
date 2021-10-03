@@ -21,7 +21,7 @@
 import codecs, inspect, os, re, traceback
 from jinja2 import Environment, FileSystemLoader
 from html import escape as htmlesc, unescape as htmlun
-from os.path import join as pjoin, basename as bname
+from os.path import abspath, join as pjoin, basename as bname
 from past.builtins import basestring
 from inspect import getmro, getsource, isclass, ismethod
 
@@ -38,7 +38,7 @@ from tableaux import Tableau, TableauxSystem as TabSys
 from proof.writers import create_tabwriter
 from proof.rules import Rule, ClosureRule, PotentialNodeRule, FilterNodeRule
 from models import truth_table
-from fixed import base_dir, operators_list
+from fixed import operators_list
 
 defaults = {
     'html_theme'       : 'default',
@@ -57,7 +57,7 @@ defaults = {
 # Sphinx events:
 #    https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
 
-doc_dir = pjoin(base_dir, 'doc')
+doc_dir = abspath(pjoin(os.path.dirname(__file__), '../doc'))
 templates_dir = pjoin(doc_dir, 'templates')
 build_dir = pjoin(doc_dir, '_build/html')
 jenv = Environment(
@@ -261,7 +261,7 @@ class Helper(object):
         defns = [
             # Truth values
             (r'{v.([TBNF])}', ':math:`\\1`'),
-            # Logic class links like {@FDE}
+            # Logic class links like :ref:`FDE`
             (
                 r'{{@({0})}}'.format(logicmatch),
                 lambda pat: (
@@ -461,14 +461,14 @@ class Helper(object):
         if text.startswith('oper.'):
             what = 'operator'
             text = text.split('.')[1]
-        elif text.startswith('pred.'):
-            what = 'pred'
-            text = text.split('.')[1]
+        # elif text.startswith('pred.'):
+        #     what = 'pred'
+        #     text = text.split('.')[1]
         elif not what:
             what = 'sentence'
         if what == 'sentence':
-            raw = parse(text)
-        lw.write(text)
+            text = parse(text)
+        raw = lw.write(text)
         rendered = htmlun(raw)
         node = nodes.inline(text = rendered)
         set_classes(opts)

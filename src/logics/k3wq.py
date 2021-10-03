@@ -126,7 +126,7 @@ class DefaultAllConstantsRule(fde.DefaultAllConstantsRule):
 class TableauxRules(object):
     """
     The Tableaux System for K3WQ contains the `FDE closure rule`_, and the
-    `K3 closure rule`_. All of the operator rules are the same as `K3W`_. The
+    `K3 closure rule`_. All of the operator rules are the same as :ref:`K3W`. The
     rules for the quantifiers, however, are different.
 
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure

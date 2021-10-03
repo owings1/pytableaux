@@ -1,3 +1,5 @@
+.. _S4:
+
 **************************
 S4 - S4 Normal Modal Logic
 **************************
@@ -26,9 +28,7 @@ Normal modal logic with reflexive and transitive access relation.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined just as in `K`_:
+    **Logical Consequence** is defined just as in :ref:`K` :
 
     - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
       at *w0* are models where *C* also has the value **T** at *w0*.
-
-.. _K: k.html

@@ -1,9 +1,11 @@
+.. _RM3:
+
 ****************
 RM3 - R-mingle 3
 ****************
 
 R-mingle 3 (RM3) is a three-valued logic with values **T**, **F**, and **B**.
-It is similar to `LP`_, with a different conditional operator.
+It is similar to :ref:`LP`, with a different conditional operator.
 
 .. contents:: :local:
 
@@ -28,7 +30,7 @@ It is similar to `LP`_, with a different conditional operator.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined, just as in `FDE`_, in terms of *designated* values **T**
+    **Logical Consequence** is defined, just as in :ref:`FDE`, in terms of *designated* values **T**
     and **B**:
 
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
@@ -38,9 +40,9 @@ It is similar to `LP`_, with a different conditional operator.
     =====
 
     * With the conditional operator, Modus Ponens (:s:`A`, :s:`A $ B`, therefore :s:`B`) is
-      valid in RM3, but it fails in `LP`_.
+      valid in RM3, but it fails in:ref:`LP`.
 
-    * The argument :s:`B`, therefore :s:`A $ B` is valid in `LP`_, but not in RM3.
+    * The argument :s:`B`, therefore :s:`A $ B` is valid in :ref:`LP`, but not in RM3.
 
     References
     ==========
@@ -53,7 +55,6 @@ It is similar to `LP`_, with a different conditional operator.
     * Belnap, N. D., McRobbie, M. A. `Relevant Analytic Tableaux`_.  Studia Logica,
       Vol. 38, No. 2. 1979.
 
-.. _FDE: fde.html
-.. _LP: lp.html
+
 .. _Relevant Analytic Tableaux: http://www.pitt.edu/~belnap/77relevantanalytictableaux.pdf
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en

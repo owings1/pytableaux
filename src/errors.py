@@ -1,28 +1,9 @@
+class IllegalStateError(Exception):
+    pass
+
+class NotFoundError(ValueError):
+    pass
 # lexicals
-
-class PredicateError(Exception):
-    pass
-
-class IndexTooLargeError(PredicateError):
-    pass
-
-class PredicateArityError(PredicateError):
-    pass
-
-class PredicateSubscriptError(PredicateError):
-    pass
-
-class PredicateAlreadyDeclaredError(PredicateError):
-    pass
-
-class NoSuchPredicateError(PredicateError):
-    pass
-
-class PredicateArityMismatchError(PredicateError):
-    pass
-
-class PredicateIndexMismatchError(PredicateError):
-    pass
 
 class OperatorError(Exception):
     pass
@@ -62,9 +43,6 @@ class ParseError(Exception):
     pass
 
 class ParserThreadError(ParseError):
-    pass
-
-class IllegalStateError(ParseError):
     pass
 
 class UnboundVariableError(ParseError):

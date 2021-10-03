@@ -110,7 +110,7 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 class TableauxRules(object):
     """
     The closure rules for B3E are the `FDE closure rule`_, and the `K3 closure rule`_.
-    The operator rules are mostly a mix of `FDE`_ and `K3W`_ rules, but with different
+    The operator rules are mostly a mix of :ref:`FDE` and :ref:`K3W` rules, but with different
     rules for the assertion, conditional and biconditional operators.
 
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure

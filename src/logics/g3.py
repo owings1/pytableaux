@@ -92,7 +92,7 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 class TableauxRules(object):
     """
     The closure rules for G3 are the `FDE closure rule`_, and the `K3 closure rule`_.
-    The operator rules for G3 are mostly the rules for `FDE`_, with the exception
+    The operator rules for G3 are mostly the rules for :ref:`FDE`, with the exception
     of the rules for the conditional and biconditional operators.
 
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure

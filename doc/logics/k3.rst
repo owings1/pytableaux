@@ -1,3 +1,5 @@
+.. _K3:
+
 ************************
 K3 - Strong Kleene Logic
 ************************
@@ -5,7 +7,7 @@ K3 - Strong Kleene Logic
 .. contents:: :local:
 
 K3 is a three-valued logic (:m:`T`, :m:`F`, and :m:`N`). It can be understood
-as {@FDE} without the :m:`B` value. :m:`v.B`
+as :ref:`FDE` without the :m:`B` value. :m:`v.B`
 
 .. automodule:: logics.k3
 
@@ -33,7 +35,7 @@ as {@FDE} without the :m:`B` value. :m:`v.B`
 
         .. method:: value_of_predicated(sentence)
 
-            Like {@FDE}, K3 predication defines a predicate's *extenstion*
+            Like :ref:`FDE`, K3 predication defines a predicate's *extenstion*
             and *anti-extension*. The value of a predicated sentence is determined as follows:
 
             A sentence with *n*-ary predicate :math:`P` over parameters :m:`ntuple`
@@ -48,11 +50,11 @@ as {@FDE} without the :m:`B` value. :m:`v.B`
             * :m:`N` iff :m:`ntuple` is in **neither** the extension nor the 
               anti-extension of :math:`P`.
 
-            Note, unlike {@FDE}, there is an *exclusivity constraint*
+            Note, unlike :ref:`FDE`, there is an *exclusivity constraint*
             on a predicate's extension/anti-extension. This means that :m:`ntuple`
             cannot be in **both** the extension and the anti-extension of `P`.
 
-            Like {@FDE}, there is no *exhaustion constraint*: there are permissible K3 models
+            Like :ref:`FDE`, there is no *exhaustion constraint*: there are permissible K3 models
             where some tuple :m:`ntuple` is in **neither** the extension nor the
             anti-extension of some predicate :math:`P`.
 
@@ -82,13 +84,9 @@ as {@FDE} without the :m:`B` value. :m:`v.B`
 
     Some notable features of K3 include:
 
-    * Everything valid in {@FDE} is valid in K3.
+    * Everything valid in :ref:`FDE` is valid in K3.
 
-    * Like {@FDE}, the Law of Excluded Middle, and Conditional Identity :s:`(A $ A)` fail.
+    * Like :ref:`FDE`, the Law of Excluded Middle, and Conditional Identity :s:`(A $ A)` fail.
 
     * Some cassical validities, such as *Modus Ponens*, *Modus Tollens*, *Disjunctive Syllogism*,
       and *DeMorgan* laws, are valid.
-
-
-.. _FDE: fde.html
-.. _CPL: cpl.html

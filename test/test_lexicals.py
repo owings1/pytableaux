@@ -33,7 +33,7 @@ from pytest import raises
 class TestVocabulary(object):
 
     def test_predicate_error_pred_defs_duple(self):
-        with raises(PredicateError):
+        with raises(TypeError):
             Vocab(predicate_defs=[('foo', 4)])
 
     def test_get_predicate_by_name_sys_identity(self):
@@ -41,22 +41,22 @@ class TestVocabulary(object):
 
     def test_get_predicate_by_index_subscript_sys_identity(self):
         # TODO: after refactor test for get_predicate(-1, 0)
-        assert Vocab().get_predicate(-1, subscript=0).name == 'Identity'
+        assert Vocab().get_predicate(-1, 0).name == 'Identity'
 
-    def test_get_predicate_no_such_predicate_error_bad_name(self):
-        with raises(NoSuchPredicateError):
+    def test_get_predicate_notfound_bad_name(self):
+        with raises(NotFoundError):
             Vocab().get_predicate('NonExistentPredicate')
 
-    def test_get_predicate_no_such_predicate_error_bad_custom_index(self):
-        with raises(NoSuchPredicateError):
+    def test_get_predicate_notfound_bad_custom_index(self):
+        with raises(NotFoundError):
             Vocab().get_predicate(index=1, subscript=2)
 
     def test_get_predicate_no_such_predicate_error_bad_sys_index(self):
-        with raises(NoSuchPredicateError):
+        with raises(NotFoundError):
             Vocab().get_predicate(index=-1, subscript=2)
 
-    def test_get_predicate_no_such_predicate_error_not_enough_info(self):
-        with raises(PredicateError):
+    def test_get_predicate_err_not_enough_info(self):
+        with raises(TypeError):
             Vocab().get_predicate(index=-1)
 
     def test_declare_predicate1(self):
@@ -73,48 +73,48 @@ class TestVocabulary(object):
         assert v2.get_predicate('MyPredicate') == predicate
 
     def test_add_predicate_raises_non_predicate(self):
-        with raises(PredicateError):
+        with raises(TypeError):
             Vocab().add_predicate('foo')
 
     def test_add_predicate_raises_sys_predicate(self):
         pred = get_system_predicate('Identity')
-        with raises(PredicateError):
+        with raises(TypeError):
             Vocab().add_predicate(pred)
 
     def test_declare_predicate_already_declared_sys(self):
-        with raises(PredicateAlreadyDeclaredError):
+        with raises(ValueError):
             Vocab().declare_predicate('Identity', 0, 0, 2)
 
     def test_declare_predicate_already_declared_user_name(self):
         v = Vocab()
         v.declare_predicate('MyPredicate', 0, 0, 1)
-        with raises(PredicateAlreadyDeclaredError):
+        with raises(ValueError):
             v.declare_predicate('MyPredicate', 0, 0, 1)
 
     def test_declare_predicate_already_declared_user_index_subscript(self):
         v = Vocab()
         v.declare_predicate('MyPredicate', 0, 0, 1)
-        with raises(PredicateAlreadyDeclaredError):
+        with raises(ValueError):
             v.declare_predicate('MyPredicate2', 0, 0, 1)
 
     def test_declare_predicate_index_too_large(self):
-        with raises(IndexTooLargeError):
+        with raises(ValueError):
             Vocab().declare_predicate('MyPredicate', num_predicate_symbols, 0, 1)
 
     def test_declare_predicate_arity_non_int(self):
-        with raises(PredicateArityError):
+        with raises(TypeError):
             Vocab().declare_predicate('MyPredicate', 0, 0, None)
 
     def test_declare_predicate_arity_0_error(self):
-        with raises(PredicateArityError):
+        with raises(ValueError):
             Vocab().declare_predicate('MyPredicate', 0, 0, 0)
 
     def test_new_predicate_subscript_non_int(self):
-        with raises(PredicateSubscriptError):
+        with raises(TypeError):
             Predicate('MyPredicate', 0, None, 1)
 
     def test_new_predicate_subscript_less_than_0_error(self):
-        with raises(PredicateSubscriptError):
+        with raises(ValueError):
             Predicate('MyPredicate', 0, -1, 1)
 
     def test_predicate_is_system_predicate_true(self):
@@ -158,7 +158,7 @@ class TestVocabulary(object):
         assert 'Identity' not in v.list_user_predicates()
 
     def test_constant_index_too_large(self):
-        with raises(IndexTooLargeError):
+        with raises(ValueError):
             Constant(num_const_symbols, 0)
 
     def test_constant_is_constant_not_variable(self):
@@ -167,7 +167,7 @@ class TestVocabulary(object):
         assert not c.is_variable()
 
     def test_variable_index_too_large(self):
-        with raises(IndexTooLargeError):
+        with raises(ValueError):
             Variable(num_var_symbols, 0)
 
     # def test_sentence_is_sentence(self):
@@ -181,9 +181,8 @@ class TestVocabulary(object):
         with raises(NotImplementedError):
             s.substitute(c, v)
 
-
     def test_atomic_index_too_large(self):
-        with raises(IndexTooLargeError):
+        with raises(ValueError):
             Atomic(num_atomic_symbols, 0)
         
     def test_atomic_substitute(self):
@@ -217,12 +216,12 @@ class TestVocabulary(object):
 
     def test_predicated_no_such_predicate_no_vocab(self):
         params = [Constant(0, 0), Constant(1, 0)]
-        with raises(NoSuchPredicateError):
+        with raises(NotFoundError):
             Predicated('MyPredicate', params)
 
     def test_predicated_arity_mismatch_identity(self):
         params = [Constant(0, 0)]
-        with raises(PredicateArityMismatchError):
+        with raises(TypeError):
             Predicated('Identity', params)
 
     def test_predicated_substitute_a_for_x_identity(self):
@@ -297,8 +296,8 @@ class TestVocabulary(object):
         s3 = parse('MVyFmy', vocab=vocab)
         assert s2 == s3
 
-    def test_with_pred_defs_single_pred_with_length4_name_raises_pred_err(self):
-        with raises(PredicateError):
+    def test_with_pred_defs_single_pred_with_length4_name_raises_value_err(self):
+        with raises(TypeError):
             Vocab(('Pred', 0, 0, 1))
 
     def test_with_pred_defs_single_def_list(self):

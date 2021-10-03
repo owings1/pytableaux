@@ -1,3 +1,5 @@
+.. _P3:
+
 ************************
 P3 - Post 3-valued logic
 ************************
@@ -31,7 +33,7 @@ from classical logic, as well as more well-known many-valued systems.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined just like in `CPL`_ and `K3`_:
+    **Logical Consequence** is defined just like in :ref:`CPL` and :ref:`K3`:
 
     * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
       are models where *C* also has the value **T**.
@@ -53,7 +55,6 @@ from classical logic, as well as more well-known many-valued systems.
 
           <img src="../_static/img/Emil_Leon_Post.jpg">
 
-.. _CPL: cpl.html
-.. _K3: k3.html
+
 .. _Introduction to a General Theory of Elementary Propositions: https://www.jstor.org/stable/2370324?origin=crossref&seq=1#metadata_info_tab_contents
 .. _Many-valued Logic: https://www.google.com/books/edition/_/ZyTXAAAAMAAJ?hl=en

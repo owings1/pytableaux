@@ -1,3 +1,5 @@
+.. _GO:
+
 ***********************
 GO - Gappy Object Logic
 ***********************
@@ -32,7 +34,7 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined just like in `CPL`_ and `K3`_:
+    **Logical Consequence** is defined just like in :ref:`CPL` and :ref:`K3`:
 
     * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
       are models where *C* also has the value **T**.
@@ -40,13 +42,13 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
     Notes
     =====
 
-    - GO has some similarities to `K3`_. Material Identity :s:`A $ A` and the
+    - GO has some similarities to :ref:`K3`. Material Identity :s:`A $ A` and the
       Law of Excluded Middle :s:`A V ~A` fail.
 
-    - Unlike `K3`_, there are logical truths, e.g. The Law of Non Contradiction :s:`~(A & ~A)`.
+    - Unlike :ref:`K3`, there are logical truths, e.g. The Law of Non Contradiction :s:`~(A & ~A)`.
 
     - GO contains an additional conditional operator besides the material conditional,
-      which is similar to `L3`_. However, this conditional is *non-primitive*, unlike `L3`_,
+      which is similar to :ref:`L3`. However, this conditional is *non-primitive*, unlike :ref:`L3`,
       and it obeys contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
 
     - This logic was developed as part of this author's dissertation, `Indeterminacy and Logical Atoms`_
@@ -64,10 +66,4 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
 .. _Professor Jc Beall: http://entailments.net
 .. _Colin Caret: https://sites.google.com/view/colincaret
 .. _Indeterminacy and Logical Atoms: https://github.com/owings1/dissertation/raw/master/output/dissertation.pdf
-.. _K3: k3.html
-.. _K3 Predication: k3.html#predication
-.. _L3: l3.html
-.. _B3E: b3e.html
-.. _FDE: fde.html
-.. _CPL: cpl.html
 .. _Hybridized Paracomplete and Paraconsistent Logics: https://ojs.victoria.ac.nz/ajl/article/view/4035/3588

@@ -1,6 +1,6 @@
-from errors import ParseError, ParserThreadError, IllegalStateError, \
-    UnboundVariableError, BoundVariableError, NoSuchPredicateError, UnknownNotationError
-from lexicals import Argument, AtomicSentence, PredicatedSentence, \
+from errors import ParseError, ParserThreadError, IllegalStateError, NotFoundError, \
+    UnboundVariableError, BoundVariableError, UnknownNotationError
+from lexicals import Argument, AtomicSentence, PredicatedSentence, get_system_predicate, \
     QuantifiedSentence, OperatedSentence, Constant, Variable, operators, Vocabulary
 from fixed import default_notation
 from utils import isstr, SymbolSet
@@ -217,9 +217,14 @@ class BaseParser(Parser):
         """
         pchar = self._current()
         cpos = self.pos
+        ctype = self._typeof(pchar)
+        if ctype == 'system_predicate':
+            name = self.symbol_set.indexof(ctype, pchar)
+            self._advance()
+            return get_system_predicate(name)
         try:
             return self.vocab.get_predicate(**self._read_item())
-        except NoSuchPredicateError:
+        except NotFoundError:
             raise ParseError(
                 "Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos)
             )
@@ -302,10 +307,11 @@ class BaseParser(Parser):
     def _read_item(self, ctype = None):
         """
         Read an item and its subscript starting from the current character,
-        which must be in the list of characters given. Returns a list containing
-        the index of the current character in the chars list, and the subscript
-        of that item. This is a generic way to read predicates, atomics, variables,
-        constants, etc.
+        which must be in the list of characters given. Returns a dict with
+        keys `index` and `subscript`, where `index` is the list index in
+        the symbol set. This is a generic way to read user predicates,
+        atomics, variables, constants, etc. Note, this will not work for
+        system predicates, because they have string keys in the symbols set.
 
         :rtype: dict
         :meta private:
@@ -336,8 +342,7 @@ class BaseParser(Parser):
         return self._typeof(self._current())
 
     def _assert_current_is(self, *ctypes):
-        self._assert_current()
-        ctype = self._typeof(self._current())
+        ctype = self._assert_current()
         if ctype not in ctypes:
             raise ParseError(
                 "Unexpected {0} '{1}' at position {2}.".format(ctype, self._current(), self.pos)

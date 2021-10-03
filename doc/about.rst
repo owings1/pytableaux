@@ -1,6 +1,6 @@
-************
-Introduction
-************
+****************
+About pytableaux
+****************
 
 pytableaux is a multi-logic tableau proof generator. It supports full first-order 
 sentences (predication and quantification), with standard operators (negation, 
@@ -8,8 +8,10 @@ conjunction, etc.), as well as modal operators (possibility, necessity). It is
 designed to compare logical validities across various 'nonclassical' logics, 
 focusing on many-valued and modal logics.
 
-Project History & Goals
-=======================
+.. contents:: :local:
+
+History
+=======
 
 I started this project when I was supposed to be writing my dissertation_ on 
 non-classical logic. I wanted to write a proof generator for a new logic I was
@@ -36,15 +38,15 @@ any logic, even if that proof system does not have any particular rules for
 handling a sentence of a particular form. 
 
 For example, Classical logic has one conditional operator, the Material 
-Conditional. Lukasiewicz logic also has a distinct Conditional operator,
+Conditional. :ref:`Lukasiewicz <L3>` logic also has a distinct Conditional operator,
 which attempts to work around the failure of some classical inferences for the
 Material Conditional. Another example is Free Logic, which has a special 
 Existence predicate meant to allow for the possibility that nothing exists.
 
 Since operators, quantifiers and special predicates are defined 
 globally, every logic will 'recognize' a sentence containing any of these 
-tokens, and will successfully construct a tableau with them. However, Classical 
-logic has no rules related to either an Existence predicate or a Conditional 
+tokens, and will successfully construct a tableau with them. However,
+:ref:`Classical Logic <CFOL>` has no rules related to either an Existence predicate or a Conditional 
 operator (separate from the Material Conditional), and so these sentences would 
 not get 'broken down' in the proof process. 
 
@@ -102,7 +104,6 @@ the inner sentence (no superfluous variables allowed).
 Quantifiers
 -----------
 
-
 +-----------------+------------------------------------------------+
 | Quantifier      | Common Translation                             |
 +=================+================================================+
@@ -110,7 +111,6 @@ Quantifiers
 +-----------------+------------------------------------------------+
 | Universal       | *for all x*, ...                               |
 +-----------------+------------------------------------------------+
-
 
 Operators
 ---------
@@ -156,86 +156,21 @@ operator, but given that some do (e.g. Bochvar), we introduce it to the vocabula
 it as a transparent operator (:s:`*A` == :s:`A`) in logics that do not traditionally define it.
 
 
-Installation
-============
-
-The program contains the following interfaces:
-
-    - An API to use in Python scripts.
-    
-    - A web form interface. See https://logic.dougowings.net.
-
-    - (In Progress) A web JSON api.
-
-To run the Docker image from Docker Hub:
-
-    1. Run the command::
-
-        docker run -p 8080:8080 owings1/pytableaux:latest
-
-    2. Access the web interface at http://localhost:8080
-
-To install natively:
-
-    1. Download the source, for example::
-
-        git clone https://github.com/owings1/pytableaux
-    
-    2. Install dependencies::
-
-        pip install future jinja2 cherrypy prometheus_client
-
-    3. Launch the web interface, for example::
-
-        python src/web.py
-
-    4. Then access http://localhost:8080
-
-To build the documentation (requires python-dev and make):
-
-    1. Install the dependencies::
-
-        pip install Sphinx
-
-    2. Build the docs::
-
-        cd doc
-        make clean html
-
-To run the tests:
-
-    1. Install the dependencies::
-
-        pip install pytest
-
-    2. Run the tests::
-
-        python -m pytest test
-
-To build the Docker image yourself:
-
-    docker build -f res/python3.dockerfile .
-
 Parsing
 =======
 
 There are two parsers available: Polish notation, and Standard notation.
+More to come...
 
 Proof output
 ============
 
-Currently the output formats are plain text (ASCII), and HTML.
+Currently the output formats are plain text, and HTML. More to come...
 
-Contributing
-============
 
-To contribute in any way (documentation, code, testing, suggestions, etc.), contact
-Doug Owings at doug at dougowings dot net. You can also submit issues and merge requests
-on `GitHub`_.
 
 
 .. _dissertation: https://github.com/owings1/dissertation/raw/master/output/dissertation.pdf
 
 .. _Possibilities and Paradox: https://www.google.com/books/edition/_/aLZvQgAACAAJ?hl=en
 
-.. _GitHub: https://github.com/owings1/pytableaux
