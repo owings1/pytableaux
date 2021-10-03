@@ -32,8 +32,8 @@ a world *w'* such that *w* accesses *w'*.
 
     **Logical Consequence** is defined just as in :ref:`K`:
 
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      at *w0* are models where *C* also has the value **T** at *w0*.
+    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
+      at *w0* are models where *C* also has the value :m:`T` at *w0*.
 
     Notes
     =====

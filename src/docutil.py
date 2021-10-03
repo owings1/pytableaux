@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2021 Doug Owings.
 # 
@@ -55,6 +56,10 @@ defaults = {
 #    https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html
 # Sphinx events:
 #    https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
+# Docutils doctree:
+#    https://docutils.sourceforge.io/docs/ref/doctree.html
+# Font (GPL):
+#    http://www.gust.org.pl/projects/e-foundry/tg-math/download/index_html#Bonum_Math
 
 doc_dir = abspath(pjoin(os.path.dirname(__file__), '../doc'))
 templates_dir = pjoin(doc_dir, 'templates')
@@ -94,6 +99,9 @@ def init_sphinx(app, opts):
 
     )
 
+    helper.connect_sphinx(app, 'object-description-transform',
+        'sphinx_evtest',
+    )
     app.add_role('s', helper.role_lexrender_auto)
     app.add_role('oper', helper.role_lexrender_oper)
     app.add_role('m', helper.role_lexrender_meta)
@@ -269,8 +277,8 @@ class Helper(object):
                     )
                 )
             ),
-            # Meta-tuple params - {@metuple}
-            ('{@metuple}', ':math:`\\\\langle a_0,...,a_n\\\\rangle`'),
+            # Meta-tuple params - :m:`ntuple`
+            (':m:`ntuple`', ':math:`\\\\langle a_0,...,a_n\\\\rangle`'),
         ]
         text = '\n'.join(lines)
         for regex, repl in defns:
@@ -389,6 +397,13 @@ class Helper(object):
             if check and (not callable(check) or check(obj)):
                 lines += func(obj)
 
+    def sphinx_evtest(self, app, domain, objtype, contentnode):
+        #print('\n\n\n', (domain, objtype, contentnode), '\n')
+        # if pagename == '_modules/logics/fde':
+        #     for n in doctree.traverse():
+        #         print(str(n.attlist()))
+        # # print('\n\n\n', (pagename, templatename), '\n')
+        pass
     ## ===================
     ## HTML Subroutines  :
     ## ===================
@@ -459,6 +474,7 @@ class Helper(object):
             r'^(o|op|oper|operator)\.(.*)': ('operator', '\\2'),
             r'^(p|pred|predicate)\.(.*)' : ('predicate', '\\2'),
         }
+        classes = ['lexitem']
         lw = self.lw
         parse = self.parser.parse
         symset = self.parser.symbol_set
@@ -482,6 +498,7 @@ class Helper(object):
                 text = symset.indexof('operator', text)
         elif what == 'sentence':
             text = parse(text)
+        classes.append(what)
         raw = lw.write(text)
         rendered = htmlun(raw)
         node = nodes.inline(text = rendered)
@@ -498,15 +515,33 @@ class Helper(object):
 
     @sphinx_role_defaults
     def role_lexrender_meta(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
-        
-        ismath = True
+        classes = ['lexmeta']
+        nclass = nodes.math
+        attrs = {}
         bs = '\\'
         if text == 'ntuple':
-            # ntuple
+            classes.extend(['tuple', 'ntuple'])
             rend = cat(bs, 'langle a_0,...,a_n', bs, 'rangle')
-            #rend = ':math:`\\\\langle a_0,...,a_n\\\\rangle`'
         elif text in ('T', 'F', 'N', 'B'):
+            classes.extend(['truth-value'])
             rend = text
+            nclass = nodes.strong
+        elif re.match(r'^w[0-9]', text):
+            wparts = text.split('R')
+            rend = '\\mathcal{R}'.join(
+                re.sub(r'w([0-9]+)', 'w_\\1', wtxt)
+                for wtxt in wparts
+            )
+            classes.append('modal')#
+            classes.append('access' if len(wparts) > 1 else 'world')
+        elif text == 'w' or re.match(r'', text):
+            if '<' in text:
+                classes.append('tuple')
+            rend = text.replace('<', '\\langle ').replace('>', '\\rangle')
+            #rend = text.replace('<', '⟨').replace('>', '⟩')
+            #nclass = nodes.inline
+            classes.extend(['modal'])
+
         else:
             if '.' in text:
                 pfx, text = text.split('.', 1)
@@ -518,10 +553,11 @@ class Helper(object):
                 rend = htmlesc(text)
             else:
                 raise UnknownLexTypeError('Unknown metalexical type: {0}'.format(pfx))
-        if ismath:
-            node = nodes.math(text = rend)
-        else:
-            node = nodes.inline(text = rend)
+        node = nclass(text = rend, classes = classes, **attrs)
+        # if ismath:
+        #     node = nodes.math(text = rend, classes=['fooclass'])
+        # else:
+        #     node = nodes.inline(text = rend, classes=['fooclass'])
         set_classes(opts)
         return ([node], [])
 

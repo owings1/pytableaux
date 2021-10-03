@@ -36,7 +36,7 @@ from . import fde
 
 class Model(fde.Model):
     """
-    An LP model is like an `FDE model`_ without the **N** value, which yields an
+    An LP model is like an `FDE model`_ without the :m:`N` value, which yields an
     exhaustion restraint an predicate's extension/anti-extension.
 
     .. _FDE model: fde.html#logics.fde.Model

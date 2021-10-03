@@ -36,7 +36,7 @@ from . import fde
 
 class Model(fde.Model):
     """
-    A K3 model is like an :class:`FDE model <logics.fde.Model>` without the {v.B} value.
+    A K3 model is like an :class:`FDE model <logics.fde.Model>` without the :m:`B` value.
     """
 
     #: The set of admissible values for sentences in a model.

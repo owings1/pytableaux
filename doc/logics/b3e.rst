@@ -4,9 +4,9 @@
 B3E - Bochvar 3-valued External Logic
 *************************************
 
-B3E is a three-valued logic with values **T**, **F**, and **N**. B3E is similar
+B3E is a three-valued logic with values :m:`T`, :m:`F`, and :m:`N`. B3E is similar
 to :ref:`K3W`, with a special Assertion operator, that always results in a classical
-value (**T** or **F**).
+value (:m:`T` or :m:`F`).
 
 .. contents:: :local:
 
@@ -33,8 +33,8 @@ value (**T** or **F**).
 
     **Logical Consequence** is defined just like in :ref:`CPL` and :ref:`K3`:
 
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.
+    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
+      are models where *C* also has the value :m:`T`.
 
     Notes
     =====

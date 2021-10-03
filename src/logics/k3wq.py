@@ -77,7 +77,7 @@ class Model(k3w.Model):
     def value_of_universal(self, sentence, **kw):
         """
         A universal sentence is interpreted in terms of `generalized conjunction`.
-        If we order the values least to greatest as **N**, **F**, **T**, then we
+        If we order the values least to greatest as :m:`N`, :m:`F`, :m:`T`, then we
         can define the value of a universal in terms of the `minimum` value of
         the set of values for the substitution of each constant in the model for
         the variable.
@@ -93,7 +93,7 @@ class Model(k3w.Model):
     def value_of_existential(self, sentence, **kw):
         """
         An existential sentence is interpreted in terms of `generalized disjunction`.
-        If we order the values least to greatest as **N**, **T**, **F**, then we
+        If we order the values least to greatest as :m:`N`, :m:`T`, :m:`F`, then we
         can define the value of an existential in terms of the `maximum` value of
         the set of values for the substitution of each constant in the model for
         the variable.

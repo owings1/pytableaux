@@ -56,8 +56,8 @@ class Model(k3.Model):
         //truth_tables//go//
 
         Note that, given the tables above, conjunctions and disjunctions always have a classical
-        value (**T** or **F**). This means that only atomic sentences (with zero or more negations)
-        can have the non-classical **N** value.
+        value (:m:`T` or :m:`F`). This means that only atomic sentences (with zero or more negations)
+        can have the non-classical :m:`N` value.
 
         This property of "classical containment" means, that we can define a conditional operator
         that satisfies Identity :s:`A $ A`. It also allows us to give a formal description of
@@ -73,7 +73,7 @@ class Model(k3.Model):
         values* of the sentences that result from replacing each constant for the
         quantified variable.
 
-        The *crunched value* of *v* is 1 (**T**) if *v* is 1, else 0 (**F**).
+        The *crunched value* of *v* is 1 (:m:`T`) if *v* is 1, else 0 (:m:`F`).
 
         Note that this is in accord with interpreting the existential quantifier
         in terms of generalized disjunction.
@@ -90,7 +90,7 @@ class Model(k3.Model):
         of the sentences that result from replacing each constant for the quantified
         variable.
 
-        The *crunched value* of *v* is 1 (**T**) if *v* is 1, else 0 (**F**).
+        The *crunched value* of *v* is 1 (:m:`T`) if *v* is 1, else 0 (:m:`F`).
 
         Note that this is in accord with interpreting the universal quantifier
         in terms of generalized conjunction.

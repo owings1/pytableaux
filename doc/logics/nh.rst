@@ -28,7 +28,7 @@ NH - Paraconsistent Hybrid Logic
     ===================
 
     **Logical Consequence** is defined, just as in :ref:`FDE` and :ref:`LP`, in
-    terms of *designated* values **T** and **B**:
+    terms of *designated* values :m:`T` and :m:`B`:
 
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
-      (**T** or **B**) are models where *C* also has a *designated* value.
+      (:m:`T` or :m:`B`) are models where *C* also has a *designated* value.

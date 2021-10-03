@@ -6,13 +6,13 @@ FDE - First Degree Entailment
 
 .. contents:: :local:
 
-FDE is a 4-valued logic (:m:`T`, **F**, **N** and **B**). A common interpretation of these
+FDE is a 4-valued logic (:m:`T`, :m:`F`, :m:`N` and :m:`B`). A common interpretation of these
 values is:
 
-- **T**: just true
-- **F**: just false
-- **N**: neither true nor false
-- **B**: both true and false
+- :m:`T`: just true
+- :m:`F`: just false
+- :m:`N`: neither true nor false
+- :m:`B`: both true and false
 
 .. automodule:: logics.fde
 
@@ -40,23 +40,23 @@ values is:
 
         .. method:: value_of_predicated(sentence)
 
-            A sentence with *n*-ary predicate :math:`P` over parameters {@metuple}
+            A sentence with *n*-ary predicate :math:`P` over parameters :m:`ntuple`
             has the value:
 
-            * {v.T} iff {@metuple} is in the *extension* of :math:`P` and
+            * :m:`T` iff :m:`ntuple` is in the *extension* of :math:`P` and
               not in the *anti-extension* of :math:`P`.
 
-            * {v.F} iff {@metuple} is in the *anti-extension* of :math:`P`
+            * :m:`F` iff :m:`ntuple` is in the *anti-extension* of :math:`P`
               and not in the *extension* of :math:`P`.
 
-            * {v.B} iff {@metuple} is in **both** the extension and anti-extension
+            * :m:`B` iff :m:`ntuple` is in **both** the extension and anti-extension
               of :math:`P`.
 
-            * {v.N} iff {@metuple} is in **neither** in the extension nor the 
+            * :m:`N` iff :m:`ntuple` is in **neither** in the extension nor the 
               anti-extension of :math:`P`.
 
             Note, for FDE, there is no *exclusivity* nor *exhaustion* constraint on a predicate's
-            extension and anti-extension. This means that {@metuple} could be in *neither*
+            extension and anti-extension. This means that :m:`ntuple` could be in *neither*
             the extension nor the anti-extension of a predicate, or it could be in *both* the extension
             and the anti-extension.
 
@@ -65,10 +65,10 @@ values is:
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined in terms of the *designated* values {v.T} and {v.B}:
+    **Logical Consequence** is defined in terms of the *designated* values :m:`T` and :m:`B`:
 
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
-      ({v.T} or {v.B}) are models where *C* also has a *designated* value.
+      (:m:`T` or :m:`B`) are models where *C* also has a *designated* value.
 
     Tableaux System
     ===============

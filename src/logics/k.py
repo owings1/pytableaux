@@ -114,8 +114,8 @@ class Model(BaseModel):
 
     def value_of_operated(self, sentence, **kw):
         """
-        The value of a sentence with a truth-functional operator `w` is determined by
-        the values of its operands at `w` according to the following tables.
+        The value of a sentence with a truth-functional operator :m:`w` is determined by
+        the values of its operands at :m:`w` according to the following tables.
 
         //truth_tables//k//
         """
@@ -127,8 +127,8 @@ class Model(BaseModel):
 
     def value_of_predicated(self, sentence, **kw):
         """
-        A sentence for predicate `P` is true at `w` iff the tuple of the parameters
-        is in the extension of `P` at `w`.
+        A sentence for predicate `P` is true at :m:`w` iff the tuple of the parameters
+        is in the extension of `P` at :m:`w`.
         """
         for param in sentence.parameters:
             if param not in self.constants:
@@ -139,8 +139,8 @@ class Model(BaseModel):
 
     def value_of_existential(self, sentence, **kw):
         """
-        An existential sentence is true at `w`, just when the sentence resulting in the
-        subsitution of some constant in the domain for the variable is true at `w`.
+        An existential sentence is true at :m:`w`, just when the sentence resulting in the
+        subsitution of some constant in the domain for the variable is true at :m:`w`.
         """
         si = sentence.sentence
         v = sentence.variable
@@ -152,8 +152,8 @@ class Model(BaseModel):
 
     def value_of_universal(self, sentence, **kw):
         """
-        A universal sentence is true at `w`, just when the sentence resulting in the
-        subsitution of each constant in the domain for the variable is true at `w`.
+        A universal sentence is true at :m:`w`, just when the sentence resulting in the
+        subsitution of each constant in the domain for the variable is true at :m:`w`.
         """
         si = sentence.sentence
         v = sentence.variable
@@ -165,8 +165,8 @@ class Model(BaseModel):
 
     def value_of_possibility(self, sentence, world=0, **kw):
         """
-        A possibility sentence is true at `w` iff its operand is true at `w'` for
-        some `w'` such that `<w, w'>` in the access relation.
+        A possibility sentence is true at :m:`w` iff its operand is true at :m:`w'` for
+        some :m:`w'` such that :m:`<w, w'>` in the access relation.
         """
         for w2 in self.visibles(world):
             if self.value_of(sentence.operand, world=w2, **kw) == 'T':
@@ -175,8 +175,8 @@ class Model(BaseModel):
 
     def value_of_necessity(self, sentence, world=0, **kw):
         """
-        A necessity sentence is true at `w` iff its operand is true at `w'` for
-        each `w'` such that `<w, w'>` is in the access relation.
+        A necessity sentence is true at :m:`w` iff its operand is true at :m:`w'` for
+        each :m:`w'` such that :m:`<w, w'>` is in the access relation.
         """
         for w2 in self.visibles(world):
             if self.value_of(sentence.operand, world=w2, **kw) == 'F':
@@ -186,7 +186,7 @@ class Model(BaseModel):
     def is_countermodel_to(self, argument):
         """
         A model is a countermodel for an argument iff the value of each premise
-        is **T** at `w0` and the value of the conclusion is **F** at `w0`.
+        is :m:`T` at `w0` and the value of the conclusion is :m:`F` at :m:`w0`.
         """
         for premise in argument.premises:
             if self.value_of(premise, world=0) != 'T':
@@ -657,8 +657,8 @@ class TableauxSystem(TableauxSystem):
     def build_trunk(cls, tableau, argument):
         """
         To build the trunk for an argument, add a node with each premise, with
-        world *w0*, followed by a node with the negation of the conclusion
-        with world *w0*.
+        world :m:`*w0*`, followed by a node with the negation of the conclusion
+        with world :m:`*w0*`.
         """
         branch = tableau.branch()
         for premise in argument.premises:

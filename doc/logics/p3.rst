@@ -4,7 +4,7 @@
 P3 - Post 3-valued logic
 ************************
 
-Emil Post's three-valued logic (**T**, **F**, and **N**) has a deviant negation
+Emil Post's three-valued logic (:m:`T`, :m:`F`, and :m:`N`) has a deviant negation
 that performs a *cyclic shift* in value. The result is a system much different
 from classical logic, as well as more well-known many-valued systems.
 
@@ -35,8 +35,8 @@ from classical logic, as well as more well-known many-valued systems.
 
     **Logical Consequence** is defined just like in :ref:`CPL` and :ref:`K3`:
 
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.
+    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
+      are models where *C* also has the value :m:`T`.
 
     References
     ==========

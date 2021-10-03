@@ -45,8 +45,8 @@ class Model(k3.Model):
         The value of a sentence with a truth-functional operator is determined by
         the values of its operands according to the following tables.
 
-        Note that, for the binary connectives, if either operand has the value **N**,
-        then the whole sentence has the value **N**. To (re-)quote a Chinese proverb,
+        Note that, for the binary connectives, if either operand has the value :m:`N`,
+        then the whole sentence has the value :m:`N`. To (re-)quote a Chinese proverb,
         "a single jot of rat's dung spoils the soup."
 
         //truth_tables//k3w//
@@ -347,7 +347,7 @@ class TableauxRules(object):
     class DisjunctionNegatedUndesignated(DefaultNodeRule):
         """
         Either the disjunction is designated, or at least one of the disjuncts
-        has the value **N**. So, from an unticked, undesignated, negated
+        has the value :m:`N`. So, from an unticked, undesignated, negated
         disjunction node *n* on a branch *b*, make three branches *b'*, *b''*,
         and *b'''* from *b*. On *b'* add a designated node with the disjunction.
         On *b''* add two undesignated nodes with the first disjunct and its

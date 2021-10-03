@@ -39,7 +39,7 @@ class Model(k.Model):
     of the `atomics` and predicate `extensions`.
 
     .. _K model: k.html#logics.k.Model
-    .. _K frame: k.html#logics.k.Model.Frame
+    .. _K frame: k.html#logics.k.Frame
     """
 
     def value_of_operated(self, sentence, **kw):
@@ -75,159 +75,61 @@ class TableauxSystem(cpl.TableauxSystem):
 class TableauxRules(object):
     """
     The Tableaux System for CFOL contains all the rules from :ref:`CPL`, including the
-    `CPL closure rules`_, as well as additional rules for the quantifiers.
-
-    .. _CPL closure rules: cpl.html#logics.cpl.TableauxRules.Closure
+    CPL closure rules, as well as additional rules for the quantifiers.
     """
 
+    class ContradictionClosure(cpl.TableauxRules.ContradictionClosure):
+        pass
+
+    class SelfIdentityClosure(cpl.TableauxRules.SelfIdentityClosure):
+        pass
+
+    class NonExistenceClosure(cpl.TableauxRules.NonExistenceClosure):
+        pass
+
     class DoubleNegation(cpl.TableauxRules.DoubleNegation):
-        """
-        This rule is the same as the `CPL DoubleNegation rule`_.
-
-        //ruledoc//cpl//DoubleNegation//
-
-        .. _CPL DoubleNegation rule: cpl.html#logics.cpl.TableauxRules.DoubleNegation
-        """
         pass
 
     class Assertion(cpl.TableauxRules.Assertion):
-        """
-        This rule is the same as the `CPL Assertion rule`_.
-
-        //ruledoc//cpl//Assertion//
-
-        .. _CPL Assertion rule: cpl.html#logics.cpl.TableauxRules.Assertion
-        """
         pass
 
     class AssertionNegated(cpl.TableauxRules.AssertionNegated):
-        """
-        This rule is the same as the `CPL AssertionNegated rule`_.
-
-        //ruledoc//cpl//AssertionNegated//
-
-        .. _CPL AssertionNegated rule: cpl.html#logics.cpl.TableauxRules.AssertionNegated
-        """
         pass
 
     class Conjunction(cpl.TableauxRules.Conjunction):
-        """
-        This rule is the same as the `CPL Conjunction rule`_.
-
-        //ruledoc//cpl//Conjunction//
-
-        .. _CPL Conjunction rule: cpl.html#logics.cpl.TableauxRules.Conjunction
-        """
         pass
 
     class ConjunctionNegated(cpl.TableauxRules.ConjunctionNegated):
-        """
-        This rule is the same as the `CPL ConjunctionNegated rule`_.
-
-        //ruledoc//cpl//ConjunctionNegated//
-
-        .. _CPL ConjunctionNegated rule: cpl.html#logics.cpl.TableauxRules.ConjunctionNegated
-        """
         pass
 
     class Disjunction(cpl.TableauxRules.Disjunction):
-        """
-        This rule is the same as the `CPL Disjunction rule`_.
-
-        //ruledoc//cpl//Disjunction//
-
-        .. _CPL Disjunction rule: cpl.html#logics.cpl.TableauxRules.Disjunction
-        """
         pass
 
     class DisjunctionNegated(cpl.TableauxRules.DisjunctionNegated):
-        """
-        This rule is the same as the `CPL DisjunctionNegated rule`_.
-
-        //ruledoc//cpl//DisjunctionNegated//
-
-        .. _CPL DisjunctionNegated rule: cpl.html#logics.cpl.TableauxRules.DisjunctionNegated
-        """
         pass
 
     class MaterialConditional(cpl.TableauxRules.MaterialConditional):
-        """
-        This rule is the same as the `CPL MaterialConditional rule`_.
-
-        //ruledoc//cpl//MaterialConditional//
-
-        .. _CPL MaterialConditional rule: cpl.html#logics.cpl.TableauxRules.MaterialConditional
-        """
         pass
 
     class MaterialConditionalNegated(cpl.TableauxRules.MaterialConditionalNegated):
-        """
-        This rule is the same as the `CPL MaterialConditionalNegated rule`_.
-
-        //ruledoc//cpl//MaterialConditionalNegated//
-
-        .. _CPL MaterialConditionalNegated rule: cpl.html#logics.cpl.TableauxRules.MaterialConditionalNegated
-        """
         pass
 
     class MaterialBiconditional(cpl.TableauxRules.MaterialBiconditional):
-        """
-        This rule is the same as the `CPL DoubleNegation rule`_.
-
-        //ruledoc//cpl//MaterialBiconditional//
-
-        .. _CPL MaterialBiconditional rule: cpl.html#logics.cpl.TableauxRules.MaterialBiconditional
-        """
         pass
 
     class MaterialBiconditionalNegated(cpl.TableauxRules.MaterialBiconditionalNegated):
-        """
-        This rule is the same as the `CPL MaterialBiconditionalNegated rule`_.
-
-        //ruledoc//cpl//MaterialBiconditionalNegated//
-
-        .. _CPL MaterialBiconditionalNegated rule: cpl.html#logics.cpl.TableauxRules.MaterialBiconditionalNegated
-        """
         pass
 
     class Conditional(cpl.TableauxRules.Conditional):
-        """
-        This rule is the same as the `CPL Conditional rule`_.
-
-        //ruledoc//cpl//Conditional//
-
-        .. _CPL Conditional rule: cpl.html#logics.cpl.TableauxRules.Conditional
-        """
         pass
 
     class ConditionalNegated(cpl.TableauxRules.ConditionalNegated):
-        """
-        This rule is the same as the `CPL ConditionalNegated rule`_.
-
-        //ruledoc//cpl//ConditionalNegated//
-
-        .. _CPL ConditionalNegated rule: cpl.html#logics.cpl.TableauxRules.ConditionalNegated
-        """
         pass
 
     class Biconditional(cpl.TableauxRules.Biconditional):
-        """
-        This rule is the same as the `CPL Biconditional rule`_.
-
-        //ruledoc//cpl//Biconditional//
-
-        .. _CPL Biconditional rule: cpl.html#logics.cpl.TableauxRules.Biconditional
-        """
         pass
 
     class BiconditionalNegated(cpl.TableauxRules.BiconditionalNegated):
-        """
-        This rule is the same as the `CPL BiconditionalNegated rule`_.
-
-        //ruledoc//cpl//BiconditionalNegated//
-
-        .. _CPL BiconditionalNegated rule: cpl.html#logics.cpl.TableauxRules.BiconditionalNegated
-        """
         pass
 
     class Existential(cpl.NonModal, k.TableauxRules.Existential):
@@ -265,16 +167,13 @@ class TableauxRules(object):
         pass
 
     class IdentityIndiscernability(cpl.TableauxRules.IdentityIndiscernability):
-        """
-        This rule is the same as the `CPL IdentityIndiscernability rule`_.
-
-        //ruledoc//cpl//IdentityIndiscernability//
-
-        .. _CPL IdentityIndiscernability rule: cpl.html#logics.cpl.TableauxRules.IdentityIndiscernability
-        """
         pass
 
-    closure_rules = list(cpl.TableauxRules.closure_rules)
+    closure_rules = [
+        ContradictionClosure,
+        SelfIdentityClosure,
+        NonExistenceClosure,
+    ]
 
     rule_groups = [
         [

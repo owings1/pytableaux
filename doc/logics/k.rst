@@ -4,8 +4,8 @@
 K - Kripke Normal Modal Logic
 *****************************
 
-Kripke Logic (K) is the foundation of so-called normal modal logics. It is an extension of :ref:`CFOL`,
-adding the modal operators for possibility and necessity.
+Kripke Logic (K) is the foundation of so-called normal modal logics. It is an extension
+of :ref:`CFOL`, adding the modal operators for possibility and necessity.
 
 .. contents:: :local:
 
@@ -52,7 +52,13 @@ adding the modal operators for possibility and necessity.
         .. automethod:: value_of_necessity(sentence)
 
 
+    Logical Consequence
+    ===================
 
+    **Logical Consequence** is defined similary as :ref:`CPL`, except with reference to a world:
+
+    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
+      at :m:`w0` are models where *C* also has the value :m:`T` at :m:`w0`.
 
 
     Tableaux System
@@ -64,13 +70,6 @@ adding the modal operators for possibility and necessity.
     .. autoclass:: TableauxRules
         :members:
 
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined similary as :ref:`CPL`, except with reference to a world:
-
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      at *w0* are models where *C* also has the value **T** at *w0*.
 
     Notes
     =====

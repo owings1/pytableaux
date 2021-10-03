@@ -4,8 +4,8 @@
 LP - Logic of Paradox
 *********************
 
-LP is a 3-valued logic (**T**, **F**, and **B**). It can be understood as :ref:`FDE` without
-the **N** value.
+LP is a 3-valued logic (:m:`T`, :m:`F`, and :m:`B`). It can be understood as :ref:`FDE` without
+the :m:`N` value.
 
 .. contents:: :local:
 
@@ -22,9 +22,9 @@ the **N** value.
 
             A sentence with predicate `P` with parameters :m:`ntuple` has the value:
 
-            * **T** iff :m:`ntuple` is in the extension of `P` and not in the anti-extension of `P`.
-            * **F** iff :m:`ntuple` is in the anti-extension of `P` and not in the extension of `P`.
-            * **B** iff :m:`ntuple` is in both the extension and anti-extension of `P`.
+            * :m:`T` iff :m:`ntuple` is in the extension of `P` and not in the anti-extension of `P`.
+            * :m:`F` iff :m:`ntuple` is in the anti-extension of `P` and not in the extension of `P`.
+            * :m:`B` iff :m:`ntuple` is in both the extension and anti-extension of `P`.
 
             Note, unlike :ref:`FDE`, there is an exhaustion constraint on a predicate's
             extension/anti-extension. This means that :m:`ntuple` must be in either the
@@ -43,11 +43,11 @@ the **N** value.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined, just as in :ref:`FDE`, in terms of *designated* values **T**
-    and **B**:
+    **Logical Consequence** is defined, just as in :ref:`FDE`, in terms of *designated* values :m:`T`
+    and :m:`B`:
 
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
-      (**T** or **B**) are models where *C* also has a *designated* value.
+      (:m:`T` or :m:`B`) are models where *C* also has a *designated* value.
 
     Notes
     =====

@@ -44,17 +44,17 @@ Existence = get_system_predicate('Existence')
 
 class Model(BaseModel):
     """
-    FDE Model.
+    An FDE model 
     """
 
-    #: The set of admissible values for sentences in a model.
+    #: The set of admissible values for sentences.
     #:
     #: :type: set
     #: :value: {T, B, N, F}
     #: :meta hide-value:
     truth_values = set(['F', 'N', 'B', 'T'])
 
-    #: The set of designated values in a model.
+    #: The set of designated values.
     #:
     #: :type: set
     #: :value: {T, B}
@@ -129,7 +129,9 @@ class Model(BaseModel):
         """
         The value of an existential sentence is the maximum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
-        the values from least to greatest is: **F**, **N**, **B**, **T**.
+        the values from least to greatest is: :m:`F`, :m:`N`, :m:`B`, :m:`T`.
+
+
         """
         v = sentence.variable
         si = sentence.sentence
@@ -140,7 +142,7 @@ class Model(BaseModel):
         """
         The value of an universal sentence is the minimum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
-        the values from least to greatest is: **F**, **N**, **B**, **T**.
+        the values from least to greatest is: :m:`F`, :m:`N`, :m:`B`, :m:`T`.
         """
         v = sentence.variable
         si = sentence.sentence
@@ -1203,7 +1205,7 @@ class TableauxRules(object):
         From an unticked designated negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a designated node to *b*
         that universally quantifies over *v* into the negation of *s* (i.e. change
-        'not exists x: A' to 'for all x: not A'), then tick *n*.
+        :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
         negated     = True
         quantifier  = 'Existential'
@@ -1251,8 +1253,8 @@ class TableauxRules(object):
         """
         From an unticked undesignated negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add an undesignated node to *b*
-        that universally quantifies over *v* into the negation of *s* (i.e. change 'not
-        exists x: A' to 'for all x: not A'), then tick *n*.
+        that universally quantifies over *v* into the negation of *s* (e.g. change
+        :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
         quantifier  = 'Existential'
         designation = False
@@ -1273,8 +1275,8 @@ class TableauxRules(object):
         """
         From an unticked designated negated universal node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a designated node to *b*
-        with the existential quantifier over *v* into the negation of *s* (i.e. change
-        'not all x: A' to 'exists x: not A'), then tick *n*.
+        with the existential quantifier over *v* into the negation of *s* (e.g. change
+        :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
         quantifier  = 'Universal'
         designation = True
@@ -1293,8 +1295,8 @@ class TableauxRules(object):
         """
         From an unticked undesignated negated universal node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add an undesignated node to *b*
-        with the existential quantifier over *v* into the negation of *s* (i.e. change
-        'not all x: A' to 'exists x: not A'), then tick *n*.
+        with the existential quantifier over *v* into the negation of *s* (e.g. change
+        :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
         quantifier  = 'Universal'
         designation = False

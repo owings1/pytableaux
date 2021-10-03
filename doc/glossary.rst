@@ -10,3 +10,9 @@ This glossary is under construction.
 
     exclusitivity constraint
         . . .
+    
+    exhaustion constraint
+        . . .
+    
+    a logic is an extension of another
+        . . . 

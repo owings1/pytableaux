@@ -43,5 +43,5 @@ Classical First-Order Logic (CFOL) augments :ref:`CPL` with the quantifiers: Uni
 
     **Logical Consequence** is defined in the standard way:
 
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.
+    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
+      are models where *C* also has the value :m:`T`.

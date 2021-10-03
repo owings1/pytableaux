@@ -5,7 +5,7 @@ CPL - Classical Predicate Logic
 *******************************
 
 Classical Predicate Logic (CPL) is the standard bivalent logic with
-values **T** and **F**, commonly interpretated as 'true' and 'false',
+values :m:`T` and :m:`F`, commonly interpretated as 'true' and 'false',
 respectively.
 
 .. contents:: :local:
@@ -42,5 +42,5 @@ respectively.
 
     **Logical Consequence** is defined in the standard way:
 
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is **T**
-      are models where *C* also has the value **T**.
+    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
+      are models where *C* also has the value :m:`T`.
