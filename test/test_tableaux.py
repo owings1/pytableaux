@@ -6,7 +6,6 @@ from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
 from lexicals import Atomic, Constant, Predicated
 import examples
 
-from fixed import num_const_symbols
 import time
 from pytest import raises
 
@@ -104,7 +103,7 @@ class TestBranch(object):
     def test_new_constant_returns_m1_after_s0(self):
         b = Branch()
         i = 0
-        while i < num_const_symbols:
+        while i <= Constant.max_index():
             c = Constant(i, 0)
             sen = Predicated('Identity', [c, c])
             b.add({'sentence': sen})

@@ -20,15 +20,17 @@
 # import pytest
 
 import examples
-from lexicals import Vocabulary as Vocab, Variable, Constant, Predicate, \
+from lexicals import Vocabulary as Vocab, Variable, Constant, Parameter, Predicate, \
     Atomic, Predicated, Quantified, Operated, Sentence, get_system_predicate
 from parsers import parse
-from fixed import num_const_symbols, num_var_symbols, num_atomic_symbols, \
-    num_predicate_symbols
 from errors import *
 
-
 from pytest import raises
+
+class TestParameter(object):
+    def test_cannot_construct(self):
+        with raises(TypeError):
+            Parameter(0, 0)
 
 class TestVocabulary(object):
 
@@ -99,7 +101,7 @@ class TestVocabulary(object):
 
     def test_declare_predicate_index_too_large(self):
         with raises(ValueError):
-            Vocab().declare_predicate('MyPredicate', num_predicate_symbols, 0, 1)
+            Vocab().declare_predicate('MyPredicate', Predicate.max_index() + 1, 0, 1)
 
     def test_declare_predicate_arity_non_int(self):
         with raises(TypeError):
@@ -159,7 +161,7 @@ class TestVocabulary(object):
 
     def test_constant_index_too_large(self):
         with raises(ValueError):
-            Constant(num_const_symbols, 0)
+            Constant(Constant.max_index() + 1, 0)
 
     def test_constant_is_constant_not_variable(self):
         c = Constant(0, 0)
@@ -168,7 +170,7 @@ class TestVocabulary(object):
 
     def test_variable_index_too_large(self):
         with raises(ValueError):
-            Variable(num_var_symbols, 0)
+            Variable(Variable.max_index() + 1, 0)
 
     # def test_sentence_is_sentence(self):
     #     s = parse('a')
@@ -183,7 +185,7 @@ class TestVocabulary(object):
 
     def test_atomic_index_too_large(self):
         with raises(ValueError):
-            Atomic(num_atomic_symbols, 0)
+            Atomic(Atomic.max_index() + 1, 0)
         
     def test_atomic_substitute(self):
         s = Atomic(0, 0)
@@ -209,7 +211,7 @@ class TestVocabulary(object):
         assert res.subscript == 0
 
     def test_atomic_next_e0_to_a1(self):
-        s = Atomic(num_atomic_symbols - 1, 0)
+        s = Atomic(Atomic.max_index(), 0)
         res = s.next()
         assert res.index == 0
         assert res.subscript == 1

@@ -20,10 +20,11 @@
 
 import examples, fixed
 from errors import TimeoutError
-from fixed import num_predicate_symbols, issues_href, source_href, version, \
-    quantifiers_list, operators_list, parser_names, lexwriter_names, \
+from fixed import issues_href, source_href, version, \
+    parser_names, lexwriter_names, \
     lexwriter_encodings, tabwriter_names
-from lexicals import system_predicates, Argument, Vocabulary, create_lexwriter
+from lexicals import Argument, Predicate, Vocabulary, \
+    create_lexwriter, list_operators, list_quantifiers, get_system_predicates
 from parsers import create_parser
 from tableaux import Tableau
 from proof.writers import create_tabwriter
@@ -86,7 +87,7 @@ browser_data = {
     'example_predicates'    : examples.test_pred_data,
     # nups: "notation-user-predicate-symbols"
     'nups'                  : nups,
-    'num_predicate_symbols' : num_predicate_symbols,
+    'num_predicate_symbols' : Predicate.max_index() + 1,
     'example_arguments'     : example_arguments,
 }
 
@@ -108,10 +109,10 @@ base_view_data = {
     'logics'              : modules['logics'],
     'parser_names'        : parser_names,
     'parser_symsets'      : parser_symsets,
-    'operators_list'      : operators_list,
-    'quantifiers'         : quantifiers_list,
+    'operators_list'      : list_operators(),
+    'quantifiers'         : list_quantifiers(),
     'source_href'         : source_href,
-    'system_predicates'   : system_predicates,
+    'system_predicates'   : {p.name: p for p in get_system_predicates()},
     'tabwriter_names'     : tabwriter_names,
     'version'             : version,
 }

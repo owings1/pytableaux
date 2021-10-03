@@ -1,4 +1,3 @@
-from fixed import num_const_symbols
 from lexicals import Constant
 from utils import get_logic, StopWatch
 
@@ -702,8 +701,9 @@ class Branch(object):
         Add a node (Node object or dict of props). Returns self.
         """
         node = self.create_node(node)
+        consts = node.constants()
         self.nodes.append(node)
-        self.consts.update(node.constants())
+        self.consts.update(consts)
         self.ws.update(node.worlds())
         self.preds.update(node.predicates())
         self.atms.update(node.atomics())
@@ -711,7 +711,7 @@ class Branch(object):
         self.leaf = node
 
         # Add to index *before* after_node_add callback
-        self.__add_to_index(node)
+        self.__add_to_index(node, consts)
 
         # Tableau callback
         if self.tableau != None:
@@ -822,19 +822,16 @@ class Branch(object):
         """
         Return a new constant that does not appear on the branch.
         """
-        constants = list(self.constants())
-        if not len(constants):
+        if not self.consts:
             return Constant(0, 0)
-        index = 0
-        subscript = 0
-        c = Constant(index, subscript)
-        while c in constants:
+        maxidx = Constant.max_index()
+        coordset = set(c.coords for c in self.consts)
+        index, sub = 0, 0
+        while (index, sub) in coordset:
             index += 1
-            if index == num_const_symbols:
-                index = 0
-                subscript += 1
-            c = Constant(index, subscript)
-        return c
+            if index > maxidx:
+                index, sub = 0, sub + 1
+        return Constant(index, sub)
 
     def constants_or_new(self):
         """
@@ -887,7 +884,7 @@ class Branch(object):
             return props
         return Node(props=props)
 
-    def __add_to_index(self, node):
+    def __add_to_index(self, node, consts):
         for prop in self.node_index:
             key = None
             if prop == 'w1Rw2':

@@ -57,6 +57,9 @@ def isstr(arg):
 def isint(arg):
     return isinstance(arg, int)
 
+def sortedbyval(map):
+    return list(it[1] for it in sorted((v, k) for k, v in map.items()))
+
 class SymbolSet(object):
 
     def __init__(self, data):

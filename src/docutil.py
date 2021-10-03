@@ -32,13 +32,12 @@ from docutils.parsers.rst import Directive, directives, roles
 logger = logging.getLogger(__name__)
 from utils import cat, get_logic
 import examples
-from lexicals import operarity, create_lexwriter
+from lexicals import list_operators, operarity, create_lexwriter
 from parsers import create_parser, parse_argument
 from tableaux import Tableau, TableauxSystem as TabSys
 from proof.writers import create_tabwriter
 from proof.rules import Rule, ClosureRule, PotentialNodeRule, FilterNodeRule
 from models import truth_table
-from fixed import operators_list
 
 defaults = {
     'html_theme'       : 'default',
@@ -168,7 +167,7 @@ class Helper(object):
         lgc = get_logic(lgc)
         tables = [
             self.html_truth_table(lgc, operator)
-            for operator in operators_list
+            for operator in list_operators()
             if operator in lgc.Model.truth_functional_operators
         ]
         lines = '\n'.join(tables).split('\n')
@@ -225,7 +224,7 @@ class Helper(object):
             '"{0}","{1}","``{2}``","``{3}``","{4}"'.format(*row)
             for row in (
                 (o, str(operarity(o)), sympol[o], symstd[o], htmlun(symhtml[o]))
-                for o in operators_list
+                for o in list_operators()
             )
         ]
         return indent_lines(lines, indent = indent)

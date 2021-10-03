@@ -1,7 +1,7 @@
 from errors import ParseError, IllegalStateError, NotFoundError, \
     UnboundVariableError, BoundVariableError
 from lexicals import Argument, AtomicSentence, PredicatedSentence, get_system_predicate, \
-    QuantifiedSentence, OperatedSentence, Constant, Variable, operators, Vocabulary
+    QuantifiedSentence, OperatedSentence, Constant, Variable, operarity, Vocabulary
 from fixed import default_notation
 from utils import isstr, SymbolSet
 from past.builtins import basestring
@@ -412,7 +412,7 @@ class PolishParser(BaseParser):
         if ctype == 'operator':
             operator = self.symbol_set.indexof('operator', self._current())
             self._advance()
-            operands = [self._read() for x in range(operators[operator])]
+            operands = [self._read() for x in range(operarity(operator))]
             s = OperatedSentence(operator, operands)
         else:
             s = super()._read()
@@ -457,7 +457,7 @@ class StandardParser(BaseParser):
 
     def __read_operator_sentence(self):
         operator = self.symbol_set.indexof('operator', self._current())
-        arity = operators[operator]
+        arity = operarity(operator)
         # only unary operators can be prefix operators
         if arity != 1:
             raise ParseError(
@@ -502,7 +502,7 @@ class StandardParser(BaseParser):
                 depth += 1
             elif ptype == 'operator':
                 peek_operator = self.symbol_set.indexof('operator', peek)
-                if operators[peek_operator] == 2 and depth == 1:
+                if operarity(peek_operator) == 2 and depth == 1:
                     if operator != None:
                         raise ParseError(
                             'Unexpected binary operator at position {0}.'.format(self.pos + length)
