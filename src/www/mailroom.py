@@ -20,7 +20,7 @@
 import re, smtplib, ssl, threading, time, traceback
 from collections import deque
 from www.conf import logger, re_email
-from errors import EmailConfigError, InternalSMTPError
+from errors import ConfigError, IllegalStateError
 
 def is_valid_email(value):
     return re.fullmatch(re_email, value)
@@ -46,21 +46,21 @@ class Mailroom(object):
         logger.info('Intializing SMTP settings')
         if opts['feedback_enabled']:
             if not opts['feedback_to_address']:
-                raise EmailConfigError(
+                raise ConfigError(
                     'Feedback is enabled but to address is not set'
                 )
             if not opts['feedback_from_address']:
-                raise EmailConfigError(
+                raise ConfigError(
                     'Feedback is enabled but from address is not set'
                 )
             if not is_valid_email(opts['feedback_to_address']):
-                raise EmailConfigError(
+                raise ConfigError(
                     'Invalid feedback to address: {0}'.format(
                         str(opts['feedback_to_address'])
                     )
                 )
             if not is_valid_email(opts['feedback_from_address']):
-                raise EmailConfigError(
+                raise ConfigError(
                     'Invalid feedback from address: {0}'.format(
                         str(opts['feedback_from_address'])
                     )
@@ -90,7 +90,7 @@ class Mailroom(object):
 
     def enqueue(self, from_addr, to_addrs, msg):
         if not self.enabled:
-            raise EmailConfigError('SMTP not configured, cannot enqueue message')
+            raise ConfigError('SMTP not configured, cannot enqueue message')
         self.queue.append({
             'from_addr' : from_addr,
             'to_addrs'  : to_addrs,
@@ -99,9 +99,9 @@ class Mailroom(object):
 
     def runner(self):
         if not self.enabled:
-            raise EmailConfigError('SMTP not configured, cannot start Mailroom.')
+            raise ConfigError('SMTP not configured, cannot start Mailroom.')
         if self.started:
-            raise InternalSMTPError('Mailroom already running')
+            raise IllegalStateError('Mailroom already running')
         self.started = True
         interval = self.opts['mailroom_interval']
         requeue_interval = self.opts['mailroom_requeue_interval']

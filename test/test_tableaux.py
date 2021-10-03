@@ -31,7 +31,7 @@ class TestTableau(object):
 
     def test_build_trunk_already_built_error(self):
         proof = Tableau('cpl', examples.argument('Addition'))
-        with raises(TrunkAlreadyBuiltError):
+        with raises(IllegalStateError):
             proof.build_trunk()
 
     def test_repr_contains_finished(self):
@@ -47,7 +47,7 @@ class TestTableau(object):
     def test_step_raises_trunk_not_built_with_hacked_arg_prop(self):
         proof = Tableau('cpl')
         proof.argument = examples.argument('Addition')
-        with raises(TrunkNotBuiltError):
+        with raises(IllegalStateError):
             proof.step()
 
     def test_construct_sets_is_rank_optim_option(self):
@@ -58,7 +58,7 @@ class TestTableau(object):
     def test_timeout_1ms(self):
         proof = Tableau('cpl', examples.argument('Addition'))
         proof.step = mock_sleep_5ms
-        with raises(ProofTimeoutError):
+        with raises(TimeoutError):
             proof.build(build_timeout=1)
 
     def test_finish_empty_sets_build_duration_ms_0(self):
@@ -157,7 +157,7 @@ class TestBranch(object):
         proof = Tableau('cpl', examples.argument('Addition'))
         proof.build()
         b = list(proof.branches)[0]
-        with raises(BranchClosedError):
+        with raises(TypeError):
             b.make_model()
 
     def test_branch_has_world1(self):

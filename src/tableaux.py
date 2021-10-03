@@ -2,8 +2,7 @@ from fixed import num_const_symbols
 from lexicals import Constant
 from utils import get_logic, StopWatch
 
-from errors import BranchClosedError, ProofTimeoutError, \
-    TableauStateError, TrunkAlreadyBuiltError, TrunkNotBuiltError
+from errors import IllegalStateError, TimeoutError
 
 from inspect import isclass
 
@@ -551,7 +550,7 @@ class Tableau(object):
         if timeout != None and timeout >= 0:
             if self.build_timer.elapsed() > timeout:
                 self.build_timer.stop()
-                raise ProofTimeoutError(
+                raise TimeoutError(
                     'Timeout of {0}ms exceeded.'.format(str(timeout))
                 )
 
@@ -561,15 +560,15 @@ class Tableau(object):
 
     def __check_trunk_built(self):
         if self.argument != None and not self.trunk_built:
-            raise TrunkNotBuiltError("Trunk is not built.")
+            raise IllegalStateError("Trunk is not built.")
 
     def __check_trunk_not_built(self):
         if self.trunk_built:
-            raise TrunkAlreadyBuiltError("Trunk is already built.")
+            raise IllegalStateError("Trunk is already built.")
 
     def __check_not_started(self):
         if self.current_step > 0:
-            raise TableauStateError("Proof has already started building.")
+            raise IllegalStateError("Proof has already started building.")
 
     def __result_word(self):
         if self.valid:
@@ -852,11 +851,11 @@ class Branch(object):
         """
         Make a model from the open branch.
         """
-        model = self.tableau.logic.Model()
         if self.closed:
-            raise BranchClosedError(
+            raise TypeError(
                 'Cannot build a model from a closed branch'
             )
+        model = self.tableau.logic.Model()
         model.read_branch(self)
         if self.tableau.argument != None:
             model.is_countermodel = model.is_countermodel_to(self.tableau.argument)

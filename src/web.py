@@ -19,7 +19,7 @@
 # pytableaux - Web Application
 
 import examples, fixed
-from errors import ProofTimeoutError, UnknownNotationError
+from errors import TimeoutError
 from fixed import num_predicate_symbols, issues_href, source_href, version, \
     quantifiers_list, operators_list, parser_names, lexwriter_names, \
     lexwriter_encodings, tabwriter_names
@@ -231,7 +231,7 @@ class App(object):
                 result = self.api_prove(api_data)
             except RequestDataError as err:
                 errors.update(err.errors)
-            except ProofTimeoutError as err: # pragma: no cover
+            except TimeoutError as err: # pragma: no cover
                 errors['Tableau'] = str(err)
 
             if len(errors) == 0:
@@ -350,7 +350,7 @@ class App(object):
                         'message' : 'OK',
                         'result'  : result,
                     }
-            except ProofTimeoutError as err: # pragma: no cover
+            except TimeoutError as err: # pragma: no cover
                 res.status = 408
                 return {
                     'status'  : 408,
@@ -675,7 +675,7 @@ class App(object):
 
         try:
             if adata['notation'] not in parser_names:
-                raise UnknownNotationError('Invalid parser notation')
+                raise ValueError('Invalid parser notation')
         except Exception as e:
             errors['Notation'] = str(e)
 

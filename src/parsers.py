@@ -1,5 +1,5 @@
-from errors import ParseError, ParserThreadError, IllegalStateError, NotFoundError, \
-    UnboundVariableError, BoundVariableError, UnknownNotationError
+from errors import ParseError, IllegalStateError, NotFoundError, \
+    UnboundVariableError, BoundVariableError
 from lexicals import Argument, AtomicSentence, PredicatedSentence, get_system_predicate, \
     QuantifiedSentence, OperatedSentence, Constant, Variable, operators, Vocabulary
 from fixed import default_notation
@@ -49,7 +49,7 @@ def create_parser(notn=None, vocab=None, **opts):
         return PolishParser(vocab, **opts)
     elif notn == 'standard':
         return StandardParser(vocab, **opts)
-    raise UnknownNotationError('Unknown parser: {0}'.format(str(notn)))
+    raise ValueError('Unknown parser: {0}'.format(str(notn)))
 
 class Parser(object):
     def parse(self, input):
@@ -393,7 +393,7 @@ class BaseParser(Parser):
                 )
         def __enter__(self):
             if self.is_parsing:
-                raise ParserThreadError(
+                raise IllegalStateError(
                     'Parser is already parsing -- not thread safe'
                 )
             self.inst.bound_vars = set()

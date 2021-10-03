@@ -1,49 +1,27 @@
+# Base Errors
 class IllegalStateError(Exception):
     pass
 
+class ParseError(Exception):
+    pass
+
+class TimeoutError(Exception):
+    pass
+
+# ValueErrors
 class NotFoundError(ValueError):
     pass
-# lexicals
 
-class OperatorError(Exception):
+class ConfigError(ValueError):
     pass
 
-class NoSuchOperatorError(OperatorError):
-    pass
-
-class OperatorArityMismatchError(OperatorError):
-    pass
-
-# tableaux
-
-class TableauStateError(Exception):
-    pass
-
-class ProofTimeoutError(Exception):
-    pass
-
-class TrunkAlreadyBuiltError(TableauStateError):
-    pass
-
-class TrunkNotBuiltError(TableauStateError):
-    pass
-
-class BranchClosedError(TableauStateError):
-    pass
-
-# models
-class ModelValueError(Exception):
+class ModelValueError(ValueError):
     pass
 
 class DenotationError(ModelValueError):
     pass
 
-# parsers
-class ParseError(Exception):
-    pass
-
-class ParserThreadError(ParseError):
-    pass
+# ParseErrors
 
 class UnboundVariableError(ParseError):
     pass
@@ -52,12 +30,4 @@ class BoundVariableError(ParseError):
     pass
 
 class UnknownNotationError(ParseError):
-    pass
-
-# smtp mailroom
-
-class EmailConfigError(Exception):
-    pass
-
-class InternalSMTPError(Exception):
     pass

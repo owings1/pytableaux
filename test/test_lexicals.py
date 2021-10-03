@@ -249,12 +249,12 @@ class TestVocabulary(object):
 
     def test_operated_no_such_operator(self):
         s = Atomic(0, 0)
-        with raises(NoSuchOperatorError):
+        with raises(NotFoundError):
             Operated('Misjunction', [s, s])
 
     def test_operated_arity_mismatch_negation(self):
         s = Atomic(0, 0)
-        with raises(OperatorArityMismatchError):
+        with raises(TypeError):
             Operated('Negation', [s, s])
 
     def test_constant_repr_contains_subscript(self):

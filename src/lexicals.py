@@ -2,8 +2,7 @@ from fixed import num_atomic_symbols, num_const_symbols, num_predicate_symbols, 
     num_var_symbols, operators, system_predicates_index, system_predicates_list, \
     default_notation, quantifiers
 
-from errors import NotFoundError, \
-    NoSuchOperatorError, OperatorArityMismatchError
+from errors import NotFoundError
 
 from utils import cat, isint, isstr, SymbolSet
 
@@ -473,12 +472,12 @@ class OperatedSentence(Sentence):
 
     def __init__(self, operator, operands):
         if operator not in operators:
-            raise NoSuchOperatorError(
+            raise NotFoundError(
                 "Unknown operator '{0}'.".format(operator)
             )
-        arity = operators[operator]
+        arity = operarity(operator)
         if len(operands) != arity:
-            raise OperatorArityMismatchError(
+            raise TypeError(
                 "Expecting {0} operands for operator '{1}', got {2}.".format(
                     arity, operator, len(operands)
                 )
