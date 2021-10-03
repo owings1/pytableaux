@@ -30,7 +30,7 @@ It is similar to :ref:`LP`, with a different conditional operator.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined, just as in :ref:`FDE`, in terms of *designated* values :m:`T`
+    **Logical Consequence** is defined, just as in :ref:`FDE <FDE>`, in terms of *designated* values :m:`T`
     and :m:`B`:
 
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value

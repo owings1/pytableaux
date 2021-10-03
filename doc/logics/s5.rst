@@ -28,7 +28,7 @@ Normal modal logic with reflexive, symmetric, and transitive access relation.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined just as in :ref:`K` :
+    **Logical Consequence** is defined just as in :ref:`K <K>` :
 
     - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
       at *w0* are models where *C* also has the value :m:`T` at *w0*.

@@ -4,7 +4,7 @@
 CFOL - Classical First-Order Logic
 **********************************
 
-Classical First-Order Logic (CFOL) augments :ref:`CPL` with the quantifiers: Universal and Existential.
+Classical First-Order Logic (CFOL) augments :ref:`CPL <CPL>` with the quantifiers: Universal and Existential.
 
 .. contents:: :local:
 
@@ -15,6 +15,13 @@ Classical First-Order Logic (CFOL) augments :ref:`CPL` with the quantifiers: Uni
 
     .. autoclass:: Model
 
+        .. method:: value_of_operated(sentence)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            //truth_tables//cfol//
+
         .. method:: value_of_existential(sentence)
 
             An existential sentence is true just when the sentence resulting in the
@@ -24,10 +31,6 @@ Classical First-Order Logic (CFOL) augments :ref:`CPL` with the quantifiers: Uni
 
             A universal sentence is true just when the sentence resulting in the
             subsitution of each constant in the domain for the variable is true.
-
-        .. automethod:: value_of_operated(sentence)
-
-        .. automethod:: is_sentence_opaque(sentence)
 
     Tableaux System
     ===============

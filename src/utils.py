@@ -35,7 +35,7 @@ def get_module(package, arg):
 def get_logic(name):
     """
     Get the logic module from the specified name. The following
-    inputs all return the :ref:`FDE` logic module: *'fde'*, *'FDE'*,
+    inputs all return the :ref:`FDE <FDE>` logic module: *'fde'*, *'FDE'*,
     *'logics.fde'*. If a module is passed, it is returned.
 
     :param str name: The logic name.

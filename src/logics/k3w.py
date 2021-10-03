@@ -154,8 +154,8 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 class TableauxRules(object):
     """
     The Tableaux System for K3W contains the `FDE closure rule`_, and the
-    `K3 closure rule`_. Several of the operator rules are the same as :ref:`FDE`.
-    However, many rules for K3W are different from :ref:`FDE`, given
+    `K3 closure rule`_. Several of the operator rules are the same as :ref:`FDE <FDE>`.
+    However, many rules for K3W are different from :ref:`FDE <FDE>`, given
     the behavior of the *N* value.
     
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure

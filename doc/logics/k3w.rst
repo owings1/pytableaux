@@ -5,7 +5,7 @@ K3W - Weak Kleene Logic
 ***********************
 
 K3W is a 3-valued logic with values :m:`T`, :m:`F`, and :m:`N`. The logic is similar
-to :ref:`K3`, but with slightly different behavior of the :m:`N` value. This logic is also
+to :ref:`K3 <K3>`, but with slightly different behavior of the :m:`N` value. This logic is also
 known as Bochvar Internal (B3). A common interpretation of these values is:
 
 - :m:`T`: just true
@@ -35,7 +35,7 @@ known as Bochvar Internal (B3). A common interpretation of these values is:
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined just like in :ref:`CPL` and :ref:`K3`:
+    **Logical Consequence** is defined just like in :ref:`CPL <CPL>` and :ref:`K3 <K3>`:
 
     * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
       are models where *C* also has the value :m:`T`.

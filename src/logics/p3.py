@@ -46,7 +46,7 @@ class Model(k3.Model):
         the values of its operands according to the following tables.
 
         Most notable is the behavior of negation. Disjunction is the same as in
-        :ref:`K3`, but conjunction is quite different, which is defined in terms of
+        :ref:`K3 <K3>`, but conjunction is quite different, which is defined in terms of
         disjunction in the standard way (:s:`~(~A V ~B)`).
 
         //truth_tables//p3//
@@ -199,9 +199,9 @@ class DefaultAllConstantsRule(fde.DefaultAllConstantsRule):
 class TableauxRules(object):
     """
     The Tableaux System for P3 contains the `FDE closure rule`_, and the
-    `K3 closure rule`_. Some of the operator rules are the same as :ref:`FDE`,
+    `K3 closure rule`_. Some of the operator rules are the same as :ref:`FDE <FDE>`,
     most notably disjunction. However, many rules for P3 are different
-    from :ref:`FDE`, given the non-standard negation. Notably, an undesignated
+    from :ref:`FDE <FDE>`, given the non-standard negation. Notably, an undesignated
     double-negation will branch.
     
     .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure

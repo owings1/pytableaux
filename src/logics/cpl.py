@@ -34,22 +34,11 @@ from . import k
 
 class Model(k.Model):
     """
-    A CPL Model is just a `K model`_ with the single world-0 frame. Sentences
-    with quantifiers or modal operators are treated as opaque. See `K frame`_
-    for a description of the `atomics` and predicate `extensions`.
-
-    .. _K model: k.html#logics.k.Model
-    .. _K frame: k.html#logics.k.Model.Frame
+    A CPL Model is just a :ref:`K model <k-model>` with the single world-0 frame.
+    Sentences with quantifiers or modal operators are treated as opaque. See
+    :ref:`K frame <k-frame>` for a description of the `atomics` and predicate
+    `extensions`.
     """
-
-    def value_of_operated(self, sentence, **kw):
-        """
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
-
-        //truth_tables//cpl//
-        """
-        return super().value_of_operated(sentence, **kw)
 
     def is_sentence_opaque(self, sentence):
         """

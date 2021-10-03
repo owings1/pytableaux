@@ -5,7 +5,7 @@ B3E - Bochvar 3-valued External Logic
 *************************************
 
 B3E is a three-valued logic with values :m:`T`, :m:`F`, and :m:`N`. B3E is similar
-to :ref:`K3W`, with a special Assertion operator, that always results in a classical
+to :ref:`K3W <K3W>`, with a special Assertion operator, that always results in a classical
 value (:m:`T` or :m:`F`).
 
 .. contents:: :local:
@@ -17,8 +17,36 @@ value (:m:`T` or :m:`F`).
 
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. method:: value_of_operated(sentence)
 
+        The value of a sentence with a truth-functional operator is determined by
+        the values of its operands according to the following tables.
+
+        Note that the conditional operator :oper:`Conditional` is definable in terms of the
+        assertion operator :oper:`Assertion`:
+        
+        * :s:`A $ B` is equivalent to :s:`~*A V *B` 
+
+        //truth_tables//b3e//
+
+        Bochvar also defined `external` versions of :oper:`Conjunction` and :oper:`Disjunction`
+        using the assertion operator:
+
+        * External conjunction: :s:`*A & *B`
+        * External disjunction: :s:`*A V *B`
+
+        These connectives always result in a classical value. For compatibility,
+        we use the standard `internal` readings of :oper:`Conjunction` and :oper:`Disjunction`,
+        and use the `internal` reading for :oper:`Conditional` and :oper:`Biconditional`.
+
+    Logical Consequence
+    ===================
+
+    **Logical Consequence** is defined just like in :ref:`CPL <CPL>` and :ref:`K3 <K3>`:
+
+    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
+      are models where *C* also has the value :m:`T`.
+ 
     Tableaux System
     ===============
 
@@ -28,13 +56,6 @@ value (:m:`T` or :m:`F`).
     .. autoclass:: TableauxRules
         :members:
 
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just like in :ref:`CPL` and :ref:`K3`:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      are models where *C* also has the value :m:`T`.
 
     Notes
     =====

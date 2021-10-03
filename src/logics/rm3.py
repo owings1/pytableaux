@@ -92,7 +92,7 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 class TableauxRules(object):
     """
     The closure rules for RM3 are the `FDE closure rule`_, and the `LP closure rule`_.
-    Most of the operator rules are the same as :ref:`FDE`, except for the conditional
+    Most of the operator rules are the same as :ref:`FDE <FDE>`, except for the conditional
     rules. The biconditional rules are borrowed from `L3_`, since they are
     simplification rules.
 

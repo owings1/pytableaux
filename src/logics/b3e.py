@@ -41,32 +41,8 @@ def crunch(v):
 
 class Model(k3w.Model):
     """
-    A B3E model is just like a `K3W model`_ with different tables for some of the connectives.
-
-    .. _K3W model: k3w.html#logics.k3w.Model
+    A B3E model is just like a :ref:`K3W <K3W>` with different tables for some of the connectives.
     """
-
-    def value_of_operated(self, sentence, **kw):
-        """
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
-
-        Note that the conditional operator :oper:`Conditional` is definable in terms of the
-        assertion operator :oper:`Assertion`, as :s:`~*A V *B`.
-
-        //truth_tables//b3e//
-
-        Bochvar also defined `external` versions of :oper:`Conjunction` and :oper:`Disjunction`
-        using the assertion operator:
-
-        * External conjunction: :s:`*A & *B`
-        * External disjunction: :s:`*A V *B`
-
-        These connectives always result in a classical value. For compatibility,
-        we use the standard `internal` readings of :oper:`Conjunction` and :oper:`Disjunction`,
-        and use the `internal` reading for :oper:`Conditional` and :oper:`Biconditional`.
-        """
-        return super().value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Assertion':
@@ -83,10 +59,8 @@ class Model(k3w.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    B3E's Tableaux System inherits directly from the `FDE system`_, employing
-    designation markers, and building the trunk in the same way.
-
-    .. _FDE system: fde.html#logics.fde.TableauxSystem
+    B3E's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    employing designation markers, and building the trunk in the same way.
     """
 
     # operator => negated => designated
@@ -109,44 +83,24 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 
 class TableauxRules(object):
     """
-    The closure rules for B3E are the `FDE closure rule`_, and the `K3 closure rule`_.
-    The operator rules are mostly a mix of :ref:`FDE` and :ref:`K3W` rules, but with different
-    rules for the assertion, conditional and biconditional operators.
-
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
-    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure
-    .. _FDE: fde.html
-    .. _K3W: k3w.html
+    The closure rules for B3E are the FDE closure rule, and the K3 closure rule.
+    The operator rules are mostly a mix of :ref:`FDE <FDE>` and :ref:`K3W <K3W>` rules, but
+    with different rules for the assertion, conditional and biconditional operators.
     """
 
-    class DoubleNegationDesignated(k3w.TableauxRules.DoubleNegationDesignated):
-        """
-        This rule is the same as the `FDE DoubleNegationDesignated rule`_.
-
-        //ruledoc//fde//DoubleNegationDesignated//
-
-        .. _FDE DoubleNegationDesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationDesignated
-        """
+    class GlutClosure(k3.TableauxRules.GlutClosure):
         pass
 
-    class DoubleNegationUndesignated(k3w.TableauxRules.DoubleNegationUndesignated):
-        """
-        This rule is the same as the `FDE DoubleNegationUndesignated rule`_.
-
-        //ruledoc//fde//DoubleNegationUndesignated//
-
-        .. _FDE DoubleNegationUndesignated rule: fde.html#logics.fde.TableauxRules.DoubleNegationUndesignated
-        """
+    class DesignationClosure(fde.TableauxRules.DesignationClosure):
         pass
 
-    class AssertionDesignated(k3w.TableauxRules.AssertionDesignated):
-        """
-        This rule is the same as the `FDE AssertionDesignated rule`_.
+    class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
+        pass
 
-        //ruledoc//fde//AssertionDesignated//
+    class DoubleNegationUndesignated(fde.TableauxRules.DoubleNegationUndesignated):
+        pass
 
-        .. _FDE AssertionDesignated rule: fde.html#logics.fde.TableauxRules.AssertionDesignated
-        """
+    class AssertionDesignated(fde.TableauxRules.AssertionDesignated):
         pass
 
     class AssertionNegatedDesignated(DefaultNodeRule):
@@ -157,7 +111,6 @@ class TableauxRules(object):
         negated     = True
         operator    = 'Assertion'
         designation = True
-
         branch_level = 1
 
         def get_target_for_node(self, node, branch):
@@ -196,164 +149,52 @@ class TableauxRules(object):
                 ],
             }
 
-    class ConjunctionDesignated(k3w.TableauxRules.ConjunctionDesignated):
-        """
-        This rule is the same as the `FDE ConjunctionDesignated rule`_.
-
-        //ruledoc//fde//ConjunctionDesignated//
-
-        .. _FDE ConjunctionDesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionDesignated
-        """
+    class ConjunctionDesignated(fde.TableauxRules.ConjunctionDesignated):
         pass
 
     class ConjunctionNegatedDesignated(k3w.TableauxRules.ConjunctionNegatedDesignated):
-        """
-        This rule is the same as the `K3W ConjunctionNegatedDesignated rule`_.
-
-        //ruledoc//k3w//ConjunctionNegatedDesignated//
-
-        .. _K3W ConjunctionNegatedDesignated rule: k3w.html#logics.k3w.TableauxRules.ConjunctionNegatedDesignated
-        """
         pass
 
-    class ConjunctionUndesignated(k3w.TableauxRules.ConjunctionUndesignated):
-        """
-        This rule is the same as the `FDE ConjunctionUndesignated rule`_.
-
-        //ruledoc//fde//ConjunctionUndesignated//
-
-        .. _FDE ConjunctionUndesignated rule: fde.html#logics.fde.TableauxRules.ConjunctionUndesignated
-        """
+    class ConjunctionUndesignated(fde.TableauxRules.ConjunctionUndesignated):
         pass
 
     class ConjunctionNegatedUndesignated(k3w.TableauxRules.ConjunctionNegatedUndesignated):
-        """
-        This rule is the same as the `K3W ConjunctionNegatedUndesignated rule`_.
-
-        //ruledoc//k3w//ConjunctionNegatedUndesignated//
-
-        .. _K3W ConjunctionNegatedUndesignated rule: k3w.html#logics.k3w.TableauxRules.ConjunctionNegatedUndesignated
-        """
         pass
 
     class DisjunctionDesignated(k3w.TableauxRules.DisjunctionDesignated):
-        """
-        This rule is the same as the `K3W DisjunctionDesignated rule`_.
-
-        //ruledoc//k3w//DisjunctionDesignated//
-
-        .. _K3W DisjunctionDesignated rule: k3w.html#logics.k3w.TableauxRules.DisjunctionDesignated
-        """
         pass
 
-    class DisjunctionNegatedDesignated(k3w.TableauxRules.DisjunctionNegatedDesignated):
-        """
-        This rule is the same as the `FDE DisjunctionNegatedDesignated rule`_.
-
-        //ruledoc//fde//DisjunctionNegatedDesignated//
-
-        .. _FDE DisjunctionNegatedDesignated rule: fde.html#logics.fde.TableauxRules.DisjunctionNegatedDesignated
-        """
+    class DisjunctionNegatedDesignated(fde.TableauxRules.DisjunctionNegatedDesignated):
         pass
 
     class DisjunctionUndesignated(k3w.TableauxRules.DisjunctionUndesignated):
-        """
-        This rule is the same as the `K3W DisjunctionUndesignated rule`_.
-
-        //ruledoc//k3w//DisjunctionUndesignated//
-
-        .. _K3W DisjunctionUndesignated rule: k3w.html#logics.k3w.TableauxRules.DisjunctionUndesignated
-        """
         pass
 
     class DisjunctionNegatedUndesignated(k3w.TableauxRules.DisjunctionNegatedUndesignated):
-        """
-        This rule is the same as the `K3W DisjunctionNegatedUndesignated rule`_.
-
-        //ruledoc//k3w//DisjunctionNegatedUndesignated//
-
-        .. _K3W DisjunctionNegatedUndesignated rule: k3w.html#logics.k3w.TableauxRules.DisjunctionNegatedUndesignated
-        """
         pass
 
     class MaterialConditionalDesignated(k3w.TableauxRules.MaterialConditionalDesignated):
-        """
-        This rule is the same as the `K3W MaterialConditionalDesignated rule`_.
-
-        //ruledoc//k3w//MaterialConditionalDesignated//
-
-        .. _K3W MaterialConditionalDesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialConditionalDesignated
-        """
         pass
 
     class MaterialConditionalNegatedDesignated(k3w.TableauxRules.MaterialConditionalNegatedDesignated):
-        """
-        This rule is the same as the `K3W MaterialConditionalNegatedDesignated rule`_.
-
-        //ruledoc//k3w//MaterialConditionalNegatedDesignated//
-
-        .. _K3W MaterialConditionalNegatedDesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialConditionalNegatedDesignated
-        """
         pass
 
     class MaterialConditionalUndesignated(k3w.TableauxRules.MaterialConditionalUndesignated):
-        """
-        This rule is the same as the `K3W MaterialConditionalUndesignated rule`_.
-
-        //ruledoc//k3w//MaterialConditionalUndesignated//
-
-        .. _K3W MaterialConditionalUndesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialConditionalUndesignated
-        """
         pass
 
     class MaterialConditionalNegatedUndesignated(k3w.TableauxRules.MaterialConditionalNegatedUndesignated):
-        """
-        This rule is the same as the `K3W MaterialConditionalNegatedUndesignated rule`_.
-
-        //ruledoc//k3w//MaterialConditionalNegatedUndesignated//
-
-        .. _K3W MaterialConditionalNegatedUndesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialConditionalNegatedUndesignated
-        """
         pass
 
     class MaterialBiconditionalDesignated(k3w.TableauxRules.MaterialBiconditionalDesignated):
-        """
-        This rule is the same as the `K3W MaterialBiconditionalDesignated rule`_.
-
-        //ruledoc//k3w//MaterialBiconditionalDesignated//
-
-        .. _K3W MaterialBiconditionalDesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialBiconditionalDesignated
-        """
         pass
 
     class MaterialBiconditionalNegatedDesignated(k3w.TableauxRules.MaterialBiconditionalNegatedDesignated):
-        """
-        This rule is the same as the `K3W MaterialBiconditionalNegatedDesignated rule`_.
-
-        //ruledoc//k3w//MaterialBiconditionalNegatedDesignated//
-
-        .. _K3W MaterialBiconditionalNegatedDesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialBiconditionalNegatedDesignated
-        """
         pass
 
     class MaterialBiconditionalUndesignated(k3w.TableauxRules.MaterialBiconditionalUndesignated):
-        """
-        This rule is the same as the `K3W MaterialBiconditionalUndesignated rule`_.
-
-        //ruledoc//k3w//MaterialBiconditionalUndesignated//
-
-        .. _K3W MaterialBiconditionalUndesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialBiconditionalUndesignated
-        """
         pass
 
     class MaterialBiconditionalNegatedUndesignated(k3w.TableauxRules.MaterialBiconditionalNegatedUndesignated):
-        """
-        This rule is the same as the `K3W MaterialBiconditionalNegatedUndesignated rule`_.
-
-        //ruledoc//k3w//MaterialBiconditionalNegatedUndesignated//
-
-        .. _K3W MaterialBiconditionalNegatedUndesignated rule: k3w.html#logics.k3w.TableauxRules.MaterialBiconditionalNegatedUndesignated
-        """
         pass
 
     class ConditionalDesignated(DefaultNodeRule):
@@ -495,87 +336,34 @@ class TableauxRules(object):
         negated     = True
         designation = False
 
-    class ExistentialDesignated(k3w.TableauxRules.ExistentialDesignated):
-        """
-        This rule is the same as the `FDE ExistentialDesignated rule`_.
-
-        //ruledoc//fde//ExistentialDesignated//
-
-        .. _FDE ExistentialDesignated rule: fde.html#logics.fde.TableauxRules.ExistentialDesignated
-        """
+    class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
         pass
 
-    class ExistentialNegatedDesignated(k3w.TableauxRules.ExistentialNegatedDesignated):
-        """
-        This rule is the same as the `FDE ExistentialNegatedDesignated rule`_.
-
-        //ruledoc//fde//ExistentialNegatedDesignated//
-
-        .. _FDE ExistentialNegatedDesignated rule: fde.html#logics.fde.TableauxRules.ExistentialNegatedDesignated
-        """
+    class ExistentialNegatedDesignated(fde.TableauxRules.ExistentialNegatedDesignated):
         pass
 
-    class ExistentialUndesignated(k3w.TableauxRules.ExistentialUndesignated):
-        """
-        This rule is the same as the `FDE ExistentialUndesignated rule`_.
-
-        //ruledoc//fde//ExistentialUndesignated//
-
-        .. _FDE ExistentialUndesignated rule: fde.html#logics.fde.TableauxRules.ExistentialUndesignated
-        """
+    class ExistentialUndesignated(fde.TableauxRules.ExistentialUndesignated):
         pass
 
-    class ExistentialNegatedUndesignated(k3w.TableauxRules.ExistentialNegatedUndesignated):
-        """
-        This rule is the same as the `FDE ExistentialNegatedUndesignated rule`_.
-
-        //ruledoc//fde//ExistentialNegatedUndesignated//
-
-        .. _FDE ExistentialNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.ExistentialNegatedUndesignated
-        """
+    class ExistentialNegatedUndesignated(fde.TableauxRules.ExistentialNegatedUndesignated):
         pass
 
-    class UniversalDesignated(k3w.TableauxRules.UniversalDesignated):
-        """
-        This rule is the same as the `FDE UniversalDesignated rule`_.
-
-        //ruledoc//fde//UniversalDesignated//
-
-        .. _FDE UniversalDesignated rule: fde.html#logics.fde.TableauxRules.UniversalDesignated
-        """
+    class UniversalDesignated(fde.TableauxRules.UniversalDesignated):
         pass
 
-    class UniversalNegatedDesignated(k3w.TableauxRules.UniversalNegatedDesignated):
-        """
-        This rule is the same as the `FDE UniversalNegatedDesignated rule`_.
-
-        //ruledoc//fde//UniversalNegatedDesignated//
-
-        .. _FDE UniversalNegatedDesignated rule: fde.html#logics.fde.TableauxRules.UniversalNegatedDesignated
-        """
+    class UniversalNegatedDesignated(fde.TableauxRules.UniversalNegatedDesignated):
         pass
 
-    class UniversalUndesignated(k3w.TableauxRules.UniversalUndesignated):
-        """
-        This rule is the same as the `FDE UniversalUndesignated rule`_.
-
-        //ruledoc//fde//UniversalUndesignated//
-
-        .. _FDE UniversalUndesignated rule: fde.html#logics.fde.TableauxRules.UniversalUndesignated
-        """
+    class UniversalUndesignated(fde.TableauxRules.UniversalUndesignated):
         pass
 
-    class UniversalNegatedUndesignated(k3w.TableauxRules.UniversalNegatedUndesignated):
-        """
-        This rule is the same as the `FDE UniversalNegatedUndesignated rule`_.
-
-        //ruledoc//fde//UniversalNegatedUndesignated//
-
-        .. _FDE UniversalNegatedUndesignated rule: fde.html#logics.fde.TableauxRules.UniversalNegatedUndesignated
-        """
+    class UniversalNegatedUndesignated(fde.TableauxRules.UniversalNegatedUndesignated):
         pass
 
-    closure_rules = list(k3.TableauxRules.closure_rules)
+    closure_rules = [
+        GlutClosure,
+        DesignationClosure,
+    ]
 
     rule_groups = [
         [

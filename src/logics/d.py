@@ -38,13 +38,11 @@ from . import k
 
 class Model(k.Model):
     """
-    A D model is just like a `K model`_ with a *serial* restriction on the access
-    relation.
+    A D model is just like a :ref:`K model <k-model>` with a *serial* restriction
+    on the access relation.
 
-    * **Seriality**: For each world *w*, there is some world *w'* such that `<w,w'>`
-      is in the access relation.
-
-    .. _K model: k.html#logics.k.Model
+    * **Seriality**: For each world :m:`w`, there is some world :m:`w'` such that
+      :m:`<w,w'>` is in the access relation.
     """
 
     def finish(self):
@@ -62,18 +60,15 @@ class Model(k.Model):
 
 class TableauxSystem(k.TableauxSystem):
     """
-    D's Tableaux System inherits directly inherits directly from the `K system`_.
-
-    .. _K system: k.html#logics.k.TableauxSystem
+    D's Tableaux System inherits directly inherits directly from the
+    :ref:`K system <K>`.
     """
     pass
 
 class TableauxRules:
     """
-    The Tableaux Rules for D contain the rules for :ref:`K`, as well as an additional
+    The Tableaux Rules for D contain the rules for :ref:`K <K>`, as well as an additional
     Serial rule, which operates on the accessibility relation for worlds.
-
-    .. _K: k.html
     """
 
     class Serial(k.IsModal, PotentialNodeRule):
@@ -144,7 +139,7 @@ class TableauxRules:
     #
     #class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
     #    """
-    #    The rule for identity indiscernability is the same as for :ref:`K`, with the exception that
+    #    The rule for identity indiscernability is the same as for :ref:`K <K>`, with the exception that
     #    the rule does not apply if the Serial rule was the last rule to apply to the branch.
     #    This prevents infinite repetition (back and forth) of the Serial and IdentityIndiscernability
     #    rules.

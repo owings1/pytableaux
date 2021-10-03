@@ -34,7 +34,7 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined just like in :ref:`CPL` and :ref:`K3`:
+    **Logical Consequence** is defined just like in :ref:`CPL <CPL>` and :ref:`K3 <K3>`:
 
     * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
       are models where *C* also has the value :m:`T`.
@@ -42,10 +42,10 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
     Notes
     =====
 
-    - GO has some similarities to :ref:`K3`. Material Identity :s:`A $ A` and the
+    - GO has some similarities to :ref:`K3 <K3>`. Material Identity :s:`A $ A` and the
       Law of Excluded Middle :s:`A V ~A` fail.
 
-    - Unlike :ref:`K3`, there are logical truths, e.g. The Law of Non Contradiction :s:`~(A & ~A)`.
+    - Unlike :ref:`K3 <K3>`, there are logical truths, e.g. The Law of Non Contradiction :s:`~(A & ~A)`.
 
     - GO contains an additional conditional operator besides the material conditional,
       which is similar to :ref:`L3`. However, this conditional is *non-primitive*, unlike :ref:`L3`,

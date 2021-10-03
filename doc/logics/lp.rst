@@ -4,7 +4,7 @@
 LP - Logic of Paradox
 *********************
 
-LP is a 3-valued logic (:m:`T`, :m:`F`, and :m:`B`). It can be understood as :ref:`FDE` without
+LP is a 3-valued logic (:m:`T`, :m:`F`, and :m:`B`). It can be understood as :ref:`FDE <FDE>` without
 the :m:`N` value.
 
 .. contents:: :local:
@@ -26,9 +26,9 @@ the :m:`N` value.
             * :m:`F` iff :m:`ntuple` is in the anti-extension of `P` and not in the extension of `P`.
             * :m:`B` iff :m:`ntuple` is in both the extension and anti-extension of `P`.
 
-            Note, unlike :ref:`FDE`, there is an exhaustion constraint on a predicate's
+            Note, unlike :ref:`FDE <FDE>`, there is an exhaustion constraint on a predicate's
             extension/anti-extension. This means that :m:`ntuple` must be in either the
-            extension and the anti-extension of `P`. Like :ref:`FDE`, there is no exclusion
+            extension and the anti-extension of `P`. Like :ref:`FDE <FDE>`, there is no exclusion
             restraint.
 
     Tableaux System
@@ -43,7 +43,7 @@ the :m:`N` value.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined, just as in :ref:`FDE`, in terms of *designated* values :m:`T`
+    **Logical Consequence** is defined, just as in :ref:`FDE <FDE>`, in terms of *designated* values :m:`T`
     and :m:`B`:
 
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
@@ -54,11 +54,11 @@ the :m:`N` value.
 
     Some notable features of LP include:
 
-    * Everything valid in :ref:`FDE` is valid in LP.
+    * Everything valid in :ref:`FDE <FDE>` is valid in LP.
 
-    * Like :ref:`FDE`, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
+    * Like :ref:`FDE <FDE>`, the Law of Non-Contradiction fails :s:`~(A & ~A)`.
 
-    * Unlike :ref:`FDE`, LP has some logical truths. For example, the Law of Excluded Middle (:s:`(A V ~A)`),
+    * Unlike :ref:`FDE <FDE>`, LP has some logical truths. For example, the Law of Excluded Middle (:s:`(A V ~A)`),
       and Conditional Identity (:s:`(A $ A)`).
 
     * Many classical validities fail, such as Modus Ponens, Modus Tollens, and Disjunctive Syllogism.
