@@ -32,7 +32,7 @@ from docutils.parsers.rst import Directive, directives, roles
 logger = logging.getLogger(__name__)
 from utils import cat, get_logic
 import examples
-from lexicals import list_operators, operarity, create_lexwriter
+from lexicals import list_operators, operarity, create_lexwriter, is_operator
 from parsers import create_parser, parse_argument
 from tableaux import Tableau, TableauxSystem as TabSys
 from proof.writers import create_tabwriter
@@ -455,17 +455,32 @@ class Helper(object):
         * A list of system messages, which will be inserted into the document tree
         immediately after the end of the current block (can also be empty).
         """
+        regexes = {
+            r'^(o|op|oper|operator)\.(.*)': ('operator', '\\2'),
+            r'^(p|pred|predicate)\.(.*)' : ('predicate', '\\2'),
+        }
         lw = self.lw
         parse = self.parser.parse
-        if text.startswith('oper.'):
-            what = 'operator'
-            text = text.split('.')[1]
+        symset = self.parser.symbol_set
+        if not what:
+            for regex, defn in regexes.items():
+                if re.findall(regex, text):
+                    # print('found', regex, text)
+                    what, text = defn[0], re.sub(regex, defn[1], text)
+                    break
+        # if text.startswith('oper.'):
+        #     what = 'operator'
+        #     text = text.split('.')[1]
         # elif text.startswith('pred.'):
         #     what = 'pred'
         #     text = text.split('.')[1]
-        elif not what:
+        if not what:
             what = 'sentence'
-        if what == 'sentence':
+        # print('what:', what, 'text:', text)
+        if what == 'operator':
+            if not is_operator(text):
+                text = symset.indexof('operator', text)
+        elif what == 'sentence':
             text = parse(text)
         raw = lw.write(text)
         rendered = htmlun(raw)

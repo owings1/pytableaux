@@ -14,8 +14,46 @@ adding the modal operators for possibility and necessity.
     Semantics
     =========
 
+    A K model makes use of *Frames* to hold information about each world.
+
+    .. autoclass:: Frame
+
+        .. autoattribute:: world
+
+        .. autoattribute:: atomics
+        
+        .. autoattribute:: extensions
+
     .. autoclass:: Model
-        :members:
+
+        .. autoattribute:: truth_values
+
+        .. autoattribute:: frames
+
+        .. autoattribute:: access
+
+        .. autoattribute:: constants
+
+        .. method:: value_of_operated(sentence)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            //truth_tables//k//
+
+        .. automethod:: value_of_predicated(sentence)
+
+        .. automethod:: value_of_existential(sentence)
+
+        .. automethod:: value_of_universal(sentence)
+
+        .. automethod:: value_of_possibility(sentence)
+
+        .. automethod:: value_of_necessity(sentence)
+
+
+
+
 
     Tableaux System
     ===============

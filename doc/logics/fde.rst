@@ -60,15 +60,6 @@ values is:
             the extension nor the anti-extension of a predicate, or it could be in *both* the extension
             and the anti-extension.
 
-    Tableaux System
-    ===============
-
-    .. autoclass:: TableauxSystem
-        :members:
-
-    .. autoclass:: TableauxRules
-        :members:
-
     .. _fde-consequence:
 
     Logical Consequence
@@ -78,6 +69,15 @@ values is:
 
     * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
       ({v.T} or {v.B}) are models where *C* also has a *designated* value.
+
+    Tableaux System
+    ===============
+
+    .. autoclass:: TableauxSystem
+        :members:
+
+    .. autoclass:: TableauxRules
+        :members:
 
     Notes
     =====

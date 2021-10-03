@@ -63,17 +63,27 @@ class Model(BaseModel):
     relation, and a set of constants (the domain).
     """
 
-    #: The admissible values
+    #: The set of admissible values for sentences in a model.
+    #:
+    #: :type: set
+    #: :value: {T, F}
+    #: :meta hide-value:
     truth_values = set(['F', 'T'])
 
-    #: A set of pairs of worlds.
+    #: A map from worlds to their frame. Worlds are reprented as integers.
+    #:
+    #: :type: dict
+    frames = {}
+
+    #: A set of pairs of worlds, which functions as an `access` relation.
+    #:
+    #: :type: set
     access = set()
 
-    #: The domain of constants.
+    #: The fixed domain of constants, common to all worlds in the model.
+    #:
+    #: :type: set
     constants = set()
-
-    #: A map from worlds to their frame.
-    frames = {}
 
     truth_values_list = ['F', 'T']
 
@@ -87,180 +97,6 @@ class Model(BaseModel):
         1: 'T',
         0: 'F',
     }
-
-    # WIP - Generating "objects" like k-constants for a domain, dentation, and
-    #       predicate "property" extensions.
-    #
-    #       With the current implemtation of how values are set and checked
-    #       dynamically for integrity, we can't easily generate a useful
-    #       domain until we know the model is finished.
-    #
-    #       For now, the purpose of this WIP feature is merely informational.
-
-    class Denotum(object):
-        pass
-
-    class Frame(object):
-        """
-        A K-frame comprises the interpretation of sentences and predicates at a world.
-        """
-
-        #: The world of the frame.
-        world = 0
-
-        #: An assignment of each atomic sentence to a value.
-        atomics = {}
-
-        #: An assignment of each opaque (un-interpreted) sentence to a value.
-        opaques = {}
-
-        #: A map of predicates to their extension.
-        extensions = {}
-
-        # TODO: WIP
-        domain = set()
-        denotation = {}
-
-        def __init__(self, world):
-
-            self.world = world
-            self.atomics = {}
-            self.opaques = {}
-            self.extensions = {Identity: set(), Existence: set()}
-            # Track the anti-extensions to ensure integrity
-            self.anti_extensions = {}
-
-            # TODO: WIP
-            self.denotation = {}
-            self.domain = set()
-            self.property_classes = {Identity: set(), Existence: set()}
-
-        def get_data(self):
-            return {
-                'description' : 'frame at world {0}'.format(str(self.world)),
-                'datatype'    : 'map',
-                'typehint'    : 'frame',
-                'value'       : {
-                    'world'   : {
-                        'description' : 'world',
-                        'datatype'    : 'int',
-                        'typehint'    : 'world', 
-                        'value'       : self.world,
-                        'symbol'      : 'w',
-                    },
-                    'Atomics' : {
-                        'description'     : 'atomic values',
-                        'datatype'        : 'function',
-                        'typehint'        : 'truth_function',
-                        'input_datatype'  : 'sentence',
-                        'output_datatype' : 'string',
-                        'output_typehint' : 'truth_value',
-                        'symbol'          : 'v',
-                        'values'          : [
-                            {
-                                'input'  : sentence,
-                                'output' : self.atomics[sentence]
-                            }
-                            for sentence in sorted(list(self.atomics.keys()))
-                        ]
-                    },
-                    'Opaques' : {
-                        'description'     : 'opaque values',
-                        'datatype'        : 'function',
-                        'typehint'        : 'truth_function',
-                        'input_datatype'  : 'sentence',
-                        'output_datatype' : 'string',
-                        'output_typehint' : 'truth_value',
-                        'symbol'          : 'v',
-                        'values'          : [
-                            {
-                                'input'  : sentence,
-                                'output' : self.opaques[sentence],
-                            }
-                            for sentence in sorted(list(self.opaques.keys()))
-                        ]
-                    },
-                    # TODO: include (instead?) domain and property class data
-                    'Predicates' : {
-                        'description' : 'predicate extensions',
-                        'datatype'    : 'list',
-                        'values'      : [
-                            {
-                                'description'     : 'predicate extension for {0}'.format(predicate.name),
-                                'datatype'        : 'function',
-                                'typehint'        : 'extension',
-                                'input_datatype'  : 'predicate',
-                                'output_datatype' : 'set',
-                                'output_typehint' : 'extension',
-                                'symbol'          : 'P',
-                                'values'          : [
-                                    {
-                                        'input'  : predicate,
-                                        'output' : self.extensions[predicate],
-                                    }
-                                ]
-                            }
-                            for predicate in sorted(list(self.extensions.keys()))
-                        ]
-                    }
-                }
-            }
-
-        def is_equivalent_to(self, other):
-            # check for informational equivalence, ignoring world
-            # check atomic keys
-            akeys_a = set(self.atomics.keys())
-            akeys_b = set(other.atomics.keys())
-            if len(akeys_a.difference(akeys_b)) or len(akeys_b.difference(akeys_a)):
-                return False
-            # check opaque keys
-            okeys_a = set(self.opaques.keys())
-            okeys_b = set(other.opaques.keys())
-            if len(okeys_a.difference(okeys_b)) or len(okeys_b.difference(okeys_a)):
-                return False
-            # check extensions keys
-            ekeys_a = set(self.extensions.keys())
-            ekeys_b = set(other.extensions.keys())
-            if len(ekeys_a.difference(ekeys_b)) or len(ekeys_b.difference(ekeys_a)):
-                return False
-            # check atomic values
-            for s in self.atomics:
-                if other.atomics[s] != self.atomics[s]:
-                    return False
-            # check opaque values
-            for s in self.opaques:
-                if other.opaques[s] != self.opaques[s]:
-                    return False
-            # check extensions values
-            for p in self.extensions:
-                ext_a = self.extensions[p]
-                ext_b = other.extensions[p]
-                if len(ext_a.difference(ext_b)) or len(ext_b.difference(ext_a)):
-                    return False
-            return True
-
-        def __eq__(self, other):
-            return other != None and self.__dict__ == other.__dict__
-
-        def __ne__(self, other):
-            return other == None or self.__dict__ != other.__dict__
-
-        def __lt__(self, other):
-            return self.world < other.world
-
-        def __le__(self, other):
-            return self.world <= other.world
-
-        def __gt__(self, other):
-            return self.world > other.world
-
-        def __ge__(self, other):
-            return self.world >= other.world
-
-        def __cmp__(self, other):
-            # Python 2 only
-            #return cmp(self.world, other.world)
-            return (self.world > other.world) - (self.world < other.world)
 
     def __init__(self):
 
@@ -467,7 +303,7 @@ class Model(BaseModel):
         todo = set(self.constants)
         for c in self.constants:
             if c in todo:
-                denotum = Model.Denotum()
+                denotum = Denotum()
                 frame.domain.add(denotum)
                 denoters = {c}.union(self.get_identicals(c, world=world))
                 frame.denotation.update({c: denotum for c in denoters})
@@ -597,7 +433,7 @@ class Model(BaseModel):
 
     def world_frame(self, world):
         if world not in self.frames:
-            self.frames[world] = self.__class__.Frame(world)
+            self.frames[world] = Frame(world)
         return self.frames[world]
 
     def value_of_opaque(self, sentence, world=0, **kw):
@@ -631,6 +467,179 @@ class Model(BaseModel):
 
     def truth_function(self, operator, a, b=None):
         return self.fde.truth_function(operator, a, b)
+
+class Denotum(object):
+    # WIP - Generating "objects" like k-constants for a domain, dentation, and
+    #       predicate "property" extensions.
+    #
+    #       With the current implemtation of how values are set and checked
+    #       dynamically for integrity, we can't easily generate a useful
+    #       domain until we know the model is finished.
+    #
+    #       For now, the purpose of this WIP feature is merely informational.
+    pass
+
+class Frame(object):
+    """
+    A K-frame comprises the interpretation of sentences and predicates at a world.
+    """
+
+    #: The world of the frame.
+    world = 0
+
+    #: An assignment of each atomic sentence to a value.
+    atomics = {}
+
+    #: An assignment of each opaque (un-interpreted) sentence to a value.
+    opaques = {}
+
+    #: A map of predicates to their extension.
+    extensions = {}
+
+    # TODO: WIP
+    domain = set()
+    denotation = {}
+
+    def __init__(self, world):
+
+        self.world = world
+        self.atomics = {}
+        self.opaques = {}
+        self.extensions = {Identity: set(), Existence: set()}
+        # Track the anti-extensions to ensure integrity
+        self.anti_extensions = {}
+
+        # TODO: WIP
+        self.denotation = {}
+        self.domain = set()
+        self.property_classes = {Identity: set(), Existence: set()}
+
+    def get_data(self):
+        return {
+            'description' : 'frame at world {0}'.format(str(self.world)),
+            'datatype'    : 'map',
+            'typehint'    : 'frame',
+            'value'       : {
+                'world'   : {
+                    'description' : 'world',
+                    'datatype'    : 'int',
+                    'typehint'    : 'world', 
+                    'value'       : self.world,
+                    'symbol'      : 'w',
+                },
+                'Atomics' : {
+                    'description'     : 'atomic values',
+                    'datatype'        : 'function',
+                    'typehint'        : 'truth_function',
+                    'input_datatype'  : 'sentence',
+                    'output_datatype' : 'string',
+                    'output_typehint' : 'truth_value',
+                    'symbol'          : 'v',
+                    'values'          : [
+                        {
+                            'input'  : sentence,
+                            'output' : self.atomics[sentence]
+                        }
+                        for sentence in sorted(list(self.atomics.keys()))
+                    ]
+                },
+                'Opaques' : {
+                    'description'     : 'opaque values',
+                    'datatype'        : 'function',
+                    'typehint'        : 'truth_function',
+                    'input_datatype'  : 'sentence',
+                    'output_datatype' : 'string',
+                    'output_typehint' : 'truth_value',
+                    'symbol'          : 'v',
+                    'values'          : [
+                        {
+                            'input'  : sentence,
+                            'output' : self.opaques[sentence],
+                        }
+                        for sentence in sorted(list(self.opaques.keys()))
+                    ]
+                },
+                # TODO: include (instead?) domain and property class data
+                'Predicates' : {
+                    'description' : 'predicate extensions',
+                    'datatype'    : 'list',
+                    'values'      : [
+                        {
+                            'description'     : 'predicate extension for {0}'.format(predicate.name),
+                            'datatype'        : 'function',
+                            'typehint'        : 'extension',
+                            'input_datatype'  : 'predicate',
+                            'output_datatype' : 'set',
+                            'output_typehint' : 'extension',
+                            'symbol'          : 'P',
+                            'values'          : [
+                                {
+                                    'input'  : predicate,
+                                    'output' : self.extensions[predicate],
+                                }
+                            ]
+                        }
+                        for predicate in sorted(list(self.extensions.keys()))
+                    ]
+                }
+            }
+        }
+
+    def is_equivalent_to(self, other):
+        # check for informational equivalence, ignoring world
+        # check atomic keys
+        akeys_a = set(self.atomics.keys())
+        akeys_b = set(other.atomics.keys())
+        if len(akeys_a.difference(akeys_b)) or len(akeys_b.difference(akeys_a)):
+            return False
+        # check opaque keys
+        okeys_a = set(self.opaques.keys())
+        okeys_b = set(other.opaques.keys())
+        if len(okeys_a.difference(okeys_b)) or len(okeys_b.difference(okeys_a)):
+            return False
+        # check extensions keys
+        ekeys_a = set(self.extensions.keys())
+        ekeys_b = set(other.extensions.keys())
+        if len(ekeys_a.difference(ekeys_b)) or len(ekeys_b.difference(ekeys_a)):
+            return False
+        # check atomic values
+        for s in self.atomics:
+            if other.atomics[s] != self.atomics[s]:
+                return False
+        # check opaque values
+        for s in self.opaques:
+            if other.opaques[s] != self.opaques[s]:
+                return False
+        # check extensions values
+        for p in self.extensions:
+            ext_a = self.extensions[p]
+            ext_b = other.extensions[p]
+            if len(ext_a.difference(ext_b)) or len(ext_b.difference(ext_a)):
+                return False
+        return True
+
+    def __eq__(self, other):
+        return other != None and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return other == None or self.__dict__ != other.__dict__
+
+    def __lt__(self, other):
+        return self.world < other.world
+
+    def __le__(self, other):
+        return self.world <= other.world
+
+    def __gt__(self, other):
+        return self.world > other.world
+
+    def __ge__(self, other):
+        return self.world >= other.world
+
+    def __cmp__(self, other):
+        # Python 2 only
+        #return cmp(self.world, other.world)
+        return (self.world > other.world) - (self.world < other.world)
 
 class TableauxSystem(TableauxSystem):
     """

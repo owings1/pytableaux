@@ -6,6 +6,12 @@
 pytableaux documentation
 ========================
 
+pytableaux is a multi-logic tableau proof generator. It supports full first-order 
+sentences (predication and quantification), with standard operators (negation, 
+conjunction, etc.), as well as modal operators (possibility, necessity). It is 
+designed to compare logical validities across various 'nonclassical' logics, 
+focusing on many-valued and modal logics.
+
 To access the site, visit https://logic.dougowings.net
 
 Contents:
@@ -13,7 +19,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
    
-   about
+   language
 
 .. toctree::
    :maxdepth: 3
