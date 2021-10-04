@@ -42,30 +42,20 @@ def crunch(v):
 
 class Model(k3.Model):
     """
-    A GO model is like a `K3 model`_, but with different tables for some of the connectives,
-    as well as a different behavior for the quantifiers.
-
-    .. _K3 model: k3.html#logics.k3.Model
+    A GO model is like a :ref:`K3 model <k3-model>`, but with different tables
+    for some of the connectives, as well as a different behavior for the quantifiers.
     """
 
-    def value_of_operated(self, sentence, **kw):
-        """
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
-
-        //truth_tables//go//
-
-        Note that, given the tables above, conjunctions and disjunctions always have a classical
-        value (:m:`T` or :m:`F`). This means that only atomic sentences (with zero or more negations)
-        can have the non-classical :m:`N` value.
-
-        This property of "classical containment" means, that we can define a conditional operator
-        that satisfies Identity :s:`A $ A`. It also allows us to give a formal description of
-        a subset of sentences that obey all principles of classical logic. For example, although
-        the Law of Excluded Middle fails for atomic sentences :s:`A V ~A`, complex sentences -- those
-        with at least one binary connective -- do obey the law: :s:`(A V A) V ~(A V A)`.
-        """
-        return super().value_of_operated(sentence, **kw)
+    def truth_function(self, operator, a, b=None):
+        if operator == 'Assertion':
+            return self.cvals[crunch(self.nvals[a])]
+        elif operator == 'Disjunction':
+            return self.cvals[max(crunch(self.nvals[a]), crunch(self.nvals[b]))]
+        elif operator == 'Conjunction':
+            return self.cvals[min(crunch(self.nvals[a]), crunch(self.nvals[b]))]
+        elif operator == 'Conditional':
+            return self.cvals[crunch(max(1 - self.nvals[a], self.nvals[b], gap(self.nvals[a]) + gap(self.nvals[b])))]
+        return super().truth_function(operator, a, b)
 
     def value_of_existential(self, sentence, **kw):
         """
@@ -101,23 +91,10 @@ class Model(k3.Model):
         crunched = {crunch(self.nvals[val]) for val in values}
         return self.cvals[min(crunched)]
 
-    def truth_function(self, operator, a, b=None):
-        if operator == 'Assertion':
-            return self.cvals[crunch(self.nvals[a])]
-        elif operator == 'Disjunction':
-            return self.cvals[max(crunch(self.nvals[a]), crunch(self.nvals[b]))]
-        elif operator == 'Conjunction':
-            return self.cvals[min(crunch(self.nvals[a]), crunch(self.nvals[b]))]
-        elif operator == 'Conditional':
-            return self.cvals[crunch(max(1 - self.nvals[a], self.nvals[b], gap(self.nvals[a]) + gap(self.nvals[b])))]
-        return super().truth_function(operator, a, b)
-
 class TableauxSystem(fde.TableauxSystem):
     """
-    GO's Tableaux System inherits directly from the `FDE system`_, employing
-    designation markers, and building the trunk in the same way.
-
-    .. _FDE system: fde.html#logics.fde.TableauxSystem
+    GO's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    employing designation markers, and building the trunk in the same way.
     """
     # operator => negated => designated
     branchables = {
@@ -204,13 +181,17 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 
 class TableauxRules(object):
     """
-    The closure rules for GO are the `FDE closure rule`_, and the `K3 closure rule`_.
+    The closure rules for GO are the FDE closure rule, and the K3 closure rule.
     Most of the operators rules are unique to GO, with a few rules that are
-    the same as :ref:`FDE <FDE>`. The rules for assertion mirror those of :ref:`B3E`.
-    
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
-    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure
+    the same as :ref:`FDE <FDE>`. The rules for assertion mirror those of
+    :ref:`B3E <B3E>`.
     """
+
+    class GlutClosure(k3.TableauxRules.GlutClosure):
+        pass
+
+    class DesignationClosure(fde.TableauxRules.DesignationClosure):
+        pass
 
     class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
         pass
@@ -445,8 +426,8 @@ class TableauxRules(object):
                         {'sentence': disj, 'designated': True}
                     ],
                     [
-                        {'sentence':        s.lhs , 'designated': False},
-                        {'sentence':        s.rhs , 'designated': False},
+                        {'sentence': s.lhs         , 'designated': False},
+                        {'sentence': s.rhs         , 'designated': False},
                         {'sentence': s.lhs.negate(), 'designated': False},
                         {'sentence': s.rhs.negate(), 'designated': False},
                     ],
@@ -691,7 +672,10 @@ class TableauxRules(object):
         quantifier = 'Universal'
         designation = False
 
-    closure_rules = list(k3.TableauxRules.closure_rules)
+    closure_rules = [
+        GlutClosure,
+        DesignationClosure,
+    ]
 
     rule_groups = [
         [

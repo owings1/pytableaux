@@ -95,7 +95,7 @@ class Model(BaseModel):
         #: :type: dict
         self.anti_extensions = {}
 
-        #: An assignment of each atomic sentence to a truth value.
+        #: An assignment of each atomic sentence to an admissible truth value.
         #:
         #: :type: dict
         self.atomics = {}
@@ -130,8 +130,6 @@ class Model(BaseModel):
         The value of an existential sentence is the maximum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: :m:`F`, :m:`N`, :m:`B`, :m:`T`.
-
-
         """
         v = sentence.variable
         si = sentence.sentence
@@ -482,74 +480,32 @@ class TableauxSystem(BaseSystem):
             True: {True: 0, False: 0},
         },
         'Assertion': {
-            False : {
-                True  : 0,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 0,
-            },
+            False : {True: 0, False: 0},
+            True  : {True: 0, False: 0},
         },
         'Conjunction': {
-            False : {
-                True  : 0,
-                False : 1,
-            },
-            True  : {
-                True  : 1,
-                False : 0,
-            },
+            False : {True: 0, False: 1},
+            True  : {True: 1, False: 0},
         },
         'Disjunction': {
-            False  : {
-                True  : 1,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 1,
-            },
+            False : {True: 1, False: 0},
+            True  : {True: 0, False: 1},
         },
         'Material Conditional': {
-            False  : {
-                True  : 1,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 1,
-            },
+            False : {True: 1, False: 0},
+            True  : {True: 0, False: 1},
         },
         'Material Biconditional': {
-            False  : {
-                True  : 1,
-                False : 1,
-            },
-            True : {
-                True  : 1,
-                False : 1,
-            },
+            False : {True: 1, False: 1},
+            True  : {True: 1, False: 1},
         },
         'Conditional': {
-            False  : {
-                True  : 1,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 1,
-            },
+            False : {True: 1, False: 0},
+            True  : {True: 0, False: 1},
         },
         'Biconditional': {
-            False  : {
-                True  : 1,
-                False : 1,
-            },
-            True : {
-                True  : 1,
-                False : 1,
-            },
+            False : {True: 1, False: 1},
+            True  : {True: 1, False: 1},
         },
     }
 

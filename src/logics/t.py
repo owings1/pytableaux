@@ -67,7 +67,7 @@ class TableauxRules(object):
     .. _K: k.html
     """
 
-    class Reflexive(k.IsModal, PotentialNodeRule):
+    class Reflexive(PotentialNodeRule):
         """
         The Reflexive rule applies to an open branch *b* when there is a node *n*
         on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
@@ -76,6 +76,7 @@ class TableauxRules(object):
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
+        modal = True
 
         def setup(self):
             self.opts['is_rank_optim'] = False

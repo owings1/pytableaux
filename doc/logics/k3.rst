@@ -14,6 +14,8 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
     Semantics
     =========
 
+    .. _k3-model:
+
     .. autoclass:: Model
 
         .. autoattribute:: truth_values
@@ -26,7 +28,7 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
 
         .. autoattribute:: atomics
 
-        .. method:: value_of_operated(sentence)
+        .. method:: truth_function(operator, a, b)
 
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.
@@ -38,17 +40,7 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
             Like :ref:`FDE <FDE>`, K3 predication defines a predicate's *extenstion*
             and *anti-extension*. The value of a predicated sentence is determined as follows:
 
-            A sentence with *n*-ary predicate :math:`P` over parameters :m:`ntuple`
-            has the value:
-
-            * :m:`T` iff :m:`ntuple` is in the *extension* of :math:`P` and
-              not in the *anti-extension* of :math:`P`.
-
-            * :m:`F` iff :m:`ntuple` is in the *anti-extension* of :math:`P`
-              and not in the *extension* of :math:`P`.
-
-            * :m:`N` iff :m:`ntuple` is in **neither** the extension nor the 
-              anti-extension of :math:`P`.
+            .. include:: include/k3/m.predication.rst
 
             Note, unlike :ref:`FDE <FDE>`, there is an *exclusivity constraint*
             on a predicate's extension/anti-extension. This means that :m:`ntuple`
@@ -58,17 +50,31 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
             K3 models where some tuple :m:`ntuple` is in **neither** the extension nor the
             anti-extension of some predicate :math:`P`.
 
+        .. method:: value_of_existential(sentence)
+
+            Existential quantification is defined just as in :ref:`FDE <FDE>`:
+
+            .. include:: include/fde/m.existential.rst
+
+        .. method:: value_of_universal(sentence)
+
+            Universal quantification is defined just as in :ref:`FDE <FDE>`:
+
+            .. include:: include/fde/m.existential.rst
+
+    .. _k3-consequence:
+
     Logical Consequence
     ===================
 
     **Logical Consequence** is defined just like in :ref:`CPL <cpl-consequence>`:
 
-        | :math:`C` is a **Logical Consequence** of :math:`A` iff,
-        | in all models where the value of :math:`A`is :m:`T`,
-        | then value of :math:`C` is also :m:`T`.
+        ..include:: include/k3/m.consequence.rst
 
     Alternatively, we can use the :ref:`FDE formulation <fde-consequence>`
     in terms of *designated* values, since K3 has only the designated value :m:`T`.
+
+    .. _k3-system:
 
     Tableaux System
     ===============

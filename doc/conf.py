@@ -72,7 +72,7 @@ htmlhelp_basename = 'pytableauxdoc'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build', 'templates/*']
+exclude_patterns = ['_build', 'templates/*', '**/include/*']
 
 # Add any paths that contain templates here, relative to this directory.
 #templates_path = ['_templates']

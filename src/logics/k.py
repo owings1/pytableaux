@@ -21,14 +21,10 @@
 name = 'K'
 
 class Meta(object):
-
     title    = 'Kripke Normal Modal Logic'
     category = 'Bivalent Modal'
-
     description = 'Base normal modal logic with no access relation restrictions'
-
     tags = ['bivalent', 'modal', 'first-order']
-    
     category_display_order = 1
 
 from lexicals import get_system_predicate, Atomic, Operated, Quantified, Predicated
@@ -70,21 +66,6 @@ class Model(BaseModel):
     #: :meta hide-value:
     truth_values = set(['F', 'T'])
 
-    #: A map from worlds to their frame. Worlds are reprented as integers.
-    #:
-    #: :type: dict
-    frames = {}
-
-    #: A set of pairs of worlds, which functions as an `access` relation.
-    #:
-    #: :type: set
-    access = set()
-
-    #: The fixed domain of constants, common to all worlds in the model.
-    #:
-    #: :type: set
-    constants = set()
-
     truth_values_list = ['F', 'T']
 
     unassigned_value = 'F'
@@ -102,23 +83,28 @@ class Model(BaseModel):
 
         super().__init__()
 
+        #: A map from worlds to their frame. Worlds are reprented as integers.
+        #:
+        #: :type: dict
         self.frames = {}
+
+        #: A set of pairs of worlds, which functions as an `access` relation.
+        #:
+        #: :type: set
         self.access = set()
 
-        self.predicates = set([Identity, Existence])
+        #: The fixed domain of constants, common to all worlds in the model.
+        #:
+        #: :type: set
         self.constants = set()
+
+        self.predicates = set([Identity, Existence])
         self.fde = fde.Model()
 
         # ensure there is a w0
         self.world_frame(0)
 
     def value_of_operated(self, sentence, **kw):
-        """
-        The value of a sentence with a truth-functional operator :m:`w` is determined by
-        the values of its operands at :m:`w` according to the following tables.
-
-        //truth_tables//k//
-        """
         if self.is_sentence_opaque(sentence):
             return self.value_of_opaque(sentence, **kw)
         elif sentence.operator in self.modal_operators:
@@ -484,28 +470,28 @@ class Frame(object):
     A K-frame comprises the interpretation of sentences and predicates at a world.
     """
 
-    #: The world of the frame.
-    world = 0
-
-    #: An assignment of each atomic sentence to a value.
-    atomics = {}
-
-    #: An assignment of each opaque (un-interpreted) sentence to a value.
-    opaques = {}
-
-    #: A map of predicates to their extension.
-    extensions = {}
-
-    # TODO: WIP
-    domain = set()
-    denotation = {}
-
     def __init__(self, world):
 
+        #: The world of the frame.
+        #:
+        #: :type: int
         self.world = world
+
+        #: An assignment of each atomic sentence to a truth value.
+        #:
+        #: :type: dict
         self.atomics = {}
+
+        #: An assignment of each opaque (un-interpreted) sentence to a value.
         self.opaques = {}
+
+        #: A map of predicates to their extension. An extension for an
+        #: *n*-ary predicate is a set of *n*-tuples of constants.
+        #:
+        #: :type: dict
+        #: :meta hide-value:
         self.extensions = {Identity: set(), Existence: set()}
+
         # Track the anti-extensions to ensure integrity
         self.anti_extensions = {}
 
@@ -690,11 +676,11 @@ class TableauxSystem(TableauxSystem):
                 complexity += 1
         return complexity
 
-class IsModal(object):
+class ModalClosureRule(ClosureRule):
     modal = True
 
-class DefaultNodeRule(IsModal, FilterNodeRule):
-
+class DefaultNodeRule(FilterNodeRule):
+    modal = True
     ticking = True
 
     def apply_to_target(self, target):
@@ -710,7 +696,7 @@ class TableauxRules(object):
     connectives.
     """
 
-    class ContradictionClosure(IsModal, ClosureRule):
+    class ContradictionClosure(ModalClosureRule):
         """
         A branch closes when a sentence and its negation both appear on a node **with the
         same world** on the branch.
@@ -751,7 +737,7 @@ class TableauxRules(object):
                     'world'    : node.props['world'],
                 })
                 
-    class SelfIdentityClosure(IsModal, ClosureRule):
+    class SelfIdentityClosure(ModalClosureRule):
         """
         A branch closes when a sentence of the form :s:`~a = a` appears on the
         branch *at any world*.
@@ -781,7 +767,7 @@ class TableauxRules(object):
             w = 0 if self.modal else None
             return {'sentence': s, 'world': w}
 
-    class NonExistenceClosure(IsModal, ClosureRule):
+    class NonExistenceClosure(ModalClosureRule):
         """
         A branch closes when a sentence of the form :s:`~!a` appears on the branch
         *at any world*.

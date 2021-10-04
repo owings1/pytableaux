@@ -38,7 +38,7 @@ of :ref:`CFOL <CFOL>`, adding the modal operators for possibility and necessity.
 
         .. autoattribute:: constants
 
-        .. method:: value_of_operated(sentence)
+        .. method:: truth_function(operator, a, b)
 
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.
@@ -59,11 +59,14 @@ of :ref:`CFOL <CFOL>`, adding the modal operators for possibility and necessity.
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined similary as :ref:`CPL <CPL>`, except with reference to a world:
+    **Logical Consequence** is defined similary as :ref:`CPL <CPL>`,
+    except with reference to a world:
 
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      at :m:`w0` are models where *C* also has the value :m:`T` at :m:`w0`.
+        | *C* is a **Logical Consequence** of *A* iff,
+        | all models where the value of *A* is :m:`T` at :m:`w0`
+        | are models where *C* also has the value :m:`T` at :m:`w0`.
 
+    .. _k-system:
 
     Tableaux System
     ===============

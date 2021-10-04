@@ -36,10 +36,8 @@ from . import fde, k3
 
 class Model(k3.Model):
     """
-    An Ł3 model is just like a `K3 model`_ with different tables for the conditional
-    and bi-conditional operators.
-
-    .. _K3 model: k3.html#logics.k3.Model
+    An Ł3 model is just like a :ref:`K3 model <k3-model>` with different tables
+    for the conditional and bi-conditional operators.
     """
 
     def value_of_operated(self, sentence, **kw):
@@ -59,32 +57,18 @@ class Model(k3.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    Ł3's Tableaux System inherits directly from the `FDE system`_, employing
-    designation markers, and building the trunk in the same way.
-
-    .. _FDE system: fde.html#logics.fde.TableauxSystem
+    Ł3's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    employing designation markers, and building the trunk in the same way.
     """
     branchables = dict(fde.TableauxSystem.branchables)
     branchables.update({
         'Conditional': {
-            False  : {
-                True  : 1,
-                False : 1,
-            },
-            True : {
-                True  : 0,
-                False : 1,
-            },
+            False : {True: 1, False: 1},
+            True  : {True: 0, False: 1},
         },
         'Biconditional': {
-            False  : {
-                True  : 1,
-                False : 1,
-            },
-            True : {
-                True  : 1,
-                False : 1,
-            },
+            False : {True: 1, False: 1},
+            True  : {True: 1, False: 1},
         },
     })
 
@@ -93,13 +77,9 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 
 class TableauxRules(object):
     """
-    The closure rules for Ł3 are the `FDE closure rule`_, and the `K3 closure rule`_.
-    The operator rules for Ł3 are mostly the rules for :ref:`FDE <FDE>`, with the exception
-    of the rules for the conditional and biconditional operators.
-
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
-    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure
-    .. _FDE: fde.html
+    The closure rules for Ł3 are the FDE closure rule, and the K3 closure rule.
+    The operator rules for Ł3 are mostly the rules for :ref:`FDE <FDE>`, with
+    the exception of the rules for the conditional and biconditional operators.
     """
 
     class GlutClosure(k3.TableauxRules.GlutClosure):

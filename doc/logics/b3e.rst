@@ -17,35 +17,62 @@ value (:m:`T` or :m:`F`).
 
     .. autoclass:: Model
 
-        .. method:: value_of_operated(sentence)
+        .. autoattribute:: truth_values
 
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
+        .. autoattribute:: designated_values
 
-        Note that the conditional operator :oper:`Conditional` is definable in terms of the
-        assertion operator :oper:`Assertion`:
+        .. autoattribute:: extensions
+
+        .. autoattribute:: anti_extensions
+
+        .. autoattribute:: atomics
+
+        .. method:: truth_function(operator, a, b)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            Note that the conditional operator :oper:`Conditional` is definable in terms of the
+            assertion operator :oper:`Assertion`:
+            
+            * :s:`A $ B` is equivalent to :s:`~*A V *B` 
+
+            //truth_tables//b3e//
+
+            Bochvar also defined `external` versions of :oper:`Conjunction` and :oper:`Disjunction`
+            using the assertion operator:
+
+            * External conjunction: :s:`*A & *B`
+            * External disjunction: :s:`*A V *B`
+
+            These connectives always result in a classical value. For compatibility,
+            we use the standard `internal` readings of :oper:`Conjunction` and :oper:`Disjunction`,
+            and use the `internal` reading for :oper:`Conditional` and :oper:`Biconditional`.
+
+        .. method:: value_of_predicated(sentence)
+
+            B3E predication is defined just as in :ref:`K3 <K3>`:
+
+            .. include:: include/k3/m.predication.rst
+
+        .. method:: value_of_existential(sentence)
+
+            Existential quantification is defined just as in :ref:`FDE <FDE>`:
+
+            .. include:: include/fde/m.existential.rst
+
+        .. method:: value_of_universal(sentence)
+
+            Universal quantification is defined just as in :ref:`FDE <FDE>`:
+
+            .. include:: include/fde/m.existential.rst
         
-        * :s:`A $ B` is equivalent to :s:`~*A V *B` 
-
-        //truth_tables//b3e//
-
-        Bochvar also defined `external` versions of :oper:`Conjunction` and :oper:`Disjunction`
-        using the assertion operator:
-
-        * External conjunction: :s:`*A & *B`
-        * External disjunction: :s:`*A V *B`
-
-        These connectives always result in a classical value. For compatibility,
-        we use the standard `internal` readings of :oper:`Conjunction` and :oper:`Disjunction`,
-        and use the `internal` reading for :oper:`Conditional` and :oper:`Biconditional`.
-
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined just like in :ref:`CPL <CPL>` and :ref:`K3 <K3>`:
+    **Logical Consequence** is defined just like in :ref:`K3 <k3-consequence>`:
 
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      are models where *C* also has the value :m:`T`.
+        .. include:: include/k3/m.consequence.rst
  
     Tableaux System
     ===============
@@ -55,7 +82,6 @@ value (:m:`T` or :m:`F`).
 
     .. autoclass:: TableauxRules
         :members:
-
 
     Notes
     =====

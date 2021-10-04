@@ -19,6 +19,8 @@ values is:
     Semantics
     =========
 
+    .. _fde-model:
+
     .. autoclass:: Model
 
         .. autoattribute:: truth_values
@@ -31,7 +33,7 @@ values is:
 
         .. autoattribute:: atomics
 
-        .. method:: value_of_operated(sentence)
+        .. method:: truth_function(operator, a, b)
 
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.
@@ -60,6 +62,14 @@ values is:
             the extension nor the anti-extension of a predicate, or it could be in *both* the extension
             and the anti-extension.
 
+        .. method:: value_of_existential(sentence)
+
+            .. include:: include/fde/m.existential.rst
+
+        .. method:: value_of_universal(sentence)
+
+            .. include:: include/fde/m.universal.rst
+
     .. _fde-consequence:
 
     Logical Consequence
@@ -67,8 +77,9 @@ values is:
 
     **Logical Consequence** is defined in terms of the *designated* values :m:`T` and :m:`B`:
 
-    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
-      (:m:`T` or :m:`B`) are models where *C* also has a *designated* value.
+        | *C* is a **Logical Consequence** of *A* iff
+        | all models where *A* has a *desginated* value (:m:`T` or :m:`B`)
+        | are models where *C* also has a *designated* value.
 
     .. _fde-system:
 

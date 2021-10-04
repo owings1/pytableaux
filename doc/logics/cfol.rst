@@ -15,7 +15,7 @@ Classical First-Order Logic (CFOL) augments :ref:`CPL <CPL>` with the quantifier
 
     .. autoclass:: Model
 
-        .. method:: value_of_operated(sentence)
+        .. method:: truth_function(operator, a, b)
 
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.

@@ -37,14 +37,12 @@ from . import k, t
 
 class Model(t.Model):
     """
-    An S4 model is just like a `T model`_ with an additional *transitive*
+    An S4 model is just like a :ref:`T model <T>` with an additional *transitive*
     restriction on the access relation.
 
-    * **Transitivity**: For each world *w* and each world *w'*, for any world
-      *w''* such that `<w,w'>` and `<w',w''>` are in the access relation, then
-      `<w,w''>` is in the access relation.
-
-    .. _T model: t.html#logics.t.Model
+    * **Transitivity**: For each world :m:`w` and each world :m:`w', for any world
+      :m:`w''` such that :m:`<w,w'>` and :m:`<w',w''>` are in the access relation, then
+      :m:`<w,w''>` is in the access relation.
     """
 
     def finish(self):
@@ -63,26 +61,23 @@ class Model(t.Model):
 
 class TableauxSystem(k.TableauxSystem):
     """
-    S4's Tableaux System inherits directly inherits directly from the `K system`_.
-
-    .. _K system: k.html#logics.k.TableauxSystem
+    S4's Tableaux System inherits directly inherits directly from the :ref:`K system <K>`.
     """
     pass
 
 class TableauxRules(object):
     """
-    The Tableaux Rules for S4 contain the rules for `T`_, as well as an additional
+    The Tableaux Rules for S4 contain the rules for :ref:`T <T>`, as well as an additional
     Transitive rule, which operates on the accessibility relation for worlds.
-
-    .. _T: t.html
     """
     
-    class Transitive(k.IsModal, PotentialNodeRule):
+    class Transitive(PotentialNodeRule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* and for each
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
         appear on *b*, then add *wRw''* to *b*.
         """
+        modal = True
 
         def setup(self):
             self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))

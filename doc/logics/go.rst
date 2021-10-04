@@ -16,7 +16,22 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
 
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. method:: truth_function(operator, a, b)
+
+              The value of a sentence with a truth-functional operator is determined by
+              the values of its operands according to the following tables.
+
+              //truth_tables//go//
+
+              Note that, given the tables above, conjunctions and disjunctions always have a classical
+              value (:m:`T` or :m:`F`). This means that only atomic sentences (with zero or more negations)
+              can have the non-classical :m:`N` value.
+
+              This property of "classical containment" means, that we can define a conditional operator
+              that satisfies Identity :s:`A $ A`. It also allows us to give a formal description of
+              a subset of sentences that obey all principles of classical logic. For example, although
+              the Law of Excluded Middle fails for atomic sentences :s:`A V ~A`, complex sentences -- those
+              with at least one binary connective -- do obey the law: :s:`(A V A) V ~(A V A)`.
 
         .. automethod:: value_of_existential(sentence)
 
@@ -50,10 +65,6 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
     - GO contains an additional conditional operator besides the material conditional,
       which is similar to :ref:`L3`. However, this conditional is *non-primitive*, unlike :ref:`L3`,
       and it obeys contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
-
-    - This logic was developed as part of this author's dissertation, `Indeterminacy and Logical Atoms`_
-      at the University of Connecticut, under `Professor Jc Beall`_.
-
 
     Further Reading
     ===============

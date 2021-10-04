@@ -77,12 +77,12 @@ class TableauxRules(object):
     .. _S4: s4.html
     """
     
-    class Symmetric(k.IsModal, PotentialNodeRule):
+    class Symmetric(PotentialNodeRule):
         """
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
         """
-
+        modal = True
         ticked = None
 
         def setup(self):

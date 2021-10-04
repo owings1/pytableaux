@@ -61,7 +61,7 @@ class Model(k.Model):
 class TableauxSystem(k.TableauxSystem):
     """
     D's Tableaux System inherits directly inherits directly from the
-    :ref:`K system <K>`.
+    :ref:`K system <k-system>`.
     """
     pass
 
@@ -71,7 +71,7 @@ class TableauxRules:
     Serial rule, which operates on the accessibility relation for worlds.
     """
 
-    class Serial(k.IsModal, PotentialNodeRule):
+    class Serial(PotentialNodeRule):
         """
         The Serial rule applies to a an open branch *b* when there is a world *w* that
         appears on *b*, but there is no world *w'* such that *w* accesses *w'*. The exception
@@ -84,6 +84,7 @@ class TableauxRules:
         no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
+        modal = True
 
         def setup(self):
             self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))

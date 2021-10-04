@@ -36,7 +36,7 @@ from . import fde
 
 class Model(fde.Model):
     """
-    A K3 model is like an :class:`FDE model <logics.fde.Model>` without the :m:`B` value.
+    A K3 model is like an :ref:`FDE model <fde-model>` without the :m:`B` value.
     """
 
     #: The set of admissible values for sentences in a model.
@@ -70,17 +70,15 @@ class Model(fde.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    K3's Tableaux System inherits directly from the `FDE system`_, employing
-    designation markers, and building the trunk in the same way.
-
-    .. _FDE system: fde.html#logics.fde.TableauxSystem
+    K3's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    employing designation markers, and building the trunk in the same way.
     """
     pass
         
 class TableauxRules(object):
     """
-    The Tableaux System for K3 contains all the rules from :ref:`FDE <FDE>`, as well as an additional
-    closure rule.
+    The Tableaux System for K3 contains all the rules from :ref:`FDE <FDE>`, as well
+    as an additional closure rule.
     """
 
     class GlutClosure(ClosureRule):
@@ -115,7 +113,7 @@ class TableauxRules(object):
         def example_nodes(self, branch):
             a = Atomic(0, 0)
             return [
-                {'sentence':        a , 'designated': True},
+                {'sentence': a         , 'designated': True},
                 {'sentence': a.negate(), 'designated': True},
             ]
 
