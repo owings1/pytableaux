@@ -91,7 +91,7 @@ For many logics, the *Conditional* operator is the same as the *Material Conditi
 operator (and likewise, the *Biconditional* is equivalent to the *Material Biconditional*).
 This comes from the fact that the *Material Conditional* is defined in terms of a
 disjunction, i.e. :s:`(A > B)` is equivalent to :s:`(~A V B)`. However, some logics, like 
-:ref:`L3`, define a separate *Conditional* :s:`oper.$` operator, intended to better preserve intuitive
+:ref:`L3`, define a separate *Conditional* :s:`$` operator, intended to better preserve intuitive
 classical inferences such as *Identity* (:s:`(A > A)`). For this reason, the *Conditional*
 is treated as a separate operator. Thus, in logics that do not define a distinct *Conditional*,
 it will be equivalent to the *Material Conditional*.

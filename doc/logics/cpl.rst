@@ -15,7 +15,11 @@ respectively.
     Semantics
     =========
 
+    .. _cpl-model:
+
     .. autoclass:: Model
+
+        .. include:: include/cpl/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)
 
@@ -26,16 +30,27 @@ respectively.
 
         .. method:: value_of_predicated(sentence)
 
-            A sentence for predicate `P` is true iff the tuple of the parameters
-            is in the extension of `P`.
+            The value of predicated sentences are handled in terms of their *extension*:
+
+                | A sentence with *n*-ary predicate :math:`P` over parameters :m:`ntuple`
+                | has the value :m:`T` iff :m:`ntuple` is in the extension of :math:`P`.
+
+
+
+        .. Note:: CPL does not give a treatment of the quantifiers. Quantified sentences
+            are treated as opaque (uninterpreted). See :ref:`CFOL <CFOL>` for quantification.
+              
+
+    .. _cpl-consequence:
 
     Logical Consequence
     ===================
 
     **Logical Consequence** is defined in the standard way:
 
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      are models where *C* also has the value :m:`T`.
+        .. include:: include/cpl/m.consequence.rst
+
+    .. _cfol-system:
 
     Tableaux System
     ===============
@@ -46,4 +61,3 @@ respectively.
     .. autoclass:: TableauxRules
         :members:
 
-    .. _cpl-consequence:

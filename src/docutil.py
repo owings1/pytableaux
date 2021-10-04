@@ -33,7 +33,8 @@ from docutils.parsers.rst import Directive, directives, roles
 logger = logging.getLogger(__name__)
 from utils import cat, isstr, get_logic
 import examples
-from lexicals import list_operators, operarity, create_lexwriter, is_operator, SymbolSet
+from lexicals import list_operators, operarity, create_lexwriter, is_operator, \
+    Constant, Variable, SymbolSet, get_system_predicate
 from parsers import create_parser, parse_argument
 from tableaux import Tableau, TableauxSystem as TabSys
 from proof.writers import create_tabwriter
@@ -482,20 +483,21 @@ class Helper(object):
         * A list of system messages, which will be inserted into the document tree
         immediately after the end of the current block (can also be empty).
         """
-        regexes = {
-            r'^(o|op|oper|operator)\.(.*)': ('operator', '\\2'),
-            r'^(p|pred|predicate)\.(.*)' : ('predicate', '\\2'),
-        }
+        # regexes = {
+        #     r'^(o|op|oper|operator)\.(.*)': ('operator', '\\2'),
+        #     r'^(p|pred|predicate)\.(.*)' : ('predicate', '\\2'),
+        # }
         classes = ['lexitem']
         lw = self.lw
         parse = self.parser.parse
         symset = self.parser.symbol_set
-        if not what:
-            for regex, defn in regexes.items():
-                if re.findall(regex, text):
-                    # print('found', regex, text)
-                    what, text = defn[0], re.sub(regex, defn[1], text)
-                    break
+        item = None
+        # if not what:
+        #     for regex, defn in regexes.items():
+        #         if re.findall(regex, text):
+        #             # print('found', regex, text)
+        #             what, text = defn[0], re.sub(regex, defn[1], text)
+        #             break
         # if text.startswith('oper.'):
         #     what = 'operator'
         #     text = text.split('.')[1]
@@ -503,27 +505,77 @@ class Helper(object):
         #     what = 'pred'
         #     text = text.split('.')[1]
         if not what:
+            m = re.match(r'^(.)([0-9]*)$', text)
+            if m:
+                chr, sub = m.groups()
+                sub = int(sub) if len(sub) else 0
+                ctype = symset.typeof(chr)
+                if ctype in ('operator', 'quantifier'):
+                    what = ctype
+                    item = symset.indexof(ctype, chr)
+                elif ctype in ('constant', 'variable'):
+                    what = ctype
+                    idx = symset.indexof(ctype, chr)
+                    if ctype == 'constant':
+                        item = Constant(idx, sub)
+                        classes.append('constant')
+                    else:
+                        item = Variable(idx, sub)
+                        classes.append('variable')
+                elif ctype == 'user_predicate':
+                    what = 'predicate'
+                    idx = symset.indexof(ctype, chr)
+                    item = self.opts['vocabulary'].get_predicate(index=idx, subscript=sub)
+                    classes.append('user_predicate')
+                elif ctype == 'system_predicate':
+                    what = 'predicate'
+                    item = get_system_predicate(symset.indexof(ctype, chr))
+                    classes.extend(('system_predicate', item.name))
+        if not what:
             what = 'sentence'
+        if what == 'sentence':
+            item = parse(text)
+        if not item:
+            item = text
         # print('what:', what, 'text:', text)
-        if what == 'operator':
-            if not is_operator(text):
-                text = symset.indexof('operator', text)
-        elif what == 'sentence':
-            text = parse(text)
+        # if what == 'operator':
+        #     if not is_operator(text):
+        #         item = symset.indexof('operator', text)
+        # elif what == 'sentence':
+        #     item = parse(text)
         classes.append(what)
-        raw = lw.write(text)
+        raw = lw.write(item)
         rendered = htmlun(raw)
-        node = nodes.inline(text = rendered)
+        node = nodes.inline(text = rendered, classes = classes)
         set_classes(opts)
         return ([node], [])
 
     @sphinx_role_defaults
     def role_lexrender_auto(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
-        return self.lexrender_common(text, opts)
+        try:
+
+            return self.lexrender_common(text, opts)
+        except Exception as e:
+            print(
+                '\n\n',
+                'role_lexrender_auto: rawtext=',rawtext, ', lineno=', str(lineno),
+                '\ncontent=\n', '\n'.join(content),
+            )
+            raise e
 
     @sphinx_role_defaults
     def role_lexrender_oper(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
-        return self.lexrender_common(text, opts, what = 'operator')
+        try:
+
+
+            return self.lexrender_common(text, opts, what = 'operator')
+        except Exception as e:
+            print(
+                '\n\n',
+                'role_lexrender_oper: rawtext=',rawtext, ', lineno=', str(lineno),
+                '\ncontent=\n', '\n'.join(content),
+            )
+            raise e
 
     @sphinx_role_defaults
     def role_lexrender_meta(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):

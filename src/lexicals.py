@@ -1079,6 +1079,21 @@ class StandardLexWriter(BaseLexWriter):
             self._write_parameter(params[1]),
         )
 
+class RenderSet(object):
+
+    def __init__(self, data):
+        if not isinstance(data, dict):
+            raise TypeError('data must be a dict')
+        self.name = data['name']
+        self.encoding = data['encoding']
+        self.rend = data['render']
+
+    def strfor(self, ctype, index):
+        repl = self.rend[ctype][index]
+        if isstr(repl):
+            return repl
+        raise NotImplementedError()
+
 class SymbolSet(object):
 
     __cache = {}

@@ -20,23 +20,17 @@
 name = 'CFOL'
 
 class Meta(object):
-
     title    = 'Classical First Order Logic'
     category = 'Bivalent'
-
     description = 'Standard bivalent logic with full first-order quantification'
-
     tags = ['bivalent', 'non-modal', 'first-order']
-    
     category_display_order = 2
 
 from . import k, cpl
 
 class Model(k.Model):
     """
-    A CFOL Model is just a :ref:`K model <k-model>` with the single world-0 frame. Sentences
-    with modal operators are treated as opaque. See :ref:`K frame <k-frame>` for a description
-    of the `atomics` and predicate `extensions`.
+    A CFOL Model is just like :ref:`CPL model <cpl-model>` but with quantification.
     """
 
     def is_sentence_opaque(self, sentence):
@@ -63,7 +57,7 @@ class TableauxSystem(cpl.TableauxSystem):
 class TableauxRules(object):
     """
     The Tableaux System for CFOL contains all the rules from :ref:`CPL <CPL>`,
-    including the CPL closure rules, as well as additional rules for the quantifiers.
+    including the CPL closure rules, and adds additional rules for the quantifiers.
     """
 
     class ContradictionClosure(cpl.TableauxRules.ContradictionClosure):
@@ -120,39 +114,39 @@ class TableauxRules(object):
     class BiconditionalNegated(cpl.TableauxRules.BiconditionalNegated):
         pass
 
-    class Existential(cpl.NonModal, k.TableauxRules.Existential):
+    class Existential(k.TableauxRules.Existential):
         """
         From an unticked existential node *n* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node to *b* with the substitution
         into *s* of *v* with a constant new to *b*, then tick *n*.
         """
-        pass
+        modal = False
 
-    class ExistentialNegated(cpl.NonModal, k.TableauxRules.ExistentialNegated):
+    class ExistentialNegated(k.TableauxRules.ExistentialNegated):
         """
         From an unticked negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
         node to *b* over *v* into the negation of *s*, then tick *n*.
         """
-        pass
+        modal = False
 
-    class Universal(cpl.NonModal, k.TableauxRules.Universal):
+    class Universal(k.TableauxRules.Universal):
         """
         From a universal node on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
         exists) for *v* into *s* does not appear on *b*, add a node with *r* to
         *b*. The node *n* is never ticked.
         """
-        pass
+        modal = False
 
-    class UniversalNegated(cpl.NonModal, k.TableauxRules.UniversalNegated):
+    class UniversalNegated(k.TableauxRules.UniversalNegated):
         """
         From an unticked negated universal node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add an existentially
         quantified node to *b* over *v* into the negation of *s*,
         then tick *n*.
         """
-        pass
+        modal = False
 
     class IdentityIndiscernability(cpl.TableauxRules.IdentityIndiscernability):
         pass

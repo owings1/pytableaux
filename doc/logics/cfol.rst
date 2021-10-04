@@ -4,7 +4,8 @@
 CFOL - Classical First-Order Logic
 **********************************
 
-Classical First-Order Logic (CFOL) augments :ref:`CPL <CPL>` with the quantifiers: Universal and Existential.
+Classical First-Order Logic (CFOL) augments :ref:`CPL <CPL>` with the quantifiers:
+Universal (:s:`L`) and Existential (:s:`X`).
 
 .. contents:: :local:
 
@@ -14,6 +15,8 @@ Classical First-Order Logic (CFOL) augments :ref:`CPL <CPL>` with the quantifier
     =========
 
     .. autoclass:: Model
+
+        .. include:: include/cpl/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)
 
@@ -46,5 +49,4 @@ Classical First-Order Logic (CFOL) augments :ref:`CPL <CPL>` with the quantifier
 
     **Logical Consequence** is defined in the standard way:
 
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      are models where *C* also has the value :m:`T`.
+        .. include:: include/cpl/m.consequence.rst
