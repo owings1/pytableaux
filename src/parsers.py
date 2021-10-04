@@ -1,7 +1,7 @@
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError, NotFoundError
 from lexicals import Constant, Variable,  Atomic, Predicated, Quantified, \
-    Operated, Vocabulary, Argument, SymbolSet, get_system_predicate, operarity
+    Operated, Vocabulary, Argument, get_system_predicate, operarity
     
 from fixed import default_notation
 from utils import cat, isstr
@@ -24,7 +24,7 @@ def parse_argument(conclusion, premises=None, title=None, **kw):
     """
     return create_parser(**kw).argument(conclusion, premises, title)
 
-def create_parser(notn=None, vocab=None, **opts):
+def create_parser(notn=None, vocab=None, table=None, **opts):
     """
     Create a sentence parser with the given spec. This is
     useful if you parsing many sentences with the same notation
@@ -35,6 +35,7 @@ def create_parser(notn=None, vocab=None, **opts):
     :param Vocabulary vocab: The vocabulary instance containing any
         custom predicate definitions. If not passed, a new instance is
         created.
+    :param CharTable table: A custom parser table to use.
     :return: The parser instance
     :rtype: Parser
     """
@@ -45,11 +46,14 @@ def create_parser(notn=None, vocab=None, **opts):
         vocab = Vocabulary()
     if not notn:
         notn = default_notation
+    elif notn not in ('polish', 'standard'):
+        raise ValueError('Invalid notation: {0}'.format(str(notn)))
+    if not table:
+        table = CharTable.fetch(notn, 'default')
     if notn == 'polish':
-        return PolishParser(vocab, **opts)
+        return PolishParser(table, vocab, **opts)
     elif notn == 'standard':
-        return StandardParser(vocab, **opts)
-    raise ValueError('Unknown parser: {0}'.format(str(notn)))
+        return StandardParser(table, vocab, **opts)
 
 class Parser(object):
 
@@ -87,6 +91,205 @@ class Parser(object):
             conclusion = conc, premises = prems, title = title
         )
 
+# class SymbolSet(object):
+
+#     __cache = {}
+
+#     @staticmethod
+#     def get_instance(key):
+#         cache = __class__.__cache
+#         if key not in cache:
+#             cache[key] = __class__(symbols_data[key])
+#         return cache[key]
+
+#     def __init__(self, data):
+#         if not isinstance(data, dict):
+#             raise TypeError('data must be a dict')
+#         self.name = data['name']
+#         self.encoding = data['encoding']
+#         self.can_parse = bool(data.get('parse'))
+#         self.symbols = {}
+#         self.types = {}
+#         self.index = {}
+#         self.reverse = {}
+        
+#         for ctype, cvals in data['symbols'].items():
+#             if isinstance(cvals, dict):
+#                 self.symbols[ctype] = dict(cvals)
+#                 self.types.update({c: ctype for c in cvals.values()})
+#                 self.index[ctype] = dict(cvals)
+#                 self.reverse[ctype] = {cvals[k]: k for k in cvals}
+#             elif isinstance(cvals, list) or isinstance(cvals, tuple):
+#                 self.symbols[ctype] = list(cvals)
+#                 self.types.update({c: ctype for c in cvals})
+#                 self.index[ctype] = {i: c for i, c in enumerate(cvals)}
+#                 self.reverse[ctype] = {c: i for i, c in enumerate(cvals)}
+#             else:
+#                 raise TypeError('Unsupported type for {0}'.format(ctype))
+
+#     def typeof(self, c):
+#         return self.types.get(c)
+
+#     def charof(self, ctype, index):
+#         return self.index[ctype][index]
+
+#     def indexof(self, ctype, key):
+#         return self.reverse[ctype][key]
+
+#     def chars(self, ctype):
+#         return self.symbols[ctype]
+
+_tdata = {
+    'standard': {
+        'default': {
+            'A' : ('atomic', 0),
+            'B' : ('atomic', 1),
+            'C' : ('atomic', 2),
+            'D' : ('atomic', 3),
+            'E' : ('atomic', 4),
+            '*' : ('operator', 'Assertion'),
+            '~' : ('operator', 'Negation'),
+            '&' : ('operator', 'Conjunction'),
+            'V' : ('operator', 'Disjunction'),
+            '>' : ('operator', 'Material Conditional'),
+            '<' : ('operator', 'Material Biconditional'),
+            '$' : ('operator', 'Conditional'),
+            '%' : ('operator', 'Biconditional'),
+            'P' : ('operator', 'Possibility'),
+            'N' : ('operator', 'Necessity'),
+            'x' : ('variable', 0),
+            'y' : ('variable', 1),
+            'z' : ('variable', 2),
+            'v' : ('variable', 3),
+            'a' : ('constant', 0),
+            'b' : ('constant', 1),
+            'c' : ('constant', 2),
+            'd' : ('constant', 3),
+            '=' : ('system_predicate', 'Identity'),
+            '!' : ('system_predicate', 'Existence'),
+            'F' : ('user_predicate', 0),
+            'G' : ('user_predicate', 1),
+            'H' : ('user_predicate', 2),
+            'O' : ('user_predicate', 3),
+            'L' : ('quantifier', 'Universal'),
+            'X' : ('quantifier', 'Existential'),
+            '(' : ('paren_open', 0),
+            ')' : ('paren_close', 0),
+            ' ' : ('whitespace', 0),
+            '0' : ('digit', 0),
+            '1' : ('digit', 1),
+            '2' : ('digit', 2),
+            '3' : ('digit', 3),
+            '4' : ('digit', 4),
+            '5' : ('digit', 5),
+            '6' : ('digit', 6),
+            '7' : ('digit', 7),
+            '8' : ('digit', 8),
+            '9' : ('digit', 9),
+        }
+    },
+    'polish': {
+        'default': {
+            'a' : ('atomic', 0),
+            'b' : ('atomic', 1),
+            'c' : ('atomic', 2),
+            'd' : ('atomic', 3),
+            'e' : ('atomic', 4),
+            'T' : ('operator', 'Assertion'),
+            'N' : ('operator', 'Negation'),
+            'K' : ('operator', 'Conjunction'),
+            'A' : ('operator', 'Disjunction'),
+            'C' : ('operator', 'Material Conditional'),
+            'E' : ('operator', 'Material Biconditional'),
+            'U' : ('operator', 'Conditional'),
+            'B' : ('operator', 'Biconditional'),
+            'M' : ('operator', 'Possibility'),
+            'L' : ('operator', 'Necessity'),
+            'x' : ('variable', 0),
+            'y' : ('variable', 1),
+            'z' : ('variable', 2),
+            'v' : ('variable', 3),
+            'm' : ('constant', 0),
+            'n' : ('constant', 1),
+            'o' : ('constant', 2),
+            's' : ('constant', 3),
+            'I' : ('system_predicate', 'Identity'),
+            'J' : ('system_predicate', 'Existence'),
+            'F' : ('user_predicate', 0),
+            'G' : ('user_predicate', 1),
+            'H' : ('user_predicate', 2),
+            'O' : ('user_predicate', 3),
+            'V' : ('quantifier', 'Universal'),
+            'S' : ('quantifier', 'Existential'),
+            ' ' : ('whitespace', 0),
+            '0' : ('digit', 0),
+            '1' : ('digit', 1),
+            '2' : ('digit', 2),
+            '3' : ('digit', 3),
+            '4' : ('digit', 4),
+            '5' : ('digit', 5),
+            '6' : ('digit', 6),
+            '7' : ('digit', 7),
+            '8' : ('digit', 8),
+            '9' : ('digit', 9),
+        },
+    }
+}
+
+class CharTable(object):
+
+    __instances = {'polish': {}, 'standard': {}}
+
+    @staticmethod
+    def load(notn, name, table):
+        idx = __class__.__instances[notn]
+        if name in idx:
+            raise ValueError('Table {0}.{1} already defined'.format(notn, name))
+        idx[name] = __class__(table)
+        return idx[name]
+
+    @staticmethod
+    def fetch(notn, name='default'):
+        idx = __class__.__instances[notn]
+        table = _tdata[notn][name]
+        return idx.get(name) or __class__.load(notn, name, table)
+
+    @staticmethod
+    def tables(notn):
+        return sorted(set(__class__.__instances[notn]).union(_tdata[notn]))
+
+    def __init__(self, table):
+        vals, itms = table.values(), table.items()
+        self._table = {key: tuple(value) for key, value in itms}
+        self._reverse = dict(reversed(item) for item in itms)
+        self._types = sorted(set(item[0] for item in vals))
+        self._lists = {
+            typ: sorted(item[1] for item in vals if item[0] == typ)
+            for typ in self._types
+        }
+
+    def type(self, char):
+        item = self._table.get(char)
+        return item[0] if item else None
+
+    def item(self, char):
+        return self._table[char]
+
+    def value(self, char):
+        return self.item(char)[1]
+
+    def char(self, *item):
+        return self._reverse[tuple(item)]
+
+    def list(self, typ):
+        return list(self._lists[typ])
+
+    def types(self):
+        return list(self._types)
+
+    def table(self):
+        return dict(self._table)
+    
 class BaseParser(Parser):
 
     # The base ``Parser`` class handles parsing operations common to both Polish
@@ -106,7 +309,8 @@ class BaseParser(Parser):
     # - Quantifier symbols
     # - Operator symbols
     # - Atomic sentence (proposition) symbols
-    def __init__(self, vocab, **opts):
+    def __init__(self, table, vocab, **opts):
+        self.table = table
         self.vocab = vocab
         self.opts = opts
         self.__state = self.__State(self)
@@ -185,18 +389,21 @@ class BaseParser(Parser):
         :meta private:
         """
         self._assert_current_is('quantifier')
-        quantifier = self.symbol_set.indexof('quantifier', self._current())
+        # quantifier = self.symbol_set.indexof('quantifier', self._current())
+        _, quantifier = self.table.item(self._current())
         self._advance()
         v = self._read_variable()
         if v in list(self.bound_vars):
-            vchr = self.symbol_set.charof('variable', v.index)
+            # vchr = self.symbol_set.charof('variable', v.index)
+            vchr = self.table.char('variable', v.index)
             raise BoundVariableError(
                 "Cannot rebind variable '{0}' ({1}) at position {2}.".format(vchr, v.subscript, self.pos)
             )
         self.bound_vars.add(v)
         sentence = self._read()
         if v not in list(sentence.variables()):
-            vchr = self.symbol_set.charof('variable', v.index)
+            # vchr = self.symbol_set.charof('variable', v.index)
+            vchr = self.table.char('variable', v.index)
             raise BoundVariableError(
                 "Unused bound variable '{0}' ({1}) at position {2}.".format(vchr, v.subscript, self.pos)
             )
@@ -218,7 +425,8 @@ class BaseParser(Parser):
         cpos = self.pos
         ctype = self._typeof(pchar)
         if ctype == 'system_predicate':
-            name = self.symbol_set.indexof(ctype, pchar)
+            # name = self.symbol_set.indexof(ctype, pchar)
+            _, name = self.table.item(pchar)
             self._advance()
             return get_system_predicate(name)
         try:
@@ -260,7 +468,8 @@ class BaseParser(Parser):
             cpos = self.pos
             v = self._read_variable()
             if v not in list(self.bound_vars):
-                vchr = self.symbol_set.charof('variable', v.index)
+                # vchr = self.symbol_set.charof('variable', v.index)
+                vchr = self.table.char('variable', v.index)
                 raise UnboundVariableError(
                     "Unbound variable '{0}' ({1}) at position {2}.".format(vchr, cpos, v.subscript)
                 )
@@ -319,7 +528,8 @@ class BaseParser(Parser):
             ctype = self._typeof(self._current())
         else:
             self._assert_current_is(ctype)
-        index = self.symbol_set.indexof(ctype, self._current())
+        # index = self.symbol_set.indexof(ctype, self._current())
+        _, index = self.table.item(self._current())
         self._advance()
         subscript = self._read_subscript()
         return {'index': index, 'subscript': subscript}
@@ -377,7 +587,8 @@ class BaseParser(Parser):
         return self
 
     def _typeof(self, c):
-        return self.symbol_set.typeof(c)
+        # return self.symbol_set.typeof(c)
+        return self.table.type(c)
 
     class __State(object):
 
@@ -404,12 +615,13 @@ class BaseParser(Parser):
 
 class PolishParser(BaseParser):
 
-    symbol_set = SymbolSet.get_instance('polish.ascii')
+    # symbol_set = SymbolSet.get_instance('polish.ascii')
 
     def _read(self):
         ctype = self._assert_current()
         if ctype == 'operator':
-            operator = self.symbol_set.indexof('operator', self._current())
+            # operator = self.symbol_set.indexof('operator', self._current())
+            _, operator = self.table.item(self._current())
             self._advance()
             operands = [self._read() for x in range(operarity(operator))]
             s = Operated(operator, operands)
@@ -419,7 +631,7 @@ class PolishParser(BaseParser):
 
 class StandardParser(BaseParser):
 
-    symbol_set = SymbolSet.get_instance('standard.ascii')
+    # symbol_set = SymbolSet.get_instance('standard.ascii')
 
     def parse(self, string):
         # override
@@ -429,9 +641,11 @@ class StandardParser(BaseParser):
             try:
                 # allow dropped outer parens
                 pstring = ''.join([
-                    self.symbol_set.charof('paren_open', 0),
+                    # self.symbol_set.charof('paren_open', 0),
+                    self.table.char('paren_open', 0),
                     string,
-                    self.symbol_set.charof('paren_close', 0)
+                    # self.symbol_set.charof('paren_close', 0),
+                    self.table.char('paren_close', 0)
                 ])
                 s = super().parse(pstring)
             except ParseError as e1:
@@ -455,7 +669,8 @@ class StandardParser(BaseParser):
         return s
 
     def __read_operator_sentence(self):
-        operator = self.symbol_set.indexof('operator', self._current())
+        # operator = self.symbol_set.indexof('operator', self._current())
+        _, operator = self.table.item(self._current())
         arity = operarity(operator)
         # only unary operators can be prefix operators
         if arity != 1:
@@ -502,7 +717,8 @@ class StandardParser(BaseParser):
             elif ptype == 'paren_open':
                 depth += 1
             elif ptype == 'operator':
-                peek_operator = self.symbol_set.indexof('operator', peek)
+                # peek_operator = self.symbol_set.indexof('operator', peek)
+                _, peek_operator = self.table.item(peek)
                 if operarity(peek_operator) == 2 and depth == 1:
                     if operator != None:
                         raise ParseError(
@@ -543,3 +759,4 @@ class StandardParser(BaseParser):
         # move past the close paren
         self._advance()
         return Operated(operator, [lhs, rhs])
+

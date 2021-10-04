@@ -1,6 +1,25 @@
-from fixed import default_notation, symbols_data
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2021 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+# pytableaux - lexicals module
+from fixed import default_notation, _old_symbols_data
 from errors import NotFoundError
-from utils import cat, isint, isstr, sortedbyval
+from utils import cat, isint, isstr, sortedbyval, unicodesub
 from copy import deepcopy
 
 def create_lexwriter(notn=None, enc=None, **opts):
@@ -10,12 +29,11 @@ def create_lexwriter(notn=None, enc=None, **opts):
         raise ValueError('Invalid notation: {0}'.format(str(notn)))
     if not enc:
         enc = 'ascii'
-    if 'symbol_set' not in opts:
+    if 'renderset' not in opts:
         key = '.'.join((notn, enc))
-        try:
-            opts['symbol_set'] = SymbolSet.get_instance(key)
-        except KeyError:
-            raise NotFoundError('Symbols for {0} not found'.format(key))
+        if key not in rendersets:
+            raise NotFoundError('Rendering data for {0} not found'.format(key))
+        opts['renderset'] = rendersets[key]
     if notn == 'polish':
         return PolishLexWriter(**opts)
     if notn == 'standard':
@@ -934,16 +952,14 @@ class LexWriter(object):
 
 class BaseLexWriter(LexWriter):
 
-    def __init__(self, symbol_set, **opts):
+    def __init__(self, renderset, **opts):
         super().__init__(**opts)
-        self.symbol_set = symbol_set
-        self.encoding = symbol_set.encoding
-        # for compatibility, TODO: what does 'format' mean?
-        # self.format = symbol_set.encoding
+        self.renderset = renderset
+        self.encoding = renderset.encoding
 
     # Base lex writer.
     def _strfor(self, *args, **kw):
-        return self.symbol_set.charof(*args, **kw)
+        return self.renderset.strfor(*args, **kw)
 
     def _write_operator(self, operator):
         return self._strfor('operator', operator)
@@ -1006,10 +1022,7 @@ class BaseLexWriter(LexWriter):
     def _write_subscript(self, subscript):
         if subscript == 0:
             return ''
-        sub = self._strfor('digit', subscript)
-        if self.encoding == 'html':
-            return '<span class="subscript">{0}</span>'.format(sub)
-        return sub
+        return self._strfor('subscript', subscript)
 
     def _write_operated(self, sentence):
         raise NotImplementedError()
@@ -1050,11 +1063,10 @@ class StandardLexWriter(BaseLexWriter):
         arity = operarity(oper)
         if arity == 1:
             operand = sentence.operand
-            if (self.encoding == 'html' and
-                oper == 'Negation' and
+            if (oper == 'Negation' and
                 operand.is_predicated() and
                 operand.predicate.name == 'Identity'):
-                return self.__write_html_negated_identity(sentence)
+                return self._write_negated_identity(sentence)
             else:
                 return self._write_operator(oper) + self.write(operand)
         elif arity == 2:
@@ -1069,7 +1081,7 @@ class StandardLexWriter(BaseLexWriter):
             ])
         raise NotImplementedError('No support for operators of arity {0}'.format(str(arity)))
 
-    def __write_html_negated_identity(self, sentence):
+    def _write_negated_identity(self, sentence):
         params = sentence.operand.parameters
         return cat(
             self._write_parameter(params[0]),
@@ -1086,61 +1098,134 @@ class RenderSet(object):
             raise TypeError('data must be a dict')
         self.name = data['name']
         self.encoding = data['encoding']
-        self.rend = data['render']
+        self.renders = data.get('renders', {})
+        self.formats = data.get('formats', {})
+        self.strings = data.get('strings', {})
+        self.data = data
 
-    def strfor(self, ctype, index):
-        repl = self.rend[ctype][index]
-        if isstr(repl):
-            return repl
-        raise NotImplementedError()
+    def strfor(self, ctype, value):
+        if ctype in self.renders:
+            return self.renders[ctype](value)
+        if ctype in self.formats:
+            return self.formats[ctype].format(value)
+        return self.strings[ctype][value]
 
-class SymbolSet(object):
+rendersets = {
+    'standard.utf8': RenderSet({
+        'name'    : 'standard.unicode',
+        'notation': 'standard',
+        'encoding': 'utf8',
+        'renders': {
+            # 'subscript' : ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'],
+            'subscript': lambda sub: ''.join(chr(0x2080 + int(d)) for d in str(sub))
+        },
+        'strings': {
+            'atomic'   : ['A', 'B', 'C', 'D', 'E'],
+            'operator' : {
+                'Assertion'              : '°',
+                'Negation'               : '¬',
+                'Conjunction'            : '∧',
+                'Disjunction'            : '∨',
+                'Material Conditional'   : '⊃',
+                'Material Biconditional' : '≡',
+                'Conditional'            : '→',
+                'Biconditional'          : '↔',
+                'Possibility'            : '◇',
+                'Necessity'              : '◻',
+            },
+            'variable'   : ['x', 'y', 'z', 'v'],
+            'constant'   : ['a', 'b', 'c', 'd'],
+            'quantifier' : {
+                'Universal'   : '∀' ,
+                'Existential' : '∃' ,
+            },
+            'system_predicate'  : {
+                'Identity'  : '=',
+                'Existence' : 'E!',
+                'NegatedIdentity' : '≠',
+            },
+            'user_predicate'  : ['F', 'G', 'H', 'O'],
+            'paren_open'      : ['('],
+            'paren_close'     : [')'],
+            'whitespace'      : [' '],
+        },
+    }),
+    'standard.html': RenderSet({
+        'name'    : 'standard.html',
+        'notation': 'standard',
+        'encoding': 'html',
+        'formats' : {
+            'subscript': '<sub>{0}</sub>',
+        },
+        'strings': {
+            'atomic'   : ['A', 'B', 'C', 'D', 'E'],
+            'operator' : {
+                'Assertion'              : '&deg;'   ,
+                'Negation'               : '&not;'   ,
+                'Conjunction'            : '&and;'   ,
+                'Disjunction'            : '&or;'    ,
+                'Material Conditional'   : '&sup;'   ,
+                'Material Biconditional' : '&equiv;' ,
+                'Conditional'            : '&rarr;'  ,
+                'Biconditional'          : '&harr;'  ,
+                'Possibility'            : '&#9671;' ,
+                'Necessity'              : '&#9723;' ,
+            },
+            'variable'   : ['x', 'y', 'z', 'v'],
+            'constant'   : ['a', 'b', 'c', 'd'],
+            'quantifier' : {
+                'Universal'   : '&forall;' ,
+                'Existential' : '&exist;'  ,
+            },
+            'system_predicate'  : {
+                'Identity'  : '=',
+                'Existence' : 'E!',
+                'NegatedIdentity' : '&ne;',
+            },
+            'user_predicate'  : ['F', 'G', 'H', 'O'],
+            'paren_open'      : ['('],
+            'paren_close'     : [')'],
+            'whitespace'      : [' '],
+        },
+    }),
+}
+_ = deepcopy(_old_symbols_data['polish.ascii'])
+_.update({
+    'renders': {
+        'subscript': str
+    },
+    'strings': _['symbols'],
+})
+del(_['symbols'])
+rendersets['polish.ascii'] = RenderSet(_)
+rendersets['polish.utf8'] = RenderSet(_)
 
-    __cache = {}
+_ = deepcopy(_old_symbols_data['polish.ascii'])
+_.update({
+    'name' : 'polish.html',
+    'encoding': 'html',
+    'formats': {
+        'subscript': '<sub>{0}</sub>'
+    },
+    'strings': _['symbols'],
+})
+del(_['symbols'])
+rendersets['polish.html'] = RenderSet(_)
 
-    @staticmethod
-    def get_instance(key):
-        cache = __class__.__cache
-        if key not in cache:
-            cache[key] = __class__(symbols_data[key])
-        return cache[key]
-
-    def __init__(self, data):
-        if not isinstance(data, dict):
-            raise TypeError('data must be a dict')
-        self.name = data['name']
-        self.encoding = data['encoding']
-        self.can_parse = bool(data.get('parse'))
-        self.symbols = {}
-        self.types = {}
-        self.index = {}
-        self.reverse = {}
-        
-        for ctype, cvals in data['symbols'].items():
-            if isinstance(cvals, dict):
-                self.symbols[ctype] = dict(cvals)
-                self.types.update({c: ctype for c in cvals.values()})
-                self.index[ctype] = dict(cvals)
-                self.reverse[ctype] = {cvals[k]: k for k in cvals}
-            elif isinstance(cvals, list) or isinstance(cvals, tuple):
-                self.symbols[ctype] = list(cvals)
-                self.types.update({c: ctype for c in cvals})
-                self.index[ctype] = {i: c for i, c in enumerate(cvals)}
-                self.reverse[ctype] = {c: i for i, c in enumerate(cvals)}
-            else:
-                raise TypeError('Unsupported type for {0}'.format(ctype))
-
-    def typeof(self, c):
-        return self.types.get(c)
-
-    def charof(self, ctype, index):
-        return self.index[ctype][index]
-
-    def indexof(self, ctype, key):
-        return self.reverse[ctype][key]
-
-    def chars(self, ctype):
-        return self.symbols[ctype]
+_ = deepcopy(_old_symbols_data['standard.ascii'])
+_.update({
+    'renders': {
+        'subscript': str
+    },
+    'strings': _['symbols'],
+})
+_['strings']['system_predicate'].update({
+    'Existence': 'E!',
+    'NegatedIdentity': '!=',
+})
+del(_['symbols'])
+rendersets['standard.ascii'] = RenderSet(_)
+del(_)
 
 # Aliases
 Atomic = AtomicSentence

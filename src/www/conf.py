@@ -19,7 +19,7 @@
 # pytableaux - Web App Configuration
 from utils import get_logic
 from fixed import parser_names
-from parsers import create_parser
+from parsers import create_parser, CharTable
 from lexicals import create_lexwriter
 import examples
 import importlib, logging, os, os.path
@@ -157,7 +157,7 @@ logic_categories = dict()
 # nups: "notation-user-predicate-symbols"
 nups = dict()
 
-parser_symsets = {}
+parser_tables = {}
 example_arguments = {}
 def __populate_info():
     
@@ -179,9 +179,9 @@ def __populate_info():
                 'conclusion': w.write(arg.conclusion),
             }
         p = create_parser(notn=notn)
-        parser_symsets[notn] = p.symbol_set
+        parser_tables[notn] = table = CharTable.fetch(notn)
         nups[notn] = list(
-            p.symbol_set.chars('user_predicate')
+            table.list('user_predicate')
         )
 
     for name in modules['logics']:

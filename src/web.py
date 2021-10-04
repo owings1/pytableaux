@@ -42,7 +42,7 @@ from www.mailroom import Mailroom
 
 from www.conf import available, consts, cp_global_config, jenv, \
     logger, logic_categories, metrics, modules, example_arguments, \
-    nups, opts, re_email, parser_symsets
+    nups, opts, re_email, parser_tables
 
 mailroom = Mailroom(opts)
 
@@ -107,7 +107,7 @@ base_view_data = {
     'logic_modules'       : available['logics'],
     'logics'              : modules['logics'],
     'parser_names'        : parser_names,
-    'parser_symsets'      : parser_symsets,
+    'parser_tables'      : parser_tables,
     'operators_list'      : list_operators(),
     'quantifiers'         : list_quantifiers(),
     'source_href'         : source_href,

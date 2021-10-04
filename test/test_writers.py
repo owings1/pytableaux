@@ -19,7 +19,7 @@
 # pytableaux - writers test cases
 import pytest
 
-from lexicals import Atomic, Operated, BaseLexWriter, SymbolSet, \
+from lexicals import Atomic, Operated, BaseLexWriter, \
     create_lexwriter, get_system_predicate
 from parsers import parse
 from errors import *
@@ -35,12 +35,13 @@ pol = create_lexwriter(notn='polish')
 stdhtm = create_lexwriter(notn='standard', enc='html')
 class TestBase(object):
 
-    def test_write_operated_not_impl(self):
-        s = Operated('Negation', [Atomic(0, 0)])
-        symset = SymbolSet.get_instance('standard.ascii')
-        w = BaseLexWriter(symset)
-        with pytest.raises(NotImplementedError):
-            w.write(s) 
+    pass
+    # def test_write_operated_not_impl(self):
+    #     s = Operated('Negation', [Atomic(0, 0)])
+    #     symset = SymbolSet.get_instance('standard.ascii')
+    #     w = BaseLexWriter(symset)
+    #     with pytest.raises(NotImplementedError):
+    #         w.write(s) 
         
 class TestStandard(object):
 
@@ -66,7 +67,7 @@ class TestStandard(object):
     def test_write_subscript_html(self):
 
         res = stdhtm._write_subscript(1)
-        assert '>1</span>' in res
+        assert '>1</s' in res
 
     def test_write_neg_ident_html(self):
         s1 = parse('NImn')

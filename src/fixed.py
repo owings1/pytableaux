@@ -18,7 +18,7 @@ parser_names = ['standard', 'polish']
 lexwriter_names = ['standard', 'polish']
 lexwriter_encodings = ['html', 'ascii']
 tabwriter_names = ['html', 'text']
-symbols_data = {
+_old_symbols_data = {
     'polish.ascii' : {
         'name'    : 'polish.ascii',
         'encoding': 'ascii',
@@ -124,4 +124,4 @@ symbols_data = {
         },
     },
 }
-symbols_data['polish.html'] = symbols_data['polish.ascii']
+_old_symbols_data['polish.html'] = _old_symbols_data['polish.ascii']

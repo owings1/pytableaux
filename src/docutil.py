@@ -34,13 +34,12 @@ logger = logging.getLogger(__name__)
 from utils import cat, isstr, get_logic
 import examples
 from lexicals import list_operators, operarity, create_lexwriter, is_operator, \
-    Constant, Variable, SymbolSet, get_system_predicate
-from parsers import create_parser, parse_argument
+    Constant, Variable, RenderSet, get_system_predicate
+from parsers import create_parser, parse_argument, CharTable
 from tableaux import Tableau, TableauxSystem as TabSys
 from proof.writers import create_tabwriter
 from proof.rules import Rule, ClosureRule, PotentialNodeRule, FilterNodeRule
 from models import truth_table
-from fixed import symbols_data
 
 defaults = {
     'html_theme'       : 'default',
@@ -140,10 +139,14 @@ class Helper(object):
         self.lw = create_lexwriter(notn = wrnotn, enc = 'html')
         self.pw = create_tabwriter(notn = wrnotn, format = 'html')
 
-        symdata = deepcopy(symbols_data[cat(wrnotn, '.html')])
-        symdata['symbols']['digit'][2] = 'n'
-        symset = SymbolSet(symdata)
-        self.lwtrunk = create_lexwriter(notn = wrnotn, symbol_set = symset)
+        rsdata = deepcopy(self.lw.renderset.data)
+        if 'renders' not in rsdata:
+            rsdata['renders'] = {}
+        rsdata['renders']['subscript'] = lambda sub: (
+            '<sub>{0}</sub>'.format('n' if sub == 2 else sub)
+        )
+        rset = RenderSet(rsdata)
+        self.lwtrunk = create_lexwriter(notn = wrnotn, renderset = rset)
         self.pwtrunk = create_tabwriter(notn = wrnotn, format = 'html', lw = self.lwtrunk)
 
         self.replace_defns = []
@@ -225,19 +228,22 @@ class Helper(object):
         """
         Build the csv table for the operators reference table.
         """
-        sympol, symstd, symhtml = (
-            symset.chars('operator') for symset in (
-                create_parser('polish',  enc='ascii').symbol_set,
-                create_parser('standard', enc='ascii').symbol_set,
-                create_lexwriter('standard', enc='html').symbol_set,
+        sympol, symstd = (
+            table.list('operator') for table in (
+                CharTable.fetch('polish'),
+                CharTable.fetch('standard'),
             )
         )
+        lwhtm = create_lexwriter('standard', enc='html')
+        symhtml = {
+            o: htmlun(lwhtm.write(o)) for o in list_operators()
+        }
         lines = [
             '"Operator Name","Arity","Polish","Standard","HTML"'
         ] + [
             '"{0}","{1}","``{2}``","``{3}``","{4}"'.format(*row)
             for row in (
-                (o, str(operarity(o)), sympol[o], symstd[o], htmlun(symhtml[o]))
+                (o, str(operarity(o)), sympol[o], symstd[o], symhtml[o])
                 for o in list_operators()
             )
         ]
@@ -487,11 +493,7 @@ class Helper(object):
         #     r'^(o|op|oper|operator)\.(.*)': ('operator', '\\2'),
         #     r'^(p|pred|predicate)\.(.*)' : ('predicate', '\\2'),
         # }
-        classes = ['lexitem']
-        lw = self.lw
-        parse = self.parser.parse
-        symset = self.parser.symbol_set
-        item = None
+
         # if not what:
         #     for regex, defn in regexes.items():
         #         if re.findall(regex, text):
@@ -504,9 +506,12 @@ class Helper(object):
         # elif text.startswith('pred.'):
         #     what = 'pred'
         #     text = text.split('.')[1]
+        classes = ['lexitem']
+        item = None
         if not what:
             m = re.match(r'^(.)([0-9]*)$', text)
             if m:
+                symset = self.parser.symbol_set
                 chr, sub = m.groups()
                 sub = int(sub) if len(sub) else 0
                 ctype = symset.typeof(chr)
@@ -534,17 +539,11 @@ class Helper(object):
         if not what:
             what = 'sentence'
         if what == 'sentence':
-            item = parse(text)
+            item = self.parser.parse(text)
         if not item:
             item = text
-        # print('what:', what, 'text:', text)
-        # if what == 'operator':
-        #     if not is_operator(text):
-        #         item = symset.indexof('operator', text)
-        # elif what == 'sentence':
-        #     item = parse(text)
         classes.append(what)
-        raw = lw.write(item)
+        raw = self.lw.write(item)
         rendered = htmlun(raw)
         node = nodes.inline(text = rendered, classes = classes)
         set_classes(opts)
