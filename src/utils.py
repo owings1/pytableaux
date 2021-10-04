@@ -18,7 +18,6 @@
 # ------------------
 #
 # pytableaux - utils module
-from fixed import symbols_data
 import importlib, time
 from types import ModuleType
 from past.builtins import basestring
@@ -59,53 +58,6 @@ def isint(arg):
 
 def sortedbyval(map):
     return list(it[1] for it in sorted((v, k) for k, v in map.items()))
-
-class SymbolSet(object):
-
-    def __init__(self, data):
-        if isstr(data):
-            self.name = data
-            data = symbols_data[data]
-        self.data = data
-        self.name = data['name']
-        self.encoding = data['encoding']
-        self.can_parse = data['parse']
-        self.types = {}
-        self.index = {}
-        self.reverse = {}
-        
-        for ctype in data['lexicals']:
-            cvals = data['lexicals'][ctype]
-            if isinstance(cvals, dict):
-                self.types.update({c: ctype for c in cvals.values()})
-                self.index[ctype] = dict(cvals)
-                self.reverse[ctype] = {cvals[k]: k for k in cvals}
-            else:
-                self.types.update({c: ctype for c in cvals})
-                self.index[ctype] = {i: c for i, c in enumerate(cvals)}
-                self.reverse[ctype] = {c: i for i, c in enumerate(cvals)}
-
-    def typeof(self, c):
-        if c in self.types:
-            return self.types[c]
-        return None
-
-    def charof(self, ctype, index, subscript = None, skip_zero = True):
-        s = self.index[ctype][index]
-        if subscript != None:
-            s += self.subfor(subscript, skip_zero = skip_zero)
-        return s
-
-    def indexof(self, ctype, ref):
-        return self.reverse[ctype][ref]
-
-    def subfor(self, subscript, skip_zero = True):
-        if skip_zero and subscript == 0:
-            return ''
-        return ''.join([self.charof('digit', int(d)) for d in list(str(subscript))])
-
-    def chars(self, ctype):
-        return self.data['lexicals'][ctype]
 
 class StopWatch(object):
 

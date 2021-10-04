@@ -1,8 +1,79 @@
-from fixed import default_notation
+from fixed import default_notation, symbols_data
 from errors import NotFoundError
-from utils import cat, isint, isstr, sortedbyval, SymbolSet
+from utils import cat, isint, isstr, sortedbyval
+from copy import deepcopy
 
-from past.builtins import basestring
+def create_lexwriter(notn=None, enc=None, **opts):
+    if not notn:
+        notn = default_notation
+    if notn not in ('polish', 'standard'):
+        raise ValueError('Invalid notation: {0}'.format(str(notn)))
+    if not enc:
+        enc = 'ascii'
+    if 'symbol_set' not in opts:
+        key = '.'.join((notn, enc))
+        try:
+            opts['symbol_set'] = SymbolSet.get_instance(key)
+        except KeyError:
+            raise NotFoundError('Symbols for {0} not found'.format(key))
+    if notn == 'polish':
+        return PolishLexWriter(**opts)
+    if notn == 'standard':
+        return StandardLexWriter(**opts)
+
+def get_system_predicate(name):
+    """
+    Get a system predicate by name. Example::
+
+        pred = get_system_predicate('Identity')
+        assert pred.arity == 2
+
+    :param str name: The predicate name.
+    :return: The predicate instance.
+    :rtype: Vocabulary.Predicate
+    :raises KeyError: if the system predicate does not exist.
+    """
+    return Vocabulary._get_system_predicate(name)
+
+def get_system_predicates():
+    """
+    Returns a list of predicate objects.
+    """
+    return Vocabulary._get_system_predicates()
+
+def list_system_predicates():
+    """
+    Returns a list of predicate names
+    """
+    return Vocabulary._list_system_predicates()
+
+def is_system_predicate(name):
+    return Vocabulary._is_system_predicate(name)
+
+def operarity(oper):
+    """
+    Get the arity of an operator.
+
+    Note: to get the arity of a predicate, use ``predicate.arity``.
+
+    :param str operator: The operator.
+    :return: The arity of the operator.
+    :rtype: int
+    :raises KeyError: if the operator does not exist.
+    """
+    return OperatedSentence._operarity(oper)
+
+def is_operator(arg):
+    return OperatedSentence._is_operator(arg)
+
+def list_operators():
+    return OperatedSentence._list_operators()
+
+def is_quantifier(arg):
+    return QuantifiedSentence._is_quantifier(arg)
+
+def list_quantifiers():
+    return QuantifiedSentence._list_quantifiers()
 
 class LexicalItem(object):
 
@@ -17,6 +88,10 @@ class LexicalItem(object):
         if cls == Predicate:
             return 3
         return None
+
+    def __init__(self):
+        if self.__class__ == __class__:
+            raise TypeError('Class {0} cannot be constructed'.format(self.__class__.__name__))
 
     # Base LexicalItem class for comparison, hashing, and sorting.
 
@@ -132,7 +207,6 @@ class Parameter(LexicalItem):
         # Sort constants and variables by index, subscript
         return (self.index, self.subscript)
 
-
 class Constant(Parameter):
     pass
 
@@ -190,6 +264,8 @@ class Sentence(LexicalItem):
     type = None
 
     def __init__(self):
+        if self.__class__ == __class__:
+            raise TypeError('Class {0} cannot be constructed'.format(self.__class__.__name__))
         self.type = self.__class__.__name__
 
     def is_atomic(self):
@@ -588,9 +664,6 @@ class OperatedSentence(Sentence):
         'Necessity'              : 1,
     }
 
-# Initialize order.
-LexicalItem._initorder()
-
 class Vocabulary(object):
     """
     A vocabulary is a store of user-defined predicates.
@@ -779,6 +852,8 @@ class Vocabulary(object):
 
 # Init system predicates
 Vocabulary._initsys()
+# Initialize order.
+LexicalItem._initorder()
 
 class Argument(object):
     """
@@ -815,45 +890,28 @@ class Argument(object):
     def __ne__(self, other):
         return not isinstance(other, self.__class__) or hash(self) != hash(other)
 
-def create_lexwriter(notn=None, enc=None, **opts):
-    if not notn:
-        notn = default_notation
-    if not enc:
-        enc = 'ascii'
-    symset_key = '.'.join((notn, enc))
-    symbol_set = SymbolSet(symset_key)
-    if notn == 'polish':
-        return PolishLexWriter(symbol_set, **opts)
-    if notn == 'standard':
-        return StandardLexWriter(symbol_set, **opts)
-    raise ValueError('Invalid notation: {0}'.format(str(notn)))
-
 class LexWriter(object):
 
-    def __init__(self, symbol_set, **opts):
-        self.symbol_set = symbol_set
-        self.encoding = symbol_set.encoding
-        # for compatibility, TODO: what does 'format' mean?
-        self.format = symbol_set.encoding
-        self.opts = opts
+    _defaults = {}
+
+    def __init__(self, **opts):
+        self.opts = deepcopy(self._defaults)
+        self.opts.update(opts)
 
     def write(self, item):
-        if isinstance(item, basestring):
+        if isstr(item):
             if is_operator(item):
                 return self._write_operator(item)
             if is_quantifier(item):
                 return self._write_quantifier(item)
             raise TypeError('Unknown lexical string type: {0}'.format(item))
-        if isinstance(item, Constant) or isinstance(item, Variable):
+        if isinstance(item, Parameter):
             return self._write_parameter(item)
         if isinstance(item, Predicate):
             return self._write_predicate(item)
         if isinstance(item, Sentence):
             return self._write_sentence(item)
         raise TypeError('Unknown lexical type: {0}'.format(item))
-
-    def _charof(self, *args, **kw):
-        return self.symbol_set.charof(*args, **kw)
 
     def _write_parameter(self, param):
         if isinstance(param, Constant):
@@ -876,23 +934,32 @@ class LexWriter(object):
 
 class BaseLexWriter(LexWriter):
 
+    def __init__(self, symbol_set, **opts):
+        super().__init__(**opts)
+        self.symbol_set = symbol_set
+        self.encoding = symbol_set.encoding
+        # for compatibility, TODO: what does 'format' mean?
+        # self.format = symbol_set.encoding
+
     # Base lex writer.
+    def _strfor(self, *args, **kw):
+        return self.symbol_set.charof(*args, **kw)
 
     def _write_operator(self, operator):
-        return self._charof('operator', operator)
+        return self._strfor('operator', operator)
 
     def _write_quantifier(self, quantifier):
-        return self._charof('quantifier', quantifier)
+        return self._strfor('quantifier', quantifier)
 
     def _write_constant(self, constant):
         return cat(
-            self._charof('constant', constant.index),
+            self._strfor('constant', constant.index),
             self._write_subscript(constant.subscript),
         )
 
     def _write_variable(self, variable):
         return cat(
-            self._charof('variable', variable.index),
+            self._strfor('variable', variable.index),
             self._write_subscript(variable.subscript),
         )
 
@@ -902,7 +969,7 @@ class BaseLexWriter(LexWriter):
         else:
             typ, key = ('user_predicate', predicate.index)
         return cat(
-            self._charof(typ, key),
+            self._strfor(typ, key),
             self._write_subscript(predicate.subscript),
         )
 
@@ -919,7 +986,7 @@ class BaseLexWriter(LexWriter):
 
     def _write_atomic(self, sentence):
         return cat(
-            self._charof('atomic', sentence.index),
+            self._strfor('atomic', sentence.index),
             self._write_subscript(sentence.subscript)
         )
 
@@ -937,17 +1004,12 @@ class BaseLexWriter(LexWriter):
         return s
 
     def _write_subscript(self, subscript):
-        symset = self.symbol_set
-        if self.encoding == 'html':
-            if subscript != 0:
-                return ''.join([
-                    '<span class="subscript">',
-                    symset.subfor(subscript, skip_zero = True),
-                    '</span>'
-                ])
+        if subscript == 0:
             return ''
-        else:
-            return symset.subfor(subscript, skip_zero = True)
+        sub = self._strfor('digit', subscript)
+        if self.encoding == 'html':
+            return '<span class="subscript">{0}</span>'.format(sub)
+        return sub
 
     def _write_operated(self, sentence):
         raise NotImplementedError()
@@ -962,15 +1024,10 @@ class PolishLexWriter(BaseLexWriter):
 
 class StandardLexWriter(BaseLexWriter):
 
-    __defaults = {'drop_parens': True}
-
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **self.__defaults, **kw)
-        opts = self.opts
-        self.drop_parens = bool(opts['drop_parens'])
+    _defaults = {'drop_parens': True}
 
     def write(self, item):
-        if self.drop_parens and isinstance(item, OperatedSentence):
+        if self.opts['drop_parens'] and isinstance(item, OperatedSentence):
             return self._write_operated(item, drop_parens = True)
         return super().write(item)
 
@@ -979,7 +1036,7 @@ class StandardLexWriter(BaseLexWriter):
         if sentence.predicate.arity < 2:
             return super()._write_predicated(sentence)
         # For Identity, add spaces (a = b instead of a=b)
-        ws = self._charof('whitespace', 0) if sentence.predicate.name == 'Identity' else ''
+        ws = self._strfor('whitespace', 0) if sentence.predicate.name == 'Identity' else ''
         return cat(
             self._write_parameter(sentence.parameters[0]),
             ws,
@@ -1002,13 +1059,13 @@ class StandardLexWriter(BaseLexWriter):
                 return self._write_operator(oper) + self.write(operand)
         elif arity == 2:
             return ''.join([
-                self._charof('paren_open', 0) if not drop_parens else '',
-                self._charof('whitespace', 0).join([
+                self._strfor('paren_open', 0) if not drop_parens else '',
+                self._strfor('whitespace', 0).join([
                     self.write(sentence.lhs),
                     self._write_operator(oper),
                     self.write(sentence.rhs),
                 ]),
-                self._charof('paren_close', 0) if not drop_parens else '',
+                self._strfor('paren_close', 0) if not drop_parens else '',
             ])
         raise NotImplementedError('No support for operators of arity {0}'.format(str(arity)))
 
@@ -1016,68 +1073,61 @@ class StandardLexWriter(BaseLexWriter):
         params = sentence.operand.parameters
         return cat(
             self._write_parameter(params[0]),
-            self._charof('whitespace', 0),
-            self._charof('system_predicate', 'NegatedIdentity'),
-            self._charof('whitespace', 0),
+            self._strfor('whitespace', 0),
+            self._strfor('system_predicate', 'NegatedIdentity'),
+            self._strfor('whitespace', 0),
             self._write_parameter(params[1]),
         )
 
-def get_system_predicate(name):
-    """
-    Get a system predicate by name. Example::
+class SymbolSet(object):
 
-        pred = get_system_predicate('Identity')
-        assert pred.arity == 2
+    __cache = {}
 
-    :param str name: The predicate name.
-    :return: The predicate instance.
-    :rtype: Vocabulary.Predicate
-    :raises KeyError: if the system predicate does not exist.
-    """
-    return Vocabulary._get_system_predicate(name)
+    @staticmethod
+    def get_instance(key):
+        cache = __class__.__cache
+        if key not in cache:
+            cache[key] = __class__(symbols_data[key])
+        return cache[key]
 
-def get_system_predicates():
-    """
-    Returns a list of predicate objects.
-    """
-    return Vocabulary._get_system_predicates()
+    def __init__(self, data):
+        if not isinstance(data, dict):
+            raise TypeError('data must be a dict')
+        self.name = data['name']
+        self.encoding = data['encoding']
+        self.can_parse = bool(data.get('parse'))
+        self.symbols = {}
+        self.types = {}
+        self.index = {}
+        self.reverse = {}
+        
+        for ctype, cvals in data['symbols'].items():
+            if isinstance(cvals, dict):
+                self.symbols[ctype] = dict(cvals)
+                self.types.update({c: ctype for c in cvals.values()})
+                self.index[ctype] = dict(cvals)
+                self.reverse[ctype] = {cvals[k]: k for k in cvals}
+            elif isinstance(cvals, list) or isinstance(cvals, tuple):
+                self.symbols[ctype] = list(cvals)
+                self.types.update({c: ctype for c in cvals})
+                self.index[ctype] = {i: c for i, c in enumerate(cvals)}
+                self.reverse[ctype] = {c: i for i, c in enumerate(cvals)}
+            else:
+                raise TypeError('Unsupported type for {0}'.format(ctype))
 
-def list_system_predicates():
-    """
-    Returns a list of predicate names
-    """
-    return Vocabulary._list_system_predicates()
+    def typeof(self, c):
+        return self.types.get(c)
 
-def is_system_predicate(name):
-    return Vocabulary._is_system_predicate(name)
+    def charof(self, ctype, index):
+        return self.index[ctype][index]
 
-def operarity(oper):
-    """
-    Get the arity of an operator.
+    def indexof(self, ctype, key):
+        return self.reverse[ctype][key]
 
-    Note: to get the arity of a predicate, use ``predicate.arity``.
+    def chars(self, ctype):
+        return self.symbols[ctype]
 
-    :param str operator: The operator.
-    :return: The arity of the operator.
-    :rtype: int
-    :raises KeyError: if the operator does not exist.
-    """
-    return OperatedSentence._operarity(oper)
-
-def is_operator(arg):
-    return OperatedSentence._is_operator(arg)
-
-def list_operators():
-    return OperatedSentence._list_operators()
-
-def is_quantifier(arg):
-    return QuantifiedSentence._is_quantifier(arg)
-
-def list_quantifiers():
-    return QuantifiedSentence._list_quantifiers()
-
-# Shorthand
-
+# Aliases
 Atomic = AtomicSentence
 Predicated = PredicatedSentence
 Operated = OperatedSentence

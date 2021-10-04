@@ -23,7 +23,7 @@ symbols_data = {
         'name'    : 'polish.ascii',
         'encoding': 'ascii',
         'parse'   : True,
-        'lexicals' : {
+        'symbols' : {
             'atomic'   : ['a', 'b', 'c', 'd', 'e'],
             'operator' : {
                 'Assertion'              : 'T',
@@ -56,7 +56,7 @@ symbols_data = {
         'name'    : 'standard.ascii',
         'encoding': 'ascii',
         'parse'   : True,
-        'lexicals': {
+        'symbols': {
             'atomic' : ['A', 'B', 'C', 'D', 'E'],
             'operator' : {
                 'Assertion'              :  '*',
@@ -91,7 +91,7 @@ symbols_data = {
         'name'    : 'standard.html',
         'encoding': 'html',
         'parse'   : False,
-        'lexicals': {
+        'symbols': {
             'atomic'   : ['A', 'B', 'C', 'D', 'E'],
             'operator' : {
                 'Assertion'              : '&deg;'   ,

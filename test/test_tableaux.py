@@ -84,6 +84,28 @@ class TestTableau(object):
         proof.build(is_build_models=True)
         assert proof.tree['model_id']
 
+    def test_getrule_returns_arg_if_rule_instance(self):
+        proof = Tableau('CPL')
+        rule = proof.get_rule('Conjunction')
+        assert isinstance(rule, Rule)
+        r = proof.get_rule(rule)
+        assert isinstance(r, Rule)
+        assert r is rule
+
+    def test_register_branch_with_nodes_no_parent(self):
+
+        class MockRule(Rule):
+            def register_branch(self, branch, parent):
+                self._checkbranch = branch
+                self._checkparent = parent
+        proof = Tableau(None)
+        proof.add_rule_group([MockRule])
+        b = Branch()
+        b.add({'test': True})
+        proof.add_branch(b)
+        rule = proof.get_rule(MockRule)
+        assert rule._checkbranch is b
+        assert rule._checkparent == None
     #def test_add_rule_group_instance_mock(self):
     #    class MockRule1():
 

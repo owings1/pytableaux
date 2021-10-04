@@ -1,10 +1,10 @@
-from errors import ParseError, IllegalStateError, NotFoundError, \
-    UnboundVariableError, BoundVariableError
-from lexicals import Argument, AtomicSentence, PredicatedSentence, get_system_predicate, \
-    QuantifiedSentence, OperatedSentence, Constant, Variable, operarity, Vocabulary
+from errors import ParseError, BoundVariableError, UnboundVariableError, \
+    IllegalStateError, NotFoundError
+from lexicals import Constant, Variable,  Atomic, Predicated, Quantified, \
+    Operated, Vocabulary, Argument, SymbolSet, get_system_predicate, operarity
+    
 from fixed import default_notation
-from utils import isstr, SymbolSet
-from past.builtins import basestring
+from utils import cat, isstr
 
 def parse(input, *args, **kw):
     """
@@ -38,7 +38,7 @@ def create_parser(notn=None, vocab=None, **opts):
     :return: The parser instance
     :rtype: Parser
     """
-    if isinstance(notn, Vocabulary) or isinstance(vocab, basestring):
+    if isinstance(notn, Vocabulary) or isstr(vocab):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
     if not vocab:
@@ -52,6 +52,7 @@ def create_parser(notn=None, vocab=None, **opts):
     raise ValueError('Unknown parser: {0}'.format(str(notn)))
 
 class Parser(object):
+
     def parse(self, input):
         """
         Parse a sentence from an input string.
@@ -62,8 +63,29 @@ class Parser(object):
         :raises errors.ParseError:
         """
         raise NotImplementedError()
+
     def argument(self, conclusion, premises=None, title=None):
-        raise NotImplementedError()
+        """
+        Parse the input strings and create an argument.
+
+        :param str conclusion: The argument's conclusion.
+        :param list premises: List of premise strings, if any.
+        :param str title: The title to pass to the argument's constructor.
+        :return: The argument.
+        :rtype: argument
+        :raises ParseError:
+        """
+        if isstr(conclusion):
+            conc = self.parse(conclusion)
+        else:
+            conc = conclusion
+        prems = []
+        if premises:
+            for s in premises:
+                prems.append(self.parse(s) if isstr(s) else s)
+        return Argument(
+            conclusion = conc, premises = prems, title = title
+        )
 
 class BaseParser(Parser):
 
@@ -104,29 +126,6 @@ class BaseParser(Parser):
                 )
         return s
 
-    def argument(self, conclusion, premises=None, title=None):
-        """
-        Parse the input strings and create an argument.
-
-        :param str conclusion: The argument's conclusion.
-        :param list premises: List of premise strings, if any.
-        :param str title: The title to pass to the argument's constructor.
-        :return: The argument.
-        :rtype: argument
-        :raises Parser.ParseError:
-        """
-        if isstr(conclusion):
-            conc = self.parse(conclusion)
-        else:
-            conc = conclusion
-        prems = []
-        if premises:
-            for s in premises:
-                prems.append(self.parse(s) if isstr(s) else s)
-        return Argument(
-            conclusion = conc, premises = prems, title = title
-        )
-
     ## ==========================================
     ##  Medium-level parsing methods - Sentences
     ## ==========================================
@@ -141,9 +140,9 @@ class BaseParser(Parser):
         this method, and delegate to ``super()`` for the default implementation
         when appropriate.
 
-        :rtype: Vocabulary.Sentence
+        :rtype: Sentence
+        :raises ParseError:
         :meta private:
-        :raises Parser.ParseError:
         """
         ctype = self._assert_current()
         if ctype == 'user_predicate' or ctype == 'system_predicate':
@@ -162,27 +161,27 @@ class BaseParser(Parser):
         """
         Read an atomic sentence starting from the current character.
 
-        :rtype: Vocabulary.AtomicSentence
+        :rtype: AtomicSentence
         :meta private:
         """
-        return AtomicSentence(**self._read_item())
+        return Atomic(**self._read_item())
 
     def _read_predicate_sentence(self):
         """
         Read predicated sentence starting from the current character.
 
-        :rtype: Vocabulary.PredicatedSentence
+        :rtype: PredicatedSentence
         :meta private:
         """
         predicate = self._read_predicate()
         params = self._read_parameters(predicate.arity)
-        return PredicatedSentence(predicate, params)
+        return Predicated(predicate, params)
 
     def _read_quantified_sentence(self):
         """
         Read quantified sentence starting from the current character.
 
-        :rtype: Vocabulary.PredicatedSentence
+        :rtype: PredicatedSentence
         :meta private:
         """
         self._assert_current_is('quantifier')
@@ -190,19 +189,19 @@ class BaseParser(Parser):
         self._advance()
         v = self._read_variable()
         if v in list(self.bound_vars):
-            var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
+            vchr = self.symbol_set.charof('variable', v.index)
             raise BoundVariableError(
-                "Cannot rebind variable '{0}' at position {1}.".format(var_str, self.pos)
+                "Cannot rebind variable '{0}' ({1}) at position {2}.".format(vchr, v.subscript, self.pos)
             )
         self.bound_vars.add(v)
         sentence = self._read()
         if v not in list(sentence.variables()):
-            var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
+            vchr = self.symbol_set.charof('variable', v.index)
             raise BoundVariableError(
-                "Unused bound variable '{0}' at position {1}.".format(var_str, self.pos)
+                "Unused bound variable '{0}' ({1}) at position {2}.".format(vchr, v.subscript, self.pos)
             )
         self.bound_vars.remove(v)
-        return QuantifiedSentence(quantifier, v, sentence)
+        return Quantified(quantifier, v, sentence)
 
     ## ==========================================
     ##  Medium-level parsing methods - Parameters
@@ -212,7 +211,7 @@ class BaseParser(Parser):
         """
         Read a predicate starting from the current character.
 
-        :rtype: Vocabulary.Predicate
+        :rtype: Predicate
         :meta private:
         """
         pchar = self._current()
@@ -236,7 +235,7 @@ class BaseParser(Parser):
 
         :param int num: The number of parameters to read, which should equal the
             predicate's arity.
-        :return: A list of `Vocabulary.Parameter` objects.
+        :return: A list of `Parameter` objects.
         :rtype: list
         :meta private:
         """
@@ -249,7 +248,7 @@ class BaseParser(Parser):
         """
         Read a single parameter (constant or variable) from the current character.
 
-        :rtype: Vocabulary.Parameter
+        :rtype: Parameter
         :raises Parser.UnboundVariableError: if a variable appears that has not
             been bound by a quantifier.
         :meta private:
@@ -261,9 +260,9 @@ class BaseParser(Parser):
             cpos = self.pos
             v = self._read_variable()
             if v not in list(self.bound_vars):
-                var_str = self.symbol_set.charof('variable', v.index, subscript = v.subscript)
+                vchr = self.symbol_set.charof('variable', v.index)
                 raise UnboundVariableError(
-                    "Unbound variable '{0}' at position {1}.".format(var_str, cpos)
+                    "Unbound variable '{0}' ({1}) at position {2}.".format(vchr, cpos, v.subscript)
                 )
             return v
 
@@ -271,7 +270,7 @@ class BaseParser(Parser):
         """
         Read a variable starting from the current character.
 
-        :rtype: Vocabulary.Variable
+        :rtype: Variable
         :meta private:
         """
         return Variable(**self._read_item())
@@ -280,7 +279,7 @@ class BaseParser(Parser):
         """
         Read a constant starting from the current character.
 
-        :rtype: Vocabulary.Constant
+        :rtype: Constant
         :meta private:
         """
         return Constant(**self._read_item())
@@ -405,7 +404,7 @@ class BaseParser(Parser):
 
 class PolishParser(BaseParser):
 
-    symbol_set = SymbolSet('polish.ascii')
+    symbol_set = SymbolSet.get_instance('polish.ascii')
 
     def _read(self):
         ctype = self._assert_current()
@@ -413,14 +412,14 @@ class PolishParser(BaseParser):
             operator = self.symbol_set.indexof('operator', self._current())
             self._advance()
             operands = [self._read() for x in range(operarity(operator))]
-            s = OperatedSentence(operator, operands)
+            s = Operated(operator, operands)
         else:
             s = super()._read()
         return s
 
 class StandardParser(BaseParser):
 
-    symbol_set = SymbolSet('standard.ascii')
+    symbol_set = SymbolSet.get_instance('standard.ascii')
 
     def parse(self, string):
         # override
@@ -467,7 +466,7 @@ class StandardParser(BaseParser):
             )
         self._advance()
         operand = self._read()
-        return OperatedSentence(operator, [operand])
+        return Operated(operator, [operand])
 
     def __read_infix_predicate_sentence(self):
         params = [self._read_parameter()]
@@ -476,9 +475,11 @@ class StandardParser(BaseParser):
         predicate = self._read_predicate()
         if predicate.arity < 2:
             raise ParseError(
-                "Unexpected {0}-ary predicate at position {1}. Infix notation requires arity > 1.".format(predicate.arity, ppos))
+                cat("Unexpected {0}-ary predicate symbol at position {1}. ",
+                "Infix notation requires arity > 1.").format(predicate.arity, ppos)
+            )
         params += self._read_parameters(predicate.arity - 1)
-        return PredicatedSentence(predicate, params)
+        return Predicated(predicate, params)
 
     def __read_from_open_paren(self):
         # if we have an open parenthesis, then we demand a binary infix operator sentence.
@@ -505,13 +506,15 @@ class StandardParser(BaseParser):
                 if operarity(peek_operator) == 2 and depth == 1:
                     if operator != None:
                         raise ParseError(
-                            'Unexpected binary operator at position {0}.'.format(self.pos + length)
+                            'Unexpected binary operator symbol at position {0}.'.format(self.pos + length)
                         )
                     operator_pos = self.pos + length
                     operator = peek_operator
             length += 1
         if operator == None:
-            raise ParseError('Parenthetical expression is missing binary operator at position {0}.'.format(self.pos))
+            raise ParseError(
+                'Parenthetical expression is missing binary operator at position {0}.'.format(self.pos)
+            )
         #if length == 2: #if length == 1:
         #    raise logic.Parser.ParseError('Empty parenthetical expression at position {0}.'.format(self.pos))
         # now we can divide the string into lhs and rhs
@@ -539,4 +542,4 @@ class StandardParser(BaseParser):
         self._assert_current_is('paren_close')
         # move past the close paren
         self._advance()
-        return OperatedSentence(operator, [lhs, rhs])
+        return Operated(operator, [lhs, rhs])

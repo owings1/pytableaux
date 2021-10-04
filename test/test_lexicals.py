@@ -176,12 +176,14 @@ class TestVocabulary(object):
     #     s = parse('a')
     #     assert s.is_sentence()
 
-    def test_base_substitute_not_implemented(self):
-        s = Sentence()
-        c = Constant(0, 0)
-        v = Variable(0, 0)
-        with raises(NotImplementedError):
-            s.substitute(c, v)
+    def test_base_cannot_construct(self):
+        with raises(TypeError):
+            Sentence()
+        # s = Sentence()
+        # c = Constant(0, 0)
+        # v = Variable(0, 0)
+        # with raises(NotImplementedError):
+        #     s.substitute(c, v)
 
     def test_atomic_index_too_large(self):
         with raises(ValueError):
@@ -263,17 +265,6 @@ class TestVocabulary(object):
         c = Constant(0, 8)
         res = str(c)
         assert '8' in res
-
-    def test_base_sentence_not_implemented_various(self):
-        s = Sentence()
-        # with raises(NotImplementedError):
-        #     s.atomics()
-        # with raises(NotImplementedError):
-        #     s.predicates()
-        with raises(NotImplementedError):
-            s.sort_tuple()
-        # with raises(NotImplementedError):
-        #     s.operators()
 
     def test_atomic_less_than_predicated(self):
         s1 = Atomic(0, 4)

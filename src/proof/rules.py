@@ -162,6 +162,12 @@ class Rule(object):
 
     # Private callbacks -- do not implement
 
+    def _before_trunk_build(self, argument):
+        self.before_trunk_build(argument)
+        for helper in self.helpers:
+            if hasattr(helper, 'before_trunk_build'):
+                helper.before_trunk_build(argument)
+
     def _after_trunk_build(self, branches):
         self.after_trunk_build(branches)
         for helper in self.helpers:
@@ -170,13 +176,19 @@ class Rule(object):
 
     def _after_branch_add(self, branch):
         # Called by Tableau.
+        if not branch.parent:
+            # For corner case of a register_branch callback adding a node, make
+            # sure we don't call register_node twice, so prefetch the nodes.
+            nodes = branch.get_nodes(ticked=self.ticked)
+        else:
+            nodes = None
         self.register_branch(branch, branch.parent)
         for helper in self.helpers:
             if hasattr(helper, 'register_branch'):
                 helper.register_branch(branch, branch.parent)
         if not branch.parent:
-            for node in branch.get_nodes(ticked=self.ticked):
-                self.register_node(self, node, branch)
+            for node in nodes:
+                self.register_node(node, branch)
                 for helper in self.helpers:
                     if hasattr(helper, 'register_node'):
                         helper.register_node(node, branch)
@@ -216,6 +228,9 @@ class Rule(object):
         pass
 
     def register_node(self, node, branch):
+        pass
+
+    def before_trunk_build(self, argument):
         pass
 
     def after_trunk_build(self, branches):

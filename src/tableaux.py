@@ -366,10 +366,13 @@ class Tableau(object):
 
     def get_rule(self, rule):
         """
-        Get a rule instance by name or class reference. Returns first occurrence.
+        Get a rule instance by name, class, or instance reference. Returns first
+        matching occurrence.
         """
         for r in self.all_rules:
             if r.__class__ == rule or r.name == rule or r.__class__.__name__ == rule:
+                return r
+            if r.__class__ == rule.__class__:
                 return r
 
     def branch(self, parent = None):
@@ -407,6 +410,7 @@ class Tableau(object):
         """
         self.__check_trunk_not_built()
         with self.trunk_build_timer:
+            self.__before_trunk_build()
             self.logic.TableauxSystem.build_trunk(self, self.argument)
             self.trunk_built = True
             self.current_step += 1
@@ -490,6 +494,10 @@ class Tableau(object):
         # Propagate event to rules
         for rule in self.all_rules:
             rule._after_branch_add(branch)
+
+    def __before_trunk_build(self):
+        for rule in self.all_rules:
+            rule._before_trunk_build(self.argument)
 
     def __after_trunk_build(self):
         # Called from ``build_trunk()``
@@ -975,6 +983,9 @@ class Node(object):
             if prop not in self.props or not props[prop] == self.props[prop]:
                 return False
         return True
+
+    def is_closure(self):
+        return self.props.get('flag') == 'closure'
 
     def worlds(self):
         """

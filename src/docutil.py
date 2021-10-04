@@ -23,22 +23,23 @@ import codecs, inspect, os, re, traceback
 from jinja2 import Environment, FileSystemLoader
 from html import escape as htmlesc, unescape as htmlun
 from os.path import abspath, join as pjoin, basename as bname
-from past.builtins import basestring
 from inspect import getmro, getsource, isclass, ismethod
+from copy import deepcopy
 
 from sphinx.util import logging
 from docutils import nodes
 from docutils.parsers.rst import Directive, directives, roles
 
 logger = logging.getLogger(__name__)
-from utils import cat, get_logic
+from utils import cat, isstr, get_logic
 import examples
-from lexicals import list_operators, operarity, create_lexwriter, is_operator
+from lexicals import list_operators, operarity, create_lexwriter, is_operator, SymbolSet
 from parsers import create_parser, parse_argument
 from tableaux import Tableau, TableauxSystem as TabSys
 from proof.writers import create_tabwriter
 from proof.rules import Rule, ClosureRule, PotentialNodeRule, FilterNodeRule
 from models import truth_table
+from fixed import symbols_data
 
 defaults = {
     'html_theme'       : 'default',
@@ -132,14 +133,18 @@ class Helper(object):
             vocab = self.opts['vocabulary'],
         )
         # print('\n\n', self.parser.__class__.__name__)
-        self.lw = create_lexwriter(
-            notn = self.opts['write_notation'],
-            enc = 'html',
-        )
-        self.pw = create_tabwriter(
-            notn = self.opts['write_notation'],
-            format = 'html',
-        )
+
+        wrnotn = self.opts['write_notation']
+
+        self.lw = create_lexwriter(notn = wrnotn, enc = 'html')
+        self.pw = create_tabwriter(notn = wrnotn, format = 'html')
+
+        symdata = deepcopy(symbols_data[cat(wrnotn, '.html')])
+        symdata['symbols']['digit'][2] = 'n'
+        symset = SymbolSet(symdata)
+        self.lwtrunk = create_lexwriter(notn = wrnotn, symbol_set = symset)
+        self.pwtrunk = create_tabwriter(notn = wrnotn, format = 'html', lw = self.lwtrunk)
+
         self.replace_defns = []
         # https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
         self._listeners = dict()
@@ -253,7 +258,7 @@ class Helper(object):
         if event not in self._listeners:
             self._listeners[event] = []
         for func in [
-            getattr(self, method) if isinstance(method, basestring) else method
+            getattr(self, method) if isstr(method) else method
             for method in methods
         ]:
             self._listeners[event].append(func)
@@ -337,7 +342,7 @@ class Helper(object):
                     if not matches:
                         raise BadExpressionError(line)
                     match = matches[0]
-                    if isinstance(match, basestring):
+                    if isstr(match):
                         # Corner case of one capture group
                         match = (match,)
                     rpl[i] = func(*match)
@@ -414,13 +419,16 @@ class Helper(object):
         """
         lgc = get_obj_logic(lgc)
         arg = parse_argument('b', ['a1', 'a2'], notn='polish')
-        lw = self.lw
+        lw = self.lwtrunk
+        pw = self.pwtrunk
+        proof = Tableau(lgc).add_rule_group([TrunkEllipsisRule])
+        proof.set_argument(arg).finish()
         return cat(
             'Argument: <i>',
-            '</i>, <i>'.join(lw.write(p) for p in arg.premises),
+            '</i> ... <i>'.join(lw.write(p) for p in arg.premises),
             '</i> &there4; <i>', lw.write(arg.conclusion), '</i>',
             '\n',
-            self.pw.write(Tableau(lgc, arg).finish()),
+            pw.write(proof),
         )
 
     def html_rule_example(self, rule, lgc=None):
@@ -430,8 +438,12 @@ class Helper(object):
         lgc = get_logic(lgc or get_obj_logic(rule))
         proof = Tableau(lgc)
         rule = proof.get_rule(rule)
+        isclosure = isinstance(rule, ClosureRule)
+        if isclosure:
+            proof.add_rule_group([ClosureEllipsisRule(proof, rule)])
         rule.example()
-        proof.branches[0].add({'ellipsis': True})
+        if not isclosure:
+            proof.branches[0].add({'ellipsis': True})
         target = rule.get_target(proof.branches[0])
         rule.apply(target)
         proof.finish()
@@ -619,6 +631,69 @@ class Helper(object):
         return False
 
 # Misc util
+class TrunkEllipsisRule(Rule):
+    def get_candidate_targets(self, branch):
+        return None
+
+    def setup(self):
+        super().setup()
+        self.__n = False
+
+    def before_trunk_build(self, arg):
+        super().before_trunk_build(arg)
+        if not self.__n:
+            self.__n = 1
+
+    def register_node(self, node, branch):
+        super().register_node(node, branch)
+        if node.has('ellipsis'):
+            return
+        if self.__n == 1:
+            self.__n = 2
+            branch.add({'ellipsis': True})
+
+class ClosureEllipsisRule(Rule):
+
+    def __init__(self, tableau, target_rule, **opts):
+        super().__init__(tableau, **opts)
+        self.__applies = False
+        testproof = Tableau(tableau.logic)
+        rule = testproof.get_rule(target_rule)
+        if not isinstance(rule, ClosureRule):
+            return
+        rule.example()
+        if len(testproof.branches) == 1:
+            b, = testproof.branches
+            if len(b.nodes) > 0:
+                self.__applies = True
+                self.__nodecount = len(b.nodes)
+                self.__n = 0
+
+    def get_candidate_targets(self, branch):
+        return None
+
+    def register_branch(self, branch, parent):
+        super().register_branch(branch, parent)
+        if not self.__applies:
+            return
+        if self.__nodecount != 1:
+            return
+        branch.add({'ellipsis': True})
+        
+    def register_node(self, node, branch):
+        super().register_node(node, branch)
+        if not self.__applies:
+            return
+        if node.has('ellipsis'):
+            return
+        if node.is_closure():
+            return
+        if self.__nodecount == 1:
+            return
+        self.__n += 1
+        if self.__n < self.__nodecount:
+            branch.add({'ellipsis': True})
+
 
 def rawblock(lines, indent=None):
     """

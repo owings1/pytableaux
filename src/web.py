@@ -28,7 +28,7 @@ from lexicals import Argument, Predicate, Vocabulary, \
 from parsers import create_parser
 from tableaux import Tableau
 from proof.writers import create_tabwriter
-from utils import get_logic
+from utils import get_logic, isstr
 import json, re, time, traceback
 
 import cherrypy as server
@@ -38,7 +38,6 @@ from cherrypy._cpdispatch import Dispatcher
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from past.builtins import basestring
 from www.mailroom import Mailroom
 
 from www.conf import available, consts, cp_global_config, jenv, \
@@ -142,7 +141,7 @@ def fix_form_data(form_data):
     if len(form_data):
         for param in form_data:
             if param.endswith('[]'):
-                if isinstance(form_data[param], basestring):
+                if isstr(form_data[param]):
                     form_data[param] = [form_data[param]]
     return form_data
 

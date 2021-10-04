@@ -19,11 +19,10 @@
 # pytableaux - writers test cases
 import pytest
 
-from lexicals import create_lexwriter, Atomic, Operated, Sentence, \
-    Parameter, get_system_predicate, BaseLexWriter
+from lexicals import Atomic, Operated, BaseLexWriter, SymbolSet, \
+    create_lexwriter, get_system_predicate
 from parsers import parse
 from errors import *
-from utils import SymbolSet
 from tableaux import Tableau
 from proof.writers import create_tabwriter
 import examples
@@ -38,7 +37,7 @@ class TestBase(object):
 
     def test_write_operated_not_impl(self):
         s = Operated('Negation', [Atomic(0, 0)])
-        symset = SymbolSet('standard.ascii')
+        symset = SymbolSet.get_instance('standard.ascii')
         w = BaseLexWriter(symset)
         with pytest.raises(NotImplementedError):
             w.write(s) 
@@ -54,11 +53,6 @@ class TestStandard(object):
         # ss = std.symset('default')
         # res = std.symset(ss)
         # assert res == ss
-
-    def test_write_not_impl_base_sentence(self):
-        s = Sentence()
-        with pytest.raises(NotImplementedError):
-            std.write(s)
 
     def test_write_predicate_sys(self):
         res = std.write(get_system_predicate('Identity'))

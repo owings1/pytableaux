@@ -32,12 +32,12 @@ value (:m:`T` or :m:`F`).
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.
 
+            //truth_tables//b3e//
+
             Note that the conditional operator :oper:`Conditional` is definable in terms of the
             assertion operator :oper:`Assertion`:
             
-            * :s:`A $ B` is equivalent to :s:`~*A V *B` 
-
-            //truth_tables//b3e//
+            .. centered:: :s:`A $ B` :math:`:=` :s:`~*A V *B` 
 
             Bochvar also defined `external` versions of :oper:`Conjunction` and :oper:`Disjunction`
             using the assertion operator:
