@@ -20,14 +20,13 @@
 
 import examples, fixed
 from errors import TimeoutError
-from fixed import issues_href, source_href, version, \
-    parser_names, lexwriter_names, \
-    lexwriter_encodings, tabwriter_names
-from lexicals import Argument, Predicate, Vocabulary, \
-    create_lexwriter, list_operators, list_quantifiers, get_system_predicates
-from parsers import create_parser
+from fixed import issues_href, source_href, version
+from lexicals import Argument, Predicate, Vocabulary, RenderSet, \
+    create_lexwriter, list_operators, list_quantifiers, get_system_predicates, \
+    notations as lexwriter_notations
+from parsers import create_parser, notations as parser_notations
 from tableaux import Tableau
-from proof.writers import create_tabwriter
+from proof.writers import create_tabwriter, formats as tabwriter_formats
 from utils import get_logic, isstr
 import json, re, time, traceback
 
@@ -81,13 +80,39 @@ cp_config = {
 #####################
 ## Static Data     ##
 #####################
+# For not, only include those common to all, until UI suports it
+lexwriter_encodings = {
+    notn: RenderSet.available(notn)
+    for notn in lexwriter_notations
+}
+_enc = set(enc for encs in lexwriter_encodings.values() for enc in encs)
+for notn in lexwriter_notations:
+    _enc = _enc.intersection(RenderSet.available(notn))
+lexwriter_encodings_common = sorted(_enc)
+del(_enc)
 
+print('lexwriter_encodings_common', lexwriter_encodings_common)
+# Defaults on first load.
+form_defaults = {
+    'input_notation': 'standard',
+    'format': 'html',
+    'output_notation': 'standard',
+    'symbol_enc': 'html',
+
+    'options.controls': True,
+    'options.group_optimizations': True,
+    'options.models': True,
+    'options.rank_optimizations': True,
+
+}
+# Rendered to javascript
 browser_data = {
     'example_predicates'    : examples.test_pred_data,
     # nups: "notation-user-predicate-symbols"
     'nups'                  : nups,
     'num_predicate_symbols' : Predicate.max_index() + 1,
     'example_arguments'     : example_arguments,
+    'is_debug'              : opts['is_debug'],
 }
 
 base_view_data = {
@@ -96,23 +121,24 @@ base_view_data = {
     'copyright'           : fixed.copyright,
     'example_args_list'   : examples.args_list,
     'feedback_to_address' : opts['feedback_to_address'],
+    'form_defaults'       : form_defaults,
     'google_analytics_id' : opts['google_analytics_id'],
     'is_debug'            : opts['is_debug'],
     'is_feedback'         : opts['feedback_enabled'],
     'is_google_analytics' : bool(opts['google_analytics_id']),
     'issues_href'         : issues_href,
-    'lexwriter_names'     : lexwriter_names,
-    'lexwriter_encodings' : lexwriter_encodings,
+    'lexwriter_notations' : lexwriter_notations,
+    'lexwriter_encodings' : lexwriter_encodings_common,
     'logic_categories'    : logic_categories,
     'logic_modules'       : available['logics'],
     'logics'              : modules['logics'],
-    'parser_names'        : parser_names,
-    'parser_tables'      : parser_tables,
+    # 'parser_names'        : parser_notations,
+    'parser_tables'       : parser_tables,
     'operators_list'      : list_operators(),
     'quantifiers'         : list_quantifiers(),
     'source_href'         : source_href,
     'system_predicates'   : {p.name: p for p in get_system_predicates()},
-    'tabwriter_names'     : tabwriter_names,
+    'tabwriter_formats'   : tabwriter_formats,
     'version'             : version,
 }
 
@@ -124,7 +150,7 @@ template_cache = dict()
 
 def get_template(view):
     if '.' not in view:
-        view = '.'.join((view, 'html'))
+        view = '.'.join((view, 'jinja2'))
     if opts['is_debug'] or (view not in template_cache):
         template_cache[view] = jenv.get_template(view)
     return template_cache[view]
@@ -189,9 +215,9 @@ class RequestDataError(Exception):
 lexwriters = {
     notn: {
         enc: create_lexwriter(notn=notn, enc=enc)
-        for enc in lexwriter_encodings
+        for enc in RenderSet.available(notn)
     }
-    for notn in lexwriter_names 
+    for notn in lexwriter_notations 
 }
 
 ###################
@@ -421,7 +447,7 @@ class App(object):
             body['input'] = ''
 
         errors = dict()
-        if body['notation'] not in parser_names:
+        if body['notation'] not in parser_notations:
             errors['Notation'] = 'Invalid notation'
 
         try:
@@ -473,7 +499,7 @@ class App(object):
                 "output": {
                     "notation": "standard",
                     "format": "html",
-                    "symbol_set": "default",
+                    "symbol_enc": "default",
                     "options": {
                         "color_open": true,
                         "controls": true,
@@ -501,7 +527,7 @@ class App(object):
                     "writer": {
                         "name": "HTML",
                         "format": "html,
-                        "symbol_set": "default",
+                        "symbol_enc": "default",
                         "options": {}
                     },
                     "max_steps" : null
@@ -512,34 +538,24 @@ class App(object):
         body = dict(body)
 
         # defaults
-        if 'argument' not in body:
-            body['argument'] = dict()
-        if 'output' not in body:
-            body['output'] = dict()
+        body['argument'] = body.get('argument', {})
+        body['output'] = body.get('output', {})
         odata = body['output']
-        if 'notation' not in odata:
-            odata['notation'] = 'standard'
-        if 'format' not in odata:
-            odata['format'] = 'html'
-        if 'symbol_set' not in odata:
+        odata['notation'] = odata.get('notation', 'standard')
+        odata['format'] = odata.get('format', 'html')
+        if 'symbol_enc' not in odata:
             if odata['format'] == 'html':
-                odata['symbol_set'] = 'html'
+                odata['symbol_enc'] = 'html'
             else:
-                odata['symbol_set'] = 'ascii'
-        if 'options' not in odata:
-            odata['options'] = dict()
-        if 'color_open' not in odata['options']:
-            odata['options']['color_open'] = True
-        if 'controls' not in odata['options']:
-            odata['options']['controls'] = True
-        if 'models' not in odata['options']:
-            odata['options']['models'] = False
-        if 'max_steps' not in body:
-            body['max_steps'] = None
-        if 'rank_optimizations' not in body:
-            body['rank_optimizations'] = True
-        if 'group_optimizations' not in body:
-            body['group_optimizations'] = True
+                odata['symbol_enc'] = 'ascii'
+        odata['options'] = odata.get('options', {})
+        odata['options']['color_open'] = odata['options'].get('color_open', True)
+        odata['options']['controls'] = odata['options'].get('controls', True)
+        odata['options']['models'] = odata['options'].get('models', False)
+        body['max_steps'] = body.get('max_steps', None)
+        body['rank_optimizations'] = body.get('rank_optimizations', True)
+        body['group_optimizations'] = body.get('group_optimizations', True)
+
 
         odata['options']['debug'] = opts['is_debug']
 
@@ -555,21 +571,23 @@ class App(object):
         try:
             lwmap = lexwriters[odata['notation']]
             try:
-                lw = lwmap[odata['symbol_set']]
+                lw = lwmap[odata['symbol_enc']]
             except KeyError as err:
-                errors['Symbol Set'] = 'Unsupported encoding: {0}'.format(str(odata['symbol_set']))
+                errors['Symbol Encoding'] = 'Unsupported encoding: {0}'.format(str(odata['symbol_enc']))
             except Exception as err:
                 if opts['is_debug']:
                     traceback.print_exc()
-                errors['Symbol Set'] = errstr(err)
+                errors['Symbol Encoding'] = errstr(err)
         except Exception as err:
             errors['Output notation'] = errstr(err)
+            if opts['is_debug']:
+                traceback.print_exc()
         try:
             tabwriter = create_tabwriter(
                 notn=odata['notation'],
                 format=odata['format'],
                 # lw=lw,
-                enc=odata['symbol_set'],
+                enc=odata['symbol_enc'],
                 **odata['options'],
             )
         except Exception as err:
@@ -651,7 +669,7 @@ class App(object):
                 'writer' : {
                     'name'       : tabwriter.name,
                     'format'     : odata['format'],
-                    'symbol_set' : odata['symbol_set'],
+                    'symbol_enc' : odata['symbol_enc'],
                     'options'    : tabwriter.opts,
                 }
             }
@@ -674,7 +692,7 @@ class App(object):
         errors = dict()
 
         try:
-            if adata['notation'] not in parser_names:
+            if adata['notation'] not in parser_notations:
                 raise ValueError('Invalid parser notation')
         except Exception as e:
             errors['Notation'] = str(e)

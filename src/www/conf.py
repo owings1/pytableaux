@@ -18,8 +18,7 @@
 #
 # pytableaux - Web App Configuration
 from utils import get_logic
-from fixed import parser_names
-from parsers import create_parser, CharTable
+from parsers import create_parser, notations as parser_notations, CharTable
 from lexicals import create_lexwriter
 import examples
 import importlib, logging, os, os.path
@@ -150,7 +149,6 @@ available = {
         'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
         'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
     ],
-    # 'writers'   : ['html'],
 }
 modules = dict()
 logic_categories = dict()
@@ -171,7 +169,8 @@ def __populate_info():
     exargs = examples.arguments()
     for arg in exargs:
         example_arguments[arg.title] = {}
-    for notn in parser_names:
+    for notn in parser_notations:
+        # Build rendered example arguments
         w = create_lexwriter(notn=notn, enc='ascii')
         for arg in exargs:
             example_arguments[arg.title][notn] = {
@@ -180,9 +179,7 @@ def __populate_info():
             }
         p = create_parser(notn=notn)
         parser_tables[notn] = table = CharTable.fetch(notn)
-        nups[notn] = list(
-            table.list('user_predicate')
-        )
+        nups[notn] = table.chars('user_predicate')
 
     for name in modules['logics']:
         lgc = modules['logics'][name]

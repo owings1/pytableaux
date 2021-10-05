@@ -7,7 +7,7 @@
         <label for="input_notation">Notation</label>
         <select id="input_notation" name="input_notation">
             {% for notn in parser_tables -%}
-                <option value="{{ notn|e }}" {{ helper.select_opt(form_data, 'input_notation', notn) }}>
+                <option value="{{ notn|e }}" {{ helper.select_opt(form_data, 'input_notation', notn, form_defaults) }}>
                     {{- notn -}}
                 </option>
             {% endfor %}
@@ -18,7 +18,7 @@
             <div class="lexicon hidden notation-{{ notn|e }}">
                 <span class="label">Atomics</span>
                 <ul class="item-symbols">
-                    {% for char in table.list('atomic') -%}
+                    {% for char in table.chars('atomic') -%}
                         <li>{{ char|e }}</li>
                     {% endfor %}
                 </ul>
@@ -45,13 +45,13 @@
             <div class="lexicon hidden notation-{{ notn|e }}">
                 <span class="label">Constants</span>
                 <ul class="item-symbols">
-                    {% for char in table.list('constant') -%}
+                    {% for char in table.chars('constant') -%}
                         <li>{{ char|e }}</li>
                     {% endfor %}
                 </ul>
                 <span class="label">Variables</span>
                 <ul class="item-symbols">
-                    {% for char in table.list('variable') -%}
+                    {% for char in table.chars('variable') -%}
                         <li>{{ char|e }}</li>
                     {% endfor %}
                 </ul>
@@ -69,25 +69,23 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for name in system_predicates -%}
+                    {% for name, predicate in system_predicates.items() -%}
                         <tr class="systemPredicate">
                             <td>
                                 {% for notn, table in parser_tables.items() %}
                                     {%- set symbol = table.char('system_predicate', name) -%}
-                                    {%- set subscript = system_predicates[name].subscript -%}
+                                    {%- set subscript = predicate.subscript -%}
                                     <span class="predicateSymbol notation-{{ notn|e }} hidden">
                                         {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript|e }}</span>{% endif -%}
                                     </span>
                                 {% endfor %}
                             </td>
                             <td>{{ name|e }}</td>
-                            <td>{{ system_predicates[name].arity }}</td>
+                            <td>{{ predicate.arity }}</td>
                         </tr>
                     {% endfor %}
                     {% for label in form_data['user_predicate_symbols[]'] %}
-                        {%- set info = label.split('.') -%}
-                        {%- set index = info[0]|int -%}
-                        {%- set subscript = info[1]|int -%}
+                        {%- set index, subscript = label.split('.')|map('int') -%}
                         {%- set name = form_data['user_predicate_names[]'][loop.index0] -%}
                         {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
                         {%- call helper.predicate_row(index, subscript, name, arity) %}

@@ -1,5 +1,5 @@
-{%- extends 'layout.html' -%}
-{%- import 'helper.html' as helper -%}
+{%- extends 'layout.jinja2' -%}
+{%- import 'helper.jinja2' as helper -%}
 {%- block content -%}
     <script type="text/template" id="premiseTemplate">
         {{ helper.premise('{n}', '{value}', '{status}', '{messsage}') }}
@@ -11,10 +11,10 @@
     </script>
     <div class="pt-app">
         {% if errors %}
-            {% include 'errors.html' %}
+            {% include 'errors.jinja2' %}
         {% endif %}
         {% if warns %}
-            {% include 'warns.html' %}
+            {% include 'warns.jinja2' %}
         {% endif %}
         <form class="argument" action="/" method="post">
             <input type="hidden" name="api-json"/>
@@ -24,7 +24,7 @@
                     <span class="heading-summary" id="logic-heading-description"></span>
                 </div>
                 <div class="fieldset-contents hidden">
-                    {% include 'select-logic.html' %}
+                    {% include 'select-logic.jinja2' %}
                     <div class="clear"></div>
                 </div>
             </div>
@@ -35,10 +35,10 @@
                 </div>
                 <div class="fieldset-contents {{- helper.hidden_if(is_proof) }}">
                     <div class="left" id="sentences-input-panel">
-                        {% include 'sentence-input.html' %}
+                        {% include 'sentence-input.jinja2' %}
                     </div>
                     <div class="collapser-wrapper" id="lexicons-wrapper">
-                        {% include 'lexicon.html' %}
+                        {% include 'lexicon.jinja2' %}
                     </div>
                 </div>
                 <div class="clear"></div>
@@ -49,7 +49,7 @@
                     <span class="heading-summary" id="output-heading-description"></span>
                 </div>
                 <div class="fieldset-contents hidden">
-                    {% include 'output-options.html' %}
+                    {% include 'output-options.jinja2' %}
                 </div>
             </div>
         </form>

@@ -3,8 +3,10 @@ from errors import ParseError, BoundVariableError, UnboundVariableError, \
 from lexicals import Constant, Variable,  Atomic, Predicated, Quantified, \
     Operated, Vocabulary, Argument, get_system_predicate, operarity
     
-from fixed import default_notation
 from utils import cat, isstr
+
+notations = ('polish', 'standard')
+default_notation = 'polish'
 
 def parse(input, *args, **kw):
     """
@@ -49,7 +51,9 @@ def create_parser(notn=None, vocab=None, table=None, **opts):
     elif notn not in ('polish', 'standard'):
         raise ValueError('Invalid notation: {0}'.format(str(notn)))
     if not table:
-        table = CharTable.fetch(notn, 'default')
+        table = 'default'
+    if isstr(table):
+        table = CharTable.fetch(notn, table)
     if notn == 'polish':
         return PolishParser(table, vocab, **opts)
     elif notn == 'standard':
@@ -90,205 +94,6 @@ class Parser(object):
         return Argument(
             conclusion = conc, premises = prems, title = title
         )
-
-# class SymbolSet(object):
-
-#     __cache = {}
-
-#     @staticmethod
-#     def get_instance(key):
-#         cache = __class__.__cache
-#         if key not in cache:
-#             cache[key] = __class__(symbols_data[key])
-#         return cache[key]
-
-#     def __init__(self, data):
-#         if not isinstance(data, dict):
-#             raise TypeError('data must be a dict')
-#         self.name = data['name']
-#         self.encoding = data['encoding']
-#         self.can_parse = bool(data.get('parse'))
-#         self.symbols = {}
-#         self.types = {}
-#         self.index = {}
-#         self.reverse = {}
-        
-#         for ctype, cvals in data['symbols'].items():
-#             if isinstance(cvals, dict):
-#                 self.symbols[ctype] = dict(cvals)
-#                 self.types.update({c: ctype for c in cvals.values()})
-#                 self.index[ctype] = dict(cvals)
-#                 self.reverse[ctype] = {cvals[k]: k for k in cvals}
-#             elif isinstance(cvals, list) or isinstance(cvals, tuple):
-#                 self.symbols[ctype] = list(cvals)
-#                 self.types.update({c: ctype for c in cvals})
-#                 self.index[ctype] = {i: c for i, c in enumerate(cvals)}
-#                 self.reverse[ctype] = {c: i for i, c in enumerate(cvals)}
-#             else:
-#                 raise TypeError('Unsupported type for {0}'.format(ctype))
-
-#     def typeof(self, c):
-#         return self.types.get(c)
-
-#     def charof(self, ctype, index):
-#         return self.index[ctype][index]
-
-#     def indexof(self, ctype, key):
-#         return self.reverse[ctype][key]
-
-#     def chars(self, ctype):
-#         return self.symbols[ctype]
-
-_tdata = {
-    'standard': {
-        'default': {
-            'A' : ('atomic', 0),
-            'B' : ('atomic', 1),
-            'C' : ('atomic', 2),
-            'D' : ('atomic', 3),
-            'E' : ('atomic', 4),
-            '*' : ('operator', 'Assertion'),
-            '~' : ('operator', 'Negation'),
-            '&' : ('operator', 'Conjunction'),
-            'V' : ('operator', 'Disjunction'),
-            '>' : ('operator', 'Material Conditional'),
-            '<' : ('operator', 'Material Biconditional'),
-            '$' : ('operator', 'Conditional'),
-            '%' : ('operator', 'Biconditional'),
-            'P' : ('operator', 'Possibility'),
-            'N' : ('operator', 'Necessity'),
-            'x' : ('variable', 0),
-            'y' : ('variable', 1),
-            'z' : ('variable', 2),
-            'v' : ('variable', 3),
-            'a' : ('constant', 0),
-            'b' : ('constant', 1),
-            'c' : ('constant', 2),
-            'd' : ('constant', 3),
-            '=' : ('system_predicate', 'Identity'),
-            '!' : ('system_predicate', 'Existence'),
-            'F' : ('user_predicate', 0),
-            'G' : ('user_predicate', 1),
-            'H' : ('user_predicate', 2),
-            'O' : ('user_predicate', 3),
-            'L' : ('quantifier', 'Universal'),
-            'X' : ('quantifier', 'Existential'),
-            '(' : ('paren_open', 0),
-            ')' : ('paren_close', 0),
-            ' ' : ('whitespace', 0),
-            '0' : ('digit', 0),
-            '1' : ('digit', 1),
-            '2' : ('digit', 2),
-            '3' : ('digit', 3),
-            '4' : ('digit', 4),
-            '5' : ('digit', 5),
-            '6' : ('digit', 6),
-            '7' : ('digit', 7),
-            '8' : ('digit', 8),
-            '9' : ('digit', 9),
-        }
-    },
-    'polish': {
-        'default': {
-            'a' : ('atomic', 0),
-            'b' : ('atomic', 1),
-            'c' : ('atomic', 2),
-            'd' : ('atomic', 3),
-            'e' : ('atomic', 4),
-            'T' : ('operator', 'Assertion'),
-            'N' : ('operator', 'Negation'),
-            'K' : ('operator', 'Conjunction'),
-            'A' : ('operator', 'Disjunction'),
-            'C' : ('operator', 'Material Conditional'),
-            'E' : ('operator', 'Material Biconditional'),
-            'U' : ('operator', 'Conditional'),
-            'B' : ('operator', 'Biconditional'),
-            'M' : ('operator', 'Possibility'),
-            'L' : ('operator', 'Necessity'),
-            'x' : ('variable', 0),
-            'y' : ('variable', 1),
-            'z' : ('variable', 2),
-            'v' : ('variable', 3),
-            'm' : ('constant', 0),
-            'n' : ('constant', 1),
-            'o' : ('constant', 2),
-            's' : ('constant', 3),
-            'I' : ('system_predicate', 'Identity'),
-            'J' : ('system_predicate', 'Existence'),
-            'F' : ('user_predicate', 0),
-            'G' : ('user_predicate', 1),
-            'H' : ('user_predicate', 2),
-            'O' : ('user_predicate', 3),
-            'V' : ('quantifier', 'Universal'),
-            'S' : ('quantifier', 'Existential'),
-            ' ' : ('whitespace', 0),
-            '0' : ('digit', 0),
-            '1' : ('digit', 1),
-            '2' : ('digit', 2),
-            '3' : ('digit', 3),
-            '4' : ('digit', 4),
-            '5' : ('digit', 5),
-            '6' : ('digit', 6),
-            '7' : ('digit', 7),
-            '8' : ('digit', 8),
-            '9' : ('digit', 9),
-        },
-    }
-}
-
-class CharTable(object):
-
-    __instances = {'polish': {}, 'standard': {}}
-
-    @staticmethod
-    def load(notn, name, table):
-        idx = __class__.__instances[notn]
-        if name in idx:
-            raise ValueError('Table {0}.{1} already defined'.format(notn, name))
-        idx[name] = __class__(table)
-        return idx[name]
-
-    @staticmethod
-    def fetch(notn, name='default'):
-        idx = __class__.__instances[notn]
-        table = _tdata[notn][name]
-        return idx.get(name) or __class__.load(notn, name, table)
-
-    @staticmethod
-    def tables(notn):
-        return sorted(set(__class__.__instances[notn]).union(_tdata[notn]))
-
-    def __init__(self, table):
-        vals, itms = table.values(), table.items()
-        self._table = {key: tuple(value) for key, value in itms}
-        self._reverse = dict(reversed(item) for item in itms)
-        self._types = sorted(set(item[0] for item in vals))
-        self._lists = {
-            typ: sorted(item[1] for item in vals if item[0] == typ)
-            for typ in self._types
-        }
-
-    def type(self, char):
-        item = self._table.get(char)
-        return item[0] if item else None
-
-    def item(self, char):
-        return self._table[char]
-
-    def value(self, char):
-        return self.item(char)[1]
-
-    def char(self, *item):
-        return self._reverse[tuple(item)]
-
-    def list(self, typ):
-        return list(self._lists[typ])
-
-    def types(self):
-        return list(self._types)
-
-    def table(self):
-        return dict(self._table)
     
 class BaseParser(Parser):
 
@@ -760,3 +565,172 @@ class StandardParser(BaseParser):
         self._advance()
         return Operated(operator, [lhs, rhs])
 
+class CharTable(object):
+
+    __instances = {'polish': {}, 'standard': {}}
+
+    @staticmethod
+    def load(notn, name, table):
+        idx = __class__.__instances[notn]
+        if name in idx:
+            raise ValueError('Table {0}.{1} already defined'.format(notn, name))
+        idx[name] = __class__(table)
+        return idx[name]
+
+    @staticmethod
+    def fetch(notn, name='default'):
+        idx = __class__.__instances[notn]
+        builtin = __class__.__builtin[notn]
+        return idx.get(name) or __class__.load(notn, name, builtin[name])
+
+    @staticmethod
+    def available(notn):
+        return sorted(set(__class__.__instances[notn]).union(__class__.__builtin[notn]))
+
+    def __init__(self, table):
+        vals, itms = table.values(), table.items()
+        # copy table
+        self._table = {key: tuple(value) for key, value in itms}
+        # flipped table 
+        self._reverse = dict(reversed(item) for item in itms)
+        # list of types
+        self._types = sorted(set(item[0] for item in vals))
+        # tuple of unique values for type
+        self._values = {
+            # must be unique!
+            typ: sorted(set(item[1] for item in vals if item[0] == typ))
+            for typ in self._types
+        }
+        # chars for each type, no duplicates
+        self._chars = {
+            typ: tuple(self._reverse[(typ, val)] for val in self._values[typ])
+            for typ in self._types
+        }
+
+    def type(self, char):
+        item = self._table.get(char)
+        return item[0] if item else None
+
+    def item(self, char):
+        return self._table[char]
+
+    def value(self, char):
+        return self.item(char)[1]
+
+    def char(self, *item):
+        return self._reverse[tuple(item)]
+
+    def values(self, typ):
+        return list(self._values[typ])
+
+    def chars(self, typ):
+        return list(self._chars[typ])
+
+    def types(self):
+        return list(self._types)
+
+    def table(self):
+        return dict(self._table)
+
+    @staticmethod
+    def _initbuiltin(tdata):
+        __class__.__builtin = tdata
+        del(__class__._initbuiltin)
+    __builtin = None
+
+CharTable._initbuiltin({
+    'standard': {
+        'default': {
+            'A' : ('atomic', 0),
+            'B' : ('atomic', 1),
+            'C' : ('atomic', 2),
+            'D' : ('atomic', 3),
+            'E' : ('atomic', 4),
+            '*' : ('operator', 'Assertion'),
+            '~' : ('operator', 'Negation'),
+            '&' : ('operator', 'Conjunction'),
+            'V' : ('operator', 'Disjunction'),
+            '>' : ('operator', 'Material Conditional'),
+            '<' : ('operator', 'Material Biconditional'),
+            '$' : ('operator', 'Conditional'),
+            '%' : ('operator', 'Biconditional'),
+            'P' : ('operator', 'Possibility'),
+            'N' : ('operator', 'Necessity'),
+            'x' : ('variable', 0),
+            'y' : ('variable', 1),
+            'z' : ('variable', 2),
+            'v' : ('variable', 3),
+            'a' : ('constant', 0),
+            'b' : ('constant', 1),
+            'c' : ('constant', 2),
+            'd' : ('constant', 3),
+            '=' : ('system_predicate', 'Identity'),
+            '!' : ('system_predicate', 'Existence'),
+            'F' : ('user_predicate', 0),
+            'G' : ('user_predicate', 1),
+            'H' : ('user_predicate', 2),
+            'O' : ('user_predicate', 3),
+            'L' : ('quantifier', 'Universal'),
+            'X' : ('quantifier', 'Existential'),
+            '(' : ('paren_open', 0),
+            ')' : ('paren_close', 0),
+            ' ' : ('whitespace', 0),
+            '0' : ('digit', 0),
+            '1' : ('digit', 1),
+            '2' : ('digit', 2),
+            '3' : ('digit', 3),
+            '4' : ('digit', 4),
+            '5' : ('digit', 5),
+            '6' : ('digit', 6),
+            '7' : ('digit', 7),
+            '8' : ('digit', 8),
+            '9' : ('digit', 9),
+        }
+    },
+    'polish': {
+        'default': {
+            'a' : ('atomic', 0),
+            'b' : ('atomic', 1),
+            'c' : ('atomic', 2),
+            'd' : ('atomic', 3),
+            'e' : ('atomic', 4),
+            'T' : ('operator', 'Assertion'),
+            'N' : ('operator', 'Negation'),
+            'K' : ('operator', 'Conjunction'),
+            'A' : ('operator', 'Disjunction'),
+            'C' : ('operator', 'Material Conditional'),
+            'E' : ('operator', 'Material Biconditional'),
+            'U' : ('operator', 'Conditional'),
+            'B' : ('operator', 'Biconditional'),
+            'M' : ('operator', 'Possibility'),
+            'L' : ('operator', 'Necessity'),
+            'x' : ('variable', 0),
+            'y' : ('variable', 1),
+            'z' : ('variable', 2),
+            'v' : ('variable', 3),
+            'm' : ('constant', 0),
+            'n' : ('constant', 1),
+            'o' : ('constant', 2),
+            's' : ('constant', 3),
+            'I' : ('system_predicate', 'Identity'),
+            'J' : ('system_predicate', 'Existence'),
+            'F' : ('user_predicate', 0),
+            'G' : ('user_predicate', 1),
+            'H' : ('user_predicate', 2),
+            'O' : ('user_predicate', 3),
+            'V' : ('quantifier', 'Universal'),
+            'S' : ('quantifier', 'Existential'),
+            ' ' : ('whitespace', 0),
+            '0' : ('digit', 0),
+            '1' : ('digit', 1),
+            '2' : ('digit', 2),
+            '3' : ('digit', 3),
+            '4' : ('digit', 4),
+            '5' : ('digit', 5),
+            '6' : ('digit', 6),
+            '7' : ('digit', 7),
+            '8' : ('digit', 8),
+            '9' : ('digit', 9),
+        },
+    }
+})

@@ -59,11 +59,6 @@ def isint(arg):
 def sortedbyval(map):
     return list(it[1] for it in sorted((v, k) for k, v in map.items()))
 
-_unisubs = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉']
-
-def unicodesub(sub):
-    return ''.join(_unisubs[int(d)] for d in str(sub))
-
 class StopWatch(object):
 
     class StateError(Exception):

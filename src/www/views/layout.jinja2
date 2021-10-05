@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/proof.css"/>
     <meta name="viewport" content="width=device-width"/>
     {% if is_google_analytics -%}
-        {% include 'analytics.html' %}
+        {% include 'analytics.jinja2' %}
     {% endif -%}
 </head>
 <body>
@@ -30,7 +30,7 @@
     <div class="pt-content">
         {%- block content -%}{%- endblock -%}
         {%- if is_debug %}
-            {%- include 'debug.html' -%}
+            {%- include 'debug.jinja2' -%}
         {%- endif %}
     </div>
     <div class="footer-wrapper">

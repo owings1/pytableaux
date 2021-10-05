@@ -228,23 +228,34 @@ class Helper(object):
         """
         Build the csv table for the operators reference table.
         """
+        oplist = list_operators()
         sympol, symstd = (
-            table.list('operator') for table in (
+            {o: table.char('operator', o) for o in oplist}
+            for table in (
                 CharTable.fetch('polish'),
                 CharTable.fetch('standard'),
             )
         )
-        lwhtm = create_lexwriter('standard', enc='html')
-        symhtml = {
-            o: htmlun(lwhtm.write(o)) for o in list_operators()
-        }
+        symhtml, symunic = (
+            {o: rset.strfor('operator', o) for o in oplist}
+            for rset in (
+                RenderSet.fetch('standard', 'html'),
+                RenderSet.fetch('standard', 'unicode')
+            )
+        )
+        # lwhtm = create_lexwriter('standard', enc='unicode')
+        # symhtml = {
+        #     # o: htmlun(lwhtm.write(o)) for o in oplist
+        #     o: lwhtm.write(o) for o in oplist
+        # }
         lines = [
-            '"Operator Name","Arity","Polish","Standard","HTML"'
+            '"","","","Render only"',
+            '"Operator Name","Polish","Standard","Standard HTML","Standard Unicode"',
         ] + [
-            '"{0}","{1}","``{2}``","``{3}``","{4}"'.format(*row)
+            '"{0}","``{1}``","``{2}``","{3}","{4}"'.format(*row)
             for row in (
-                (o, str(operarity(o)), sympol[o], symstd[o], symhtml[o])
-                for o in list_operators()
+                (o, sympol[o], symstd[o], htmlun(symhtml[o]), symunic[o])
+                for o in oplist
             )
         ]
         return indent_lines(lines, indent = indent)
@@ -511,16 +522,14 @@ class Helper(object):
         if not what:
             m = re.match(r'^(.)([0-9]*)$', text)
             if m:
-                symset = self.parser.symbol_set
-                chr, sub = m.groups()
+                table = self.parser.table
+                char, sub = m.groups()
                 sub = int(sub) if len(sub) else 0
-                ctype = symset.typeof(chr)
+                ctype = table.type(char)
                 if ctype in ('operator', 'quantifier'):
-                    what = ctype
-                    item = symset.indexof(ctype, chr)
+                    what, item = table.item(char)
                 elif ctype in ('constant', 'variable'):
-                    what = ctype
-                    idx = symset.indexof(ctype, chr)
+                    what, idx = table.item(char)
                     if ctype == 'constant':
                         item = Constant(idx, sub)
                         classes.append('constant')
@@ -529,12 +538,13 @@ class Helper(object):
                         classes.append('variable')
                 elif ctype == 'user_predicate':
                     what = 'predicate'
-                    idx = symset.indexof(ctype, chr)
+                    _, idx = table.item(char)
                     item = self.opts['vocabulary'].get_predicate(index=idx, subscript=sub)
                     classes.append('user_predicate')
                 elif ctype == 'system_predicate':
                     what = 'predicate'
-                    item = get_system_predicate(symset.indexof(ctype, chr))
+                    _, name = table.item(char)
+                    item = get_system_predicate(name)
                     classes.extend(('system_predicate', item.name))
         if not what:
             what = 'sentence'

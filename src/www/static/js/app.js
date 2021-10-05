@@ -22,6 +22,7 @@
     $(document).ready(function() {
 
         const AppData = $.parseJSON($('script.app').html())
+        const {is_debug} = AppData
         const Templates = {
             premise    : $('#premiseTemplate').html(),
             predicate  : $('#predicateRowTemplate').html()
@@ -116,6 +117,7 @@
             $('input:submit', $Frm).prop('disabled', true)
             const data = getApiData()
             const json = JSON.stringify(data)
+            debug('submitForm', data)
             $('input[name="api-json"]', $Frm).val(json)
         }
 
@@ -219,8 +221,8 @@
          *
          * @return String name of the symbol set, e.g. 'default'
          */
-        function currentOutputSymbolSet() {
-            return $('#symbol_set', $Ctx).val()
+        function currentOutputSymbolEnc() {
+            return $('#symbol_enc', $Ctx).val()
         }
 
         /**
@@ -495,6 +497,7 @@
                             $status.removeClass('bad').addClass('good')
                             $status.attr('title', res.result.type).tooltip()
                             SentenceRenders[input] = res.result.rendered
+                            debug({SentenceRenders})
                             refreshArgumentHeader()
                         },
                         error: function(xhr, textStatus, errorThrown) {
@@ -534,7 +537,7 @@
          */
         function refreshArgumentHeader() {
             const notation = currentOutputNotation()
-            const symset = currentOutputSymbolSet()
+            const enc = currentOutputSymbolEnc()
             const premises = []
             var conclusion
             $('input.sentence', $Ctx).each(function(sentenceIndex) {
@@ -545,8 +548,9 @@
                 if (input || isConclusion) {
                     var sentence
                     if (isGood && SentenceRenders[input]) {
-                        sentence = SentenceRenders[input][notation][symset]
-                        if (symset != 'html') {
+                        // debug({notation, enc})
+                        sentence = SentenceRenders[input][notation][enc]
+                        if (enc != 'html') {
                             sentence = h(sentence)
                         }
                     } else {
@@ -644,7 +648,7 @@
             })
             data.output.notation = $('#output_notation', $Frm).val()
             data.output.format = $('#format', $Frm).val()
-            data.output.symbol_set = $('#symbol_set', $Frm).val()
+            data.output.symbol_enc = $('#symbol_enc', $Frm).val()
             data.output.options = {}
             $('input:checkbox.options', $Frm).each(function() {
                 const $me = $(this)
@@ -684,7 +688,14 @@
             return str.replace(/</g, '&lt;')
         }
 
+        function debug(...args) {
+            if (is_debug) {
+                console.log(...args)
+            }
+        }
+
         init()
 
+        debug({AppData})
     })
 })(jQuery);

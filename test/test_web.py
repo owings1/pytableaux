@@ -154,7 +154,7 @@ class AppTest(helper.CPWebCase):
             app.api_prove({'logic': 'bunky'})
             assert 'Logic' in exc_info.value.errors
         with pytest.raises(web.RequestDataError) as exc_info:
-            app.api_prove({'output': {'symbol_set': 'bunky'}})
+            app.api_prove({'output': {'symbol_enc': 'bunky'}})
             assert 'Symbol Set' in exc_info.value.errors
         with pytest.raises(web.RequestDataError) as exc_info:
             app.api_prove({'output': {'notation': 'bunky'}})

@@ -17,27 +17,28 @@
 #
 # ------------------
 # pytableaux - lexicals module
-from fixed import default_notation, _old_symbols_data
 from errors import NotFoundError
-from utils import cat, isint, isstr, sortedbyval, unicodesub
+from utils import cat, isint, isstr, sortedbyval
 from copy import deepcopy
+
+notations = ('polish', 'standard')
+default_notation = 'standard'
+default_notn_encs = {'polish': 'ascii', 'standard': 'unicode'}
 
 def create_lexwriter(notn=None, enc=None, **opts):
     if not notn:
         notn = default_notation
-    if notn not in ('polish', 'standard'):
+    if notn not in notations:
         raise ValueError('Invalid notation: {0}'.format(str(notn)))
     if not enc:
-        enc = 'ascii'
+        enc = default_notn_encs[notn]
     if 'renderset' not in opts:
-        key = '.'.join((notn, enc))
-        if key not in rendersets:
-            raise NotFoundError('Rendering data for {0} not found'.format(key))
-        opts['renderset'] = rendersets[key]
+        opts['renderset'] = RenderSet.fetch(notn, enc)
     if notn == 'polish':
         return PolishLexWriter(**opts)
     if notn == 'standard':
         return StandardLexWriter(**opts)
+    raise NotFoundError('Unknown notation {0}'.format(str(notn)))
 
 def get_system_predicate(name):
     """
@@ -1093,6 +1094,26 @@ class StandardLexWriter(BaseLexWriter):
 
 class RenderSet(object):
 
+    __instances = {'polish': {}, 'standard': {}}
+
+    @staticmethod
+    def load(notn, name, data):
+        idx = __class__.__instances[notn]
+        if name in idx:
+            raise ValueError('RenderSet {0}.{1} already defined'.format(notn, name))
+        idx[name] = __class__(data)
+        return idx[name]
+
+    @staticmethod
+    def fetch(notn, name='ascii'):
+        idx = __class__.__instances[notn]
+        builtin = __class__.__builtin[notn]
+        return idx.get(name) or __class__.load(notn, name, builtin[name])
+
+    @staticmethod
+    def available(notn):
+        return sorted(set(__class__.__instances[notn]).union(__class__.__builtin[notn]))
+
     def __init__(self, data):
         if not isinstance(data, dict):
             raise TypeError('data must be a dict')
@@ -1110,122 +1131,183 @@ class RenderSet(object):
             return self.formats[ctype].format(value)
         return self.strings[ctype][value]
 
-rendersets = {
-    'standard.utf8': RenderSet({
-        'name'    : 'standard.unicode',
-        'notation': 'standard',
-        'encoding': 'utf8',
-        'renders': {
-            # 'subscript' : ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'],
-            'subscript': lambda sub: ''.join(chr(0x2080 + int(d)) for d in str(sub))
-        },
-        'strings': {
-            'atomic'   : ['A', 'B', 'C', 'D', 'E'],
-            'operator' : {
-                'Assertion'              : '°',
-                'Negation'               : '¬',
-                'Conjunction'            : '∧',
-                'Disjunction'            : '∨',
-                'Material Conditional'   : '⊃',
-                'Material Biconditional' : '≡',
-                'Conditional'            : '→',
-                'Biconditional'          : '↔',
-                'Possibility'            : '◇',
-                'Necessity'              : '◻',
+    @staticmethod
+    def _initbuiltin(tdata):
+        __class__.__builtin = tdata
+        del(__class__._initbuiltin)
+    __builtin = None
+
+_ = {
+    'polish': {
+        'ascii': {
+            'name'     : 'polish.ascii',
+            'notation' : 'polish',
+            'encoding' : 'ascii',
+            'formats': {
+                'subscript': '{0}',
             },
-            'variable'   : ['x', 'y', 'z', 'v'],
-            'constant'   : ['a', 'b', 'c', 'd'],
-            'quantifier' : {
-                'Universal'   : '∀' ,
-                'Existential' : '∃' ,
+            'strings' : {
+                'atomic'   : ['a', 'b', 'c', 'd', 'e'],
+                'operator' : {
+                    'Assertion'              : 'T',
+                    'Negation'               : 'N',
+                    'Conjunction'            : 'K',
+                    'Disjunction'            : 'A',
+                    'Material Conditional'   : 'C',
+                    'Material Biconditional' : 'E',
+                    'Conditional'            : 'U',
+                    'Biconditional'          : 'B',
+                    'Possibility'            : 'M',
+                    'Necessity'              : 'L',
+                },
+                'variable'   : ['x', 'y', 'z', 'v'],
+                'constant'   : ['m', 'n', 'o', 's'],
+                'quantifier' : {
+                    'Universal'   : 'V',
+                    'Existential' : 'S',
+                },
+                'system_predicate'  : {
+                    'Identity'  : 'I',
+                    'Existence' : 'J',
+                    'NegatedIdentity' : NotImplemented,
+                },
+                'user_predicate' : ['F', 'G', 'H', 'O'],
+                'paren_open'     : [NotImplemented],
+                'paren_close'    : [NotImplemented],
+                'whitespace'     : [' '],
             },
-            'system_predicate'  : {
-                'Identity'  : '=',
-                'Existence' : 'E!',
-                'NegatedIdentity' : '≠',
-            },
-            'user_predicate'  : ['F', 'G', 'H', 'O'],
-            'paren_open'      : ['('],
-            'paren_close'     : [')'],
-            'whitespace'      : [' '],
-        },
-    }),
-    'standard.html': RenderSet({
-        'name'    : 'standard.html',
-        'notation': 'standard',
-        'encoding': 'html',
-        'formats' : {
-            'subscript': '<sub>{0}</sub>',
-        },
-        'strings': {
-            'atomic'   : ['A', 'B', 'C', 'D', 'E'],
-            'operator' : {
-                'Assertion'              : '&deg;'   ,
-                'Negation'               : '&not;'   ,
-                'Conjunction'            : '&and;'   ,
-                'Disjunction'            : '&or;'    ,
-                'Material Conditional'   : '&sup;'   ,
-                'Material Biconditional' : '&equiv;' ,
-                'Conditional'            : '&rarr;'  ,
-                'Biconditional'          : '&harr;'  ,
-                'Possibility'            : '&#9671;' ,
-                'Necessity'              : '&#9723;' ,
-            },
-            'variable'   : ['x', 'y', 'z', 'v'],
-            'constant'   : ['a', 'b', 'c', 'd'],
-            'quantifier' : {
-                'Universal'   : '&forall;' ,
-                'Existential' : '&exist;'  ,
-            },
-            'system_predicate'  : {
-                'Identity'  : '=',
-                'Existence' : 'E!',
-                'NegatedIdentity' : '&ne;',
-            },
-            'user_predicate'  : ['F', 'G', 'H', 'O'],
-            'paren_open'      : ['('],
-            'paren_close'     : [')'],
-            'whitespace'      : [' '],
-        },
-    }),
+        }
+    }
 }
-_ = deepcopy(_old_symbols_data['polish.ascii'])
-_.update({
-    'renders': {
-        'subscript': str
-    },
-    'strings': _['symbols'],
-})
-del(_['symbols'])
-rendersets['polish.ascii'] = RenderSet(_)
-rendersets['polish.utf8'] = RenderSet(_)
-
-_ = deepcopy(_old_symbols_data['polish.ascii'])
-_.update({
-    'name' : 'polish.html',
+_['polish']['html'] = deepcopy(_['polish']['ascii'])
+_['polish']['html'].update({
+    'name': 'polish.html',
     'encoding': 'html',
-    'formats': {
-        'subscript': '<sub>{0}</sub>'
-    },
-    'strings': _['symbols'],
+    'formats': {'subscript': '<sub>{0}</sub>'},
 })
-del(_['symbols'])
-rendersets['polish.html'] = RenderSet(_)
-
-_ = deepcopy(_old_symbols_data['standard.ascii'])
+_['polish']['unicode'] = _['polish']['ascii']
 _.update({
-    'renders': {
-        'subscript': str
-    },
-    'strings': _['symbols'],
+    'standard': {
+        'ascii': {
+            'name'     : 'standard.ascii',
+            'notation' : 'standard',
+            'encoding' : 'ascii',
+            'formats': {
+                'subscript': '{0}',
+            },
+            'strings': {
+                'atomic' : ['A', 'B', 'C', 'D', 'E'],
+                'operator' : {
+                    'Assertion'              :  '*',
+                    'Negation'               :  '~',
+                    'Conjunction'            :  '&',
+                    'Disjunction'            :  'V',
+                    'Material Conditional'   :  '>',
+                    'Material Biconditional' :  '<',
+                    'Conditional'            :  '$',
+                    'Biconditional'          :  '%',
+                    'Possibility'            :  'P',
+                    'Necessity'              :  'N',
+                },
+                'variable' : ['x', 'y', 'z', 'v'],
+                'constant' : ['a', 'b', 'c', 'd'],
+                'quantifier' : {
+                    'Universal'   : 'L',
+                    'Existential' : 'X',
+                },
+                'system_predicate'  : {
+                    'Identity'  : '=',
+                    'Existence' : 'E!',
+                    'NegatedIdentity' : '!=',
+                },
+                'user_predicate'  : ['F', 'G', 'H', 'O'],
+                'paren_open'      : ['('],
+                'paren_close'     : [')'],
+                'whitespace'      : [' '],
+            },
+        },
+        'unicode': {
+            'name'    : 'standard.unicode',
+            'notation': 'standard',
+            'encoding': 'utf8',
+            'renders': {
+                # ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'],
+                'subscript': lambda sub: ''.join(chr(0x2080 + int(d)) for d in str(sub))
+            },
+            'strings': {
+                'atomic'   : ['A', 'B', 'C', 'D', 'E'],
+                'operator' : {
+                    'Assertion'              : '°',
+                    'Negation'               : '¬',
+                    'Conjunction'            : '∧',
+                    'Disjunction'            : '∨',
+                    'Material Conditional'   : '⊃',
+                    'Material Biconditional' : '≡',
+                    'Conditional'            : '→',
+                    'Biconditional'          : '↔',
+                    'Possibility'            : '◇',
+                    'Necessity'              : '◻',
+                },
+                'variable'   : ['x', 'y', 'z', 'v'],
+                'constant'   : ['a', 'b', 'c', 'd'],
+                'quantifier' : {
+                    'Universal'   : '∀' ,
+                    'Existential' : '∃' ,
+                },
+                'system_predicate'  : {
+                    'Identity'  : '=',
+                    'Existence' : 'E!',
+                    'NegatedIdentity' : '≠',
+                },
+                'user_predicate'  : ['F', 'G', 'H', 'O'],
+                'paren_open'      : ['('],
+                'paren_close'     : [')'],
+                'whitespace'      : [' '],
+            },
+        },
+        'html': {
+            'name'    : 'standard.html',
+            'notation': 'standard',
+            'encoding': 'html',
+            'formats' : {
+                'subscript': '<sub>{0}</sub>',
+            },
+            'strings': {
+                'atomic'   : ['A', 'B', 'C', 'D', 'E'],
+                'operator' : {
+                    'Assertion'              : '&deg;'   ,
+                    'Negation'               : '&not;'   ,
+                    'Conjunction'            : '&and;'   ,
+                    'Disjunction'            : '&or;'    ,
+                    'Material Conditional'   : '&sup;'   ,
+                    'Material Biconditional' : '&equiv;' ,
+                    'Conditional'            : '&rarr;'  ,
+                    'Biconditional'          : '&harr;'  ,
+                    'Possibility'            : '&#9671;' ,
+                    'Necessity'              : '&#9723;' ,
+                },
+                'variable'   : ['x', 'y', 'z', 'v'],
+                'constant'   : ['a', 'b', 'c', 'd'],
+                'quantifier' : {
+                    'Universal'   : '&forall;' ,
+                    'Existential' : '&exist;'  ,
+                },
+                'system_predicate'  : {
+                    'Identity'  : '=',
+                    'Existence' : 'E!',
+                    'NegatedIdentity' : '&ne;',
+                },
+                'user_predicate'  : ['F', 'G', 'H', 'O'],
+                'paren_open'      : ['('],
+                'paren_close'     : [')'],
+                'whitespace'      : [' '],
+            },
+        }
+    }
 })
-_['strings']['system_predicate'].update({
-    'Existence': 'E!',
-    'NegatedIdentity': '!=',
-})
-del(_['symbols'])
-rendersets['standard.ascii'] = RenderSet(_)
+RenderSet._initbuiltin(_)
 del(_)
+
 
 # Aliases
 Atomic = AtomicSentence

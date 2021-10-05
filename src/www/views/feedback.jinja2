@@ -1,5 +1,5 @@
-{%- extends 'layout.html' -%}
-{%- import 'helper.html' as helper -%}
+{%- extends 'layout.jinja2' -%}
+{%- import 'helper.jinja2' as helper -%}
 {%- block content -%}
 <div class="pt-app">
     <div class="feedback_view">
@@ -18,7 +18,7 @@
             </div>
         {%- else -%}
             {% if errors %}
-                {% include 'errors.html' %}
+                {% include 'errors.jinja2' %}
             {% endif %}
             <div class="feedback_preamble">
                 <p>
@@ -35,7 +35,7 @@
                 <p><i>{{ feedback_to_address|e }}</i></p>
             </div>
             {% if warns %}
-                {% include 'warns.html' %}
+                {% include 'warns.jinja2' %}
             {% endif %}
             <form method="POST" class="feedback">
                 <div class="input">
