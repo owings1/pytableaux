@@ -918,6 +918,11 @@ class LexWriter(object):
         self.opts.update(opts)
 
     def write(self, item):
+        """
+        Write a lexical item.
+        """
+        # NB: implementations should avoid calling this method, e.g.
+        #     dropping parens will screw up since it is recursive.
         if isstr(item):
             if is_operator(item):
                 return self._write_operator(item)
@@ -943,6 +948,12 @@ class LexWriter(object):
         raise NotImplementedError()
 
     def _write_quantifier(self, item):
+        raise NotImplementedError()
+
+    def _write_constant(self, item):
+        raise NotImplementedError()
+
+    def _write_variable(self, item):
         raise NotImplementedError()
 
     def _write_predicate(self, item):
@@ -1069,14 +1080,16 @@ class StandardLexWriter(BaseLexWriter):
                 operand.predicate.name == 'Identity'):
                 return self._write_negated_identity(sentence)
             else:
-                return self._write_operator(oper) + self.write(operand)
+                return self._write_operator(oper) + self._write_sentence(operand)
         elif arity == 2:
             return ''.join([
                 self._strfor('paren_open', 0) if not drop_parens else '',
                 self._strfor('whitespace', 0).join([
-                    self.write(sentence.lhs),
+                    # self.write(sentence.lhs),
+                    self._write_sentence(sentence.lhs),
                     self._write_operator(oper),
-                    self.write(sentence.rhs),
+                    # self.write(sentence.rhs),
+                    self._write_sentence(sentence.rhs),
                 ]),
                 self._strfor('paren_close', 0) if not drop_parens else '',
             ])

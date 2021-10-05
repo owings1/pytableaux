@@ -20,14 +20,10 @@
 name = 'K3WQ'
 
 class Meta(object):
-
     title    = 'Weak Kleene 3-valued alternate-quantifier logic'
     category = 'Many-valued'
-
     description = 'Three-valued logic with values T, F, and N, with alternate quantification'
-
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-
     category_display_order = 40
 
 from lexicals import Operated, Quantified

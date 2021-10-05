@@ -21,7 +21,7 @@ import pytest
 
 from lexicals import Atomic, Operated, BaseLexWriter, \
     create_lexwriter, get_system_predicate
-from parsers import parse
+from parsers import parse, create_parser
 from errors import *
 from tableaux import Tableau
 from proof.writers import create_tabwriter
@@ -30,9 +30,17 @@ import examples
 # Sentence Writers
 
 std = create_lexwriter(notn='standard')
+stdasc = create_lexwriter(notn='standard', enc='ascii')
+stduni = create_lexwriter(notn='standard', enc='unicode')
+stdhtm = create_lexwriter(notn='standard', enc='html')
+
 pol = create_lexwriter(notn='polish')
 
-stdhtm = create_lexwriter(notn='standard', enc='html')
+
+
+
+pstd = create_parser('standard')
+
 class TestBase(object):
 
     pass
@@ -50,6 +58,39 @@ class TestStandard(object):
         res = std.write(s)
         assert res == 'A'
 
+    def test_writes_parens_asc(self):
+        s = parse('UUaba')
+        res = stdasc.write(s)
+        assert '(' in res
+        assert ')' in res
+    def test_writes_parens_uni(self):
+        s = parse('UUaba')
+        res = stduni.write(s)
+        assert '(' in res
+        assert ')' in res
+    def test_writes_parens_htm(self):
+        s = parse('UUaba')
+        res = stdhtm.write(s)
+        assert '(' in res
+        assert ')' in res
+    def test_drop_parens_asc(self):
+        s = parse('Uab')
+        lw = create_lexwriter('standard', 'ascii', drop_parens=True)
+        res = lw.write(s)
+        assert '(' not in res
+        assert ')' not in res
+    def test_drop_parens_uni(self):
+        s = parse('Uab')
+        lw = create_lexwriter('standard', 'unicode', drop_parens=True)
+        res = lw.write(s)
+        assert '(' not in res
+        assert ')' not in res
+    def test_drop_parens_htm(self):
+        s = parse('Uab')
+        lw = create_lexwriter('standard', 'html', drop_parens=True)
+        res = lw.write(s)
+        assert '(' not in res
+        assert ')' not in res
     # def test_symset_returns_same(self):
         # ss = std.symset('default')
         # res = std.symset(ss)
