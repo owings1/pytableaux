@@ -1,11 +1,11 @@
 .. _K3WQ:
 
-******************************************************
-K3WQ - Weak Kleene Logic with alternate quantification
-******************************************************
+************************************************************
+:m:`K3WQ` - Weak Kleene Logic with alternate quantification
+************************************************************
 
 This is a version of :ref:`K3W` with a different treatment of the quantifiers
-in terms of generalized conjunction/disjunction. This yeilds some interesting
+in terms of generalized conjunction/disjunction. This yields some interesting
 rules for the quantifiers, given the behavior of those operators in :ref:`K3W`.
 
 .. contents:: :local:
@@ -15,16 +15,34 @@ rules for the quantifiers, given the behavior of those operators in :ref:`K3W`.
     Semantics
     =========
 
+    .. _k3wq-model:
+
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. include:: include/fde/m.attributes.rst
+
+        .. method:: truth_function(operator, a, b)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            //truth_tables//k3wq//
 
         .. automethod:: value_of_existential(sentence)
 
         .. automethod:: value_of_universal(sentence)
 
+    Logical Consequence
+    -------------------
+
+    Logical consequence is defined just like in :m:`K3`:
+    
+    .. include:: include/k3/m.consequence.rst
+
     Tableaux System
     ===============
+
+    .. _k3wq-system:
 
     .. autoclass:: TableauxSystem
         :members: build_trunk
@@ -32,15 +50,7 @@ rules for the quantifiers, given the behavior of those operators in :ref:`K3W`.
     .. autoclass:: TableauxRules
         :members:
 
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just like in :ref:`CPL <CPL>` and :ref:`K3 <K3>`:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      are models where *C* also has the value :m:`T`.
-
     Notes
-    =====
+    -----
 
     - Standard interdefinability of the quantifiers is preserved.

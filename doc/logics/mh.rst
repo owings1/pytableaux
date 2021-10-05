@@ -27,10 +27,9 @@ MH - Paracomplete Hybrid Logic
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined just like in :ref:`CPL <CPL>` and :ref:`K3 <K3>`:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      are models where *C* also has the value :m:`T`.
+    Logical consequence is defined just like in :m:`K3`:
+    
+    .. include:: include/k3/m.consequence.rst
 
 
 ..

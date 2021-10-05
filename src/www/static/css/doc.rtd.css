@@ -29,3 +29,14 @@
 .truth-table th.operator-symbol.arity-1 {
     border-bottom: 1px solid black;
 }
+#semantics .truth-table thead > tr > th.operator-name {
+    text-align: right;
+}
+
+/* remove exclamation point from admonitions */
+/* .fa-exclamation-circle:before, */
+/* .wy-inline-validate.wy-inline-validate-info .wy-input-context:before, */
+/* .wy-inline-validate.wy-inline-validate-warning .wy-input-context:before, */
+.rst-content .admonition-title:before {
+    content: "";
+}

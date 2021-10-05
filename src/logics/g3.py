@@ -35,7 +35,7 @@ from . import fde, l3, k3
 
 class Model(l3.Model):
     """
-    A G3 model is similar to a :ref:`K3 model <k3-model>`, but with different tables
+    A :m:`G3` model is similar to a :ref:`K3 model <k3-model>`, but with different tables
     for some of the operators.
     """
 
@@ -47,7 +47,7 @@ class Model(l3.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    G3's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    :m:`G3`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
     employing designation markers, and building the trunk in the same way.
     """
 
@@ -68,8 +68,8 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 
 class TableauxRules(object):
     """
-    The closure rules for G3 are the FDE closure rule, and the K3 closure rule.
-    The operator rules for G3 are mostly the rules for :ref:`FDE <FDE>`, with the exception
+    The closure rules for :m:`G3` are the FDE closure rule, and the :m:`K3` closure rule.
+    The operator rules for :m:`G3` are mostly the rules for :ref:`FDE <FDE>`, with the exception
     of the rules for the conditional and biconditional operators, and some of
     the negation rules.
     """

@@ -66,7 +66,7 @@ class Model(k3.Model):
         The *crunched value* of *v* is 1 (:m:`T`) if *v* is 1, else 0 (:m:`F`).
 
         Note that this is in accord with interpreting the existential quantifier
-        in terms of generalized disjunction.
+        in terms of `generalized disjunction`.
         """
         si = sentence.sentence
         v = sentence.variable
@@ -449,7 +449,7 @@ class TableauxRules(object):
 
         def get_target_for_node(self, node, branch):
             s = self.sentence(node)
-            disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
+            # disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
             return {
                 'adds': [
                     [

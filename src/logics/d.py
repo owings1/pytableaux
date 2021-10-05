@@ -17,18 +17,13 @@
 # ------------------
 #
 # pytableaux - Deonitic Normal Modal Logic
-
 name = 'D'
 
 class Meta(object):
-
     title    = 'Deontic Normal Modal Logic'
     category = 'Bivalent Modal'
-
     description = 'Normal modal logic with a serial access relation'
-
     tags = ['bivalent', 'modal', 'first-order']
-
     category_display_order = 2
 
 from proof.rules import PotentialNodeRule
@@ -40,11 +35,7 @@ class Model(k.Model):
     """
     A D model is just like a :ref:`K model <k-model>` with a *serial* restriction
     on the access relation.
-
-    * **Seriality**: For each world :m:`w`, there is some world :m:`w'` such that
-      :m:`<w,w'>` is in the access relation.
     """
-
     def finish(self):
         needs_world = set()
         for world in self.frames:
@@ -60,8 +51,7 @@ class Model(k.Model):
 
 class TableauxSystem(k.TableauxSystem):
     """
-    D's Tableaux System inherits directly inherits directly from the
-    :ref:`K system <k-system>`.
+    D's Tableaux System inherits directly inherits directly from K.
     """
     pass
 
@@ -73,6 +63,8 @@ class TableauxRules:
 
     class Serial(PotentialNodeRule):
         """
+        .. _serial-rule:
+
         The Serial rule applies to a an open branch *b* when there is a world *w* that
         appears on *b*, but there is no world *w'* such that *w* accesses *w'*. The exception
         to this is when the Serial rule was the last rule to apply to the branch. This

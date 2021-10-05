@@ -23,15 +23,7 @@ values is:
 
     .. autoclass:: Model
 
-        .. autoattribute:: truth_values
-
-        .. autoattribute:: designated_values
-
-        .. autoattribute:: extensions
-
-        .. autoattribute:: anti_extensions
-
-        .. autoattribute:: atomics
+        .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)
 
@@ -86,6 +78,8 @@ values is:
 
     .. autoclass:: TableauxSystem
         :members:
+
+    .. _fde-rules:
 
     .. autoclass:: TableauxRules
         :members:

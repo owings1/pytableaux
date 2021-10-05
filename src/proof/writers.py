@@ -111,7 +111,10 @@ class HtmlTableauWriter(TemplateWriter):
 
     name = 'HTML'
     format = 'html'
-    defaults = {}
+    defaults = {
+        'classes'      : [],
+        'wrap_classes' : [],
+    }
 
     path_prefix = 'html'
     jinja_opts = {

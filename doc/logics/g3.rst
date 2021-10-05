@@ -1,8 +1,8 @@
 .. _G3:
 
-*************************
-G3 - Gödel 3-valued logic
-*************************
+******************************
+:m:`G3` - Gödel 3-valued logic
+******************************
 
 Gödel 3-valued logic (:m:`T`, :m:`F`, and :m:`N`) with classical-like negation.
 
@@ -15,12 +15,21 @@ Gödel 3-valued logic (:m:`T`, :m:`F`, and :m:`N`) with classical-like negation.
 
     .. autoclass:: Model
 
+        .. include:: include/fde/m.attributes.rst
+
         .. method:: truth_function(operator, a, b)
 
             The value of a sentence with a truth-functional operator is determined by
             the values of its operands according to the following tables.
 
             //truth_tables//g3//
+
+    Logical Consequence
+    -------------------
+
+    Logical consequence is defined just like in :m:`K3`:
+    
+    .. include:: include/k3/m.consequence.rst
 
     Tableaux System
     ===============
@@ -31,16 +40,10 @@ Gödel 3-valued logic (:m:`T`, :m:`F`, and :m:`N`) with classical-like negation.
     .. autoclass:: TableauxRules
         :members:
 
-    Logical Consequence
-    ===================
+    Notes
+    -----
 
-    **Logical Consequence** is defined just like in :ref:`CPL <CPL>` and :ref:`K3 <K3>`:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      are models where *C* also has the value :m:`T`.
-
-    References
-    ==========
+    .. rubric:: Futher Reading
 
     - Heyting, Arend. `Intuitionism`_: An Introduction. Netherlands, North-Holland, 1966.
 

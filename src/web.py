@@ -94,10 +94,10 @@ del(_enc)
 print('lexwriter_encodings_common', lexwriter_encodings_common)
 # Defaults on first load.
 form_defaults = {
-    'input_notation': 'standard',
-    'format': 'html',
-    'output_notation': 'standard',
-    'symbol_enc': 'html',
+    'input_notation'  : 'standard',
+    'format'          : 'html',
+    'output_notation' : 'standard',
+    'symbol_enc'      : 'html',
 
     'options.controls': True,
     'options.group_optimizations': True,

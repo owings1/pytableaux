@@ -1,13 +1,14 @@
 {%- import 'helper.jinja2' as helper -%}
 {%- import 'structure.jinja2' as structure -%}
-<div class="html-writer">
+<div class="html-writer {{ opts.get('wrap_classes', [])|join(' ') }}">
     {% if opts['controls'] %}
         {%- include 'controls.jinja2' -%}
     {% endif %}
     {% if opts['models'] and not tableau.is_premature %}
         {%- include 'models.jinja2' -%}
     {% endif %}
-    <div class="html-writer-proof
+    <div class="html-writer-proof tableau
+        {{ opts.get('classes', [])|join(' ') }}
         {{- ' color-open' if opts['color_open'] }}
         {{- ' with-controls' if opts['controls'] }}
         {{- ' with-models' if opts['models'] }}

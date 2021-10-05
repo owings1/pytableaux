@@ -1175,6 +1175,10 @@ _ = {
                 'paren_open'     : [NotImplemented],
                 'paren_close'    : [NotImplemented],
                 'whitespace'     : [' '],
+                'meta': {
+                    'conseq': '|-',
+                    'non-conseq': '|/-',
+                },
             },
         }
     }
@@ -1224,6 +1228,10 @@ _.update({
                 'paren_open'      : ['('],
                 'paren_close'     : [')'],
                 'whitespace'      : [' '],
+                'meta': {
+                    'conseq': '|-',
+                    'non-conseq': '|/-'
+                },
             },
         },
         'unicode': {
@@ -1263,6 +1271,11 @@ _.update({
                 'paren_open'      : ['('],
                 'paren_close'     : [')'],
                 'whitespace'      : [' '],
+                'meta': {
+                    'conseq': '⊢',
+                    'nonconseq': '⊬',
+                    # 'weak-assertion' : '»',
+                },
             },
         },
         'html': {
@@ -1301,6 +1314,10 @@ _.update({
                 'paren_open'      : ['('],
                 'paren_close'     : [')'],
                 'whitespace'      : [' '],
+                'meta': {
+                    'conseq': '⊢',
+                    'nonconseq': '⊬',
+                },
             },
         }
     }

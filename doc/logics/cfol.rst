@@ -35,8 +35,17 @@ Universal (:s:`L`) and Existential (:s:`X`).
             A universal sentence is true just when the sentence resulting in the
             subsitution of each constant in the domain for the variable is true.
 
+    Logical Consequence
+    -------------------
+
+    **Logical Consequence** is defined in the standard way:
+
+        .. include:: include/cpl/m.consequence.rst
+
     Tableaux System
     ===============
+
+    .. _cfol-system:
 
     .. autoclass:: TableauxSystem
         :members: build_trunk
@@ -44,9 +53,4 @@ Universal (:s:`L`) and Existential (:s:`X`).
     .. autoclass:: TableauxRules
         :members:
 
-    Logical Consequence
-    ===================
 
-    **Logical Consequence** is defined in the standard way:
-
-        .. include:: include/cpl/m.consequence.rst

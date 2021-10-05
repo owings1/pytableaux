@@ -20,14 +20,10 @@
 name = 'K3W'
 
 class Meta(object):
-
     title    = 'Weak Kleene 3-valued logic'
     category = 'Many-valued'
-
     description = 'Three-valued logic with values T, F, and N'
-
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-
     category_display_order = 30
 
 from lexicals import operarity, Operated
@@ -35,23 +31,9 @@ from . import fde, k3
 
 class Model(k3.Model):
     """
-    A K3W model is just like a `K3 model`_ with different tables for some of the connectives.
-
-    .. _K3 model: k3.html#logics.k3.Model
+    A :m:`K3W` model is just like a :ref:`K3 model <k3-model>` with different tables for
+    some of the connectives.
     """
-
-    def value_of_operated(self, sentence, **kw):
-        """
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
-
-        Note that, for the binary connectives, if either operand has the value :m:`N`,
-        then the whole sentence has the value :m:`N`. To (re-)quote a Chinese proverb,
-        "a single jot of rat's dung spoils the soup."
-
-        //truth_tables//k3w//
-        """
-        return super().value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         if operarity(operator) == 2 and (a == 'N' or b == 'N'):
@@ -60,10 +42,8 @@ class Model(k3.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    K3W's Tableaux System inherits directly from the `FDE system`_, employing
-    designation markers, and building the trunk in the same way.
-
-    .. _FDE system: fde.html#logics.fde.TableauxSystem
+    :m:`K3W`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    employing designation markers, and building the trunk in the same way.
     """
     branchables = {
         'Negation': {
@@ -153,14 +133,10 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 
 class TableauxRules(object):
     """
-    The Tableaux System for K3W contains the `FDE closure rule`_, and the
-    `K3 closure rule`_. Several of the operator rules are the same as :ref:`FDE <FDE>`.
-    However, many rules for K3W are different from :ref:`FDE <FDE>`, given
+    The Tableaux System for :m:`K3W` contains the FDE closure rule, and the :m:`K3` closure
+    rule. Several of the operator rules are the same as :ref:`FDE <fde-system>`.
+    However, many rules for :m:`K3W` are different from FDE, given
     the behavior of the *N* value.
-    
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
-    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure
-    .. _FDE: fde.html
     """
 
     class GlutClosure(k3.TableauxRules.GlutClosure):

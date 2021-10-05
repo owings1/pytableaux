@@ -39,15 +39,9 @@ from . import k, t, s4
 
 class Model(s4.Model):
     """
-    An S5 model is just like an `S4 model`_ with an additional *symmetric*
-    restriction on the access relation.
-
-    * **Symmetry**: For each world *w* and each world *w'*, if `<w,w'>` is
-      in the access relation, then so is `<w',w>`.
-
-    .. _S4 model: s4.html#logics.s4.Model
+    An S5 model is just like an :ref:`S4 model <s4-model>` with an additional
+    *symmetric* restriction on the access relation.
     """
-
     def finish(self):
         while True:
             super().finish()
@@ -63,22 +57,21 @@ class Model(s4.Model):
 
 class TableauxSystem(k.TableauxSystem):
     """
-    S5's Tableaux System inherits directly inherits directly from the `K system`_.
-
-    .. _K system: k.html#logics.k.TableauxSystem
+    S5's Tableaux System inherits directly inherits directly from K.
     """
     pass
 
 class TableauxRules(object):
     """
-    The Tableaux Rules for S5 contain the rules for `S4`_, as well as an additional
-    Symmetric rule, which operates on the accessibility relation for worlds.
-
-    .. _S4: s4.html
+    The Tableaux Rules for S5 contain the rules for :ref:`S4 <S4>`, as well
+    as an additional Symmetric rule, which operates on the accessibility
+    relation for worlds.
     """
     
     class Symmetric(PotentialNodeRule):
         """
+        .. _symmetric-rule:
+
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
         """

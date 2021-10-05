@@ -55,7 +55,7 @@ def substitute_params(params, old_value, new_value):
 
 class Model(BaseModel):
     """
-    A K-model comprises a non-empty collection of K-frames, a world access
+    A K model comprises a non-empty collection of K-frames, a world access
     relation, and a set of constants (the domain).
     """
 

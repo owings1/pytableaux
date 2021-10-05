@@ -1,10 +1,10 @@
 .. _RM3:
 
-****************
-RM3 - R-mingle 3
-****************
+*********************
+:m:`RM3` - R-mingle 3
+*********************
 
-R-mingle 3 (RM3) is a three-valued logic with values :m:`T`, :m:`F`, and :m:`B`.
+R-mingle 3 (:m:`RM3`) is a three-valued logic with values :m:`T`, :m:`F`, and :m:`B`.
 It is similar to :ref:`LP`, with a different conditional operator.
 
 .. contents:: :local:
@@ -16,7 +16,22 @@ It is similar to :ref:`LP`, with a different conditional operator.
 
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. include:: include/fde/m.attributes.rst
+
+        .. method:: truth_function(operator, a, b)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            //truth_tables//rm3//
+
+    Logical Consequence
+    ===================
+
+    Logical consequence is defined, just as in :ref:`FDE <FDE>`, in terms of
+    *designated* values :m:`T` and :m:`B`:
+    
+    .. include:: include/fde/m.consequence.rst
 
     Tableaux System
     ===============
@@ -27,22 +42,13 @@ It is similar to :ref:`LP`, with a different conditional operator.
     .. autoclass:: TableauxRules
         :members:
 
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined, just as in :ref:`FDE <FDE>`, in terms of *designated* values :m:`T`
-    and :m:`B`:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where *A* has a *desginated* value
-      (:m:`T` or :m:`B`) are models where *C* also has a *designated* value.
-
     Notes
     =====
 
     * With the conditional operator, Modus Ponens (:s:`A`, :s:`A $ B`, therefore :s:`B`) is
-      valid in RM3, but it fails in:ref:`LP`.
+      valid in :m:`RM3`, but it fails in:ref:`LP`.
 
-    * The argument :s:`B`, therefore :s:`A $ B` is valid in :ref:`LP`, but not in RM3.
+    * The argument :s:`B`, therefore :s:`A $ B` is valid in :ref:`LP`, but not in :m:`RM3`.
 
     References
     ==========

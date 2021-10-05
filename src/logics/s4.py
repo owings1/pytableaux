@@ -20,14 +20,10 @@
 name = 'S4'
 
 class Meta(object):
-
     title    = 'S4 Normal Modal Logic'
     category = 'Bivalent Modal'
-
     description = 'Normal modal logic with a reflexive and transitive access relation'
-
     tags = ['bivalent', 'modal', 'first-order']
-    
     category_display_order = 4
 
 from proof.rules import PotentialNodeRule
@@ -39,12 +35,7 @@ class Model(t.Model):
     """
     An S4 model is just like a :ref:`T model <T>` with an additional *transitive*
     restriction on the access relation.
-
-    * **Transitivity**: For each world :m:`w` and each world :m:`w', for any world
-      :m:`w''` such that :m:`<w,w'>` and :m:`<w',w''>` are in the access relation, then
-      :m:`<w,w''>` is in the access relation.
     """
-
     def finish(self):
         while True:
             super().finish()
@@ -61,7 +52,7 @@ class Model(t.Model):
 
 class TableauxSystem(k.TableauxSystem):
     """
-    S4's Tableaux System inherits directly inherits directly from the :ref:`K system <K>`.
+    S4's Tableaux System inherits directly inherits directly from K.
     """
     pass
 
@@ -73,6 +64,8 @@ class TableauxRules(object):
     
     class Transitive(PotentialNodeRule):
         """
+        .. _transitive-rule:
+
         For any world *w* appearing on a branch *b*, for each world *w'* and for each
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
         appear on *b*, then add *wRw''* to *b*.

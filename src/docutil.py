@@ -70,7 +70,7 @@ jenv = Environment(
     trim_blocks = True,
     lstrip_blocks = True,
 )
-truth_table_template = jenv.get_template('truth_table.html')
+truth_table_template = jenv.get_template('truth_table.jinja2')
 
 lgclist = [
     bname('.'.join(file.split('.')[0:-1])).upper() for file in
@@ -137,7 +137,18 @@ class Helper(object):
         wrnotn = self.opts['write_notation']
 
         self.lw = create_lexwriter(notn = wrnotn, enc = 'html')
-        self.pw = create_tabwriter(notn = wrnotn, format = 'html')
+        self.pwrule = create_tabwriter(
+            notn = wrnotn,
+            format = 'html',
+            lw = self.lw,
+            classes = ['example', 'rule'],
+        )
+        self.pwclosure = create_tabwriter(
+            notn = wrnotn,
+            format = 'html',
+            lw = self.lw,
+            classes = ['example', 'rule', 'closure'],
+        )
 
         rsdata = deepcopy(self.lw.renderset.data)
         if 'renders' not in rsdata:
@@ -147,7 +158,12 @@ class Helper(object):
         )
         rset = RenderSet(rsdata)
         self.lwtrunk = create_lexwriter(notn = wrnotn, renderset = rset)
-        self.pwtrunk = create_tabwriter(notn = wrnotn, format = 'html', lw = self.lwtrunk)
+        self.pwtrunk = create_tabwriter(
+            notn = wrnotn,
+            format = 'html',
+            lw = self.lwtrunk,
+            classes = ['example', 'build-trunk'],
+        )
 
         self.replace_defns = []
         # https://www.sphinx-doc.org/en/master/extdev/appapi.html#sphinx-core-events
@@ -427,6 +443,7 @@ class Helper(object):
         #         print(str(n.attlist()))
         # # print('\n\n\n', (pagename, templatename), '\n')
         pass
+
     ## ===================
     ## HTML Subroutines  :
     ## ===================
@@ -458,16 +475,19 @@ class Helper(object):
         rule = proof.get_rule(rule)
         isclosure = isinstance(rule, ClosureRule)
         if isclosure:
+            pw = self.pwclosure
             proof.add_rule_group([ClosureEllipsisRule(proof, rule)])
+        else:
+            pw = self.pwrule
         rule.example()
         if not isclosure:
             proof.branches[0].add({'ellipsis': True})
         target = rule.get_target(proof.branches[0])
         rule.apply(target)
         proof.finish()
-        return self.pw.write(proof)
+        return pw.write(proof)
 
-    def html_truth_table(self, lgc, operator):
+    def html_truth_table(self, lgc, operator, classes=[]):
         """
         Returns rendered truth table HTML for a single operator.
         """
@@ -479,6 +499,7 @@ class Helper(object):
             'table'      : table,
             'operator'   : operator,
             'lw'         : self.lw,
+            'classes'    : [] + classes,
             # Theme hint for conditional class class name.
             'theme'      : self.opts['html_theme'],
         })
@@ -589,6 +610,40 @@ class Helper(object):
     @sphinx_role_defaults
     def role_lexrender_meta(self, name, rawtext, text, lineno, inliner, opts={}, content=[]):
         classes = ['lexmeta']
+
+        if text.upper() in ('P3', 'B3', 'G3', 'K3', 'L3', 'Ł3', 'RM3'):
+            classes.append('subber')
+            parts = list(text.upper())
+            r = parts.pop(0) if len(parts) == 3 else None
+            main, down = parts
+            if r:
+                main = r + main
+            if main == 'L':
+                main = 'Ł'
+            nlist = [
+                nodes.inline(text=main, classes=classes + ['main']),
+                nodes.subscript(text=down, classes=classes + ['down']),
+            ]
+            return (nlist, [])
+        if text.upper() in ('B3E', 'K3W', 'K3WQ'):
+            # :math:`{B^E_3}`
+            classes.append('subsup')
+            parts = list(text.upper())
+            q = parts.pop() if len(parts) == 4 else None
+            main, up, down = parts
+            if q:
+                down += q
+            nlist = [
+                nodes.inline(text=main, classes=classes + ['main']),
+                nodes.superscript(text=up, classes=classes + ['up']),
+                nodes.subscript(text=down, classes=classes + ['down']),
+            ]
+            # if q:
+            #     nlist.append(
+            #         nodes.inline(text=q, classes = classes + ['post'])
+            #     )
+            return (nlist, [])
+        # ⟨ ⟩
         nclass = nodes.math
         attrs = {}
         bs = '\\'
@@ -600,6 +655,7 @@ class Helper(object):
             rend = text
             nclass = nodes.strong
         elif re.match(r'^w[0-9]', text):
+            # w0 or w0Rw1
             wparts = text.split('R')
             rend = '\\mathcal{R}'.join(
                 re.sub(r'w([0-9]+)', 'w_\\1', wtxt)
@@ -608,6 +664,7 @@ class Helper(object):
             classes.append('modal')#
             classes.append('access' if len(wparts) > 1 else 'world')
         elif text == 'w' or re.match(r'', text):
+            # <w, w'> etc.
             if '<' in text:
                 classes.append('tuple')
             rend = text.replace('<', '\\langle ').replace('>', '\\rangle')

@@ -15,8 +15,46 @@ a world *w'* such that *w* accesses *w'*.
     Semantics
     =========
 
-    .. autoclass:: Model
-        :members:
+    A D model uses :ref:`K Frames <k-frame>` to hold information about each world.
+
+    .. autoclass:: logics.k.Frame
+        :noindex:
+
+        .. autoattribute:: world
+            :noindex:
+
+        .. autoattribute:: atomics
+            :noindex:
+
+        .. autoattribute:: extensions
+            :noindex:
+
+    .. class:: Model
+
+        .. include:: include/k/m.attributes.rst
+
+    Seriality
+    ---------
+
+    D adds a *serial* restriction on the access relation for models.
+
+    .. cssclass:: definiendum smallcaps
+
+    Seriality
+
+    .. cssclass:: definiens
+
+    In every model, for each world :m:`w`, there is *some world* :m:`w'` such
+    that :m:`<w,w'>` is in the access relation.
+
+    This is witnessed in the tableaux system through the :ref:`Serial Rule <serial-rule>`.
+
+    Logical Consequence
+    -------------------
+
+    Logical Consequence is defined just as in :ref:`K <K>`:
+
+    .. include:: include/k/m.consequence.rst
 
     Tableaux System
     ===============
@@ -27,18 +65,10 @@ a world *w'* such that *w* accesses *w'*.
     .. autoclass:: TableauxRules
         :members:
 
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just as in :ref:`K <K>`:
-
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      at *w0* are models where *C* also has the value :m:`T` at *w0*.
-
     Notes
-    =====
+    -----
 
-    For further reading, see
+    .. rubric:: Further Reading
 
     * `Stanford Encyclopedia on Deontic Logic`_
 

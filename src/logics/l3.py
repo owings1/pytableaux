@@ -21,14 +21,10 @@
 name = 'L3'
 
 class Meta(object):
-
     title    = u'Łukasiewicz 3-valued Logic'
     category = 'Many-valued'
-
     description = 'Three-valued logic (True, False, Neither) with a primitive Conditional operator'
-
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-
     category_display_order = 80
 
 from lexicals import Operated
@@ -36,18 +32,9 @@ from . import fde, k3
 
 class Model(k3.Model):
     """
-    An Ł3 model is just like a :ref:`K3 model <k3-model>` with different tables
+    An :m:`L3` model is just like a :ref:`K3 model <k3-model>` with different tables
     for the conditional and bi-conditional operators.
     """
-
-    def value_of_operated(self, sentence, **kw):
-        """
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
-
-        //truth_tables//l3//
-        """
-        return super().value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
         if operator == 'Conditional':
@@ -57,7 +44,7 @@ class Model(k3.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    Ł3's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    :m:`L3`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
     employing designation markers, and building the trunk in the same way.
     """
     branchables = dict(fde.TableauxSystem.branchables)
@@ -77,8 +64,8 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 
 class TableauxRules(object):
     """
-    The closure rules for Ł3 are the FDE closure rule, and the K3 closure rule.
-    The operator rules for Ł3 are mostly the rules for :ref:`FDE <FDE>`, with
+    The closure rules for :m:`L3` are the FDE closure rule, and the :m:`K3` closure rule.
+    The operator rules for :m:`L3` are mostly the rules for :ref:`FDE <FDE>`, with
     the exception of the rules for the conditional and biconditional operators.
     """
 

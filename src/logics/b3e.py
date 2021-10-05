@@ -20,14 +20,10 @@
 name = 'B3E'
 
 class Meta(object):
-
     title    = 'Bochvar 3 External Logic'
     category = 'Many-valued'
-
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
-
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-    
     category_display_order = 50
 
 from lexicals import Operated
@@ -41,7 +37,7 @@ def crunch(v):
 
 class Model(k3w.Model):
     """
-    A B3E model is just like a :ref:`K3W <K3W>` with different tables for some of the connectives.
+    A :m:`B3E` model is just like a :ref:`K3W <K3W>` with different tables for some of the connectives.
     """
 
     def truth_function(self, operator, a, b=None):
@@ -59,7 +55,7 @@ class Model(k3w.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    B3E's Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    :m:`B3E`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
     employing designation markers, and building the trunk in the same way.
     """
 
@@ -83,7 +79,7 @@ class DefaultNodeRule(fde.DefaultNodeRule):
 
 class TableauxRules(object):
     """
-    The closure rules for B3E are the FDE closure rule, and the K3 closure rule.
+    The closure rules for :m:`B3E` are the FDE closure rule, and the K3 closure rule.
     The operator rules are mostly a mix of :ref:`FDE <FDE>` and :ref:`K3W <K3W>` rules, but
     with different rules for the assertion, conditional and biconditional operators.
     """

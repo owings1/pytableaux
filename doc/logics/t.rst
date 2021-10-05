@@ -14,8 +14,39 @@ which states that for every world *w*, *w* accesses *w* (itself).
     Semantics
     =========
 
+    A T model uses :ref:`K Frames <k-frame>` to hold information about each world.
+
+    .. autoclass:: logics.k.Frame
+        :noindex:
+
+        .. autoattribute:: world
+            :noindex:
+
+        .. autoattribute:: atomics
+            :noindex:
+
+        .. autoattribute:: extensions
+            :noindex:
+
     .. autoclass:: Model
-        :members:
+
+        .. include:: include/k/m.attributes.rst
+
+    Reflexivity
+    -----------
+
+    T adds a *reflexivity* restriction on the access relation for models.
+
+    .. include:: include/t/m.reflexivity.rst
+
+    This is witnessed in the tableaux system through the :ref:`Reflexive Rule <reflexive-rule>`.
+
+    Logical Consequence
+    -------------------
+
+    Logical Consequence is defined just as in :ref:`K <K>`:
+
+    .. include:: include/k/m.consequence.rst
 
     Tableaux System
     ===============
@@ -25,11 +56,3 @@ which states that for every world *w*, *w* accesses *w* (itself).
 
     .. autoclass:: TableauxRules
         :members:
-
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just as in :ref:`K <K>`: :
-
-    - *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      at *w0* are models where *C* also has the value :m:`T` at *w0*.

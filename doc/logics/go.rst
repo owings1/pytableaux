@@ -16,6 +16,8 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
 
     .. autoclass:: Model
 
+        .. include:: include/fde/m.attributes.rst
+
         .. method:: truth_function(operator, a, b)
 
               The value of a sentence with a truth-functional operator is determined by
@@ -37,37 +39,37 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
 
         .. automethod:: value_of_universal(sentence)
 
+    Logical Consequence
+    -------------------
+
+    Logical consequence is defined just like in :m:`K3`:
+    
+    .. include:: include/k3/m.consequence.rst
+
     Tableaux System
     ===============
 
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
+    .. cssclass:: tableauxrules
+
     .. autoclass:: TableauxRules
         :members:
 
-    Logical Consequence
-    ===================
-
-    **Logical Consequence** is defined just like in :ref:`CPL <CPL>` and :ref:`K3 <K3>`:
-
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      are models where *C* also has the value :m:`T`.
-
     Notes
-    =====
+    -----
 
-    - GO has some similarities to :ref:`K3 <K3>`. Material Identity :s:`A $ A` and the
+    - GO has some similarities to :m:`K3`. Material Identity :s:`A $ A` and the
       Law of Excluded Middle :s:`A V ~A` fail.
 
-    - Unlike :ref:`K3 <K3>`, there are logical truths, e.g. The Law of Non Contradiction :s:`~(A & ~A)`.
+    - Unlike :m:`K3`, there are logical truths, e.g. The Law of Non Contradiction :s:`~(A & ~A)`.
 
     - GO contains an additional conditional operator besides the material conditional,
-      which is similar to :ref:`L3`. However, this conditional is *non-primitive*, unlike :ref:`L3`,
+      which is similar to :m:`L3`. However, this conditional is *non-primitive*, unlike :m:`L3`,
       and it obeys contraction (:s:`A $ (A $ B)` implies :s:`A $ B`).
 
-    Further Reading
-    ===============
+    .. rubric:: Further Reading
 
     - Doug Owings (2012). `Indeterminacy and Logical Atoms`_. *Ph.D. Thesis, University of Connecticut*.
 

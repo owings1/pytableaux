@@ -1,12 +1,12 @@
 .. _K3:
 
-************************
-K3 - Strong Kleene Logic
-************************
+*****************************
+:m:`K3` - Strong Kleene Logic
+*****************************
 
 .. contents:: :local:
 
-K3 is a three-valued logic (:m:`T`, :m:`F`, and :m:`N`). It can be understood
+:m:`K3` is a three-valued logic (:m:`T`, :m:`F`, and :m:`N`). It can be understood
 as :ref:`FDE <FDE>` without the :m:`B` value.
 
 .. automodule:: logics.k3
@@ -18,15 +18,7 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
 
     .. autoclass:: Model
 
-        .. autoattribute:: truth_values
-
-        .. autoattribute:: designated_values
-
-        .. autoattribute:: extensions
-
-        .. autoattribute:: anti_extensions
-
-        .. autoattribute:: atomics
+        .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)
 
@@ -37,7 +29,7 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
 
         .. method:: value_of_predicated(sentence)
 
-            Like :ref:`FDE <FDE>`, K3 predication defines a predicate's *extenstion*
+            Like :ref:`FDE <FDE>`, :m:`K3` predication defines a predicate's *extenstion*
             and *anti-extension*. The value of a predicated sentence is determined as follows:
 
             .. include:: include/k3/m.predication.rst
@@ -47,37 +39,39 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
             cannot be in **both** the extension and the anti-extension of `P`.
 
             Like :ref:`FDE <FDE>`, there is no *exhaustion constraint*: there are permissible
-            K3 models where some tuple :m:`ntuple` is in **neither** the extension nor the
+            :m:`K3` models where some tuple :m:`ntuple` is in **neither** the extension nor the
             anti-extension of some predicate :math:`P`.
 
         .. method:: value_of_existential(sentence)
 
-            Existential quantification is defined just as in :ref:`FDE <FDE>`:
+            Existential quantification is defined similary to :ref:`FDE <fde-model>`,
+            with the :m:`B` value.
 
-            .. include:: include/fde/m.existential.rst
+            .. include:: include/k3/m.existential.rst
 
         .. method:: value_of_universal(sentence)
 
-            Universal quantification is defined just as in :ref:`FDE <FDE>`:
+            Universal quantification is defined similary to :ref:`FDE <fde-model>`,
+            with the :m:`B` value.
 
-            .. include:: include/fde/m.existential.rst
+            .. include:: include/k3/m.universal.rst
 
     .. _k3-consequence:
 
     Logical Consequence
-    ===================
+    -------------------
 
     **Logical Consequence** is defined just like in :ref:`CPL <cpl-consequence>`:
 
         ..include:: include/k3/m.consequence.rst
 
     Alternatively, we can use the :ref:`FDE formulation <fde-consequence>`
-    in terms of *designated* values, since K3 has only the designated value :m:`T`.
-
-    .. _k3-system:
+    in terms of *designated* values, since :m:`K3` has only the designated value :m:`T`.
 
     Tableaux System
     ===============
+
+    .. _k3-system:
 
     .. autoclass:: TableauxSystem
         :members: build_trunk
@@ -86,11 +80,11 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
         :members:
 
     Notes
-    =====
+    -----
 
-    Some notable features of K3 include:
+    Some notable features of :m:`K3` include:
 
-    * Everything valid in :ref:`FDE <FDE>` is valid in K3.
+    * Everything valid in :ref:`FDE <FDE>` is valid in :m:`K3`.
 
     * Like :ref:`FDE <FDE>`, the Law of Excluded Middle, and Conditional Identity :s:`(A $ A)` fail.
 

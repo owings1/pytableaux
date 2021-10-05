@@ -1,10 +1,10 @@
 .. _L3:
 
-*******************************
-L3 - Łukasiewicz 3-valued Logic
-*******************************
+************************************
+:m:`L3` - Łukasiewicz 3-valued Logic
+************************************
 
-Ł3 is a three-valued logic with values :m:`T`, :m:`F`, and :m:`N`. It is
+:m:`L3` is a three-valued logic with values :m:`T`, :m:`F`, and :m:`N`. It is
 similar to :ref:`K3 <K3>`, but with a different, primitive conditional 
 operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
@@ -17,7 +17,15 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. include:: include/fde/m.attributes.rst
+
+        .. method:: truth_function(operator, a, b)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            //truth_tables//l3//
+
 
     Tableaux System
     ===============
@@ -31,7 +39,14 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
     Logical Consequence
     ===================
 
-    **Logical Consequence** is defined just like in :ref:`CPL <CPL>` and :ref:`K3 <K3>`:
+    Logical consequence is defined just like in :m:`K3`:
+    
+    .. include:: include/k3/m.consequence.rst
 
-    * *C* is a **Logical Consequence** of *A* iff all models where the value of *A* is :m:`T`
-      are models where *C* also has the value :m:`T`.
+    Notes
+    =====
+
+    * Łukasiewicz, J. (1920). On 3-valued logic. Ruch Filozoficzny 5, 169–171.
+
+    * Łukasiewicz, J. (1957). Aristotle’s Syllogistic from the Standpoint of Modern
+      Formal Logic. Oxford: Clarendon Press

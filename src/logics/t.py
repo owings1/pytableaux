@@ -38,12 +38,8 @@ from . import k
 
 class Model(k.Model):
     """
-    A T model is just like a `K model`_ with a *reflexive* restriction on the access
-    relation.
-
-    * **Reflexivity**: For each world *w*, `<w,w>` is in the access relation.
-
-    .. _K model: k.html#logics.k.Model
+    A T model is just like a :ref:`K model <k-model>` with a *reflexive*
+    restriction on the access relation.
     """
 
     def finish(self):
@@ -53,9 +49,7 @@ class Model(k.Model):
 
 class TableauxSystem(k.TableauxSystem):
     """
-    T's Tableaux System inherits directly inherits directly from the `K system`_.
-
-    .. _K system: k.html#logics.k.TableauxSystem
+    T's Tableaux System inherits directly inherits directly from K.
     """
     pass
 
@@ -63,12 +57,12 @@ class TableauxRules(object):
     """
     The Tableaux Rules for T contain the rules for :ref:`K <K>`, as well as an additional
     Reflexive rule, which operates on the accessibility relation for worlds.
-
-    .. _K: k.html
     """
 
     class Reflexive(PotentialNodeRule):
         """
+        .. _reflexive-rule:
+
         The Reflexive rule applies to an open branch *b* when there is a node *n*
         on *b* with a world *w* but there is not a node where *w* accesses *w* (itself).
 

@@ -36,7 +36,6 @@ respectively.
                 | has the value :m:`T` iff :m:`ntuple` is in the extension of :math:`P`.
 
 
-
         .. Note:: CPL does not give a treatment of the quantifiers. Quantified sentences
             are treated as opaque (uninterpreted). See :ref:`CFOL <CFOL>` for quantification.
               
@@ -44,7 +43,7 @@ respectively.
     .. _cpl-consequence:
 
     Logical Consequence
-    ===================
+    -------------------
 
     **Logical Consequence** is defined in the standard way:
 
