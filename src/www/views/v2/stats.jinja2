@@ -1,0 +1,71 @@
+{% set stats = tableau.stats %}
+<div class="proof-stats">
+    <ul class="details">
+        <li class="argument-output">
+            <div class="prop">Argument</div>
+            <div class="value">
+                {% if tableau.argument %}
+                    {% set arg = tableau.argument %}
+                    {% for premise in arg.premises -%}
+                        <div class="premise">
+                        {% if lw.encoding == 'html' -%}
+                            {{ lw.write(premise) }}
+                        {% else -%}
+                            {{ lw.write(premise)|e }}
+                        {% endif -%}
+                        </div>
+                    {% endfor -%}
+                    &there4;
+                    {% if lw.encoding == 'html' -%}
+                        {{ lw.write(arg.conclusion) }}
+                    {% else -%}
+                        {{ lw.write(arg.conclusion)|e }}
+                    {% endif -%}
+                {% endif %}
+            </div>
+        </li>
+    </ul>
+    <ul class="details">
+        <li>
+            <span class="prop">Logic</span>
+            <div class="value">{{ tableau.logic.name|e }} - {{ tableau.logic.Meta.title|e }}</div>
+        </li>
+        <li>
+            <span class="prop">Result</span>
+            <div class="value result {{ stats.result|lower|e }}">
+                {{ stats.result|e }}
+            </div>
+        </li>
+    </ul>
+    <ul class="details">
+        <li>
+            <span class="prop">Branches</span>
+            <div class="value">{{ stats.branches|e }}</div>
+        </li>
+        <li>
+            <span class="prop">Open Branches</span>
+            <div class="value">{{ stats.open_branches|e }}</div>
+        </li>
+        <li>
+            <span class="prop">Closed Branches</span>
+            <div class="value">{{ stats.closed_branches|e }}</div>
+        </li>
+        <li>
+            <span class="prop">Nodes</span>
+            <div class="value">{{ stats.distinct_nodes|e }}</div>
+        </li>
+        <li>
+            <span class="prop">Rules Applied</span>
+            <div class="value">{{ stats.rules_applied|e }}</div>
+        </li>
+        <li>
+            <span class="prop">Duration</span>
+            <div class="value">{{ stats.build_duration_ms|e }}ms</div>
+        </li>
+        <li>
+            <span class="prop">Overhead</span>
+            <div class="value">{{ (stats.build_duration_ms - stats.rules_duration_ms)|e }}ms</div>
+        </li>
+    </ul>
+
+</div>

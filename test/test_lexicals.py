@@ -61,6 +61,16 @@ class TestVocabulary(object):
         with raises(TypeError):
             Vocab().get_predicate(index=-1)
 
+    def test_pred_no_name(self):
+        v = Vocab()
+        p = v.declare_predicate(name=None, index=1, subscript=0, arity=1)
+        p1 = v.get_predicate(index=1, subscript=0)
+        assert p == p1
+        p = v.declare_predicate(name=None, index=1, subscript=1, arity=2)
+        p2 = v.get_predicate(index=1, subscript=1)
+        assert p == p2
+        
+
     def test_declare_predicate1(self):
         p = Vocab().declare_predicate('MyPredicate', 0, 0, 1)
         assert p.name == 'MyPredicate'

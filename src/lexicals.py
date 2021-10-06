@@ -255,6 +255,8 @@ class Predicate(LexicalItem):
             raise ValueError(
                 'Subscript cannot be < 0'
             )
+        if name == None:
+            name = 'Predicate@({0},{1})'.format(index, subscript)
         self.name      = name
         self.arity     = arity
         self.index     = index
@@ -764,11 +766,11 @@ class Vocabulary(object):
         Declare a user-defined predicate::
 
             vocab = Vocabulary()
-            predicate = vocab.declare_predicate(
+            pred = vocab.declare_predicate(
                 name='is tall', index=0, subscript=0, arity=1
             )
-            assert predicate == vocab.get_predicate('is tall')
-            assert predicate == vocab.get_predicate(index=0, subscript=0)
+            assert pred == vocab.get_predicate('is tall')
+            assert pred == vocab.get_predicate(index=0, subscript=0)
             
             # predicates cannot be re-declared
             try:

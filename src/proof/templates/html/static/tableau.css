@@ -1,0 +1,93 @@
+.tableau {
+    min-height: 90px;
+}
+.tableau pre {
+    overflow-x: scroll;
+}
+.tableau .node {
+    text-align: center;
+    margin: 0.2em 0;
+}
+.tableau .clear {
+    clear: both;
+}
+/* Designation markers */
+.tableau .node-props .designation.designated::after {
+    content: '\2295';
+}
+.tableau .node-props .designation.undesignated::after {
+    content: '\2296';
+}
+/* Close marker */
+.tableau .node-props .flag.closure::after {
+    content: '\2297';
+    font-size: 1.4em;
+}
+/*  Quit flag marker, e.g. K Necessity, or max constants rules (see QuitFlagHelper).  */
+.tableau .node-props .flag.quit::after {
+    width: 24px;
+    height: 24px;
+    background-size: 24px 24px;
+    background-image: url(../img/quit-flag-yellow.svg);
+    content: '';
+    display: inline-block;
+}
+/* Ellipsis, used in rule example docs */
+.tableau .node-props .ellipsis::after {
+    content: '\22EE';
+}
+.tableau .node-props {
+    padding: 0.26em;
+    display: inline-block;
+}
+.tableau .node .node-props.ticked {
+    padding: 0.2em;
+    border-color: #aaaaaa;
+    border-style: solid;
+    border-width: 1px;
+}
+.tableau .child-wrapper {
+    float: left;
+}
+.tableau .vertical-line, .tableau .horizontal-line {
+    margin: 0 auto;
+}
+.tableau .horizontal-line {
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+    border-bottom-color: #aaaaaa;
+    margin-bottom: -1px;
+}
+.tableau .horizontal-line.collapsed {
+    border-bottom-style: dashed;
+}
+.tableau .vertical-line {
+    border-right: 1px solid #aaaaaa;
+    height: 0.7em;
+    width: 1px;
+}
+.tableau .subscript {
+    vertical-align: sub;
+    font-size: 80%;
+}
+.tableau .world {
+    font-style: italic;
+}
+.tableau .structure > .node-segment {
+    text-align: center;
+}
+.tableau .structure.leaf > .node-segment::after {
+    display: inline-block;
+    background-position: center;
+    content: '';
+    width: 16px;
+    height: 16px;
+}
+
+/* Branch coloring */
+.tableau.color-open .structure.has-open > .node-segment {
+    color: red;
+}
+.tableau.color-open .structure.has-open.has-closed > .node-segment {
+    color: #e808ff;
+}

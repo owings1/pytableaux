@@ -53,6 +53,9 @@ class TableauWriter(object):
     def document_footer(self):
         return ''
 
+    def attachments(self, tableau):
+        return {}
+
     def write(self, tableau):
         return self._write_tableau(tableau)
 
@@ -70,16 +73,18 @@ class TemplateWriter(TableauWriter):
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
+        dir = path.join(self.base_dir, self.path_prefix)
+        if not getattr(self, 'template_dir', None):
+            self.template_dir = dir
         jopts = dict(self.jinja_opts)
         if 'loader' not in jopts:
-            dir = path.join(self.base_dir, self.path_prefix)
             jopts['loader'] = FileSystemLoader(dir)
         self.jenv = Environment(**jopts)
 
     def get_template(self, template):
         return self.jenv.get_template(template)
 
-    def render(self, template, context=None):
+    def render(self, template, context={}):
         return self.get_template(template).render(context)
 
     def get_argstrs(self, argument):
@@ -114,6 +119,7 @@ class HtmlTableauWriter(TemplateWriter):
     defaults = {
         'classes'      : [],
         'wrap_classes' : [],
+        'inline_css'   : False,
     }
 
     path_prefix = 'html'
@@ -122,6 +128,25 @@ class HtmlTableauWriter(TemplateWriter):
         'lstrip_blocks' : True,
     }
 
+    def attachments(self, *_a, **_k):
+        with open(path.join(self.template_dir, 'static/tableau.css'), 'r') as f:
+            return {'css': f.read()}
+    # classes:
+    #   wrapper : tableau-wrapper
+    #      tableau : tableau
+    #        structure : structure [, root, has-open, has-closed, leaf, only-branch, closed, open]
+    #          node-segment : node-sement
+    #             vertical-line : vertical-line
+    #             horizontal-line : horizontal-line
+    #                node : node [, ticked]
+    #                   node-props : node-props [, ticked]
+    #                        inline : [sentence, world, designation, designated, undesignated, world1,
+    #                                   world2, access, ellipsis, flag, <flag>]
+    #                   
+    #               
+    #   misc : clear
+    #
+    #
 class TextTableauWriter(TemplateWriter):
 
     name = 'Text'

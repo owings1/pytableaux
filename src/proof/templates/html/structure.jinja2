@@ -1,41 +1,39 @@
 {%- import 'node.jinja2' as nw -%}
 {% macro write_structure(lw, structure, is_child = False) -%}
-    <div class="structure 
-        {{- ' zoomed' if not is_child -}}
-        {{- ' has-open' if structure['has_open'] -}}
-        {{- ' has-closed' if structure['has_closed'] -}}
-        {{- ' leaf' if structure['leaf'] -}}
-        {{- ' inspected' if structure['is_only_branch'] -}}
-        {{- ' closed' if structure['closed'] -}}
-        {{- ' open' if structure['open'] -}}"
-        data-depth="{{ structure['depth'] }}"
-        data-width="{{ structure['width'] }}"
-        data-left="{{ structure['left'] }}" 
-        data-right="{{ structure['right'] }}"
-        data-step="{{ structure['step'] }}"
-        {%- if structure['closed'] %}
-            data-closed-step="{{ structure['closed_step'] }}"
-        {%- endif %}
-        data-branch-id="{{ structure['branch_id'] }}"
-        data-model-id="{{ structure['model_id'] if structure['model_id'] }}">
+    <div class="structure
+        {{- ' root' if not is_child -}}
+        {{- ' has-open' if structure.has_open -}}
+        {{- ' has-closed' if structure.has_closed -}}
+        {{- ' leaf' if structure.leaf -}}
+        {{- ' only-branch' if structure.is_only_branch -}}
+        {{- ' closed' if structure.closed -}}
+        {{- ' open' if structure.open -}}"
+        data-depth="{{ structure.depth }}"
+        data-width="{{ structure.width }}"
+        data-left="{{ structure.left }}" 
+        data-right="{{ structure.right }}"
+        data-step="{{ structure.step }}"
+        data-closed-step="{{ structure.closed_step if structure.closed }}"
+        data-branch-id="{{ structure.get('branch_id', '') }}"
+        data-model-id="{{ structure.get('model_id', '') }}">
         <div class="node-segment">
         {% if is_child %}
-            <div class="vertical-line" data-step="{{ structure['step'] }}"></div>
+            <div class="vertical-line" data-step="{{ structure.step }}"></div>
         {% endif %}
         {% for node in structure['nodes'] -%}
             {{ nw.write_node(lw, node) -}}
         {% endfor -%}
         </div>
-        {% if structure['children']|length %}
-            <div class="vertical-line" data-step="{{ structure['branch_step'] }}"></div>
-            {% set width = 100 * structure['balanced_line_width'] %}
-            {% set margin = 100 * structure['balanced_line_margin'] %}
+        {% if structure.children|length %}
+            <div class="vertical-line" data-step="{{ structure.branch_step }}"></div>
+            {% set width = 100 * structure.balanced_line_width %}
+            {% set margin = 100 * structure.balanced_line_margin %}
             <div class="horizontal-line"
                 style="width: {{ width }}%; margin-left: {{ margin }}%;"
-                data-step="{{ structure['branch_step'] }}"></div>
-            {% for child in structure['children'] %}
-                {% set child_width = (100 / structure['width']) * child['width'] %}
-                <div class="child-wrapper" style="width: {{ child_width }}%;" data-step="{{ child['step'] }}" data-current-width-pct="{{ child_width }}%">
+                data-step="{{ structure.branch_step }}"></div>
+            {% for child in structure.children %}
+                {% set child_width = (100 / structure.width) * child.width %}
+                <div class="child-wrapper" style="width: {{ child_width }}%;" data-step="{{ child.step }}" data-current-width-pct="{{ child_width }}%">
                     {{ write_structure(lw, child, is_child = True) }}
                 </div>
             {% endfor %}

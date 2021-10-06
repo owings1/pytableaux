@@ -1,0 +1,78 @@
+{# Examples #}
+
+<div class="input select example-argument">
+    <select id="example_argument">
+        <option value="">Load example argument ...</option>
+        {% for argument_name in example_args_list -%}
+            <option value="{{ argument_name|e }}">{{ argument_name|e }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+{# Premises #}
+
+<div class="premises">
+    {%- if 'premises[]' in form_data -%}
+        {%- for premise in form_data['premises[]'] -%}
+            {%- set error_label = 'Premise ' ~ loop.index -%}
+            {%- if errors and error_label in errors -%}
+                {{ helper.premise(loop.index, premise, 'bad', errors[error_label].message) }}
+            {%- elif premise -%}
+                {{ helper.premise(loop.index, premise, 'good') }}
+            {%- endif -%}
+        {%- endfor -%}
+    {% endif %}
+</div>
+
+{# Conclusion #}
+
+<div class="sentence input conclusion">
+    <label for="conclusion">Conclusion</label>
+    <input id="conclusion" class="sentence conclusion" type="text"
+        name="conclusion" value="{{ form_data['conclusion'] }}" />
+    {%- set status = '' -%}
+    {%- set message = '' -%}
+    {%- if errors and 'Conclusion' in errors -%}
+        {%- set status = 'bad' -%}
+        {%- set message = errors['Conclusion'].message -%}
+    {%- elif 'conclusion' in form_data -%}
+        {%- set status = 'good' -%}
+    {%- endif %}
+    <span class="status {{ status }}" title="{{ message|e }}"></span>
+</div>    
+<div class="input submit">
+    <input type="submit" value="Go"/>
+    <div id="clear_argument_wrapper"><a href="javascript:" id="clear_argument">Clear</a></div>
+</div>
+
+{# Select Logic #}
+
+<div class="input select">
+    <label for="selected_logic">Logic</label>
+    <select name="logic" id="selected_logic">
+        {% for category in logic_categories -%}
+            <optgroup label="{{ category|e }}">
+                {% for key in logic_categories[category] -%}
+                    <option value="{{ key|e }}" {{- helper.select_opt(form_data, 'logic', key) }}>
+                        {{- logics[key].name|e -}}
+                    </option>
+                {% endfor %}
+            </optgroup>
+        {% endfor %}
+    </select>
+</div>
+{% for key, logic in logics.items() -%}
+    {# updated from javascript on select change #}
+    <div class="hidden logic-details {{ key|e }}">
+        <span class="hidden logic-name {{ key|e }}">{{ logic.name|e }}</span>
+        <ul class="details">
+            <li>
+                <span class="value logic-title {{ key|e }}">
+                    <a class="external" href="/doc/logics/{{ key|e }}.html" target="_blank" rel="noreferrer noopener">
+                    {{ logic.Meta.title|e }}
+                    </a>
+                </span>
+            </li>
+        </ul>
+    </div>
+{% endfor %}

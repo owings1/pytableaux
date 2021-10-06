@@ -1,0 +1,681 @@
+/**
+ * pytableaux, a multi-logic proof generator.
+ * Copyright (C) 2014-2021 Doug Owings.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * pytableaux - main css for web ui
+ */
+/*!
+ *  Font Awesome 4.7.0 by @davegandy - http://fontawesome.io - @fontawesome
+ *  License - http://fontawesome.io/license (Font: SIL OFL 1.1, CSS: MIT License)
+ */
+@font-face {
+  font-family: FontAwesome;
+  src: url(fonts/fontawesome-webfont.eot);
+  src: url(fonts/fontawesome-webfont.eot) format("embedded-opentype"),
+    url(fonts/fontawesome-webfont.woff2) format("woff2"),
+    url(fonts/fontawesome-webfont.woff) format("woff"),
+    url(fonts/fontawesome-webfont.ttf) format("truetype"),
+    url(fonts/fontawesome-webfont.svg) format("svg");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: Lato;
+  src: url(fonts/lato-normal.woff2) format("woff2"),
+    url(fonts/lato-normal.woff) format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: Lato;
+  src: url(fonts/lato-bold.woff2) format("woff2"),
+    url(fonts/lato-bold.woff) format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: Lato;
+  src: url(fonts/lato-bold-italic.woff2) format("woff2"),
+    url(fonts/lato-bold-italic.woff) format("woff");
+  font-weight: 700;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: Lato;
+  src: url(fonts/lato-normal-italic.woff2) format("woff2"),
+    url(fonts/lato-normal-italic.woff) format("woff");
+  font-weight: 400;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: Roboto Slab;
+  font-style: normal;
+  font-weight: 400;
+  src: url(fonts/Roboto-Slab-Regular.woff2) format("woff2"),
+    url(fonts/Roboto-Slab-Regular.woff) format("woff");
+  font-display: block;
+}
+@font-face {
+  font-family: Roboto Slab;
+  font-style: normal;
+  font-weight: 700;
+  src: url(fonts/Roboto-Slab-Bold.woff2) format("woff2"),
+    url(fonts/Roboto-Slab-Bold.woff) format("woff");
+  font-display: block;
+}
+
+body {
+  /* font-size: 13px; */
+  margin: 0;
+  padding: 0;
+}
+body,
+.ui-widget {
+  /* font-family: 'lucida grande',verdana,helvetica,arial,sans-serif; */
+  font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;
+  /* font-family: FontAwesome;
+  font: normal normal normal 14px/1 FontAwesome; */
+}
+/* 
+rtd-theme:
+    fonts:
+        Lato,proxima-nova,Helvetica Neue,Arial,sans-serif
+    backgrounds:
+        #6ab0de (note, blue)
+        #dbfaf4 (important, light green)
+        rgb(26, 188, 156) (important, dark green)
+        #2980b9 (title bar, blue)
+ */
+/* Header/footer */
+.header-wrapper,
+.footer-wrapper {
+  width: 100%;
+  z-index: 101;
+  color: white;
+}
+body.no-proof .header-wrapper,
+body.no-proof .footer-wrapper {
+  position: fixed;
+}
+body.no-proof .footer-wrapper {
+  bottom: 0px;
+}
+.header-wrapper {
+  background-color: #2980b9;
+}
+.footer-wrapper {
+  background-color: #343131;
+}
+.header a,
+.footer a {
+  color: white;
+  text-decoration: none;
+}
+.header-wrapper {
+  top: 0px;
+}
+.header,
+.footer {
+  padding: 10px;
+}
+.header a:hover,
+.footer a:hover {
+  text-decoration: underline;
+}
+.footer {
+  text-align: center;
+  font-size: 11px;
+}
+
+.pt-content {
+  padding: 20px;
+  margin: 30px 0;
+}
+/*
+ * Generic
+*/
+.subscript {
+  position: relative;
+  bottom: -0.2em;
+  font-size: 80%;
+}
+.hidden {
+  display: none;
+}
+.clear {
+  clear: both;
+}
+.left {
+  float: left;
+}
+.right {
+  float: right;
+}
+/*
+ * Buttons
+ */
+.pt-app a.button {
+  /* background-color: #138ead; */
+  /* background-color: #6ab0de; */
+  /* background-color: #2980b9; */
+  background-color: #dbfaf4;
+  border: 1px solid #bbb;
+  text-decoration: none;
+  /* color: white; */
+  /* font-size: 0.8em; */
+  padding: 5px 10px;
+}
+.pt-app a.button:hover {
+  background-color: lightblue;
+}
+.pt-app a.button.active {
+    background-color: rgb(26, 188, 156);
+}
+.pt-app a.button.disabled {
+    background-color: #dddddd;
+    color: #999999;
+}
+/*
+ * Links
+ */
+a.external {
+  color: #2980b9;
+  text-decoration: none;
+  cursor: pointer;
+}
+a.external:after {
+  /* From rtd theme */
+  /* font-family: FontAwesome; */
+  /* content: "\f08e"; */
+  /* content: "?"; */
+  color: #b3b3b3;
+  vertical-align: super;
+  /* font-size: 80%; */
+  margin: 0 0.2em;
+  font-family: FontAwesome;
+  content: "\f08e";
+}
+/* 
+ * Admonitions
+ */
+.pt-app .errors,
+.pt-app .warns {
+  padding: 5px 10px;
+  margin-bottom: 10px;
+}
+.pt-app .errors h3,
+.pt-app .warns h3 {
+  margin: 0;
+}
+.pt-app .errors dt,
+.pt-app .warns dt {
+  float: left;
+  width: 100px;
+  text-align: right;
+  padding: 10px;
+  clear: both;
+  font-style: italic;
+}
+.pt-app .errors dd,
+.pt-app .warns dd {
+  margin: 0;
+  padding: 10px;
+  float: left;
+  font-weight: bold;
+}
+.pt-app .errors {
+  background-color: rgb(255, 190, 202);
+  border: 1px solid red;
+}
+.pt-app .warns {
+  background-color: rgb(254, 255, 204);
+  border: 1px solid yellow;
+}
+.pt-app .errors h3 {
+  color: red;
+}
+.pt-app .warns h3 {
+  color: yellow;
+}
+
+/*
+ * Lists
+ */
+.pt-app ul.details {
+  /* margin: 16px 0 0 0; */
+  padding: 0;
+}
+.pt-app ul.details li {
+  display: block;
+  padding: 0 8px 0 5px;
+  margin-top: 22px;
+  border-left: 2px solid #cccccc;
+}
+/* .pt-app ul.details .prop {
+    font-style: italic;
+    font-size: 12px;
+  } */
+/* .pt-app ul.details .prop::after {
+  content: "\a";
+  white-space: pre;
+} */
+.pt-app ul.details .value {
+  padding: 2px;
+  margin-top: 9px;
+}
+
+/*
+ * Tabs
+ */
+ .ui-state-active,
+ .ui-widget-content .ui-state-active,
+ .ui-widget-header .ui-state-active,
+ a.ui-button:active,
+ .ui-button:active,
+ .ui-button.ui-state-active:hover {
+   border: 1px solid #c3c3c3;
+   background: #2980b9;
+ }
+
+/**
+ * Forms
+ */
+.pt-app div.input {
+  margin: 2px 0;
+}
+.pt-app .input label {
+  border: 1px solid #cccccc;
+  min-width: 100px;
+  text-align: right;
+  display: inline-block;
+  background-color: #eee;
+  padding: 10px;
+  vertical-align: top;
+}
+.pt-app .fieldset {
+  clear: both;
+  /* border: 1px solid #93c3cd; */
+  border: 1px solid #c3c3c3;
+  margin: 0 0 10px 0;
+  padding: 0;
+}
+.pt-app .fieldset-contents {
+  padding: 10px;
+}
+.pt-app .input input[type="text"],
+.pt-app .input input[type="email"] {
+  padding: 7px 4px;
+}
+.pt-app .input.submit input[type="submit"] {
+  margin: 10px 0 20px 127px;
+}
+.pt-app.ui-selectmenu-menu .ui-menu {
+  max-height: 300px;
+}
+
+/*
+ * Argument Form
+ * ===========================
+ */
+.pt-app #argument-input-panel {
+  width: 380px;
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+/* Example argument */
+.pt-app select#example_argument {
+  margin: 5px 0 10px 1px;
+}
+.pt-app .input.example-argument {
+    padding: 10px;
+    text-align: center;
+    border: 1px dashed #cccccc;
+    margin-bottom: 10px;
+}
+/* Sentence input */
+.pt-app .input.sentence input {
+  width: 215px;
+}
+.pt-app .input.sentence .status {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+}
+.pt-app .input.sentence .status.good {
+  background: url(/static/img/check-green.svg);
+  background-size: 16px 16px;
+}
+.pt-app .input.sentence .status.bad {
+  background: url(/static/img/error-red.svg);
+  background-size: 16px 16px;
+}
+.pt-app #clear_argument_wrapper {
+  float: right;
+  margin-right: 28px;
+  margin-top: 8px;
+}
+
+/* Lexicon */
+.pt-app .lexicons .lexicon-panel {
+  margin-right: 10px;
+  padding: 0 5px 0 0;
+  float: left;
+}
+.pt-app .lexicons .lexicon-panel.last {
+  border-left: 1px solid #eee;
+  padding-left: 10px;
+  margin-right: 0;
+}
+.pt-app .lexicons .label {
+  border: 1px solid #ccc;
+  display: inline-block;
+  padding: 6px;
+  margin: 8px 0 5px 1px;
+  min-width: 150px;
+}
+.pt-app .lexicon dl {
+  margin: 0 0 0 3px;
+}
+.pt-app .lexicon dd {
+  padding: 2px 0;
+  margin: 0px 0 4px 24px;
+}
+.pt-app .lexicon dt {
+  float: left;
+  background-color: #eee;
+  padding: 2px 3px;
+  clear: both;
+  min-width: 12px;
+  border: 1px solid #cccccc;
+  text-align: center;
+}
+.pt-app #lexicons-content div.predicates {
+  max-width: 300px;
+}
+.pt-app #lexicons-content table.predicates {
+  width: 100%;
+}
+.pt-app .predicateSymbol {
+  min-width: 10px;
+}
+.pt-app input.arity {
+  width: 10px;
+}
+.pt-app #lexicons-content table.predicates th {
+  font-weight: normal;
+  text-align: left;
+  background-color: #eee;
+}
+.pt-app #lexicons-content table.predicates td,
+table.predicates th {
+  border: 1px solid #eee;
+  padding: 5px;
+}
+.pt-app ul.item-symbols {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+.pt-app ul.item-symbols li,
+.pt-app .predicateSymbol {
+  display: inline-block;
+  padding: 2px 3px;
+  background-color: #eee;
+  margin: 0 3px;
+  border: 1px solid #cccccc;
+  text-align: center;
+}
+.pt-app .predicateSymbol.hidden {
+  display: none;
+}
+/* Argument form -- options */
+.pt-app .fieldset.options .input label {
+  width: 160px;
+}
+
+
+
+/*
+ * Result
+ */
+.evaluation pre {
+  overflow-x: scroll;
+}
+.evaluation {
+  /* border: 1px solid black; */
+  margin-bottom: 10px;
+}
+.evaluation > .summary {
+  /* padding: 10px;
+  border-bottom: 1px solid black; */
+  /* background-color: rgba(0, 61, 76, 0.12); */
+  background-color: #bbbbbb;
+}
+/* .evaluation > .summary h3 {
+  margin: 0;
+  padding: 0.2em;
+  font-size: 1.5em;
+} */
+/* .evaluation > .summary > .argument {
+  float: right;
+} */
+.evaluation > .summary > .result {
+  float: right;
+  text-transform: uppercase;
+  font-weight: bold;
+  font-size: 1.2em;
+  color: white;
+}
+.evaluation > .summary > .result > span {
+  padding: 0.4em;
+  display: inline-block;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+.evaluation > .summary > .result .valid {
+  /* background-color: green; */
+  background-color: rgb(26, 188, 156);
+  border: 1px solid #666;
+}
+.evaluation > .summary > .result .invalid {
+  /* background-color: red; */
+  background-color: rgb(255, 100, 85);
+  border: 1px solid #aaa;
+}
+.evaluation > .summary > .result .unfinished {
+  /* background-color: #666; */
+  background-color: rgb(205, 129, 63);
+  border: 1px solid #aaa;
+}
+.evaluation > .proof-output {
+  padding: 10px;
+  overflow-x: scroll;
+}
+
+/*
+ * Feedback form
+ */
+.pt-app .feedback_view {
+  max-width: 800px;
+}
+.pt-app #input_feedback_content {
+  width: 600px;
+  height: 120px;
+  border: 3px solid #cccccc;
+  padding: 5px;
+}
+
+/*
+ * Debug
+ */
+.pt-app .debugs-wrapper::before {
+  content: "";
+  display: block;
+  margin-top: 100px;
+  margin-bottom: 20px;
+  border-bottom: 2px dashed #9e9e9e;
+}
+.pt-app .debugs {
+  border: 1px solid #cccccc;
+  background-color: #ffb00052;
+  padding-bottom: 20px;
+}
+.pt-app .debugs .debug {
+  padding: 10px 10px 0 10px;
+}
+.pt-app .debugs h3 {
+  background-color: #ffb00059;
+  margin-block-start: 0;
+  margin-block-end: 0;
+  padding: 10px;
+  border-bottom: 1px solid #cccccc;
+}
+.pt-app .debugs h4 {
+  background-color: #adadad;
+  margin-block-start: 0;
+  margin-block-end: 0;
+  margin-top: 10px;
+  padding: 10px;
+  color: #0f100f;
+  border: 1px solid #888888;
+}
+.pt-app .debug-content {
+  padding: 20px;
+  background-color: #eeeeee;
+  border: 1px solid #888888;
+}
+.pt-app .json-dump {
+  white-space: pre;
+  font-family: monospace;
+  overflow-x: scroll;
+}
+
+.tableau.with-controls {
+  cursor: pointer;
+}
+
+/* .pt-app input {
+  font-size: 14px;
+} */
+/* .pt-app select,
+input[type="submit"] {
+  font-size: 16px;
+} */
+
+/* .pt-app #lexicons-heading::before {
+    background-image: url(../img/book.svg);
+  } */
+/* .pt-app .fieldset .heading {
+  cursor: pointer;
+  background-color: #93c3cd;
+  padding: 10px;
+  color: #333333;
+} */
+/* .pt-app .fieldset .heading:hover {
+  background-color: #ccd232;
+} */
+/* .pt-app .fieldset .legend {
+  display: inline;
+  margin-block-start: 0;
+  margin-block-end: 0;
+} */
+
+/* .pt-app .input label
+.pt-app .heading .legend::after {
+  content: "";
+  opacity: 75%;
+  margin-right: 10px;
+  width: 22px;
+  height: 22px;
+  background-size: 22px 22px;
+  float: right;
+} */
+
+/* .pt-app .toggler {
+    cursor: pointer;
+  } */
+
+/* .pt-app .logic-details .tag {
+    border-radius: 0.75rem;
+    padding: 3px 8px 3px 8px;
+    margin: 3px 0 3px 0;
+    display: inline-block;
+    background-color: #003d4c38;
+    font-weight: normal;
+} */
+/* .pt-app #logic-details-heading::before {
+    background-image: url(../img/cluster.svg);
+    opacity: 45%;
+} */
+/* Collapser */
+
+/*
+.pt-app .heading.collapsed .legend::after {
+    background-image: url(../img/plus-medium.svg);
+}
+.pt-app .heading.uncollapsed .legend::after {
+    background-image: url(../img/minus-medium.svg);
+}
+.pt-app .collapser-wrapper {
+    float: left;
+    border: 2px solid #ccc;
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+.pt-app .collapser-heading {
+    cursor: pointer;
+    color: #333333;
+    padding: 10px;
+    font-size: 16px;
+    margin-block-start: 0;
+    margin-block-end: 0;
+    background-color: #93c3cd61;
+}
+.pt-app .collapser-heading.uncollapsed {
+    border-bottom: 1px solid #cccccc;
+}
+.pt-app .collapser-heading::before {
+    background-size: 16px 16px;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-right: 5px;
+    content: "";
+    opacity: 65%;
+}
+.pt-app .collapser-heading::after {
+    background-size: 16px 16px;
+    width: 16px;
+    height: 16px;
+    float: right;
+    content: "";
+    opacity: 45%;
+}
+.pt-app .collapser-heading.uncollapsed::after {
+    background-image: url(../img/double-left-arrow.svg);
+}
+.pt-app .collapser-heading.collapsed::after {
+    background-image: url(../img/double-right-arrow.svg);
+    margin-left: 5px;
+}
+.pt-app .collapser-contents {
+    padding: 10px;
+}
+*/

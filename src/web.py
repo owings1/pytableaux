@@ -98,8 +98,9 @@ form_defaults = {
     'format'          : 'html',
     'output_notation' : 'standard',
     'symbol_enc'      : 'html',
+    'show_controls'   : True,
 
-    'options.controls': True,
+    # 'options.controls': True,
     'options.group_optimizations': True,
     'options.models': True,
     'options.rank_optimizations': True,
@@ -140,6 +141,7 @@ base_view_data = {
     'system_predicates'   : {p.name: p for p in get_system_predicates()},
     'tabwriter_formats'   : tabwriter_formats,
     'version'             : version,
+    'view_version'        : 'v2',
 }
 
 ###################
@@ -227,7 +229,9 @@ lexwriters = {
 class App(object):
 
     @server.expose
-    def index(self, *args, **form_data):
+    def index(self, *args, **req_data):
+
+        req = server.request
 
         errors = dict()
         warns  = dict()
@@ -237,14 +241,17 @@ class App(object):
 
         vocab = Vocabulary()
 
-        view = 'argument'
+        if req_data.get('v') in ('v1', 'v2'):
+            view_version = req_data['v']
+        else:
+            view_version = 'v2'
+        view = '/'.join((view_version, 'main'))
+        
+        form_data = fix_form_data(req_data)
+        api_data = resp_data = None
 
-        form_data = fix_form_data(form_data)
-        api_data = None
-        result = None
-
-        if len(form_data):
-
+        if req.method == 'POST':
+            
             try:
                 try:
                     api_data = json.loads(form_data['api-json'])
@@ -254,30 +261,35 @@ class App(object):
                     arg, vocab = self.parse_argument_data(api_data['argument'])
                 except RequestDataError as err:
                     errors.update(err.errors)
-                result = self.api_prove(api_data)
+                resp_data, tableau, lw = self.api_prove(api_data)
             except RequestDataError as err:
                 errors.update(err.errors)
             except TimeoutError as err: # pragma: no cover
                 errors['Tableau'] = str(err)
 
-            if len(errors) == 0:
-                view = 'prove'
+            if not errors:
                 data.update({
                     'is_proof' : True,
-                    'result'   : result,
+                    'tableau'  : tableau,
+                    'lw'       : lw,
                 })
+                # if resp_data['attachments']
 
-        if len(errors) > 0:
+        if errors:
             data['errors'] = errors
 
         debugs.extend([
             ('api_data', api_data),
+            ('req_data', req_data),
             ('form_data', form_data),
-            ('result', debug_result(result)),
+            ('method', req.method),
+            ('resp_data', debug_result(resp_data)),
         ])
 
         data.update({
+            'view_version'         : view_version,
             'form_data'            : form_data,
+            'resp_data'            : resp_data,
             'user_predicates'      : vocab.user_predicates,
             'user_predicates_list' : vocab.user_predicates_list,
             'debugs'               : debugs,
@@ -304,7 +316,7 @@ class App(object):
 
         req = server.request
 
-        if len(form_data):
+        if req.method == 'POST':
 
             try:
                 validate_feedback_form(form_data)
@@ -369,7 +381,7 @@ class App(object):
                 if action == 'parse':
                     result = self.api_parse(req.json)
                 elif action == 'prove':
-                    result = self.api_prove(req.json)
+                    result, _t, _lw = self.api_prove(req.json)
                 if result:
                     return {
                         'status'  : 200,
@@ -501,11 +513,10 @@ class App(object):
                     "format": "html",
                     "symbol_enc": "default",
                     "options": {
-                        "color_open": true,
-                        "controls": true,
-                        "models": false
+                        
                     }
                 },
+                "build_models": false,
                 "max_steps": null,
                 "rank_optimizations": true,
                 "group_optimizations": true
@@ -524,14 +535,14 @@ class App(object):
                     "body": "...html...",
                     "header": "...",
                     "footer": "...",
-                    "writer": {
-                        "name": "HTML",
-                        "format": "html,
-                        "symbol_enc": "default",
-                        "options": {}
-                    },
                     "max_steps" : null
-                }
+                },
+                "writer": {
+                    "name": "HTML",
+                    "format": "html,
+                    "symbol_enc": "html",
+                    "options": {}
+                },
             }
         """
 
@@ -549,9 +560,10 @@ class App(object):
             else:
                 odata['symbol_enc'] = 'ascii'
         odata['options'] = odata.get('options', {})
-        odata['options']['color_open'] = odata['options'].get('color_open', True)
-        odata['options']['controls'] = odata['options'].get('controls', True)
-        odata['options']['models'] = odata['options'].get('models', False)
+        # odata['options']['color_open'] = odata['options'].get('color_open', True)
+        # odata['options']['controls'] = odata['options'].get('controls', True)
+        # odata['options']['models'] = odata['options'].get('models', False)
+        body['build_models'] = bool(body.get('build_models'))
         body['max_steps'] = body.get('max_steps', None)
         body['rank_optimizations'] = body.get('rank_optimizations', True)
         body['group_optimizations'] = body.get('group_optimizations', True)
@@ -612,7 +624,7 @@ class App(object):
             'is_rank_optim'  : body['rank_optimizations'],
             'is_group_optim' : body['group_optimizations'],
             'build_timeout'  : opts['maxtimeout'],
-            'is_build_models': odata['options']['models'],
+            'is_build_models': body['build_models'],
             'max_steps'      : body['max_steps'],
         }
 
@@ -650,7 +662,9 @@ class App(object):
             opts['app_name'], selected_logic.name, proof.stats['result']
         ).inc()
 
-        return {
+        # actually we return a tuple (resp, tableau, lw) because the
+        # web ui needs the tableau object to write the controls.
+        return ({
             'tableau': {
                 'logic' : selected_logic.name,
                 'argument': {
@@ -666,14 +680,15 @@ class App(object):
                 'body'   : tabwriter.write(proof),
                 'stats'  : proof.stats,
                 'result' : proof.stats['result'],
-                'writer' : {
-                    'name'       : tabwriter.name,
-                    'format'     : odata['format'],
-                    'symbol_enc' : odata['symbol_enc'],
-                    'options'    : tabwriter.opts,
-                }
+            },
+            'attachments' : tabwriter.attachments(proof),
+            'writer' : {
+                'name'       : tabwriter.name,
+                'format'     : odata['format'],
+                'symbol_enc' : odata['symbol_enc'],
+                'options'    : tabwriter.opts,
             }
-        }
+        }, proof, lw)
 
     def parse_argument_data(self, adata):
 
@@ -728,6 +743,14 @@ class App(object):
         i = 1
         for pdata in predicates:
             try:
+                # Correct for missing or empty name, by setting it
+                # explicitly to None.
+                if isinstance(pdata, dict) and not pdata.get('name'):
+                    pdata = dict(pdata)
+                    pdata['name'] = None
+                elif isinstance(pdata, list) and len(pdata) == 3:
+                    if not isstr(pdata[0]):
+                        pdata = [None] + list(pdata)
                 vocab.declare_predicate(**pdata)
             except Exception as e:
                 errors['Predicate {0}'.format(str(i))] = str(e)

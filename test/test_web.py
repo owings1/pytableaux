@@ -23,7 +23,7 @@ import web
 import cherrypy
 import json
 from cherrypy.test import helper
-
+from urllib.parse import urlencode
 def test_instantiate():
     app = web.App()
 
@@ -40,6 +40,16 @@ class AppTest(helper.CPWebCase):
         res_list = list(res_raw)
         return json.loads(res_list[2])
 
+    def post_form(self, page, data):
+        body = urlencode(data)
+        headers = [
+            ('Content-type', 'application/x-www-form-urlencoded'),
+            ('Content-Length', str(len(body)))
+        ]
+        res_raw = self.getPage(page, headers, 'POST', body)
+        res_list = list(res_raw)
+        return str(res_list[2])
+
     @staticmethod
     def setup_server():
         cherrypy.tree.mount(web.App(), '/', {})
@@ -49,7 +59,6 @@ class AppTest(helper.CPWebCase):
         self.assertStatus('200 OK')
 
     def test_index_ok_1(self):
-        app = web.App()
         kw = {
             'api-json': json.dumps({
                 'argument': {
@@ -58,19 +67,17 @@ class AppTest(helper.CPWebCase):
                 'logic': 'cpl'
             })
         }
-        res = app.index(**kw)
-        assert 'html-writer-proof' in res
+        res = self.post_form('/', kw)
+        assert 'tableau-wrapper' in res
 
     def test_index_fail_bad_api_data_1(self):
-        app = web.App()
         kw = {
             'api-json': 'badjson'
         }
-        res = app.index(**kw)
+        res = self.post_form('/', kw)
         assert 'correct the following errors' in res
 
     def test_index_fail_bad_arg_1(self):
-        app = web.App()
         kw = {
             'api-json': json.dumps({
                 'argument': {
@@ -79,7 +86,7 @@ class AppTest(helper.CPWebCase):
                 'logic': 'cpl'
             })
         }
-        res = app.index(**kw)
+        res = self.post_form('/', kw)
         assert 'correct the following errors' in res
 
     def test_api_parse_1(self):
@@ -146,7 +153,7 @@ class AppTest(helper.CPWebCase):
             'logic': 'cpl'
         }
         res = app.api_prove(body)
-        assert res['tableau']['valid']
+        assert res[0]['tableau']['valid']
 
     def test_api_errors_various(self):
         app = web.App()

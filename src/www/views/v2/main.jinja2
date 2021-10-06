@@ -1,0 +1,98 @@
+{#
+    v2
+#}
+{%- extends 'layout.jinja2' -%}
+{%- import 'v2/helper.jinja2' as helper -%}
+{%- block inline_css -%}
+    {% if is_proof and resp_data %}
+        {{ resp_data.attachments.get('css') }}
+    {% endif %}
+{%- endblock %}
+{%- block content -%}
+    <script type="text/template" id="premiseTemplate">
+        {{ helper.premise('{n}', '{value}', '{status}', '{messsage}') }}
+    </script>
+    <script type="text/template" id="predicateRowTemplate">
+        {% call helper.predicate_row('{index}', '{subscript}', '{name}', '{arity}') %}
+            {symbol_html}
+        {% endcall %}
+    </script>
+    <div class="pt-app">
+        {% if errors %}
+            {% include 'errors.jinja2' %}
+        {% endif %}
+        {% if warns %}
+            {% include 'warns.jinja2' %}
+        {% endif %}
+        {% set show_controls = is_proof and form_data.show_controls %}
+        {% set show_models = is_proof and form_data.get('options.models') %}
+        <form class="argument" action="/" method="post">
+            <input type="hidden" name="api-json"/>
+            <div id="proove-tabs">
+                <ul>
+                    <li><a href="#tab-argument">Argument</a></li>
+                    <li><a href="#tab-options" >Options</a></li>
+                    {% if is_proof %}
+                        <li><a href="#tab-stats" >Stats</a></li>
+                        {% if show_controls -%}
+                            <li><a href="#tab-controls" >Controls</a></li>
+                        {% endif %}
+                        {% if show_models -%}
+                            <li><a href="#tab-models" >Models</a></li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+                <div id="tab-argument" class="fieldset argument {{- ' hidden' if is_proof }}">
+                    <div class="fieldset-contents">
+                        <div class="left" id="argument-input-panel">
+                            {% include 'v2/argument-input.jinja2' %}
+                        </div>
+                        <div id="lexicons-wrapper">
+                            {% include 'v2/lexicon.jinja2' %}
+                        </div>
+                    </div>
+                </div>  
+                <div id="tab-options" class="fieldset options">
+                    <div class="fieldset-contents">
+                        {% include 'v2/options.jinja2' %}
+                    </div>
+                </div>
+                {% if is_proof -%}
+                    <div id="tab-stats">
+                        {% include 'v2/stats.jinja2' %}
+                    </div>
+                    {% if show_controls -%}
+                        <div id="tab-controls">
+                            {% include 'v2/controls.jinja2' %}
+                        </div>
+                    {% endif %}
+                    {% if show_models -%}
+                        <div id="tab-models">
+                            {% include 'v2/models.jinja2' %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </form>
+        <div class="clear"></div>
+    </div>
+    {% if is_proof -%}
+        <div class="evaluation">
+            <div class="summary">
+                <div class="result">
+                    <span class="{{ resp_data.tableau.result|lower|e }}">
+                        {{- resp_data.tableau.result|e -}}
+                    </span>
+                </div>
+                <div class="clear"></div>
+            </div>
+            <div class="proof-output">
+                {% if resp_data.writer.format == 'html' %}
+                    {{ resp_data.tableau.body }}
+                {% else %}
+                    <pre>{{ resp_data.tableau.body|e }}</pre>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+{%- endblock -%}

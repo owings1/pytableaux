@@ -1,0 +1,382 @@
+/**
+ * pytableaux, a multi-logic proof generator.
+ * Copyright (C) 2014-2021 Doug Owings.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * pytableaux - css for html tableau writer
+ */
+ @font-face {
+    font-family: "Charmonman";
+    font-weight: normal;
+    src: url("fonts/charmonman/Charmonman-Regular.ttf") format("truetype");
+}
+@font-face {
+    font-family: "Charmonman"; 
+    font-weight: bold;
+    src: url("fonts/charmonman/Charmonman-Bold.ttf") format("truetype");
+}
+.tableau {
+    font-family: 'lucida grande',verdana,helvetica,arial,sans-serif;
+}
+.tableau .hidden {
+    display: none;
+}
+
+/* Controls */
+.tableau .node.highlight > .node-props, 
+.tableau .structure.closed.highlight-closed > .node-segment > .node:last-child::after {
+    background-color: yellow;
+}
+/* Node Highlighting */
+.tableau .node.highlight-ticked > .node-props.ticked {
+    border-width: 3px;
+    padding: 2px;
+    color: #dddddd;
+}
+
+/* Selected branch indicator, at the leaf. Only show if controls or models options are enabled */
+.tableau:is(.with-controls, .with-models) .structure.leaf.inspected > .node-segment::after {
+    width: 16px;
+    height: 16px;
+    background-size: 16px 16px;
+    background-image: url(../img/inspected-black.svg);
+}
+
+.proof-controls .valid {
+    color: green;
+}
+.proof-controls .invalid {
+    color: red;
+}
+
+.proof-controls .wip {
+    color: purple;
+    font-weight: bold;
+}
+
+
+
+.proof-controls > ul.details,
+.proof-stats > ul.details {
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-right: 3px;
+    display: inline-block;
+    vertical-align: top;
+}
+.proof-controls > ul.details > li,
+.proof-stats > ul.details > li {
+    display: inline-block;
+    margin: 0;
+}
+.proof-stats .argument-output .premise:last-child {
+    border-bottom: 1px solid #000000;
+    padding-bottom: 3px;
+    margin-bottom: 1px;
+}
+
+.models-output .model > ul > li.in-summary {
+    display: block;
+}
+.models-output {
+    max-width: 300px;
+}
+.models-output .message {
+    padding: 10px;
+}
+
+
+.models-output .model ul.details li .prop {
+    font-weight: bold;
+}
+.models-output .model ul.details li .value {
+    font-weight: normal;
+}
+.models-output .model {
+    display: none;
+}
+.models-output.single-branch .model {
+    display: block;
+}
+.models-output.inspected .select-a-branch {
+    display: none;
+}
+.models-output .symbol {
+    font-family: "Charmonman", "cursive";
+}
+.models-output .model .set > .symbol::after {
+    margin-left: 5px;
+}
+.models-output .model .map > .values > li > .value > .symbol::after {
+    margin-left: 10px;
+}
+.models-output .model .set > .symbol::after,
+.models-output .model .map > .values > li > .value > .symbol::after,
+.models-output .model .list > .symbol::after {
+    content: "=";
+    margin-right: 5px;
+}
+.models-output .model .values .world {
+    font-style: italic;
+}
+.models-output .model .set > .values,
+.models-output .model .set > .values > .tuple,
+.models-output .model .set > .values > .tuple > .values {
+    display: inline;
+}
+.models-output .model .set > .symbol,
+.models-output .model .map > .values > li > .value > .symbol,
+.models-output .model .list > .symbol,
+.models-output .model .list > ul.values > li > .symbol {
+    font-weight: bold;
+    font-size: 14px;
+}
+.models-output .model .set > .values::before,
+.models-output .model .set > .values::after {
+    font-size: 14px;
+}
+.models-output .model .set.non-empty > .values::before {
+    content: "{";
+}
+.models-output .model .set.non-empty > .values::after {
+    content: "}";
+}
+
+.models-output .model .set.empty > .values::after,
+.models-output .model .function.empty::after {
+    content: "\2205";
+}
+.models-output .model .list.empty > .symbol::after {
+    content: " = \2205";
+}
+.models-output .model .tuple > .values::before {
+    content: "<";
+}
+.models-output .model .tuple > .values::after {
+    content: ">";
+}
+.models-output .model .function > ul.values,
+.models-output .model .map > ul.values,
+.models-output .model .list > ul.values {
+    margin: 0;
+    padding: 0;
+    padding-inline-start: 0;
+}
+.models-output .model .function > ul.values li,
+.models-output .model .map > ul.values li,
+.models-output .model .list > ul.values li  {
+    display: block;
+    padding: 0;
+    margin: 0;
+}
+.models-output .model .map > ul.values > li > .prop {
+    font-style: italic;
+    font-weight: bold;
+    font-size: 12px;
+}
+.models-output .model .map > ul.values > li {
+    margin-top: 5px;
+}
+.models-output .model .map > ul.values > li > .value {
+    padding-left: 10px;
+}
+.models-output .model .truth_value {
+    font-weight: bold;
+}
+.models-output .model .function > ul.values > li > .input,
+.models-output .model .function > ul.values > li > .output,
+.models-output .model .function > ul.values > li > .output > .set {
+    display: inline;
+}
+.models-output .model .function > ul.values > li > .input::before {
+    content: '(';
+}
+.models-output .model .function > ul.values > li > .input::after {
+    content: ') = ';
+}
+.models-output .model .function.extension > ul.values > li > .symbol {
+    font-size: 18px;
+    font-weight: bold;
+}
+.models-output .model .function.extension > ul.values > li {
+    padding-top: 4px;
+}
+.models-output .model ul.values.frame > li {
+    border: 1px solid #cccccc;
+    border-top: 3px solid #bbbbbb;
+    border-left: 2px solid #cccccc;
+    padding: 5px 0 5px 5px;
+}
+.models-output .model ul.values.frame > li > .symbol {
+    font-size: 17px;
+}
+.models-output .model .list.frames > ul.values > li {
+    margin-bottom: 10px;
+}
+.models-output .model .is-countermodel.yes {
+    color: green;
+}
+.models-output .model .is-countermodel.no {
+    color: red;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* .proof-controls a.button {
+    background-color: #138ead;
+    background-color: #6ab0de;
+    border: 1px solid #bbb;
+    text-decoration: none;
+    color: white;
+    font-size: 0.8em;
+    padding: 5px 10px;
+} */
+/* .proof-controls a.button:hover {
+    background-color: lightblue;
+} */
+
+
+/* .proof-controls > ul.details > li > .prop {
+    font-style: italic;
+    font-weight: bold;
+    font-size: 12px;
+} */
+/* .proof-controls > ul.details > li > .prop::after {
+    content: "\a";
+    white-space: pre;
+} */
+
+/* .proof-controls, .models-output {
+    display: inline-block;
+    position: absolute;
+} */
+/* .proof-output .collapser-wrapper {
+    background: #ffffff;
+}
+.proof-output .collapser-heading.collapsed span.heading-title {
+    display: none;
+}
+.proof-output .collapser-heading.uncollapsed span.heading-title {
+    display: inline;
+} */
+/* .proof-controls {
+    z-index: 2;
+}
+.proof-controls .controls-contents {
+    min-width: 260px;
+} */
+/* .proof-controls .ui-accordion-header.ui-state-active {
+    background: #1b5361d1;
+    border: 1px solid #1387a5d1;
+}
+.proof-controls .collapser-wrapper.positioned-left .controls-heading.collapsed::before,
+.proof-controls .collapser-wrapper.positioned-right .controls-heading.collapsed::after {
+    background-image: url(../img/controls.svg);
+}
+.proof-controls .controls-contents .ui-accordion-header {
+    margin: 0;
+    border-top-right-radius: 0;
+    border-top-left-radius: 0;
+} */
+
+/* .proof-output .collapser-wrapper {
+    border-color: #7b7b7b;
+    border-style: solid;
+    border-width: 1px 1px 1px 1px;
+    margin-bottom: 10px;
+}
+.proof-output .collapser-heading {
+    cursor: pointer;
+    color: #333333;
+    padding: 10px;
+    font-size: 13px;
+    margin-block-start: 0;
+    margin-block-end: 0;
+}
+.proof-output .collapser-heading.uncollapsed {
+    background-color: #93c3cd61;
+}
+.proof-output .collapser-heading.collapsed {
+    background-color: #93c3cd;
+}
+.proof-output .collapser-heading h3 {
+    display: inline;
+    margin-block-start: 0;
+    margin-block-end: 0;
+}
+.proof-output .collapser-heading.uncollapsed {
+    border-bottom: 1px solid #cccccc;
+}
+.proof-output .collapser-heading::before,
+.proof-output .collapser-heading::after {
+    display: inline-block;
+    content: "";
+}
+.proof-output .collapser-heading::before {
+    margin-right: 5px;
+}
+.proof-output .collapser-heading::after {
+    float: right;
+}
+.proof-output .collapser-heading.collapsed::before,
+.proof-output .collapser-heading.collapsed::after,
+.proof-output .collapser-wrapper.positioned-left .collapser-heading.uncollapsed::after,
+.proof-output .collapser-wrapper.positioned-right .collapser-heading.uncollapsed::before {
+    background-size: 16px 16px;
+    width: 16px;
+    height: 16px;
+}
+.proof-output .collapser-wrapper.positioned-left .collapser-heading::after,
+.proof-output .collapser-wrapper.positioned-right .collapser-heading::before {
+    opacity: 75%;
+}
+.proof-output .collapser-wrapper.positioned-left .collapser-heading.uncollapsed::after,
+.proof-output .collapser-wrapper.positioned-right .collapser-heading.collapsed::before {
+    background-image: url(../img/double-left-arrow.svg);
+}
+.proof-output .collapser-wrapper.positioned-left .collapser-heading.collapsed::after,
+.proof-output .collapser-wrapper.positioned-right .collapser-heading.uncollapsed::before {
+    background-image: url(../img/double-right-arrow.svg);
+}
+.proof-output .collapser-wrapper.positioned-left .collapser-heading.collapsed::after {
+    margin-left: 5px;
+}
+.proof-output .collapser-wrapper.positioned-right .controls-heading::after {
+    margin-left: 5px;
+    opacity: 90%;
+} */
+
+
+/* Models */
+/* .models-output .collapser-wrapper.positioned-left .collapser-heading.collapsed::before,
+.models-output .collapser-wrapper.positioned-right .collapser-heading.collapsed::after {
+    background-image: url(../img/open-book.svg);
+}
+.models-output {
+    z-index: 1;
+}
+.models-output .collapser-wrapper.uncollapsed {
+    min-width: 200px;
+} */

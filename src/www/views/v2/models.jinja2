@@ -1,0 +1,14 @@
+{%- import 'v2/model.jinja2' as model_helper -%}
+<div class="models-output 
+    {{- ' single-branch inspected' if tableau.stats.branches == 1 }}"
+    id="models_{{ tableau.id }}"
+    data-proof-element-id="tableau_{{ tableau.id }}">
+    {% if tableau.stats.open_branches > 0 %}
+        <div class="message select-a-branch">Select an open branch to view model</div>
+        {% for branch in tableau.open_branches() %}
+            {{ model_helper.write_model(lw, branch) }}
+        {% endfor %}
+    {% else %}
+        <div class="message no-models">No open branches</div>
+    {% endif %}
+</div>

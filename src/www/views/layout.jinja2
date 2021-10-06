@@ -4,20 +4,27 @@
     <title>pytableaux</title>
     <script src="/static/js/jquery-3.6.0.min.js"></script>
     <script src="/static/jquery-ui/jquery-ui.min.js"></script>
-    <script src="/static/js/app.js"></script>
-    <script src="/static/js/proof.js"></script>
+    <script src="/static/js/app.{{ view_version }}.js"></script>
+    <script src="/static/js/proof.{{ view_version }}.js"></script>
     <link rel="stylesheet" type="text/css" href="/static/jquery-ui/jquery-ui.min.css"/>
-    <link rel="stylesheet" type="text/css" href="/static/css/app.css"/>
-    <link rel="stylesheet" type="text/css" href="/static/css/proof.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/css/app.{{ view_version }}.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/css/proof.{{ view_version }}.css"/>
     <meta name="viewport" content="width=device-width"/>
     {% if is_google_analytics -%}
         {% include 'analytics.jinja2' %}
     {% endif -%}
+    <style>
+        {% block inline_css %}{% endblock %}
+    </style>
 </head>
-<body>
+<body class="{{ 'has-proof' if is_proof else 'no-proof' }}">
     <div class="header-wrapper">
         <div class="header">
             <a href="/">pytableaux {{ version }}</a>
+            {% if is_debug %}
+            {% set altver = 'v1' if view_version == 'v2' else 'v2' %}
+                | view_version: {{ view_version }} | <a href="/?v={{ altver }}">(change)</a>
+            {% endif %}
             <span class="right">
                 <a href="/doc" target="_blank">documentation</a> | 
                 <a href="{{ source_href }}" target="_blank">source</a>

@@ -115,7 +115,7 @@ def init_sphinx(app, opts):
         themecss = 'doc.default.css'
     app.add_css_file('/'.join(['css', themecss]))
 
-    app.add_css_file('css/proof.css')
+    app.add_css_file('tableau.css')
 
 def sphinx_role_defaults(func):
     func.options = {'class': directives.class_option}

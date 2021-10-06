@@ -11,14 +11,14 @@
                 {% set sentence_raw = lw.write(node.props['sentence']) -%}
                 <span class="sentence">{{ sentence_raw if lw.encoding == 'html' else sentence_raw|e }}</span>
                 {% if node.has('world') -%}
-                    <span class="world">, w<span class="subscript">{{ node.props['world'] }}</span></span>
+                    <span class="world">, w<sub>{{ node.props['world'] }}</sub></span>
                 {% endif -%}
             {% endif -%}
             {% if node.has('designated') -%}
                 <span class="designation {{ 'designated' if node.props['designated'] else 'undesignated' }}"></span>
             {% endif -%}
             {% if node.has('world1') and node.has('world2') -%}
-                <span class="access">w<span class="subscript">{{ node.props['world1'] }}</span>Rw<span class="subscript">{{ node.props['world2'] }}</span></span>
+                <span class="access">w<sub>{{ node.props['world1'] }}</sub>Rw<sub>{{ node.props['world2'] }}</sub></span>
             {% endif -%}
             {% if node.has('ellipsis') -%}
                 <span class="ellipsis"></span>

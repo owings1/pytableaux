@@ -79,6 +79,8 @@ class Tableau(object):
 
     def __init__(self, logic, argument=None, **opts):
 
+        self.id = id(self)
+
         self.finished = False
         self.valid = None
         self.invalid = None
@@ -511,6 +513,7 @@ class Tableau(object):
         # Compute the stats property after the tableau is finished.
         num_open = len(self.open_branches())
         return {
+            'id'                : id(self),
             'result'            : self.__result_word(),
             'branches'          : len(self.branches),
             'open_branches'     : num_open,

@@ -1,0 +1,40 @@
+{#
+    v2
+#}
+{%- macro premise(id, value='', status='', message='') %}
+    <div class="sentence input premise">
+        <label for="premise{{id}}">Premise {{id}}</label>
+        <input class="sentence premise" id="premise{{id}}" type="text" name="premises[]" value="{{value|e}}"/>
+        <span class="status {{ status }}" title="{{ message|e }}"></span>
+    </div>
+{%- endmacro -%}
+
+{% macro predicate_symbol(notn, symbol, subscript) -%}
+    <span class="predicateSymbol notation-{{notn}} hidden">
+        {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript }}</span>{% endif -%}
+    </span>
+{%- endmacro %}
+
+{%- macro predicate_row(index, subscript, name='', arity='') %}
+    <tr class="userPredicate">
+        <td>
+            {{- caller() -}}
+            <input type="hidden" class="predicateSymbol" name="user_predicate_symbols[]" value="{{ index }}.{{ subscript }}" />
+        </td>
+        <td>
+            <input type="text" class="arity" name="user_predicate_arities[]" value="{{ arity }}"/> arity
+        </td>
+    </tr>
+{%- endmacro -%}
+
+{% macro select_opt(form_data, key, value, defaults = {}) -%}
+    {{- ' selected="selected"' if form_data.get(key, defaults.get(key)) == value }}
+{%- endmacro %}
+
+{% macro checkbox_default(form_data, key, defaults = {}) -%}
+    {% if key in form_data or defaults[key] %} checked="checked"{% endif %}
+{%- endmacro %}
+
+{% macro hidden_if(value) -%}
+    {% if value %} hidden{% endif %}
+{%- endmacro %}

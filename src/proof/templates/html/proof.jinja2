@@ -1,18 +1,13 @@
 {%- import 'helper.jinja2' as helper -%}
 {%- import 'structure.jinja2' as structure -%}
-<div class="html-writer {{ opts.get('wrap_classes', [])|join(' ') }}">
-    {% if opts['controls'] %}
-        {%- include 'controls.jinja2' -%}
-    {% endif %}
-    {% if opts['models'] and not tableau.is_premature %}
-        {%- include 'models.jinja2' -%}
-    {% endif %}
-    <div class="html-writer-proof tableau
-        {{ opts.get('classes', [])|join(' ') }}
-        {{- ' color-open' if opts['color_open'] }}
-        {{- ' with-controls' if opts['controls'] }}
-        {{- ' with-models' if opts['models'] }}
-        {{- ' static-doc' if opts['static_doc'] }}"
+{%- if opts.inline_css %}
+<style>
+    {% include 'tableau.css' %}
+</style>
+{%- endif %}
+<div class="tableau-wrapper {{ opts.get('wrap_classes', [])|join(' ') }}">
+    <div id="{{ opts.get('element_id', 'tableau_' ~ tableau.id)|e }}"
+        class="tableau {{ opts.get('classes', [])|join(' ') }}"
         data-step="{{ tableau.history|length }}"
         data-num-steps="{{ tableau.history|length }}"
         data-current-width-pct="100">
