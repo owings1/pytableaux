@@ -20,7 +20,7 @@
         {% block inline_css %}{% endblock %}
     </style>
 </head>
-<body class="{{ 'has-proof' if is_proof else 'no-proof' }}">
+<body class="pt-app {{- ' has-proof' if is_proof else ' no-proof' }}">
     <div class="header-wrapper">
         <div class="header">
             <a href="/">pytableaux {{ version }}</a>

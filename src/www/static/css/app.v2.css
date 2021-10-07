@@ -104,49 +104,63 @@ rtd-theme:
         #2980b9 (title bar, blue)
  */
 /* Header/footer */
-.header-wrapper,
-.footer-wrapper {
+.pt-app .header-wrapper,
+.pt-app .footer-wrapper {
   width: 100%;
   z-index: 101;
   color: white;
 }
-body.no-proof .header-wrapper,
-body.no-proof .footer-wrapper {
+.pt-app.no-proof .header-wrapper,
+.pt-app.no-proof .footer-wrapper {
   position: fixed;
 }
-body.no-proof .footer-wrapper {
+.pt-app.no-proof .footer-wrapper {
   bottom: 0px;
 }
-.header-wrapper {
-  background-color: #2980b9;
+.pt-app.has-proof #proove-tabs-wrapper {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
 }
-.footer-wrapper {
+.pt-app .header-wrapper {
+  /* background-color: #2980b9; */
   background-color: #343131;
 }
-.header a,
-.footer a {
+.pt-app .footer-wrapper {
+  /* background-color: #343131; */
+  /* background-color: #2980b9; */
+  background-color: #6ab0de;
+}
+.pt-app .header a,
+.pt-app .footer a {
   color: white;
   text-decoration: none;
 }
-.header-wrapper {
+.pt-app .header-wrapper {
   top: 0px;
 }
-.header,
-.footer {
+.pt-app .header,
+.pt-app .footer {
   padding: 10px;
 }
-.header a:hover,
-.footer a:hover {
+.pt-app .header a:hover,
+.pt-app .footer a:hover {
   text-decoration: underline;
 }
-.footer {
+.pt-app .footer {
   text-align: center;
   font-size: 11px;
 }
 
-.pt-content {
+
+.pt-app .pt-content {
   padding: 20px;
+}
+.pt-app.no-proof .pt-content {
   margin: 30px 0;
+}
+.pt-app #proove-tabs-wrapper {
+  margin-bottom: 20px
 }
 /*
  * Generic
@@ -172,15 +186,8 @@ body.no-proof .footer-wrapper {
  * Buttons
  */
 .pt-app a.button {
-  /* background-color: #dbfaf4; */
   padding: 5px 10px;
 }
-/* .pt-app a.button:hover {
-  background-color: lightblue;
-}
-.pt-app a.button.active {
-    background-color: rgb(26, 188, 156);
-} */
 .pt-app a.button.disabled {
     background-color: #dddddd;
     color: #999999;
@@ -188,12 +195,12 @@ body.no-proof .footer-wrapper {
 /*
  * Links
  */
-a.external {
+.pt-app a.external {
   color: #2980b9;
   text-decoration: none;
   cursor: pointer;
 }
-a.external:after {
+.pt-app a.external:after {
   /* From rtd theme */
   /* font-family: FontAwesome; */
   /* content: "\f08e"; */
@@ -252,40 +259,19 @@ a.external:after {
  * Lists
  */
 .pt-app ul.details {
-  /* margin: 16px 0 0 0; */
   padding: 0;
 }
 .pt-app ul.details li {
-  display: block;
+  display: inline-table;
   padding: 0 8px 0 5px;
   margin-top: 22px;
   border-left: 2px solid #cccccc;
 }
-/* .pt-app ul.details .prop {
-    font-style: italic;
-    font-size: 12px;
-  } */
-/* .pt-app ul.details .prop::after {
-  content: "\a";
-  white-space: pre;
-} */
 .pt-app ul.details .value {
   padding: 2px;
   margin-top: 9px;
 }
 
-/*
- * Tabs
- */
- /* .ui-state-active,
- .ui-widget-content .ui-state-active,
- .ui-widget-header .ui-state-active,
- a.ui-button:active,
- .ui-button:active,
- .ui-button.ui-state-active:hover {
-   border: 1px solid #c3c3c3;
-   background: #2980b9;
- } */
 
  /* Code */
  .pt-app code {
@@ -296,7 +282,7 @@ a.external:after {
   font-size: 75%;
   overflow-x: auto;
   max-width: 100%;
-  padding: 2px 5px;
+  padding: 3px 5px;
   white-space: normal;
  }
 
@@ -468,52 +454,34 @@ table.predicates th {
   /* border: 1px solid black; */
   margin-bottom: 10px;
 }
-.evaluation > .summary {
-  /* padding: 10px;
-  border-bottom: 1px solid black; */
-  /* background-color: rgba(0, 61, 76, 0.12); */
-  background-color: #bbbbbb;
+
+.tableau.with-controls {
+  cursor: pointer;
 }
-/* .evaluation > .summary h3 {
-  margin: 0;
-  padding: 0.2em;
-  font-size: 1.5em;
-} */
-/* .evaluation > .summary > .argument {
-  float: right;
-} */
-.evaluation > .summary > .result {
-  float: right;
+.tableau-wrapper {
+  overflow-x: scroll;
+}
+.proof-result-admon {
   text-transform: uppercase;
   font-weight: bold;
-  font-size: 1.2em;
   color: white;
-}
-.evaluation > .summary > .result > span {
   padding: 0.4em;
-  display: inline-block;
-  text-align: center;
   letter-spacing: 0.05em;
 }
-.evaluation > .summary > .result .valid {
-  /* background-color: green; */
+.proof-result-admon.valid {
   background-color: rgb(26, 188, 156);
   border: 1px solid #666;
 }
-.evaluation > .summary > .result .invalid {
-  /* background-color: red; */
+.proof-result-admon.invalid {
   background-color: rgb(255, 100, 85);
   border: 1px solid #aaa;
 }
-.evaluation > .summary > .result .unfinished {
-  /* background-color: #666; */
+.proof-result-admon.unfinished {
   background-color: rgb(205, 129, 63);
   border: 1px solid #aaa;
 }
-.evaluation > .proof-output {
-  padding: 10px;
-  overflow-x: scroll;
-}
+
+
 
 /*
  * Feedback form
@@ -573,9 +541,7 @@ table.predicates th {
   overflow-x: scroll;
 }
 
-.tableau.with-controls {
-  cursor: pointer;
-}
+
 
 /* .pt-app input {
   font-size: 14px;

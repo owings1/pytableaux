@@ -1260,7 +1260,8 @@ _.update({
             'strings': {
                 'atomic'   : ['A', 'B', 'C', 'D', 'E'],
                 'operator' : {
-                    'Assertion'              : '°',
+                    # 'Assertion'              : '°',
+                    'Assertion'              : '○',
                     'Negation'               : '¬',
                     'Conjunction'            : '∧',
                     'Disjunction'            : '∨',
@@ -1303,7 +1304,8 @@ _.update({
             'strings': {
                 'atomic'   : ['A', 'B', 'C', 'D', 'E'],
                 'operator' : {
-                    'Assertion'              : '&deg;'   ,
+                    # 'Assertion'              : '&deg;'   ,
+                    'Assertion'              : '&#9675;' ,
                     'Negation'               : '&not;'   ,
                     'Conjunction'            : '&and;'   ,
                     'Disjunction'            : '&or;'    ,

@@ -85,11 +85,14 @@
         ControlsContent : 'controls-contents'    ,
         ControlsPos     : 'controls-position'    ,
         Proof           : 'tableau'              ,
+        Root            : 'root'                 ,
         Structure       : 'structure'            ,
         Child           : 'child-wrapper'        ,
         Leaf            : 'leaf'                 ,
         NodeSegment     : 'node-segment'         ,
         NodeProps       : 'node-props'           ,
+        PropSentence    : 'sentence'             ,
+        PropAccess      : 'access'               ,
         Node            : 'node'                 ,
         Hidden          : 'hidden'               ,
         Zoomed          : 'zoomed'               ,
@@ -120,6 +123,7 @@
         WidthMinusMinus : 'width-minus-minus'    ,
         WidthReset      : 'width-reset'          ,
         WidthAutoStretch: 'width-auto-stretch'   ,
+        ScrollCenter    : 'scroll-center'        ,
         HasOpen         : 'has-open'             ,
         HasClosed       : 'has-closed'           ,
         BranchFilter    : 'branch-filter'        ,
@@ -215,6 +219,8 @@
         'Q' : true,
         'm' : true,
         'M' : true,
+        '@' : true,
+        '$' : true,
     }
 
     // enums
@@ -781,7 +787,7 @@
             adjustWidths($proof, $(leaves), false)
         }
 
-        debug({shows: shows.length, hides: $hides.length})
+        // debug({shows: shows.length, hides: $hides.length})
         // show elements that do not have a filter
         $(shows).show(showSpeed)
 
@@ -922,8 +928,6 @@
             }
         })
     }
-
-
 
     /**
      * Perform a node highlighting operation on a proof.
@@ -1185,6 +1189,17 @@
         }
         adjust($proof, E_AdjustWhat.Width, (guess - 1) * 100)
     }
+
+    function scrollToCenter($proof) {
+        const $parent = $proof.parent()
+        var current = $parent.scrollLeft()
+        var windowWidth = $(window).width()
+        var sel = [Dcls.Root, Dcls.NodeSegment, Dcls.Node, Dcls.NodeProps].join(' > ')
+        var centerPos = $(sel, $proof).position().left
+        var scroll = centerPos - (windowWidth / 2) + current
+        debug({current, centerPos, scroll, windowWidth})
+        $parent.scrollLeft(scroll)
+    }
     /**
      * Guess the width needed so that nodes do not wrap
      */
@@ -1198,13 +1213,41 @@
         // A good candidate for the wrappiest node is the wrappiest of the
         // outer-most leaf segments.
         var maxWrapHeight = noWrapHeight
-        $(Dcls.Leaf + ':eq(0) ' + Dcls.NodeProps, $proof).each(function() {
-            const h = $(this).height()
+        // another strategy
+        var maxDiffPct = 0
+        $(Dcls.Leaf + ':visible:eq(0) ' + Dcls.NodeProps, $proof).each(function() {
+            const $me = $(this)
+            const h = $me.height()
+
+            // one stragegy
             if (h > maxWrapHeight) {
-                maxWrapHeight = h
+                // only count sentence or access nodes (not flags)
+                if ($me.children([Dcls.PropSentence, Dcls.PropAccess].join(', ')).length) {
+
+                    maxWrapHeight = h
+                }
             }
+            // another
+            var h2 = $me.css('position', 'absolute').height()
+            $me.css('position', 'inherit')
+            if (h > h2) {
+                var diff = h / h2
+                if (diff > maxDiffPct) {
+                    maxDiffPct = diff
+                }
+            }
+            // debug({h, h2})
         })
-        return maxWrapHeight / noWrapHeight
+        var strategy1 = 1, strategy2 = 1
+        if (maxWrapHeight >= noWrapHeight * 1.5) {
+            strategy1 = maxWrapHeight / noWrapHeight
+        }
+        if (maxDiffPct > 1.5) {
+            strategy2 = maxDiffPct
+        }
+        debug({strategy1, strategy2, maxDiffPct, maxWrapHeight})
+        return strategy1
+        
         // TODO: compare with right leaf
     }
 
@@ -1280,6 +1323,8 @@
             adjust($proof, E_AdjustWhat.Width, E_HowMuch.Reset)
         } else if ($target.hasClass(Cls.WidthAutoStretch)) {
             autoStretchWidth($proof)
+        } else if ($target.hasClass(Cls.ScrollCenter)) {
+            scrollToCenter($proof)
         } else if ($target.hasClass(Cls.StepRuleTarget)) {
             var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
             doHighlight($proof, {stay: true, off: off, ruleTarget: true})
@@ -1391,6 +1436,9 @@
                 break
             case '@':
                 autoStretchWidth($proof)
+                break
+            case '$':
+                scrollToCenter($proof)
                 break
             case 'O':
                 //defer(function() {
