@@ -107,7 +107,7 @@ form_defaults = {
 
 }
 # Rendered to javascript
-browser_data = {
+base_browser_data = {
     'example_predicates'    : examples.test_pred_data,
     # nups: "notation-user-predicate-symbols"
     'nups'                  : nups,
@@ -118,7 +118,6 @@ browser_data = {
 
 base_view_data = {
     'app_name'            : opts['app_name'],
-    'browser_json'        : json.dumps(browser_data, indent = 2),
     'copyright'           : fixed.copyright,
     'example_args_list'   : examples.args_list,
     'feedback_to_address' : opts['feedback_to_address'],
@@ -238,6 +237,7 @@ class App(object):
         debugs = list()
 
         data = dict(base_view_data)
+        browser_data = dict(base_browser_data)
 
         vocab = Vocabulary()
 
@@ -249,6 +249,8 @@ class App(object):
         
         form_data = fix_form_data(req_data)
         api_data = resp_data = None
+        is_proof = is_controls = is_models = False
+        selected_tab = 'argument'
 
         if req.method == 'POST':
             
@@ -268,31 +270,53 @@ class App(object):
                 errors['Tableau'] = str(err)
 
             if not errors:
+                is_proof = True
+                if form_data.get('format') == 'html':
+                    is_controls = bool(form_data.get('show_controls'))
+                    is_models = bool(
+                        form_data.get('options.models') and
+                        not tableau.valid
+                    )
+                    selected_tab = 'controls'
+                else:
+                    selected_tab = 'stats'
                 data.update({
-                    'is_proof' : True,
-                    'tableau'  : tableau,
-                    'lw'       : lw,
+                    'tableau'     : tableau,
+                    'lw'          : lw,
                 })
-                # if resp_data['attachments']
 
         if errors:
             data['errors'] = errors
 
-        debugs.extend([
-            ('api_data', api_data),
-            ('req_data', req_data),
-            ('form_data', form_data),
-            ('method', req.method),
-            ('resp_data', debug_result(resp_data)),
-        ])
+        browser_data.update({
+            'is_proof'     : is_proof,
+            'is_controls'  : is_controls,
+            'is_models'    : is_models,
+            'selected_tab' : selected_tab,
+        })
+
+        if opts['is_debug']:
+            debugs.extend([
+                ('api_data', api_data),
+                ('req_data', req_data),
+                ('form_data', form_data),
+                ('method', req.method),
+                ('resp_data', debug_result(resp_data)),
+                ('browser_data', browser_data),
+            ])
+            data['debugs'] = debugs
 
         data.update({
-            'view_version'         : view_version,
+            'browser_json' : json.dumps(browser_data, indent = 2),
+            'is_proof'     : is_proof,
+            'is_controls'  : is_controls,
+            'is_models'    : is_models,
+            'selected_tab' : selected_tab,
+            'view_version' : view_version,
             'form_data'            : form_data,
             'resp_data'            : resp_data,
             'user_predicates'      : vocab.user_predicates,
             'user_predicates_list' : vocab.user_predicates_list,
-            'debugs'               : debugs,
             'warns'                : warns,
         })
 

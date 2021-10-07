@@ -19,10 +19,19 @@
 */
 ;(function($) {
 
+    const TabIndexes = {
+        argument : 0,
+        options  : 1,
+        stats    : 2,
+        controls : 3,
+        models   : 4,
+    }
+
     $(document).ready(function() {
 
         const AppData = $.parseJSON($('script.app').html())
         const {is_debug} = AppData
+        const is_proof  = Boolean(AppData.is_proof)
         const Templates = {
             premise    : $('#premiseTemplate').html(),
             predicate  : $('#predicateRowTemplate').html()
@@ -70,15 +79,7 @@
 
                 $Ctx.on('click', function(e) {
                     const $target = $(e.target)
-                    const $heading = $target.closest('.heading')
-                    const $collapserHeading = $target.closest('.collapser-heading')
-                    if ($heading.length) {
-                        handleFieldsetHeadingClick($heading)
-                    } else if ($collapserHeading.length) {
-                        handlerCollapserHeadingClick($collapserHeading)
-                    } /*else if ($target.is('.toggler')) {
-                        $($target.attr('data-target')).toggle()
-                    } */else if ($target.is('#clear_argument')) {
+                    if ($target.is('#clear_argument')) {
                         clearArgument()
                         clearExampleArgument()
                         ensureEmptyPremise()
@@ -95,7 +96,34 @@
             })
             $('input[type="submit"]', $Frm).button()
 
+            
+            var selectedTab = TabIndexes[AppData.selected_tab]
+            if (!Number.isInteger(selectedTab)) {
+                selectedTab = 0
+            }
+            const tabOpts = {
+                active      : selectedTab,
+                collapsible : is_proof,
+            }
+            $('#proove-tabs').tabs(tabOpts)
+            $('a.button').button()
+            $('.ui-controlgroup').controlgroup({
+                button: 'a',
+            })
+            $('.proof-controls a[title]').each(function() {
+                const $me = $(this)
+                var html = $me.attr('title')
+                var shortkey = $me.attr('data-shortcut-key')
+                if (shortkey) {
+                    html += '<br>Shorcut key: ' + shortkey
+                }
+                $me.tooltip({content: html, show: {delay: 2000}})
+            })
+
             setTimeout(function() {
+                if (is_proof) {
+                    $('.proof-controls .width-auto-stretch').click()
+                }
                 ensureEmptyPremise()
                 ensureEmptyPredicate()
                 refreshNotation()
@@ -106,12 +134,6 @@
                 }
                 refreshArgumentHeader()
             })
-            const tabOpts = {}
-            if ($('.evaluation').length) {
-                tabOpts.active = 3
-                tabOpts.collapsible = true
-            }
-            $('#proove-tabs').tabs(tabOpts)
         }
 
         /**
@@ -127,39 +149,39 @@
             $('input[name="api-json"]', $Frm).val(json)
         }
 
-        /**
-         * Show/hide handler for fieldset heading.
-         *
-         * @return void
-         */
-        function handleFieldsetHeadingClick($heading) {
-            const $contents = $heading.closest('.fieldset').find('.fieldset-contents')
-            const isVisible = $contents.is(':visible')
-            $('.fieldset-contents', $Ctx).removeClass('uncollapsed').addClass('collapsed').hide('fast')
-            $('.heading', $Ctx).removeClass('uncollapsed').addClass('collapsed')
-            if (!isVisible) {
-                $contents.removeClass('collapsed').addClass('uncollapsed').show('fast')
-                $heading.removeClass('collapsed').addClass('uncollapsed')
-            }
-        }
+        // /**
+        //  * Show/hide handler for fieldset heading.
+        //  *
+        //  * @return void
+        //  */
+        // function handleFieldsetHeadingClick($heading) {
+        //     const $contents = $heading.closest('.fieldset').find('.fieldset-contents')
+        //     const isVisible = $contents.is(':visible')
+        //     $('.fieldset-contents', $Ctx).removeClass('uncollapsed').addClass('collapsed').hide('fast')
+        //     $('.heading', $Ctx).removeClass('uncollapsed').addClass('collapsed')
+        //     if (!isVisible) {
+        //         $contents.removeClass('collapsed').addClass('uncollapsed').show('fast')
+        //         $heading.removeClass('collapsed').addClass('uncollapsed')
+        //     }
+        // }
 
-        /**
-         * Show/hide handler for collapser.
-         *
-         * @param $heading The heading jQuery element
-         * @return void
-         */
-        function handlerCollapserHeadingClick($heading) {
-            const $wrapper = $heading.closest('.collapser-wrapper')
-            const $contents = $wrapper.find('.collapser-contents')
-            if ($heading.hasClass('collapsed')) {
-                $heading.add($wrapper).removeClass('collapsed').addClass('uncollapsed')
-                $contents.removeClass('collapsed').addClass('uncollapsed').show('fast')
-            } else {
-                $heading.add($wrapper).removeClass('uncollapsed').addClass('collapsed')
-                $contents.removeClass('uncollapsed').addClass('collapsed').hide('fast')
-            }
-        }
+        // /**
+        //  * Show/hide handler for collapser.
+        //  *
+        //  * @param $heading The heading jQuery element
+        //  * @return void
+        //  */
+        // function handlerCollapserHeadingClick($heading) {
+        //     const $wrapper = $heading.closest('.collapser-wrapper')
+        //     const $contents = $wrapper.find('.collapser-contents')
+        //     if ($heading.hasClass('collapsed')) {
+        //         $heading.add($wrapper).removeClass('collapsed').addClass('uncollapsed')
+        //         $contents.removeClass('collapsed').addClass('uncollapsed').show('fast')
+        //     } else {
+        //         $heading.add($wrapper).removeClass('uncollapsed').addClass('collapsed')
+        //         $contents.removeClass('uncollapsed').addClass('collapsed').hide('fast')
+        //     }
+        // }
 
         /**
          * Interpolate variable strings like {varname}.
@@ -300,7 +322,7 @@
                 html += '<span class="' + classes.join(' ') + '">'
                 html += $('<div/>').text(symbols[index]).html()
                 if (subscript > 0)
-                    html += '<span class="subscript">' + subscript + '</span>'
+                    html += '<sub>' + subscript + '</sub>'
                 html += '</span>'
             })
             $('table.predicates tbody', $Ctx).append(render(Templates.predicate, { 
@@ -503,7 +525,7 @@
                             $status.removeClass('bad').addClass('good')
                             $status.attr('title', res.result.type).tooltip()
                             SentenceRenders[input] = res.result.rendered
-                            debug({SentenceRenders})
+                            // debug({SentenceRenders})
                             refreshArgumentHeader()
                         },
                         error: function(xhr, textStatus, errorThrown) {
@@ -525,7 +547,7 @@
                                 title = [textStatus, errorThrown].join(': ')
                             }
                             $status.attr('title', title).tooltip()
-                            delete SentenceRenders[input]
+                            // delete SentenceRenders[input]
                         }
                     })
                 } else {

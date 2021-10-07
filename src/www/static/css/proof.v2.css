@@ -65,9 +65,20 @@
     color: purple;
     font-weight: bold;
 }
+.proof-controls .button.width-reset {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
 
-
-
+.proof-controls .branch-filter.active {
+    background-color: #1abc9c;
+    border: 1px solid #39d6b7;
+    color: white;
+}
+.proof-controls .step-rule-name {
+    text-decoration: none;
+    cursor: pointer;
+}
 .proof-controls > ul.details,
 .proof-stats > ul.details {
     margin-top: 0;

@@ -119,6 +119,7 @@
         WidthMinus      : 'width-minus'          ,
         WidthMinusMinus : 'width-minus-minus'    ,
         WidthReset      : 'width-reset'          ,
+        WidthAutoStretch: 'width-auto-stretch'   ,
         HasOpen         : 'has-open'             ,
         HasClosed       : 'has-closed'           ,
         BranchFilter    : 'branch-filter'        ,
@@ -251,8 +252,6 @@
         All    : 'all'    ,
     }
 
-    const ValidFilterTypeValues = flipObject(E_FilterType)
-
     const E_Behave = {
         Inspect : 'inspect',
         Zoom    : 'zoom'   ,
@@ -319,6 +318,9 @@
         })
     }
 
+    const debug = console.debug
+
+    const Index = {proof: {}, controls: {}, models: {}}
     /**
      * Get the target proof jQuery element from the controls jQuery
      * element
@@ -327,15 +329,29 @@
      * @return $proof|null The jQuery proof element, or null if not found.
      */
     function getProofFromControls($controls) {
-        const id = $controls.attr(Attrib.ProofId)
-        if (id) {
-            var $proof = $('#' + id)
-            if ($proof.length) {
-                return $proof
+        const controlsId = $controls.attr('id')
+        if (!Index.controls[controlsId]) {
+            Index.controls[controlsId] = {}
+        }
+        if (!Index.controls[controlsId] || Index.controls[controlsId].$proof === undefined) {
+            var proofId = $controls.attr(Attrib.ProofId)
+            Index.controls[controlsId].$proof = null
+            if (proofId) {
+                var $proof = $('#' + proofId)
+                if ($proof.length) {
+                    Index.controls[controlsId].$proof = $proof
+                }
+                if (!Index.proof[proofId]) {
+                    Index.proof[proofId] = {}
+                }
+                Index.proof[proofId].$controls = $controls
             }
         }
-        console.debug('Cannot find proof element')
-        return null
+        var $proof = Index.controls[controlsId].$proof
+        if (!$proof) {
+            console.debug('Cannot find proof element')
+        }
+        return $proof
     }
 
     /**
@@ -346,15 +362,29 @@
      * @return $proof|null The jQuery proof element, or null if not found.
      */
      function getProofFromModels($models) {
-        const id = $models.attr(Attrib.ProofId)
-        if (id) {
-            var $proof = $('#' + id)
-            if ($proof.length) {
-                return $proof
+        const modelsId = $models.attr('id')
+        if (!Index.models[modelsId]) {
+            Index.models[modelsId] = {}
+        }
+        if (!Index.models[modelsId] || Index.models[modelsId].$proof === undefined) {
+            var proofId = $models.attr(Attrib.ProofId)
+            Index.models[modelsId].$proof = null
+            if (proofId) {
+                var $proof = $('#' + proofId)
+                if ($proof.length) {
+                    Index.models[modelsId].$proof = $proof
+                }
+                if (!Index.proof[proofId]) {
+                    Index.proof[proofId] = {}
+                }
+                Index.proof[proofId].$models = $models
             }
         }
-        console.debug('Cannot find proof element')
-        return null
+        var $proof = Index.models[modelsId].$proof
+        if (!$proof) {
+            console.debug('Cannot find proof element')
+        }
+        return $proof
     }
 
     /**
@@ -366,6 +396,9 @@
     function getControlsFromProof($proof) {
         const id = $proof.attr('id')
         if (id) {
+            if (Index.proof[id] && Index.proof[id].$controls) {
+                return Index.proof[id].$controls
+            }
             var $controls = $(Dcls.Controls).filter(getAttrSelector(Attrib.ProofId, id))
             if ($controls.length) {
                 return $controls
@@ -383,6 +416,9 @@
     function getModelsFromProof($proof) {
         const id = $proof.attr('id')
         if (id) {
+            if (Index.proof[id] && Index.proof[id].$models) {
+                return Index.proof[id].$models
+            }
             var $models = $(Dcls.Models).filter(getAttrSelector(Attrib.ProofId, id))
             if ($models.length) {
                 return $models
@@ -398,10 +434,6 @@
      * @return void
      */
     function zoom($structure) {
-
-        // if (!$structure.hasClass(Cls.Structure)) {
-        //     throw new Error('Invalid structure argument: ' + $structure)
-        // }
 
         // if we are currently zoomed to this structure, there is nothing to do
         if ($structure.hasClass(Cls.Zoomed)) {
@@ -446,10 +478,6 @@
      * @return void
      */
     function setInspectedBranch($structure) {
-
-        // if (!$structure.hasClass(Cls.Structure)) {
-        //     throw new Error('Invalid structure argument: ' + $structure)
-        // }
 
         // if we are currently inspecting this structure, there is nothing to do
         if ($structure.hasClass(Cls.Inspected)) {
@@ -585,14 +613,14 @@
             var $backward = $([Dcls.StepStart, Dcls.StepPrev].join(', '), $controls)
             var $forward = $([Dcls.StepEnd, Dcls.StepNext].join(', '), $controls)
             if (n === numSteps) {
-                $forward.addClass('disabled').prop('disabled', true)
+                $forward.addClass('disabled')//.prop('disabled', true)
             } else if (n < numSteps) {
-                $forward.removeClass('disabled').prop('disabled', false)
+                $forward.removeClass('disabled')//.prop('disabled', undefined)
             }
             if (n === 0) {
-                $backward.addClass('disabled').prop('disabled', true)
-            } else if (n > numSteps) {
-                $backward.removeClass('disabled').prop('disabled', false)
+                $backward.addClass('disabled')//.prop('disabled', true)
+            } else if (numSteps > n) {
+                $backward.removeClass('disabled')//.prop('disabled', undefined)
             }
         }
     }
@@ -606,15 +634,12 @@
      */
     function filterBranches(type, $proof) {
 
-        if (!(type in ValidFilterTypeValues)) {
-            throw new Error("Invalid filter type: " + type)
-        }
-
         // Track current state so we don't filter if not needed.
         const markClass = [Cls.MarkFiltered, type].join('-')
         if ($proof.hasClass(markClass)) {
             return
         }
+    
         var removeClasses
         switch (type) {
             case E_FilterType.All:
@@ -635,6 +660,16 @@
                     [Cls.MarkFiltered, E_FilterType.Open].join('-'),
                 ]
                 break
+        }
+
+        const $controls = getControlsFromProof($proof)
+        var $active
+        if ($controls) {
+            var $ctrl = $(Dcls.BranchFilter, $controls)
+            $active = $ctrl.filter('.' + type)
+            if ($active.length) {
+                $ctrl.removeClass(Cls.MarkActive)
+            }
         }
 
         const toHide = []
@@ -670,19 +705,8 @@
         })
 
         $proof.removeClass(removeClasses).addClass(markClass)
-
-        const $controls = getControlsFromProof($proof)
-        if ($controls) {
-            var $ctrl = $(Dcls.BranchFilter, $controls)
-            if ($ctrl.is('select')) {
-                $ctrl.val(type)
-            } else {
-                var $active = $ctrl.filter('.' + type)
-                if ($active.length) {
-                    $ctrl.removeClass(Cls.MarkActive)
-                    $active.addClass(Cls.MarkActive)
-                }
-            }
+        if ($active && $active.length) {
+            $active.addClass(Cls.MarkActive)
         }
     }
 
@@ -714,6 +738,9 @@
         const $hides = opts.$hides
         const $shows = opts.$shows
         const className = opts.className
+        var showSpeed = Anim.Fast
+        var hideSpeed = Anim.Fast
+        var animateWidths = true
 
         // track the lowest structures to adjust widths
         const lowests = {}
@@ -733,6 +760,13 @@
             }
         })
 
+        // TODO: :)
+        if (shows.length + $hides.length > 30) {
+            showSpeed = 0
+            hideSpeed = 0
+            animateWidths = false
+        }
+
         // sort the elements to show from higher to lower
         shows.sort(function(a, b) { return $(a).attr(Attrib.Depth) - $(b).attr(Attrib.Depth) })
 
@@ -740,19 +774,19 @@
         const leaves = $.map(lowests, function(pos) { return pos.$el.get(0) })
 
         // hide elements that have a filter
-        $hides.hide(Anim.Fast)
+        $hides.hide(hideSpeed)
 
         // adjust the widths (or do this 'after' below)
         if (opts.adjust == E_AdjustWhen.Before) {
             adjustWidths($proof, $(leaves), false)
         }
-        var showSpeed = Anim.Fast
-        console.log({shows: shows.length, hides: $hides.length})
+
+        debug({shows: shows.length, hides: $hides.length})
         // show elements that do not have a filter
         $(shows).show(showSpeed)
 
         if (opts.adjust && opts.adjust != E_AdjustWhen.Before) {
-            adjustWidths($proof, $(leaves), true)
+            adjustWidths($proof, $(leaves), animateWidths)
         }
     }
 
@@ -889,6 +923,8 @@
         })
     }
 
+
+
     /**
      * Perform a node highlighting operation on a proof.
      *
@@ -947,7 +983,7 @@
             if (nodeIdStr) {
                 var nodeIdsArr = nodeIdStr.split(',').filter(Boolean)
                 for (var i = 0; i < nodeIdsArr.length; ++i) {
-                    nodeIds.push(+id)
+                    nodeIds.push(+nodeIdsArr[i])
                 }
                 // nodeIdsArr.shift()
                 // $.each(nodeIdsArr, function(i, id) { nodeIds.push(+id) })
@@ -1080,13 +1116,13 @@
         return ['[', attr, oper, '"', val, '"]'].join('')
     }
 
-    function flipObject(obj) {
-        const ret = Object.create(null)
-        for (var k in obj) {
-            ret[obj[k]] = k
-        }
-        return ret
-    }
+    // function flipObject(obj) {
+    //     const ret = Object.create(null)
+    //     for (var k in obj) {
+    //         ret[obj[k]] = k
+    //     }
+    //     return ret
+    // }
 
     /**
      * Make various incremental UI adjustments.
@@ -1139,6 +1175,37 @@
             default:
                 break
         }
+    }
+
+    function autoStretchWidth($proof) {
+        var guess = guessNoWrapWidth($proof)
+        debug({guess})
+        if (!guess || guess <= 1) {
+            return
+        }
+        adjust($proof, E_AdjustWhat.Width, (guess - 1) * 100)
+    }
+    /**
+     * Guess the width needed so that nodes do not wrap
+     */
+    function guessNoWrapWidth($proof) {
+        var currentWidth = $proof.width()
+        // Likely the first node does not wrap
+        var noWrapHeight = $(Dcls.NodeProps + ':eq(0)', $proof).height()
+        if (!noWrapHeight) {
+            return
+        }
+        // A good candidate for the wrappiest node is the wrappiest of the
+        // outer-most leaf segments.
+        var maxWrapHeight = noWrapHeight
+        $(Dcls.Leaf + ':eq(0) ' + Dcls.NodeProps, $proof).each(function() {
+            const h = $(this).height()
+            if (h > maxWrapHeight) {
+                maxWrapHeight = h
+            }
+        })
+        return maxWrapHeight / noWrapHeight
+        // TODO: compare with right leaf
     }
 
     /**
@@ -1211,11 +1278,14 @@
             adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthDownLarge)
         } else if ($target.hasClass(Cls.WidthReset)) {
             adjust($proof, E_AdjustWhat.Width, E_HowMuch.Reset)
+        } else if ($target.hasClass(Cls.WidthAutoStretch)) {
+            autoStretchWidth($proof)
         } else if ($target.hasClass(Cls.StepRuleTarget)) {
             var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
             doHighlight($proof, {stay: true, off: off, ruleTarget: true})
             $target.toggleClass(Cls.Stay)
         } else if ($target.hasClass(Cls.StepRuleName)) {
+            debug('StepRuleName')
             var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
             doHighlight($proof, {stay: true, off: off, ruleStep: true})
             $target.toggleClass(Cls.Stay)
@@ -1319,6 +1389,9 @@
             case '|':
                 adjust($proof, E_AdjustWhat.Width, E_HowMuch.Reset)
                 break
+            case '@':
+                autoStretchWidth($proof)
+                break
             case 'O':
                 //defer(function() {
                     if ($proof.children(Sel.CanBranchFilter).length) {
@@ -1370,22 +1443,22 @@
         onReady()
     })
 
-    var BUSY = false
-    function defer(cb) {
-        if (BUSY) {
-            console.log('BUSY')
-            return false
-        }
-        BUSY = true
-        setTimeout(function() {
-            try {
-                cb()
-            } finally {
-                BUSY = false
-            }
-        })
-        return true
-    }
+    // var BUSY = false
+    // function defer(cb) {
+    //     if (BUSY) {
+    //         console.log('BUSY')
+    //         return false
+    //     }
+    //     BUSY = true
+    //     setTimeout(function() {
+    //         try {
+    //             cb()
+    //         } finally {
+    //             BUSY = false
+    //         }
+    //     })
+    //     return true
+    // }
 
     /**
      * Compute the right offset from the left position.

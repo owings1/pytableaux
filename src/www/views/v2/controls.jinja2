@@ -1,35 +1,55 @@
-<div class="proof-controls"
+<div class="proof-controls ui-controls"
     data-proof-element-id="tableau_{{ tableau.id }}"
     id="controls_{{ tableau.id }}">
     {% set tree = tableau.tree %}
     <ul class="details">
+        {%- if is_debug %}
+            <li>
+                <div class="prop">Auto</div>
+                <div class="value">
+                    <a class="button width-auto-stretch" data-shortcut-key="@" href="javascript:"{#
+                        #} title="Auto stretch width">⬄</a>
+                </div>
+            </li>
+        {%- endif %}
         <li>
-            <div class="prop">Width</div>
-            <div class="value">
-                <a class="button width-minus-minus" href="javascript:">{</a>
-                <a class="button width-minus" href="javascript:">[</a>
-                <a class="button width-reset" href="javascript:">|</a>
-                <a class="button width-plus" href="javascript:">]</a>
-                <a class="button width-plus-plus" href="javascript:">}</a>
+            <div class="prop">Width<span class="width-adjust-display"></span></div>
+            <div class="value width-adjusts ui-controlgroup">
+                <a class="button width-minus-minus" data-shortcut-key="{" href="javascript:"{#
+                    #} title="Decrease width by 25%">&langle;&langle;</a>
+                <a class="button width-minus" data-shortcut-key="[" href="javascript:"{#
+                    #} title="Decrease width by 10%">&langle;</a>
+                <a class="button width-reset" data-shortcut-key="|" href="javascript:"{#
+                    #} title="Reset width">&Vert;</a>
+                <a class="button width-plus" data-shortcut-key="]" href="javascript:"{#
+                    #} title="Increase width by 20%">&rangle;</a>
+                <a class="button width-plus-plus" data-shortcut-key="}" href="javascript:"{#
+                    #} title="Increase width by 25%">&rangle;&rangle;</a>
             </div>
         </li>
         <li>
-            <div class="prop">Font</div>
-            <div class="value">
-                <a class="button font-minus" href="javascript:">-</a>
-                <a class="button font-reset" href="javascript:">=</a>
-                <a class="button font-plus" href="javascript:">+</a>
+            <div class="prop">Text<span class="font-adjust-display"></span></div>
+            <div class="value ui-controlgroup">
+                <a class="button font-minus" data-shortcut-key="-" href="javascript:"{#
+                    #} title="Decrease font size">&darr;</a>
+                <a class="button font-reset" data-shortcut-key="=" href="javascript:"{#
+                    #} title="Reset font size">=</a>
+                <a class="button font-plus" data-shortcut-key="+" href="javascript:"{#
+                    #} title="Increase font size">&uarr;</a>
             </div>
         </li>
     </ul>
     <ul class="details">
         <li>
             <div class="prop">Branch Filter</div>
-            <div class="value">
+            <div class="value ui-controlgroup">
                 {%- set can_filter = tree.has_open and tree.has_closed %}
-                <a class="button branch-filter all active {{- ' disabled' if not can_filter }}" href="javascript:">All</a>
-                <a class="button branch-filter open {{- ' disabled' if not can_filter }}" href="javascript:">Open</a>
-                <a class="button branch-filter closed {{- ' disabled' if not can_filter }}" href="javascript:">Closed</a>
+                <a class="button branch-filter all active {{- ' disabled' if not can_filter }}"{#
+                    #} data-shortcut-key="A" href="javascript:" title="Show all branches">All</a>
+                <a class="button branch-filter open {{- ' disabled' if not can_filter }}"{#
+                    #} data-shortcut-key="O" href="javascript:" title="Show only open branches">Open</a>
+                <a class="button branch-filter closed {{- ' disabled' if not can_filter }}"{#
+                    #} data-shortcut-key="C" href="javascript:" title="Show only closed branches">Closed</a>
             </div>
         </li>
         <li>
@@ -43,20 +63,31 @@
         <li>
             <div class="prop">Step</div>
             <div class="value">
-                <a class="button step-start {{- ' disabled' if not tableau.history }}" href="javascript:">B</a>
-                <a class="button step-prev {{- ' disabled' if not tableau.history }}" href="javascript:">&lt;</a>
+                <span class="ui-controlgroup">
+                    <a class="button step-start {{- ' disabled' if not tableau.history }}"{#
+                        #} data-shortcut-key="B" href="javascript:" title="Go to beginning">&langle;&langle;</a>
+                    <a class="button step-prev {{- ' disabled' if not tableau.history }}"{#
+                        #} data-shortcut-key="&lt;" href="javascript:" title="Go back on step">&langle;</a>
+                </span>
                 <input type="text" size="{{ tableau.history|length|string|length + 1 }}" class="step-input" value="{{ tableau.history|length }}">
-                <a class="button step-next disabled" href="javascript:">&gt;</a>
-                <a class="button step-end disabled" href="javascript:">E</a>
+                <span class="ui-controlgroup">
+                    <a class="button step-next disabled" data-shortcut-key="&gt;" href="javascript:"{#
+                        #} title="Go forward one step">&rangle;</a>
+                    <a class="button step-end disabled" data-shortcut-key="E" href="javascript:"{#
+                        #} title="Go to the end">&rangle;&rangle;</a>
+                </span>
             </div>
         </li>
         <li>
             <div class="prop">Rule Applied</div>
-            <div class="value">
-                <a class="step-rule-name step-rule-datum {{- helper.hidden_if(tableau.history|length) }}" data-step="0" href="javascript:">Build Trunk</a>
+            <div class="value step-rule-names">
+                <code class="literal step-rule-name step-rule-datum {{- helper.hidden_if(tableau.history|length) }}"{#
+                    #} data-step="0">Build Trunk</code>
                 {%- for application in tableau.history %}
                     {%- set rule_name = application['rule'].name %}
-                    <a class="step-rule-name step-rule-datum {{- helper.hidden_if(not loop.last) }}" data-step="{{ loop.index }}" href="javascript:">{{ rule_name }}</a>
+                    <code class="literal step-rule-name step-rule-datum {{- helper.hidden_if(not loop.last) }}"{#
+                        #} data-step="{{ loop.index }}">{{ rule_name }}</code>
+                            {# <code class="literal">{{ rule_name }}</code></a> #}
                 {%- endfor %}
             </div>
         </li>

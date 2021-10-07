@@ -3,10 +3,13 @@
 <head>
     <title>pytableaux</title>
     <script src="/static/js/jquery-3.6.0.min.js"></script>
-    <script src="/static/jquery-ui/jquery-ui.min.js"></script>
+    <script src="/static/js/jquery-ui.min.js"></script>
     <script src="/static/js/app.{{ view_version }}.js"></script>
     <script src="/static/js/proof.{{ view_version }}.js"></script>
-    <link rel="stylesheet" type="text/css" href="/static/jquery-ui/jquery-ui.min.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/ui-base/jquery-ui.min.css"/>
+    {%- if is_controls %}
+    <link rel="stylesheet" type="text/css" href="/static/ui-controls/jquery-ui.min.css"/>
+    {%- endif %}
     <link rel="stylesheet" type="text/css" href="/static/css/app.{{ view_version }}.css"/>
     <link rel="stylesheet" type="text/css" href="/static/css/proof.{{ view_version }}.css"/>
     <meta name="viewport" content="width=device-width"/>
