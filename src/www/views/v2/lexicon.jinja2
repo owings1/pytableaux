@@ -1,8 +1,5 @@
-{#
-    v2
-#}
 <div id="lexicons-content" class="lexicons">
-    <h3>Symbols</h3>
+    <h4>Symbols</h4>
     <div class="lexicon-panel">
         {%- for notn, table in parser_tables.items() -%}
             <div class="lexicon hidden notation-{{ notn|e }}">
@@ -17,6 +14,32 @@
                     {% for operator in operators_list -%}
                         <dt>{{ table.char('operator', operator)|e }}</dt>
                         <dd>{{ operator|e }}</dd>
+                    {% endfor %}
+                </dl>
+                <div class="clear"></div>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="lexicon-panel">
+        {%- for notn, table in parser_tables.items() -%}
+            <div class="lexicon hidden notation-{{ notn|e }}">
+                <span class="label">Constants</span>
+                <ul class="item-symbols">
+                    {% for char in table.chars('constant') -%}
+                        <li>{{ char|e }}</li>
+                    {% endfor %}
+                </ul>
+                <span class="label">Variables</span>
+                <ul class="item-symbols">
+                    {% for char in table.chars('variable') -%}
+                        <li>{{ char|e }}</li>
+                    {% endfor %}
+                </ul>
+                <span class="label">Quantifiers</span>
+                <dl class="operator-symbols">
+                    {% for quantifier in quantifiers -%}
+                        <dt>{{ table.char('quantifier', quantifier)|e }}</dt>
+                        <dd>{{ quantifier|e }}</dd>
                     {% endfor %}
                 </dl>
                 <div class="clear"></div>
@@ -54,30 +77,7 @@
                 </tbody>
             </table>
         </div>
-        {%- for notn, table in parser_tables.items() -%}
-            <div class="lexicon hidden notation-{{ notn|e }}">
-                <span class="label">Constants</span>
-                <ul class="item-symbols">
-                    {% for char in table.chars('constant') -%}
-                        <li>{{ char|e }}</li>
-                    {% endfor %}
-                </ul>
-                <span class="label">Variables</span>
-                <ul class="item-symbols">
-                    {% for char in table.chars('variable') -%}
-                        <li>{{ char|e }}</li>
-                    {% endfor %}
-                </ul>
-                <span class="label">Quantifiers</span>
-                <dl class="operator-symbols">
-                    {% for quantifier in quantifiers -%}
-                        <dt>{{ table.char('quantifier', quantifier)|e }}</dt>
-                        <dd>{{ quantifier|e }}</dd>
-                    {% endfor %}
-                </dl>
-                <div class="clear"></div>
-            </div>
-        {% endfor %}
+
     </div>
     <div class="clear"></div>
 </div>

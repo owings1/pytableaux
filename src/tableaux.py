@@ -1099,6 +1099,7 @@ def make_tree_structure(branches, node_depth=0, track=None):
         # whether this is the one and only branch
         'is_only_branch'        : False,
     }
+    s['id'] = id(s)
     while True:
         relevant = [branch for branch in branches if len(branch.nodes) > node_depth]
         for branch in relevant:

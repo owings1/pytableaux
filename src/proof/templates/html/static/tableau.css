@@ -1,15 +1,20 @@
-.tableau {
-    min-height: 90px;
-}
-.tableau pre {
-    overflow-x: scroll;
+.tableau .clear {
+    clear: both;
 }
 .tableau .node {
     text-align: center;
     margin: 0.2em 0;
 }
-.tableau .clear {
-    clear: both;
+.tableau .node-props {
+    padding: 0.26em;
+    display: inline-block;
+    word-break: break-all;
+}
+.tableau .node .node-props.ticked {
+    padding: 0.2em;
+    border-color: #aaaaaa;
+    border-style: solid;
+    border-width: 1px;
 }
 /* Designation markers */
 .tableau .node-props .designation.designated::after {
@@ -25,31 +30,18 @@
 }
 /*  Quit flag marker, e.g. K Necessity, or max constants rules (see QuitFlagHelper).  */
 .tableau .node-props .flag.quit::after {
-    width: 24px;
-    height: 24px;
-    background-size: 24px 24px;
-    background-image: url(../img/quit-flag-yellow.svg);
-    content: '';
-    display: inline-block;
+    content: '\2690';
+    font-size: 1.4em;
 }
 /* Ellipsis, used in rule example docs */
 .tableau .node-props .ellipsis::after {
     content: '\22EE';
 }
-.tableau .node-props {
-    padding: 0.26em;
-    display: inline-block;
-}
-.tableau .node .node-props.ticked {
-    padding: 0.2em;
-    border-color: #aaaaaa;
-    border-style: solid;
-    border-width: 1px;
-}
 .tableau .child-wrapper {
     float: left;
 }
-.tableau .vertical-line, .tableau .horizontal-line {
+.tableau .vertical-line,
+.tableau .horizontal-line {
     margin: 0 auto;
 }
 .tableau .horizontal-line {
@@ -66,28 +58,10 @@
     height: 0.7em;
     width: 1px;
 }
-.tableau .subscript {
-    vertical-align: sub;
-    font-size: 80%;
-}
 .tableau .world {
     font-style: italic;
 }
 .tableau .structure > .node-segment {
     text-align: center;
 }
-.tableau .structure.leaf > .node-segment::after {
-    display: inline-block;
-    background-position: center;
-    content: '';
-    width: 16px;
-    height: 16px;
-}
 
-/* Branch coloring */
-.tableau.color-open .structure.has-open > .node-segment {
-    color: red;
-}
-.tableau.color-open .structure.has-open.has-closed > .node-segment {
-    color: #e808ff;
-}

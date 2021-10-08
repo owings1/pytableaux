@@ -43,6 +43,7 @@ from www.conf import available, consts, cp_global_config, jenv, \
     logger, logic_categories, metrics, modules, example_arguments, \
     nups, opts, re_email, parser_tables
 
+opts['is_debug'] = False
 mailroom = Mailroom(opts)
 
 ##############################
@@ -80,7 +81,7 @@ cp_config = {
 #####################
 ## Static Data     ##
 #####################
-# For not, only include those common to all, until UI suports it
+# For notn, only include those common to all, until UI suports it
 lexwriter_encodings = {
     notn: RenderSet.available(notn)
     for notn in lexwriter_notations

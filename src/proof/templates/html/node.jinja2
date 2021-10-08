@@ -1,31 +1,31 @@
-{% macro write_node(lw, node) -%}
-    <div class="node {{- ' ticked' if node.ticked }}"
-        data-node-id="{{ node.id }}"
-        data-step="{{ node.step }}"
-        {% if node.ticked -%}
+{%- macro write_node(lw, node) -%}
+    <div class="node {{- ' ticked' if node.ticked }}"{#
+        #} id="node_{{ node.id }}"{#
+        #} data-node-id="{{ node.id }}"{#
+        #} data-step="{{ node.step }}"{#
+        #} {% if node.ticked -%}
             data-ticked-step="{{ node.ticked_step }}"
-        {% endif -%}
-        data-ticked="{{ '1' if node.ticked else '0' }}">
+        {%- endif %}>
         <span class="node-props {{- ' ticked' if node.ticked}}">
-            {% if node.has('sentence') -%}
+            {%- if node.has('sentence') -%}
                 {% set sentence_raw = lw.write(node.props['sentence']) -%}
                 <span class="sentence">{{ sentence_raw if lw.encoding == 'html' else sentence_raw|e }}</span>
-                {% if node.has('world') -%}
+                {%- if node.has('world') -%}
                     <span class="world">, w<sub>{{ node.props['world'] }}</sub></span>
-                {% endif -%}
-            {% endif -%}
-            {% if node.has('designated') -%}
+                {%- endif -%}
+            {%- endif -%}
+            {%- if node.has('designated') -%}
                 <span class="designation {{ 'designated' if node.props['designated'] else 'undesignated' }}"></span>
-            {% endif -%}
-            {% if node.has('world1') and node.has('world2') -%}
+            {%- endif -%}
+            {%- if node.has('world1') and node.has('world2') -%}
                 <span class="access">w<sub>{{ node.props['world1'] }}</sub>Rw<sub>{{ node.props['world2'] }}</sub></span>
-            {% endif -%}
-            {% if node.has('ellipsis') -%}
+            {%- endif -%}
+            {%- if node.has('ellipsis') -%}
                 <span class="ellipsis"></span>
-            {% endif -%}
-            {% if node.has('is_flag') -%}
+            {%- endif -%}
+            {%- if node.has('is_flag') -%}
                 <span class="flag {{ node.props['flag']|e }}" title="{{ node.props['info']|e }}"></span>
-            {% endif -%}
+            {%- endif -%}
         </span>
     </div>
 {%- endmacro %}

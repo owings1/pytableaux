@@ -47,8 +47,8 @@
 
 {# Select Logic #}
 
+<h3>Logic</h3>
 <div class="input select">
-    <label for="selected_logic">Logic</label>
     <select name="logic" id="selected_logic">
         {% for category in logic_categories -%}
             <optgroup label="{{ category|e }}">
@@ -64,15 +64,10 @@
 {% for key, logic in logics.items() -%}
     {# updated from javascript on select change #}
     <div class="hidden logic-details {{ key|e }}">
-        <span class="hidden logic-name {{ key|e }}">{{ logic.name|e }}</span>
-        <ul class="details">
-            <li>
-                <span class="value logic-title {{ key|e }}">
-                    <a class="external" href="/doc/logics/{{ key|e }}.html" target="_blank" rel="noreferrer noopener">
-                    {{ logic.Meta.title|e }}
-                    </a>
-                </span>
-            </li>
-        </ul>
+        <span class="value logic-title {{ key|e }}">
+            <a class="external" href="/doc/logics/{{ key|e }}.html" target="_blank" rel="noreferrer noopener">
+            {{ logic.Meta.title|e }}
+            </a>
+        </span>
     </div>
 {% endfor %}

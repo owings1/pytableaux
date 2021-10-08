@@ -20,31 +20,13 @@
  ;(function() {
 
     if (typeof(jQuery) != 'function') {
-        console.error(new Error('jQuery not loaded. Not initializing interactive handlers.'))
+        console.error(new Error('jQuery not loaded. Cannot load tableau plugin.'))
         return
     }
 
     const $ = jQuery
     const $E = $()
-
-    // default option sets
-    const Defaults = {
-        Filter : {
-            $proof       : $E      ,
-            $hides       : $E      ,
-            $shows       : $E      ,
-            className    : null    ,
-            adjust       : 'after' ,
-        },
-        Highlight : {
-            $proof     : $E    ,
-            exclusive  : true  ,
-            stay       : true  ,
-            off        : false ,
-            ruleStep   : null  ,
-            ruleTarget : null  ,
-        }
-    }
+    const debug = console.debug
 
     // animation speed constants, in milliseconds.
     const Anim = {
@@ -79,28 +61,25 @@
     */
     // class names
     const Cls = {
-        Controls        : 'proof-controls'       ,
-        Models          : 'models-output'        ,
-        ControlsHeading : 'controls-heading'     ,
-        ControlsContent : 'controls-contents'    ,
-        ControlsPos     : 'controls-position'    ,
-        Proof           : 'tableau'              ,
+
+        // tableau classes
         Root            : 'root'                 ,
         Structure       : 'structure'            ,
+        HasOpen         : 'has-open'             ,
+        HasClosed       : 'has-closed'           ,
         Child           : 'child-wrapper'        ,
         Leaf            : 'leaf'                 ,
+        HL              : 'horizontal-line'      ,
+        VL              : 'vertical-line'        ,
         NodeSegment     : 'node-segment'         ,
         NodeProps       : 'node-props'           ,
         PropSentence    : 'sentence'             ,
         PropAccess      : 'access'               ,
         Node            : 'node'                 ,
-        Hidden          : 'hidden'               ,
-        Zoomed          : 'zoomed'               ,
-        Inspected       : 'inspected'            ,
-        HL              : 'horizontal-line'      ,
-        VL              : 'vertical-line'        ,
-        Collapsed       : 'collapsed'            ,
-        Uncollapsed     : 'uncollapsed'          ,
+        Ticked          : 'ticked'               ,
+        Closed          : 'closed'               ,
+
+        // controls classes
         StepStart       : 'step-start'           ,
         StepPrev        : 'step-prev'            ,
         StepNext        : 'step-next'            ,
@@ -111,9 +90,6 @@
         StepRuleTarget  : 'step-rule-target'     ,
         StepFiltered    : 'step-filtered'        ,
         ZoomFiltered    : 'zoom-filtered'        ,
-        BranchFiltered  : 'branch-filtered'      ,
-        Ticked          : 'ticked'               ,
-        Closed          : 'closed'               ,
         FontPlus        : 'font-plus'            ,
         FontMinus       : 'font-minus'           ,
         FontReset       : 'font-reset'           ,
@@ -124,19 +100,27 @@
         WidthReset      : 'width-reset'          ,
         WidthAutoStretch: 'width-auto-stretch'   ,
         ScrollCenter    : 'scroll-center'        ,
-        HasOpen         : 'has-open'             ,
-        HasClosed       : 'has-closed'           ,
         BranchFilter    : 'branch-filter'        ,
+        ColorOpen       : 'color-open'           ,
+
+        // stateful classes
+        Hidden          : 'hidden'               ,
+        Zoomed          : 'zoomed'               ,
+        Inspected       : 'inspected'            ,
+        Collapsed       : 'collapsed'            ,
+        Uncollapsed     : 'uncollapsed'          ,
+        BranchFiltered  : 'branch-filtered'      ,
         Highlight       : 'highlight'            ,
         HighlightTicked : 'highlight-ticked'     ,
         HighlightClosed : 'highlight-closed'     ,
         Stay            : 'stay'                 ,
-        ColorOpen       : 'color-open'           ,
-        ModelsPos       : 'models-position'      ,
         Model           : 'model'                ,
         MarkActive      : 'active'               ,
         MarkFiltered    : 'filtered'             ,
     }
+
+    // the id of node elements
+    const NodeIdPrefix = 'node_'
 
     // class names preceded with a '.' for selecting
     const Dcls = {}
@@ -146,26 +130,24 @@
 
     // attributes
     const Attrib = {
-        ProofId        : 'data-proof-element-id'  ,
-        ProofClue      : 'data-step'              ,
+        // tableau attributes
+        NumSteps       : 'data-num-steps'         ,
+        Step           : 'data-step'              ,
+        CurWidthPct    : 'data-current-width-pct' ,
+        Depth          : 'data-depth'             ,
+        Width          : 'data-width'             ,
         Left           : 'data-left'              ,
         Right          : 'data-right'             ,
-        Step           : 'data-step'              ,
-        Ticked         : 'data-ticked'            ,
-        TickStep       : 'data-ticked-step'       ,
         CloseStep      : 'data-closed-step'       ,
-        NumSteps       : 'data-num-steps'         ,
-        Depth          : 'data-depth'             ,
-        FilteredWidth  : 'data-filtered-width'    ,
-        Width          : 'data-width'             ,
-        CurWidthPct    : 'data-current-width-pct' ,
-        NodeId         : 'data-node-id'           ,
-        NodeIds        : 'data-node-ids'          ,
-        BranchNodeId   : 'data-branch-node-id'    ,
         BranchId       : 'data-branch-id'         ,
         ModelId        : 'data-model-id'          ,
-        LastTop        : 'data-last-top'          ,
-        TopOffset      : 'data-top-offset'        ,
+        NodeId         : 'data-node-id'           ,
+        TickStep       : 'data-ticked-step'       ,
+        // controls attributes (rules)
+        NodeIds        : 'data-node-ids'          ,
+        BranchNodeId   : 'data-branch-node-id'    ,
+        // stateful attributes
+        FilteredWidth  : 'data-filtered-width'    ,
     }
 
     // selectors
@@ -185,13 +167,6 @@
         ].join('')
     }
     Sel.Unfiltered = ':not(' + Sel.Filtered + ')'
-
-    // mod key state
-    const ModKey = {
-        shift : false,
-        ctrl  : false,
-        alt   : false,
-    }
 
     // relevant action keys
     const ActionKeys = {
@@ -240,6 +215,7 @@
         End             : 'end'       ,
         Beginning       : 'beginning' ,
         Reset           : 'reset'     ,
+        Auto            : 'auto'      ,
         StepInc         :   1         ,
         StepDec         :  -1         ,
         FontInc         :   1         ,
@@ -263,208 +239,331 @@
         Zoom    : 'zoom'   ,
     }
 
-    /**
-     * Document ready init function.
-     * 
-     * @return void
-     */
-    function onReady() {
-
-        var $currentProof = $(Dcls.Proof + '[' + Attrib.ProofClue + ']').first()
-
-        // load a click event handler for each proof in the document.
-        $(Dcls.Proof).on('click', function(e) {
-            const $proof  = $(this)
-            handleProofClick($(e.target), $proof)
-            $currentProof = $proof
-        })
-
-        // load a change event for the controls panel
-        $(Dcls.Controls).on('change', function(e) {
-            const $controls = $(this)
-            handleControlsChange($(e.target), $controls)
-            $currentProof = getProofFromControls($controls)
-        })
-
-        // load a click event for the controls panel
-        $(Dcls.Controls).on('click', function(e) {
-            const $controls = $(this)
-            handleControlsClick($(e.target), $controls)
-            $currentProof = getProofFromControls($controls)
-        })
-
-        // load a click event for the models panel
-        $(Dcls.Models).on('click', function(e) {
-            const $models = $(this)
-            handleModelsClick($(e.target), $models)
-            $currentProof = getProofFromModels($models)
-        })
-
-        // monitor modifier keys
-        $(document).on('keyup keydown', function(e) {
-            ModKey.shift   = e.shiftKey
-            ModKey.ctrl    = e.metaKey || e.ctrlKey
-            ModKey.alt     = e.altKey
-            ModKey.ctrlalt = ModKey.ctrl || ModKey.alt
-        })
-
-        // action keys
-        $(document).on('keypress', function(e) {
-            const key = String.fromCharCode(e.which)
-            if (!ActionKeys[key]) {
-                return
-            }
-            const $target = $(e.target)
-            const isInput = $target.is(':input')
-            const shouldProcess = !isInput && $currentProof && $currentProof.length
-            if (!shouldProcess) {
-                return
-            }
-            handleActionKey(key, $currentProof)
-        })
+    // default option sets
+    const FuncDefaults = {
+        Filter : {
+            $hides     : $E,
+            $shows     : $E,
+            className  : null,
+            adjust     : E_AdjustWhen.After,
+        },
+        Highlight : {
+            exclusive  : true  ,
+            stay       : true  ,
+            off        : false ,
+            ruleStep   : null  ,
+            ruleTarget : null  ,
+        }
     }
 
-    const debug = console.debug
-
-    const Index = {proof: {}, controls: {}, models: {}}
-    /**
-     * Get the target proof jQuery element from the controls jQuery
-     * element
-     * 
-     * @param $controls The controls jQuery element.
-     * @return $proof|null The jQuery proof element, or null if not found.
-     */
-    function getProofFromControls($controls) {
-        const controlsId = $controls.attr('id')
-        if (!Index.controls[controlsId]) {
-            Index.controls[controlsId] = {}
+    function Api($tableau) {
+        if ($tableau.length !== 1) {
+            throw new Error('Cannot create Api for length ' + $tableau.length)
         }
-        if (!Index.controls[controlsId] || Index.controls[controlsId].$proof === undefined) {
-            var proofId = $controls.attr(Attrib.ProofId)
-            Index.controls[controlsId].$proof = null
-            if (proofId) {
-                var $proof = $('#' + proofId)
-                if ($proof.length) {
-                    Index.controls[controlsId].$proof = $proof
+        const id = $tableau.attr('id')
+        if (Api.instances[id]) {
+            throw new Error('Instance already created for id ' + id)
+        }
+        if (id == null || !id.length) {
+            throw new Error('Cannot create Api for id "' + String(id) + '"')
+        }
+        Object.defineProperties(this, {
+            id       : {value: id},
+            $tableau : {value: $tableau},
+        })
+        Api.instances[id] = this
+        if (!Api.activeInstance) {
+            Api.activeInstance = this
+        }
+    }
+    Api.instances = Object.create(null)
+    Api.activeInstance = null
+
+    Api.getInstance = function getApiInstance(ref) {
+        if (Api.instances[ref]) {
+            return Api.instances[ref]
+        }
+        if (typeof ref.attr !== 'function') {
+            ref = $(ref)
+        }
+        if (ref.length > 1) {
+            $.error('Cannot get instance for object with length ' + ref.length)
+        }
+        return Api.instances[ref.attr('id')]
+    }
+    Api.fn = Api.prototype
+
+    function Plugin(opts) {
+        if (opts === 'api') {
+            return Api.getInstance(this)
+        }
+        return this.each(function() {
+            var $tableau = $(this)
+            var api = Api.getInstance($tableau)
+            if (api) {
+                if (typeof(api[opts]) === 'function') {
+                    var args = Array.prototype.slice.call(arguments, 1)
+                    api[opts].apply(api, args)
                 }
-                if (!Index.proof[proofId]) {
-                    Index.proof[proofId] = {}
-                }
-                Index.proof[proofId].$controls = $controls
+            } else {
+                new Api($tableau).init(opts)
             }
+        })
+    }
+    $.fn.tableau = Plugin
+
+    Plugin.defaults = $.extend(Object.create(null), {
+        controls: function($tableau) {
+            var $controls = $('.tableau-controls')
+            if ($controls.length > 1) {
+                var $specific = $controls.filter(getAttrSelector('data-tableau-id', this.id))
+                if ($specific.length) {
+                    return $specific
+                }
+            }
+            return $controls
+        },
+        models: function($tableau) {
+            var $models = $('.tableau-models')
+            if ($models.length > 1) {
+                var $specific = $models.filter(getAttrSelector('data-tableau-id', this.id))
+                if ($specific.length) {
+                    return $specific
+                }
+            }
+            return $models
+        },
+        actionKeys: true,
+    })
+
+    Api.fn.init = function init(opts) {
+        this.destroy()
+        Api.instances[this.id] = this
+        opts = this.opts = $.extend(true, Plugin.defaults, this.opts, opts)
+        const that = this
+        for (var opt of ['controls', 'models']) {
+            var prop = '$' + opt, value = opts[opt]
+            if (typeof value === 'function') {
+                this[prop] = $(value.call(this, this.$tableau))
+            } else if (value === true) {
+                this[prop] = Plugin.defaults[opt].call(this, this.$tableau)
+            } else {
+                if (typeof value === 'string') {
+                    value = value.replace('{id}', this.id)
+                }
+                this[prop] = $(value)
+            }
+            this[prop].each(function(i) {
+                var id = $(this).attr('id')
+                if (!id) {
+                    id = [opt, that.id, String(i)].join('_')
+                    while ($('#' + id).length) {
+                        id += [id, ++i].join('_')
+                    }
+                    $(this).attr('id', id)
+                }
+                Api.instances[id] = that
+            })
         }
-        var $proof = Index.controls[controlsId].$proof
-        if (!$proof) {
-            console.debug('Cannot find proof element')
+        this.$tableau.on('click', onTableauClick)
+        this.$controls.on('click', onControlsClick).on('change', onControlsChange)
+        this.$models.on('click', onModelsClick)
+        this.actionKeysHash = opts.actionKeys ? $.extend({}, ActionKeys) : {}
+        if (opts.actionKeys) {
+            ensureKeypressHandlers()
         }
-        return $proof
+        initCaches.call(this)
+        return this
     }
 
-    /**
-     * Get the target proof jQuery element from the models jQuery
-     * element
-     * 
-     * @param $controls The controls jQuery element.
-     * @return $proof|null The jQuery proof element, or null if not found.
-     */
-     function getProofFromModels($models) {
-        const modelsId = $models.attr('id')
-        if (!Index.models[modelsId]) {
-            Index.models[modelsId] = {}
+    Api.fn.destroy = function destroy() {
+        if (this.$controls) {
+            this.$controls.off('click', onControlsClick).off('change', onControlsChange)
+            this.$controls.each(function() {
+                delete App.instances[$(this).attr('id')]
+            })
         }
-        if (!Index.models[modelsId] || Index.models[modelsId].$proof === undefined) {
-            var proofId = $models.attr(Attrib.ProofId)
-            Index.models[modelsId].$proof = null
-            if (proofId) {
-                var $proof = $('#' + proofId)
-                if ($proof.length) {
-                    Index.models[modelsId].$proof = $proof
-                }
-                if (!Index.proof[proofId]) {
-                    Index.proof[proofId] = {}
-                }
-                Index.proof[proofId].$models = $models
-            }
+        if (this.$models) {
+            this.$models.off('click', onModelsClick)
+            this.$models.each(function() {
+                delete App.instances[$(this).attr('id')]
+            })
         }
-        var $proof = Index.models[modelsId].$proof
-        if (!$proof) {
-            console.debug('Cannot find proof element')
+        this.$tableau.off('click', onTableauClick)
+        delete Api.instances[this.id]
+        if (Api.activeInstance === this) {
+            Api.activeInstance = null
         }
-        return $proof
+        if (!Object.keys(Api.instances).length) {
+            unloadKeypressHandlers()
+        }
+        return this
     }
 
-    /**
-     * Get the controls container from the proof.
-     * 
-     * @param $proof The proof jQuery element
-     * @return The jQuery controls element, or null if not found.
-     */
-    function getControlsFromProof($proof) {
-        const id = $proof.attr('id')
-        if (id) {
-            if (Index.proof[id] && Index.proof[id].$controls) {
-                return Index.proof[id].$controls
-            }
-            var $controls = $(Dcls.Controls).filter(getAttrSelector(Attrib.ProofId, id))
-            if ($controls.length) {
-                return $controls
-            }
+    Api.fn.width = function width(value) {
+        if (typeof value === 'undefined') {
+            return this.$tableau.width()
         }
-        console.debug('Cannot find controls element')
-        return null
+        adjust.call(this, E_AdjustWhat.Width, value)
+        return this
     }
-    /**
-     * Get the models container from the proof.
-     * 
-     * @param $proof The proof jQuery element
-     * @return The jQuery models element, or null if not found.
-     */
-    function getModelsFromProof($proof) {
-        const id = $proof.attr('id')
-        if (id) {
-            if (Index.proof[id] && Index.proof[id].$models) {
-                return Index.proof[id].$models
-            }
-            var $models = $(Dcls.Models).filter(getAttrSelector(Attrib.ProofId, id))
-            if ($models.length) {
-                return $models
-            }
+
+    Api.fn.center = function center() {
+        scrollToCenter.call(this)
+        return this
+    }
+
+    function onTableauClick(e) {
+        const api = Api.getInstance(this)
+        Api.activeInstance = api
+        handleTableauClick.call(api, $(e.target))
+    }
+
+    function onControlsClick(e) {
+        const api = Api.getInstance(this)
+        Api.activeInstance = api
+        handleControlsClick.call(api, $(e.target))
+    }
+
+    function onControlsChange(e) {
+        const api = Api.getInstance(this)
+        Api.activeInstance = api
+        handleControlsChange.call(api, $(e.target))
+    }
+
+    function onModelsClick(e) {
+        const api = Api.getInstance(this)
+        Api.activeInstance = api
+        handleModelsClick.call(api, $(e.target))
+    }
+
+    // Keypress handlers
+    var IsKeyHandlersLoaded = false
+
+    // mod key state
+    const ModKey = {
+        shift   : false,
+        ctrl    : false,
+        alt     : false,
+        ctrlalt : false,
+    }
+
+    function ensureKeypressHandlers() {
+        if (IsKeyHandlersLoaded) {
+            return
         }
-        console.debug('Cannot find models element')
-        return null
+        $(document).on('keyup keydown', onKeyupKeydown)
+        $(document).on('keypress', onKeypress)
+        IsKeyHandlersLoaded = true
     }
+
+    function unloadKeypressHandlers() {
+        if (!IsKeyHandlersLoaded) {
+            return
+        }
+        $(document).off('keyup keydown', onKeyupKeydown)
+        $(document).off('keypress', onKeypress)
+        IsKeyHandlersLoaded = false
+    }
+
+    function onKeyupKeydown(e) {
+        ModKey.shift   = e.shiftKey
+        ModKey.ctrl    = e.metaKey || e.ctrlKey
+        ModKey.alt     = e.altKey
+        ModKey.ctrlalt = ModKey.ctrl || ModKey.alt
+    }
+
+    function onKeypress(e) {
+        var api = Api.activeInstance
+        const key = String.fromCharCode(e.which)
+        if (!api || !api.actionKeysHash[key]) {
+            return
+        }
+        const $target = $(e.target)
+        const isInput = $target.is(':input')
+        const shouldProcess = !isInput
+        if (!shouldProcess) {
+            return
+        }
+        handleActionKey.call(api, key)
+    }
+
+    function initCaches() {
+        if (this.isCacheInit) {
+            return
+        }
+        const $tableau = this.$tableau
+        const stmap = Object.create(null)
+        const sts = $(Dcls.Structure, $tableau).toArray().map(function(s) {
+            const $s = $(s)
+            const st = {
+                id : $s.attr('id'),
+                $s : $s,
+                s  : $s.get(0),
+                isRoot    : $s.hasClass(Cls.Root),
+                left      : +$s.attr(Attrib.Left),
+                right     : +$s.attr(Attrib.Right),
+                step      : +$s.attr(Attrib.Step),
+                tickStep  : +$s.attr(Attrib.TickStep),
+                depth     : +$s.attr(Attrib.Depth),
+                hasOpen   : $s.hasClass(Cls.HasOpen),
+                hasTicked : $(Dcls.NodeProps, $s).hasClass(Cls.Ticked),
+                closed    : $s.hasClass(Cls.Closed),
+                leaf      : $s.hasClass(Cls.Leaf),
+            }
+            stmap[st.id] = st
+            return st
+        })
+        Object.defineProperties(this, {
+            isCacheInit: {value: true},
+            numSteps   : {value: +$tableau.attr(Attrib.NumSteps)},
+            sts        : {value: sts},
+            stmap      : {value: stmap},
+        })
+    }
+
+    function getStructObj(ref) {
+        if (ref.$s) {
+            return ref
+        }
+        if (typeof ref.attr !== 'function') {
+            ref = $(ref)
+        }
+        return this.stmap[ref.attr('id')]
+    }
+
     /**
      * Show only the lineage of the given structure.
      *
-     * @param $structure The jQuery .structure element(s).
+     * @private
+     * @param st The st cache object.
      * @return void
      */
-    function zoom($structure) {
+    function zoom(st) {
 
+        st = getStructObj.call(this, st)
+        const $s = st.$s
         // if we are currently zoomed to this structure, there is nothing to do
-        if ($structure.hasClass(Cls.Zoomed)) {
+        if ($s.hasClass(Cls.Zoomed)) {
             return
         }
 
-        const $proof = $structure.first().closest(Dcls.Proof)
-
+        const $tableau = this.$tableau
         // get the previously zoomed structure
-        const $prev = $(Dcls.Zoomed, $proof)
-
-        const thisPos = getPos($structure)
+        const $prev = $(Dcls.Zoomed, $tableau)
 
         const hides = []
         const shows = []
 
-        $(Dcls.Structure, $proof).each(function(i, s) {
-            if (getRelation(getPos($(s)), thisPos) == Rel.Outside) {
-                hides.push(s)
+        $.each(this.sts, function(i, other) {
+            if (getRelation(other, st) === Rel.Outside) {
+                hides.push(other.s)
             } else {
-                shows.push(s)
+                shows.push(other.s)
             }
         })
 
-        doFilter($proof, {
+        doFilter.call(this, {
             $hides    : $(hides),
             $shows    : $(shows),
             className : Cls.ZoomFiltered
@@ -474,12 +573,13 @@
         $prev.removeClass(Cls.Zoomed)
 
         // mark the current structure as zoomed
-        $structure.addClass(Cls.Zoomed)
+        $s.addClass(Cls.Zoomed)
     }
 
     /**
      * Set the branch being inspected.
      *
+     * @private
      * @param $structure The singleton jQuery .structure element.
      * @return void
      */
@@ -490,38 +590,39 @@
             return
         }
 
-        const $proof = $structure.closest(Dcls.Proof)
-
-        $(Dcls.Inspected, $proof).removeClass(Cls.Inspected)
+        $(Dcls.Inspected, this.$tableau).removeClass(Cls.Inspected)
         $structure.addClass(Cls.Inspected)
 
-        const $models = getModelsFromProof($proof)
-        if (!$models) {
-            return
-        }
-        const $modelElements = $(Dcls.Model, $models)
-        const modelId = $structure.attr(Attrib.ModelId)
+        const $models = this.$models
+        if ($models.length) {
+            var $modelElements = $(Dcls.Model, $models)
+            var modelId = $structure.attr(Attrib.ModelId)
 
-        $modelElements.hide()
-        if (modelId) {
-            $models.addClass(Cls.Inspected)
-            $modelElements.filter(getAttrSelector(Attrib.ModelId, modelId)).show(Anim.Fast)
-        } else {
-            $models.removeClass(Cls.Inspected)
+            $modelElements.hide()
+            if (modelId) {
+                $models.addClass(Cls.Inspected)
+                $modelElements.filter(getAttrSelector(Attrib.ModelId, modelId)).show(Anim.Fast)
+            } else {
+                $models.removeClass(Cls.Inspected)
+            }
         }
     }
 
     /**
      * Move the proof state to the given step.
      *
-     * @param $proof The singleton jQuery proof element.
+     * @private
      * @param n The step number.
      * @return void
      */
-    function step($proof, n) {
+    function step(n) {
 
-        const numSteps = +$proof.attr(Attrib.NumSteps)
-        const prevStep = +$proof.attr(Attrib.Step)
+        const $tableau = this.$tableau
+        const $controls = this.$controls
+        const that = this
+
+        const numSteps = this.numSteps
+        const prevStep = +$tableau.attr(Attrib.Step)
 
         if (n < 0) {
             n = 0
@@ -542,11 +643,12 @@
 
         var highlightDelay = Anim.Slow
 
-        $(Dcls.Structure, $proof).each(function(i, s) {
-            const $s = $(s)
-            const sPos = getPos($s)
-            const sStep = +$s.attr(Attrib.Step)
-            
+        $.each(this.sts, function(i, st) {
+            const $s = st.$s
+            const sStep = st.step
+            const s = st.s
+            const sPos = st
+
             if (sStep > n) {
                 // only hide the highest structures
                 trackHighests(toHide, sPos)
@@ -563,7 +665,7 @@
                 }
                 showChilds.push(stepped)
                 // ticking/unticking
-                if (!+$stepped.attr(Attrib.Ticked)) {
+                if (!$stepped.hasClass(Cls.Ticked)) {
                     return true
                 }
                 const tStep = +$stepped.attr(Attrib.TickStep)
@@ -587,8 +689,8 @@
         $(Dcls.NodeProps, untickNodes).removeClass(Cls.Ticked)
 
         // filter structures
-        const hides = $.map(toHide, function(pos) { return pos.$el.get(0) })
-        doFilter($proof, {
+        const hides = $.map(toHide, function(st) { return st.s })
+        doFilter.call(this, {
             $hides    : $(hides),
             $shows    : $(shows),
             className : Cls.StepFiltered,
@@ -602,13 +704,12 @@
         setTimeout(function() { $(Dcls.NodeProps, tickNodes).addClass(Cls.Ticked) }, Anim.Med)
 
         // highlight the result
-        setTimeout(function() { doHighlight($proof, {stay: false, ruleStep: n})}, highlightDelay)
+        setTimeout(function() { doHighlight.call(that, {stay: false, ruleStep: n})}, highlightDelay)
 
         // set the current step attribute on the proof
-        $proof.attr(Attrib.Step, n)
+        $tableau.attr(Attrib.Step, n)
 
-        var $controls = getControlsFromProof($proof)
-        if ($controls) {
+        if ($controls.length) {
             // show the rule and target in the controls panel
             const attrSelector = getAttrSelector(Attrib.Step, n)
             $(Dcls.StepRuleDatum, $controls).hide().filter(attrSelector).show()
@@ -632,17 +733,19 @@
     }
 
     /**
-     * Filter branches of a proof according to their status.
+     * Filter branches of a tableau according to their status.
      *
+     * @private
      * @param type The branch status to show, either 'open', 'closed', or 'all'.
-     * @param $proof The singleton jQuery proof element.
      * @return void
      */
-    function filterBranches(type, $proof) {
+    function filterBranches(type) {
 
+        const $tableau = this.$tableau
+        const $controls = this.$controls
         // Track current state so we don't filter if not needed.
         const markClass = [Cls.MarkFiltered, type].join('-')
-        if ($proof.hasClass(markClass)) {
+        if ($tableau.hasClass(markClass)) {
             return
         }
     
@@ -668,9 +771,8 @@
                 break
         }
 
-        const $controls = getControlsFromProof($proof)
         var $active
-        if ($controls) {
+        if ($controls.length) {
             var $ctrl = $(Dcls.BranchFilter, $controls)
             $active = $ctrl.filter('.' + type)
             if ($active.length) {
@@ -681,7 +783,7 @@
         const toHide = []
         const toShow = []
 
-        $(Dcls.Structure, $proof).each(function(i, s) {
+        $(Dcls.Structure, $tableau).each(function(i, s) {
             const $s = $(s)
             var shown
             switch (type) {
@@ -704,13 +806,13 @@
             }
         })
 
-        doFilter($proof, {
+        doFilter.call(this, {
             $hides    : $(toHide),
             $shows    : $(toShow),
             className : Cls.BranchFiltered
         })
 
-        $proof.removeClass(removeClasses).addClass(markClass)
+        $tableau.removeClass(removeClasses).addClass(markClass)
         if ($active && $active.length) {
             $active.addClass(Cls.MarkActive)
         }
@@ -733,13 +835,14 @@
      *     - adjust     : Adjust horizontal lines (boolean, 'before', or 'after').
      *                    Default is 'after'.
      *
-     * @param $proof The singleton jQuery proof element.
+     * @private
      * @param opts The options.
      * @return void
      */
-    function doFilter($proof, opts) {
+    function doFilter(opts) {
 
-        opts = $.extend({}, Defaults.Filter, opts)
+        const $tableau = this.$tableau
+        opts = $.extend({}, FuncDefaults.Filter, opts)
 
         const $hides = opts.$hides
         const $shows = opts.$shows
@@ -761,7 +864,7 @@
             const pos = getPos($(this))
             trackLowests(lowests, pos)
             // if there are no more filters on the element, it will be shown
-            if (pos.$el.is(Sel.Unfiltered)) {
+            if (pos.$structure.is(Sel.Unfiltered)) {
                 shows.push(this)
             }
         })
@@ -777,14 +880,14 @@
         shows.sort(function(a, b) { return $(a).attr(Attrib.Depth) - $(b).attr(Attrib.Depth) })
 
         // collect the dom elements of the lowest structures
-        const leaves = $.map(lowests, function(pos) { return pos.$el.get(0) })
+        const leaves = $.map(lowests, function(pos) { return pos.$structure.get(0) })
 
         // hide elements that have a filter
         $hides.hide(hideSpeed)
 
         // adjust the widths (or do this 'after' below)
         if (opts.adjust == E_AdjustWhen.Before) {
-            adjustWidths($proof, $(leaves), false)
+            adjustWidths.call(this, $(leaves), false)
         }
 
         // debug({shows: shows.length, hides: $hides.length})
@@ -792,7 +895,7 @@
         $(shows).show(showSpeed)
 
         if (opts.adjust && opts.adjust != E_AdjustWhen.Before) {
-            adjustWidths($proof, $(leaves), animateWidths)
+            adjustWidths.call(this, $(leaves), animateWidths)
         }
     }
 
@@ -804,7 +907,7 @@
      * The 'leaves' will not be adjusted, since their width is fixed. True
      * leaves can only have nodes, so their width is 1.
      *
-     * @param $proof The singleton proof jQuery element.
+     * @private
      * @param $leaves The jQuery element with the leaves, or deepest
      *   affected structures.
      * @param isAnimate Whether to animate the width transitions. Default
@@ -812,11 +915,7 @@
      *   changes if the adjusted width is known to be an increase.
      * @return void
      */
-    function adjustWidths($proof, $leaves, isAnimate) {
-
-        if (!$leaves) {
-            $leaves = $(Dcls.Leaf, $proof)
-        }
+    function adjustWidths($leaves, isAnimate) {
 
         // traverse upward through the ancestors
         $leaves.parents(Dcls.Structure + Sel.Unfiltered).each(function(pi, parent) {
@@ -943,20 +1042,22 @@
      *                  the current (or given) proof step.
      *   - ruleTarget : true || step number. Highlight the target nodes of
      *                  the current (or given) proof step.
-     * @param $proof The singleton jQuery proof element.
+     * @private
      * @param opts The options.
      * @return void
      */
-    function doHighlight($proof, opts) {
-        opts = $.extend({}, Defaults.Highlight, opts)
+    function doHighlight(opts) {
+        const $tableau = this.$tableau
+        const $controls = this.$controls
+        const that = this
+        opts = $.extend({}, FuncDefaults.Highlight, opts)
         if (opts.off || opts.exclusive) {
-            $(Dcls.Highlight, $proof).removeClass(Cls.Highlight)
-            $(Dcls.HighlightTicked, $proof).removeClass(Cls.HighlightTicked)
-            $(Dcls.HighlightClosed, $proof).removeClass(Cls.HighlightClosed)
+            $(Dcls.Highlight, $tableau).removeClass(Cls.Highlight)
+            $(Dcls.HighlightTicked, $tableau).removeClass(Cls.HighlightTicked)
+            $(Dcls.HighlightClosed, $tableau).removeClass(Cls.HighlightClosed)
         }
         if (opts.off) {
-            var $controls = getControlsFromProof($proof)
-            if ($controls) {
+            if ($controls.length) {
                 $(Dcls.Highlight, $controls).removeClass(Cls.Highlight)
             }
             return
@@ -965,19 +1066,18 @@
             return
         }
         if (opts.ruleStep != null) {
-            var n = opts.ruleStep === true ? +$proof.attr(Attrib.Step) : opts.ruleStep
+            var n = opts.ruleStep === true ? +$tableau.attr(Attrib.Step) : opts.ruleStep
             var nodeAttrSel = getAttrSelector(Attrib.Step, n)
             var nodeSel = Dcls.Node + nodeAttrSel
             var closeSel = Dcls.Structure + getAttrSelector(Attrib.CloseStep, n)
             var tickSel = Dcls.Node + getAttrSelector(Attrib.TickStep, n)
-            $(nodeSel, $proof).addClass(Cls.Highlight)
-            $(tickSel, $proof).addClass(Cls.HighlightTicked)
-            $(closeSel, $proof).addClass(Cls.HighlightClosed)
+            $(nodeSel, $tableau).addClass(Cls.Highlight)
+            $(tickSel, $tableau).addClass(Cls.HighlightTicked)
+            $(closeSel, $tableau).addClass(Cls.HighlightClosed)
         } else {
-            var n = opts.ruleTarget === true ? +$proof.attr(Attrib.Step) : opts.ruleTarget
+            var n = opts.ruleTarget === true ? +$tableau.attr(Attrib.Step) : opts.ruleTarget
             var nodeAttrSel = getAttrSelector(Attrib.Step, n)
             var nodeIds = []
-            var $controls = getControlsFromProof($proof)
             var $ruleTarget = $(Dcls.StepRuleTarget + nodeAttrSel, $controls)
             var nodeId = $ruleTarget.attr(Attrib.NodeId)
             if (nodeId) {
@@ -989,12 +1089,10 @@
                 for (var i = 0; i < nodeIdsArr.length; ++i) {
                     nodeIds.push(+nodeIdsArr[i])
                 }
-                // nodeIdsArr.shift()
-                // $.each(nodeIdsArr, function(i, id) { nodeIds.push(+id) })
             }
             if (nodeIds.length) {
-                var nodeSel = $.map(nodeIds, function(id) { return Dcls.Node + getAttrSelector(Attrib.NodeId, id) }).join(',')
-                var $nodes = $(nodeSel, $proof)
+                var nodeSel = $.map(nodeIds, function(id) { return '#' + NodeIdPrefix + id }).join(', ')
+                var $nodes = $(nodeSel, $tableau)
             } else {
                 var $nodes = $E
             }
@@ -1002,7 +1100,374 @@
             $nodes.addClass(Cls.Highlight)
         }
         if (!opts.stay) {
-            setTimeout(function() { doHighlight($proof, {off: true})}, Anim.Slow)
+            setTimeout(function() { doHighlight.call(that, {off: true})}, Anim.Slow)
+        }
+    }
+
+    /**
+     * Make various incremental UI adjustments.
+     *
+     * @private
+     * @param what What thing to adjust (font, width, step).
+     * @param howMuch How much to adjust it, or 'reset'.
+     * @return void
+     */
+    function adjust(what, howMuch) {
+
+        const $tableau = this.$tableau
+        switch (what) {
+            case E_AdjustWhat.Font  :
+                if (howMuch == E_HowMuch.Reset) {
+                    $tableau.css({fontSize: 'inherit'})
+                } else {
+                    $tableau.css({fontSize: parseInt($tableau.css('fontSize')) + (parseFloat(howMuch) || 0)})
+                }
+                break
+            case E_AdjustWhat.Width :
+                var p
+                if (howMuch == E_HowMuch.Reset) {
+                    p = 100
+                } else if (howMuch === E_HowMuch.Auto) {
+                    var guess = guessNoWrapWidth.call(this)
+                    debug({guess})
+                    if (!guess || guess <= 1) {
+                        break
+                    }
+                    p = (guess - 1) * 100
+                } else {
+                    p = +$tableau.attr(Attrib.CurWidthPct) + (parseFloat(howMuch) || 0)
+                }
+                if (p < 0) {
+                    p == 0
+                }
+                $tableau.attr(Attrib.CurWidthPct, p)
+                $tableau.css({width: p + '%'})
+                break
+            case E_AdjustWhat.Step:
+                var maxSteps = this.numSteps
+                var n
+                if (howMuch == E_HowMuch.Beginning || howMuch == E_HowMuch.Start) {
+                    n = 0
+                } else if (howMuch == E_HowMuch.Reset || howMuch == E_HowMuch.End) {
+                    n = maxSteps
+                } else {
+                    n = +$tableau.attr(Attrib.Step) + (parseInt(howMuch) || 0)
+                }
+                if (n < 0) {
+                    n = 0
+                } else if (n > maxSteps) {
+                    n = maxSteps
+                }
+                step.call(this, n)
+                break
+            default:
+                break
+        }
+    }
+
+    /**
+     * Scroll the tableau to the center
+     * 
+     * @private
+     * @return void
+     */
+    function scrollToCenter() {
+        const $tableau = this.$tableau
+        const $parent = $tableau.parent()
+        var current = $parent.scrollLeft()
+        var windowWidth = $(window).width()
+        var sel = [Dcls.Root, Dcls.NodeSegment, Dcls.Node, Dcls.NodeProps].join(' > ')
+        var centerPos = $(sel, $tableau).position().left
+        var scroll = centerPos - (windowWidth / 2) + current
+        // debug({current, centerPos, scroll, windowWidth})
+        $parent.scrollLeft(scroll)
+    }
+
+    /**
+     * Guess the width needed so that nodes do not wrap.
+     * 
+     * @private
+     * @return integer How much to multiple the current width by, e.g.
+     * a value of 1 means no change.
+     */
+    function guessNoWrapWidth() {
+        const $tableau = this.$tableau
+        var currentWidth = $tableau.width()
+        // Likely the first node does not wrap
+        var noWrapHeight = $(Dcls.NodeProps + ':eq(0)', $tableau).height()
+        if (!noWrapHeight) {
+            return 1
+        }
+        // A good candidate for the wrappiest node is the wrappiest of the
+        // outer-most leaf segments.
+        var maxWrapHeight = noWrapHeight
+        // another strategy
+        var maxDiffPct = 0
+        $(Dcls.Leaf + ':visible:eq(0) ' + Dcls.NodeProps, $tableau).each(function() {
+            const $me = $(this)
+            const h = $me.height()
+
+            // one stragegy
+            if (h > maxWrapHeight) {
+                // only count sentence or access nodes (not flags)
+                if ($me.children([Dcls.PropSentence, Dcls.PropAccess].join(', ')).length) {
+
+                    maxWrapHeight = h
+                }
+            }
+            // another
+            var h2 = $me.css('position', 'absolute').height()
+            $me.css('position', 'inherit')
+            if (h > h2) {
+                var diff = h / h2
+                if (diff > maxDiffPct) {
+                    maxDiffPct = diff
+                }
+            }
+            // debug({h, h2})
+        })
+        var strategy1 = 1, strategy2 = 1
+        if (maxWrapHeight >= noWrapHeight * 1.5) {
+            strategy1 = maxWrapHeight / noWrapHeight
+        }
+        if (maxDiffPct > 1.5) {
+            strategy2 = maxDiffPct
+        }
+        debug({strategy1, strategy2, maxDiffPct, maxWrapHeight})
+        return strategy1
+        
+        // TODO: compare with right leaf
+    }
+
+    /**
+     * Handle a click event on a tableau.
+     *
+     * @private
+     * @param $target The target jQuery element.
+     * @return void
+     */
+    function handleTableauClick($target) {
+
+        const $structure = $target.closest(Dcls.Structure)
+        const $tableau = this.$tableau
+
+        if ($structure.length) {
+            const behavior = ModKey.ctrlalt ? E_Behave.Zoom : E_Behave.Inspect
+            switch (behavior) {
+                case E_Behave.Zoom:
+                    zoom.call(this, $structure)
+                    setInspectedBranch.call(this, $structure)
+                    break
+                case E_Behave.Inspect:
+                    setInspectedBranch.call(this, $structure)
+                    break
+                default :
+                    break
+            }
+        }
+    }
+
+    /**
+     * Handle a click event on a controls panel element.
+     *
+     * @private
+     * @param $target The event target jQuery element.
+     * @return void
+     */
+    function handleControlsClick($target) {
+
+        if ($target.is(':disabled, .disabled, :checkbox, select')) {
+            return
+        }
+        const classMap = Object.create(null)
+        const classes = $target.attr('class').split(' ')
+        for (var i = 0; i < classes.length; ++i) {
+            classMap[classes[i]] = true
+        }
+        const $tableau = this.$tableau
+        if (classMap[Cls.StepStart]) {
+            adjust.call(this, E_AdjustWhat.Step, E_HowMuch.Start)
+        } else if (classMap[Cls.StepNext]) {
+            adjust.call(this, E_AdjustWhat.Step, E_HowMuch.StepInc)
+        } else if (classMap[Cls.StepPrev]) {
+            adjust.call(this, E_AdjustWhat.Step, E_HowMuch.StepDec)
+        } else if (classMap[Cls.StepEnd]) {
+            adjust.call(this, E_AdjustWhat.Step, E_HowMuch.End)
+        } else if (classMap[Cls.FontPlus]) {
+            adjust.call(this, E_AdjustWhat.Font, E_HowMuch.FontInc)
+        } else if (classMap[Cls.FontMinus]) {
+            adjust.call(this, E_AdjustWhat.Font, E_HowMuch.FontDec)
+        } else if (classMap[Cls.FontReset]) {
+            adjust.call(this, E_AdjustWhat.Font, E_HowMuch.Reset)
+        } else if (classMap[Cls.WidthPlus]) {
+            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthUpMed)
+        } else if (classMap[Cls.WidthPlusPlus]) {
+            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthUpLarge)
+        } else if (classMap[Cls.WidthMinus]) {
+            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthDownMed)
+        } else if (classMap[Cls.WidthMinusMinus]) {
+            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthDownLarge)
+        } else if (classMap[Cls.WidthReset]) {
+            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.Reset)
+        } else if (classMap[Cls.WidthAutoStretch]) {
+            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.Auto)
+        } else if (classMap[Cls.ScrollCenter]) {
+            scrollToCenter.call(this)
+        } else if (classMap[Cls.StepRuleTarget]) {
+            var off = Boolean(classMap[Cls.Highlight] || classMap[Cls.Stay])
+            doHighlight.call(this, {stay: true, off: off, ruleTarget: true})
+            $target.toggleClass(Cls.Stay)
+        } else if (classMap[Cls.StepRuleName]) {
+            var off = Boolean(classMap[Cls.Highlight] || classMap[Cls.Stay])
+            doHighlight.call(this, {stay: true, off: off, ruleStep: true})
+            $target.toggleClass(Cls.Stay)
+        } else if (classMap[Cls.BranchFilter]) {
+            for (var filterType of Object.values(E_FilterType)) {
+                if (classMap[filterType]) {
+                    filterBranches.call(this, filterType)
+                    break
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle a change event on a controls panel.
+     *
+     * @private
+     * @param $target The event target jQuery element.
+     * @return void
+     */
+    function handleControlsChange($target) {
+
+        const $tableau = this.$tableau
+        if ($target.hasClass(Cls.StepInput)) {
+            var n = +$target.val()
+            var maxSteps = +$tableau.attr(Attrib.NumSteps)
+            if (isNaN(n) || n < 0 || n > maxSteps) {
+                $target.val($tableau.attr(Attrib.Step))
+                return
+            }
+            step.call(this, n)
+        } else if ($target.hasClass(Cls.BranchFilter)) {
+            filterBranches.call(this, $target.val())
+        } else if ($target.hasClass(Cls.ColorOpen)) {
+            if ($target.is(':checked')) {
+                $tableau.addClass(Cls.ColorOpen)
+            } else {
+                $tableau.removeClass(Cls.ColorOpen)
+            }
+        }
+    }
+
+    /**
+     * Handle a click event on a models panel.
+     *
+     * @private
+     * @param $target The event target jQuery element.
+     * @return void
+     */
+    function handleModelsClick($target) {
+
+    }
+
+    /**
+     * Handle an action key on the proof.
+     *
+     * @private
+     * @param key The action key character.
+     * @return void
+     */
+    function handleActionKey(key) {
+
+        const $tableau = this.$tableau
+        const $controls = this.$controls
+        switch (key) {
+            case '>':
+                adjust.call(this, E_AdjustWhat.Step, E_HowMuch.StepInc)
+                break
+            case '<':
+                adjust.call(this, E_AdjustWhat.Step, E_HowMuch.StepDec)
+                break
+            case 'B':
+                adjust.call(this, E_AdjustWhat.Step, E_HowMuch.Start)
+                break
+            case 'E':
+                adjust.call(this, E_AdjustWhat.Step, E_HowMuch.End)
+                break
+            case '+':
+                adjust.call(this, E_AdjustWhat.Font, E_HowMuch.FontInc)
+                break
+            case '-':
+                adjust.call(this, E_AdjustWhat.Font, E_HowMuch.FontDec)
+                break
+            case '=':
+                adjust.call(this, E_AdjustWhat.Font, E_HowMuch.Reset)
+                break
+            case ']':
+                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthUpMed)
+                break
+            case '}':
+                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthUpLarge)
+                break
+            case '[':
+                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthDownMed)
+                break
+            case '{':
+                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthDownLarge)
+                break
+            case '|':
+                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.Reset)
+                break
+            case '@':
+                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.Auto)
+                break
+            case '$':
+                scrollToCenter.call(this)
+                break
+            case 'O':
+                if ($tableau.children(Sel.CanBranchFilter).length) {
+                    filterBranches.call(this, E_FilterType.Open)
+                }
+                break
+            case 'C':
+                if ($tableau.children(Sel.CanBranchFilter).length) {
+                    filterBranches.call(this, E_FilterType.Closed)
+                }
+                break
+            case 'A':
+                if ($tableau.children(Sel.CanBranchFilter).length) {
+                    filterBranches.call(this, E_FilterType.All)
+                }
+                break
+            case 'r':
+            case 'R':
+                var stay = key == 'R'
+                doHighlight.call(this, {stay: stay, ruleStep: true})
+                if (stay) {
+                    // var $controls = getControlsFromProof($tableau)
+                    if ($controls.length) {
+                        $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
+                    }
+                }
+                break
+            case 't':
+            case 'T':
+                var stay = key == 'T'
+                doHighlight.call(this, {stay: stay, ruleTarget: true})
+                if (stay) {
+                    // var $controls = getControlsFromProof($tableau)
+                    if ($controls.length) {
+                        $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
+                    }
+                }
+                break
+            case 'Z':
+                // unzoom
+                zoom.call(this, $tableau.children(Dcls.Structure))
+                break
+            default:
+                break
         }
     }
 
@@ -1010,14 +1475,14 @@
      * Get the left/right values of the given structure, as well a reference
      * to the structure's jQuery element.
      *
-     * @param $el The singleton jQuery .structure element.
-     * @return A plain object with left/right/$el keys.
+     * @param $structure The singleton jQuery .structure element.
+     * @return A plain object with left/right/$structure keys.
      */
-    function getPos($el) {
+     function getPos($structure) {
         return {
-            left  : +$el.attr(Attrib.Left),
-            right : +$el.attr(Attrib.Right),
-            $el   : $el
+            left  : +$structure.attr(Attrib.Left),
+            right : +$structure.attr(Attrib.Right),
+            $structure : $structure,
         }
     }
 
@@ -1028,7 +1493,7 @@
      * @param to The position object to compare to.
      * @return A string, either 'self', 'ancestor', 'descendant', or 'other'.
      */
-    function getRelation(from, to) {
+     function getRelation(from, to) {
         if (from.left == to.left) {
             return Rel.Self
         }
@@ -1119,395 +1584,6 @@
         oper = oper || '='
         return ['[', attr, oper, '"', val, '"]'].join('')
     }
-
-    // function flipObject(obj) {
-    //     const ret = Object.create(null)
-    //     for (var k in obj) {
-    //         ret[obj[k]] = k
-    //     }
-    //     return ret
-    // }
-
-    /**
-     * Make various incremental UI adjustments.
-     *
-     * @param $proof The singleton jQuery proof element.
-     * @param what What thing to adjust (font, width, step).
-     * @param howMuch How much to adjust it, or 'reset'.
-     * @return void
-     */
-    function adjust($proof, what, howMuch) {
-
-        switch (what) {
-            case E_AdjustWhat.Font  :
-                if (howMuch == E_HowMuch.Reset) {
-                    $proof.css({fontSize: 'inherit'})
-                } else {
-                    $proof.css({fontSize: parseInt($proof.css('fontSize')) + (parseFloat(howMuch) || 0)})
-                }
-                break
-            case E_AdjustWhat.Width :
-                var p
-                if (howMuch == E_HowMuch.Reset) {
-                    p = 100
-                } else {
-                    p = +$proof.attr(Attrib.CurWidthPct) + (parseFloat(howMuch) || 0)
-                }
-                if (p < 0) {
-                    p == 0
-                }
-                $proof.attr(Attrib.CurWidthPct, p)
-                $proof.css({width: p + '%'})
-                break
-            case E_AdjustWhat.Step:
-                var maxSteps = +$proof.attr(Attrib.NumSteps)
-                var n
-                if (howMuch == E_HowMuch.Beginning || howMuch == E_HowMuch.Start) {
-                    n = 0
-                } else if (howMuch == E_HowMuch.Reset || howMuch == E_HowMuch.End) {
-                    n = maxSteps
-                } else {
-                    n = +$proof.attr(Attrib.Step) + (parseInt(howMuch) || 0)
-                }
-                if (n < 0) {
-                    n = 0
-                } else if (n > maxSteps) {
-                    n = maxSteps
-                }
-                step($proof, n)
-                break
-            default:
-                break
-        }
-    }
-
-    function autoStretchWidth($proof) {
-        var guess = guessNoWrapWidth($proof)
-        debug({guess})
-        if (!guess || guess <= 1) {
-            return
-        }
-        adjust($proof, E_AdjustWhat.Width, (guess - 1) * 100)
-    }
-
-    function scrollToCenter($proof) {
-        const $parent = $proof.parent()
-        var current = $parent.scrollLeft()
-        var windowWidth = $(window).width()
-        var sel = [Dcls.Root, Dcls.NodeSegment, Dcls.Node, Dcls.NodeProps].join(' > ')
-        var centerPos = $(sel, $proof).position().left
-        var scroll = centerPos - (windowWidth / 2) + current
-        debug({current, centerPos, scroll, windowWidth})
-        $parent.scrollLeft(scroll)
-    }
-    /**
-     * Guess the width needed so that nodes do not wrap
-     */
-    function guessNoWrapWidth($proof) {
-        var currentWidth = $proof.width()
-        // Likely the first node does not wrap
-        var noWrapHeight = $(Dcls.NodeProps + ':eq(0)', $proof).height()
-        if (!noWrapHeight) {
-            return
-        }
-        // A good candidate for the wrappiest node is the wrappiest of the
-        // outer-most leaf segments.
-        var maxWrapHeight = noWrapHeight
-        // another strategy
-        var maxDiffPct = 0
-        $(Dcls.Leaf + ':visible:eq(0) ' + Dcls.NodeProps, $proof).each(function() {
-            const $me = $(this)
-            const h = $me.height()
-
-            // one stragegy
-            if (h > maxWrapHeight) {
-                // only count sentence or access nodes (not flags)
-                if ($me.children([Dcls.PropSentence, Dcls.PropAccess].join(', ')).length) {
-
-                    maxWrapHeight = h
-                }
-            }
-            // another
-            var h2 = $me.css('position', 'absolute').height()
-            $me.css('position', 'inherit')
-            if (h > h2) {
-                var diff = h / h2
-                if (diff > maxDiffPct) {
-                    maxDiffPct = diff
-                }
-            }
-            // debug({h, h2})
-        })
-        var strategy1 = 1, strategy2 = 1
-        if (maxWrapHeight >= noWrapHeight * 1.5) {
-            strategy1 = maxWrapHeight / noWrapHeight
-        }
-        if (maxDiffPct > 1.5) {
-            strategy2 = maxDiffPct
-        }
-        debug({strategy1, strategy2, maxDiffPct, maxWrapHeight})
-        return strategy1
-        
-        // TODO: compare with right leaf
-    }
-
-    /**
-     * Handle a click event on a proof.
-     *
-     * @param $target The target jQuery element.
-     * @param $proof The proof jQuery element.
-     * @return void
-     */
-    function handleProofClick($target, $proof) {
-
-        const $structure = $target.closest(Dcls.Structure)
-
-        if ($structure.length) {
-            const behavior = ModKey.ctrlalt ? E_Behave.Zoom : E_Behave.Inspect
-            switch (behavior) {
-                case E_Behave.Zoom:
-                    zoom($structure)
-                    setInspectedBranch($structure)
-                    break
-                case E_Behave.Inspect:
-                    setInspectedBranch($structure)
-                    break
-                default :
-                    break
-            }
-        }
-    }
-
-    /**
-     * Handle a click event on a controls panel
-     *
-     * @param $target The target jQuery element.
-     * @param $controls The controls jQuery element.
-     * @return void
-     */
-    function handleControlsClick($target, $controls) {
-
-        if ($target.is(':disabled, .disabled, :checkbox, select')) {
-            return
-        }
-        const $proof = getProofFromControls($controls)
-        if (!$proof) {
-            return
-        }
-        // const classMap = Object.fromEntries(
-        //     $target.attr('class').split(' ').map(function(c) { return [c, true] })
-        // )
-        if ($target.hasClass(Cls.StepStart)) {
-            adjust($proof, E_AdjustWhat.Step, E_HowMuch.Start)
-        } else if ($target.hasClass(Cls.StepNext)) {
-            adjust($proof, E_AdjustWhat.Step, E_HowMuch.StepInc)
-        } else if ($target.hasClass(Cls.StepPrev)) {
-            adjust($proof, E_AdjustWhat.Step, E_HowMuch.StepDec)
-        } else if ($target.hasClass(Cls.StepEnd)) {
-            adjust($proof, E_AdjustWhat.Step, E_HowMuch.End)
-        } else if ($target.hasClass(Cls.FontPlus)) {
-            adjust($proof, E_AdjustWhat.Font, E_HowMuch.FontInc)
-        } else if ($target.hasClass(Cls.FontMinus)) {
-            adjust($proof, E_AdjustWhat.Font, E_HowMuch.FontDec)
-        } else if ($target.hasClass(Cls.FontReset)) {
-            adjust($proof, E_AdjustWhat.Font, E_HowMuch.Reset)
-        } else if ($target.hasClass(Cls.WidthPlus)) {
-            adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthUpMed)
-        } else if ($target.hasClass(Cls.WidthPlusPlus)) {
-            adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthUpLarge)
-        } else if ($target.hasClass(Cls.WidthMinus)) {
-            adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthDownMed)
-        } else if ($target.hasClass(Cls.WidthMinusMinus)) {
-            adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthDownLarge)
-        } else if ($target.hasClass(Cls.WidthReset)) {
-            adjust($proof, E_AdjustWhat.Width, E_HowMuch.Reset)
-        } else if ($target.hasClass(Cls.WidthAutoStretch)) {
-            autoStretchWidth($proof)
-        } else if ($target.hasClass(Cls.ScrollCenter)) {
-            scrollToCenter($proof)
-        } else if ($target.hasClass(Cls.StepRuleTarget)) {
-            var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
-            doHighlight($proof, {stay: true, off: off, ruleTarget: true})
-            $target.toggleClass(Cls.Stay)
-        } else if ($target.hasClass(Cls.StepRuleName)) {
-            debug('StepRuleName')
-            var off = $target.hasClass(Cls.Highlight) || $target.hasClass(Cls.Stay)
-            doHighlight($proof, {stay: true, off: off, ruleStep: true})
-            $target.toggleClass(Cls.Stay)
-        } else if ($target.hasClass(Cls.BranchFilter)) {
-            for (var filterType of Object.values(E_FilterType)) {
-                if ($target.hasClass(filterType)) {
-                    filterBranches(filterType, $proof)
-                    break
-                }
-            }
-        }
-    }
-
-    /**
-     * Handle a change event on a controls panel.
-     *
-     * @param $target The target jQuery element.
-     * @param $controls The controls jQuery element.
-     * @return void
-     */
-    function handleControlsChange($target, $controls) {
-
-        var $proof = getProofFromControls($controls)
-        if (!$proof) {
-            return
-        }
-
-        if ($target.hasClass(Cls.StepInput)) {
-            var n = +$target.val()
-            var maxSteps = +$proof.attr(Attrib.NumSteps)
-            if (isNaN(n) || n < 0 || n > maxSteps) {
-                $target.val($proof.attr(Attrib.Step))
-                return
-            }
-            step($proof, n)
-        } else if ($target.hasClass(Cls.BranchFilter)) {
-            filterBranches($target.val(), $proof)
-        } else if ($target.hasClass(Cls.ColorOpen)) {
-            if ($target.is(':checked')) {
-                $proof.addClass(Cls.ColorOpen)
-            } else {
-                $proof.removeClass(Cls.ColorOpen)
-            }
-        }
-    }
-
-    /**
-     * Handle a click event on a models panel.
-     *
-     * @param $target The target jQuery element.
-     * @param $models The models panel jQuery element.
-     * @return void
-     */
-    function handleModelsClick($target, $models) {
-
-    }
-
-    /**
-     * Handle an action key on the proof.
-     *
-     * @param key The action key character.
-     * @param $proof The proof jQuery element.
-     * @return void
-     */
-    function handleActionKey(key, $proof) {
-
-        switch (key) {
-            case '>':
-                adjust($proof, E_AdjustWhat.Step, E_HowMuch.StepInc)
-                break
-            case '<':
-                adjust($proof, E_AdjustWhat.Step, E_HowMuch.StepDec)
-                break
-            case 'B':
-                adjust($proof, E_AdjustWhat.Step, E_HowMuch.Start)
-                break
-            case 'E':
-                adjust($proof, E_AdjustWhat.Step, E_HowMuch.End)
-                break
-            case '+':
-                adjust($proof, E_AdjustWhat.Font, E_HowMuch.FontInc)
-                break
-            case '-':
-                adjust($proof, E_AdjustWhat.Font, E_HowMuch.FontDec)
-                break
-            case '=':
-                adjust($proof, E_AdjustWhat.Font, E_HowMuch.Reset)
-                break
-            case ']':
-                adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthUpMed)
-                break
-            case '}':
-                adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthUpLarge)
-                break
-            case '[':
-                adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthDownMed)
-                break
-            case '{':
-                adjust($proof, E_AdjustWhat.Width, E_HowMuch.WidthDownLarge)
-                break
-            case '|':
-                adjust($proof, E_AdjustWhat.Width, E_HowMuch.Reset)
-                break
-            case '@':
-                autoStretchWidth($proof)
-                break
-            case '$':
-                scrollToCenter($proof)
-                break
-            case 'O':
-                //defer(function() {
-                    if ($proof.children(Sel.CanBranchFilter).length) {
-                        filterBranches(E_FilterType.Open, $proof)
-                    }
-                //})
-                break
-            case 'C':
-                if ($proof.children(Sel.CanBranchFilter).length) {
-                    filterBranches(E_FilterType.Closed, $proof)
-                }
-                break
-            case 'A':
-                if ($proof.children(Sel.CanBranchFilter).length) {
-                    filterBranches(E_FilterType.All, $proof)
-                }
-                break
-            case 'r':
-            case 'R':
-                var stay = key == 'R'
-                doHighlight($proof, {stay: stay, ruleStep: true})
-                if (stay) {
-                    var $controls = getControlsFromProof($proof)
-                    if ($controls) {
-                        $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
-                    }
-                }
-                break
-            case 't':
-            case 'T':
-                var stay = key == 'T'
-                doHighlight($proof, {stay: stay, ruleTarget: true})
-                if (stay) {
-                    var $controls = getControlsFromProof($proof)
-                    if ($controls) {
-                        $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
-                    }
-                }
-                break
-            case 'Z':
-                zoom($proof.children(Dcls.Structure))
-                break
-            default:
-                break
-        }
-    }
-
-    $(document).ready(function() {
-        onReady()
-    })
-
-    // var BUSY = false
-    // function defer(cb) {
-    //     if (BUSY) {
-    //         console.log('BUSY')
-    //         return false
-    //     }
-    //     BUSY = true
-    //     setTimeout(function() {
-    //         try {
-    //             cb()
-    //         } finally {
-    //             BUSY = false
-    //         }
-    //     })
-    //     return true
-    // }
-
     /**
      * Compute the right offset from the left position.
      *
@@ -1536,3 +1612,194 @@
         return n
     }
 })();
+    // /**
+    //  * Document ready init function.
+    //  * 
+    //  * @return void
+    //  */
+    // function onReady() {
+
+    //     var $currentProof = $(Dcls.Proof + '[' + Attrib.ProofClue + ']').first()
+
+    //     // monitor modifier keys
+    //     $(document).on('keyup keydown', function(e) {
+    //         ModKey.shift   = e.shiftKey
+    //         ModKey.ctrl    = e.metaKey || e.ctrlKey
+    //         ModKey.alt     = e.altKey
+    //         ModKey.ctrlalt = ModKey.ctrl || ModKey.alt
+    //     })
+
+    //     // action keys
+    //     $(document).on('keypress', function(e) {
+    //         const key = String.fromCharCode(e.which)
+    //         if (!ActionKeys[key]) {
+    //             return
+    //         }
+    //         const $target = $(e.target)
+    //         const isInput = $target.is(':input')
+    //         const shouldProcess = !isInput && $currentProof && $currentProof.length
+    //         if (!shouldProcess) {
+    //             return
+    //         }
+    //         handleActionKey($currentProof, key)
+    //     })
+    // }
+
+    // const Index = {proof: {}, controls: {}, models: {}}
+    // /**
+    //  * Get the target proof jQuery element from the controls jQuery
+    //  * element
+    //  * 
+    //  * @param $controls The controls jQuery element.
+    //  * @return $proof|null The jQuery proof element, or null if not found.
+    //  */
+    // function getProofFromControls($controls) {
+    //     const controlsId = $controls.attr('id')
+    //     if (!Index.controls[controlsId]) {
+    //         Index.controls[controlsId] = {}
+    //     }
+    //     if (!Index.controls[controlsId] || Index.controls[controlsId].$proof === undefined) {
+    //         var proofId = $controls.attr(Attrib.ProofId)
+    //         Index.controls[controlsId].$proof = null
+    //         if (proofId) {
+    //             var $proof = $('#' + proofId)
+    //             if ($proof.length) {
+    //                 Index.controls[controlsId].$proof = $proof
+    //             }
+    //             if (!Index.proof[proofId]) {
+    //                 Index.proof[proofId] = {}
+    //             }
+    //             Index.proof[proofId].$controls = $controls
+    //         }
+    //     }
+    //     var $proof = Index.controls[controlsId].$proof
+    //     if (!$proof) {
+    //         console.debug('Cannot find proof element')
+    //     }
+    //     return $proof
+    // }
+
+    // /**
+    //  * Get the target proof jQuery element from the models jQuery
+    //  * element
+    //  * 
+    //  * @param $controls The controls jQuery element.
+    //  * @return $proof|null The jQuery proof element, or null if not found.
+    //  */
+    //  function getProofFromModels($models) {
+    //     const modelsId = $models.attr('id')
+    //     if (!Index.models[modelsId]) {
+    //         Index.models[modelsId] = {}
+    //     }
+    //     if (!Index.models[modelsId] || Index.models[modelsId].$proof === undefined) {
+    //         var proofId = $models.attr(Attrib.ProofId)
+    //         Index.models[modelsId].$proof = null
+    //         if (proofId) {
+    //             var $proof = $('#' + proofId)
+    //             if ($proof.length) {
+    //                 Index.models[modelsId].$proof = $proof
+    //             }
+    //             if (!Index.proof[proofId]) {
+    //                 Index.proof[proofId] = {}
+    //             }
+    //             Index.proof[proofId].$models = $models
+    //         }
+    //     }
+    //     var $proof = Index.models[modelsId].$proof
+    //     if (!$proof) {
+    //         console.debug('Cannot find proof element')
+    //     }
+    //     return $proof
+    // }
+
+    // /**
+    //  * Get the controls container from the proof.
+    //  * 
+    //  * @param $proof The proof jQuery element
+    //  * @return The jQuery controls element, or null if not found.
+    //  */
+    // function getControlsFromProof($proof) {
+    //     const id = $proof.attr('id')
+    //     if (id) {
+    //         if (Index.proof[id] && Index.proof[id].$controls) {
+    //             return Index.proof[id].$controls
+    //         }
+    //         var $controls = $(Dcls.Controls).filter(getAttrSelector(Attrib.ProofId, id))
+    //         if ($controls.length) {
+    //             return $controls
+    //         }
+    //     }
+    //     console.debug('Cannot find controls element')
+    //     return null
+    // }
+    /**
+    //  * Get the models container from the proof.
+    //  * 
+    //  * @param $proof The proof jQuery element
+    //  * @return The jQuery models element, or null if not found.
+    //  */
+    // function getModelsFromProof($proof) {
+    //     const id = $proof.attr('id')
+    //     if (id) {
+    //         if (Index.proof[id] && Index.proof[id].$models) {
+    //             return Index.proof[id].$models
+    //         }
+    //         var $models = $(Dcls.Models).filter(getAttrSelector(Attrib.ProofId, id))
+    //         if ($models.length) {
+    //             return $models
+    //         }
+    //     }
+    //     console.debug('Cannot find models element')
+    //     return null
+    // }
+
+            /*
+        // load a click event handler for each proof in the document.
+        $(Dcls.Proof).on('click', function(e) {
+            const $proof  = $(this)
+            $currentProof = $proof
+            handleProofClick($proof, $(e.target))
+        })
+
+        // load a change event for the controls panel
+        $(Dcls.Controls).on('change', function(e) {
+            const $controls = $(this)
+            const $proof = getProofFromControls($controls)
+            if (!$proof) {
+                return
+            }
+            $currentProof = $proof
+            handleControlsChange($proof, $(e.target))
+        })
+
+        // load a click event for the controls panel
+        $(Dcls.Controls).on('click', function(e) {
+            const $controls = $(this)
+            const $proof = getProofFromControls($controls)
+            if (!$proof) {
+                return
+            }
+            $currentProof = $proof
+            handleControlsClick($proof, $(e.target))
+        })
+
+        // load a click event for the models panel
+        $(Dcls.Models).on('click', function(e) {
+            const $models = $(this)
+            const $proof = getProofFromModels($models)
+            if (!$proof) {
+                return
+            }
+            $currentProof = $proof
+            handleModelsClick($proof, $(e.target))
+        })
+        */
+
+            // function autoStretchWidth($proof) {
+    //     var guess = guessNoWrapWidth($proof)
+    //     debug({guess})
+    //     if (!guess || guess <= 1) {
+    //         return
+    //     }
+    //     adjust($proof, E_AdjustWhat.Width, (guess - 1) * 100)
+    // }

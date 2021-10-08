@@ -28,13 +28,26 @@
     padding: 2px;
     color: #dddddd;
 }
-
+/* Branch coloring */
+.tableau.color-open .structure.has-open > .node-segment {
+    color: red;
+}
+.tableau.color-open .structure.has-open.has-closed > .node-segment {
+    color: #e808ff;
+}
 /* Selected branch indicator, at the leaf. Only show if controls or models options are enabled */
 .tableau:is(.with-controls, .with-models) .structure.leaf.inspected > .node-segment::after {
     width: 16px;
     height: 16px;
     background-size: 16px 16px;
     background-image: url(../img/inspected-black.svg);
+}
+.tableau .structure.leaf > .node-segment::after {
+    display: inline-block;
+    background-position: center;
+    content: '';
+    width: 16px;
+    height: 16px;
 }
 .proof-controls, .models-output {
     display: inline-block;

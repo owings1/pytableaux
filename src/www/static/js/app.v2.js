@@ -110,7 +110,7 @@
             $('.ui-controlgroup').controlgroup({
                 button: 'a',
             })
-            $('.proof-controls a[title]').each(function() {
+            $('.tableau-controls a[title]').each(function() {
                 const $me = $(this)
                 var html = $me.attr('title')
                 var shortkey = $me.attr('data-shortcut-key')
@@ -120,9 +120,15 @@
                 $me.tooltip({content: html, show: {delay: 2000}})
             })
 
+            $('.tableau').tableau({
+
+            })
+
             setTimeout(function() {
                 if (is_proof) {
-                    $('.proof-controls .width-auto-stretch').click()
+                    var api = $('.tableau').tableau('api')
+                    api.width('auto').center()
+                    // console.log(api.s)
                 }
                 ensureEmptyPremise()
                 ensureEmptyPredicate()
@@ -148,40 +154,6 @@
             debug('submitForm', data)
             $('input[name="api-json"]', $Frm).val(json)
         }
-
-        // /**
-        //  * Show/hide handler for fieldset heading.
-        //  *
-        //  * @return void
-        //  */
-        // function handleFieldsetHeadingClick($heading) {
-        //     const $contents = $heading.closest('.fieldset').find('.fieldset-contents')
-        //     const isVisible = $contents.is(':visible')
-        //     $('.fieldset-contents', $Ctx).removeClass('uncollapsed').addClass('collapsed').hide('fast')
-        //     $('.heading', $Ctx).removeClass('uncollapsed').addClass('collapsed')
-        //     if (!isVisible) {
-        //         $contents.removeClass('collapsed').addClass('uncollapsed').show('fast')
-        //         $heading.removeClass('collapsed').addClass('uncollapsed')
-        //     }
-        // }
-
-        // /**
-        //  * Show/hide handler for collapser.
-        //  *
-        //  * @param $heading The heading jQuery element
-        //  * @return void
-        //  */
-        // function handlerCollapserHeadingClick($heading) {
-        //     const $wrapper = $heading.closest('.collapser-wrapper')
-        //     const $contents = $wrapper.find('.collapser-contents')
-        //     if ($heading.hasClass('collapsed')) {
-        //         $heading.add($wrapper).removeClass('collapsed').addClass('uncollapsed')
-        //         $contents.removeClass('collapsed').addClass('uncollapsed').show('fast')
-        //     } else {
-        //         $heading.add($wrapper).removeClass('uncollapsed').addClass('collapsed')
-        //         $contents.removeClass('uncollapsed').addClass('collapsed').hide('fast')
-        //     }
-        // }
 
         /**
          * Interpolate variable strings like {varname}.

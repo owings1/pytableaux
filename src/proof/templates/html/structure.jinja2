@@ -1,21 +1,21 @@
 {%- import 'node.jinja2' as nw -%}
 {% macro write_structure(lw, structure, is_child = False) -%}
-    <div class="structure
+    <div id="structure_{{ structure.id }}" class="structure
         {{- ' root' if not is_child -}}
         {{- ' has-open' if structure.has_open -}}
         {{- ' has-closed' if structure.has_closed -}}
         {{- ' leaf' if structure.leaf -}}
         {{- ' only-branch' if structure.is_only_branch -}}
         {{- ' closed' if structure.closed -}}
-        {{- ' open' if structure.open -}}"
-        data-depth="{{ structure.depth }}"
-        data-width="{{ structure.width }}"
-        data-left="{{ structure.left }}" 
-        data-right="{{ structure.right }}"
-        data-step="{{ structure.step }}"
-        data-closed-step="{{ structure.closed_step if structure.closed }}"
-        data-branch-id="{{ structure.get('branch_id', '') }}"
-        data-model-id="{{ structure.get('model_id', '') }}">
+        {{- ' open' if structure.open -}}"{#
+        #} data-depth="{{ structure.depth }}"{#
+        #} data-width="{{ structure.width }}"{#
+        #} data-left="{{ structure.left }}"{#
+        #} data-right="{{ structure.right }}"{#
+        #} data-step="{{ structure.step }}"{#
+        #} data-closed-step="{{ structure.closed_step if structure.closed }}"{#
+        #} data-branch-id="{{ structure.branch_id|default('', true) }}"{#
+        #} data-model-id="{{ structure.model_id|default('', true) }}">
         <div class="node-segment">
         {% if is_child %}
             <div class="vertical-line" data-step="{{ structure.step }}"></div>

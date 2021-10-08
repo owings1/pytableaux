@@ -45,7 +45,13 @@
     padding: 2px;
     color: #dddddd;
 }
-
+/* Branch coloring */
+.tableau.color-open .structure.has-open > .node-segment {
+    color: red;
+}
+.tableau.color-open .structure.has-open.has-closed > .node-segment {
+    color: #e808ff;
+}
 /* Selected branch indicator, at the leaf. Only show if controls or models options are enabled */
 .tableau:is(.with-controls, .with-models) .structure.leaf.inspected > .node-segment::after {
     width: 16px;
@@ -54,40 +60,40 @@
     background-image: url(../img/inspected-black.svg);
 }
 
-.proof-controls .valid {
+.tableau-controls .valid {
     color: green;
 }
-.proof-controls .invalid {
+.tableau-controls .invalid {
     color: red;
 }
 
-/* .proof-controls .wip {
+/* .tableau-controls .wip {
     color: purple;
     font-weight: bold;
 } */
-.proof-controls .button.width-reset {
-    padding-top: 6px;
+.tableau-controls .button.width-reset {
+    padding-top: 5px;
     padding-bottom: 6px;
 }
 
-.proof-controls .branch-filter.active:not(.disabled) {
+.tableau-controls .branch-filter.active:not(.disabled) {
     background-color: #1abc9c;
     border: 1px solid #39d6b7;
     color: white;
 }
-.proof-controls .step-rule-name {
+.tableau-controls .step-rule-name {
     text-decoration: none;
     cursor: pointer;
 }
 
-/* .proof-controls > ul.details:after {
+/* .tableau-controls > ul.details:after {
     width: 1px;
     content: "\a";
     border: 1px solid #cccccc;
     height: 100%;
     margin: 0;
 } */
-.proof-controls > ul.details,
+.tableau-controls > ul.details,
 .proof-stats > ul.details {
     margin-top: 0;
     margin-bottom: 0;
@@ -95,12 +101,12 @@
     display: inline-block;
     vertical-align: top;
 }
-.proof-controls > ul.details > li,
+.tableau-controls > ul.details > li,
 .proof-stats > ul.details > li {
     display: table-cell;
     margin: 0;
 }
-.proof-controls > ul.details > li > .prop,
+.tableau-controls > ul.details > li > .prop,
 .proof-stats > ul.details > li > .prop {
     padding-bottom: 3px;
     border-bottom: 1px solid #cccccc;
@@ -111,155 +117,155 @@
     padding-bottom: 3px;
     margin-bottom: 1px;
 }
-.proof-controls > ul.details,
-.proof-controls > ul.details > li {
+.tableau-controls > ul.details,
+.tableau-controls > ul.details > li {
     height: 47px;
 }
-.proof-controls > ul.details > li > .value {
+.tableau-controls > ul.details > li > .value {
     margin-top: 3px;
 }
-.models-output .model > ul > li.in-summary {
+.tableau-models .model > ul > li.in-summary {
     display: block;
 }
-.models-output {
+.tableau-models {
     max-width: 300px;
 }
-.models-output .message {
+.tableau-models .message {
     padding: 10px;
 }
 
 
-.models-output .model ul.details li .prop {
+.tableau-models .model ul.details li .prop {
     font-weight: bold;
 }
-.models-output .model ul.details li .value {
+.tableau-models .model ul.details li .value {
     font-weight: normal;
 }
-.models-output .model {
+.tableau-models .model {
     display: none;
 }
-.models-output.single-branch .model {
+.tableau-models.single-branch .model {
     display: block;
 }
-.models-output.inspected .select-a-branch {
+.tableau-models.inspected .select-a-branch {
     display: none;
 }
-.models-output .symbol {
+.tableau-models .symbol {
     font-family: "Charmonman", "cursive";
 }
-.models-output .model .set > .symbol::after {
+.tableau-models .model .set > .symbol::after {
     margin-left: 5px;
 }
-.models-output .model .map > .values > li > .value > .symbol::after {
+.tableau-models .model .map > .values > li > .value > .symbol::after {
     margin-left: 10px;
 }
-.models-output .model .set > .symbol::after,
-.models-output .model .map > .values > li > .value > .symbol::after,
-.models-output .model .list > .symbol::after {
+.tableau-models .model .set > .symbol::after,
+.tableau-models .model .map > .values > li > .value > .symbol::after,
+.tableau-models .model .list > .symbol::after {
     content: "=";
     margin-right: 5px;
 }
-.models-output .model .values .world {
+.tableau-models .model .values .world {
     font-style: italic;
 }
-.models-output .model .set > .values,
-.models-output .model .set > .values > .tuple,
-.models-output .model .set > .values > .tuple > .values {
+.tableau-models .model .set > .values,
+.tableau-models .model .set > .values > .tuple,
+.tableau-models .model .set > .values > .tuple > .values {
     display: inline;
 }
-.models-output .model .set > .symbol,
-.models-output .model .map > .values > li > .value > .symbol,
-.models-output .model .list > .symbol,
-.models-output .model .list > ul.values > li > .symbol {
+.tableau-models .model .set > .symbol,
+.tableau-models .model .map > .values > li > .value > .symbol,
+.tableau-models .model .list > .symbol,
+.tableau-models .model .list > ul.values > li > .symbol {
     font-weight: bold;
     font-size: 14px;
 }
-.models-output .model .set > .values::before,
-.models-output .model .set > .values::after {
+.tableau-models .model .set > .values::before,
+.tableau-models .model .set > .values::after {
     font-size: 14px;
 }
-.models-output .model .set.non-empty > .values::before {
+.tableau-models .model .set.non-empty > .values::before {
     content: "{";
 }
-.models-output .model .set.non-empty > .values::after {
+.tableau-models .model .set.non-empty > .values::after {
     content: "}";
 }
 
-.models-output .model .set.empty > .values::after,
-.models-output .model .function.empty::after {
+.tableau-models .model .set.empty > .values::after,
+.tableau-models .model .function.empty::after {
     content: "\2205";
 }
-.models-output .model .list.empty > .symbol::after {
+.tableau-models .model .list.empty > .symbol::after {
     content: " = \2205";
 }
-.models-output .model .tuple > .values::before {
+.tableau-models .model .tuple > .values::before {
     content: "<";
 }
-.models-output .model .tuple > .values::after {
+.tableau-models .model .tuple > .values::after {
     content: ">";
 }
-.models-output .model .function > ul.values,
-.models-output .model .map > ul.values,
-.models-output .model .list > ul.values {
+.tableau-models .model .function > ul.values,
+.tableau-models .model .map > ul.values,
+.tableau-models .model .list > ul.values {
     margin: 0;
     padding: 0;
     padding-inline-start: 0;
 }
-.models-output .model .function > ul.values li,
-.models-output .model .map > ul.values li,
-.models-output .model .list > ul.values li  {
+.tableau-models .model .function > ul.values li,
+.tableau-models .model .map > ul.values li,
+.tableau-models .model .list > ul.values li  {
     display: block;
     padding: 0;
     margin: 0;
 }
-.models-output .model .map > ul.values > li > .prop {
+.tableau-models .model .map > ul.values > li > .prop {
     font-style: italic;
     font-weight: bold;
     font-size: 12px;
 }
-.models-output .model .map > ul.values > li {
+.tableau-models .model .map > ul.values > li {
     margin-top: 5px;
 }
-.models-output .model .map > ul.values > li > .value {
+.tableau-models .model .map > ul.values > li > .value {
     padding-left: 10px;
 }
-.models-output .model .truth_value {
+.tableau-models .model .truth_value {
     font-weight: bold;
 }
-.models-output .model .function > ul.values > li > .input,
-.models-output .model .function > ul.values > li > .output,
-.models-output .model .function > ul.values > li > .output > .set {
+.tableau-models .model .function > ul.values > li > .input,
+.tableau-models .model .function > ul.values > li > .output,
+.tableau-models .model .function > ul.values > li > .output > .set {
     display: inline;
 }
-.models-output .model .function > ul.values > li > .input::before {
+.tableau-models .model .function > ul.values > li > .input::before {
     content: '(';
 }
-.models-output .model .function > ul.values > li > .input::after {
+.tableau-models .model .function > ul.values > li > .input::after {
     content: ') = ';
 }
-.models-output .model .function.extension > ul.values > li > .symbol {
+.tableau-models .model .function.extension > ul.values > li > .symbol {
     font-size: 18px;
     font-weight: bold;
 }
-.models-output .model .function.extension > ul.values > li {
+.tableau-models .model .function.extension > ul.values > li {
     padding-top: 4px;
 }
-.models-output .model ul.values.frame > li {
+.tableau-models .model ul.values.frame > li {
     border: 1px solid #cccccc;
     border-top: 3px solid #bbbbbb;
     border-left: 2px solid #cccccc;
     padding: 5px 0 5px 5px;
 }
-.models-output .model ul.values.frame > li > .symbol {
+.tableau-models .model ul.values.frame > li > .symbol {
     font-size: 17px;
 }
-.models-output .model .list.frames > ul.values > li {
+.tableau-models .model .list.frames > ul.values > li {
     margin-bottom: 10px;
 }
-.models-output .model .is-countermodel.yes {
+.tableau-models .model .is-countermodel.yes {
     color: green;
 }
-.models-output .model .is-countermodel.no {
+.tableau-models .model .is-countermodel.no {
     color: red;
 }
 
@@ -276,13 +282,13 @@
 
 
 /* Models */
-/* .models-output .collapser-wrapper.positioned-left .collapser-heading.collapsed::before,
-.models-output .collapser-wrapper.positioned-right .collapser-heading.collapsed::after {
+/* .tableau-models .collapser-wrapper.positioned-left .collapser-heading.collapsed::before,
+.tableau-models .collapser-wrapper.positioned-right .collapser-heading.collapsed::after {
     background-image: url(../img/open-book.svg);
 }
-.models-output {
+.tableau-models {
     z-index: 1;
 }
-.models-output .collapser-wrapper.uncollapsed {
+.tableau-models .collapser-wrapper.uncollapsed {
     min-width: 200px;
 } */

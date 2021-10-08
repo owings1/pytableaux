@@ -428,7 +428,8 @@
                 }
                 showChilds.push(stepped)
                 // ticking/unticking
-                if (!+$stepped.attr(Attrib.Ticked)) {
+                // if (!+$stepped.attr(Attrib.Ticked)) {
+                if (!$stepped.hasClass(Cls.Ticked)) {
                     return true
                 }
                 const tStep = +$stepped.attr(Attrib.TickStep)
