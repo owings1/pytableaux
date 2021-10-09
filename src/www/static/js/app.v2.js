@@ -112,11 +112,12 @@
             })
             $('.tableau-controls a[title]').each(function() {
                 const $me = $(this)
-                var html = $me.attr('title')
+                var html = '<span class="tooltip controls">' + $me.attr('title')
                 var shortkey = $me.attr('data-shortcut-key')
                 if (shortkey) {
-                    html += '<br>Shorcut key: ' + shortkey
+                    html += '<hr>Shorcut key: <code class="shortkey">' + shortkey + '</code>'
                 }
+                html += '</span>'
                 $me.tooltip({content: html, show: {delay: 2000}})
             })
 
@@ -127,7 +128,7 @@
 
             setTimeout(function() {
                 if (is_proof) {
-                    var api = $('.tableau').tableau('api')
+                    var tableau = $('.tableau').tableau('instance')
                     // api.width('stretch').center()
                     // console.log(api.s)
                 }

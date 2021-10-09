@@ -88,18 +88,6 @@
             </div>
         </li>
         <li>
-            <div class="prop">Rule Applied</div>
-            <div class="value step-rule-names">
-                <code class="literal step-rule-name step-rule-datum {{- helper.hidden_if(tableau.history|length) }}"{#
-                    #} data-step="0">Build Trunk</code>
-                {%- for application in tableau.history %}
-                    {%- set rule_name = application['rule'].name %}
-                    <code class="literal step-rule-name step-rule-datum {{- helper.hidden_if(not loop.last) }}"{#
-                        #} data-step="{{ loop.index }}">{{ rule_name }}</code>
-                {%- endfor %}
-            </div>
-        </li>
-        <li>
             <div class="prop">Rule Target</div>
             <div class="value">
                 <a class="step-rule-target step-rule-datum {{- helper.hidden_if(tableau.history|length) }}"
@@ -112,6 +100,18 @@
                      #} data-node-ids="{{ target.nodes|join(',', attribute='id') if target.nodes }}"{#
                      #} data-branch-node-id="{{ target.branch.leaf.id if target.branch }}"{#
                      #} data-step="{{ loop.index }}" href="javascript:">{{ target['type']|e }}</a>
+                {%- endfor %}
+            </div>
+        </li>
+        <li>
+            <div class="prop">Rule Applied</div>
+            <div class="value step-rule-names">
+                <code class="literal step-rule-name step-rule-datum {{- helper.hidden_if(tableau.history|length) }}"{#
+                    #} data-step="0">Build Trunk</code>
+                {%- for application in tableau.history %}
+                    {%- set rule_name = application['rule'].name %}
+                    <code class="literal step-rule-name step-rule-datum {{- helper.hidden_if(not loop.last) }}"{#
+                        #} data-step="{{ loop.index }}">{{ rule_name }}</code>
                 {%- endfor %}
             </div>
         </li>

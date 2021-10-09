@@ -45,7 +45,7 @@
 }
 /* Node Highlighting */
 .tableau .node.highlight-ticked > .node-props.ticked {
-    border-width: 3px;
+    border-width: 2px;
     padding: 2px;
     color: #dddddd;
 }

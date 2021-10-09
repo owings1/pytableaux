@@ -115,24 +115,24 @@
         Highlight       : 'highlight'            ,
         HighlightTicked : 'highlight-ticked'     ,
         HighlightClosed : 'highlight-closed'     ,
-        Stay            : 'stay'                 ,
         Model           : 'model'                ,
         MarkActive      : 'active'               ,
+        MarkDisabled    : 'disabled'             ,
         MarkFiltered    : 'filtered'             ,
     }
 
-    // the id of node elements
+    // The id of node elements.
     const NodeIdPrefix = 'node_'
 
-    // class names preceded with a '.' for selecting
+    // Class names preceded with a '.' for selecting
     const Dcls = {}
     for (var c in Cls) {
         Dcls[c] = '.' + Cls[c]
     }
 
-    // attributes
+    // Attributes
     const Attrib = {
-        // tableau attributes
+        // Tableau attributes
         NumSteps       : 'data-num-steps'         ,
         Step           : 'data-step'              ,
         CurWidthPct    : 'data-current-width-pct' ,
@@ -145,14 +145,14 @@
         ModelId        : 'data-model-id'          ,
         NodeId         : 'data-node-id'           ,
         TickStep       : 'data-ticked-step'       ,
-        // controls attributes (rules)
+        // Controls attributes (rules)
         NodeIds        : 'data-node-ids'          ,
         BranchNodeId   : 'data-branch-node-id'    ,
-        // stateful attributes
+        // Stateful attributes
         FilteredWidth  : 'data-filtered-width'    ,
     }
 
-    // selectors
+    // Selectors
     const Sel = {
         SteppedChilds  : [
             '>' + Dcls.NodeSegment + '>' + Dcls.Node,
@@ -170,7 +170,7 @@
     }
     Sel.Unfiltered = ':not(' + Sel.Filtered + ')'
 
-    // relevant action keys
+    // Relevant action keys
     const ActionKeys = {
         '>' : true,
         '<' : true,
@@ -252,12 +252,10 @@
             adjust     : E_AdjustWhen.After,
         },
         Highlight : {
-            exclusive  : true  ,
             stay       : true  ,
             off        : false ,
             ruleStep   : null  ,
             ruleTarget : null  ,
-            after      : null  ,
         },
         ScrollTo : {
             animate: false,
@@ -299,7 +297,7 @@
     Api.fn = Api.prototype
 
     function Plugin(opts) {
-        if (opts === 'api') {
+        if (opts === 'instance') {
             return Api.getInstance(this)
         }
         return this.each(function() {
@@ -464,6 +462,38 @@
         setAutoScroll.call(this, value)
         return this
     }
+
+    /**
+     * Set autoWidth api option, and run auto-width if enabled. Mark/unmark the
+     * controls element with active class.
+     * 
+     * @private
+     * @param value {boolean} The value to set.
+     * @return void
+     */
+     function setAutoWidth(value) {
+        this._isAutoWidth = Boolean(value)
+        $(Dcls.AutoWidth, this.$controls).toggleClass(Cls.MarkActive, this._isAutoWidth)
+        if (this._isAutoWidth) {
+            stretchWidth.call(this)
+        }
+    }
+    /**
+     * Set autoScroll api option, and run auto-scrool if enabled. Mark/unmark the
+     * controls element with active class.
+     * 
+     * @private
+     * @param value {boolean} The value to set.
+     * @return void
+     */
+    function setAutoScroll(value) {
+        this._isAutoScroll = Boolean(value)
+        $(Dcls.AutoScroll, this.$controls).toggleClass(Cls.MarkActive, this._isAutoScroll)
+        if (this._isAutoScroll) {
+            scrollToCenter.call(this)
+        }
+    }
+
     function onTableauClick(e) {
         const api = Api.getInstance(this)
         Api.activeInstance = api
@@ -545,6 +575,9 @@
         }
         const $tableau = this.$tableau
         const stmap = Object.create(null)
+        const cache = $.extend(Object.create(null), {
+            
+        })
         const sts = $(Dcls.Structure, $tableau).toArray().map(function(s) {
             const $s = $(s)
             const st = {
@@ -558,6 +591,7 @@
                 tickStep  : +$s.attr(Attrib.TickStep),
                 depth     : +$s.attr(Attrib.Depth),
                 hasOpen   : $s.hasClass(Cls.HasOpen),
+                hasClosed : $s.hasClass(Cls.HasClosed),
                 hasTicked : $(Dcls.NodeProps, $s).hasClass(Cls.Ticked),
                 closed    : $s.hasClass(Cls.Closed),
                 leaf      : $s.hasClass(Cls.Leaf),
@@ -570,6 +604,7 @@
             numSteps   : {value: +$tableau.attr(Attrib.NumSteps)},
             sts        : {value: sts},
             stmap      : {value: stmap},
+            cache      : {value: cache},
         })
     }
 
@@ -588,9 +623,10 @@
      *
      * @private
      * @param st The st cache object.
+     * @param next The next function.
      * @return void
      */
-    function zoom(st) {
+    function zoom(st, next) {
 
         st = getStructObj.call(this, st)
         const $s = st.$s
@@ -613,18 +649,18 @@
                 shows.push(other.s)
             }
         })
-
-        doFilter.call(this, {
-            $hides    : $(hides),
-            $shows    : $(shows),
-            className : Cls.ZoomFiltered
-        })
-
         // unmark the previous structure as zoomed
         $prev.removeClass(Cls.Zoomed)
 
         // mark the current structure as zoomed
         $s.addClass(Cls.Zoomed)
+        const fopts = {
+            $hides    : $(hides),
+            $shows    : $(shows),
+            className : Cls.ZoomFiltered
+        }
+
+        doFilter.call(this, fopts, next)
     }
 
     /**
@@ -664,9 +700,10 @@
      *
      * @private
      * @param n The step number.
+     * @param next The next function.
      * @return void
      */
-    function step(n) {
+    function step(n, next) {
 
         const $tableau = this.$tableau
         const $controls = this.$controls
@@ -692,7 +729,7 @@
         const tickNodes   = []
         const untickNodes = []
 
-        var highlightDelay = Anim.Slow
+        var highlightDelay = Anim.Med
 
         $.each(this.sts, function(i, st) {
             const $s = st.$s
@@ -734,36 +771,56 @@
         })
 
         // hide nodes, vertical lines
-        $(hideChilds).hide(Anim.Fast)
+        $(hideChilds).hide(/*Anim.Fast*/)
 
         // untick nodes
         $(Dcls.NodeProps, untickNodes).removeClass(Cls.Ticked)
 
         // filter structures
         const hides = $.map(toHide, function(st) { return st.s })
-        doFilter.call(this, {
+        const fopts = {
             $hides    : $(hides),
             $shows    : $(shows),
             className : Cls.StepFiltered,
             adjust    : (n > prevStep) ? E_AdjustWhen.Before : E_AdjustWhen.After,
+        }
+        doFilter.call(this, fopts, function() {
+
+                // show nodes, vertical lines
+                $(showChilds).show(/*Anim.Med*/)
+                if (that._isAutoWidth) {
+                    stretchWidth.call(that)
+                }
+                
+                // scroll to node
+                if (that._isAutoScroll) {
+                    var $node = $(Dcls.Node + getAttrSelector(Attrib.Step, n), $tableau).last()
+                    if ($node.length) {
+                        scrollTo.call(that, $node.children(Dcls.NodeProps))
+                    }
+                }
+                // highlight the result
+                setTimeout(function() {
+
+                    highlightStepResult.call(that, n)
+
+                    // delay the ticking of the nodes for animated effect
+                    setTimeout(function() {
+
+                        $(Dcls.NodeProps, tickNodes).addClass(Cls.Ticked)
+
+                        // unhighlight
+                        setTimeout(function() {
+
+                            highlightStepOff.call(that)
+
+                            if (typeof next === 'function') {
+                                next()
+                            }
+                        }, highlightDelay)
+                    }, highlightDelay)
+                }, highlightDelay)
         })
-
-        // show nodes, vertical lines
-        $(showChilds).show(Anim.Med)
-
-        // delay the ticking of the nodes for animated effect
-        setTimeout(function() {
-            $(Dcls.NodeProps, tickNodes).addClass(Cls.Ticked)
-        }, Anim.Med)
-
-        // highlight the result
-        setTimeout(function() {
-            doHighlight.call(that, {
-                stay: false,
-                ruleStep: n,
-            })
-            
-        }, highlightDelay)
 
         // set the current step attribute on the proof
         $tableau.attr(Attrib.Step, n)
@@ -778,14 +835,14 @@
             var $backward = $([Dcls.StepStart, Dcls.StepPrev].join(', '), $controls)
             var $forward = $([Dcls.StepEnd, Dcls.StepNext].join(', '), $controls)
             if (n === numSteps) {
-                $forward.addClass('disabled')
+                $forward.addClass(Cls.MarkDisabled)
             } else if (n < numSteps) {
-                $forward.removeClass('disabled')
+                $forward.removeClass(Cls.MarkDisabled)
             }
             if (n === 0) {
-                $backward.addClass('disabled')
+                $backward.addClass(Cls.MarkDisabled)
             } else if (numSteps > n) {
-                $backward.removeClass('disabled')
+                $backward.removeClass(Cls.MarkDisabled)
             }
         }
     }
@@ -795,38 +852,21 @@
      *
      * @private
      * @param type The branch status to show, either 'open', 'closed', or 'all'.
+     * @param next The next function.
      * @return void
      */
-    function filterBranches(type) {
+    function filterBranches(type, next) {
 
         const $tableau = this.$tableau
         const $controls = this.$controls
+        const that = this
         // Track current state so we don't filter if not needed.
         const markClass = [Cls.MarkFiltered, type].join('-')
         if ($tableau.hasClass(markClass)) {
+            if (typeof next === 'function') {
+                next()
+            }
             return
-        }
-    
-        var removeClasses
-        switch (type) {
-            case E_FilterType.All:
-                removeClasses = [
-                    [Cls.MarkFiltered, E_FilterType.Open].join('-'),
-                    [Cls.MarkFiltered, E_FilterType.Closed].join('-'),
-                ]
-                break
-            case E_FilterType.Open:
-                removeClasses = [
-                    [Cls.MarkFiltered, E_FilterType.All].join('-'),
-                    [Cls.MarkFiltered, E_FilterType.Closed].join('-'),
-                ]
-                break
-            case E_FilterType.Closed:
-                removeClasses = [
-                    [Cls.MarkFiltered, E_FilterType.All].join('-'),
-                    [Cls.MarkFiltered, E_FilterType.Open].join('-'),
-                ]
-                break
         }
 
         var $active
@@ -838,37 +878,71 @@
             }
         }
 
-        const toHide = []
-        const toShow = []
-
-        $(Dcls.Structure, $tableau).each(function(i, s) {
-            const $s = $(s)
-            var shown
+        if (!this.cache.filterBranches) {
+            this.cache.filterBranches = {}
+        }
+        const cache = this.cache.filterBranches
+        if (!cache[type]) {
+            var rmClasses
             switch (type) {
                 case E_FilterType.All:
-                    shown = true
+                    rmClasses = [
+                        [Cls.MarkFiltered, E_FilterType.Open].join('-'),
+                        [Cls.MarkFiltered, E_FilterType.Closed].join('-'),
+                    ]
                     break
                 case E_FilterType.Open:
-                    shown = $s.hasClass(Cls.HasOpen)
+                    rmClasses = [
+                        [Cls.MarkFiltered, E_FilterType.All].join('-'),
+                        [Cls.MarkFiltered, E_FilterType.Closed].join('-'),
+                    ]
                     break
                 case E_FilterType.Closed:
-                    shown = $s.hasClass(Cls.HasClosed)
-                    break
-                default:
+                    rmClasses = [
+                        [Cls.MarkFiltered, E_FilterType.All].join('-'),
+                        [Cls.MarkFiltered, E_FilterType.Open].join('-'),
+                    ]
                     break
             }
-            if (shown) {
-                toShow.push(s)
-            } else {
-                toHide.push(s)
+            const toHide = []
+            const toShow = []
+            $.each(this.sts, function(i, st) {
+                var shown
+                switch (type) {
+                    case E_FilterType.All:
+                        shown = true
+                        break
+                    case E_FilterType.Open:
+                        shown = st.hasOpen
+                        break
+                    case E_FilterType.Closed:
+                        shown = st.hasClosed
+                        break
+                    default:
+                        break
+                }
+                if (shown) {
+                    toShow.push(st.s)
+                } else {
+                    toHide.push(st.s)
+                }
+            })
+            cache[type] = {
+                $hides: $(toHide),
+                $shows: $(toShow),
+                removeClasses: rmClasses,
             }
-        })
+        }
+        const $hides = cache[type].$hides
+        const $shows = cache[type].$shows
+        const removeClasses = cache[type].removeClasses
 
-        doFilter.call(this, {
-            $hides    : $(toHide),
-            $shows    : $(toShow),
+        const fopts = {
+            $hides    : $hides,
+            $shows    : $shows,
             className : Cls.BranchFiltered
-        })
+        }
+        setTimeout(function() {doFilter.call(that, fopts, next)})
 
         $tableau.removeClass(removeClasses).addClass(markClass)
         if ($active && $active.length) {
@@ -895,18 +969,19 @@
      *
      * @private
      * @param opts The options.
+     * @param next The next function.
      * @return void
      */
-    function doFilter(opts) {
+    function doFilter(opts, next) {
 
         opts = $.extend({}, FuncDefaults.Filter, opts)
-
+        const that = this
         const $hides = opts.$hides
         const $shows = opts.$shows
         const className = opts.className
-        var showSpeed = Anim.Fast
-        var hideSpeed = Anim.Fast
-        var animateWidths = true
+        var showSpeed = 0//Anim.Fast
+        var hideSpeed = 0//Anim.Fast
+        var animateWidths = false//true
 
         // track the lowest structures to adjust widths
         const lowests = {}
@@ -926,13 +1001,6 @@
             }
         })
 
-        // TODO: :)
-        if (shows.length + $hides.length > 30) {
-            showSpeed = 0
-            hideSpeed = 0
-            animateWidths = false
-        }
-
         // sort the elements to show from higher to lower
         shows.sort(function(a, b) { return $(a).attr(Attrib.Depth) - $(b).attr(Attrib.Depth) })
 
@@ -942,24 +1010,37 @@
         // hide elements that have a filter
         $hides.hide(hideSpeed)
 
+        this._lastShows = $shows
+        var finish
         // adjust the widths (or do this 'after' below)
         if (opts.adjust == E_AdjustWhen.Before) {
-            adjustWidths.call(this, $(leaves), false)
+            // adjustWidths.call(this, $(leaves), false, next)
+            finish = function finish() {
+                adjustWidths.call(that, $(leaves), false, function() {
+                    $(shows).show(showSpeed)
+                    if (typeof next === 'function') {
+                        next()
+                    }
+                })
+            }
+        } else if (opts.adjust) {
+            finish = function finish() {
+                $(shows).show(showSpeed)
+                adjustWidths.call(that, $(leaves), animateWidths, next)
+            }
+        } else {
+            finish = function finish() {
+                $(shows).show(showSpeed)
+                if (typeof next === 'function') {
+                    next()
+                }
+            }
         }
-
-        // debug({shows: shows.length, hides: $hides.length})
-        // show elements that do not have a filter
-        $(shows).show(showSpeed)
-
-        this._lastShows = $shows
-
-        if (opts.adjust && opts.adjust != E_AdjustWhen.Before) {
-            adjustWidths.call(this, $(leaves), animateWidths)
-        }
+        setTimeout(finish)
     }
 
     /**
-     * Adjust the widths of the proof structures, after filters have been
+     * Adjust the widths of the tableau structures, after filters have been
      * applied. This takes the leaves (or lowest affected structures), and
      * traverses upward, adjusting the width of the ancestors.
      *
@@ -972,10 +1053,12 @@
      * @param isAnimate Whether to animate the width transitions. Default
      *   is to animate all horizontal lines changes, and to animate width
      *   changes if the adjusted width is known to be an increase.
+     * @param next The next function.
      * @return void
      */
-    function adjustWidths($leaves, isAnimate) {
+    function adjustWidths($leaves, isAnimate, next) {
 
+        isAnimate = false
         const that = this
         // traverse upward through the ancestors
         $leaves.parents(Dcls.Structure + Sel.Unfiltered).each(function(pi, parent) {
@@ -1086,129 +1169,85 @@
                 }
             }
         })
+        if (typeof next === 'function') {
+            setTimeout(next)
+        }
     }
 
     /**
-     * Perform a node highlighting operation on a tableau.
-     *
-     * Option keys:
-     *
-     *   - exclusive  : Whether to unhighlight everything else on the tableau.
-     *                  Default true.
-     *   - stay       : Whether to keep the highlighting effect, default true.
-     *                  If false, it will flash.
-     *   - off        : Whether to unhighlight everything on the tableau.
-     *   - ruleStep   : true || step number. Highlight the resulting nodes of
-     *                  the current (or given) proof step.
-     *   - ruleTarget : true || step number. Highlight the target nodes of
-     *                  the current (or given) proof step.
-     *   - after      : a callback to execute after highlighting is complete.
+     * Highlight the result nodes/ticking/markers of the given step, or current step.
+     * 
      * @private
-     * @param opts The options.
+     * @param step (optional) The step number. Default is current step.
      * @return void
      */
-    function doHighlight(opts) {
+    function highlightStepResult(step) {
         const $tableau = this.$tableau
         const $controls = this.$controls
-        const that = this
-        opts = $.extend({}, FuncDefaults.Highlight, opts)
-        function doExclude() {
-            $(Dcls.Highlight, $tableau).removeClass(Cls.Highlight)
-            $(Dcls.HighlightTicked, $tableau).removeClass(Cls.HighlightTicked)
-            $(Dcls.HighlightClosed, $tableau).removeClass(Cls.HighlightClosed)
+        if (step == null) {
+            step = +$tableau.attr(Attrib.Step)
         }
-        function doOff() {
-            doExclude()
-            $(Dcls.Highlight, $controls).removeClass(Cls.Highlight)
-        }
-        var $eff
-        function done() {
-            if ($eff && $eff.length) {
-                if (that._isAutoWidth) {
-                    stretchWidth.call(that)
-                }
-                if (that._isAutoScroll) {
-                    if ($eff) {
-                        scrollTo.call(that, $eff.children(Dcls.NodeProps), {
-                            animate: Anim.Med,
-                        })
-                    }
-                }
-            }
-            if (typeof opts.after === 'function') {
-                opts.after.call(that)
-            }
-        }
-        if (opts.off) {
-            doOff()
-            setTimeout(done)
-            return
-        } else if (opts.exclusive) {
-            doExclude()
-        }
-        if (opts.ruleStep == null && opts.ruleTarget == null) {
-            // noop
-            if (typeof opts.after === 'function') {
-                opts.after.call(this)
-            }
-            return
-        }
-        if (opts.ruleStep != null) {
-            var n = opts.ruleStep === true ? +$tableau.attr(Attrib.Step) : opts.ruleStep
-            var nodeAttrSel = getAttrSelector(Attrib.Step, n)
-            var nodeSel = Dcls.Node + nodeAttrSel
-            var closeSel = Dcls.Structure + getAttrSelector(Attrib.CloseStep, n)
-            var tickSel = Dcls.Node + getAttrSelector(Attrib.TickStep, n)
-            var cands = $(nodeSel, $tableau).addClass(Cls.Highlight)
-            if (cands.length) {
-                $eff = $(cands.get(0))
-            }
-            cands = $(tickSel, $tableau).addClass(Cls.HighlightTicked)
-            if (cands.length) {
-                $eff = $(cands.get(0))
-            }
-            cands = $(closeSel, $tableau).addClass(Cls.HighlightClosed)
-            if (cands.length) {
-                $eff = $(cands.get(0))
-            }
-        } else {
-            var n = opts.ruleTarget === true ? +$tableau.attr(Attrib.Step) : opts.ruleTarget
-            var nodeAttrSel = getAttrSelector(Attrib.Step, n)
-            var nodeIds = []
-            var $ruleTarget = $(Dcls.StepRuleTarget + nodeAttrSel, $controls)
-            var nodeId = $ruleTarget.attr(Attrib.NodeId)
-            if (nodeId) {
-                nodeIds.push(+nodeId)
-            }
-            var nodeIdStr = $ruleTarget.attr(Attrib.NodeIds)
-            if (nodeIdStr) {
-                var nodeIdsArr = nodeIdStr.split(',').filter(Boolean)
-                for (var i = 0; i < nodeIdsArr.length; ++i) {
-                    nodeIds.push(+nodeIdsArr[i])
-                }
-            }
-            if (nodeIds.length) {
-                var nodeSel = $.map(nodeIds, function(id) { return '#' + NodeIdPrefix + id }).join(', ')
-                var $nodes = $(nodeSel, $tableau)
-                if ($nodes.length) {
-                    $eff = $($nodes.get(0))
-                }
-            } else {
-                var $nodes = $E
-            }
-            // TODO: branch / branches
-            $nodes.addClass(Cls.Highlight)
-        }
-        if (!opts.stay) {
-            setTimeout(function() {
-                doOff()
-                done()
-            }, Anim.Slow)
-        } else {
-            done()
-        }
+        const nodeAttrSel = getAttrSelector(Attrib.Step, step)
+        const nodeSel = Dcls.Node + nodeAttrSel
+        const closeSel = Dcls.Structure + getAttrSelector(Attrib.CloseStep, step)
+        const tickSel = Dcls.Node + getAttrSelector(Attrib.TickStep, step)
+        $(nodeSel, $tableau).addClass(Cls.Highlight)
+        $(tickSel, $tableau).addClass(Cls.HighlightTicked)
+        $(closeSel, $tableau).addClass(Cls.HighlightClosed)
     }
 
+    /**
+     * Highlight the target nodes of the given step, or current step.
+     * 
+     * @private
+     * @param step (optional) The step number. Default is current step.
+     * @return void
+     */
+    function highlightStepTarget(step) {
+        const $tableau = this.$tableau
+        const $controls = this.$controls
+        if (step == null) {
+            step = +$tableau.attr(Attrib.Step)
+        }
+        const nodeAttrSel = getAttrSelector(Attrib.Step, step)
+        const nodeIds = []
+        const $ruleTarget = $(Dcls.StepRuleTarget + nodeAttrSel, $controls)
+        const nodeId = $ruleTarget.attr(Attrib.NodeId)
+        if (nodeId) {
+            nodeIds.push(+nodeId)
+        }
+        const nodeIdStr = $ruleTarget.attr(Attrib.NodeIds)
+        if (nodeIdStr) {
+            var nodeIdsArr = nodeIdStr.split(',').filter(Boolean)
+            for (var i = 0; i < nodeIdsArr.length; ++i) {
+                nodeIds.push(+nodeIdsArr[i])
+            }
+        }
+        var $nodes
+        if (nodeIds.length) {
+            var nodeSel = $.map(nodeIds, function(id) { return '#' + NodeIdPrefix + id }).join(', ')
+            $nodes = $(nodeSel, $tableau)
+        } else {
+            $nodes = $E
+        }
+        // TODO: branch / branches
+        $nodes.addClass(Cls.Highlight)
+    }
+
+    /**
+     * Unhighlight any rule step result/target nodes.
+     * 
+     * @private
+     * @return void
+     */
+    function highlightStepOff() {
+        const $tableau = this.$tableau
+        const $controls = this.$controls
+        $(Dcls.Highlight, $tableau).removeClass(Cls.Highlight)
+        $(Dcls.HighlightTicked, $tableau).removeClass(Cls.HighlightTicked)
+        $(Dcls.HighlightClosed, $tableau).removeClass(Cls.HighlightClosed)
+        $(Dcls.Highlight, $controls).removeClass(Cls.Highlight)
+    }
     /**
      * Make various incremental UI adjustments.
      *
@@ -1266,7 +1305,6 @@
         }
     }
 
-
     /**
      * Scroll the tableau to the center
      * 
@@ -1286,6 +1324,13 @@
         $cont.scrollLeft(scroll)
     }
 
+    /**
+     * Scroll to the given jQuery object
+     * 
+     * @private
+     * @param $what The jQuery object to scroll to.
+     * @return void
+     */
     function scrollTo($what, opts) {
         opts = $.extend({}, FuncDefaults.ScrollTo, opts)
         const $cont = this.$scrollContainer
@@ -1297,16 +1342,16 @@
         var scrollLeft = pos.left - (windowWidth / 2)
         var scrollTop = pos.top - (windowHeight / 2)
         // debug($what.attr('id'), {scrollLeft, scrollTop, pos, windowWidth, windowHeight, currentLeft, currentTop})
-        if (opts.animate && $cont.get(0) !== document) {
-            $cont.animate({
-                scrollLeft: scrollLeft,
-                scrollTop : scrollTop,
-            }, opts.animate)
-        } else {
-            $cont.scrollLeft(scrollLeft).scrollTop(scrollTop)
-        }
+        $cont.scrollLeft(scrollLeft).scrollTop(scrollTop)
     }
 
+    /**
+     * Execute give callback and return to previous scroll position.
+     * 
+     * @private
+     * @param cb The callback.
+     * @return void
+     */
     function returnScroll(cb) {
         const $cont = this.$scrollContainer
         var left = $cont.scrollLeft()
@@ -1318,6 +1363,13 @@
         }
     }
 
+    /**
+     * Stretch or shrink the width so nodes do not wrap.
+     * 
+     * @private
+     * @param $leaves (optional) The leaves to examine to determine the width.
+     * @return void
+     */
     function stretchWidth($leaves) {
         const $tableau = this.$tableau
         const that = this
@@ -1335,14 +1387,14 @@
             $tableau.attr(Attrib.CurWidthPct, p)
             $tableau.css({width: p + '%'})
         })
-        
     }
+
     /**
      * Guess the width needed so that nodes do not wrap.
      * 
      * @private
      * @return integer How much to multiple the current width by, e.g.
-     * a value of 1 means no change.
+     *   a value of 1 means no change.
      */
     function guessNoWrapWidth($leaves) {
         const $tableau = this.$tableau
@@ -1370,32 +1422,16 @@
             debug($leaves)
         }
         if (!$leaves) {
+            // A good candidate for the wrappiest node is the wrappiest of the
+            // outer-most leaf segments.
             // TODO: compare with right leaf
             $leaves = $(Dcls.Leaf + ':visible:eq(0) ' + Dcls.NodeProps, $tableau)
         }
-        // var currentWidth = $tableau.width()
-        // // Likely the first node does not wrap
-        // var noWrapHeight = $(Dcls.NodeProps + ':eq(0)', $tableau).height()
-        // if (!noWrapHeight) {
-        //     return 1
-        // }
-        // A good candidate for the wrappiest node is the wrappiest of the
-        // outer-most leaf segments.
-        // var maxWrapHeight = noWrapHeight
-        // another strategy
+
         var maxDiffPct = 0
         $leaves.each(function() {
             const $me = $(this)
             var h = $me.height()
-            // one stragegy
-            // if (h > maxWrapHeight) {
-            //     // only count sentence or access nodes (not flags)
-            //     if ($me.children([Dcls.PropSentence, Dcls.PropAccess].join(', ')).length) {
-
-            //         maxWrapHeight = h
-            //     }
-            // }
-            // another
             var h2 = $me.css('position', 'absolute').height()
             $me.css('position', 'inherit')
             if (h > h2) {
@@ -1407,15 +1443,7 @@
             }
             // debug({h, h2})
         })
-        // var strategy1 = 1
-        // if (maxWrapHeight > noWrapHeight) {
-        //     strategy1 = maxWrapHeight / noWrapHeight
-        // }
-        var strategy2 = 1
-        if (maxDiffPct > 1) {
-            strategy2 = maxDiffPct
-        }
-        var guess = strategy2
+        var guess = maxDiffPct
         if (guess > 1) {
             if (guess <= 1.5) {
                 guess = guess - ((guess - 1) / 2)
@@ -1426,26 +1454,14 @@
             } else if (guess <= 8) {
                 guess = guess * 0.6
             }
+        } else {
+            guess = 1
         }
         debug({maxDiffPct, guess})
         return guess
     }
 
-    function setAutoWidth(value) {
-        this._isAutoWidth = Boolean(value)
-        $(Dcls.AutoWidth, this.$controls).toggleClass(Cls.MarkActive, this._isAutoWidth)
-        if (this._isAutoWidth) {
-            stretchWidth.call(this)
-        }
-    }
 
-    function setAutoScroll(value) {
-        this._isAutoScroll = Boolean(value)
-        $(Dcls.AutoScroll, this.$controls).toggleClass(Cls.MarkActive, this._isAutoScroll)
-        if (this._isAutoScroll) {
-            scrollToCenter.call(this)
-        }
-    }
     /**
      * Handle a click event on a tableau.
      *
@@ -1483,7 +1499,7 @@
      */
     function handleControlsClick($target) {
 
-        if ($target.is(':disabled, .disabled, :checkbox, select')) {
+        if ($target.is(Dcls.MarkDisabled + ', :disabled, :checkbox, select')) {
             return
         }
         const classMap = Object.create(null)
@@ -1521,13 +1537,25 @@
         } else if (classMap[Cls.ScrollCenter]) {
             scrollToCenter.call(this)
         } else if (classMap[Cls.StepRuleTarget]) {
-            var off = Boolean(classMap[Cls.Highlight] || classMap[Cls.Stay])
-            doHighlight.call(this, {stay: true, off: off, ruleTarget: true})
-            $target.toggleClass(Cls.Stay)
+            var markClass = Cls.MarkActive
+            var off = Boolean(classMap[markClass])
+            if (off) {
+                highlightStepOff.call(this)
+                $target.removeClass(markClass)
+            } else {
+                highlightStepTarget.call(this)
+                $target.addClass(markClass)
+            }
         } else if (classMap[Cls.StepRuleName]) {
-            var off = Boolean(classMap[Cls.Highlight] || classMap[Cls.Stay])
-            doHighlight.call(this, {stay: true, off: off, ruleStep: true})
-            $target.toggleClass(Cls.Stay)
+            var markClass = Cls.MarkActive
+            var off = Boolean(classMap[markClass])
+            if (off) {
+                highlightStepOff.call(this)
+                $target.removeClass(markClass)
+            } else {
+                highlightStepResult.call(this)
+                $target.addClass(markClass)
+            }
         } else if (classMap[Cls.BranchFilter]) {
             for (var filterType of Object.values(E_FilterType)) {
                 if (classMap[filterType]) {
@@ -1659,21 +1687,30 @@
                 break
             case 'r':
             case 'R':
-                var stay = key == 'R'
-                doHighlight.call(this, {stay: stay, ruleStep: true})
-                if (stay) {
-                    if ($controls.length) {
-                        $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
-                    }
-                }
-                break
             case 't':
             case 'T':
-                var stay = key == 'T'
-                doHighlight.call(this, {stay: stay, ruleTarget: true})
-                if (stay) {
-                    if ($controls.length) {
-                        $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
+                var stay = key == 'R' || key == 'T'
+                var isResult = key == 'r' || key == 'R'
+                var step = $tableau.attr(Attrib.Step)
+                var dcls = isResult ? Dcls.StepRuleName : Dcls.StepRuleTarget
+                var $target = $(dcls + getAttrSelector(Attrib.Step, step), $controls)
+                var markClass = Cls.MarkActive
+                if ($target.hasClass(markClass)) {
+                    highlightStepOff.call(this)
+                    $target.removeClass(markClass)
+                } else {
+                    $target.addClass(markClass)
+                    if (isResult) {
+                        highlightStepResult.call(this)
+                    } else {
+                        highlightStepTarget.call(this)
+                    }
+                    if (!stay) {
+                        var that = this
+                        setTimeout(function() {
+                            highlightStepOff.call(that)
+                            $target.removeClass(markClass)
+                        }, Anim.Slow)
                     }
                 }
                 break
