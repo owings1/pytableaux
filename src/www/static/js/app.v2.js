@@ -121,13 +121,14 @@
             })
 
             $('.tableau').tableau({
-
+                // autoWidth: true,
+                scrollContainer: $(document)
             })
 
             setTimeout(function() {
                 if (is_proof) {
                     var api = $('.tableau').tableau('api')
-                    api.width('auto').center()
+                    // api.width('stretch').center()
                     // console.log(api.s)
                 }
                 ensureEmptyPremise()

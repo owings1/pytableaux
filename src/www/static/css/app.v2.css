@@ -129,10 +129,11 @@ rtd-theme:
   /* position: sticky; */
   position: fixed;
   top: 35px;
+  left: 20px;
   width: 95%;
 }
 .pt-app .tableau-wrapper {
-  margin-top: 145px;
+  margin-top: 170px;
 }
 .pt-app .header-wrapper {
   /* background-color: #2980b9; */
@@ -164,12 +165,9 @@ rtd-theme:
   font-size: 11px;
 }
 
-
-.pt-app .pt-content {
-  padding: 20px;
-}
 .pt-app.no-proof .pt-content {
   margin: 30px 0;
+  padding: 20px;
 }
 .pt-app #proove-tabs-wrapper {
   margin-bottom: 20px
@@ -470,9 +468,7 @@ table.predicates th {
 .tableau.with-controls {
   cursor: pointer;
 }
-.tableau-wrapper {
-  overflow-x: scroll;
-}
+
 .proof-result-admon {
   text-transform: uppercase;
   font-weight: bold;

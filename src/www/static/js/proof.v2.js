@@ -88,8 +88,6 @@
         StepRuleDatum   : 'step-rule-datum'      ,
         StepRuleName    : 'step-rule-name'       ,
         StepRuleTarget  : 'step-rule-target'     ,
-        StepFiltered    : 'step-filtered'        ,
-        ZoomFiltered    : 'zoom-filtered'        ,
         FontPlus        : 'font-plus'            ,
         FontMinus       : 'font-minus'           ,
         FontReset       : 'font-reset'           ,
@@ -98,10 +96,12 @@
         WidthMinus      : 'width-minus'          ,
         WidthMinusMinus : 'width-minus-minus'    ,
         WidthReset      : 'width-reset'          ,
-        WidthAutoStretch: 'width-auto-stretch'   ,
+        WidthStretch    : 'width-stretch'        ,
         ScrollCenter    : 'scroll-center'        ,
         BranchFilter    : 'branch-filter'        ,
         ColorOpen       : 'color-open'           ,
+        AutoWidth       : 'auto-width'           ,
+        AutoScroll      : 'auto-scroll'          ,
 
         // stateful classes
         Hidden          : 'hidden'               ,
@@ -110,6 +110,8 @@
         Collapsed       : 'collapsed'            ,
         Uncollapsed     : 'uncollapsed'          ,
         BranchFiltered  : 'branch-filtered'      ,
+        StepFiltered    : 'step-filtered'        ,
+        ZoomFiltered    : 'zoom-filtered'        ,
         Highlight       : 'highlight'            ,
         HighlightTicked : 'highlight-ticked'     ,
         HighlightClosed : 'highlight-closed'     ,
@@ -196,6 +198,8 @@
         'M' : true,
         '@' : true,
         '$' : true,
+        'W' : true,
+        'S' : true,
     }
 
     // enums
@@ -215,7 +219,7 @@
         End             : 'end'       ,
         Beginning       : 'beginning' ,
         Reset           : 'reset'     ,
-        Auto            : 'auto'      ,
+        Stretch         : 'stretch'   ,
         StepInc         :   1         ,
         StepDec         :  -1         ,
         FontInc         :   1         ,
@@ -253,7 +257,11 @@
             off        : false ,
             ruleStep   : null  ,
             ruleTarget : null  ,
-        }
+            after      : null  ,
+        },
+        ScrollTo : {
+            animate: false,
+        },
     }
 
     function Api($tableau) {
@@ -272,9 +280,6 @@
             $tableau : {value: $tableau},
         })
         Api.instances[id] = this
-        if (!Api.activeInstance) {
-            Api.activeInstance = this
-        }
     }
     Api.instances = Object.create(null)
     Api.activeInstance = null
@@ -306,7 +311,11 @@
                     api[opts].apply(api, args)
                 }
             } else {
-                new Api($tableau).init(opts)
+                api = new Api($tableau)
+                api.init(opts)
+                if (!Api.activeInstance) {
+                    Api.activeInstance = api
+                }
             }
         })
     }
@@ -333,7 +342,14 @@
             }
             return $models
         },
+        scrollContainer: function($tableau) {
+            return $tableau.parent()
+        },
         actionKeys: true,
+        autoWidth: null,
+        autoScroll: null,
+        stretch: true,
+        center: true,
     })
 
     Api.fn.init = function init(opts) {
@@ -341,7 +357,7 @@
         Api.instances[this.id] = this
         opts = this.opts = $.extend(true, Plugin.defaults, this.opts, opts)
         const that = this
-        for (var opt of ['controls', 'models']) {
+        for (var opt of ['controls', 'models', 'scrollContainer']) {
             var prop = '$' + opt, value = opts[opt]
             if (typeof value === 'function') {
                 this[prop] = $(value.call(this, this.$tableau))
@@ -368,6 +384,26 @@
         this.$tableau.on('click', onTableauClick)
         this.$controls.on('click', onControlsClick).on('change', onControlsChange)
         this.$models.on('click', onModelsClick)
+        if (opts.autoWidth == null) {
+            if ($(Dcls.AutoWidth + Dcls.MarkActive, this.$controls).length) {
+                setAutoWidth.call(this, true)
+            }
+        } else {
+            setAutoWidth.call(this, opts.autoWidth)
+        }
+        if (opts.autoScroll == null) {
+            if ($(Dcls.AutoScroll + Dcls.MarkActive, this.$controls).length) {
+                setAutoScroll.call(this, true)
+            }
+        } else {
+            setAutoScroll.call(this, opts.autoScroll)
+        }
+        if (!this._isAutoWidth && opts.stretch) {
+            stretchWidth.call(this)
+        }
+        if (!this._isAutoScroll && opts.center) {
+            scrollToCenter.call(this)
+        }
         this.actionKeysHash = opts.actionKeys ? $.extend({}, ActionKeys) : {}
         if (opts.actionKeys) {
             ensureKeypressHandlers()
@@ -413,6 +449,21 @@
         return this
     }
 
+    Api.fn.autoWidth = function autoWidth(value) {
+        if (typeof value === 'undefined') {
+            return Boolean(this._isAutoWidth)
+        }
+        setAutoWidth.call(this, value)
+        return this
+    }
+
+    Api.fn.autoScroll = function autoScroll(value) {
+        if (typeof value === 'undefined') {
+            return Boolean(this._isAutoScroll)
+        }
+        setAutoScroll.call(this, value)
+        return this
+    }
     function onTableauClick(e) {
         const api = Api.getInstance(this)
         Api.activeInstance = api
@@ -694,17 +745,25 @@
             $hides    : $(hides),
             $shows    : $(shows),
             className : Cls.StepFiltered,
-            adjust    : (n > prevStep) ? E_AdjustWhen.Before : E_AdjustWhen.After
+            adjust    : (n > prevStep) ? E_AdjustWhen.Before : E_AdjustWhen.After,
         })
 
         // show nodes, vertical lines
         $(showChilds).show(Anim.Med)
 
         // delay the ticking of the nodes for animated effect
-        setTimeout(function() { $(Dcls.NodeProps, tickNodes).addClass(Cls.Ticked) }, Anim.Med)
+        setTimeout(function() {
+            $(Dcls.NodeProps, tickNodes).addClass(Cls.Ticked)
+        }, Anim.Med)
 
         // highlight the result
-        setTimeout(function() { doHighlight.call(that, {stay: false, ruleStep: n})}, highlightDelay)
+        setTimeout(function() {
+            doHighlight.call(that, {
+                stay: false,
+                ruleStep: n,
+            })
+            
+        }, highlightDelay)
 
         // set the current step attribute on the proof
         $tableau.attr(Attrib.Step, n)
@@ -713,21 +772,20 @@
             // show the rule and target in the controls panel
             const attrSelector = getAttrSelector(Attrib.Step, n)
             $(Dcls.StepRuleDatum, $controls).hide().filter(attrSelector).show()
-            //$(Dcls.StepRuleTarget, $controls).hide().filter(attrSelector).show()
             // update the input box
             $(Dcls.StepInput, $controls).val(n)
             // update disabled properties on forward/backward buttons
             var $backward = $([Dcls.StepStart, Dcls.StepPrev].join(', '), $controls)
             var $forward = $([Dcls.StepEnd, Dcls.StepNext].join(', '), $controls)
             if (n === numSteps) {
-                $forward.addClass('disabled')//.prop('disabled', true)
+                $forward.addClass('disabled')
             } else if (n < numSteps) {
-                $forward.removeClass('disabled')//.prop('disabled', undefined)
+                $forward.removeClass('disabled')
             }
             if (n === 0) {
-                $backward.addClass('disabled')//.prop('disabled', true)
+                $backward.addClass('disabled')
             } else if (numSteps > n) {
-                $backward.removeClass('disabled')//.prop('disabled', undefined)
+                $backward.removeClass('disabled')
             }
         }
     }
@@ -841,7 +899,6 @@
      */
     function doFilter(opts) {
 
-        const $tableau = this.$tableau
         opts = $.extend({}, FuncDefaults.Filter, opts)
 
         const $hides = opts.$hides
@@ -894,6 +951,8 @@
         // show elements that do not have a filter
         $(shows).show(showSpeed)
 
+        this._lastShows = $shows
+
         if (opts.adjust && opts.adjust != E_AdjustWhen.Before) {
             adjustWidths.call(this, $(leaves), animateWidths)
         }
@@ -917,6 +976,7 @@
      */
     function adjustWidths($leaves, isAnimate) {
 
+        const that = this
         // traverse upward through the ancestors
         $leaves.parents(Dcls.Structure + Sel.Unfiltered).each(function(pi, parent) {
 
@@ -1029,19 +1089,20 @@
     }
 
     /**
-     * Perform a node highlighting operation on a proof.
+     * Perform a node highlighting operation on a tableau.
      *
      * Option keys:
      *
-     *   - exclusive  : Whether to unhighlight everything else on the proof.
+     *   - exclusive  : Whether to unhighlight everything else on the tableau.
      *                  Default true.
      *   - stay       : Whether to keep the highlighting effect, default true.
      *                  If false, it will flash.
-     *   - off        : Whether to unhighlight everything on the proof.
+     *   - off        : Whether to unhighlight everything on the tableau.
      *   - ruleStep   : true || step number. Highlight the resulting nodes of
      *                  the current (or given) proof step.
      *   - ruleTarget : true || step number. Highlight the target nodes of
      *                  the current (or given) proof step.
+     *   - after      : a callback to execute after highlighting is complete.
      * @private
      * @param opts The options.
      * @return void
@@ -1051,18 +1112,45 @@
         const $controls = this.$controls
         const that = this
         opts = $.extend({}, FuncDefaults.Highlight, opts)
-        if (opts.off || opts.exclusive) {
+        function doExclude() {
             $(Dcls.Highlight, $tableau).removeClass(Cls.Highlight)
             $(Dcls.HighlightTicked, $tableau).removeClass(Cls.HighlightTicked)
             $(Dcls.HighlightClosed, $tableau).removeClass(Cls.HighlightClosed)
         }
-        if (opts.off) {
-            if ($controls.length) {
-                $(Dcls.Highlight, $controls).removeClass(Cls.Highlight)
+        function doOff() {
+            doExclude()
+            $(Dcls.Highlight, $controls).removeClass(Cls.Highlight)
+        }
+        var $eff
+        function done() {
+            if ($eff && $eff.length) {
+                if (that._isAutoWidth) {
+                    stretchWidth.call(that)
+                }
+                if (that._isAutoScroll) {
+                    if ($eff) {
+                        scrollTo.call(that, $eff.children(Dcls.NodeProps), {
+                            animate: Anim.Med,
+                        })
+                    }
+                }
             }
+            if (typeof opts.after === 'function') {
+                opts.after.call(that)
+            }
+        }
+        if (opts.off) {
+            doOff()
+            setTimeout(done)
             return
+        } else if (opts.exclusive) {
+            doExclude()
         }
         if (opts.ruleStep == null && opts.ruleTarget == null) {
+            // noop
+            if (typeof opts.after === 'function') {
+                opts.after.call(this)
+            }
             return
         }
         if (opts.ruleStep != null) {
@@ -1071,9 +1159,18 @@
             var nodeSel = Dcls.Node + nodeAttrSel
             var closeSel = Dcls.Structure + getAttrSelector(Attrib.CloseStep, n)
             var tickSel = Dcls.Node + getAttrSelector(Attrib.TickStep, n)
-            $(nodeSel, $tableau).addClass(Cls.Highlight)
-            $(tickSel, $tableau).addClass(Cls.HighlightTicked)
-            $(closeSel, $tableau).addClass(Cls.HighlightClosed)
+            var cands = $(nodeSel, $tableau).addClass(Cls.Highlight)
+            if (cands.length) {
+                $eff = $(cands.get(0))
+            }
+            cands = $(tickSel, $tableau).addClass(Cls.HighlightTicked)
+            if (cands.length) {
+                $eff = $(cands.get(0))
+            }
+            cands = $(closeSel, $tableau).addClass(Cls.HighlightClosed)
+            if (cands.length) {
+                $eff = $(cands.get(0))
+            }
         } else {
             var n = opts.ruleTarget === true ? +$tableau.attr(Attrib.Step) : opts.ruleTarget
             var nodeAttrSel = getAttrSelector(Attrib.Step, n)
@@ -1093,6 +1190,9 @@
             if (nodeIds.length) {
                 var nodeSel = $.map(nodeIds, function(id) { return '#' + NodeIdPrefix + id }).join(', ')
                 var $nodes = $(nodeSel, $tableau)
+                if ($nodes.length) {
+                    $eff = $($nodes.get(0))
+                }
             } else {
                 var $nodes = $E
             }
@@ -1100,7 +1200,12 @@
             $nodes.addClass(Cls.Highlight)
         }
         if (!opts.stay) {
-            setTimeout(function() { doHighlight.call(that, {off: true})}, Anim.Slow)
+            setTimeout(function() {
+                doOff()
+                done()
+            }, Anim.Slow)
+        } else {
+            done()
         }
     }
 
@@ -1127,13 +1232,9 @@
                 var p
                 if (howMuch == E_HowMuch.Reset) {
                     p = 100
-                } else if (howMuch === E_HowMuch.Auto) {
-                    var guess = guessNoWrapWidth.call(this)
-                    debug({guess})
-                    if (!guess || guess <= 1) {
-                        break
-                    }
-                    p = (guess - 1) * 100
+                } else if (howMuch === E_HowMuch.Stretch) {
+                    stretchWidth.call(this)
+                    break
                 } else {
                     p = +$tableau.attr(Attrib.CurWidthPct) + (parseFloat(howMuch) || 0)
                 }
@@ -1165,24 +1266,77 @@
         }
     }
 
+
     /**
      * Scroll the tableau to the center
      * 
      * @private
      * @return void
      */
-    function scrollToCenter() {
+    function scrollToCenter(opts) {
+        const $cont = this.$scrollContainer
         const $tableau = this.$tableau
-        const $parent = $tableau.parent()
-        var current = $parent.scrollLeft()
+        var current = $cont.scrollLeft()
         var windowWidth = $(window).width()
         var sel = [Dcls.Root, Dcls.NodeSegment, Dcls.Node, Dcls.NodeProps].join(' > ')
         var centerPos = $(sel, $tableau).position().left
-        var scroll = centerPos - (windowWidth / 2) + current
-        // debug({current, centerPos, scroll, windowWidth})
-        $parent.scrollLeft(scroll)
+        var scroll = centerPos - (windowWidth / 2)
+        // var scroll = centerPos - (windowWidth / 2) + current
+        debug({current, centerPos, scroll, windowWidth})
+        $cont.scrollLeft(scroll)
     }
 
+    function scrollTo($what, opts) {
+        opts = $.extend({}, FuncDefaults.ScrollTo, opts)
+        const $cont = this.$scrollContainer
+        // var scrollLeft = pos.left - (windowWidth / 2) + currentLeft
+        // var scrollTop = pos.top - (windowHeight / 2) + currentTop
+        var windowWidth = $(window).width()
+        var windowHeight = $(window).height()
+        var pos = $what.position()
+        var scrollLeft = pos.left - (windowWidth / 2)
+        var scrollTop = pos.top - (windowHeight / 2)
+        // debug($what.attr('id'), {scrollLeft, scrollTop, pos, windowWidth, windowHeight, currentLeft, currentTop})
+        if (opts.animate && $cont.get(0) !== document) {
+            $cont.animate({
+                scrollLeft: scrollLeft,
+                scrollTop : scrollTop,
+            }, opts.animate)
+        } else {
+            $cont.scrollLeft(scrollLeft).scrollTop(scrollTop)
+        }
+    }
+
+    function returnScroll(cb) {
+        const $cont = this.$scrollContainer
+        var left = $cont.scrollLeft()
+        var top = $cont.scrollTop()
+        try {
+            cb()
+        } finally {
+            $cont.scrollLeft(left).scrollTop(top)
+        }
+    }
+
+    function stretchWidth($leaves) {
+        const $tableau = this.$tableau
+        const that = this
+        returnScroll.call(this, function () {
+            $tableau.css({width: '100%'})
+            $tableau.attr(Attrib.CurWidthPct, '100')
+            var currWidth = +$tableau.attr(Attrib.CurWidthPct)
+            var guess = guessNoWrapWidth.call(that, $leaves)
+            debug({guess})
+            if (!guess || guess <= 1) {
+                return
+            }
+            var p = currWidth * guess
+            debug({p, currWidth})
+            $tableau.attr(Attrib.CurWidthPct, p)
+            $tableau.css({width: p + '%'})
+        })
+        
+    }
     /**
      * Guess the width needed so that nodes do not wrap.
      * 
@@ -1190,55 +1344,108 @@
      * @return integer How much to multiple the current width by, e.g.
      * a value of 1 means no change.
      */
-    function guessNoWrapWidth() {
+    function guessNoWrapWidth($leaves) {
         const $tableau = this.$tableau
-        var currentWidth = $tableau.width()
-        // Likely the first node does not wrap
-        var noWrapHeight = $(Dcls.NodeProps + ':eq(0)', $tableau).height()
-        if (!noWrapHeight) {
-            return 1
+        if (false && !$leaves && this._lastShows) {
+            var lowests = {}
+            debug('lastshows', this._lastShows)
+            this._lastShows.each(function(i, s) {
+                trackLowests(lowests, getPos($(s)))
+            })
+            debug('lowests', lowests)
+            var leaves = $.map(lowests, function(pos) { return pos.$structure.get(0) })
+            $leaves = $(leaves)
+            debug('leaves', $leaves)
         }
+        if ($leaves) {
+            if ($leaves.hasClass(Cls.Structure)) {
+                $leaves = $(
+                    '> ' + [Dcls.NodeSegment, Dcls.Node, Dcls.NodeProps].join(' > ') + ':visible',
+                    $leaves
+                )
+            }
+            // if (!$leaves.hasClass(Cls.NodeProps)) {
+            //     $leaves = $(Dcls.NodeSegment + ':eq(0) ' + Dcls.NodeProps, $leaves).filter(':visible')
+            // }
+            debug($leaves)
+        }
+        if (!$leaves) {
+            // TODO: compare with right leaf
+            $leaves = $(Dcls.Leaf + ':visible:eq(0) ' + Dcls.NodeProps, $tableau)
+        }
+        // var currentWidth = $tableau.width()
+        // // Likely the first node does not wrap
+        // var noWrapHeight = $(Dcls.NodeProps + ':eq(0)', $tableau).height()
+        // if (!noWrapHeight) {
+        //     return 1
+        // }
         // A good candidate for the wrappiest node is the wrappiest of the
         // outer-most leaf segments.
-        var maxWrapHeight = noWrapHeight
+        // var maxWrapHeight = noWrapHeight
         // another strategy
         var maxDiffPct = 0
-        $(Dcls.Leaf + ':visible:eq(0) ' + Dcls.NodeProps, $tableau).each(function() {
+        $leaves.each(function() {
             const $me = $(this)
-            const h = $me.height()
-
+            var h = $me.height()
             // one stragegy
-            if (h > maxWrapHeight) {
-                // only count sentence or access nodes (not flags)
-                if ($me.children([Dcls.PropSentence, Dcls.PropAccess].join(', ')).length) {
+            // if (h > maxWrapHeight) {
+            //     // only count sentence or access nodes (not flags)
+            //     if ($me.children([Dcls.PropSentence, Dcls.PropAccess].join(', ')).length) {
 
-                    maxWrapHeight = h
-                }
-            }
+            //         maxWrapHeight = h
+            //     }
+            // }
             // another
             var h2 = $me.css('position', 'absolute').height()
             $me.css('position', 'inherit')
             if (h > h2) {
                 var diff = h / h2
                 if (diff > maxDiffPct) {
+                    debug($me.text(), {h, h2, nid: $me.parent().attr('id')})
                     maxDiffPct = diff
                 }
             }
             // debug({h, h2})
         })
-        var strategy1 = 1, strategy2 = 1
-        if (maxWrapHeight >= noWrapHeight * 1.5) {
-            strategy1 = maxWrapHeight / noWrapHeight
-        }
-        if (maxDiffPct > 1.5) {
+        // var strategy1 = 1
+        // if (maxWrapHeight > noWrapHeight) {
+        //     strategy1 = maxWrapHeight / noWrapHeight
+        // }
+        var strategy2 = 1
+        if (maxDiffPct > 1) {
             strategy2 = maxDiffPct
         }
-        debug({strategy1, strategy2, maxDiffPct, maxWrapHeight})
-        return strategy1
-        
-        // TODO: compare with right leaf
+        var guess = strategy2
+        if (guess > 1) {
+            if (guess <= 1.5) {
+                guess = guess - ((guess - 1) / 2)
+            } else if (guess <= 2) {
+                guess = guess * 0.8
+            } else if (guess <= 4) {
+                guess = guess * 0.7
+            } else if (guess <= 8) {
+                guess = guess * 0.6
+            }
+        }
+        debug({maxDiffPct, guess})
+        return guess
     }
 
+    function setAutoWidth(value) {
+        this._isAutoWidth = Boolean(value)
+        $(Dcls.AutoWidth, this.$controls).toggleClass(Cls.MarkActive, this._isAutoWidth)
+        if (this._isAutoWidth) {
+            stretchWidth.call(this)
+        }
+    }
+
+    function setAutoScroll(value) {
+        this._isAutoScroll = Boolean(value)
+        $(Dcls.AutoScroll, this.$controls).toggleClass(Cls.MarkActive, this._isAutoScroll)
+        if (this._isAutoScroll) {
+            scrollToCenter.call(this)
+        }
+    }
     /**
      * Handle a click event on a tableau.
      *
@@ -1309,8 +1516,8 @@
             adjust.call(this, E_AdjustWhat.Width, E_HowMuch.WidthDownLarge)
         } else if (classMap[Cls.WidthReset]) {
             adjust.call(this, E_AdjustWhat.Width, E_HowMuch.Reset)
-        } else if (classMap[Cls.WidthAutoStretch]) {
-            adjust.call(this, E_AdjustWhat.Width, E_HowMuch.Auto)
+        } else if (classMap[Cls.WidthStretch]) {
+            stretchWidth.call(this)
         } else if (classMap[Cls.ScrollCenter]) {
             scrollToCenter.call(this)
         } else if (classMap[Cls.StepRuleTarget]) {
@@ -1328,6 +1535,10 @@
                     break
                 }
             }
+        } else if (classMap[Cls.AutoWidth]) {
+            setAutoWidth.call(this, !this._isAutoWidth)
+        } else if (classMap[Cls.AutoScroll]) {
+            setAutoScroll.call(this, !this._isAutoScroll)
         }
     }
 
@@ -1420,10 +1631,16 @@
                 adjust.call(this, E_AdjustWhat.Width, E_HowMuch.Reset)
                 break
             case '@':
-                adjust.call(this, E_AdjustWhat.Width, E_HowMuch.Auto)
+                stretchWidth.call(this)
                 break
             case '$':
                 scrollToCenter.call(this)
+                break
+            case 'W':
+                setAutoWidth.call(this, !this._isAutoWidth)
+                break
+            case 'S':
+                setAutoScroll.call(this, !this._isAutoScroll)
                 break
             case 'O':
                 if ($tableau.children(Sel.CanBranchFilter).length) {
@@ -1445,7 +1662,6 @@
                 var stay = key == 'R'
                 doHighlight.call(this, {stay: stay, ruleStep: true})
                 if (stay) {
-                    // var $controls = getControlsFromProof($tableau)
                     if ($controls.length) {
                         $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
                     }
@@ -1456,7 +1672,6 @@
                 var stay = key == 'T'
                 doHighlight.call(this, {stay: stay, ruleTarget: true})
                 if (stay) {
-                    // var $controls = getControlsFromProof($tableau)
                     if ($controls.length) {
                         $(Dcls.StepRuleName, $controls).toggleClass(Cls.Stay)
                     }
@@ -1612,194 +1827,3 @@
         return n
     }
 })();
-    // /**
-    //  * Document ready init function.
-    //  * 
-    //  * @return void
-    //  */
-    // function onReady() {
-
-    //     var $currentProof = $(Dcls.Proof + '[' + Attrib.ProofClue + ']').first()
-
-    //     // monitor modifier keys
-    //     $(document).on('keyup keydown', function(e) {
-    //         ModKey.shift   = e.shiftKey
-    //         ModKey.ctrl    = e.metaKey || e.ctrlKey
-    //         ModKey.alt     = e.altKey
-    //         ModKey.ctrlalt = ModKey.ctrl || ModKey.alt
-    //     })
-
-    //     // action keys
-    //     $(document).on('keypress', function(e) {
-    //         const key = String.fromCharCode(e.which)
-    //         if (!ActionKeys[key]) {
-    //             return
-    //         }
-    //         const $target = $(e.target)
-    //         const isInput = $target.is(':input')
-    //         const shouldProcess = !isInput && $currentProof && $currentProof.length
-    //         if (!shouldProcess) {
-    //             return
-    //         }
-    //         handleActionKey($currentProof, key)
-    //     })
-    // }
-
-    // const Index = {proof: {}, controls: {}, models: {}}
-    // /**
-    //  * Get the target proof jQuery element from the controls jQuery
-    //  * element
-    //  * 
-    //  * @param $controls The controls jQuery element.
-    //  * @return $proof|null The jQuery proof element, or null if not found.
-    //  */
-    // function getProofFromControls($controls) {
-    //     const controlsId = $controls.attr('id')
-    //     if (!Index.controls[controlsId]) {
-    //         Index.controls[controlsId] = {}
-    //     }
-    //     if (!Index.controls[controlsId] || Index.controls[controlsId].$proof === undefined) {
-    //         var proofId = $controls.attr(Attrib.ProofId)
-    //         Index.controls[controlsId].$proof = null
-    //         if (proofId) {
-    //             var $proof = $('#' + proofId)
-    //             if ($proof.length) {
-    //                 Index.controls[controlsId].$proof = $proof
-    //             }
-    //             if (!Index.proof[proofId]) {
-    //                 Index.proof[proofId] = {}
-    //             }
-    //             Index.proof[proofId].$controls = $controls
-    //         }
-    //     }
-    //     var $proof = Index.controls[controlsId].$proof
-    //     if (!$proof) {
-    //         console.debug('Cannot find proof element')
-    //     }
-    //     return $proof
-    // }
-
-    // /**
-    //  * Get the target proof jQuery element from the models jQuery
-    //  * element
-    //  * 
-    //  * @param $controls The controls jQuery element.
-    //  * @return $proof|null The jQuery proof element, or null if not found.
-    //  */
-    //  function getProofFromModels($models) {
-    //     const modelsId = $models.attr('id')
-    //     if (!Index.models[modelsId]) {
-    //         Index.models[modelsId] = {}
-    //     }
-    //     if (!Index.models[modelsId] || Index.models[modelsId].$proof === undefined) {
-    //         var proofId = $models.attr(Attrib.ProofId)
-    //         Index.models[modelsId].$proof = null
-    //         if (proofId) {
-    //             var $proof = $('#' + proofId)
-    //             if ($proof.length) {
-    //                 Index.models[modelsId].$proof = $proof
-    //             }
-    //             if (!Index.proof[proofId]) {
-    //                 Index.proof[proofId] = {}
-    //             }
-    //             Index.proof[proofId].$models = $models
-    //         }
-    //     }
-    //     var $proof = Index.models[modelsId].$proof
-    //     if (!$proof) {
-    //         console.debug('Cannot find proof element')
-    //     }
-    //     return $proof
-    // }
-
-    // /**
-    //  * Get the controls container from the proof.
-    //  * 
-    //  * @param $proof The proof jQuery element
-    //  * @return The jQuery controls element, or null if not found.
-    //  */
-    // function getControlsFromProof($proof) {
-    //     const id = $proof.attr('id')
-    //     if (id) {
-    //         if (Index.proof[id] && Index.proof[id].$controls) {
-    //             return Index.proof[id].$controls
-    //         }
-    //         var $controls = $(Dcls.Controls).filter(getAttrSelector(Attrib.ProofId, id))
-    //         if ($controls.length) {
-    //             return $controls
-    //         }
-    //     }
-    //     console.debug('Cannot find controls element')
-    //     return null
-    // }
-    /**
-    //  * Get the models container from the proof.
-    //  * 
-    //  * @param $proof The proof jQuery element
-    //  * @return The jQuery models element, or null if not found.
-    //  */
-    // function getModelsFromProof($proof) {
-    //     const id = $proof.attr('id')
-    //     if (id) {
-    //         if (Index.proof[id] && Index.proof[id].$models) {
-    //             return Index.proof[id].$models
-    //         }
-    //         var $models = $(Dcls.Models).filter(getAttrSelector(Attrib.ProofId, id))
-    //         if ($models.length) {
-    //             return $models
-    //         }
-    //     }
-    //     console.debug('Cannot find models element')
-    //     return null
-    // }
-
-            /*
-        // load a click event handler for each proof in the document.
-        $(Dcls.Proof).on('click', function(e) {
-            const $proof  = $(this)
-            $currentProof = $proof
-            handleProofClick($proof, $(e.target))
-        })
-
-        // load a change event for the controls panel
-        $(Dcls.Controls).on('change', function(e) {
-            const $controls = $(this)
-            const $proof = getProofFromControls($controls)
-            if (!$proof) {
-                return
-            }
-            $currentProof = $proof
-            handleControlsChange($proof, $(e.target))
-        })
-
-        // load a click event for the controls panel
-        $(Dcls.Controls).on('click', function(e) {
-            const $controls = $(this)
-            const $proof = getProofFromControls($controls)
-            if (!$proof) {
-                return
-            }
-            $currentProof = $proof
-            handleControlsClick($proof, $(e.target))
-        })
-
-        // load a click event for the models panel
-        $(Dcls.Models).on('click', function(e) {
-            const $models = $(this)
-            const $proof = getProofFromModels($models)
-            if (!$proof) {
-                return
-            }
-            $currentProof = $proof
-            handleModelsClick($proof, $(e.target))
-        })
-        */
-
-            // function autoStretchWidth($proof) {
-    //     var guess = guessNoWrapWidth($proof)
-    //     debug({guess})
-    //     if (!guess || guess <= 1) {
-    //         return
-    //     }
-    //     adjust($proof, E_AdjustWhat.Width, (guess - 1) * 100)
-    // }

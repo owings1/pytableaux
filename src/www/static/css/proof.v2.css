@@ -27,6 +27,10 @@
     font-weight: bold;
     src: url("fonts/charmonman/Charmonman-Bold.ttf") format("truetype");
 }
+/* .tableau-wrapper {
+    overflow-x: scroll;
+    overflow-y: scroll;
+} */
 .tableau {
     font-family: 'lucida grande',verdana,helvetica,arial,sans-serif;
 }
@@ -53,7 +57,7 @@
     color: #e808ff;
 }
 /* Selected branch indicator, at the leaf. Only show if controls or models options are enabled */
-.tableau:is(.with-controls, .with-models) .structure.leaf.inspected > .node-segment::after {
+.tableau.with-controls .structure.leaf.inspected > .node-segment::after {
     width: 16px;
     height: 16px;
     background-size: 16px 16px;
@@ -75,8 +79,11 @@
     padding-top: 5px;
     padding-bottom: 6px;
 }
-
-.tableau-controls .branch-filter.active:not(.disabled) {
+.tableau-controls .button.auto-scroll {
+    font-size: 0.7em;
+}
+.tableau-controls .branch-filter.active:not(.disabled),
+.tableau-controls .auto-opts .button.active {
     background-color: #1abc9c;
     border: 1px solid #39d6b7;
     color: white;
