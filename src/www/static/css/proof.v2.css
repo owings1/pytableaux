@@ -33,6 +33,7 @@
 } */
 .tableau {
     font-family: 'lucida grande',verdana,helvetica,arial,sans-serif;
+    margin: auto;
 }
 .tableau .hidden {
     display: none;
@@ -61,7 +62,8 @@
     width: 16px;
     height: 16px;
     background-size: 16px 16px;
-    background-image: url(../img/inspected-black.svg);
+    background-image: url(/static/img/inspected-black.svg);
+    content: "";
 }
 
 .tableau-controls .valid {
@@ -71,10 +73,6 @@
     color: red;
 }
 
-/* .tableau-controls .wip {
-    color: purple;
-    font-weight: bold;
-} */
 .tableau-controls .button.width-reset {
     padding-top: 5px;
     padding-bottom: 6px;
@@ -93,15 +91,9 @@
     cursor: pointer;
 }
 
-/* .tableau-controls > ul.details:after {
-    width: 1px;
-    content: "\a";
-    border: 1px solid #cccccc;
-    height: 100%;
-    margin: 0;
-} */
 .tableau-controls > ul.details,
-.proof-stats > ul.details {
+.proof-stats > ul.details,
+.tableau-models ul.details {
     margin-top: 0;
     margin-bottom: 0;
     padding-right: 3px;
@@ -109,9 +101,13 @@
     vertical-align: top;
 }
 .tableau-controls > ul.details > li,
+.tableau-models .model > ul.details li,
 .proof-stats > ul.details > li {
     display: table-cell;
     margin: 0;
+}
+.tableau-models .model > ul ul li {
+    border-left: none;
 }
 .tableau-controls > ul.details > li > .prop,
 .proof-stats > ul.details > li > .prop {
@@ -124,22 +120,18 @@
     padding-bottom: 3px;
     margin-bottom: 1px;
 }
-.tableau-controls > ul.details,
-.tableau-controls > ul.details > li {
-    height: 47px;
-}
 .tableau-controls > ul.details > li > .value {
     margin-top: 3px;
 }
 .tableau-models .model > ul > li.in-summary {
     display: block;
 }
-.tableau-models {
+/* .tableau-models {
     max-width: 300px;
-}
-.tableau-models .message {
+} */
+/* .tableau-models .message {
     padding: 10px;
-}
+} */
 
 
 .tableau-models .model ul.details li .prop {
@@ -157,7 +149,11 @@
 .tableau-models.inspected .select-a-branch {
     display: none;
 }
-.tableau-models .symbol {
+.tableau-models .model .symbol,
+.tableau-models .model .tuple > .values::before
+.tableau-models .model .tuple > .values::after,
+.tableau-models .model .set.non-empty > .values::before,
+.tableau-models .model .set.non-empty > .values::after {
     font-family: "Charmonman", "cursive";
 }
 .tableau-models .model .set > .symbol::after {
@@ -168,7 +164,8 @@
 }
 .tableau-models .model .set > .symbol::after,
 .tableau-models .model .map > .values > li > .value > .symbol::after,
-.tableau-models .model .list > .symbol::after {
+.tableau-models .model .list > .symbol::after,
+.tableau-models .model .value.world > .symbol::after {
     content: "=";
     margin-right: 5px;
 }
@@ -206,10 +203,10 @@
     content: " = \2205";
 }
 .tableau-models .model .tuple > .values::before {
-    content: "<";
+    content: "⟨";
 }
 .tableau-models .model .tuple > .values::after {
-    content: ">";
+    content: "⟩";
 }
 .tableau-models .model .function > ul.values,
 .tableau-models .model .map > ul.values,
@@ -250,25 +247,25 @@
 .tableau-models .model .function > ul.values > li > .input::after {
     content: ') = ';
 }
-.tableau-models .model .function.extension > ul.values > li > .symbol {
+/* .tableau-models .model .function.extension > ul.values > li > .symbol {
     font-size: 18px;
     font-weight: bold;
-}
-.tableau-models .model .function.extension > ul.values > li {
+} */
+/* .tableau-models .model .function.extension > ul.values > li {
     padding-top: 4px;
-}
-.tableau-models .model ul.values.frame > li {
+} */
+/* .tableau-models .model ul.values.frame > li {
     border: 1px solid #cccccc;
     border-top: 3px solid #bbbbbb;
     border-left: 2px solid #cccccc;
     padding: 5px 0 5px 5px;
-}
-.tableau-models .model ul.values.frame > li > .symbol {
+} */
+/* .tableau-models .model ul.values.frame > li > .symbol {
     font-size: 17px;
-}
-.tableau-models .model .list.frames > ul.values > li {
+} */
+/* .tableau-models .model .list.frames > ul.values > li {
     margin-bottom: 10px;
-}
+} */
 .tableau-models .model .is-countermodel.yes {
     color: green;
 }

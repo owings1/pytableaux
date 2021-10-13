@@ -23,8 +23,9 @@
         argument : 0,
         options  : 1,
         stats    : 2,
-        controls : 3,
-        models   : 4,
+        view     : 3,
+        step     : 4,
+        models   : 5,
     }
 
     $(document).ready(function() {
@@ -49,7 +50,7 @@
          */
         function init() {
             $Frm.on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
-                .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
+                // .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
                 .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
                     if ($target.is('#example_argument')) {
@@ -67,10 +68,10 @@
                     } else if ($target.is('#selected_logic')) {
                         refreshLogic()
                     }
-                    if ($target.closest('.fieldset.output').length) {
-                        refreshOutputHeader()
-                        refreshArgumentHeader()
-                    }
+                    // if ($target.closest('.fieldset.output').length) {
+                    //     refreshOutputHeader()
+                    //     refreshArgumentHeader()
+                    // }
                 })
                 .on('submit', function(e) {
                     //e.preventDefault()
@@ -78,14 +79,21 @@
                 })
 
                 $Ctx.on('click', function(e) {
+                    // debug('click')
                     const $target = $(e.target)
                     if ($target.is('#clear_argument')) {
                         clearArgument()
                         clearExampleArgument()
                         ensureEmptyPremise()
                         refreshStatuses()
-                        refreshArgumentHeader()
+                        // refreshArgumentHeader()
+                    } else if ($target.hasClass('add-predicate')) {
+                        // debug('add-predicate')
+                        addEmptyPredicate().find(':input').focus()
+                    } else {
+                        // debug($target)
                     }
+                    // debug('bye')
                 })
                 
 
@@ -120,6 +128,7 @@
                 html += '</span>'
                 $me.tooltip({content: html, show: {delay: 2000}})
             })
+            $('.tooltip', $Frm).tooltip({show: {delay: 1000}})
 
             $('.tableau').tableau({
                 // autoWidth: true,
@@ -133,14 +142,15 @@
                     // console.log(api.s)
                 }
                 ensureEmptyPremise()
-                ensureEmptyPredicate()
+                // ensureEmptyPredicate()
                 refreshNotation()
                 refreshLogic()
-                refreshOutputHeader()
-                if ($('.evaluation').length) {
+                // refreshOutputHeader()
+                // if ($('.evaluation').length) {
+                if (is_proof) {
                     refreshStatuses()
                 }
-                refreshArgumentHeader()
+                // refreshArgumentHeader()
             })
         }
 
@@ -200,32 +210,32 @@
             return $('#input_notation', $Ctx).val()
         }
 
-        /**
-         * Get the output format value.
-         *
-         * @return String name of the foramat, e.g. 'html'
-         */
-        function currentOutputFormat() {
-            return $('#format', $Ctx).val()
-        }
+        // /**
+        //  * Get the output format value.
+        //  *
+        //  * @return String name of the foramat, e.g. 'html'
+        //  */
+        // function currentOutputFormat() {
+        //     return $('#format', $Ctx).val()
+        // }
 
-        /**
-         * Get the output notation value.
-         *
-         * @return String name of the notation, e.g. 'standard'
-         */
-        function currentOutputNotation() {
-            return $('#output_notation', $Ctx).val()
-        }
+        // /**
+        //  * Get the output notation value.
+        //  *
+        //  * @return String name of the notation, e.g. 'standard'
+        //  */
+        // function currentOutputNotation() {
+        //     return $('#output_notation', $Ctx).val()
+        // }
 
-        /**
-         * Get the output symbol set value.
-         *
-         * @return String name of the symbol set, e.g. 'default'
-         */
-        function currentOutputSymbolEnc() {
-            return $('#symbol_enc', $Ctx).val()
-        }
+        // /**
+        //  * Get the output symbol set value.
+        //  *
+        //  * @return String name of the symbol set, e.g. 'default'
+        //  */
+        // function currentOutputSymbolEnc() {
+        //     return $('#symbol_enc', $Ctx).val()
+        // }
 
         /**
          * Add an empty premise input row.
@@ -283,14 +293,29 @@
          * @param subscript The integer subscript of the predicate.
          * @param name The name of the predicate (optional).
          * @param arity The integer arity of the predicate (optional).
-         * @return void
+         * @return The jquery element of the created tr.
          */
         function addPredicate(index, subscript, name, arity) {
             const thisNotation = currentNotation()
             var html = ''
             // nups: "notation-user-predicate-symbols"
             $.each(AppData.nups, function(notation, symbols) {
-                var classes = ['predicateSymbol', 'notation-' + notation]
+                // var classes = ['operator-symbol', 'predicate-symbol', 'user-predicate']
+                // var html ='<span class="' + classes.join(' ') + '">'
+                // html += $('<div/>').text(symbols[index]).html()
+                // if (subscript > 0) {
+                //     html += '<sub>' + subscript + '</sub>'
+                // }
+                // html += '</span>'
+                // const rendered = render(Templates.predicate, {
+                //     index       : index,
+                //     subscript   : subscript,
+                //     arity       : arity || '',
+                //     name        : name || '',
+                //     symbol_html : html,
+                // })
+                // $('.notation-' + notation + ' table.predicates tbody', $Ctx).append(rendered)
+                var classes = ['predicate-symbol', 'notation-' + notation]
                 if (notation != thisNotation)
                     classes.push('hidden')
                 html += '<span class="' + classes.join(' ') + '">'
@@ -299,23 +324,27 @@
                     html += '<sub>' + subscript + '</sub>'
                 html += '</span>'
             })
-            $('table.predicates tbody', $Ctx).append(render(Templates.predicate, { 
+            // debug(html)
+            const $el = $(render(Templates.predicate, { 
                 index       : index,
                 subscript   : subscript,
-                name        : name || ('Predicate ' + ($('input.predicateSymbol', $Ctx).length + 1)),
+                name        : name || ('Predicate ' + ($('input.predicate-symbol', $Ctx).length + 1)),
                 arity       : arity || '',
                 symbol_html : html
             }))
+            $('table.predicates', $Ctx).append($el)
+            // debug($($el.get(0)))
+            return $el
         }
 
         /**
          * Add an empty input for a user-defined predicate. Calculates the next
          * index and subscript.
          *
-         * @return void
+         * @return The jquery element of the created tr.
          */
         function addEmptyPredicate() {
-            const $symbols   = $('input.predicateSymbol', $Ctx)
+            const $symbols   = $('input.predicate-symbol', $Ctx)
             const numSymbols = $symbols.length
             var index      = 0
             var subscript  = 0
@@ -328,7 +357,7 @@
                     subscript += 1
                 }
             }
-            addPredicate(index, subscript)
+            return addPredicate(index, subscript)
         }
 
         /**
@@ -337,7 +366,8 @@
          * @return void
          */
         function clearPredicates() {
-            $('tr.userPredicate').remove()
+            // $('tr.user-predicate').remove()
+            $('tr.user-predicate', $Ctx).remove()
         }
 
         /**
@@ -423,10 +453,10 @@
          */
         function refreshNotation() {
             const notation = currentNotation()
-            $('.lexicons .lexicon', $Ctx).hide()
+            $('.lexicons .lexicon:not(.predicates)', $Ctx).hide()
             $('.lexicon.notation-' + notation, $Ctx).show()
-            $('.predicateSymbol', $Ctx).hide()
-            $('.predicateSymbol.notation-' + notation, $Ctx).show()
+            $('.predicate-symbol', $Ctx).addClass('hidden')
+            $('.predicate-symbol.notation-' + notation, $Ctx).removeClass('hidden')
             if ($('#example_argument', $Ctx).val()) {
                 refreshExampleArgument()
             } else {
@@ -448,24 +478,30 @@
          * @return void
          */
         function refreshExampleArgument() {
+            debug('refreshExampleArgument', 1)
             clearPredicates()
             clearArgument()
             const $me = $('#example_argument')
             const argName = $me.val()
+
+            debug('refreshExampleArgument', 5)
             if (!argName) {
                 ensureEmptyPremise()
-                ensureEmptyPredicate()
+                // ensureEmptyPredicate()
                 return
             }
+            debug('refreshExampleArgument', 8)
             const notation = currentNotation()
             const arg = AppData.example_arguments[argName][notation]
             $.each(arg.premises, function(i, value) {
                 addPremise(value)
             })
+            debug('refreshExampleArgument', 15)
             $('#conclusion').val(arg.conclusion)
             $.each(AppData.example_predicates, function(i, pred) {
                 addPredicate(pred[1], pred[2], pred[0], pred[3])
             })
+            debug('refreshExampleArgument', 35)
         }
 
         /**
@@ -484,7 +520,7 @@
                         return
                     }
                     $status.attr('data-hash', hash)
-                    apiData = getApiData()
+                    var apiData = getApiData()
                     $.ajax({
                         url         : '/api/parse',
                         method      : 'POST',
@@ -500,7 +536,7 @@
                             $status.attr('title', res.result.type).tooltip()
                             SentenceRenders[input] = res.result.rendered
                             // debug({SentenceRenders})
-                            refreshArgumentHeader()
+                            // refreshArgumentHeader()
                         },
                         error: function(xhr, textStatus, errorThrown) {
                             $status.removeClass('good').addClass('bad')
@@ -532,55 +568,55 @@
             })
         }
 
-        /**
-         * Update the argument display in the header bar of the argument fieldset.
-         *
-         * @return void
-         */
-        function refreshArgumentHeader() {
-            const notation = currentOutputNotation()
-            const enc = currentOutputSymbolEnc()
-            const premises = []
-            var conclusion
-            $('input.sentence', $Ctx).each(function(sentenceIndex) {
-                const $status = $(this).closest('div.input').find('.status')
-                const input = $(this).val()
-                const isConclusion = $(this).hasClass('conclusion')
-                const isGood = $status.hasClass('good')
-                if (input || isConclusion) {
-                    var sentence
-                    if (isGood && SentenceRenders[input]) {
-                        // debug({notation, enc})
-                        sentence = SentenceRenders[input][notation][enc]
-                        if (enc != 'html') {
-                            sentence = h(sentence)
-                        }
-                    } else {
-                        sentence = '?'
-                    }
-                    if (isConclusion) {
-                        conclusion = sentence
-                    } else {
-                        premises.push(sentence)
-                    }
-                }
-            })
-            $('#argument-heading-rendered').html(premises.join(', ') + ' &there4; ' + conclusion)
-        }
+        // /**
+        //  * Update the argument display in the header bar of the argument fieldset.
+        //  *
+        //  * @return void
+        //  */
+        // function refreshArgumentHeader() {
+        //     const notation = currentOutputNotation()
+        //     const enc = currentOutputSymbolEnc()
+        //     const premises = []
+        //     var conclusion
+        //     $('input.sentence', $Ctx).each(function(sentenceIndex) {
+        //         const $status = $(this).closest('div.input').find('.status')
+        //         const input = $(this).val()
+        //         const isConclusion = $(this).hasClass('conclusion')
+        //         const isGood = $status.hasClass('good')
+        //         if (input || isConclusion) {
+        //             var sentence
+        //             if (isGood && SentenceRenders[input]) {
+        //                 // debug({notation, enc})
+        //                 sentence = SentenceRenders[input][notation][enc]
+        //                 if (enc != 'html') {
+        //                     sentence = h(sentence)
+        //                 }
+        //             } else {
+        //                 sentence = '?'
+        //             }
+        //             if (isConclusion) {
+        //                 conclusion = sentence
+        //             } else {
+        //                 premises.push(sentence)
+        //             }
+        //         }
+        //     })
+        //     $('#argument-heading-rendered').html(premises.join(', ') + ' &there4; ' + conclusion)
+        // }
 
-        /**
-         * Update the display in the header bar of the output fieldset.
-         *
-         * @return void
-         */
-        function refreshOutputHeader() {
-            $('#output-heading-description').html(
-                [
-                    currentOutputFormat().toUpperCase(),
-                    currentOutputNotation()
-                ].join(' | ')
-            )
-        }
+        // /**
+        //  * Update the display in the header bar of the output fieldset.
+        //  *
+        //  * @return void
+        //  */
+        // function refreshOutputHeader() {
+        //     $('#output-heading-description').html(
+        //         [
+        //             currentOutputFormat().toUpperCase(),
+        //             currentOutputNotation()
+        //         ].join(' | ')
+        //     )
+        // }
 
         /**
          * Generate an integer hash for a string.
@@ -612,26 +648,40 @@
          */
          function getApiData() {
             const data = {
+                logic: $('select[name="logic"]', $Frm).val(),
                 argument : {
+                    conclusion: $('#conclusion', $Frm).val(),
                     premises  : [],
-                    predicates: []
+                    predicates: [],
+                    notation: currentNotation(),
                 },
-                output: {}
+                output: {
+                    format   : $('#format', $Frm).val(),
+                    notation : $('#output_notation', $Frm).val(),
+                    symbol_enc : $('#symbol_enc', $Frm).val(),
+                    options : {
+                        classes: [],
+                        models: null,
+                    }
+                },
+                build_models: null,
+                max_steps: null,
+                rank_optimizations: null,
+                group_optimizations: null,
+                show_controls: null,
             }
-            data.logic = $('select[name="logic"]', $Frm).val()
-            data.argument.notation = currentNotation()
-            data.argument.conclusion = $('#conclusion').val()
             $('input.premise', $Frm).each(function() {
                 const val = $(this).val()
                 if (val) {
                     data.argument.premises.push(val)
                 }
             })
-            $('.userPredicate', $Frm).each(function() {
+            $('.user-predicate', $Frm).each(function() {
                 const $tr = $(this)
+                debug('tr', $tr)
                 const arity = $('input.arity', $tr).val()
                 if (arity.length > 0) {
-                    const coords = $('input.predicateSymbol', $tr).val().split('.')
+                    const coords = $('input.predicate-symbol', $tr).val().split('.')
                     const arityNumVal = +arity
                     // let invalid arity propagate
                     var arityVal
@@ -641,17 +691,13 @@
                         arityVal = arityNumVal
                     }
                     data.argument.predicates.push({
-                        name      : $('input.predicateName', $tr).val(),
+                        // name      : $('input.predicateName', $tr).val(),
                         index     : +coords[0],
                         subscript : +coords[1],
                         arity     : arityVal
                     })
                 }
             })
-            data.output.notation = $('#output_notation', $Frm).val()
-            data.output.format = $('#format', $Frm).val()
-            data.output.symbol_enc = $('#symbol_enc', $Frm).val()
-            data.output.options = {classes: []}
             $('input:checkbox.options', $Frm).each(function() {
                 const $me = $(this)
                 const name = $me.attr('name')

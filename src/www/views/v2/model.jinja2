@@ -6,17 +6,13 @@
             <li>
                 <div class="prop">Is countermodel</div>
                 <div class="value">
-                    <span class="is-countermodel {{ bool_to_yn(model.is_countermodel)|lower }}">{{ bool_to_yn(model.is_countermodel) }}</span>
+                    <span class="is-countermodel {{ bool_to_yn(model.is_countermodel)|lower }}">
+                        {{- bool_to_yn(model.is_countermodel) -}}
+                    </span>
                 </div>
             </li>
-            {% for key in data -%}
-                {% set info = data[key] -%}
-                <li>
-                    <div class="prop">{{ key|e }}</div>
-                    <div class="value">{{ write_info(lw, info) }}</div>
-                </li>
-            {% endfor -%}
         </ul>
+        {{ write_map(lw, data) }}
     </div>
 {% endmacro -%}
 
@@ -24,47 +20,61 @@
     {{- 'Yes' if value else 'No' -}}
 {%- endmacro -%}
 
-{% macro write_info(lw, info) -%}
-    {% if info ['datatype'] == 'set' -%}
-        {{ write_set(lw, info['values'], info['member_datatype'], typehint=info['typehint'], member_typehint=info['member_typehint'], symbol=info['symbol']) }}
-    {% elif info['datatype'] == 'function' -%}
-        {{ write_function(lw, info['values'], info['input_datatype'], info['output_datatype'], input_typehint=info['input_typehint'], output_typehint=info['output_typehint'], typehint=info['typehint'], symbol=info['symbol']) }}
-    {% elif info['datatype'] == 'map' -%}
-        {{ write_map(lw, info['value']) }}
-    {% elif info['datatype'] == 'list' -%}
-        {{ write_list(lw, info['values'], info['member_datatype'], typehint=info['typehint'], member_typehint=info['member_typehint'], symbol=info['symbol']) }}
-    {% else %}
-        {{ write_item(lw, info['value'], info['datatype'], typehint=info['typehint'], symbol=info['symbol']) }}
-    {% endif -%}
-{% endmacro -%}
+{%- macro write_info(lw, info) -%}
+    {%- set datatype = info.datatype -%}
+    {%- if datatype == 'set' -%}
+        {{ write_set(lw, info['values'], info.member_datatype,
+            typehint=info.typehint, member_typehint=info.member_typehint, symbol=info.symbol) }}
+    {%- elif datatype == 'function' -%}
+        {{ write_function(lw, info['values'], info.input_datatype, info.output_datatype,
+            input_typehint=info.input_typehint, output_typehint=info.output_typehint,
+            typehint=info.typehint, symbol=info.symbol) }}
+    {%- elif datatype == 'map' -%}
+        {{ write_map(lw, info.value) }}
+    {%- elif datatype == 'list' -%}
+        {{ write_list(lw, info['values'], info.member_datatype,
+            typehint=info.typehint, member_typehint=info.member_typehint, symbol=info.symbol) }}
+    {%- else -%}
+        {{ write_item(lw, info.value, datatype,
+            typehint=info.typehint, symbol=info.symbol) }}
+    {%- endif -%}
+{%- endmacro -%}
 
-{% macro write_map(lw, data) -%}
-    <div class="map {{ 'non-empty' if data|length else 'empty'}}">
+{%- macro write_map(lw, data) -%}
+    {# <div class="map {{ 'non-empty' if data|length else 'empty'}}"> #}
         {% if data|length -%}
-            <ul class="values">
-                {% for key in data -%}
-                    {% set info = data[key] -%}
-                    <li>
-                        <div class="prop">{{ key|e }}</div>
-                        <div class="value">{{ write_info(lw, info) }}</div>
-                    </li>
+            <ul class="details map values {{- ' non-empty' if data|length else ' empty'}}">
+                {% for key, info in data.items() -%}
+                    {%- if info.value or info.get('values', '')|length -%}
+                        {%- if info.typehint == 'frames' -%}
+                            {%- for frame in info['values'] -%}
+                                <li class="">
+                                    <div class="prop frame">Frame<sub>{{ loop.index0 }}</sub></div>
+                                    <div class="value frame">{{ write_map(lw, frame.value) }}</div>
+                                </li>
+                            {%- endfor -%}
+                        {%- else -%}
+                            <li class="datatype-{{ info.datatype|e }}">
+                                <div class="prop {{ key|lower|e }}">{{ key|e }}</div>
+                                <div class="value {{ key|lower|e }}">{{ write_info(lw, info) }}</div>
+                            </li>
+                        {%- endif -%}
+                    {%- endif -%}
                 {% endfor -%}
             </ul>
         {% endif -%}
-    </div>
-{% endmacro -%}
+    {# </div> #}
+{%- endmacro -%}
 
-{% macro write_set(lw, values, member_datatype, typehint=None, member_typehint=None, symbol=None) -%}
+{%- macro write_set(lw, values, member_datatype, typehint=None, member_typehint=None, symbol=None) -%}
     <div class="set
         {{- ' non-empty' if values|length else ' empty' -}}
-        {{- ' ' + typehint|e if typehint -}}
-        ">
+        {{- ' ' ~ typehint|e if typehint -}}">
         {%- if symbol -%}
             <span class="symbol">{{ symbol| e }}</span>
         {%- endif -%}
         <div class="values
-            {{- ' ' + member_typehint|e if member_typehint -}}
-            ">
+            {{- ' ' ~ member_typehint|e if member_typehint -}}">
             {%- if member_typehint == 'world' -%}
                 {%- for w in values -%}
                     {{- write_world(w, loop.last) -}}
@@ -92,12 +102,11 @@
         {{- ' ' + typehint|e if typehint -}}">
         {%- if values|length -%}
             <ul class="values
-                {{- ' ' + member_typehint|e if member_typehint -}}
-                ">
+                {{- ' ' + member_typehint|e if member_typehint -}}">
                 {%- for value in values -%}
                     <li>
                         {%- if symbol -%}
-                            <span class="symbol">{{ symbol|e }}<span class="subscript">{{ loop.index0 }}</span></span>
+                            <span class="symbol">{{ symbol|e }}<sub>{{ loop.index0 }}</sub></span>
                         {%- endif -%}
                         {{- write_info(lw, value) -}}
                     </li>
@@ -109,11 +118,11 @@
     </div>
 {%- endmacro -%}
 
-{% macro write_function(lw, values, input_datatype, output_datatype, input_typehint=None, output_typehint=None, typehint=None, symbol=None) -%}
+{%- macro write_function(lw, values, input_datatype, output_datatype,
+    input_typehint=None, output_typehint=None, typehint=None, symbol=None) -%}
     <div class="function
         {{- ' non-empty' if values|length else ' empty' -}}
-        {{- ' ' + typehint|e if typehint -}}
-        ">
+        {{- ' ' + typehint|e if typehint -}}">
         {%- if values|length -%}
             <ul class="values">
                 {%- for value in values -%}
@@ -175,7 +184,6 @@
     {%- endif -%}
 {%- endmacro -%}
 
-
 {%- macro write_world(subscript, is_last) -%}
-    <span class="world">w<span class="subscript">{{ subscript|e }}</span></span>{{ ', ' if not is_last -}}
+    <span class="world">w<sub>{{ subscript|e }}</sub></span>{{ ', ' if not is_last -}}
 {%- endmacro -%}

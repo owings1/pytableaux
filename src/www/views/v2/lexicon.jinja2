@@ -1,5 +1,6 @@
-<div id="lexicons-content" class="lexicons">
-    <h4>Symbols</h4>
+{%- set lwh = lwstdhtm -%}
+<div id="lexicons-content" class="lexicons input">
+    <label class="heading">Symbols</label>
     <div class="lexicon-panel">
         {%- for notn, table in parser_tables.items() -%}
             <div class="lexicon hidden notation-{{ notn|e }}">
@@ -10,12 +11,15 @@
                     {% endfor %}
                 </ul>
                 <span class="label">Operators</span>
-                <dl class="operator-symbols">
+                <table class="operator-symbols">
                     {% for operator in operators_list -%}
-                        <dt>{{ table.char('operator', operator)|e }}</dt>
-                        <dd>{{ operator|e }}</dd>
+                        <tr>
+                            <td><span class="operator-symbol">{{ table.char('operator', operator)|e }}</span></td>
+                            <td class="html-ref-symbol">{{ lwh.write(operator) }}</td>
+                            <td>{{ operator|e }}</td>
+                        </tr>
                     {% endfor %}
-                </dl>
+                </table>
                 <div class="clear"></div>
             </div>
         {% endfor %}
@@ -36,48 +40,59 @@
                     {% endfor %}
                 </ul>
                 <span class="label">Quantifiers</span>
-                <dl class="operator-symbols">
+                <table class="operator-symbols quantifier-symbols">
                     {% for quantifier in quantifiers -%}
-                        <dt>{{ table.char('quantifier', quantifier)|e }}</dt>
-                        <dd>{{ quantifier|e }}</dd>
+                        <tr>
+                            <td>
+                                <span class="operator-symbol quantifier-symbol">
+                                    {{- table.char('quantifier', quantifier)|e -}}
+                                </span>
+                            </td>
+                            <td class="html-ref-symbol">{{ lwh.write(quantifier) }}</td>
+                            <td>{{ quantifier|e }}</td>
+                        </tr>
                     {% endfor %}
-                </dl>
+                </table>
                 <div class="clear"></div>
             </div>
         {% endfor %}
-    </div>
-    <div class="lexicon-panel last">
-        <span class="label">Predicates</span>
-        <div class="predicates">
-            <table class="predicates">
-                <tbody>
-                    {% for name, predicate in system_predicates.items() -%}
-                        <tr class="systemPredicate">
-                            <td>
-                                {% for notn, table in parser_tables.items() %}
-                                    {%- set symbol = table.char('system_predicate', name) -%}
-                                    {%- set subscript = predicate.subscript -%}
-                                    <span class="predicateSymbol notation-{{ notn|e }} hidden">
-                                        {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript|e }}</span>{% endif -%}
-                                    </span>
-                                {% endfor %}
-                            </td>
-                            <td>{{ name|e }}</td>
-                        </tr>
-                    {% endfor %}
-                    {% for label in form_data['user_predicate_symbols[]'] %}
-                        {%- set index, subscript = label.split('.')|map('int') -%}
-                        {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
-                        {%- call helper.predicate_row(index, subscript, name, arity) %}
-                            {% for notn, table in parser_tables.items() -%}
-                                {{- helper.predicate_symbol(notn, table.char('user_predicate', index), subscript) }}
-                            {% endfor -%}
-                        {%- endcall -%}
-                    {%- endfor %}
-                </tbody>
-            </table>
+        <div class="lexicon predicates">
+            <span class="label">Predicates</span>
+            <table class="predicates operator-symbols predicate-symbols">
+                {% for name, predicate in system_predicates.items() -%}
+                    <tr class="system-predicate">
+                        <td>
+                            {% for notn, table in parser_tables.items() %}
+                                {%- set symbol = table.char('system_predicate', name) -%}
+                                {%- set subscript = predicate.subscript -%}
+                                <span class="predicate-symbol notation-{{ notn|e }} hidden">
+                                    {{- symbol|e }}{% if subscript > 0 %}<sub>{{ subscript|e }}</sub>{% endif -%}
+                                </span>
+                            {% endfor %}
+                        </td>
+                        <td class="html-ref-symbol">{{ lwh.write(predicate) }}</td>
+                        <td>{{ name|e }}</td>
+                    </tr>
+                {% endfor %}
+                {% for label in form_data['user_predicate_symbols[]'] %}
+                    {%- set index, subscript = label.split('.')|map('int') -%}
+                    {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
+                    {%- call helper.predicate_row(index, subscript, name, arity) %}
+                        {% for notn, table in parser_tables.items() -%}
+                            {{- helper.predicate_symbol(notn, table.char('user_predicate', index), subscript) }}
+                        {% endfor -%}
+                    {%- endcall -%}
+                {%- endfor %}
+            </table>{# ⊕ #}
+            <div>
+                <a href="javascript:" class="add-predicate tooltip" title="Add a predicate">
+                    <span class="add-predicate dashes">–  –  –  –  –  –  </span>
+                    <span class="add-predicate circ">◯</span><span class="plus">+</span>
+                    <span class="add-predicate dashes">  –  –  –  –  –  –</span>
+                </a>
+            </div>
+            <div class="clear"></div>
         </div>
-
     </div>
     <div class="clear"></div>
 </div>

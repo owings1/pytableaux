@@ -81,17 +81,46 @@
   font-display: block;
 }
 
-body {
+body.pt-app {
   font-size: 0.9em;
   margin: 0;
   padding: 0;
 }
-body,
-.ui-widget {
+body.pt-app,
+.pt-app .ui-widget {
   /* font-family: 'lucida grande',verdana,helvetica,arial,sans-serif; */
   font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;
   /* font-family: FontAwesome;
   font: normal normal normal 14px/1 FontAwesome; */
+}
+.pt-app code,
+.pt-app .errors dd,
+.pt-app .warns dd,
+.pt-app .input .logic-title,
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
+}
+
+.pt-app.no-proof label.heading,
+.pt-app.no-proof #lexicons-content ul.item-symbols li,
+.pt-app.no-proof #lexicons-content .predicate-symbol,
+.pt-app.no-proof #lexicons-content .operator-symbol {
+  font-size: 1.2em;
+}
+
+.pt-app.no-proof a.add-predicate {
+  font-size: 1.0em;
+}
+
+.pt-app .footer {
+  font-size: 0.8em;
+}
+
+.pt-app a.external,
+.pt-app a.add-predicate {
+  color: #2980b9;
 }
 /* 
 rtd-theme:
@@ -162,7 +191,6 @@ rtd-theme:
 }
 .pt-app .footer {
   text-align: center;
-  font-size: 11px;
 }
 
 .pt-app.no-proof .pt-content {
@@ -172,14 +200,22 @@ rtd-theme:
 .pt-app #proove-tabs-wrapper {
   margin-bottom: 20px
 }
+.pt-app.has-proof .ui-tabs-anchor {
+  padding: .2em 0.5em;
+}
+/*
+ * Tabs
+ */
+ .ui-tabs #tab-view.ui-tabs-panel,
+ .ui-tabs #tab-step.ui-tabs-panel,
+ .ui-tabs #tab-stats.ui-tabs-panel,
+ .ui-tabs #tab-models.ui-tabs-panel {
+     padding: 0.4em 0.4em 0 0.4em;
+ }
 /*
  * Generic
 */
-.subscript {
-  position: relative;
-  bottom: -0.2em;
-  font-size: 80%;
-}
+
 .hidden {
   display: none;
 }
@@ -206,18 +242,12 @@ rtd-theme:
  * Links
  */
 .pt-app a.external {
-  color: #2980b9;
   text-decoration: none;
   cursor: pointer;
 }
 .pt-app a.external:after {
   /* From rtd theme */
-  /* font-family: FontAwesome; */
-  /* content: "\f08e"; */
-  /* content: "?"; */
   color: #b3b3b3;
-  vertical-align: super;
-  /* font-size: 80%; */
   margin: 0 0.2em;
   font-family: FontAwesome;
   content: "\f08e";
@@ -227,43 +257,51 @@ rtd-theme:
  */
 .pt-app .errors,
 .pt-app .warns {
-  padding: 5px 10px;
+  padding-bottom: 15px;
   margin-bottom: 10px;
 }
 .pt-app .errors h3,
 .pt-app .warns h3 {
   margin: 0;
+  padding: 6px 12px;
+  color: white;
 }
 .pt-app .errors dt,
 .pt-app .warns dt {
   float: left;
-  width: 100px;
+  min-width: 100px;
   text-align: right;
   padding: 10px;
   clear: both;
-  font-style: italic;
+  font-weight: bold;
 }
 .pt-app .errors dd,
 .pt-app .warns dd {
   margin: 0;
   padding: 10px;
   float: left;
-  font-weight: bold;
 }
 .pt-app .errors {
-  background-color: rgb(255, 190, 202);
-  border: 1px solid red;
+  background-color: #fdf3f2;
+  border: 1px solid #f29f97;
 }
 .pt-app .warns {
-  background-color: rgb(254, 255, 204);
-  border: 1px solid yellow;
+  background-color: #ffedcc;
+  border: 1px solid #f0b37e;
 }
 .pt-app .errors h3 {
-  color: red;
+  background-color: #f29f97;
 }
 .pt-app .warns h3 {
-  color: yellow;
+  background-color: #f0b37e;
 }
+.pt-app .warns h3::before,
+.pt-app .errors h3::before {
+  font-family: FontAwesome;
+  margin-right: 8px;
+  content: "";
+}
+
 
 /*
  * Lists
@@ -285,11 +323,9 @@ rtd-theme:
 
  /* Code */
  .pt-app code {
-  font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
   border: 1px solid #e1e4e5;
   background: #ffffff;
   color: #e74c3c;
-  font-size: 75%;
   overflow-x: auto;
   max-width: 100%;
   padding: 3px 5px;
@@ -336,20 +372,14 @@ rtd-theme:
  * Argument Form
  * ===========================
  */
-.pt-app #argument-input-panel {
+/* .pt-app #argument-input-panel {
   width: 380px;
   margin-right: 10px;
   margin-bottom: 10px;
-}
+} */
 /* Example argument */
 .pt-app select#example_argument {
   margin: 5px 0 10px 1px;
-}
-.pt-app .input.example-argument {
-    padding: 10px;
-    text-align: center;
-    border: 1px dashed #cccccc;
-    margin-bottom: 10px;
 }
 /* Sentence input */
 .pt-app .input.sentence input {
@@ -370,27 +400,66 @@ rtd-theme:
 }
 .pt-app #clear_argument_wrapper {
   float: right;
+  display:inline;
   margin-right: 28px;
   margin-top: 8px;
 }
+/* Logic */
+.pt-app .select-logic,
+.pt-app .input-argument,
+.pt-app #lexicons-content {
+  text-align: left;
+  border: 1px solid #cccccc;
+  padding: 10px 20px;
+}
 
+.pt-app .argument .example-argument {
+  margin: 0 0 15px 0;
+}
+.pt-app .argument .select-logic {
+  margin-bottom: 7px;
+}
+.pt-app label.heading {
+  display: block;
+  text-align: left;
+  border-width: 0 0 1px 0;
+  border-color: #cccccc;
+  border-style: solid;
+  font-weight: bold;
+  margin-bottom: 12px;
+  padding-left: 0;
+  background-color: inherit;
+}
+.pt-app .select-logic .logic-details {
+  margin: 20px 0;
+}
+.pt-app .select-logic .logic-title {
+  margin-bottom: 6px;
+  border: none;
+  border-left: 3px solid #ccc;
+  background: #f0f0f0;
+  color: #555;
+  margin: 6px 0;
+  padding: 6px;
+  display: block;
+  font-weight: bold;
+}
 /* Lexicon */
+.pt-app #lexicons-wrapper {
+  float: left;
+  margin-left: 5px;
+}
 .pt-app .lexicons .lexicon-panel {
   margin-right: 10px;
   padding: 0 5px 0 0;
   float: left;
 }
-.pt-app .lexicons .lexicon-panel.last {
-  border-left: 1px solid #eee;
-  padding-left: 10px;
-  margin-right: 0;
-}
 .pt-app .lexicons .label {
-  border: 1px solid #ccc;
-  display: inline-block;
+  border: 1px solid #ccccccab;
+  display: block;
   padding: 6px;
-  margin: 8px 0 5px 1px;
-  min-width: 150px;
+  margin: 0 0 7px 0;
+  background-color: #edf0f261;
 }
 .pt-app .lexicon dl {
   margin: 0 0 0 3px;
@@ -411,49 +480,65 @@ rtd-theme:
 .pt-app #lexicons-content div.predicates {
   max-width: 300px;
 }
-.pt-app #lexicons-content table.predicates {
-  width: 100%;
-}
-.pt-app .predicateSymbol {
+.pt-app #lexicons-content .predicate-symbol {
   min-width: 10px;
 }
-.pt-app input.arity {
+.pt-app #lexicons-content input.arity {
   width: 10px;
+  padding: 2px;
 }
 .pt-app #lexicons-content table.predicates th {
   font-weight: normal;
   text-align: left;
   background-color: #eee;
 }
-.pt-app #lexicons-content table.predicates td,
-table.predicates th {
-  border: 1px solid #eee;
-  padding: 5px;
-}
-.pt-app ul.item-symbols {
+.pt-app #lexicons-content ul.item-symbols {
   list-style-type: none;
   padding: 0;
+}
+.pt-app #lexicons-content ul.item-symbols,
+.pt-app #lexicons-content table.operator-symbols {
+  margin: 0 0 16px 0;
+}
+.pt-app #lexicons-content table.operator-symbols.predicate-symbols {
   margin: 0;
 }
-.pt-app ul.item-symbols li,
-.pt-app .predicateSymbol {
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
   display: inline-block;
-  padding: 2px 3px;
+  padding: 2px 4px;
   background-color: #eee;
   margin: 0 3px;
   border: 1px solid #cccccc;
   text-align: center;
 }
-.pt-app .predicateSymbol.hidden {
+.pt-app #lexicons-content .predicate-symbol.hidden {
   display: none;
+}
+.pt-app #lexicons-content .operator-symbols td {
+  padding: 3px;
 }
 /* Argument form -- options */
 .pt-app .fieldset.options .input label {
   width: 160px;
 }
+.pt-app td.add-predicate {
+  text-align: left;
+}
+.pt-app a.add-predicate {
+  /* background-color: #6ab0de69; */
+  padding: 3px 8px;
 
-
-
+  text-decoration: none;
+  display: inline-block;
+}
+.pt-app a.add-predicate .plus {
+  margin-left: -0.78em;
+}
+.pt-app a.add-predicate .dashes {
+  white-space: pre;
+}
 /*
  * Result
  */
@@ -488,7 +573,6 @@ table.predicates th {
   background-color: rgb(205, 129, 63);
   border: 1px solid #aaa;
 }
-
 
 
 /*

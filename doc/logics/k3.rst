@@ -63,7 +63,7 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
 
     **Logical Consequence** is defined just like in :ref:`CPL <cpl-consequence>`:
 
-        ..include:: include/k3/m.consequence.rst
+        .. include:: include/k3/m.consequence.rst
 
     Alternatively, we can use the :ref:`FDE formulation <fde-consequence>`
     in terms of *designated* values, since :m:`K3` has only the designated value :m:`T`.

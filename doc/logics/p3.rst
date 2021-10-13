@@ -1,8 +1,8 @@
 .. _P3:
 
-************************
-P3 - Post 3-valued logic
-************************
+*****************************
+:m:`P3` - Post 3-valued logic
+*****************************
 
 Emil Post's three-valued logic (:m:`T`, :m:`F`, and :m:`N`) has a deviant negation
 that performs a *cyclic shift* in value. The result is a system much different
@@ -15,11 +15,57 @@ from classical logic, as well as more well-known many-valued systems.
     Semantics
     =========
 
+    .. _p3-model:
+
     .. autoclass:: Model
 
-        .. automethod:: value_of_operated(sentence)
+        .. include:: include/fde/m.attributes.rst
 
-        .. automethod:: value_of_universal(sentence)
+        .. method:: truth_function(operator, a, b)
+
+            The value of a sentence with a truth-functional operator is determined by
+            the values of its operands according to the following tables.
+
+            Most notable is the behavior of negation. Disjunction :s:`V` is the same as in
+            :ref:`K3 <K3>`, but conjunction is quite different, which is defined in terms of
+            disjunction in the standard way as :s:`~(~A V ~B)`.
+
+            //truth_tables//p3//
+
+        .. method:: value_of_predicated(sentence)
+
+            Predication is given the same treatment as :ref:`K3 <k3-model>`, defined in terms of a
+            predicate's *extenstion* and *anti-extension*.
+
+            .. include:: include/k3/m.predication.rst
+
+        .. method:: value_of_existential(sentence)
+
+            Existential quantification is defined just as in :ref:`K3 <k3-model>`:
+
+            .. include:: include/k3/m.existential.rst
+
+        .. method:: value_of_universal(sentence)
+
+            .. Note:: :m:`P3` did not originally define quantification. This is a novel construction.
+
+            The universal quantifier is thought of like `generalized conjunction`.
+            Since :s:`A & B` is defined as :s:`~(~A V ~B)`, we can generalize conjunction
+            in the following way. Take the set of values of the sentence resulting
+            from the substitution of the variable with each constant. Then apply
+            the negation function to each of those values. Then take the maximum
+            of those values (the `generalized disjunction`), and apply the negation
+            function to that minimum value. The result is the value of the universal
+            sentence.
+
+    Logical Consequence
+    -------------------
+
+    Logical consequence is defined just like in :m:`K3`:
+    
+    .. include:: include/k3/m.consequence.rst
+
+    .. _p3-system:
 
     Tableaux System
     ===============
@@ -29,13 +75,6 @@ from classical logic, as well as more well-known many-valued systems.
 
     .. autoclass:: TableauxRules
         :members:
-
-    Logical Consequence
-    ===================
-
-    Logical consequence is defined just like in :m:`K3`:
-    
-    .. include:: include/k3/m.consequence.rst
 
     References
     ==========

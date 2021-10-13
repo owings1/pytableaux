@@ -20,14 +20,10 @@
 name = 'P3'
 
 class Meta(object):
-
     title    = 'Post 3-valued logic'
     category = 'Many-valued'
-
     description = 'Emil Post three-valued logic (T, F, and N) with mirror-image negation'
-
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-
     category_display_order = 120
 
 from lexicals import Operated
@@ -35,33 +31,13 @@ from . import fde, k3
 
 class Model(k3.Model):
     """
-    A P3 model is just like a `K3 model`_ with different tables for some of the connectives.
-
-    .. _K3 model: k3.html#logics.k3.Model
+    A :m:`P3` model is just like a :ref:`K3 model <k3-model>` with different tables
+    for some of the connectives.
     """
-
-    def value_of_operated(self, sentence, **kw):
-        """
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
-
-        Most notable is the behavior of negation. Disjunction is the same as in
-        :ref:`K3 <K3>`, but conjunction is quite different, which is defined in terms of
-        disjunction in the standard way (:s:`~(~A V ~B)`).
-
-        //truth_tables//p3//
-
-        .. _K3: k3.html
-        """
-        return super().value_of_operated(sentence, **kw)
 
     def value_of_universal(self, sentence, **kw):
         """
-        NB: P3 did not originally define quantification. This is a novel construction.
-
-        The universal quantifier is thought of like `generalized conjunction`.
-        Since :s:`A & B` is defined as :s:`~(~A V ~B)`, we can generalize conjunction
-        in the following way. Take the set of values of the sentence resulting
+        Take the set of values of the sentence resulting
         from the substitution of the variable with each constant. Then apply
         the negation function to each of those values. Then take the maximum
         of those values (the `generalized disjunction`), and apply the negation
@@ -98,10 +74,8 @@ class Model(k3.Model):
 
 class TableauxSystem(fde.TableauxSystem):
     """
-    P3's Tableaux System inherits directly from the `FDE system`_, employing
-    designation markers, and building the trunk in the same way.
-
-    .. _FDE system: fde.html#logics.fde.TableauxSystem
+    :m:`P3`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
+    employing designation markers, and building the trunk in the same way.
     """
 
     branchables = {
@@ -198,15 +172,11 @@ class DefaultAllConstantsRule(fde.DefaultAllConstantsRule):
 
 class TableauxRules(object):
     """
-    The Tableaux System for P3 contains the `FDE closure rule`_, and the
-    `K3 closure rule`_. Some of the operator rules are the same as :ref:`FDE <FDE>`,
-    most notably disjunction. However, many rules for P3 are different
+    The Tableaux System for :m:`P3` contains the FDE closure rule, and the
+    :m:`K3` closure rule. Some of the operator rules are the same as :ref:`FDE <FDE>`,
+    most notably disjunction. However, many rules for :m:`P3` are different
     from :ref:`FDE <FDE>`, given the non-standard negation. Notably, an undesignated
     double-negation will branch.
-    
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
-    .. _K3 closure rule: k3.html#logics.k3.TableauxRules.GlutClosure
-    .. _FDE: fde.html
     """
 
     class GlutClosure(k3.TableauxRules.GlutClosure):
@@ -233,7 +203,7 @@ class TableauxRules(object):
                 'adds': [
                     [
                         {'sentence': si.negate(), 'designated': False},
-                        {'sentence':        si , 'designated': False},
+                        {'sentence': si         , 'designated': False},
                     ],
                 ],
             }
@@ -259,7 +229,7 @@ class TableauxRules(object):
                         {'sentence': si.negate(), 'designated': True},
                     ],
                     [
-                        {'sentence':        si , 'designated': True},
+                        {'sentence': si         , 'designated': True},
                     ],
                 ],
             }
@@ -292,9 +262,9 @@ class TableauxRules(object):
                 'adds': [
                     [
                         {'sentence': s.lhs.negate(), 'designated': False},
-                        {'sentence':        s.lhs , 'designated': False},
+                        {'sentence': s.lhs         , 'designated': False},
                         {'sentence': s.rhs.negate(), 'designated': False},
-                        {'sentence':        s.rhs , 'designated': False},
+                        {'sentence': s.rhs         , 'designated': False},
                     ],
                 ],
             }
@@ -318,11 +288,11 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence':        s.lhs , 'designated': True},
+                        {'sentence': s.lhs         , 'designated': True},
                         {'sentence': s.rhs.negate(), 'designated': False},
                     ],
                     [
-                        {'sentence':        s.rhs , 'designated': True},
+                        {'sentence': s.rhs         , 'designated': True},
                         {'sentence': s.lhs.negate(), 'designated': False},
                     ],
                 ],
@@ -349,13 +319,13 @@ class TableauxRules(object):
                         {'sentence': s.lhs.negate(), 'designated': True},
                     ],
                     [
-                        {'sentence':        s.lhs , 'designated': True},
+                        {'sentence': s.lhs         , 'designated': True},
                     ],
                     [
                         {'sentence': s.rhs.negate(), 'designated': True},
                     ],
                     [
-                        {'sentence':        s.rhs , 'designated': True},
+                        {'sentence': s.rhs         , 'designated': True},
                     ],
                 ],
             }
@@ -380,9 +350,9 @@ class TableauxRules(object):
                 'adds': [
                     [
                         {'sentence': s.lhs.negate(), 'designated': False},
-                        {'sentence':        s.lhs , 'designated': False},
+                        {'sentence': s.lhs         , 'designated': False},
                         {'sentence': s.rhs.negate(), 'designated': False},
-                        {'sentence':        s.rhs , 'designated': False},
+                        {'sentence': s.rhs         , 'designated': False},
                     ],
                     [
                         {'sentence': s.lhs.negate(), 'designated': True},
@@ -521,25 +491,25 @@ class TableauxRules(object):
         """
         This is the same as the rule for the material conditional.
         """
-        operator    = 'Conditional'
+        operator = 'Conditional'
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        operator    = 'Conditional'
+        operator = 'Conditional'
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        operator    = 'Conditional'
+        operator = 'Conditional'
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
         """
         This is the same as the rule for the material conditional.
         """
-        operator    = 'Conditional'
+        operator = 'Conditional'
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         """

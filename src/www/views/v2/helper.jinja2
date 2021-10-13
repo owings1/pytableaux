@@ -10,18 +10,18 @@
 {%- endmacro -%}
 
 {% macro predicate_symbol(notn, symbol, subscript) -%}
-    <span class="predicateSymbol notation-{{notn}} hidden">
-        {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript }}</span>{% endif -%}
+    <span class="predicate-symbol notation-{{notn}} hidden">
+        {{- symbol|e }}{% if subscript > 0 %}<sub>{{ subscript }}</sub>{% endif -%}
     </span>
 {%- endmacro %}
 
 {%- macro predicate_row(index, subscript, name='', arity='') %}
-    <tr class="userPredicate">
+    <tr class="user-predicate">
         <td>
             {{- caller() -}}
-            <input type="hidden" class="predicateSymbol" name="user_predicate_symbols[]" value="{{ index }}.{{ subscript }}" />
+            <input type="hidden" class="predicate-symbol" name="user_predicate_symbols[]" value="{{ index }}.{{ subscript }}" />
         </td>
-        <td>
+        <td colspan="2">
             <input type="text" class="arity" name="user_predicate_arities[]" value="{{ arity }}"/> arity
         </td>
     </tr>

@@ -43,7 +43,7 @@ from www.conf import available, consts, cp_global_config, jenv, \
     logger, logic_categories, metrics, modules, example_arguments, \
     nups, opts, re_email, parser_tables
 
-opts['is_debug'] = False
+# opts['is_debug'] = False
 mailroom = Mailroom(opts)
 
 ##############################
@@ -92,7 +92,17 @@ for notn in lexwriter_notations:
 lexwriter_encodings_common = sorted(_enc)
 del(_enc)
 
-print('lexwriter_encodings_common', lexwriter_encodings_common)
+########################
+## Static LexWriters  ##
+########################
+lexwriters = {
+    notn: {
+        enc: create_lexwriter(notn=notn, enc=enc)
+        for enc in RenderSet.available(notn)
+    }
+    for notn in lexwriter_notations 
+}
+
 # Defaults on first load.
 form_defaults = {
     'input_notation'  : 'standard',
@@ -130,6 +140,7 @@ base_view_data = {
     'issues_href'         : issues_href,
     'lexwriter_notations' : lexwriter_notations,
     'lexwriter_encodings' : lexwriter_encodings_common,
+    'lwstdhtm'            : lexwriters['standard']['html'],
     'logic_categories'    : logic_categories,
     'logic_modules'       : available['logics'],
     'logics'              : modules['logics'],
@@ -211,17 +222,6 @@ class RequestDataError(Exception):
     def __init__(self, errors):
         self.errors = errors
 
-########################
-## Static LexWriters  ##
-########################
-lexwriters = {
-    notn: {
-        enc: create_lexwriter(notn=notn, enc=enc)
-        for enc in RenderSet.available(notn)
-    }
-    for notn in lexwriter_notations 
-}
-
 ###################
 ## Webapp        ##
 ###################
@@ -247,7 +247,11 @@ class App(object):
         else:
             view_version = 'v2'
         view = '/'.join((view_version, 'main'))
-        
+
+        is_debug = opts['is_debug']
+        if is_debug and req_data.get('debug') == 'false':
+            is_debug = False
+
         form_data = fix_form_data(req_data)
         api_data = resp_data = None
         is_proof = is_controls = is_models = False
@@ -278,7 +282,7 @@ class App(object):
                         form_data.get('options.models') and
                         not tableau.valid
                     )
-                    selected_tab = 'controls'
+                    selected_tab = 'view'
                 else:
                     selected_tab = 'stats'
                 data.update({
@@ -290,13 +294,14 @@ class App(object):
             data['errors'] = errors
 
         browser_data.update({
+            'is_debug'     : is_debug,
             'is_proof'     : is_proof,
             'is_controls'  : is_controls,
             'is_models'    : is_models,
             'selected_tab' : selected_tab,
         })
 
-        if opts['is_debug']:
+        if is_debug:
             debugs.extend([
                 ('api_data', api_data),
                 ('req_data', req_data),

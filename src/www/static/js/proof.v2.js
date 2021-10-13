@@ -35,7 +35,7 @@
         Slow : 500,
     }
 
-    // relationship string contants
+    // relationship string constants
     const Rel = {
         Self       : 'self'       ,
         Ancestor   : 'ancestor'   ,
@@ -192,10 +192,10 @@
         't' : true,
         'T' : true,
         'Z' : true,
-        'q' : true,
-        'Q' : true,
-        'm' : true,
-        'M' : true,
+        // 'q' : true,
+        // 'Q' : true,
+        // 'm' : true,
+        // 'M' : true,
         '@' : true,
         '$' : true,
         'W' : true,
@@ -836,12 +836,14 @@
             var $forward = $([Dcls.StepEnd, Dcls.StepNext].join(', '), $controls)
             if (n === numSteps) {
                 $forward.addClass(Cls.MarkDisabled)
-            } else if (n < numSteps) {
+            }
+            if (n < numSteps) {
                 $forward.removeClass(Cls.MarkDisabled)
             }
             if (n === 0) {
                 $backward.addClass(Cls.MarkDisabled)
-            } else if (numSteps > n) {
+            }
+            if (n > 0) {
                 $backward.removeClass(Cls.MarkDisabled)
             }
         }
