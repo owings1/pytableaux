@@ -20,14 +20,10 @@
 name = 'GO'
 
 class Meta(object):
-
     title    = 'Gappy Object 3-valued Logic'
     category = 'Many-valued'
-
     description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
-
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-
     category_display_order = 60
 
 from lexicals import Operated, Quantified

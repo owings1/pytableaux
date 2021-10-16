@@ -11,7 +11,7 @@ Quick Start
 The following is an example for building a proof in {@CPL} for Modus Ponens::
 
     from parsers import parse_argument
-    from tableaux import Tableau
+    from proof.tableaux import Tableau
     from proof.writers import write_tableau
 
     # Create an argument

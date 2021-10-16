@@ -36,7 +36,7 @@ import examples
 from lexicals import list_operators, operarity, create_lexwriter, is_operator, \
     Constant, Variable, RenderSet, get_system_predicate
 from parsers import create_parser, parse_argument, CharTable
-from tableaux import Tableau, TableauxSystem as TabSys
+from proof.tableaux import Tableau, TableauxSystem as TabSys
 from proof.writers import create_tabwriter
 from proof.rules import Rule, ClosureRule, PotentialNodeRule, FilterNodeRule
 from models import truth_table

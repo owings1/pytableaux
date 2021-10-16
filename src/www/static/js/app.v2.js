@@ -63,13 +63,12 @@
                         refreshStatuses()
                     } else if ($target.hasClass('arity')) {
                         refreshStatuses(true)
-                    } else if ($target.hasClass('predicateName')) {
+                    }/* else if ($target.hasClass('predicateName')) {
                         refreshStatuses(true)
-                    } else if ($target.is('#selected_logic')) {
+                    } */else if ($target.is('#selected_logic')) {
                         refreshLogic()
                     }
                     // if ($target.closest('.fieldset.output').length) {
-                    //     refreshOutputHeader()
                     //     refreshArgumentHeader()
                     // }
                 })
@@ -79,7 +78,6 @@
                 })
 
                 $Ctx.on('click', function(e) {
-                    // debug('click')
                     const $target = $(e.target)
                     if ($target.is('#clear_argument')) {
                         clearArgument()
@@ -88,12 +86,8 @@
                         refreshStatuses()
                         // refreshArgumentHeader()
                     } else if ($target.hasClass('add-predicate')) {
-                        // debug('add-predicate')
                         addEmptyPredicate().find(':input').focus()
-                    } else {
-                        // debug($target)
                     }
-                    // debug('bye')
                 })
                 
 
@@ -138,19 +132,14 @@
             setTimeout(function() {
                 if (is_proof) {
                     var tableau = $('.tableau').tableau('instance')
-                    // api.width('stretch').center()
-                    // console.log(api.s)
                 }
                 ensureEmptyPremise()
                 // ensureEmptyPredicate()
                 refreshNotation()
                 refreshLogic()
-                // refreshOutputHeader()
-                // if ($('.evaluation').length) {
                 if (is_proof) {
                     refreshStatuses()
                 }
-                // refreshArgumentHeader()
             })
         }
 
@@ -197,7 +186,7 @@
                 n       : premiseNum++,
                 value   : value   || '',
                 status  : status  || '',
-                message : message || ''
+                message : message || '',
             }))
         }
 
@@ -298,23 +287,7 @@
         function addPredicate(index, subscript, name, arity) {
             const thisNotation = currentNotation()
             var html = ''
-            // nups: "notation-user-predicate-symbols"
             $.each(AppData.nups, function(notation, symbols) {
-                // var classes = ['operator-symbol', 'predicate-symbol', 'user-predicate']
-                // var html ='<span class="' + classes.join(' ') + '">'
-                // html += $('<div/>').text(symbols[index]).html()
-                // if (subscript > 0) {
-                //     html += '<sub>' + subscript + '</sub>'
-                // }
-                // html += '</span>'
-                // const rendered = render(Templates.predicate, {
-                //     index       : index,
-                //     subscript   : subscript,
-                //     arity       : arity || '',
-                //     name        : name || '',
-                //     symbol_html : html,
-                // })
-                // $('.notation-' + notation + ' table.predicates tbody', $Ctx).append(rendered)
                 var classes = ['predicate-symbol', 'notation-' + notation]
                 if (notation != thisNotation)
                     classes.push('hidden')
@@ -333,7 +306,6 @@
                 symbol_html : html
             }))
             $('table.predicates', $Ctx).append($el)
-            // debug($($el.get(0)))
             return $el
         }
 
@@ -366,7 +338,6 @@
          * @return void
          */
         function clearPredicates() {
-            // $('tr.user-predicate').remove()
             $('tr.user-predicate', $Ctx).remove()
         }
 
@@ -437,12 +408,6 @@
             const logicName = $('#selected_logic').val()
             $('.logic-details', $Ctx).hide()
             $('.logic-details.' + logicName, $Ctx).show()
-            // $('#logic-heading-description').html(
-            //     [
-            //         $('.logic-details .logic-name.' + logicName, $Ctx).html(),
-            //         $('.logic-details .logic-title.' + logicName, $Ctx).html()
-            //     ].join(' - ')
-            // )
         }
 
         /**
@@ -604,20 +569,6 @@
         //     $('#argument-heading-rendered').html(premises.join(', ') + ' &there4; ' + conclusion)
         // }
 
-        // /**
-        //  * Update the display in the header bar of the output fieldset.
-        //  *
-        //  * @return void
-        //  */
-        // function refreshOutputHeader() {
-        //     $('#output-heading-description').html(
-        //         [
-        //             currentOutputFormat().toUpperCase(),
-        //             currentOutputNotation()
-        //         ].join(' | ')
-        //     )
-        // }
-
         /**
          * Generate an integer hash for a string.
          *
@@ -661,14 +612,14 @@
                     symbol_enc : $('#symbol_enc', $Frm).val(),
                     options : {
                         classes: [],
-                        models: null,
+                        models: undefined,
                     }
                 },
-                build_models: null,
-                max_steps: null,
-                rank_optimizations: null,
-                group_optimizations: null,
-                show_controls: null,
+                build_models: undefined,
+                max_steps: undefined,
+                rank_optimizations: undefined,
+                group_optimizations: undefined,
+                show_controls: undefined,
             }
             $('input.premise', $Frm).each(function() {
                 const val = $(this).val()
@@ -678,7 +629,6 @@
             })
             $('.user-predicate', $Frm).each(function() {
                 const $tr = $(this)
-                debug('tr', $tr)
                 const arity = $('input.arity', $tr).val()
                 if (arity.length > 0) {
                     const coords = $('input.predicate-symbol', $tr).val().split('.')
@@ -703,7 +653,6 @@
                 const name = $me.attr('name')
                 const opt = name.split('.')[1]
                 const value = $me.is(':checked')
-                debug({name, opt, value})
                 data.output.options[opt] = value
             })
             if (data.output.options.models) {
@@ -720,7 +669,7 @@
                     data.max_steps = maxStepsIntVal
                 }
             } else {
-                data.max_steps = null
+                data.max_steps = undefined
             }
             const $rankOptim = $('#options_rank_optimizations', $Frm)
             if ($rankOptim.length) {
@@ -768,6 +717,6 @@
 
         init()
 
-        debug({AppData})
+        // debug({AppData})
     })
 })(jQuery);

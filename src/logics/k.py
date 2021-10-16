@@ -30,7 +30,7 @@ class Meta(object):
 from lexicals import get_system_predicate, Atomic, Operated, Quantified, Predicated
 from models import BaseModel
 
-from tableaux import TableauxSystem
+from proof.tableaux import TableauxSystem as BaseSystem
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
     NewConstantStoppingRule
 from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
@@ -627,7 +627,7 @@ class Frame(object):
         #return cmp(self.world, other.world)
         return (self.world > other.world) - (self.world < other.world)
 
-class TableauxSystem(TableauxSystem):
+class TableauxSystem(BaseSystem):
     """
     Modal tableaux are similar to classical tableaux, with the addition of a
     *world* index for each sentence node, as well as *access* nodes representing

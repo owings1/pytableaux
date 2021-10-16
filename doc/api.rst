@@ -5,7 +5,7 @@ Modules
 
 .. toctree::
 
-    modules/tableaux
+    modules/proof.tableaux
 
     modules/proof.writers
 

@@ -4,7 +4,7 @@ Tableaux Module
 
 .. contents:: :local:
 
-.. automodule:: tableaux
+.. automodule:: proof.tableaux
 
     .. autoclass:: Tableau
 

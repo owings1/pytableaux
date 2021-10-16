@@ -153,14 +153,7 @@ rtd-theme:
 .pt-app .footer-wrapper {
   bottom: 0px;
 }
-.pt-app.has-proof #proove-tabs-wrapper {
-  /* position: -webkit-sticky; */
-  /* position: sticky; */
-  position: fixed;
-  top: 35px;
-  left: 20px;
-  width: 95%;
-}
+
 .pt-app .tableau-wrapper {
   margin-top: 170px;
 }
@@ -206,6 +199,16 @@ rtd-theme:
 /*
  * Tabs
  */
+ .pt-app.has-proof #proove-tabs-wrapper {
+  /* position: -webkit-sticky; */
+  /* position: sticky; */
+  position: fixed;
+  max-height: 80%;
+  overflow-y: auto;
+  top: 35px;
+  left: 20px;
+  width: 95%;
+}
  .ui-tabs #tab-view.ui-tabs-panel,
  .ui-tabs #tab-step.ui-tabs-panel,
  .ui-tabs #tab-stats.ui-tabs-panel,

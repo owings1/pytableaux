@@ -23,7 +23,7 @@ from lexicals import Atomic, Operated, BaseLexWriter, \
     create_lexwriter, get_system_predicate
 from parsers import parse, create_parser
 from errors import *
-from tableaux import Tableau
+from proof.tableaux import Tableau
 from proof.writers import create_tabwriter
 import examples
 

@@ -20,14 +20,10 @@
 name = 'LP'
 
 class Meta(object):
-
     title    = 'Logic of Paradox'
     category = 'Many-valued'
-
     description = 'Three-valued logic (T, F, B)'
-
     tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
-    
     category_display_order = 100
 
 from lexicals import Atomic

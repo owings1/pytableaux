@@ -25,7 +25,7 @@ from lexicals import Argument, Predicate, Vocabulary, RenderSet, \
     create_lexwriter, list_operators, list_quantifiers, get_system_predicates, \
     notations as lexwriter_notations
 from parsers import create_parser, notations as parser_notations
-from tableaux import Tableau
+from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
 from utils import get_logic, isstr
 import json, re, time, traceback
@@ -43,7 +43,6 @@ from www.conf import available, consts, cp_global_config, jenv, \
     logger, logic_categories, metrics, modules, example_arguments, \
     nups, opts, re_email, parser_tables
 
-# opts['is_debug'] = False
 mailroom = Mailroom(opts)
 
 ##############################
@@ -81,7 +80,8 @@ cp_config = {
 #####################
 ## Static Data     ##
 #####################
-# For notn, only include those common to all, until UI suports it
+# For notn, only include those common to all, until UI suports
+# notn-specific choice.
 lexwriter_encodings = {
     notn: RenderSet.available(notn)
     for notn in lexwriter_notations
@@ -103,7 +103,9 @@ lexwriters = {
     for notn in lexwriter_notations 
 }
 
-# Defaults on first load.
+#####################
+## Form Defaults   ##
+#####################
 form_defaults = {
     'input_notation'  : 'standard',
     'format'          : 'html',
@@ -117,7 +119,10 @@ form_defaults = {
     'options.rank_optimizations': True,
 
 }
-# Rendered to javascript
+
+###############
+## JS Data   ##
+###############
 base_browser_data = {
     'example_predicates'    : examples.test_pred_data,
     # nups: "notation-user-predicate-symbols"
@@ -127,6 +132,9 @@ base_browser_data = {
     'is_debug'              : opts['is_debug'],
 }
 
+#################
+## View Data   ##
+#################
 base_view_data = {
     'app_name'            : opts['app_name'],
     'copyright'           : fixed.copyright,
@@ -248,9 +256,10 @@ class App(object):
             view_version = 'v2'
         view = '/'.join((view_version, 'main'))
 
-        is_debug = opts['is_debug']
-        if is_debug and req_data.get('debug') == 'false':
+        if req_data.get('debug') == 'false':
             is_debug = False
+        else:
+            is_debug = opts['is_debug']
 
         form_data = fix_form_data(req_data)
         api_data = resp_data = None
@@ -280,14 +289,14 @@ class App(object):
                     is_controls = bool(form_data.get('show_controls'))
                     is_models = bool(
                         form_data.get('options.models') and
-                        not tableau.valid
+                        tableau.invalid
                     )
                     selected_tab = 'view'
                 else:
                     selected_tab = 'stats'
                 data.update({
-                    'tableau'     : tableau,
-                    'lw'          : lw,
+                    'tableau' : tableau,
+                    'lw'      : lw,
                 })
 
         if errors:
@@ -306,7 +315,6 @@ class App(object):
                 ('api_data', api_data),
                 ('req_data', req_data),
                 ('form_data', form_data),
-                ('method', req.method),
                 ('resp_data', debug_result(resp_data)),
                 ('browser_data', browser_data),
             ])
@@ -590,14 +598,10 @@ class App(object):
             else:
                 odata['symbol_enc'] = 'ascii'
         odata['options'] = odata.get('options', {})
-        # odata['options']['color_open'] = odata['options'].get('color_open', True)
-        # odata['options']['controls'] = odata['options'].get('controls', True)
-        # odata['options']['models'] = odata['options'].get('models', False)
         body['build_models'] = bool(body.get('build_models'))
         body['max_steps'] = body.get('max_steps', None)
         body['rank_optimizations'] = body.get('rank_optimizations', True)
         body['group_optimizations'] = body.get('group_optimizations', True)
-
 
         odata['options']['debug'] = opts['is_debug']
 

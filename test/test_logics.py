@@ -22,7 +22,7 @@ from errors import *
 from utils import get_logic
 from lexicals import Vocabulary, Atomic, Constant, Predicated, Quantified, \
     Operated, Variable, get_system_predicate
-from tableaux import Tableau, Branch, Node
+from proof.tableaux import Tableau, Branch, Node
 from proof.rules import Rule, FilterNodeRule
 from proof.helpers import MaxConstantsTracker
 from parsers import parse, parse_argument

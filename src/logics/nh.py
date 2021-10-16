@@ -20,17 +20,13 @@
 name = 'NH'
 
 class Meta(object):
-
     title    = 'Paraconsistent Hybrid Logic'
     category = 'Many-valued'
-
     description = ' '.join((
         'Three-valued logic (True, False, Both) with non-standard conjunction,',
         'and a classical-like conditional',
     ))
-
     tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
-
     category_display_order = 110
 
 from lexicals import Operated

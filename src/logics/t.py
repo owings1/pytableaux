@@ -20,14 +20,10 @@
 name = 'T'
 
 class Meta(object):
-
     title    = 'Reflexive Normal Modal Logic'
     category = 'Bivalent Modal'
-
     description = 'Normal modal logic with a reflexive access relation'
-
     tags = ['bivalent', 'modal', 'first-order']
-
     category_display_order = 3
 
 from lexicals import Atomic

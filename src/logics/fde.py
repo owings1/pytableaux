@@ -33,7 +33,7 @@ class Meta(object):
 from models import BaseModel
 from lexicals import Atomic, Operated, Quantified, get_system_predicate
 
-from tableaux import TableauxSystem as BaseSystem
+from proof.tableaux import TableauxSystem as BaseSystem
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
     NewConstantStoppingRule
 

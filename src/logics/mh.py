@@ -20,17 +20,13 @@
 name = 'MH'
 
 class Meta(object):
-
     title    = 'Paracomplete Hybrid Logic'
     category = 'Many-valued'
-
     description = ' '.join((
         'Three-valued logic (True, False, Neither) with non-standard disjunction,',
         'and a classical-like conditional',
     ))
-
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-
     category_display_order = 70
 
 from lexicals import Operated

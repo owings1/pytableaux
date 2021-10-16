@@ -1,7 +1,7 @@
 
 from errors import *
 
-from tableaux import TableauxSystem as TabSys, Branch, Node, Tableau
+from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau
 from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
 from lexicals import Atomic, Constant, Predicated
 import examples
