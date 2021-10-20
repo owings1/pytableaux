@@ -2109,10 +2109,10 @@ class TestK(LogicTester):
         for i in range(10):
             opens = {b for b in proof.open_branches() if b != b1}
             for b in opens:
-                res = proof.get_branch_application(b)
+                res = proof._get_branch_application(b)
                 if res:
                     rule, target = res
-                    proof.do_application(rule, target, None)
+                    proof._do_application(rule, target, None)
                     break
 
         # we shouldn't apply now
@@ -2425,7 +2425,7 @@ class TestMaxConstantsTracker(LogicTester):
         arg = parse_argument('NLVxNFx', ['LMSxFx'], vocab=self.vocab)
         proof = Tableau(self.logic)
         proof.add_rule_group([self.Rule])
-        proof.set_argument(arg)
+        proof.argument = arg
         rule = proof.get_rule(self.Rule)
         branch = proof.branches[0]
         assert rule.mtr._compute_max_constants(branch) == 3

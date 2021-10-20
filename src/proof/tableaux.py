@@ -1,8 +1,26 @@
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2021 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux - tableaux module
 from lexicals import Constant
 from utils import get_logic, StopWatch
-
 from errors import IllegalStateError, TimeoutError
-
+from events import Events
 from inspect import isclass
 
 class TableauxSystem(object):
@@ -28,48 +46,6 @@ class Tableau(object):
     Represents a tableau proof of an argument for the given logic.
     """
 
-    #: A tableau is finished when no more rules can apply.
-    finished = False
-
-    #: An argument is proved (valid) when its finished tableau has no
-    #: open branches.
-    valid = None
-
-    #: An argument is disproved (invalid) when its finished tableau has
-    #: at least one open branch, and it was not ended prematurely.
-    invalid = None
-
-    #: Whether the tableau ended prematurely. This can happen when the
-    #: `max_steps` or `build_timeout` options are exceeded.
-    is_premature = False
-
-    #: The branches on the tableau. The branches are stored as list to
-    #: maintain a consistent ordering. Since a tableau really consists of
-    #: a `set`, and are represented internally as such, this will always
-    #: be a list of unique branches.
-    branches = list()
-
-    #: The history of rule applications. Each application is a map (`dict`)
-    #: with the following keys:
-    #:
-    #: - `rule` - The :class:`~logic.Rule` instance that was applied.
-    #:
-    #: - `target` - A `dict` containing information about the elements to
-    #:    which the rule was applied, as well as any auxilliary information
-    #:    that may be tracked for various rules and optimizations. There is
-    #:    no hard constraint on what keys are in a target, but all current
-    #:    implementations at least provide a `branch` key.
-    #:
-    #: - `duration_ms` - The duration in milliseconds of the application,
-    #:    or `0` if no step timer was associated.
-    history = list()
-
-    #: A tree structure of the tableau. This is generated only after the
-    #: proof is finished.
-    tree = dict()
-
-    models = None
-
     default_opts = {
         'is_group_optim'  : True,
         'is_build_models' : False,
@@ -79,88 +55,133 @@ class Tableau(object):
 
     def __init__(self, logic, argument=None, **opts):
 
+        #: The unique object ID of the tableau.
+        #:
+        #: :type: int
         self.id = id(self)
 
+        #: A tableau is finished when no more rules can apply.
         self.finished = False
+
+        #: An argument is valid (proved) when its finished tableau has no
+        #: open branches.
         self.valid = None
+
+        #: An argument is invalid (disproved) when its finished tableau has
+        #: at least one open branch, and it was not ended prematurely.
         self.invalid = None
+
+        #: Whether the tableau ended prematurely. This can happen when the
+        #: `max_steps` or `build_timeout` options are exceeded.
         self.is_premature = False
 
-        self.branches = []
-        self.history = []
+        #: The branches on the tableau. The branches are stored as list to
+        #: maintain a consistent ordering. Since a tableau really consists of
+        #: a `set` of branches, and they are represented internally as such,
+        #: this will always be a list of `unique` branches.
+        self.branches = list()
 
-        self.tree = dict()
+        #: The history of rule applications. Each application is a ``dict``
+        #: with the following keys:
+        #:
+        #: - `rule` - The :class:`~proof.rules.Rule` instance that was applied.
+        #:
+        #: - `target` - A ``dict`` containing information about the elements to
+        #:    which the rule was applied, as well as any auxilliary information
+        #:    that may be tracked for various rules and optimizations. There is
+        #:    no hard constraint on what keys are in a target, but all current
+        #:    implementations at least provide a `branch` key.
+        #:
+        #: - `duration_ms` - The duration in milliseconds of the application,
+        #:    or ``0`` if no step timer was associated.
+        self.history = list()
 
-        #: A reference to the logic, if given. To set the logic after
-        #: constructing, it is recommended to use ``set_logic()`` instead
-        #: of setting this property directly.
-        self.logic = None
-
-        #: The argument of the tableau, if given. To set the argument after
-        #: constructing, it is recommended to use ``set_argument()`` instead
-        #: of setting this property directly.
-        self.argument = None
+        #: A tree structure of the tableau. This is generated only after the
+        #: proof is finished.
+        #:
+        #: :type: dict
+        self.tree = None
 
         # Rules
-        self.all_rules = []
-        self.closure_rules = []
-        self.rule_groups = []
+        self.all_rules = list()
+        self.closure_rules = list()
+        self.rule_groups = list()
 
-        # build timers
+        # Post-build properties
+        self.models = None
+        self.stats = None
+
+        # Timers
         self.build_timer = StopWatch()
-        self.trunk_build_timer = StopWatch()
-        self.tree_timer = StopWatch()
         self.models_timer = StopWatch()
+        self.tree_timer = StopWatch()
+        self.trunk_build_timer = StopWatch()
 
-        # opts
+        # Options
         self.opts = dict(self.default_opts)
         self.opts.update(opts)
 
         self.open_branchset = set()
-        self.branch_dict = dict()
+        self.__branch_dict = dict()
         self.trunk_built = False
         self.current_step = 0
+
+        self.__listeners = {
+            Events.AFTER_BRANCH_ADD   : list(),
+            Events.AFTER_BRANCH_CLOSE : list(),
+            Events.AFTER_NODE_ADD     : list(),
+            Events.AFTER_NODE_TICK    : list(),
+            # Events.AFTER_RULE_APPLY   : list(),
+            Events.AFTER_TRUNK_BUILD  : list(),
+            Events.BEFORE_TRUNK_BUILD : list(),
+        }
 
         # Cache for the branching complexities
         self.branching_complexities = dict()
 
         if logic != None:
-            self.set_logic(logic)
+            self.logic = logic
+        else:
+            self.__logic = None
 
         if argument != None:
-            self.set_argument(argument)
+            self.argument = argument
+        else:
+            self.__argument = None
 
-    def build(self, **opts):
+    @property
+    def logic(self):
         """
-        Build the tableau. Returns self.
+        The logic of the tableau.
         """
-        self.opts.update(opts)
-        with self.build_timer:
-            while not self.finished:
-                self.__check_timeout()
-                self.step()
-        self.finish()
-        return self
+        return self.__logic
 
-    def set_logic(self, logic):
+    @logic.setter
+    def logic(self, logic):
         """
-        Set the logic for the tableau. Assumes building has not started.
-        Returns self.
+        Setter for ``logic`` property. Assumes building has not started.
         """
         self.__check_not_started()
-        self.logic = get_logic(logic)
+        self.__logic = get_logic(logic)
         self.clear_rules()
         self.logic.TableauxSystem.add_rules(self, self.opts)
-        return self
 
-    def set_argument(self, argument):
+    @property
+    def argument(self):
         """
-        Set the argument for the tableau. Return self.
+        The argument of the tableau.
 
-        If the tableau has a logic set, then ``build_trunk()`` is automatically
-        called.
+        :type: lexicals.Argument
         """
-        self.argument = argument
+        return self.__argument
+
+    @argument.setter
+    def argument(self, argument):
+        """
+        Setter for ``argument`` property. If the tableau has a logic set, then
+        ``build_trunk()`` is automatically called.
+        """
+        self.__argument = argument
         if self.logic != None:
             self.build_trunk()
         return self
@@ -170,15 +191,15 @@ class Tableau(object):
         Clear the rules. Assumes building has not started. Returns self.
         """
         self.__check_not_started()
-        self.closure_rules = []
-        self.rule_groups = []
-        self.all_rules = []
+        self.closure_rules.clear()
+        self.rule_groups.clear()
+        self.all_rules.clear()
         return self
 
     def add_closure_rule(self, rule):
         """
-        Add a closure rule. The ``rule`` parameter can be either a class
-        or instance. Returns self.
+        Add a closure rule. The ``rule`` parameter can be either a class or
+        instance. Returns self.
         """
         self.__check_not_started()
         if isclass(rule):
@@ -202,6 +223,18 @@ class Tableau(object):
         self.all_rules.extend(group)
         return self
 
+    def build(self, **opts):
+        """
+        Build the tableau. Returns self.
+        """
+        self.opts.update(opts)
+        with self.build_timer:
+            while not self.finished:
+                self.__check_timeout()
+                self.step()
+        self.finish()
+        return self
+
     def step(self):
         """
         Find, execute, and return the next rule application. If no rule can
@@ -209,9 +242,13 @@ class Tableau(object):
         If the tableau is already finished when this method is called, return
         ``False``.
 
-        Internally, this calls the ``get_application()`` method to get the
-        rule application, and, if non-empty, calls the ``do_application()``
+        Internally, this calls the ``__get_application()`` method to get the
+        rule application, and, if non-empty, calls the ``_do_application()``
         method.
+
+        :return: The application dict.
+        :rtype: dict
+        :raises IllegalStateError: if the trunk is not built.
         """
         if self.finished:
             return False
@@ -222,41 +259,206 @@ class Tableau(object):
             if self.__is_max_steps_exceeded():
                 self.is_premature = True
             else:
-                res = self.get_application()
+                res = self.__get_application()
             if res:
                 rule, target = res
-                application = self.do_application(rule, target, step_timer)
+                application = self._do_application(rule, target, step_timer)
             else:
                 self.finish()
         return application
 
-    def get_application(self):
+    def open_branches(self):
+        """
+        Return the set of open branches on the tableau. This does **not** make
+        a copy of the set, and so should be copied by the caller if modifications
+        may occur.
+        """
+        return self.open_branchset
+
+    def get_rule(self, rule):
+        """
+        Get a rule instance by name, class, or instance reference. Returns first
+        matching occurrence.
+        """
+        for r in self.all_rules:
+            if r.__class__ == rule or r.name == rule or r.__class__.__name__ == rule:
+                return r
+            if r.__class__ == rule.__class__:
+                return r
+
+    def branch(self, parent = None):
+        """
+        Create a new branch on the tableau, as a copy of ``parent``, if given.
+        This calls the ``after_branch_add()`` callback on all the rules of the
+        tableau.
+        """
+        if parent == None:
+            branch = Branch(self)
+        else:
+            branch = parent.copy()
+            branch.parent = parent
+        self.add_branch(branch)
+        return branch
+
+    def add_branch(self, branch):
+        """
+        Add a new branch to the tableau. Returns self.
+        """
+        branch.index = len(self.branches)
+        self.branches.append(branch)
+        if not branch.closed:
+            self.open_branchset.add(branch)
+        self.__branch_dict[branch.id] = branch
+        self.__after_branch_add(branch)
+        return self
+
+    def get_branch(self, branch_id):
+        """
+        Get a branch by its id.
+
+        :raises KeyError: if the branch is not found.
+        """
+        return self.__branch_dict[branch_id]
+
+    def build_trunk(self):
+        """
+        Build the trunk of the tableau. Delegates to the ``build_trunk()`` method
+        of the logic's ``TableauxSystem``. This is called automatically when the
+        tableau has non-empty ``argument`` and ``logic`` properties.
+        """
+        self.__check_trunk_not_built()
+        with self.trunk_build_timer:
+            self.__before_trunk_build()
+            self.logic.TableauxSystem.build_trunk(self, self.argument)
+            self.trunk_built = True
+            self.current_step += 1
+            self.__after_trunk_build()
+        return self
+
+    def finish(self):
+        """
+        Mark the tableau as finished. Computes the ``valid``, ``invalid``,
+        and ``stats`` properties, and builds the structure into the ``tree``
+        property. Returns self.
+
+        This is safe to call multiple times. If the tableau is already finished,
+        this will be a no-op.
+        """
+        if self.finished:
+            return self
+
+        self.finished = True
+        self.valid    = len(self.open_branches()) == 0
+        self.invalid  = not self.valid and not self.is_premature
+
+        with self.models_timer:
+            if self.opts['is_build_models'] and not self.is_premature:
+                self.__build_models()
+
+        with self.tree_timer:
+            self.tree = make_tree_structure(self.branches)
+
+        self.stats = self.__compute_stats()
+
+        return self
+
+    def branching_complexity(self, node):
+        """
+        Convenience caching method for the logic's ``TableauxSystem.branching_complexity()``
+        method. If the tableau has no logic, then ``0`` is returned.
+
+        :param Node node: The node to evaluate.
+        :return: The branching complexity.
+        :rtype: int
+        """
+        if node.id not in self.branching_complexities:
+            if self.logic != None:
+                self.branching_complexities[node.id] = self.logic.TableauxSystem.branching_complexity(node)
+            else:
+                return 0
+        return self.branching_complexities[node.id]
+
+    def add_listener(self, event, callback):
+        self.__listeners[event].append(callback)
+        return self
+
+    def remove_listener(self, event, callback):
+        idx = self.__listeners[event].index(callback)
+        self.__listeners[event].pop(idx)
+        return self
+
+    def remove_listeners(self, event):
+        self.__listeners[event].clear()
+        return self
+
+    def remove_all_listeners(self):
+        for event in self.__listeners:
+            self.__listeners[event].clear()
+        return self
+
+    # Callbacks called internally
+
+    def __after_branch_add(self, branch):
+        branch.add_listener(Events.AFTER_BRANCH_CLOSE, self.__after_branch_close)
+        branch.add_listener(Events.AFTER_NODE_ADD, self.__after_node_add)
+        branch.add_listener(Events.AFTER_NODE_TICK, self.__after_node_tick)
+        for callback in self.__listeners[Events.AFTER_BRANCH_ADD]:
+            callback(branch)
+
+    def __after_branch_close(self, branch):
+        branch.closed_step = self.current_step
+        self.open_branchset.remove(branch)
+        for callback in self.__listeners[Events.AFTER_BRANCH_CLOSE]:
+            callback(branch)
+
+    def __after_node_add(self, node, branch):
+        node.step = self.current_step
+        for callback in self.__listeners[Events.AFTER_NODE_ADD]:
+            callback(node, branch)
+
+    def __after_node_tick(self, node, branch):
+        if node.ticked_step == None or self.current_step > node.ticked_step:
+            node.ticked_step = self.current_step
+        for callback in self.__listeners[Events.AFTER_NODE_TICK]:
+            callback(node, branch)
+
+    def __after_trunk_build(self):
+        for callback in self.__listeners[Events.AFTER_TRUNK_BUILD]:
+            callback(self.branches)
+
+    def __before_trunk_build(self):
+        for callback in self.__listeners[Events.BEFORE_TRUNK_BUILD]:
+            callback(self.argument)
+
+    # Interal util methods
+
+    def __get_application(self):
         """
         Find and return the next available rule application. If no rule
         cal be applied, return ``None``. This iterates over the open
-        branches and calls ``get_branch_application()``, returning the
+        branches and calls ``_get_branch_application()``, returning the
         first non-empty result.
         """
         for branch in self.open_branches():
-            res = self.get_branch_application(branch)
+            res = self._get_branch_application(branch)
             if res:
                 return res
 
-    def get_branch_application(self, branch):
+    def _get_branch_application(self, branch):
         """
         Find and return the next available rule application for the given
         open branch. This first checks the closure rules, then iterates
         over the rule groups. The first non-empty result is returned.
         """
-        res = self.get_group_application(branch, self.closure_rules)
+        res = self.__get_group_application(branch, self.closure_rules)
         if res:
             return res
         for rules in self.rule_groups:
-            res = self.get_group_application(branch, rules)
+            res = self.__get_group_application(branch, rules)
             if res:
                 return res
 
-    def get_group_application(self, branch, rules):
+    def __get_group_application(self, branch, rules):
         """
         Find and return the next available rule application for the given
         open branch and rule group. The ``rules`` parameter is a list of
@@ -264,18 +466,18 @@ class Tableau(object):
         rule groups of the tableau. This calls the ``get_target()`` method
         on the rules.
 
-        If the ``is_group_optim`` option is **disabled**, then the first
+        If the `is_group_optim` option is **disabled**, then the first
         non-empty target returned by a rule is selected. The target is
-        updated with the keys `group_score` = ``None``, `total_group_targets` = `1`,
+        updated with the keys `group_score` = ``None``, `total_group_targets` = ``1``,
         and `min_group_score` = ``None``.
 
-        If the ``is_group_optim`` option is **enabled**, then all non-empty
-        targets from the rules are collected, and the ``select_optim_group_application()``
+        If the `is_group_optim` option is **enabled**, then all non-empty
+        targets from the rules are collected, and the ``__select_optim_group_application()``
         method is called to select the result.
 
         The return value is either a non-empty list of results, or ``None``.
         Each result is a pair (tuple). The first element is the rule, and
-        the second element is the target returned by the rule's `get_target()`
+        the second element is the target returned by the rule's ``get_target()``
         method.
         """
         results = []
@@ -293,9 +495,9 @@ class Tableau(object):
                     return (rule, target)
                 results.append((rule, target))
         if results:
-            return self.select_optim_group_application(results)
+            return self.__select_optim_group_application(results)
 
-    def select_optim_group_application(self, results):
+    def __select_optim_group_application(self, results):
         """
         Choose the best rule to apply from among the list of results. The
         ``results`` parameter is assumed to be a non-empty list, where each
@@ -330,7 +532,7 @@ class Tableau(object):
                 })
                 return (rule, target)
 
-    def do_application(self, rule, target, step_timer):
+    def _do_application(self, rule, target, step_timer):
         """
         Perform the application of the rule. This calls ``rule.apply()``
         with the target. The ``target`` should be what was returned by the
@@ -357,157 +559,6 @@ class Tableau(object):
         self.history.append(application)
         self.current_step += 1
         return application
-
-    def open_branches(self):
-        """
-        Return the set of open branches on the tableau. This does **not** make
-        a copy of the set, and so should be copied by the caller if modifications
-        may occur.
-        """
-        return self.open_branchset
-
-    def get_rule(self, rule):
-        """
-        Get a rule instance by name, class, or instance reference. Returns first
-        matching occurrence.
-        """
-        for r in self.all_rules:
-            if r.__class__ == rule or r.name == rule or r.__class__.__name__ == rule:
-                return r
-            if r.__class__ == rule.__class__:
-                return r
-
-    def branch(self, parent = None):
-        """
-        Create a new branch on the tableau, as a copy of ``parent``, if given.
-        This calls the ``after_branch_add(`` callback on all the rules of the
-        tableau.
-        """
-        if parent == None:
-            branch = Branch(self)
-        else:
-            branch = parent.copy()
-            branch.parent = parent
-        self.add_branch(branch)
-        return branch
-
-    def add_branch(self, branch):
-        """
-        Add a new branch to the tableau. Returns self.
-        """
-        branch.index = len(self.branches)
-        self.branches.append(branch)
-        if not branch.closed:
-            self.open_branchset.add(branch)
-        self.branch_dict[branch.id] = branch
-        self.__after_branch_add(branch)
-        return self
-
-    def build_trunk(self):
-        """
-        Build the trunk of the tableau. Delegates to the ``build_trunk()`` method
-        of the logic's ``TableauxSystem``. This is called automatically when the
-        tableau is instantiated with a logic and an argument, or when instantiated
-        with a logic, and the ``set_argument()`` method is called.
-        """
-        self.__check_trunk_not_built()
-        with self.trunk_build_timer:
-            self.__before_trunk_build()
-            self.logic.TableauxSystem.build_trunk(self, self.argument)
-            self.trunk_built = True
-            self.current_step += 1
-            self.__after_trunk_build()
-        return self
-
-    def get_branch(self, branch_id):
-        """
-        Get a branch by its id. Raises ``KeyError`` if not found.
-        """
-        return self.branch_dict[branch_id]
-
-    def finish(self):
-        """
-        Mark the tableau as finished. Computes the ``valid``, ``invalid``,
-        and ``stats`` properties, and builds the structure into the ``tree``
-        property. Returns self.
-
-        This is safe to call multiple times. If the tableau is already finished,
-        this will be a no-op.
-        """
-        if self.finished:
-            return self
-
-        self.finished = True
-        self.valid    = len(self.open_branches()) == 0
-        self.invalid  = not self.valid and not self.is_premature
-
-        with self.models_timer:
-            if self.opts['is_build_models'] and not self.is_premature:
-                self.__build_models()
-
-        with self.tree_timer:
-            self.tree = make_tree_structure(self.branches)
-
-        self.stats = self.__compute_stats()
-
-        return self
-
-    def branching_complexity(self, node):
-        """
-        Convenience caching method for the logic's ``TableauxSystem.branching_complexity()``
-        method. If the tableau has no logic, then ``0`` is returned.
-        """
-        if node.id not in self.branching_complexities:
-            if self.logic != None:
-                self.branching_complexities[node.id] = self.logic.TableauxSystem.branching_complexity(node)
-            else:
-                return 0
-        return self.branching_complexities[node.id]
-
-    # Callbacks called from other classes
-
-    def after_branch_close(self, branch):
-        # Called from the branch instance in the close method.
-        branch.closed_step = self.current_step
-        self.open_branchset.remove(branch)
-        # Propagate event to rules
-        for rule in self.all_rules:
-            rule._after_branch_close(branch)
-
-    def after_node_add(self, node, branch):
-        # Called from the branch instance in the add/update methods.
-        node.step = self.current_step
-        # Propagate event to rules
-        for rule in self.all_rules:
-            rule._after_node_add(node, branch)
-
-    def after_node_tick(self, node, branch):
-        # Called from the branch instance in the tick method.
-        if node.ticked_step == None or self.current_step > node.ticked_step:
-            node.ticked_step = self.current_step
-        # Propagate event to rules
-        for rule in self.all_rules:
-            rule._after_node_tick(node, branch)
-
-    # Callbacks called internally
-
-    def __after_branch_add(self, branch):
-        # Called from ``add_branch()``
-        # Propagate event to rules
-        for rule in self.all_rules:
-            rule._after_branch_add(branch)
-
-    def __before_trunk_build(self):
-        for rule in self.all_rules:
-            rule._before_trunk_build(self.argument)
-
-    def __after_trunk_build(self):
-        # Called from ``build_trunk()``
-        # Propagate event to rules
-        for rule in self.all_rules:
-            rule._after_trunk_build(self.branches)
-
-    # Interal util methods
 
     def __compute_stats(self):
         # Compute the stats property after the tableau is finished.
@@ -634,6 +685,29 @@ class Branch(object):
             'world2'     : {},
             'w1Rw2'      : {},
         }
+        self.__listeners = {
+            Events.AFTER_BRANCH_CLOSE : list(),
+            Events.AFTER_NODE_ADD     : list(),
+            Events.AFTER_NODE_TICK    : list(),
+        }
+
+    def add_listener(self, event, callback):
+        self.__listeners[event].append(callback)
+        return self
+
+    def remove_listener(self, event, callback):
+        idx = self.__listeners[event].index(callback)
+        self.__listeners[event].pop(idx)
+        return self
+
+    def remove_listeners(self, event):
+        self.__listeners[event].clear()
+        return self
+
+    def remove_all_listeners(self):
+        for event in self.__listeners:
+            self.__listeners[event].clear()
+        return self
 
     def has(self, props, ticked=None):
         """
@@ -723,10 +797,7 @@ class Branch(object):
 
         # Add to index *before* after_node_add callback
         self.__add_to_index(node, consts)
-
-        # Tableau callback
-        if self.tableau != None:
-            self.tableau.after_node_add(node, self)
+        self.__after_node_add(node)
 
         return self
 
@@ -745,9 +816,7 @@ class Branch(object):
         if node not in self.ticked_nodes:
             self.ticked_nodes.add(node)
             node.ticked = True
-            # Tableau callback
-            if self.tableau != None:
-                self.tableau.after_node_tick(node, self)
+            self.__after_node_tick(node)
         return self
 
     def close(self):
@@ -756,9 +825,7 @@ class Branch(object):
         """
         self.closed = True
         self.add({'is_flag': True, 'flag': 'closure'})
-        # Tableau callback
-        if self.tableau != None:
-            self.tableau.after_branch_close(self)
+        self.__after_close()
         return self
 
     def get_nodes(self, ticked=None):
@@ -848,7 +915,7 @@ class Branch(object):
         """
         Return a tuple ``(constants, is_new)``, where ``constants`` is either the
         branch constants, or, if no constants are on the branch, a singleton
-        containing a new constants, and ``is_new`` indicates whether it is
+        containing a new constant, and ``is_new`` indicates whether it is
         a new constant.
         """
         if self.constants():
@@ -933,6 +1000,18 @@ class Branch(object):
             else:
                 best_index = self.nodes
         return best_index
+
+    def __after_close(self):
+        for callback in self.__listeners[Events.AFTER_BRANCH_CLOSE]:
+            callback(self)
+
+    def __after_node_add(self, node):
+        for callback in self.__listeners[Events.AFTER_NODE_ADD]:
+            callback(node, self)
+
+    def __after_node_tick(self, node):
+        for callback in self.__listeners[Events.AFTER_NODE_TICK]:
+            callback(node, self)
 
     def __repr__(self):
         return {

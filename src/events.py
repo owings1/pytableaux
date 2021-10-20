@@ -1,0 +1,8 @@
+class Events(object):
+    AFTER_BRANCH_ADD   = 10
+    AFTER_BRANCH_CLOSE = 20
+    AFTER_NODE_ADD     = 30
+    AFTER_NODE_TICK    = 40
+    AFTER_RULE_APPLY   = 50
+    AFTER_TRUNK_BUILD  = 60
+    BEFORE_TRUNK_BUILD = 100

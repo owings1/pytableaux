@@ -43,12 +43,6 @@ class TestTableau(object):
         proof.build(max_steps=1)
         assert proof.is_premature
 
-    def test_step_raises_trunk_not_built_with_hacked_arg_prop(self):
-        proof = Tableau('cpl')
-        proof.argument = examples.argument('Addition')
-        with raises(IllegalStateError):
-            proof.step()
-
     def test_construct_sets_is_rank_optim_option(self):
         proof = Tableau('cpl', is_rank_optim=False)
         rule = proof.get_rule('Conjunction')

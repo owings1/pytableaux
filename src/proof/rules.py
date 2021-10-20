@@ -1,8 +1,28 @@
 
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2021 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+#
+# pytableaux - tableaux rules module
 from lexicals import AtomicSentence, OperatedSentence, operarity
 from utils import StopWatch
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper
+from events import Events
 
 class Rule(object):
     """
@@ -43,6 +63,12 @@ class Rule(object):
         self.opts.update(opts)
         self.add_helper('adz', AdzHelper(self))
         self.setup()
+        self.tableau.add_listener(Events.AFTER_BRANCH_ADD, self.__after_branch_add)
+        self.tableau.add_listener(Events.AFTER_BRANCH_CLOSE, self.__after_branch_close)
+        self.tableau.add_listener(Events.AFTER_NODE_ADD, self.__after_node_add)
+        self.tableau.add_listener(Events.AFTER_NODE_TICK, self.__after_node_tick)
+        self.tableau.add_listener(Events.AFTER_TRUNK_BUILD, self.__after_trunk_build)
+        self.tableau.add_listener(Events.BEFORE_TRUNK_BUILD, self.__before_trunk_build)
 
     # External API
 
@@ -160,68 +186,6 @@ class Rule(object):
         # Will sum to 0 by default
         return {}
 
-    # Private callbacks -- do not implement
-
-    def _before_trunk_build(self, argument):
-        self.before_trunk_build(argument)
-        for helper in self.helpers:
-            if hasattr(helper, 'before_trunk_build'):
-                helper.before_trunk_build(argument)
-
-    def _after_trunk_build(self, branches):
-        self.after_trunk_build(branches)
-        for helper in self.helpers:
-            if hasattr(helper, 'after_trunk_build'):
-                helper.after_trunk_build(branches)
-
-    def _after_branch_add(self, branch):
-        # Called by Tableau.
-        if not branch.parent:
-            # For corner case of a register_branch callback adding a node, make
-            # sure we don't call register_node twice, so prefetch the nodes.
-            nodes = branch.get_nodes(ticked=self.ticked)
-        else:
-            nodes = None
-        self.register_branch(branch, branch.parent)
-        for helper in self.helpers:
-            if hasattr(helper, 'register_branch'):
-                helper.register_branch(branch, branch.parent)
-        if not branch.parent:
-            for node in nodes:
-                self.register_node(node, branch)
-                for helper in self.helpers:
-                    if hasattr(helper, 'register_node'):
-                        helper.register_node(node, branch)
-
-    def _after_branch_close(self, branch):
-        # Called by Tableau.
-        self.after_branch_close(branch)
-        for helper in self.helpers:
-            if hasattr(helper, 'after_branch_close'):
-                helper.after_branch_close(branch)
-
-    def _after_node_add(self, node, branch):
-        # Called by Tableau.
-        self.register_node(node, branch)
-        for helper in self.helpers:
-            if hasattr(helper, 'register_node'):
-                helper.register_node(node, branch)
-
-    def _after_node_tick(self, node, branch):
-        # Called by Tableau.
-        self.after_node_tick(node, branch)
-        for helper in self.helpers:
-            if hasattr(helper, 'after_node_tick'):
-                helper.after_node_tick(node, branch)
-
-    # Called internally
-
-    def __after_apply(self, target):
-        self.after_apply(target)
-        for helper in self.helpers:
-            if hasattr(helper, 'after_apply'):
-                helper.after_apply(target)
-
     # Implementable callbacks -- always call ``super()``, or use a helper.
 
     def register_branch(self, branch, parent):
@@ -280,6 +244,62 @@ class Rule(object):
         for name in helpers:
             self.add_helper(name, helpers[name])
         return self
+
+    # Callbacks
+
+    def __before_trunk_build(self, argument):
+        self.before_trunk_build(argument)
+        for helper in self.helpers:
+            if hasattr(helper, 'before_trunk_build'):
+                helper.before_trunk_build(argument)
+
+    def __after_trunk_build(self, branches):
+        self.after_trunk_build(branches)
+        for helper in self.helpers:
+            if hasattr(helper, 'after_trunk_build'):
+                helper.after_trunk_build(branches)
+
+    def __after_branch_add(self, branch):
+        if not branch.parent:
+            # For corner case of a register_branch callback adding a node, make
+            # sure we don't call register_node twice, so prefetch the nodes.
+            nodes = branch.get_nodes(ticked = self.ticked)
+        else:
+            nodes = None
+        self.register_branch(branch, branch.parent)
+        for helper in self.helpers:
+            if hasattr(helper, 'register_branch'):
+                helper.register_branch(branch, branch.parent)
+        if not branch.parent:
+            for node in nodes:
+                self.register_node(node, branch)
+                for helper in self.helpers:
+                    if hasattr(helper, 'register_node'):
+                        helper.register_node(node, branch)
+
+    def __after_branch_close(self, branch):
+        self.after_branch_close(branch)
+        for helper in self.helpers:
+            if hasattr(helper, 'after_branch_close'):
+                helper.after_branch_close(branch)
+
+    def __after_node_add(self, node, branch):
+        self.register_node(node, branch)
+        for helper in self.helpers:
+            if hasattr(helper, 'register_node'):
+                helper.register_node(node, branch)
+
+    def __after_node_tick(self, node, branch):
+        self.after_node_tick(node, branch)
+        for helper in self.helpers:
+            if hasattr(helper, 'after_node_tick'):
+                helper.after_node_tick(node, branch)
+
+    def __after_apply(self, target):
+        self.after_apply(target)
+        for helper in self.helpers:
+            if hasattr(helper, 'after_apply'):
+                helper.after_apply(target)
 
     def __repr__(self):
         return self.name

@@ -457,7 +457,8 @@ class Helper(object):
         lw = self.lwtrunk
         pw = self.pwtrunk
         proof = Tableau(lgc).add_rule_group([TrunkEllipsisRule])
-        proof.set_argument(arg).finish()
+        proof.argument = arg
+        proof.finish()
         return cat(
             'Argument: <i>',
             '</i> ... <i>'.join(lw.write(p) for p in arg.premises),
