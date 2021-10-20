@@ -968,7 +968,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence':        s.lhs , 'world': w}, 
+                        {'sentence': s.lhs         , 'world': w}, 
                         {'sentence': s.rhs.negate(), 'world': w},
                     ],
                 ],
@@ -1019,12 +1019,12 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence':        s.lhs , 'world': w},
+                        {'sentence': s.lhs         , 'world': w},
                         {'sentence': s.rhs.negate(), 'world': w},
                     ],
                     [
                         {'sentence': s.rhs.negate(), 'world': w},
-                        {'sentence':        s.lhs , 'world': w},
+                        {'sentence': s.lhs         , 'world': w},
                     ],
                 ],
             }

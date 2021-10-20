@@ -49,7 +49,7 @@ def get_system_predicate(name):
 
     :param str name: The predicate name.
     :return: The predicate instance.
-    :rtype: Vocabulary.Predicate
+    :rtype: Predicate
     :raises KeyError: if the system predicate does not exist.
     """
     return Vocabulary._get_system_predicate(name)
@@ -292,24 +292,32 @@ class Sentence(LexicalItem):
     def is_atomic(self):
         """
         Whether this is an atomic sentence.
+
+        :rtype: bool
         """
         return isinstance(self, AtomicSentence)
 
     def is_predicated(self):
         """
         Whether this is a predicated sentence.
+
+        :rtype: bool
         """
         return isinstance(self, PredicatedSentence)
 
     def is_quantified(self):
         """
         Whether this a quantified sentence.
+
+        :rtype: bool
         """
         return isinstance(self, QuantifiedSentence)
 
     def is_operated(self):
         """
         Whether this is an operated sentence.
+
+        :rtype: bool
         """
         return isinstance(self, OperatedSentence)
 
@@ -318,6 +326,8 @@ class Sentence(LexicalItem):
         Whether the sentence is a literal. Here a literal is either a
         predicated sentence, the negation of a predicated sentence,
         an atomic sentence, or the negation of an atomic sentence.
+
+        :rtype: bool
         """
         return self.is_atomic() or self.is_predicated() or (
             self.is_operated() and self.operator == 'Negation' and (
@@ -328,7 +338,9 @@ class Sentence(LexicalItem):
 
     def is_negated(self):
         """
-        TODO: doc
+        Whether this is a negated sentence.
+
+        :rtype: bool
         """
         return isinstance(self, OperatedSentence) and self.operator == 'Negation'
 
@@ -336,6 +348,8 @@ class Sentence(LexicalItem):
         """
         Recursively substitute ``new_param`` for all occurrences of ``old_param``.
         May return self, or a new sentence.
+
+        :rtype: Sentence
         """
         raise NotImplementedError()
 
