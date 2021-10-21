@@ -280,8 +280,8 @@ class ClosureRule(Rule):
         'is_rank_optim' : False
     }
 
-    def __init__(self, *args, **opts):
-        super().__init__(*args, **opts)
+    def __init__(self, tableau, **opts):
+        super().__init__(tableau, **opts)
         self.add_helper('tracker', NodeTargetCheckHelper(self))
 
     def get_candidate_targets(self, branch):

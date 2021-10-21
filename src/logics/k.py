@@ -364,11 +364,19 @@ class Model(BaseModel):
         anti_extension = self.get_anti_extension(predicate, **kw)
         if value == 'F':
             if params in extension:
-                raise ModelValueError('Cannot set value {0} for tuple {1} already in extension'.format(str(value), str(params)))
+                raise ModelValueError(
+                    'Cannot set value {0} for tuple {1} already in extension'.format(
+                        str(value), str(params)
+                    )
+                )
             anti_extension.add(params)
         if value == 'T':
             if params in anti_extension:
-                raise ModelValueError('Cannot set value {0} for tuple {1} already in anti-extension'.format(str(value), str(params)))
+                raise ModelValueError(
+                    'Cannot set value {0} for tuple {1} already in anti-extension'.format(
+                        str(value), str(params)
+                    )
+                )
             extension.add(params)
 
     def get_extension(self, predicate, world=0, **kw):
@@ -405,7 +413,11 @@ class Model(BaseModel):
         try:
             return den[c]
         except KeyError:
-            raise DenotationError('Constant {0} does not have a reference at w{1}'.format(str(c), str(world)))
+            raise DenotationError(
+                'Constant {0} does not have a reference at w{1}'.format(
+                    str(c), str(world)
+                )
+            )
 
     def add_access(self, w1, w2):
         self.access.add((w1, w2))

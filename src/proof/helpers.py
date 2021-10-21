@@ -41,7 +41,7 @@ class AdzHelper(object):
         close_count = 0
         for nodes in target['adds']:
             nodes = [target['branch'].create_node(node) for node in nodes]
-            for rule in self.rule.tableau.closure_rules:
+            for rule in self.rule.tableau.closure_rules():
                 if rule.nodes_will_close_branch(nodes, target['branch']):
                     close_count += 1
                     break
@@ -135,7 +135,7 @@ class MaxConstantsTracker(object):
         """
         Get the cached set of constants at a world for the branch.
 
-        :param Branch branch:
+        :param tableaux.Branch branch:
         :param int world:
         :rtype: bool
         """
@@ -148,7 +148,7 @@ class MaxConstantsTracker(object):
         Whether we have already reached or exceeded the max number of constants
         projected for the branch (origin) at the given world.
 
-        :param Branch branch:
+        :param tableaux.Branch branch:
         :param int world:
         :rtype: bool
         """
@@ -163,7 +163,7 @@ class MaxConstantsTracker(object):
         Whether we have exceeded the max number of constants projected for
         the branch (origin) at the given world.
 
-        :param Branch branch:
+        :param tableaux.Branch branch:
         :param int world:
         :rtype: bool
         """
@@ -184,7 +184,7 @@ class MaxConstantsTracker(object):
         - *info*: ``'RuleName:MaxConstants({n})'`` where *RuleName* is ``rule.name``,
             and ``n`` is the computed max allowed constants for the branch.
 
-        :param Branch branch:
+        :param tableaux.Branch branch:
         :rtype: dict
         """
         info = '{0}:MaxConstants({1})'.format(self.rule.name, str(self.get_max_constants(branch)))
@@ -192,8 +192,8 @@ class MaxConstantsTracker(object):
 
     # Helper implementation
 
-    def after_trunk_build(self, branches):
-        for branch in branches:
+    def after_trunk_build(self, tableau):
+        for branch in tableau.branches():
             origin = branch.origin()
             # In most cases, we will have only one origin branch.
             if origin.id in self.branch_max_constants:
@@ -368,8 +368,8 @@ class MaxWorldsTracker(object):
 
     # Helper implementation
 
-    def after_trunk_build(self, branches):
-        for branch in branches:
+    def after_trunk_build(self, tableau):
+        for branch in tableau.branches():
             origin = branch.origin()
             # In most cases, we will have only one origin branch.
             if origin.id in self.branch_max_worlds:

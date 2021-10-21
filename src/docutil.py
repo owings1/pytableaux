@@ -483,8 +483,8 @@ class Helper(object):
             pw = self.pwrule
         rule.example()
         if not isclosure:
-            proof.branches[0].add({'ellipsis': True})
-        target = rule.get_target(proof.branches[0])
+            proof.branches().__next__().add({'ellipsis': True})
+        target = rule.get_target(proof.branches().__next__())
         rule.apply(target)
         proof.finish()
         return pw.write(proof)
@@ -762,7 +762,7 @@ class TrunkEllipsisRule(Rule):
     def get_candidate_targets(self, branch):
         return None
 
-    def __before_trunk_build(self, arg):
+    def __before_trunk_build(self, *_):
         if not self.__n:
             self.__n = 1
 
@@ -786,8 +786,8 @@ class ClosureEllipsisRule(Rule):
         if not isinstance(rule, ClosureRule):
             return
         rule.example()
-        if len(testproof.branches) == 1:
-            b, = testproof.branches
+        if testproof.branch_count == 1:
+            b, = testproof.branches()
             if len(b.nodes) > 0:
                 self.__applies = True
                 self.__nodecount = len(b.nodes)

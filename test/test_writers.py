@@ -35,10 +35,6 @@ stduni = create_lexwriter(notn='standard', enc='unicode')
 stdhtm = create_lexwriter(notn='standard', enc='html')
 
 pol = create_lexwriter(notn='polish')
-
-
-
-
 pstd = create_parser('standard')
 
 class TestBase(object):
@@ -163,42 +159,5 @@ class TestHtml(object):
     def test_write_std_fde_1(self):
         proof = example_proof('fde', 'Addition')
         res = htm.write(proof)
-        # TODO: assert something
-# class TestAscii(object):
 
-#     def test_write_std_fde_1(self):
-#         proof = example_proof('FDE', 'Addition')
-#         res = asc.write(proof, standard)
-#         # TODO: assert something
-
-#     def test_write_std_fde_mmp(self):
-#         proof = example_proof('FDE', 'Material Modus Ponens')
-#         res = asc.write(proof, standard, controls=True)
-#         # TODO: assert something
-
-#     def test_write_nec_dist_s4(self):
-#         proof = tableau('S4', examples.argument('Necessity Distribution 1'))
-#         proof.branches[0].add({'ellipsis': True})
-#         proof.build()
-#         res = asc.write(proof, standard)
-#         # TODO: assert something
-
-#     def test_write_status_prems(self):
-#         proof = example_proof('FDE', 'Addition')
-#         res = asc.write(proof, standard, controls=True)
-#         # TODO: assert something
-
-# class TestAsciiv(object):
-
-#     def test_write_std_fde_1(self):
-#         proof = example_proof('fde', 'Addition')
-#         res = asv.write(proof, standard)
-#         # TODO: assert something
-
-#     def test_write_nec_dist_s4(self):
-#         proof = tableau('S4', examples.argument('Necessity Distribution 1'))
-#         proof.branches[0].add({'ellipsis': True})
-#         proof.build()
-#         res = asv.write(proof, standard)
-#         # TODO: assert something
     

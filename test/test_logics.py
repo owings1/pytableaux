@@ -116,7 +116,7 @@ class TestFDE(LogicTester):
         proof = Tableau(self.logic)
         proof.get_rule(self.logic.TableauxRules.DesignationClosure).example()
         proof.build()
-        assert len(proof.branches) == 1
+        assert proof.branch_count == 1
         assert proof.valid
 
     def test_ConjunctionNegatedDesignated_example_node(self):
@@ -132,7 +132,7 @@ class TestFDE(LogicTester):
         rule = proof.get_rule('ExistentialUndesignated')
         rule.example()
         s = examples.quantified('Existential')
-        branch = proof.branches[0]
+        branch = proof.get_branch_at(0)
         assert branch.has({'sentence': s, 'designated': False})
 
     def test_valid_addition(self):
@@ -180,7 +180,7 @@ class TestFDE(LogicTester):
 
     def test_invalid_lnc_build_model(self):
         proof = self.example_proof('Law of Non-contradiction')
-        model = proof.branches[0].model
+        model = proof.get_branch_at(0).model
         assert not proof.valid
         assert model.value_of(parse('a')) == 'B'
 
@@ -334,7 +334,7 @@ class TestFDE(LogicTester):
         arg = parse_argument('a', premises=['NLa', 'b'])
         proof = Tableau(self.logic, arg)
         proof.build(is_build_models=True)
-        model = proof.branches[0].model
+        model = proof.get_branch_at(0).model
         assert model.value_of(parse('a')) == 'F'
         assert model.value_of(parse('La')) == 'F'
         assert model.value_of(parse('NLa')) == 'T'
@@ -395,7 +395,7 @@ class TestFDE(LogicTester):
         proof = Tableau(self.logic, arg)
         proof.build(is_build_models=False, max_steps=100)
         assert proof.invalid
-        branch = proof.branches[-1]
+        branch = list(proof.branches())[-1]
         model = self.logic.Model()
         model.read_branch(branch)
         s1 = arg.premises[0]
@@ -427,7 +427,7 @@ class TestK3(LogicTester):
         rule = proof.get_rule(self.logic.TableauxRules.GlutClosure)
         rule.example()
         proof.build()
-        assert len(proof.branches) == 1
+        assert proof.branch_count == 1
         assert proof.valid
         
     def test_valid_bicond_elim_1(self):
@@ -462,7 +462,7 @@ class TestK3W(LogicTester):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('NKab'), 'designated': False})
         proof.step()
-        b1, b2, b3 = proof.branches
+        b1, b2, b3 = proof.branches()
         assert b1.has({'sentence': parse('a'), 'designated': False})
         assert b1.has({'sentence': parse('Na'), 'designated': False})
         assert b2.has({'sentence': parse('b'), 'designated': False})
@@ -814,7 +814,7 @@ class TestLP(LogicTester):
         arg = parse_argument('NBab', premises=['NBab'])
         proof = Tableau(self.logic, arg)
         rule = proof.get_rule(self.logic.TableauxRules.BiconditionalNegatedUndesignated)
-        assert rule.get_target(proof.branches[0])
+        assert rule.get_target(proof.get_branch_at(0))
 
     def test_invalid_lnc(self):
         proof = self.example_proof('Law of Non-contradiction')
@@ -986,7 +986,7 @@ class TestGO(LogicTester):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('NEab'), 'designated': True})
         proof.step()
-        b1, b2 = proof.branches
+        b1, b2 = proof.branches()
         assert b1.has({'sentence': parse('Na'), 'designated': False})
         assert b1.has({'sentence': parse('b'), 'designated': False})
         assert b2.has({'sentence': parse('a'), 'designated': False})
@@ -996,7 +996,7 @@ class TestGO(LogicTester):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('Uab'), 'designated': True})
         proof.step()
-        b1, b2 = proof.branches
+        b1, b2 = proof.branches()
         assert b1.has({'sentence': parse('ANab'), 'designated': True})
         assert b2.has({'sentence': parse('a'), 'designated': False})
         assert b2.has({'sentence': parse('b'), 'designated': False})
@@ -1007,7 +1007,7 @@ class TestGO(LogicTester):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('NUab'), 'designated': True})
         proof.step()
-        b1, b2 = proof.branches
+        b1, b2 = proof.branches()
         assert b1.has({'sentence': parse('a'), 'designated': True})
         assert b1.has({'sentence': parse('b'), 'designated': False})
         assert b2.has({'sentence': parse('Na'), 'designated': False})
@@ -1025,7 +1025,7 @@ class TestGO(LogicTester):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('NBab'), 'designated': True})
         proof.step()
-        b1, b2 = proof.branches
+        b1, b2 = proof.branches()
         assert b1.has({'sentence': parse('NUab'), 'designated': True})
         assert b2.has({'sentence': parse('NUba'), 'designated': True})
 
@@ -1228,7 +1228,7 @@ class TestP3(LogicTester):
         proof.build()
         assert len(proof.history) == 1
         assert proof.history[0]['rule'] == rule
-        assert proof.branches[0].has_all([
+        assert proof.get_branch_at(0).has_all([
             {'sentence': parse('a'), 'designated': False},
             {'sentence': parse('Na'), 'designated': False},
         ])
@@ -1293,25 +1293,25 @@ class TestCPL(LogicTester):
         proof = Tableau(self.logic)
         rule = proof.get_rule('ContradictionClosure')
         rule.example()
-        assert len(proof.branches) == 1
+        assert proof.branch_count == 1
 
     def test_SelfIdentityClosure_example(self):
         proof = Tableau(self.logic)
         rule = proof.get_rule('SelfIdentityClosure')
         rule.example()
-        assert len(proof.branches) == 1
+        assert proof.branch_count == 1
 
     def test_NonExistenceClosure_example(self):
         proof = Tableau(self.logic)
         rule = proof.get_rule('NonExistenceClosure')
         rule.example()
-        assert len(proof.branches) == 1
+        assert proof.branch_count == 1
 
     def test_IdentityIndiscernability_example(self):
         proof = Tableau(self.logic)
         rule = proof.get_rule('IdentityIndiscernability')
         rule.example()
-        assert len(proof.branches) == 1
+        assert proof.branch_count == 1
 
     def test_valid_simplification(self):
         proof = self.example_proof('Simplification')
@@ -1440,7 +1440,7 @@ class TestCPL(LogicTester):
         arg = parse_argument('Na', premises=['Cab', 'Nb', 'Acd'])
         proof = Tableau(self.logic, arg).build()
         assert proof.valid
-        assert len(proof.branches) == 2
+        assert proof.branch_count == 2
 
 class TestCFOL(LogicTester):
 
@@ -1494,7 +1494,7 @@ class TestCFOL(LogicTester):
         arg = parse_argument('a', premises=['NLa', 'b'])
         proof = Tableau(self.logic, arg, is_build_models=True)
         proof.build()
-        model = proof.branches[0].model
+        model = proof.get_branch_at(0).model
         assert model.value_of(parse('a'))   == 'F'
         assert model.value_of(parse('La'))  == 'F'
         assert model.value_of(parse('NLa')) == 'T'
@@ -1520,9 +1520,9 @@ class TestCFOL(LogicTester):
         proof = Tableau(self.logic, arg, is_build_models=True)
         proof.build()
         # this assert is so our test has integrity
-        assert len(proof.branches) == 2
-        assert proof.branches[0].model.is_countermodel_to(arg)
-        assert proof.branches[1].model.is_countermodel_to(arg)
+        assert proof.branch_count == 2
+        assert proof.get_branch_at(0).model.is_countermodel_to(arg)
+        assert list(proof.branches())[1].model.is_countermodel_to(arg)
 
     def test_model_identity_predication1(self):
         model = self.logic.Model()
@@ -1595,12 +1595,12 @@ class TestK(LogicTester):
     def test_ContradictionClosure_example(self):
         rule = self.logic.TableauxRules.ContradictionClosure(empty_proof())
         rule.example()
-        assert len(rule.tableau.branches) == 1
+        assert rule.tableau.branch_count == 1
 
     def test_SelfIdentityClosure_example(self):
         rule = self.logic.TableauxRules.SelfIdentityClosure(empty_proof())
         rule.example()
-        assert len(rule.tableau.branches) == 1
+        assert rule.tableau.branch_count == 1
 
     def test_Possibility_example_node(self):
         rule = self.logic.TableauxRules.Possibility(empty_proof())
@@ -1620,17 +1620,17 @@ class TestK(LogicTester):
     def test_Universal_example(self):
         rule = self.logic.TableauxRules.Universal(empty_proof())
         rule.example()
-        assert len(rule.tableau.branches) == 1
+        assert rule.tableau.branch_count == 1
 
     def test_Necessity_example(self):
         rule = self.logic.TableauxRules.Necessity(empty_proof())
         rule.example()
-        assert len(rule.tableau.branches) == 1
+        assert rule.tableau.branch_count == 1
 
     def test_IdentityIndiscernability_example(self):
         rule = self.logic.TableauxRules.IdentityIndiscernability(empty_proof())
         rule.example()
-        assert len(rule.tableau.branches) == 1
+        assert rule.tableau.branch_count == 1
 
     def test_IdentityIndiscernability_not_applies(self):
         proof = empty_proof()
@@ -2090,7 +2090,7 @@ class TestK(LogicTester):
         proof = Tableau(self.logic, parse_argument(s2, [s1]))
         
         univ = proof.get_rule('Universal')
-        b1 = proof.branches[0]
+        b1 = proof.get_branch_at(0)
 
         ap1 = proof.step()
         assert ap1['rule'].name == 'Universal'
@@ -2098,7 +2098,7 @@ class TestK(LogicTester):
         ap2 = proof.step()
         assert ap2['rule'].name == 'Conditional'
         assert b1.has({'sentence': s3, 'world': 0})
-        b2 = proof.branches[1]
+        b2 = list(proof.branches())[1]
 
         # we don't apply now
         assert not univ.get_target(b1)
@@ -2137,7 +2137,7 @@ class TestD(LogicTester):
         proof = Tableau(self.logic)
         rule = proof.get_rule('Serial')
         rule.example()
-        assert len(proof.branches) == 1
+        assert proof.branch_count == 1
 
     def test_Serial_not_applies_to_branch_empty(self):
         proof = Tableau(self.logic)
@@ -2174,9 +2174,9 @@ class TestD(LogicTester):
         proof.build()
 
         # sanity check
-        assert len(proof.branches) == 1
+        assert proof.branch_count == 1
 
-        branch = proof.branches[0]
+        branch = proof.get_branch_at(0)
 
         # use internal properties just to be sure, since the bug was with the .find method
         access = {}
@@ -2206,7 +2206,7 @@ class TestT(LogicTester):
         rule = proof.get_rule(self.logic.TableauxRules.Reflexive)
         rule.example()
         proof.build()
-        branch = proof.branches[0]
+        branch = proof.get_branch_at(0)
         assert branch.has({'world1': 0, 'world2': 0})
 
     def test_valid_np_collapse_1(self):
@@ -2259,7 +2259,7 @@ class TestS4(LogicTester):
         rule = proof.get_rule('Transitive')
         rule.example()
         proof.build()
-        branch = proof.branches[0]
+        branch = proof.get_branch_at(0)
         assert branch.has({'world1': 0, 'world2': 2})
 
     def test_valid_s4_material_inf_1(self):
@@ -2339,7 +2339,7 @@ class TestS5(LogicTester):
         rule = proof.get_rule(self.logic.TableauxRules.Symmetric)
         rule.example()
         proof.build()
-        branch = proof.branches[0]
+        branch = proof.get_branch_at(0)
         assert branch.has({'world1': 1, 'world2': 0})
 
     def test_valid_s4_cond_inf_2(self):
@@ -2426,7 +2426,7 @@ class TestMaxConstantsTracker(LogicTester):
         proof.add_rule_group([self.Rule])
         proof.argument = arg
         rule = proof.get_rule(self.Rule)
-        branch = proof.branches[0]
+        branch = proof.get_branch_at(0)
         assert rule.mtr._compute_max_constants(branch) == 3
 
     def compute_for_node_one_q_returns_1(self):

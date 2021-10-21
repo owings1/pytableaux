@@ -85,13 +85,13 @@ class Tableau(EventEmitter):
         #: :type: bool
         self.is_premature = False
 
-        #: The branches on the tableau. The branches are stored as list to
-        #: maintain a consistent ordering. Since a tableau really consists of
-        #: a `set` of branches, and they are represented internally as such,
-        #: this will always be a list of `unique` branches.
-        #:
-        #: :type: list
-        self.branches = list()
+        # #: The branches on the tableau. The branches are stored as list to
+        # #: maintain a consistent ordering. Since a tableau really consists of
+        # #: a `set` of branches, and they are represented internally as such,
+        # #: this will always be a list of `unique` branches.
+        # #:
+        # #: :type: list
+        # self.branches = list()
 
         #: The history of rule applications. Each application is a ``dict``
         #: with the following keys:
@@ -117,8 +117,8 @@ class Tableau(EventEmitter):
         self.tree = None
 
         # Rules
-        self.all_rules = list()
-        self.closure_rules = list()
+        self.__all_rules = list()
+        self.__closure_rules = list()
         self.rule_groups = list()
 
         # Post-build properties
@@ -135,6 +135,7 @@ class Tableau(EventEmitter):
         self.opts = dict(self.default_opts)
         self.opts.update(opts)
 
+        self.__branch_list = list()
         self.__open_branchset = set()
         self.__branch_dict = dict()
         self.trunk_built = False
@@ -171,6 +172,8 @@ class Tableau(EventEmitter):
     def logic(self):
         """
         The logic of the tableau.
+
+        :type: module
         """
         return self.__logic
 
@@ -204,27 +207,48 @@ class Tableau(EventEmitter):
             self.build_trunk()
         return self
 
+    @property
+    def branch_count(self):
+        """
+        The current number of branches.
+
+        :type: int
+        """
+        return len(self.__branch_list)
+
     def clear_rules(self):
         """
         Clear the rules. Assumes building has not started. Returns self.
+
+        :rtype: Tableau
         """
         self.__check_not_started()
-        self.closure_rules.clear()
+        self.__closure_rules.clear()
         self.rule_groups.clear()
-        self.all_rules.clear()
+        self.__all_rules.clear()
         return self
 
     def add_closure_rule(self, rule):
         """
         Add a closure rule. The ``rule`` parameter can be either a class or
         instance. Returns self.
+
+        :rtype: Tableau
         """
         self.__check_not_started()
         if isclass(rule):
             rule = rule(self, **self.opts)
-        self.closure_rules.append(rule)
-        self.all_rules.append(rule)
+        self.__closure_rules.append(rule)
+        self.__all_rules.append(rule)
         return self
+
+    def closure_rules(self):
+        """
+        Returns an iterator for the list of closure rule instances.
+
+        :rtype: list_iterator(rules.ClosureRule)
+        """
+        return iter(self.__closure_rules)
 
     def add_rule_group(self, rules):
         """
@@ -238,7 +262,7 @@ class Tableau(EventEmitter):
                 rule = rule(self, **self.opts)
             group.append(rule)
         self.rule_groups.append(group)
-        self.all_rules.extend(group)
+        self.__all_rules.extend(group)
         return self
 
     def build(self, **opts):
@@ -285,20 +309,33 @@ class Tableau(EventEmitter):
                 self.finish()
         return application
 
+    def branches(self):
+        """
+        Returns an iterator for the list of all branches on the tableau.
+
+        The branches are stored as list to maintain a consistent ordering.
+        Since a tableau really consists of a `set` of branches, and they are
+        represented internally as such, this will always be a list of `unique`
+        branches.
+
+        :rtype: list_iterator(Branch)
+        """
+        return iter(self.__branch_list)
+
     def open_branches(self):
         """
-        Return the set (copy) of open branches on the tableau.
+        Returns an iterator for the set of open branches.
 
-        :rtype: set(Branch)
+        :rtype: set_iterator(Branch)
         """
-        return set(self.__open_branchset)
+        return iter(self.__open_branchset)
 
     def get_rule(self, rule):
         """
         Get a rule instance by name, class, or instance reference. Returns first
         matching occurrence.
         """
-        for r in self.all_rules:
+        for r in self.__all_rules:
             if r.__class__ == rule or r.name == rule or r.__class__.__name__ == rule:
                 return r
             if r.__class__ == rule.__class__:
@@ -322,8 +359,10 @@ class Tableau(EventEmitter):
         """
         Add a new branch to the tableau. Returns self.
         """
-        branch.index = len(self.branches)
-        self.branches.append(branch)
+        if branch.id in self.__branch_dict:
+            raise ValueError('Branch {0} already on tableau'.format(str(branch.id)))
+        branch.index = len(self.__branch_list)
+        self.__branch_list.append(branch)
         if not branch.closed:
             self.__open_branchset.add(branch)
         self.__branch_dict[branch.id] = branch
@@ -334,9 +373,23 @@ class Tableau(EventEmitter):
         """
         Get a branch by its id.
 
+        :param int id: The branch id.
+        :return: The branch.
+        :rtype: Branch
         :raises KeyError: if the branch is not found.
         """
         return self.__branch_dict[branch_id]
+
+    def get_branch_at(self, index):
+        """
+        Get a branch by its index.
+
+        :param int index: The branch index.
+        :return: The branch.
+        :rtype: Branch
+        :raises IndexError: if the index does not exist.
+        """
+        return self.__branch_list[index]
 
     def build_trunk(self):
         """
@@ -346,11 +399,11 @@ class Tableau(EventEmitter):
         """
         self.__check_trunk_not_built()
         with self.trunk_build_timer:
-            self.emit(Events.BEFORE_TRUNK_BUILD, self.argument)
+            self.emit(Events.BEFORE_TRUNK_BUILD, self)
             self.logic.TableauxSystem.build_trunk(self, self.argument)
             self.trunk_built = True
             self.current_step += 1
-            self.emit(Events.AFTER_TRUNK_BUILD, self.branches)
+            self.emit(Events.AFTER_TRUNK_BUILD, self)
         return self
 
     def finish(self):
@@ -366,7 +419,7 @@ class Tableau(EventEmitter):
             return self
 
         self.finished = True
-        self.valid    = len(self.open_branches()) == 0
+        self.valid    = len(self.__open_branchset) == 0
         self.invalid  = not self.valid and not self.is_premature
 
         with self.models_timer:
@@ -374,7 +427,7 @@ class Tableau(EventEmitter):
                 self.__build_models()
 
         with self.tree_timer:
-            self.tree = make_tree_structure(self.branches)
+            self.tree = make_tree_structure(list(self.branches()))
 
         self.stats = self.__compute_stats()
 
@@ -446,7 +499,7 @@ class Tableau(EventEmitter):
         open branch. This first checks the closure rules, then iterates
         over the rule groups. The first non-empty result is returned.
         """
-        res = self.__get_group_application(branch, self.closure_rules)
+        res = self.__get_group_application(branch, self.__closure_rules)
         if res:
             return res
         for rules in self.rule_groups:
@@ -558,13 +611,13 @@ class Tableau(EventEmitter):
 
     def __compute_stats(self):
         # Compute the stats property after the tableau is finished.
-        num_open = len(self.open_branches())
+        num_open = len(self.__open_branchset)
         return {
             'id'                : id(self),
             'result'            : self.__result_word(),
-            'branches'          : len(self.branches),
+            'branches'          : self.branch_count,
             'open_branches'     : num_open,
-            'closed_branches'   : len(self.branches) - num_open,
+            'closed_branches'   : self.branch_count - num_open,
             'rules_applied'     : len(self.history),
             'distinct_nodes'    : self.tree['distinct_nodes'],
             'rules_duration_ms' : sum((application['duration_ms'] for application in self.history)),
@@ -574,11 +627,11 @@ class Tableau(EventEmitter):
             'models_duration_ms': self.models_timer.elapsed(),
             'rules_time_ms'     : sum([
                 sum([rule.search_timer.elapsed(), rule.apply_timer.elapsed()])
-                for rule in self.all_rules
+                for rule in self.__all_rules
             ]),
             'rules' : [
                 self.__compute_rule_stats(rule)
-                for rule in self.all_rules
+                for rule in self.__all_rules
             ],
         }
 
@@ -637,7 +690,7 @@ class Tableau(EventEmitter):
     def __build_models(self):
         self.models = set()
         # Build models for the open branches
-        for branch in list(self.open_branches()):
+        for branch in self.__open_branchset:
             self.__check_timeout()
             model = self.logic.Model()
             model.read_branch(branch)
@@ -649,7 +702,7 @@ class Tableau(EventEmitter):
     def __repr__(self):
         return {
             'argument'      : self.argument,
-            'branches'      : len(self.branches),
+            'branches'      : self.branch_count,
             'rules_applied' : len(self.history),
             'finished'      : self.finished,
             'valid'         : self.valid,

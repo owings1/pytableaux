@@ -11,3 +11,5 @@ Rules Module
         .. autoattribute:: tableau
 
         .. autoattribute:: name
+    
+    .. autoclass:: ClosureRule
