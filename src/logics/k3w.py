@@ -199,26 +199,6 @@ class TableauxRules(object):
                 ],
             }
 
-        # If you try this 2-branching version, don't forget to
-        # reorder the rules!
-        #
-        #def apply_to_node(self, node, branch):
-        #    s = self.sentence(node)
-        #    d = self.designation
-        #    b1 = branch
-        #    b2 = self.tableau.branch(branch)
-        #    disj1 = operate('Disjunction', [s.rhs, negate(s.rhs)])
-        #    disj2 = operate('Disjunction', [s.lhs, negate(s.lhs)])
-        #    b1.update([
-        #        {'sentence': negate(s.lhs), 'designated': True},
-        #        {'sentence':        disj1 , 'designated': True},
-        #    ]).tick(node)
-        #    b2.update([
-        #        {'sentence': negate(s.rhs), 'designated': True},
-        #        {'sentence':        disj2 , 'designated': True},
-        #    ]).tick(node)
-
-
     class ConjunctionUndesignated(fde.TableauxRules.ConjunctionUndesignated):
         pass
 

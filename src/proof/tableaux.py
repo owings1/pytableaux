@@ -20,7 +20,7 @@
 from lexicals import Constant
 from utils import get_logic, StopWatch
 from errors import IllegalStateError, TimeoutError
-from events import Events
+from events import Events, EventEmitter
 from inspect import isclass
 
 class TableauxSystem(object):
@@ -41,7 +41,7 @@ class TableauxSystem(object):
         for Rules in TabRules.rule_groups:
             tableau.add_rule_group(Rules)
 
-class Tableau(object):
+class Tableau(EventEmitter):
     """
     Represents a tableau proof of an argument for the given logic.
     """
@@ -53,7 +53,9 @@ class Tableau(object):
         'max_steps'       : None,
     }
 
-    def __init__(self, logic, argument=None, **opts):
+    def __init__(self, logic, argument = None, **opts):
+
+        super().__init__()
 
         #: The unique object ID of the tableau.
         #:
@@ -61,24 +63,34 @@ class Tableau(object):
         self.id = id(self)
 
         #: A tableau is finished when no more rules can apply.
+        #:
+        #: :type: bool
         self.finished = False
 
         #: An argument is valid (proved) when its finished tableau has no
         #: open branches.
+        #:
+        #: :type: bool
         self.valid = None
 
         #: An argument is invalid (disproved) when its finished tableau has
         #: at least one open branch, and it was not ended prematurely.
+        #:
+        #: :type: bool
         self.invalid = None
 
         #: Whether the tableau ended prematurely. This can happen when the
         #: `max_steps` or `build_timeout` options are exceeded.
+        #:
+        #: :type: bool
         self.is_premature = False
 
         #: The branches on the tableau. The branches are stored as list to
         #: maintain a consistent ordering. Since a tableau really consists of
         #: a `set` of branches, and they are represented internally as such,
         #: this will always be a list of `unique` branches.
+        #:
+        #: :type: list
         self.branches = list()
 
         #: The history of rule applications. Each application is a ``dict``
@@ -94,6 +106,8 @@ class Tableau(object):
         #:
         #: - `duration_ms` - The duration in milliseconds of the application,
         #:    or ``0`` if no step timer was associated.
+        #:
+        #: :type: list
         self.history = list()
 
         #: A tree structure of the tableau. This is generated only after the
@@ -126,14 +140,18 @@ class Tableau(object):
         self.trunk_built = False
         self.current_step = 0
 
-        self.__listeners = {
-            Events.AFTER_BRANCH_ADD   : list(),
-            Events.AFTER_BRANCH_CLOSE : list(),
-            Events.AFTER_NODE_ADD     : list(),
-            Events.AFTER_NODE_TICK    : list(),
-            # Events.AFTER_RULE_APPLY   : list(),
-            Events.AFTER_TRUNK_BUILD  : list(),
-            Events.BEFORE_TRUNK_BUILD : list(),
+        self.register_event(
+            Events.AFTER_BRANCH_ADD,
+            Events.AFTER_BRANCH_CLOSE,
+            Events.AFTER_NODE_ADD,
+            Events.AFTER_NODE_TICK,
+            Events.AFTER_TRUNK_BUILD,
+            Events.BEFORE_TRUNK_BUILD,
+        )
+        self.__branch_listeners = {
+            Events.AFTER_BRANCH_CLOSE : self.__after_branch_close,
+            Events.AFTER_NODE_ADD     : self.__after_node_add,
+            Events.AFTER_NODE_TICK    : self.__after_node_tick,
         }
 
         # Cache for the branching complexities
@@ -328,11 +346,11 @@ class Tableau(object):
         """
         self.__check_trunk_not_built()
         with self.trunk_build_timer:
-            self.__before_trunk_build()
+            self.emit(Events.BEFORE_TRUNK_BUILD, self.argument)
             self.logic.TableauxSystem.build_trunk(self, self.argument)
             self.trunk_built = True
             self.current_step += 1
-            self.__after_trunk_build()
+            self.emit(Events.AFTER_TRUNK_BUILD, self.branches)
         return self
 
     def finish(self):
@@ -378,57 +396,35 @@ class Tableau(object):
                 return 0
         return self.branching_complexities[node.id]
 
-    def add_listener(self, event, callback):
-        self.__listeners[event].append(callback)
-        return self
-
-    def remove_listener(self, event, callback):
-        idx = self.__listeners[event].index(callback)
-        self.__listeners[event].pop(idx)
-        return self
-
-    def remove_listeners(self, event):
-        self.__listeners[event].clear()
-        return self
-
-    def remove_all_listeners(self):
-        for event in self.__listeners:
-            self.__listeners[event].clear()
-        return self
-
-    # Callbacks called internally
-
     def __after_branch_add(self, branch):
-        branch.add_listener(Events.AFTER_BRANCH_CLOSE, self.__after_branch_close)
-        branch.add_listener(Events.AFTER_NODE_ADD, self.__after_node_add)
-        branch.add_listener(Events.AFTER_NODE_TICK, self.__after_node_tick)
-        for callback in self.__listeners[Events.AFTER_BRANCH_ADD]:
-            callback(branch)
+        if not branch.parent:
+            # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
+            # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
+            nodes = branch.get_nodes()
+        else:
+            nodes = None
+
+        self.emit(Events.AFTER_BRANCH_ADD, branch)
+
+        if not branch.parent:
+            for node in nodes:
+                self.__after_node_add(node, branch)
+
+        branch.add_listeners(self.__branch_listeners)
 
     def __after_branch_close(self, branch):
         branch.closed_step = self.current_step
         self.open_branchset.remove(branch)
-        for callback in self.__listeners[Events.AFTER_BRANCH_CLOSE]:
-            callback(branch)
+        self.emit(Events.AFTER_BRANCH_CLOSE, branch)
 
     def __after_node_add(self, node, branch):
         node.step = self.current_step
-        for callback in self.__listeners[Events.AFTER_NODE_ADD]:
-            callback(node, branch)
+        self.emit(Events.AFTER_NODE_ADD, node, branch)
 
     def __after_node_tick(self, node, branch):
         if node.ticked_step == None or self.current_step > node.ticked_step:
             node.ticked_step = self.current_step
-        for callback in self.__listeners[Events.AFTER_NODE_TICK]:
-            callback(node, branch)
-
-    def __after_trunk_build(self):
-        for callback in self.__listeners[Events.AFTER_TRUNK_BUILD]:
-            callback(self.branches)
-
-    def __before_trunk_build(self):
-        for callback in self.__listeners[Events.BEFORE_TRUNK_BUILD]:
-            callback(self.argument)
+        self.emit(Events.AFTER_NODE_TICK, node, branch)
 
     # Interal util methods
 
@@ -656,12 +652,13 @@ class Tableau(object):
             'is_premature'  : self.is_premature,
         }.__repr__()
 
-class Branch(object):
+class Branch(EventEmitter):
     """
     Represents a tableau branch.
     """
 
-    def __init__(self, tableau=None):
+    def __init__(self, tableau = None):
+        super().__init__()
         # Make sure properties are copied if needed in copy()
         self.id = id(self)
         self.closed = False
@@ -685,31 +682,13 @@ class Branch(object):
             'world2'     : {},
             'w1Rw2'      : {},
         }
-        self.__listeners = {
-            Events.AFTER_BRANCH_CLOSE : list(),
-            Events.AFTER_NODE_ADD     : list(),
-            Events.AFTER_NODE_TICK    : list(),
-        }
+        self.register_event(
+            Events.AFTER_BRANCH_CLOSE,
+            Events.AFTER_NODE_ADD,
+            Events.AFTER_NODE_TICK,
+        )
 
-    def add_listener(self, event, callback):
-        self.__listeners[event].append(callback)
-        return self
-
-    def remove_listener(self, event, callback):
-        idx = self.__listeners[event].index(callback)
-        self.__listeners[event].pop(idx)
-        return self
-
-    def remove_listeners(self, event):
-        self.__listeners[event].clear()
-        return self
-
-    def remove_all_listeners(self):
-        for event in self.__listeners:
-            self.__listeners[event].clear()
-        return self
-
-    def has(self, props, ticked=None):
+    def has(self, props, ticked = None):
         """
         Check whether there is a node on the branch that matches the given properties,
         optionally filtered by ticked status.
@@ -726,7 +705,7 @@ class Branch(object):
         """
         return str(list(worlds)) in self.node_index['w1Rw2']
 
-    def has_any(self, props_list, ticked=None):
+    def has_any(self, props_list, ticked = None):
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``True``
         when the first match is found.
@@ -736,7 +715,7 @@ class Branch(object):
                 return True
         return False
 
-    def has_all(self, props_list, ticked=None):
+    def has_all(self, props_list, ticked = None):
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``False``
         when the first non-match is found.
@@ -746,7 +725,7 @@ class Branch(object):
                 return False
         return True
 
-    def find(self, props, ticked=None):
+    def find(self, props, ticked = None):
         """
         Find the first node on the branch that matches the given properties, optionally
         filtered by ticked status. Returns ``None`` if not found.
@@ -756,14 +735,14 @@ class Branch(object):
             return results[0]
         return None
 
-    def find_all(self, props, ticked=None):
+    def find_all(self, props, ticked = None):
         """
         Find all the nodes on the branch that match the given properties, optionally
         filtered by ticked status. Returns a list.
         """
         return self.search_nodes(props, ticked=ticked)
 
-    def search_nodes(self, props, ticked=None, limit=None):
+    def search_nodes(self, props, ticked = None, limit = None):
         """
         Find all the nodes on the branch that match the given properties, optionally
         filtered by ticked status, up to the limit, if given. Returns a list.
@@ -797,7 +776,7 @@ class Branch(object):
 
         # Add to index *before* after_node_add callback
         self.__add_to_index(node, consts)
-        self.__after_node_add(node)
+        self.emit(Events.AFTER_NODE_ADD, node, self)
 
         return self
 
@@ -816,7 +795,7 @@ class Branch(object):
         if node not in self.ticked_nodes:
             self.ticked_nodes.add(node)
             node.ticked = True
-            self.__after_node_tick(node)
+            self.emit(Events.AFTER_NODE_TICK, node, self)
         return self
 
     def close(self):
@@ -825,10 +804,10 @@ class Branch(object):
         """
         self.closed = True
         self.add({'is_flag': True, 'flag': 'closure'})
-        self.__after_close()
+        self.emit(Events.AFTER_BRANCH_CLOSE, self)
         return self
 
-    def get_nodes(self, ticked=None):
+    def get_nodes(self, ticked = None):
         """
         Return the nodes, optionally filtered by ticked status.
         """
@@ -844,7 +823,7 @@ class Branch(object):
 
     def copy(self):
         """
-        Return a copy of the branch.
+        Return a copy of the branch. Event listeners are *not* copied.
         """
         branch = self.__class__(self.tableau)
         branch.nodes = list(self.nodes)
@@ -1000,18 +979,6 @@ class Branch(object):
             else:
                 best_index = self.nodes
         return best_index
-
-    def __after_close(self):
-        for callback in self.__listeners[Events.AFTER_BRANCH_CLOSE]:
-            callback(self)
-
-    def __after_node_add(self, node):
-        for callback in self.__listeners[Events.AFTER_NODE_ADD]:
-            callback(node, self)
-
-    def __after_node_tick(self, node):
-        for callback in self.__listeners[Events.AFTER_NODE_TICK]:
-            callback(node, self)
 
     def __repr__(self):
         return {

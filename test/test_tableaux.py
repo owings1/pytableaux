@@ -1,6 +1,6 @@
 
 from errors import *
-
+from events import Events
 from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau
 from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
 from lexicals import Atomic, Constant, Predicated
@@ -86,12 +86,16 @@ class TestTableau(object):
         assert isinstance(r, Rule)
         assert r is rule
 
-    def test_register_branch_with_nodes_no_parent(self):
+    def test_after_branch_add_with_nodes_no_parent(self):
 
         class MockRule(Rule):
-            def register_branch(self, branch, parent):
+            def __init__(self, *args, **opts):
+                super().__init__(*args, **opts)
+                self.tableau.add_listener(Events.AFTER_BRANCH_ADD, self.__after_branch_add)
+
+            def __after_branch_add(self, branch):
                 self._checkbranch = branch
-                self._checkparent = parent
+                self._checkparent = branch.parent
         proof = Tableau(None)
         proof.add_rule_group([MockRule])
         b = Branch()
@@ -180,14 +184,18 @@ class TestBranch(object):
         branch = proof.branch().add({'world1': 4, 'world2': 1})
         assert branch.has({'world1': 4})
 
-    def test_regression_branch_has_works_with_newly_added_node_on_register_node(self):
+    def test_regression_branch_has_works_with_newly_added_node_on_after_node_add(self):
 
         class MyRule(Rule):
 
             should_be = False
             shouldnt_be = True
 
-            def register_node(self, node, branch):
+            def __init__(self, *args, **opts):
+                super().__init__(*args, **opts)
+                self.tableau.add_listener(Events.AFTER_NODE_ADD, self.__after_node_add)
+
+            def __after_node_add(self, node, branch):
                 self.should_be = branch.has({'world1': 7})
                 self.shouldnt_be = branch.has({'world1': 6})
 
@@ -272,7 +280,7 @@ class TestNodeRule(object):
     def test_not_impl_various(self):
         rule = PotentialNodeRule(Tableau(None, None))
         with raises(NotImplementedError):
-            rule.apply_to_node(None, None)
+            rule.apply_to_node_target(None, None, None)
         with raises(NotImplementedError):
             rule.example_node(None)
         with raises(NotImplementedError):

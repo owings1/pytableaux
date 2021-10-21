@@ -20,14 +20,10 @@
 name = 'FDE'
 
 class Meta(object):
-
     title    = 'First Degree Entailment'
     category = 'Many-valued'
-
     description = 'Four-valued logic (True, False, Neither, Both)'
-
     tags = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
-    
     category_display_order = 10
 
 from models import BaseModel

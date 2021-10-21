@@ -32,6 +32,7 @@ from docutils.parsers.rst import Directive, directives, roles
 
 logger = logging.getLogger(__name__)
 from utils import cat, isstr, get_logic
+from events import Events
 import examples
 from lexicals import list_operators, operarity, create_lexwriter, is_operator, \
     Constant, Variable, RenderSet, get_system_predicate
@@ -751,20 +752,22 @@ class Helper(object):
 
 # Misc util
 class TrunkEllipsisRule(Rule):
+
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self.__n = False
+        self.tableau.add_listener(Events.AFTER_NODE_ADD, self.__after_node_add)
+        self.tableau.add_listener(Events.BEFORE_TRUNK_BUILD, self.__before_trunk_build)
+
     def get_candidate_targets(self, branch):
         return None
 
-    def setup(self):
-        super().setup()
-        self.__n = False
-
-    def before_trunk_build(self, arg):
-        super().before_trunk_build(arg)
+    def __before_trunk_build(self, arg):
         if not self.__n:
             self.__n = 1
 
-    def register_node(self, node, branch):
-        super().register_node(node, branch)
+    def __after_node_add(self, node, branch):
+        # super().register_node(node, branch)
         if node.has('ellipsis'):
             return
         if self.__n == 1:
@@ -775,6 +778,8 @@ class ClosureEllipsisRule(Rule):
 
     def __init__(self, tableau, target_rule, **opts):
         super().__init__(tableau, **opts)
+        self.tableau.add_listener(Events.AFTER_BRANCH_ADD, self.__after_branch_add)
+        self.tableau.add_listener(Events.AFTER_NODE_ADD, self.__after_node_add)
         self.__applies = False
         testproof = Tableau(tableau.logic)
         rule = testproof.get_rule(target_rule)
@@ -791,16 +796,16 @@ class ClosureEllipsisRule(Rule):
     def get_candidate_targets(self, branch):
         return None
 
-    def register_branch(self, branch, parent):
-        super().register_branch(branch, parent)
+    def __after_branch_add(self, branch):
+        # super().register_branch(branch, parent)
         if not self.__applies:
             return
         if self.__nodecount != 1:
             return
         branch.add({'ellipsis': True})
         
-    def register_node(self, node, branch):
-        super().register_node(node, branch)
+    def __after_node_add(self, node, branch):
+        # super().register_node(node, branch)
         if not self.__applies:
             return
         if node.has('ellipsis'):

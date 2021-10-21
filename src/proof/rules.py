@@ -22,9 +22,9 @@ from lexicals import AtomicSentence, OperatedSentence, operarity
 from utils import StopWatch
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper
-from events import Events
+from events import Events, EventEmitter
 
-class Rule(object):
+class Rule(EventEmitter):
     """
     Base class for a tableau rule.
     """
@@ -38,37 +38,41 @@ class Rule(object):
     # For helper
     ticking = None
 
-    # TODO: We may be able to remove this `ticked` property, since it looks
-    #  like the only time this class uses it is if "not branch.parent", which
-    #  seems like the only typical (read actual) case would be on trunk build.
-    #  Furthermore, I believe it is just a (vacuous) optimization, instead
-    #  of always using None for the filter in _after_branch_add. But tests
-    #  will have to be performed.
-
-    # For compatibility in ``_after_branch_add()``
-    ticked = None
-
     def __init__(self, tableau, **opts):
+
         if not _check_is_tableau(tableau):
             raise TypeError('Must instantiate rule with a tableau instance.')
+        super().__init__()
+
         #: Reference to the tableau for which the rule is instantiated.
+        #:
+        #: :type: tableaux.Tableau
         self.tableau = tableau
+
+        #: The rule name, default it the class name.
+        #:
+        #: :type: str
+        self.name = self.__class__.__name__
+
         self.search_timer = StopWatch()
         self.apply_timer = StopWatch()
         self.timers = {}
         self.helpers = []
-        self.name = self.__class__.__name__
         self.apply_count = 0
         self.opts = dict(self.default_opts)
         self.opts.update(opts)
+
+        self.tableau.add_listeners({
+            Events.AFTER_BRANCH_ADD   : self.__after_branch_add,
+            Events.AFTER_BRANCH_CLOSE : self.__after_branch_close,
+            Events.AFTER_NODE_ADD     : self.__after_node_add,
+            Events.AFTER_NODE_TICK    : self.__after_node_tick,
+            Events.AFTER_TRUNK_BUILD  : self.__after_trunk_build,
+            Events.BEFORE_TRUNK_BUILD : self.__before_trunk_build,
+        })
+        self.register_event(Events.AFTER_APPLY)
         self.add_helper('adz', AdzHelper(self))
         self.setup()
-        self.tableau.add_listener(Events.AFTER_BRANCH_ADD, self.__after_branch_add)
-        self.tableau.add_listener(Events.AFTER_BRANCH_CLOSE, self.__after_branch_close)
-        self.tableau.add_listener(Events.AFTER_NODE_ADD, self.__after_node_add)
-        self.tableau.add_listener(Events.AFTER_NODE_TICK, self.__after_node_tick)
-        self.tableau.add_listener(Events.AFTER_TRUNK_BUILD, self.__after_trunk_build)
-        self.tableau.add_listener(Events.BEFORE_TRUNK_BUILD, self.__before_trunk_build)
 
     # External API
 
@@ -87,53 +91,6 @@ class Rule(object):
         if cands:
             self.__extend_branch_targets(cands, branch)
             return self.__select_best_target(cands, branch)
-
-    def __extend_branch_targets(self, targets, branch):
-        # Augment the targets with the following keys:
-        #
-        #  - branch
-        #  - is_rank_optim
-        #  - candidate_score
-        #  - total_candidates
-        #  - min_candidate_score
-        #  - max_candidate_score
-
-        for target in targets:
-            if 'branch' not in target:
-                target['branch'] = branch
-
-        if self.opts['is_rank_optim']:
-            scores = [self.score_candidate(target) for target in targets]
-        else:
-            scores = [0]
-        max_score = max(scores)
-        min_score = min(scores)
-        for i in range(len(targets)):
-            target = targets[i]
-            if self.opts['is_rank_optim']:
-                target.update({
-                    'is_rank_optim'       : True,
-                    'candidate_score'     : scores[i],
-                    'total_candidates'    : len(targets),
-                    'min_candidate_score' : min_score,
-                    'max_candidate_score' : max_score,
-                })
-            else:
-                target.update({
-                    'is_rank_optim'       : False,
-                    'candidate_score'     : None,
-                    'total_candidates'    : len(targets),
-                    'min_candidate_score' : None,
-                    'max_candidate_score' : None,
-                })
-
-    def __select_best_target(self, targets, branch):
-        # Selects the best target. Assumes targets have been extended.
-        for target in targets:
-            if not self.opts['is_rank_optim']:
-                return target
-            if target['candidate_score'] == target['max_candidate_score']:
-                return target
 
     # Abstract methods
 
@@ -186,29 +143,6 @@ class Rule(object):
         # Will sum to 0 by default
         return {}
 
-    # Implementable callbacks -- always call ``super()``, or use a helper.
-
-    def register_branch(self, branch, parent):
-        pass
-
-    def register_node(self, node, branch):
-        pass
-
-    def before_trunk_build(self, argument):
-        pass
-
-    def after_trunk_build(self, branches):
-        pass
-
-    def after_node_tick(self, node, branch):
-        pass
-
-    def after_branch_close(self, branch):
-        pass
-
-    def after_apply(self, target):
-        pass
-
     # Util methods
 
     def setup(self):
@@ -216,7 +150,7 @@ class Rule(object):
         # only be used by concrete classes. called in constructor.
         pass
 
-    def branch(self, parent=None):
+    def branch(self, parent = None):
         # Convenience for ``self.tableau.branch()``.
         return self.tableau.branch(parent)
 
@@ -224,7 +158,7 @@ class Rule(object):
     def branching_complexity(self, node):
         return self.tableau.branching_complexity(node)
 
-    def safeprop(self, name, value=None):
+    def safeprop(self, name, value = None):
         if hasattr(self, name):
             raise KeyError('Property {0} already exists'.format(str(name)))
         self.__dict__[name] = value
@@ -248,58 +182,94 @@ class Rule(object):
     # Callbacks
 
     def __before_trunk_build(self, argument):
-        self.before_trunk_build(argument)
         for helper in self.helpers:
             if hasattr(helper, 'before_trunk_build'):
                 helper.before_trunk_build(argument)
 
     def __after_trunk_build(self, branches):
-        self.after_trunk_build(branches)
         for helper in self.helpers:
             if hasattr(helper, 'after_trunk_build'):
                 helper.after_trunk_build(branches)
 
     def __after_branch_add(self, branch):
-        if not branch.parent:
-            # For corner case of a register_branch callback adding a node, make
-            # sure we don't call register_node twice, so prefetch the nodes.
-            nodes = branch.get_nodes(ticked = self.ticked)
-        else:
-            nodes = None
-        self.register_branch(branch, branch.parent)
         for helper in self.helpers:
             if hasattr(helper, 'register_branch'):
                 helper.register_branch(branch, branch.parent)
-        if not branch.parent:
-            for node in nodes:
-                self.register_node(node, branch)
-                for helper in self.helpers:
-                    if hasattr(helper, 'register_node'):
-                        helper.register_node(node, branch)
 
     def __after_branch_close(self, branch):
-        self.after_branch_close(branch)
         for helper in self.helpers:
             if hasattr(helper, 'after_branch_close'):
                 helper.after_branch_close(branch)
 
     def __after_node_add(self, node, branch):
-        self.register_node(node, branch)
         for helper in self.helpers:
             if hasattr(helper, 'register_node'):
                 helper.register_node(node, branch)
 
     def __after_node_tick(self, node, branch):
-        self.after_node_tick(node, branch)
         for helper in self.helpers:
             if hasattr(helper, 'after_node_tick'):
                 helper.after_node_tick(node, branch)
 
     def __after_apply(self, target):
-        self.after_apply(target)
+        self.emit(Events.AFTER_APPLY, target)
         for helper in self.helpers:
             if hasattr(helper, 'after_apply'):
                 helper.after_apply(target)
+
+    # Private Util
+
+    def __extend_branch_targets(self, targets, branch):
+        """
+        Augment the targets with the following keys:
+        
+        - `branch`
+        - `is_rank_optim`
+        - `candidate_score`
+        - `total_candidates`
+        - `min_candidate_score`
+        - `max_candidate_score`
+        """
+        for target in targets:
+            if 'branch' not in target:
+                target['branch'] = branch
+
+        if self.opts['is_rank_optim']:
+            scores = [self.score_candidate(target) for target in targets]
+        else:
+            scores = [0]
+        max_score = max(scores)
+        min_score = min(scores)
+        for i in range(len(targets)):
+            target = targets[i]
+            if self.opts['is_rank_optim']:
+                target.update({
+                    'is_rank_optim'       : True,
+                    'candidate_score'     : scores[i],
+                    'total_candidates'    : len(targets),
+                    'min_candidate_score' : min_score,
+                    'max_candidate_score' : max_score,
+                })
+            else:
+                target.update({
+                    'is_rank_optim'       : False,
+                    'candidate_score'     : None,
+                    'total_candidates'    : len(targets),
+                    'min_candidate_score' : None,
+                    'max_candidate_score' : None,
+                })
+
+    def __select_best_target(self, targets, branch):
+        """
+        Selects the best target. Assumes targets have been extended.
+        """
+        for target in targets:
+            if not self.opts['is_rank_optim']:
+                return target
+            if target['candidate_score'] == target['max_candidate_score']:
+                return target
+
+    # Other
 
     def __repr__(self):
         return self.name
@@ -361,87 +331,49 @@ class PotentialNodeRule(Rule):
 
     def __init__(self, *args, **opts):
         super().__init__(*args, **opts)
-        self.safeprop('potential_nodes', {})
-        self.safeprop('node_applications', {})
+        self.__potential_nodes = dict()
+        self.__node_applications = dict()
+        self.tableau.add_listeners({
+            Events.AFTER_BRANCH_ADD   : self.__after_branch_add,
+            Events.AFTER_BRANCH_CLOSE : self.__after_branch_close,
+            Events.AFTER_NODE_ADD     : self.__after_node_add,
+            Events.AFTER_NODE_TICK    : self.__after_node_tick,
+        })
+        self.add_listener(Events.AFTER_APPLY, self.__after_apply)
 
     # Implementation
 
     def get_candidate_targets(self, branch):
         # Implementations should be careful with overriding this method.
-        # Be sure you at least call ``_extend_node_target()``.
         cands = list()
-        if branch.id in self.potential_nodes:
-            for node in set(self.potential_nodes[branch.id]):
+        if branch.id in self.__potential_nodes:
+            for node in set(self.__potential_nodes[branch.id]):
                 targets = self.get_targets_for_node(node, branch)
                 if targets:
                     for target in targets:
-                        target = self._extend_node_target(target, node, branch)
+                        target = self.__extend_node_target(target, node, branch)
                         cands.append(target)
                 else:
                     if not self.is_potential_node(node, branch):
-                        self.potential_nodes[branch.id].discard(node)
+                        self.__potential_nodes[branch.id].discard(node)
         return cands
-
-    def _extend_node_target(self, target, node, branch):
-        if target == True:
-            target = {'node' : node}
-        if 'node' not in target:
-            target['node'] = node
-        if 'type' not in target:
-            target['type'] = 'Node'
-        if 'branch' not in target:
-            target['branch'] = branch
-        return target
-
-    # Caching
-
-    def register_branch(self, branch, parent):
-        # Likely to be extended in concrete class - call super and pay attention
-        super().register_branch(branch, parent)
-        if parent != None and parent.id in self.potential_nodes:
-            self.potential_nodes[branch.id] = set(self.potential_nodes[parent.id])
-            self.node_applications[branch.id] = dict(self.node_applications[parent.id])
-        else:
-            self.potential_nodes[branch.id] = set()
-            self.node_applications[branch.id] = dict()
-
-    def register_node(self, node, branch):
-        # Likely to be extended in concrete class - call super and pay attention
-        super().register_node(node, branch)
-        if self.is_potential_node(node, branch):
-            self.potential_nodes[branch.id].add(node)
-            self.node_applications[branch.id][node.id] = 0
-
-    def after_apply(self, target):
-        super().after_apply(target)
-        self.node_applications[target['branch'].id][target['node'].id] += 1
-
-    def after_branch_close(self, branch):
-        super().after_branch_close(branch)
-        del(self.potential_nodes[branch.id])
-        del(self.node_applications[branch.id])
-
-    def after_node_tick(self, node, branch):
-        super().after_node_tick(node, branch)
-        if self.ticked == False and branch.id in self.potential_nodes:
-            self.potential_nodes[branch.id].discard(node)
 
     # Util
 
     def min_application_count(self, branch_id):
-        if branch_id in self.node_applications:
-            if not len(self.node_applications[branch_id]):
+        if branch_id in self.__node_applications:
+            if not len(self.__node_applications[branch_id]):
                 return 0
             return min({
                 self.node_application_count(node_id, branch_id)
-                for node_id in self.node_applications[branch_id]
+                for node_id in self.__node_applications[branch_id]
             })
         return 0
 
     def node_application_count(self, node_id, branch_id):
-        if branch_id in self.node_applications:
-            if node_id in self.node_applications[branch_id]:
-                return self.node_applications[branch_id][node_id]
+        if branch_id in self.__node_applications:
+            if node_id in self.__node_applications[branch_id]:
+                return self.__node_applications[branch_id][node_id]
         return 0
 
     # Default
@@ -453,12 +385,10 @@ class PotentialNodeRule(Rule):
             score = -1 * complexity
         return score
 
-    # Abstract
-
-    def is_potential_node(self, node, branch):
-        raise NotImplementedError()
-
-    # Delegating abstract
+    def apply_to_target(self, target):
+        # Default implementation, to provide a more convenient
+        # method signature.
+        self.apply_to_node_target(target['node'], target['branch'], target)
 
     def get_targets_for_node(self, node, branch):
         # Default implementation, delegates to ``get_target_for_node``
@@ -466,58 +396,104 @@ class PotentialNodeRule(Rule):
         if target:
             return [target]
 
+    # Abstract
+
+    def apply_to_node_target(self, node, branch, target):
+        raise NotImplementedError()
+
     def get_target_for_node(self, node, branch):
         raise NotImplementedError()
 
-    def apply_to_target(self, target):
-        # Default implementation, to provide a more convenient
-        # method signature.
-        self.apply_to_node_target(target['node'], target['branch'], target)
-
-    def apply_to_node_target(self, node, branch, target):
-        # Default implementation, to provide a more convenient
-        # method signature.
-        self.apply_to_node(node, branch)
-
-    def apply_to_node(self, node, branch):
-        # Simpler signature to implement, mostly for legacy purposes.
-        # New code should implement ``apply_to_node_target()`` instead,
-        # which provides more flexibility.
+    def is_potential_node(self, node, branch):
         raise NotImplementedError()
+
+    # Events
+
+    def __after_apply(self, target):
+        self.__node_applications[target['branch'].id][target['node'].id] += 1
+
+    def __after_branch_add(self, branch):
+        parent = branch.parent
+        if parent != None and parent.id in self.__potential_nodes:
+            self.__potential_nodes[branch.id] = set(self.__potential_nodes[parent.id])
+            self.__node_applications[branch.id] = dict(self.__node_applications[parent.id])
+        else:
+            self.__potential_nodes[branch.id] = set()
+            self.__node_applications[branch.id] = dict()
+
+    def __after_branch_close(self, branch):
+        del(self.__potential_nodes[branch.id])
+        del(self.__node_applications[branch.id])
+
+    def __after_node_tick(self, node, branch):
+        if self.ticked == False and branch.id in self.__potential_nodes:
+            self.__potential_nodes[branch.id].discard(node)
+
+    def __after_node_add(self, node, branch):
+        if self.is_potential_node(node, branch):
+            self.__potential_nodes[branch.id].add(node)
+            self.__node_applications[branch.id][node.id] = 0
+
+    # Private Util
+
+    def __extend_node_target(self, target, node, branch):
+        if target == True:
+            target = {'node' : node}
+        if 'node' not in target:
+            target['node'] = node
+        if 'type' not in target:
+            target['type'] = 'Node'
+        if 'branch' not in target:
+            target['branch'] = branch
+        return target
 
 class FilterNodeRule(PotentialNodeRule):
     """
-    A ``FilterNodeRule`` filters potential nodes by matching
-    the attribute conditions of the implementing class.
+    A ``FilterNodeRule`` filters potential nodes by matching the attribute
+    conditions of the implementing class.
 
-    The following attribute conditions can be defined. If a condition is
-    set to ``None``, then it will be vacuously met.
+    The following attribute conditions can be defined. If a condition is set to
+    ``None``, then it will be vacuously met.
     """
 
     #: The ticked status of the node, default is ``False``.
-    ticked      = False
+    #:
+    #: :type: bool
+    ticked = False
 
     #: Whether this rule applies to modal nodes, i.e. nodes that
     #: reference one or more worlds.
-    modal       = None
+    #:
+    #: :type: bool
+    modal = None
 
     #: The main operator of the node's sentence, if any.
-    operator    = None
+    #:
+    #: :type: str
+    operator = None
 
     #: Whether the sentence must be negated. if ``True``, then nodes
     #: whose sentence's main connective is Negation will be checked,
     #: and if the negatum has the main connective defined in the
     #: ``operator`` condition (above), then this condition will be met.
-    negated     = None
+    #:
+    #: :type: bool
+    negated = None
 
     #: The quantifier of the sentence, e.g. 'Universal' or 'Existential'.
-    quantifier  = None
+    #:
+    #: :type: str
+    quantifier = None
 
-    #: The designation status (``True``/``False``) of the node.
+    #: The designation status of the node.
+    #:
+    #: :type: bool
     designation = None
 
-    #: The predicate name
-    predicate   = None
+    #: The predicate name.
+    #:
+    #: :type: str
+    predicate = None
 
     # Implementation
 
@@ -558,7 +534,7 @@ class FilterNodeRule(PotentialNodeRule):
             if self.quantifier != quantifier:
                 return False
         if self.designation != None:
-            if 'designated' not in node.props or node.props['designated'] != self.designation:
+            if node.props.get('designated') != self.designation:
                 return False
         if self.predicate != None:
             if predicate == None or self.predicate != predicate.name:
@@ -631,9 +607,9 @@ class NewConstantStoppingRule(FilterNodeRule):
 
     def get_target_for_node(self, node, branch):
 
-        if not self._should_apply(branch, node.props['world']):
+        if not self.__should_apply(branch, node.props['world']):
             if not self.quit_flagger.has_flagged(branch):
-                return self._get_flag_target(branch)
+                return self.__get_flag_target(branch)
             return
 
         c = branch.new_constant()
@@ -655,10 +631,10 @@ class NewConstantStoppingRule(FilterNodeRule):
 
     # private util
 
-    def _should_apply(self, branch, world):
+    def __should_apply(self, branch, world):
         return not self.max_constants.max_constants_exceeded(branch, world)
 
-    def _get_flag_target(self, branch):
+    def __get_flag_target(self, branch):
         return {
             'flag': True,
             'adds': [
@@ -693,11 +669,11 @@ class AllConstantsStoppingRule(FilterNodeRule):
     def get_targets_for_node(self, node, branch):
 
         with self.timers['in_should_apply']:
-            should_apply = self._should_apply(node, branch)
+            should_apply = self.__should_apply(node, branch)
 
         if not should_apply:
-            if self._should_flag(branch, node.props['world']):
-                return [self._get_flag_target(branch)]
+            if self.__should_flag(branch, node.props['world']):
+                return [self.__get_flag_target(branch)]
             return
 
         with self.timers['in_get_targets_for_nodes']:
@@ -725,7 +701,7 @@ class AllConstantsStoppingRule(FilterNodeRule):
 
     # private util
 
-    def _should_apply(self, node, branch):
+    def __should_apply(self, node, branch):
         if self.max_constants.max_constants_exceeded(branch, node.props['world']):
             return False
         # Apply if there are no constants on the branch
@@ -735,14 +711,14 @@ class AllConstantsStoppingRule(FilterNodeRule):
         if self.applied_constants.get_unapplied(node, branch):
             return True
 
-    def _should_flag(self, branch, world):
+    def __should_flag(self, branch, world):
         # Slight difference with FDE here -- using world
         return (
             self.max_constants.max_constants_exceeded(branch, world) and
             not self.quit_flagger.has_flagged(branch)
         )
 
-    def _get_flag_target(self, branch):
+    def __get_flag_target(self, branch):
         return {
             'flag': True,
             'adds': [
