@@ -68,7 +68,8 @@ class TableauxRules(object):
         """
         modal = True
 
-        def setup(self):
+        def __init__(self, *args, **opts):
+            super().__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
             self.add_timer('is_potential_node')
             self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))

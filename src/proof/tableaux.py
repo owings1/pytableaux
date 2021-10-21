@@ -43,7 +43,7 @@ class TableauxSystem(object):
 
 class Tableau(EventEmitter):
     """
-    Represents a tableau proof of an argument for the given logic.
+    A tableau proof.
     """
 
     default_opts = {
@@ -135,7 +135,7 @@ class Tableau(EventEmitter):
         self.opts = dict(self.default_opts)
         self.opts.update(opts)
 
-        self.open_branchset = set()
+        self.__open_branchset = set()
         self.__branch_dict = dict()
         self.trunk_built = False
         self.current_step = 0
@@ -287,11 +287,11 @@ class Tableau(EventEmitter):
 
     def open_branches(self):
         """
-        Return the set of open branches on the tableau. This does **not** make
-        a copy of the set, and so should be copied by the caller if modifications
-        may occur.
+        Return the set (copy) of open branches on the tableau.
+
+        :rtype: set(Branch)
         """
-        return self.open_branchset
+        return set(self.__open_branchset)
 
     def get_rule(self, rule):
         """
@@ -311,7 +311,7 @@ class Tableau(EventEmitter):
         tableau.
         """
         if parent == None:
-            branch = Branch(self)
+            branch = Branch()
         else:
             branch = parent.copy()
             branch.parent = parent
@@ -325,7 +325,7 @@ class Tableau(EventEmitter):
         branch.index = len(self.branches)
         self.branches.append(branch)
         if not branch.closed:
-            self.open_branchset.add(branch)
+            self.__open_branchset.add(branch)
         self.__branch_dict[branch.id] = branch
         self.__after_branch_add(branch)
         return self
@@ -390,10 +390,10 @@ class Tableau(EventEmitter):
         :rtype: int
         """
         if node.id not in self.branching_complexities:
-            if self.logic != None:
-                self.branching_complexities[node.id] = self.logic.TableauxSystem.branching_complexity(node)
-            else:
+            if self.logic == None:
                 return 0
+            self.branching_complexities[node.id] = \
+                self.logic.TableauxSystem.branching_complexity(node)
         return self.branching_complexities[node.id]
 
     def __after_branch_add(self, branch):
@@ -414,7 +414,7 @@ class Tableau(EventEmitter):
 
     def __after_branch_close(self, branch):
         branch.closed_step = self.current_step
-        self.open_branchset.remove(branch)
+        self.__open_branchset.remove(branch)
         self.emit(Events.AFTER_BRANCH_CLOSE, branch)
 
     def __after_node_add(self, node, branch):
@@ -639,7 +639,12 @@ class Tableau(EventEmitter):
         # Build models for the open branches
         for branch in list(self.open_branches()):
             self.__check_timeout()
-            self.models.add(branch.make_model())
+            model = self.logic.Model()
+            model.read_branch(branch)
+            if self.argument != None:
+                model.is_countermodel = model.is_countermodel_to(self.argument)
+            branch.model = model
+            self.models.add(model)
         
     def __repr__(self):
         return {
@@ -657,7 +662,7 @@ class Branch(EventEmitter):
     Represents a tableau branch.
     """
 
-    def __init__(self, tableau = None):
+    def __init__(self):
         super().__init__()
         # Make sure properties are copied if needed in copy()
         self.id = id(self)
@@ -669,7 +674,6 @@ class Branch(EventEmitter):
         self.preds = set()
         self.atms = set()
         self.leaf = None
-        self.tableau = tableau
         self.closed_step = None
         self.index = None
         self.model = None
@@ -825,7 +829,7 @@ class Branch(EventEmitter):
         """
         Return a copy of the branch. Event listeners are *not* copied.
         """
-        branch = self.__class__(self.tableau)
+        branch = self.__class__()
         branch.nodes = list(self.nodes)
         branch.ticked_nodes = set(self.ticked_nodes)
         branch.consts = set(self.consts)
@@ -901,21 +905,6 @@ class Branch(EventEmitter):
             return (self.constants(), False)
         return ({self.new_constant()}, True)
 
-    def make_model(self):
-        """
-        Make a model from the open branch.
-        """
-        if self.closed:
-            raise TypeError(
-                'Cannot build a model from a closed branch'
-            )
-        model = self.tableau.logic.Model()
-        model.read_branch(self)
-        if self.tableau.argument != None:
-            model.is_countermodel = model.is_countermodel_to(self.tableau.argument)
-        self.model = model
-        return model
-
     def origin(self):
         """
         Traverse up through the ``parent`` property.
@@ -924,12 +913,6 @@ class Branch(EventEmitter):
         while origin.parent != None:
             origin = origin.parent
         return origin
-
-    def branch(self):
-        """
-        Convenience method for ``tableau.branch()``.
-        """
-        return self.tableau.branch(self)
 
     def create_node(self, props):
         """
@@ -993,7 +976,7 @@ class Node(object):
     A tableau node.
     """
 
-    def __init__(self, props={}):
+    def __init__(self, props = {}):
         #: A dictionary of properties for the node.
         self.props = {
             'world'      : None,
@@ -1054,7 +1037,7 @@ class Node(object):
 
     def atomics(self):
         """
-        Return the set of atomics (recusive) of the node's `sentence`
+        Return the set of atomics (recursive) of the node's `sentence`
         property, if any. If the node does not have a sentence, return
         an empty set.
         """
@@ -1064,7 +1047,7 @@ class Node(object):
 
     def constants(self):
         """
-        Return the set of constants (recusive) of the node's `sentence`
+        Return the set of constants (recursive) of the node's `sentence`
         property, if any. If the node does not have a sentence, return
         the empty set.
         """
@@ -1074,7 +1057,7 @@ class Node(object):
 
     def predicates(self):
         """
-        Return the set of constants (recusive) of the node's `sentence`
+        Return the set of predicates (recursive) of the node's `sentence`
         property, if any. If the node does not have a sentence, return
         the empty set.
         """

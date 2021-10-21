@@ -295,6 +295,7 @@ class Model(BaseModel):
                     else:
                         self.set_literal_value(sentence, value)
         self.finish()
+        return self
 
     def _collect_node(self, node):
         self.predicates.update(node.predicates())
@@ -553,7 +554,7 @@ class DefaultNodeRule(FilterNodeRule):
 class DefaultNewConstantRule(DefaultNodeRule, NewConstantStoppingRule):
 
     def score_candidate(self, target):
-        return -1 * self.branching_complexity(target['node'])
+        return -1 * self.tableau.branching_complexity(target['node'])
 
 class DefaultAllConstantsRule(DefaultNodeRule, AllConstantsStoppingRule):
 

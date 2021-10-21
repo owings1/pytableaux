@@ -29,7 +29,7 @@ class AdzHelper(object):
         for i in range(len(target['adds'])):
             if i == 0:
                 continue
-            b = branch.branch()
+            b = self.rule.branch(branch)
             b.update(target['adds'][i])
             if self.rule.ticking:
                 b.tick(target['node'])

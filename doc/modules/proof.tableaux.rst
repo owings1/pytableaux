@@ -8,7 +8,9 @@ Tableaux Module
 
     .. autoclass:: Tableau
 
-        .. automethod:: build
+        .. automethod:: build()
+
+        .. automethod:: open_branches
 
     .. autoclass:: Branch
 

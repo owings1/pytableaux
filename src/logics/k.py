@@ -215,6 +215,7 @@ class Model(BaseModel):
         for node in branch.get_nodes():
             self.read_node(node)
         self.finish()
+        return self
 
     def read_node(self, node):
         if node.has('sentence'):
@@ -622,11 +623,6 @@ class Frame(object):
     def __ge__(self, other):
         return self.world >= other.world
 
-    def __cmp__(self, other):
-        # Python 2 only
-        #return cmp(self.world, other.world)
-        return (self.world > other.world) - (self.world < other.world)
-
 class TableauxSystem(BaseSystem):
     """
     Modal tableaux are similar to classical tableaux, with the addition of a
@@ -636,8 +632,8 @@ class TableauxSystem(BaseSystem):
     to their classical counterparts.
     """
 
-    neg_branchable = set(['Conjunction', 'Material Biconditional', 'Biconditional'])
-    pos_branchable = set(['Disjunction', 'Material Conditional', 'Conditional'])
+    neg_branchable = {'Conjunction', 'Material Biconditional', 'Biconditional'}
+    pos_branchable = {'Disjunction', 'Material Conditional', 'Conditional'}
 
     @classmethod
     def build_trunk(cls, tableau, argument):
@@ -1088,7 +1084,7 @@ class TableauxRules(object):
         branch_level = 1
 
         def score_candidate(self, target):
-            return -1 * self.branching_complexity(target['node'])
+            return -1 * self.tableau.branching_complexity(target['node'])
 
         # NewConstantStoppingRule implementation
 
@@ -1176,7 +1172,8 @@ class TableauxRules(object):
         operator = 'Possibility'
         branch_level = 1
 
-        def setup(self):
+        def __init__(self, *args, **opts):
+            super().__init__(*args, **opts)
             self.add_helpers({
                 'applied_sentences' : AppliedSentenceCounter(self),
                 'max_worlds'        : MaxWorldsTracker(self),
@@ -1287,7 +1284,8 @@ class TableauxRules(object):
         branch_level = 1
         ticking      = False
 
-        def setup(self):
+        def __init__(self, *args, **opts):
+            super().__init__(*args, **opts)
             self.add_timer(
                 'get_targets_for_node',
                 'make_target'         ,
@@ -1375,7 +1373,7 @@ class TableauxRules(object):
                 return 1
 
             # Pick the least branching complexity
-            return -1 * self.branching_complexity(target['node'])
+            return -1 * self.tableau.branching_complexity(target['node'])
 
         def group_score(self, target):
 
@@ -1383,7 +1381,7 @@ class TableauxRules(object):
                 return 1
 
             return -1 * self.node_application_count(target['node'].id, target['branch'].id)
-            #return -1 * min(target['track_count'], self.branching_complexity(target['node']))
+            #return -1 * min(target['track_count'], self.tableau.branching_complexity(target['node']))
 
         def example_nodes(self, branch):
             s = Operated(self.operator, [Atomic(0, 0)])
@@ -1433,7 +1431,8 @@ class TableauxRules(object):
         branch_level = 1
         ticking      = False
 
-        def setup(self):
+        def __init__(self, *args, **opts):
+            super().__init__(*args, **opts)
             self.add_helper('predicated_nodes', PredicatedNodesTracker(self))
 
         def get_targets_for_node(self, node, branch):

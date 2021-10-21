@@ -72,7 +72,6 @@ class Rule(EventEmitter):
         })
         self.register_event(Events.AFTER_APPLY)
         self.add_helper('adz', AdzHelper(self))
-        self.setup()
 
     # External API
 
@@ -145,18 +144,15 @@ class Rule(EventEmitter):
 
     # Util methods
 
-    def setup(self):
-        # Convenience instead of overriding ``__init__``. Should
-        # only be used by concrete classes. called in constructor.
-        pass
-
     def branch(self, parent = None):
-        # Convenience for ``self.tableau.branch()``.
-        return self.tableau.branch(parent)
+        """
+        Create a new branch on the tableau. Convenience for ``self.tableau.branch()``.
 
-    #: TODO: move tableau implementation to here directly.
-    def branching_complexity(self, node):
-        return self.tableau.branching_complexity(node)
+        :param tableaux.Branch parent: The parent branch, if any.
+        :return: The new branch.
+        :rtype: tableaux.Branch
+        """
+        return self.tableau.branch(parent)
 
     def safeprop(self, name, value = None):
         if hasattr(self, name):
@@ -179,7 +175,7 @@ class Rule(EventEmitter):
             self.add_helper(name, helpers[name])
         return self
 
-    # Callbacks
+    # Events
 
     def __before_trunk_build(self, argument):
         for helper in self.helpers:
@@ -381,7 +377,7 @@ class PotentialNodeRule(Rule):
     def score_candidate(self, target):
         score = super().score_candidate(target)
         if score == 0:
-            complexity = self.branching_complexity(target['node'])
+            complexity = self.tableau.branching_complexity(target['node'])
             score = -1 * complexity
         return score
 

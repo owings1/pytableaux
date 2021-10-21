@@ -80,84 +80,39 @@ class TableauxSystem(fde.TableauxSystem):
 
     branchables = {
         'Negation': {
-            True : {
-                True  : 0,
-                False : 1,
-            },
+            True : {True: 0, False: 1},
         },
         'Assertion': {
-            False : {
-                True  : 0,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 0,
-            },
+            False : {True: 0, False: 0},
+            True  : {True: 0, False: 0},
         },
         'Conjunction': {
-            False : {
-                True  : 0,
-                False : 3,
-            },
-            True  : {
-                True  : 1,
-                False : 2,
-            },
+            False : {True: 0, False: 3},
+            True  : {True: 1, False: 2},
         },
         'Disjunction': {
-            False  : {
-                True  : 1,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 1,
-            },
+            False : {True: 1, False: 0},
+            True  : {True: 0, False: 1},
         },
         # reduction
         'Material Conditional': {
-            False  : {
-                True  : 0,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 0,
-            },
+            False : {True: 0, False: 0},
+            True  : {True: 0, False: 0},
         },
         # reduction
         'Material Biconditional': {
-            False  : {
-                True  : 0,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 0,
-            },
+            False : {True: 0, False: 0},
+            True  : {True: 0, False: 0},
         },
         # reduction
         'Conditional': {
-            False  : {
-                True  : 0,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 0,
-            },
+            False : {True: 0, False: 0},
+            True  : {True: 0, False: 0},
         },
         # reduction
         'Biconditional': {
-            False  : {
-                True  : 0,
-                False : 0,
-            },
-            True : {
-                True  : 0,
-                False : 0,
-            },
+            False : {True: 0, False: 0},
+            True  : {True: 0, False: 0},
         },
     }
 

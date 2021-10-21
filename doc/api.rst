@@ -12,3 +12,5 @@ Modules
     modules/parsers
 
     modules/lexicals
+
+    modules/proof.rules

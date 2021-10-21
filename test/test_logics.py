@@ -165,7 +165,7 @@ class TestFDE(LogicTester):
 
     def test_invalid_lem_model_is_countermodel_to(self):
         proof = self.example_proof('Law of Excluded Middle')
-        branch, = list(proof.open_branchset)
+        branch, = list(proof.open_branches())
         assert branch.model.is_countermodel_to(proof.argument)
 
     def test_a_thus_b_is_countermodel_to_false(self):
@@ -192,7 +192,7 @@ class TestFDE(LogicTester):
             {'sentence': s, 'designated': True},
             {'sentence': s.negate(), 'designated': True}
         ])
-        model = branch.make_model()
+        model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) == 'B'
 
     def test_model_univ_t_value_branch(self):
@@ -201,7 +201,7 @@ class TestFDE(LogicTester):
         s = parse('Fm', examples.vocabulary)
         branch.add({'sentence': s, 'designated': True})
         s1 = parse('VxFx', examples.vocabulary)
-        model = branch.make_model()
+        model = self.logic.Model().read_branch(branch)
         assert model.value_of(s1) == 'T'
 
     def test_model_exist_b_value_branch(self):
@@ -216,7 +216,7 @@ class TestFDE(LogicTester):
             {'sentence': s1.negate(), 'designated': False},
         ])
         s2 = parse('SxFx', examples.vocabulary)
-        model = branch.make_model()
+        model = self.logic.Model().read_branch(branch)
         assert model.value_of(s2) == 'B'
 
     def test_model_necessity_opaque_des_value_branch(self):
@@ -224,7 +224,7 @@ class TestFDE(LogicTester):
         branch = proof.branch()
         s = parse('La')
         branch.add({'sentence': s, 'designated': True})
-        model = branch.make_model()
+        model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) in set(['B', 'T'])
 
     def test_model_necessity_opaque_b_value_branch(self):
@@ -235,7 +235,7 @@ class TestFDE(LogicTester):
             {'sentence': s, 'designated': True},
             {'sentence': s.negate(), 'designated': True}
         ])
-        model = branch.make_model()
+        model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) == 'B'
 
     def test_model_atomic_undes_value_branch(self):
@@ -245,7 +245,7 @@ class TestFDE(LogicTester):
         branch.update([
             {'sentence': s, 'designated': False}
         ])
-        model = branch.make_model()
+        model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) in set(['F', 'N'])
 
     def test_model_atomic_t_value_branch(self):
@@ -256,7 +256,7 @@ class TestFDE(LogicTester):
             {'sentence': s, 'designated': True},
             {'sentence': s.negate(), 'designated': False}
         ])
-        model = branch.make_model()
+        model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) == 'T'
 
     def test_model_atomic_f_value_branch(self):
@@ -267,7 +267,7 @@ class TestFDE(LogicTester):
             {'sentence': s, 'designated': False},
             {'sentence': s.negate(), 'designated': True}
         ])
-        model = branch.make_model()
+        model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) == 'F'
 
     def test_model_get_data_various(self):
@@ -1373,7 +1373,7 @@ class TestCPL(LogicTester):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': s})
-        model = branch.make_model()
+        model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) == 'T'
 
     def test_model_opaque_neg_necessity_branch_make_model(self):
@@ -1381,7 +1381,7 @@ class TestCPL(LogicTester):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': s.negate()})
-        model = branch.make_model()
+        model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) == 'F'
 
     def test_model_get_data_triv(self):
@@ -2006,8 +2006,6 @@ class TestK(LogicTester):
         assert f1 < f2
         assert f2 >= f1
         assert f1 <= f2
-        # coverage
-        assert f1.__cmp__(f2) < 0
 
     def test_model_not_impl_various(self):
         s1 = parse('Aab')
@@ -2416,7 +2414,8 @@ class TestMaxConstantsTracker(LogicTester):
 
     class MockRule(FilterNodeRule):
 
-        def setup(self):
+        def __init__(self, *args, **opts):
+            super().__init__(*args, **opts)
             self.add_helper('mtr', MaxConstantsTracker(self))
 
     Rule = MockRule

@@ -172,13 +172,6 @@ class TestBranch(object):
         b.add({'sentence': s2})
         assert s1.predicate in b.predicates()
 
-    def test_make_model_raises_when_branch_closed(self):
-        proof = Tableau('cpl', examples.argument('Addition'))
-        proof.build()
-        b = list(proof.branches)[0]
-        with raises(TypeError):
-            b.make_model()
-
     def test_branch_has_world1(self):
         proof = Tableau(None)
         branch = proof.branch().add({'world1': 4, 'world2': 1})

@@ -72,7 +72,8 @@ class TableauxRules(object):
         """
         modal = True
 
-        def setup(self):
+        def __init__(self, *args, **opts):
+            super().__init__(*args, **opts)
             self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
             self.add_helper('visibles', VisibleWorldsIndex(self))
 
