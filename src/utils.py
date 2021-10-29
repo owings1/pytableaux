@@ -18,47 +18,151 @@
 # ------------------
 #
 # pytableaux - utils module
-import importlib, time
+from builtins import ModuleNotFoundError
 from errors import IllegalStateError
+from importlib import import_module
+from time import time
 from types import ModuleType
 from past.builtins import basestring
 
-def get_module(package, arg):    
-    if isinstance(arg, ModuleType):
-        return arg
-    if isinstance(arg, basestring):
-        if '.' not in arg:
-            arg = package + '.' + arg
-        return importlib.import_module(arg.lower())
-    raise TypeError("Argument must be module or string")
+def get_module(ref, package = None):
 
-def get_logic(name):
+    cache = _myattr(get_module, dict)
+    keys = set()
+    ret = {'mod': None}
+
+    def _checkref(ref):
+        key = (package, ref)
+        if key in cache:
+            return bool(_setcache(cache[key]))
+        keys.add(key)
+        return False
+
+    def _setcache(val):
+        for key in keys:
+            cache[key] = val
+        ret['mod'] = val
+        return val
+
+    if hasattr(ref, '__module__'):
+        if _checkref(ref.__module__):
+            return ret['mod']
+        ref = import_module(ref.__module__)
+
+    if ismodule(ref):
+        if _checkref(ref.__name__):
+            return ret['mod']
+        if package != None and package != getattr(ref, '__package__', None):
+            raise ModuleNotFoundError(
+                "Module '{0}' not in package '{1}'".format(ref.__name__, package)
+            )
+        return _setcache(ref)
+
+    if not isstr(ref):
+        raise TypeError("ref must be string or module, or have __module__ attribute")
+
+    ref = ref.lower()
+    if _checkref(ref):
+        return ret['mod']
+    if package == None:
+        return _setcache(import_module(ref))
+    pfx = cat(package, '.')
+    try:
+        return _setcache(import_module(cat(pfx, ref)))
+    except ModuleNotFoundError:
+        if not ref.startswith(pfx):
+            raise
+        ref = ref[len(pfx):]
+        if _checkref(ref):
+            return ret['mod']
+        return _setcache(import_module(cat(pfx, ref)))
+
+def get_logic(ref):
     """
-    Get the logic module from the specified name. The following
-    inputs all return the :ref:`FDE <FDE>` logic module: *'fde'*, *'FDE'*,
-    *'logics.fde'*. If a module is passed, it is returned.
+    Get the logic module from the specified reference.
 
-    :param str name: The logic name.
-    :return: The module for the given logic.
+    Each of following examples returns the :ref:`FDE <FDE>` logic module::
+
+        get_logic('fde')
+        get_logic('FDE')
+        get_logic('logics.fde')
+        get_logic(get_logic('FDE'))
+
+
+    :param any ref: The logic reference.
+    :return: The logic module.
     :rtype: module
-    :raises ModuleNotFoundError:
+    :raises ModuleNotFoundError: if the logic is not found.
+    :raises TypeError: if no module name can be determined from ``ref``.
     """
-    return get_module('logics', name)
+    return get_module(ref, package = 'logics')
 
 def nowms():
-    return int(round(time.time() * 1000))
+    return int(round(time() * 1000))
 
 def cat(*args):
     return ''.join(args)
 
-def isstr(arg):
-    return isinstance(arg, basestring)
+def isstr(obj):
+    return isinstance(obj, basestring)
 
-def isint(arg):
-    return isinstance(arg, int)
+def isint(obj):
+    return isinstance(obj, int)
+
+def ismodule(obj):
+    return isinstance(obj, ModuleType)
+
+def istableau(obj):
+    """
+    Check if an object is a tableau.
+    """
+    cache = _myattr(istableau)
+    cls = obj.__class__
+    if cls in cache:
+        return True
+    d = obj.__dict__
+    if not (
+        callable(getattr(obj, 'branch', None)) and
+        #: TODO: move the Tableau impl to Rule class, then we don't need this check
+        callable(getattr(obj, 'branching_complexity', None)) and
+        isinstance(d.get('history'), list) and
+        True
+    ):
+        return False
+    cache.add(cls)
+    return True
+
+def isrule(obj):
+    """
+    Checks if an object is a rule instance.
+    """
+    cache = _myattr(isrule)
+    cls = obj.__class__
+    if cls in cache:
+        return True
+    d = obj.__dict__
+    if not (
+        callable(getattr(obj, 'get_target', None)) and
+        callable(getattr(obj, 'apply', None)) and
+        isstr(d.get('name')) and
+        istableau(d.get('tableau')) and
+        isinstance(d.get('apply_count'), int) and
+        isinstance(d.get('timers'), dict) and
+        isinstance(d.get('apply_timer'), StopWatch) and
+        isinstance(d.get('search_timer'), StopWatch) and
+        True
+    ):
+        return False
+    cache.add(cls)
+    return True
 
 def sortedbyval(map):
     return list(it[1] for it in sorted((v, k) for k, v in map.items()))
+
+def _myattr(func, cls = set, name = '_cache'):
+    if not hasattr(func, name):
+        setattr(func, name, cls())
+    return getattr(func, name)
 
 class EventEmitter(object):
 

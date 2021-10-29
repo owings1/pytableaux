@@ -19,7 +19,7 @@
 #
 # pytableaux - tableaux rules module
 from lexicals import AtomicSentence, OperatedSentence, operarity
-from utils import EventEmitter, StopWatch
+from utils import EventEmitter, StopWatch, istableau
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper
 from events import Events
@@ -40,8 +40,8 @@ class Rule(EventEmitter):
 
     def __init__(self, tableau, **opts):
 
-        if not _check_is_tableau(tableau):
-            raise TypeError('Must instantiate rule with a tableau instance.')
+        if not istableau(tableau):
+            raise TypeError('Must instantiate rule with a Tableau instance.')
         super().__init__()
 
         #: Reference to the tableau for which the rule is instantiated.
@@ -728,11 +728,11 @@ class AllConstantsStoppingRule(FilterNodeRule):
             ],
         }
 
-def _check_is_tableau(obj):
-    # Just enough for what we call.
-    return (
-        callable(getattr(obj, 'branch', None)) and
-        #: TODO: move the Tableau impl to Rule class, then we don't need this check
-        callable(getattr(obj, 'branching_complexity', None)) and
-        isinstance(getattr(obj, 'history', None), list)
-    )
+# def _check_is_tableau(obj):
+#     # Just enough for what we call.
+#     return (
+#         callable(getattr(obj, 'branch', None)) and
+#         #: TODO: move the Tableau impl to Rule class, then we don't need this check
+#         callable(getattr(obj, 'branching_complexity', None)) and
+#         isinstance(getattr(obj, 'history', None), list)
+#     )

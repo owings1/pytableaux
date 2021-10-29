@@ -18,7 +18,7 @@
 #
 # pytableaux - tableaux module
 from lexicals import Argument, Constant
-from utils import get_logic, EventEmitter, StopWatch
+from utils import EventEmitter, StopWatch, get_logic, isrule
 from errors import IllegalStateError, NotFoundError, TimeoutError
 from events import Events
 from inspect import isclass
@@ -57,42 +57,6 @@ class Tableau(EventEmitter):
 
         super().__init__()
 
-        #: The unique object ID of the tableau.
-        #:
-        #: :type: int
-        self.id = id(self)
-
-        #: A tableau is finished when no more rules can apply.
-        #:
-        #: :type: bool
-        self.finished = False
-
-        #: An argument is valid (proved) when its finished tableau has no
-        #: open branches.
-        #:
-        #: :type: bool
-        self.valid = None
-
-        #: An argument is invalid (disproved) when its finished tableau has
-        #: at least one open branch, and it was not ended prematurely.
-        #:
-        #: :type: bool
-        self.invalid = None
-
-        #: Whether the tableau ended prematurely. This can happen when the
-        #: `max_steps` or `build_timeout` options are exceeded.
-        #:
-        #: :type: bool
-        self.is_premature = False
-
-        # #: The branches on the tableau. The branches are stored as list to
-        # #: maintain a consistent ordering. Since a tableau really consists of
-        # #: a `set` of branches, and they are represented internally as such,
-        # #: this will always be a list of `unique` branches.
-        # #:
-        # #: :type: list
-        # self.branches = list()
-
         #: The history of rule applications. Each application is a ``dict``
         #: with the following keys:
         #:
@@ -110,8 +74,9 @@ class Tableau(EventEmitter):
         #: :type: list
         self.history = list()
 
-        #: A tree structure of the tableau. This is generated only after the
-        #: proof is finished.
+        #: A tree structure of the tableau. This is generated after the tableau
+        #: is finished. If the `build_timeout` was exceeded, the tree is `not`
+        #: built.
         #:
         #: :type: dict
         self.tree = None
@@ -119,17 +84,17 @@ class Tableau(EventEmitter):
         # Rules
         self.__all_rules = list()
         self.__closure_rules = list()
-        self.rule_groups = list()
+        self.__rule_groups = list()
 
         # Post-build properties
         self.models = None
         self.stats = None
 
         # Timers
-        self.build_timer = StopWatch()
-        self.models_timer = StopWatch()
-        self.tree_timer = StopWatch()
-        self.trunk_build_timer = StopWatch()
+        self.__build_timer = StopWatch()
+        self.__models_timer = StopWatch()
+        self.__tree_timer = StopWatch()
+        self.__tunk_build_timer = StopWatch()
 
         # Options
         self.opts = dict(self.default_opts)
@@ -138,8 +103,13 @@ class Tableau(EventEmitter):
         self.__branch_list = list()
         self.__open_branchset = set()
         self.__branch_dict = dict()
-        self.trunk_built = False
-        self.current_step = 0
+        self.__finished = False
+        self.__premature = True
+        self.__timed_out = False
+        self.__trunk_built = False
+
+        # Cache for the nodes' branching complexities
+        self.__branching_complexities = dict()
 
         self.register_event(
             Events.AFTER_BRANCH_ADD,
@@ -155,18 +125,20 @@ class Tableau(EventEmitter):
             Events.AFTER_NODE_TICK    : self.__after_node_tick,
         }
 
-        # Cache for the branching complexities
-        self.branching_complexities = dict()
-
+        self.__logic = self.__argument = None
         if logic != None:
             self.logic = logic
-        else:
-            self.__logic = None
-
         if argument != None:
             self.argument = argument
-        else:
-            self.__argument = None
+
+    @property
+    def id(self):
+        """
+        The unique object ID of the tableau.
+
+        :type: int
+        """
+        return id(self)
 
     @property
     def logic(self):
@@ -185,7 +157,19 @@ class Tableau(EventEmitter):
         self.__check_not_started()
         self.__logic = get_logic(logic)
         self.clear_rules()
-        self.logic.TableauxSystem.add_rules(self, self.opts)
+        self.System.add_rules(self, self.opts)
+
+    @property
+    def System(self):
+        """
+        Convenience property for ``self.logic.TableauxSystem``. If the ``logic``
+        property is ``None``, the value will be ``None``.
+
+        :type: TableauxSystem
+        """
+        if self.logic == None:
+            return None
+        return self.logic.TableauxSystem
 
     @property
     def argument(self):
@@ -202,10 +186,97 @@ class Tableau(EventEmitter):
         Setter for ``argument`` property. If the tableau has a logic set, then
         ``build_trunk()`` is automatically called.
         """
+        if not isinstance(argument, Argument):
+            raise TypeError(
+                "Value for 'argument' must be a {0} instance".format(Argument)
+            )
+        self.__check_trunk_not_built()
         self.__argument = argument
         if self.logic != None:
             self.build_trunk()
         return self
+
+    @property
+    def finished(self):
+        """
+        Whether the tableau is finished. A tableau is `finished` iff `any` of the
+        following conditions apply:
+
+        i. The tableau is `completed`.
+        ii. The `max_steps` option is met or exceeded.
+        iii. The `build_timeout` option is exceeded.
+        iv. The ``finish()`` method is manually invoked.
+
+        :type: bool
+        """
+        return self.__finished
+
+    @property
+    def completed(self):
+        """
+        Whether the tableau is completed. A tableau is `completed` iff all rules
+        that can be applied have been applied.
+
+        :type: bool
+        """
+        return self.finished and not self.__premature
+
+    @property
+    def premature(self):
+        """
+        Whether the tableau is finished prematurely. A tableau is `premature` iff
+        it is `finished` but not `completed`.
+
+        :type: bool
+        """
+        return self.finished and self.__premature
+
+    @property
+    def valid(self):
+        """
+        Whether the tableau's argument is valid (proved). A tableau with an
+        argument is `valid` iff it is `completed` and it has no open branches.
+        If the tableau is not completed, or it has no argument, the value will
+        be ``None``.
+
+        :type: bool
+        """
+        if not self.completed or self.argument == None:
+            return None
+        return self.open_branch_count == 0
+
+    @property
+    def invalid(self):
+        """
+        Whether the tableau's argument is invalid (disproved). A tableau with
+        an argument is `invalid` iff it is `completed` and it has at least one
+        open branch. If the tableau is not completed, or it has no argument,
+        the value will be ``None``.
+
+        :type: bool
+        """
+        if not self.completed or self.argument == None:
+            return None
+        return self.open_branch_count > 0
+
+    @property
+    def trunk_built(self):
+        """
+        Whether the trunk has been built.
+
+        :type: bool
+        """
+        return self.__trunk_built
+
+    @property
+    def current_step(self):
+        """
+        The current step number. This is the number of rule applications, plus ``1``
+        if the trunk is built.
+
+        :type: int
+        """
+        return len(self.history) + int(self.trunk_built)
 
     @property
     def branch_count(self):
@@ -216,61 +287,24 @@ class Tableau(EventEmitter):
         """
         return len(self.__branch_list)
 
-    def clear_rules(self):
+    @property
+    def open_branch_count(self):
         """
-        Clear the rules. Assumes building has not started. Returns self.
+        The current number of open branches.
 
-        :rtype: Tableau
+        :type: int
         """
-        self.__check_not_started()
-        self.__closure_rules.clear()
-        self.rule_groups.clear()
-        self.__all_rules.clear()
-        return self
-
-    def add_closure_rule(self, rule):
-        """
-        Add a closure rule. The ``rule`` parameter can be either a class or
-        instance. Returns self.
-
-        :rtype: Tableau
-        """
-        self.__check_not_started()
-        if isclass(rule):
-            rule = rule(self, **self.opts)
-        self.__closure_rules.append(rule)
-        self.__all_rules.append(rule)
-        return self
-
-    def closure_rules(self):
-        """
-        Returns an iterator for the list of closure rule instances.
-
-        :rtype: list_iterator(rules.ClosureRule)
-        """
-        return iter(self.__closure_rules)
-
-    def add_rule_group(self, rules):
-        """
-        Add a rule group. The ``rules`` parameter should be list of rule
-        instances or classes. Returns self.
-        """
-        self.__check_not_started()
-        group = []
-        for rule in rules:
-            if isclass(rule):
-                rule = rule(self, **self.opts)
-            group.append(rule)
-        self.rule_groups.append(group)
-        self.__all_rules.extend(group)
-        return self
+        return len(self.__open_branchset)
 
     def build(self, **opts):
         """
-        Build the tableau. Returns self.
+        Build the tableau.
+
+        :return: self
+        :rtype: Tableau
         """
         self.opts.update(opts)
-        with self.build_timer:
+        with self.__build_timer:
             while not self.finished:
                 self.__check_timeout()
                 self.step()
@@ -284,13 +318,13 @@ class Tableau(EventEmitter):
         If the tableau is already finished when this method is called, return
         ``False``.
 
-        Internally, this calls the ``__get_application()`` method to get the
-        rule application, and, if non-empty, calls the ``_do_application()``
-        method.
+        .. Internally, this calls the ``__get_application()`` method to get the
+        .. rule application, and, if non-empty, calls the ``__do_application()``
+        .. method.
 
-        :return: The application dict.
-        :rtype: dict
-        :raises IllegalStateError: if the trunk is not built.
+        :return: The application dict, or ``None`` if just finished, or ``False``
+          if previously finished.
+        :raises errors.IllegalStateError: if the trunk is not built.
         """
         if self.finished:
             return False
@@ -298,25 +332,21 @@ class Tableau(EventEmitter):
         application = None
         with StopWatch() as step_timer:
             res = None
-            if self.__is_max_steps_exceeded():
-                self.is_premature = True
-            else:
+            if not self.__is_max_steps_exceeded():
                 res = self.__get_application()
+                if not res:
+                    self.__premature = False
             if res:
                 rule, target = res
-                application = self._do_application(rule, target, step_timer)
+                application = self.__do_application(rule, target, step_timer)
             else:
                 self.finish()
         return application
 
     def branches(self):
         """
-        Returns an iterator for the list of all branches on the tableau.
-
-        The branches are stored as list to maintain a consistent ordering.
-        Since a tableau really consists of a `set` of branches, and they are
-        represented internally as such, this will always be a list of `unique`
-        branches.
+        Returns an iterator for all branches, in the order they were added to
+        the tableau.
 
         :rtype: list_iterator(Branch)
         """
@@ -329,45 +359,6 @@ class Tableau(EventEmitter):
         :rtype: set_iterator(Branch)
         """
         return iter(self.__open_branchset)
-
-    def get_rule(self, rule):
-        """
-        Get a rule instance by name, class, or instance reference. Returns first
-        matching occurrence.
-        """
-        for r in self.__all_rules:
-            if r.__class__ == rule or r.name == rule or r.__class__.__name__ == rule:
-                return r
-            if r.__class__ == rule.__class__:
-                return r
-
-    def branch(self, parent = None):
-        """
-        Create a new branch on the tableau, as a copy of ``parent``, if given.
-        This calls the ``after_branch_add()`` callback on all the rules of the
-        tableau.
-        """
-        if parent == None:
-            branch = Branch()
-        else:
-            branch = parent.copy()
-            branch.parent = parent
-        self.add_branch(branch)
-        return branch
-
-    def add_branch(self, branch):
-        """
-        Add a new branch to the tableau. Returns self.
-        """
-        if branch.id in self.__branch_dict:
-            raise ValueError('Branch {0} already on tableau'.format(str(branch.id)))
-        branch.index = len(self.__branch_list)
-        self.__branch_list.append(branch)
-        if not branch.closed:
-            self.__open_branchset.add(branch)
-        self.__branch_dict[branch.id] = branch
-        self.__after_branch_add(branch)
-        return self
 
     def get_branch(self, branch_id):
         """
@@ -391,43 +382,160 @@ class Tableau(EventEmitter):
         """
         return self.__branch_list[index]
 
+    def branch(self, parent = None):
+        """
+        Create a new branch on the tableau, as a copy of ``parent``, if given.
+        This calls the ``after_branch_add()`` callback on all the rules of the
+        tableau.
+
+        :param Branch parent: The parent branch, if any.
+        :return: The new branch.
+        :rtype: Branch
+        """
+        if parent == None:
+            branch = Branch()
+        else:
+            branch = parent.copy()
+            branch.parent = parent
+        self.add_branch(branch)
+        return branch
+
+    def add_branch(self, branch):
+        """
+        Add a new branch to the tableau. Returns self.
+
+        :param Branch branch: The branch to add.
+        :return: self
+        :rtype: Tableau
+        """
+        if branch.id in self.__branch_dict:
+            raise ValueError(
+                'Branch {0} already on tableau'.format(str(branch.id))
+            )
+        branch.index = len(self.__branch_list)
+        self.__branch_list.append(branch)
+        if not branch.closed:
+            self.__open_branchset.add(branch)
+        self.__branch_dict[branch.id] = branch
+        self.__after_branch_add(branch)
+        return self
+
+    def get_rule(self, ref):
+        """
+        Get a rule instance by name, class, or instance reference. Returns first
+        matching occurrence.
+
+        :param any ref: Rule name, class, or instance reference.
+        :return: The rule instance.
+        :rtype: rules.Rule
+        :raises errors.NotFoundError: if the rule is not found.
+        """
+        for rule in self.__all_rules:
+            if (
+                rule.__class__ == ref or
+                rule.name == ref or
+                rule.__class__.__name__ == ref or
+                rule.__class__ == ref.__class__
+            ):
+                return rule
+        raise NotFoundError('Rule not found for ref: {0}'.format(str(ref)))
+
+    def add_closure_rule(self, rule):
+        """
+        Add a closure rule.
+
+        :param class rule: Rule class reference. The rule should be a subclass
+          of :class:`~rules.ClosureRule`
+        :return: self
+        :rtype: Tableau
+        """
+        self.__check_not_started()
+        rule = self.__create_rule(rule)
+        self.__closure_rules.append(rule)
+        self.__all_rules.append(rule)
+        return self
+
+    def closure_rules(self):
+        """
+        Returns an iterator for the list of closure rule instances.
+
+        :rtype: list_iterator(rules.ClosureRule)
+        """
+        return iter(self.__closure_rules)
+
+    def add_rule_group(self, rules):
+        """
+        Add a rule group.
+
+        :param list(class) rules: List of rule class references. Each rule
+          
+        :return: self
+        :rtype: Tableau
+        """
+        self.__check_not_started()
+        group = list(self.__create_rule(rule) for rule in rules)
+        self.__rule_groups.append(group)
+        self.__all_rules.extend(group)
+        return self
+
+    def clear_rules(self):
+        """
+        Clear the rules. Assumes building has not started. Returns self.
+
+        :rtype: Tableau
+        """
+        self.__check_not_started()
+        self.__closure_rules.clear()
+        self.__rule_groups.clear()
+        self.__all_rules.clear()
+        return self
+
     def build_trunk(self):
         """
         Build the trunk of the tableau. Delegates to the ``build_trunk()`` method
-        of the logic's ``TableauxSystem``. This is called automatically when the
-        tableau has non-empty ``argument`` and ``logic`` properties.
+        of ``TableauxSystem``. This is called automatically when the
+        tableau has non-empty ``argument`` and ``logic`` properties. Returns self.
+
+        :return: self
+        :rtype: Tableau
+        :raises errors.IllegalStateError: if the trunk is already built.
         """
         self.__check_trunk_not_built()
-        with self.trunk_build_timer:
+        with self.__tunk_build_timer:
             self.emit(Events.BEFORE_TRUNK_BUILD, self)
-            self.logic.TableauxSystem.build_trunk(self, self.argument)
-            self.trunk_built = True
-            self.current_step += 1
+            self.System.build_trunk(self, self.argument)
+            self.__trunk_built = True
             self.emit(Events.AFTER_TRUNK_BUILD, self)
         return self
 
     def finish(self):
         """
-        Mark the tableau as finished. Computes the ``valid``, ``invalid``,
-        and ``stats`` properties, and builds the structure into the ``tree``
-        property. Returns self.
+        Mark the tableau as finished, and perform post-build tasks, including
+        populating the ``tree``, ``stats``, and ``models`` properties.
+        
+        When using the ``build()`` or ``step()`` methods, there is never a need
+        to call this method, since it is handled internally. However, this
+        method *is* safe to call multiple times. If the tableau is already
+        finished, it will be a no-op.
 
-        This is safe to call multiple times. If the tableau is already finished,
-        this will be a no-op.
+        :return: self
+        :rtype: Tableau
         """
         if self.finished:
             return self
 
-        self.finished = True
-        self.valid    = len(self.__open_branchset) == 0
-        self.invalid  = not self.valid and not self.is_premature
+        self.__finished = True
 
-        with self.models_timer:
-            if self.opts['is_build_models'] and not self.is_premature:
+        if self.invalid and self.opts.get('is_build_models'):
+            with self.__models_timer:
                 self.__build_models()
 
-        with self.tree_timer:
-            self.tree = make_tree_structure(list(self.branches()))
+        if not self.__timed_out:
+            # In case of a timeout, we do `not` build the tree in order to best
+            # respect the timeout. In case of `max_steps` excess, however, we
+            # `do` build the tree.
+            with self.__tree_timer:
+                self.tree = make_tree_structure(list(self.branches()))
 
         self.stats = self.__compute_stats()
 
@@ -435,19 +543,46 @@ class Tableau(EventEmitter):
 
     def branching_complexity(self, node):
         """
-        Convenience caching method for the logic's ``TableauxSystem.branching_complexity()``
+        Caching method for the logic's ``TableauxSystem.branching_complexity()``
         method. If the tableau has no logic, then ``0`` is returned.
 
         :param Node node: The node to evaluate.
         :return: The branching complexity.
         :rtype: int
         """
-        if node.id not in self.branching_complexities:
-            if self.logic == None:
+        # TODO: Consider potential optimization using hash equivalence for nodes,
+        #       to avoid redundant calculations. Perhaps the TableauxSystem should
+        #       provide a special branch-complexity node hashing function.
+        if node.id not in self.__branching_complexities:
+            if self.System == None:
                 return 0
-            self.branching_complexities[node.id] = \
-                self.logic.TableauxSystem.branching_complexity(node)
-        return self.branching_complexities[node.id]
+            self.__branching_complexities[node.id] = \
+                self.System.branching_complexity(node)
+        return self.__branching_complexities[node.id]
+
+    def __repr__(self):
+        info = dict()
+        info.update({
+            prop: getattr(self, prop)
+            for prop in ('id', 'branch_count', 'current_step', 'finished')
+        })
+        info.update({
+            key: value
+            for key, value in {
+                prop: getattr(self, prop)
+                for prop in ('premature', 'valid', 'invalid', 'argument')
+            }.items()
+            if value
+        })
+        return info.__repr__()
+
+    ## :===============================:
+    ## :       Private Methods         :
+    ## :===============================:
+
+    # :-----------:
+    # : Callbacks :
+    # :-----------:
 
     def __after_branch_add(self, branch):
         if not branch.parent:
@@ -479,54 +614,59 @@ class Tableau(EventEmitter):
             node.ticked_step = self.current_step
         self.emit(Events.AFTER_NODE_TICK, node, branch)
 
-    # Interal util methods
+    # :-----------:
+    # : Util      :
+    # :-----------:
 
     def __get_application(self):
         """
-        Find and return the next available rule application. If no rule
-        cal be applied, return ``None``. This iterates over the open
-        branches and calls ``_get_branch_application()``, returning the
-        first non-empty result.
+        Find and return the next available rule application. If no rule can be
+        applied, return ``None``.
+        
+        This iterates over the open branches and calls ``__get_branch_application()``,
+        returning the first non-empty result.
         """
         for branch in self.open_branches():
-            res = self._get_branch_application(branch)
+            res = self.__get_branch_application(branch)
             if res:
                 return res
 
-    def _get_branch_application(self, branch):
+    def __get_branch_application(self, branch):
         """
-        Find and return the next available rule application for the given
-        open branch. This first checks the closure rules, then iterates
-        over the rule groups. The first non-empty result is returned.
+        Find and return the next available rule application for the given open
+        branch. This first checks the closure rules, then iterates over the
+        rule groups. The first non-empty result is returned.
         """
         res = self.__get_group_application(branch, self.__closure_rules)
         if res:
             return res
-        for rules in self.rule_groups:
+        for rules in self.__rule_groups:
             res = self.__get_group_application(branch, rules)
             if res:
                 return res
 
     def __get_group_application(self, branch, rules):
         """
-        Find and return the next available rule application for the given
-        open branch and rule group. The ``rules`` parameter is a list of
-        rules, and is assumed to be either the closure rules, or one of the
-        rule groups of the tableau. This calls the ``get_target()`` method
-        on the rules.
+        Find and return the next available rule application for the given open
+        branch and rule group. The ``rules`` parameter is a list of rules, and
+        is assumed to be either the closure rules, or one of the rule groups of
+        the tableau. This calls the ``get_target()`` method on the rules.
 
-        If the `is_group_optim` option is **disabled**, then the first
-        non-empty target returned by a rule is selected. The target is
-        updated with the keys `group_score` = ``None``, `total_group_targets` = ``1``,
-        and `min_group_score` = ``None``.
+        If the `is_group_optim` option is `disabled`, then the first non-empty
+        target returned by a rule is selected. The target is updated with the
+        the following:
+        
+        - `group_score`: ``None``
+        - `total_group_targets`: ``1``
+        - `min_group_score`: ``None``
 
-        If the `is_group_optim` option is **enabled**, then all non-empty
-        targets from the rules are collected, and the ``__select_optim_group_application()``
+        If the `is_group_optim` option is `enabled`, then all non-empty targets
+        from the rules are collected, and the ``__select_optim_group_application()``
         method is called to select the result.
 
         The return value is either a non-empty list of results, or ``None``.
-        Each result is a pair (tuple). The first element is the rule, and
-        the second element is the target returned by the rule's ``get_target()``
+        Each result is a pair (tuple). The first element is the rule, and the
+        second element is the target returned by the rule's ``get_target()``
         method.
         """
         results = []
@@ -534,7 +674,7 @@ class Tableau(EventEmitter):
             with rule.search_timer:
                 target = rule.get_target(branch)
             if target:
-                if not self.opts['is_group_optim']:
+                if not self.opts.get('is_group_optim'):
                     target.update({
                         'group_score'         : None,
                         'total_group_targets' : 1,
@@ -555,17 +695,17 @@ class Tableau(EventEmitter):
         Internally, this calls the ``group_score()`` method on each rule,
         passing it the target that the rule returned by its ``get_target()``
         method. The target with the max score is selected. If there is a tie,
-        the the first target is selected.
+        then the first target is selected.
 
         The target is updated with the following keys:
         
-        - group_score
-        - total_group_targets
-        - min_group_score
-        - is_group_optim
+        - `group_score`
+        - `total_group_targets`
+        - `min_group_score`
+        - `is_group_optim`
 
-        The return value an element of ``results``, which is a (rule, target)
-        pair.
+        The return value is an element of the ``results`` parameter, which is a
+        ``(rule, target)`` pair.
         """
         group_scores = [rule.group_score(target) for rule, target in results]
         max_group_score = max(group_scores)
@@ -581,23 +721,22 @@ class Tableau(EventEmitter):
                 })
                 return (rule, target)
 
-    def _do_application(self, rule, target, step_timer):
+    def __do_application(self, rule, target, step_timer):
         """
-        Perform the application of the rule. This calls ``rule.apply()``
-        with the target. The ``target`` should be what was returned by the
-        rule's ``get_target()`` method.
+        Calls ``rule.apply(target)`` and creates a history entry. The ``target``
+        parameter should be what was previously returned by ``rule.get_target()``.
 
-        Internally, this creates an entry in the tableau's history, and
-        increments the ``current_step`` property. The history entry is
-        a dictionary with `rule`, `target`, and `duration_ms` keys, and
-        is the return value of this method.
+        This is called by the ``step()`` method, which creates a ``StopWatch`` to
+        track the combined time it takes to complete both the ``get_target()`` and
+        ``apply()`` methods.
+        
+        This method will accept ``None`` for the ``step_timer`` parameter,
+        however, this means the timing statistics will be inaccurate.
 
-        This method is called internally by the ``step()`` method, which
-        creates a ``StopWatch`` to track the combined time it takes to
-        complete both the ``get_target()`` and ``apply()`` methods. The
-        elapsed time is then stored in the history entry. This method will
-        accept ``None`` for the ``step_timer`` parameter, however, this means
-        the timing statistics will be inaccurate.
+        :param rules.Rule rule: The rule.
+        :param dict target: The target object.
+        :return: The application object.
+        :rtype: dict
         """
         rule.apply(target)
         application = {
@@ -606,29 +745,34 @@ class Tableau(EventEmitter):
             'duration_ms' : step_timer.elapsed() if step_timer else 0,
         }
         self.history.append(application)
-        self.current_step += 1
         return application
 
     def __compute_stats(self):
-        # Compute the stats property after the tableau is finished.
-        num_open = len(self.__open_branchset)
+        """
+        Compute the stats property after the tableau is finished.
+        """
+        num_open = self.open_branch_count
+        distinct_nodes = self.tree['distinct_nodes'] if self.tree else None
         return {
-            'id'                : id(self),
+            'id'                : self.id,
             'result'            : self.__result_word(),
             'branches'          : self.branch_count,
             'open_branches'     : num_open,
             'closed_branches'   : self.branch_count - num_open,
             'rules_applied'     : len(self.history),
-            'distinct_nodes'    : self.tree['distinct_nodes'],
-            'rules_duration_ms' : sum((application['duration_ms'] for application in self.history)),
-            'build_duration_ms' : self.build_timer.elapsed(),
-            'trunk_duration_ms' : self.trunk_build_timer.elapsed(),
-            'tree_duration_ms'  : self.tree_timer.elapsed(),
-            'models_duration_ms': self.models_timer.elapsed(),
-            'rules_time_ms'     : sum([
-                sum([rule.search_timer.elapsed(), rule.apply_timer.elapsed()])
+            'distinct_nodes'    : distinct_nodes,
+            'rules_duration_ms' : sum(
+                application['duration_ms']
+                for application in self.history
+            ),
+            'build_duration_ms' : self.__build_timer.elapsed(),
+            'trunk_duration_ms' : self.__tunk_build_timer.elapsed(),
+            'tree_duration_ms'  : self.__tree_timer.elapsed(),
+            'models_duration_ms': self.__models_timer.elapsed(),
+            'rules_time_ms'     : sum(
+                sum((rule.search_timer.elapsed(), rule.apply_timer.elapsed()))
                 for rule in self.__all_rules
-            ]),
+            ),
             'rules' : [
                 self.__compute_rule_stats(rule)
                 for rule in self.__all_rules
@@ -636,7 +780,9 @@ class Tableau(EventEmitter):
         }
 
     def __compute_rule_stats(self, rule):
-        # Compute the stats for a rule after the tableau is finished.
+        """
+        Compute the stats for a rule after the tableau is finished.
+        """
         return {
             'name'            : rule.name,
             'queries'         : rule.search_timer.times_started(),
@@ -647,25 +793,26 @@ class Tableau(EventEmitter):
             'apply_time_avg'  : rule.apply_timer.elapsed_avg(),
             'timers'          : {
                 name : {
-                    'duration_ms'   : rule.timers[name].elapsed(),
-                    'duration_avg'  : rule.timers[name].elapsed_avg(),
-                    'times_started' : rule.timers[name].times_started(),
+                    'duration_ms'   : timer.elapsed(),
+                    'duration_avg'  : timer.elapsed_avg(),
+                    'times_started' : timer.times_started(),
                 }
-                for name in rule.timers
+                for name, timer in rule.timers.items()
             },
         }
 
     def __check_timeout(self):
-        timeout = self.opts['build_timeout']
-        if timeout != None and timeout >= 0:
-            if self.build_timer.elapsed() > timeout:
-                self.build_timer.stop()
-                raise TimeoutError(
-                    'Timeout of {0}ms exceeded.'.format(str(timeout))
-                )
+        timeout = self.opts.get('build_timeout')
+        if timeout == None or timeout < 0:
+            return
+        if self.__build_timer.elapsed() > timeout:
+            self.__build_timer.stop()
+            self.__timed_out = True
+            self.finish()
+            raise TimeoutError('Timeout of {0}ms exceeded.'.format(timeout))
 
     def __is_max_steps_exceeded(self):
-        max_steps = self.opts['max_steps']
+        max_steps = self.opts.get('max_steps')
         return max_steps != None and len(self.history) >= max_steps
 
     def __check_trunk_built(self):
@@ -678,18 +825,33 @@ class Tableau(EventEmitter):
 
     def __check_not_started(self):
         if self.current_step > 0:
-            raise IllegalStateError("Proof has already started building.")
+            raise IllegalStateError("Tableau is already started.")
 
+    def __create_rule(self, rule):
+        if isclass(rule):
+            rule = rule(self, **self.opts)
+        if not isrule(rule):
+            raise TypeError('Invalid rule class: {0}'.format(rule.__class__))
+        if rule.tableau is not self:
+            raise ValueError('Rule {0} not assigned to this tableau.'.format(rule))
+        return rule
+        
     def __result_word(self):
         if self.valid:
             return 'Valid'
         if self.invalid:
             return 'Invalid'
+        if self.completed:
+            return 'Completed'
         return 'Unfinished'
 
     def __build_models(self):
+        """
+        Build models for the open branches.
+        """
+        if self.logic == None:
+            return
         self.models = set()
-        # Build models for the open branches
         for branch in self.__open_branchset:
             self.__check_timeout()
             model = self.logic.Model()
@@ -698,17 +860,6 @@ class Tableau(EventEmitter):
                 model.is_countermodel = model.is_countermodel_to(self.argument)
             branch.model = model
             self.models.add(model)
-        
-    def __repr__(self):
-        return {
-            'argument'      : self.argument,
-            'branches'      : self.branch_count,
-            'rules_applied' : len(self.history),
-            'finished'      : self.finished,
-            'valid'         : self.valid,
-            'invalid'       : self.invalid,
-            'is_premature'  : self.is_premature,
-        }.__repr__()
 
 class Branch(EventEmitter):
     """
@@ -1262,3 +1413,25 @@ def make_tree_structure(branches, node_depth=0, track=None):
     if is_root:
         s['distinct_nodes'] = track['distinct_nodes']
     return s
+
+def _check_is_rule(obj):
+    """
+    Checks if an object is a rule instance.
+    """
+    if obj.__class__ in _check_is_rule.classes:
+        return True
+    if not (
+        hasattr(obj, 'name') and
+        callable(getattr(obj, 'get_target', None)) and
+        callable(getattr(obj, 'apply', None)) and
+        isinstance(getattr(obj, 'tableau', None), Tableau) and
+        isinstance(getattr(obj, 'apply_count', None), int) and
+        isinstance(getattr(obj, 'timers', None), dict) and
+        isinstance(getattr(obj, 'apply_timer', None), StopWatch) and
+        isinstance(getattr(obj, 'search_timer', None), StopWatch) and
+        True
+    ):
+        return False
+    _check_is_rule.classes.add(obj.__class__)
+    return True
+_check_is_rule.classes = set()
