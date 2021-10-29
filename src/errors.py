@@ -2,10 +2,21 @@
 class IllegalStateError(Exception):
     pass
 
+class TimeoutError(Exception):
+    pass
+
+# ParseErrors
+
 class ParseError(Exception):
     pass
 
-class TimeoutError(Exception):
+class UnboundVariableError(ParseError):
+    pass
+
+class BoundVariableError(ParseError):
+    pass
+
+class UnknownNotationError(ParseError):
     pass
 
 # ValueErrors
@@ -19,15 +30,4 @@ class ModelValueError(ValueError):
     pass
 
 class DenotationError(ModelValueError):
-    pass
-
-# ParseErrors
-
-class UnboundVariableError(ParseError):
-    pass
-
-class BoundVariableError(ParseError):
-    pass
-
-class UnknownNotationError(ParseError):
     pass
