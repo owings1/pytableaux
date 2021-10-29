@@ -17,10 +17,10 @@
 # ------------------
 #
 # pytableaux - tableaux module
-from lexicals import Constant
-from utils import get_logic, StopWatch
-from errors import IllegalStateError, TimeoutError
-from events import Events, EventEmitter
+from lexicals import Argument, Constant
+from utils import get_logic, EventEmitter, StopWatch
+from errors import IllegalStateError, NotFoundError, TimeoutError
+from events import Events
 from inspect import isclass
 
 class TableauxSystem(object):

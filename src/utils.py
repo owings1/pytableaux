@@ -19,6 +19,7 @@
 #
 # pytableaux - utils module
 import importlib, time
+from errors import IllegalStateError
 from types import ModuleType
 from past.builtins import basestring
 
@@ -59,10 +60,60 @@ def isint(arg):
 def sortedbyval(map):
     return list(it[1] for it in sorted((v, k) for k, v in map.items()))
 
-class StopWatch(object):
+class EventEmitter(object):
 
-    class StateError(Exception):
-        pass
+    def __init__(self):
+        self.__listeners = dict()
+
+    def add_listener(self, event, callback):
+        if not callable(callback):
+            raise TypeError('callback argument must be callable')
+        self.__listeners[event].append(callback)
+        return self
+
+    def add_listeners(self, *args, **kw):
+        for arg in args:
+            for event, callback in arg.items():
+                self.add_listener(event, callback)
+        for event, callback in kw.items():
+            self.add_listener(event, callback)
+        return self
+
+    def deregister_all_events(self):
+        return self.deregister_event(*self.__listeners)
+
+    def deregister_event(self, *events):
+        for event in events:
+            del(self.__listeners[event])
+        return self
+
+    def emit(self, event, *args, **kw):
+        for callback in self.__listeners[event]:
+            callback(*args, **kw)
+        return self
+
+    def register_event(self, *events):
+        for event in events:
+            if event not in self.__listeners:
+                self.__listeners[event] = list()
+        return self
+
+    def remove_listener(self, event, callback):
+        idx = self.__listeners[event].index(callback)
+        self.__listeners[event].pop(idx)
+        return self
+
+    def remove_listeners(self, *events):
+        for event in events:
+            self.__listeners[event].clear()
+        return self
+
+    def remove_all_listeners(self):
+        for event in self.__listeners:
+            self.__listeners[event].clear()
+        return self
+
+class StopWatch(object):
 
     def __init__(self, started=False):
         self._start_time = None
@@ -74,7 +125,7 @@ class StopWatch(object):
 
     def start(self):
         if self._is_running:
-            raise StopWatch.StateError('StopWatch already started.')
+            raise IllegalStateError('StopWatch already started.')
         self._start_time = nowms()
         self._is_running = True
         self._times_started += 1
@@ -82,7 +133,7 @@ class StopWatch(object):
 
     def stop(self):
         if not self._is_running:
-            raise StopWatch.StateError('StopWatch already stopped.')
+            raise IllegalStateError('StopWatch already stopped.')
         self._is_running = False
         self._elapsed += nowms() - self._start_time
         return self

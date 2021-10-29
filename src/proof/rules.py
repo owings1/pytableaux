@@ -19,10 +19,10 @@
 #
 # pytableaux - tableaux rules module
 from lexicals import AtomicSentence, OperatedSentence, operarity
-from utils import StopWatch
+from utils import EventEmitter, StopWatch
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper
-from events import Events, EventEmitter
+from events import Events
 
 class Rule(EventEmitter):
     """
