@@ -1,32 +1,37 @@
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError, NotFoundError
 from lexicals import Constant, Variable,  Atomic, Predicated, Quantified, \
-    Operated, Vocabulary, Argument, get_system_predicate, operarity
+    Operated, Sentence, Vocabulary, Argument, get_system_predicate, operarity
     
 from utils import cat, isstr
 
-notations = ('polish', 'standard')
-default_notation = 'polish'
+parser_classes = {
+    # Values populated after class declarations below.
+    'polish'   : None,
+    'standard' : None,
+}
+notations = tuple(sorted(parser_classes.keys()))
+default_notation = notations[notations.index('polish')]
 
 def parse(input, *args, **kw):
     """
     Parse a string and return a sentence.
     Convenience wrapper for ``create_parser().parse()``.
 
-    :rtype: Sentence
+    :rtype: lexicals.Sentence
     """
     return create_parser(*args, **kw).parse(input)
 
-def parse_argument(conclusion, premises=None, title=None, **kw):
+def parse_argument(conclusion, premises = None, title = None, **kw):
     """
     Parse conclusion, and optional premises, and return an argument.
     Convenience wrapper for ``create_parser().parse_argument()``.
 
-    :rtype: Argument
+    :rtype: lexicals.Argument
     """
-    return create_parser(**kw).argument(conclusion, premises, title)
+    return create_parser(**kw).argument(conclusion, premises, title = title)
 
-def create_parser(notn=None, vocab=None, table=None, **opts):
+def create_parser(notn = None, vocab = None, table = None, **opts):
     """
     Create a sentence parser with the given spec. This is
     useful if you parsing many sentences with the same notation
@@ -34,30 +39,33 @@ def create_parser(notn=None, vocab=None, table=None, **opts):
 
     :param str notn: The parser notation. Uses the default notation
         if not passed.
-    :param Vocabulary vocab: The vocabulary instance containing any
-        custom predicate definitions. If not passed, a new instance is
+    :param lexicals.Vocabulary vocab: The vocabulary instance containing any
+        custom predicate definitions. If not passed, an empty instance is
         created.
     :param CharTable table: A custom parser table to use.
     :return: The parser instance
     :rtype: Parser
+    :raises ValueError: on invalid notation, or table.
+    :raises TypeError: on invalid argument types.
     """
     if isinstance(notn, Vocabulary) or isstr(vocab):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
-    if not vocab:
+    if vocab == None:
         vocab = Vocabulary()
-    if not notn:
+    if notn == None:
         notn = default_notation
-    elif notn not in ('polish', 'standard'):
+    elif notn not in parser_classes:
         raise ValueError('Invalid notation: {0}'.format(str(notn)))
-    if not table:
+    if table == None:
         table = 'default'
     if isstr(table):
         table = CharTable.fetch(notn, table)
-    if notn == 'polish':
-        return PolishParser(table, vocab, **opts)
-    elif notn == 'standard':
-        return StandardParser(table, vocab, **opts)
+    return parser_classes[notn](table, vocab, **opts)
+    # if notn == 'polish':
+    #     return PolishParser(table, vocab, **opts)
+    # elif notn == 'standard':
+    #     return StandardParser(table, vocab, **opts)
 
 class Parser(object):
 
@@ -67,33 +75,44 @@ class Parser(object):
 
         :param str input: The input string.
         :return: The parsed sentence.
-        :rtype: Sentence
+        :rtype: lexicals.Sentence
         :raises errors.ParseError:
         """
         raise NotImplementedError()
 
-    def argument(self, conclusion, premises=None, title=None):
+    def argument(self, conclusion, premises = None, title = None):
         """
         Parse the input strings and create an argument.
 
         :param str conclusion: The argument's conclusion.
-        :param list premises: List of premise strings, if any.
-        :param str title: The title to pass to the argument's constructor.
+        :param list(str) premises: List of premise strings, if any.
         :return: The argument.
-        :rtype: argument
-        :raises ParseError:
+        :rtype: lexicals.Argument
+        :raises errors.ParseError:
         """
-        if isstr(conclusion):
-            conc = self.parse(conclusion)
-        else:
-            conc = conclusion
-        prems = []
-        if premises:
-            for s in premises:
-                prems.append(self.parse(s) if isstr(s) else s)
+        # if isstr(conclusion):
+        #     conc = self.parse(conclusion)
+        # else:
+        #     conc = conclusion
+        # if not isinstance(conclusion, Sentence):
+        #     conclusion = self.parse(conclusion)
+        # premises = list(
+        #     prem if isinstance(prem, Sentence) else self.parse(prem)
+        #     for prem in premises
+        # ) if premises else premises
         return Argument(
-            conclusion = conc, premises = prems, title = title
+            self.parse(conclusion),
+            premises and [self.parse(p) for p in premises],
+            title = title,
         )
+        # conc = (
+        #     self.parse(conclusion) if isstr(conclusion) else conclusion
+        # )
+        
+        # if premises:
+        #     for s in premises:
+        #         prems.append(self.parse(s) if isstr(s) else s)
+        # return Argument(conc, prems, **kw)
     
 class BaseParser(Parser):
 
@@ -121,6 +140,8 @@ class BaseParser(Parser):
         self.__state = self.__State(self)
 
     def parse(self, input):
+        if isinstance(input, Sentence):
+            return input
         with self.__state:
             self.s = list(input)
             self.pos = 0
@@ -131,7 +152,9 @@ class BaseParser(Parser):
             self._chomp()
             if self._has_current():
                 raise ParseError(
-                    "Unexpected character '{0}' at position {1}.".format(self._current(), self.pos)
+                    "Unexpected character '{0}' at position {1}.".format(
+                        self._current(), self.pos
+                    )
                 )
         return s
 
@@ -149,8 +172,8 @@ class BaseParser(Parser):
         this method, and delegate to ``super()`` for the default implementation
         when appropriate.
 
-        :rtype: Sentence
-        :raises ParseError:
+        :rtype: lexicals.Sentence
+        :raises errors.ParseError:
         :meta private:
         """
         ctype = self._assert_current()
@@ -162,7 +185,9 @@ class BaseParser(Parser):
             s = self._read_atomic()
         else:
             raise ParseError(
-                "Unexpected {0} '{1}' at position {2}.".format(ctype, self._current(), self.pos)
+                "Unexpected {0} '{1}' at position {2}.".format(
+                    ctype, self._current(), self.pos
+                )
             )
         return s
 
@@ -170,7 +195,8 @@ class BaseParser(Parser):
         """
         Read an atomic sentence starting from the current character.
 
-        :rtype: AtomicSentence
+        :rtype: lexicals.AtomicSentence
+        :raises errors.ParseError:
         :meta private:
         """
         return Atomic(**self._read_item())
@@ -179,7 +205,8 @@ class BaseParser(Parser):
         """
         Read predicated sentence starting from the current character.
 
-        :rtype: PredicatedSentence
+        :rtype: lexicals.PredicatedSentence
+        :raises errors.ParseError:
         :meta private:
         """
         predicate = self._read_predicate()
@@ -190,16 +217,15 @@ class BaseParser(Parser):
         """
         Read quantified sentence starting from the current character.
 
-        :rtype: PredicatedSentence
+        :rtype: lexicals.PredicatedSentence
+        :raises errors.ParseError:
         :meta private:
         """
         self._assert_current_is('quantifier')
-        # quantifier = self.symbol_set.indexof('quantifier', self._current())
         _, quantifier = self.table.item(self._current())
         self._advance()
         v = self._read_variable()
         if v in list(self.bound_vars):
-            # vchr = self.symbol_set.charof('variable', v.index)
             vchr = self.table.char('variable', v.index)
             raise BoundVariableError(
                 "Cannot rebind variable '{0}' ({1}) at position {2}.".format(vchr, v.subscript, self.pos)
@@ -207,7 +233,6 @@ class BaseParser(Parser):
         self.bound_vars.add(v)
         sentence = self._read()
         if v not in list(sentence.variables()):
-            # vchr = self.symbol_set.charof('variable', v.index)
             vchr = self.table.char('variable', v.index)
             raise BoundVariableError(
                 "Unused bound variable '{0}' ({1}) at position {2}.".format(vchr, v.subscript, self.pos)
@@ -223,14 +248,14 @@ class BaseParser(Parser):
         """
         Read a predicate starting from the current character.
 
-        :rtype: Predicate
+        :rtype: lexicals.Predicate
+        :raises errors.ParseError:
         :meta private:
         """
         pchar = self._current()
         cpos = self.pos
         ctype = self._typeof(pchar)
         if ctype == 'system_predicate':
-            # name = self.symbol_set.indexof(ctype, pchar)
             _, name = self.table.item(pchar)
             self._advance()
             return get_system_predicate(name)
@@ -248,8 +273,9 @@ class BaseParser(Parser):
 
         :param int num: The number of parameters to read, which should equal the
             predicate's arity.
-        :return: A list of `Parameter` objects.
-        :rtype: list
+        :return: A list of parameters.
+        :rtype: list(lexicals.Parameter)
+        :raises errors.ParseError:
         :meta private:
         """
         parameters = []
@@ -261,30 +287,32 @@ class BaseParser(Parser):
         """
         Read a single parameter (constant or variable) from the current character.
 
-        :rtype: Parameter
-        :raises Parser.UnboundVariableError: if a variable appears that has not
+        :rtype: lexicals.Parameter
+        :raises errors.UnboundVariableError: if a variable appears that has not
             been bound by a quantifier.
+        :raises errors.ParseError:
         :meta private:
         """
         ctype = self._assert_current_is('constant', 'variable')
         if ctype == 'constant':
             return self._read_constant()
-        else:
-            cpos = self.pos
-            v = self._read_variable()
-            if v not in list(self.bound_vars):
-                # vchr = self.symbol_set.charof('variable', v.index)
-                vchr = self.table.char('variable', v.index)
-                raise UnboundVariableError(
-                    "Unbound variable '{0}' ({1}) at position {2}.".format(vchr, cpos, v.subscript)
+        cpos = self.pos
+        v = self._read_variable()
+        if v not in list(self.bound_vars):
+            vchr = self.table.char('variable', v.index)
+            raise UnboundVariableError(
+                "Unbound variable '{0}' ({1}) at position {2}.".format(
+                    vchr, cpos, v.subscript
                 )
-            return v
+            )
+        return v
 
     def _read_variable(self):
         """
         Read a variable starting from the current character.
 
-        :rtype: Variable
+        :rtype: lexicals.Variable
+        :raises errors.ParseError:
         :meta private:
         """
         return Variable(**self._read_item())
@@ -293,7 +321,8 @@ class BaseParser(Parser):
         """
         Read a constant starting from the current character.
 
-        :rtype: Constant
+        :rtype: lexicals.Constant
+        :raises errors.ParseError:
         :meta private:
         """
         return Constant(**self._read_item())
@@ -307,6 +336,7 @@ class BaseParser(Parser):
         returned.
 
         :rtype: int
+        :raises errors.ParseError:
         :meta private:
         """
         sub = []
@@ -327,13 +357,13 @@ class BaseParser(Parser):
         system predicates, because they have string keys in the symbols set.
 
         :rtype: dict
+        :raises errors.ParseError:
         :meta private:
         """
         if ctype == None:
             ctype = self._typeof(self._current())
         else:
             self._assert_current_is(ctype)
-        # index = self.symbol_set.indexof(ctype, self._current())
         _, index = self.table.item(self._current())
         self._advance()
         subscript = self._read_subscript()
@@ -344,11 +374,17 @@ class BaseParser(Parser):
     ## ============================
 
     def _current(self):
-        # Get the current character, or ``None`` if after last.
+        """
+        :return: The current character, or ``None`` if after last.
+        """
         return self._next(0)
 
     def _assert_current(self):
-        # Raise a ``ParseError`` if after last.
+        """
+        :return: Type of current char, e.g. ``'operator'``, or ``None`` if
+          uknown type.
+        :raises errors.ParseError: if after last.
+        """
         if not self._has_current():
             raise ParseError(
                 'Unexpected end of input at position {0}.'.format(self.pos)
@@ -356,12 +392,22 @@ class BaseParser(Parser):
         return self._typeof(self._current())
 
     def _assert_current_is(self, *ctypes):
+        """
+        :param str *ctypes:
+        :return: Type of current char.
+        :rtype: str
+        :raises errors.ParseError: if after last, unexpected type or unknown symbol.
+        """
         ctype = self._assert_current()
-        if ctype not in ctypes:
-            raise ParseError(
-                "Unexpected {0} '{1}' at position {2}.".format(ctype, self._current(), self.pos)
-            )
-        return ctype
+        if ctype in ctypes:
+            return ctype
+        if ctype == None:
+            pfx = 'Unknown symbol'
+        else:
+            pfx = 'Unexpected {0} symbol'.format(ctype)
+        raise ParseError(
+            "{0} '{1}' at position {2}.".format(pfx, self._current(), self.pos)
+        )
 
     def _has_next(self, n=1):
         # Check whether there are n-many characters after the current.
@@ -392,7 +438,6 @@ class BaseParser(Parser):
         return self
 
     def _typeof(self, c):
-        # return self.symbol_set.typeof(c)
         return self.table.type(c)
 
     class __State(object):
@@ -420,12 +465,9 @@ class BaseParser(Parser):
 
 class PolishParser(BaseParser):
 
-    # symbol_set = SymbolSet.get_instance('polish.ascii')
-
     def _read(self):
         ctype = self._assert_current()
         if ctype == 'operator':
-            # operator = self.symbol_set.indexof('operator', self._current())
             _, operator = self.table.item(self._current())
             self._advance()
             operands = [self._read() for x in range(operarity(operator))]
@@ -436,20 +478,16 @@ class PolishParser(BaseParser):
 
 class StandardParser(BaseParser):
 
-    # symbol_set = SymbolSet.get_instance('standard.ascii')
-
-    def parse(self, string):
+    def parse(self, input):
         # override
         try:
-            s = super().parse(string)
+            s = super().parse(input)
         except ParseError as e:
             try:
                 # allow dropped outer parens
                 pstring = ''.join([
-                    # self.symbol_set.charof('paren_open', 0),
                     self.table.char('paren_open', 0),
-                    string,
-                    # self.symbol_set.charof('paren_close', 0),
+                    input,
                     self.table.char('paren_close', 0)
                 ])
                 s = super().parse(pstring)
@@ -474,7 +512,6 @@ class StandardParser(BaseParser):
         return s
 
     def __read_operator_sentence(self):
-        # operator = self.symbol_set.indexof('operator', self._current())
         _, operator = self.table.item(self._current())
         arity = operarity(operator)
         # only unary operators can be prefix operators
@@ -522,7 +559,6 @@ class StandardParser(BaseParser):
             elif ptype == 'paren_open':
                 depth += 1
             elif ptype == 'operator':
-                # peek_operator = self.symbol_set.indexof('operator', peek)
                 _, peek_operator = self.table.item(peek)
                 if operarity(peek_operator) == 2 and depth == 1:
                     if operator != None:
@@ -565,27 +601,41 @@ class StandardParser(BaseParser):
         self._advance()
         return Operated(operator, [lhs, rhs])
 
+parser_classes.update({
+    'polish'   : PolishParser,
+    'standard' : StandardParser,
+})
+
 class CharTable(object):
 
-    __instances = {'polish': {}, 'standard': {}}
+    __instances = {notn: dict() for notn in notations}
 
     @staticmethod
     def load(notn, name, table):
-        idx = __class__.__instances[notn]
+        idx = __class__.__getidx(notn)
+        if not isstr(name):
+            raise TypeError("`name` param not a string, got '{0}'".format(name.__class__))
         if name in idx:
             raise ValueError('Table {0}.{1} already defined'.format(notn, name))
         idx[name] = __class__(table)
         return idx[name]
 
     @staticmethod
-    def fetch(notn, name='default'):
-        idx = __class__.__instances[notn]
+    def fetch(notn, name = 'default'):
+        idx = __class__.__getidx(notn)
         builtin = __class__.__builtin[notn]
         return idx.get(name) or __class__.load(notn, name, builtin[name])
 
     @staticmethod
     def available(notn):
-        return sorted(set(__class__.__instances[notn]).union(__class__.__builtin[notn]))
+        return sorted(set(__class__.__getidx(notn)).union(__class__.__builtin[notn]))
+
+    @staticmethod
+    def __getidx(notn):
+        try:
+            return __class__.__instances[notn]
+        except KeyError:
+            raise ValueError("Invalid notation '{0}'".format(str(notn)))
 
     def __init__(self, table):
         vals, itms = table.values(), table.items()
@@ -608,13 +658,31 @@ class CharTable(object):
         }
 
     def type(self, char):
+        """
+        :param str char: The character symbol.
+        :return: The symbol type, or ``None`` if not in table.
+        :rtype: str
+        """
         item = self._table.get(char)
         return item[0] if item else None
 
     def item(self, char):
+        """
+        :param str char: The character symbol.
+        :return: Table item pair ``(type, value)``, e.g. ``('atomic', 1)``, or
+          ``('operator', 'Negation')``.
+        :rtype: tuple(str, any)
+        :raises KeyError: if symbol not in table.
+        """
         return self._table[char]
 
     def value(self, char):
+        """
+        :param str char: The character symbol.
+        :return: Table item value, e.g. ``1`` or ``'Negation'``.
+        :rtype: any
+        :raises KeyError: if symbol not in table.
+        """
         return self.item(char)[1]
 
     def char(self, *item):

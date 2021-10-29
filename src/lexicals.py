@@ -895,7 +895,7 @@ class Argument(object):
     Create an argument from sentence objects. For parsing strings into arguments,
     see ``Parser.argument``.
     """
-    def __init__(self, conclusion, premises=None, title=None):
+    def __init__(self, conclusion, premises = None, title = None):
         self.premises = []
         if premises:
             for premise in premises:

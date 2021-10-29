@@ -132,7 +132,7 @@ def argument(name):
     else:
         premises = []
         conclusion = info
-    return parser.argument(conclusion=conclusion, premises=premises, title=name)
+    return parser.argument(conclusion, premises, title=name)
 
 def arguments(names=None):
     if names == None:
