@@ -19,29 +19,29 @@ class TestTableauxSystem(object):
 def mock_sleep_5ms():
     time.sleep(0.005)
 
+def exarg(*args, **kw):
+    return examples.argument(*args, **kw)
+
 class TestTableau(object):
 
     def test_step_returns_false_when_finished(self):
-        proof = Tableau(None, None)
-        # force property
-        proof.finished = True
-        res = proof.step()
-        assert not res
+        res = Tableau(None).finish().step()
+        assert res == False
 
     def test_build_trunk_already_built_error(self):
-        proof = Tableau('cpl', examples.argument('Addition'))
+        proof = Tableau('cpl', exarg('Addition'))
         with raises(IllegalStateError):
             proof.build_trunk()
 
     def test_repr_contains_finished(self):
-        proof = Tableau('cpl', examples.argument('Addition'))
+        proof = Tableau('cpl', exarg('Addition'))
         res = proof.__repr__()
         assert 'finished' in res
 
     def test_build_premature_max_steps(self):
-        proof = Tableau('cpl', examples.argument('Material Modus Ponens'))
-        proof.build(max_steps=1)
-        assert proof.is_premature
+        proof = Tableau('cpl', exarg('Material Modus Ponens'), max_steps=1)
+        proof.build()
+        assert proof.premature
 
     def test_construct_sets_is_rank_optim_option(self):
         proof = Tableau('cpl', is_rank_optim=False)
@@ -49,13 +49,13 @@ class TestTableau(object):
         assert not proof.opts['is_rank_optim']
 
     def test_timeout_1ms(self):
-        proof = Tableau('cpl', examples.argument('Addition'))
+        proof = Tableau('cpl', exarg('Addition'), build_timeout=1)
         proof.step = mock_sleep_5ms
         with raises(TimeoutError):
-            proof.build(build_timeout=1)
+            proof.build()
 
     def test_finish_empty_sets_build_duration_ms_0(self):
-        proof = Tableau(None, None)
+        proof = Tableau(None)
         proof.finish()
         assert proof.stats['build_duration_ms'] == 0
 
@@ -68,14 +68,14 @@ class TestTableau(object):
             def node_will_close_branch(self, node, branch):
                 return True
         proof = Tableau(None)
-        rule = MockRule(proof)
-        proof.add_closure_rule(rule).branch()
+        proof.add_closure_rule(MockRule).branch()
+        assert proof.open_branch_count == 1
         proof.build()
-        assert proof.valid
+        assert proof.open_branch_count == 0
 
     def test_regress_structure_has_model_id(self):
-        proof = Tableau('CPL', examples.argument('Triviality 1'))
-        proof.build(is_build_models=True)
+        proof = Tableau('CPL', exarg('Triviality 1'), is_build_models=True)
+        proof.build()
         assert proof.tree['model_id']
 
     def test_getrule_returns_arg_if_rule_instance(self):
@@ -96,11 +96,11 @@ class TestTableau(object):
             def __after_branch_add(self, branch):
                 self._checkbranch = branch
                 self._checkparent = branch.parent
-        proof = Tableau(None)
-        proof.add_rule_group([MockRule])
-        b = Branch()
-        b.add({'test': True})
-        proof.add_branch(b)
+        b = Branch().add({'test': True})
+        proof = Tableau(None).add_rule_group([MockRule]).add_branch(b)
+        # proof
+        
+        # proof.add_branch(b)
         rule = proof.get_rule(MockRule)
         assert rule._checkbranch is b
         assert rule._checkparent == None

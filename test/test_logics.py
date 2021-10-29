@@ -19,13 +19,13 @@
 # pytableaux - logics test cases
 import pytest
 from errors import *
-from utils import get_logic
+from utils import StopWatch, get_logic
 from lexicals import Vocabulary, Atomic, Constant, Predicated, Quantified, \
     Operated, Variable, get_system_predicate
 from proof.tableaux import Tableau, Branch, Node
 from proof.rules import Rule, FilterNodeRule
 from proof.helpers import MaxConstantsTracker
-from parsers import parse, parse_argument
+from parsers import create_parser, parse, parse_argument
 from models import truth_table
 import examples
 
@@ -50,14 +50,19 @@ def empty_proof():
 
 class LogicTester(object):
 
-    vocab = Vocabulary([
-        ('PredF', 0, 0, 1),
-        ('PredG', 1, 0, 1),
-    ])
+    # vocab = Vocabulary([
+    #     ('PredF', 0, 0, 1),
+    #     ('PredG', 1, 0, 1),
+    # ])
+
+    vocab = examples.vocabulary
 
     default_notation = 'polish'
 
     def example_proof(self, name, **kw):
+        return example_proof(self.logic, name, **kw)
+
+    def eg(self, name, **kw):
         return example_proof(self.logic, name, **kw)
 
     def p(self, s, **kw):
@@ -67,15 +72,39 @@ class LogicTester(object):
             kw['notn'] = self.default_notation
         return parse(s, **kw)
 
+    def pp(self, *sens, **kw):
+        return list(self.p(s, **kw) for s in sens)
+
     def parg(self, conc, *prems, **kw):
+        if 'notn' not in kw:
+            kw['notn'] = self.default_notation
+        premises = []
+        for prem in prems:
+            if isinstance(prem, (list, tuple)):
+                premises.extend(prem)
+            elif isinstance(prem, Vocabulary):
+                if 'vocab' in kw:
+                    raise KeyError('duplicate vocabulary')
+                kw['vocab'] = prem
+            else:
+                premises.append(prem)
+        if 'vocab' not in kw:
+            kw['vocab'] = self.vocab
+        return parse_argument(conc, premises, **kw)
+
+    def create_parser(self, **kw):
         if 'vocab' not in kw:
             kw['vocab'] = self.vocab
         if 'notn' not in kw:
             kw['notn'] = self.default_notation
-        return parse_argument(conclusion=conc, premises=prems, **kw)
+        return create_parser(**kw)
 
     def get_rule(self, rule):
         return Tableau(self.logic).get_rule(rule)
+
+    @property
+    def Rules(self):
+        return self.logic.TableauxRules
 
     def assert_axiom(self, ax, **kw):
         arg = self.parg(ax, **kw)
@@ -99,12 +128,12 @@ class LogicTester(object):
         return proof
 
     def assert_valid_eg(self, name):
-        proof = self.example_proof(name)
+        proof = self.eg(name)
         assert proof.valid
         return proof
 
     def assert_invalid_eg(self, name):
-        proof = self.example_proof(name)
+        proof = self.eg(name)
         assert proof.invalid
         return proof
 
@@ -114,10 +143,11 @@ class TestFDE(LogicTester):
 
     def test_DesignationClosure_example(self):
         proof = Tableau(self.logic)
-        proof.get_rule(self.logic.TableauxRules.DesignationClosure).example()
+        proof.get_rule('DesignationClosure').example()
+        assert proof.open_branch_count == 1
         proof.build()
         assert proof.branch_count == 1
-        assert proof.valid
+        assert proof.open_branch_count == 0
 
     def test_ConjunctionNegatedDesignated_example_node(self):
         proof = Tableau(self.logic)
@@ -136,7 +166,7 @@ class TestFDE(LogicTester):
         assert branch.has({'sentence': s, 'designated': False})
 
     def test_valid_addition(self):
-        proof = self.example_proof('Addition')
+        proof = self.eg('Addition')
         assert proof.valid
 
     def test_valid_univ_from_neg_exist_1(self):
@@ -164,7 +194,7 @@ class TestFDE(LogicTester):
         self.assert_invalid_eg('Material Biconditional Elimination 3')
 
     def test_invalid_lem_model_is_countermodel_to(self):
-        proof = self.example_proof('Law of Excluded Middle')
+        proof = self.eg('Law of Excluded Middle')
         branch, = list(proof.open_branches())
         assert branch.model.is_countermodel_to(proof.argument)
 
@@ -179,7 +209,7 @@ class TestFDE(LogicTester):
         self.assert_invalid_eg('Universal from Existential')
 
     def test_invalid_lnc_build_model(self):
-        proof = self.example_proof('Law of Non-contradiction')
+        proof = self.eg('Law of Non-contradiction')
         model = proof.get_branch_at(0).model
         assert not proof.valid
         assert model.value_of(parse('a')) == 'B'
@@ -424,11 +454,11 @@ class TestK3(LogicTester):
 
     def test_GlutClosure_example(self):
         proof = Tableau(self.logic)
-        rule = proof.get_rule(self.logic.TableauxRules.GlutClosure)
-        rule.example()
+        proof.get_rule(self.logic.TableauxRules.GlutClosure).example()
+        assert proof.open_branch_count == 1
         proof.build()
         assert proof.branch_count == 1
-        assert proof.valid
+        assert proof.open_branch_count == 0
         
     def test_valid_bicond_elim_1(self):
         self.assert_valid_eg('Biconditional Elimination 1')
@@ -486,7 +516,7 @@ class TestK3W(LogicTester):
 
     def test_conditional_designated_example(self):
         proof = Tableau(self.logic)
-        rule = proof.get_rule(self.logic.TableauxRules.ConditionalDesignated)
+        rule = proof.get_rule('ConditionalDesignated')
         rule.example()
         proof.build()
         assert len(proof.history) > 0
@@ -494,7 +524,7 @@ class TestK3W(LogicTester):
 
     def test_conditional_undesignated_example(self):
         proof = Tableau(self.logic)
-        rule = proof.get_rule(self.logic.TableauxRules.ConditionalUndesignated)
+        rule = proof.get_rule('ConditionalUndesignated')
         rule.example()
         proof.build()
         assert len(proof.history) > 0
@@ -666,40 +696,31 @@ class TestL3(LogicTester):
         assert tbl['outputs'][6] == 'F'
         
     def test_valid_cond_identity(self):
-        proof = self.example_proof('Conditional Identity')
-        assert proof.valid
+        self.assert_valid_eg('Conditional Identity')
 
     def test_valid_cond_mp(self):
-        proof = self.example_proof('Conditional Modus Ponens')
-        assert proof.valid
+        self.assert_valid_eg('Conditional Modus Ponens')
 
     def test_valid_bicond_elim_1(self):
-        proof = self.example_proof('Biconditional Elimination 1')
-        assert proof.valid
+        self.assert_valid_eg('Biconditional Elimination 1')
 
     def test_valid_bicond_elim_3(self):
-        proof = self.example_proof('Biconditional Elimination 3')
-        assert proof.valid
+        self.assert_valid_eg('Biconditional Elimination 3')
 
     def test_valid_bicond_intro_3(self):
-        proof = self.example_proof('Biconditional Introduction 3')
-        assert proof.valid
+        self.assert_valid_eg('Biconditional Introduction 3')
 
     def test_valid_bicond_ident(self):
-        proof = self.example_proof('Biconditional Identity')
-        assert proof.valid
+        self.assert_valid_eg('Biconditional Identity')
 
     def test_invalid_material_identify(self):
-        proof = self.example_proof('Material Identity')
-        assert not proof.valid
+        self.assert_invalid_eg('Material Identity')
 
     def test_invalid_cond_contraction(self):
-        proof = self.example_proof('Conditional Contraction')
-        assert not proof.valid
+        self.assert_invalid_eg('Conditional Contraction')
 
     def test_invalid_cond_pseudo_contraction(self):
-        proof = self.example_proof('Conditional Pseudo Contraction')
-        assert not proof.valid
+        self.assert_invalid_eg('Conditional Pseudo Contraction')
 
     def test_valid_bicond_from_mat_bicond(self):
         arg = parse_argument('Bab', premises=['Eab'])
@@ -720,17 +741,17 @@ class TestG3(LogicTester):
     logic = get_logic('G3')
 
     def test_invalid_demorgan_8_model(self):
-        proof = self.example_proof('DeMorgan 8')
+        proof = self.eg('DeMorgan 8')
         assert proof.invalid
         model = list(proof.open_branches())[0].model
         assert model.is_countermodel_to(proof.argument)
 
     def test_valid_demorgan_6(self):
-        proof = self.example_proof('DeMorgan 6')
+        proof = self.eg('DeMorgan 6')
         assert proof.valid
 
     def test_invalid_lem(self):
-        proof = self.example_proof('Law of Excluded Middle')
+        proof = self.eg('Law of Excluded Middle')
         assert proof.invalid
 
     def test_invalid_not_not_a_arrow_a(self):
@@ -793,13 +814,14 @@ class TestLP(LogicTester):
 
     def test_GapClosure_example(self):
         proof = Tableau(self.logic)
-        rule = proof.get_rule(self.logic.TableauxRules.GapClosure)
-        rule.example()
+        proof.get_rule(self.logic.TableauxRules.GapClosure).example()
+        assert proof.open_branch_count == 1
         proof.build()
-        assert proof.valid
+        assert proof.branch_count == 1
+        assert proof.open_branch_count == 0
 
     def test_valid_material_ident(self):
-        proof = self.example_proof('Material Identity')
+        proof = self.eg('Material Identity')
         assert proof.valid
 
     def test_case_model_not_a_countermodel(self):
@@ -817,7 +839,7 @@ class TestLP(LogicTester):
         assert rule.get_target(proof.get_branch_at(0))
 
     def test_invalid_lnc(self):
-        proof = self.example_proof('Law of Non-contradiction')
+        proof = self.eg('Law of Non-contradiction')
         assert not proof.valid
 
     def test_valid_b_then_a_arrow_b(self):
@@ -826,7 +848,7 @@ class TestLP(LogicTester):
         assert proof.valid
 
     def test_invalid_cond_modus_ponens(self):
-        proof = self.example_proof('Conditional Modus Ponens')
+        proof = self.eg('Conditional Modus Ponens')
         assert not proof.valid
 
     def test_valid_a_not_a_not_b_thus_not_a_arrow_b(self):
@@ -870,23 +892,23 @@ class TestRM3(LogicTester):
         assert model.value_of(parse('Bab')) == 'F'
 
     def test_valid_cond_mp(self):
-        proof = self.example_proof('Conditional Modus Ponens')
+        proof = self.eg('Conditional Modus Ponens')
         assert proof.valid
 
     def test_valid_demorgan_1(self):
-        proof = self.example_proof('DeMorgan 1')
+        proof = self.eg('DeMorgan 1')
         assert proof.valid
 
     def test_valid_demorgan_2(self):
-        proof = self.example_proof('DeMorgan 2')
+        proof = self.eg('DeMorgan 2')
         assert proof.valid
 
     def test_valid_demorgan_3(self):
-        proof = self.example_proof('DeMorgan 3')
+        proof = self.eg('DeMorgan 3')
         assert proof.valid
 
     def test_valid_demorgan_4(self):
-        proof = self.example_proof('DeMorgan 4')
+        proof = self.eg('DeMorgan 4')
         assert proof.valid
 
     def test_invalid_b_then_a_arrow_b(self):
@@ -895,7 +917,7 @@ class TestRM3(LogicTester):
         assert not proof.valid
 
     def test_valid_cond_modus_ponens(self):
-        proof = self.example_proof('Conditional Modus Ponens')
+        proof = self.eg('Conditional Modus Ponens')
         assert proof.valid
 
     def test_invalid_a_a_arrow_not_b_arrow_c_thus_not_a_arrow_b(self):
@@ -1051,27 +1073,27 @@ class TestGO(LogicTester):
         assert branch.has({'sentence': parse('a'), 'designated': True})
 
     def test_valid_neg_exist_from_univ(self):
-        proof = self.example_proof('Quantifier Interdefinability 1')
+        proof = self.eg('Quantifier Interdefinability 1')
         assert proof.valid
 
     def test_valid_neg_univ_from_exist(self):
-        proof = self.example_proof('Quantifier Interdefinability 3')
+        proof = self.eg('Quantifier Interdefinability 3')
         assert proof.valid
 
     def test_valid_demorgan_3(self):
-        proof = self.example_proof('DeMorgan 3')
+        proof = self.eg('DeMorgan 3')
         assert proof.valid
 
     def test_invalid_demorgan_1(self):
-        proof = self.example_proof('DeMorgan 1')
+        proof = self.eg('DeMorgan 1')
         assert not proof.valid
 
     def test_invalid_exist_from_neg_univ(self):
-        proof = self.example_proof('Quantifier Interdefinability 2')
+        proof = self.eg('Quantifier Interdefinability 2')
         assert not proof.valid
 
     def test_invalid_univ_from_neg_exist(self):
-        proof = self.example_proof('Quantifier Interdefinability 4')
+        proof = self.eg('Quantifier Interdefinability 4')
         assert not proof.valid
 
     def test_valid_prior_b3e_rule_defect2(self):
@@ -1141,7 +1163,7 @@ class TestMH(LogicTester):
         self.assert_axiom('UKaANbNAbNbNUab')
 
     def test_mp(self):
-        proof = self.example_proof('Conditional Modus Ponens')
+        proof = self.eg('Conditional Modus Ponens')
         assert proof.valid
 
     def test_inden(self):
@@ -1258,31 +1280,31 @@ class TestP3(LogicTester):
         assert proof.history[0]['rule'] == rule
 
     def test_invalid_lem(self):
-        proof = self.example_proof('Law of Excluded Middle')
+        proof = self.eg('Law of Excluded Middle')
         assert proof.invalid
 
     def test_invalid_demorgan_1(self):
-        proof = self.example_proof('DeMorgan 1')
+        proof = self.eg('DeMorgan 1')
         assert proof.invalid
 
     def test_invalid_demorgan_2(self):
-        proof = self.example_proof('DeMorgan 2')
+        proof = self.eg('DeMorgan 2')
         assert proof.invalid
 
     def test_invalid_demorgan_3(self):
-        proof = self.example_proof('DeMorgan 3')
+        proof = self.eg('DeMorgan 3')
         assert not proof.valid
 
     def test_invalid_demorgan_4(self):
-        proof = self.example_proof('DeMorgan 4')
+        proof = self.eg('DeMorgan 4')
         assert proof.invalid
 
     def test_invalid_demorgan_5(self):
-        proof = self.example_proof('DeMorgan 5')
+        proof = self.eg('DeMorgan 5')
         assert proof.invalid
 
     def test_valid_demorgan_6(self):
-        proof = self.example_proof('DeMorgan 6')
+        proof = self.eg('DeMorgan 6')
         assert proof.valid
 
 class TestCPL(LogicTester):
@@ -1314,15 +1336,15 @@ class TestCPL(LogicTester):
         assert proof.branch_count == 1
 
     def test_valid_simplification(self):
-        proof = self.example_proof('Simplification')
+        proof = self.eg('Simplification')
         assert proof.valid
 
     def test_invalid_syllogism(self):
-        proof = self.example_proof('Syllogism')
+        proof = self.eg('Syllogism')
         assert not proof.valid
 
     def test_read_model_deny_antec(self):
-        proof = self.example_proof('Denying the Antecedent')
+        proof = self.eg('Denying the Antecedent')
         model = self.logic.Model()
         branch = list(proof.open_branches())[0]
         model.read_branch(branch)
@@ -1331,7 +1353,7 @@ class TestCPL(LogicTester):
         assert model.value_of(s.negate()) == 'T'
 
     def test_read_model_extract_disj_2(self):
-        proof = self.example_proof('Extracting a Disjunct 2')
+        proof = self.eg('Extracting a Disjunct 2')
         model = self.logic.Model()
         branch = list(proof.open_branches())[0]
         model.read_branch(branch)
@@ -1491,7 +1513,7 @@ class TestCFOL(LogicTester):
             model.add_access(0, 0)
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
-        arg = parse_argument('a', premises=['NLa', 'b'])
+        arg = self.parg('a', ['NLa', 'b'])
         proof = Tableau(self.logic, arg, is_build_models=True)
         proof.build()
         model = proof.get_branch_at(0).model
@@ -1501,22 +1523,22 @@ class TestCFOL(LogicTester):
         assert model.is_countermodel_to(arg)
 
     def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
-        vocab = Vocabulary((('Pred', 0, 0, 1),))
-        proof = Tableau(self.logic, parse_argument('b', premises=['VxKFxKaNa'], vocab=vocab))
+        arg = self.parg('b', 'VxKFxKaNa')
+        proof = Tableau(self.logic, arg)
         proof.build()
         assert proof.valid
 
     def test_invalid_existential_inside_univ_max_steps(self):
-        arg = parse_argument('b', ['VxUFxSyFy'], vocab=self.vocab)
-        proof = Tableau(self.logic, arg)
-        proof.build(max_steps=100)
+        arg = self.parg('b', 'VxUFxSyFy')
+        proof = Tableau(self.logic, arg, max_steps = 100)
+        proof.build()
         assert proof.invalid
 
     def test_quantified_opaque_is_countermodel(self):
         # for this we needed to add constants that occur within opaque sentences.
         # the use of the existential is important given the way the K model
         # computes quantified values (short-circuit), as opposed to FDE (min/max).
-        arg = parse_argument('b', ['SxUNFxSyMFy'], vocab=self.vocab)
+        arg = self.parg('b', 'SxUNFxSyMFy')
         proof = Tableau(self.logic, arg, is_build_models=True)
         proof.build()
         # this assert is so our test has integrity
@@ -1526,9 +1548,9 @@ class TestCFOL(LogicTester):
 
     def test_model_identity_predication1(self):
         model = self.logic.Model()
-        s1 = parse('Fm', vocab=self.vocab)
-        s2 = parse('Imn')
-        s3 = parse('Fn', vocab=self.vocab)
+        s1 = self.p('Fm')
+        s2 = self.p('Imn')
+        s3 = self.p('Fn')
         model.set_literal_value(s1, 'T')
         model.set_literal_value(s2, 'T')
         model.finish()
@@ -1536,9 +1558,9 @@ class TestCFOL(LogicTester):
 
     def test_model_identity_predication2(self):
         model = self.logic.Model()
-        s1 = parse('Fm', vocab=self.vocab)
-        s2 = parse('Inm')
-        s3 = parse('Fn', vocab=self.vocab)
+        s1 = self.p('Fm')
+        s2 = self.p('Imn')
+        s3 = self.p('Fn')
         model.set_literal_value(s1, 'T')
         model.set_literal_value(s2, 'T')
         model.finish()
@@ -1635,8 +1657,8 @@ class TestK(LogicTester):
     def test_IdentityIndiscernability_not_applies(self):
         proof = empty_proof()
         branch = proof.branch()
-        branch.add({'sentence': parse('Imm'), 'world': 0})
-        branch.add({'sentence': parse('Fs', vocab=examples.vocabulary), 'world': 0})
+        branch.add({'sentence': self.p('Imm'), 'world': 0})
+        branch.add({'sentence': self.p('Fs'), 'world': 0})
         rule = self.logic.TableauxRules.IdentityIndiscernability(proof)
         res = rule.get_target(branch)
         assert not res
@@ -1703,7 +1725,8 @@ class TestK(LogicTester):
 
     def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
         vocab = Vocabulary((('Pred', 0, 0, 1),))
-        proof = Tableau(self.logic, parse_argument('b', premises=['VxKFxKaNa'], vocab=vocab))
+        arg = self.parg('b', 'VxKFxKaNa', vocab=vocab)
+        proof = Tableau(self.logic, arg)
         proof.build()
         assert proof.valid
 
@@ -1831,8 +1854,8 @@ class TestK(LogicTester):
         assert res == 'T'
 
     def test_model_universal_false(self):
-        s1 = parse('VxFx', vocab=examples.vocabulary)
-        s2 = parse('Fm', vocab=examples.vocabulary)
+        s1 = self.p('VxFx')
+        s2 = self.p('Fm')
         model = self.logic.Model()
         model.set_predicated_value(s2, 0, world=0)
         res = model.value_of(s1, world=0)
@@ -1856,7 +1879,7 @@ class TestK(LogicTester):
         assert res == 'F'
 
     def test_model_identity_extension_non_empty_with_sentence(self):
-        s = parse('Imn')
+        s = self.p('Imn')
         model = self.logic.Model()
         model.set_predicated_value(s, 'T', world=0)
         extension = model.get_extension(get_system_predicate('Identity'), world=0)
@@ -1864,7 +1887,7 @@ class TestK(LogicTester):
         assert (Constant(0, 0), Constant(1, 0)) in extension
         
     def test_model_frame_data_has_identity_with_sentence(self):
-        s = parse('Imn')
+        s = self.p('Imn')
         model = self.logic.Model()
         model.set_predicated_value(s, 'T', world=0)
         model.finish()
@@ -1939,10 +1962,10 @@ class TestK(LogicTester):
 
     def test_frame_difference_extension_keys_diff(self):
         vocab = Vocabulary()
-        vocab.add_predicate(examples.vocabulary.get_predicate(index=0, subscript=0))
+        vocab.add_predicate(self.vocab.get_predicate(index=0, subscript=0))
         vocab.declare_predicate('g', 1, 0, 2)
-        s1 = parse('Fm', vocab=vocab)
-        s2 = parse('Gmn', vocab=vocab)
+        s1 = self.p('Fm', vocab=vocab)
+        s2 = self.p('Gmn', vocab=vocab)
         model = self.logic.Model()
         model.set_predicated_value(s1, 'T', world=0)
         model.set_predicated_value(s2, 'T', world=1)
@@ -1952,8 +1975,8 @@ class TestK(LogicTester):
         assert not frame_b.is_equivalent_to(frame_a)
 
     def test_frame_difference_extension_values_diff(self):
-        s1 = parse('Fm', vocab=examples.vocabulary)
-        s2 = parse('Fn', vocab=examples.vocabulary)
+        s1 = self.p('Fm')
+        s2 = self.p('Fn')
         model = self.logic.Model()
         model.set_predicated_value(s1, 'T', world=0)
         model.set_predicated_value(s2, 'T', world=1)
@@ -1963,8 +1986,8 @@ class TestK(LogicTester):
         assert not frame_b.is_equivalent_to(frame_a)
 
     def test_frame_difference_extension_values_equiv(self):
-        s1 = parse('Fm', vocab=examples.vocabulary)
-        s2 = parse('Fn', vocab=examples.vocabulary)
+        s1 = self.p('Fm')
+        s2 = self.p('Fn')
         model = self.logic.Model()
         model.set_predicated_value(s1, 'T', world=0)
         model.set_predicated_value(s2, 'F', world=0)
@@ -1976,7 +1999,7 @@ class TestK(LogicTester):
         assert frame_b.is_equivalent_to(frame_a)
 
     def test_frame_not_equals(self):
-        s = parse('a')
+        s = self.p('a')
         model1 = self.logic.Model()
         model2 = self.logic.Model()
         model1.set_literal_value(s, 'T', world=0)
@@ -1986,7 +2009,7 @@ class TestK(LogicTester):
         assert f1 != f2
 
     def test_frame_not_equals(self):
-        s = parse('a')
+        s = self.p('a')
         model1 = self.logic.Model()
         model2 = self.logic.Model()
         model1.set_literal_value(s, 'T', world=0)
@@ -1996,7 +2019,7 @@ class TestK(LogicTester):
         assert f1 == f2
 
     def test_frame_ordering(self):
-        s = parse('a')
+        s = self.p('a')
         model = self.logic.Model()
         model.set_literal_value(s, 'T', world=0)
         model.set_literal_value(s, 'F', world=1)
@@ -2008,7 +2031,7 @@ class TestK(LogicTester):
         assert f1 <= f2
 
     def test_model_not_impl_various(self):
-        s1 = parse('Aab')
+        s1 = self.p('Aab')
         model = self.logic.Model()
         with pytest.raises(NotImplementedError):
             model.set_literal_value(s1, 'T')
@@ -2018,7 +2041,7 @@ class TestK(LogicTester):
             model.value_of_quantified(s1)
 
     def test_model_value_error_various(self):
-        s1 = parse('a')
+        s1 = self.p('a')
         model = self.logic.Model()
         model.set_opaque_value(s1, 'T')
         with pytest.raises(ModelValueError):
@@ -2027,46 +2050,47 @@ class TestK(LogicTester):
         model.set_atomic_value(s1, 'T')
         with pytest.raises(ModelValueError):
             model.set_atomic_value(s1, 'F')
-        s2 = parse('Fm', vocab=examples.vocabulary)
+        s2 = self.p('Fm')
         model.set_predicated_value(s2, 'T')
         with pytest.raises(ModelValueError):
             model.set_predicated_value(s2, 'F')
 
     def test_model_get_extension_adds_predicate_to_predicates(self):
         # coverage
-        s1 = parse('Fm', vocab=examples.vocabulary)
+        s1 = self.p('Fm')
         model = self.logic.Model()
         res = model.get_extension(s1.predicate)
         assert len(res) == 0
         assert s1.predicate in model.predicates
 
     def test_model_is_countermodel_to_false1(self):
-        arg = parse_argument('b', premises=['a'])
-        s1 = arg.premises[0]
+        arg = self.parg('b', 'a')
+        s1, = arg.premises
         model = self.logic.Model()
         model.set_literal_value(s1, 'F')
         model.set_literal_value(arg.conclusion, 'T')
         assert not model.is_countermodel_to(arg)
 
     def test_nonexistence_closure1(self):
-        arg = parse_argument('b', premises=['NJm'])
+        arg = self.parg('b', ['NJm'])
         proof = Tableau(self.logic, arg).build()
         assert proof.valid
 
     def test_nonexistence_closure_example(self):
         proof = Tableau(self.logic, None)
-        rule = proof.get_rule(self.logic.TableauxRules.NonExistenceClosure)
-        rule.example()
+        proof.get_rule('NonExistenceClosure').example()
+        assert proof.open_branch_count == 1
         proof.build()
-        assert proof.valid
+        assert proof.branch_count == 1
+        assert proof.open_branch_count == 0
 
     def test_invalid_s4_cond_inf_2(self):
         proof = self.example_proof('S4 Conditional Inference 2')
         assert not proof.valid
 
     def test_model_finish_every_opaque_has_value_in_every_frame(self):
-        s1 = parse('a')
-        s2 = parse('b')
+        s1 = self.p('a')
+        s2 = self.p('b')
         model = self.logic.Model()
         model.set_opaque_value(s1, 'T', world=0)
         model.set_opaque_value(s2, 'T', world=1)
@@ -2107,10 +2131,10 @@ class TestK(LogicTester):
         for i in range(10):
             opens = {b for b in proof.open_branches() if b != b1}
             for b in opens:
-                res = proof._get_branch_application(b)
+                res = proof._Tableau__get_branch_application(b)
                 if res:
                     rule, target = res
-                    proof._do_application(rule, target, None)
+                    proof._Tableau__do_application(rule, target, StopWatch())
                     break
 
         # we shouldn't apply now
@@ -2125,8 +2149,8 @@ class TestK(LogicTester):
 
     def test_invalid_existential_inside_univ_max_steps(self):
         arg = parse_argument('b', ['VxUFxSyFy'], vocab=self.vocab)
-        proof = Tableau(self.logic, arg)
-        proof.build(max_steps=100)
+        proof = Tableau(self.logic, arg, max_steps=100)
+        proof.build()
         assert proof.invalid
 
 class TestD(LogicTester):
