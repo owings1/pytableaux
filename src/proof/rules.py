@@ -75,6 +75,14 @@ class Rule(EventEmitter):
 
     # External API
 
+    def get_target(self, branch):
+        # Concrete classes should not override this, but should implement
+        # ``get_candidate_targets()`` instead.
+        cands = self.get_candidate_targets(branch)
+        if cands:
+            self.__extend_branch_targets(cands, branch)
+            return self.__select_best_target(cands, branch)
+
     def apply(self, target):
         # Concrete classes should not override this, but should implement
         # ``apply_to_target()`` instead.
@@ -83,13 +91,12 @@ class Rule(EventEmitter):
             self.apply_count += 1
             self.__after_apply(target)
 
-    def get_target(self, branch):
-        # Concrete classes should not override this, but should implement
-        # ``get_candidate_targets()`` instead.
-        cands = self.get_candidate_targets(branch)
-        if cands:
-            self.__extend_branch_targets(cands, branch)
-            return self.__select_best_target(cands, branch)
+    def example(self):
+        # Add example branches/nodes sufficient for ``applies()`` to return true.
+        # Implementations should modify the tableau directly, with no return
+        # value. Used for building examples/documentation.
+        branch = self.branch()
+        branch.update(self.example_nodes(branch))
 
     # Abstract methods
 
@@ -105,13 +112,6 @@ class Rule(EventEmitter):
         raise NotImplementedError()
 
     # Implementation options for ``example()``
-
-    def example(self):
-        # Add example branches/nodes sufficient for ``applies()`` to return true.
-        # Implementations should modify the tableau directly, with no return
-        # value. Used for building examples/documentation.
-        branch = self.branch()
-        branch.update(self.example_nodes(branch))
 
     def example_nodes(self, branch):
         return [self.example_node(branch)]
@@ -225,6 +225,10 @@ class Rule(EventEmitter):
         - `total_candidates`
         - `min_candidate_score`
         - `max_candidate_score`
+
+        :param iterable(dict) targets: The list of targets.
+        :param tableaux.Branch branch: The branch.
+        :return: ``None``
         """
         for target in targets:
             if 'branch' not in target:

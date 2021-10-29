@@ -5,12 +5,16 @@ Modules
 
 .. toctree::
 
-    modules/proof.tableaux
-
-    modules/proof.writers
+    modules/lexicals
 
     modules/parsers
 
-    modules/lexicals
+    modules/proof.tableaux
 
+    modules/proof.writers
+    
     modules/proof.rules
+
+    modules/utils
+
+    modules/errors
