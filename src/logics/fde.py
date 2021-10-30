@@ -355,7 +355,7 @@ class Model(BaseModel):
         predicate = sentence.predicate
         params = tuple(sentence.parameters)
         for param in params:
-            if param.is_constant():
+            if param.is_constant:
                 self.constants.add(param)
         extension = self.get_extension(predicate)
         anti_extension = self.get_anti_extension(predicate)

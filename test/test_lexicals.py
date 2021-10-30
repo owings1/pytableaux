@@ -175,8 +175,8 @@ class TestVocabulary(object):
 
     def test_constant_is_constant_not_variable(self):
         c = Constant(0, 0)
-        assert c.is_constant()
-        assert not c.is_variable()
+        assert c.is_constant
+        assert not c.is_variable
 
     def test_variable_index_too_large(self):
         with raises(ValueError):
