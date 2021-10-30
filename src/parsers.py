@@ -1,9 +1,27 @@
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2021 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+# pytableaux - parsers module
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError, NotFoundError
 from lexicals import Constant, Variable,  Atomic, Predicated, Quantified, \
     Operated, Sentence, Vocabulary, Argument, get_system_predicate, operarity
-    
-from utils import cat, isstr
+from utils import CacheNotationData, cat, isstr, condcheck, typecheck
 
 parser_classes = {
     # Values populated after class declarations below.
@@ -62,10 +80,6 @@ def create_parser(notn = None, vocab = None, table = None, **opts):
     if isstr(table):
         table = CharTable.fetch(notn, table)
     return parser_classes[notn](table, vocab, **opts)
-    # if notn == 'polish':
-    #     return PolishParser(table, vocab, **opts)
-    # elif notn == 'standard':
-    #     return StandardParser(table, vocab, **opts)
 
 class Parser(object):
 
@@ -90,29 +104,11 @@ class Parser(object):
         :rtype: lexicals.Argument
         :raises errors.ParseError:
         """
-        # if isstr(conclusion):
-        #     conc = self.parse(conclusion)
-        # else:
-        #     conc = conclusion
-        # if not isinstance(conclusion, Sentence):
-        #     conclusion = self.parse(conclusion)
-        # premises = list(
-        #     prem if isinstance(prem, Sentence) else self.parse(prem)
-        #     for prem in premises
-        # ) if premises else premises
         return Argument(
             self.parse(conclusion),
             premises and [self.parse(p) for p in premises],
             title = title,
         )
-        # conc = (
-        #     self.parse(conclusion) if isstr(conclusion) else conclusion
-        # )
-        
-        # if premises:
-        #     for s in premises:
-        #         prems.append(self.parse(s) if isstr(s) else s)
-        # return Argument(conc, prems, **kw)
     
 class BaseParser(Parser):
 
@@ -209,9 +205,9 @@ class BaseParser(Parser):
         :raises errors.ParseError:
         :meta private:
         """
-        predicate = self._read_predicate()
-        params = self._read_parameters(predicate.arity)
-        return Predicated(predicate, params)
+        pred = self._read_predicate()
+        params = self._read_parameters(pred.arity)
+        return Predicated(pred, params)
 
     def _read_quantified_sentence(self):
         """
@@ -225,7 +221,7 @@ class BaseParser(Parser):
         _, quantifier = self.table.item(self._current())
         self._advance()
         v = self._read_variable()
-        if v in list(self.bound_vars):
+        if v in self.bound_vars:
             vchr = self.table.char('variable', v.index)
             raise BoundVariableError(
                 "Cannot rebind variable '{0}' ({1}) at position {2}.".format(vchr, v.subscript, self.pos)
@@ -298,7 +294,7 @@ class BaseParser(Parser):
             return self._read_constant()
         cpos = self.pos
         v = self._read_variable()
-        if v not in list(self.bound_vars):
+        if v not in self.bound_vars:
             vchr = self.table.char('variable', v.index)
             raise UnboundVariableError(
                 "Unbound variable '{0}' ({1}) at position {2}.".format(
@@ -412,7 +408,7 @@ class BaseParser(Parser):
     def _has_next(self, n=1):
         # Check whether there are n-many characters after the current.
         self.__state.check_started()
-        return (len(self.s) > self.pos + n)
+        return len(self.s) > self.pos + n
 
     def _has_current(self):
         # check whether there is a current character, or return ``False``` if after last.
@@ -529,14 +525,15 @@ class StandardParser(BaseParser):
         params = [self._read_parameter()]
         self._assert_current_is('user_predicate', 'system_predicate')
         ppos = self.pos
-        predicate = self._read_predicate()
-        if predicate.arity < 2:
+        pred = self._read_predicate()
+        arity = pred.arity
+        if arity < 2:
             raise ParseError(
                 cat("Unexpected {0}-ary predicate symbol at position {1}. ",
-                "Infix notation requires arity > 1.").format(predicate.arity, ppos)
+                "Infix notation requires arity > 1.").format(arity, ppos)
             )
-        params += self._read_parameters(predicate.arity - 1)
-        return Predicated(predicate, params)
+        params += self._read_parameters(arity - 1)
+        return Predicated(pred, params)
 
     def __read_from_open_paren(self):
         # if we have an open parenthesis, then we demand a binary infix operator sentence.
@@ -606,39 +603,13 @@ parser_classes.update({
     'standard' : StandardParser,
 })
 
-class CharTable(object):
+class CharTable(CacheNotationData):
 
-    __instances = {notn: dict() for notn in notations}
+    default_fetch_name = 'default'
 
-    @staticmethod
-    def load(notn, name, table):
-        idx = __class__.__getidx(notn)
-        if not isstr(name):
-            raise TypeError("`name` param not a string, got '{0}'".format(name.__class__))
-        if name in idx:
-            raise ValueError('Table {0}.{1} already defined'.format(notn, name))
-        idx[name] = __class__(table)
-        return idx[name]
-
-    @staticmethod
-    def fetch(notn, name = 'default'):
-        idx = __class__.__getidx(notn)
-        builtin = __class__.__builtin[notn]
-        return idx.get(name) or __class__.load(notn, name, builtin[name])
-
-    @staticmethod
-    def available(notn):
-        return sorted(set(__class__.__getidx(notn)).union(__class__.__builtin[notn]))
-
-    @staticmethod
-    def __getidx(notn):
-        try:
-            return __class__.__instances[notn]
-        except KeyError:
-            raise ValueError("Invalid notation '{0}'".format(str(notn)))
-
-    def __init__(self, table):
-        vals, itms = table.values(), table.items()
+    def __init__(self, data):
+        typecheck(data, dict, 'data')
+        vals, itms = data.values(), data.items()
         # copy table
         self._table = {key: tuple(value) for key, value in itms}
         # flipped table 
@@ -700,13 +671,7 @@ class CharTable(object):
     def table(self):
         return dict(self._table)
 
-    @staticmethod
-    def _initbuiltin(tdata):
-        __class__.__builtin = tdata
-        del(__class__._initbuiltin)
-    __builtin = None
-
-CharTable._initbuiltin({
+CharTable._initcache(notations, {
     'standard': {
         'default': {
             'A' : ('atomic', 0),

@@ -40,7 +40,7 @@ def test_parse_polish():
 def test_argument_no_prems_1_std_untitled():
     a = argument(conclusion='A', notn='standard')
     assert len(a.premises) == 0
-    assert a.conclusion.is_atomic()
+    assert a.conclusion.is_atomic
 
 def test_argument_prems_preparsed_titled():
     premises = [parse('Aab'), parse('Nb')]
@@ -70,11 +70,11 @@ class TestStandard(object):
 
     def test_parse_atomic(self):
         s = std.parse('A')
-        assert s.is_atomic()
+        assert s.is_atomic
 
     def test_parse_negated(self):
         s = std.parse('~A')
-        assert s.is_literal()
+        assert s.is_literal
         assert s.operator == 'Negation'
 
     def test_parse_conjunction_parens(self):
@@ -92,7 +92,7 @@ class TestStandard(object):
     def test_complex_quantified_1(self):
         s = std.parse('((A & B) V XxXy(=xy > !a))')
         assert s.operator == 'Disjunction'
-        assert s.rhs.is_quantified()
+        assert s.rhs.is_quantified
 
     def test_complex_quantified_1_equivalence(self):
         s1 = std.parse('((A&B0)VXxXy(=xy>!a))')
@@ -136,11 +136,11 @@ class TestPolish(object):
 
     def test_parse_atomic(self):
         s = pol.parse('a')
-        assert s.is_atomic()
+        assert s.is_atomic
 
     def test_parse_negated(self):
         s = pol.parse('Na')
-        assert s.is_literal()
+        assert s.is_literal
         assert s.operator == 'Negation'
 
     def test_unexpected_constant_error(self):

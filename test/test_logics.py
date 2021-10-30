@@ -1814,11 +1814,11 @@ class TestK(LogicTester):
 
     def test_model_existence_user_pred_true(self):
         v = Vocabulary()
-        v.declare_predicate('MyPred', 0, 0, 1)
+        pred = v.declare_predicate('MyPred', 0, 0, 1)
         m = Constant(0, 0)
         x = Variable(0, 0)
-        s1 = Predicated('MyPred', [m], v)
-        s2 = Predicated('MyPred', [x], v)
+        s1 = Predicated(pred, [m])
+        s2 = Predicated(pred, [x])
         s3 = Quantified('Existential', x, s2)
 
         model = self.logic.Model()
@@ -1828,11 +1828,11 @@ class TestK(LogicTester):
 
     def test_model_existense_user_pred_false(self):
         v = Vocabulary()
-        v.declare_predicate('MyPred', 0, 0, 1)
+        pred = v.declare_predicate('MyPred', 0, 0, 1)
         m = Constant(0, 0)
         x = Variable(0, 0)
-        s1 = Predicated('MyPred', [m], v)
-        s2 = Predicated('MyPred', [x], v)
+        s1 = Predicated(pred, [m])
+        s2 = Predicated(pred, [x])
         s3 = Quantified('Existential', x, s2)
 
         model = self.logic.Model()
@@ -1841,11 +1841,11 @@ class TestK(LogicTester):
 
     def test_model_universal_user_pred_true(self):
         v = Vocabulary()
-        v.declare_predicate('MyPred', 0, 0, 1)
+        pred = v.declare_predicate('MyPred', 0, 0, 1)
         m = Constant(0, 0)
         x = Variable(0, 0)
-        s1 = Predicated('MyPred', [m], v)
-        s2 = Predicated('MyPred', [x], v)
+        s1 = Predicated(pred, [m])
+        s2 = Predicated(pred, [x])
         s3 = Quantified('Universal', x, s2)
 
         model = self.logic.Model()
@@ -1863,13 +1863,13 @@ class TestK(LogicTester):
 
     def test_model_universal_user_pred_false(self):
         v = Vocabulary()
-        v.declare_predicate('MyPred', 0, 0, 1)
+        pred = v.declare_predicate('MyPred', 0, 0, 1)
         m = Constant(0, 0)
         n = Constant(1, 0)
         x = Variable(0, 0)
-        s1 = Predicated('MyPred', [m], v)
-        s2 = Predicated('MyPred', [x], v)
-        s3 = Predicated('MyPred', [n], v)
+        s1 = Predicated(pred, [m])
+        s2 = Predicated(pred, [x])
+        s3 = Predicated(pred, [n])
         s4 = Quantified('Universal', x, s2)
     
         model = self.logic.Model()

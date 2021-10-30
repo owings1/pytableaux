@@ -21,6 +21,7 @@
 from builtins import ModuleNotFoundError
 from errors import IllegalStateError
 from importlib import import_module
+from inspect import isclass
 from time import time
 from types import ModuleType
 from past.builtins import basestring
@@ -96,6 +97,25 @@ def get_logic(ref):
     :raises TypeError: if no module name can be determined from ``ref``.
     """
     return get_module(ref, package = 'logics')
+
+def typecheck(obj, types, name = 'parameter', err = TypeError):
+    if isclass(types):
+        types = (types,)
+    types = tuple(
+        basestring if val == str else val for val in types
+    )
+    if isinstance(obj, types):
+        return obj
+    raise err("`{0}` must be {1}, got '{2}'".format(name, types, obj.__class__))
+
+def condcheck(cond, msg = None, name = 'parameter', err = ValueError):
+    if callable(cond):
+        cond = cond()
+    if cond:
+        return
+    if msg == None:
+        msg = 'Invalid value for `{0}`'.format(name)
+    raise err(msg)
 
 def nowms():
     return int(round(time() * 1000))
@@ -217,6 +237,56 @@ class EventEmitter(object):
             self.__listeners[event].clear()
         return self
 
+class CacheNotationData(object):
+
+    default_fetch_name = 'default'
+
+    @classmethod
+    def load(cls, notn, name, data):
+        idx = cls.__getidx(notn)
+        typecheck(name, str, 'name')
+        typecheck(data, dict, 'data')
+        condcheck(
+            name not in idx,
+            '{0} {1}.{2} already defined'.format(notn, name, cls)
+        )
+        idx[name] = cls(data)
+        return idx[name]
+
+    @classmethod
+    def fetch(cls, notn, name = None):
+        if name == None:
+            name = cls.default_fetch_name
+        idx = cls.__getidx(notn)
+        builtin = cls.__builtin[notn]
+        return idx.get(name) or cls.load(notn, name, builtin[name])
+
+    @classmethod
+    def available(cls, notn):
+        return sorted(set(
+            cls.__getidx(notn)
+        ).union(
+            cls.__builtin[notn]
+        ))
+
+    @classmethod
+    def __getidx(cls, notn):
+        try:
+            return cls.__instances[notn]
+        except KeyError:
+            raise ValueError("Invalid notation '{0}'".format(notn))
+
+    @classmethod
+    def _initcache(cls, notns, builtin):
+        a_ = '_initcache'
+        if cls == __class__:
+            raise TypeError("Cannot invoke '{1}' on {0}".format(cls, a_))
+        if hasattr(cls, '__builtin'):
+            raise AttributeError("{0} has no attribute '{1}'".format(cls, a_))
+        builtin = cls.__builtin = dict(builtin)
+        notns = set(notns).union(builtin)
+        cls.__instances = {notn: {} for notn in notns}
+
 class StopWatch(object):
 
     def __init__(self, started=False):
@@ -272,4 +342,3 @@ class StopWatch(object):
     def __exit__(self, type, value, traceback):
         if self.is_running():
             self.stop()
-

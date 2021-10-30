@@ -32,13 +32,13 @@ class BaseModel(object):
     def value_of(self, sentence, **kw):
         if self.is_sentence_opaque(sentence):
             return self.value_of_opaque(sentence, **kw)
-        elif sentence.is_operated():
+        elif sentence.is_operated:
             return self.value_of_operated(sentence, **kw)
-        elif sentence.is_predicated():
+        elif sentence.is_predicated:
             return self.value_of_predicated(sentence, **kw)
-        elif sentence.is_atomic():
+        elif sentence.is_atomic:
             return self.value_of_atomic(sentence, **kw)
-        elif sentence.is_quantified():
+        elif sentence.is_quantified:
             return self.value_of_quantified(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):

@@ -854,21 +854,22 @@ def methmro(meth):
     except:
         return []
 
-def get_obj_logic(obj):
-    try:
-        return get_logic(obj)
-    except:
-        pass
-    if hasattr(obj, '__module__'):
-        # class or instance, its module is likely a logic
-        return get_logic(obj.__module__)
-    # Assume it's a string
-    parts = obj.split('.')
-    if parts[0] == 'logics':
-        # logics.fde, etc.
-        return get_logic('.'.join(parts[0:2]))
-    # Last resort
-    return get_logic(parts[0])
+get_obj_logic = get_logic
+# def get_obj_logic(obj):
+#     try:
+#         return get_logic(obj)
+#     except:
+#         pass
+#     if hasattr(obj, '__module__'):
+#         # class or instance, its module is likely a logic
+#         return get_logic(obj.__module__)
+#     # Assume it's a string
+#     parts = obj.split('.')
+#     if parts[0] == 'logics':
+#         # logics.fde, etc.
+#         return get_logic('.'.join(parts[0:2]))
+#     # Last resort
+#     return get_logic(parts[0])
 
 def isnodoc(obj):
     return not bool(getattr(obj, '__doc__', False))

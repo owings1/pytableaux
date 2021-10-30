@@ -130,7 +130,7 @@ class TestVocabulary(object):
             Predicate('MyPredicate', 0, -1, 1)
 
     def test_predicate_is_system_predicate_true(self):
-        assert get_system_predicate('Identity').is_system_predicate()
+        assert get_system_predicate('Identity').is_system
 
     def test_predicate_eq_true(self):
         assert get_system_predicate('Identity') == get_system_predicate('Identity')

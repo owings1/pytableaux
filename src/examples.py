@@ -127,8 +127,7 @@ parser = create_parser(notn='polish', vocab=vocabulary)
 def argument(name):
     info = args[name]
     if isinstance(info, list):
-        premises = info[0]
-        conclusion = info[1]
+        premises, conclusion = info
     else:
         premises = []
         conclusion = info
@@ -160,11 +159,7 @@ def existence():
 def quantified(quantifier):
     x = Variable(0, 0)
     p = vocabulary.get_predicate(index = 0, subscript = 0)
-    x_is_f = PredicatedSentence(p, [x], vocabulary)
-    #if quantifier == 'Universal':
-    #    x_is_g = logic.predicated(test_pred_data[1][0], [x], vocabulary)
-    #    s = logic.operate('Material Conditional', [x_is_f, x_is_g])
-    #    return logic.quantify(quantifier, x, s)
+    x_is_f = PredicatedSentence(p, [x])
     return QuantifiedSentence(quantifier, x, x_is_f)
 
 def operated(operator):

@@ -320,16 +320,16 @@ class Model(BaseModel):
     def is_sentence_literal(self, sentence):
         if sentence.operator == 'Negation' and self.is_sentence_opaque(sentence.operand):
             return True
-        return sentence.is_literal()
+        return sentence.is_literal
 
     def set_literal_value(self, sentence, value, **kw):
         if self.is_sentence_opaque(sentence):
             self.set_opaque_value(sentence, value, **kw)
-        elif sentence.is_operated() and sentence.operator == 'Negation':
+        elif sentence.is_operated and sentence.operator == 'Negation':
             self.set_literal_value(sentence.operand, self.truth_function('Negation', value), **kw)
-        elif sentence.is_atomic():
+        elif sentence.is_atomic:
             self.set_atomic_value(sentence, value, **kw)
-        elif sentence.is_predicated():
+        elif sentence.is_predicated:
             self.set_predicated_value(sentence, value, **kw)
         else:
             raise NotImplementedError()

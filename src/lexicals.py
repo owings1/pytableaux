@@ -18,41 +18,53 @@
 # ------------------
 # pytableaux - lexicals module
 from errors import NotFoundError
-from utils import cat, isint, isstr, sortedbyval
+from utils import CacheNotationData, cat, isint, isstr, sortedbyval, typecheck, \
+    condcheck
 from copy import deepcopy
 
-notations = ('polish', 'standard')
-default_notation = 'standard'
-default_notn_encs = {'polish': 'ascii', 'standard': 'unicode'}
+lexwriter_classes = {
+    # Values populated after class declarations below.
+    'polish'   : None,
+    'standard' : None,
+}
+notations = tuple(sorted(lexwriter_classes.keys()))
+default_notation = notations[notations.index('polish')]
+default_notn_encs = {
+    notations[notations.index('polish')]   : 'ascii',
+    notations[notations.index('standard')] : 'unicode',
+}
 
 def create_lexwriter(notn=None, enc=None, **opts):
     if not notn:
         notn = default_notation
     if notn not in notations:
-        raise ValueError('Invalid notation: {0}'.format(str(notn)))
+        raise ValueError('Invalid notation: {0}'.format(notn))
     if not enc:
         enc = default_notn_encs[notn]
     if 'renderset' not in opts:
         opts['renderset'] = RenderSet.fetch(notn, enc)
-    if notn == 'polish':
-        return PolishLexWriter(**opts)
-    if notn == 'standard':
-        return StandardLexWriter(**opts)
-    raise NotFoundError('Unknown notation {0}'.format(str(notn)))
+    return lexwriter_classes[notn](**opts)
+    # if notn == 'polish':
+    #     return PolishLexWriter(**opts)
+    # if notn == 'standard':
+    #     return StandardLexWriter(**opts)
+    # raise NotFoundError('Unknown notation {0}'.format(str(notn)))
 
-def get_system_predicate(name):
+def get_system_predicate(ref):
     """
-    Get a system predicate by name. Example::
+    Get a system predicate by name or coordinates. Example::
 
-        pred = get_system_predicate('Identity')
-        assert pred.arity == 2
+        p1 = get_system_predicate('Identity')
+        assert p1.arity == 2
+        p2 = get_system_predicate((-1, 0))
+        assert p1 == p2
 
-    :param str name: The predicate name.
+    :param any ref: The predicate name, or coordinates.
     :return: The predicate instance.
     :rtype: Predicate
-    :raises KeyError: if the system predicate does not exist.
+    :raises errors.NotFoundError: if the system predicate does not exist.
     """
-    return Vocabulary._get_system_predicate(name)
+    return Vocabulary._get_system_predicate(ref)
 
 def get_system_predicates():
     """
@@ -66,8 +78,8 @@ def list_system_predicates():
     """
     return Vocabulary._list_system_predicates()
 
-def is_system_predicate(name):
-    return Vocabulary._is_system_predicate(name)
+def is_system_predicate(ref):
+    return Vocabulary._is_system_predicate(ref)
 
 def operarity(oper):
     """
@@ -75,10 +87,10 @@ def operarity(oper):
 
     Note: to get the arity of a predicate, use ``predicate.arity``.
 
-    :param str operator: The operator.
+    :param str oper: The operator.
     :return: The arity of the operator.
     :rtype: int
-    :raises KeyError: if the operator does not exist.
+    :raises NotFoundError: if the operator does not exist.
     """
     return OperatedSentence._operarity(oper)
 
@@ -109,8 +121,16 @@ class LexicalItem(object):
         return None
 
     def __init__(self):
-        if self.__class__ == __class__:
-            raise TypeError('Class {0} cannot be constructed'.format(self.__class__.__name__))
+        self._abstract_check()
+
+    @property
+    def type(self):
+        """
+        The type (class name).
+
+        :type: str
+        """
+        return self.__class__.__name__
 
     # Base LexicalItem class for comparison, hashing, and sorting.
 
@@ -187,6 +207,11 @@ class LexicalItem(object):
         """
         return (LexicalItem.__lexorder[self.__class__], self.sort_tuple()).__repr__()
 
+    def _abstract_check(self):
+        rank, = LexicalItem._lexrank(self)
+        if rank >= 400:
+            raise TypeError('{0} cannot be constructed'.format(self.__class__))
+
     @staticmethod
     def _lexrank(*items):
         # Returns the value of __lexorder (below) for the class of each item.
@@ -194,27 +219,44 @@ class LexicalItem(object):
 
     @staticmethod
     def _initorder():
-        # Canonical order or all the concrete LexicalItem classes.
+        # Canonical order for all LexicalItem classes.
         LexicalItem.__lexorder = {
             Predicate: 10, Constant: 20, Variable: 30, AtomicSentence: 40,
             PredicatedSentence: 50, QuantifiedSentence: 60, OperatedSentence: 70,
-            # Abstract, just a safety measure
-            Parameter: 416, Sentence: 417, LexicalItem: 418,
+            # Abstract classes have > 400 order, see ``_abstract_check()``.
+            CoordsItem: 415, Parameter: 416, Sentence: 417, LexicalItem: 418,
         }
         # This method self-destucts.
         delattr(LexicalItem, '_initorder')
 
-class Parameter(LexicalItem):
+class CoordsItem(LexicalItem):
 
     def __init__(self, index, subscript):
+        self._abstract_check()
         maxi = self.__class__.max_index()
-        if maxi == None:
-            raise TypeError('Class {0} cannot be constructed'.format(self.__class__.__name__))
-        if index > maxi:
-            raise ValueError('Index too large: {0}'.format(str(index)))
-        self.index = index
-        self.subscript = subscript
-        self.coords = (index, subscript)
+        typecheck(index, int, 'index')
+        condcheck(index <= maxi, '`index` must be <= {0}, got {1}'.format(maxi, index))
+        typecheck(subscript, int, 'subscript')
+        condcheck(subscript >= 0, '`subscript` must be >= 0, got {0}'.format(subscript))
+        self.__coords = (index, subscript)
+
+    @property
+    def coords(self):
+        return self.__coords
+
+    @property
+    def index(self):
+        return self.__coords[0]
+
+    @property
+    def subscript(self):
+        return self.__coords[1]
+
+class Parameter(CoordsItem):
+
+    def __init__(self, index, subscript):
+        self._abstract_check()
+        CoordsItem.__init__(self, index, subscript)
 
     def is_constant(self):
         return isinstance(self, Constant)
@@ -223,8 +265,8 @@ class Parameter(LexicalItem):
         return isinstance(self, Variable)
 
     def sort_tuple(self):
-        # Sort constants and variables by index, subscript
-        return (self.index, self.subscript)
+        # Sort constants and variables by coords
+        return self.coords
 
 class Constant(Parameter):
     pass
@@ -232,115 +274,125 @@ class Constant(Parameter):
 class Variable(Parameter):
     pass
 
-class Predicate(LexicalItem):
+class Predicate(CoordsItem):
 
     def __init__(self, name, index, subscript, arity):
-        if index > self.__class__.max_index():
-            raise ValueError(
-                "Predicate index too large: {0}".format(str(index))
-            )
-        if not isint(arity):
-            raise TypeError(
-                'Predicate arity must be an integer'
-            )
-        if arity < 1:
-            raise ValueError(
-                'Predicate arity cannot be < 1'
-            )
-        if not isint(subscript):
-            raise TypeError(
-                'Predicate subscript must be an integer'
-            )
-        if subscript < 0:
-            raise ValueError(
-                'Subscript cannot be < 0'
-            )
+        CoordsItem.__init__(self, index, subscript)
+        condcheck(
+            index >= 0 or not list_system_predicates(),
+            '`index` must be >= 0',
+        )
+        typecheck(arity, int, 'arity')
+        condcheck(arity > 0, '`arity` must be > 0')
         if name == None:
             name = 'Predicate@({0},{1})'.format(index, subscript)
-        self.name      = name
-        self.arity     = arity
-        self.index     = index
-        self.subscript = subscript
-        self.coords    = (index, subscript)
+        self.__name = name
+        self.__arity = arity
+        self.__sort_tuple = (index, subscript, arity)
 
-    def is_system_predicate(self):
+    @property
+    def arity(self):
+        return self.__arity
+
+    @property
+    def name(self):
+        return self.__name
+
+    @property
+    def is_system(self):
         return self.index < 0
 
     def sort_tuple(self):
-        # Sort predicates by index, subscript, arity
-        return (self.index, self.subscript, self.arity)
+        # Sort predicates by (index, subscript, arity)
+        return self.__sort_tuple
 
 class Sentence(LexicalItem):
 
-    #: The operator, if any.
-    operator = None
+    @property
+    def operator(self):
+        """
+        The operator, if any.
 
-    #: The quantifier, if any.
-    quantifier = None
+        :type: str
+        """
+        return None
 
-    #: The predicate, if any.
-    predicate = None
+    @property
+    def quantifier(self):
+        """
+        The quantifier, if any.
 
-    #: The type (class name).
-    type = None
+        :type: str
+        """
+        return None
 
-    def __init__(self):
-        if self.__class__ == __class__:
-            raise TypeError('Class {0} cannot be constructed'.format(self.__class__.__name__))
-        self.type = self.__class__.__name__
+    @property
+    def predicate(self):
+        """
+        The predicate, if any.
 
+        :type: Predicate
+        """
+        return None
+
+    @property
     def is_atomic(self):
         """
         Whether this is an atomic sentence.
 
-        :rtype: bool
+        :type: bool
         """
         return isinstance(self, AtomicSentence)
 
+    @property
     def is_predicated(self):
         """
         Whether this is a predicated sentence.
 
-        :rtype: bool
+        :type: bool
         """
         return isinstance(self, PredicatedSentence)
 
+    @property
     def is_quantified(self):
         """
         Whether this a quantified sentence.
 
-        :rtype: bool
+        :type: bool
         """
         return isinstance(self, QuantifiedSentence)
 
+    @property
     def is_operated(self):
         """
         Whether this is an operated sentence.
 
-        :rtype: bool
+        :type: bool
         """
         return isinstance(self, OperatedSentence)
 
+    @property
     def is_literal(self):
         """
         Whether the sentence is a literal. Here a literal is either a
         predicated sentence, the negation of a predicated sentence,
         an atomic sentence, or the negation of an atomic sentence.
 
-        :rtype: bool
+        :type: bool
         """
-        return self.is_atomic() or self.is_predicated() or (
-            self.is_operated() and self.operator == 'Negation' and (
-                self.operand.is_atomic() or
-                self.operand.is_predicated()
+        return self.is_atomic or self.is_predicated or (
+            self.is_negated and (
+                self.operand.is_atomic or
+                self.operand.is_predicated
             )
         )
 
+    @property
     def is_negated(self):
         """
         Whether this is a negated sentence.
 
-        :rtype: bool
+        :type: bool
         """
         return isinstance(self, OperatedSentence) and self.operator == 'Negation'
 
@@ -368,7 +420,7 @@ class Sentence(LexicalItem):
 
         :rtype: Sentence
         """
-        return self.negatum if self.is_negated() else self.negate()
+        return self.negatum if self.is_negated else self.negate()
 
     def asserted(self):
         """
@@ -402,6 +454,12 @@ class Sentence(LexicalItem):
         """
         return set()
 
+    def has_variable(self, v):
+        """
+        Whether the sentence has the given variable, recursive.
+        """
+        return v in self.variables()
+
     def atomics(self):
         """
         Set of atomic sentences, recursive.
@@ -430,81 +488,93 @@ class Sentence(LexicalItem):
         """
         return list()
 
-class AtomicSentence(Sentence):
+class AtomicSentence(Sentence, CoordsItem):
 
     def __init__(self, index, subscript):
-        if index > AtomicSentence.max_index():
-            raise ValueError(
-                "Index too large {0}".format(str(index))
-            )
-        super().__init__()
-        self.index     = index
-        self.subscript = subscript
-        self.coords    = (index, subscript)
+        CoordsItem.__init__(self, index, subscript)
 
     def substitute(self, new_param, old_param):
         return self
 
     def atomics(self):
-        return set([self])
+        return {self}
+
+    def has_variable(self, v):
+        return False
 
     def next(self):
-        if self.index < AtomicSentence.max_index():
-            index = self.index + 1
-            subscript = self.subscript
+        if self.index < self.__class__.max_index():
+            coords = (self.index + 1, self.subscript)
         else:
-            index = 0
-            subscript = self.subscript + 1
-        return AtomicSentence(index, subscript)
+            coords = (0, self.subscript + 1)
+        return self.__class__(*coords)
 
     def sort_tuple(self):
-        # Sort atomic sentences by index, subscript
-        return (self.index, self.subscript)
+        # Sort atomic sentences by coords
+        return self.coords
 
 class PredicatedSentence(Sentence):
 
-    def __init__(self, predicate, parameters, vocabulary=None):
-        if isstr(predicate):
-            if is_system_predicate(predicate):
-                predicate = get_system_predicate(predicate)
-            elif vocabulary is None:
-                raise NotFoundError(
-                    "Predicate '{0}' not found.".format(predicate)
-                )
-            else:
-                predicate = vocabulary.get_predicate(predicate)    
-        if len(parameters) != predicate.arity:
-            raise TypeError(
-                'Expecting {0} parameters for predicate {1}, got {2} instead.'.format(
-                    predicate.arity, str([predicate.index, predicate.subscript]), len(parameters)
-                )
-            )
-        super().__init__()
-        self.predicate  = predicate
-        self.parameters = parameters
-        self.vocabulary = vocabulary
+    def __init__(self, pred, params):
+        if isstr(pred):
+            pred = get_system_predicate(pred)
+        typecheck(pred, Predicate, 'pred')
+        typecheck(params, (list, tuple), 'params')
+        condcheck(
+            len(params) == pred.arity,
+            "{0} is {1}-ary, got {2} params".format(
+                pred.name, pred.arity, len(params)
+            ),
+            err = TypeError,
+        )
+        self.__pred = pred
+        self.__params = tuple(params)
+        self.__paramset = set(params)
+        # Lazy init
+        self.__sort_tuple = None
+    
+    @property
+    def params(self):
+        return self.__params
+
+    @property
+    def predicate(self):
+        return self.__pred
+
+    @property
+    def parameters(self):
+        return self.params
+
+    @property
+    def arity(self):
+        return self.predicate.arity
 
     def substitute(self, new_param, old_param):
-        params = []
-        for param in self.parameters:
-            if param == old_param:
-                params.append(new_param)
-            else:
-                params.append(param)
-        return PredicatedSentence(self.predicate, params)
+        params = tuple(
+            new_param if param == old_param else param for param in self.params
+        )
+        return self.__class__(self.predicate, params)
 
     def constants(self):
-        return {param for param in self.parameters if param.is_constant()}
+        return {param for param in self.__paramset if param.is_constant()}
 
     def variables(self):
-        return {param for param in self.parameters if param.is_variable()}
+        return {param for param in self.__paramset if param.is_variable()}
+
+    def has_variable(self, v):
+        return v in self.__paramset and v.is_variable()
 
     def predicates(self):
-        return set([self.predicate])
+        return {self.predicate}
 
     def sort_tuple(self):
         # Sort predicated sentences by their predicate, then by their parameters
-        return self.predicate.sort_tuple() + tuple(param.sort_tuple() for param in self.parameters)
+        if self.__sort_tuple == None:
+            # Lazy init
+            self.__sort_tuple = self.predicate.sort_tuple() + tuple(
+                param.sort_tuple() for param in self.params
+            )
+        return self.__sort_tuple
 
 class QuantifiedSentence(Sentence):
 
@@ -547,22 +617,42 @@ class QuantifiedSentence(Sentence):
     # :rtype: Vocabulary.Sentence
 
     def __init__(self, quantifier, variable, sentence):
-        super().__init__()
-        self.quantifier = quantifier
-        self.variable   = variable
-        self.sentence   = sentence
+        condcheck(
+            is_quantifier(quantifier),
+            "Invalid quantifier: '{0}'".format(quantifier),
+        )
+        typecheck(variable, Variable, 'variable')
+        typecheck(sentence, Sentence, 'sentence')
+        self.__quantifier = quantifier
+        self.__variable = variable
+        self.__sentence = sentence
+
+    @property
+    def quantifier(self):
+        return self.__quantifier
+
+    @property
+    def variable(self):
+        return self.__variable
+
+    @property
+    def sentence(self):
+        return self.__sentence
 
     def substitute(self, new_param, old_param):
         # Always return a new sentence.
         si = self.sentence
         r = si.substitute(new_param, old_param)
-        return QuantifiedSentence(self.quantifier, self.variable, r)
+        return self.__class__(self.quantifier, self.variable, r)
 
     def constants(self):
         return self.sentence.constants()
 
     def variables(self):
         return self.sentence.variables()
+
+    def has_variable(self, v):
+        return self.variable == v or self.sentence.has_variable(v)
 
     def atomics(self):
         return self.sentence.atomics()
@@ -598,49 +688,83 @@ class QuantifiedSentence(Sentence):
 class OperatedSentence(Sentence):
 
     def __init__(self, operator, operands):
-        if not is_operator(operator):
-            raise NotFoundError(
-                "Unknown operator '{0}'.".format(operator)
-            )
-        arity = operarity(operator)
-        if len(operands) != arity:
-            raise TypeError(
-                "Expecting {0} operands for operator '{1}', got {2}.".format(
-                    arity, operator, len(operands)
-                )
-            )
-        super().__init__()
-        self.operator = operator
-        self.operands = operands
-        if len(operands) == 1:
-            self.operand = operands[0]
-            if operator == 'Negation':
-                self.negatum = self.operand
-        elif len(operands) > 1:
-            self.lhs = operands[0]
-            self.rhs = operands[-1]
+        self.__arity = arity = operarity(operator)
+        if isinstance(operands, Sentence):
+            operands = (operands,)
+        typecheck(operands, (list, tuple), 'operands')
+        condcheck(
+            len(operands) == arity,
+            "{0} is {1}-ary, got {2} operands".format(
+                operator, arity, len(operands)
+            ),
+            err = TypeError,
+        )
+        self.__operator = operator
+        self.__operands = tuple(operands)
+        if arity == 1:
+            self.__operand, = operands
+            if self.is_negated:
+                self.__negatum = self.__operand
+        elif arity == 2:
+            self.__lhs, self.__rhs = operands
+
+    @property
+    def operator(self):
+        return self.__operator
+
+    @property
+    def operands(self):
+        return self.__operands
+
+    @property
+    def arity(self):
+        return self.__arity
+
+    @property
+    def operand(self):
+        return self.__operand
+
+    @property
+    def negatum(self):
+        return self.__negatum
+
+    @property
+    def lhs(self):
+        return self.__lhs
+
+    @property
+    def rhs(self):
+        return self.__rhs
 
     def substitute(self, new_param, old_param):
         # Always return a new sentence
-        new_operands = [operand.substitute(new_param, old_param) for operand in self.operands]
-        return OperatedSentence(self.operator, new_operands)
+        operands = tuple(
+            s.substitute(new_param, old_param) for s in self.operands
+        )
+        return self.__class__(self.operator, operands)
 
     def constants(self):
         c = set()
-        for operand in self.operands:
-            c.update(operand.constants())
+        for s in self.operands:
+            c.update(s.constants())
         return c
 
     def variables(self):
         v = set()
-        for operand in self.operands:
-            v.update(operand.variables())
+        for s in self.operands:
+            v.update(s.variables())
         return v
+
+    def has_variable(self, v):
+        for s in self.operands:
+            if s.has_variable(v):
+                return True
+        return False
 
     def atomics(self):
         a = set()
-        for operand in self.operands:
-            a.update(operand.atomics())
+        for s in self.operands:
+            a.update(s.atomics())
         return a
 
     def predicates(self):
@@ -652,14 +776,14 @@ class OperatedSentence(Sentence):
     def operators(self):
         ops = list()
         ops.append(self.operator)
-        for operand in self.operands:
-            ops.extend(operand.operators())
+        for s in self.operands:
+            ops.extend(s.operators())
         return ops
 
     def quantifiers(self):
         qts = list()
-        for operand in self.operands:
-            qts.extend(operand.quantifiers())
+        for s in self.operands:
+            qts.extend(s.quantifiers())
         return qts
 
     def sort_tuple(self):
@@ -677,7 +801,10 @@ class OperatedSentence(Sentence):
 
     @staticmethod
     def _operarity(operator):
-        return __class__.__arities[operator]
+        try:
+            return __class__.__arities[operator]
+        except KeyError:
+            raise NotFoundError("Unknown operator '{0}'".format(operator))
 
     # Lexical sorting order.
     __lexorder = {
@@ -724,14 +851,20 @@ class Vocabulary(object):
         self.user_predicates_index = {}
         if predicate_defs:
             for info in predicate_defs:
-                if not isinstance(info, list) and not isinstance(info, tuple):
-                    raise TypeError(
-                        'predicate_defs must be a list/tuple of lists/tuples.'
-                    )
-                if len(info) != 4:
-                    raise TypeError(
-                        'Predicate declarations must be 4-tuples (name, index, subscript, arity).'
-                    )
+                typecheck(info, (list, tuple), 'predicate_def')
+                condcheck(
+                    len(info) == 4,
+                    '`predicate_def` needs length {0}, got {1}'.format(4, len(info)),
+                    err = TypeError
+                )
+                # if not isinstance(info, (list, tuple)):
+                #     raise TypeError(
+                #         '`predicate_defs` must be a list/tuple.'
+                #     )
+                # if len(info) != 4:
+                #     raise TypeError(
+                #         'Predicate declarations must be 4-tuples (name, index, subscript, arity).'
+                #     )
                 self.declare_predicate(*info)
 
     def copy(self):
@@ -762,18 +895,20 @@ class Vocabulary(object):
                 return get_system_predicate(name)
             if name in self.user_predicates:
                 return self.user_predicates[name]
-            raise NotFoundError('Predicate {0} not found'.format(name))
+            raise NotFoundError('Predicate not found: {0}'.format(name))
         if isint(name) and isint(index) and subscript == None:
-            # allow for get_predicate(0, 0)
+            # Allow for get_predicate(0, 0)
             index, subscript = name, index
-        if not isint(index) or not isint(subscript):
-            raise TypeError('index, subscript must be integers')
+        typecheck(index, int, 'index')
+        typecheck(subscript, int, 'subscript')
+        # if not isint(index) or not isint(subscript):
+        #     raise TypeError('index, subscript must be integers')
         coords = (index, subscript)
         if coords in self.user_predicates_index:
             return self.user_predicates_index[coords]
         if coords in Vocabulary.__syslookup:
             return Vocabulary.__syslookup[coords]
-        raise NotFoundError('Predicate {0} not found'.format(str(coords)))
+        raise NotFoundError('Predicate not found: {0}'.format(coords))
 
     def declare_predicate(self, name, index, subscript, arity):
         """
@@ -829,14 +964,20 @@ class Vocabulary(object):
             vocab2.add_predicate(predicate)
             assert vocab2.get_predicate('is tall') == predicate
         """
-        if not isinstance(predicate, Predicate):
-            raise TypeError(
-                'Predicate must be an instance of Predicate'
-            )
-        if predicate.index < 0:
-            raise TypeError(
-                'Cannot add a system predicate to a vocabulary'
-            )
+        typecheck(predicate, Predicate, 'predicate')
+        condcheck(
+            not predicate.is_system,
+            'System predicate not allowed',
+            err = TypeError,
+        )
+        # if not isinstance(predicate, Predicate):
+        #     raise TypeError(
+        #         'Predicate must be an instance of Predicate'
+        #     )
+        # if predicate.index < 0:
+        #     raise TypeError(
+        #         'Cannot add a system predicate to a vocabulary'
+        #     )
         self.user_predicates[predicate.name] = predicate
         key = (predicate.index, predicate.subscript)
         self.user_predicates_index[key] = predicate
@@ -858,19 +999,28 @@ class Vocabulary(object):
         return list(self.user_predicates_list)
 
     @staticmethod
-    def _get_system_predicate(lookup):
-        return Vocabulary.__syslookup[lookup]
+    def _get_system_predicate(ref):
+        try:
+            return Vocabulary.__syslookup[ref]
+        except KeyError:
+            raise NotFoundError("System predicate '{0}' not found".format(ref))
 
     @staticmethod
     def _get_system_predicates():
+        if hasattr(Vocabulary, '_initsys'):
+            return []
         return list(Vocabulary.__syspreds)
 
     @staticmethod
-    def _is_system_predicate(pred):
-        return pred in Vocabulary.__syslookup
+    def _is_system_predicate(ref):
+        if hasattr(Vocabulary, '_initsys'):
+            return False
+        return ref in Vocabulary.__syslookup
 
     @staticmethod
     def _list_system_predicates():
+        if hasattr(Vocabulary, '_initsys'):
+            return []
         return list(p.name for p in Vocabulary.__syspreds)
 
     @staticmethod
@@ -879,16 +1029,13 @@ class Vocabulary(object):
             Predicate('Identity',  -1, 0, 2),
             Predicate('Existence', -2, 0, 1),
         )
-        Vocabulary.__syslookup = idx = {p.name: p for p in preds}
+        Vocabulary.__syslookup = idx = dict()
+        idx.update({p.name: p for p in preds})
         idx.update({p.coords: p for p in preds})
+        idx.update({p.ident(): p for p in preds})
         idx.update({p: p for p in preds})
         # This method self-destucts.
         delattr(Vocabulary, '_initsys')
-
-# Init system predicates
-Vocabulary._initsys()
-# Initialize order.
-LexicalItem._initorder()
 
 class Argument(object):
     """
@@ -1018,15 +1165,15 @@ class BaseLexWriter(LexWriter):
         )
 
     def _write_sentence(self, sentence):
-        if sentence.is_atomic():
+        if sentence.is_atomic:
             return self._write_atomic(sentence)
-        if sentence.is_predicated():
+        if sentence.is_predicated:
             return self._write_predicated(sentence)
-        if sentence.is_quantified():
+        if sentence.is_quantified:
             return self._write_quantified(sentence)
-        if sentence.is_operated():
+        if sentence.is_operated:
             return self._write_operated(sentence)
-        raise TypeError('Unknown sentence type: {0}'.format(str(sentence)))
+        raise TypeError('Unknown sentence type: {0}'.format(sentence))
 
     def _write_atomic(self, sentence):
         return cat(
@@ -1074,16 +1221,17 @@ class StandardLexWriter(BaseLexWriter):
 
     def _write_predicated(self, sentence):
         # Infix notation for predicates of arity > 1
-        if sentence.predicate.arity < 2:
+        pred = sentence.predicate
+        if pred.arity < 2:
             return super()._write_predicated(sentence)
         # For Identity, add spaces (a = b instead of a=b)
-        ws = self._strfor('whitespace', 0) if sentence.predicate.name == 'Identity' else ''
+        ws = self._strfor('whitespace', 0) if pred.name == 'Identity' else ''
         return cat(
-            self._write_parameter(sentence.parameters[0]),
+            self._write_parameter(sentence.params[0]),
             ws,
-            self._write_predicate(sentence.predicate),
+            self._write_predicate(pred),
             ws,
-            *(self._write_parameter(param) for param in sentence.parameters[1:]),
+            *(self._write_parameter(param) for param in sentence.params[1:]),
         )
 
     def _write_operated(self, sentence, drop_parens = False):
@@ -1092,7 +1240,7 @@ class StandardLexWriter(BaseLexWriter):
         if arity == 1:
             operand = sentence.operand
             if (oper == 'Negation' and
-                operand.is_predicated() and
+                operand.is_predicated and
                 operand.predicate.name == 'Identity'):
                 return self._write_negated_identity(sentence)
             else:
@@ -1101,18 +1249,16 @@ class StandardLexWriter(BaseLexWriter):
             return ''.join([
                 self._strfor('paren_open', 0) if not drop_parens else '',
                 self._strfor('whitespace', 0).join([
-                    # self.write(sentence.lhs),
                     self._write_sentence(sentence.lhs),
                     self._write_operator(oper),
-                    # self.write(sentence.rhs),
                     self._write_sentence(sentence.rhs),
                 ]),
                 self._strfor('paren_close', 0) if not drop_parens else '',
             ])
-        raise NotImplementedError('No support for operators of arity {0}'.format(str(arity)))
+        raise NotImplementedError('{0}-ary operators not supported'.format(arity))
 
     def _write_negated_identity(self, sentence):
-        params = sentence.operand.parameters
+        params = sentence.operand.params
         return cat(
             self._write_parameter(params[0]),
             self._strfor('whitespace', 0),
@@ -1121,31 +1267,12 @@ class StandardLexWriter(BaseLexWriter):
             self._write_parameter(params[1]),
         )
 
-class RenderSet(object):
+class RenderSet(CacheNotationData):
 
-    __instances = {'polish': {}, 'standard': {}}
-
-    @staticmethod
-    def load(notn, name, data):
-        idx = __class__.__instances[notn]
-        if name in idx:
-            raise ValueError('RenderSet {0}.{1} already defined'.format(notn, name))
-        idx[name] = __class__(data)
-        return idx[name]
-
-    @staticmethod
-    def fetch(notn, name='ascii'):
-        idx = __class__.__instances[notn]
-        builtin = __class__.__builtin[notn]
-        return idx.get(name) or __class__.load(notn, name, builtin[name])
-
-    @staticmethod
-    def available(notn):
-        return sorted(set(__class__.__instances[notn]).union(__class__.__builtin[notn]))
+    default_fetch_name = 'ascii'
 
     def __init__(self, data):
-        if not isinstance(data, dict):
-            raise TypeError('data must be a dict')
+        typecheck(data, dict, 'data')
         self.name = data['name']
         self.encoding = data['encoding']
         self.renders = data.get('renders', {})
@@ -1160,13 +1287,7 @@ class RenderSet(object):
             return self.formats[ctype].format(value)
         return self.strings[ctype][value]
 
-    @staticmethod
-    def _initbuiltin(tdata):
-        __class__.__builtin = tdata
-        del(__class__._initbuiltin)
-    __builtin = None
-
-_ = {
+_builtin = {
     'polish': {
         'ascii': {
             'name'     : 'polish.ascii',
@@ -1212,14 +1333,14 @@ _ = {
         }
     }
 }
-_['polish']['html'] = deepcopy(_['polish']['ascii'])
-_['polish']['html'].update({
+_builtin['polish']['html'] = deepcopy(_builtin['polish']['ascii'])
+_builtin['polish']['html'].update({
     'name': 'polish.html',
     'encoding': 'html',
     'formats': {'subscript': '<sub>{0}</sub>'},
 })
-_['polish']['unicode'] = _['polish']['ascii']
-_.update({
+_builtin['polish']['unicode'] = _builtin['polish']['ascii']
+_builtin.update({
     'standard': {
         'ascii': {
             'name'     : 'standard.ascii',
@@ -1353,12 +1474,23 @@ _.update({
         }
     }
 })
-RenderSet._initbuiltin(_)
-del(_)
 
+
+RenderSet._initcache(notations, _builtin)
+del(_builtin)
 
 # Aliases
 Atomic = AtomicSentence
 Predicated = PredicatedSentence
 Operated = OperatedSentence
 Quantified = QuantifiedSentence
+
+lexwriter_classes.update({
+    'polish'   : PolishLexWriter,
+    'standard' : StandardLexWriter,
+})
+
+# Initialize order.
+LexicalItem._initorder()
+# Init system predicates
+Vocabulary._initsys()

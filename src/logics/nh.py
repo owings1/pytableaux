@@ -44,7 +44,7 @@ class Model(lp.Model):
         return super().value_of_operated(sentence, **kw)
 
     def is_sentence_opaque(self, sentence):
-        if sentence.is_quantified():
+        if sentence.is_quantified:
             return True
         return super().is_sentence_opaque(sentence)
 

@@ -23,11 +23,11 @@ import examples
 
 def test_predicated():
     s = examples.predicated()
-    assert s.is_predicated()
+    assert s.is_predicated
 
 def test_identity():
     s = examples.identity()
-    assert s.is_predicated()
+    assert s.is_predicated
     assert s.predicate.name == 'Identity'
 
 def test_self_identity():
@@ -37,15 +37,15 @@ def test_self_identity():
 
 def test_quantified_universal():
     s = examples.quantified('Universal')
-    assert s.is_quantified()
+    assert s.is_quantified
     assert s.quantifier == 'Universal'
 
 def test_quantified_existential():
     s = examples.quantified('Existential')
-    assert s.is_quantified()
+    assert s.is_quantified
     assert s.quantifier == 'Existential'
 
 def test_operated_conjunction():
     s = examples.operated('Conjunction')
-    assert s.is_operated()
+    assert s.is_operated
     assert s.operator == 'Conjunction'

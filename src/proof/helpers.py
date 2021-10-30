@@ -494,7 +494,7 @@ class PredicatedNodesTracker(object):
             self.predicated_nodes[branch.id] = set()
 
     def register_node(self, node, branch):
-        if node.has('sentence') and node.props['sentence'].is_predicated():
+        if node.has('sentence') and node.props['sentence'].is_predicated:
             self.predicated_nodes[branch.id].add(node)
 
 class AppliedNodesWorldsTracker(object):

@@ -38,7 +38,7 @@ class Model(k.Model):
         A sentence is opaque if it is a quantified sentence, or its operator is
         either Necessity or Possibility.
         """
-        if sentence.is_quantified():
+        if sentence.is_quantified:
             return True
         if sentence.operator in self.modal_operators:
             return True
