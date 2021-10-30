@@ -20,7 +20,7 @@
 import pytest
 from errors import *
 from utils import StopWatch, get_logic
-from lexicals import Vocabulary, Atomic, Constant, Predicated, Quantified, \
+from lexicals import Vocabulary, Atomic, Constant, Predicate, Predicated, Quantified, \
     Operated, Variable, get_system_predicate
 from proof.tableaux import Tableau, Branch, Node
 from proof.rules import Rule, FilterNodeRule
@@ -49,11 +49,6 @@ def empty_proof():
     return Tableau(None, None)
 
 class LogicTester(object):
-
-    # vocab = Vocabulary([
-    #     ('PredF', 0, 0, 1),
-    #     ('PredG', 1, 0, 1),
-    # ])
 
     vocab = examples.vocabulary
 
@@ -166,8 +161,7 @@ class TestFDE(LogicTester):
         assert branch.has({'sentence': s, 'designated': False})
 
     def test_valid_addition(self):
-        proof = self.eg('Addition')
-        assert proof.valid
+        assert self.eg('Addition').valid
 
     def test_valid_univ_from_neg_exist_1(self):
         self.assert_valid_eg('Quantifier Interdefinability 4')
@@ -199,7 +193,7 @@ class TestFDE(LogicTester):
         assert branch.model.is_countermodel_to(proof.argument)
 
     def test_a_thus_b_is_countermodel_to_false(self):
-        arg = parse_argument('b', premises=['a'])
+        arg = self.parg('b', 'a')
         model = self.logic.Model()
         model.set_literal_value(arg.premises[0], 'F')
         model.set_literal_value(arg.conclusion, 'F')
@@ -211,66 +205,57 @@ class TestFDE(LogicTester):
     def test_invalid_lnc_build_model(self):
         proof = self.eg('Law of Non-contradiction')
         model = proof.get_branch_at(0).model
-        assert not proof.valid
+        assert proof.invalid
         assert model.value_of(parse('a')) == 'B'
 
     def test_model_b_value_atomic_branch(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
+        branch = Tableau(self.logic).branch()
         s = parse('a')
         branch.update([
-            {'sentence': s, 'designated': True},
-            {'sentence': s.negate(), 'designated': True}
+            {'sentence': s         , 'designated': True},
+            {'sentence': s.negate(), 'designated': True},
         ])
         model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) == 'B'
 
     def test_model_univ_t_value_branch(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        s = parse('Fm', examples.vocabulary)
+        branch = Tableau(self.logic).branch()
+        s, s1 = self.pp('Fm', 'VxFx')
         branch.add({'sentence': s, 'designated': True})
-        s1 = parse('VxFx', examples.vocabulary)
         model = self.logic.Model().read_branch(branch)
         assert model.value_of(s1) == 'T'
 
     def test_model_exist_b_value_branch(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        s = parse('Fm', examples.vocabulary)
-        s1 = parse('Fn', examples.vocabulary)
+        branch = Tableau(self.logic).branch()
+        s, s1, s2 = self.pp('Fm', 'Fn', 'SxFx')
         branch.update([
-            {'sentence': s, 'designated': True},
-            {'sentence': s.negate(), 'designated': True},
-            {'sentence': s1, 'designated': False},
+            {'sentence': s          , 'designated': True},
+            {'sentence': s.negate() , 'designated': True},
+            {'sentence': s1         , 'designated': False},
             {'sentence': s1.negate(), 'designated': False},
         ])
-        s2 = parse('SxFx', examples.vocabulary)
         model = self.logic.Model().read_branch(branch)
         assert model.value_of(s2) == 'B'
 
     def test_model_necessity_opaque_des_value_branch(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
+        branch = Tableau(self.logic).branch()
         s = parse('La')
         branch.add({'sentence': s, 'designated': True})
         model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) in set(['B', 'T'])
 
     def test_model_necessity_opaque_b_value_branch(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
+        branch = Tableau(self.logic).branch()
         s = parse('La')
         branch.update([
-            {'sentence': s, 'designated': True},
+            {'sentence': s         , 'designated': True},
             {'sentence': s.negate(), 'designated': True}
         ])
         model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) == 'B'
 
     def test_model_atomic_undes_value_branch(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
+        branch = Tableau(self.logic).branch()
         s = parse('a')
         branch.update([
             {'sentence': s, 'designated': False}
@@ -279,23 +264,21 @@ class TestFDE(LogicTester):
         assert model.value_of(s) in set(['F', 'N'])
 
     def test_model_atomic_t_value_branch(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
+        branch = Tableau(self.logic).branch()
         s = parse('a')
         branch.update([
-            {'sentence': s, 'designated': True},
-            {'sentence': s.negate(), 'designated': False}
+            {'sentence': s         , 'designated': True},
+            {'sentence': s.negate(), 'designated': False},
         ])
         model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) == 'T'
 
     def test_model_atomic_f_value_branch(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
+        branch = Tableau(self.logic).branch()
         s = parse('a')
         branch.update([
-            {'sentence': s, 'designated': False},
-            {'sentence': s.negate(), 'designated': True}
+            {'sentence': s         , 'designated': False},
+            {'sentence': s.negate(), 'designated': True},
         ])
         model = self.logic.Model().read_branch(branch)
         assert model.value_of(s) == 'F'
@@ -409,23 +392,20 @@ class TestFDE(LogicTester):
         assert proof.branching_complexity(node) == 2
 
     def test_invalid_existential_inside_univ_max_steps(self):
-        arg = parse_argument('b', ['VxUFxSyFy'], vocab=self.vocab)
-        proof = Tableau(self.logic, arg)
-        proof.build(max_steps=100)
+        arg = self.parg('b', 'VxUFxSyFy')
+        proof = Tableau(self.logic, arg, max_steps=100).build()
         assert proof.invalid
 
     def test_observed_model_error_with_quantifiers_and_modals(self):
-        arg = parse_argument('b', ['VxUFxSyMFy'], vocab=self.vocab)
-        proof = Tableau(self.logic, arg)
-        proof.build(is_build_models=True, max_steps=100)
+        arg = self.parg('b', 'VxUFxSyMFy')
+        proof = Tableau(self.logic, arg, is_build_models=True, max_steps=100).build()
         assert proof.invalid
 
     def test_observed_value_of_universal_with_diamond_min_arg_is_an_empty_sequence(self):
-        arg = parse_argument('b', ['VxUFxSyMFy'], vocab=self.vocab)
-        proof = Tableau(self.logic, arg)
-        proof.build(is_build_models=False, max_steps=100)
+        arg = self.parg('b', 'VxUFxSyMFy')
+        proof = Tableau(self.logic, arg, is_build_models=False, max_steps=100).build()
         assert proof.invalid
-        branch = list(proof.branches())[-1]
+        branch = proof.get_branch_at(-1)
         model = self.logic.Model()
         model.read_branch(branch)
         s1 = arg.premises[0]
@@ -433,12 +413,14 @@ class TestFDE(LogicTester):
 
     def test_observed_as_above_reconstruct1(self):
         # solution was to add all constants in set_opaque_value
-        s1 = parse('MFs', vocab=self.vocab) # designated
-        s2 = parse('MFo', vocab=self.vocab) # designated
-        s3 = parse('MFn', vocab=self.vocab) # designated
-        s4 = parse('b') # undesignated
-        s5 = parse('SyMFy', vocab=self.vocab) # designated
-        s6 = parse('VxUFxSyMFy', vocab=self.vocab) # designated
+        s1, s2, s3, s4, s5, s6 = self.pp(
+            'MFs',          # designated
+            'MFo',          # designated
+            'MFn',          # designated
+            'b',            # undesignated
+            'SyMFy',        # designated
+            'VxUFxSyMFy',   # designated
+        )
         model = self.logic.Model()
         model.set_opaque_value(s1, 'T')
         model.set_opaque_value(s2, 'T')
@@ -616,9 +598,8 @@ class TestK3WQ(LogicTester):
         assert model.is_countermodel_to(arg)
 
     def test_invalid_universal_from_predicate_sentence_countermodel(self):
-        arg = parse_argument('VxFx', ['Fm'], vocab=self.vocab)
-        proof = Tableau(self.logic, arg)
-        proof.build(is_build_models=True)
+        arg = self.parg('VxFx', 'Fm')
+        proof = Tableau(self.logic, arg, is_build_models=True).build()
         assert proof.invalid
         branch = list(proof.open_branches())[0]
         model = branch.model
@@ -664,26 +645,20 @@ class TestB3E(LogicTester):
         self.assert_invalid_eg('Law of Excluded Middle')
 
     def test_invalid_prior_rule_defect(self):
-        arg = parse_argument('ANAabNa', premises=['Na'], notn='polish')
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert not proof.valid
+        arg = self.parg('ANAabNa', 'Na')
+        assert Tableau(self.logic, arg).build().invalid
 
     def test_valid_prior_rule_defect2(self):
-        arg = parse_argument('AANaTbNa', premises=['Na'], notn='polish')
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert proof.valid
+        arg = self.parg('AANaTbNa', 'Na')
+        assert Tableau(self.logic, arg).build().valid
 
     def test_valid_asserted_addition(self):
-        arg = parse_argument('AaTb', premises=['a'], notn='polish')
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert proof.valid
+        arg = self.parg('AaTb', 'a')
+        assert Tableau(self.logic, arg).build().valid
 
     def test_valid_cond_lem(self):
-        proof = Tableau(self.logic, parse_argument('AUabNUab')).build()
-        assert proof.valid
+        arg = self.parg('AUabNUab')
+        assert Tableau(self.logic, arg).build().valid
 
 class TestL3(LogicTester):
 
@@ -723,18 +698,16 @@ class TestL3(LogicTester):
         self.assert_invalid_eg('Conditional Pseudo Contraction')
 
     def test_valid_bicond_from_mat_bicond(self):
-        arg = parse_argument('Bab', premises=['Eab'])
-        proof = Tableau(self.logic, arg).build()
-        assert proof.valid
+        arg = self.parg('Bab', 'Eab')
+        assert Tableau(self.logic, arg).build().valid
 
     def test_invalid_mat_bicon_from_bicond(self):
-        arg = parse_argument('Eab', premises=['Bab'])
-        proof = Tableau(self.logic, arg).build()
-        assert not proof.valid
+        arg = self.parg('Eab', 'Bab')
+        assert Tableau(self.logic, arg).build().invalid
 
     def test_invalid_cond_lem(self):
-        proof = Tableau(self.logic, parse_argument('AUabNUab')).build()
-        assert not proof.valid
+        arg = self.parg('AUabNUab')
+        assert Tableau(self.logic, arg).build().invalid
 
 class TestG3(LogicTester):
 
@@ -747,66 +720,50 @@ class TestG3(LogicTester):
         assert model.is_countermodel_to(proof.argument)
 
     def test_valid_demorgan_6(self):
-        proof = self.eg('DeMorgan 6')
-        assert proof.valid
+        assert self.eg('DeMorgan 6').valid
 
     def test_invalid_lem(self):
-        proof = self.eg('Law of Excluded Middle')
-        assert proof.invalid
+        assert self.eg('Law of Excluded Middle').invalid
 
     def test_invalid_not_not_a_arrow_a(self):
         # Rescher p.45
-        arg = parse_argument('UNNaa')
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert proof.invalid
+        arg = self.parg('UNNaa')
+        assert Tableau(self.logic, arg).build().invalid
 
     def test_invalid_not_a_arrow_not_b_arrow_b_arrow_a(self):
         # Rescher p.45
-        arg = parse_argument('UUNaNbUba')
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert proof.invalid
+        arg = self.parg('UUNaNbUba')
+        assert Tableau(self.logic, arg).build().invalid
 
     def test_valid_a_arrow_b_or_b_arrow_a(self):
         # Rescher p.45
-        arg = parse_argument('AUabUba')
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert proof.valid
+        arg = self.parg('AUabUba')
+        assert Tableau(self.logic, arg).build().valid
 
     def test_valid_not_not_a_arrow_a_arrow_a_or_not_a(self):
         # Rescher p.45
-        arg = parse_argument('UUNNaaAaNa')
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert proof.valid
+        arg = self.parg('UUNNaaAaNa')
+        assert Tableau(self.logic, arg).build().valid
 
     def test_valid_a_dblarrow_a(self):
-        arg = parse_argument('Baa')
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert proof.valid
+        arg = self.parg('Baa')
+        assert Tableau(self.logic, arg).build().valid
 
     def test_valid_a_dblarrow_b_thus_a_arrow_b_and_b_arrow_a(self):
-        arg = parse_argument('KUabUba', ['Bab'])
-        proof = Tableau(self.logic, arg).build()
-        assert proof.valid
+        arg = self.parg('KUabUba', 'Bab')
+        assert Tableau(self.logic, arg).build().valid
 
     def test_valid_a_arrow_b_and_b_arrow_a_thus_a_dblarrow_b(self):
-        arg = parse_argument('Bab', ['KUabUba'])
-        proof = Tableau(self.logic, arg).build()
-        assert proof.valid
+        arg = self.parg('Bab', 'KUabUba')
+        assert Tableau(self.logic, arg).build().valid
 
     def test_valid_not_a_arrow_b_or_not_b_arrow_a_thus_not_a_dblarrow_b(self):
-        arg = parse_argument('NBab', ['ANUabNUba'])
-        proof = Tableau(self.logic, arg).build()
-        assert proof.valid
+        arg = self.parg('NBab', 'ANUabNUba')
+        assert Tableau(self.logic, arg).build().valid
 
     def test_valid_not_a_dblarrow_b_thus_not_a_arrow_b_or_not_b_arrow_a(self):
-        arg = parse_argument('ANUabNUba', ['NBab'])
-        proof = Tableau(self.logic, arg).build()
-        assert proof.valid
+        arg = self.parg('ANUabNUba', 'NBab')
+        assert Tableau(self.logic, arg).build().valid
 
 class TestLP(LogicTester):
 
@@ -821,11 +778,10 @@ class TestLP(LogicTester):
         assert proof.open_branch_count == 0
 
     def test_valid_material_ident(self):
-        proof = self.eg('Material Identity')
-        assert proof.valid
+        assert self.eg('Material Identity').valid
 
     def test_case_model_not_a_countermodel(self):
-        arg = parse_argument('NBab', premises=['c', 'BcNUab'])
+        arg = self.parg('NBab', 'c', 'BcNUab')
         model = self.logic.Model()
         model.set_literal_value(parse('a'), 'F')
         model.set_literal_value(parse('b'), 'T')
@@ -833,23 +789,20 @@ class TestLP(LogicTester):
         assert model.value_of(arg.premises[1]) == 'B'
 
     def test_case_bad_rule_neg_bicond_undes(self):
-        arg = parse_argument('NBab', premises=['NBab'])
+        arg = self.parg('NBab', 'NBab')
         proof = Tableau(self.logic, arg)
-        rule = proof.get_rule(self.logic.TableauxRules.BiconditionalNegatedUndesignated)
+        rule = proof.get_rule('BiconditionalNegatedUndesignated')
         assert rule.get_target(proof.get_branch_at(0))
 
     def test_invalid_lnc(self):
-        proof = self.eg('Law of Non-contradiction')
-        assert not proof.valid
+        assert self.eg('Law of Non-contradiction').invalid
 
     def test_valid_b_then_a_arrow_b(self):
-        arg = parse_argument('Uab', premises=['b'])
-        proof = Tableau(self.logic, arg).build()
-        assert proof.valid
+        arg = self.parg('Uab', 'b')
+        assert Tableau(self.logic, arg).build().valid
 
     def test_invalid_cond_modus_ponens(self):
-        proof = self.eg('Conditional Modus Ponens')
-        assert not proof.valid
+        assert self.eg('Conditional Modus Ponens').invalid
 
     def test_valid_a_not_a_not_b_thus_not_a_arrow_b(self):
         proof = Tableau(self.logic, parse_argument('NUab', ['a', 'Na', 'Nb'])).build()
@@ -865,9 +818,8 @@ class TestLP(LogicTester):
         assert not proof.valid
 
     def test_invalid_mp_with_neg_bicon(self):
-        arg = parse_argument('NBab', premises=['c', 'BcNUab'])
-        proof = Tableau(self.logic, arg).build()
-        assert not proof.valid
+        arg = self.parg('NBab', 'c', 'BcNUab')
+        assert Tableau(self.logic, arg).build().invalid
 
 class TestRM3(LogicTester):
 
@@ -1273,7 +1225,7 @@ class TestP3(LogicTester):
 
     def test_universal_negated_designated_example(self):
         proof = Tableau(self.logic)
-        rule = proof.get_rule(self.logic.TableauxRules.UniversalNegatedDesignated)
+        rule = proof.get_rule('UniversalNegatedDesignated')
         rule.example()
         proof.build()
         assert len(proof.history) > 0
@@ -1284,28 +1236,22 @@ class TestP3(LogicTester):
         assert proof.invalid
 
     def test_invalid_demorgan_1(self):
-        proof = self.eg('DeMorgan 1')
-        assert proof.invalid
+        assert self.eg('DeMorgan 1').invalid
 
     def test_invalid_demorgan_2(self):
-        proof = self.eg('DeMorgan 2')
-        assert proof.invalid
+        assert self.eg('DeMorgan 2').invalid
 
     def test_invalid_demorgan_3(self):
-        proof = self.eg('DeMorgan 3')
-        assert not proof.valid
+        assert self.eg('DeMorgan 3').invalid
 
     def test_invalid_demorgan_4(self):
-        proof = self.eg('DeMorgan 4')
-        assert proof.invalid
+        assert self.eg('DeMorgan 4').invalid
 
     def test_invalid_demorgan_5(self):
-        proof = self.eg('DeMorgan 5')
-        assert proof.invalid
+        assert self.eg('DeMorgan 5').invalid
 
     def test_valid_demorgan_6(self):
-        proof = self.eg('DeMorgan 6')
-        assert proof.valid
+        assert self.eg('DeMorgan 6').valid
 
 class TestCPL(LogicTester):
 
@@ -1416,7 +1362,7 @@ class TestCPL(LogicTester):
 
     def test_identity_indiscernability_not_applies(self):
         vocab = Vocabulary()
-        vocab.declare_predicate('MyPred', 0, 0, 2)
+        vocab.declare(0, 0, 2)
         proof = Tableau(self.logic)
         s1 = parse('Fmn', vocab=vocab)
         s2 = parse('Io1o2')
@@ -1425,7 +1371,7 @@ class TestCPL(LogicTester):
             {'sentence': s1, 'world': 0},
             {'sentence': s2, 'world': 0},
         ])
-        rule = proof.get_rule(proof.logic.TableauxRules.IdentityIndiscernability)
+        rule = proof.get_rule('IdentityIndiscernability')
         assert not rule.get_target(branch)
 
     def test_model_value_of_operated_opaque1(self):
@@ -1459,7 +1405,7 @@ class TestCPL(LogicTester):
         assert tuple(s.parameters) in anti_extension
 
     def test_group_score_from_candidate_score1(self):
-        arg = parse_argument('Na', premises=['Cab', 'Nb', 'Acd'])
+        arg = self.parg('Na', 'Cab', 'Nb', 'Acd')
         proof = Tableau(self.logic, arg).build()
         assert proof.valid
         assert proof.branch_count == 2
@@ -1469,8 +1415,7 @@ class TestCFOL(LogicTester):
     logic = get_logic('CFOL')
 
     def test_valid_syllogism(self):
-        proof = example_proof('cfol', 'Syllogism')
-        assert proof.valid
+        assert self.eg('Syllogism').valid
 
     def test_invalid_possibility_addition(self):
         proof = example_proof('cfol', 'Possibility Addition')
@@ -1664,67 +1609,52 @@ class TestK(LogicTester):
         assert not res
         
     def test_valid_conjunction_introduction(self):
-        proof = self.example_proof('Conjunction Introduction')
-        assert proof.valid
+        self.assert_valid_eg('Conjunction Introduction')
 
     def test_valid_addition(self):
-        proof = self.example_proof('Addition')
-        assert proof.valid
+        self.assert_valid_eg('Addition')
 
     def test_valid_self_identity_1(self):
-        proof = self.example_proof('Self Identity 1')
-        assert proof.valid
+        self.assert_valid_eg('Self Identity 1')
         
     def test_valid_nec_dist(self):
-        proof = self.example_proof('Necessity Distribution 1')
-        assert proof.valid
+        self.assert_valid_eg('Necessity Distribution 1')
 
     def test_valid_material_bicond_elim_1(self):
-        proof = self.example_proof('Material Biconditional Elimination 1')
-        assert proof.valid
+        self.assert_valid_eg('Material Biconditional Elimination 1')
 
     def test_valid_material_bicond_intro_1(self):
-        proof = self.example_proof('Material Biconditional Introduction 1')
-        assert proof.valid
+        self.assert_valid_eg('Material Biconditional Introduction 1')
 
     def test_valid_disj_syllogism(self):
-        proof = self.example_proof('Disjunctive Syllogism')
-        assert proof.valid
+        self.assert_valid_eg('Disjunctive Syllogism')
 
     def test_valid_disj_syllogism_2(self):
-        proof = self.example_proof('Disjunctive Syllogism 2')
-        assert proof.valid
+        self.assert_valid_eg('Disjunctive Syllogism 2')
         
     def test_valid_assert_elim_1(self):
-        proof = self.example_proof('Assertion Elimination 1')
-        assert proof.valid
+        self.assert_valid_eg('Assertion Elimination 1')
 
     def test_valid_assert_elim_2(self):
-        proof = self.example_proof('Assertion Elimination 2')
-        assert proof.valid
+        self.assert_valid_eg('Assertion Elimination 2')
 
     def test_valid_nec_elim(self):
-        proof = self.example_proof('Necessity Distribution 1')
-        assert proof.valid
+        self.assert_valid_eg('Necessity Distribution 1')
 
     def test_valid_modal_tranform_2(self):
-        proof = self.example_proof('Modal Transformation 2')
-        assert proof.valid
+        self.assert_valid_eg('Modal Transformation 2')
 
     def test_valid_ident_indiscern_1(self):
-        proof = self.example_proof('Identity Indiscernability 1')
-        assert proof.valid
+        self.assert_valid_eg('Identity Indiscernability 1')
 
     def test_valid_ident_indiscern_2(self):
-        proof = self.example_proof('Identity Indiscernability 2')
-        assert proof.valid
+        self.assert_valid_eg('Identity Indiscernability 2')
         
     def test_invalid_nec_elim(self):
-        proof = self.example_proof('Necessity Elimination')
-        assert not proof.valid
+        self.assert_invalid_eg('Necessity Elimination')
 
     def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
-        vocab = Vocabulary((('Pred', 0, 0, 1),))
+        vocab = Vocabulary((0, 0, 1))
         arg = self.parg('b', 'VxKFxKaNa', vocab=vocab)
         proof = Tableau(self.logic, arg)
         proof.build()
@@ -1793,13 +1723,13 @@ class TestK(LogicTester):
         model = self.logic.Model()
         a = Atomic(0, 0)
         model.set_atomic_value(a, 'T', world=1)
-        res = model.value_of(Operated('Possibility', [a]), world=0)
+        res = model.value_of(Operated('Possibility', a), world=0)
         assert res == 'F'
 
     def test_model_nec_a_no_access_true(self):
         model = self.logic.Model()
         a = Atomic(0, 0)
-        res = model.value_of(Operated('Necessity', [a]), world=0)
+        res = model.value_of(Operated('Necessity', a), world=0)
         assert res == 'T'
 
     def test_model_nec_a_with_access_false(self):
@@ -1809,12 +1739,11 @@ class TestK(LogicTester):
         model.set_atomic_value(a, 'F', world=1)
         model.add_access(0, 1)
         model.add_access(0, 0)
-        res = model.value_of(Operated('Necessity', [a]), world=0)
+        res = model.value_of(Operated('Necessity', a), world=0)
         assert res == 'F'
 
     def test_model_existence_user_pred_true(self):
-        v = Vocabulary()
-        pred = v.declare_predicate('MyPred', 0, 0, 1)
+        pred = Predicate.create(0, 0, 1)
         m = Constant(0, 0)
         x = Variable(0, 0)
         s1 = Predicated(pred, [m])
@@ -1827,8 +1756,7 @@ class TestK(LogicTester):
         assert res == 'T'
 
     def test_model_existense_user_pred_false(self):
-        v = Vocabulary()
-        pred = v.declare_predicate('MyPred', 0, 0, 1)
+        pred = Predicate.create(0, 0, 1)
         m = Constant(0, 0)
         x = Variable(0, 0)
         s1 = Predicated(pred, [m])
@@ -1840,8 +1768,7 @@ class TestK(LogicTester):
         assert res == 'F'
 
     def test_model_universal_user_pred_true(self):
-        v = Vocabulary()
-        pred = v.declare_predicate('MyPred', 0, 0, 1)
+        pred = Predicate.create(0, 0, 1)
         m = Constant(0, 0)
         x = Variable(0, 0)
         s1 = Predicated(pred, [m])
@@ -1862,8 +1789,7 @@ class TestK(LogicTester):
         assert res == 'F'
 
     def test_model_universal_user_pred_false(self):
-        v = Vocabulary()
-        pred = v.declare_predicate('MyPred', 0, 0, 1)
+        pred = Predicate.create(0, 0, 1)
         m = Constant(0, 0)
         n = Constant(1, 0)
         x = Variable(0, 0)
@@ -1962,8 +1888,8 @@ class TestK(LogicTester):
 
     def test_frame_difference_extension_keys_diff(self):
         vocab = Vocabulary()
-        vocab.add_predicate(self.vocab.get_predicate(index=0, subscript=0))
-        vocab.declare_predicate('g', 1, 0, 2)
+        vocab.add(self.vocab.get((0, 0)))
+        vocab.declare(1, 0, 2)
         s1 = self.p('Fm', vocab=vocab)
         s2 = self.p('Gmn', vocab=vocab)
         model = self.logic.Model()
@@ -2171,12 +2097,10 @@ class TestD(LogicTester):
         assert not res
 
     def test_valid_serial_inf_1(self):
-        proof = self.example_proof('Serial Inference 1')
-        assert proof.valid
+        self.assert_valid_eg('Serial Inference 1')
 
     def test_invalid_reflex_inf_1(self):
-        proof = self.example_proof('Reflexive Inference 1')
-        assert not proof.valid
+        self.assert_invalid_eg('Reflexive Inference 1')
 
     def test_invalid_optimize_nec_rule1_max_steps_50(self):
         arg = parse_argument('NLVxNFx', premises=['LMSxFx'], vocab=examples.vocabulary)
@@ -2185,8 +2109,7 @@ class TestD(LogicTester):
         assert proof.invalid
 
     def test_invalid_s4_cond_inf_2(self):
-        proof = self.example_proof('S4 Conditional Inference 2')
-        assert not proof.valid
+        self.assert_invalid_eg('S4 Conditional Inference 2')
 
     def test_valid_long_serial_max_steps_50(self):
         proof = Tableau(self.logic, parse_argument('MMMMMa', premises=['LLLLLa']))

@@ -19,8 +19,7 @@
 # pytableaux - lexicals module
 from copy import deepcopy
 from errors import NotFoundError
-from inspect import isclass
-from utils import CacheNotationData, cat, isint, isstr, sortedbyval, typecheck, \
+from utils import CacheNotationData, cat, isstr, sortedbyval, typecheck, \
     condcheck
 
 lexwriter_classes = {
@@ -39,7 +38,7 @@ def create_lexwriter(notn=None, enc=None, **opts):
     if not notn:
         notn = default_notation
     if notn not in notations:
-        raise ValueError('Invalid notation: {0}'.format(notn))
+        raise ValueError('Invalid notation: {}'.format(notn))
     if not enc:
         enc = default_notn_encs[notn]
     if 'renderset' not in opts:
@@ -51,7 +50,6 @@ def get_system_predicate(ref):
     Get a system predicate by name or coordinates. Example::
 
         p1 = get_system_predicate('Identity')
-        assert p1.arity == 2
         p2 = get_system_predicate((-1, 0))
         assert p1 == p2
 
@@ -64,17 +62,19 @@ def get_system_predicate(ref):
 
 def get_system_predicates():
     """
-    Returns a list of predicate objects.
+    Get all system predicate objects.
+
+    :rtype: tuple(Predicate)
     """
     return Vocabulary._get_system_predicates()
 
-def list_system_predicates():
-    """
-    Returns a list of predicate names
-    """
-    return Vocabulary._list_system_predicates()
-
 def is_system_predicate(ref):
+    """
+    Whether the reference attribute matches a system predicate.
+
+    :param any ref: The predicate reference attribute.
+    :rtype: bool
+    """
     return Vocabulary._is_system_predicate(ref)
 
 def operarity(oper):
@@ -86,20 +86,44 @@ def operarity(oper):
     :param str oper: The operator.
     :return: The arity of the operator.
     :rtype: int
-    :raises NotFoundError: if the operator does not exist.
+    :raises errors.NotFoundError: if the operator does not exist.
     """
     return OperatedSentence._operarity(oper)
 
 def is_operator(obj):
+    """
+    Whether the object is an operator string.
+
+    :param any obj: The object to check.
+    :return: Whether it is an operator.
+    :rtype: bool
+    """
     return OperatedSentence._is_operator(obj)
 
 def list_operators():
+    """
+    Get a list of all the operator strings.
+
+    :rtype: list(str)
+    """
     return OperatedSentence._list_operators()
 
 def is_quantifier(obj):
+    """
+    Whether the object is an quantifier string.
+
+    :param any obj: The object to check.
+    :return: Whether it is an quantifier.
+    :rtype: bool
+    """
     return QuantifiedSentence._is_quantifier(obj)
 
 def list_quantifiers():
+    """
+    Get a list of all the quantifier strings.
+
+    :rtype: list(str)
+    """
     return QuantifiedSentence._list_quantifiers()
 
 class MetaClass(type):
@@ -119,36 +143,61 @@ class LexicalItem(object, metaclass = MetaClass):
 
     @staticmethod
     def cls_rank(cls):
-        return __class__.__lexorder[cls]
+        """
+        Get the lexical rank for the given class.
+
+        :param class cls: The class.
+        :return: The lexical rank.
+        :rtype: int
+        :raises KeyError: for invalid class.
+        """
+        return __class__.__lexrank[cls]
+
+    @staticmethod
+    def rank_cls(rank):
+        """
+        Get the class for the given lexical rank.
+
+        :param int rank: The lexical rank.
+        :return: The class.
+        :rtype: class
+        :raises KeyError: for invalid rank.
+        """
+        return __class__.__lexrankrev[rank]
 
     @staticmethod
     def cls_maxi(cls):
+        """
+        Get the max index for the given class if applicable.
+
+        :param class cls: The class.
+        :return: The max index, or ``None``.
+        :rtype: int
+        :raises KeyError: for invalid class.
+        """
         return __class__.__max_indexes[cls]
-            
-    @classmethod
-    def max_index(cls):
-        return cls.MAXI
-        # return LexicalItem.cls_maxi(cls)
-        # if cls == Constant:
-        #     return 3
-        # if cls == Variable:
-        #     return 3
-        # if cls == AtomicSentence:
-        #     return 4
-        # if cls == Predicate:
-        #     return 3
-        # return None
 
     def __init__(self):
         if self.RANK >= 400:
-            raise TypeError('{} cannot be constructed'.format(self.__class__))
+            raise TypeError('Cannot instantiate {}'.format(self.__class__))
+        self.__ident = self.__hash = None
 
     @property
     def RANK(self):
+        """
+        Lexical rank.
+
+        :type: int
+        """
         return self.__class__.RANK
 
     @property
     def MAXI(self):
+        """
+        Max index, if applicable, else ``None``.
+
+        :type: int
+        """
         return self.__class__.MAXI
 
     @property
@@ -160,12 +209,16 @@ class LexicalItem(object, metaclass = MetaClass):
         """
         return self.__class__.__name__
 
-    #  for comparison, hashing, and sorting.
-
     @property
     def ident(self):
-        # Equality/inequality identifier. By default, this delegates to sort_tuple.
-        return self.sort_tuple
+        """
+        Equality identifier.
+
+        :type: tuple
+        """
+        if self.__ident == None:
+            self.__ident = (self.RANK, self.sort_tuple)
+        return self.__ident
 
     @property
     def sort_tuple(self):
@@ -179,7 +232,7 @@ class LexicalItem(object, metaclass = MetaClass):
     # care of ensuring different types are not considered equal (e.g. constant(0, 0),
     # variable(0, 0), atomic(0, 0)) and are still sorted properly.
     #
-    # This is the reason for _lexrank, and __lexorder, on the Vocabulary class,
+    # This is the reason for lexical rank here, and on the Vocabulary class,
     # as well as similar properties on QuantifiedSentence (for quantifiers), and
     # OperatedSentence (for operators). Basically anything that cannot be
     # converted to a number by which we can meaningfully sort needs to be
@@ -201,7 +254,7 @@ class LexicalItem(object, metaclass = MetaClass):
         return a >= b
 
     def __getcmp(self, other):
-        r1, r2 = self.RANK, other.RANK #LexicalItem._lexrank(self, other)
+        r1, r2 = self.RANK, other.RANK
         if r1 == r2:
             return (self.sort_tuple, other.sort_tuple)
         return (r1, r2)
@@ -223,40 +276,33 @@ class LexicalItem(object, metaclass = MetaClass):
         )
 
     def __ne__(self, other):
-        return (
-            not isinstance(other, self.__class__) or
-            self.ident != other.ident
-        )
+        return not (self == other)
 
     def __hash__(self):
-        return hash(self.sort_tuple)
+        if self.__hash == None:
+            self.__hash = hash(self.sort_tuple)
+        return self.__hash
 
     def __repr__(self):
-        """
-        Default representation with lex-order + sort-tuple.
-        """
-        return (self.RANK, self.sort_tuple).__repr__()
-        # return (LexicalItem.__lexorder[self.__class__], self.sort_tuple).__repr__()
-
-    @staticmethod
-    def _lexrank(*items):
-        # Returns the value of __lexorder (below) for the class of each item.
-        return tuple(LexicalItem.__lexorder[clas] for clas in (it.__class__ for it in items))
+        return self.ident.__repr__()
 
     @staticmethod
     def _initorder():
         # Canonical order for all LexicalItem classes.
-        __class__.__lexorder = {
+        __class__.__lexrank = {
             Predicate: 10, Constant: 20, Variable: 30, AtomicSentence: 40,
             PredicatedSentence: 50, QuantifiedSentence: 60, OperatedSentence: 70,
-            # Abstract classes have > 400 order.
+            # Abstract classes have rank > 400.
             CoordsItem: 415, Parameter: 416, Sentence: 417, LexicalItem: 418,
         }
+        # Reverse index from rank to class.
+        __class__.__lexrankrev = {v: k for k, v in __class__.__lexrank.items()}
         # Max indexes for classes if applicable.
-        __class__.__max_indexes = {cls: None for cls in __class__.__lexorder}
+        __class__.__max_indexes = {cls: None for cls in __class__.__lexrank}
         __class__.__max_indexes.update({
             Predicate: 3, Constant: 3, Variable: 3, AtomicSentence: 4,
         })
+        # Self-destruct
         delattr(__class__, '_initorder')
 
 class CoordsItem(LexicalItem):
@@ -264,11 +310,12 @@ class CoordsItem(LexicalItem):
     def __init__(self, index, subscript):
         super().__init__()
         maxi = self.MAXI
+        sub = subscript
         typecheck(index, int, 'index')
         condcheck(index <= maxi, 'max `index` is {}, got {}'.format(maxi, index))
-        typecheck(subscript, int, 'subscript')
-        condcheck(subscript >= 0, 'min `subscript` is 0, got {}'.format(subscript))
-        self.__coords = (index, subscript)
+        typecheck(sub, int, 'subscript')
+        condcheck(sub >= 0, 'min `subscript` is 0, got {}'.format(sub))
+        self.__coords = (index, sub)
 
     @property
     def coords(self):
@@ -296,11 +343,6 @@ class Parameter(CoordsItem):
     def is_variable(self):
         return isinstance(self, Variable)
 
-    # @property
-    # def sort_tuple(self):
-    #     # Sort constants and variables by coords
-    #     return self.coords
-
 class Constant(Parameter):
     pass
 
@@ -309,19 +351,80 @@ class Variable(Parameter):
 
 class Predicate(CoordsItem):
 
+    @staticmethod
+    def create(*args):
+        """
+        The parameters can be passed either expanded, or as a single
+        ``list``/``tuple``. A valid spec consists of 3 integers in
+        the order of `index`, `subscript`, `arity`, for example::
+
+            Predicate.create(0, 0, 1)
+
+        An additional `name` parameter can be passed, which is used
+        primarily for system predicates, e.g. `Identity`. This was
+        designed to provide a convienent reference, but is likely to be
+        removed once a decent alternative is developed.
+        
+        For compatibility with the current constructor signature,
+        the `name` can be placed as either the first or the last element,
+        or left out entirely (recommended). The following are treated
+        equivalently::
+
+            # Recommended
+            Predicate.create(1, 3, 2, 'MyLabel')
+            Predicate.create((1, 3, 2, 'MyLabel'))
+
+            # Not recommended (legacy)
+            Predicate.create('MyLabel', 1, 3, 2)
+            Predicate.create(('MyLabel', 1, 3, 2))
+        
+        If a spec has 4 parameters, the last element is checked for being
+        either a string or ``None``, in which case it is treated as the
+        `name`, otherwise it is assumed to be the first element.
+        """
+        if len(args) == 1 and isinstance(args[0], (tuple, list, dict)):
+            args, = args
+            if isinstance(args, dict):
+                keys = ('index', 'subscript', 'arity', 'name')
+                args = tuple(args.get(key) for key in keys)
+        name = None
+        if len(args) == 4:
+            last = args[-1]
+            if last == None or isstr(last):
+                # name is last
+                name, args = last, args[0:3]
+            else:
+                # name is first
+                name, *args = args
+        elif len(args) != 3:
+            raise TypeError(
+                'need 3 or 4 elements/arguments, got {}'.format(len(args))
+            )
+        return __class__(name, *args)
+
     def __init__(self, name, index, subscript, arity):
         super().__init__(index, subscript)
         condcheck(
-            index >= 0 or not list_system_predicates(),
+            # During module init, the system predicates are being created,
+            # so allow negative index only if there are no system predicates.
+            index >= 0 or not get_system_predicates(),
             '`index` must be >= 0',
         )
         typecheck(arity, int, 'arity')
         condcheck(arity > 0, '`arity` must be > 0')
-        if name == None:
-            name = 'Predicate@({0},{1})'.format(index, subscript)
-        self.__name = name
-        self.__arity = arity
         self.__sort_tuple = (index, subscript, arity)
+        self.__arity = arity
+        if name == None:
+            name = self.ident
+        typecheck(name, (str, int, tuple), 'name')
+        self.__name = name
+        condcheck(
+            not is_system_predicate(name),
+            "'{}' is a system predicate".format(name),
+        )
+        self.__refs = tuple({
+            self.coords, self.sort_tuple, self.ident, self.name
+        })
 
     @property
     def arity(self):
@@ -337,8 +440,28 @@ class Predicate(CoordsItem):
 
     @property
     def sort_tuple(self):
-        # Sort predicates by (index, subscript, arity)
+        # (index, subscript, arity)
         return self.__sort_tuple
+
+    @property
+    def refs(self):
+        """
+        The coords and other attributes, each of which uniquely identify this
+        instance among other predicates. These are used to create hash indexes
+        for retrieving predicates from :class:`~Vocabulary` instances, and for
+        system predicates.
+
+        .. _predicate-refs-list:
+
+        - `coords` - A ``tuple`` with (index, subscript).
+        - `sort_tuple` - A ``tuple`` with (index, subscript, arity).
+        - `ident` - Includes class rank (``10``) plus `sort_tuple`.
+        - `name` - For system predicates, e.g. `Identity`, but is legacy for
+           user predicates.
+
+        :type: tuple
+        """
+        return self.__refs
 
 class Sentence(LexicalItem):
 
@@ -437,7 +560,7 @@ class Sentence(LexicalItem):
 
         :rtype: Sentence
         """
-        raise NotImplementedError()
+        return self
 
     def negate(self):
         """
@@ -445,7 +568,7 @@ class Sentence(LexicalItem):
 
         :rtype: OperatedSentence
         """
-        return OperatedSentence('Negation', [self])
+        return OperatedSentence('Negation', self)
 
     def negative(self):
         """
@@ -462,19 +585,19 @@ class Sentence(LexicalItem):
 
         :rtype: Sentence
         """
-        return OperatedSentence('Assertion', [self])
+        return OperatedSentence('Assertion', self)
 
     def disjoin(self, rhs):
         """
         TODO: doc
         """
-        return OperatedSentence('Disjunction', [self, rhs])
+        return OperatedSentence('Disjunction', (self, rhs))
 
     def conjoin(self, rhs):
         """
         TODO: doc
         """
-        return OperatedSentence('Conjunction', [self, rhs])
+        return OperatedSentence('Conjunction', (self, rhs))
 
     def constants(self):
         """
@@ -522,18 +645,11 @@ class Sentence(LexicalItem):
         """
         return list()
 
-class AtomicSentence(Sentence, CoordsItem):
+class AtomicSentence(CoordsItem, Sentence):
 
     def __init__(self, index, subscript):
         CoordsItem.__init__(self, index, subscript)
-
-    # @property
-    # def sort_tuple(self):
-    #     # Sort atomic sentences by coords
-    #     return self.coords
-
-    def substitute(self, new_param, old_param):
-        return self
+        Sentence.__init__(self)
 
     def atomics(self):
         return {self}
@@ -542,7 +658,7 @@ class AtomicSentence(Sentence, CoordsItem):
         return False
 
     def next(self):
-        if self.index < self.__class__.max_index():
+        if self.index < self.MAXI:
             coords = (self.index + 1, self.subscript)
         else:
             coords = (0, self.subscript + 1)
@@ -568,7 +684,6 @@ class PredicatedSentence(Sentence):
         self.__pred = pred
         self.__params = tuple(params)
         self.__paramset = set(params)
-        # Lazy init
         self.__sort_tuple = None
     
     @property
@@ -584,10 +699,6 @@ class PredicatedSentence(Sentence):
         return self.params
 
     @property
-    def arity(self):
-        return self.predicate.arity
-
-    @property
     def sort_tuple(self):
         # Sort predicated sentences by their predicate, then by their parameters
         if self.__sort_tuple == None:
@@ -599,7 +710,8 @@ class PredicatedSentence(Sentence):
 
     def substitute(self, new_param, old_param):
         params = tuple(
-            new_param if param == old_param else param for param in self.params
+            new_param if param == old_param else param
+            for param in self.params
         )
         return self.__class__(self.predicate, params)
 
@@ -666,7 +778,6 @@ class QuantifiedSentence(Sentence):
         self.__quantifier = quantifier
         self.__variable = variable
         self.__sentence = sentence
-        # Lazy init
         self.__sort_tuple = None
 
     @property
@@ -687,7 +798,6 @@ class QuantifiedSentence(Sentence):
         # lexical order (below), then by their variable, followed by their
         # inner sentence.
         if self.__sort_tuple == None:
-            # Lazy init
             self.__sort_tuple = (
                 self.__lexorder[self.quantifier],
                 self.variable.sort_tuple,
@@ -890,44 +1000,160 @@ class OperatedSentence(Sentence):
 class Vocabulary(object):
     """
     A vocabulary is a store of user-defined predicates.
-
-    Create a new vocabulary. *predicate_defs* is a list of tuples (name, index,
-    subscript, arity) defining user predicates. Example::
-
-        vocab = Vocabulary([
-            ('is tall',        0, 0, 1),
-            ('is taller than', 0, 1, 2),
-            ('between',        1, 0, 3)
-        ])
-
     """
-    def __init__(self, predicate_defs=None):
-        # set of predicate instances
-        self.user_predicates_set   = set()
-        # list of predicate names
-        self.user_predicates_list  = []
-        # name to predicate instance
-        self.user_predicates       = {}
-        # (index, subscript) to predicate instance
-        self.user_predicates_index = {}
-        if predicate_defs:
-            for info in predicate_defs:
-                typecheck(info, (list, tuple), 'predicate_def')
-                condcheck(
-                    len(info) == 4,
-                    '`predicate_def` needs length {0}, got {1}'.format(4, len(info)),
-                    err = TypeError
-                )
-                self.declare_predicate(*info)
+
+    def __init__(self, *defs):
+        self.__idx = {}
+        self.__uset = set()
+        if defs:
+            typecheck(defs, (list, tuple), 'defs')
+            if len(defs) == 1 and isinstance(defs[0], (list, tuple)):
+                if defs[0] and isinstance(defs[0][0], (list, tuple)):
+                    defs, = defs
+            for spec in defs:
+                typecheck(spec, (list, tuple), 'spec')
+                self.declare(*spec)
 
     def copy(self):
-        # Shallow copy.
-        vocab = Vocabulary()
-        vocab.user_predicates = dict(self.user_predicates)
-        vocab.user_predicates_list = list(self.user_predicates_list)
-        vocab.user_predicates_set = set(self.user_predicates_set)
-        vocab.user_predicates_index = dict(self.user_predicates_index)
+        """
+        Make a copy of the vocabulary.
+
+        :return: The new vocabulary instance.
+        :rtype: Vocabulary
+        """
+        vocab = self.__class__()
+        vocab.__uset = set(self.__uset)
+        vocab.__idx = dict(self.__idx)
         return vocab
+
+    def get(self, ref):
+        """
+        Get a predicate by coords, name, or other reference. This also matches
+        system predicates, see ``uget()`` to exclude them.
+
+        See :ref:`Predicate.refs <predicate-refs-list>` for a description of the
+        ``ref`` parameter.
+
+        :param any ref: A lookup reference.
+        :return: The predicate instance.
+        :rtype: Predicate
+        :raises errors.NotFoundError: when not found.
+        """
+        if is_system_predicate(ref):
+            return get_system_predicate(ref)
+        return self.uget(ref)
+
+    def has(self, ref):
+        """
+        Check whether a predicate exists for the given reference, This also matches
+        system predicates, see ``uhas()`` to exclude them. See :ref:`Predicate.refs
+        <predicate-refs-list>` for a description of the ``ref`` parameter.
+
+        :param any ref: A lookup reference.
+        :rtype: bool
+        """
+        return is_system_predicate(ref) or self.uhas(ref)
+
+    def list(self):
+        """
+        Get a list of all predicates, including system predicates. To exclude them,
+        see ``ulist()``.
+
+        :return: A list of predicate instances, sorted in lexical order.
+        :rtype: list(Predicate)
+        """
+        return list(get_system_predicates()) + self.ulist()
+
+    def add(self, pred):
+        """
+        Add a user-defined predicate.
+
+        :param Predicate pred: The predicate to add.
+        :return: self
+        :rtype: Vocabulary
+        :raises TypeError:
+        :raises ValueError:
+        """
+        typecheck(pred, Predicate, 'predicate')
+        condcheck(
+            not pred.is_system,
+            'Cannot add system predicate',
+            err = TypeError,
+        )
+        condcheck(
+            not self.has(pred.coords),
+            '{} already added'.format(pred.coords),
+        )
+        self.__idx.update({ref: pred for ref in pred.refs + (pred,)})
+        self.__uset.add(pred)
+        return self
+
+    def declare(self, *args):
+        """
+        Create and add a new user-defined predicate. See ``Predicate.create()``
+        for parameter formats.
+
+        :param any args: The predicate definition specs.
+        :return: The new predicate instance.
+        :rtype: Predicate
+        :raises TypeError: on predicate spec errors.
+        :raises ValueError: if the predicate is already added
+        """
+        pred = Predicate.create(*args)
+        self.add(pred)
+        return pred
+
+    def uget(self, ref):
+        """
+        Get a user-defined predicate, ignoring system predicates. See
+        :ref:`Predicate.refs <predicate-refs-list>` for a description of the ``ref``
+        parameter.
+
+        :param any ref: A lookup reference.
+        :return: The predicate instance.
+        :rtype: Predicate
+        :raises errors.NotFoundError: when not found.
+        """
+        try:
+            return self.__idx[ref]
+        except KeyError:
+            raise NotFoundError('Predicate not found: {}'.format(ref))
+
+    def uhas(self, ref):
+        """
+        Check whether a predicate exists for the given reference, excluding
+        system predicates. See :ref:`Predicate.refs <predicate-refs-list>`
+        for a description of the ``ref`` parameter.
+
+        :param any ref: A lookup reference.
+        :rtype: bool
+        """
+        return ref in self.__idx
+
+    def ulist(self):
+        """
+        Get a list of all user-defined predicates.
+
+        :return: A list of predicate instances, sorted in lexical order.
+        :rtype: list(Predicate)
+        """
+        return sorted(self.__uset)
+
+    def clear(self):
+        """
+        Clear all predicates.
+
+        :return: self
+        :type: Vocabulary
+        """
+        self.__idx.clear()
+        self.__uset.clear()
+        return self
+
+    ## OBSOLETE ##
+
+    def declare_predicate(self, name, index, subscript, arity):
+        return self.declare(name, index, subscript, arity)
 
     def get_predicate(self, name=None, index=None, subscript=None):
         """
@@ -943,141 +1169,102 @@ class Vocabulary(object):
             assert vocab.get_predicate('is tall') == vocab.get_predicate(index=0, subscript=0)
 
         """
-        if isstr(name):
-            if is_system_predicate(name):
-                return get_system_predicate(name)
-            if name in self.user_predicates:
-                return self.user_predicates[name]
-            raise NotFoundError('Predicate not found: {0}'.format(name))
-        if isint(name) and isint(index) and subscript == None:
-            index, subscript = name, index
-        typecheck(index, int, 'index')
-        typecheck(subscript, int, 'subscript')
-        coords = (index, subscript)
-        if coords in self.user_predicates_index:
-            return self.user_predicates_index[coords]
-        if coords in Vocabulary.__syslookup:
-            return Vocabulary.__syslookup[coords]
-        raise NotFoundError('Predicate not found: {0}'.format(coords))
-
-    def declare_predicate(self, name, index, subscript, arity):
-        """
-        Declare a user-defined predicate::
-
-            vocab = Vocabulary()
-            pred = vocab.declare_predicate(
-                name='is tall', index=0, subscript=0, arity=1
-            )
-            assert pred == vocab.get_predicate('is tall')
-            assert pred == vocab.get_predicate(index=0, subscript=0)
-            
-            # predicates cannot be re-declared
-            try:
-                vocab.declare_predicate('is tall', index=1, subscript=2, arity=3)
-            except ValueError:
-                assert True
-            else:
-                assert False
-
-        """
-        if is_system_predicate(name):
-            raise ValueError(
-                "Cannot declare system predicate '{0}'".format(name)
-            )
-        if name in self.user_predicates:
-            raise ValueError(
-                "Predicate '{0}' already declared".format(name)
-            )
-        try:
-            self.get_predicate(index=index, subscript=subscript)
-        except NotFoundError:
-            pass
-        else:
-            raise ValueError(
-                "Predicate for {0},{1} already declared".format(
-                    index, subscript
-                )
-            )
-        predicate = Predicate(name, index, subscript, arity)
-        self.add_predicate(predicate)
-        return predicate
-
-    def add_predicate(self, predicate):
-        """
-        Add a predicate instance::
-
-            vocab1 = Vocabulary()
-            predicate = vocab1.declare_predicate(
-                name='is tall', index=0, subscript=0, arity=1
-            )
-            vocab2 = Vocabulary()
-            vocab2.add_predicate(predicate)
-            assert vocab2.get_predicate('is tall') == predicate
-        """
-        typecheck(predicate, Predicate, 'predicate')
-        condcheck(
-            not predicate.is_system,
-            'System predicate not allowed',
-            err = TypeError,
+        refs = tuple(
+            ref for ref in
+            (name, (name, index), (index, subscript))
+            if ref != None and (not isinstance(ref, tuple) or None not in ref)
         )
-        self.user_predicates[predicate.name] = predicate
-        key = (predicate.index, predicate.subscript)
-        self.user_predicates_index[key] = predicate
-        if predicate not in self.user_predicates_set:
-            self.user_predicates_set.add(predicate)
-            self.user_predicates_list.append(predicate.name)
-        return predicate
-        
-    def list_predicates(self):
-        """
-        List all predicates in the vocabulary, including system predicates.
-        """
-        return list_system_predicates() + self.user_predicates_list
+        if not refs:
+            raise TypeError('No valid search keys')
+        for ref in refs:
+            if self.has(ref):
+                return self.get(ref)
+        refstr = ', '.join(str(ref) for ref in refs)
+        # if refs[0] == None and None in refs[1] and None in refs[2]:
+        #     raise TypeError('Not enough info in keys: {}'.format(refstr))
+        raise NotFoundError('Predicate not found for keys: {}'.format(refstr))
+        # if self.has(name):
+        #     return self.get(name)
+        # if self.has((name, index)):
+        #     return self.get((name, index)):
+        # return self.get((index, subscript))
+        # if isstr(name):
+        #     if is_system_predicate(name):
+        #         return get_system_predicate(name)
+        #     if name in self.user_predicates:
+        #         return self.user_predicates[name]
+        #     raise NotFoundError('Predicate not found: {0}'.format(name))
+        # if isinstance(name, tuple) and len(name) == 2:
+        #     index, subscript = name
+        # elif isint(name) and isint(index) and subscript == None:
+        #     index, subscript = name, index
+        # typecheck(index, int, 'index')
+        # typecheck(subscript, int, 'subscript')
+        # coords = (index, subscript)
+        # if coords in self.user_predicates_index:
+        #     return self.user_predicates_index[coords]
+        # if is_system_predicate(coords):
+        #     return get_system_predicate(coords)
+        # raise NotFoundError('Predicate not found: {0}'.format(coords))
 
-    def list_user_predicates(self):
+
+    def add_predicate(self, pred):
         """
-        List all predicates in the vocabulary, excluding system predicates.
+        Add a predicate instance.
+
+        :param Predicate pred: The predicate to add.
+        :return: The predicate.
+        :raises TypeError:
         """
-        return list(self.user_predicates_list)
+        return self.add(pred)
 
     @staticmethod
     def _get_system_predicate(ref):
         try:
-            return Vocabulary.__syslookup[ref]
+            return __class__.__sidx[ref]
         except KeyError:
-            raise NotFoundError("System predicate '{0}' not found".format(ref))
+            raise NotFoundError("System predicate not found: {}".format(ref))
 
     @staticmethod
     def _get_system_predicates():
-        if hasattr(Vocabulary, '_initsys'):
-            return []
-        return list(Vocabulary.__syspreds)
+        try:
+            return __class__.__spreds
+        except AttributeError:
+            pass
+        # if hasattr(Vocabulary, '_initsys'):
+        #     return None
+        # return __class__.__spreds
+        # return list(Vocabulary.__slist)
 
     @staticmethod
     def _is_system_predicate(ref):
-        if hasattr(Vocabulary, '_initsys'):
-            return False
-        return ref in Vocabulary.__syslookup
-
-    @staticmethod
-    def _list_system_predicates():
-        if hasattr(Vocabulary, '_initsys'):
-            return []
-        return list(p.name for p in Vocabulary.__syspreds)
+        try:
+            return ref in __class__.__sidx
+        except AttributeError:
+            pass
+        # if hasattr(Vocabulary, '_initsys'):
+        #     return False
+        # return ref in __class__.__sidx
 
     @staticmethod
     def _initsys():
-        Vocabulary.__syspreds = preds = (
-            Predicate('Identity',  -1, 0, 2),
-            Predicate('Existence', -2, 0, 1),
-        )
-        Vocabulary.__syslookup = idx = dict()
-        idx.update({p.name: p for p in preds})
-        idx.update({p.coords: p for p in preds})
-        idx.update({p.ident: p for p in preds})
-        idx.update({p: p for p in preds})
+        __class__.__spreds = preds = tuple(sorted(
+            Predicate.create(spec) for spec in (
+                (-1, 0, 2, 'Identity'),
+                (-2, 0, 1, 'Existence'),
+            )
+        ))
+        __class__.__sidx = idx = dict()
+        for pred in preds:
+            # refs = {pred, pred.coords, pred.sort_tuple, pred.ident, pred.name}
+            idx.update({ref: pred for ref in pred.refs + (pred,)})
+        # Vocabulary.__syslookup = idx = dict()
+        # idx.update({p.name: p for p in preds})
+        # idx.update({p.coords: p for p in preds})
+        # idx.update({p.ident: p for p in preds})
+        # idx.update({p: p for p in preds})
         # This method self-destucts.
-        delattr(Vocabulary, '_initsys')
+        delattr(__class__, '_initsys')
 
 class Argument(object):
     """
@@ -1085,21 +1272,27 @@ class Argument(object):
     see ``Parser.argument``.
     """
     def __init__(self, conclusion, premises = None, title = None):
-        self.premises = []
-        if premises:
-            for premise in premises:
-                if not isinstance(premise, Sentence):
-                    raise TypeError('premises must be Sentence objects')
-                self.premises.append(premise)
-        if not isinstance(conclusion, Sentence):
-            raise TypeError('conclusion must be Sentence object')
-        self.conclusion = conclusion
-        self.title      = title
+        typecheck(conclusion, Sentence, 'conclusion')
+        premises = tuple(premises or ())
+        for s in premises:
+            typecheck(s, Sentence, 'premise')
+        self.title = title
+        self.__premises = premises
+        self.__conclusion = conclusion
+
+    @property
+    def premises(self):
+        return self.__premises
+
+    @property
+    def conclusion(self):
+        return self.__conclusion
 
     def __repr__(self):
-        if self.title is None:
-            return [self.premises, self.conclusion].__repr__()
-        return [self.premises, self.conclusion, {'title': self.title}].__repr__()
+        return (self.premises, self.conclusion).__repr__()
+        # if self.title is None:
+        #     return [self.premises, self.conclusion].__repr__()
+        # return [self.premises, self.conclusion, {'title': self.title}].__repr__()
 
     def __hash__(self):
         return hash((self.conclusion,) + tuple(self.premises))
@@ -1133,14 +1326,14 @@ class LexWriter(object):
                 return self._write_operator(item)
             if is_quantifier(item):
                 return self._write_quantifier(item)
-            raise TypeError('Unknown lexical string type: {0}'.format(item))
+            raise TypeError('Unknown lexical string type: {}'.format(item))
         if isinstance(item, Parameter):
             return self._write_parameter(item)
         if isinstance(item, Predicate):
             return self._write_predicate(item)
         if isinstance(item, Sentence):
             return self._write_sentence(item)
-        raise TypeError('Unknown lexical type: {0}'.format(item))
+        raise TypeError('Unknown lexical type: {}'.format(item))
 
     def _write_parameter(self, param):
         if isinstance(param, Constant):
@@ -1232,7 +1425,7 @@ class BaseLexWriter(LexWriter):
 
     def _write_predicated(self, sentence):
         s = self._write_predicate(sentence.predicate)
-        for param in sentence.parameters:
+        for param in sentence.params:
             s += self._write_parameter(param)
         return s
 

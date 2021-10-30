@@ -123,7 +123,7 @@ class TestBranch(object):
     def test_new_constant_returns_m1_after_s0(self):
         b = Branch()
         i = 0
-        while i <= Constant.max_index():
+        while i <= Constant.MAXI:
             c = Constant(i, 0)
             sen = Predicated('Identity', [c, c])
             b.add({'sentence': sen})

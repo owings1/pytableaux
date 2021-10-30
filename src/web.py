@@ -127,7 +127,7 @@ base_browser_data = {
     'example_predicates'    : examples.test_pred_data,
     # nups: "notation-user-predicate-symbols"
     'nups'                  : nups,
-    'num_predicate_symbols' : Predicate.max_index() + 1,
+    'num_predicate_symbols' : Predicate.MAXI + 1,
     'example_arguments'     : example_arguments,
     'is_debug'              : opts['is_debug'],
 }
@@ -248,7 +248,7 @@ class App(object):
         data = dict(base_view_data)
         browser_data = dict(base_browser_data)
 
-        vocab = Vocabulary()
+        # vocab = Vocabulary()
 
         if req_data.get('v') in ('v1', 'v2'):
             view_version = req_data['v']
@@ -272,16 +272,17 @@ class App(object):
                 try:
                     api_data = json.loads(form_data['api-json'])
                 except Exception as err:
-                    raise RequestDataError({'api-data': str(err)})
+                    raise RequestDataError({'api-data': errstr(err)})
                 try:
-                    arg, vocab = self.parse_argument_data(api_data['argument'])
+                    # arg, vocab = self.parse_argument_data(api_data['argument'])
+                    self.parse_argument_data(api_data['argument'])
                 except RequestDataError as err:
                     errors.update(err.errors)
                 resp_data, tableau, lw = self.api_prove(api_data)
             except RequestDataError as err:
                 errors.update(err.errors)
             except TimeoutError as err: # pragma: no cover
-                errors['Tableau'] = str(err)
+                errors['Tableau'] = errstr(err)
 
             if not errors:
                 is_proof = True
@@ -327,11 +328,9 @@ class App(object):
             'is_models'    : is_models,
             'selected_tab' : selected_tab,
             'view_version' : view_version,
-            'form_data'            : form_data,
-            'resp_data'            : resp_data,
-            'user_predicates'      : vocab.user_predicates,
-            'user_predicates_list' : vocab.user_predicates_list,
-            'warns'                : warns,
+            'form_data'    : form_data,
+            'resp_data'    : resp_data,
+            'warns'        : warns,
         })
 
         return render(view, data)
@@ -746,7 +745,7 @@ class App(object):
         except Exception as e:
             errors['Notation'] = str(e)
 
-        if len(errors) == 0:
+        if not errors:
             try:
                 vocab = self.parse_predicates_data(adata['predicates'])
             except RequestDataError as err:
@@ -766,7 +765,7 @@ class App(object):
             except Exception as e:
                 errors['Conclusion'] = str(e)
 
-        if len(errors) > 0:
+        if errors:
             raise RequestDataError(errors)
 
         return (Argument(conclusion, premises), vocab)
@@ -777,19 +776,11 @@ class App(object):
         i = 1
         for pdata in predicates:
             try:
-                # Correct for missing or empty name, by setting it
-                # explicitly to None.
-                if isinstance(pdata, dict) and not pdata.get('name'):
-                    pdata = dict(pdata)
-                    pdata['name'] = None
-                elif isinstance(pdata, list) and len(pdata) == 3:
-                    if not isstr(pdata[0]):
-                        pdata = [None] + list(pdata)
-                vocab.declare_predicate(**pdata)
+                vocab.declare(pdata)
             except Exception as e:
-                errors['Predicate {0}'.format(str(i))] = str(e)
+                errors['Predicate {0}'.format(str(i))] = errstr(e)
             i += 1
-        if len(errors) > 0:
+        if errors:
             raise RequestDataError(errors)
         return vocab
 

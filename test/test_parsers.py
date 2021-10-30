@@ -56,15 +56,10 @@ def test_argument_parse_prems_preparsed_conclusion():
     assert len(a.premises) == 2
     assert a.conclusion == conclusion
 
-def test_argument_repr_untitled():
-    a = argument(conclusion='a', notn='polish')
-    res = a.__repr__()
-    assert 'title' not in res
-
-def test_argument_repr_titled():
+def test_argument_repr_coverage():
     a = argument(conclusion='a', notn='polish', title='TestArg')
     res = a.__repr__()
-    assert 'title' in res
+    assert '(0, 0)' in res
 
 class TestStandard(object):
 
