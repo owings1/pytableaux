@@ -275,8 +275,6 @@ class TestNodeRule(object):
         with raises(NotImplementedError):
             rule.apply_to_node_target(None, None, None)
         with raises(NotImplementedError):
-            rule.example_node(None)
-        with raises(NotImplementedError):
             rule.example()
 
 class TestFilterNodeRule(object):

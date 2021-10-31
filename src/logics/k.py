@@ -723,7 +723,7 @@ class TableauxRules(object):
                 return True
             return False
 
-        def example_nodes(self, branch):
+        def example_nodes(self, branch = None):
             a = Atomic(0, 0)
             w = 0 if self.modal else None
             return [
@@ -770,10 +770,10 @@ class TableauxRules(object):
             # Delegate to tracker
             return self.tracker.cached_target(branch)
 
-        def example_node(self, branch):
+        def example_nodes(self, branch = None):
             s = examples.self_identity().negate()
             w = 0 if self.modal else None
-            return {'sentence': s, 'world': w}
+            return ({'sentence': s, 'world': w},)
 
     class NonExistenceClosure(ClosureRule):
         """
@@ -799,10 +799,10 @@ class TableauxRules(object):
             # Delegate to tracker
             return self.tracker.cached_target(branch)
 
-        def example_node(self, branch):
+        def example_nodes(self, branch = None):
             s = examples.existence().negate()
             w = 0 if self.modal else None
-            return {'sentence': s, 'world': w}
+            return ({'sentence': s, 'world': w},)
 
     class DoubleNegation(DefaultNodeRule):
         """
@@ -1403,7 +1403,7 @@ class TableauxRules(object):
             )
             #return -1 * min(target['track_count'], self.tableau.branching_complexity(target['node']))
 
-        def example_nodes(self, branch):
+        def example_nodes(self, branch = None):
             s = Operated(self.operator, [Atomic(0, 0)])
             return [
                 {'sentence': s, 'world': 0},
@@ -1495,7 +1495,7 @@ class TableauxRules(object):
                 })
             return targets
 
-        def example_nodes(self, branch):
+        def example_nodes(self, branch = None):
             world = 0 if self.modal else None
             return [
                 {'sentence': examples.predicated(), 'world': world},

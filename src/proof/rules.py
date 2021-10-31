@@ -19,8 +19,8 @@
 #
 # pytableaux - tableaux rules module
 from inspect import isclass
-from lexicals import AtomicSentence, OperatedSentence, operarity
-from utils import EventEmitter, StopWatch, istableau
+from lexicals import Atomic, Operated, operarity
+from utils import EventEmitter, StopWatch, istableau, safeprop
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper
 from events import Events
@@ -79,15 +79,22 @@ class Rule(EventEmitter):
             Events.AFTER_TRUNK_BUILD  : self.__after_trunk_build,
             Events.BEFORE_TRUNK_BUILD : self.__before_trunk_build,
         })
-        self.register_event(Events.AFTER_APPLY)
-
+        self.register_event(
+            Events.AFTER_APPLY,
+            Events.BEFORE_APPLY,
+        )
         for name, helper in self.Helpers:
-            self.add_helper(name, helper)
+            self.add_helper(helper, name)
         self.add_timer(*self.Timers)
 
-    # External API
+    @property
+    def is_closure(self):
+        return isinstance(self, ClosureRule)
 
     def get_target(self, branch):
+        """
+        :meta public final:
+        """
         # Concrete classes should not override this, but should implement
         # ``get_candidate_targets()`` instead.
         cands = self.get_candidate_targets(branch)
@@ -96,39 +103,51 @@ class Rule(EventEmitter):
             return self.__select_best_target(cands, branch)
 
     def apply(self, target):
+        """
+        :meta public final:
+        """
         # Concrete classes should not override this, but should implement
         # ``apply_to_target()`` instead.
         with self.apply_timer:
+            self.emit(Events.BEFORE_APPLY, target)
+            # self.__before_apply(target)
             self.apply_to_target(target)
             self.apply_count += 1
-            self.__after_apply(target)
+            # self.__after_apply(target)
+            self.emit(Events.AFTER_APPLY, target)
 
     def example(self):
+        """
+        :meta public:
+        """
         # Add example branches/nodes sufficient for ``applies()`` to return true.
         # Implementations should modify the tableau directly, with no return
         # value. Used for building examples/documentation.
-        branch = self.branch()
-        branch.update(self.example_nodes(branch))
+        self.branch().update(self.example_nodes())
 
     # Abstract methods
 
     def get_candidate_targets(self, branch):
+        """
+        :meta abstract:
+        """
         # Intermediate classes such as ``ClosureRule``, ``PotentialNodeRule``,
         # (and its child ``FilterNodeRule``) implement this and ``select_best_target()``,
         # and define finer-grained methods for concrete classes to implement.
         raise NotImplementedError()
 
     def apply_to_target(self, target):
+        """
+        :meta abstract:
+        """
         # Apply the rule to the target. Implementations should
         # modify the tableau directly, with no return value.
         raise NotImplementedError()
 
-    # Implementation options for ``example()``
-
-    def example_nodes(self, branch):
-        return [self.example_node(branch)]
-
-    def example_node(self, branch):
+    def example_nodes(self, branch = None):
+        """
+        :meta abstract:
+        """
         raise NotImplementedError()
 
     # Default implementation
@@ -165,10 +184,10 @@ class Rule(EventEmitter):
         """
         return self.tableau.branch(parent)
 
-    def safeprop(self, name, value = None):
-        if hasattr(self, name):
-            raise KeyError("Property '{}' already exists".format(name))
-        setattr(self, name, value)
+    # def safeprop(self, name, value = None):
+    #     if hasattr(self, name):
+    #         raise KeyError("Property '{}' already exists".format(name))
+    #     setattr(self, name, value)
 
     def add_timer(self, *names):
         for name in names:
@@ -176,17 +195,17 @@ class Rule(EventEmitter):
                 raise KeyError("Timer '{}' already exists".format(name))
             self.timers[name] = StopWatch()
 
-    def add_helper(self, name, helper):
+    def add_helper(self, helper, attr = None):
         if isclass(helper):
             helper = helper(self)
-        self.safeprop(name, helper)
+        if attr != None:
+            safeprop(self, attr, helper)
+        if hasattr(helper, 'before_apply'):
+            self.add_listener(Events.BEFORE_APPLY, helper.before_apply)
+        if hasattr(helper, 'after_apply'):
+            self.add_listener(Events.AFTER_APPLY, helper.after_apply)
         self.__helpers.append(helper)
         return helper
-
-    def add_helpers(self, helpers):
-        for name in helpers:
-            self.add_helper(name, helpers[name])
-        return self
 
     # Other
 
@@ -225,11 +244,17 @@ class Rule(EventEmitter):
             if hasattr(helper, 'after_node_tick'):
                 helper.after_node_tick(node, branch)
 
-    def __after_apply(self, target):
-        self.emit(Events.AFTER_APPLY, target)
-        for helper in self.__helpers:
-            if hasattr(helper, 'after_apply'):
-                helper.after_apply(target)
+    # def __before_apply(self, target):
+    #     self.emit(Events.BEFORE_APPLY, target)
+    #     # for helper in self.__helpers:
+    #     #     if hasattr(helper, 'before_apply'):
+    #     #         helper.before_apply(target)
+
+    # def __after_apply(self, target):
+    #     self.emit(Events.AFTER_APPLY, target)
+    #     # for helper in self.__helpers:
+    #     #     if hasattr(helper, 'after_apply'):
+    #     #         helper.after_apply(target)
 
     # Private Util
 
@@ -293,16 +318,19 @@ class ClosureRule(Rule):
     closed. Sub-classes should implement the ``applies_to_branch()`` method.
     """
 
-    Helpers = [
+    Helpers = (
         *Rule.Helpers,
         ('tracker', NodeTargetCheckHelper),
-    ]
+    )
 
     default_opts = {
         'is_rank_optim' : False
     }
 
     def get_candidate_targets(self, branch):
+        """
+        :implements: Rule
+        """
         target = self.applies_to_branch(branch)
         if target:
             if target == True:
@@ -314,12 +342,23 @@ class ClosureRule(Rule):
             return [target]
 
     def apply_to_target(self, target):
+        """
+        :implements: Rule
+        """
         target['branch'].close()
 
     def applies_to_branch(self, branch):
         raise NotImplementedError()
 
     def nodes_will_close_branch(self, nodes, branch):
+        """
+        Used in AdzHelper for calculating a target's closure score. This default
+        implementation delegates to the abstract ``node_will_close_branch()``.
+
+        :param iterable(Node) nodes:
+        :param tableaux.Branch branch:
+        :rtype: bool
+        """
         for node in nodes:
             if self.node_will_close_branch(node, branch):
                 return True
@@ -551,7 +590,7 @@ class FilterNodeRule(PotentialNodeRule):
             if node.props.get('designated') != self.designation:
                 return False
         if self.predicate != None:
-            if predicate == None or self.predicate != predicate.name:
+            if predicate == None or self.predicate not in predicate.refs:
                 return False
         return True
 
@@ -567,14 +606,14 @@ class FilterNodeRule(PotentialNodeRule):
 
     # Default
 
-    def example_node(self, branch):
+    def example_nodes(self, branch = None):
         props = {}
         if self.modal:
             props['world'] = 0
         if self.designation != None:
             props['designated'] = self.designation
         sentence = None
-        a = AtomicSentence(0, 0)
+        a = Atomic(0, 0)
         if self.operator != None:
             params = []
             arity = operarity(self.operator)
@@ -582,17 +621,17 @@ class FilterNodeRule(PotentialNodeRule):
                 params.append(a)
             for i in range(arity - 1):
                 params.append(params[-1].next())
-            sentence = OperatedSentence(self.operator, params)
+            sentence = Operated(self.operator, params)
         elif self.quantifier != None:
             import examples
             sentence = examples.quantified(self.quantifier)
         if self.negated:
             if sentence == None:
                 sentence = a
-            sentence = OperatedSentence('Negation', [sentence])
+            sentence = sentence.negate()
         if sentence != None:
             props['sentence'] = sentence
-        return props
+        return (props,)
 
 class NewConstantStoppingRule(FilterNodeRule):
     """

@@ -318,30 +318,31 @@ class Tableau(EventEmitter):
         If the tableau is already finished when this method is called, return
         ``False``.
 
-        .. Internally, this calls the ``__get_application()`` method to get the
-        .. rule application, and, if non-empty, calls the ``__do_application()``
-        .. method.
+        .. Internally, this calls the ``__next_step()`` method to select the
+        .. next step, and, if non-empty, applies the rule and appends the entry
+        .. to the history.
 
-        :return: The application dict, or ``None`` if just finished, or ``False``
+        :return: The history entry, or ``None`` if just finished, or ``False``
           if previously finished.
         :raises errors.IllegalStateError: if the trunk is not built.
         """
         if self.finished:
             return False
         self.__check_trunk_built()
-        application = None
-        with StopWatch() as step_timer:
-            res = None
+        step = entry = None
+        with StopWatch() as timer:
             if not self.__is_max_steps_exceeded():
-                res = self.__get_application()
-                if not res:
+                step = self.__next_step()
+                if not step:
                     self.__premature = False
-            if res:
-                rule, target = res
-                application = self.__do_application(rule, target, step_timer)
+            if step:
+                rule, target = step
+                rule.apply(target)
+                entry = StepEntry(*step, timer.elapsed())
+                self.history.append(entry)
             else:
                 self.finish()
-        return application
+        return entry
 
     def branches(self):
         """
@@ -410,7 +411,7 @@ class Tableau(EventEmitter):
         """
         if branch.id in self.__branch_dict:
             raise ValueError(
-                'Branch {0} already on tableau'.format(str(branch.id))
+                'Branch {0} already on tableau'.format(branch.id)
             )
         branch.index = len(self.__branch_list)
         self.__branch_list.append(branch)
@@ -438,7 +439,16 @@ class Tableau(EventEmitter):
                 rule.__class__ == ref.__class__
             ):
                 return rule
-        raise NotFoundError('Rule not found for ref: {0}'.format(str(ref)))
+        raise NotFoundError('Rule not found for ref: {0}'.format(ref))
+
+    def get_rule_at(self, i, n):
+        return self.__rule_groups[i][n]
+
+    def get_rule_group(self, i):
+        return tuple(self.__rule_groups[i])
+
+    def rule_groups(self):
+        return (iter(group) for group in self.__rule_groups)
 
     def add_closure_rule(self, rule):
         """
@@ -618,13 +628,12 @@ class Tableau(EventEmitter):
     # : Util      :
     # :-----------:
 
-    def __get_application(self):
+    def __next_step(self):
         """
-        Find and return the next available rule application. If no rule can be
-        applied, return ``None``.
-        
-        This iterates over the open branches and calls ``__get_branch_application()``,
-        returning the first non-empty result.
+        Choose the next rule step to perform. Returns the (rule, target)
+        pair, or ``None``if no rule can be applied.
+
+        This iterates over the open branches and calls ``__get_branch_application()``.
         """
         for branch in self.open_branches():
             res = self.__get_branch_application(branch)
@@ -650,24 +659,22 @@ class Tableau(EventEmitter):
         Find and return the next available rule application for the given open
         branch and rule group. The ``rules`` parameter is a list of rules, and
         is assumed to be either the closure rules, or one of the rule groups of
-        the tableau. This calls the ``get_target()`` method on the rules.
+        the tableau. This calls the ``rule.get_target(branch)`` on the rules.
 
         If the `is_group_optim` option is `disabled`, then the first non-empty
         target returned by a rule is selected. The target is updated with the
         the following:
-        
-        - `group_score`: ``None``
-        - `total_group_targets`: ``1``
-        - `min_group_score`: ``None``
+
+        - `group_score`         : None
+        - `total_group_targets` : 1
+        - `min_group_score`     : None
+        - `is_group_optim`      : False
 
         If the `is_group_optim` option is `enabled`, then all non-empty targets
-        from the rules are collected, and the ``__select_optim_group_application()``
-        method is called to select the result.
+        collected and passed to ``__select_optim_group_application()`` to
+        compute the scores and select the winner.
 
-        The return value is either a non-empty list of results, or ``None``.
-        Each result is a pair (tuple). The first element is the rule, and the
-        second element is the target returned by the rule's ``get_target()``
-        method.
+        :return: A (rule, target) pair, or ``None``.
         """
         results = []
         for rule in rules:
@@ -688,24 +695,23 @@ class Tableau(EventEmitter):
 
     def __select_optim_group_application(self, results):
         """
-        Choose the best rule to apply from among the list of results. The
-        ``results`` parameter is assumed to be a non-empty list, where each
-        element is a pair (tuple) of rule, target.
+        Choose the highest scoring element from given results. The ``results``
+        parameter is assumed to be a non-empty list/tuple of (rule, target) pairs.
 
-        Internally, this calls the ``group_score()`` method on each rule,
-        passing it the target that the rule returned by its ``get_target()``
-        method. The target with the max score is selected. If there is a tie,
-        then the first target is selected.
+        This calls ``rule.group_score(target)`` on each element to compute the
+        score. In case of a tie, the earliest element wins.
 
-        The target is updated with the following keys:
+        Before the selected result is returned, the ``target`` dict is updated
+        with the following:
         
-        - `group_score`
-        - `total_group_targets`
-        - `min_group_score`
-        - `is_group_optim`
+        - `group_score`        : int
+        - `total_group_targets`: int
+        - `min_group_score`    : int
+        - `is_group_optim`     : True
 
-        The return value is an element of the ``results`` parameter, which is a
-        ``(rule, target)`` pair.
+        :param list results: A list/tuple of (Rule, dict) pairs.
+        :return: The highest scoring element.
+        :rtype: tuple(rules.Rule, dict)
         """
         group_scores = [rule.group_score(target) for rule, target in results]
         max_group_score = max(group_scores)
@@ -720,32 +726,6 @@ class Tableau(EventEmitter):
                     'is_group_optim'      : True,
                 })
                 return (rule, target)
-
-    def __do_application(self, rule, target, step_timer):
-        """
-        Calls ``rule.apply(target)`` and creates a history entry. The ``target``
-        parameter should be what was previously returned by ``rule.get_target()``.
-
-        This is called by the ``step()`` method, which creates a ``StopWatch`` to
-        track the combined time it takes to complete both the ``get_target()`` and
-        ``apply()`` methods.
-        
-        This method will accept ``None`` for the ``step_timer`` parameter,
-        however, this means the timing statistics will be inaccurate.
-
-        :param rules.Rule rule: The rule.
-        :param dict target: The target object.
-        :return: The application object.
-        :rtype: dict
-        """
-        rule.apply(target)
-        application = {
-            'rule'        : rule,
-            'target'      : target,
-            'duration_ms' : step_timer.elapsed() if step_timer else 0,
-        }
-        self.history.append(application)
-        return application
 
     def __compute_stats(self):
         """
@@ -1193,12 +1173,16 @@ class Node(object):
         self.ticked_step = None
         self.id = id(self)
 
+    @property
+    def is_closure(self):
+        return self.props.get('flag') == 'closure'
+
     def has(self, *names):
         """
         Whether the node has a non-``None`` property of all the given names.
         """
         for name in names:
-            if name not in self.props or self.props[name] == None:
+            if self.props.get(name) == None:
                 return False
         return True
 
@@ -1207,7 +1191,7 @@ class Node(object):
         Whether the node has a non-``None`` property of any of the given names.
         """
         for name in names:
-            if name in self.props and self.props[name] != None:
+            if self.props.get(name) != None:
                 return True
         return False
 
@@ -1219,9 +1203,6 @@ class Node(object):
             if prop not in self.props or not props[prop] == self.props[prop]:
                 return False
         return True
-
-    def is_closure(self):
-        return self.props.get('flag') == 'closure'
 
     def worlds(self):
         """
@@ -1277,6 +1258,32 @@ class Node(object):
             'step'   : self.step,
             'parent' : self.parent.id if self.parent else None,
         }.__repr__()
+
+class StepEntry(object):
+
+    def __init__(self, *entry):
+        if len(entry) < 3:
+            raise TypeError('Expecting more than {} arguments'.format(len(entry)))
+        self.__entry = entry
+
+    @property
+    def rule(self):
+        return self.__entry[0]
+
+    @property
+    def target(self):
+        return self.__entry[1]
+
+    @property
+    def duration_ms(self):
+        return self.__entry[2]
+
+    @property
+    def entry(self):
+        return self.__entry
+
+    def __getitem__(self, item):
+        return getattr(self, item)
 
 def make_tree_structure(branches, node_depth=0, track=None):
     is_root = track == None
@@ -1414,24 +1421,24 @@ def make_tree_structure(branches, node_depth=0, track=None):
         s['distinct_nodes'] = track['distinct_nodes']
     return s
 
-def _check_is_rule(obj):
-    """
-    Checks if an object is a rule instance.
-    """
-    if obj.__class__ in _check_is_rule.classes:
-        return True
-    if not (
-        hasattr(obj, 'name') and
-        callable(getattr(obj, 'get_target', None)) and
-        callable(getattr(obj, 'apply', None)) and
-        isinstance(getattr(obj, 'tableau', None), Tableau) and
-        isinstance(getattr(obj, 'apply_count', None), int) and
-        isinstance(getattr(obj, 'timers', None), dict) and
-        isinstance(getattr(obj, 'apply_timer', None), StopWatch) and
-        isinstance(getattr(obj, 'search_timer', None), StopWatch) and
-        True
-    ):
-        return False
-    _check_is_rule.classes.add(obj.__class__)
-    return True
-_check_is_rule.classes = set()
+# def _check_is_rule(obj):
+#     """
+#     Checks if an object is a rule instance.
+#     """
+#     if obj.__class__ in _check_is_rule.classes:
+#         return True
+#     if not (
+#         hasattr(obj, 'name') and
+#         callable(getattr(obj, 'get_target', None)) and
+#         callable(getattr(obj, 'apply', None)) and
+#         isinstance(getattr(obj, 'tableau', None), Tableau) and
+#         isinstance(getattr(obj, 'apply_count', None), int) and
+#         isinstance(getattr(obj, 'timers', None), dict) and
+#         isinstance(getattr(obj, 'apply_timer', None), StopWatch) and
+#         isinstance(getattr(obj, 'search_timer', None), StopWatch) and
+#         True
+#     ):
+#         return False
+#     _check_is_rule.classes.add(obj.__class__)
+#     return True
+# _check_is_rule.classes = set()

@@ -560,3 +560,53 @@ class AppliedSentenceCounter(object):
         if sentence not in self.counts[branch.id]:
             self.counts[branch.id][sentence] = 0
         self.counts[branch.id][sentence] += 1
+
+class EllipsisExampleHelper(object):
+
+    mynode = {'ellipsis': True}
+    closenodes = []
+
+    def __init__(self, rule):
+        self.rule = rule
+        self.applied = set()
+        if rule.is_closure:
+            self.closenodes = list(
+                n if isinstance(n, dict) else n.props
+                for n in reversed(rule.example_nodes())
+            )
+        self.istrunk = False
+
+    def before_trunk_build(self, *_):
+        self.istrunk = True
+
+    def after_trunk_build(self, *_):
+        self.istrunk = False
+
+    def register_branch(self, branch, *_):
+        if self.applied:
+            return
+        if len(self.closenodes) == 1:
+            self.__addnode(branch)        
+
+    def register_node(self, node, branch):
+        if self.applied:
+            return
+        if node.has_props(self.mynode) or node.is_closure:
+            return
+        if self.istrunk:
+            self.__addnode(branch)
+        elif self.closenodes and node.has_props(self.closenodes[-1]):
+            self.closenodes.pop()
+            if len(self.closenodes) == 1:
+                self.__addnode(branch)
+
+    def before_apply(self, target):
+        if self.applied:
+            return
+        if self.rule.is_closure:
+            return
+        self.__addnode(target['branch'])
+
+    def __addnode(self, branch):
+        self.applied.add(branch)
+        branch.add(self.mynode)

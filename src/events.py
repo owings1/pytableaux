@@ -6,4 +6,5 @@ class Events(object):
     AFTER_NODE_TICK    = 50
     AFTER_RULE_APPLY   = 60
     AFTER_TRUNK_BUILD  = 70
+    BEFORE_APPLY       = 80
     BEFORE_TRUNK_BUILD = 100

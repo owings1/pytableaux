@@ -25,7 +25,7 @@ from lexicals import Vocabulary, Atomic, Constant, Predicate, Predicated, Quanti
 from proof.tableaux import Tableau, Branch, Node
 from proof.rules import Rule, FilterNodeRule
 from proof.helpers import MaxConstantsTracker
-from parsers import parse, parse_argument
+from parsers import parse, parse_argument, notations as parser_notns
 from models import truth_table
 import examples
 
@@ -37,15 +37,32 @@ class LogicTester(object):
     vocab = examples.vocabulary
     notn = 'polish'
 
-    def p(self, s, **kw):
+    def p(self, s, *args, **kw):
+        for val in args:
+            if isinstance(val, Vocabulary):
+                key = 'vocab'
+            elif val in parser_notns:
+                key = 'notn'
+            else:
+                raise ValueError('Unrecognized positional argument {}'.format(val))
+            if key in kw:
+                raise KeyError('Positional argument {} duplicates keyword {}'.format(val, key))
+            kw[key] = val
         if 'vocab' not in kw:
             kw['vocab'] = self.vocab
         if 'notn' not in kw:
             kw['notn'] = self.notn
         return parse(s, **kw)
 
-    def pp(self, *sens, **kw):
-        return list(self.p(s, **kw) for s in sens)
+    def pp(self, *sargs, **kw):
+        args = []
+        sens = []
+        for val in sargs:
+            if isinstance(val, Vocabulary) or val in parser_notns:
+                args.append(val)
+            else:
+                sens.append(val)
+        return list(self.p(s, *args, **kw) for s in sens)
 
     def parg(self, conc, *prems, **kw):
         if 'notn' not in kw:
@@ -163,9 +180,9 @@ class TestFDE(LogicTester):
         assert tab.branch_count == 1
         assert tab.open_branch_count == 0
 
-    def test_rule_ConjunctionNegatedDesignated_example_node(self):
+    def test_rule_ConjunctionNegatedDesignated_example_nodes(self):
         tab = self.tab()
-        props = tab.get_rule('ConjunctionNegatedDesignated').example_node(tab.branch())
+        props, = tab.get_rule('ConjunctionNegatedDesignated').example_nodes(tab.branch())
         s = props['sentence']
         assert s.is_negated
         assert s.operand.operator == 'Conjunction'
@@ -1558,89 +1575,60 @@ class TestK(LogicTester):
         self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
 
     def test_rule_ContradictionClosure_example(self):
-        rule = self.logic.TableauxRules.ContradictionClosure(empty_proof())
-        rule.example()
-        assert rule.tableau.branch_count == 1
+        tab = self.tab()
+        tab.get_rule('ContradictionClosure').example()
+        assert tab.branch_count == 1
 
     def test_rule_SelfIdentityClosure_example(self):
-        rule = self.logic.TableauxRules.SelfIdentityClosure(empty_proof())
+        rule = self.tab().get_rule('SelfIdentityClosure')
         rule.example()
         assert rule.tableau.branch_count == 1
 
     def test_rule_NonExistenceClosure_example(self):
-        proof = Tableau(self.logic, None)
+        proof = self.tab()
         proof.get_rule('NonExistenceClosure').example()
         assert proof.open_branch_count == 1
         proof.build()
         assert proof.branch_count == 1
         assert proof.open_branch_count == 0
 
-    def test_rule_Possibility_example_node(self):
-        rule = self.logic.TableauxRules.Possibility(empty_proof())
-        props = rule.example_node(rule.branch())
+    def test_rule_Possibility_example_nodes(self):
+        rule = self.tab().get_rule('Possibility')
+        props, = rule.example_nodes(rule.branch())
         assert props['world'] == 0
 
-    def test_rule_Existential_example_node(self):
-        rule = self.logic.TableauxRules.Existential(empty_proof())
-        props = rule.example_node(rule.branch())
+    def test_rule_Existential_example_nodes(self):
+        rule = self.tab().get_rule('Existential')
+        props, = rule.example_nodes(rule.branch())
         assert props['sentence'].quantifier == 'Existential'
 
-    def test_rule_DisjunctionNegated_example_node(self):
-        rule = self.logic.TableauxRules.DisjunctionNegated(empty_proof())
-        props = rule.example_node(rule.branch())
+    def test_rule_DisjunctionNegated_example_nodes(self):
+        rule = self.tab().get_rule('DisjunctionNegated')
+        props, = rule.example_nodes(rule.branch())
         assert props['sentence'].operator == 'Negation'
 
     def test_rule_Universal_example(self):
-        rule = self.logic.TableauxRules.Universal(empty_proof())
+        rule = self.tab().get_rule('Universal')
         rule.example()
         assert rule.tableau.branch_count == 1
 
     def test_rule_Necessity_example(self):
-        rule = self.logic.TableauxRules.Necessity(empty_proof())
+        rule = self.tab().get_rule('Necessity')
         rule.example()
         assert rule.tableau.branch_count == 1
 
     def test_rule_IdentityIndiscernability_example(self):
-        rule = self.logic.TableauxRules.IdentityIndiscernability(empty_proof())
+        rule = self.tab().get_rule('IdentityIndiscernability')
         rule.example()
         assert rule.tableau.branch_count == 1
 
     def test_rule_IdentityIndiscernability_not_applies(self):
-        proof = empty_proof()
-        branch = proof.branch()
-        branch.add({'sentence': self.p('Imm'), 'world': 0})
-        branch.add({'sentence': self.p('Fs'), 'world': 0})
-        rule = self.logic.TableauxRules.IdentityIndiscernability(proof)
-        res = rule.get_target(branch)
-        assert not res
-
-    def test_rule_Universal_should_make_new_constant_with_one_there(self):
-        # see commit 8889b92 for bug fix
-        s1, s2, s3 = self.pp('VxUFxSyGy', 'b', 'NFm')
-        proof = self.tab(s2, s1, is_build = False)
-        univ = proof.get_rule('Universal')
-        b1 = proof.get_branch_at(0)
-
-        ap1 = proof.step()
-        assert ap1['rule'].name == 'Universal'
-        ap2 = proof.step()
-        assert ap2['rule'].name == 'Conditional'
-        assert b1.has({'sentence': s3, 'world': 0})
-
-        # we don't apply now
-        assert not univ.get_target(b1)
-        # do some steps, but NOT on our b1
-        for i in range(10):
-            opens = {b for b in proof.open_branches() if b != b1}
-            for b in opens:
-                res = proof._Tableau__get_branch_application(b)
-                if res:
-                    rule, target = res
-                    proof._Tableau__do_application(rule, target, StopWatch())
-                    break
-        # we shouldn't apply now
-        target = univ.get_target(b1)
-        assert not target , target['sentence']
+        tab = self.tab()
+        b = tab.branch().update((
+            {'sentence': self.p('Imm'), 'world': 0},
+            {'sentence': self.p('Fs'), 'world': 0},
+        ))
+        assert not tab.get_rule('IdentityIndiscernability').get_target(b)
 
     def test_model_branch_proof_deny_antec(self):
         proof = self.tab('Denying the Antecedent')
@@ -1860,7 +1848,7 @@ class TestK(LogicTester):
 
     def test_model_get_data_with_access_has_2_frames(self):
         model = self.logic.Model()
-        model.set_literal_value(parse('a'), 'T', world=0)
+        model.set_literal_value(self.p('a'), 'T', world=0)
         model.add_access(0, 1)
         model.finish()
         data = model.get_data()
@@ -1868,8 +1856,8 @@ class TestK(LogicTester):
 
     def test_frame_difference_atomic_keys_diff(self):
         model = self.logic.Model()
-        model.set_literal_value(parse('a'), 'T', world=0)
-        model.set_literal_value(parse('b'), 'T', world=1)
+        model.set_literal_value(self.p('a'), 'T', world=0)
+        model.set_literal_value(self.p('b'), 'T', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert not frame_a.is_equivalent_to(frame_b)
@@ -1877,8 +1865,9 @@ class TestK(LogicTester):
 
     def test_frame_difference_atomic_values_diff(self):
         model = self.logic.Model()
-        model.set_literal_value(parse('a'), 'T', world=0)
-        model.set_literal_value(parse('a'), 'F', world=1)
+        s1 = self.p('a')
+        model.set_literal_value(s1, 'T', world=0)
+        model.set_literal_value(s1, 'F', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert not frame_a.is_equivalent_to(frame_b)
@@ -1886,8 +1875,9 @@ class TestK(LogicTester):
 
     def test_frame_difference_atomic_values_equiv(self):
         model = self.logic.Model()
-        model.set_literal_value(parse('a'), 'T', world=0)
-        model.set_literal_value(parse('a'), 'T', world=1)
+        s1 = self.p('a')
+        model.set_literal_value(s1, 'T', world=0)
+        model.set_literal_value(s1, 'T', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert frame_a.is_equivalent_to(frame_b)
@@ -1895,17 +1885,18 @@ class TestK(LogicTester):
 
     def test_frame_difference_opaque_keys_diff(self):
         model = self.logic.Model()
-        model.set_opaque_value(parse('Ma'), 'T', world=0)
-        model.set_opaque_value(parse('Mb'), 'T', world=1)
+        model.set_opaque_value(self.p('Ma'), 'T', world=0)
+        model.set_opaque_value(self.p('Mb'), 'T', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert not frame_a.is_equivalent_to(frame_b)
         assert not frame_b.is_equivalent_to(frame_a)
 
     def test_frame_difference_opaque_values_diff(self):
+        s1 = self.p('Ma')
         model = self.logic.Model()
-        model.set_opaque_value(parse('Ma'), 'T', world=0)
-        model.set_opaque_value(parse('Ma'), 'F', world=1)
+        model.set_opaque_value(s1, 'T', world=0)
+        model.set_opaque_value(s1, 'F', world=1)
         frame_a = model.world_frame(0)
         frame_b = model.world_frame(1)
         assert not frame_a.is_equivalent_to(frame_b)
@@ -1921,11 +1912,8 @@ class TestK(LogicTester):
         assert frame_b.is_equivalent_to(frame_a)
 
     def test_frame_difference_extension_keys_diff(self):
-        vocab = Vocabulary()
-        vocab.add(self.vocab.get((0, 0)))
-        vocab.declare(1, 0, 2)
-        s1 = self.p('Fm', vocab=vocab)
-        s2 = self.p('Gmn', vocab=vocab)
+        vocab = Vocabulary((0, 0, 1), (1, 0, 2))
+        s1, s2 = self.pp('Fm', 'Gmn', vocab)
         model = self.logic.Model()
         model.set_predicated_value(s1, 'T', world=0)
         model.set_predicated_value(s2, 'T', world=1)
@@ -2202,9 +2190,10 @@ class TestS5(LogicTester):
         self.invalid_tab('b', 'LVxSyUFxLMGy', max_steps = 200)
 
 class MtrTestRule(FilterNodeRule):
-    def __init__(self, *args, **opts):
-        super().__init__(*args, **opts)
-        self.add_helper('mtr', MaxConstantsTracker)
+    Helpers = (
+        *FilterNodeRule.Helpers,
+        ('mtr', MaxConstantsTracker),
+    )
 
 class TestMaxConstantsTracker(LogicTester):
 

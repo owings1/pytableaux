@@ -32,7 +32,7 @@ from proof.helpers import MaxWorldsTracker
 
 from . import k, t, s4
 
-
+# TODO:
 # Some problematic arguments for S5:
 #
 #   VxLUFxMSyLGy |- b       or   ∀x◻(Fx → ◇∃y◻Gy) |- B  (also bad for S4)
@@ -75,14 +75,20 @@ class TableauxRules(object):
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
         """
+        Helpers = (
+            *PotentialNodeRule.Helpers,
+            ('max_worlds_tracker', MaxWorldsTracker),
+        )
+        Timers = (
+            *PotentialNodeRule.Timers,
+            'is_potential_node',
+        )
         modal = True
         ticked = None
 
         def __init__(self, *args, **opts):
             super().__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
-            self.add_timer('is_potential_node')
-            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
 
         # rule implementation
 
@@ -96,7 +102,7 @@ class TableauxRules(object):
             return ret
 
         def get_target_for_node(self, node, branch):
-            if not self._should_apply(branch):
+            if not self.__should_apply(branch):
                 return
             if not branch.has({'world1': node.props['world2'], 'world2': node.props['world1']}):
                 return {
@@ -110,12 +116,10 @@ class TableauxRules(object):
                 'world2': target['world2'],
             })
 
-        def example_node(self, branch):
-            return {'world1': 0, 'world2': 1}
+        def example_nodes(self, branch = None):
+            return ({'world1': 0, 'world2': 1},)
 
-        # private util
-
-        def _should_apply(self, branch):
+        def __should_apply(self, branch):
             # why apply when necessity will not apply
             return not self.max_worlds_tracker.max_worlds_reached(branch)
 

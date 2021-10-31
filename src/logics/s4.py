@@ -70,12 +70,12 @@ class TableauxRules(object):
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
         appear on *b*, then add *wRw''* to *b*.
         """
+        Helpers = (
+            *PotentialNodeRule.Helpers,
+            ('max_worlds_tracker', MaxWorldsTracker),
+            ('visibles'          , VisibleWorldsIndex),
+        )
         modal = True
-
-        def __init__(self, *args, **opts):
-            super().__init__(*args, **opts)
-            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
-            self.add_helper('visibles', VisibleWorldsIndex(self))
 
         # rule implmentation
 
@@ -83,7 +83,7 @@ class TableauxRules(object):
             return node.has('world1', 'world2')
 
         def get_targets_for_node(self, node, branch):
-            if not self._should_apply(branch):
+            if not self.__should_apply(branch):
                 return
             w1 = node.props['world1']
             w2 = node.props['world2']
@@ -110,10 +110,8 @@ class TableauxRules(object):
                 'world2': target['world2'],
             })
 
-        def example_nodes(self, branch):
-            w1 = branch.new_world()
-            w2 = w1 + 1
-            w3 = w2 + 1
+        def example_nodes(self, branch = None):
+            w1, w2, w3 = range(3)
             return [
                 {'world1': w1, 'world2': w2},
                 {'world1': w2, 'world2': w3},
@@ -121,7 +119,7 @@ class TableauxRules(object):
 
         # private util
 
-        def _should_apply(self, branch):
+        def __should_apply(self, branch):
             return not self.max_worlds_tracker.max_worlds_reached(branch)
 
     closure_rules = list(k.TableauxRules.closure_rules)

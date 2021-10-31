@@ -76,12 +76,12 @@ class TableauxRules:
         no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
+        Helpers = (
+            *PotentialNodeRule.Helpers,
+            ('max_worlds_tracker', MaxWorldsTracker),
+            ('unserial_tracker'  , UnserialWorldsTracker),
+        )
         modal = True
-
-        def __init__(self, *args, **opts):
-            super().__init__(*args, **opts)
-            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
-            self.add_helper('unserial_tracker', UnserialWorldsTracker(self))
 
         # rule implementation
 
@@ -95,7 +95,7 @@ class TableauxRules:
             if not unserials:
                 return
 
-            if not self._should_apply(branch):
+            if not self.__should_apply(branch):
                 return
 
             return [{'world': w} for w in unserials]
@@ -106,12 +106,12 @@ class TableauxRules:
                 'world2': branch.new_world(),
             })
 
-        def example_node(self, branch):
-            return {'sentence': Atomic(0, 0), 'world': branch.new_world()}
+        def example_nodes(self, branch = None):
+            return ({'sentence': Atomic(0, 0), 'world': 0},)
 
         # util
 
-        def _should_apply(self, branch):
+        def __should_apply(self, branch):
 
             # TODO: Shouldn't this check the history only relative to the branch?
             #       Waiting to come up with a test case before fixing it.

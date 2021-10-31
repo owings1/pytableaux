@@ -105,12 +105,12 @@ class TableauxRules(object):
             # Delegate to tracker
             return self.tracker.cached_target(branch)
 
-        def example_nodes(self, branch):
+        def example_nodes(self, branch = None):
             a = Atomic(0, 0)
-            return [
+            return (
                 {'sentence': a         , 'designated': False},
                 {'sentence': a.negate(), 'designated': False},
-            ]
+            )
 
         # private util
 

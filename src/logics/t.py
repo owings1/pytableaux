@@ -66,13 +66,19 @@ class TableauxRules(object):
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
+        Helpers = (
+            *PotentialNodeRule.Helpers,
+            ('max_worlds_tracker', MaxWorldsTracker),
+        )
+        Timers = (
+            *PotentialNodeRule.Timers,
+            'is_potential_node',
+        )
         modal = True
 
         def __init__(self, *args, **opts):
             super().__init__(*args, **opts)
             self.opts['is_rank_optim'] = False
-            self.add_timer('is_potential_node')
-            self.add_helper('max_worlds_tracker', MaxWorldsTracker(self))
 
         # rule implementation
 
@@ -87,7 +93,7 @@ class TableauxRules(object):
 
         def get_target_for_node(self, node, branch):
             # why apply when necessity will not apply
-            if not self._should_apply(branch):
+            if not self.__should_apply(branch):
                 return
             for world in node.worlds():
                 if not branch.has_access(world, world):
@@ -97,12 +103,12 @@ class TableauxRules(object):
         def apply_to_node_target(self, node, branch, target):
             branch.add({'world1': target['world'], 'world2': target['world']})
 
-        def example_node(self, branch):
-            return {'sentence': Atomic(0, 0), 'world': branch.new_world()}
+        def example_nodes(self, branch = None):
+            return ({'sentence': Atomic(0, 0), 'world': 0},)
 
         # private util
 
-        def _should_apply(self, branch):
+        def __should_apply(self, branch):
             # why apply when necessity will not apply
             return not self.max_worlds_tracker.max_worlds_exceeded(branch)
 

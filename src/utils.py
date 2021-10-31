@@ -176,6 +176,11 @@ def isrule(obj):
     cache.add(cls)
     return True
 
+def safeprop(self, name, value = None):
+    if hasattr(self, name):
+        raise KeyError("Property '{}' already exists".format(name))
+    setattr(self, name, value)
+
 def sortedbyval(map):
     return list(it[1] for it in sorted((v, k) for k, v in map.items()))
 

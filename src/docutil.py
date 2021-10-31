@@ -37,9 +37,10 @@ import examples
 from lexicals import list_operators, operarity, create_lexwriter, is_operator, \
     Constant, Variable, RenderSet, get_system_predicate
 from parsers import create_parser, parse_argument, CharTable
-from proof.tableaux import Tableau, TableauxSystem as TabSys
+from proof.tableaux import Tableau, TableauxSystem as TabSys, Node
 from proof.writers import create_tabwriter
 from proof.rules import Rule, ClosureRule, PotentialNodeRule, FilterNodeRule
+from proof.helpers import EllipsisExampleHelper
 from models import truth_table
 
 defaults = {
@@ -213,7 +214,7 @@ class Helper(object):
         Retrieve docstring lines for replacing //ruledoc//... references.
         Lines are returned properly indented if indent is specified.
         """
-        lgc = get_logic(lgc or get_obj_logic(rule))
+        lgc = get_logic(lgc or rule)
         found = None
         for name, member in inspect.getmembers(lgc.TableauxRules):
             if name == rule or member == rule:
@@ -231,7 +232,7 @@ class Helper(object):
         Generate entire doc block for an inherited rule.
         """
         prule = getmro(rule)[1]
-        plgc = get_obj_logic(prule)
+        plgc = get_logic(prule)
         lines = [
             '*This rule is the same as* :class:`{0} {1}'.format(plgc.name, prule.__name__),
             '<{0}.{1}>`'.format(prule.__module__, prule.__qualname__),
@@ -453,11 +454,12 @@ class Helper(object):
         """
         Returns rendered tableau HTML with argument and build_trunk example.
         """
-        lgc = get_obj_logic(lgc)
+        lgc = get_logic(lgc)
         arg = parse_argument('b', ['a1', 'a2'], notn='polish')
         lw = self.lwtrunk
         pw = self.pwtrunk
-        proof = Tableau(lgc).add_rule_group([TrunkEllipsisRule])
+        proof = Tableau(lgc)
+        proof.get_rule_at(0, 0).add_helper(EllipsisExampleHelper)
         proof.argument = arg
         proof.finish()
         return cat(
@@ -472,22 +474,14 @@ class Helper(object):
         """
         Returns rendered tableau HTML for a rule's example application.
         """
-        lgc = get_logic(lgc or get_obj_logic(rule))
+        lgc = get_logic(lgc or rule)
         proof = Tableau(lgc)
         rule = proof.get_rule(rule)
-        isclosure = isinstance(rule, ClosureRule)
-        if isclosure:
-            pw = self.pwclosure
-            proof.add_rule_group([ClosureEllipsisRule(proof, rule)])
-        else:
-            pw = self.pwrule
-        rule.example()
-        if not isclosure:
-            proof.branches().__next__().add({'ellipsis': True})
-        target = rule.get_target(proof.branches().__next__())
-        rule.apply(target)
-        proof.finish()
-        return pw.write(proof)
+        rule.add_helper(EllipsisExampleHelper)
+        pw = self.pwclosure if rule.is_closure else self.pwrule
+        b = proof.branch().update(rule.example_nodes())
+        rule.apply(rule.get_target(b))
+        return pw.write(proof.finish())
 
     def html_truth_table(self, lgc, operator, classes=[]):
         """
@@ -751,73 +745,6 @@ class Helper(object):
         return False
 
 # Misc util
-class TrunkEllipsisRule(Rule):
-
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-        self.__n = False
-        self.tableau.add_listener(Events.AFTER_NODE_ADD, self.__after_node_add)
-        self.tableau.add_listener(Events.BEFORE_TRUNK_BUILD, self.__before_trunk_build)
-
-    def get_candidate_targets(self, branch):
-        return None
-
-    def __before_trunk_build(self, *_):
-        if not self.__n:
-            self.__n = 1
-
-    def __after_node_add(self, node, branch):
-        # super().register_node(node, branch)
-        if node.has('ellipsis'):
-            return
-        if self.__n == 1:
-            self.__n = 2
-            branch.add({'ellipsis': True})
-
-class ClosureEllipsisRule(Rule):
-
-    def __init__(self, tableau, target_rule, **opts):
-        super().__init__(tableau, **opts)
-        self.tableau.add_listener(Events.AFTER_BRANCH_ADD, self.__after_branch_add)
-        self.tableau.add_listener(Events.AFTER_NODE_ADD, self.__after_node_add)
-        self.__applies = False
-        testproof = Tableau(tableau.logic)
-        rule = testproof.get_rule(target_rule)
-        if not isinstance(rule, ClosureRule):
-            return
-        rule.example()
-        if testproof.branch_count == 1:
-            b, = testproof.branches()
-            if len(b.nodes) > 0:
-                self.__applies = True
-                self.__nodecount = len(b.nodes)
-                self.__n = 0
-
-    def get_candidate_targets(self, branch):
-        return None
-
-    def __after_branch_add(self, branch):
-        # super().register_branch(branch, parent)
-        if not self.__applies:
-            return
-        if self.__nodecount != 1:
-            return
-        branch.add({'ellipsis': True})
-        
-    def __after_node_add(self, node, branch):
-        # super().register_node(node, branch)
-        if not self.__applies:
-            return
-        if node.has('ellipsis'):
-            return
-        if node.is_closure():
-            return
-        if self.__nodecount == 1:
-            return
-        self.__n += 1
-        if self.__n < self.__nodecount:
-            branch.add({'ellipsis': True})
-
 
 def rawblock(lines, indent=None):
     """
@@ -853,23 +780,6 @@ def methmro(meth):
         return [m for m in meths if m]
     except:
         return []
-
-get_obj_logic = get_logic
-# def get_obj_logic(obj):
-#     try:
-#         return get_logic(obj)
-#     except:
-#         pass
-#     if hasattr(obj, '__module__'):
-#         # class or instance, its module is likely a logic
-#         return get_logic(obj.__module__)
-#     # Assume it's a string
-#     parts = obj.split('.')
-#     if parts[0] == 'logics':
-#         # logics.fde, etc.
-#         return get_logic('.'.join(parts[0:2]))
-#     # Last resort
-#     return get_logic(parts[0])
 
 def isnodoc(obj):
     return not bool(getattr(obj, '__doc__', False))
@@ -928,14 +838,14 @@ def rulegrouped(rule, lgc):
 
 def selfgrouped(rule):
     try:
-        return rulegrouped(rule, get_obj_logic(rule))
+        return rulegrouped(rule, get_logic(rule))
     except:
         return False
 
 def parentgrouped(rule):
     try:
         parent = getmro(rule)[1]
-        plgc = get_obj_logic(parent)
+        plgc = get_logic(parent)
         return rulegrouped(parent, plgc)
     except:
         return False
@@ -986,7 +896,7 @@ class UnknownLexTypeError(Exception):
 #     raise NotImplementedError()
 #     if what == 'class' and name.startswith('logics.') and '.TableauxRules.' in name:
 #         # check if it is in use in rule groups
-#         lgc = get_obj_logic(obj)
+#         lgc = get_logic(obj)
 #         isfound = False
 #         if obj in lgc.TableauxRules.closure_rules:
 #             print('CLUSRE', name, lgc.name)
