@@ -21,7 +21,7 @@ from pytest import raises
 from errors import *
 from utils import StopWatch, get_logic
 from lexicals import Vocabulary, Atomic, Constant, Predicate, Predicated, Quantified, \
-    Operated, Variable, get_system_predicate
+    Operated, Variable, get_system_predicate, Argument
 from proof.tableaux import Tableau, Branch, Node
 from proof.rules import Rule, FilterNodeRule
 from proof.helpers import MaxConstantsTracker
@@ -29,15 +29,8 @@ from parsers import parse, parse_argument
 from models import truth_table
 import examples
 
-def example_proof(logic, name, is_build=True, is_models=True):
-    arg = examples.argument(name)
-    proof = Tableau(logic, arg)
-    if is_build:
-        proof.build(is_build_models=is_models)
-    return proof
-
 def empty_proof():
-    return Tableau(None, None)
+    return Tableau(None)
 
 class LogicTester(object):
 
@@ -80,8 +73,11 @@ class LogicTester(object):
             # default
             kw['is_build_models'] = True
         is_build = kw.pop('is_build') if 'is_build' in kw else None
-        if len(args) == 1 and args[0] in examples.args:
-            arg = examples.argument(args[0])
+        val = args[0] if len(args) == 1 else None
+        if val in examples.args:
+            arg = examples.argument(val)
+        elif isinstance(val, Argument):
+            arg = val
         elif args:
             arg = self.parg(*args, **kw)
         else:
@@ -92,179 +88,181 @@ class LogicTester(object):
         if is_build:
             tab.build()
         return tab
-    example_proof = tab
 
     def valid_tab(self, *args, **kw):
-        kw['is_build'] = True
         tab = self.tab(*args, **kw)
         assert tab.valid
         return tab
-    assert_axiom = assert_valid_eg = assert_valid = valid_tab
 
     def invalid_tab(self, *args, **kw):
-        kw['is_build'] = True
         tab = self.tab(*args, **kw)
         assert tab.invalid
         return tab
-    assert_invalid_eg = assert_invalid = invalid_tab
+
+    def acmm(self, *args, **kw):
+        kw['is_build_models'] = True
+        tab = self.invalid_tab(*args, **kw)
+        arg, models = tab.argument, list(tab.models)
+        assert bool(models)
+        for m in models:
+            assert m.is_countermodel_to(arg)
+        return (arg, models)
+
+    def cmm(self, *args, **kw):
+        return self.acmm(*args, **kw)[1]
+
+    def cm(self, *args, **kw):
+        return self.acmm(*args, **kw)[1][0]
+
+    @property
+    def Model(self):
+        return self.logic.Model
 
 class TestFDE(LogicTester):
 
     logic = get_logic('FDE')
 
-    def test_DesignationClosure_example(self):
-        # proof = Tableau(self.logic)
-        proof = self.tab()
-        proof.get_rule('DesignationClosure').example()
-        assert proof.open_branch_count == 1
-        proof.build()
-        assert proof.branch_count == 1
-        assert proof.open_branch_count == 0
-
-    def test_ConjunctionNegatedDesignated_example_node(self):
-        # proof = Tableau(self.logic)
-        proof = self.tab()
-        rule = proof.get_rule('ConjunctionNegatedDesignated')
-        props = rule.example_node(proof.branch())
-        assert props['sentence'].operator == 'Negation'
-        assert props['sentence'].operand.operator == 'Conjunction'
-        assert props['designated']
-
-    def test_ExistentialUndesignated_example(self):
-        # proof = Tableau(self.logic)
-        proof = self.tab()
-        rule = proof.get_rule('ExistentialUndesignated')
-        rule.example()
-        s = examples.quantified('Existential')
-        branch = proof.get_branch_at(0)
-        assert branch.has({'sentence': s, 'designated': False})
-
     def test_valid_addition(self):
-        assert self.tab('Addition').valid
+        self.valid_tab('Addition')
 
     def test_valid_univ_from_neg_exist_1(self):
-        self.assert_valid_eg('Quantifier Interdefinability 4')
+        self.valid_tab('Quantifier Interdefinability 4')
 
     def test_valid_neg_assert_a_implies_a(self):
-        self.assert_valid('Na', 'NTa')
+        self.valid_tab('Na', 'NTa')
 
     def test_valid_demorgan_1(self):
-        self.assert_valid_eg('DeMorgan 1')
+        self.valid_tab('DeMorgan 1')
 
     def test_valid_demorgan_2(self):
-        self.assert_valid_eg('DeMorgan 2')
+        self.valid_tab('DeMorgan 2')
 
     def test_valid_demorgan_3(self):
-        self.assert_valid_eg('DeMorgan 3')
+        self.valid_tab('DeMorgan 3')
 
     def test_valid_demorgan_4(self):
-        self.assert_valid_eg('DeMorgan 4')
+        self.valid_tab('DeMorgan 4')
 
     def test_invalid_lem(self):
-        self.assert_invalid_eg('Law of Excluded Middle')
+        self.invalid_tab('Law of Excluded Middle')
+
+    def test_invalid_lnc(self):
+        self.invalid_tab('Law of Non-contradiction')
 
     def test_invalid_mat_bicond_elim_3(self):
-        self.assert_invalid_eg('Material Biconditional Elimination 3')
+        self.invalid_tab('Material Biconditional Elimination 3')
 
-    def test_invalid_lem_model_is_countermodel_to(self):
-        proof = self.tab('Law of Excluded Middle')
-        branch, = list(proof.open_branches())
-        assert branch.model.is_countermodel_to(proof.argument)
+    def test_invalid_univ_from_exist(self):
+        self.invalid_tab('Universal from Existential')
 
-    def test_a_thus_b_is_countermodel_to_false(self):
+    def test_rule_DesignationClosure_example(self):
+        tab = self.tab()
+        tab.get_rule('DesignationClosure').example()
+        assert tab.open_branch_count == 1
+        tab.build()
+        assert tab.branch_count == 1
+        assert tab.open_branch_count == 0
+
+    def test_rule_ConjunctionNegatedDesignated_example_node(self):
+        tab = self.tab()
+        props = tab.get_rule('ConjunctionNegatedDesignated').example_node(tab.branch())
+        s = props['sentence']
+        assert s.is_negated
+        assert s.operand.operator == 'Conjunction'
+        assert props['designated']
+
+    def test_rule_ExistentialUndesignated_example(self):
+        tab = self.tab()
+        tab.get_rule('ExistentialUndesignated').example()
+        s = examples.quantified('Existential')
+        b = tab.get_branch_at(0)
+        assert b.has({'sentence': s, 'designated': False})
+
+    def test_model_lem_countermodel(self):
+        self.cm('Law of Excluded Middle')
+
+    def test_model_a_thus_b_is_countermodel_to_false(self):
         arg = self.parg('b', 'a')
         model = self.logic.Model()
         model.set_literal_value(arg.premises[0], 'F')
         model.set_literal_value(arg.conclusion, 'F')
         assert not model.is_countermodel_to(arg)
 
-    def test_invalid_univ_from_exist(self):
-        self.assert_invalid_eg('Universal from Existential')
-
-    def test_invalid_lnc_build_model(self):
-        proof = self.tab('Law of Non-contradiction')
-        model = proof.get_branch_at(0).model
-        assert proof.invalid
-        assert model.value_of(parse('a')) == 'B'
+    def test_model_lnc_value_of_a(self):
+        m = self.cm('Law of Non-contradiction')
+        s1 = self.p('a')
+        assert m.value_of(s1) == 'B'
 
     def test_model_b_value_atomic_branch(self):
-        branch = Tableau(self.logic).branch()
-        s = parse('a')
-        branch.update([
-            {'sentence': s         , 'designated': True},
-            {'sentence': s.negate(), 'designated': True},
-        ])
-        model = self.logic.Model().read_branch(branch)
-        assert model.value_of(s) == 'B'
+        s1 = self.p('a')
+        b = Branch().update((
+            {'sentence': s1         , 'designated': True},
+            {'sentence': s1.negate(), 'designated': True},
+        ))
+        m = self.Model().read_branch(b)
+        assert m.value_of(s1) == 'B'
 
     def test_model_univ_t_value_branch(self):
-        branch = Tableau(self.logic).branch()
-        s, s1 = self.pp('Fm', 'VxFx')
-        branch.add({'sentence': s, 'designated': True})
-        model = self.logic.Model().read_branch(branch)
-        assert model.value_of(s1) == 'T'
+        s1, s2 = self.pp('Fm', 'VxFx')
+        b = Branch().add({'sentence': s1, 'designated': True})
+        m = self.Model().read_branch(b)
+        assert m.value_of(s2) == 'T'
 
     def test_model_exist_b_value_branch(self):
-        branch = Tableau(self.logic).branch()
-        s, s1, s2 = self.pp('Fm', 'Fn', 'SxFx')
-        branch.update([
-            {'sentence': s          , 'designated': True},
-            {'sentence': s.negate() , 'designated': True},
-            {'sentence': s1         , 'designated': False},
-            {'sentence': s1.negate(), 'designated': False},
-        ])
-        model = self.logic.Model().read_branch(branch)
-        assert model.value_of(s2) == 'B'
+        s1, s2, s3 = self.pp('Fm', 'Fn', 'SxFx')
+        b = Branch().update((
+            {'sentence': s1          , 'designated': True},
+            {'sentence': s1.negate() , 'designated': True},
+            {'sentence': s2          , 'designated': False},
+            {'sentence': s2.negate() , 'designated': False},
+        ))
+        m = self.Model().read_branch(b)
+        assert m.value_of(s3) == 'B'
 
     def test_model_necessity_opaque_des_value_branch(self):
-        branch = Tableau(self.logic).branch()
-        s = parse('La')
-        branch.add({'sentence': s, 'designated': True})
-        model = self.logic.Model().read_branch(branch)
-        assert model.value_of(s) in set(['B', 'T'])
+        s1 = self.p('La')
+        b = Branch().add({'sentence': s1, 'designated': True})
+        m = self.Model().read_branch(b)
+        assert m.value_of(s1) in ('B', 'T')
 
     def test_model_necessity_opaque_b_value_branch(self):
-        branch = Tableau(self.logic).branch()
-        s = parse('La')
-        branch.update([
-            {'sentence': s         , 'designated': True},
-            {'sentence': s.negate(), 'designated': True}
-        ])
-        model = self.logic.Model().read_branch(branch)
-        assert model.value_of(s) == 'B'
+        s1 = self.p('La')
+        b = Branch().update((
+            {'sentence': s1         , 'designated': True},
+            {'sentence': s1.negate(), 'designated': True},
+        ))
+        m = self.Model().read_branch(b)
+        assert m.value_of(s1) == 'B'
 
     def test_model_atomic_undes_value_branch(self):
-        branch = Tableau(self.logic).branch()
-        s = parse('a')
-        branch.update([
-            {'sentence': s, 'designated': False}
-        ])
-        model = self.logic.Model().read_branch(branch)
-        assert model.value_of(s) in set(['F', 'N'])
+        s1 = self.p('a')
+        b = Branch().add({'sentence': s1, 'designated': False})
+        m = self.Model().read_branch(b)
+        assert m.value_of(s1) in ('F', 'N')
 
     def test_model_atomic_t_value_branch(self):
-        branch = Tableau(self.logic).branch()
-        s = parse('a')
+        branch = Branch()
+        s = self.p('a')
         branch.update([
             {'sentence': s         , 'designated': True},
             {'sentence': s.negate(), 'designated': False},
         ])
-        model = self.logic.Model().read_branch(branch)
+        model = self.Model().read_branch(branch)
         assert model.value_of(s) == 'T'
 
     def test_model_atomic_f_value_branch(self):
-        branch = Tableau(self.logic).branch()
-        s = parse('a')
+        branch = Branch()
+        s = self.p('a')
         branch.update([
             {'sentence': s         , 'designated': False},
             {'sentence': s.negate(), 'designated': True},
         ])
-        model = self.logic.Model().read_branch(branch)
+        model = self.Model().read_branch(branch)
         assert model.value_of(s) == 'F'
 
     def test_model_get_data_various(self):
-        s1 = parse('a')
-        s2 = parse('Imn')
+        s1 = self.p('a')
+        s2 = self.p('Imn')
         model = self.logic.Model()
         model.set_literal_value(s1, 'B')
         model.set_literal_value(s2, 'F')
@@ -272,7 +270,7 @@ class TestFDE(LogicTester):
         assert 'Atomics' in res
 
     def test_model_not_impl_various(self):
-        s1 = parse('Aab')
+        s1 = self.p('Aab')
         model = self.logic.Model()
         with raises(NotImplementedError):
             model.set_literal_value(s1, 'T')
@@ -282,29 +280,29 @@ class TestFDE(LogicTester):
             model.truth_function('Foomunction', 'F')
 
     def test_model_value_of_atomic_unassigned(self):
-        s = parse('a')
+        s = self.p('a')
         model = self.logic.Model()
         res = model.value_of(s)
         assert res == model.unassigned_value
 
     def test_model_value_of_opaque_unassigned(self):
-        s = parse('La')
+        s = self.p('La')
         model = self.logic.Model()
         res = model.value_of(s)
         assert res == model.unassigned_value
 
     def test_model_value_error_various(self):
-        s1 = parse('La')
+        s1 = self.p('La')
+        s2 = self.p('a')
+        s3 = self.p('Imn')
         model = self.logic.Model()
         model.set_opaque_value(s1, 'T')
         with raises(ModelValueError):
             model.set_opaque_value(s1, 'B')
-        s2 = parse('a')
         model = self.logic.Model()
         model.set_atomic_value(s2, 'T')
         with raises(ModelValueError):
             model.set_atomic_value(s2, 'B')
-        s3 = parse('Imn')
         model = self.logic.Model()
         model.set_predicated_value(s3, 'T')
         with raises(ModelValueError):
@@ -422,22 +420,22 @@ class TestK3(LogicTester):
         assert proof.open_branch_count == 0
         
     def test_valid_bicond_elim_1(self):
-        self.assert_valid_eg('Biconditional Elimination 1')
+        self.valid_tab('Biconditional Elimination 1')
 
     def test_invalid_lem(self):
-        self.assert_invalid_eg('Law of Excluded Middle')
+        self.invalid_tab('Law of Excluded Middle')
 
     def test_valid_demorgan_1(self):
-        self.assert_valid_eg('DeMorgan 1')
+        self.valid_tab('DeMorgan 1')
 
     def test_valid_demorgan_2(self):
-        self.assert_valid_eg('DeMorgan 2')
+        self.valid_tab('DeMorgan 2')
 
     def test_valid_demorgan_3(self):
-        self.assert_valid_eg('DeMorgan 3')
+        self.valid_tab('DeMorgan 3')
 
     def test_valid_demorgan_4(self):
-        self.assert_valid_eg('DeMorgan 4')
+        self.valid_tab('DeMorgan 4')
 
 class TestK3W(LogicTester):
 
@@ -492,31 +490,31 @@ class TestK3W(LogicTester):
         assert proof.history[0]['rule'] == rule
 
     def test_valid_cond_contraction(self):
-        self.assert_valid_eg('Conditional Contraction')
+        self.valid_tab('Conditional Contraction')
 
     def test_invalid_addition(self):
-        self.assert_invalid_eg('Addition')
+        self.invalid_tab('Addition')
 
     def test_invalid_prior_rule_defect(self):
-        self.assert_invalid('ANAabNa', 'Na')
+        self.invalid_tab('ANAabNa', 'Na')
 
     def test_invalid_asserted_addition(self):
-        self.assert_invalid('AaTb', 'a')
+        self.invalid_tab('AaTb', 'a')
 
     def test_valid_demorgan_1(self):
-        self.assert_valid_eg('DeMorgan 1')
+        self.valid_tab('DeMorgan 1')
 
     def test_valid_demorgan_2(self):
-        self.assert_valid_eg('DeMorgan 2')
+        self.valid_tab('DeMorgan 2')
 
     def test_valid_demorgan_3(self):
-        self.assert_valid_eg('DeMorgan 3')
+        self.valid_tab('DeMorgan 3')
 
     def test_valid_demorgan_4(self):
-        self.assert_valid_eg('DeMorgan 4')
+        self.valid_tab('DeMorgan 4')
 
     def test_invalid_cond_lem(self):
-        self.assert_invalid('AUabNUab')
+        self.invalid_tab('AUabNUab')
 
     def test_optimize1(self):
         proof = Tableau(self.logic)
@@ -544,47 +542,36 @@ class TestK3WQ(LogicTester):
     logic = get_logic('K3WQ')
 
     def test_valid_quantifier_interdefinability_1(self):
-        self.assert_valid_eg('Quantifier Interdefinability 1')
+        self.valid_tab('Quantifier Interdefinability 1')
 
     def test_valid_quantifier_interdefinability_2(self):
-        self.assert_valid_eg('Quantifier Interdefinability 2')
+        self.valid_tab('Quantifier Interdefinability 2')
         
     def test_valid_quantifier_interdefinability_3(self):
-        self.assert_valid_eg('Quantifier Interdefinability 3')
+        self.valid_tab('Quantifier Interdefinability 3')
 
     def test_valid_quantifier_interdefinability_4(self):
-        self.assert_valid_eg('Quantifier Interdefinability 4')
+        self.valid_tab('Quantifier Interdefinability 4')
 
     def test_valid_existential_to_if_a_then_a(self):
-        self.assert_valid('CFmFm', 'SxFx')
-        # arg = parse_argument('CFmFm', ['SxFx'], vocab=self.vocab)
-        # proof = Tableau(self.logic, arg).build()
-        # assert proof.valid
+        self.valid_tab('CFmFm', 'SxFx')
 
-    def test_invalid_existential_from_predicate_sentence_countermodel(self):
-        arg = parse_argument('SxFx', ['Fm'], vocab=self.vocab)
-        proof = Tableau(self.logic, arg)
-        proof.build(is_build_models=True)
-        assert proof.invalid
-        proof2 = self.assert_invalid('SxFx', 'Fm')
-        
-        # arg = proof.argument
-        branch = list(proof.open_branches())[0]
-        model = branch.model
-        assert model.value_of(self.p('Fn')) == 'N'
-        assert model.value_of(self.p('Fm')) == 'T'
-        assert model.value_of(self.p('SxFx')) in {'F', 'N'}
-        assert model.is_countermodel_to(arg)
+    def test_model_existential_from_predicate_sentence_countermodel(self):
+        s1, s2, s3 = self.pp('SxFx', 'Fm', 'Fn')
+        arg = self.parg(s1, s2)
+        m, = self.tab(arg, is_build_models = True).models
+        assert m.value_of(s1) in {'F', 'N'}
+        assert m.value_of(s2) == 'T'
+        assert m.value_of(s3) == 'N'
+        assert m.is_countermodel_to(arg)
 
-    def test_invalid_universal_from_predicate_sentence_countermodel(self):
-        arg = self.parg('VxFx', 'Fm')
-        proof = Tableau(self.logic, arg, is_build_models=True).build()
-        assert proof.invalid
-        branch = list(proof.open_branches())[0]
-        model = branch.model
-        assert model.value_of(self.p('Fm')) == 'T'
-        assert model.value_of(self.p('VxFx')) in {'F', 'N'}
-        assert model.is_countermodel_to(arg)
+    def test_model_universal_from_predicate_sentence_countermodel(self):
+        s1, s2 = self.pp('VxFx', 'Fm')
+        arg = self.parg(s1, s2)
+        m, = self.tab(arg, is_build_models = True).models
+        assert m.value_of(s1) in ('F', 'N')
+        assert m.value_of(s2) == 'T'
+        assert m.is_countermodel_to(arg)
 
 class TestB3E(LogicTester):
 
@@ -609,19 +596,19 @@ class TestB3E(LogicTester):
         assert tbl['outputs'][7] == 'F'
         
     def test_valid_cond_contraction(self):
-        self.assert_valid_eg('Conditional Contraction')
+        self.valid_tab('Conditional Contraction')
 
     def test_valid_bicond_elim_1(self):
-        self.assert_valid_eg('Biconditional Elimination 1')
+        self.valid_tab('Biconditional Elimination 1')
 
     def test_valid_bicond_elim_3(self):
-        self.assert_valid_eg('Biconditional Elimination 3')
+        self.valid_tab('Biconditional Elimination 3')
 
     def test_valid_bicond_intro_1(self):
-        self.assert_valid_eg('Biconditional Introduction 1')
+        self.valid_tab('Biconditional Introduction 1')
 
     def test_invalid_lem(self):
-        self.assert_invalid_eg('Law of Excluded Middle')
+        self.invalid_tab('Law of Excluded Middle')
 
     def test_invalid_prior_rule_defect(self):
         arg = self.parg('ANAabNa', 'Na')
@@ -642,51 +629,48 @@ class TestB3E(LogicTester):
 class TestL3(LogicTester):
 
     logic = get_logic('L3')
+        
+    def test_valid_cond_identity(self):
+        self.valid_tab('Conditional Identity')
+
+    def test_valid_cond_mp(self):
+        self.valid_tab('Conditional Modus Ponens')
+
+    def test_valid_bicond_elim_1(self):
+        self.valid_tab('Biconditional Elimination 1')
+
+    def test_valid_bicond_elim_3(self):
+        self.valid_tab('Biconditional Elimination 3')
+
+    def test_valid_bicond_intro_3(self):
+        self.valid_tab('Biconditional Introduction 3')
+
+    def test_valid_bicond_ident(self):
+        self.valid_tab('Biconditional Identity')
+
+    def test_valid_bicond_from_mat_bicond(self):
+        self.valid_tab('Bab', 'Eab')
+
+    def test_invalid_material_identify(self):
+        self.invalid_tab('Material Identity')
+
+    def test_invalid_cond_contraction(self):
+        self.invalid_tab('Conditional Contraction')
+
+    def test_invalid_cond_pseudo_contraction(self):
+        self.invalid_tab('Conditional Pseudo Contraction')
+
+    def test_invalid_mat_bicon_from_bicond(self):
+        self.invalid_tab('Eab', 'Bab')
+
+    def test_invalid_cond_lem(self):
+        self.invalid_tab('AUabNUab')
 
     def test_truth_table_conditional(self):
         tbl = truth_table(self.logic, 'Conditional')
         assert tbl['outputs'][3] == 'N'
         assert tbl['outputs'][4] == 'T'
         assert tbl['outputs'][6] == 'F'
-        
-    def test_valid_cond_identity(self):
-        self.assert_valid_eg('Conditional Identity')
-
-    def test_valid_cond_mp(self):
-        self.assert_valid_eg('Conditional Modus Ponens')
-
-    def test_valid_bicond_elim_1(self):
-        self.assert_valid_eg('Biconditional Elimination 1')
-
-    def test_valid_bicond_elim_3(self):
-        self.assert_valid_eg('Biconditional Elimination 3')
-
-    def test_valid_bicond_intro_3(self):
-        self.assert_valid_eg('Biconditional Introduction 3')
-
-    def test_valid_bicond_ident(self):
-        self.assert_valid_eg('Biconditional Identity')
-
-    def test_invalid_material_identify(self):
-        self.assert_invalid_eg('Material Identity')
-
-    def test_invalid_cond_contraction(self):
-        self.assert_invalid_eg('Conditional Contraction')
-
-    def test_invalid_cond_pseudo_contraction(self):
-        self.assert_invalid_eg('Conditional Pseudo Contraction')
-
-    def test_valid_bicond_from_mat_bicond(self):
-        arg = self.parg('Bab', 'Eab')
-        assert Tableau(self.logic, arg).build().valid
-
-    def test_invalid_mat_bicon_from_bicond(self):
-        arg = self.parg('Eab', 'Bab')
-        assert Tableau(self.logic, arg).build().invalid
-
-    def test_invalid_cond_lem(self):
-        arg = self.parg('AUabNUab')
-        assert Tableau(self.logic, arg).build().invalid
 
 class TestG3(LogicTester):
 
@@ -1040,135 +1024,133 @@ class TestGO(LogicTester):
         node, = branch.get_nodes()
         assert self.logic.TableauxSystem.branching_complexity(node) == 0
 
-
 class TestMH(LogicTester):
 
     logic = get_logic('MH')
 
-    def test_hmh_ax1(self):
-        self.assert_axiom('UaUba')
+    def test_valid_hmh_ax1(self):
+        self.valid_tab('UaUba')
 
-    def test_hmh_ax2(self):
-        self.assert_axiom('UUaUbcUUabUac')
+    def test_valid_hmh_ax2(self):
+        self.valid_tab('UUaUbcUUabUac')
 
-    def test_hmh_ax3(self):
-        self.assert_axiom('UKaba')
+    def test_valid_hmh_ax3(self):
+        self.valid_tab('UKaba')
 
-    def test_hmh_ax4(self):
-        self.assert_axiom('UKabb')
+    def test_valid_hmh_ax4(self):
+        self.valid_tab('UKabb')
 
-    def test_hmh_ax5(self):
-        self.assert_axiom('UUabUUacUaKbc')
+    def test_valid_hmh_ax5(self):
+        self.valid_tab('UUabUUacUaKbc')
 
-    def test_hmh_ax6(self):
-        self.assert_axiom('UaAab')
+    def test_valid_hmh_ax6(self):
+        self.valid_tab('UaAab')
 
-    def test_hmh_ax7(self):
-        self.assert_axiom('UbAab')
+    def test_valid_hmh_ax7(self):
+        self.valid_tab('UbAab')
 
-    def test_hmh_ax8(self):
-        self.assert_axiom('UUacUUbcUAabc')
+    def test_valid_hmh_ax8(self):
+        self.valid_tab('UUacUUbcUAabc')
 
-    def test_hmh_ax9(self):
-        self.assert_axiom('BNNaa')
+    def test_valid_hmh_ax9(self):
+        self.valid_tab('BNNaa')
 
-    def test_hmh_ax10(self):
-        self.assert_axiom('AAaNaNAaNa')
+    def test_valid_hmh_ax10(self):
+        self.valid_tab('AAaNaNAaNa')
 
-    def test_hmh_ax11(self):
-        self.assert_axiom('AUabNUab')
+    def test_valid_hmh_ax11(self):
+        self.valid_tab('AUabNUab')
 
-    def test_hmh_ax12(self):
-        self.assert_axiom('UAaNaUUabUNbNa')
+    def test_valid_hmh_ax12(self):
+        self.valid_tab('UAaNaUUabUNbNa')
 
-    def test_hmh_ax13(self):
-        self.assert_axiom('BNKabANaNb')
+    def test_valid_hmh_ax13(self):
+        self.valid_tab('BNKabANaNb')
 
-    def test_hmh_ax14(self):
-        self.assert_axiom('BNAabAKNaNbKNAaNaNAbNb')
+    def test_valid_hmh_ax14(self):
+        self.valid_tab('BNAabAKNaNbKNAaNaNAbNb')
 
-    def test_hmh_ax15(self):
-        self.assert_axiom('UANaNAaNaUab')
+    def test_valid_hmh_ax15(self):
+        self.valid_tab('UANaNAaNaUab')
 
-    def test_hmh_ax16(self):
-        self.assert_axiom('UKaANbNAbNbNUab')
+    def test_valid_hmh_ax16(self):
+        self.valid_tab('UKaANbNAbNbNUab')
 
-    def test_mp(self):
-        proof = self.tab('Conditional Modus Ponens')
-        assert proof.valid
+    def test_valid_mp(self):
+        self.valid_tab('Conditional Modus Ponens')
 
-    def test_inden(self):
-        self.assert_axiom('Uaa')
+    def test_valid_inden(self):
+        self.valid_tab('Uaa')
 
-    def test_ifn(self):
-        self.assert_axiom('BNAaNaNANaNNa')
+    def test_valid_ifn(self):
+        self.valid_tab('BNAaNaNANaNNa')
 
-    def test_adj(self):
-        self.assert_valid('Kab', 'a', 'b')
+    def test_valid_adj(self):
+        self.valid_tab('Kab', 'a', 'b')
 
-    def test_p_invalid(self):
-        self.assert_invalid('UNbNa', 'NAaNa', 'Uab')
+    def test_invalid_p(self):
+        self.invalid_tab('UNbNa', 'NAaNa', 'Uab')
 
 class TestNH(LogicTester):
 
     logic = get_logic('NH')
 
-    def test_hnh_ax1(self):
-        self.assert_axiom('UaUba')
+    def test_valid_hnh_ax1(self):
+        self.valid_tab('UaUba')
 
-    def test_hnh_ax2(self):
-        self.assert_axiom('UUaUbcUUabUac')
+    def test_valid_hnh_ax2(self):
+        self.valid_tab('UUaUbcUUabUac')
 
-    def test_hnh_ax3(self):
-        self.assert_axiom('UKaba')
+    def test_valid_hnh_ax3(self):
+        self.valid_tab('UKaba')
 
-    def test_hnh_ax4(self):
-        self.assert_axiom('UKabb')
+    def test_valid_hnh_ax4(self):
+        self.valid_tab('UKabb')
 
-    def test_hnh_ax5(self):
-        self.assert_axiom('UUabUUacUaKbc')
+    def test_valid_hnh_ax5(self):
+        self.valid_tab('UUabUUacUaKbc')
 
-    def test_hnh_ax6(self):
-        self.assert_axiom('UaAab')
+    def test_valid_hnh_ax6(self):
+        self.valid_tab('UaAab')
 
-    def test_hnh_ax7(self):
-        self.assert_axiom('UbAab')
+    def test_valid_hnh_ax7(self):
+        self.valid_tab('UbAab')
 
-    def test_hnh_ax8(self):
-        self.assert_axiom('UUacUUbcUAabc')
+    def test_valid_hnh_ax8(self):
+        self.valid_tab('UUacUUbcUAabc')
 
-    def test_hnh_ax9(self):
-        self.assert_axiom('BNNaa')
+    def test_valid_hnh_ax9(self):
+        self.valid_tab('BNNaa')
 
-    def test_hnh_ax17(self):
-        self.assert_axiom('NKKaNaNKaNa')
+    def test_valid_hnh_ax17(self):
+        self.valid_tab('NKKaNaNKaNa')
 
-    def test_hnh_ax18(self):
-        self.assert_axiom('NKUabNUab')
+    def test_valid_hnh_ax18(self):
+        self.valid_tab('NKUabNUab')
 
-    def test_hnh_ax19(self):
-        self.assert_axiom('UNKaNaUUbaUNaNb')
+    def test_valid_hnh_ax19(self):
+        self.valid_tab('UNKaNaUUbaUNaNb')
 
-    def test_hnh_ax20(self):
-        self.assert_axiom('BKNaNbNAab')
+    def test_valid_hnh_ax20(self):
+        self.valid_tab('BKNaNbNAab')
 
-    def test_hnh_ax21(self):
-        self.assert_axiom('BANaNbANKabKKaNaKbNb')
+    def test_valid_hnh_ax21(self):
+        self.valid_tab('BANaNbANKabKKaNaKbNb')
 
-    def test_hnh_ax22(self):
-        self.assert_axiom('UKNKaNaNaUab')
+    def test_valid_hnh_ax22(self):
+        self.valid_tab('UKNKaNaNaUab')
 
-    def test_hnh_ax23(self):
-        self.assert_axiom('UKaKNKbNbNbNUab')
+    def test_valid_hnh_ax23(self):
+        self.valid_tab('UKaKNKbNbNbNUab')
 
-    def test_efq_invalid(self):
-        self.assert_invalid('b', 'KaNa')
+    def test_invalid_efq(self):
+        self.invalid_tab('b', 'KaNa')
 
-    def test_lem_valid(self):
-        self.assert_valid('AbNb', 'a')
+    def test_valid_lem(self):
+        self.valid_tab('AbNb', 'a')
 
-    def test_dem_invalid(self):
-        self.assert_invalid('NAab', 'ANaNb')
+    def test_invalid_dem(self):
+        self.invalid_tab('NAab', 'ANaNb')
 
 class TestP3(LogicTester):
 
@@ -1235,40 +1217,56 @@ class TestP3(LogicTester):
 class TestCPL(LogicTester):
 
     logic = get_logic('CPL')
+    
+    def test_valid_simplification(self):
+        self.valid_tab('Simplification')
 
-    def test_Closure_example(self):
+    def test_valid_optimize_group_score_from_candidate_score(self):
+        tab = self.valid_tab('Na', ('Cab', 'Nb', 'Acd'))
+        assert tab.branch_count == 2
+
+    def test_invalid_syllogism(self):
+        self.invalid_tab('Syllogism')
+
+    def test_rule_ContradictionClosure_example(self):
         proof = Tableau(self.logic)
         rule = proof.get_rule('ContradictionClosure')
         rule.example()
         assert proof.branch_count == 1
 
-    def test_SelfIdentityClosure_example(self):
+    def test_rule_SelfIdentityClosure_example(self):
         proof = Tableau(self.logic)
         rule = proof.get_rule('SelfIdentityClosure')
         rule.example()
         assert proof.branch_count == 1
 
-    def test_NonExistenceClosure_example(self):
+    def test_rule_NonExistenceClosure_example(self):
         proof = Tableau(self.logic)
         rule = proof.get_rule('NonExistenceClosure')
         rule.example()
         assert proof.branch_count == 1
 
-    def test_IdentityIndiscernability_example(self):
+    def test_rule_IdentityIndiscernability_example(self):
         proof = Tableau(self.logic)
         rule = proof.get_rule('IdentityIndiscernability')
         rule.example()
         assert proof.branch_count == 1
 
-    def test_valid_simplification(self):
-        proof = self.tab('Simplification')
-        assert proof.valid
+    def test_rule_IdentityIndiscernability_not_applies(self):
+        vocab = Vocabulary()
+        vocab.declare(0, 0, 2)
+        proof = Tableau(self.logic)
+        s1 = parse('Fmn', vocab=vocab)
+        s2 = parse('Io1o2')
+        branch = proof.branch()
+        branch.update([
+            {'sentence': s1, 'world': 0},
+            {'sentence': s2, 'world': 0},
+        ])
+        rule = proof.get_rule('IdentityIndiscernability')
+        assert not rule.get_target(branch)
 
-    def test_invalid_syllogism(self):
-        proof = self.tab('Syllogism')
-        assert not proof.valid
-
-    def test_read_model_deny_antec(self):
+    def test_model_branch_deny_antec(self):
         proof = self.tab('Denying the Antecedent')
         model = self.logic.Model()
         branch = list(proof.open_branches())[0]
@@ -1277,7 +1275,7 @@ class TestCPL(LogicTester):
         assert model.value_of(s) == 'F'
         assert model.value_of(s.negate()) == 'T'
 
-    def test_read_model_extract_disj_2(self):
+    def test_model_branch_extract_disj_2(self):
         proof = self.tab('Extracting a Disjunct 2')
         model = self.logic.Model()
         branch = list(proof.open_branches())[0]
@@ -1286,7 +1284,7 @@ class TestCPL(LogicTester):
         assert model.value_of(s) == 'T'
         assert model.value_of(s.negate()) == 'F'
 
-    def test_read_model_no_proof_predicated(self):
+    def test_model_branch_no_proof_predicated(self):
         branch = Branch()
         s1 = parse('Fm', vocab=examples.vocabulary)
         branch.add({'sentence': s1})
@@ -1339,20 +1337,6 @@ class TestCPL(LogicTester):
         data = model.get_data()
         assert 'Atomics' in data
 
-    def test_identity_indiscernability_not_applies(self):
-        vocab = Vocabulary()
-        vocab.declare(0, 0, 2)
-        proof = Tableau(self.logic)
-        s1 = parse('Fmn', vocab=vocab)
-        s2 = parse('Io1o2')
-        branch = proof.branch()
-        branch.update([
-            {'sentence': s1, 'world': 0},
-            {'sentence': s2, 'world': 0},
-        ])
-        rule = proof.get_rule('IdentityIndiscernability')
-        assert not rule.get_target(branch)
-
     def test_model_value_of_operated_opaque1(self):
         s1 = parse('La')
         model = self.logic.Model()
@@ -1375,19 +1359,13 @@ class TestCPL(LogicTester):
 
     def test_model_get_anti_extension(self):
         # coverage
-        s = parse('Fm', vocab=examples.vocabulary)
+        s = self.p('Fm')
         model = self.logic.Model()
-        predicate = s.predicate
-        anti_extension = model.get_anti_extension(predicate)
+        pred = s.predicate
+        anti_extension = model.get_anti_extension(pred)
         assert len(anti_extension) == 0
         model.set_literal_value(s, 'F')
-        assert tuple(s.parameters) in anti_extension
-
-    def test_group_score_from_candidate_score1(self):
-        arg = self.parg('Na', 'Cab', 'Nb', 'Acd')
-        proof = Tableau(self.logic, arg).build()
-        assert proof.valid
-        assert proof.branch_count == 2
+        assert s.params in anti_extension
 
 class TestCFOL(LogicTester):
 
@@ -1399,185 +1377,235 @@ class TestCFOL(LogicTester):
     def test_invalid_possibility_addition(self):
         self.invalid_tab('Possibility Addition')
 
-    def test_model_get_data_triv(self):
-        s = self.p('a')
-        model = self.logic.Model()
-        model.set_literal_value(s, 'T')
-        model.finish()
-        data = model.get_data()
-        assert 'Atomics' in data
-
-    def test_model_value_of_operated_opaque1(self):
-        s1 = parse('La')
-        model = self.logic.Model()
-        model.set_opaque_value(s1, 'F')
-        res = model.value_of_operated(s1.negate())
-        assert res == 'T'
-
-    def test_model_value_of_operated_opaque2(self):
-        s1 = parse('La')
-        model = self.logic.Model()
-        model.set_opaque_value(s1, 'T')
-        res = model.value_of_operated(s1)
-        assert res == 'T'
-
-    def test_model_read_node_opaque(self):
-        s1 = parse('La')
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.add({'sentence': s1})
-        model = self.logic.Model()
-        model.read_node(branch.nodes[0])
-        assert model.value_of(s1) == 'T'
-
-    def test_model_add_access_not_impl(self):
-        model = self.logic.Model()
-        with raises(NotImplementedError):
-            model.add_access(0, 0)
-
-    def test_model_read_branch_with_negated_opaque_then_faithful(self):
-        arg = self.parg('a', ['NLa', 'b'])
-        proof = Tableau(self.logic, arg, is_build_models=True)
-        proof.build()
-        model = proof.get_branch_at(0).model
-        assert model.value_of(parse('a'))   == 'F'
-        assert model.value_of(parse('La'))  == 'F'
-        assert model.value_of(parse('NLa')) == 'T'
-        assert model.is_countermodel_to(arg)
-
     def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
-        arg = self.parg('b', 'VxKFxKaNa')
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert proof.valid
+        self.valid_tab('b', 'VxKFxKaNa')
 
     def test_invalid_existential_inside_univ_max_steps(self):
-        arg = self.parg('b', 'VxUFxSyFy')
-        proof = Tableau(self.logic, arg, max_steps = 100)
-        proof.build()
-        assert proof.invalid
+        self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
 
-    def test_quantified_opaque_is_countermodel(self):
-        # for this we needed to add constants that occur within opaque sentences.
-        # the use of the existential is important given the way the K model
-        # computes quantified values (short-circuit), as opposed to FDE (min/max).
-        arg = self.parg('b', 'SxUNFxSyMFy')
-        proof = Tableau(self.logic, arg, is_build_models=True)
-        proof.build()
-        # this assert is so our test has integrity
-        assert proof.branch_count == 2
-        assert proof.get_branch_at(0).model.is_countermodel_to(arg)
-        assert list(proof.branches())[1].model.is_countermodel_to(arg)
+    def test_model_get_data_triv(self):
+        m = self.logic.Model()
+        s1 = self.p('a')
+        m.set_literal_value(s1, 'T')
+        m.finish()
+        assert 'Atomics' in m.get_data()
+
+    def test_model_value_of_operated_opaque1(self):
+        m = self.logic.Model()
+        s1 = self.p('La')
+        m.set_opaque_value(s1, 'F')
+        assert m.value_of_operated(s1.negate()) == 'T'
+
+    def test_model_value_of_operated_opaque2(self):
+        m = self.logic.Model()
+        s1 = self.p('La')
+        m.set_opaque_value(s1, 'T')
+        assert m.value_of_operated(s1) == 'T'
+
+    def test_model_read_node_opaque(self):
+        m = self.logic.Model()
+        s1 = self.p('La')
+        m.read_node(Node({'sentence': s1}))
+        assert m.value_of(s1) == 'T'
+
+    def test_model_add_access_not_impl(self):
+        m = self.logic.Model()
+        with raises(NotImplementedError):
+            m.add_access(0, 0)
+
+    def test_model_read_branch_with_negated_opaque_then_faithful(self):
+        tab = self.tab('a', ('NLa', 'b'), is_build_models = True)
+        m, = tab.models
+        s1, s2, s3 = self.pp('a', 'La', 'NLa')
+        assert m.value_of(s1) == 'F'
+        assert m.value_of(s2) == 'F'
+        assert m.value_of(s3) == 'T'
+        assert m.is_countermodel_to(tab.argument)
+
+    def test_model_quantified_opaque_is_countermodel(self):
+        """
+        For this we needed to add constants that occur within opaque sentences.
+        The use of the existential is important given the way the K model
+        computes quantified values (short-circuit), as opposed to FDE (min/max).
+        """
+        tab = self.tab('b', 'SxUNFxSyMFy', is_build_models = True)
+        arg = tab.argument
+        assert tab.branch_count == 2
+        assert len(tab.models) == 2
+        m1, m2 = tab.models
+        assert m1.is_countermodel_to(arg)
+        assert m2.is_countermodel_to(arg)
 
     def test_model_identity_predication1(self):
-        model = self.logic.Model()
-        s1 = self.p('Fm')
-        s2 = self.p('Imn')
-        s3 = self.p('Fn')
-        model.set_literal_value(s1, 'T')
-        model.set_literal_value(s2, 'T')
-        model.finish()
-        assert model.value_of(s3) == 'T'
+        m = self.logic.Model()
+        s1, s2, s3 = self.pp('Fm', 'Imn', 'Fn')
+        for s in (s1, s2):
+            m.set_literal_value(s, 'T')
+        m.finish()
+        assert m.value_of(s3) == 'T'
 
     def test_model_identity_predication2(self):
-        model = self.logic.Model()
-        s1 = self.p('Fm')
-        s2 = self.p('Imn')
-        s3 = self.p('Fn')
-        model.set_literal_value(s1, 'T')
-        model.set_literal_value(s2, 'T')
-        model.finish()
-        assert model.value_of(s3) == 'T'
+        m = self.logic.Model()
+        s1, s2, s3 = self.pp('Fm', 'Imn', 'Fn')
+        for s in (s1, s2):
+            m.set_literal_value(s, 'T')
+        m.finish()
+        assert m.value_of(s3) == 'T'
 
     def test_model_self_identity1(self):
-        model = self.logic.Model()
+        m = self.logic.Model()
+        s1, s2 = self.pp('Fm', 'Imm')
         # here we make sure the constant m is registered
-        s1 = self.p('Fm')
-        model.set_literal_value(s1, 'F')
-        model.finish()
-        s2 = self.p('Imm')
-        assert model.value_of(s2) == 'T'
+        m.set_literal_value(s1, 'F')
+        m.finish()
+        assert m.value_of(s2) == 'T'
 
     def test_model_raises_denotation_error(self):
-        model = self.logic.Model()
-        model.finish()
+        m = self.logic.Model()
         s1 = self.p('Imm')
+        m.finish()
         with raises(DenotationError):
-            model.value_of(s1)
+            m.value_of(s1)
 
     def test_model_get_identicals_singleton_two_identical_constants(self):
-        model = self.logic.Model()
+        m = self.logic.Model()
         s1 = self.p('Imn')
-        c1, c2 = s1.parameters
-        model.set_literal_value(s1, 'T')
-        model.finish()
-        identicals = model.get_identicals(c1)
+        c1, c2 = s1.params
+        m.set_literal_value(s1, 'T')
+        m.finish()
+        identicals = m.get_identicals(c1)
         assert len(identicals) == 1
         assert c2 in identicals
 
     def test_model_singleton_domain_two_identical_constants(self):
-        model = self.logic.Model()
+        m = self.logic.Model()
         s1 = self.p('Imn')
-        model.set_literal_value(s1, 'T')
-        model.finish()
-        d = model.get_domain()
+        m.set_literal_value(s1, 'T')
+        m.finish()
+        d = m.get_domain()
         assert len(d) == 1
 
     def test_model_same_denotum_two_identical_constants(self):
-        model = self.logic.Model()
+        m = self.logic.Model()
         s1 = self.p('Imn')
-        c1, c2 = s1.parameters
-        model.set_literal_value(s1, 'T')
-        model.finish()
-        d1 = model.get_denotum(c1)
-        d2 = model.get_denotum(c2)
+        m.set_literal_value(s1, 'T')
+        m.finish()
+        d1, d2 = (m.get_denotum(c) for c in s1.params)
         assert d1 is d2
 
 class TestK(LogicTester):
 
     logic = get_logic('K')
+        
+    def test_valid_conjunction_introduction(self):
+        self.valid_tab('Conjunction Introduction')
 
-    def test_ContradictionClosure_example(self):
+    def test_valid_addition(self):
+        self.valid_tab('Addition')
+
+    def test_valid_self_identity_1(self):
+        self.valid_tab('Self Identity 1')
+        
+    def test_valid_nec_dist(self):
+        self.valid_tab('Necessity Distribution 1')
+
+    def test_valid_material_bicond_elim_1(self):
+        self.valid_tab('Material Biconditional Elimination 1')
+
+    def test_valid_material_bicond_intro_1(self):
+        self.valid_tab('Material Biconditional Introduction 1')
+
+    def test_valid_disj_syllogism(self):
+        self.valid_tab('Disjunctive Syllogism')
+
+    def test_valid_disj_syllogism_2(self):
+        self.valid_tab('Disjunctive Syllogism 2')
+        
+    def test_valid_assert_elim_1(self):
+        self.valid_tab('Assertion Elimination 1')
+
+    def test_valid_assert_elim_2(self):
+        self.valid_tab('Assertion Elimination 2')
+
+    def test_valid_nec_elim(self):
+        self.valid_tab('Necessity Distribution 1')
+
+    def test_valid_modal_tranform_2(self):
+        self.valid_tab('Modal Transformation 2')
+
+    def test_valid_ident_indiscern_1(self):
+        self.valid_tab('Identity Indiscernability 1')
+
+    def test_valid_ident_indiscern_2(self):
+        self.valid_tab('Identity Indiscernability 2')
+
+    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
+        self.valid_tab('b', 'VxKFxKaNa')
+
+    def test_valid_nonexistence_efq(self):
+        self.valid_tab('b', 'NJm')
+
+    def test_invalid_s4_cond_inf_2(self):
+        self.invalid_tab('S4 Conditional Inference 2')
+
+    def test_invalid_nec_elim(self):
+        self.invalid_tab('Necessity Elimination')
+
+    def test_invalid_nested_diamond_within_box1(self):
+        self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
+
+    def test_invalid_existential_inside_univ_max_steps(self):
+        self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
+
+    def test_rule_ContradictionClosure_example(self):
         rule = self.logic.TableauxRules.ContradictionClosure(empty_proof())
         rule.example()
         assert rule.tableau.branch_count == 1
 
-    def test_SelfIdentityClosure_example(self):
+    def test_rule_SelfIdentityClosure_example(self):
         rule = self.logic.TableauxRules.SelfIdentityClosure(empty_proof())
         rule.example()
         assert rule.tableau.branch_count == 1
 
-    def test_Possibility_example_node(self):
+    def test_rule_NonExistenceClosure_example(self):
+        proof = Tableau(self.logic, None)
+        proof.get_rule('NonExistenceClosure').example()
+        assert proof.open_branch_count == 1
+        proof.build()
+        assert proof.branch_count == 1
+        assert proof.open_branch_count == 0
+
+    def test_rule_Possibility_example_node(self):
         rule = self.logic.TableauxRules.Possibility(empty_proof())
         props = rule.example_node(rule.branch())
         assert props['world'] == 0
 
-    def test_Existential_example_node(self):
+    def test_rule_Existential_example_node(self):
         rule = self.logic.TableauxRules.Existential(empty_proof())
         props = rule.example_node(rule.branch())
         assert props['sentence'].quantifier == 'Existential'
 
-    def test_DisjunctionNegated_example_node(self):
+    def test_rule_DisjunctionNegated_example_node(self):
         rule = self.logic.TableauxRules.DisjunctionNegated(empty_proof())
         props = rule.example_node(rule.branch())
         assert props['sentence'].operator == 'Negation'
 
-    def test_Universal_example(self):
+    def test_rule_Universal_example(self):
         rule = self.logic.TableauxRules.Universal(empty_proof())
         rule.example()
         assert rule.tableau.branch_count == 1
 
-    def test_Necessity_example(self):
+    def test_rule_Necessity_example(self):
         rule = self.logic.TableauxRules.Necessity(empty_proof())
         rule.example()
         assert rule.tableau.branch_count == 1
 
-    def test_IdentityIndiscernability_example(self):
+    def test_rule_IdentityIndiscernability_example(self):
         rule = self.logic.TableauxRules.IdentityIndiscernability(empty_proof())
         rule.example()
         assert rule.tableau.branch_count == 1
 
-    def test_IdentityIndiscernability_not_applies(self):
+    def test_rule_IdentityIndiscernability_not_applies(self):
         proof = empty_proof()
         branch = proof.branch()
         branch.add({'sentence': self.p('Imm'), 'world': 0})
@@ -1585,60 +1613,36 @@ class TestK(LogicTester):
         rule = self.logic.TableauxRules.IdentityIndiscernability(proof)
         res = rule.get_target(branch)
         assert not res
-        
-    def test_valid_conjunction_introduction(self):
-        self.assert_valid_eg('Conjunction Introduction')
 
-    def test_valid_addition(self):
-        self.assert_valid_eg('Addition')
+    def test_rule_Universal_should_make_new_constant_with_one_there(self):
+        # see commit 8889b92 for bug fix
+        s1, s2, s3 = self.pp('VxUFxSyGy', 'b', 'NFm')
+        proof = self.tab(s2, s1, is_build = False)
+        univ = proof.get_rule('Universal')
+        b1 = proof.get_branch_at(0)
 
-    def test_valid_self_identity_1(self):
-        self.assert_valid_eg('Self Identity 1')
-        
-    def test_valid_nec_dist(self):
-        self.assert_valid_eg('Necessity Distribution 1')
+        ap1 = proof.step()
+        assert ap1['rule'].name == 'Universal'
+        ap2 = proof.step()
+        assert ap2['rule'].name == 'Conditional'
+        assert b1.has({'sentence': s3, 'world': 0})
 
-    def test_valid_material_bicond_elim_1(self):
-        self.assert_valid_eg('Material Biconditional Elimination 1')
+        # we don't apply now
+        assert not univ.get_target(b1)
+        # do some steps, but NOT on our b1
+        for i in range(10):
+            opens = {b for b in proof.open_branches() if b != b1}
+            for b in opens:
+                res = proof._Tableau__get_branch_application(b)
+                if res:
+                    rule, target = res
+                    proof._Tableau__do_application(rule, target, StopWatch())
+                    break
+        # we shouldn't apply now
+        target = univ.get_target(b1)
+        assert not target , target['sentence']
 
-    def test_valid_material_bicond_intro_1(self):
-        self.assert_valid_eg('Material Biconditional Introduction 1')
-
-    def test_valid_disj_syllogism(self):
-        self.assert_valid_eg('Disjunctive Syllogism')
-
-    def test_valid_disj_syllogism_2(self):
-        self.assert_valid_eg('Disjunctive Syllogism 2')
-        
-    def test_valid_assert_elim_1(self):
-        self.assert_valid_eg('Assertion Elimination 1')
-
-    def test_valid_assert_elim_2(self):
-        self.assert_valid_eg('Assertion Elimination 2')
-
-    def test_valid_nec_elim(self):
-        self.assert_valid_eg('Necessity Distribution 1')
-
-    def test_valid_modal_tranform_2(self):
-        self.assert_valid_eg('Modal Transformation 2')
-
-    def test_valid_ident_indiscern_1(self):
-        self.assert_valid_eg('Identity Indiscernability 1')
-
-    def test_valid_ident_indiscern_2(self):
-        self.assert_valid_eg('Identity Indiscernability 2')
-        
-    def test_invalid_nec_elim(self):
-        self.assert_invalid_eg('Necessity Elimination')
-
-    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
-        vocab = Vocabulary((0, 0, 1))
-        arg = self.parg('b', 'VxKFxKaNa', vocab=vocab)
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert proof.valid
-
-    def test_read_model_proof_deny_antec(self):
+    def test_model_branch_proof_deny_antec(self):
         proof = self.tab('Denying the Antecedent')
         model = self.logic.Model()
         branch = list(proof.open_branches())[0]
@@ -1647,14 +1651,14 @@ class TestK(LogicTester):
         assert model.value_of(s, world=0) == 'F'
         assert model.value_of(s.negate(), world=0) == 'T'
 
-    def test_read_model_no_proof_atomic(self):
+    def test_model_branch_no_proof_atomic(self):
         model = self.logic.Model()
         branch = Branch()
         branch.add({'sentence': Atomic(0, 0), 'world': 0})
         model.read_branch(branch)
         assert model.value_of(Atomic(0, 0), world=0) == 'T'
 
-    def test_read_model_no_proof_predicated(self):
+    def test_model_branch_no_proof_predicated(self):
         model = self.logic.Model()
         branch = Branch()
         s1 = parse('Imn')
@@ -1662,7 +1666,7 @@ class TestK(LogicTester):
         model.read_branch(branch)
         assert model.value_of(s1, world=0) == 'T'
 
-    def test_read_model_no_proof_access(self):
+    def test_model_branch_no_proof_access(self):
         model = self.logic.Model()
         branch = Branch()
         branch.add({'world1': 0, 'world2': 1})
@@ -1789,7 +1793,59 @@ class TestK(LogicTester):
         extension = model.get_extension(get_system_predicate('Identity'), world=0)
         assert len(extension) > 0
         assert (Constant(0, 0), Constant(1, 0)) in extension
-        
+
+    def test_model_not_impl_various(self):
+        s1 = self.p('Aab')
+        model = self.logic.Model()
+        with raises(NotImplementedError):
+            model.set_literal_value(s1, 'T')
+        with raises(NotImplementedError):
+            model.value_of_modal(s1)
+        with raises(NotImplementedError):
+            model.value_of_quantified(s1)
+
+    def test_model_value_error_various(self):
+        s1, s2 = self.pp('a', 'Fm')
+        model = self.logic.Model()
+        model.set_opaque_value(s1, 'T')
+        with raises(ModelValueError):
+            model.set_opaque_value(s1, 'F')
+        model = self.logic.Model()
+        model.set_atomic_value(s1, 'T')
+        with raises(ModelValueError):
+            model.set_atomic_value(s1, 'F')
+        model.set_predicated_value(s2, 'T')
+        with raises(ModelValueError):
+            model.set_predicated_value(s2, 'F')
+
+    def test_model_get_extension_adds_predicate_to_predicates(self):
+        # coverage
+        s1 = self.p('Fm')
+        model = self.logic.Model()
+        res = model.get_extension(s1.predicate)
+        assert len(res) == 0
+        assert s1.predicate in model.predicates
+
+    def test_model_is_countermodel_to_false1(self):
+        arg = self.parg('b', 'a')
+        s1, = arg.premises
+        model = self.logic.Model()
+        model.set_literal_value(s1, 'F')
+        model.set_literal_value(arg.conclusion, 'T')
+        assert not model.is_countermodel_to(arg)
+
+    def test_model_finish_every_opaque_has_value_in_every_frame(self):
+        s1, s2 = self.pp('a', 'b')
+        # s2 = self.p('b')
+        model = self.logic.Model()
+        model.set_opaque_value(s1, 'T', world=0)
+        model.set_opaque_value(s2, 'T', world=1)
+        model.finish()
+        f1 = model.world_frame(0)
+        f2 = model.world_frame(1)
+        assert s2 in f1.opaques
+        assert s1 in f2.opaques
+
     def test_model_frame_data_has_identity_with_sentence(self):
         s = self.p('Imn')
         model = self.logic.Model()
@@ -1934,172 +1990,43 @@ class TestK(LogicTester):
         assert f2 >= f1
         assert f1 <= f2
 
-    def test_model_not_impl_various(self):
-        s1 = self.p('Aab')
-        model = self.logic.Model()
-        with raises(NotImplementedError):
-            model.set_literal_value(s1, 'T')
-        with raises(NotImplementedError):
-            model.value_of_modal(s1)
-        with raises(NotImplementedError):
-            model.value_of_quantified(s1)
-
-    def test_model_value_error_various(self):
-        s1, s2 = self.pp('a', 'Fm')
-        model = self.logic.Model()
-        model.set_opaque_value(s1, 'T')
-        with raises(ModelValueError):
-            model.set_opaque_value(s1, 'F')
-        model = self.logic.Model()
-        model.set_atomic_value(s1, 'T')
-        with raises(ModelValueError):
-            model.set_atomic_value(s1, 'F')
-        model.set_predicated_value(s2, 'T')
-        with raises(ModelValueError):
-            model.set_predicated_value(s2, 'F')
-
-    def test_model_get_extension_adds_predicate_to_predicates(self):
-        # coverage
-        s1 = self.p('Fm')
-        model = self.logic.Model()
-        res = model.get_extension(s1.predicate)
-        assert len(res) == 0
-        assert s1.predicate in model.predicates
-
-    def test_model_is_countermodel_to_false1(self):
-        arg = self.parg('b', 'a')
-        s1, = arg.premises
-        model = self.logic.Model()
-        model.set_literal_value(s1, 'F')
-        model.set_literal_value(arg.conclusion, 'T')
-        assert not model.is_countermodel_to(arg)
-
-    def test_nonexistence_closure1(self):
-        arg = self.parg('b', ['NJm'])
-        proof = Tableau(self.logic, arg).build()
-        assert proof.valid
-
-    def test_nonexistence_closure_example(self):
-        proof = Tableau(self.logic, None)
-        proof.get_rule('NonExistenceClosure').example()
-        assert proof.open_branch_count == 1
-        proof.build()
-        assert proof.branch_count == 1
-        assert proof.open_branch_count == 0
-
-    def test_invalid_s4_cond_inf_2(self):
-        self.invalid_tab('S4 Conditional Inference 2')
-        # assert not proof.valid
-
-    def test_model_finish_every_opaque_has_value_in_every_frame(self):
-        s1, s2 = self.pp('a', 'b')
-        # s2 = self.p('b')
-        model = self.logic.Model()
-        model.set_opaque_value(s1, 'T', world=0)
-        model.set_opaque_value(s2, 'T', world=1)
-        model.finish()
-        f1 = model.world_frame(0)
-        f2 = model.world_frame(1)
-        assert s2 in f1.opaques
-        assert s1 in f2.opaques
-
-    def test_universal_should_make_new_constant_with_one_there(self):
-
-        # see commit 8889b92 for bug fix
-
-        s1, s2, s3 = self.pp('VxUFxSyGy', 'b', 'NFm')
-
-        proof = self.tab(s2, s1, is_build = False)
-        
-        univ = proof.get_rule('Universal')
-        b1 = proof.get_branch_at(0)
-
-        ap1 = proof.step()
-        assert ap1['rule'].name == 'Universal'
-
-        ap2 = proof.step()
-        assert ap2['rule'].name == 'Conditional'
-        assert b1.has({'sentence': s3, 'world': 0})
-        b2 = proof.get_branch_at(1)
-
-        # we don't apply now
-        assert not univ.get_target(b1)
-
-        # do some steps, but NOT on our b1
-        for i in range(10):
-            opens = {b for b in proof.open_branches() if b != b1}
-            for b in opens:
-                res = proof._Tableau__get_branch_application(b)
-                if res:
-                    rule, target = res
-                    proof._Tableau__do_application(rule, target, StopWatch())
-                    break
-
-        # we shouldn't apply now
-        target = univ.get_target(b1)
-        assert not target , target['sentence']
-
-    def test_nested_diamond_within_box1(self):
-        arg = parse_argument('KMNbc', ['LCaMNb', 'Ma'])
-        proof = Tableau(self.logic, arg)
-        proof.build()
-        assert proof.invalid
-
-    def test_invalid_existential_inside_univ_max_steps(self):
-        arg = parse_argument('b', ['VxUFxSyFy'], vocab=self.vocab)
-        proof = Tableau(self.logic, arg, max_steps=100)
-        proof.build()
-        assert proof.invalid
-
 class TestD(LogicTester):
 
     logic = get_logic('D')
 
-    def test_Serial_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule('Serial')
-        rule.example()
-        assert proof.branch_count == 1
-
-    def test_Serial_not_applies_to_branch_empty(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        rule = proof.get_rule('Serial')
-        res = rule.get_target(branch)
-        assert not res
+    def test_valid_long_serial_max_steps_50(self):
+        self.valid_tab('MMMMMa', 'LLLLLa', max_steps = 50)
 
     def test_valid_serial_inf_1(self):
-        self.assert_valid_eg('Serial Inference 1')
+        self.valid_tab('Serial Inference 1')
 
     def test_invalid_reflex_inf_1(self):
-        self.assert_invalid_eg('Reflexive Inference 1')
+        self.invalid_tab('Reflexive Inference 1')
 
     def test_invalid_optimize_nec_rule1_max_steps_50(self):
-        arg = parse_argument('NLVxNFx', premises=['LMSxFx'], vocab=examples.vocabulary)
-        proof = Tableau(self.logic, arg)
-        proof.build(max_steps=50)
-        assert proof.invalid
+        self.invalid_tab('NLVxNFx', 'LMSxFx', max_steps = 50)
 
     def test_invalid_s4_cond_inf_2(self):
-        self.assert_invalid_eg('S4 Conditional Inference 2')
+        self.invalid_tab('S4 Conditional Inference 2')
 
-    def test_valid_long_serial_max_steps_50(self):
-        proof = Tableau(self.logic, parse_argument('MMMMMa', premises=['LLLLLa']))
-        proof.build(max_steps=50)
-        assert proof.valid
+    def test_rule_Serial_example(self):
+        tab = self.tab()
+        tab.get_rule('Serial').example()
+        assert tab.branch_count == 1
+
+    def test_rule_Serial_not_applies_to_branch_empty(self):
+        tab = self.tab()
+        rule = tab.get_rule('Serial')
+        assert not rule.get_target(tab.branch())
 
     def test_verify_core_bugfix_branch_should_not_have_w1_with_more_than_one_w2(self):
-        proof = Tableau(self.logic, parse_argument('CaLMa'))
-        proof.build()
-
+        tab = self.tab('CaLMa')
         # sanity check
-        assert proof.branch_count == 1
-
-        branch = proof.get_branch_at(0)
-
+        assert tab.branch_count == 1
+        b = tab.get_branch_at(0)
         # use internal properties just to be sure, since the bug was with the .find method
         access = {}
-        for node in list(branch.nodes):
+        for node in list(b.nodes):
             if 'world1' in node.props:
                 w1 = node.props['world1']
                 w2 = node.props['world2']
@@ -2107,24 +2034,15 @@ class TestD(LogicTester):
                     # use a list to also make sure we don't have redundant nodes
                     access[w1] = list()
                 access[w1].append(w2)
-        
         for w1 in access:
             assert len(access[w1]) == 1
-        assert len(access) == (len(branch.worlds()) - 1)
-
+        assert len(access) == (len(b.worlds()) - 1)
         # sanity check
-        assert len(branch.worlds()) > 2
-            
-        
+        assert len(b.worlds()) > 2
+
 class TestT(LogicTester):
 
     logic = get_logic('T')
-
-    def test_Reflexive_example(self):
-        proof = self.tab()
-        proof.get_rule('Reflexive').example()
-        branch = proof.build().get_branch_at(0)
-        assert branch.has({'world1': 0, 'world2': 0})
 
     def test_valid_np_collapse_1(self):
         self.valid_tab('NP Collapse 1')
@@ -2137,6 +2055,12 @@ class TestT(LogicTester):
 
     def test_invalid_s4_cond_inf_2(self):
         self.invalid_tab('S4 Conditional Inference 2')
+
+    def test_rule_Reflexive_example(self):
+        proof = self.tab()
+        proof.get_rule('Reflexive').example()
+        branch = proof.build().get_branch_at(0)
+        assert branch.has({'world1': 0, 'world2': 0})
 
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
         """
@@ -2168,8 +2092,8 @@ class TestS4(LogicTester):
     def test_valid_np_collapse_1(self):
         self.valid_tab('NP Collapse 1')
 
-    def test_invalid_s5_cond_inf_1(self):
-        self.invalid_tab('S5 Conditional Inference 1')
+    def test_valid_s4_complex_possibility_with_max_steps(self):
+        self.valid_tab('MNb', ['LCaMMMNb', 'Ma'], max_steps = 200)
 
     def test_valid_optimize_nec_rule1(self):
         self.valid_tab('NLVxNFx', 'LMSxFx', build_timeout = 1000)
@@ -2177,11 +2101,11 @@ class TestS4(LogicTester):
     def test_valid_s4_cond_inf_2(self):
         self.valid_tab('S4 Conditional Inference 2')
 
+    def test_invalid_s5_cond_inf_1(self):
+        self.invalid_tab('S5 Conditional Inference 1')
+
     def test_invalid_problematic_1_with_timeout(self):
         self.invalid_tab('b', 'LMa', build_timeout = 2000)
-
-    def test_valid_s4_complex_possibility_with_max_steps(self):
-        self.valid_tab('MNb', ['LCaMMMNb', 'Ma'], max_steps = 200)
 
     def test_invalid_nested_diamond_within_box1(self):
         self.invalid_tab('KMNbc', ['LCaMNb', 'Ma'])
@@ -2232,9 +2156,6 @@ class TestS5(LogicTester):
     def test_valid_s4_complex_possibility_with_max_steps(self):
         self.valid_tab('MNb', ('LCaMMMNb', 'Ma'), max_steps = 200)
 
-    def test_invalid_nested_diamond_within_box1(self):
-        self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
-
     def test_valid_optimize_nec_rule1(self):
         self.valid_tab('NLVxNFx', 'LMSxFx', build_timeout = 1000)
 
@@ -2244,6 +2165,9 @@ class TestS5(LogicTester):
         in the same group, and toward the end.
         """
         self.valid_tab('MSxGx', ('VxLSyUFxMGy', 'Fm'), max_steps = 100)
+
+    def test_invalid_nested_diamond_within_box1(self):
+        self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
 
     def test_rule_Symmetric_example(self):
         proof = self.tab()
@@ -2276,8 +2200,6 @@ class TestS5(LogicTester):
         """
         # 200 might be agressive
         self.invalid_tab('b', 'LVxSyUFxLMGy', max_steps = 200)
-
-
 
 class MtrTestRule(FilterNodeRule):
     def __init__(self, *args, **opts):

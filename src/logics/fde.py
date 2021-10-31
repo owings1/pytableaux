@@ -109,7 +109,7 @@ class Model(BaseModel):
         self.predicates = set()
 
     def value_of_predicated(self, sentence, **kw):
-        params = tuple(sentence.parameters)
+        params = sentence.params
         predicate = sentence.predicate
         extension = self.get_extension(predicate)
         anti_extension = self.get_anti_extension(predicate)
@@ -353,7 +353,7 @@ class Model(BaseModel):
         if value not in self.truth_values:
             self._raise_value('UnknownForSentence', value, sentence)
         predicate = sentence.predicate
-        params = tuple(sentence.parameters)
+        params = sentence.params
         for param in params:
             if param.is_constant:
                 self.constants.add(param)

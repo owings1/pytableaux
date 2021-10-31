@@ -221,8 +221,8 @@ class TestVocabulary(object):
     def test_predicated_substitute_a_for_x_identity(self):
         s = Predicated('Identity', [Variable(0, 0), Constant(1, 0)])
         res = s.substitute(Constant(0, 0), Variable(0, 0))
-        assert res.parameters[0] == Constant(0, 0)
-        assert res.parameters[1] == Constant(1, 0)
+        assert res.params[0] == Constant(0, 0)
+        assert res.params[1] == Constant(1, 0)
 
     def test_quantified_substitute_inner_quantified(self):
         x = Variable(0, 0)

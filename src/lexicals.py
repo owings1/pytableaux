@@ -611,9 +611,9 @@ class Sentence(LexicalItem):
         """
         return set()
 
-    def has_variable(self, v):
+    def variable_occurs(self, v):
         """
-        Whether the sentence has the given variable, recursive.
+        Whether a variable occurs anywhere in the sentence (recursive).
         """
         return v in self.variables()
 
@@ -654,7 +654,7 @@ class AtomicSentence(CoordsItem, Sentence):
     def atomics(self):
         return {self}
 
-    def has_variable(self, v):
+    def variable_occurs(self, v):
         return False
 
     def next(self):
@@ -688,10 +688,18 @@ class PredicatedSentence(Sentence):
     
     @property
     def params(self):
+        """
+        The sentence params.
+
+        :type: type(Parameter)
+        """
         return self.__params
 
     @property
     def predicate(self):
+        """
+        :overrides: Sentence
+        """
         return self.__pred
 
     @property
@@ -700,6 +708,9 @@ class PredicatedSentence(Sentence):
 
     @property
     def sort_tuple(self):
+        """
+        :implements: LexicalItem
+        """
         # Sort predicated sentences by their predicate, then by their parameters
         if self.__sort_tuple == None:
             # Lazy init
@@ -709,6 +720,9 @@ class PredicatedSentence(Sentence):
         return self.__sort_tuple
 
     def substitute(self, new_param, old_param):
+        """
+        :overrides: Sentence
+        """
         params = tuple(
             new_param if param == old_param else param
             for param in self.params
@@ -716,15 +730,27 @@ class PredicatedSentence(Sentence):
         return self.__class__(self.predicate, params)
 
     def constants(self):
+        """
+        :overrides: Sentence
+        """
         return {param for param in self.__paramset if param.is_constant}
 
     def variables(self):
+        """
+        :overrides: Sentence
+        """
         return {param for param in self.__paramset if param.is_variable}
 
-    def has_variable(self, v):
+    def variable_occurs(self, v):
+        """
+        :overrides: Sentence
+        """
         return v in self.__paramset and v.is_variable
 
     def predicates(self):
+        """
+        :overrides: Sentence
+        """
         return {self.predicate}
 
 class QuantifiedSentence(Sentence):
@@ -817,8 +843,8 @@ class QuantifiedSentence(Sentence):
     def variables(self):
         return self.sentence.variables()
 
-    def has_variable(self, v):
-        return self.variable == v or self.sentence.has_variable(v)
+    def variable_occurs(self, v):
+        return self.variable == v or self.sentence.variable_occurs(v)
 
     def atomics(self):
         return self.sentence.atomics()
@@ -931,9 +957,9 @@ class OperatedSentence(Sentence):
             v.update(s.variables())
         return v
 
-    def has_variable(self, v):
+    def variable_occurs(self, v):
         for s in self.operands:
-            if s.has_variable(v):
+            if s.variable_occurs(v):
                 return True
         return False
 

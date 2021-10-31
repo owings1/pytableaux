@@ -33,7 +33,7 @@ def test_identity():
 def test_self_identity():
     s = examples.self_identity()
     assert s.predicate.name == 'Identity'
-    assert s.parameters[0] == s.parameters[1]
+    assert s.params[0] == s.params[1]
 
 def test_quantified_universal():
     s = examples.quantified('Universal')

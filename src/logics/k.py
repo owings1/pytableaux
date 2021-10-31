@@ -46,13 +46,6 @@ Existence = get_system_predicate('Existence')
 
 def substitute_params(params, old_value, new_value):
     return tuple(new_value if p == old_value else p for p in params)
-    # new_params = []
-    # for p in params:
-    #     if p == old_value:
-    #         new_params.append(new_value)
-    #     else:
-    #         new_params.append(p)
-    # return tuple(new_params)
 
 class Model(BaseModel):
     """
@@ -1462,45 +1455,44 @@ class TableauxRules(object):
             *DefaultNodeRule.Helpers,
             ('predicated_nodes', PredicatedNodesTracker),
         )
-        # def __init__(self, *args, **opts):
-        #     super().__init__(*args, **opts)
-        #     self.add_helper('predicated_nodes', PredicatedNodesTracker(self))
 
         def get_targets_for_node(self, node, branch):
             pnodes = self.predicated_nodes.get_predicated(branch)
             targets = list()
-            w = node.props['world']
             pa, pb = node.props['sentence'].params
-            # find a node n with a sentence s having one of those parameters p.
+            if pa == pb:
+                # Substituting a param for itself would be silly.
+                return
+            # Find other nodes with one of the identicals.
             for n in pnodes:
+                if n is node:
+                    continue
                 s = n.props['sentence']
                 if pa in s.params:
-                    p = pa
-                    p1 = pb
+                    p_old, p_new = pa, pb
                 elif pb in s.params:
-                    p = pb
-                    p1 = pa
+                    p_old, p_new = pb, pa
                 else:
-                    # This continue statement does not register as covered. this line is covered
-                    # by test_identity_indiscernability_not_applies
+                    # This continue statement does not register as covered,
+                    # but it is by ``test_identity_indiscernability_not_applies()```
                     continue # pragma: no cover
-                # let s1 be the replacement of p with the other parameter p1 into s.
-                params = [p1 if param == p else param for param in s.params]
-                s1 = Predicated(s.predicate, params)
-                # since we have SelfIdentityClosure, we don't need a = a
-                if s.predicate != Identity or params[0] != params[1]:
-                    # if <s1,w> does not yet appear on b, ...
-                    if not branch.has({'sentence': s1, 'world': w}):
-                        # then the rule applies to <s',w,b>
-                        targets.append({
-                            'type'  : 'Nodes',
-                            'nodes' : set([node, n]),
-                            'adds'  : [
-                                [
-                                    {'sentence': s1, 'world': w}
-                                ]
-                            ]
-                        })
+                # Replace p with p1.
+                params = substitute_params(s.params, p_old, p_new)
+                # Since we have SelfIdentityClosure, we don't need a = a.
+                if s.predicate == Identity and params[0] == params[1]:
+                    continue
+                # Create a node with the substituted param.
+                s_new = Predicated(s.predicate, params)
+                n_new = {'sentence': s_new, 'world': node.props['world']}
+                # Check if it already appears on the branch.
+                if branch.has(n_new):
+                    continue
+                # The rule applies.
+                targets.append({
+                    'type'  : 'Nodes',
+                    'nodes' : {node, n},
+                    'adds'  : [[n_new]],
+                })
             return targets
 
         def example_nodes(self, branch):
