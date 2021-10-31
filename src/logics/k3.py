@@ -88,7 +88,7 @@ class TableauxRules(object):
 
         def check_for_target(self, node, branch):
             """
-            Tracker implementation. See :class:`<rules.helpers.NodeTargetCheckHelper>`
+            Tracker implementation. See :class:`<proof.helpers.NodeTargetCheckHelper>`
 
             :meta private:
             """

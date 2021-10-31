@@ -45,13 +45,14 @@ Identity  = get_system_predicate('Identity')
 Existence = get_system_predicate('Existence')
 
 def substitute_params(params, old_value, new_value):
-    new_params = []
-    for p in params:
-        if p == old_value:
-            new_params.append(new_value)
-        else:
-            new_params.append(p)
-    return tuple(new_params)
+    return tuple(new_value if p == old_value else p for p in params)
+    # new_params = []
+    # for p in params:
+    #     if p == old_value:
+    #         new_params.append(new_value)
+    #     else:
+    #         new_params.append(p)
+    # return tuple(new_params)
 
 class Model(BaseModel):
     """
@@ -59,14 +60,14 @@ class Model(BaseModel):
     relation, and a set of constants (the domain).
     """
 
+    truth_values_list = ['F', 'T']
+
     #: The set of admissible values for sentences in a model.
     #:
     #: :type: set
     #: :value: {T, F}
     #: :meta hide-value:
-    truth_values = set(['F', 'T'])
-
-    truth_values_list = ['F', 'T']
+    truth_values = frozenset(truth_values_list)
 
     unassigned_value = 'F'
 
@@ -98,7 +99,7 @@ class Model(BaseModel):
         #: :type: set
         self.constants = set()
 
-        self.predicates = set([Identity, Existence])
+        self.predicates = {Identity, Existence}
         self.fde = fde.Model()
 
         # ensure there is a w0
@@ -107,7 +108,7 @@ class Model(BaseModel):
     def value_of_operated(self, sentence, **kw):
         if self.is_sentence_opaque(sentence):
             return self.value_of_opaque(sentence, **kw)
-        elif sentence.operator in self.modal_operators:
+        if sentence.operator in self.modal_operators:
             return self.value_of_modal(sentence, **kw)
         return super().value_of_operated(sentence, **kw)
 
@@ -116,10 +117,14 @@ class Model(BaseModel):
         A sentence for predicate `P` is true at :m:`w` iff the tuple of the parameters
         is in the extension of `P` at :m:`w`.
         """
-        for param in sentence.parameters:
+        pred = sentence.predicate
+        params = sentence.params
+        for param in params:
             if param not in self.constants:
-                raise DenotationError('Parameter {0} is not in the constants'.format(str(param)))
-        if tuple(sentence.parameters) in self.get_extension(sentence.predicate, **kw):
+                raise DenotationError(
+                    'Parameter {0} is not in the constants'.format(param)
+                )
+        if params in self.get_extension(pred, **kw):
             return 'T'
         return 'F'
 
@@ -252,14 +257,15 @@ class Model(BaseModel):
             self.ensure_self_existence(world)
 
         # make sure each atomic and opaque is assigned a value in each frame
+        unval = self.unassigned_value
         for world in self.frames:
             frame = self.world_frame(world)
             for s in atomics:
                 if s not in frame.atomics:
-                    self.set_literal_value(s, self.unassigned_value, world=world)
+                    self.set_literal_value(s, unval, world=world)
             for s in opaques:
                 if s not in frame.opaques:
-                    self.set_opaque_value(s, self.unassigned_value, world=world)
+                    self.set_opaque_value(s, unval, world=world)
 
     def ensure_self_identity(self, world):
         identity_extension = self.get_extension(Identity, world=world)
@@ -299,13 +305,13 @@ class Model(BaseModel):
 
     def generate_property_classes(self, world):
         frame = self.world_frame(world)
-        for predicate in self.predicates:
+        for pred in self.predicates:
             # Skip identity and existence
-            if predicate == Identity or predicate == Existence:
+            if pred in (Identity, Existence):
                 continue
-            frame.property_classes[predicate] = {
+            frame.property_classes[pred] = {
                 tuple(self.get_denotum(param, world=world) for param in params)
-                for params in self.get_extension(predicate, world=world)
+                for params in self.get_extension(pred, world=world)
             }
 
     def get_identicals(self, c, **kw):
@@ -318,15 +324,16 @@ class Model(BaseModel):
         return identicals
 
     def is_sentence_literal(self, sentence):
-        if sentence.operator == 'Negation' and self.is_sentence_opaque(sentence.operand):
+        if sentence.is_negated and self.is_sentence_opaque(sentence.operand):
             return True
         return sentence.is_literal
 
     def set_literal_value(self, sentence, value, **kw):
         if self.is_sentence_opaque(sentence):
             self.set_opaque_value(sentence, value, **kw)
-        elif sentence.is_operated and sentence.operator == 'Negation':
-            self.set_literal_value(sentence.operand, self.truth_function('Negation', value), **kw)
+        elif sentence.is_negated:
+            negval = self.truth_function(sentence.operator, value)
+            self.set_literal_value(sentence.operand, negval, **kw)
         elif sentence.is_atomic:
             self.set_atomic_value(sentence, value, **kw)
         elif sentence.is_predicated:
@@ -336,8 +343,9 @@ class Model(BaseModel):
 
     def set_opaque_value(self, sentence, value, world=0, **kw):
         frame = self.world_frame(world)
-        if sentence in frame.opaques and frame.opaques[sentence] != value:
-            raise ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
+        # if sentence in frame.opaques and frame.opaques[sentence] != value:
+        if frame.opaques.get(sentence, value) != value:
+            raise ModelValueError('Inconsistent value for sentence {0}'.format(sentence))
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants.
         # NB: in FDE we added the atomics to all_atomics, but we don't have that
@@ -353,20 +361,20 @@ class Model(BaseModel):
         frame.atomics[sentence] = value
 
     def set_predicated_value(self, sentence, value, **kw):
-        predicate = sentence.predicate
-        if predicate not in self.predicates:
-            self.predicates.add(predicate)
-        params = tuple(sentence.parameters)
+        pred = sentence.predicate
+        params = sentence.params
+        if pred not in self.predicates:
+            self.predicates.add(pred)
         for param in params:
             if param.is_constant:
                 self.constants.add(param)
-        extension = self.get_extension(predicate, **kw)
-        anti_extension = self.get_anti_extension(predicate, **kw)
+        extension = self.get_extension(pred, **kw)
+        anti_extension = self.get_anti_extension(pred, **kw)
         if value == 'F':
             if params in extension:
                 raise ModelValueError(
                     'Cannot set value {0} for tuple {1} already in extension'.format(
-                        str(value), str(params)
+                        value, params
                     )
                 )
             anti_extension.add(params)
@@ -374,7 +382,7 @@ class Model(BaseModel):
             if params in anti_extension:
                 raise ModelValueError(
                     'Cannot set value {0} for tuple {1} already in anti-extension'.format(
-                        str(value), str(params)
+                        value, params
                     )
                 )
             extension.add(params)
@@ -564,7 +572,7 @@ class Frame(object):
                     'datatype'    : 'list',
                     'values'      : [
                         {
-                            'description'     : 'predicate extension for {0}'.format(predicate.name),
+                            'description'     : 'predicate extension for {0}'.format(pred.name),
                             'datatype'        : 'function',
                             'typehint'        : 'extension',
                             'input_datatype'  : 'predicate',
@@ -573,12 +581,12 @@ class Frame(object):
                             'symbol'          : 'P',
                             'values'          : [
                                 {
-                                    'input'  : predicate,
-                                    'output' : self.extensions[predicate],
+                                    'input'  : pred,
+                                    'output' : self.extensions[pred],
                                 }
                             ]
                         }
-                        for predicate in sorted(list(self.extensions.keys()))
+                        for pred in sorted(list(self.extensions.keys()))
                     ]
                 }
             }
@@ -684,9 +692,6 @@ class TableauxSystem(BaseSystem):
                 complexity += 1
         return complexity
 
-class ModalClosureRule(ClosureRule):
-    modal = True
-
 class DefaultNodeRule(FilterNodeRule):
     modal = True
     ticking = True
@@ -704,11 +709,12 @@ class TableauxRules(object):
     connectives.
     """
 
-    class ContradictionClosure(ModalClosureRule):
+    class ContradictionClosure(ClosureRule):
         """
         A branch closes when a sentence and its negation both appear on a node **with the
         same world** on the branch.
         """
+        modal = True
 
         # tracker implementation
 
@@ -745,11 +751,12 @@ class TableauxRules(object):
                     'world'    : node.props['world'],
                 })
                 
-    class SelfIdentityClosure(ModalClosureRule):
+    class SelfIdentityClosure(ClosureRule):
         """
         A branch closes when a sentence of the form :s:`~a = a` appears on the
         branch *at any world*.
         """
+        modal = True
 
         # tracker implementation
 
@@ -763,7 +770,7 @@ class TableauxRules(object):
             if node.has('sentence'):
                 s = node.props['sentence']
                 if s.operator == 'Negation' and s.operand.predicate == Identity:
-                    a, b = node.props['sentence'].operand.parameters
+                    a, b = node.props['sentence'].operand.params
                     return a == b
 
         def applies_to_branch(self, branch):
@@ -775,11 +782,12 @@ class TableauxRules(object):
             w = 0 if self.modal else None
             return {'sentence': s, 'world': w}
 
-    class NonExistenceClosure(ModalClosureRule):
+    class NonExistenceClosure(ClosureRule):
         """
         A branch closes when a sentence of the form :s:`~!a` appears on the branch
         *at any world*.
         """
+        modal = True
 
         # tracker implementation
 
@@ -1184,13 +1192,12 @@ class TableauxRules(object):
         operator = 'Possibility'
         branch_level = 1
 
-        def __init__(self, *args, **opts):
-            super().__init__(*args, **opts)
-            self.add_helpers({
-                'applied_sentences' : AppliedSentenceCounter(self),
-                'max_worlds'        : MaxWorldsTracker(self),
-                'quit_flagger'      : QuitFlagHelper(self),
-            })
+        Helpers = (
+            *DefaultNodeRule.Helpers,
+            ('applied_sentences' , AppliedSentenceCounter),
+            ('max_worlds'        , MaxWorldsTracker),
+            ('quit_flagger'      , QuitFlagHelper),
+        )
 
         def is_potential_node(self, node, branch):
             if self.quit_flagger.has_flagged(branch):
@@ -1296,19 +1303,20 @@ class TableauxRules(object):
         branch_level = 1
         ticking      = False
 
-        def __init__(self, *args, **opts):
-            super().__init__(*args, **opts)
-            self.add_timer(
-                'get_targets_for_node',
-                'make_target'         ,
-                'check_target_condtn1',
-                'check_target_condtn2',
-            )
-            self.add_helpers({
-                'max_worlds'          : MaxWorldsTracker(self),
-                'node_worlds_applied' : AppliedNodesWorldsTracker(self),
-                'quit_flagger'        : QuitFlagHelper(self),
-            })
+        Helpers = (
+            *DefaultNodeRule.Helpers,
+            ('max_worlds'          , MaxWorldsTracker),
+            ('node_worlds_applied' , AppliedNodesWorldsTracker),
+            ('quit_flagger'        , QuitFlagHelper),
+        )
+
+        Timers = (
+            *DefaultNodeRule.Timers,
+            'get_targets_for_node',
+            'make_target'         ,
+            'check_target_condtn1',
+            'check_target_condtn2',
+        )
 
         def is_potential_node(self, node, branch):
             if self.quit_flagger.has_flagged(branch):
@@ -1318,13 +1326,13 @@ class TableauxRules(object):
         def get_targets_for_node(self, node, branch):
 
             # Check for max worlds reached
-            if not self._should_apply(branch):
+            if not self.__should_apply(branch):
                 if not self.quit_flagger.has_flagged(branch):
-                    return [self._get_flag_target(branch)]
+                    return [self.__get_flag_target(branch)]
                 return
 
             # Only count least-applied-to nodes
-            if not self._is_least_applied_to(node, branch):
+            if not self.__is_least_applied_to(node, branch):
                 return
 
             with self.timers['get_targets_for_node']:
@@ -1358,7 +1366,7 @@ class TableauxRules(object):
                             targets.append({
                                 'sentence' : si,
                                 'world'    : w2,
-                                'nodes'    : set([node, anode]),
+                                'nodes'    : {node, anode},
                                 'type'     : 'Nodes',
                                 'adds'     : [
                                     [
@@ -1370,17 +1378,21 @@ class TableauxRules(object):
 
         def score_candidate(self, target):
 
-            if 'flag' in target and target['flag']:
+            if target.get('flag'):
                 return 1
 
-            # We are already restricted to least-applied-to nodes by ``get_targets_for_node()``
+            # We are already restricted to least-applied-to nodes by
+            # ``get_targets_for_node()``
 
             # Check for closure
             if self.adz.closure_score(target) == 1:
                 return 1
 
             # Not applied to yet
-            node_apply_count = self.node_application_count(target['node'].id, target['branch'].id)
+            node_apply_count = self.node_application_count(
+                target['node'].id,
+                target['branch'].id,
+            )
             if node_apply_count == 0:
                 return 1
 
@@ -1392,7 +1404,10 @@ class TableauxRules(object):
             if self.score_candidate(target) > 0:
                 return 1
 
-            return -1 * self.node_application_count(target['node'].id, target['branch'].id)
+            return -1 * self.node_application_count(
+                target['node'].id,
+                target['branch'].id,
+            )
             #return -1 * min(target['track_count'], self.tableau.branching_complexity(target['node']))
 
         def example_nodes(self, branch):
@@ -1404,15 +1419,15 @@ class TableauxRules(object):
 
         # private util
 
-        def _should_apply(self, branch):
+        def __should_apply(self, branch):
             return not self.max_worlds.max_worlds_exceeded(branch)
 
-        def _is_least_applied_to(self, node, branch):
+        def __is_least_applied_to(self, node, branch):
             node_apply_count = self.node_application_count(node.id, branch.id)
             min_apply_count = self.min_application_count(branch.id)
             return min_apply_count >= node_apply_count
 
-        def _get_flag_target(self, branch):
+        def __get_flag_target(self, branch):
             return {
                 'flag': True,
                 'adds': [
@@ -1443,22 +1458,26 @@ class TableauxRules(object):
         branch_level = 1
         ticking      = False
 
-        def __init__(self, *args, **opts):
-            super().__init__(*args, **opts)
-            self.add_helper('predicated_nodes', PredicatedNodesTracker(self))
+        Helpers = (
+            *DefaultNodeRule.Helpers,
+            ('predicated_nodes', PredicatedNodesTracker),
+        )
+        # def __init__(self, *args, **opts):
+        #     super().__init__(*args, **opts)
+        #     self.add_helper('predicated_nodes', PredicatedNodesTracker(self))
 
         def get_targets_for_node(self, node, branch):
             pnodes = self.predicated_nodes.get_predicated(branch)
             targets = list()
             w = node.props['world']
-            pa, pb = node.props['sentence'].parameters
+            pa, pb = node.props['sentence'].params
             # find a node n with a sentence s having one of those parameters p.
             for n in pnodes:
                 s = n.props['sentence']
-                if pa in s.parameters:
+                if pa in s.params:
                     p = pa
                     p1 = pb
-                elif pb in s.parameters:
+                elif pb in s.params:
                     p = pb
                     p1 = pa
                 else:
@@ -1466,7 +1485,7 @@ class TableauxRules(object):
                     # by test_identity_indiscernability_not_applies
                     continue # pragma: no cover
                 # let s1 be the replacement of p with the other parameter p1 into s.
-                params = [p1 if param == p else param for param in s.parameters]
+                params = [p1 if param == p else param for param in s.params]
                 s1 = Predicated(s.predicate, params)
                 # since we have SelfIdentityClosure, we don't need a = a
                 if s.predicate != Identity or params[0] != params[1]:

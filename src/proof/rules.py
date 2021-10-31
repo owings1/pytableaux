@@ -18,6 +18,7 @@
 # ------------------
 #
 # pytableaux - tableaux rules module
+from inspect import isclass
 from lexicals import AtomicSentence, OperatedSentence, operarity
 from utils import EventEmitter, StopWatch, istableau
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
@@ -29,19 +30,24 @@ class Rule(EventEmitter):
     Base class for a tableau rule.
     """
 
+    Helpers = (('adz', AdzHelper),)
+    Timers = tuple()
+
     branch_level = 1
 
     default_opts = {
         'is_rank_optim' : True
     }
 
-    # For helper
+    # For AdzHelper.
     ticking = None
 
     def __init__(self, tableau, **opts):
 
         if not istableau(tableau):
-            raise TypeError('Must instantiate rule with a Tableau instance.')
+            raise TypeError(
+                '`tableau` must be a Tableau, got {}'.format(tableau.__class__)
+            )
         super().__init__()
 
         #: Reference to the tableau for which the rule is instantiated.
@@ -57,10 +63,13 @@ class Rule(EventEmitter):
         self.search_timer = StopWatch()
         self.apply_timer = StopWatch()
         self.timers = {}
-        self.helpers = []
         self.apply_count = 0
-        self.opts = dict(self.default_opts)
+
+        self.opts = dict(__class__.default_opts)
+        self.opts.update(self.default_opts)
         self.opts.update(opts)
+
+        self.__helpers = []
 
         self.tableau.add_listeners({
             Events.AFTER_BRANCH_ADD   : self.__after_branch_add,
@@ -71,7 +80,10 @@ class Rule(EventEmitter):
             Events.BEFORE_TRUNK_BUILD : self.__before_trunk_build,
         })
         self.register_event(Events.AFTER_APPLY)
-        self.add_helper('adz', AdzHelper(self))
+
+        for name, helper in self.Helpers:
+            self.add_helper(name, helper)
+        self.add_timer(*self.Timers)
 
     # External API
 
@@ -127,8 +139,7 @@ class Rule(EventEmitter):
 
     def sentence(self, node):
         # Overriden in FilterNodeRule
-        if 'sentence' in node.props:
-            return node.props['sentence']
+        return node.props.get('sentence')
 
     # Candidate score implementation options ``is_rank_optim``
 
@@ -156,18 +167,20 @@ class Rule(EventEmitter):
 
     def safeprop(self, name, value = None):
         if hasattr(self, name):
-            raise KeyError('Property {0} already exists'.format(str(name)))
-        self.__dict__[name] = value
+            raise KeyError("Property '{}' already exists".format(name))
+        setattr(self, name, value)
 
     def add_timer(self, *names):
         for name in names:
             if name in self.timers:
-                raise KeyError('Timer {0} already exists'.format(str(name)))
+                raise KeyError("Timer '{}' already exists".format(name))
             self.timers[name] = StopWatch()
 
     def add_helper(self, name, helper):
+        if isclass(helper):
+            helper = helper(self)
         self.safeprop(name, helper)
-        self.helpers.append(helper)
+        self.__helpers.append(helper)
         return helper
 
     def add_helpers(self, helpers):
@@ -175,41 +188,46 @@ class Rule(EventEmitter):
             self.add_helper(name, helpers[name])
         return self
 
+    # Other
+
+    def __repr__(self):
+        return self.name
+
     # Events
 
     def __before_trunk_build(self, argument):
-        for helper in self.helpers:
+        for helper in self.__helpers:
             if hasattr(helper, 'before_trunk_build'):
                 helper.before_trunk_build(argument)
 
     def __after_trunk_build(self, branches):
-        for helper in self.helpers:
+        for helper in self.__helpers:
             if hasattr(helper, 'after_trunk_build'):
                 helper.after_trunk_build(branches)
 
     def __after_branch_add(self, branch):
-        for helper in self.helpers:
+        for helper in self.__helpers:
             if hasattr(helper, 'register_branch'):
                 helper.register_branch(branch, branch.parent)
 
     def __after_branch_close(self, branch):
-        for helper in self.helpers:
+        for helper in self.__helpers:
             if hasattr(helper, 'after_branch_close'):
                 helper.after_branch_close(branch)
 
     def __after_node_add(self, node, branch):
-        for helper in self.helpers:
+        for helper in self.__helpers:
             if hasattr(helper, 'register_node'):
                 helper.register_node(node, branch)
 
     def __after_node_tick(self, node, branch):
-        for helper in self.helpers:
+        for helper in self.__helpers:
             if hasattr(helper, 'after_node_tick'):
                 helper.after_node_tick(node, branch)
 
     def __after_apply(self, target):
         self.emit(Events.AFTER_APPLY, target)
-        for helper in self.helpers:
+        for helper in self.__helpers:
             if hasattr(helper, 'after_apply'):
                 helper.after_apply(target)
 
@@ -269,24 +287,20 @@ class Rule(EventEmitter):
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
 
-    # Other
-
-    def __repr__(self):
-        return self.name
-
 class ClosureRule(Rule):
     """
     A closure rule has a fixed ``apply()`` method that marks the branch as
     closed. Sub-classes should implement the ``applies_to_branch()`` method.
     """
 
+    Helpers = [
+        *Rule.Helpers,
+        ('tracker', NodeTargetCheckHelper),
+    ]
+
     default_opts = {
         'is_rank_optim' : False
     }
-
-    def __init__(self, tableau, **opts):
-        super().__init__(tableau, **opts)
-        self.add_helper('tracker', NodeTargetCheckHelper(self))
 
     def get_candidate_targets(self, branch):
         target = self.applies_to_branch(branch)
@@ -320,7 +334,7 @@ class ClosureRule(Rule):
 
 class PotentialNodeRule(Rule):
     """
-    ``PotentialNodeRule`` base class. Caches potential nodes as they appear,
+    ``PotentialNodeRule`` intermediate class. Caches potential nodes as they appear,
     and tracks the number of applications to each node. Provides default
     implementation of some methods, and delegates to finer-grained abstract
     methods.
@@ -582,31 +596,43 @@ class FilterNodeRule(PotentialNodeRule):
 
 class NewConstantStoppingRule(FilterNodeRule):
     """
-    Default rule implementation for a one-constant instantiating rule. The rule
-    will check the ``MaxConstantsTracker``. If the max constants have been
-    exceeded for the branch and world, emits a quit flag using the ``QuitFlagHelper``.
-    Concrete classes must implement ``get_new_nodes_for_constant()``.
-
-    This rule inherits from ``FilterNodeRule`` and implements the
-    ``get_target_for_node()`` method.
+    Intermediate class for a one-constant instantiating rule. This class uses
+    the ``MaxConstantsTracker``, and adds a quit flag to the branch once the
+    max number of constants is exceeded.
+ 
+    This class implements ``get_target_for_node()`` from ``FilterNodeRule``,
+    replacing it with the abstract method: ``get_new_nodes_for_constant()``.
     """
 
-    # To be implemented
+    Helpers = (
+        *FilterNodeRule.Helpers,
+        ('max_constants', MaxConstantsTracker),
+        ('quit_flagger' , QuitFlagHelper),
+    )
 
     def get_new_nodes_for_constant(self, c, node, branch):
+        """
+        Create the new nodes for the given constant, node, and branch, according
+        to the implementation.
+
+        :param lexicals.Constant c:
+        :param tableaux.Node node:
+        :param tableaux.Branch branch:
+        :return: The list of nodes.
+        :meta abstract:
+        """
         raise NotImplementedError()
 
-    # node rule implementation
-
-    def __init__(self, *args, **opts):
-        super().__init__(*args, **opts)
-        self.add_helpers({
-            'max_constants' : MaxConstantsTracker(self),
-            'quit_flagger'  : QuitFlagHelper(self),
-        })
+    def add_to_adds(self, node, branch):
+        """
+        Optionally extend the target `adds` with additional branches.
+        """
+        pass
 
     def get_target_for_node(self, node, branch):
-
+        """
+        Implements ``PotentialNodeRule``.
+        """
         if not self.__should_apply(branch, node.props['world']):
             if not self.quit_flagger.has_flagged(branch):
                 return self.__get_flag_target(branch)
@@ -620,16 +646,15 @@ class NewConstantStoppingRule(FilterNodeRule):
             ],
         }
 
+        # TODO:
+        # Most implementations do not branch, so ``get_new_nodes_for_constant``
+        # expects just a list of nodes, not branches. However, K3WQ and P3 are
+        # apparently exceptions, so this workaround is introduced.
         more_adds = self.add_to_adds(node, branch)
         if more_adds:
             target['adds'].extend(more_adds)
 
         return target
-
-    def add_to_adds(self, node, branch):
-        pass
-
-    # private util
 
     def __should_apply(self, branch, world):
         return not self.max_constants.max_constants_exceeded(branch, world)
@@ -646,28 +671,37 @@ class NewConstantStoppingRule(FilterNodeRule):
 
 class AllConstantsStoppingRule(FilterNodeRule):
 
-    # To be implemented
+    Helpers = (
+        *FilterNodeRule.Helpers,
+        ('max_constants'     , MaxConstantsTracker),
+        ('applied_constants' , NodeAppliedConstants),
+        ('quit_flagger'      , QuitFlagHelper),
+    )
+
+    Timers = (
+        *FilterNodeRule.Timers,
+        'in_get_targets_for_nodes',
+        'in_node_examime',
+        'in_should_apply',
+    )
 
     def get_new_nodes_for_constant(self, c, node, branch):
+        """
+        Create the new nodes for the given constant, node, and branch, according
+        to the implementation.
+
+        :param lexicals.Constant c:
+        :param tableaux.Node node:
+        :param tableaux.Branch branch:
+        :return: The list of nodes.
+        :meta abstract:
+        """
         raise NotImplementedError()
 
-    def __init__(self, *args, **opts):
-        super().__init__(*args, **opts)
-        self.add_timer(
-            'in_get_targets_for_nodes',
-            'in_node_examime'         ,
-            'in_should_apply'         ,
-        )
-        self.add_helpers({
-            'max_constants'     : MaxConstantsTracker(self),
-            'applied_constants' : NodeAppliedConstants(self),
-            'quit_flagger'      : QuitFlagHelper(self),
-        })
-
-    # rule implementation
-
     def get_targets_for_node(self, node, branch):
-
+        """
+        Implements ``PotentialNodeRule``.
+        """
         with self.timers['in_should_apply']:
             should_apply = self.__should_apply(node, branch)
 
@@ -699,8 +733,6 @@ class AllConstantsStoppingRule(FilterNodeRule):
 
         return targets
 
-    # private util
-
     def __should_apply(self, node, branch):
         if self.max_constants.max_constants_exceeded(branch, node.props['world']):
             return False
@@ -727,12 +759,3 @@ class AllConstantsStoppingRule(FilterNodeRule):
                 ],
             ],
         }
-
-# def _check_is_tableau(obj):
-#     # Just enough for what we call.
-#     return (
-#         callable(getattr(obj, 'branch', None)) and
-#         #: TODO: move the Tableau impl to Rule class, then we don't need this check
-#         callable(getattr(obj, 'branching_complexity', None)) and
-#         isinstance(getattr(obj, 'history', None), list)
-#     )
