@@ -689,7 +689,7 @@ class DefaultNodeRule(FilterNodeRule):
     modal = True
     ticking = True
 
-    def apply_to_target(self, target):
+    def _apply(self, target):
         self.adz.apply_to_target(target)
 
     def score_candidate(self, target):
@@ -714,7 +714,7 @@ class TableauxRules(object):
         def check_for_target(self, node, branch):
             nnode = self._find_closing_node(node, branch)
             if nnode:
-                return {'nodes': set([node, nnode]), 'type': 'Nodes'}
+                return {'nodes': set([node, nnode])}
 
         # rule implementation
 
@@ -755,7 +755,7 @@ class TableauxRules(object):
 
         def check_for_target(self, node, branch):
             if self.node_will_close_branch(node, branch):
-                return {'node': node, 'type': 'Node'}
+                return {'node': node}
 
         # rule implementation
 
@@ -786,7 +786,7 @@ class TableauxRules(object):
 
         def check_for_target(self, node, branch):
             if self.node_will_close_branch(node, branch):
-                return {'node': node, 'type': 'Node'}
+                return {'node': node}
 
         # rule implementation
 
@@ -956,7 +956,7 @@ class TableauxRules(object):
                         {'sentence': s.lhs.negate(), 'world': w},
                     ],
                     [
-                        {'sentence':        s.rhs , 'world': w},
+                        {'sentence': s.rhs         , 'world': w},
                     ],
                 ],
             }
@@ -1147,7 +1147,7 @@ class TableauxRules(object):
         ticking      = False
 
         def score_candidate(self, target):
-            if 'flag' in target and target['flag']:
+            if target.get('flag'):
                 return 1
             if self.adz.closure_score(target) == 1:
                 return 1
@@ -1221,7 +1221,7 @@ class TableauxRules(object):
 
         def score_candidate(self, target):
 
-            if 'flag' in target and target['flag']:
+            if target.get('flag'):
                 return 1
 
             # override
@@ -1360,7 +1360,6 @@ class TableauxRules(object):
                                 'sentence' : si,
                                 'world'    : w2,
                                 'nodes'    : {node, anode},
-                                'type'     : 'Nodes',
                                 'adds'     : [
                                     [
                                         {'sentence': si, 'world': w2}
@@ -1489,13 +1488,12 @@ class TableauxRules(object):
                     continue
                 # The rule applies.
                 targets.append({
-                    'type'  : 'Nodes',
                     'nodes' : {node, n},
                     'adds'  : [[n_new]],
                 })
             return targets
 
-        def example_nodes(self, branch = None):
+        def example_nodes(self):
             world = 0 if self.modal else None
             return [
                 {'sentence': examples.predicated(), 'world': world},

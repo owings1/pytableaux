@@ -20,7 +20,7 @@
 # pytableaux - tableaux rules module
 from inspect import isclass
 from lexicals import Atomic, Operated, operarity
-from utils import EventEmitter, StopWatch, istableau, safeprop
+from utils import EventEmitter, StopWatch, istableau, safeprop, typecheck
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper
 from events import Events
@@ -30,7 +30,7 @@ class Rule(EventEmitter):
     Base class for a tableau rule.
     """
 
-    Helpers = (('adz', AdzHelper),)
+    Helpers = tuple()#(('adz', AdzHelper),)
     Timers = tuple()
 
     branch_level = 1
@@ -39,46 +39,25 @@ class Rule(EventEmitter):
         'is_rank_optim' : True
     }
 
-    # For AdzHelper.
-    ticking = None
-
     def __init__(self, tableau, **opts):
-
         if not istableau(tableau):
             raise TypeError(
                 '`tableau` must be a Tableau, got {}'.format(tableau.__class__)
             )
         super().__init__()
 
-        #: Reference to the tableau for which the rule is instantiated.
-        #:
-        #: :type: tableaux.Tableau
-        self.tableau = tableau
-
-        #: The rule name, default it the class name.
-        #:
-        #: :type: str
-        self.name = self.__class__.__name__
-
         self.search_timer = StopWatch()
         self.apply_timer = StopWatch()
         self.timers = {}
-        self.apply_count = 0
 
         self.opts = dict(__class__.default_opts)
         self.opts.update(self.default_opts)
         self.opts.update(opts)
 
+        self.__apply_count = 0
         self.__helpers = []
+        self.__tableau = tableau
 
-        self.tableau.add_listeners({
-            Events.AFTER_BRANCH_ADD   : self.__after_branch_add,
-            Events.AFTER_BRANCH_CLOSE : self.__after_branch_close,
-            Events.AFTER_NODE_ADD     : self.__after_node_add,
-            Events.AFTER_NODE_TICK    : self.__after_node_tick,
-            Events.AFTER_TRUNK_BUILD  : self.__after_trunk_build,
-            Events.BEFORE_TRUNK_BUILD : self.__before_trunk_build,
-        })
         self.register_event(
             Events.AFTER_APPLY,
             Events.BEFORE_APPLY,
@@ -88,77 +67,165 @@ class Rule(EventEmitter):
         self.add_timer(*self.Timers)
 
     @property
+    def apply_count(self):
+        """
+        The number of times the rule has applied.
+
+        :type: int
+        """
+        return self.__apply_count
+
+    @property
     def is_closure(self):
+        """
+        Whether this is an instance of :class:`~ClosureRule`.
+
+        :type: bool
+        """
         return isinstance(self, ClosureRule)
+
+    @property
+    def name(self):
+        """
+        The rule name, default it the class name.
+
+        :type: str
+        """
+        return self.__class__.__name__
+
+    @property
+    def tableau(self):
+        """
+        Reference to the tableau instance.
+
+        :type: tableaux.Tableau
+        """
+        return self.__tableau
+
+    @property
+    def Node(self):
+        """
+        Reference to the :class:`~tableaux.Node` class.
+
+        :type: class
+        """
+        return self.tableau.Node
 
     def get_target(self, branch):
         """
         :meta public final:
         """
         # Concrete classes should not override this, but should implement
-        # ``get_candidate_targets()`` instead.
-        cands = self.get_candidate_targets(branch)
-        if cands:
-            self.__extend_branch_targets(cands, branch)
-            return self.__select_best_target(cands, branch)
+        # ``_get_targets()`` instead.
+        targets = self._get_targets(branch)
+        if targets:
+            self.__extend_targets(targets)
+            return self.__select_best_target(targets)
 
     def apply(self, target):
         """
         :meta public final:
         """
         # Concrete classes should not override this, but should implement
-        # ``apply_to_target()`` instead.
+        # ``_apply()`` instead.
         with self.apply_timer:
             self.emit(Events.BEFORE_APPLY, target)
-            # self.__before_apply(target)
-            self.apply_to_target(target)
-            self.apply_count += 1
-            # self.__after_apply(target)
+            self._apply(target)
+            self.__apply_count += 1
             self.emit(Events.AFTER_APPLY, target)
 
-    def example(self):
+    def branch(self, parent = None):
         """
+        Create a new branch on the tableau. Convenience for ``self.tableau.branch()``.
+
+        :param tableaux.Branch parent: The parent branch, if any.
+        :return: The new branch.
+        :rtype: tableaux.Branch
+        :meta public final:
+        """
+        return self.tableau.branch(parent)
+
+    def add_timer(self, *names):
+        """
+        Add a timer.
+
         :meta public:
         """
-        # Add example branches/nodes sufficient for ``applies()`` to return true.
-        # Implementations should modify the tableau directly, with no return
-        # value. Used for building examples/documentation.
-        self.branch().update(self.example_nodes())
+        for name in names:
+            if name in self.timers:
+                raise KeyError("Timer '{}' already exists".format(name))
+            self.timers[name] = StopWatch()
+
+    def add_helper(self, helper, attr = None):
+        """
+        Add a helper.
+
+        :meta public:
+        """
+        if isclass(helper):
+            helper = helper(self)
+        if attr != None:
+            safeprop(self, attr, helper)
+        for event, meth in (
+            (Events.AFTER_APPLY  , 'after_apply'),
+            (Events.BEFORE_APPLY , 'before_apply'),
+        ):
+            if hasattr(helper, meth):
+                self.add_listener(event, getattr(helper, meth))
+        for event, meth in (
+            (Events.AFTER_BRANCH_ADD   , 'after_branch_add'),
+            (Events.AFTER_BRANCH_CLOSE , 'after_branch_close'),
+            (Events.AFTER_NODE_ADD     , 'after_node_add'),
+            (Events.AFTER_NODE_TICK    , 'after_node_tick'),
+            (Events.AFTER_TRUNK_BUILD  , 'after_trunk_build'),
+            (Events.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
+        ):
+            if hasattr(helper, meth):
+                self.tableau.add_listener(event, getattr(helper, meth))
+        self.__helpers.append(helper)
+        return helper
 
     # Abstract methods
-
-    def get_candidate_targets(self, branch):
+    def example_nodes(self):
         """
         :meta abstract:
+        """
+        raise NotImplementedError()
+
+    def _get_targets(self, branch):
+        """
+        :meta protected abstract:
         """
         # Intermediate classes such as ``ClosureRule``, ``PotentialNodeRule``,
         # (and its child ``FilterNodeRule``) implement this and ``select_best_target()``,
         # and define finer-grained methods for concrete classes to implement.
         raise NotImplementedError()
 
-    def apply_to_target(self, target):
+    def _apply(self, target):
         """
-        :meta abstract:
-        """
-        # Apply the rule to the target. Implementations should
-        # modify the tableau directly, with no return value.
-        raise NotImplementedError()
+        Apply the rule to the target. Implementations should modify the tableau directly,
+        with no return value.
 
-    def example_nodes(self, branch = None):
-        """
         :meta abstract:
         """
         raise NotImplementedError()
 
     # Default implementation
 
+    def sentence(self, node):
+        """
+        Get the sentence for the node, or ``None``.
+
+        :param tableaux.Node node:
+        :rtype: lexicals.Sentence
+        """
+        return node.sentence
+
+    # Scoring
+
     def group_score(self, target):
         # Called in tableau
         return self.score_candidate(target) / max(1, self.branch_level)
-
-    def sentence(self, node):
-        # Overriden in FilterNodeRule
-        return node.props.get('sentence')
 
     # Candidate score implementation options ``is_rank_optim``
 
@@ -172,97 +239,18 @@ class Rule(EventEmitter):
         # Will sum to 0 by default
         return {}
 
-    # Util methods
-
-    def branch(self, parent = None):
-        """
-        Create a new branch on the tableau. Convenience for ``self.tableau.branch()``.
-
-        :param tableaux.Branch parent: The parent branch, if any.
-        :return: The new branch.
-        :rtype: tableaux.Branch
-        """
-        return self.tableau.branch(parent)
-
-    # def safeprop(self, name, value = None):
-    #     if hasattr(self, name):
-    #         raise KeyError("Property '{}' already exists".format(name))
-    #     setattr(self, name, value)
-
-    def add_timer(self, *names):
-        for name in names:
-            if name in self.timers:
-                raise KeyError("Timer '{}' already exists".format(name))
-            self.timers[name] = StopWatch()
-
-    def add_helper(self, helper, attr = None):
-        if isclass(helper):
-            helper = helper(self)
-        if attr != None:
-            safeprop(self, attr, helper)
-        if hasattr(helper, 'before_apply'):
-            self.add_listener(Events.BEFORE_APPLY, helper.before_apply)
-        if hasattr(helper, 'after_apply'):
-            self.add_listener(Events.AFTER_APPLY, helper.after_apply)
-        self.__helpers.append(helper)
-        return helper
-
     # Other
 
     def __repr__(self):
         return self.name
 
-    # Events
-
-    def __before_trunk_build(self, argument):
-        for helper in self.__helpers:
-            if hasattr(helper, 'before_trunk_build'):
-                helper.before_trunk_build(argument)
-
-    def __after_trunk_build(self, branches):
-        for helper in self.__helpers:
-            if hasattr(helper, 'after_trunk_build'):
-                helper.after_trunk_build(branches)
-
-    def __after_branch_add(self, branch):
-        for helper in self.__helpers:
-            if hasattr(helper, 'register_branch'):
-                helper.register_branch(branch, branch.parent)
-
-    def __after_branch_close(self, branch):
-        for helper in self.__helpers:
-            if hasattr(helper, 'after_branch_close'):
-                helper.after_branch_close(branch)
-
-    def __after_node_add(self, node, branch):
-        for helper in self.__helpers:
-            if hasattr(helper, 'register_node'):
-                helper.register_node(node, branch)
-
-    def __after_node_tick(self, node, branch):
-        for helper in self.__helpers:
-            if hasattr(helper, 'after_node_tick'):
-                helper.after_node_tick(node, branch)
-
-    # def __before_apply(self, target):
-    #     self.emit(Events.BEFORE_APPLY, target)
-    #     # for helper in self.__helpers:
-    #     #     if hasattr(helper, 'before_apply'):
-    #     #         helper.before_apply(target)
-
-    # def __after_apply(self, target):
-    #     self.emit(Events.AFTER_APPLY, target)
-    #     # for helper in self.__helpers:
-    #     #     if hasattr(helper, 'after_apply'):
-    #     #         helper.after_apply(target)
-
     # Private Util
 
-    def __extend_branch_targets(self, targets, branch):
+    def __extend_targets(self, targets):
         """
         Augment the targets with the following keys:
         
-        - `branch`
+        - `rule`
         - `is_rank_optim`
         - `candidate_score`
         - `total_candidates`
@@ -273,23 +261,21 @@ class Rule(EventEmitter):
         :param tableaux.Branch branch: The branch.
         :return: ``None``
         """
-        for target in targets:
-            if 'branch' not in target:
-                target['branch'] = branch
-
         if self.opts['is_rank_optim']:
             scores = [self.score_candidate(target) for target in targets]
         else:
             scores = [0]
         max_score = max(scores)
         min_score = min(scores)
-        for i in range(len(targets)):
-            target = targets[i]
+        for i, target in enumerate(targets):
+            target.update({
+                'rule'            : self,
+                'total_candidates': len(targets),
+            })
             if self.opts['is_rank_optim']:
                 target.update({
                     'is_rank_optim'       : True,
                     'candidate_score'     : scores[i],
-                    'total_candidates'    : len(targets),
                     'min_candidate_score' : min_score,
                     'max_candidate_score' : max_score,
                 })
@@ -297,12 +283,11 @@ class Rule(EventEmitter):
                 target.update({
                     'is_rank_optim'       : False,
                     'candidate_score'     : None,
-                    'total_candidates'    : len(targets),
                     'min_candidate_score' : None,
                     'max_candidate_score' : None,
                 })
 
-    def __select_best_target(self, targets, branch):
+    def __select_best_target(self, targets):
         """
         Selects the best target. Assumes targets have been extended.
         """
@@ -311,6 +296,83 @@ class Rule(EventEmitter):
                 return target
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
+
+class Target(object):
+
+    __comps = {'type'}
+    __attrs = {'branch', 'node', 'rule'}
+    __oppos = {}
+
+    __opkeys = {
+        # 'node': {'nodes'},
+        # 'nodes': {'node'},
+    }
+
+    @staticmethod
+    def create(obj, **data):
+        if isinstance(obj, __class__):
+            target = obj
+            target.update(data)
+        else:
+            target = __class__(data)
+            if isinstance(obj, dict):
+                target.update(obj)
+        return target
+
+    def __init__(self, data):
+        self.__keys = set(self.__comps)
+        self.__data = {}
+        self.__oppos = {}
+        self.update(data)
+        self['branch']
+        # self['rule']
+
+    def update(self, obj):
+        for k in obj:
+            self[k] = obj[k]
+
+    def get(self, key, default = None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __getitem__(self, item):
+        if item in self.__comps:
+            return getattr(self, item)
+        return self.__data[item]
+
+    def __setitem__(self, item, val):
+        if item in self.__oppos:
+            oppos = self.__oppos[item]
+            raise KeyError("Cannot set '{}' when '{}' is set".format(item, oppos))
+        if item in self.__keys:
+            if item in self.__comps:
+                raise KeyError("Computed property '{}'".format(item))
+            if self.__data[item] == val:
+                return
+            raise KeyError("Cannot replace '{}'".format(item))
+        self.__data[item] = val
+        self.__keys.add(item)
+        if item in self.__opkeys:
+            for key in self.__opkeys[item]:
+                self.__oppos[key] = item
+
+    def __contains__(self, item):
+        return item in self.__keys
+
+    @property
+    def type(self):
+        if 'nodes' in self.__data:
+            return 'Nodes'
+        if 'node' in self.__data:
+            return 'Node'
+        return 'Branch'
+
+    def __getattr__(self, item):
+        if item in self.__attrs:
+            return getattr(self.__data, item)
+        raise AttributeError("'{}'".format(item))
 
 class ClosureRule(Rule):
     """
@@ -327,27 +389,24 @@ class ClosureRule(Rule):
         'is_rank_optim' : False
     }
 
-    def get_candidate_targets(self, branch):
+    def _get_targets(self, branch):
         """
         :implements: Rule
         """
         target = self.applies_to_branch(branch)
         if target:
-            if target == True:
-                target = {'branch': branch}
-            if 'branch' not in target:
-                target['branch'] = branch
-            if 'type' not in target:
-                target['type'] = 'Branch'
-            return [target]
+            return [Target.create(target, branch = branch)]
 
-    def apply_to_target(self, target):
+    def _apply(self, target):
         """
         :implements: Rule
         """
         target['branch'].close()
 
     def applies_to_branch(self, branch):
+        """
+        :meta abstract:
+        """
         raise NotImplementedError()
 
     def nodes_will_close_branch(self, nodes, branch):
@@ -378,9 +437,13 @@ class PotentialNodeRule(Rule):
     implementation of some methods, and delegates to finer-grained abstract
     methods.
     """
-
-    # Override
+    Helpers = (
+        *Rule.Helpers,
+        ('adz', AdzHelper),
+    )
     ticked = False
+    # For AdzHelper.
+    ticking = None
 
     def __init__(self, *args, **opts):
         super().__init__(*args, **opts)
@@ -396,16 +459,21 @@ class PotentialNodeRule(Rule):
 
     # Implementation
 
-    def get_candidate_targets(self, branch):
+    def _get_targets(self, branch):
+        """
+        :implements: Rule
+        """
         # Implementations should be careful with overriding this method.
         cands = list()
         if branch.id in self.__potential_nodes:
+            # Must copy to avoid concurrent modification.
             for node in set(self.__potential_nodes[branch.id]):
                 targets = self.get_targets_for_node(node, branch)
                 if targets:
-                    for target in targets:
-                        target = self.__extend_node_target(target, node, branch)
-                        cands.append(target)
+                    cands.extend(
+                        Target.create(target, branch = branch, node = node)
+                        for target in targets
+                    )
                 else:
                     if not self.is_potential_node(node, branch):
                         self.__potential_nodes[branch.id].discard(node)
@@ -438,7 +506,7 @@ class PotentialNodeRule(Rule):
             score = -1 * complexity
         return score
 
-    def apply_to_target(self, target):
+    def _apply(self, target):
         # Default implementation, to provide a more convenient
         # method signature.
         self.apply_to_node_target(target['node'], target['branch'], target)
@@ -486,19 +554,6 @@ class PotentialNodeRule(Rule):
         if self.is_potential_node(node, branch):
             self.__potential_nodes[branch.id].add(node)
             self.__node_applications[branch.id][node.id] = 0
-
-    # Private Util
-
-    def __extend_node_target(self, target, node, branch):
-        if target == True:
-            target = {'node' : node}
-        if 'node' not in target:
-            target['node'] = node
-        if 'type' not in target:
-            target['type'] = 'Node'
-        if 'branch' not in target:
-            target['branch'] = branch
-        return target
 
 class FilterNodeRule(PotentialNodeRule):
     """
@@ -561,9 +616,9 @@ class FilterNodeRule(PotentialNodeRule):
     def conditions_apply(self, node, branch):
         if self.ticked != None and self.ticked != (node in branch.ticked_nodes):
             return False
-        if self.modal != None:
-            modal = len(node.worlds()) > 0
-            if self.modal != modal:
+        if self.modal != None and self.modal != node.is_modal:
+            # modal = len(node.worlds()) > 0
+            # if self.modal != modal:
                 return False
         sentence = operator = quantifier = predicate = None
         if node.has('sentence'):
@@ -798,3 +853,5 @@ class AllConstantsStoppingRule(FilterNodeRule):
                 ],
             ],
         }
+
+Rule.Target = Target

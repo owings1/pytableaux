@@ -27,113 +27,11 @@ from proof.rules import Rule, FilterNodeRule
 from proof.helpers import MaxConstantsTracker
 from parsers import parse, parse_argument, notations as parser_notns
 from models import truth_table
+from .testutils import LogicTester
 import examples
 
 def empty_proof():
     return Tableau(None)
-
-class LogicTester(object):
-
-    vocab = examples.vocabulary
-    notn = 'polish'
-
-    def p(self, s, *args, **kw):
-        for val in args:
-            if isinstance(val, Vocabulary):
-                key = 'vocab'
-            elif val in parser_notns:
-                key = 'notn'
-            else:
-                raise ValueError('Unrecognized positional argument {}'.format(val))
-            if key in kw:
-                raise KeyError('Positional argument {} duplicates keyword {}'.format(val, key))
-            kw[key] = val
-        if 'vocab' not in kw:
-            kw['vocab'] = self.vocab
-        if 'notn' not in kw:
-            kw['notn'] = self.notn
-        return parse(s, **kw)
-
-    def pp(self, *sargs, **kw):
-        args = []
-        sens = []
-        for val in sargs:
-            if isinstance(val, Vocabulary) or val in parser_notns:
-                args.append(val)
-            else:
-                sens.append(val)
-        return list(self.p(s, *args, **kw) for s in sens)
-
-    def parg(self, conc, *prems, **kw):
-        if 'notn' not in kw:
-            kw['notn'] = self.notn
-        premises = []
-        for prem in prems:
-            if isinstance(prem, (list, tuple)):
-                premises.extend(prem)
-            elif isinstance(prem, Vocabulary):
-                if 'vocab' in kw:
-                    raise KeyError('duplicate: vocab')
-                kw['vocab'] = prem
-            else:
-                premises.append(prem)
-        if 'vocab' not in kw:
-            kw['vocab'] = self.vocab
-        return parse_argument(conc, premises, **kw)
-
-    def tab(self, *args, **kw):
-        if 'is_models' in kw:
-            if 'is_build_models' in kw:
-                raise KeyError('is_models duplicates is_build_models')
-            kw['is_build_models'] = kw.pop('is_models')
-        else:
-            # default
-            kw['is_build_models'] = True
-        is_build = kw.pop('is_build') if 'is_build' in kw else None
-        val = args[0] if len(args) == 1 else None
-        if val in examples.args:
-            arg = examples.argument(val)
-        elif isinstance(val, Argument):
-            arg = val
-        elif args:
-            arg = self.parg(*args, **kw)
-        else:
-            arg = None
-        if arg and is_build == None:
-            is_build = True
-        tab = Tableau(self.logic, arg, **kw)
-        if is_build:
-            tab.build()
-        return tab
-
-    def valid_tab(self, *args, **kw):
-        tab = self.tab(*args, **kw)
-        assert tab.valid
-        return tab
-
-    def invalid_tab(self, *args, **kw):
-        tab = self.tab(*args, **kw)
-        assert tab.invalid
-        return tab
-
-    def acmm(self, *args, **kw):
-        kw['is_build_models'] = True
-        tab = self.invalid_tab(*args, **kw)
-        arg, models = tab.argument, list(tab.models)
-        assert bool(models)
-        for m in models:
-            assert m.is_countermodel_to(arg)
-        return (arg, models)
-
-    def cmm(self, *args, **kw):
-        return self.acmm(*args, **kw)[1]
-
-    def cm(self, *args, **kw):
-        return self.acmm(*args, **kw)[1][0]
-
-    @property
-    def Model(self):
-        return self.logic.Model
 
 class TestFDE(LogicTester):
 
@@ -172,25 +70,19 @@ class TestFDE(LogicTester):
     def test_invalid_univ_from_exist(self):
         self.invalid_tab('Universal from Existential')
 
-    def test_rule_DesignationClosure_example(self):
-        tab = self.tab()
-        tab.get_rule('DesignationClosure').example()
-        assert tab.open_branch_count == 1
-        tab.build()
-        assert tab.branch_count == 1
-        assert tab.open_branch_count == 0
+    def test_rule_DesignationClosure_eg(self):
+        self.rule_eg('DesignationClosure')
 
-    def test_rule_ConjunctionNegatedDesignated_example_nodes(self):
-        tab = self.tab()
-        props, = tab.get_rule('ConjunctionNegatedDesignated').example_nodes(tab.branch())
-        s = props['sentence']
+    def test_rule_ConjunctionNegatedDesignated_eg(self):
+        rule, tab = self.rule_eg('ConjunctionNegatedDesignated')
+        node = tab.history[0].target['node']
+        s = node['sentence']
         assert s.is_negated
         assert s.operand.operator == 'Conjunction'
-        assert props['designated']
+        assert node['designated']
 
     def test_rule_ExistentialUndesignated_example(self):
-        tab = self.tab()
-        tab.get_rule('ExistentialUndesignated').example()
+        rule, tab = self.rule_eg('ExistentialUndesignated')
         s = examples.quantified('Existential')
         b = tab.get_branch_at(0)
         assert b.has({'sentence': s, 'designated': False})
@@ -428,13 +320,8 @@ class TestK3(LogicTester):
 
     logic = get_logic('K3')
 
-    def test_GlutClosure_example(self):
-        proof = Tableau(self.logic)
-        proof.get_rule(self.logic.TableauxRules.GlutClosure).example()
-        assert proof.open_branch_count == 1
-        proof.build()
-        assert proof.branch_count == 1
-        assert proof.open_branch_count == 0
+    def test_rule_GlutClosure_eg(self):
+        self.rule_eg('GlutClosure')
         
     def test_valid_bicond_elim_1(self):
         self.valid_tab('Biconditional Elimination 1')
@@ -464,7 +351,7 @@ class TestK3W(LogicTester):
         assert tbl['outputs'][3] == 'N'
         assert tbl['outputs'][8] == 'T'
 
-    def test_ConjunctionNegatedUndesignated_step(self):
+    def test_rule_ConjunctionNegatedUndesignated_step(self):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('NKab'), 'designated': False})
         proof.step()
@@ -476,35 +363,27 @@ class TestK3W(LogicTester):
         assert b3.has({'sentence': parse('a'), 'designated': True})
         assert b3.has({'sentence': parse('b'), 'designated': True})
 
-    def test_MaterialBiconditionalDesignated_step(self):
+    def test_rule_MaterialBiconditionalDesignated_step(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': parse('Eab'), 'designated': True})
         proof.step()
         assert branch.has({'sentence': parse('KCabCba'), 'designated': True})
 
-    def test_MaterialBiconditionalNegatedDesignated_step(self):
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.add({'sentence': parse('NEab'), 'designated': True})
-        proof.step()
-        assert branch.has({'sentence': parse('NKCabCba'), 'designated': True})
+    def test_rule_MaterialBiconditionalNegatedDesignated_step(self):
+        s1, s2 = self.pp('NEab', 'NKCabCba')
+        tab = self.tab()
+        b = tab.branch().add({'sentence': s1, 'designated': True})
+        tab.step()
+        rule = tab.history[0].rule
+        assert rule.name == 'MaterialBiconditionalNegatedDesignated'
+        assert b.has({'sentence': s2, 'designated': True})
 
-    def test_conditional_designated_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule('ConditionalDesignated')
-        rule.example()
-        proof.build()
-        assert len(proof.history) > 0
-        assert proof.history[0]['rule'] == rule
+    def test_rule_ConditionalDesignated_eg(self):
+        self.rule_eg('ConditionalDesignated')
 
-    def test_conditional_undesignated_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule('ConditionalUndesignated')
-        rule.example()
-        proof.build()
-        assert len(proof.history) > 0
-        assert proof.history[0]['rule'] == rule
+    def test_rule_ConditionalUndesignated_eg(self):
+        self.rule_eg('ConditionalDesignated')
 
     def test_valid_cond_contraction(self):
         self.valid_tab('Conditional Contraction')
@@ -547,8 +426,8 @@ class TestK3W(LogicTester):
         # it was only observed when we were sorting predicated sentences
         # that ended up in the opaques of a model.
         arg = parse_argument('VxMFx', ['VxUFxSyMFy', 'Fm'], vocab=self.vocab)
-        proof = Tableau(self.logic, arg)
-        proof.build(is_build_models=True, max_steps=100)
+        proof = Tableau(self.logic, arg, is_build_models=True, max_steps=100)
+        proof.build()
         assert proof.invalid
         for branch in proof.open_branches():
             model = branch.model
@@ -749,13 +628,8 @@ class TestLP(LogicTester):
 
     logic = get_logic('LP')
 
-    def test_GapClosure_example(self):
-        proof = Tableau(self.logic)
-        proof.get_rule(self.logic.TableauxRules.GapClosure).example()
-        assert proof.open_branch_count == 1
-        proof.build()
-        assert proof.branch_count == 1
-        assert proof.open_branch_count == 0
+    def test_rule_GapClosure_eg(self):
+        self.rule_eg('GapClosure')
 
     def test_valid_material_ident(self):
         assert self.tab('Material Identity').valid
@@ -1173,41 +1047,21 @@ class TestP3(LogicTester):
 
     logic = get_logic('P3')
 
-    def test_double_negation_designated_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule(self.logic.TableauxRules.DoubleNegationDesignated)
-        rule.example()
-        proof.build()
-        assert len(proof.history) == 1
-        assert proof.history[0]['rule'] == rule
-        assert proof.get_branch_at(0).has_all([
+    def test_rule_DoubleNegationDesignated_eg(self):
+        rule, tab = self.rule_eg('DoubleNegationDesignated')
+        assert tab.get_branch_at(0).has_all([
             {'sentence': parse('a'), 'designated': False},
             {'sentence': parse('Na'), 'designated': False},
         ])
 
-    def test_conjunction_undesignated_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule(self.logic.TableauxRules.ConjunctionUndesignated)
-        rule.example()
-        proof.build()
-        assert len(proof.history) == 1
-        assert proof.history[0]['rule'] == rule
+    def test_rule_ConjunctionUndesignated_eg(self):
+        self.rule_eg('ConjunctionUndesignated')
 
-    def test_material_conditional_designated_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule(self.logic.TableauxRules.MaterialConditionalDesignated)
-        rule.example()
-        proof.build()
-        assert len(proof.history) > 0
-        assert proof.history[0]['rule'] == rule
+    def test_rule_MaterialConditionalDesignated_eg(self):
+        self.rule_eg('MaterialConditionalDesignated')
 
-    def test_universal_negated_designated_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule('UniversalNegatedDesignated')
-        rule.example()
-        proof.build()
-        assert len(proof.history) > 0
-        assert proof.history[0]['rule'] == rule
+    def test_rule_UniversalNegatedDesignated_eg(self):
+        self.rule_eg('UniversalNegatedDesignated')
 
     def test_invalid_lem(self):
         proof = self.tab('Law of Excluded Middle')
@@ -1245,29 +1099,17 @@ class TestCPL(LogicTester):
     def test_invalid_syllogism(self):
         self.invalid_tab('Syllogism')
 
-    def test_rule_ContradictionClosure_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule('ContradictionClosure')
-        rule.example()
-        assert proof.branch_count == 1
+    def test_rule_ContradictionClosure_eg(self):
+        self.rule_eg('ContradictionClosure')
 
-    def test_rule_SelfIdentityClosure_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule('SelfIdentityClosure')
-        rule.example()
-        assert proof.branch_count == 1
+    def test_rule_SelfIdentityClosure_eg(self):
+        self.rule_eg('SelfIdentityClosure')
 
-    def test_rule_NonExistenceClosure_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule('NonExistenceClosure')
-        rule.example()
-        assert proof.branch_count == 1
+    def test_rule_NonExistenceClosure_eg(self):
+        self.rule_eg('NonExistenceClosure')
 
-    def test_rule_IdentityIndiscernability_example(self):
-        proof = Tableau(self.logic)
-        rule = proof.get_rule('IdentityIndiscernability')
-        rule.example()
-        assert proof.branch_count == 1
+    def test_rule_IdentityIndiscernability_eg(self):
+        self.rule_eg('IdentityIndiscernability')
 
     def test_rule_IdentityIndiscernability_not_applies(self):
         vocab = Vocabulary()
@@ -1574,53 +1416,38 @@ class TestK(LogicTester):
     def test_invalid_existential_inside_univ_max_steps(self):
         self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
 
-    def test_rule_ContradictionClosure_example(self):
-        tab = self.tab()
-        tab.get_rule('ContradictionClosure').example()
-        assert tab.branch_count == 1
+    def test_rule_ContradictionClosure_eg(self):
+        self.rule_eg('ContradictionClosure')
 
-    def test_rule_SelfIdentityClosure_example(self):
-        rule = self.tab().get_rule('SelfIdentityClosure')
-        rule.example()
-        assert rule.tableau.branch_count == 1
+    def test_rule_SelfIdentityClosure_eg(self):
+        self.rule_eg('SelfIdentityClosure')
 
-    def test_rule_NonExistenceClosure_example(self):
-        proof = self.tab()
-        proof.get_rule('NonExistenceClosure').example()
-        assert proof.open_branch_count == 1
-        proof.build()
-        assert proof.branch_count == 1
-        assert proof.open_branch_count == 0
+    def test_rule_NonExistenceClosure_eg(self):
+        self.rule_eg('NonExistenceClosure')
 
-    def test_rule_Possibility_example_nodes(self):
-        rule = self.tab().get_rule('Possibility')
-        props, = rule.example_nodes(rule.branch())
-        assert props['world'] == 0
+    def test_rule_Possibility_node_has_w0(self):
+        rule, tab = self.rule_eg('Possibility', step = False)
+        node, = tab.get_branch_at(0).nodes
+        assert node['world'] == 0
 
     def test_rule_Existential_example_nodes(self):
-        rule = self.tab().get_rule('Existential')
-        props, = rule.example_nodes(rule.branch())
-        assert props['sentence'].quantifier == 'Existential'
+        rule, tab = self.rule_eg('Existential', step = False)
+        node, = tab.get_branch_at(0).nodes
+        assert node.sentence.quantifier == 'Existential'
 
     def test_rule_DisjunctionNegated_example_nodes(self):
-        rule = self.tab().get_rule('DisjunctionNegated')
-        props, = rule.example_nodes(rule.branch())
-        assert props['sentence'].operator == 'Negation'
+        rule, tab = self.rule_eg('DisjunctionNegated', step = False)
+        node, = tab.get_branch_at(0).nodes
+        assert node.sentence.operator == 'Negation'
 
-    def test_rule_Universal_example(self):
-        rule = self.tab().get_rule('Universal')
-        rule.example()
-        assert rule.tableau.branch_count == 1
+    def test_rule_Universal_eg(self):
+        self.rule_eg('Universal')
 
-    def test_rule_Necessity_example(self):
-        rule = self.tab().get_rule('Necessity')
-        rule.example()
-        assert rule.tableau.branch_count == 1
+    def test_rule_Necessity_eg(self):
+        self.rule_eg('Necessity')
 
-    def test_rule_IdentityIndiscernability_example(self):
-        rule = self.tab().get_rule('IdentityIndiscernability')
-        rule.example()
-        assert rule.tableau.branch_count == 1
+    def test_rule_IdentityIndiscernability_eg(self):
+        self.rule_eg('IdentityIndiscernability')
 
     def test_rule_IdentityIndiscernability_not_applies(self):
         tab = self.tab()
@@ -1997,10 +1824,8 @@ class TestD(LogicTester):
     def test_invalid_s4_cond_inf_2(self):
         self.invalid_tab('S4 Conditional Inference 2')
 
-    def test_rule_Serial_example(self):
-        tab = self.tab()
-        tab.get_rule('Serial').example()
-        assert tab.branch_count == 1
+    def test_rule_Serial_eg(self):
+        self.rule_eg('Serial')
 
     def test_rule_Serial_not_applies_to_branch_empty(self):
         tab = self.tab()
@@ -2044,11 +1869,10 @@ class TestT(LogicTester):
     def test_invalid_s4_cond_inf_2(self):
         self.invalid_tab('S4 Conditional Inference 2')
 
-    def test_rule_Reflexive_example(self):
-        proof = self.tab()
-        proof.get_rule('Reflexive').example()
-        branch = proof.build().get_branch_at(0)
-        assert branch.has({'world1': 0, 'world2': 0})
+    def test_rule_Reflexive_eg(self):
+        rule, tab = self.rule_eg('Reflexive')
+        b, = tab.branches()
+        assert b.has({'world1': 0, 'world2': 0})
 
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
         """
@@ -2098,11 +1922,10 @@ class TestS4(LogicTester):
     def test_invalid_nested_diamond_within_box1(self):
         self.invalid_tab('KMNbc', ['LCaMNb', 'Ma'])
 
-    def test_rule_Transitive_example(self):
-        proof = self.tab()
-        proof.get_rule('Transitive').example()
-        branch = proof.build().get_branch_at(0)
-        assert branch.has({'world1': 0, 'world2': 2})
+    def test_rule_Transitive_eg(self):
+        rule, tab = self.rule_eg('Transitive')
+        b, = tab.branches()
+        assert b.has({'world1': 0, 'world2': 2})
 
     def test_model_finish_transitity_visibles(self):
         model = self.logic.Model()
@@ -2157,11 +1980,10 @@ class TestS5(LogicTester):
     def test_invalid_nested_diamond_within_box1(self):
         self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
 
-    def test_rule_Symmetric_example(self):
-        proof = self.tab()
-        proof.get_rule('Symmetric').example()
-        branch = proof.build().get_branch_at(0)
-        assert branch.has({'world1': 1, 'world2': 0})
+    def test_rule_Symmetric_eg(self):
+        rule, tab = self.rule_eg('Symmetric', bare = True)
+        b, = tab.branches()
+        assert b.has({'world1': 1, 'world2': 0})
 
     def test_model_finish_symmetry_visibles(self):
         model = self.logic.Model()

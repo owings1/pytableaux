@@ -3,11 +3,14 @@ from errors import *
 from events import Events
 from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau
 from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
+from proof.helpers import NodeFilter
 from lexicals import Atomic, Constant, Predicated
+from utils import get_logic
 import examples
 
 import time
 from pytest import raises
+from .testutils import LogicTester
 
 class TestTableauxSystem(object):
 
@@ -254,7 +257,7 @@ class TestRule(object):
     def test_base_not_impl_various(self):
         rule = Rule(Tableau(None, None))
         with raises(NotImplementedError):
-            rule.get_candidate_targets(None)
+            rule._get_targets(None)
 
     def test_base_repr_equals_rule(self):
         rule = Rule(Tableau(None, None))
@@ -274,8 +277,6 @@ class TestNodeRule(object):
         rule = PotentialNodeRule(Tableau(None, None))
         with raises(NotImplementedError):
             rule.apply_to_node_target(None, None, None)
-        with raises(NotImplementedError):
-            rule.example()
 
 class TestFilterNodeRule(object):
 
@@ -314,3 +315,39 @@ class TestFilterNodeRule(object):
         branch = proof.branch().add(node)
         branch.tick(node)
         assert rule.get_target_for_node(node, branch)
+
+
+class Test_NodeFilter_CPL(LogicTester):
+
+    logic = get_logic('CPL')
+
+    def test_node_method_filter_has_props_sentence(self):
+
+        s1, s2 = self.pp('a', 'b')
+        n1, n2 = (Node({'sentence': s}) for s in (s1, s2))
+
+        nfilter = NodeFilter.node_method_filter(
+            'has_props', {'sentence': s1}
+        )
+        assert nfilter(n1)
+        assert not nfilter(n2)
+
+    def test_node_filter_on_tableau(self):
+        s1, s2 = self.pp('a', 'b')
+        nfilter = NodeFilter.node_method_filter(
+            'has_props', {'sentence': s1}
+        )
+        class TestRuleImpl(Rule):
+            Helpers = (('nf', NodeFilter),)
+        
+        tab = self.tab()
+        tab.clear_rules()
+        rule = tab.add_rule_group([TestRuleImpl]).get_rule(TestRuleImpl)
+        nf = rule.nf
+        nf.add_filter(nfilter)
+        b = tab.branch().update((
+            {'sentence': s1},
+            {'sentence': s2},
+        ))
+        nodes = list(nf.get_nodes(b))
+        assert len(nodes) == 1

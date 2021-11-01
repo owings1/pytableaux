@@ -545,7 +545,7 @@ class DefaultNodeRule(FilterNodeRule):
 
     ticking = True
 
-    def apply_to_target(self, target):
+    def _apply(self, target):
         self.adz.apply_to_target(target)
 
     def score_candidate(self, target):
@@ -561,7 +561,7 @@ class DefaultAllConstantsRule(DefaultNodeRule, AllConstantsStoppingRule):
     ticking = False
 
     def score_candidate(self, target):
-        if 'flag' in target and target['flag']:
+        if target.get('flag'):
             return 1
         if self.adz.closure_score(target) == 1:
             return 1
@@ -615,7 +615,7 @@ class TableauxRules(object):
         def check_for_target(self, node, branch):
             nnode = self._find_closing_node(node, branch)
             if nnode:
-                return {'nodes': set([node, nnode]), 'type': 'Nodes'}
+                return {'nodes': set([node, nnode])}
 
         # rule implementation
 

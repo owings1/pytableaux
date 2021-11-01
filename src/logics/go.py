@@ -632,12 +632,11 @@ class TableauxRules(object):
 
             target = super().get_target_for_node(node, branch)
 
-            if target:
-                if 'flag' not in target or not target['flag']:
-                    # Add the extra branch with the quantified sentence.
-                    target['adds'].append([
-                        self._get_quantified_node(node, branch)
-                    ])
+            if target and not target.get('flag'):
+                # Add the extra branch with the quantified sentence.
+                target['adds'].append([
+                    self._get_quantified_node(node, branch)
+                ])
             return target
 
         # private util

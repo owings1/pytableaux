@@ -96,7 +96,6 @@ class TableauxRules(object):
                         'world2': w3,
                         'branch': branch,
                         'nodes' : set([node, branch.find({'world1': w2, 'world2': w3})]),
-                        'type'  : 'Nodes',
                     })
             return targets
 

@@ -952,7 +952,7 @@ class Branch(EventEmitter):
         """
         Add a node (Node object or dict of props). Returns self.
         """
-        node = self.create_node(node)
+        node = Node.create(node)
         consts = node.constants()
         self.nodes.append(node)
         self.consts.update(consts)
@@ -1098,15 +1098,14 @@ class Branch(EventEmitter):
             origin = origin.parent
         return origin
 
-    def create_node(self, props):
-        """
-        Create a new node. Does not add it to the branch. If ``props`` is a
-        node instance, return it. Otherwise create a new node from the props
-        and return it.
-        """
-        if isinstance(props, Node):
-            return props
-        return Node(props=props)
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.id == other.id
+
+    def __ne__(self, other):
+        return not (isinstance(other, self.__class__) and self.id == other.id)
+
+    def __hash__(self):
+        return hash(self.id)
 
     def __add_to_index(self, node, consts):
         for prop in self.node_index:
@@ -1160,6 +1159,12 @@ class Node(object):
     A tableau node.
     """
 
+    @staticmethod
+    def create(obj):
+        if isinstance(obj, __class__):
+            return obj
+        return __class__(obj)
+
     def __init__(self, props = {}):
         #: A dictionary of properties for the node.
         self.props = {
@@ -1175,14 +1180,25 @@ class Node(object):
 
     @property
     def is_closure(self):
-        return self.props.get('flag') == 'closure'
+        return self.get('flag') == 'closure'
+
+    @property
+    def is_modal(self):
+        return self.has_any('world', 'world1', 'world2', 'worlds')
+
+    @property
+    def sentence(self):
+        return self.get('sentence')
+
+    def get(self, name, default = None):
+        return self.props.get(name, default)
 
     def has(self, *names):
         """
         Whether the node has a non-``None`` property of all the given names.
         """
         for name in names:
-            if self.props.get(name) == None:
+            if self.get(name) == None:
                 return False
         return True
 
@@ -1191,7 +1207,7 @@ class Node(object):
         Whether the node has a non-``None`` property of any of the given names.
         """
         for name in names:
-            if self.props.get(name) != None:
+            if self.get(name) != None:
                 return True
         return False
 
@@ -1210,14 +1226,17 @@ class Node(object):
         the properties `world`, `world1`, `world2`, and `worlds`.
         """
         worlds = set()
-        if self.has('world'):
-            worlds.add(self.props['world'])
-        if self.has('world1'):
-            worlds.add(self.props['world1'])
-        if self.has('world2'):
-            worlds.add(self.props['world2'])
+        for name in ('world', 'world1', 'world2'):
+            if self.has(name):
+                worlds.add(self.get(name))
+        # if self.has('world'):
+        #     worlds.add(self.props['world'])
+        # if self.has('world1'):
+        #     worlds.add(self.props['world1'])
+        # if self.has('world2'):
+        #     worlds.add(self.props['world2'])
         if self.has('worlds'):
-            worlds.update(self.props['worlds'])
+            worlds.update(self.get('worlds'))
         return worlds
 
     def atomics(self):
@@ -1226,8 +1245,8 @@ class Node(object):
         property, if any. If the node does not have a sentence, return
         an empty set.
         """
-        if self.has('sentence'):
-            return self.props['sentence'].atomics()
+        if self.sentence:
+            return self.sentence.atomics()
         return set()
 
     def constants(self):
@@ -1236,8 +1255,8 @@ class Node(object):
         property, if any. If the node does not have a sentence, return
         the empty set.
         """
-        if self.has('sentence'):
-            return self.props['sentence'].constants()
+        if self.sentence:
+            return self.sentence.constants()
         return set()
 
     def predicates(self):
@@ -1246,9 +1265,21 @@ class Node(object):
         property, if any. If the node does not have a sentence, return
         the empty set.
         """
-        if self.has('sentence'):
-            return self.props['sentence'].predicates()
+        if self.sentence:
+            return self.sentence.predicates()
         return set()
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.id == other.id
+
+    def __ne__(self, other):
+        return not (isinstance(other, self.__class__) and self.id == other.id)
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __getitem__(self, item):
+        return self.props[item]
 
     def __repr__(self):
         return {
@@ -1421,24 +1452,5 @@ def make_tree_structure(branches, node_depth=0, track=None):
         s['distinct_nodes'] = track['distinct_nodes']
     return s
 
-# def _check_is_rule(obj):
-#     """
-#     Checks if an object is a rule instance.
-#     """
-#     if obj.__class__ in _check_is_rule.classes:
-#         return True
-#     if not (
-#         hasattr(obj, 'name') and
-#         callable(getattr(obj, 'get_target', None)) and
-#         callable(getattr(obj, 'apply', None)) and
-#         isinstance(getattr(obj, 'tableau', None), Tableau) and
-#         isinstance(getattr(obj, 'apply_count', None), int) and
-#         isinstance(getattr(obj, 'timers', None), dict) and
-#         isinstance(getattr(obj, 'apply_timer', None), StopWatch) and
-#         isinstance(getattr(obj, 'search_timer', None), StopWatch) and
-#         True
-#     ):
-#         return False
-#     _check_is_rule.classes.add(obj.__class__)
-#     return True
-# _check_is_rule.classes = set()
+
+Tableau.Node = Node

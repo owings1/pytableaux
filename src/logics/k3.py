@@ -94,7 +94,7 @@ class TableauxRules(object):
             """
             nnode = self.__find_closing_node(node, branch)
             if nnode:
-               return {'nodes': set([node, nnode]), 'type': 'Nodes'}
+               return {'nodes': set([node, nnode])}
 
         # rule implementation
 

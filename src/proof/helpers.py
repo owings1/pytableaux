@@ -23,6 +23,7 @@ class AdzHelper(object):
 
     def __init__(self, rule):
         self.rule = rule
+        self.Node = rule.Node
 
     def apply_to_target(self, target):
         branch = target['branch']
@@ -40,7 +41,7 @@ class AdzHelper(object):
     def closure_score(self, target):
         close_count = 0
         for nodes in target['adds']:
-            nodes = [target['branch'].create_node(node) for node in nodes]
+            nodes = [self.Node(node) for node in nodes]
             for rule in self.rule.tableau.closure_rules():
                 if rule.nodes_will_close_branch(nodes, target['branch']):
                     close_count += 1
@@ -68,9 +69,9 @@ class NodeTargetCheckHelper(object):
         if branch.id in self.targets:
             return self.targets[branch.id]
 
-    # Helper Implementation
+    # Event Listeners
 
-    def register_node(self, node, branch):
+    def after_node_add(self, node, branch):
         target = self.rule.check_for_target(node, branch)
         if target:
             self.targets[branch.id] = target
@@ -93,17 +94,68 @@ class QuitFlagHelper(object):
             return self.flagged[branch.id]
         return False
 
-    # Helper implementation
+    # Event Listeners
 
-    def register_branch(self, branch, parent):
+    def after_branch_add(self, branch):
+        parent = branch.parent
         if parent != None and parent.id in self.flagged:
             self.flagged[branch.id] = self.flagged[parent.id]
         else:
             self.flagged[branch.id] = False
 
     def after_apply(self, target):
-        if 'flag' in target and target['flag']:
+        if target.get('flag'):
             self.flagged[target['branch'].id] = True
+
+class NodeFilter(object):
+
+    @staticmethod
+    def node_method_filter(meth, *args, **kw):
+        def mfilter(node):
+            func = getattr(node, meth)
+            return func(*args, **kw)
+        return mfilter
+
+    def __init__(self, rule):
+        self.rule = rule
+        self._checks = []
+        self._ignore_ticked = None
+        self._default_action = False
+        self._cache = {}
+
+    def add_filter(self, func):
+        self._checks.append(func)
+
+    def get_nodes(self, branch):
+        return self._cache[branch]
+
+    # Event Listeners
+
+    def after_branch_add(self, branch):
+        cache = self._cache[branch] = set()
+        if branch.parent:
+            cache.update(self._cache[branch.parent])
+
+    def after_branch_close(self, branch):
+        del(self._cache[branch])
+
+    def after_node_tick(self, node, branch):
+        if self._ignore_ticked:
+            self._cache[branch].discard(node)
+
+    def after_node_add(self, node, branch):
+        if self._ignore_ticked and branch.is_ticked(node):
+            return
+        if self._run_checks(node, branch):
+            self._cache[branch].add(node)
+
+    def _run_checks(self, node, branch):
+        if not self._checks:
+            return self._default_action
+        for func in self._checks:
+            if not func(node):
+                return False
+        return True
 
 class MaxConstantsTracker(object):
     """
@@ -200,7 +252,8 @@ class MaxConstantsTracker(object):
                 return
             self.branch_max_constants[origin.id] = self._compute_max_constants(branch)
 
-    def register_branch(self, branch, parent):
+    def after_branch_add(self, branch):
+        parent = branch.parent
         if parent != None and parent.id in self.world_constants:
             self.world_constants[branch.id] = {
                 world : set(self.world_constants[parent.id][world])
@@ -209,7 +262,7 @@ class MaxConstantsTracker(object):
         else:
             self.world_constants[branch.id] = {}
 
-    def register_node(self, node, branch):
+    def after_node_add(self, node, branch):
         if node.has('sentence'):
             world = node.props['world']
             if world == None:
@@ -267,7 +320,8 @@ class NodeAppliedConstants(object):
 
     # helper implementation
 
-    def register_branch(self, branch, parent):
+    def after_branch_add(self, branch):
+        parent = branch.parent
         if parent != None and parent.id in self.node_states:
             self.consts[branch.id] = set(self.consts[parent.id])
             self.node_states[branch.id] = {
@@ -281,7 +335,7 @@ class NodeAppliedConstants(object):
             self.node_states[branch.id] = dict()
             self.consts[branch.id] = set()
 
-    def register_node(self, node, branch):
+    def after_node_add(self, node, branch):
         if self.__should_track_node(node, branch):
             if node.id not in self.node_states[branch.id]:
                 # By tracking per node, we are tracking per world, a fortiori.
@@ -296,7 +350,7 @@ class NodeAppliedConstants(object):
                 self.consts[branch.id].add(c)
 
     def after_apply(self, target):
-        if 'flag' in target and target['flag']:
+        if target.get('flag'):
             return
         idx = self.node_states[target['branch'].id][target['node'].id]
         c = target['constant']
@@ -412,13 +466,14 @@ class UnserialWorldsTracker(object):
 
     # helper implementation
 
-    def register_branch(self, branch, parent):
+    def after_branch_add(self, branch):
+        parent = branch.parent
         if parent != None and parent.id in self.unserial_worlds:
             self.unserial_worlds[branch.id] = set(self.unserial_worlds[parent.id])
         else:
             self.unserial_worlds[branch.id] = set()
 
-    def register_node(self, node, branch):
+    def after_node_add(self, node, branch):
         for w in node.worlds():
             if branch.has({'world1': w}):
                 self.unserial_worlds[branch.id].discard(w)
@@ -453,7 +508,8 @@ class VisibleWorldsIndex(object):
 
     # helper implementation
 
-    def register_branch(self, branch, parent):
+    def after_branch_add(self, branch):
+        parent = branch.parent
         if parent != None and parent.id in self.index:
             self.index[branch.id] = {
                 w: set(self.index[parent.id][w])
@@ -462,7 +518,7 @@ class VisibleWorldsIndex(object):
         else:
             self.index[branch.id] = {}
 
-    def register_node(self, node, branch):
+    def after_node_add(self, node, branch):
         if node.has('world1', 'world2'):
             w1 = node.props['world1']
             w2 = node.props['world2']
@@ -487,13 +543,14 @@ class PredicatedNodesTracker(object):
 
     # helper implementation
 
-    def register_branch(self, branch, parent):
+    def after_branch_add(self, branch):
+        parent = branch.parent
         if parent != None and parent.id in self.predicated_nodes:
             self.predicated_nodes[branch.id] = set(self.predicated_nodes[parent.id])
         else:
             self.predicated_nodes[branch.id] = set()
 
-    def register_node(self, node, branch):
+    def after_node_add(self, node, branch):
         if node.has('sentence') and node.props['sentence'].is_predicated:
             self.predicated_nodes[branch.id].add(node)
 
@@ -515,12 +572,12 @@ class AppliedNodesWorldsTracker(object):
 
     # helper implementation
 
-    def register_node(self, node, branch):
+    def after_node_add(self, node, branch):
         if branch.id not in self.node_worlds_applied:
             self.node_worlds_applied[branch.id] = set()
 
     def after_apply(self, target):
-        if 'flag' in target and target['flag']:
+        if target.get('flag'):
             return
         pair = (target['node'].id, target['world'])
         self.node_worlds_applied[target['branch'].id].add(pair)
@@ -546,14 +603,15 @@ class AppliedSentenceCounter(object):
 
     # helper implementation
 
-    def register_branch(self, branch, parent):
+    def after_branch_add(self, branch):
+        parent = branch.parent
         if parent != None and parent.id in self.counts:
             self.counts[branch.id] = dict(self.counts[parent.id])
         else:
             self.counts[branch.id] = {}
 
     def after_apply(self, target):
-        if 'flag' in target and target['flag']:
+        if target.get('flag'):
             return
         branch = target['branch']
         sentence = target['sentence']
@@ -582,13 +640,13 @@ class EllipsisExampleHelper(object):
     def after_trunk_build(self, *_):
         self.istrunk = False
 
-    def register_branch(self, branch, *_):
+    def after_branch_add(self, branch):
         if self.applied:
             return
         if len(self.closenodes) == 1:
             self.__addnode(branch)        
 
-    def register_node(self, node, branch):
+    def after_node_add(self, node, branch):
         if self.applied:
             return
         if node.has_props(self.mynode) or node.is_closure:

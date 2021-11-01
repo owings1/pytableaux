@@ -164,12 +164,12 @@ def isrule(obj):
     if not (
         callable(getattr(obj, 'get_target', None)) and
         callable(getattr(obj, 'apply', None)) and
-        isstr(d.get('name')) and
-        istableau(d.get('tableau')) and
-        isinstance(d.get('apply_count'), int) and
-        isinstance(d.get('timers'), dict) and
-        isinstance(d.get('apply_timer'), StopWatch) and
-        isinstance(d.get('search_timer'), StopWatch) and
+        isstr(getattr(obj, 'name')) and
+        istableau(getattr(obj, 'tableau')) and
+        isinstance(getattr(obj, 'apply_count'), int) and
+        isinstance(getattr(obj, 'timers'), dict) and
+        isinstance(getattr(obj, 'apply_timer'), StopWatch) and
+        isinstance(getattr(obj, 'search_timer'), StopWatch) and
         True
     ):
         return False

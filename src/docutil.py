@@ -556,7 +556,7 @@ class Helper(object):
                 elif ctype == 'user_predicate':
                     what = 'predicate'
                     _, idx = table.item(char)
-                    item = self.opts['vocabulary'].get_predicate(index=idx, subscript=sub)
+                    item = self.opts['vocabulary'].get((idx, sub))
                     classes.append('user_predicate')
                 elif ctype == 'system_predicate':
                     what = 'predicate'
