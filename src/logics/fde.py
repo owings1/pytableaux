@@ -242,17 +242,17 @@ class Model(BaseModel):
         return data
 
     def read_branch(self, branch):
-        for node in branch.nodes:
+        for node in branch:
             if node.has('sentence'):
                 self._collect_node(node)
-                sentence = node.props['sentence']
+                sentence = node['sentence']
                 is_literal = self.is_sentence_literal(sentence)
                 is_opaque = self.is_sentence_opaque(sentence)
                 if is_literal or is_opaque:
                     if sentence.operator == 'Negation':
                         # If the sentence is negated, set the value of the negatum
                         sentence = sentence.negatum
-                        if node.props['designated']:
+                        if node['designated']:
                             if branch.has({'sentence': sentence, 'designated': True}):
                                 # If the node is designated, and the negatum is
                                 # also designated on b, the value is B
@@ -272,7 +272,7 @@ class Model(BaseModel):
                                 value = 'T'
                     else:
                         # If the sentence is unnegated, set the value of the sentence
-                        if node.props['designated']:
+                        if node['designated']:
                             if branch.has({'sentence': sentence.negate(), 'designated': True}):
                                 # If the node is designated, and its negation is
                                 # also designated on b, the value is B

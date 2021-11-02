@@ -598,7 +598,7 @@ class Tableau(EventEmitter):
         if not branch.parent:
             # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
             # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
-            nodes = branch.get_nodes()
+            nodes = list(branch)
         else:
             nodes = None
 
@@ -849,20 +849,20 @@ class Branch(EventEmitter):
     def __init__(self):
         super().__init__()
         # Make sure properties are copied if needed in copy()
-        self.id = id(self)
+        
         self.closed = False
-        self.ticked_nodes = set()
-        self.nodes = []
-        self.consts = set()
-        self.ws = set()
-        self.preds = set()
-        self.atms = set()
+        self.__constants = set()
+        self.__worlds = set()
+        # self.preds = set()
+        # self.atms = set()
         self.leaf = None
         self.closed_step = None
         self.index = None
         self.model = None
         self.parent = None
-        self.node_index = {
+        self.__nodes = []
+        self.__ticked = set()
+        self.__pidx = {
             'sentence'   : {},
             'designated' : {},
             'world'      : {},
@@ -876,6 +876,18 @@ class Branch(EventEmitter):
             Events.AFTER_NODE_TICK,
         )
 
+    @property
+    def id(self):
+        return id(self)
+
+    @property
+    def world_count(self):
+        return len(self.__worlds)
+
+    @property
+    def constants_count(self):
+        return len(self.__constants)
+
     def has(self, props, ticked = None):
         """
         Check whether there is a node on the branch that matches the given properties,
@@ -883,7 +895,7 @@ class Branch(EventEmitter):
         """
         return self.find(props, ticked=ticked) != None
 
-    def has_access(self, *worlds):
+    def has_access(self, w1, w2):
         """
         Check whether a tuple of the given worlds is on the branch.
 
@@ -891,7 +903,7 @@ class Branch(EventEmitter):
         branch with `world1` and `world2` properties. For more advanced
         searches, use the ``has()`` method.
         """
-        return str(list(worlds)) in self.node_index['w1Rw2']
+        return (w1, w2) in self.__pidx['w1Rw2']
 
     def has_any(self, props_list, ticked = None):
         """
@@ -919,7 +931,7 @@ class Branch(EventEmitter):
         filtered by ticked status. Returns ``None`` if not found.
         """
         results = self.search_nodes(props, ticked=ticked, limit=1)
-        if len(results):
+        if results:
             return results[0]
         return None
 
@@ -936,7 +948,7 @@ class Branch(EventEmitter):
         filtered by ticked status, up to the limit, if given. Returns a list.
         """
         results = []
-        best_haystack = self._select_index(props, ticked)
+        best_haystack = self.__select_index(props, ticked)
         if not best_haystack:
             return results
         for node in best_haystack:
@@ -953,22 +965,19 @@ class Branch(EventEmitter):
         Add a node (Node object or dict of props). Returns self.
         """
         node = Node.create(node)
-        consts = node.constants()
-        self.nodes.append(node)
-        self.consts.update(consts)
-        self.ws.update(node.worlds())
-        self.preds.update(node.predicates())
-        self.atms.update(node.atomics())
+        self.__nodes.append(node)
+        self.__constants.update(node.constants())
+        self.__worlds.update(node.worlds())
         node.parent = self.leaf
         self.leaf = node
 
         # Add to index *before* after_node_add callback
-        self.__add_to_index(node, consts)
+        self.__add_to_index(node)
         self.emit(Events.AFTER_NODE_ADD, node, self)
 
         return self
 
-    def update(self, nodes):
+    def extend(self, nodes):
         """
         Add multiple nodes. Returns self.
         """
@@ -976,118 +985,84 @@ class Branch(EventEmitter):
             self.add(node)
         return self
 
-    def tick(self, node):
+    def update(self, nodes):
+        # TODO: deprecate
+        return self.extend(nodes)
+
+    def tick(self, *nodes):
         """
         Tick a node for the branch. Returns self.
         """
-        if node not in self.ticked_nodes:
-            self.ticked_nodes.add(node)
-            node.ticked = True
-            self.emit(Events.AFTER_NODE_TICK, node, self)
+        for node in nodes:
+            if not self.is_ticked(node):
+                self.__ticked.add(node)
+                node.ticked = True
+                self.emit(Events.AFTER_NODE_TICK, node, self)
         return self
 
     def close(self):
         """
         Close the branch. Returns self.
         """
-        self.closed = True
-        self.add({'is_flag': True, 'flag': 'closure'})
-        self.emit(Events.AFTER_BRANCH_CLOSE, self)
+        if not self.closed:
+            self.closed = True
+            self.add({'is_flag': True, 'flag': 'closure'})
+            self.emit(Events.AFTER_BRANCH_CLOSE, self)
         return self
-
-    def get_nodes(self, ticked = None):
-        """
-        Return the nodes, optionally filtered by ticked status.
-        """
-        if ticked == None:
-            return self.nodes
-        return [node for node in self.nodes if ticked == self.is_ticked(node)]
 
     def is_ticked(self, node):
         """
         Whether the node is ticked relative to the branch.
         """
-        return node in self.ticked_nodes
+        return node in self.__ticked
 
     def copy(self):
         """
         Return a copy of the branch. Event listeners are *not* copied.
         """
         branch = self.__class__()
-        branch.nodes = list(self.nodes)
-        branch.ticked_nodes = set(self.ticked_nodes)
-        branch.consts = set(self.consts)
-        branch.ws = set(self.ws)
-        branch.atms = set(self.atms)
-        branch.preds = set(self.preds)
+        branch.__nodes = list(self.__nodes)
+        branch.__ticked = set(self.__ticked)
+        branch.__constants = set(self.__constants)
+        branch.__worlds = set(self.__worlds)
         branch.leaf = self.leaf
-        branch.node_index = {
+        branch.__pidx = {
             prop : {
-                key : set(self.node_index[prop][key])
-                for key in self.node_index[prop]
+                key : set(self.__pidx[prop][key])
+                for key in self.__pidx[prop]
             }
-            for prop in self.node_index
+            for prop in self.__pidx
         }
         return branch
-
-    def worlds(self):
-        """
-        Return the set of worlds that appear on the branch.
-        """
-        return self.ws
 
     def new_world(self):
         """
         Return a new world that does not appear on the branch.
         """
-        worlds = self.worlds()
-        if not len(worlds):
+        if not self.__worlds:
             return 0
-        return max(worlds) + 1
-
-    def predicates(self):
-        """
-        Return the set of predicates that appear on the branch.
-        """
-        return self.preds
-
-    def atomics(self):
-        """
-        Return the set of atomics that appear on the branch.
-        """
-        return self.atms
+        return max(self.__worlds) + 1
 
     def constants(self):
         """
         Return the set of constants that appear on the branch.
         """
-        return self.consts
+        return self.__constants
 
     def new_constant(self):
         """
         Return a new constant that does not appear on the branch.
         """
-        if not self.consts:
+        if not self.__constants:
             return Constant(0, 0)
         maxidx = Constant.MAXI
-        coordset = set(c.coords for c in self.consts)
+        coordset = set(c.coords for c in self.__constants)
         index, sub = 0, 0
         while (index, sub) in coordset:
             index += 1
             if index > maxidx:
                 index, sub = 0, sub + 1
         return Constant(index, sub)
-
-    def constants_or_new(self):
-        """
-        Return a tuple ``(constants, is_new)``, where ``constants`` is either the
-        branch constants, or, if no constants are on the branch, a singleton
-        containing a new constant, and ``is_new`` indicates whether it is
-        a new constant.
-        """
-        if self.constants():
-            return (self.constants(), False)
-        return ({self.new_constant()}, True)
 
     def origin(self):
         """
@@ -1107,33 +1082,50 @@ class Branch(EventEmitter):
     def __hash__(self):
         return hash(self.id)
 
-    def __add_to_index(self, node, consts):
-        for prop in self.node_index:
-            key = None
-            if prop == 'w1Rw2':
-                if 'world1' in node.props and 'world2' in node.props:
-                    key = str([node.props['world1'], node.props['world2']])
-            elif prop in node.props:
-                key = str(node.props[prop])
-            if key:
-                if key not in self.node_index[prop]:
-                    self.node_index[prop][key] = set()
-                self.node_index[prop][key].add(node)
+    def __getitem__(self, key):
+        return self.__nodes[key]
 
-    def _select_index(self, props, ticked):
-        # TODO: Mangle with __, but we are using this in a test.
+    def __len__(self):
+        return len(self.__nodes)
+
+    def __iter__(self):
+        return iter(self.__nodes)
+
+    # def __contains__(self, node):
+
+
+    def __add_to_index(self, node):
+        for prop in self.__pidx:
+            val = None
+            found = False
+            if prop == 'w1Rw2':
+                if node.has('world1', 'world2'):
+                    val = (node['world1'], node['world2'])
+                    found = True
+            elif prop in node:
+                val = node[prop]
+                found = True
+            if found:
+                if val not in self.__pidx[prop]:
+                    self.__pidx[prop][val] = set()
+                self.__pidx[prop][val].add(node)
+
+    def __select_index(self, props, ticked):
         best_index = None
-        for prop in self.node_index:
-            key = None
+        for prop in self.__pidx:
+            val = None
+            found = False
             if prop == 'w1Rw2':
                 if 'world1' in props and 'world2' in props:
-                    key = str([props['world1'], props['world2']])
+                    val = (props['world1'], props['world2'])
+                    found = True
             elif prop in props:
-                key = str(props[prop])
-            if key != None:
-                if key not in self.node_index[prop]:
+                val = props[prop]
+                found = True
+            if found:
+                if val not in self.__pidx[prop]:
                     return False
-                index = self.node_index[prop][key]
+                index = self.__pidx[prop][val]
                 if best_index == None or len(index) < len(best_index):
                     best_index = index
                 # we could do no better
@@ -1141,15 +1133,15 @@ class Branch(EventEmitter):
                     break
         if not best_index:
             if ticked:
-                best_index = self.ticked_nodes
+                best_index = self.__ticked
             else:
-                best_index = self.nodes
+                best_index = self
         return best_index
 
     def __repr__(self):
         return {
             'id'     : self.id,
-            'nodes'  : len(self.nodes),
+            'nodes'  : len(self),
             'leaf'   : self.leaf.id if self.leaf else None,
             'closed' : self.closed,
         }.__repr__()
@@ -1189,6 +1181,14 @@ class Node(object):
     @property
     def sentence(self):
         return self.get('sentence')
+
+    # @property
+    # def designated(self):
+    #     return self.get('designated')
+
+    # @property
+    # def negated(self):
+    #     return None if not self.sentence else self.sentence.is_negated
 
     def get(self, name, default = None):
         return self.props.get(name, default)
@@ -1278,8 +1278,11 @@ class Node(object):
     def __hash__(self):
         return hash(self.id)
 
-    def __getitem__(self, item):
-        return self.props[item]
+    def __getitem__(self, key):
+        return self.props[key]
+
+    def __contains__(self, item):
+        return item in self.props
 
     def __repr__(self):
         return {
@@ -1372,7 +1375,7 @@ def make_tree_structure(branches, node_depth=0, track=None):
     }
     s['id'] = id(s)
     while True:
-        relevant = [branch for branch in branches if len(branch.nodes) > node_depth]
+        relevant = [branch for branch in branches if len(branch) > node_depth]
         for branch in relevant:
             if branch.closed:
                 s['has_closed'] = True
@@ -1383,12 +1386,12 @@ def make_tree_structure(branches, node_depth=0, track=None):
         distinct_nodes = []
         distinct_nodeset = set()
         for branch in relevant:
-            node = branch.nodes[node_depth]
+            node = branch[node_depth]
             if node not in distinct_nodeset:
                 distinct_nodeset.add(node)
                 distinct_nodes.append(node)
         if len(distinct_nodes) == 1:
-            node = relevant[0].nodes[node_depth]
+            node = relevant[0][node_depth]
             s['nodes'].append(node)
             if s['step'] == None or s['step'] > node.step:
                 s['step'] = node.step
@@ -1421,7 +1424,7 @@ def make_tree_structure(branches, node_depth=0, track=None):
 
             child_branches = [
                 branch for branch in branches
-                if branch.nodes[node_depth] == node
+                if branch[node_depth] == node
             ]
 
             # recurse

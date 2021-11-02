@@ -27,7 +27,7 @@ from proof.rules import Rule, FilterNodeRule
 from proof.helpers import MaxConstantsTracker
 from parsers import parse, parse_argument, notations as parser_notns
 from models import truth_table
-from .testutils import LogicTester
+from .tutils import LogicTester
 import examples
 
 def empty_proof():
@@ -243,21 +243,21 @@ class TestFDE(LogicTester):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': parse('a'), 'designated': False})
-        node = branch.get_nodes()[0]
+        node = branch[0]
         assert proof.branching_complexity(node) == 0
 
     def test_branching_complexity_undes_1_1(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': parse('Kab'), 'designated': False})
-        node = branch.get_nodes()[0]
+        node = branch[0]
         assert proof.branching_complexity(node) == 1
 
     def test_branching_complexity_undes_1_2(self):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': parse('NAaNKbc'), 'designated': False})
-        node = branch.get_nodes()[0]
+        node = branch[0]
         assert node.props['sentence'].operators() == ['Negation', 'Disjunction', 'Negation', 'Conjunction']
         assert proof.branching_complexity(node) == 1
 
@@ -265,7 +265,7 @@ class TestFDE(LogicTester):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': parse('NAab'), 'designated': False})
-        node = branch.get_nodes()[0]
+        node = branch[0]
         assert node.props['sentence'].operators() == ['Negation', 'Disjunction']
         assert proof.branching_complexity(node) == 1
 
@@ -273,7 +273,7 @@ class TestFDE(LogicTester):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': parse('KaKab'), 'designated': False})
-        node = branch.get_nodes()[0]
+        node = branch[0]
         assert node.props['sentence'].operators() == ['Conjunction', 'Conjunction']
         assert proof.branching_complexity(node) == 2
 
@@ -912,7 +912,7 @@ class TestGO(LogicTester):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': parse('Kab'), 'designated': False})
-        node, = branch.get_nodes()
+        node = branch[0]
         assert self.logic.TableauxSystem.branching_complexity(node) == 0
 
 class TestMH(LogicTester):
@@ -1427,18 +1427,18 @@ class TestK(LogicTester):
 
     def test_rule_Possibility_node_has_w0(self):
         rule, tab = self.rule_eg('Possibility', step = False)
-        node, = tab.get_branch_at(0).nodes
+        node = tab.get_branch_at(0)[0]
         assert node['world'] == 0
 
     def test_rule_Existential_example_nodes(self):
         rule, tab = self.rule_eg('Existential', step = False)
-        node, = tab.get_branch_at(0).nodes
-        assert node.sentence.quantifier == 'Existential'
+        node = tab.get_branch_at(0)[0]
+        assert node['sentence'].quantifier == 'Existential'
 
     def test_rule_DisjunctionNegated_example_nodes(self):
         rule, tab = self.rule_eg('DisjunctionNegated', step = False)
-        node, = tab.get_branch_at(0).nodes
-        assert node.sentence.operator == 'Negation'
+        node = tab.get_branch_at(0)[0]
+        assert node['sentence'].operator == 'Negation'
 
     def test_rule_Universal_eg(self):
         self.rule_eg('Universal')
@@ -1839,7 +1839,7 @@ class TestD(LogicTester):
         b = tab.get_branch_at(0)
         # use internal properties just to be sure, since the bug was with the .find method
         access = {}
-        for node in list(b.nodes):
+        for node in b:
             if 'world1' in node.props:
                 w1 = node.props['world1']
                 w2 = node.props['world2']
@@ -1849,9 +1849,9 @@ class TestD(LogicTester):
                 access[w1].append(w2)
         for w1 in access:
             assert len(access[w1]) == 1
-        assert len(access) == (len(b.worlds()) - 1)
+        assert len(access) == (b.world_count - 1)
         # sanity check
-        assert len(b.worlds()) > 2
+        assert b.world_count > 2
 
 class TestT(LogicTester):
 

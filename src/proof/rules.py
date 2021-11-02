@@ -219,7 +219,7 @@ class Rule(EventEmitter):
         :param tableaux.Node node:
         :rtype: lexicals.Sentence
         """
-        return node.sentence
+        return node.get('sentence')
 
     # Scoring
 
@@ -614,7 +614,7 @@ class FilterNodeRule(PotentialNodeRule):
         return self.conditions_apply(node, branch)
 
     def conditions_apply(self, node, branch):
-        if self.ticked != None and self.ticked != (node in branch.ticked_nodes):
+        if self.ticked != None and self.ticked != branch.is_ticked(node):
             return False
         if self.modal != None and self.modal != node.is_modal:
             # modal = len(node.worlds()) > 0
@@ -831,7 +831,7 @@ class AllConstantsStoppingRule(FilterNodeRule):
         if self.max_constants.max_constants_exceeded(branch, node.props['world']):
             return False
         # Apply if there are no constants on the branch
-        if not branch.constants():
+        if not branch.constants_count:
             return True
         # Apply if we have tracked a constant that we haven't applied to.
         if self.applied_constants.get_unapplied(node, branch):

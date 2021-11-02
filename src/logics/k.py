@@ -210,7 +210,7 @@ class Model(BaseModel):
         }
 
     def read_branch(self, branch):
-        for node in branch.get_nodes():
+        for node in branch:
             self.read_node(node)
         self.finish()
         return self
@@ -1332,7 +1332,6 @@ class TableauxRules(object):
 
                 targets = []
 
-                # worlds = branch.worlds()
                 s = self.sentence(node)
                 si = s.operand
                 w1 = node.props['world']

@@ -18,6 +18,7 @@
 #
 # pytableaux - rule helpers module
 from models import BaseModel
+from utils import isstr
 
 class AdzHelper(object):
 
@@ -107,55 +108,218 @@ class QuitFlagHelper(object):
         if target.get('flag'):
             self.flagged[target['branch'].id] = True
 
-class NodeFilter(object):
-
-    @staticmethod
-    def node_method_filter(meth, *args, **kw):
-        def mfilter(node):
-            func = getattr(node, meth)
-            return func(*args, **kw)
-        return mfilter
+class NodeFilterHelper(object):
 
     def __init__(self, rule):
         self.rule = rule
-        self._checks = []
-        self._ignore_ticked = None
-        self._default_action = False
-        self._cache = {}
+        self.__filters = []
+        self.__cache = {}
+        self.__include_ticked = None
 
-    def add_filter(self, func):
-        self._checks.append(func)
+    # API
 
-    def get_nodes(self, branch):
-        return self._cache[branch]
+    def add_filter(self, *filters):
+        self.__filters.extend(filters)
+
+    def filter(self, node, branch):
+        if not self.include_ticked and branch.is_ticked(node):
+            return False
+        for func in self.__filters:
+            if not func(node):
+                return False
+        return True
+
+    # Subscript API
+
+    def __getitem__(self, branch):
+        return self.__cache[branch]
+
+    def __setitem__(self, branch, value):
+        if branch in self.__cache:
+            raise TypeError('Branch {} already in cache'.format(branch.id))
+        self.__cache[branch] = value
+
+    def __delitem__(self, branch):
+        del(self.__cache[branch])
+
+    def __contains__(self, branch):
+        return branch in self.__cache
+
+    def __len__(self):
+        return len(self.__cache)
+
+    # Induced Rule Properties
+
+    @property
+    def include_ticked(self):
+        if self.__include_ticked != None:
+            return self.__include_ticked
+        if hasattr(self.rule, 'include_ticked'):
+            return self.rule.include_ticked
+        if hasattr(self.rule.__class__, 'include_ticked'):
+            return self.rule.__class__.include_ticked
+
+    @include_ticked.setter
+    def include_ticked(self, val):
+        self.__include_ticked = val
 
     # Event Listeners
 
     def after_branch_add(self, branch):
-        cache = self._cache[branch] = set()
+        self[branch] = set()
         if branch.parent:
-            cache.update(self._cache[branch.parent])
+            self[branch].update(self[branch.parent])
 
     def after_branch_close(self, branch):
-        del(self._cache[branch])
-
-    def after_node_tick(self, node, branch):
-        if self._ignore_ticked:
-            self._cache[branch].discard(node)
+        del(self[branch])
 
     def after_node_add(self, node, branch):
-        if self._ignore_ticked and branch.is_ticked(node):
-            return
-        if self._run_checks(node, branch):
-            self._cache[branch].add(node)
+        if self.filter(node, branch):
+            self[branch].add(node)
 
-    def _run_checks(self, node, branch):
-        if not self._checks:
-            return self._default_action
-        for func in self._checks:
-            if not func(node):
+    def after_node_tick(self, node, branch):
+        if not self.include_ticked:
+            self[branch].discard(node)
+
+class Getters(object):
+
+    @staticmethod
+    def it(obj, _ = None):
+        return obj
+    @staticmethod
+    def attr(obj, name):
+        return getattr(obj, name)
+    @staticmethod
+    def attrsafe(obj, name):
+        return getattr(obj, name, None)
+    @staticmethod
+    def key(obj, key):
+        return obj[key]
+    @staticmethod
+    def keysafe(obj, key):
+        try:
+            return obj[key]
+        except KeyError:
+            return None
+    @staticmethod
+    def chain(obj, funcs):
+        ret = obj
+        for func in funcs:
+            ret = func(ret)
+        return ret
+
+    def __init__(self, *items):
+        def getgetter(getter):
+            if isstr(getter):
+                getter = getattr(self.__class__, getter)
+            if not callable(getter):
+                raise TypeError('{} not callable'.format(getter))
+            return getter
+        def wrap(item):
+            if not isinstance(item, (list, tuple)):
+                item = (item,)
+            if len(item) > 2:
+                raise ValueError("item length {} > 2".format(len(item)))
+            getter, *args = item
+            getter = getgetter(getter)
+            def get(obj, _ = None):
+                return getter(obj, *args)
+            return get
+        towrap = list(items)
+        last = towrap.pop()
+        funcs = [wrap(item) for item in towrap]
+        if isinstance(last, (list, tuple)):
+            funcs.append(wrap(last))
+        else:
+            funcs.append(getgetter(last))
+        def chained(obj, *args):
+            ret = obj
+            for func in funcs:
+                ret = func(ret, *args)
+            return ret
+        self.get = chained
+
+    def __call__(self, *args):
+        return self.get(*args)
+
+class Filters(object):
+
+    class Method(object):
+
+        args = tuple()
+        kw = {}
+
+        get = Getters.attr
+
+        def __init__(self, meth, *args, **kw):
+            self.meth = meth
+            if args:
+                self.args = args
+            self.kw.update(kw)
+
+        def __call__(self, rhs):
+            func = self.get(rhs, self.meth)
+            return bool(func(*self.args, **self.kw))
+
+    class Attr(object):
+
+        attrpairs = tuple()
+
+        lget = Getters.attrsafe
+        rget = Getters.attr
+
+        def __init__(self, lhs, **attrmap):
+            self.lhs = lhs
+            if attrmap:
+                self.attrpairs = tuple(attrmap.items())
+
+        def __call__(self, rhs):
+            for lattr, rattr in self.attrpairs:
+                val = self.lget(self.lhs, lattr)
+                if val != None and val != self.rget(rhs, rattr):
+                    return False
+            return True
+
+    class Sentence(object):
+
+        negated = None
+
+        rattr = None
+
+        get = Getters.it
+
+        def __init__(self, lhs, negated = None, rattr = None, iskey = False):
+            self.lhs = lhs
+            if negated != None:
+                self.negated = negated
+            if rattr:
+                if iskey:
+                    getter = Getters.key
+                else:
+                    getter = Getters.attr
+                def get(rhs):
+                    return getter(rhs, rattr)
+                self.get = get
+
+        def __call__(self, rhs):
+            lhs = self.lhs
+            if not any((lhs.operator, lhs.quantifier, lhs.predicate)):
+                return True
+            rhs = self.get(rhs)
+            if not rhs:
                 return False
-        return True
+            if getattr(lhs, 'negated', None):
+                if not rhs.is_negated:
+                    return False
+                rhs = rhs.operand
+            if lhs.operator and lhs.operator != rhs.operator:
+                return False
+            if lhs.quantifier and lhs.quantifier != rhs.quantifier:
+                return False
+            if lhs.predicate:
+                if not rhs.predicate or lhs.predicate not in rhs.predicate.refs:
+                    return False
+            return True
 
 class MaxConstantsTracker(object):
     """
@@ -281,9 +445,9 @@ class MaxConstantsTracker(object):
         """
         node_needed_constants = sum([
             self._compute_needed_constants_for_node(node, branch)
-            for node in branch.get_nodes()
+            for node in branch
         ])
-        return max(1, len(branch.constants())) * max(1, node_needed_constants) + 1
+        return max(1, branch.constants_count) * max(1, node_needed_constants) + 1
 
     def _compute_needed_constants_for_node(self, node, branch):
         if node.has('sentence'):
@@ -392,7 +556,7 @@ class MaxWorldsTracker(object):
         projected for the branch (origin).
         """
         max_worlds = self.get_max_worlds(branch)
-        return max_worlds != None and len(branch.worlds()) >= max_worlds
+        return max_worlds != None and branch.world_count >= max_worlds
 
     def max_worlds_exceeded(self, branch):
         """
@@ -400,7 +564,7 @@ class MaxWorldsTracker(object):
         branch (origin).
         """
         max_worlds = self.get_max_worlds(branch)
-        return max_worlds != None and len(branch.worlds()) > max_worlds
+        return max_worlds != None and branch.world_count > max_worlds
 
     def modal_complexity(self, sentence):
         """
@@ -438,9 +602,9 @@ class MaxWorldsTracker(object):
         # operators + 1.
         node_needed_worlds = sum([
             self.__compute_needed_worlds_for_node(node, branch)
-            for node in branch.get_nodes()
+            for node in branch
         ])
-        return len(branch.worlds()) + node_needed_worlds + 1
+        return branch.world_count + node_needed_worlds + 1
 
     def __compute_needed_worlds_for_node(self, node, branch):
         # we only care about unticked nodes, since ticked nodes will have
