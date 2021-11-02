@@ -17,6 +17,7 @@
 # ------------------
 #
 # pytableaux - rule helpers module
+from inspect import isclass
 from models import BaseModel
 from utils import isstr
 
@@ -115,6 +116,8 @@ class NodeFilterHelper(object):
         self.__filters = []
         self.__cache = {}
         self.__include_ticked = None
+        for cls in getattr(rule, 'NodeFilters', tuple()):
+            self.add_filter(cls(rule))
 
     # API
 
@@ -181,66 +184,125 @@ class NodeFilterHelper(object):
         if not self.include_ticked:
             self[branch].discard(node)
 
+
+
+def rcurry(func, rargs):
+    class curried(object):
+        def __call__(self, *largs):
+            return func(*largs, *rargs)
+    return curried()
+
+def lcurry(func, largs):
+    class curried(object):
+        def __call__(self, *rargs):
+            return func(*largs, *rargs)
+    return curried()
+
 class Getters(object):
 
+    def __new__(cls, *items):
+        return cls.chain(*items)
+
     @staticmethod
-    def it(obj, _ = None):
-        return obj
-    @staticmethod
-    def attr(obj, name):
-        return getattr(obj, name)
-    @staticmethod
-    def attrsafe(obj, name):
-        return getattr(obj, name, None)
-    @staticmethod
-    def key(obj, key):
-        return obj[key]
-    @staticmethod
-    def keysafe(obj, key):
-        try:
+    def chain(*items):
+        chain = [cls(*args) for cls, *args in items]
+        last = chain.pop()
+        class chained(object):
+            def __call__(self, obj, *args):
+                for func in chain:
+                    obj = func(obj)
+                return last(obj, *args)
+        return chained()
+
+    class Getter(object):
+        curry = rcurry
+        def __new__(cls, *args):
+            inst = object.__new__(cls)
+            if args:
+                return cls.curry(inst, args)
+            return inst
+
+    class Attr(Getter):
+        def __call__(self, obj, name):
+            return getattr(obj, name)
+
+    class AttrSafe(Getter):
+        def __call__(self, obj, name):
+            return getattr(obj, name, None)
+
+    class Key(Getter):
+        def __call__(self, obj, key):
             return obj[key]
-        except KeyError:
-            return None
-    @staticmethod
-    def chain(obj, funcs):
-        ret = obj
-        for func in funcs:
-            ret = func(ret)
-        return ret
 
-    def __init__(self, *items):
-        def getgetter(getter):
-            if isstr(getter):
-                getter = getattr(self.__class__, getter)
-            if not callable(getter):
-                raise TypeError('{} not callable'.format(getter))
-            return getter
-        def wrap(item):
-            if not isinstance(item, (list, tuple)):
-                item = (item,)
-            if len(item) > 2:
-                raise ValueError("item length {} > 2".format(len(item)))
-            getter, *args = item
-            getter = getgetter(getter)
-            def get(obj, _ = None):
-                return getter(obj, *args)
-            return get
-        towrap = list(items)
-        last = towrap.pop()
-        funcs = [wrap(item) for item in towrap]
-        if isinstance(last, (list, tuple)):
-            funcs.append(wrap(last))
-        else:
-            funcs.append(getgetter(last))
-        def chained(obj, *args):
-            ret = obj
-            for func in funcs:
-                ret = func(ret, *args)
-            return ret
-        self.get = chained
+    class KeySafe(Getter):
+        def __call__(self, obj, key):
+            try:
+                return obj[key]
+            except KeyError:
+                pass
 
-    def __call__(self, *args):
-        return self.get(*args)
+    class It(Getter):
+        curry = lcurry
+        def __call__(self, obj, _ = None):
+            return obj
+
+    attr = Attr()
+    attrsafe = AttrSafe()
+    key = Key()
+    keysafe = KeySafe()
+    it = It()
+
+    # def __init__(self, *items):
+        # chain = [cls(*args) for cls, *args in items]
+        # last = chain.pop()
+        # def chained(obj, *args):
+        #     for func in chain:
+        #         obj = func(obj)
+        #     return last(obj, *args)
+        # self.get = chained
+
+        # return
+        # wraptypes = (tuple, list)
+
+        # def tofunc(getter):
+        #     assert isclass(getter)
+        #     return getter()
+        #     if isstr(getter):
+        #         getter = getattr(self.__class__, getter)
+        #     if isclass(getter):
+        #         getter = getter()
+        #     elif not callable(getter):
+        #         raise TypeError('{} not callable'.format(getter))
+
+        #     return getter
+
+        # def wrap(item):
+        #     cls, *args = item
+        #     return cls(*args)
+        #     if not isinstance(item, wraptypes):
+        #         item = (item,)
+        #     cls, *args = item
+        #     assert isclass(cls)
+        #     return cls(*args)
+        #     return cls.rwrap(*args)
+        #     getter = tofunc(getter)
+        #     def get(obj):
+        #         return getter(obj, *args)
+        #     return get
+
+        # def getlast(item):
+        #     if isinstance(item, wraptypes):
+        #         return wrap(item)
+        #     return tofunc(item)
+
+        # chain, last = tuple(wrap(it) for it in items[0:-1]), getlast(items[-1])
+
+
+
+
+    # def __call__(self, obj, *args):
+    #     return self.get(obj, *args)
+
 
 class Filters(object):
 
@@ -263,18 +325,17 @@ class Filters(object):
 
     class Attr(object):
 
-        attrpairs = tuple()
+        attrs = tuple()
 
         lget = Getters.attrsafe
         rget = Getters.attr
 
         def __init__(self, lhs, **attrmap):
             self.lhs = lhs
-            if attrmap:
-                self.attrpairs = tuple(attrmap.items())
+            self.attrs = tuple(self.attrs + tuple(attrmap.items()))
 
         def __call__(self, rhs):
-            for lattr, rattr in self.attrpairs:
+            for lattr, rattr in self.attrs:
                 val = self.lget(self.lhs, lattr)
                 if val != None and val != self.rget(rhs, rattr):
                     return False
@@ -282,36 +343,40 @@ class Filters(object):
 
     class Sentence(object):
 
-        negated = None
-
-        rattr = None
-
         get = Getters.it
 
-        def __init__(self, lhs, negated = None, rattr = None, iskey = False):
-            self.lhs = lhs
+        @property
+        def negated(self):
+            if self.__negated != None:
+                return self.__negated
+            return Getters.attrsafe(self.lhs, 'negated')
+
+        @negated.setter
+        def negated(self, val):
+            self.__negated = val
+
+        @property
+        def lhs(self):
+            return self.__lhs
+
+        def __init__(self, lhs, negated = None):
+            self.__negated = None
+            self.__lhs = lhs
+            self.__applies = any((lhs.operator, lhs.quantifier, lhs.predicate))
             if negated != None:
                 self.negated = negated
-            if rattr:
-                if iskey:
-                    getter = Getters.key
-                else:
-                    getter = Getters.attr
-                def get(rhs):
-                    return getter(rhs, rattr)
-                self.get = get
 
         def __call__(self, rhs):
-            lhs = self.lhs
-            if not any((lhs.operator, lhs.quantifier, lhs.predicate)):
+            if not self.__applies:
                 return True
             rhs = self.get(rhs)
             if not rhs:
                 return False
-            if getattr(lhs, 'negated', None):
+            if self.negated:
                 if not rhs.is_negated:
                     return False
                 rhs = rhs.operand
+            lhs = self.lhs
             if lhs.operator and lhs.operator != rhs.operator:
                 return False
             if lhs.quantifier and lhs.quantifier != rhs.quantifier:

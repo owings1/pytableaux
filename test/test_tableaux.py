@@ -3,7 +3,7 @@ from errors import *
 from events import Events
 from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau
 from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
-from proof.helpers import NodeFilterHelper, Filters
+from proof.helpers import NodeFilterHelper, Getters, Filters
 from lexicals import Atomic, Constant, Predicated
 from utils import get_logic
 import examples
@@ -403,37 +403,38 @@ class TestFilters(LogicTester):
         assert f(Node({'world1': 0}))
         assert not f(Node({'foo': 'bar'}))
 
-    def test_AttrFilter_node_designated(self):
+    def test_AttrFilter_key_node_designated(self):
         class Lhs(object):
             testname = True
         f = Filters.Attr(Lhs(), testname = 'designated')
+        f.rget = Getters.Key()
         assert f(Node({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
 
 class NodeFilterRule(Rule):
 
-    Helpers = (('nf', NodeFilterHelper),)
-
     include_ticked = None
-
     designation = None
     modal = None
+    negated = operator = quantifier = predicate = None
 
-    negated = None
-    operator = None
-    quantifier = None
-    predicate = None
+    Helpers = (('nf', NodeFilterHelper),)
 
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-        self.nf.add_filter(
-            Filters.Attr(
-                self,
-                designation = 'designated',
-                modal       = 'is_modal',
-            ),
-            Filters.Sentence(self, rattr = 'sentence'),
-        )
+    class DesignationFilter(Filters.Attr):
+        attrs = (('designation', 'designated'),)
+        rget = Getters.key
+
+    class ModalFilter(Filters.Attr):
+        attrs = (('modal', 'is_modal'),)
+
+    class SentenceFilter(Filters.Sentence):
+        get = Getters.KeySafe('sentence')
+
+    NodeFilters = (
+        DesignationFilter,
+        ModalFilter,
+        SentenceFilter,
+    )
 
 @using(logic = 'CPL')
 class Test_NodeFilter(LogicTester):
@@ -464,6 +465,10 @@ class Test_NodeFilter(LogicTester):
 
     def test_sentence_no_filters(self):
         nf, b, nn = self.case1(NodeFilterRule)
+        lhs = nf.rule
+        assert not any((lhs.operator, lhs.quantifier, lhs.predicate))
+        sf = nf._NodeFilterHelper__filters[-1]
+        assert sf._Sentence__applies == False
         assert nf[b] == set(nn)
         assert nf[b] == set(b)
 
@@ -513,8 +518,8 @@ class Test_NodeFilter(LogicTester):
     def test_designation_true(self):
         class Impl(NodeFilterRule):
             designation = True
-        # nf, b, nn = self.case1(Impl, n=3)
-        # assert nf[b] == {nn[1]}
+        nf, b, nn = self.case1(Impl, n=3)
+        assert nf[b] == {nn[1]}
 
 @using(logic = 'CPL')
 class TestTestDecorator(LogicTester):
