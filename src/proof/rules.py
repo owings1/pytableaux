@@ -19,10 +19,11 @@
 #
 # pytableaux - tableaux rules module
 from inspect import isclass
-from lexicals import Atomic, Operated, operarity
+from lexicals import Predicated, Atomic, Quantified, Operated, Predicate, Variable, operarity
 from utils import EventEmitter, StopWatch, istableau, safeprop, typecheck
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
-    MaxConstantsTracker, QuitFlagHelper
+    MaxConstantsTracker, QuitFlagHelper, \
+    NodeFilterHelper, Getters, Filters
 from events import Events
 
 class Rule(EventEmitter):
@@ -319,6 +320,11 @@ class Target(object):
                 target.update(obj)
         return target
 
+    @staticmethod
+    def createall(objs, **data):
+        if isinstance(objs, (__class__, dict)):
+            objs = (objs,)
+        return (__class__.create(obj, **data) for obj in objs)
     def __init__(self, data):
         self.__keys = set(self.__comps)
         self.__data = {}
@@ -428,6 +434,82 @@ class ClosureRule(Rule):
     # NodeTargetCheckHelper implementation
 
     def check_for_target(self, node, branch):
+        raise NotImplementedError()
+
+class NodeFilterRule(Rule):
+
+    Helpers = (
+        *Rule.Helpers,
+        ('nf', NodeFilterHelper),
+    )
+
+    include_ticked = None
+
+    negated = operator = quantifier = predicate = None
+
+    NodeFilters = (
+        ('sentence', Filters.Node.Sentence),
+    )
+
+    def _get_targets(self, branch):
+        """
+        :implements: Rule
+        """
+        targets = list()
+        # misses = {}
+        for node in self.nf[branch]:
+            res = self._get_node_targets(node, branch)
+            if res:
+                targets.extend(
+                    Target.createall(res, branch = branch, node = node)
+                )
+                continue
+        #     if not self.nf.filter(node, branch):
+        #         if branch not in misses:
+        #             misses[branch] = set()
+        #         misses[branch].add(node)
+        # for branch in misses:
+        #     for node in misses[branch]:
+        #        self.nf[branch].discard(node)
+        return targets
+
+    def sentence(self, node):
+        """
+        :overrides: Rule
+        """
+        return self.nf.filters.sentence.get_sentence(node)
+
+    def example_nodes(self):
+        """
+        TODO: copied from old impl, refactor
+        :implements: Rule
+        """
+        props = {}
+        sentence = None
+        a = Atomic(0, 0)
+        if self.operator != None:
+            params = []
+            arity = operarity(self.operator)
+            if arity > 0:
+                params.append(a)
+            for i in range(arity - 1):
+                params.append(params[-1].next())
+            sentence = Operated(self.operator, params)
+        elif self.quantifier != None:
+            sp = Predicated(Predicate(0, 0, 1), Variable(0, 0))
+            sentence = Quantified(self.quantifier, sp)
+        if self.negated:
+            if sentence == None:
+                sentence = a
+            sentence = sentence.negate()
+        if sentence != None:
+            props['sentence'] = sentence
+        return (props,)
+
+    def _get_node_targets(self, node, branch):
+        """
+        :meta abstract:
+        """
         raise NotImplementedError()
 
 class PotentialNodeRule(Rule):

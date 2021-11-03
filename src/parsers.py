@@ -19,8 +19,8 @@
 # pytableaux - parsers module
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError, NotFoundError
-from lexicals import Constant, Variable,  Atomic, Predicated, Quantified, \
-    Operated, Sentence, Vocabulary, Argument, get_system_predicate, operarity
+from lexicals import Constant, Variable, Atomic, Predicated, Quantified, \
+    Operated, Sentence, Predicates, Argument, operarity
 from utils import CacheNotationData, cat, isstr, condcheck, typecheck
 
 parser_classes = {
@@ -57,7 +57,7 @@ def create_parser(notn = None, vocab = None, table = None, **opts):
 
     :param str notn: The parser notation. Uses the default notation
         if not passed.
-    :param lexicals.Vocabulary vocab: The vocabulary instance containing any
+    :param lexicals.Predicates vocab: The vocabulary instance containing any
         custom predicate definitions. If not passed, an empty instance is
         created.
     :param CharTable table: A custom parser table to use.
@@ -66,11 +66,11 @@ def create_parser(notn = None, vocab = None, table = None, **opts):
     :raises ValueError: on invalid notation, or table.
     :raises TypeError: on invalid argument types.
     """
-    if isinstance(notn, Vocabulary) or isstr(vocab):
+    if isinstance(notn, Predicates) or isstr(vocab):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
     if vocab == None:
-        vocab = Vocabulary()
+        vocab = Predicates()
     if notn == None:
         notn = default_notation
     elif notn not in parser_classes:
@@ -195,7 +195,7 @@ class BaseParser(Parser):
         :raises errors.ParseError:
         :meta private:
         """
-        return Atomic(**self._read_item())
+        return Atomic(self._read_coords())
 
     def _read_predicate_sentence(self):
         """
@@ -254,9 +254,9 @@ class BaseParser(Parser):
         if ctype == 'system_predicate':
             _, name = self.table.item(pchar)
             self._advance()
-            return get_system_predicate(name)
+            return Predicates.system[name]
         try:
-            return self.vocab.get_predicate(**self._read_item())
+            return self.vocab.get(self._read_coords())
         except NotFoundError:
             raise ParseError(
                 "Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos)
@@ -311,7 +311,7 @@ class BaseParser(Parser):
         :raises errors.ParseError:
         :meta private:
         """
-        return Variable(**self._read_item())
+        return Variable(self._read_coords())
 
     def _read_constant(self):
         """
@@ -321,7 +321,7 @@ class BaseParser(Parser):
         :raises errors.ParseError:
         :meta private:
         """
-        return Constant(**self._read_item())
+        return Constant(self._read_coords())
 
     def _read_subscript(self):
         """
@@ -343,16 +343,15 @@ class BaseParser(Parser):
             sub.append('0')
         return int(''.join(sub))
 
-    def _read_item(self, ctype = None):
+    def _read_coords(self, ctype = None):
         """
-        Read an item and its subscript starting from the current character,
-        which must be in the list of characters given. Returns a dict with
-        keys `index` and `subscript`, where `index` is the list index in
+        Read (index, subscript) coords starting from the current character,
+        which must be in the list of characters given. `index` is the list index in
         the symbol set. This is a generic way to read user predicates,
         atomics, variables, constants, etc. Note, this will not work for
         system predicates, because they have string keys in the symbols set.
 
-        :rtype: dict
+        :rtype: tuple
         :raises errors.ParseError:
         :meta private:
         """
@@ -363,7 +362,7 @@ class BaseParser(Parser):
         _, index = self.table.item(self._current())
         self._advance()
         subscript = self._read_subscript()
-        return {'index': index, 'subscript': subscript}
+        return (index, subscript)
 
     ## ============================
     ##  Low-level parsing methods

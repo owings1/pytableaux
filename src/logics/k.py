@@ -27,22 +27,22 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 1
 
-from lexicals import get_system_predicate, Atomic, Operated, Quantified, Predicated
+from lexicals import Predicates, Atomic, Operated, Quantified, Predicated
 from models import BaseModel
 
 from proof.tableaux import TableauxSystem as BaseSystem
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
-    NewConstantStoppingRule
+    NewConstantStoppingRule, NodeFilterRule
 from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
-    MaxWorldsTracker, PredicatedNodesTracker, QuitFlagHelper
+    MaxWorldsTracker, PredicatedNodesTracker, QuitFlagHelper, Filters, AdzHelper
 import examples
 
 from errors import DenotationError, ModelValueError
 
 from . import fde
 
-Identity  = get_system_predicate('Identity')
-Existence = get_system_predicate('Existence')
+Identity  = Predicates.system['Identity']
+Existence = Predicates.system['Existence']
 
 def substitute_params(params, old_value, new_value):
     return tuple(new_value if p == old_value else p for p in params)
@@ -218,7 +218,7 @@ class Model(BaseModel):
     def read_node(self, node):
         if node.has('sentence'):
             sentence = node.props['sentence']
-            world = node.props['world']
+            world = node['world']
             if world == None:
                 world = 0
             if self.is_sentence_opaque(sentence):
@@ -685,7 +685,7 @@ class TableauxSystem(BaseSystem):
                 complexity += 1
         return complexity
 
-class DefaultNodeRule(FilterNodeRule):
+class OldDefaultNodeRule(FilterNodeRule):
     modal = True
     ticking = True
 
@@ -694,6 +694,43 @@ class DefaultNodeRule(FilterNodeRule):
 
     def score_candidate(self, target):
         return self.adz.closure_score(target)
+
+    # Compatibility during refactor
+    def _get_node_targets(self, *args, **kw):
+        return self.get_target_for_node(*args, **kw)
+
+class NewDefaultNodeRule(NodeFilterRule):
+    modal = True
+    ticking = True
+    class ModalFilter(Filters.Attr):
+        attrs = (('modal', 'is_modal'),)
+    Helpers = (
+        *NodeFilterRule.Helpers,
+        ('adz', AdzHelper),
+    )
+    NodeFilters = (
+        ('modal', ModalFilter),
+        *NodeFilterRule.NodeFilters,
+    )
+    def _apply(self, target):
+        self.adz.apply_to_target(target)
+
+    def example_nodes(self):
+        nodes = super().example_nodes()
+        for props in nodes:
+            if self.modal:
+                w = props.get('world') or props.get('world1')
+                if w == None:
+                    props['world'] = 0
+        return nodes
+    def score_candidate(self, target):
+        return self.adz.closure_score(target)
+
+    # Legacy
+    def get_target_for_node(self, *args, **kw):
+        return self._get_node_targets(*args, **kw)
+
+DefaultNodeRule = NewDefaultNodeRule
 
 class TableauxRules(object):
     """
@@ -741,7 +778,7 @@ class TableauxRules(object):
             if node.has('sentence'):
                 return branch.find({
                     'sentence' : node.props['sentence'].negative(),
-                    'world'    : node.props['world'],
+                    'world'    : node['world'],
                 })
                 
     class SelfIdentityClosure(ClosureRule):
@@ -804,7 +841,8 @@ class TableauxRules(object):
             w = 0 if self.modal else None
             return ({'sentence': s, 'world': w},)
 
-    class DoubleNegation(DefaultNodeRule):
+    # class DoubleNegation(DefaultNodeRule):
+    class DoubleNegation(NewDefaultNodeRule):
         """
         From an unticked double negation node *n* with world *w* on a branch *b*, add a
         node to *b* with *w* and the double-negatum of *n*, then tick *n*.
@@ -813,17 +851,20 @@ class TableauxRules(object):
         operator = 'Negation'
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
                     [
-                        {'sentence': s.operand, 'world': node.props['world']},
+                        {'sentence': s.operand, 'world': node['world']},
                     ],
                 ],
             }
+        # get_target_for_node = _get_node_targets
+        # def get_target_for_node(self, *args, **kw):
+        #     return self._get_node_targets(*args, **kw)
 
-    class Assertion(DefaultNodeRule):
+    class Assertion(NewDefaultNodeRule):
         """
         From an unticked assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
@@ -831,15 +872,16 @@ class TableauxRules(object):
         operator = 'Assertion'
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
                     [
-                        {'sentence': s.operand, 'world': node.props['world']},
+                        {'sentence': s.operand, 'world': node['world']},
                     ],
                 ],
             }
+        # get_target_for_node = _get_node_targets
 
     class AssertionNegated(DefaultNodeRule):
         """
@@ -851,12 +893,12 @@ class TableauxRules(object):
         operator = 'Assertion'
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
                     [
-                        {'sentence': s.operand.negate(), 'world': node.props['world']},
+                        {'sentence': s.operand.negate(), 'world': node['world']},
                     ],
                 ],
             }
@@ -869,11 +911,11 @@ class TableauxRules(object):
         operator = 'Conjunction'
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             return {
                 'adds': [
                     [
-                        {'sentence': operand, 'world': node.props['world']}
+                        {'sentence': operand, 'world': node['world']}
                         for operand in self.sentence(node).operands
                     ],
                 ],
@@ -889,11 +931,11 @@ class TableauxRules(object):
         operator = 'Conjunction'
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             return {
                 'adds': [
                     [
-                        {'sentence': operand.negate(), 'world': node.props['world']},
+                        {'sentence': operand.negate(), 'world': node['world']},
                     ]
                     for operand in self.sentence(node).operands
                 ],
@@ -908,11 +950,11 @@ class TableauxRules(object):
         operator = 'Disjunction'
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             return {
                 'adds': [
                     [
-                        {'sentence': operand, 'world': node.props['world']},
+                        {'sentence': operand, 'world': node['world']},
                     ]
                     for operand in self.sentence(node).operands
                 ],
@@ -927,11 +969,11 @@ class TableauxRules(object):
         operator = 'Disjunction'
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             return {
                 'adds': [
                     [
-                        {'sentence': operand.negate(), 'world': node.props['world']}
+                        {'sentence': operand.negate(), 'world': node['world']}
                         for operand in self.sentence(node).operands
                     ],
                 ],
@@ -947,9 +989,9 @@ class TableauxRules(object):
         operator = 'Material Conditional'
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
-            w = node.props['world']
+            w = node['world']
             return {
                 'adds': [
                     [
@@ -971,9 +1013,9 @@ class TableauxRules(object):
         operator = 'Material Conditional'
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
-            w = node.props['world']
+            w = node['world']
             return {
                 'adds': [
                     [
@@ -994,9 +1036,9 @@ class TableauxRules(object):
         operator = 'Material Biconditional'
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
-            w = node.props['world']
+            w = node['world']
             return {
                 'adds': [
                     [
@@ -1022,9 +1064,9 @@ class TableauxRules(object):
         operator = 'Material Biconditional'
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
-            w = node.props['world']
+            w = node['world']
             return {
                 'adds': [
                     [
@@ -1087,7 +1129,7 @@ class TableauxRules(object):
         negated  = True
         operator = 'Biconditional'
 
-    class Existential(DefaultNodeRule, NewConstantStoppingRule):
+    class Existential(OldDefaultNodeRule, NewConstantStoppingRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
@@ -1107,10 +1149,10 @@ class TableauxRules(object):
             si = s.sentence
             r = si.substitute(c, v)
             return [
-                {'sentence': r, 'world': node.props['world']},
+                {'sentence': r, 'world': node['world']},
             ]
 
-    class ExistentialNegated(DefaultNodeRule):
+    class ExistentialNegated(OldDefaultNodeRule):
         """
         From an unticked negated existential node *n* with world *w* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
@@ -1130,12 +1172,12 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': sq, 'world': node.props['world']},
+                        {'sentence': sq, 'world': node['world']},
                     ],
                 ],
             }
 
-    class Universal(DefaultNodeRule, AllConstantsStoppingRule):
+    class Universal(OldDefaultNodeRule, AllConstantsStoppingRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -1162,7 +1204,7 @@ class TableauxRules(object):
             si = s.sentence
             r = si.substitute(c, v)
             return [
-                {'sentence': r, 'world': node.props['world']},
+                {'sentence': r, 'world': node['world']},
             ]
 
     class UniversalNegated(ExistentialNegated):
@@ -1176,7 +1218,7 @@ class TableauxRules(object):
         quantifier = 'Universal'
         convert_to = 'Existential'
 
-    class Possibility(DefaultNodeRule):
+    class Possibility(OldDefaultNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -1206,7 +1248,7 @@ class TableauxRules(object):
 
             s  = self.sentence(node)
             si = s.operand
-            w1 = node.props['world']
+            w1 = node['world']
             w2 = branch.new_world()
 
             return {
@@ -1263,7 +1305,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class PossibilityNegated(DefaultNodeRule):
+    class PossibilityNegated(OldDefaultNodeRule):
         """
         From an unticked negated possibility node *n* with world *w* on a branch *b*, add a
         necessity node to *b* with *w*, whose operand is the negation of the negated 
@@ -1281,12 +1323,12 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': sm, 'world': node.props['world']},
+                        {'sentence': sm, 'world': node['world']},
                     ],
                 ],
             }
 
-    class Necessity(DefaultNodeRule):
+    class Necessity(OldDefaultNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -1334,7 +1376,7 @@ class TableauxRules(object):
 
                 s = self.sentence(node)
                 si = s.operand
-                w1 = node.props['world']
+                w1 = node['world']
 
                 for anode in branch.find_all({'world1': w1}):
 
@@ -1438,7 +1480,7 @@ class TableauxRules(object):
         operator   = 'Necessity'
         convert_to = 'Possibility'
 
-    class IdentityIndiscernability(DefaultNodeRule):
+    class IdentityIndiscernability(OldDefaultNodeRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,
@@ -1481,7 +1523,7 @@ class TableauxRules(object):
                     continue
                 # Create a node with the substituted param.
                 s_new = Predicated(s.predicate, params)
-                n_new = {'sentence': s_new, 'world': node.props['world']}
+                n_new = {'sentence': s_new, 'world': node['world']}
                 # Check if it already appears on the branch.
                 if branch.has(n_new):
                     continue

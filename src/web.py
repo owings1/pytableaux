@@ -21,8 +21,8 @@
 import examples, fixed
 from errors import TimeoutError
 from fixed import issues_href, source_href, version
-from lexicals import Argument, Predicate, Vocabulary, RenderSet, \
-    create_lexwriter, list_operators, list_quantifiers, get_system_predicates, \
+from lexicals import Argument, Predicate, Predicates, RenderSet, \
+    create_lexwriter, list_operators, list_quantifiers, \
     notations as lexwriter_notations
 from parsers import create_parser, notations as parser_notations
 from proof.tableaux import Tableau
@@ -157,7 +157,7 @@ base_view_data = {
     'operators_list'      : list_operators(),
     'quantifiers'         : list_quantifiers(),
     'source_href'         : source_href,
-    'system_predicates'   : {p.name: p for p in get_system_predicates()},
+    'system_predicates'   : {p.name: p for p in Predicates.system},
     'tabwriter_formats'   : tabwriter_formats,
     'version'             : version,
     'view_version'        : 'v2',
@@ -248,7 +248,7 @@ class App(object):
         data = dict(base_view_data)
         browser_data = dict(base_browser_data)
 
-        # vocab = Vocabulary()
+        # vocab = Predicates()
 
         if req_data.get('v') in ('v1', 'v2'):
             view_version = req_data['v']
@@ -503,7 +503,7 @@ class App(object):
             vocab = self.parse_predicates_data(body['predicates'])
         except RequestDataError as err:
             errors.update(err.errors)
-            vocab = Vocabulary()
+            vocab = Predicates()
 
         if len(errors) == 0:
             parser = create_parser(body['notation'], vocab)
@@ -644,7 +644,7 @@ class App(object):
             except Exception as err:
                 errors['Max steps'] = errstr(err)
 
-        if len(errors) > 0:
+        if errors:
             raise RequestDataError(errors)
 
         proof_start_time = time.time()
@@ -735,7 +735,7 @@ class App(object):
         if 'premises' not in adata:
             adata['premises'] = list()
 
-        vocab = Vocabulary()
+        vocab = Predicates()
 
         errors = dict()
 
@@ -758,12 +758,12 @@ class App(object):
                     premises.append(parser.parse(premise))
                 except Exception as e:
                     premises.append(None)
-                    errors['Premise {0}'.format(str(i))] = str(e)
+                    errors['Premise {0}'.format(str(i))] = errstr(e)
                 i += 1
             try:
                 conclusion = parser.parse(adata['conclusion'])
             except Exception as e:
-                errors['Conclusion'] = str(e)
+                errors['Conclusion'] = errstr(e)
 
         if errors:
             raise RequestDataError(errors)
@@ -771,12 +771,17 @@ class App(object):
         return (Argument(conclusion, premises), vocab)
 
     def parse_predicates_data(self, predicates):
-        vocab = Vocabulary()
+        vocab = Predicates()
         errors = dict()
         i = 1
         for pdata in predicates:
+            if isinstance(pdata, dict):
+                pdata = tuple(
+                    pdata.get(k) for k in
+                    ('index', 'subscript', 'arity')
+                )
             try:
-                vocab.declare(pdata)
+                vocab.add(pdata)
             except Exception as e:
                 errors['Predicate {0}'.format(str(i))] = errstr(e)
             i += 1

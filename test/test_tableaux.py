@@ -3,14 +3,14 @@ from errors import *
 from events import Events
 from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau
 from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
-from proof.helpers import NodeFilterHelper, Getters, Filters
+from proof.helpers import AdzHelper, NodeFilterHelper, Getters, Filters
 from lexicals import Atomic, Constant, Predicated
 from utils import get_logic
 import examples
 
 import time
 from pytest import raises
-from .tutils import LogicTester, dynattrs, using
+from .tutils import BaseSuite, dynattrs, using
 
 class TestTableauxSystem(object):
 
@@ -388,7 +388,7 @@ class TestFilterNodeRule(object):
         branch.tick(node)
         assert rule.get_target_for_node(node, branch)
 
-class TestFilters(LogicTester):
+class TestFilters(BaseSuite):
 
     def test_MethodFilter_node_has_props_sentence(self):
         s1, s2 = self.pp('a', 'b')
@@ -418,7 +418,10 @@ class NodeFilterRule(Rule):
     modal = None
     negated = operator = quantifier = predicate = None
 
-    Helpers = (('nf', NodeFilterHelper),)
+    Helpers = (
+        ('nf', NodeFilterHelper),
+        ('adz', AdzHelper),
+    )
 
     class DesignationFilter(Filters.Attr):
         attrs = (('designation', 'designated'),)
@@ -427,21 +430,14 @@ class NodeFilterRule(Rule):
     class ModalFilter(Filters.Attr):
         attrs = (('modal', 'is_modal'),)
 
-    class SentenceFilter(Filters.Sentence):
-        get = Getters.KeySafe('sentence')
-
     NodeFilters = (
-        DesignationFilter,
-        ModalFilter,
-        SentenceFilter,
+        ('designation', DesignationFilter),
+        ('modal', ModalFilter),
+        ('sentence', Filters.Node.Sentence),
     )
 
 @using(logic = 'CPL')
-class Test_NodeFilter(LogicTester):
-
-    def ss1(self, n = 2):
-        ss = ('Kab', 'a', 'b')
-        return self.pp(*(ss[i] for i in range(n)))
+class Test_NodeFilter(BaseSuite):
 
     def nn1(self, n = 2):
         return tuple(
@@ -449,7 +445,7 @@ class Test_NodeFilter(LogicTester):
                 'sentence': s,
                 'designated': None if i == 0 else bool(i % 2),
             })
-            for i, s in enumerate(self.ss1(n))
+            for i, s in enumerate(self.sgen(n))
         )
 
     def case1(self, cls, n = 2, nn = None):
@@ -463,11 +459,26 @@ class Test_NodeFilter(LogicTester):
         b.update(nn)
         return (nf, b, nn)
 
+    def test_filters_view(self):
+        nf, b, nn = self.case1(NodeFilterRule, 4)
+        fview = nf.filters
+        assert len(fview) == 3
+        assert 'sentence' in fview
+        assert isinstance(fview.sentence, Filters.Node.Sentence)
+        assert fview['sentence'] == fview.sentence
+        assert fview.sentence in set(fview)
+        with raises(AttributeError):
+            fview.foo
+        with raises(AttributeError):
+            del(fview.sentence)
+        with raises(TypeError):
+            del(fview['sentence'])
+
     def test_sentence_no_filters(self):
         nf, b, nn = self.case1(NodeFilterRule)
         lhs = nf.rule
         assert not any((lhs.operator, lhs.quantifier, lhs.predicate))
-        sf = nf._NodeFilterHelper__filters[-1]
+        sf = nf.filters[-1]
         assert sf._Sentence__applies == False
         assert nf[b] == set(nn)
         assert nf[b] == set(b)
@@ -521,8 +532,38 @@ class Test_NodeFilter(LogicTester):
         nf, b, nn = self.case1(Impl, n=3)
         assert nf[b] == {nn[1]}
 
+DefaultKRule = get_logic('K').DefaultNodeRule
+@using(logic = 'K')
+class Test_K_DefaultNodeFilterRule(BaseSuite):
+
+    def ngen(self, n):
+        sgen = self.sgen(n)
+        wn = 0
+        for i in range(n):
+            s = sgen.__next__()
+            if i == 0:
+                n = {'sentence':s}
+            elif i % 3 == 0:
+                w1 = wn
+                w2 = wn = w1 + 1
+                n = {'world1':w1, 'world2':w2}
+            else:
+                n = {'sentence':s, 'world':wn}
+            yield Node(n)
+        sgen.close()
+
+    def case1(self, n = 10, **kw):
+        rule, tab = self.rule_tab(DefaultKRule, **kw)
+        tab.branch().extend(self.ngen(n))
+        return (rule, tab)
+
+    def test_rule_sentence_impl(self):
+        rule, tab = self.case1()
+        
+        # tab.step()
+
 @using(logic = 'CPL')
-class TestTestDecorator(LogicTester):
+class TestTestDecorator(BaseSuite):
 
     def test_using_initial(self):
         assert self.logic.name == 'CPL'

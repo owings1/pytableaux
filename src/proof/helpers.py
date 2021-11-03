@@ -17,9 +17,10 @@
 # ------------------
 #
 # pytableaux - rule helpers module
-from inspect import isclass
 from models import BaseModel
-from utils import isstr
+from utils import OrderedAttrsView, isint, isstr, rcurry, lcurry
+from lexicals import Variable, Predicate, Predicated, Atomic, Quantified, \
+    Operated, operarity
 
 class AdzHelper(object):
 
@@ -113,21 +114,33 @@ class NodeFilterHelper(object):
 
     def __init__(self, rule):
         self.rule = rule
-        self.__filters = []
+        self.__flist = []
+        self.__fmap = {}
         self.__cache = {}
         self.__include_ticked = None
-        for cls in getattr(rule, 'NodeFilters', tuple()):
-            self.add_filter(cls(rule))
+        self.__viewfilters = OrderedAttrsView(self.__fmap, self.__flist)
+        for name, cls in getattr(rule, 'NodeFilters', tuple()):
+            self.add_filter(name, cls)
 
     # API
 
-    def add_filter(self, *filters):
-        self.__filters.extend(filters)
+    def add_filter(self, name, cls):
+        if name in self.__fmap:
+            raise KeyError('{} exists'.format(name))
+        if not isstr(name):
+            raise TypeError('name not a string')
+        filt = cls(self.rule)
+        self.__fmap[name] = filt
+        self.__flist.append(filt)
+
+    @property
+    def filters(self):
+        return self.__viewfilters
 
     def filter(self, node, branch):
         if not self.include_ticked and branch.is_ticked(node):
             return False
-        for func in self.__filters:
+        for func in self.__flist:
             if not func(node):
                 return False
         return True
@@ -139,7 +152,7 @@ class NodeFilterHelper(object):
 
     def __setitem__(self, branch, value):
         if branch in self.__cache:
-            raise TypeError('Branch {} already in cache'.format(branch.id))
+            raise KeyError('Branch {} already in cache'.format(branch.id))
         self.__cache[branch] = value
 
     def __delitem__(self, branch):
@@ -151,16 +164,15 @@ class NodeFilterHelper(object):
     def __len__(self):
         return len(self.__cache)
 
+    def __iter__(self):
+        return iter(self.__cache)
     # Induced Rule Properties
 
     @property
     def include_ticked(self):
         if self.__include_ticked != None:
             return self.__include_ticked
-        if hasattr(self.rule, 'include_ticked'):
-            return self.rule.include_ticked
-        if hasattr(self.rule.__class__, 'include_ticked'):
-            return self.rule.__class__.include_ticked
+        return getattr(self.rule, 'include_ticked', None)
 
     @include_ticked.setter
     def include_ticked(self, val):
@@ -183,20 +195,6 @@ class NodeFilterHelper(object):
     def after_node_tick(self, node, branch):
         if not self.include_ticked:
             self[branch].discard(node)
-
-
-
-def rcurry(func, rargs):
-    class curried(object):
-        def __call__(self, *largs):
-            return func(*largs, *rargs)
-    return curried()
-
-def lcurry(func, largs):
-    class curried(object):
-        def __call__(self, *rargs):
-            return func(*largs, *rargs)
-    return curried()
 
 class Getters(object):
 
@@ -251,58 +249,6 @@ class Getters(object):
     key = Key()
     keysafe = KeySafe()
     it = It()
-
-    # def __init__(self, *items):
-        # chain = [cls(*args) for cls, *args in items]
-        # last = chain.pop()
-        # def chained(obj, *args):
-        #     for func in chain:
-        #         obj = func(obj)
-        #     return last(obj, *args)
-        # self.get = chained
-
-        # return
-        # wraptypes = (tuple, list)
-
-        # def tofunc(getter):
-        #     assert isclass(getter)
-        #     return getter()
-        #     if isstr(getter):
-        #         getter = getattr(self.__class__, getter)
-        #     if isclass(getter):
-        #         getter = getter()
-        #     elif not callable(getter):
-        #         raise TypeError('{} not callable'.format(getter))
-
-        #     return getter
-
-        # def wrap(item):
-        #     cls, *args = item
-        #     return cls(*args)
-        #     if not isinstance(item, wraptypes):
-        #         item = (item,)
-        #     cls, *args = item
-        #     assert isclass(cls)
-        #     return cls(*args)
-        #     return cls.rwrap(*args)
-        #     getter = tofunc(getter)
-        #     def get(obj):
-        #         return getter(obj, *args)
-        #     return get
-
-        # def getlast(item):
-        #     if isinstance(item, wraptypes):
-        #         return wrap(item)
-        #     return tofunc(item)
-
-        # chain, last = tuple(wrap(it) for it in items[0:-1]), getlast(items[-1])
-
-
-
-
-    # def __call__(self, obj, *args):
-    #     return self.get(obj, *args)
-
 
 class Filters(object):
 
@@ -359,6 +305,40 @@ class Filters(object):
         def lhs(self):
             return self.__lhs
 
+        @property
+        def applies(self):
+            return self.__applies
+        def get_sentence(self, rhs):
+            s = self.get(rhs)
+            if s:
+                if not self.negated:
+                    return s
+                if s.is_negated:
+                    return s.operand
+        def eg_sentence(self):
+            if not self.applies:
+                return
+            a = Atomic(0, 0)
+            if self.operator != None:
+                params = []
+                arity = operarity(self.operator)
+                s = Operated(
+                    self.operator,
+                    
+                )
+                if arity > 0:
+                    params.append(a)
+                for i in range(arity - 1):
+                    params.append(params[-1].next())
+                s = Operated(self.operator, params)
+            elif self.quantifier != None:
+                sp = Predicated(Predicate(0, 0, 1), Variable(0, 0))
+                s = Quantified(self.quantifier, sp)
+            if self.negated:
+                if s == None:
+                    s = a
+                s = s.negate()
+            return s
         def __init__(self, lhs, negated = None):
             self.__negated = None
             self.__lhs = lhs
@@ -367,24 +347,27 @@ class Filters(object):
                 self.negated = negated
 
         def __call__(self, rhs):
-            if not self.__applies:
+            if not self.applies:
                 return True
-            rhs = self.get(rhs)
-            if not rhs:
+            s = self.get_sentence(rhs)
+            if not s:
                 return False
-            if self.negated:
-                if not rhs.is_negated:
-                    return False
-                rhs = rhs.operand
             lhs = self.lhs
-            if lhs.operator and lhs.operator != rhs.operator:
+            if lhs.operator and lhs.operator != s.operator:
                 return False
-            if lhs.quantifier and lhs.quantifier != rhs.quantifier:
+            if lhs.quantifier and lhs.quantifier != s.quantifier:
                 return False
             if lhs.predicate:
-                if not rhs.predicate or lhs.predicate not in rhs.predicate.refs:
+                if not s.predicate or lhs.predicate not in s.predicate.refs:
                     return False
             return True
+    Node = None
+
+class NodeFilters(object):
+    class Sentence(Filters.Sentence):
+        get = Getters.KeySafe('sentence')
+
+Filters.Node = NodeFilters
 
 class MaxConstantsTracker(object):
     """

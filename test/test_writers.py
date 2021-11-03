@@ -19,8 +19,8 @@
 # pytableaux - writers test cases
 import pytest
 
-from lexicals import Atomic, Operated, BaseLexWriter, \
-    create_lexwriter, get_system_predicate
+from lexicals import Atomic, Operated, BaseLexWriter, Predicates, \
+    create_lexwriter
 from parsers import parse, create_parser
 from errors import *
 from proof.tableaux import Tableau
@@ -93,7 +93,7 @@ class TestStandard(object):
         # assert res == ss
 
     def test_write_predicate_sys(self):
-        res = std.write(get_system_predicate('Identity'))
+        res = std.write(Predicates.system['Identity'])
         assert res == '='
 
     # def test_write_parameter_not_impl_base_param(self):

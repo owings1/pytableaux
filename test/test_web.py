@@ -104,7 +104,7 @@ class AppTest(helper.CPWebCase):
             ]
         }
         res = app.api_parse(body)
-        assert res['type'] == 'PredicatedSentence'
+        assert res['type'] in ('Predicated', 'PredicatedSentence')
 
     def test_api_parse_2(self):
         app = web.App()
@@ -112,7 +112,7 @@ class AppTest(helper.CPWebCase):
             'input': 'a'
         }
         res = app.api_parse(body)
-        assert res['type'] == 'AtomicSentence'
+        assert res['type'] in ('Atomic', 'AtomicSentence')
 
     def test_api_parse_invalid_notation(self):
         app = web.App()
@@ -211,7 +211,7 @@ class AppTest(helper.CPWebCase):
             'input': 'a'
         }
         res = self.post_json('/api/parse', body)
-        assert res['result']['type'] == 'AtomicSentence'
+        assert res['result']['type'] in ('Atomic', 'AtomicSentence')
 
     def test_post_api_404_1(self):
         body = {}

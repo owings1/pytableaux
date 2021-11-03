@@ -117,6 +117,8 @@ def condcheck(cond, msg = None, name = 'parameter', err = ValueError):
         msg = 'Invalid value for `{0}`'.format(name)
     raise err(msg)
 
+emptyset = frozenset()
+
 def nowms():
     return int(round(time() * 1000))
 
@@ -178,7 +180,7 @@ def isrule(obj):
 
 def safeprop(self, name, value = None):
     if hasattr(self, name):
-        raise KeyError("Property '{}' already exists".format(name))
+        raise KeyError("'{}' already exists".format(name))
     setattr(self, name, value)
 
 def sortedbyval(map):
@@ -188,6 +190,18 @@ def _myattr(func, cls = set, name = '_cache'):
     if not hasattr(func, name):
         setattr(func, name, cls())
     return getattr(func, name)
+
+def rcurry(func, rargs):
+    class curried(object):
+        def __call__(self, *largs):
+            return func(*largs, *rargs)
+    return curried()
+
+def lcurry(func, largs):
+    class curried(object):
+        def __call__(self, *rargs):
+            return func(*largs, *rargs)
+    return curried()
 
 class EventEmitter(object):
 
@@ -347,3 +361,32 @@ class StopWatch(object):
     def __exit__(self, type, value, traceback):
         if self.is_running():
             self.stop()
+
+class OrderedAttrsView(object):
+
+    def __init__(self, attrmap, valuelist):
+        self.__list = valuelist
+        self.__map = attrmap
+
+    def __getattr__(self, name):
+        try:
+            return self.__map[name]
+        except KeyError:
+            raise AttributeError(name)
+
+    def __getitem__(self, key):
+        if isint(key):
+            return self.__list[key]
+        return self.__map[key]
+
+    def __contains__(self, key):
+        return key in self.__map
+
+    def __len__(self):
+        return len(self.__map)
+
+    def __iter__(self):
+        return iter(self.__list)
+
+    def get(self, key, default = None):
+        return self.__map.get(key, default)

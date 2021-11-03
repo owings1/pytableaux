@@ -18,8 +18,8 @@
 #
 # pytableaux - example arguments
 
-from lexicals import Vocabulary, Constant, Variable, AtomicSentence, \
-    PredicatedSentence, OperatedSentence, QuantifiedSentence, operarity
+from lexicals import Vocab, Constant, Variable, Atomic, \
+    Predicated, Operated, Quantified, operarity
 from parsers import create_parser
 
 # polish notation
@@ -116,13 +116,13 @@ args_list = sorted(args.keys())
 
 # Test vocabulary predicate data
 test_pred_data = [
-    ['F-ness', 0, 0, 1],
-    ['G-ness', 1, 0, 1],
-    ['H-ness', 2, 0, 1]
+    [0, 0, 1],
+    [1, 0, 1],
+    [2, 0, 1],
 ]
 
-vocabulary = Vocabulary(test_pred_data)
-parser = create_parser(notn='polish', vocab=vocabulary)
+vocab = vocabulary = Vocab(test_pred_data)
+parser = create_parser(notn='polish', vocab=vocab)
 
 def argument(name):
     info = args[name]
@@ -140,31 +140,31 @@ def arguments(names=None):
 
 def predicated():
     c = Constant(0, 0)
-    p = vocabulary.get_predicate(index = 0, subscript = 0)
-    return PredicatedSentence(p, [c])
+    p = vocabulary.get((0, 0))
+    return Predicated(p, [c])
 
 def identity():
     a = Constant(0, 0)
     b = Constant(1, 0)
-    return PredicatedSentence('Identity', [a, b])
+    return Predicated('Identity', [a, b])
 
 def self_identity():
     a = Constant(0, 0)
-    return PredicatedSentence('Identity', [a, a])
+    return Predicated('Identity', [a, a])
 
 def existence():
     a = Constant(0, 0)
-    return PredicatedSentence('Existence', [a])
+    return Predicated('Existence', [a])
 
 def quantified(quantifier):
     x = Variable(0, 0)
-    p = vocabulary.get_predicate(index = 0, subscript = 0)
-    x_is_f = PredicatedSentence(p, [x])
-    return QuantifiedSentence(quantifier, x, x_is_f)
+    p = vocabulary.get((0, 0))
+    x_is_f = Predicated(p, [x])
+    return Quantified(quantifier, x, x_is_f)
 
 def operated(operator):
-    a = AtomicSentence(0, 0)
+    a = Atomic(0, 0)
     operands = [a]
     for x in range(operarity(operator) - 1):
         operands.append(operands[-1].next())
-    return OperatedSentence(operator, operands)
+    return Operated(operator, operands)

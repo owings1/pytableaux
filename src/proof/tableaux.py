@@ -570,6 +570,15 @@ class Tableau(EventEmitter):
                 self.System.branching_complexity(node)
         return self.__branching_complexities[node.id]
 
+    def __getitem__(self, index):
+        return self.__branch_list[index]
+
+    def __len__(self):
+        return len(self.__branch_list)
+
+    def __iter__(self):
+        return iter(self.__branch_list)
+
     def __repr__(self):
         info = dict()
         info.update({

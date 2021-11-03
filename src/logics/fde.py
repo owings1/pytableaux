@@ -27,16 +27,17 @@ class Meta(object):
     category_display_order = 10
 
 from models import BaseModel
-from lexicals import Atomic, Operated, Quantified, get_system_predicate
+from lexicals import Atomic, Operated, Quantified, Predicates
 
 from proof.tableaux import TableauxSystem as BaseSystem
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
-    NewConstantStoppingRule
+    NewConstantStoppingRule, NodeFilterRule
+from proof.helpers import AdzHelper, Getters, Filters
 
 from errors import ModelValueError
 
-Identity = get_system_predicate('Identity')
-Existence = get_system_predicate('Existence')
+Identity = Predicates.system['Identity']
+Existence = Predicates.system['Existence']
 
 class Model(BaseModel):
     """
@@ -550,6 +551,38 @@ class DefaultNodeRule(FilterNodeRule):
 
     def score_candidate(self, target):
         return self.adz.closure_score(target)
+
+class NewDefaultNodeRule(NodeFilterRule):
+
+    ticking = True
+
+    class DesignationFilter(Filters.Attr):
+        attrs = (('designation', 'designated'),)
+        rget = Getters.key
+    Helpers = (
+        *NodeFilterRule.Helpers,
+        ('adz', AdzHelper),
+    )
+    NodeFilters = (
+        ('designation', DesignationFilter),
+        *NodeFilterRule.NodeFilters,
+    )
+    def _apply(self, target):
+        self.adz.apply_to_target(target)
+
+    def example_nodes(self):
+        nodes = super().example_nodes()
+        for props in nodes:
+            if self.designation != None:
+                props['designated'] = self.designation
+        return nodes
+
+    def score_candidate(self, target):
+        return self.adz.closure_score(target)
+
+    # Legacy
+    def get_target_for_node(self, *args, **kw):
+        return self._get_node_targets(*args, **kw)
 
 class DefaultNewConstantRule(DefaultNodeRule, NewConstantStoppingRule):
 

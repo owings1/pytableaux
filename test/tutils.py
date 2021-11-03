@@ -1,9 +1,9 @@
 import examples
 from inspect import isclass
 from lexicals import Argument, Vocabulary
-from parsers import notations as parser_notns, parse_argument, parse
-from proof.tableaux import Tableau
-from utils import get_logic
+from parsers import notations as parser_notns, create_parser, parse_argument, parse
+from proof.tableaux import Tableau, Branch, Node
+from utils import get_logic, isint
 
 def _setattrs(obj, **attrs):
     if isclass(obj):
@@ -53,19 +53,27 @@ def dynattrs(*names):
         return cls
     return wrapper
 
+def loopgen(n, col):
+    i = 0
+    for x in range(n):
+        if i == len(col): i = 0
+        yield col[i]
+        i += 1
+
 @dynattrs('logic')
-class LogicTester(object):
+class BaseSuite(object):
 
     vocab = examples.vocabulary
     notn = 'polish'
     logic = 'CFOL'
+    fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
 
     @classmethod
     def dynamic(cls, attr, val):
         if attr == 'logic':
             cls.logic = get_logic(val)
 
-    def p(self, s, *args, **kw):
+    def crparser(self, *args, **kw):
         for val in args:
             if isinstance(val, Vocabulary):
                 key = 'vocab'
@@ -80,7 +88,10 @@ class LogicTester(object):
             kw['vocab'] = self.vocab
         if 'notn' not in kw:
             kw['notn'] = self.notn
-        return parse(s, **kw)
+        return create_parser(**kw)
+
+    def p(self, s, *args, **kw):
+        return self.crparser(*args, **kw).parse(s)
 
     def pp(self, *sargs, **kw):
         args = []
@@ -90,7 +101,21 @@ class LogicTester(object):
                 args.append(val)
             else:
                 sens.append(val)
-        return list(self.p(s, *args, **kw) for s in sens)
+        p = self.crparser(*args, **kw)
+        return list(p.parse(s) for s in sens)
+
+    def sgen(self, n, ss = None, **kw):
+        if ss == None: ss = self.fix_ss
+        p = self.crparser(**kw)
+        for s in loopgen(n, ss):
+            yield p.parse(s)
+
+    def _gennode(self, i, s, **kw):
+        return {'sentence': s}
+
+    def ngen(self, n, **kw):
+        for i, s in enumerate(self.sgen(n, **kw)):
+            yield Node(self._gennode(i, s, **kw))
 
     def parg(self, conc, *prems, **kw):
         if 'notn' not in kw:
@@ -110,9 +135,10 @@ class LogicTester(object):
         return parse_argument(conc, premises, **kw)
 
     def tab(self, *args, **kw):
-        is_build = kw.pop('is_build') if 'is_build' in kw else None
+        is_build = kw.pop('is_build', None)# if 'is_build' in kw else None
         if 'is_build_models' not in kw:
             kw['is_build_models'] = True
+        nn = kw.pop('nn', None)# if 'nn' in kw else None
         val = args[0] if len(args) == 1 else None
         if val in examples.args:
             arg = examples.argument(val)
@@ -125,6 +151,12 @@ class LogicTester(object):
         if arg and is_build == None:
             is_build = True
         tab = Tableau(self.logic, arg, **kw)
+        if nn:
+            if isint(nn):
+                nn = self.ngen(nn, **kw)
+                kw.pop('ss', None)
+            b = tab[0] if len(tab) else tab.branch()
+            b.extend(nn)
         if is_build:
             tab.build()
         self.t = tab

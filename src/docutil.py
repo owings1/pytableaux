@@ -35,7 +35,7 @@ from utils import cat, isstr, get_logic
 from events import Events
 import examples
 from lexicals import list_operators, operarity, create_lexwriter, is_operator, \
-    Constant, Variable, RenderSet, get_system_predicate
+    Constant, Variable, RenderSet, Predicates
 from parsers import create_parser, parse_argument, CharTable
 from proof.tableaux import Tableau, TableauxSystem as TabSys, Node
 from proof.writers import create_tabwriter
@@ -561,7 +561,7 @@ class Helper(object):
                 elif ctype == 'system_predicate':
                     what = 'predicate'
                     _, name = table.item(char)
-                    item = get_system_predicate(name)
+                    item = Predicates.system[name]
                     classes.extend(('system_predicate', item.name))
         if not what:
             what = 'sentence'

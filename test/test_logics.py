@@ -20,20 +20,20 @@
 from pytest import raises
 from errors import *
 from utils import StopWatch, get_logic
-from lexicals import Vocabulary, Atomic, Constant, Predicate, Predicated, Quantified, \
-    Operated, Variable, get_system_predicate, Argument
+from lexicals import Predicates, Atomic, Constant, Predicate, Predicated, Quantified, \
+    Operated, Variable, Argument
 from proof.tableaux import Tableau, Branch, Node
 from proof.rules import Rule, FilterNodeRule
 from proof.helpers import MaxConstantsTracker
 from parsers import parse, parse_argument, notations as parser_notns
 from models import truth_table
-from .tutils import LogicTester
+from .tutils import BaseSuite
 import examples
 
 def empty_proof():
     return Tableau(None)
 
-class TestFDE(LogicTester):
+class TestFDE(BaseSuite):
 
     logic = get_logic('FDE')
 
@@ -316,7 +316,7 @@ class TestFDE(LogicTester):
         assert s3 in model.opaques
         assert model.value_of(s5) in model.designated_values
 
-class TestK3(LogicTester):
+class TestK3(BaseSuite):
 
     logic = get_logic('K3')
 
@@ -341,7 +341,7 @@ class TestK3(LogicTester):
     def test_valid_demorgan_4(self):
         self.valid_tab('DeMorgan 4')
 
-class TestK3W(LogicTester):
+class TestK3W(BaseSuite):
 
     logic = get_logic('k3w')
 
@@ -433,7 +433,7 @@ class TestK3W(LogicTester):
             model = branch.model
             model.get_data()
 
-class TestK3WQ(LogicTester):
+class TestK3WQ(BaseSuite):
 
     logic = get_logic('K3WQ')
 
@@ -469,7 +469,7 @@ class TestK3WQ(LogicTester):
         assert m.value_of(s2) == 'T'
         assert m.is_countermodel_to(arg)
 
-class TestB3E(LogicTester):
+class TestB3E(BaseSuite):
 
     logic = get_logic('B3E')
 
@@ -522,7 +522,7 @@ class TestB3E(LogicTester):
         arg = self.parg('AUabNUab')
         assert Tableau(self.logic, arg).build().valid
 
-class TestL3(LogicTester):
+class TestL3(BaseSuite):
 
     logic = get_logic('L3')
         
@@ -568,7 +568,7 @@ class TestL3(LogicTester):
         assert tbl['outputs'][4] == 'T'
         assert tbl['outputs'][6] == 'F'
 
-class TestG3(LogicTester):
+class TestG3(BaseSuite):
 
     logic = get_logic('G3')
 
@@ -624,7 +624,7 @@ class TestG3(LogicTester):
         arg = self.parg('ANUabNUba', 'NBab')
         assert Tableau(self.logic, arg).build().valid
 
-class TestLP(LogicTester):
+class TestLP(BaseSuite):
 
     logic = get_logic('LP')
 
@@ -675,7 +675,7 @@ class TestLP(LogicTester):
         arg = self.parg('NBab', 'c', 'BcNUab')
         assert Tableau(self.logic, arg).build().invalid
 
-class TestRM3(LogicTester):
+class TestRM3(BaseSuite):
 
     logic = get_logic('RM3')
 
@@ -750,7 +750,7 @@ class TestRM3(LogicTester):
         proof = Tableau(self.logic, arg).build()
         assert proof.valid
 
-class TestGO(LogicTester):
+class TestGO(BaseSuite):
 
     logic = get_logic('GO')
 
@@ -915,7 +915,7 @@ class TestGO(LogicTester):
         node = branch[0]
         assert self.logic.TableauxSystem.branching_complexity(node) == 0
 
-class TestMH(LogicTester):
+class TestMH(BaseSuite):
 
     logic = get_logic('MH')
 
@@ -982,7 +982,7 @@ class TestMH(LogicTester):
     def test_invalid_p(self):
         self.invalid_tab('UNbNa', 'NAaNa', 'Uab')
 
-class TestNH(LogicTester):
+class TestNH(BaseSuite):
 
     logic = get_logic('NH')
 
@@ -1043,7 +1043,7 @@ class TestNH(LogicTester):
     def test_invalid_dem(self):
         self.invalid_tab('NAab', 'ANaNb')
 
-class TestP3(LogicTester):
+class TestP3(BaseSuite):
 
     logic = get_logic('P3')
 
@@ -1085,7 +1085,7 @@ class TestP3(LogicTester):
     def test_valid_demorgan_6(self):
         assert self.tab('DeMorgan 6').valid
 
-class TestCPL(LogicTester):
+class TestCPL(BaseSuite):
 
     logic = get_logic('CPL')
     
@@ -1112,8 +1112,8 @@ class TestCPL(LogicTester):
         self.rule_eg('IdentityIndiscernability')
 
     def test_rule_IdentityIndiscernability_not_applies(self):
-        vocab = Vocabulary()
-        vocab.declare(0, 0, 2)
+        vocab = Predicates()
+        vocab.add((0, 0, 2))
         proof = Tableau(self.logic)
         s1 = parse('Fmn', vocab=vocab)
         s2 = parse('Io1o2')
@@ -1226,7 +1226,7 @@ class TestCPL(LogicTester):
         model.set_literal_value(s, 'F')
         assert s.params in anti_extension
 
-class TestCFOL(LogicTester):
+class TestCFOL(BaseSuite):
 
     logic = get_logic('CFOL')
 
@@ -1352,7 +1352,7 @@ class TestCFOL(LogicTester):
         d1, d2 = (m.get_denotum(c) for c in s1.params)
         assert d1 is d2
 
-class TestK(LogicTester):
+class TestK(BaseSuite):
 
     logic = get_logic('K')
         
@@ -1437,7 +1437,7 @@ class TestK(LogicTester):
 
     def test_rule_DisjunctionNegated_example_nodes(self):
         rule, tab = self.rule_eg('DisjunctionNegated', step = False)
-        node = tab.get_branch_at(0)[0]
+        node = tab[0][0]
         assert node['sentence'].operator == 'Negation'
 
     def test_rule_Universal_eg(self):
@@ -1540,7 +1540,7 @@ class TestK(LogicTester):
         assert res == 'F'
 
     def test_model_existence_user_pred_true(self):
-        pred = Predicate.create(0, 0, 1)
+        pred = Predicate(0, 0, 1)
         m = Constant(0, 0)
         x = Variable(0, 0)
         s1 = Predicated(pred, [m])
@@ -1553,7 +1553,7 @@ class TestK(LogicTester):
         assert res == 'T'
 
     def test_model_existense_user_pred_false(self):
-        pred = Predicate.create(0, 0, 1)
+        pred = Predicate(0, 0, 1)
         m = Constant(0, 0)
         x = Variable(0, 0)
         s1 = Predicated(pred, [m])
@@ -1565,7 +1565,7 @@ class TestK(LogicTester):
         assert res == 'F'
 
     def test_model_universal_user_pred_true(self):
-        pred = Predicate.create(0, 0, 1)
+        pred = Predicate(0, 0, 1)
         m = Constant(0, 0)
         x = Variable(0, 0)
         s1 = Predicated(pred, [m])
@@ -1586,7 +1586,7 @@ class TestK(LogicTester):
         assert res == 'F'
 
     def test_model_universal_user_pred_false(self):
-        pred = Predicate.create(0, 0, 1)
+        pred = Predicate(0, 0, 1)
         m = Constant(0, 0)
         n = Constant(1, 0)
         x = Variable(0, 0)
@@ -1605,7 +1605,7 @@ class TestK(LogicTester):
         s = self.p('Imn')
         model = self.logic.Model()
         model.set_predicated_value(s, 'T', world=0)
-        extension = model.get_extension(get_system_predicate('Identity'), world=0)
+        extension = model.get_extension(Predicates.system['Identity'], world=0)
         assert len(extension) > 0
         assert (Constant(0, 0), Constant(1, 0)) in extension
 
@@ -1739,7 +1739,7 @@ class TestK(LogicTester):
         assert frame_b.is_equivalent_to(frame_a)
 
     def test_frame_difference_extension_keys_diff(self):
-        vocab = Vocabulary((0, 0, 1), (1, 0, 2))
+        vocab = Predicates((0, 0, 1), (1, 0, 2))
         s1, s2 = self.pp('Fm', 'Gmn', vocab)
         model = self.logic.Model()
         model.set_predicated_value(s1, 'T', world=0)
@@ -1805,7 +1805,7 @@ class TestK(LogicTester):
         assert f2 >= f1
         assert f1 <= f2
 
-class TestD(LogicTester):
+class TestD(BaseSuite):
 
     logic = get_logic('D')
 
@@ -1853,7 +1853,7 @@ class TestD(LogicTester):
         # sanity check
         assert b.world_count > 2
 
-class TestT(LogicTester):
+class TestT(BaseSuite):
 
     logic = get_logic('T')
 
@@ -1894,7 +1894,7 @@ class TestT(LogicTester):
         # 200 might be agressive
         self.invalid_tab('b', 'LVxSyUFxLMGy', max_steps = 200)
 
-class TestS4(LogicTester):
+class TestS4(BaseSuite):
 
     logic = get_logic('S4')
 
@@ -1954,7 +1954,7 @@ class TestS4(LogicTester):
         # 200 might be agressive
         self.invalid_tab('b', 'LVxSyUFxLMGy', max_steps = 200)
 
-class TestS5(LogicTester):
+class TestS5(BaseSuite):
 
     logic = get_logic('S5')
 
@@ -2017,7 +2017,7 @@ class MtrTestRule(FilterNodeRule):
         ('mtr', MaxConstantsTracker),
     )
 
-class TestMaxConstantsTracker(LogicTester):
+class TestMaxConstantsTracker(BaseSuite):
 
     logic = get_logic('S5')
 
