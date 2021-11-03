@@ -180,7 +180,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 3
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -215,7 +215,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 3
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -247,7 +247,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 3
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -281,7 +281,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 3
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -315,7 +315,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 3
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -341,7 +341,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
             return {
@@ -361,7 +361,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
             return {
@@ -394,7 +394,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             cond1 = Operated('Material Conditional', s.operands)
             cond2 = Operated('Material Conditional', list(reversed(s.operands)))
@@ -416,7 +416,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             cond1 = Operated('Material Conditional', s.operands)
             cond2 = Operated('Material Conditional', list(reversed(s.operands)))

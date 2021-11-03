@@ -90,7 +90,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             return {
                 'adds': [
                     [
@@ -109,7 +109,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             return {
                 'adds': [
                     [
@@ -195,7 +195,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             return {
                 'adds': [
@@ -347,8 +347,6 @@ class TableauxRules(object):
             ConditionalUndesignated,
             ConditionalNegatedUndesignated,
             ConditionalNegatedDesignated,
-
-
         ],
         [
             ExistentialDesignated,

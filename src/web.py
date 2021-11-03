@@ -471,7 +471,7 @@ class App(object):
         Example success result::
 
             {
-               "type": "PredicatedSentence",
+               "type": "Predicated",
                "rendered": {
                     "standard": {
                         "default": "Fa",

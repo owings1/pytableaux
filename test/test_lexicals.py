@@ -24,6 +24,7 @@ from lexicals import Predicates, Variable, Constant, Parameter, Predicate, \
     Atomic, Predicated, Quantified, Operated, Sentence
 from parsers import parse
 from errors import *
+from copy import copy, deepcopy
 
 from pytest import raises
 
@@ -88,7 +89,7 @@ class TestPredicates(object):
         v = Predicates()
         spec = (0, 0, 1)
         predicate = v.add(spec)
-        v2 = v.copy()
+        v2 = copy(v)
         assert v2[spec] == predicate
 
     def test_add_predicate_raises_non_predicate(self):
@@ -98,7 +99,6 @@ class TestPredicates(object):
     def test_declare_already_declared_sys(self):
         with raises(ValueError):
             Predicates().add((0, 0, 2, 'Identity'))
-
 
     def test_add_arity_mismatch(self):
         v = Predicates((0, 0, 1))
@@ -273,8 +273,8 @@ class TestPredicates(object):
 
     def test_with_pred_defs_single_pred_with_length4(self):
         v = Predicates((0, 0, 1))
-        assert v.has((0, 0))
-        assert v.has((0, 0, 1))
+        assert (0, 0) in v
+        assert (0, 0, 1) in v
 
     def test_with_pred_defs_single_def_list(self):
         vocab = Predicates([(0, 0, 2)])
@@ -308,4 +308,12 @@ class TestPredicates(object):
         assert res[0] == s1
         assert res[1] == s2
 
-
+    def test_copy_preds(self):
+        p1, p2, p3 = Predicate.gen(3)
+        v1 = Predicates(p1, p2)
+        v2 = copy(v1)
+        assert v1 != v2
+        assert p3 not in v1
+        v1.add(p3)
+        assert p3 in v1
+        assert p3 not in v2

@@ -19,7 +19,7 @@
 # pytableaux - rule helpers module
 from models import BaseModel
 from utils import OrderedAttrsView, isint, isstr, rcurry, lcurry
-from lexicals import Variable, Predicate, Predicated, Atomic, Quantified, \
+from lexicals import Constant, Variable, Predicate, Predicated, Atomic, Quantified, \
     Operated, operarity
 
 class AdzHelper(object):
@@ -145,6 +145,19 @@ class NodeFilterHelper(object):
                 return False
         return True
 
+    def example_node(self):
+        node = {}
+        for filt in self.filters:
+            if callable(getattr(filt, 'example_node', None)):
+                n = filt.example_node()
+                if n:
+                    node.update(n)
+            elif callable(getattr(filt, 'example', None)):
+                ret = filt.example()
+                if isinstance(ret, dict):
+                    node.update(ret)
+        return node
+
     # Subscript API
 
     def __getitem__(self, branch):
@@ -258,6 +271,7 @@ class Filters(object):
         kw = {}
 
         get = Getters.attr
+        example = None.__class__
 
         def __init__(self, meth, *args, **kw):
             self.meth = meth
@@ -287,9 +301,17 @@ class Filters(object):
                     return False
             return True
 
+        def example(self):
+            props = {}
+            for attr, rattr in self.attrs:
+                val = self.lget(self.lhs, attr)
+                if val != None:
+                    props[rattr] = val
+            return props
+
     class Sentence(object):
 
-        get = Getters.it
+        rget = Getters.it
 
         @property
         def negated(self):
@@ -308,37 +330,27 @@ class Filters(object):
         @property
         def applies(self):
             return self.__applies
-        def get_sentence(self, rhs):
-            s = self.get(rhs)
+
+        def get(self, rhs):
+            s = self.rget(rhs)
             if s:
                 if not self.negated:
                     return s
                 if s.is_negated:
                     return s.operand
-        def eg_sentence(self):
+
+        def example(self):
             if not self.applies:
                 return
-            a = Atomic(0, 0)
-            if self.operator != None:
-                params = []
-                arity = operarity(self.operator)
-                s = Operated(
-                    self.operator,
-                    
-                )
-                if arity > 0:
-                    params.append(a)
-                for i in range(arity - 1):
-                    params.append(params[-1].next())
-                s = Operated(self.operator, params)
-            elif self.quantifier != None:
-                sp = Predicated(Predicate(0, 0, 1), Variable(0, 0))
-                s = Quantified(self.quantifier, sp)
-            if self.negated:
-                if s == None:
-                    s = a
+            lhs = self.lhs
+            if lhs.operator != None:
+                s = Operated.first(lhs.operator)
+            elif lhs.quantifier != None:
+                s = Quantified.first(lhs.quantifier)
+            if lhs.negated:
                 s = s.negate()
             return s
+
         def __init__(self, lhs, negated = None):
             self.__negated = None
             self.__lhs = lhs
@@ -349,7 +361,7 @@ class Filters(object):
         def __call__(self, rhs):
             if not self.applies:
                 return True
-            s = self.get_sentence(rhs)
+            s = self.get(rhs)
             if not s:
                 return False
             lhs = self.lhs
@@ -364,8 +376,30 @@ class Filters(object):
     Node = None
 
 class NodeFilters(object):
+
     class Sentence(Filters.Sentence):
-        get = Getters.KeySafe('sentence')
+        rget = Getters.KeySafe('sentence')
+        def example_node(self):
+            n = {}
+            s = self.example()
+            if s:
+                n['sentence'] = s
+            return n
+
+    class Designation(Filters.Attr):
+        attrs = (('designation', 'designated'),)
+        rget = Getters.key
+        def example_node(self):
+            return self.example()
+
+    class Modal(Filters.Attr):
+        attrs = (('modal', 'is_modal'),)
+        def example_node(self):
+            n = {}
+            attrs = self.example()
+            if attrs.get('is_modal'):
+                n['world'] = 0
+            return n
 
 Filters.Node = NodeFilters
 

@@ -38,44 +38,12 @@ def create_lexwriter(notn=None, enc=None, **opts):
     if not notn:
         notn = default_notation
     if notn not in notations:
-        raise ValueError('Invalid notation: {}'.format(notn))
+        raise ValueError(notn)
     if not enc:
         enc = default_notn_encs[notn]
     if 'renderset' not in opts:
         opts['renderset'] = RenderSet.fetch(notn, enc)
     return lexwriter_classes[notn](**opts)
-
-# def get_system_predicate(ref):
-#     """
-#     Get a system predicate by name or coordinates. Example::
-
-#         p1 = get_system_predicate('Identity')
-#         p2 = get_system_predicate((-1, 0))
-#         assert p1 == p2
-
-#     :param any ref: The predicate name, or coordinates.
-#     :return: The predicate instance.
-#     :rtype: Predicate
-#     :raises errors.NotFoundError: if the system predicate does not exist.
-#     """
-#     return Predicates.system.get(ref)
-
-# def get_system_predicates():
-#     """
-#     Get all system predicate objects.
-
-#     :rtype: tuple(Predicate)
-#     """
-#     return Predicates.system.predicates
-
-# def is_system_predicate(ref):
-#     """
-#     Whether the reference attribute matches a system predicate.
-
-#     :param any ref: The predicate reference attribute.
-#     :rtype: bool
-#     """
-#     return Predicates.system.has(ref)
 
 def operarity(oper):
     """
@@ -181,6 +149,9 @@ class LexicalItem(object, metaclass = ItemMetaClass):
     def first(cls):
         raise NotImplementedError()
 
+    def next(self, **kw):
+        raise NotImplementedError()
+
     @classmethod
     def gen(cls, n, first = None, skipset = emptyset, **opts):
         if first and not isinstance(first, cls):
@@ -235,9 +206,6 @@ class LexicalItem(object, metaclass = ItemMetaClass):
             self.__ident = (self.RANK, self.sort_tuple)
         return self.__ident
 
-    def next(self, **kw):
-        raise NotImplementedError()
-
     @property
     def sort_tuple(self):
         # Sort tuple should always consist of numbers, or tuples with numbers.
@@ -281,7 +249,10 @@ class LexicalItem(object, metaclass = ItemMetaClass):
         return self.__hash
 
     def __repr__(self):
-        return self.ident.__repr__()
+        try:
+            return self.ident.__repr__()
+        except AttributeError:
+            return (self.type, 'Uninitialized').__repr__()
 
     @staticmethod
     def _initorder():
@@ -363,10 +334,6 @@ class Variable(Parameter):
 
 class Predicate(CoordsItem):
 
-    # @staticmethod
-    # def create(*args):
-    #     return __class__(*args)
-
     def __init__(self, *spec):
         """
         The parameters can be passed either expanded, or as a single
@@ -386,14 +353,15 @@ class Predicate(CoordsItem):
         """
         if len(spec) == 1 and isinstance(spec[0], (tuple, list)):
             spec, = spec
+            typecheck(spec, (tuple, list), 'spec')
         if len(spec) not in (3, 4):
             raise TypeError(
                 'need 3 or 4 elements/arguments, got {}'.format(len(spec))
             )
         index, subscript, arity = spec[0:3]
         super().__init__((index, subscript))
-        sys = Predicates.system
-        if sys and index < 0:
+        syspreds = Predicates.system
+        if syspreds and index < 0:
             raise ValueError('`index` must be >= 0')
         typecheck(arity, int, 'arity')
         condcheck(arity > 0, '`arity` must be > 0')
@@ -402,7 +370,7 @@ class Predicate(CoordsItem):
         if len(spec) == 4:
             name = spec[3]
             typecheck(name, (str, int, tuple), 'name')
-            if sys and name in sys:
+            if syspreds and name in syspreds:
                 raise ValueError(name)
         else:
             name = self.ident
@@ -413,7 +381,7 @@ class Predicate(CoordsItem):
 
     @classmethod
     def first(cls):
-        return cls.create((0, 0, 1))
+        return cls((0, 0, 1))
 
     def next(self, **kw):
         arity = self.arity
@@ -425,7 +393,7 @@ class Predicate(CoordsItem):
             ident = (self.index + 1, self.subscript, arity)
         else:
             ident = (0, self.subscript + 1, arity)
-        return self.__class__.create(ident)
+        return self.__class__(ident)
 
     @property
     def arity(self):
@@ -503,30 +471,40 @@ class Predicates(object, metaclass = PredsMetaClass):
             )
         )
         class System(Predicates, metaclass = PredsMetaClass):
+            def __new__(cls, *specs):
+                if Predicates.system:
+                    return object.__new__(Predicates)
+                return object.__new__(cls)
             @property
             def predicates(self):
                 return preds
-        system = System(*preds)
-        Predicates.system = system
+        Predicates.system = System(*preds)
         delattr(__class__, '_initsys')
 
+    @property
+    def is_system(self):
+        return self == __class__.system
+
     def __init__(self, *specs):
-        if self == Predicates.system:
+        if self.is_system:
             raise TypeError()
         self.__idx = {}
         self.__uset = set()
-        if Predicates.system:
-            self.__idx.update(Predicates.system.__idx)
-            self.__uset.update(Predicates.system.__uset)
-        if specs:
-            if len(specs) == 1 and isinstance(specs[0], (list, tuple)):
-                if specs[0] and isinstance(specs[0][0], (list, tuple)):
-                    specs, = specs
-            for spec in specs:
-                self.add(spec)
+        syspreds = Predicates.system
+        if syspreds:
+            for p in syspreds:
+                self.add(p)
+        if len(specs) == 1 and isinstance(specs[0], (list, tuple)):
+            if specs[0] and isinstance(specs[0][0], (list, tuple)):
+                specs, = specs
+        for spec in specs:
+            self.add(spec)
 
     def __iter__(self):
         return iter(self.__uset)
+
+    def __len__(self):
+        return len(self.__uset)
 
     def __getitem__(self, ref):
         return self.__idx[ref]
@@ -534,44 +512,11 @@ class Predicates(object, metaclass = PredsMetaClass):
     def __contains__(self, ref):
         return ref in self.__idx
 
-    def copy(self):
-        """
-        Make a copy of the predicates store.
-
-        :return: The new predicate store instance.
-        :rtype: Predicates
-        """
-        vocab = self.__class__()
-        vocab.__uset = set(self.__uset)
-        vocab.__idx = dict(self.__idx)
-        return vocab
-
-    def get(self, ref):
-        """
-        Get a predicate by coords, name, or other reference.
-
-        See :ref:`Predicate.refs <predicate-refs-list>` for a description of the
-        ``ref`` parameter.
-
-        :param any ref: A lookup reference.
-        :return: The predicate instance.
-        :rtype: Predicate
-        :raises errors.NotFoundError: when not found.
-        """
-        try:
-            return self.__idx[ref]
-        except KeyError:
-            raise NotFoundError(ref)
-
-    def has(self, ref):
-        """
-        Check whether a predicate exists for the given reference, See :ref:`Predicate.refs
-        <predicate-refs-list>` for a description of the ``ref`` parameter.
-
-        :param any ref: A lookup reference.
-        :rtype: bool
-        """
-        return ref in self.__idx
+    def __copy__(self):
+        preds = self.__class__()
+        preds.__uset = set(self.__uset)
+        preds.__idx = dict(self.__idx)
+        return preds
 
     def add(self, pred):
         """
@@ -583,7 +528,7 @@ class Predicates(object, metaclass = PredsMetaClass):
         :raises TypeError:
         :raises ValueError:
         """
-        if self == Predicates.system:
+        if self.is_system:
             raise AttributeError()
         if not isinstance(pred, Predicate):
             pred = Predicate(pred)
@@ -595,26 +540,13 @@ class Predicates(object, metaclass = PredsMetaClass):
         self.__uset.add(pred)
         return pred
 
-    def clear(self):
-        """
-        Clear all predicates.
-
-        :return: self
-        :type: Predicates
-        """
-        if self == Predicates.system:
-            raise AttributeError()
-        self.__idx.clear()
-        self.__uset.clear()
-        return self
-
     def __delattr__(self, name):
-        if self == Predicates.system:
+        if self.is_system:
             raise AttributeError()
         super().__delattr__(name)
 
     def __setattr__(self, name, value):
-        if self == Predicates.system and hasattr(self, name):
+        if self.is_system and hasattr(self, name):
             raise AttributeError()
         super().__setattr__(name, value)
 
@@ -837,6 +769,15 @@ class Predicated(Sentence):
         self.__paramset = set(params)
         self.__sort_tuple = None
 
+    def __iter__(self):
+        return iter(self.params)
+    def __getitem__(self, index):
+        return self.params.__getitem__(index)
+    def __len__(self):
+        return self.predicate.arity
+    def __contains__(self, p):
+        return p in self.params
+
     @classmethod
     def first(cls):
         pred = Predicate.first()
@@ -944,7 +885,7 @@ class Quantified(Sentence):
         return self.__sentence
 
     @classmethod
-    def first(cls):
+    def first(cls, quantifier = None):
         q = __class__.__quantlist[0]
         v = Variable.first()
         pred = Predicate.first()
@@ -1039,18 +980,25 @@ class Operated(Sentence):
         # Lazy init
         self.__sort_tuple = None
 
+    def __iter__(self):
+        return iter(self.operands)
+    def __getitem__(self, index):
+        return self.operands.__getitem__(index)
+    def __len__(self):
+        return self.arity
+    def __contains__(self, s):
+        return s in self.operands
+
     @classmethod
-    def first(cls):
-        oper = __class__.__operlist[0]
-        a = Atomic.first()
-        operands = tuple(a for i in range(operarity(oper)))
-        return cls(oper, operands)
+    def first(cls, operator = None):
+        operator = operator or __class__.__operlist[0]
+        operands = tuple(Atomic.gen(operarity(operator)))
+        return cls(operator, operands)
 
     def next(self, **kw):
-        oper = self.operator
         operands = list(self.operands)
         operands[-1] = operands[-1].next(**kw)
-        return self.__class__(oper, operands)
+        return self.__class__(self.operator, operands)
 
     @property
     def operator(self):
@@ -1155,7 +1103,7 @@ class Operated(Sentence):
         try:
             return __class__.__arities[operator]
         except KeyError:
-            raise NotFoundError("Unknown operator '{0}'".format(operator))
+            raise NotFoundError(operator)
 
     # Lexical sorting order.
     __lexorder = {
@@ -1621,14 +1569,6 @@ _builtin.update({
 
 RenderSet._initcache(notations, _builtin)
 del(_builtin)
-
-# Aliases
-AtomicSentence = Atomic
-PredicatedSentence = Predicated
-OperatedSentence = Operated
-QuantifiedSentence = Quantified
-
-Vocabulary = Vocab = Predicates
 
 lexwriter_classes.update({
     'polish'   : PolishLexWriter,

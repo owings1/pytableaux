@@ -1,6 +1,6 @@
 import examples
 from inspect import isclass
-from lexicals import Argument, Vocabulary
+from lexicals import Argument, Predicates
 from parsers import notations as parser_notns, create_parser, parse_argument, parse
 from proof.tableaux import Tableau, Branch, Node
 from utils import get_logic, isint
@@ -75,7 +75,7 @@ class BaseSuite(object):
 
     def crparser(self, *args, **kw):
         for val in args:
-            if isinstance(val, Vocabulary):
+            if isinstance(val, Predicates):
                 key = 'vocab'
             elif val in parser_notns:
                 key = 'notn'
@@ -97,7 +97,7 @@ class BaseSuite(object):
         args = []
         sens = []
         for val in sargs:
-            if isinstance(val, Vocabulary) or val in parser_notns:
+            if isinstance(val, Predicates) or val in parser_notns:
                 args.append(val)
             else:
                 sens.append(val)
@@ -124,7 +124,7 @@ class BaseSuite(object):
         for prem in prems:
             if isinstance(prem, (list, tuple)):
                 premises.extend(prem)
-            elif isinstance(prem, Vocabulary):
+            elif isinstance(prem, Predicates):
                 if 'vocab' in kw:
                     raise KeyError('duplicate: vocab')
                 kw['vocab'] = prem

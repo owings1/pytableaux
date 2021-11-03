@@ -11,7 +11,7 @@ Lexicals Module
     .. autoclass:: LexWriter
         :members: write
 
-    .. autoclass:: Vocabulary
+    .. autoclass:: Predicates
 
     .. autoclass:: Sentence
 
@@ -26,10 +26,10 @@ Lexicals Module
 
     .. autoclass:: Predicate
 
-    .. autoclass:: PredicatedSentence
+    .. autoclass:: Predicated
 
-    .. autoclass:: AtomicSentence
+    .. autoclass:: Atomic
 
-    .. autoclass:: QuantifiedSentence
+    .. autoclass:: Quantified
 
-    .. autoclass:: OperatedSentence
+    .. autoclass:: Operated

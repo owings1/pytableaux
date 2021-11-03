@@ -477,34 +477,13 @@ class NodeFilterRule(Rule):
         """
         :overrides: Rule
         """
-        return self.nf.filters.sentence.get_sentence(node)
+        return self.nf.filters.sentence.get(node)
 
     def example_nodes(self):
         """
-        TODO: copied from old impl, refactor
         :implements: Rule
         """
-        props = {}
-        sentence = None
-        a = Atomic(0, 0)
-        if self.operator != None:
-            params = []
-            arity = operarity(self.operator)
-            if arity > 0:
-                params.append(a)
-            for i in range(arity - 1):
-                params.append(params[-1].next())
-            sentence = Operated(self.operator, params)
-        elif self.quantifier != None:
-            sp = Predicated(Predicate(0, 0, 1), Variable(0, 0))
-            sentence = Quantified(self.quantifier, sp)
-        if self.negated:
-            if sentence == None:
-                sentence = a
-            sentence = sentence.negate()
-        if sentence != None:
-            props['sentence'] = sentence
-        return (props,)
+        return (self.nf.example_node(),)
 
     def _get_node_targets(self, node, branch):
         """

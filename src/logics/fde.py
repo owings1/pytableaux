@@ -31,8 +31,8 @@ from lexicals import Atomic, Operated, Quantified, Predicates
 
 from proof.tableaux import TableauxSystem as BaseSystem
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
-    NewConstantStoppingRule, NodeFilterRule
-from proof.helpers import AdzHelper, Getters, Filters
+    NewConstantStoppingRule, Rule, Target
+from proof.helpers import AdzHelper, Getters, Filters, NodeFilterHelper
 
 from errors import ModelValueError
 
@@ -542,54 +542,94 @@ class TableauxSystem(BaseSystem):
                 last_is_negated = False
         return complexity
 
-class DefaultNodeRule(FilterNodeRule):
 
+
+class DefaultNodeRule(Rule):
+
+    Helpers = (
+        ('adz', AdzHelper),
+        ('nf', NodeFilterHelper),
+    )
+
+    # AdzHelper
     ticking = True
 
+    # NodeFilterHelper
+    include_ticked = None
+
+    NodeFilters = (
+        ('designation', Filters.Node.Designation),
+        ('sentence', Filters.Node.Sentence),
+    )
+
+    # Filters.Node.Sentence
+    negated = operator = quantifier = predicate = None
+
+    # DesignationFilter
+    designation = None
+
     def _apply(self, target):
+        """
+        :implements: Rule
+        """
         self.adz.apply_to_target(target)
 
     def score_candidate(self, target):
+        """
+        :overrides: Rule
+        """
         return self.adz.closure_score(target)
 
-class NewDefaultNodeRule(NodeFilterRule):
-
-    ticking = True
-
-    class DesignationFilter(Filters.Attr):
-        attrs = (('designation', 'designated'),)
-        rget = Getters.key
-    Helpers = (
-        *NodeFilterRule.Helpers,
-        ('adz', AdzHelper),
-    )
-    NodeFilters = (
-        ('designation', DesignationFilter),
-        *NodeFilterRule.NodeFilters,
-    )
-    def _apply(self, target):
-        self.adz.apply_to_target(target)
+    def sentence(self, node):
+        """
+        :overrides: Rule
+        """
+        return self.nf.filters.sentence.get(node)
 
     def example_nodes(self):
-        nodes = super().example_nodes()
-        for props in nodes:
-            if self.designation != None:
-                props['designated'] = self.designation
-        return nodes
+        """
+        :implements: Rule
+        """
+        return (self.nf.example_node(),)
+
+    def _get_targets(self, branch):
+        """
+        :implements: Rule
+        """
+        targets = list()
+        # misses = {}
+        for node in self.nf[branch]:
+            res = self._get_node_targets(node, branch)
+            if res:
+                targets.extend(
+                    Target.createall(res, branch = branch, node = node)
+                )
+                continue
+        #     if not self.nf.filter(node, branch):
+        #         if branch not in misses:
+        #             misses[branch] = set()
+        #         misses[branch].add(node)
+        # for branch in misses:
+        #     for node in misses[branch]:
+        #        self.nf[branch].discard(node)
+        return targets
+
+class OldDefaultNodeRule(FilterNodeRule):
+
+    ticking = True
+
+    def _apply(self, target):
+        self.adz.apply_to_target(target)
 
     def score_candidate(self, target):
         return self.adz.closure_score(target)
 
-    # Legacy
-    def get_target_for_node(self, *args, **kw):
-        return self._get_node_targets(*args, **kw)
-
-class DefaultNewConstantRule(DefaultNodeRule, NewConstantStoppingRule):
+class DefaultNewConstantRule(OldDefaultNodeRule, NewConstantStoppingRule):
 
     def score_candidate(self, target):
         return -1 * self.tableau.branching_complexity(target['node'])
 
-class DefaultAllConstantsRule(DefaultNodeRule, AllConstantsStoppingRule):
+class DefaultAllConstantsRule(OldDefaultNodeRule, AllConstantsStoppingRule):
 
     ticking = False
 
@@ -607,7 +647,7 @@ class ConjunctionReducingRule(DefaultNodeRule):
 
     conjunct_op = NotImplemented
 
-    def get_target_for_node(self, node, branch):
+    def _get_node_targets(self, node, branch):
 
         if self.conjunct_op is NotImplemented:
             raise NotImplementedError()
@@ -687,7 +727,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -715,7 +755,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -744,7 +784,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -772,7 +812,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             return {
                 'adds': [
                     [
@@ -794,7 +834,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             return {
                 'adds': [
                     [
@@ -815,7 +855,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             return {
                 'adds': [
                     [
@@ -836,7 +876,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             return {
                 'adds': [
                     [
@@ -893,7 +933,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             d = self.designation
             return {
@@ -918,7 +958,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             d = self.designation
             return {
@@ -940,7 +980,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             d = self.designation
             return {
@@ -964,7 +1004,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             d = self.designation
             return {
@@ -990,7 +1030,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             d = self.designation
             return {
@@ -1019,7 +1059,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             d = self.designation
             return {
@@ -1186,7 +1226,7 @@ class TableauxRules(object):
                 {'sentence': r, 'designated': self.designation},
             ]
 
-    class ExistentialNegatedDesignated(DefaultNodeRule):
+    class ExistentialNegatedDesignated(OldDefaultNodeRule):
         """
         From an unticked designated negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a designated node to *b*

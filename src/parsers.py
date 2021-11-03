@@ -191,7 +191,7 @@ class BaseParser(Parser):
         """
         Read an atomic sentence starting from the current character.
 
-        :rtype: lexicals.AtomicSentence
+        :rtype: lexicals.Atomic
         :raises errors.ParseError:
         :meta private:
         """
@@ -201,19 +201,19 @@ class BaseParser(Parser):
         """
         Read predicated sentence starting from the current character.
 
-        :rtype: lexicals.PredicatedSentence
+        :rtype: lexicals.Predicated
         :raises errors.ParseError:
         :meta private:
         """
         pred = self._read_predicate()
-        params = self._read_parameters(pred.arity)
+        params = self._read_params(pred.arity)
         return Predicated(pred, params)
 
     def _read_quantified_sentence(self):
         """
         Read quantified sentence starting from the current character.
 
-        :rtype: lexicals.PredicatedSentence
+        :rtype: lexicals.Predicated
         :raises errors.ParseError:
         :meta private:
         """
@@ -256,13 +256,13 @@ class BaseParser(Parser):
             self._advance()
             return Predicates.system[name]
         try:
-            return self.vocab.get(self._read_coords())
-        except NotFoundError:
+            return self.vocab[self._read_coords()]
+        except KeyError:
             raise ParseError(
                 "Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos)
             )
 
-    def _read_parameters(self, num):
+    def _read_params(self, num):
         """
         Read the given number of parameters (constants or variables) starting
         from the current character.
@@ -274,10 +274,10 @@ class BaseParser(Parser):
         :raises errors.ParseError:
         :meta private:
         """
-        parameters = []
-        while len(parameters) < num:
-            parameters.append(self._read_parameter())
-        return parameters
+        params = []
+        while len(params) < num:
+            params.append(self._read_parameter())
+        return params
 
     def _read_parameter(self):
         """
@@ -531,7 +531,7 @@ class StandardParser(BaseParser):
                 cat("Unexpected {0}-ary predicate symbol at position {1}. ",
                 "Infix notation requires arity > 1.").format(arity, ppos)
             )
-        params += self._read_parameters(arity - 1)
+        params += self._read_params(arity - 1)
         return Predicated(pred, params)
 
     def __read_from_open_paren(self):

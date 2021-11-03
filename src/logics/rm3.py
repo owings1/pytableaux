@@ -181,7 +181,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 3
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             return {
                 'adds': [
@@ -215,7 +215,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             return {
                 'adds': [
@@ -245,7 +245,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 3
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             return {
                 'adds': [
@@ -280,7 +280,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             cond1 = Operated('Conditional', [lhs, rhs])
             cond2 = Operated('Conditional', [rhs, lhs])
@@ -307,7 +307,7 @@ class TableauxRules(object):
         designation = False
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node).operands
             return {
                 'adds': [

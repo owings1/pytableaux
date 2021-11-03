@@ -18,7 +18,7 @@
 #
 # pytableaux - example arguments
 
-from lexicals import Vocab, Constant, Variable, Atomic, \
+from lexicals import Predicates, Constant, Variable, Atomic, \
     Predicated, Operated, Quantified, operarity
 from parsers import create_parser
 
@@ -121,7 +121,7 @@ test_pred_data = [
     [2, 0, 1],
 ]
 
-vocab = vocabulary = Vocab(test_pred_data)
+preds = vocab = vocabulary = Predicates(test_pred_data)
 parser = create_parser(notn='polish', vocab=vocab)
 
 def argument(name):
@@ -140,7 +140,7 @@ def arguments(names=None):
 
 def predicated():
     c = Constant(0, 0)
-    p = vocabulary.get((0, 0))
+    p = preds[(0, 0)]
     return Predicated(p, [c])
 
 def identity():
@@ -158,7 +158,7 @@ def existence():
 
 def quantified(quantifier):
     x = Variable(0, 0)
-    p = vocabulary.get((0, 0))
+    p = preds[(0, 0)]
     x_is_f = Predicated(p, [x])
     return Quantified(quantifier, x, x_is_f)
 

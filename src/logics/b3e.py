@@ -109,7 +109,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -135,7 +135,7 @@ class TableauxRules(object):
         negated     = True
         designation = False
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -204,7 +204,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             sn = Operated(
                 'Disjunction',
@@ -233,7 +233,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 1
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             return {
                 'adds': [
@@ -274,7 +274,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 2
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             d = self.designation
             sn1 = Operated('Disjunction', [
