@@ -89,6 +89,10 @@ class TestTableau(object):
         assert isinstance(r, Rule)
         assert r is rule
 
+# from proof.tableaux import *
+# import examples
+# arg = examples.argument('Triviality 1')
+# tab = Tableau('cpl', arg)
     def test_after_branch_add_with_nodes_no_parent(self):
 
         class MockRule(Rule):
@@ -145,7 +149,7 @@ class TestBranch(object):
         s1 = Atomic(0, 0)
         s2 = Atomic(1, 0)
         s3 = Atomic(2, 0)
-        b.update([{'sentence': s1}, {'sentence': s2}, {'sentence': s3}])
+        b.extend([{'sentence': s1}, {'sentence': s2}, {'sentence': s3}])
         check = [{'sentence': s1, 'sentence': s2}]
         assert b.has_all(check)
 
@@ -154,7 +158,7 @@ class TestBranch(object):
         s1 = Atomic(0, 0)
         s2 = Atomic(1, 0)
         s3 = Atomic(2, 0)
-        b.update([{'sentence': s1}, {'sentence': s3}])
+        b.extend([{'sentence': s1}, {'sentence': s3}])
         check = [{'sentence': s1, 'sentence': s2}]
         assert not b.has_all(check)
 
@@ -163,7 +167,7 @@ class TestBranch(object):
     #     s1 = Atomic(0, 0)
     #     s2 = Atomic(1, 0).negate()
     #     s3 = Atomic(1, 0)
-    #     b.update([{'sentence': s1}, {'sentence': s2}])
+    #     b.extend([{'sentence': s1}, {'sentence': s2}])
     #     res = b.atomics()
     #     assert s1 in res
     #     assert s3 in res
@@ -313,11 +317,6 @@ class TestNode(object):
         assert 0 in res
         assert 1 in res
 
-    def test_repr_contains_prop_key(self):
-        node = Node({'foo': 1})
-        res = node.__repr__()
-        assert 'foo' in res
-
     def test_clousre_flag_node_has_is_flag(self):
         branch = Branch()
         branch.close()
@@ -456,7 +455,7 @@ class Test_NodeFilter(BaseSuite):
             return (nf, b)
         if nn == None:
             nn = self.nn1(n)
-        b.update(nn)
+        b.extend(nn)
         return (nf, b, nn)
 
     def test_filters_view(self):
@@ -523,7 +522,7 @@ class Test_NodeFilter(BaseSuite):
         nn = self.nn1(3)
         assert nf.include_ticked == False
         nf.rule.include_ticked = True
-        b.update(nn).tick(nn[0], nn[1])
+        b.extend(nn).tick(nn[0], nn[1])
         assert nf[b] == set(nn)
 
     def test_designation_true(self):

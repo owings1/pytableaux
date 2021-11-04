@@ -390,3 +390,146 @@ class OrderedAttrsView(object):
 
     def get(self, key, default = None):
         return self.__map.get(key, default)
+
+class LinkedOrderedSet(object):
+
+    class LinkEntry(object):
+        def __init__(self, item):
+            self.prev = self.next = None
+            self.item = item
+        def __repr__(self):
+            return (self.item).__repr__()
+
+    class Common(object):
+        def add(method):
+            def prep(self, item):
+                if item in self:
+                    raise KeyError('Duplicate Key {}'.format(item))
+
+                entry = self._idx[item] = self.LinkEntry(item)
+
+                if self._first == None:
+                    self._first = self._last = entry
+                    return
+
+                if self._first == self._last:
+                    self._first.next = entry
+                method(self, entry)
+            return prep
+
+        def view(obj):
+            class viewer(object):
+                def __iter__(self):
+                    return iter(obj)
+                def __reversed__(self):
+                    return reversed(obj)
+                def __contains__(self, item):
+                    return item in obj
+                def __len__(self):
+                    return len(obj)
+                def first(self):
+                    return obj.first()
+                def last(self):
+                    return obj.last()
+            return viewer()
+
+    @Common.add
+    def append(self, entry):
+        if self._first == self._last:
+            self._first.next = entry
+        entry.prev = self._last
+        entry.prev.next = entry
+        self._last = entry
+    add = append
+
+    def extend(self, items):
+        for item in items:
+            self.append(item)
+
+    @Common.add
+    def preprend(self, entry):
+        if self._first == self._last:
+            self._last.prev = entry
+        entry.next = self._first
+        entry.next.prev = entry
+        self._first = entry
+
+    def prextend(self, items):
+        for item in items:
+            self.prepend(item)
+
+    def remove(self, item):
+        entry = self._idx.pop(item)
+        if entry.prev == None:
+            if entry.next == None:
+                # List is empty
+                self._first = self._last = None
+            else:
+                # Move to first place
+                entry.next.prev = None
+                self._first = entry.next
+        else:
+            if entry.next == None:
+                # Move to last place
+                entry.prev.next = None
+                self._last = entry.prev
+            else:
+                # Close the gap
+                entry.prev.next = entry.next
+                entry.next.prev = entry.prev
+        del(entry.item)
+
+    def discard(self, item):
+        if item in self:
+            self.remove(item)
+    
+    def clear(self):
+        self._idx.clear()
+        self._first = self._last = None
+
+    def keys(self):
+        return self._idx.keys()
+
+    def first(self):
+        return self._first.item if self._first else None
+
+    def last(self):
+        return self._last.item if self._last else None
+
+    def view(self):
+        return self.Common.view(self)
+
+    def __init__(self):
+        self._first = self._last = None
+        self._idx = {}
+
+    def __len__(self):
+        return len(self._idx)
+
+    def __contains__(self, item):
+        return item in self._idx
+
+    def __iter__(self):
+        cur = self._first
+        while cur:
+            item, cur = cur.item, cur.prev
+            yield item
+
+    def __reversed__(self):
+        cur = self._last
+        while cur:
+            item, cur = cur.item, cur.prev
+            yield item
+
+    def __repr__(self):
+        return (len(self), self._first, self._last).__repr__()
+"""
+from utils import LinkedOrderedSet
+l1 = LinkedOrderedSet()
+
+l1.extend((str(i+1) for i in range(30)))
+
+for x in l1:
+    print(x)
+
+"""

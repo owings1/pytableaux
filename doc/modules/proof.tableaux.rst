@@ -46,8 +46,6 @@ Tableaux Module
 
         .. automethod:: get_branch
 
-        .. automethod:: get_branch_at
-
         .. automethod:: branch
 
         .. automethod:: add_branch

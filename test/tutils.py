@@ -208,7 +208,7 @@ class BaseSuite(object):
 
     def rule_eg(self, rule, step = True, **kw):
         rule, tab = self.rule_tab(rule, **kw)
-        tab.branch().update(rule.example_nodes())
+        tab.branch().extend(rule.example_nodes())
         assert tab.branch_count == 1
         assert tab.open_branch_count == 1
         if step:

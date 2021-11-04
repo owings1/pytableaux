@@ -26,7 +26,7 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 2
 
-from proof.rules import PotentialNodeRule
+from proof.rules import PotentialNodeRule, Target
 from proof.helpers import MaxWorldsTracker, UnserialWorldsTracker
 from lexicals import Atomic
 from . import k
@@ -101,6 +101,8 @@ class TableauxRules:
             return [{'world': w} for w in unserials]
 
         def apply_to_node_target(self, node, branch, target):
+            assert isinstance(target, Target)
+            assert target.branch == branch
             branch.add({ 
                 'world1': target['world'], 
                 'world2': branch.new_world(),
@@ -118,7 +120,7 @@ class TableauxRules:
 
             # This tends to stop modal explosion better than the max worlds check,
             # at least in its current form (all modal operators + worlds + 1).
-            if len(self.tableau.history) and self.tableau.history[-1]['rule'] == self:
+            if len(self.tableau.history) and self.tableau.history[-1].rule == self:
                 return False
 
             # As above, this is unnecessary

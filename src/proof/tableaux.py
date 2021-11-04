@@ -18,7 +18,8 @@
 #
 # pytableaux - tableaux module
 from lexicals import Argument, Constant
-from utils import EventEmitter, StopWatch, get_logic, isrule
+from utils import EventEmitter, LinkedOrderedSet, StopWatch, get_logic, isrule, \
+    emptyset, typecheck
 from errors import IllegalStateError, NotFoundError, TimeoutError
 from events import Events
 from inspect import isclass
@@ -53,7 +54,7 @@ class Tableau(EventEmitter):
         'max_steps'       : None,
     }
 
-    def __init__(self, logic, argument = None, **opts):
+    def __init__(self, logic = None, argument = None, **opts):
 
         super().__init__()
 
@@ -74,21 +75,21 @@ class Tableau(EventEmitter):
         #: :type: list
         self.history = list()
 
+        # Post-build properties
+
         #: A tree structure of the tableau. This is generated after the tableau
         #: is finished. If the `build_timeout` was exceeded, the tree is `not`
         #: built.
         #:
         #: :type: dict
         self.tree = None
+        self.models = None
+        self.stats = None
 
         # Rules
         self.__all_rules = list()
         self.__closure_rules = list()
         self.__rule_groups = list()
-
-        # Post-build properties
-        self.models = None
-        self.stats = None
 
         # Timers
         self.__build_timer = StopWatch()
@@ -101,7 +102,10 @@ class Tableau(EventEmitter):
         self.opts.update(opts)
 
         self.__branch_list = list()
-        self.__open_branchset = set()
+        self.__trunks = list()
+        self.__open_linkset = LinkedOrderedSet()
+        self.__open_view = self.__open_linkset.view()
+        # self.__open_branchset = set()
         self.__branch_dict = dict()
         self.__finished = False
         self.__premature = True
@@ -186,10 +190,11 @@ class Tableau(EventEmitter):
         Setter for ``argument`` property. If the tableau has a logic set, then
         ``build_trunk()`` is automatically called.
         """
-        if not isinstance(argument, Argument):
-            raise TypeError(
-                "Value for 'argument' must be a {0} instance".format(Argument)
-            )
+        # if not isinstance(argument, Argument):
+        #     raise TypeError(
+        #         "Value for 'argument' must be a {0} instance".format(Argument)
+        #     )
+        typecheck(argument, Argument, 'argument')
         self.__check_trunk_not_built()
         self.__argument = argument
         if self.logic != None:
@@ -243,7 +248,8 @@ class Tableau(EventEmitter):
         """
         if not self.completed or self.argument == None:
             return None
-        return self.open_branch_count == 0
+        return len(self.open) == 0
+        # return self.open_branch_count == 0
 
     @property
     def invalid(self):
@@ -257,7 +263,8 @@ class Tableau(EventEmitter):
         """
         if not self.completed or self.argument == None:
             return None
-        return self.open_branch_count > 0
+        return len(self.open) > 0
+        # return self.open_branch_count > 0
 
     @property
     def trunk_built(self):
@@ -285,7 +292,15 @@ class Tableau(EventEmitter):
 
         :type: int
         """
-        return len(self.__branch_list)
+        return len(self)
+        # return len(self.__branch_list)
+
+    @property
+    def open(self):
+        """
+        View of the open branches.
+        """
+        return self.__open_view
 
     @property
     def open_branch_count(self):
@@ -294,7 +309,11 @@ class Tableau(EventEmitter):
 
         :type: int
         """
-        return len(self.__open_branchset)
+        # return len(self.__open_linkset)
+        return len(self.open)
+        # print(len(self.open), len(self.__open_branchset))
+        # assert len(self.open) == len(self.__open_branchset)
+        # return len(self.__open_branchset)
 
     def build(self, **opts):
         """
@@ -351,37 +370,16 @@ class Tableau(EventEmitter):
 
         :rtype: list_iterator(Branch)
         """
-        return iter(self.__branch_list)
+        return iter(self)
 
     def open_branches(self):
         """
         Returns an iterator for the set of open branches.
 
-        :rtype: set_iterator(Branch)
+        :rtype: linked_set_iterator(Branch)
         """
-        return iter(self.__open_branchset)
-
-    def get_branch(self, branch_id):
-        """
-        Get a branch by its id.
-
-        :param int id: The branch id.
-        :return: The branch.
-        :rtype: Branch
-        :raises KeyError: if the branch is not found.
-        """
-        return self.__branch_dict[branch_id]
-
-    def get_branch_at(self, index):
-        """
-        Get a branch by its index.
-
-        :param int index: The branch index.
-        :return: The branch.
-        :rtype: Branch
-        :raises IndexError: if the index does not exist.
-        """
-        return self.__branch_list[index]
+        return iter(self.open)
+        # return iter(self.__open_branchset)
 
     def branch(self, parent = None):
         """
@@ -396,8 +394,7 @@ class Tableau(EventEmitter):
         if parent == None:
             branch = Branch()
         else:
-            branch = parent.copy()
-            branch.parent = parent
+            branch = parent.copy(parent = parent)
         self.add_branch(branch)
         return branch
 
@@ -409,15 +406,24 @@ class Tableau(EventEmitter):
         :return: self
         :rtype: Tableau
         """
-        if branch.id in self.__branch_dict:
+        if branch in self:
             raise ValueError(
                 'Branch {0} already on tableau'.format(branch.id)
             )
-        branch.index = len(self.__branch_list)
+        parent = branch.parent
+        if parent != None and parent not in self:
+            raise TypeError('unknown parent')
+        index = len(self)
         self.__branch_list.append(branch)
         if not branch.closed:
-            self.__open_branchset.add(branch)
-        self.__branch_dict[branch.id] = branch
+            self.__open_linkset.add(branch)
+            # self.__open_branchset.add(branch)
+        if not branch.parent:
+            self.__trunks.append(branch)
+        self.__branch_dict[branch] = {
+            'index': index,
+            'parent': parent,
+        }
         self.__after_branch_add(branch)
         return self
 
@@ -439,7 +445,7 @@ class Tableau(EventEmitter):
                 rule.__class__ == ref.__class__
             ):
                 return rule
-        raise NotFoundError('Rule not found for ref: {0}'.format(ref))
+        raise NotFoundError(ref)
 
     def get_rule_at(self, i, n):
         return self.__rule_groups[i][n]
@@ -545,7 +551,7 @@ class Tableau(EventEmitter):
             # respect the timeout. In case of `max_steps` excess, however, we
             # `do` build the tree.
             with self.__tree_timer:
-                self.tree = make_tree_structure(list(self.branches()))
+                self.tree = make_tree_structure(list(self))
 
         self.stats = self.__compute_stats()
 
@@ -563,12 +569,12 @@ class Tableau(EventEmitter):
         # TODO: Consider potential optimization using hash equivalence for nodes,
         #       to avoid redundant calculations. Perhaps the TableauxSystem should
         #       provide a special branch-complexity node hashing function.
-        if node.id not in self.__branching_complexities:
+        if node not in self.__branching_complexities:
             if self.System == None:
                 return 0
-            self.__branching_complexities[node.id] = \
+            self.__branching_complexities[node] = \
                 self.System.branching_complexity(node)
-        return self.__branching_complexities[node.id]
+        return self.__branching_complexities[node]
 
     def __getitem__(self, index):
         return self.__branch_list[index]
@@ -578,6 +584,12 @@ class Tableau(EventEmitter):
 
     def __iter__(self):
         return iter(self.__branch_list)
+
+    def __reversed__(self):
+        return reversed(self.__branch_list)
+
+    def __contains__(self, branch):
+        return branch in self.__branch_dict
 
     def __repr__(self):
         info = dict()
@@ -621,7 +633,8 @@ class Tableau(EventEmitter):
 
     def __after_branch_close(self, branch):
         branch.closed_step = self.current_step
-        self.__open_branchset.remove(branch)
+        self.__open_linkset.remove(branch)
+        # self.__open_branchset.remove(branch)
         self.emit(Events.AFTER_BRANCH_CLOSE, branch)
 
     def __after_node_add(self, node, branch):
@@ -644,7 +657,7 @@ class Tableau(EventEmitter):
 
         This iterates over the open branches and calls ``__get_branch_application()``.
         """
-        for branch in self.open_branches():
+        for branch in self.open:
             res = self.__get_branch_application(branch)
             if res:
                 return res
@@ -740,19 +753,18 @@ class Tableau(EventEmitter):
         """
         Compute the stats property after the tableau is finished.
         """
-        num_open = self.open_branch_count
         distinct_nodes = self.tree['distinct_nodes'] if self.tree else None
         return {
             'id'                : self.id,
             'result'            : self.__result_word(),
-            'branches'          : self.branch_count,
-            'open_branches'     : num_open,
-            'closed_branches'   : self.branch_count - num_open,
+            'branches'          : len(self),
+            'open_branches'     : len(self.open),
+            'closed_branches'   : len(self) - len(self.open),
             'rules_applied'     : len(self.history),
             'distinct_nodes'    : distinct_nodes,
             'rules_duration_ms' : sum(
-                application['duration_ms']
-                for application in self.history
+                step.duration_ms
+                for step in self.history
             ),
             'build_duration_ms' : self.__build_timer.elapsed(),
             'trunk_duration_ms' : self.__tunk_build_timer.elapsed(),
@@ -841,7 +853,7 @@ class Tableau(EventEmitter):
         if self.logic == None:
             return
         self.models = set()
-        for branch in self.__open_branchset:
+        for branch in self.open:
             self.__check_timeout()
             model = self.logic.Model()
             model.read_branch(branch)
@@ -855,21 +867,16 @@ class Branch(EventEmitter):
     Represents a tableau branch.
     """
 
-    def __init__(self):
+    def __init__(self, parent = None):
         super().__init__()
         # Make sure properties are copied if needed in copy()
         
-        self.closed = False
+        self.__parent = parent
+        self.__closed = False
         self.__constants = set()
         self.__worlds = set()
-        # self.preds = set()
-        # self.atms = set()
-        self.leaf = None
-        self.closed_step = None
-        self.index = None
-        self.model = None
-        self.parent = None
         self.__nodes = []
+        self.__nodeset = set()
         self.__ticked = set()
         self.__pidx = {
             'sentence'   : {},
@@ -879,6 +886,10 @@ class Branch(EventEmitter):
             'world2'     : {},
             'w1Rw2'      : {},
         }
+
+        self.__closed_step = None
+        self.__model = None
+
         self.register_event(
             Events.AFTER_BRANCH_CLOSE,
             Events.AFTER_NODE_ADD,
@@ -888,6 +899,38 @@ class Branch(EventEmitter):
     @property
     def id(self):
         return id(self)
+
+    @property
+    def parent(self):
+        return self.__parent
+
+    @property
+    def closed(self):
+        return self.__closed
+
+    @property
+    def leaf(self):
+        return self[-1] if len(self) else None
+
+    @property
+    def closed_step(self):
+        return self.__closed_step
+
+    @closed_step.setter
+    def closed_step(self, n):
+        if self.__closed_step != None:
+            raise AttributeError('closed_step')
+        self.__closed_step = n
+
+    @property
+    def model(self):
+        return self.__model
+
+    @model.setter
+    def model(self, model):
+        if self.__model != None:
+            raise AttributeError('model')
+        self.__model = model
 
     @property
     def world_count(self):
@@ -902,7 +945,7 @@ class Branch(EventEmitter):
         Check whether there is a node on the branch that matches the given properties,
         optionally filtered by ticked status.
         """
-        return self.find(props, ticked=ticked) != None
+        return self.find(props, ticked = ticked) != None
 
     def has_access(self, w1, w2):
         """
@@ -969,34 +1012,32 @@ class Branch(EventEmitter):
                 results.append(node)
         return results
 
-    def add(self, node):
+    def append(self, node):
         """
-        Add a node (Node object or dict of props). Returns self.
+        Append a node (Node object or dict of props). Returns self.
         """
         node = Node.create(node)
+        node.parent = self.leaf
         self.__nodes.append(node)
+        self.__nodeset.add(node)
         self.__constants.update(node.constants())
         self.__worlds.update(node.worlds())
-        node.parent = self.leaf
-        self.leaf = node
+        # self.leaf = node
 
         # Add to index *before* after_node_add callback
         self.__add_to_index(node)
         self.emit(Events.AFTER_NODE_ADD, node, self)
 
         return self
+    add = append
 
     def extend(self, nodes):
         """
         Add multiple nodes. Returns self.
         """
         for node in nodes:
-            self.add(node)
+            self.append(node)
         return self
-
-    def update(self, nodes):
-        # TODO: deprecate
-        return self.extend(nodes)
 
     def tick(self, *nodes):
         """
@@ -1014,8 +1055,8 @@ class Branch(EventEmitter):
         Close the branch. Returns self.
         """
         if not self.closed:
-            self.closed = True
-            self.add({'is_flag': True, 'flag': 'closure'})
+            self.__closed = True
+            self.append({'is_flag': True, 'flag': 'closure'})
             self.emit(Events.AFTER_BRANCH_CLOSE, self)
         return self
 
@@ -1025,16 +1066,17 @@ class Branch(EventEmitter):
         """
         return node in self.__ticked
 
-    def copy(self):
+    def copy(self, parent = None):
         """
         Return a copy of the branch. Event listeners are *not* copied.
+        Parent is not copied, but can be explicitly set.
         """
-        branch = self.__class__()
+        branch = self.__class__(parent = parent)
         branch.__nodes = list(self.__nodes)
+        branch.__nodeset = set(self.__nodeset)
         branch.__ticked = set(self.__ticked)
         branch.__constants = set(self.__constants)
         branch.__worlds = set(self.__worlds)
-        branch.leaf = self.leaf
         branch.__pidx = {
             prop : {
                 key : set(self.__pidx[prop][key])
@@ -1100,8 +1142,11 @@ class Branch(EventEmitter):
     def __iter__(self):
         return iter(self.__nodes)
 
-    # def __contains__(self, node):
+    def __copy__(self):
+        return self.copy()
 
+    def __contains__(self, node):
+        return node in self.__nodeset
 
     def __add_to_index(self, node):
         for prop in self.__pidx:
@@ -1173,11 +1218,16 @@ class Node(object):
             'designated' : None,
         }
         self.props.update(props)
+
+        # TODO: branch props, protect
         self.ticked = False
         self.parent = None
         self.step = None
         self.ticked_step = None
-        self.id = id(self)
+
+    @property
+    def id(self):
+        return id(self)
 
     @property
     def is_closure(self):
@@ -1187,9 +1237,9 @@ class Node(object):
     def is_modal(self):
         return self.has_any('world', 'world1', 'world2', 'worlds')
 
-    @property
-    def sentence(self):
-        return self.get('sentence')
+    # @property
+    # def sentence(self):
+    #     return self.get('sentence')
 
     # @property
     # def designated(self):
@@ -1225,7 +1275,7 @@ class Node(object):
         Whether the node properties match all those give in ``props`` (dict).
         """
         for prop in props:
-            if prop not in self.props or not props[prop] == self.props[prop]:
+            if prop not in self or not props[prop] == self[prop]:
                 return False
         return True
 
@@ -1238,12 +1288,6 @@ class Node(object):
         for name in ('world', 'world1', 'world2'):
             if self.has(name):
                 worlds.add(self.get(name))
-        # if self.has('world'):
-        #     worlds.add(self.props['world'])
-        # if self.has('world1'):
-        #     worlds.add(self.props['world1'])
-        # if self.has('world2'):
-        #     worlds.add(self.props['world2'])
         if self.has('worlds'):
             worlds.update(self.get('worlds'))
         return worlds
@@ -1254,9 +1298,9 @@ class Node(object):
         property, if any. If the node does not have a sentence, return
         an empty set.
         """
-        if self.sentence:
-            return self.sentence.atomics()
-        return set()
+        if 'sentence' in self:
+            return self['sentence'].atomics()
+        return emptyset
 
     def constants(self):
         """
@@ -1264,9 +1308,9 @@ class Node(object):
         property, if any. If the node does not have a sentence, return
         the empty set.
         """
-        if self.sentence:
-            return self.sentence.constants()
-        return set()
+        if 'sentence' in self:
+            return self['sentence'].constants()
+        return emptyset
 
     def predicates(self):
         """
@@ -1274,9 +1318,9 @@ class Node(object):
         property, if any. If the node does not have a sentence, return
         the empty set.
         """
-        if self.sentence:
-            return self.sentence.predicates()
-        return set()
+        if 'sentence' in self:
+            return self['sentence'].predicates()
+        return emptyset
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.id == other.id
@@ -1296,7 +1340,6 @@ class Node(object):
     def __repr__(self):
         return {
             'id'     : self.id,
-            'props'  : self.props,
             'ticked' : self.ticked,
             'step'   : self.step,
             'parent' : self.parent.id if self.parent else None,
@@ -1324,9 +1367,6 @@ class StepEntry(object):
     @property
     def entry(self):
         return self.__entry
-
-    def __getitem__(self, item):
-        return getattr(self, item)
 
 def make_tree_structure(branches, node_depth=0, track=None):
     is_root = track == None

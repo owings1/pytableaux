@@ -479,7 +479,7 @@ class Helper(object):
         rule = proof.get_rule(rule)
         rule.add_helper(EllipsisExampleHelper)
         pw = self.pwclosure if rule.is_closure else self.pwrule
-        b = proof.branch().update(rule.example_nodes())
+        b = proof.branch().extend(rule.example_nodes())
         rule.apply(rule.get_target(b))
         return pw.write(proof.finish())
 

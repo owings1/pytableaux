@@ -522,10 +522,10 @@ class TableauxSystem(BaseSystem):
     def branching_complexity(cls, node):
         if not node.has('sentence'):
             return 0
-        sentence = node.props['sentence']
+        sentence = node['sentence']
         operators = list(sentence.operators())
         last_is_negated = False
-        designated = node.props['designated']
+        designated = node['designated']
         complexity = 0
         while len(operators):
             operator = operators.pop(0)
@@ -602,7 +602,7 @@ class DefaultNodeRule(Rule):
             res = self._get_node_targets(node, branch)
             if res:
                 targets.extend(
-                    Target.createall(res, branch = branch, node = node)
+                    Target.all(res, branch = branch, node = node)
                 )
                 continue
         #     if not self.nf.filter(node, branch):
@@ -614,6 +614,11 @@ class DefaultNodeRule(Rule):
         #        self.nf[branch].discard(node)
         return targets
 
+    def _get_node_targets(self, node, branch):
+        """
+        :meta abstract:
+        """
+        raise NotImplementedError()
 class OldDefaultNodeRule(FilterNodeRule):
 
     ticking = True
@@ -713,8 +718,8 @@ class TableauxRules(object):
         def _find_closing_node(self, node, branch):
             if node.has('sentence', 'designated'):
                 return branch.find({
-                    'sentence'   : node.props['sentence'],
-                    'designated' : not node.props['designated'],
+                    'sentence'   : node['sentence'],
+                    'designated' : not node['designated'],
                 })
             
     class DoubleNegationDesignated(DefaultNodeRule):
@@ -1226,7 +1231,7 @@ class TableauxRules(object):
                 {'sentence': r, 'designated': self.designation},
             ]
 
-    class ExistentialNegatedDesignated(OldDefaultNodeRule):
+    class ExistentialNegatedDesignated(DefaultNodeRule):
         """
         From an unticked designated negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a designated node to *b*
@@ -1239,7 +1244,7 @@ class TableauxRules(object):
         branch_level = 1
         convert_to  = 'Universal'
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node, branch):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence

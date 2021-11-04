@@ -32,7 +32,7 @@ from models import BaseModel
 
 from proof.tableaux import TableauxSystem as BaseSystem
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
-    NewConstantStoppingRule, NodeFilterRule, Rule, Target
+    NewConstantStoppingRule, Rule, Target
 from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, QuitFlagHelper, Filters, AdzHelper, \
     NodeFilterHelper
@@ -218,7 +218,7 @@ class Model(BaseModel):
 
     def read_node(self, node):
         if node.has('sentence'):
-            sentence = node.props['sentence']
+            sentence = node['sentence']
             world = node['world']
             if world == None:
                 world = 0
@@ -228,7 +228,7 @@ class Model(BaseModel):
                 self.set_literal_value(sentence, 'T', world=world)
             self.predicates.update(node.predicates())
         elif node.has('world1') and node.has('world2'):
-            self.add_access(node.props['world1'], node.props['world2'])
+            self.add_access(node['world1'], node['world2'])
 
     def finish(self):
         # track all atomics and opaques
@@ -665,7 +665,7 @@ class TableauxSystem(BaseSystem):
     def branching_complexity(cls, node):
         if not node.has('sentence'):
             return 0
-        sentence = node.props['sentence']
+        sentence = node['sentence']
         operators = list(sentence.operators())
         last_is_negated = False
         complexity = 0
@@ -744,7 +744,7 @@ class DefaultNodeRule(Rule):
             res = self._get_node_targets(node, branch)
             if res:
                 targets.extend(
-                    Target.createall(res, branch = branch, node = node)
+                    Target.all(res, branch = branch, node = node)
                 )
                 continue
         #     if not self.nf.filter(node, branch):
@@ -836,9 +836,9 @@ class TableauxRules(object):
 
         def node_will_close_branch(self, node, branch):
             if node.has('sentence'):
-                s = node.props['sentence']
+                s = node['sentence']
                 if s.operator == 'Negation' and s.operand.predicate == Identity:
-                    a, b = node.props['sentence'].operand.params
+                    a, b = node['sentence'].operand.params
                     return a == b
 
         def applies_to_branch(self, branch):
@@ -867,7 +867,7 @@ class TableauxRules(object):
 
         def node_will_close_branch(self, node, branch):
             if node.has('sentence'):
-                s = node.props['sentence']
+                s = node['sentence']
                 return s.operator == 'Negation' and s.operand.predicate == Existence
 
         def applies_to_branch(self, branch):
@@ -1540,7 +1540,7 @@ class TableauxRules(object):
             for n in pnodes:
                 if n is node:
                     continue
-                s = n.props['sentence']
+                s = n['sentence']
                 if pa in s.params:
                     p_old, p_new = pa, pb
                 elif pb in s.params:

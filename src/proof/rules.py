@@ -300,38 +300,64 @@ class Rule(EventEmitter):
 
 class Target(object):
 
-    __comps = {'type'}
+    __reqd = {'branch'}
     __attrs = {'branch', 'node', 'rule'}
-    __oppos = {}
 
-    __opkeys = {
-        # 'node': {'nodes'},
-        # 'nodes': {'node'},
-    }
-
-    @staticmethod
-    def create(obj, **data):
-        if isinstance(obj, __class__):
-            target = obj
-            target.update(data)
+    @classmethod
+    def create(cls, obj, **data):
+        if obj == True:
+            target = cls(data)
         else:
-            target = __class__(data)
-            if isinstance(obj, dict):
-                target.update(obj)
+            if isinstance(obj, cls):
+                target = obj
+                target.update(data)
+            else:
+                target = cls(obj, **data)
         return target
 
-    @staticmethod
-    def createall(objs, **data):
-        if isinstance(objs, (__class__, dict)):
+    @classmethod
+    def all(cls, objs, **data):
+        if isinstance(objs, (cls, dict)):
             objs = (objs,)
-        return (__class__.create(obj, **data) for obj in objs)
-    def __init__(self, data):
-        self.__keys = set(self.__comps)
+        return (cls.create(obj, **data) for obj in objs)
+
+    def __init__(self, obj, **data):
+        if isinstance(obj, self.__class__):
+            raise TypeError(self.__class__)
         self.__data = {}
-        self.__oppos = {}
+        if obj != True:
+            self.update(obj)
         self.update(data)
-        self['branch']
-        # self['rule']
+        miss = self.__reqd.difference(self.__data)
+        if miss:
+            raise TypeError("missing {}".format(miss))
+
+    def __getitem__(self, item):
+        return self.__data[item]
+
+    def __setitem__(self, key, val):
+        if self.__data.get(key, val) != val:
+            raise KeyError("conflict '{}'".format(key))
+        self.__data[key] = val
+
+    def __contains__(self, item):
+        return item in self.__data
+
+    def __getattr__(self, name):
+        if name in self.__attrs:
+            try:
+                return self.__data[name]
+            except:
+                pass
+        raise AttributeError(name)
+
+    def __setattr__(self, name, val):
+        if name in self.__attrs:
+            self[name] = val
+        elif not hasattr(self, name) or name in self.__dict__:
+            self.__dict__[name] = val
+        else:
+            raise AttributeError(name)
 
     def update(self, obj):
         for k in obj:
@@ -343,30 +369,6 @@ class Target(object):
         except KeyError:
             return default
 
-    def __getitem__(self, item):
-        if item in self.__comps:
-            return getattr(self, item)
-        return self.__data[item]
-
-    def __setitem__(self, item, val):
-        if item in self.__oppos:
-            oppos = self.__oppos[item]
-            raise KeyError("Cannot set '{}' when '{}' is set".format(item, oppos))
-        if item in self.__keys:
-            if item in self.__comps:
-                raise KeyError("Computed property '{}'".format(item))
-            if self.__data[item] == val:
-                return
-            raise KeyError("Cannot replace '{}'".format(item))
-        self.__data[item] = val
-        self.__keys.add(item)
-        if item in self.__opkeys:
-            for key in self.__opkeys[item]:
-                self.__oppos[key] = item
-
-    def __contains__(self, item):
-        return item in self.__keys
-
     @property
     def type(self):
         if 'nodes' in self.__data:
@@ -375,10 +377,6 @@ class Target(object):
             return 'Node'
         return 'Branch'
 
-    def __getattr__(self, item):
-        if item in self.__attrs:
-            return getattr(self.__data, item)
-        raise AttributeError("'{}'".format(item))
 
 class ClosureRule(Rule):
     """
@@ -434,61 +432,6 @@ class ClosureRule(Rule):
     # NodeTargetCheckHelper implementation
 
     def check_for_target(self, node, branch):
-        raise NotImplementedError()
-
-class NodeFilterRule(Rule):
-
-    Helpers = (
-        *Rule.Helpers,
-        ('nf', NodeFilterHelper),
-    )
-
-    include_ticked = None
-
-    negated = operator = quantifier = predicate = None
-
-    NodeFilters = (
-        ('sentence', Filters.Node.Sentence),
-    )
-
-    def _get_targets(self, branch):
-        """
-        :implements: Rule
-        """
-        targets = list()
-        # misses = {}
-        for node in self.nf[branch]:
-            res = self._get_node_targets(node, branch)
-            if res:
-                targets.extend(
-                    Target.createall(res, branch = branch, node = node)
-                )
-                continue
-        #     if not self.nf.filter(node, branch):
-        #         if branch not in misses:
-        #             misses[branch] = set()
-        #         misses[branch].add(node)
-        # for branch in misses:
-        #     for node in misses[branch]:
-        #        self.nf[branch].discard(node)
-        return targets
-
-    def sentence(self, node):
-        """
-        :overrides: Rule
-        """
-        return self.nf.filters.sentence.get(node)
-
-    def example_nodes(self):
-        """
-        :implements: Rule
-        """
-        return (self.nf.example_node(),)
-
-    def _get_node_targets(self, node, branch):
-        """
-        :meta abstract:
-        """
         raise NotImplementedError()
 
 class PotentialNodeRule(Rule):
@@ -576,7 +519,7 @@ class PotentialNodeRule(Rule):
         # Default implementation, delegates to ``get_target_for_node``
         target = self.get_target_for_node(node, branch)
         if target:
-            return [target]
+            return [Target.create(target, branch = branch, node = node)]
 
     # Abstract
 
@@ -683,7 +626,7 @@ class FilterNodeRule(PotentialNodeRule):
                 return False
         sentence = operator = quantifier = predicate = None
         if node.has('sentence'):
-            sentence = node.props['sentence']
+            sentence = node['sentence']
             operator = sentence.operator
             quantifier = sentence.quantifier
             predicate = sentence.predicate
@@ -703,7 +646,7 @@ class FilterNodeRule(PotentialNodeRule):
             if self.quantifier != quantifier:
                 return False
         if self.designation != None:
-            if node.props.get('designated') != self.designation:
+            if node.get('designated') != self.designation:
                 return False
         if self.predicate != None:
             if predicate == None or self.predicate not in predicate.refs:
@@ -714,8 +657,8 @@ class FilterNodeRule(PotentialNodeRule):
 
     def sentence(self, node):
         s = None
-        if 'sentence' in node.props:
-            s = node.props['sentence']
+        if 'sentence' in node:
+            s = node['sentence']
             if self.negated:
                 s = s.operand
         return s
@@ -788,7 +731,7 @@ class NewConstantStoppingRule(FilterNodeRule):
         """
         Implements ``PotentialNodeRule``.
         """
-        if not self.__should_apply(branch, node.props['world']):
+        if not self.__should_apply(branch, node['world']):
             if not self.quit_flagger.has_flagged(branch):
                 return self.__get_flag_target(branch)
             return
@@ -861,7 +804,7 @@ class AllConstantsStoppingRule(FilterNodeRule):
             should_apply = self.__should_apply(node, branch)
 
         if not should_apply:
-            if self.__should_flag(branch, node.props['world']):
+            if self.__should_flag(branch, node['world']):
                 return [self.__get_flag_target(branch)]
             return
 
@@ -889,7 +832,7 @@ class AllConstantsStoppingRule(FilterNodeRule):
         return targets
 
     def __should_apply(self, node, branch):
-        if self.max_constants.max_constants_exceeded(branch, node.props['world']):
+        if self.max_constants.max_constants_exceeded(branch, node['world']):
             return False
         # Apply if there are no constants on the branch
         if not branch.constants_count:

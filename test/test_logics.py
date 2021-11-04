@@ -84,7 +84,7 @@ class TestFDE(BaseSuite):
     def test_rule_ExistentialUndesignated_example(self):
         rule, tab = self.rule_eg('ExistentialUndesignated')
         s = examples.quantified('Existential')
-        b = tab.get_branch_at(0)
+        b = tab[0]
         assert b.has({'sentence': s, 'designated': False})
 
     def test_model_lem_countermodel(self):
@@ -104,7 +104,7 @@ class TestFDE(BaseSuite):
 
     def test_model_b_value_atomic_branch(self):
         s1 = self.p('a')
-        b = Branch().update((
+        b = Branch().extend((
             {'sentence': s1         , 'designated': True},
             {'sentence': s1.negate(), 'designated': True},
         ))
@@ -119,7 +119,7 @@ class TestFDE(BaseSuite):
 
     def test_model_exist_b_value_branch(self):
         s1, s2, s3 = self.pp('Fm', 'Fn', 'SxFx')
-        b = Branch().update((
+        b = Branch().extend((
             {'sentence': s1          , 'designated': True},
             {'sentence': s1.negate() , 'designated': True},
             {'sentence': s2          , 'designated': False},
@@ -136,7 +136,7 @@ class TestFDE(BaseSuite):
 
     def test_model_necessity_opaque_b_value_branch(self):
         s1 = self.p('La')
-        b = Branch().update((
+        b = Branch().extend((
             {'sentence': s1         , 'designated': True},
             {'sentence': s1.negate(), 'designated': True},
         ))
@@ -152,7 +152,7 @@ class TestFDE(BaseSuite):
     def test_model_atomic_t_value_branch(self):
         branch = Branch()
         s = self.p('a')
-        branch.update([
+        branch.extend([
             {'sentence': s         , 'designated': True},
             {'sentence': s.negate(), 'designated': False},
         ])
@@ -162,7 +162,7 @@ class TestFDE(BaseSuite):
     def test_model_atomic_f_value_branch(self):
         branch = Branch()
         s = self.p('a')
-        branch.update([
+        branch.extend([
             {'sentence': s         , 'designated': False},
             {'sentence': s.negate(), 'designated': True},
         ])
@@ -233,7 +233,7 @@ class TestFDE(BaseSuite):
         arg = parse_argument('a', premises=['NLa', 'b'])
         proof = Tableau(self.logic, arg)
         proof.build(is_build_models=True)
-        model = proof.get_branch_at(0).model
+        model = proof[0].model
         assert model.value_of(parse('a')) == 'F'
         assert model.value_of(parse('La')) == 'F'
         assert model.value_of(parse('NLa')) == 'T'
@@ -258,7 +258,7 @@ class TestFDE(BaseSuite):
         branch = proof.branch()
         branch.add({'sentence': parse('NAaNKbc'), 'designated': False})
         node = branch[0]
-        assert node.props['sentence'].operators() == ['Negation', 'Disjunction', 'Negation', 'Conjunction']
+        assert node['sentence'].operators() == ['Negation', 'Disjunction', 'Negation', 'Conjunction']
         assert proof.branching_complexity(node) == 1
 
     def test_branching_complexity_undes_1_3(self):
@@ -266,7 +266,7 @@ class TestFDE(BaseSuite):
         branch = proof.branch()
         branch.add({'sentence': parse('NAab'), 'designated': False})
         node = branch[0]
-        assert node.props['sentence'].operators() == ['Negation', 'Disjunction']
+        assert node['sentence'].operators() == ['Negation', 'Disjunction']
         assert proof.branching_complexity(node) == 1
 
     def test_branching_complexity_undes_2_1(self):
@@ -274,7 +274,7 @@ class TestFDE(BaseSuite):
         branch = proof.branch()
         branch.add({'sentence': parse('KaKab'), 'designated': False})
         node = branch[0]
-        assert node.props['sentence'].operators() == ['Conjunction', 'Conjunction']
+        assert node['sentence'].operators() == ['Conjunction', 'Conjunction']
         assert proof.branching_complexity(node) == 2
 
     def test_invalid_existential_inside_univ_max_steps(self):
@@ -291,7 +291,7 @@ class TestFDE(BaseSuite):
         arg = self.parg('b', 'VxUFxSyMFy')
         proof = Tableau(self.logic, arg, is_build_models=False, max_steps=100).build()
         assert proof.invalid
-        branch = proof.get_branch_at(-1)
+        branch = proof[-1]
         model = self.logic.Model()
         model.read_branch(branch)
         s1 = arg.premises[0]
@@ -414,12 +414,12 @@ class TestK3W(BaseSuite):
 
     def test_optimize1(self):
         proof = Tableau(self.logic)
-        proof.branch().update([
+        proof.branch().extend([
             {'sentence': parse('ANaUab'), 'designated': False},
             {'sentence': parse('NANaUab'), 'designated': False},
         ])
         step = proof.step()
-        assert step['rule'].name == 'DisjunctionNegatedUndesignated'
+        assert step.rule.name == 'DisjunctionNegatedUndesignated'
 
     def test_models_with_opaques_observed_fail(self):
         # this was because sorting of constants had not been implemented.
@@ -646,7 +646,7 @@ class TestLP(BaseSuite):
         arg = self.parg('NBab', 'NBab')
         proof = Tableau(self.logic, arg)
         rule = proof.get_rule('BiconditionalNegatedUndesignated')
-        assert rule.get_target(proof.get_branch_at(0))
+        assert rule.get_target(proof[0])
 
     def test_invalid_lnc(self):
         assert self.tab('Law of Non-contradiction').invalid
@@ -1049,7 +1049,7 @@ class TestP3(BaseSuite):
 
     def test_rule_DoubleNegationDesignated_eg(self):
         rule, tab = self.rule_eg('DoubleNegationDesignated')
-        assert tab.get_branch_at(0).has_all([
+        assert tab[0].has_all([
             {'sentence': parse('a'), 'designated': False},
             {'sentence': parse('Na'), 'designated': False},
         ])
@@ -1118,8 +1118,8 @@ class TestCPL(BaseSuite):
         s1 = parse('Fmn', vocab=vocab)
         s2 = parse('Io1o2')
         branch = proof.branch()
-        branch.update([
-            {'sentence': s1, 'world': 0},
+        branch.extend([
+            {'extend': s1, 'world': 0},
             {'sentence': s2, 'world': 0},
         ])
         rule = proof.get_rule('IdentityIndiscernability')
@@ -1427,12 +1427,12 @@ class TestK(BaseSuite):
 
     def test_rule_Possibility_node_has_w0(self):
         rule, tab = self.rule_eg('Possibility', step = False)
-        node = tab.get_branch_at(0)[0]
+        node = tab[0][0]
         assert node['world'] == 0
 
     def test_rule_Existential_example_nodes(self):
         rule, tab = self.rule_eg('Existential', step = False)
-        node = tab.get_branch_at(0)[0]
+        node = tab[0][0]
         assert node['sentence'].quantifier == 'Existential'
 
     def test_rule_DisjunctionNegated_example_nodes(self):
@@ -1451,7 +1451,7 @@ class TestK(BaseSuite):
 
     def test_rule_IdentityIndiscernability_not_applies(self):
         tab = self.tab()
-        b = tab.branch().update((
+        b = tab.branch().extend((
             {'sentence': self.p('Imm'), 'world': 0},
             {'sentence': self.p('Fs'), 'world': 0},
         ))
@@ -1836,13 +1836,13 @@ class TestD(BaseSuite):
         tab = self.tab('CaLMa')
         # sanity check
         assert tab.branch_count == 1
-        b = tab.get_branch_at(0)
+        b = tab[0]
         # use internal properties just to be sure, since the bug was with the .find method
         access = {}
         for node in b:
-            if 'world1' in node.props:
-                w1 = node.props['world1']
-                w2 = node.props['world2']
+            if 'world1' in node:
+                w1 = node['world1']
+                w2 = node['world2']
                 if w1 not in access:
                     # use a list to also make sure we don't have redundant nodes
                     access[w1] = list()
@@ -2025,7 +2025,7 @@ class TestMaxConstantsTracker(BaseSuite):
         proof = self.tab().add_rule_group([MtrTestRule])
         proof.argument = self.parg('NLVxNFx', 'LMSxFx')
         rule = proof.get_rule(MtrTestRule)
-        branch = proof.get_branch_at(0)
+        branch = proof[0]
         assert rule.mtr._compute_max_constants(branch) == 3
 
     def xtest_compute_for_node_one_q_returns_1(self):
@@ -2046,6 +2046,6 @@ class TestMaxConstantsTracker(BaseSuite):
         proof = Tableau(None)
         rule = Rule(proof)
         branch = proof.branch()
-        branch.update([n1, n2])
+        branch.extend([n1, n2])
         res = rule.mtr._compute_max_constants(branch)
         assert res == 3

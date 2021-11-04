@@ -115,9 +115,9 @@ class TableauxRules(object):
         # private util
 
         def __find_closing_node(self, node, branch):
-            if node.has('sentence', 'designated') and not node.props['designated']:
+            if node.has('sentence', 'designated') and not node['designated']:
                 return branch.find({
-                    'sentence'   : node.props['sentence'].negative(),
+                    'sentence'   : node['sentence'].negative(),
                     'designated' : False
                 })
 

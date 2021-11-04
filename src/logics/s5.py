@@ -96,18 +96,18 @@ class TableauxRules(object):
             ret = None
             with self.timers['is_potential_node']:
                 if node.has('world1') and node.has('world2'):
-                    w1 = node.props['world1']
-                    w2 = node.props['world2']
+                    w1 = node['world1']
+                    w2 = node['world2']
                     ret = not branch.has_access(w2, w1)
             return ret
 
         def get_target_for_node(self, node, branch):
             if not self.__should_apply(branch):
                 return
-            if not branch.has({'world1': node.props['world2'], 'world2': node.props['world1']}):
+            if not branch.has({'world1': node['world2'], 'world2': node['world1']}):
                 return {
-                    'world1' : node.props['world2'],
-                    'world2' : node.props['world1'],
+                    'world1' : node['world2'],
+                    'world2' : node['world1'],
                 }
 
         def apply_to_node_target(self, node, branch, target):

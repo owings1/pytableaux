@@ -85,8 +85,8 @@ class TableauxRules(object):
         def get_targets_for_node(self, node, branch):
             if not self.__should_apply(branch):
                 return
-            w1 = node.props['world1']
-            w2 = node.props['world2']
+            w1 = node['world1']
+            w2 = node['world2']
             targets = list()
             for w3 in self.visibles.get_intransitives(branch, w1, w2):
                 # sanity check

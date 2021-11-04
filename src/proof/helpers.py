@@ -34,10 +34,10 @@ class AdzHelper(object):
             if i == 0:
                 continue
             b = self.rule.branch(branch)
-            b.update(target['adds'][i])
+            b.extend(target['adds'][i])
             if self.rule.ticking:
                 b.tick(target['node'])
-        branch.update(target['adds'][0])
+        branch.extend(target['adds'][0])
         if self.rule.ticking:
             branch.tick(target['node'])
 
@@ -510,7 +510,7 @@ class MaxConstantsTracker(object):
 
     def after_node_add(self, node, branch):
         if node.has('sentence'):
-            world = node.props['world']
+            world = node['world']
             if world == None:
                 world = 0
             if world not in self.world_constants[branch.id]:
@@ -533,7 +533,7 @@ class MaxConstantsTracker(object):
 
     def _compute_needed_constants_for_node(self, node, branch):
         if node.has('sentence'):
-            return len(node.props['sentence'].quantifiers())
+            return len(node['sentence'].quantifiers())
         return 0
 
 class NodeAppliedConstants(object):
@@ -692,7 +692,7 @@ class MaxWorldsTracker(object):
         # we only care about unticked nodes, since ticked nodes will have
         # already created any worlds.
         if not branch.is_ticked(node) and node.has('sentence'):
-            return self.modal_complexity(node.props['sentence'])
+            return self.modal_complexity(node['sentence'])
         return 0
 
 class UnserialWorldsTracker(object):
@@ -766,8 +766,8 @@ class VisibleWorldsIndex(object):
 
     def after_node_add(self, node, branch):
         if node.has('world1', 'world2'):
-            w1 = node.props['world1']
-            w2 = node.props['world2']
+            w1 = node['world1']
+            w2 = node['world2']
             if w1 not in self.index[branch.id]:
                 self.index[branch.id][w1] = set()
             self.index[branch.id][w1].add(w2)
@@ -797,7 +797,7 @@ class PredicatedNodesTracker(object):
             self.predicated_nodes[branch.id] = set()
 
     def after_node_add(self, node, branch):
-        if node.has('sentence') and node.props['sentence'].is_predicated:
+        if node.has('sentence') and node['sentence'].is_predicated:
             self.predicated_nodes[branch.id].add(node)
 
 class AppliedNodesWorldsTracker(object):
