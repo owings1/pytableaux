@@ -209,15 +209,15 @@ class BaseSuite(object):
     def rule_eg(self, rule, step = True, **kw):
         rule, tab = self.rule_tab(rule, **kw)
         tab.branch().extend(rule.example_nodes())
-        assert tab.branch_count == 1
-        assert tab.open_branch_count == 1
+        assert len(tab) == 1
+        assert len(tab.open) == 1
         if step:
             entry = tab.step()
             tab.finish()
             assert entry.rule == rule
             assert tab.current_step == 1
             if rule.is_closure:
-                assert tab.open_branch_count == 0
+                assert len(tab.open) == 0
         return (rule, tab)
 
     @property

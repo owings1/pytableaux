@@ -23,6 +23,7 @@ from utils import EventEmitter, LinkedOrderedSet, StopWatch, get_logic, isrule, 
 from errors import IllegalStateError, NotFoundError, TimeoutError
 from events import Events
 from inspect import isclass
+from itertools import chain
 
 class TableauxSystem(object):
 
@@ -41,6 +42,119 @@ class TableauxSystem(object):
             tableau.add_closure_rule(Rule)
         for Rules in TabRules.rule_groups:
             tableau.add_rule_group(Rules)
+
+def tabrules(tableau):
+
+    class Meta(object):
+        @property
+        def logicname(self):
+            if self.tableau and self.tableau.logic:
+                return self.tableau.logic.name
+        @property
+        def tabstarted(self):
+            self.tableau.current_step > 0
+        def __init__(self):
+            self.tableau = tableau
+    meta = Meta()
+
+    def writes(method):
+        def check(*args, **kw):
+            if tableau.current_step > 0:
+                raise IllegalStateError("Tableau is already started.")
+            return method(*args, **kw)
+        return check
+
+    def newrule(cls):
+        return (cls if isclass(cls) else cls.__class__)(tableau, **tableau.opts)
+
+    def init_group(rules = None, name = None):
+        priv = []
+        groupname = name
+        class RuleGroup(object):
+            @writes
+            def add(self, rule):
+                priv.append(newrule(rule))
+            @writes
+            def extend(self, rhs):
+                priv.extend(iter(newrule(r) for r in rhs))
+            @writes
+            def clear(self):
+                priv.clear()
+            @property
+            def name(self):
+                if groupname != None:
+                    return groupname
+                return self.__class__.__name__
+            @writes
+            def __init__(self, rules = None):
+                if rules != None:
+                    self.extend(iter(newrule(r) for r in rules))
+            def __iter__(self):
+                return iter(priv)
+            def __len__(self):
+                return len(priv)
+            def __getitem__(self, key):
+                return priv[key]
+            def __repr__(self):
+                return (len(self), self.name).__repr__()
+        return RuleGroup(rules = rules)
+
+    def init_groups():
+        priv = []
+        class RuleGroups(object):
+            @writes
+            def create(self):
+                priv.append(init_group())
+            @writes
+            def add(self, rules):
+                priv.append(init_group(rules))
+            @writes
+            def extend(self, groups):
+                for rules in groups:
+                    self.add(rules)
+            def getpriv(self):
+                return priv
+            @writes
+            def clear(self):
+                for group in priv:
+                    group.clear()
+                priv.clear()
+            def __iter__(self):
+                return iter(priv)
+            def __len__(self):
+                return len(priv)
+            def __getitem__(self, key):
+                return iter(priv[key])
+            def __repr__(self):
+                return (len(self), self.__class__.__name__).__repr__()
+        return RuleGroups()
+    
+    closure_rules = init_group()
+    rule_groups = init_groups()
+
+    class TabRules(object):
+
+        @property
+        def closure(self):
+            return closure_rules
+
+        @property
+        def groups(self):
+            return rule_groups
+
+        @writes
+        def clear(self):
+            closure_rules.clear()
+            rule_groups.clear()
+
+        def __len__(self):
+            return len(closure_rules) + sum(len(g) for g  in rule_groups)
+        def __iter__(self):
+            return chain(closure_rules, chain.from_iterable(rule_groups),)
+        def __repr__(self):
+            return (meta.logicname, self.__class__.__name__).__repr__()
+
+    return TabRules()
 
 class Tableau(EventEmitter):
     """
@@ -105,7 +219,6 @@ class Tableau(EventEmitter):
         self.__trunks = list()
         self.__open_linkset = LinkedOrderedSet()
         self.__open_view = self.__open_linkset.view()
-        # self.__open_branchset = set()
         self.__branch_dict = dict()
         self.__finished = False
         self.__premature = True
@@ -190,10 +303,6 @@ class Tableau(EventEmitter):
         Setter for ``argument`` property. If the tableau has a logic set, then
         ``build_trunk()`` is automatically called.
         """
-        # if not isinstance(argument, Argument):
-        #     raise TypeError(
-        #         "Value for 'argument' must be a {0} instance".format(Argument)
-        #     )
         typecheck(argument, Argument, 'argument')
         self.__check_trunk_not_built()
         self.__argument = argument
@@ -249,7 +358,6 @@ class Tableau(EventEmitter):
         if not self.completed or self.argument == None:
             return None
         return len(self.open) == 0
-        # return self.open_branch_count == 0
 
     @property
     def invalid(self):
@@ -264,7 +372,6 @@ class Tableau(EventEmitter):
         if not self.completed or self.argument == None:
             return None
         return len(self.open) > 0
-        # return self.open_branch_count > 0
 
     @property
     def trunk_built(self):
@@ -286,34 +393,11 @@ class Tableau(EventEmitter):
         return len(self.history) + int(self.trunk_built)
 
     @property
-    def branch_count(self):
-        """
-        The current number of branches.
-
-        :type: int
-        """
-        return len(self)
-        # return len(self.__branch_list)
-
-    @property
     def open(self):
         """
         View of the open branches.
         """
         return self.__open_view
-
-    @property
-    def open_branch_count(self):
-        """
-        The current number of open branches.
-
-        :type: int
-        """
-        # return len(self.__open_linkset)
-        return len(self.open)
-        # print(len(self.open), len(self.__open_branchset))
-        # assert len(self.open) == len(self.__open_branchset)
-        # return len(self.__open_branchset)
 
     def build(self, **opts):
         """
@@ -363,24 +447,6 @@ class Tableau(EventEmitter):
                 self.finish()
         return entry
 
-    def branches(self):
-        """
-        Returns an iterator for all branches, in the order they were added to
-        the tableau.
-
-        :rtype: list_iterator(Branch)
-        """
-        return iter(self)
-
-    def open_branches(self):
-        """
-        Returns an iterator for the set of open branches.
-
-        :rtype: linked_set_iterator(Branch)
-        """
-        return iter(self.open)
-        # return iter(self.__open_branchset)
-
     def branch(self, parent = None):
         """
         Create a new branch on the tableau, as a copy of ``parent``, if given.
@@ -395,10 +461,10 @@ class Tableau(EventEmitter):
             branch = Branch()
         else:
             branch = parent.copy(parent = parent)
-        self.add_branch(branch)
+        self.add(branch)
         return branch
 
-    def add_branch(self, branch):
+    def add(self, branch):
         """
         Add a new branch to the tableau. Returns self.
 
@@ -417,7 +483,6 @@ class Tableau(EventEmitter):
         self.__branch_list.append(branch)
         if not branch.closed:
             self.__open_linkset.add(branch)
-            # self.__open_branchset.add(branch)
         if not branch.parent:
             self.__trunks.append(branch)
         self.__branch_dict[branch] = {
@@ -595,7 +660,7 @@ class Tableau(EventEmitter):
         info = dict()
         info.update({
             prop: getattr(self, prop)
-            for prop in ('id', 'branch_count', 'current_step', 'finished')
+            for prop in ('id', 'current_step', 'finished')
         })
         info.update({
             key: value
@@ -634,7 +699,6 @@ class Tableau(EventEmitter):
     def __after_branch_close(self, branch):
         branch.closed_step = self.current_step
         self.__open_linkset.remove(branch)
-        # self.__open_branchset.remove(branch)
         self.emit(Events.AFTER_BRANCH_CLOSE, branch)
 
     def __after_node_add(self, node, branch):
@@ -1022,7 +1086,6 @@ class Branch(EventEmitter):
         self.__nodeset.add(node)
         self.__constants.update(node.constants())
         self.__worlds.update(node.worlds())
-        # self.leaf = node
 
         # Add to index *before* after_node_add callback
         self.__add_to_index(node)
@@ -1236,18 +1299,6 @@ class Node(object):
     @property
     def is_modal(self):
         return self.has_any('world', 'world1', 'world2', 'worlds')
-
-    # @property
-    # def sentence(self):
-    #     return self.get('sentence')
-
-    # @property
-    # def designated(self):
-    #     return self.get('designated')
-
-    # @property
-    # def negated(self):
-    #     return None if not self.sentence else self.sentence.is_negated
 
     def get(self, name, default = None):
         return self.props.get(name, default)

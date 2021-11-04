@@ -491,7 +491,7 @@ class MaxConstantsTracker(object):
     # Helper implementation
 
     def after_trunk_build(self, tableau):
-        for branch in tableau.branches():
+        for branch in tableau:
             origin = branch.origin()
             # In most cases, we will have only one origin branch.
             if origin.id in self.branch_max_constants:
@@ -669,7 +669,7 @@ class MaxWorldsTracker(object):
     # Helper implementation
 
     def after_trunk_build(self, tableau):
-        for branch in tableau.branches():
+        for branch in tableau:
             origin = branch.origin()
             # In most cases, we will have only one origin branch.
             if origin.id in self.branch_max_worlds:

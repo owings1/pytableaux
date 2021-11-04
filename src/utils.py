@@ -477,7 +477,6 @@ class LinkedOrderedSet(object):
                 # Close the gap
                 entry.prev.next = entry.next
                 entry.next.prev = entry.prev
-        del(entry.item)
 
     def discard(self, item):
         if item in self:
@@ -512,14 +511,16 @@ class LinkedOrderedSet(object):
     def __iter__(self):
         cur = self._first
         while cur:
-            item, cur = cur.item, cur.prev
+            item = cur.item
             yield item
-
+            cur = cur.next
+                
     def __reversed__(self):
         cur = self._last
         while cur:
-            item, cur = cur.item, cur.prev
+            item = cur.item
             yield item
+            cur = cur.prev
 
     def __repr__(self):
         return (len(self), self._first, self._last).__repr__()

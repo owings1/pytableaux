@@ -355,7 +355,7 @@ class TestK3W(BaseSuite):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('NKab'), 'designated': False})
         proof.step()
-        b1, b2, b3 = proof.branches()
+        b1, b2, b3 = proof
         assert b1.has({'sentence': parse('a'), 'designated': False})
         assert b1.has({'sentence': parse('Na'), 'designated': False})
         assert b2.has({'sentence': parse('b'), 'designated': False})
@@ -429,7 +429,7 @@ class TestK3W(BaseSuite):
         proof = Tableau(self.logic, arg, is_build_models=True, max_steps=100)
         proof.build()
         assert proof.invalid
-        for branch in proof.open_branches():
+        for branch in proof.open:
             model = branch.model
             model.get_data()
 
@@ -573,16 +573,15 @@ class TestG3(BaseSuite):
     logic = get_logic('G3')
 
     def test_invalid_demorgan_8_model(self):
-        proof = self.tab('DeMorgan 8')
-        assert proof.invalid
-        model = list(proof.open_branches())[0].model
-        assert model.is_countermodel_to(proof.argument)
+        tab = self.invalid_tab('DeMorgan 8')
+        model = tab.open.first().model
+        assert model.is_countermodel_to(tab.argument)
 
     def test_valid_demorgan_6(self):
-        assert self.tab('DeMorgan 6').valid
+        self.valid_tab('DeMorgan 6')
 
     def test_invalid_lem(self):
-        assert self.tab('Law of Excluded Middle').invalid
+        self.invalid_tab('Law of Excluded Middle')
 
     def test_invalid_not_not_a_arrow_a(self):
         # Rescher p.45
@@ -814,7 +813,7 @@ class TestGO(BaseSuite):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('NEab'), 'designated': True})
         proof.step()
-        b1, b2 = proof.branches()
+        b1, b2 = proof
         assert b1.has({'sentence': parse('Na'), 'designated': False})
         assert b1.has({'sentence': parse('b'), 'designated': False})
         assert b2.has({'sentence': parse('a'), 'designated': False})
@@ -824,7 +823,7 @@ class TestGO(BaseSuite):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('Uab'), 'designated': True})
         proof.step()
-        b1, b2 = proof.branches()
+        b1, b2 = proof
         assert b1.has({'sentence': parse('ANab'), 'designated': True})
         assert b2.has({'sentence': parse('a'), 'designated': False})
         assert b2.has({'sentence': parse('b'), 'designated': False})
@@ -835,7 +834,7 @@ class TestGO(BaseSuite):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('NUab'), 'designated': True})
         proof.step()
-        b1, b2 = proof.branches()
+        b1, b2 = proof
         assert b1.has({'sentence': parse('a'), 'designated': True})
         assert b1.has({'sentence': parse('b'), 'designated': False})
         assert b2.has({'sentence': parse('Na'), 'designated': False})
@@ -853,7 +852,7 @@ class TestGO(BaseSuite):
         proof = Tableau(self.logic)
         proof.branch().add({'sentence': parse('NBab'), 'designated': True})
         proof.step()
-        b1, b2 = proof.branches()
+        b1, b2 = proof
         assert b1.has({'sentence': parse('NUab'), 'designated': True})
         assert b2.has({'sentence': parse('NUba'), 'designated': True})
 
@@ -1094,7 +1093,7 @@ class TestCPL(BaseSuite):
 
     def test_valid_optimize_group_score_from_candidate_score(self):
         tab = self.valid_tab('Na', ('Cab', 'Nb', 'Acd'))
-        assert tab.branch_count == 2
+        assert len(tab) == 2
 
     def test_invalid_syllogism(self):
         self.invalid_tab('Syllogism')
@@ -1128,7 +1127,7 @@ class TestCPL(BaseSuite):
     def test_model_branch_deny_antec(self):
         proof = self.tab('Denying the Antecedent')
         model = self.logic.Model()
-        branch = list(proof.open_branches())[0]
+        branch = proof.open.first()
         model.read_branch(branch)
         s = Atomic(0, 0)
         assert model.value_of(s) == 'F'
@@ -1137,7 +1136,7 @@ class TestCPL(BaseSuite):
     def test_model_branch_extract_disj_2(self):
         proof = self.tab('Extracting a Disjunct 2')
         model = self.logic.Model()
-        branch = list(proof.open_branches())[0]
+        branch = proof.open.first()
         model.read_branch(branch)
         s = Atomic(0, 0)
         assert model.value_of(s) == 'T'
@@ -1289,7 +1288,7 @@ class TestCFOL(BaseSuite):
         """
         tab = self.tab('b', 'SxUNFxSyMFy', is_build_models = True)
         arg = tab.argument
-        assert tab.branch_count == 2
+        assert len(tab) == 2
         assert len(tab.models) == 2
         m1, m2 = tab.models
         assert m1.is_countermodel_to(arg)
@@ -1460,7 +1459,7 @@ class TestK(BaseSuite):
     def test_model_branch_proof_deny_antec(self):
         proof = self.tab('Denying the Antecedent')
         model = self.logic.Model()
-        branch = list(proof.open_branches())[0]
+        branch = next(iter(proof.open))
         model.read_branch(branch)
         s = Atomic(0, 0)
         assert model.value_of(s, world=0) == 'F'
@@ -1835,7 +1834,7 @@ class TestD(BaseSuite):
     def test_verify_core_bugfix_branch_should_not_have_w1_with_more_than_one_w2(self):
         tab = self.tab('CaLMa')
         # sanity check
-        assert tab.branch_count == 1
+        assert len(tab) == 1
         b = tab[0]
         # use internal properties just to be sure, since the bug was with the .find method
         access = {}
@@ -1871,7 +1870,7 @@ class TestT(BaseSuite):
 
     def test_rule_Reflexive_eg(self):
         rule, tab = self.rule_eg('Reflexive')
-        b, = tab.branches()
+        b, = tab
         assert b.has({'world1': 0, 'world2': 0})
 
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
@@ -1924,7 +1923,7 @@ class TestS4(BaseSuite):
 
     def test_rule_Transitive_eg(self):
         rule, tab = self.rule_eg('Transitive')
-        b, = tab.branches()
+        b, = tab
         assert b.has({'world1': 0, 'world2': 2})
 
     def test_model_finish_transitity_visibles(self):
@@ -1982,7 +1981,7 @@ class TestS5(BaseSuite):
 
     def test_rule_Symmetric_eg(self):
         rule, tab = self.rule_eg('Symmetric', bare = True)
-        b, = tab.branches()
+        b, = tab
         assert b.has({'world1': 1, 'world2': 0})
 
     def test_model_finish_symmetry_visibles(self):

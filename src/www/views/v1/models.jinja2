@@ -5,7 +5,7 @@
         <div class="collapser-contents hidden">
             {% if tableau.stats['open_branches'] > 0 %}
                 <div class="message select-a-branch">Select an open branch to view model</div>
-                {% for branch in tableau.open_branches() %}
+                {% for branch in tableau.open %}
                     {{ model_helper.write_model(lw, branch) }}
                 {% endfor %}
             {% else %}

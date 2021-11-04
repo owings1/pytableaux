@@ -10,8 +10,6 @@ Tableaux Module
 
         .. autoattribute:: argument
 
-        .. autoattribute:: branch_count
-
         .. autoattribute:: completed
 
         .. autoattribute:: current_step
@@ -26,9 +24,9 @@ Tableaux Module
 
         .. autoattribute:: logic
 
-        .. autoattribute:: open_branch_count
-
         .. autoattribute:: premature
+
+        .. autoattribute:: open
 
         .. autoattribute:: tree
 
@@ -40,15 +38,9 @@ Tableaux Module
 
         .. automethod:: step
 
-        .. automethod:: branches
-
-        .. automethod:: open_branches
-
-        .. automethod:: get_branch
-
         .. automethod:: branch
 
-        .. automethod:: add_branch
+        .. automethod:: add
 
         .. automethod:: get_rule
 

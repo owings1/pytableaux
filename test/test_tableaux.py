@@ -70,11 +70,11 @@ class TestTableau(object):
                 return True
             def node_will_close_branch(self, node, branch):
                 return True
-        proof = Tableau(None)
-        proof.add_closure_rule(MockRule).branch()
-        assert proof.open_branch_count == 1
-        proof.build()
-        assert proof.open_branch_count == 0
+        tab = Tableau(None)
+        tab.add_closure_rule(MockRule).branch()
+        assert len(tab.open) == 1
+        tab.build()
+        assert len(tab.open) == 0
 
     def test_regress_structure_has_model_id(self):
         proof = Tableau('CPL', exarg('Triviality 1'), is_build_models=True)
@@ -104,10 +104,10 @@ class TestTableau(object):
                 self._checkbranch = branch
                 self._checkparent = branch.parent
         b = Branch().add({'test': True})
-        proof = Tableau(None).add_rule_group([MockRule]).add_branch(b)
+        proof = Tableau(None).add_rule_group([MockRule]).add(b)
         # proof
         
-        # proof.add_branch(b)
+        # proof.add(b)
         rule = proof.get_rule(MockRule)
         assert rule._checkbranch is b
         assert rule._checkparent == None
