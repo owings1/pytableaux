@@ -219,7 +219,7 @@ class Model(BaseModel):
     def read_node(self, node):
         if node.has('sentence'):
             sentence = node['sentence']
-            world = node['world']
+            world = node.get('world')
             if world == None:
                 world = 0
             if self.is_sentence_opaque(sentence):
@@ -287,6 +287,7 @@ class Model(BaseModel):
 
     def generate_denotation(self, world):
         frame = self.world_frame(world)
+        world = frame.world
         todo = set(self.constants)
         for c in self.constants:
             if c in todo:
@@ -299,6 +300,7 @@ class Model(BaseModel):
 
     def generate_property_classes(self, world):
         frame = self.world_frame(world)
+        world = frame.world
         for pred in self.predicates:
             # Skip identity and existence
             if pred in (Identity, Existence):
@@ -337,6 +339,7 @@ class Model(BaseModel):
 
     def set_opaque_value(self, sentence, value, world=0, **kw):
         frame = self.world_frame(world)
+        world = frame.world
         # if sentence in frame.opaques and frame.opaques[sentence] != value:
         if frame.opaques.get(sentence, value) != value:
             raise ModelValueError('Inconsistent value for sentence {0}'.format(sentence))
@@ -350,6 +353,7 @@ class Model(BaseModel):
 
     def set_atomic_value(self, sentence, value, world=0, **kw):
         frame = self.world_frame(world)
+        world = frame.world
         if sentence in frame.atomics and frame.atomics[sentence] != value:
             raise ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
         frame.atomics[sentence] = value
@@ -383,6 +387,7 @@ class Model(BaseModel):
 
     def get_extension(self, predicate, world=0, **kw):
         frame = self.world_frame(world)
+        world = frame.world
         if predicate not in self.predicates:
             self.predicates.add(predicate)
         if predicate not in frame.extensions:
@@ -393,6 +398,7 @@ class Model(BaseModel):
 
     def get_anti_extension(self, predicate, world=0, **kw):
         frame = self.world_frame(world)
+        world = frame.world
         if predicate not in self.predicates:
             self.predicates.add(predicate)
         if predicate not in frame.extensions:
@@ -411,6 +417,8 @@ class Model(BaseModel):
 
     def get_denotum(self, c, world=0, **kw):
         # TODO: wip
+        frame = self.world_frame(world)
+        world = frame.world
         den = self.get_denotation(world=world)
         try:
             return den[c]
@@ -433,18 +441,24 @@ class Model(BaseModel):
         return {w for w in self.frames if (world, w) in self.access}
 
     def world_frame(self, world):
+        if world == None:
+            world = 0
+        if not isinstance(world, int):
+            raise TypeError(world)
         if world not in self.frames:
             self.frames[world] = Frame(world)
         return self.frames[world]
 
     def value_of_opaque(self, sentence, world=0, **kw):
         frame = self.world_frame(world)
+        world = frame.world
         if sentence in frame.opaques:
             return frame.opaques[sentence]
         return self.unassigned_value
 
     def value_of_atomic(self, sentence, world=0, **kw):
         frame = self.world_frame(world)
+        world = frame.world
         if sentence in frame.atomics:
             return frame.atomics[sentence]
         return self.unassigned_value
@@ -816,9 +830,9 @@ class TableauxRules(object):
             if node.has('sentence'):
                 return branch.find({
                     'sentence' : node['sentence'].negative(),
-                    'world'    : node['world'],
+                    'world'    : node.get('world'),
                 })
-                
+
     class SelfIdentityClosure(ClosureRule):
         """
         A branch closes when a sentence of the form :s:`~a = a` appears on the
@@ -893,7 +907,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': s.operand, 'world': node['world']},
+                        {'sentence': s.operand, 'world': node.get('world')},
                     ],
                 ],
             }
@@ -911,7 +925,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': s.operand, 'world': node['world']},
+                        {'sentence': s.operand, 'world': node.get('world')},
                     ],
                 ],
             }
@@ -931,7 +945,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': s.operand.negate(), 'world': node['world']},
+                        {'sentence': s.operand.negate(), 'world': node.get('world')},
                     ],
                 ],
             }
@@ -948,7 +962,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': operand, 'world': node['world']}
+                        {'sentence': operand, 'world': node.get('world')}
                         for operand in self.sentence(node).operands
                     ],
                 ],
@@ -968,7 +982,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': operand.negate(), 'world': node['world']},
+                        {'sentence': operand.negate(), 'world': node.get('world')},
                     ]
                     for operand in self.sentence(node).operands
                 ],
@@ -987,7 +1001,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': operand, 'world': node['world']},
+                        {'sentence': operand, 'world': node.get('world')},
                     ]
                     for operand in self.sentence(node).operands
                 ],
@@ -1006,7 +1020,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': operand.negate(), 'world': node['world']}
+                        {'sentence': operand.negate(), 'world': node.get('world')}
                         for operand in self.sentence(node).operands
                     ],
                 ],
@@ -1024,7 +1038,7 @@ class TableauxRules(object):
 
         def _get_node_targets(self, node, branch):
             s = self.sentence(node)
-            w = node['world']
+            w = node.get('world')
             return {
                 'adds': [
                     [
@@ -1048,7 +1062,7 @@ class TableauxRules(object):
 
         def _get_node_targets(self, node, branch):
             s = self.sentence(node)
-            w = node['world']
+            w = node.get('world')
             return {
                 'adds': [
                     [
@@ -1071,7 +1085,7 @@ class TableauxRules(object):
 
         def _get_node_targets(self, node, branch):
             s = self.sentence(node)
-            w = node['world']
+            w = node.get('world')
             return {
                 'adds': [
                     [
@@ -1099,7 +1113,7 @@ class TableauxRules(object):
 
         def _get_node_targets(self, node, branch):
             s = self.sentence(node)
-            w = node['world']
+            w = node.get('world')
             return {
                 'adds': [
                     [
@@ -1182,7 +1196,7 @@ class TableauxRules(object):
             si = s.sentence
             r = si.substitute(c, v)
             return [
-                {'sentence': r, 'world': node['world']},
+                {'sentence': r, 'world': node.get('world')},
             ]
 
     class ExistentialNegated(DefaultNodeRule):
@@ -1205,7 +1219,7 @@ class TableauxRules(object):
             return {
                 'adds': [
                     [
-                        {'sentence': sq, 'world': node['world']},
+                        {'sentence': sq, 'world': node.get('world')},
                     ],
                 ],
             }
@@ -1237,7 +1251,7 @@ class TableauxRules(object):
             si = s.sentence
             r = si.substitute(c, v)
             return [
-                {'sentence': r, 'world': node['world']},
+                {'sentence': r, 'world': node.get('world')},
             ]
 
     class UniversalNegated(ExistentialNegated):
@@ -1281,7 +1295,7 @@ class TableauxRules(object):
 
             s  = self.sentence(node)
             si = s.operand
-            w1 = node['world']
+            w1 = node.get('world')
             w2 = branch.new_world()
 
             return {
@@ -1556,7 +1570,7 @@ class TableauxRules(object):
                     continue
                 # Create a node with the substituted param.
                 s_new = Predicated(s.predicate, params)
-                n_new = {'sentence': s_new, 'world': node['world']}
+                n_new = {'sentence': s_new, 'world': node.get('world')}
                 # Check if it already appears on the branch.
                 if branch.has(n_new):
                     continue

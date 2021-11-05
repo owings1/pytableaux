@@ -18,9 +18,9 @@
 #
 # pytableaux - tableaux module
 from lexicals import Argument, Constant
-from utils import EventEmitter, LinkedOrderedSet, StopWatch, get_logic, isrule, \
-    emptyset, typecheck
-from errors import IllegalStateError, NotFoundError, TimeoutError
+from utils import EventEmitter, LinkedOrderedSet, Kwobj, StopWatch, get_logic, \
+    emptyset, typecheck, dictrepr
+from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import Events
 from inspect import isclass
 from itertools import chain
@@ -36,132 +36,223 @@ class TableauxSystem(object):
         return 0
 
     @classmethod
-    def add_rules(cls, tableau, opts):
-        TabRules = tableau.logic.TableauxRules
-        for Rule in TabRules.closure_rules:
-            tableau.add_closure_rule(Rule)
-        for Rules in TabRules.rule_groups:
-            tableau.add_rule_group(Rules)
+    def add_rules(cls, logic, rules):
+        Rules = logic.TableauxRules
+        rules.groups.add(Rules.closure_rules, 'closure')
+        rules.groups.extend(Rules.rule_groups)
 
-def tabrules(tableau):
+def TabRules(tableau):
 
-    class Meta(object):
-        @property
-        def logicname(self):
-            if self.tableau and self.tableau.logic:
-                return self.tableau.logic.name
-        @property
-        def tabstarted(self):
-            self.tableau.current_step > 0
-        def __init__(self):
-            self.tableau = tableau
-    meta = Meta()
+    _tab = tableau
+    _ruleindex = {}
+    _groupindex = {}
+    _stat = Kwobj(len = 0, locked = False)
+
+    def lock(*_): _stat.locked = True
+    _tab.once(Events.AFTER_BRANCH_ADD, lock)
 
     def writes(method):
         def check(*args, **kw):
-            if tableau.current_step > 0:
-                raise IllegalStateError("Tableau is already started.")
+            if _stat.locked:
+                raise IllegalStateError("rules are locked")
             return method(*args, **kw)
         return check
 
-    def newrule(cls):
-        return (cls if isclass(cls) else cls.__class__)(tableau, **tableau.opts)
+    def RuleGroup(name):
 
-    def init_group(rules = None, name = None):
-        priv = []
-        groupname = name
-        class RuleGroup(object):
-            @writes
-            def add(self, rule):
-                priv.append(newrule(rule))
-            @writes
-            def extend(self, rhs):
-                priv.extend(iter(newrule(r) for r in rhs))
-            @writes
-            def clear(self):
-                priv.clear()
+        _name = name
+        _rules = []
+        _index = {}
+
+        def newrule(cls):
+            if not isclass(cls):
+                cls = cls.__class__
+            return cls(_tab, **_tab.opts)
+
+        def lenchange(method):
+            def update(self, *args, **kw):
+                mypre = len(self)
+                try:
+                    return method(self, *args, **kw)
+                finally:
+                    _stat.len += len(self) - mypre
+            return update
+
+        class _RuleGroup(object):
+
             @property
             def name(self):
-                if groupname != None:
-                    return groupname
-                return self.__class__.__name__
-            @writes
-            def __init__(self, rules = None):
-                if rules != None:
-                    self.extend(iter(newrule(r) for r in rules))
-            def __iter__(self):
-                return iter(priv)
-            def __len__(self):
-                return len(priv)
-            def __getitem__(self, key):
-                return priv[key]
-            def __repr__(self):
-                return (len(self), self.name).__repr__()
-        return RuleGroup(rules = rules)
+                return _name
 
-    def init_groups():
-        priv = []
-        class RuleGroups(object):
             @writes
-            def create(self):
-                priv.append(init_group())
+            @lenchange
+            def append(self, rule):
+                rule = newrule(rule)
+                cls = rule.__class__
+                clsname = cls.__name__
+                if clsname in _ruleindex or clsname in _groupindex:
+                    raise DuplicateKeyError(clsname)
+                _rules.append(rule)
+                _ruleindex[clsname] = _index[rule] = rule
+            add = append
+
             @writes
-            def add(self, rules):
-                priv.append(init_group(rules))
+            def extend(self, rules):
+                for rule in rules:
+                    self.add(rule)
+
+            @writes
+            @lenchange
+            def clear(self):
+                for rule in _rules:
+                    del(_ruleindex[rule.__class__.__name__])
+                _rules.clear()
+
+            def __iter__(self):
+                return iter(_rules)
+
+            def __len__(self):
+                return len(_rules)
+
+            def __contains__(self, item):
+                return item in _index
+
+            def __getitem__(self, i):
+                return _rules[i]
+
+            def __getattr__(self, name):
+                if name in _index:
+                    return _index[name]
+                raise AttributeError(name)
+    
+            def __repr__(self):
+                return (self.name, (len(self),)).__repr__()
+
+        return _RuleGroup()
+
+    def RuleGroups():
+
+        _groups = []
+        _index = _groupindex
+
+        class _RuleGroups(object):
+
+            @writes
+            def create(self, name = None):
+                if name != None:
+                    if name in _index or name in _ruleindex:
+                        raise DuplicateKeyError(name)
+                group = RuleGroup(name)
+                _groups.append(group)
+                if name != None:
+                    _index[name] = group
+                return group
+
+            @writes
+            def append(self, rules, name = None):
+                if name == None:
+                    name = getattr(rules, 'name', None)
+                self.create(name).extend(rules)
+            add = append
+
             @writes
             def extend(self, groups):
                 for rules in groups:
                     self.add(rules)
-            def getpriv(self):
-                return priv
+
             @writes
             def clear(self):
-                for group in priv:
+                for group in _groups:
                     group.clear()
-                priv.clear()
-            def __iter__(self):
-                return iter(priv)
-            def __len__(self):
-                return len(priv)
-            def __getitem__(self, key):
-                return iter(priv[key])
-            def __repr__(self):
-                return (len(self), self.__class__.__name__).__repr__()
-        return RuleGroups()
-    
-    closure_rules = init_group()
-    rule_groups = init_groups()
+                _groups.clear()
+                _index.clear()
 
-    class TabRules(object):
+            def __iter__(self):
+                return iter(_groups)
+
+            def __len__(self):
+                return len(_groups)
+
+            def __getitem__(self, i):
+                return _groups[i]
+
+            def __getattr__(self, name):
+                if name in _index:
+                    return _index[name]
+                raise AttributeError(name)
+
+            def __repr__(self):
+                return (self.__class__.__name__, (len(self),)).__repr__()
+
+        return _RuleGroups()
+    
+    groups = RuleGroups()
+
+    class _TabRules(object):
 
         @property
-        def closure(self):
-            return closure_rules
+        def locked(self):
+            return _stat.locked
 
         @property
         def groups(self):
-            return rule_groups
+            return groups
+
+        @writes
+        def append(self, rule):
+            groups.create().append(rule)
+        add = append
+
+        @writes
+        def extend(self, rules):
+            groups.append(rules)
 
         @writes
         def clear(self):
-            closure_rules.clear()
-            rule_groups.clear()
+            groups.clear()
+            _ruleindex.clear()
+
+        def get(self, ref, *d):
+            if ref in _ruleindex:
+                return _ruleindex[ref]
+            if isclass(ref) and ref.__name__ in _ruleindex:
+                return _ruleindex[ref.__name__]
+            if ref.__class__.__name__ in _ruleindex:
+                return _ruleindex[ref.__class__.__name__]
+            if len(d):
+                return d[0]
+            raise NotFoundError(ref)
 
         def __len__(self):
-            return len(closure_rules) + sum(len(g) for g  in rule_groups)
-        def __iter__(self):
-            return chain(closure_rules, chain.from_iterable(rule_groups),)
-        def __repr__(self):
-            return (meta.logicname, self.__class__.__name__).__repr__()
+            return _stat.len
 
-    return TabRules()
+        def __iter__(self):
+            return chain.from_iterable(groups)
+
+        def __contains__(self, item):
+            return item in _ruleindex
+
+        def __getattr__(self, name):
+            if name in _groupindex:
+                return _groupindex[name]
+            if name in _ruleindex:
+                return _ruleindex[name]
+            raise AttributeError(name)
+
+        def __repr__(self):
+            return (
+                self.__class__.__name__, _tab.logic,
+                (len(groups), len(self)),
+            ).__repr__()
+
+    return _TabRules()
 
 class Tableau(EventEmitter):
     """
     A tableau proof.
     """
 
-    default_opts = {
+    opts = {
         'is_group_optim'  : True,
         'is_build_models' : False,
         'build_timeout'   : None,
@@ -170,7 +261,14 @@ class Tableau(EventEmitter):
 
     def __init__(self, logic = None, argument = None, **opts):
 
-        super().__init__()
+        super().__init__(
+            Events.AFTER_BRANCH_ADD,
+            Events.AFTER_BRANCH_CLOSE,
+            Events.AFTER_NODE_ADD,
+            Events.AFTER_NODE_TICK,
+            Events.AFTER_TRUNK_BUILD,
+            Events.BEFORE_TRUNK_BUILD,
+        )
 
         #: The history of rule applications. Each application is a ``dict``
         #: with the following keys:
@@ -200,11 +298,6 @@ class Tableau(EventEmitter):
         self.models = None
         self.stats = None
 
-        # Rules
-        self.__all_rules = list()
-        self.__closure_rules = list()
-        self.__rule_groups = list()
-
         # Timers
         self.__build_timer = StopWatch()
         self.__models_timer = StopWatch()
@@ -212,8 +305,7 @@ class Tableau(EventEmitter):
         self.__tunk_build_timer = StopWatch()
 
         # Options
-        self.opts = dict(self.default_opts)
-        self.opts.update(opts)
+        self.opts = self.opts | opts
 
         self.__branch_list = list()
         self.__trunks = list()
@@ -228,19 +320,14 @@ class Tableau(EventEmitter):
         # Cache for the nodes' branching complexities
         self.__branching_complexities = dict()
 
-        self.register_event(
-            Events.AFTER_BRANCH_ADD,
-            Events.AFTER_BRANCH_CLOSE,
-            Events.AFTER_NODE_ADD,
-            Events.AFTER_NODE_TICK,
-            Events.AFTER_TRUNK_BUILD,
-            Events.BEFORE_TRUNK_BUILD,
-        )
         self.__branch_listeners = {
             Events.AFTER_BRANCH_CLOSE : self.__after_branch_close,
             Events.AFTER_NODE_ADD     : self.__after_node_add,
             Events.AFTER_NODE_TICK    : self.__after_node_tick,
         }
+
+        # Rules
+        self.__rules = TabRules(self)
 
         self.__logic = self.__argument = None
         if logic != None:
@@ -273,8 +360,14 @@ class Tableau(EventEmitter):
         """
         self.__check_not_started()
         self.__logic = get_logic(logic)
-        self.clear_rules()
-        self.System.add_rules(self, self.opts)
+        self.rules.clear()
+        self.System.add_rules(self.logic, self.rules)
+        if self.argument != None:
+            self.build_trunk()
+
+    @property
+    def rules(self):
+        return self.__rules
 
     @property
     def System(self):
@@ -308,7 +401,6 @@ class Tableau(EventEmitter):
         self.__argument = argument
         if self.logic != None:
             self.build_trunk()
-        return self
 
     @property
     def finished(self):
@@ -399,14 +491,13 @@ class Tableau(EventEmitter):
         """
         return self.__open_view
 
-    def build(self, **opts):
+    def build(self):
         """
         Build the tableau.
 
         :return: self
         :rtype: Tableau
         """
-        self.opts.update(opts)
         with self.__build_timer:
             while not self.finished:
                 self.__check_timeout()
@@ -421,7 +512,7 @@ class Tableau(EventEmitter):
         If the tableau is already finished when this method is called, return
         ``False``.
 
-        .. Internally, this calls the ``__next_step()`` method to select the
+        .. Internally, this calls the ``next_step()`` method to select the
         .. next step, and, if non-empty, applies the rule and appends the entry
         .. to the history.
 
@@ -435,7 +526,7 @@ class Tableau(EventEmitter):
         step = entry = None
         with StopWatch() as timer:
             if not self.__is_max_steps_exceeded():
-                step = self.__next_step()
+                step = self.next_step()
                 if not step:
                     self.__premature = False
             if step:
@@ -490,85 +581,6 @@ class Tableau(EventEmitter):
             'parent': parent,
         }
         self.__after_branch_add(branch)
-        return self
-
-    def get_rule(self, ref):
-        """
-        Get a rule instance by name, class, or instance reference. Returns first
-        matching occurrence.
-
-        :param any ref: Rule name, class, or instance reference.
-        :return: The rule instance.
-        :rtype: rules.Rule
-        :raises errors.NotFoundError: if the rule is not found.
-        """
-        for rule in self.__all_rules:
-            if (
-                rule.__class__ == ref or
-                rule.name == ref or
-                rule.__class__.__name__ == ref or
-                rule.__class__ == ref.__class__
-            ):
-                return rule
-        raise NotFoundError(ref)
-
-    def get_rule_at(self, i, n):
-        return self.__rule_groups[i][n]
-
-    def get_rule_group(self, i):
-        return tuple(self.__rule_groups[i])
-
-    def rule_groups(self):
-        return (iter(group) for group in self.__rule_groups)
-
-    def add_closure_rule(self, rule):
-        """
-        Add a closure rule.
-
-        :param class rule: Rule class reference. The rule should be a subclass
-          of :class:`~rules.ClosureRule`
-        :return: self
-        :rtype: Tableau
-        """
-        self.__check_not_started()
-        rule = self.__create_rule(rule)
-        self.__closure_rules.append(rule)
-        self.__all_rules.append(rule)
-        return self
-
-    def closure_rules(self):
-        """
-        Returns an iterator for the list of closure rule instances.
-
-        :rtype: list_iterator(rules.ClosureRule)
-        """
-        return iter(self.__closure_rules)
-
-    def add_rule_group(self, rules):
-        """
-        Add a rule group.
-
-        :param list(class) rules: List of rule class references. Each rule
-          
-        :return: self
-        :rtype: Tableau
-        """
-        self.__check_not_started()
-        group = list(self.__create_rule(rule) for rule in rules)
-        self.__rule_groups.append(group)
-        self.__all_rules.extend(group)
-        return self
-
-    def clear_rules(self):
-        """
-        Clear the rules. Assumes building has not started. Returns self.
-
-        :rtype: Tableau
-        """
-        self.__check_not_started()
-        self.__closure_rules.clear()
-        self.__rule_groups.clear()
-        self.__all_rules.clear()
         return self
 
     def build_trunk(self):
@@ -657,12 +669,13 @@ class Tableau(EventEmitter):
         return branch in self.__branch_dict
 
     def __repr__(self):
-        info = dict()
-        info.update({
-            prop: getattr(self, prop)
-            for prop in ('id', 'current_step', 'finished')
-        })
-        info.update({
+        return dictrepr({
+            self.__class__.__name__: self.id,
+            'branches': len(self),
+            'open': len(self.open),
+            'current_step' : self.current_step,
+            'finished': self.finished,
+        } | {
             key: value
             for key, value in {
                 prop: getattr(self, prop)
@@ -670,7 +683,6 @@ class Tableau(EventEmitter):
             }.items()
             if value
         })
-        return info.__repr__()
 
     ## :===============================:
     ## :       Private Methods         :
@@ -694,7 +706,7 @@ class Tableau(EventEmitter):
             for node in nodes:
                 self.__after_node_add(node, branch)
 
-        branch.add_listeners(self.__branch_listeners)
+        branch.on(self.__branch_listeners)
 
     def __after_branch_close(self, branch):
         branch.closed_step = self.current_step
@@ -714,7 +726,7 @@ class Tableau(EventEmitter):
     # : Util      :
     # :-----------:
 
-    def __next_step(self):
+    def next_step(self):
         """
         Choose the next rule step to perform. Returns the (rule, target)
         pair, or ``None``if no rule can be applied.
@@ -729,14 +741,10 @@ class Tableau(EventEmitter):
     def __get_branch_application(self, branch):
         """
         Find and return the next available rule application for the given open
-        branch. This first checks the closure rules, then iterates over the
-        rule groups. The first non-empty result is returned.
+        branch.
         """
-        res = self.__get_group_application(branch, self.__closure_rules)
-        if res:
-            return res
-        for rules in self.__rule_groups:
-            res = self.__get_group_application(branch, rules)
+        for group in self.rules.groups:
+            res = self.__get_group_application(branch, group)
             if res:
                 return res
 
@@ -802,9 +810,8 @@ class Tableau(EventEmitter):
         group_scores = [rule.group_score(target) for rule, target in results]
         max_group_score = max(group_scores)
         min_group_score = min(group_scores)
-        for i in range(len(results)):
+        for i, (rule, target) in enumerate(results):
             if group_scores[i] == max_group_score:
-                rule, target = results[i]
                 target.update({
                     'group_score'         : max_group_score,
                     'total_group_targets' : len(results),
@@ -836,11 +843,11 @@ class Tableau(EventEmitter):
             'models_duration_ms': self.__models_timer.elapsed(),
             'rules_time_ms'     : sum(
                 sum((rule.search_timer.elapsed(), rule.apply_timer.elapsed()))
-                for rule in self.__all_rules
+                for rule in self.rules
             ),
             'rules' : [
                 self.__compute_rule_stats(rule)
-                for rule in self.__all_rules
+                for rule in self.rules
             ],
         }
 
@@ -892,15 +899,6 @@ class Tableau(EventEmitter):
         if self.current_step > 0:
             raise IllegalStateError("Tableau is already started.")
 
-    def __create_rule(self, rule):
-        if isclass(rule):
-            rule = rule(self, **self.opts)
-        if not isrule(rule):
-            raise TypeError('Invalid rule class: {0}'.format(rule.__class__))
-        if rule.tableau is not self:
-            raise ValueError('Rule {0} not assigned to this tableau.'.format(rule))
-        return rule
-        
     def __result_word(self):
         if self.valid:
             return 'Valid'
@@ -932,7 +930,11 @@ class Branch(EventEmitter):
     """
 
     def __init__(self, parent = None):
-        super().__init__()
+        super().__init__(
+            Events.AFTER_BRANCH_CLOSE,
+            Events.AFTER_NODE_ADD,
+            Events.AFTER_NODE_TICK,
+        )
         # Make sure properties are copied if needed in copy()
         
         self.__parent = parent
@@ -953,12 +955,6 @@ class Branch(EventEmitter):
 
         self.__closed_step = None
         self.__model = None
-
-        self.register_event(
-            Events.AFTER_BRANCH_CLOSE,
-            Events.AFTER_NODE_ADD,
-            Events.AFTER_NODE_TICK,
-        )
 
     @property
     def id(self):
@@ -1211,6 +1207,15 @@ class Branch(EventEmitter):
     def __contains__(self, node):
         return node in self.__nodeset
 
+    def __repr__(self):
+        clsname = self.__class__.__name__
+        return dictrepr({
+            clsname  : self.id,
+            'nodes'  : len(self),
+            'leaf'   : self.leaf.id if self.leaf else None,
+            'closed' : self.closed,
+        })
+
     def __add_to_index(self, node):
         for prop in self.__pidx:
             val = None
@@ -1254,14 +1259,6 @@ class Branch(EventEmitter):
             else:
                 best_index = self
         return best_index
-
-    def __repr__(self):
-        return {
-            'id'     : self.id,
-            'nodes'  : len(self),
-            'leaf'   : self.leaf.id if self.leaf else None,
-            'closed' : self.closed,
-        }.__repr__()
 
 class Node(object):
     """
@@ -1388,13 +1385,17 @@ class Node(object):
     def __contains__(self, item):
         return item in self.props
 
+    def __iter__(self):
+        return iter(self.props)
+
     def __repr__(self):
-        return {
-            'id'     : self.id,
+        clsname = self.__class__.__name__
+        return dictrepr({
+            clsname  : self.id,
             'ticked' : self.ticked,
             'step'   : self.step,
             'parent' : self.parent.id if self.parent else None,
-        }.__repr__()
+        })
 
 class StepEntry(object):
 

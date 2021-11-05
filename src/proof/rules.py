@@ -20,7 +20,7 @@
 # pytableaux - tableaux rules module
 from inspect import isclass
 from lexicals import Predicated, Atomic, Quantified, Operated, Predicate, Variable, operarity
-from utils import EventEmitter, StopWatch, istableau, safeprop, typecheck
+from utils import EventEmitter, StopWatch, dictrepr, istableau, safeprop, typecheck
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper, \
     NodeFilterHelper, Getters, Filters
@@ -36,33 +36,28 @@ class Rule(EventEmitter):
 
     branch_level = 1
 
-    default_opts = {
+    opts = {
         'is_rank_optim' : True
     }
 
     def __init__(self, tableau, **opts):
         if not istableau(tableau):
-            raise TypeError(
-                '`tableau` must be a Tableau, got {}'.format(tableau.__class__)
-            )
-        super().__init__()
+            raise TypeError(tableau.__class__)
+        super().__init__(
+            Events.AFTER_APPLY,
+            Events.BEFORE_APPLY,
+        )
 
         self.search_timer = StopWatch()
         self.apply_timer = StopWatch()
         self.timers = {}
 
-        self.opts = dict(__class__.default_opts)
-        self.opts.update(self.default_opts)
-        self.opts.update(opts)
+        self.opts = self.opts | opts
 
         self.__apply_count = 0
         self.__helpers = []
         self.__tableau = tableau
 
-        self.register_event(
-            Events.AFTER_APPLY,
-            Events.BEFORE_APPLY,
-        )
         for name, helper in self.Helpers:
             self.add_helper(helper, name)
         self.add_timer(*self.Timers)
@@ -172,7 +167,7 @@ class Rule(EventEmitter):
             (Events.BEFORE_APPLY , 'before_apply'),
         ):
             if hasattr(helper, meth):
-                self.add_listener(event, getattr(helper, meth))
+                self.on(event, getattr(helper, meth))
         for event, meth in (
             (Events.AFTER_BRANCH_ADD   , 'after_branch_add'),
             (Events.AFTER_BRANCH_CLOSE , 'after_branch_close'),
@@ -182,7 +177,7 @@ class Rule(EventEmitter):
             (Events.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
         ):
             if hasattr(helper, meth):
-                self.tableau.add_listener(event, getattr(helper, meth))
+                self.tableau.on(event, getattr(helper, meth))
         self.__helpers.append(helper)
         return helper
 
@@ -243,7 +238,7 @@ class Rule(EventEmitter):
     # Other
 
     def __repr__(self):
-        return self.name
+        return dictrepr({'class': self.__class__, 'name': self.name})
 
     # Private Util
 
@@ -359,6 +354,9 @@ class Target(object):
         else:
             raise AttributeError(name)
 
+    def __repr__(self):
+        return (self.__class__.__name__, ('type', self.type)).__repr__()
+
     def update(self, obj):
         for k in obj:
             self[k] = obj[k]
@@ -389,7 +387,7 @@ class ClosureRule(Rule):
         ('tracker', NodeTargetCheckHelper),
     )
 
-    default_opts = {
+    opts = {
         'is_rank_optim' : False
     }
 
@@ -453,13 +451,13 @@ class PotentialNodeRule(Rule):
         super().__init__(*args, **opts)
         self.__potential_nodes = dict()
         self.__node_applications = dict()
-        self.tableau.add_listeners({
+        self.tableau.on({
             Events.AFTER_BRANCH_ADD   : self.__after_branch_add,
             Events.AFTER_BRANCH_CLOSE : self.__after_branch_close,
             Events.AFTER_NODE_ADD     : self.__after_node_add,
             Events.AFTER_NODE_TICK    : self.__after_node_tick,
         })
-        self.add_listener(Events.AFTER_APPLY, self.__after_apply)
+        self.on(Events.AFTER_APPLY, self.__after_apply)
 
     # Implementation
 
@@ -731,7 +729,7 @@ class NewConstantStoppingRule(FilterNodeRule):
         """
         Implements ``PotentialNodeRule``.
         """
-        if not self.__should_apply(branch, node['world']):
+        if not self.__should_apply(branch, node.get('world')):
             if not self.quit_flagger.has_flagged(branch):
                 return self.__get_flag_target(branch)
             return
@@ -804,7 +802,7 @@ class AllConstantsStoppingRule(FilterNodeRule):
             should_apply = self.__should_apply(node, branch)
 
         if not should_apply:
-            if self.__should_flag(branch, node['world']):
+            if self.__should_flag(branch, node.get('world')):
                 return [self.__get_flag_target(branch)]
             return
 
@@ -832,7 +830,7 @@ class AllConstantsStoppingRule(FilterNodeRule):
         return targets
 
     def __should_apply(self, node, branch):
-        if self.max_constants.max_constants_exceeded(branch, node['world']):
+        if self.max_constants.max_constants_exceeded(branch, node.get('world')):
             return False
         # Apply if there are no constants on the branch
         if not branch.constants_count:

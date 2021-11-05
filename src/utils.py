@@ -19,9 +19,10 @@
 #
 # pytableaux - utils module
 from builtins import ModuleNotFoundError
-from errors import IllegalStateError
+from errors import DuplicateKeyError, IllegalStateError
 from importlib import import_module
 from inspect import isclass
+from itertools import islice
 from time import time
 from types import ModuleType
 from past.builtins import basestring
@@ -125,6 +126,17 @@ def nowms():
 def cat(*args):
     return ''.join(args)
 
+def wrparens(*args):
+    return cat('(', *args, ')')
+
+def dictrepr(d, limit = 10):
+    n = min(limit, len(d))
+    pairs = (
+        cat(k, '=', d[k].__name__ if isclass(d[k]) else d[k].__repr__())
+        for k in islice(d, n)
+    )
+    return wrparens(', '.join(pairs))
+
 def isstr(obj):
     return isinstance(obj, basestring)
 
@@ -203,58 +215,191 @@ def lcurry(func, largs):
             return func(*largs, *rargs)
     return curried()
 
+class Kwobj(object):
+
+    def __init__(self, *dicts, **kw):
+        for d in dicts:
+            self.__dict__.update(d)
+        self.__dict__.update(kw)
+
+    def __repr__(self):
+        return dictrepr(self.__dict__)
+
 class EventEmitter(object):
 
-    def __init__(self):
-        self.__listeners = dict()
+    @property
+    def events(self):
+        return self.__events
 
-    def add_listener(self, event, callback):
-        if not callable(callback):
-            raise TypeError('callback argument must be callable')
-        self.__listeners[event].append(callback)
+    def on(self, *args, **kw):
+        self.events.on(*args, **kw)
         return self
 
-    def add_listeners(self, *args, **kw):
-        for arg in args:
-            for event, callback in arg.items():
-                self.add_listener(event, callback)
-        for event, callback in kw.items():
-            self.add_listener(event, callback)
+    def once(self, *args, **kw):
+        self.events.on(*args, **kw)
         return self
 
-    def deregister_all_events(self):
-        return self.deregister_event(*self.__listeners)
-
-    def deregister_event(self, *events):
-        for event in events:
-            del(self.__listeners[event])
+    def off(self, *args, **kw):
+        self.events.on(*args, **kw)
         return self
 
     def emit(self, event, *args, **kw):
-        for callback in self.__listeners[event]:
-            callback(*args, **kw)
-        return self
+        return self.events.emit(event, *args, **kw)
 
-    def register_event(self, *events):
-        for event in events:
-            if event not in self.__listeners:
-                self.__listeners[event] = list()
-        return self
+    def __init__(self, *events):
+        self.__events = __class__.Events(*events)
 
-    def remove_listener(self, event, callback):
-        idx = self.__listeners[event].index(callback)
-        self.__listeners[event].pop(idx)
-        return self
+    class Listener(object):
+        def __init__(self, cb, once = False):
+            self.cb = cb
+            self.once = once
+        def __call__(self, *args, **kw):
+            return self.cb(*args, **kw)
+        def __eq__(self, other):
+            return self.cb == other or (
+                isinstance(other, __class__) and
+                self.cb == other.cb
+            )
+        def __hash__(self):
+            return hash(self.cb)
 
-    def remove_listeners(self, *events):
-        for event in events:
-            self.__listeners[event].clear()
-        return self
+    @staticmethod
+    def Events(*events):
 
-    def remove_all_listeners(self):
-        for event in self.__listeners:
-            self.__listeners[event].clear()
-        return self
+        def Event(event):
+            base = LinkedOrderedSet()
+            Item = EventEmitter.Listener
+
+            def creates(method):
+                def create(self, cb, once = False):
+                    if isinstance(cb, Item):
+                        cb = cb.cb
+                    if not callable(cb):
+                        raise TypeError(cb.__class__)
+                    item = Item(cb, once)
+                    method(self, item)
+                return create
+    
+            class _Event(object):
+
+                @property
+                def name(self):
+                    return event
+
+                @creates
+                def append(self, item):
+                    base.add(item)
+
+                @creates
+                def prepend(self, item):
+                    base.prepend(item)
+
+                def extend(self, cbs, once = False):
+                    for cb in cbs:
+                        self.append(cb, once = once)
+
+                def emit(self, *args, **kw):
+                    count = 0
+                    for listener in base:
+                        try:
+                            listener(*args, **kw)
+                            count += 1
+                        finally:
+                            if listener.once:
+                                base.remove(listener)
+                    return count
+
+                def __repr__(self):
+                    return (Event.__name__, self.name, len(self)).__repr__()
+
+                def __getattr__(self, name):
+                    if hasattr(base, name):
+                        return getattr(base, name)
+                    raise AttributeError(name)
+
+            return _Event()
+
+        keytypes = (str, int, basestring)
+        def checkkey(*keys):
+            for key in keys:
+                typecheck(key, keytypes, 'event')
+        def evargs(method):
+            def normalize(self, *args, **kw):
+                if kw:
+                    if args: raise TypeError()
+                    return normalize(self, kw)
+                if not args: raise TypeError()
+                arg = args[0]
+                if isinstance(arg, keytypes):
+                    event, *cbs = args
+                    return method(self, event, *cbs)
+                if len(args) > 1: raise TypeError()
+                if isinstance(arg, dict):
+                    ret = None
+                    for event, cbs in arg.items():
+                        if not isinstance(cbs, (tuple, list)):
+                            cbs = (cbs,)
+                        ret = method(self, event, *cbs)
+                    return ret
+                raise TypeError()
+            return normalize
+
+        base = {}
+
+        class _Events(object):
+
+            def create(self, *events):
+                checkkey(*events)
+                for event in events:
+                    if event not in base:
+                        base[event] = Event(event)
+                return self
+
+            def delete(self, event):
+                base[event].clear()
+                del(base[event])
+                return self
+
+            def clear(self):
+                for event in base:
+                    self.remove(event)
+                base.clear()
+                return self
+
+            @evargs
+            def on(self, event, *cbs):
+                base[event].extend(cbs)
+                return self
+
+            @evargs
+            def once(self, event, *cbs):
+                base[event].extend(cbs, once = True)
+                return self
+
+            @evargs
+            def off(self, event, *cbs):
+                ev = base[event]
+                for cb in cbs:
+                    ev.discard(cb)
+                return self
+
+            def emit(self, event, *args, **kw):
+                return base[event].emit(*args, **kw)
+
+            get = base.get
+
+            def __init__(self, *names):
+                self.create(*names)
+
+            __getitem__  = base.__getitem__
+            __contains__ = base.__contains__
+            __len__  = base.__len__
+            __iter__ = base.__iter__
+
+            def __repr__(self):
+                return (EventEmitter.__name__, len(self)).__repr__()
+
+        return _Events(*events)
 
 class CacheNotationData(object):
 
@@ -400,11 +545,11 @@ class LinkedOrderedSet(object):
         def __repr__(self):
             return (self.item).__repr__()
 
-    class Common(object):
+    class Helpers(object):
         def add(method):
             def prep(self, item):
                 if item in self:
-                    raise KeyError('Duplicate Key {}'.format(item))
+                    raise DuplicateKeyError(item)
 
                 entry = self._idx[item] = self.LinkEntry(item)
 
@@ -433,7 +578,7 @@ class LinkedOrderedSet(object):
                     return obj.last()
             return viewer()
 
-    @Common.add
+    @Helpers.add
     def append(self, entry):
         if self._first == self._last:
             self._first.next = entry
@@ -446,7 +591,7 @@ class LinkedOrderedSet(object):
         for item in items:
             self.append(item)
 
-    @Common.add
+    @Helpers.add
     def preprend(self, entry):
         if self._first == self._last:
             self._last.prev = entry
@@ -496,7 +641,7 @@ class LinkedOrderedSet(object):
         return self._last.item if self._last else None
 
     def view(self):
-        return self.Common.view(self)
+        return self.Helpers.view(self)
 
     def __init__(self):
         self._first = self._last = None
@@ -507,6 +652,9 @@ class LinkedOrderedSet(object):
 
     def __contains__(self, item):
         return item in self._idx
+
+    def __getitem__(self, key):
+        return self._idx[key].item
 
     def __iter__(self):
         cur = self._first

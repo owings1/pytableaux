@@ -27,6 +27,7 @@ class AdzHelper(object):
     def __init__(self, rule):
         self.rule = rule
         self.Node = rule.Node
+        self.tableau = rule.tableau
 
     def apply_to_target(self, target):
         branch = target['branch']
@@ -45,7 +46,7 @@ class AdzHelper(object):
         close_count = 0
         for nodes in target['adds']:
             nodes = [self.Node(node) for node in nodes]
-            for rule in self.rule.tableau.closure_rules():
+            for rule in self.tableau.rules.closure:
                 if rule.nodes_will_close_branch(nodes, target['branch']):
                     close_count += 1
                     break
@@ -510,7 +511,7 @@ class MaxConstantsTracker(object):
 
     def after_node_add(self, node, branch):
         if node.has('sentence'):
-            world = node['world']
+            world = node.get('world')
             if world == None:
                 world = 0
             if world not in self.world_constants[branch.id]:
