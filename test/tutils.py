@@ -1,6 +1,6 @@
 import examples
 from inspect import isclass
-from lexicals import Argument, Predicates
+from lexicals import Argument, Predicates, create_lexwriter
 from parsers import notations as parser_notns, create_parser, parse_argument, parse
 from proof.tableaux import Tableau, Branch, Node
 from utils import get_logic, isint
@@ -67,12 +67,14 @@ class BaseSuite(object):
     notn = 'polish'
     logic = 'CFOL'
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
+    lw = create_lexwriter(notn='standard')
 
     @classmethod
     def dynamic(cls, attr, val):
         if attr == 'logic':
             cls.logic = get_logic(val)
-
+    def set_logic(self, logic):
+        self.logic = get_logic(logic)
     def crparser(self, *args, **kw):
         for val in args:
             if isinstance(val, Predicates):
@@ -118,6 +120,10 @@ class BaseSuite(object):
             yield Node(self._gennode(i, s, **kw))
 
     def parg(self, conc, *prems, **kw):
+        if isinstance(conc, Argument):
+            return conc
+        if conc in examples.args:
+            return examples.argument(conc)
         if 'notn' not in kw:
             kw['notn'] = self.notn
         premises = []
@@ -190,20 +196,20 @@ class BaseSuite(object):
     def rule_tab(self, rule, bare = False, **kw):
         manual = False
         try:
-            rule = self.tab().get_rule(rule)
+            t = self.tab()
+            rule = t.rules.get(rule)
         except ValueError:
-            rule = self.tab().add_rule_group([rule]).get_rule(rule)
+            t = self.tab()
+            t.rules.add(rule)
+            rule = t.rules.get(rule)
             manual = True
         cls = rule.__class__
         tab = self.tab(**kw)
-        if bare:
-            tab.clear_rules()
         if bare or manual:
-            if rule.is_closure:
-                tab.add_closure_rule(cls)
-            else:
-                tab.add_rule_group((cls,))
-        rule = tab.get_rule(cls)
+            if bare:
+                tab.rules.clear()
+            tab.rules.add(cls)
+        rule = tab.rules.get(cls)
         return (rule, tab)
 
     def rule_eg(self, rule, step = True, **kw):
@@ -223,6 +229,5 @@ class BaseSuite(object):
     @property
     def Model(self):
         return self.logic.Model
-
 
 

@@ -19,6 +19,9 @@ class BoundVariableError(ParseError):
 class UnknownNotationError(ParseError):
     pass
 
+# KeyErrors
+class DuplicateKeyError(KeyError):
+    pass
 # ValueErrors
 class NotFoundError(ValueError):
     pass

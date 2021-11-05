@@ -1163,6 +1163,9 @@ class Argument(object):
     def __ne__(self, other):
         return not isinstance(other, self.__class__) or hash(self) != hash(other)
 
+    def __iter__(self):
+        return iter((self.conclusion, self.premises))
+
 class LexWriter(object):
 
     _defaults = {}

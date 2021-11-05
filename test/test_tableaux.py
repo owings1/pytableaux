@@ -15,7 +15,7 @@ from .tutils import BaseSuite, dynattrs, using
 class TestTableauxSystem(object):
 
     def test_build_trunk_base_not_impl(self):
-        proof = Tableau(None, None)
+        proof = Tableau()
         with raises(NotImplementedError):
             TabSys.build_trunk(proof, None)
 
@@ -25,30 +25,28 @@ def mock_sleep_5ms():
 def exarg(*args, **kw):
     return examples.argument(*args, **kw)
 
-class TestTableau(object):
+@using(logic = 'CPL')
+class TestTableau(BaseSuite):
 
     def test_step_returns_false_when_finished(self):
-        res = Tableau(None).finish().step()
-        assert res == False
+        assert Tableau().finish().step() == False
 
     def test_build_trunk_already_built_error(self):
-        proof = Tableau('cpl', exarg('Addition'))
+        tab = self.tab('Addition')
         with raises(IllegalStateError):
-            proof.build_trunk()
+            tab.build_trunk()
 
     def test_repr_contains_finished(self):
-        proof = Tableau('cpl', exarg('Addition'))
-        res = proof.__repr__()
-        assert 'finished' in res
+        tab = self.tab('Addition')
+        assert 'finished' in tab.__repr__()
 
     def test_build_premature_max_steps(self):
-        proof = Tableau('cpl', exarg('Material Modus Ponens'), max_steps=1)
-        proof.build()
-        assert proof.premature
+        tab = self.tab('Material Modus Ponens', max_steps=1)
+        assert tab.premature
 
     def test_construct_sets_is_rank_optim_option(self):
         proof = Tableau('cpl', is_rank_optim=False)
-        rule = proof.get_rule('Conjunction')
+        assert proof.rules.get('Conjunction')
         assert not proof.opts['is_rank_optim']
 
     def test_timeout_1ms(self):
@@ -58,8 +56,7 @@ class TestTableau(object):
             proof.build()
 
     def test_finish_empty_sets_build_duration_ms_0(self):
-        proof = Tableau(None)
-        proof.finish()
+        proof = Tableau().finish()
         assert proof.stats['build_duration_ms'] == 0
 
     def test_add_closure_rule_instance_mock(self):
@@ -70,8 +67,9 @@ class TestTableau(object):
                 return True
             def node_will_close_branch(self, node, branch):
                 return True
-        tab = Tableau(None)
-        tab.add_closure_rule(MockRule).branch()
+        tab = Tableau()
+        tab.rules.add(MockRule)
+        tab.branch()
         assert len(tab.open) == 1
         tab.build()
         assert len(tab.open) == 0
@@ -83,9 +81,9 @@ class TestTableau(object):
 
     def test_getrule_returns_arg_if_rule_instance(self):
         proof = Tableau('CPL')
-        rule = proof.get_rule('Conjunction')
+        rule = proof.rules.get('Conjunction')
         assert isinstance(rule, Rule)
-        r = proof.get_rule(rule)
+        r = proof.rules.get(rule)
         assert isinstance(r, Rule)
         assert r is rule
 
@@ -98,17 +96,19 @@ class TestTableau(object):
         class MockRule(Rule):
             def __init__(self, *args, **opts):
                 super().__init__(*args, **opts)
-                self.tableau.add_listener(Events.AFTER_BRANCH_ADD, self.__after_branch_add)
+                self.tableau.on(Events.AFTER_BRANCH_ADD, self.__after_branch_add)
 
             def __after_branch_add(self, branch):
                 self._checkbranch = branch
                 self._checkparent = branch.parent
         b = Branch().add({'test': True})
-        proof = Tableau(None).add_rule_group([MockRule]).add(b)
+        tab = Tableau()
+        tab.rules.add(MockRule)
+        tab.add(b)
         # proof
         
         # proof.add(b)
-        rule = proof.get_rule(MockRule)
+        rule = tab.rules.get(MockRule)
         assert rule._checkbranch is b
         assert rule._checkparent == None
     #def test_add_rule_group_instance_mock(self):
@@ -117,15 +117,10 @@ class TestTableau(object):
 class TestBranch(object):
 
     def test_new_world_returns_w0(self):
-        b = Branch()
-        res = b.new_world()
-        assert res == 0
+        assert Branch().new_world() == 0
 
     def test_new_constant_returns_m(self):
-        b = Branch()
-        res = b.new_constant()
-        check = Constant(0, 0)
-        assert res == check
+        assert Branch().new_constant() == Constant(0, 0)
 
     def test_new_constant_returns_m1_after_s0(self):
         b = Branch()
@@ -140,24 +135,18 @@ class TestBranch(object):
         assert res == check
 
     def test_repr_contains_closed(self):
-        b = Branch()
-        res = b.__repr__()
-        assert 'closed' in res
+        assert 'closed' in Branch().__repr__()
 
     def test_has_all_true_1(self):
         b = Branch()
-        s1 = Atomic(0, 0)
-        s2 = Atomic(1, 0)
-        s3 = Atomic(2, 0)
+        s1, s2, s3 = Atomic.gen(3)
         b.extend([{'sentence': s1}, {'sentence': s2}, {'sentence': s3}])
         check = [{'sentence': s1, 'sentence': s2}]
         assert b.has_all(check)
 
     def test_has_all_false_1(self):
         b = Branch()
-        s1 = Atomic(0, 0)
-        s2 = Atomic(1, 0)
-        s3 = Atomic(2, 0)
+        s1, s2, s3 = Atomic.gen(3)
         b.extend([{'sentence': s1}, {'sentence': s3}])
         check = [{'sentence': s1, 'sentence': s2}]
         assert not b.has_all(check)
@@ -180,7 +169,7 @@ class TestBranch(object):
     #     assert s1.predicate in b.predicates()
 
     def test_branch_has_world1(self):
-        proof = Tableau(None)
+        proof = Tableau()
         branch = proof.branch().add({'world1': 4, 'world2': 1})
         assert branch.has({'world1': 4})
 
@@ -193,15 +182,15 @@ class TestBranch(object):
 
             def __init__(self, *args, **opts):
                 super().__init__(*args, **opts)
-                self.tableau.add_listener(Events.AFTER_NODE_ADD, self.__after_node_add)
+                self.tableau.on(Events.AFTER_NODE_ADD, self.__after_node_add)
 
             def __after_node_add(self, node, branch):
                 self.should_be = branch.has({'world1': 7})
                 self.shouldnt_be = branch.has({'world1': 6})
 
-        proof = Tableau(None)
-        proof.add_rule_group([MyRule])
-        rule = proof.get_rule(MyRule)
+        proof = Tableau()
+        proof.rules.add(MyRule)
+        rule = proof.rules.MyRule
         proof.branch().add({'world1': 7})
 
         assert rule.should_be
@@ -326,34 +315,35 @@ class TestNode(object):
 class TestRule(object):
 
     def test_base_not_impl_various(self):
-        rule = Rule(Tableau(None, None))
+        rule = Rule(Tableau())
         with raises(NotImplementedError):
             rule._get_targets(None)
 
     def test_base_repr_equals_rule(self):
-        rule = Rule(Tableau(None, None))
+        rule = Rule(Tableau())
         res = rule.__repr__()
-        assert res == 'Rule'
+        assert 'Rule' in res
 
 class TestClosureRule(object):
 
     def test_applies_to_branch_not_impl(self):
-        rule = ClosureRule(Tableau(None, None))
+        rule = ClosureRule(Tableau())
         with raises(NotImplementedError):
             rule.applies_to_branch(None)
 
 class TestNodeRule(object):
 
     def test_not_impl_various(self):
-        rule = PotentialNodeRule(Tableau(None, None))
+        rule = PotentialNodeRule(Tableau())
         with raises(NotImplementedError):
             rule.apply_to_node_target(None, None, None)
 
 class TestFilterNodeRule(object):
 
     def proof_with_rule(self, Rule):
-        proof = Tableau(None).add_rule_group([Rule])
-        return (proof, proof.get_rule(Rule))
+        proof = Tableau()
+        proof.rules.add(Rule)
+        return (proof, proof.rules.get(Rule))
         
     def test_applies_to_empty_nodes_when_no_properties_defined(self):
 

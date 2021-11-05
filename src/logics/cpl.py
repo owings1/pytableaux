@@ -79,7 +79,11 @@ class TableauxRules(object):
         A branch is closed if a sentence and its negation appear on the branch.
         """
         modal = False
-
+        def _find_closing_node(self, node, branch):
+            if node.has('sentence'):
+                return branch.find({
+                    'sentence' : node['sentence'].negative()
+                })
     class SelfIdentityClosure(k.TableauxRules.SelfIdentityClosure):
         """
         A branch is closed if a sentence of the form :s:`~ a = a` appears on the branch.

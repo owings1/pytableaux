@@ -459,7 +459,7 @@ class Helper(object):
         lw = self.lwtrunk
         pw = self.pwtrunk
         proof = Tableau(lgc)
-        proof.get_rule_at(0, 0).add_helper(EllipsisExampleHelper)
+        proof.rules.groups[0][0].add_helper(EllipsisExampleHelper)
         proof.argument = arg
         proof.finish()
         return cat(
@@ -476,7 +476,7 @@ class Helper(object):
         """
         lgc = get_logic(lgc or rule)
         proof = Tableau(lgc)
-        rule = proof.get_rule(rule)
+        rule = proof.rules.get(rule)
         rule.add_helper(EllipsisExampleHelper)
         pw = self.pwclosure if rule.is_closure else self.pwrule
         b = proof.branch().extend(rule.example_nodes())

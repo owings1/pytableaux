@@ -231,8 +231,8 @@ class TestFDE(BaseSuite):
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
         arg = parse_argument('a', premises=['NLa', 'b'])
-        proof = Tableau(self.logic, arg)
-        proof.build(is_build_models=True)
+        proof = Tableau(self.logic, arg, is_build_models=True)
+        proof.build()
         model = proof[0].model
         assert model.value_of(parse('a')) == 'F'
         assert model.value_of(parse('La')) == 'F'
@@ -352,7 +352,7 @@ class TestK3W(BaseSuite):
         assert tbl['outputs'][8] == 'T'
 
     def test_rule_ConjunctionNegatedUndesignated_step(self):
-        proof = Tableau(self.logic)
+        proof = self.tab()
         proof.branch().add({'sentence': parse('NKab'), 'designated': False})
         proof.step()
         b1, b2, b3 = proof
@@ -364,7 +364,7 @@ class TestK3W(BaseSuite):
         assert b3.has({'sentence': parse('b'), 'designated': True})
 
     def test_rule_MaterialBiconditionalDesignated_step(self):
-        proof = Tableau(self.logic)
+        proof = self.tab()
         branch = proof.branch()
         branch.add({'sentence': parse('Eab'), 'designated': True})
         proof.step()
@@ -413,7 +413,7 @@ class TestK3W(BaseSuite):
         self.invalid_tab('AUabNUab')
 
     def test_optimize1(self):
-        proof = Tableau(self.logic)
+        proof = self.tab()
         proof.branch().extend([
             {'sentence': parse('ANaUab'), 'designated': False},
             {'sentence': parse('NANaUab'), 'designated': False},
@@ -644,7 +644,7 @@ class TestLP(BaseSuite):
     def test_case_bad_rule_neg_bicond_undes(self):
         arg = self.parg('NBab', 'NBab')
         proof = Tableau(self.logic, arg)
-        rule = proof.get_rule('BiconditionalNegatedUndesignated')
+        rule = proof.rules.BiconditionalNegatedUndesignated
         assert rule.get_target(proof[0])
 
     def test_invalid_lnc(self):
@@ -1121,7 +1121,7 @@ class TestCPL(BaseSuite):
             {'extend': s1, 'world': 0},
             {'sentence': s2, 'world': 0},
         ])
-        rule = proof.get_rule('IdentityIndiscernability')
+        rule = proof.rules.IdentityIndiscernability
         assert not rule.get_target(branch)
 
     def test_model_branch_deny_antec(self):
@@ -1454,7 +1454,7 @@ class TestK(BaseSuite):
             {'sentence': self.p('Imm'), 'world': 0},
             {'sentence': self.p('Fs'), 'world': 0},
         ))
-        assert not tab.get_rule('IdentityIndiscernability').get_target(b)
+        assert not tab.rules.IdentityIndiscernability.get_target(b)
 
     def test_model_branch_proof_deny_antec(self):
         proof = self.tab('Denying the Antecedent')
@@ -1490,7 +1490,7 @@ class TestK(BaseSuite):
     def test_model_value_of_atomic_unassigned(self):
         model = self.logic.Model()
         s = Atomic(0, 0)
-        res = model.value_of_atomic(s, 'F')
+        res = model.value_of_atomic(s)
         assert res == model.unassigned_value
 
     def test_model_set_predicated_value1(self):
@@ -1828,7 +1828,7 @@ class TestD(BaseSuite):
 
     def test_rule_Serial_not_applies_to_branch_empty(self):
         tab = self.tab()
-        rule = tab.get_rule('Serial')
+        rule = tab.rules.Serial
         assert not rule.get_target(tab.branch())
 
     def test_verify_core_bugfix_branch_should_not_have_w1_with_more_than_one_w2(self):
@@ -2021,9 +2021,10 @@ class TestMaxConstantsTracker(BaseSuite):
     logic = get_logic('S5')
 
     def test_argument_trunk_two_qs_returns_3(self):
-        proof = self.tab().add_rule_group([MtrTestRule])
+        proof = self.tab()
+        proof.rules.add(MtrTestRule)
         proof.argument = self.parg('NLVxNFx', 'LMSxFx')
-        rule = proof.get_rule(MtrTestRule)
+        rule = proof.rules.MtrTestRule
         branch = proof[0]
         assert rule.mtr._compute_max_constants(branch) == 3
 

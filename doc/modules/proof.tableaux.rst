@@ -24,6 +24,8 @@ Tableaux Module
 
         .. autoattribute:: logic
 
+        .. autoattribute:: rules
+
         .. autoattribute:: premature
 
         .. autoattribute:: open
@@ -41,16 +43,6 @@ Tableaux Module
         .. automethod:: branch
 
         .. automethod:: add
-
-        .. automethod:: get_rule
-
-        .. automethod:: closure_rules
-
-        .. automethod:: add_closure_rule
-
-        .. automethod:: add_rule_group
-
-        .. automethod:: clear_rules
         
         .. automethod:: build_trunk
 
