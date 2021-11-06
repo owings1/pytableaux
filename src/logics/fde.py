@@ -299,9 +299,11 @@ class Model(BaseModel):
         return self
 
     def _collect_node(self, node):
-        self.predicates.update(node.predicates())
-        self.all_atomics.update(node.atomics())
-        self.constants.update(node.constants())
+        s = node.get('sentence')
+        if s:
+            self.predicates.update(s.predicates)
+            self.all_atomics.update(s.atomics)
+            self.constants.update(s.constants)
 
     def finish(self):
         # TODO: consider augmenting the logic with Identity and Existence predicate
@@ -338,9 +340,9 @@ class Model(BaseModel):
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants, as well
         # as other lexical items.
-        self.predicates.update(sentence.predicates())
-        self.all_atomics.update(sentence.atomics())
-        self.constants.update(sentence.constants())
+        self.predicates.update(sentence.predicates)
+        self.all_atomics.update(sentence.atomics)
+        self.constants.update(sentence.constants)
         self.opaques[sentence] = value
         
     def set_atomic_value(self, sentence, value):
@@ -520,15 +522,16 @@ class TableauxSystem(BaseSystem):
 
     @classmethod
     def branching_complexity(cls, node):
-        if not node.has('sentence'):
+        sentence = node.get('sentence')
+        if not sentence:
             return 0
-        sentence = node['sentence']
-        operators = list(sentence.operators())
-        last_is_negated = False
         designated = node['designated']
+        last_is_negated = False
         complexity = 0
-        while len(operators):
-            operator = operators.pop(0)
+        # operators = list(sentence.operators)
+        # while len(operators):
+        #     operator = operators.pop(0)
+        for operator in sentence.operators:
             if operator == 'Negation':
                 #if last_is_negated:
                 #    last_is_negated = False

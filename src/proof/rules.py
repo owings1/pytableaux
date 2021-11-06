@@ -20,11 +20,11 @@
 # pytableaux - tableaux rules module
 from inspect import isclass
 from lexicals import Predicated, Atomic, Quantified, Operated, Predicate, Variable, operarity
-from utils import EventEmitter, StopWatch, dictrepr, istableau, safeprop, typecheck
+from utils import StopWatch, dictrepr, istableau, safeprop, typecheck
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper, \
     NodeFilterHelper, Getters, Filters
-from events import Events
+from events import Events, EventEmitter
 
 class Rule(EventEmitter):
     """
@@ -619,7 +619,7 @@ class FilterNodeRule(PotentialNodeRule):
         if self.ticked != None and self.ticked != branch.is_ticked(node):
             return False
         if self.modal != None and self.modal != node.is_modal:
-            # modal = len(node.worlds()) > 0
+            # modal = len(node.worlds) > 0
             # if self.modal != modal:
                 return False
         sentence = operator = quantifier = predicate = None

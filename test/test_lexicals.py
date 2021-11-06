@@ -179,14 +179,10 @@ class TestPredicates(object):
         assert res == s
 
     def test_atomic_constants_empty(self):
-        s = Atomic(0, 0)
-        res = s.constants()
-        assert len(res) == 0
+        assert len(Atomic(0, 0).constants) == 0
 
     def test_atomic_variables_empty(self):
-        s = Atomic(0, 0)
-        res = s.variables()
-        assert len(res) == 0
+        assert len(Atomic(0, 0).variables) == 0
 
     def test_atomic_next_a0_to_b0(self):
         s = Atomic(0, 0)
@@ -258,7 +254,7 @@ class TestPredicates(object):
 
     def test_sentence_operators_collection(self):
         s = parse('KAMVxJxNbTNNImn')
-        ops = s.operators()
+        ops = s.operators
         assert len(ops) == 7
         assert ','.join(ops) == 'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
 

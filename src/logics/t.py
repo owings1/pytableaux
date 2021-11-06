@@ -85,7 +85,7 @@ class TableauxRules(object):
         def is_potential_node(self, node, branch):
             ret = None
             with self.timers['is_potential_node']:
-                for w in node.worlds():
+                for w in node.worlds:
                     if not branch.has_access(w, w):
                         ret = True
                         break
@@ -95,7 +95,7 @@ class TableauxRules(object):
             # why apply when necessity will not apply
             if not self.__should_apply(branch):
                 return
-            for world in node.worlds():
+            for world in node.worlds:
                 if not branch.has_access(world, world):
                     return {'world': world}
             return False

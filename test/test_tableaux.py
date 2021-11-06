@@ -116,8 +116,8 @@ class TestTableau(BaseSuite):
 
 class TestBranch(object):
 
-    def test_new_world_returns_w0(self):
-        assert Branch().new_world() == 0
+    def test_next_world_returns_w0(self):
+        assert Branch().next_world == 0
 
     def test_new_constant_returns_m(self):
         assert Branch().new_constant() == Constant(0, 0)
@@ -157,7 +157,7 @@ class TestBranch(object):
     #     s2 = Atomic(1, 0).negate()
     #     s3 = Atomic(1, 0)
     #     b.extend([{'sentence': s1}, {'sentence': s2}])
-    #     res = b.atomics()
+    #     res = b.atomics
     #     assert s1 in res
     #     assert s3 in res
 
@@ -302,7 +302,7 @@ class TestNode(object):
 
     def test_worlds_contains_worlds(self):
         node = Node({'worlds': set([0, 1])})
-        res = node.worlds()
+        res = node.worlds
         assert 0 in res
         assert 1 in res
 

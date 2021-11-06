@@ -26,6 +26,7 @@ from itertools import islice
 from time import time
 from types import ModuleType
 from past.builtins import basestring
+emptyset = frozenset()
 
 def get_module(ref, package = None):
 
@@ -118,8 +119,6 @@ def condcheck(cond, msg = None, name = 'parameter', err = ValueError):
         msg = 'Invalid value for `{0}`'.format(name)
     raise err(msg)
 
-emptyset = frozenset()
-
 def nowms():
     return int(round(time() * 1000))
 
@@ -130,12 +129,13 @@ def wrparens(*args):
     return cat('(', *args, ')')
 
 def dictrepr(d, limit = 10):
-    n = min(limit, len(d))
     pairs = (
-        cat(k, '=', d[k].__name__ if isclass(d[k]) else d[k].__repr__())
-        for k in islice(d, n)
+        cat(k, '=', v.__name__
+        if isclass(v) else v.__repr__())
+        for k,v in islice(d.items(), limit)
     )
     return wrparens(', '.join(pairs))
+def kwrepr(**kw): return dictrepr(kw)
 
 def isstr(obj):
     return isinstance(obj, basestring)
@@ -215,6 +215,40 @@ def lcurry(func, largs):
             return func(*largs, *rargs)
     return curried()
 
+def Decorators():
+    def privkey(method):
+        name = method.__name__
+        key = '.'.join(('_', __name__, '__lazy_', name))
+        return (name, key)
+
+    class Decorators(object):
+        def lazyget(method):
+            name, key = privkey(method)
+            def fget(self):
+                if key not in self.__dict__:
+                    self.__dict__[key] = method(self)
+                return self.__dict__[key]
+            return fget
+        def setonce(method):
+            name, key = privkey(method)
+            def fset(self, val):
+                if key in self.__dict__:
+                    raise AttributeError(name)
+                method(self, val)
+                self.__dict__[key] = val
+            return fset
+        def checkstate(**attrs):
+            def wrap(func):
+                def check(self, *args, **kw):
+                    for attr, val in attrs.items():
+                        if getattr(self, attr) != val:
+                            raise IllegalStateError(attr)
+                    return func(self, *args, **kw)
+                return check
+            return wrap
+    return Decorators
+Decorators = Decorators()
+            
 class Kwobj(object):
 
     def __init__(self, *dicts, **kw):
@@ -224,182 +258,6 @@ class Kwobj(object):
 
     def __repr__(self):
         return dictrepr(self.__dict__)
-
-class EventEmitter(object):
-
-    @property
-    def events(self):
-        return self.__events
-
-    def on(self, *args, **kw):
-        self.events.on(*args, **kw)
-        return self
-
-    def once(self, *args, **kw):
-        self.events.on(*args, **kw)
-        return self
-
-    def off(self, *args, **kw):
-        self.events.on(*args, **kw)
-        return self
-
-    def emit(self, event, *args, **kw):
-        return self.events.emit(event, *args, **kw)
-
-    def __init__(self, *events):
-        self.__events = __class__.Events(*events)
-
-    class Listener(object):
-        def __init__(self, cb, once = False):
-            self.cb = cb
-            self.once = once
-        def __call__(self, *args, **kw):
-            return self.cb(*args, **kw)
-        def __eq__(self, other):
-            return self.cb == other or (
-                isinstance(other, __class__) and
-                self.cb == other.cb
-            )
-        def __hash__(self):
-            return hash(self.cb)
-
-    @staticmethod
-    def Events(*events):
-
-        def Event(event):
-            base = LinkedOrderedSet()
-            Item = EventEmitter.Listener
-
-            def creates(method):
-                def create(self, cb, once = False):
-                    if isinstance(cb, Item):
-                        cb = cb.cb
-                    if not callable(cb):
-                        raise TypeError(cb.__class__)
-                    item = Item(cb, once)
-                    method(self, item)
-                return create
-    
-            class _Event(object):
-
-                @property
-                def name(self):
-                    return event
-
-                @creates
-                def append(self, item):
-                    base.add(item)
-
-                @creates
-                def prepend(self, item):
-                    base.prepend(item)
-
-                def extend(self, cbs, once = False):
-                    for cb in cbs:
-                        self.append(cb, once = once)
-
-                def emit(self, *args, **kw):
-                    count = 0
-                    for listener in base:
-                        try:
-                            listener(*args, **kw)
-                            count += 1
-                        finally:
-                            if listener.once:
-                                base.remove(listener)
-                    return count
-
-                def __repr__(self):
-                    return (Event.__name__, self.name, len(self)).__repr__()
-
-                def __getattr__(self, name):
-                    if hasattr(base, name):
-                        return getattr(base, name)
-                    raise AttributeError(name)
-
-            return _Event()
-
-        keytypes = (str, int, basestring)
-        def checkkey(*keys):
-            for key in keys:
-                typecheck(key, keytypes, 'event')
-        def evargs(method):
-            def normalize(self, *args, **kw):
-                if kw:
-                    if args: raise TypeError()
-                    return normalize(self, kw)
-                if not args: raise TypeError()
-                arg = args[0]
-                if isinstance(arg, keytypes):
-                    event, *cbs = args
-                    return method(self, event, *cbs)
-                if len(args) > 1: raise TypeError()
-                if isinstance(arg, dict):
-                    ret = None
-                    for event, cbs in arg.items():
-                        if not isinstance(cbs, (tuple, list)):
-                            cbs = (cbs,)
-                        ret = method(self, event, *cbs)
-                    return ret
-                raise TypeError()
-            return normalize
-
-        base = {}
-
-        class _Events(object):
-
-            def create(self, *events):
-                checkkey(*events)
-                for event in events:
-                    if event not in base:
-                        base[event] = Event(event)
-                return self
-
-            def delete(self, event):
-                base[event].clear()
-                del(base[event])
-                return self
-
-            def clear(self):
-                for event in base:
-                    self.remove(event)
-                base.clear()
-                return self
-
-            @evargs
-            def on(self, event, *cbs):
-                base[event].extend(cbs)
-                return self
-
-            @evargs
-            def once(self, event, *cbs):
-                base[event].extend(cbs, once = True)
-                return self
-
-            @evargs
-            def off(self, event, *cbs):
-                ev = base[event]
-                for cb in cbs:
-                    ev.discard(cb)
-                return self
-
-            def emit(self, event, *args, **kw):
-                return base[event].emit(*args, **kw)
-
-            get = base.get
-
-            def __init__(self, *names):
-                self.create(*names)
-
-            __getitem__  = base.__getitem__
-            __contains__ = base.__contains__
-            __len__  = base.__len__
-            __iter__ = base.__iter__
-
-            def __repr__(self):
-                return (EventEmitter.__name__, len(self)).__repr__()
-
-        return _Events(*events)
 
 class CacheNotationData(object):
 
@@ -427,11 +285,7 @@ class CacheNotationData(object):
 
     @classmethod
     def available(cls, notn):
-        return sorted(set(
-            cls.__getidx(notn)
-        ).union(
-            cls.__builtin[notn]
-        ))
+        return sorted(set(cls.__getidx(notn)).union(cls.__builtin[notn]))
 
     @classmethod
     def __getidx(cls, notn):
@@ -536,149 +390,168 @@ class OrderedAttrsView(object):
     def get(self, key, default = None):
         return self.__map.get(key, default)
 
-class LinkedOrderedSet(object):
+def LinkOrderSet():
 
     class LinkEntry(object):
         def __init__(self, item):
             self.prev = self.next = None
             self.item = item
+        def __eq__(self, other):
+            return self.item == other or (
+                isinstance(other, self.__class__) and
+                self.item == other.item
+            )
+        def __hash__(self):
+            return hash(self.item)
         def __repr__(self):
             return (self.item).__repr__()
 
-    class Helpers(object):
-        def add(method):
+    def View(obj):
+        class Viewer(object):
+            def __iter__(self):
+                return iter(obj)
+            def __reversed__(self):
+                return reversed(obj)
+            def __contains__(self, item):
+                return item in obj
+            def __len__(self):
+                return len(obj)
+            def first(self):
+                return obj.first()
+            def last(self):
+                return obj.last()
+        return Viewer()
+
+    class LinkOrderSet(object):
+
+        def item(item_method):
+            def wrap(self, *args, **kw):
+                item = self._genitem_(*args, **kw)
+                return item_method(self, item)
+            return wrap
+
+        def iter_items(iter_item_method):
+            def wrap(self, *args, **kw):
+                for item in self._genitems_(*args, **kw):
+                    iter_item_method(self, item)
+                return 
+            return wrap
+
+        def entry(link_entry_method):
             def prep(self, item):
                 if item in self:
                     raise DuplicateKeyError(item)
-
-                entry = self._idx[item] = self.LinkEntry(item)
-
-                if self._first == None:
-                    self._first = self._last = entry
+                entry = self.__idx[item] = LinkEntry(item)
+                if self.__first == None:
+                    self.__first = self.__last = entry
                     return
-
-                if self._first == self._last:
-                    self._first.next = entry
-                method(self, entry)
+                if self.__first == self.__last:
+                    self.__first.next = entry
+                link_entry_method(self, entry)
             return prep
 
-        def view(obj):
-            class viewer(object):
-                def __iter__(self):
-                    return iter(obj)
-                def __reversed__(self):
-                    return reversed(obj)
-                def __contains__(self, item):
-                    return item in obj
-                def __len__(self):
-                    return len(obj)
-                def first(self):
-                    return obj.first()
-                def last(self):
-                    return obj.last()
-            return viewer()
+        def _genitem_(self, item):
+            return item
 
-    @Helpers.add
-    def append(self, entry):
-        if self._first == self._last:
-            self._first.next = entry
-        entry.prev = self._last
-        entry.prev.next = entry
-        self._last = entry
-    add = append
+        def _genitems_(self, items):
+            return (self._genitem_(item) for item in items)
 
-    def extend(self, items):
-        for item in items:
-            self.append(item)
+        @item
+        @entry
+        def append(self, entry):
+            if self.__first == self.__last:
+                self.__first.next = entry
+            entry.prev = self.__last
+            entry.prev.next = entry
+            self.__last = entry
+        add = append
+        extend = iter_items(append)
 
-    @Helpers.add
-    def preprend(self, entry):
-        if self._first == self._last:
-            self._last.prev = entry
-        entry.next = self._first
-        entry.next.prev = entry
-        self._first = entry
+        @item
+        @entry
+        def prepend(self, entry):
+            if self.__first == self.__last:
+                self.__last.prev = entry
+            entry.next = self.__first
+            entry.next.prev = entry
+            self.__first = entry
+        prextend = iter_items(prepend)
 
-    def prextend(self, items):
-        for item in items:
-            self.prepend(item)
-
-    def remove(self, item):
-        entry = self._idx.pop(item)
-        if entry.prev == None:
-            if entry.next == None:
-                # List is empty
-                self._first = self._last = None
+        @item
+        def remove(self, item):
+            entry = self.__idx.pop(item)
+            if entry.prev == None:
+                if entry.next == None:
+                    # Empty
+                    self.__first = self.__last = None
+                else:
+                    # Remove first
+                    entry.next.prev = None
+                    self.__first = entry.next
             else:
-                # Move to first place
-                entry.next.prev = None
-                self._first = entry.next
-        else:
-            if entry.next == None:
-                # Move to last place
-                entry.prev.next = None
-                self._last = entry.prev
-            else:
-                # Close the gap
-                entry.prev.next = entry.next
-                entry.next.prev = entry.prev
+                if entry.next == None:
+                    # Remove last
+                    entry.prev.next = None
+                    self.__last = entry.prev
+                else:
+                    # Remove in-between
+                    entry.prev.next = entry.next
+                    entry.next.prev = entry.prev
 
-    def discard(self, item):
-        if item in self:
-            self.remove(item)
-    
-    def clear(self):
-        self._idx.clear()
-        self._first = self._last = None
+        @item
+        def discard(self, item):
+            if item in self:
+                self.remove(item)
+        
+        def clear(self):
+            self.__idx.clear()
+            self.__first = self.__last = None
 
-    def keys(self):
-        return self._idx.keys()
+        def first(self):
+            return self.__first.item if self.__first else None
 
-    def first(self):
-        return self._first.item if self._first else None
+        def last(self):
+            return self.__last.item if self.__last else None
 
-    def last(self):
-        return self._last.item if self._last else None
+        @property
+        @Decorators.lazyget
+        def view(self):
+            return View(self)
 
-    def view(self):
-        return self.Helpers.view(self)
+        def __init__(self):
+            self.__first = self.__last = None
+            self.__idx = {}
 
-    def __init__(self):
-        self._first = self._last = None
-        self._idx = {}
+        def __len__(self):
+            return len(self.__idx)
 
-    def __len__(self):
-        return len(self._idx)
+        def __contains__(self, item):
+            return item in self.__idx
 
-    def __contains__(self, item):
-        return item in self._idx
+        def __getitem__(self, key):
+            return self.__idx[key].item
 
-    def __getitem__(self, key):
-        return self._idx[key].item
+        def __iter__(self):
+            cur = self.__first
+            while cur:
+                item = cur.item
+                yield item
+                cur = cur.next
+                    
+        def __reversed__(self):
+            cur = self.__last
+            while cur:
+                item = cur.item
+                yield item
+                cur = cur.prev
 
-    def __iter__(self):
-        cur = self._first
-        while cur:
-            item = cur.item
-            yield item
-            cur = cur.next
-                
-    def __reversed__(self):
-        cur = self._last
-        while cur:
-            item = cur.item
-            yield item
-            cur = cur.prev
+        def __repr__(self):
+            return (self.__class__.__name__, kwrepr(
+                len=len(self),
+                first=self.__first,
+                last=self.__last,
+            )).__repr__()
 
-    def __repr__(self):
-        return (len(self), self._first, self._last).__repr__()
-"""
-from utils import LinkedOrderedSet
-l1 = LinkedOrderedSet()
+    return LinkOrderSet
 
-l1.extend((str(i+1) for i in range(30)))
-
-for x in l1:
-    print(x)
-
-"""
+LinkOrderSet = LinkOrderSet()

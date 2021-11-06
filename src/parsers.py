@@ -228,7 +228,7 @@ class BaseParser(Parser):
             )
         self.bound_vars.add(v)
         sentence = self._read()
-        if v not in list(sentence.variables()):
+        if v not in sentence.variables:
             vchr = self.table.char('variable', v.index)
             raise BoundVariableError(
                 "Unused bound variable '{0}' ({1}) at position {2}.".format(vchr, v.subscript, self.pos)

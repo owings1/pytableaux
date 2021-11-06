@@ -105,7 +105,7 @@ class TableauxRules:
             assert target.branch == branch
             branch.add({ 
                 'world1': target['world'], 
-                'world2': branch.new_world(),
+                'world2': branch.next_world,
             })
 
         def example_nodes(self, branch = None):

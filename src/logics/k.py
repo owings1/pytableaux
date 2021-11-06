@@ -226,7 +226,7 @@ class Model(BaseModel):
                 self.set_opaque_value(sentence, 'T', world=world)
             elif self.is_sentence_literal(sentence):
                 self.set_literal_value(sentence, 'T', world=world)
-            self.predicates.update(node.predicates())
+            self.predicates.update(sentence.predicates)
         elif node.has('world1') and node.has('world2'):
             self.add_access(node['world1'], node['world2'])
 
@@ -347,8 +347,8 @@ class Model(BaseModel):
         # to still check every subsitution, so we want the constants.
         # NB: in FDE we added the atomics to all_atomics, but we don't have that
         #     here since we do frames -- will that be a problem?
-        self.constants.update(sentence.constants())
-        self.predicates.update(sentence.predicates())
+        self.constants.update(sentence.constants)
+        self.predicates.update(sentence.predicates)
         frame.opaques[sentence] = value
 
     def set_atomic_value(self, sentence, value, world=0, **kw):
@@ -680,11 +680,12 @@ class TableauxSystem(BaseSystem):
         if not node.has('sentence'):
             return 0
         sentence = node['sentence']
-        operators = list(sentence.operators())
         last_is_negated = False
         complexity = 0
-        while len(operators):
-            operator = operators.pop(0)
+        # operators = list(sentence.operators)
+        # while len(operators):
+            # operator = operators.pop(0)
+        for operator in sentence.operators:
             if operator == 'Assertion':
                 continue
             if operator == 'Negation':
@@ -1295,8 +1296,8 @@ class TableauxRules(object):
 
             s  = self.sentence(node)
             si = s.operand
-            w1 = node.get('world')
-            w2 = branch.new_world()
+            w1 = node['world']
+            w2 = branch.next_world
 
             return {
                 'sentence' : si,

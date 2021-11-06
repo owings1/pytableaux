@@ -18,7 +18,7 @@
 #
 # pytableaux - rule helpers module
 from models import BaseModel
-from utils import OrderedAttrsView, isint, isstr, rcurry, lcurry
+from utils import OrderedAttrsView, isint, isstr, rcurry, lcurry, emptyset
 from lexicals import Constant, Variable, Predicate, Predicated, Atomic, Quantified, \
     Operated, operarity
 
@@ -70,15 +70,15 @@ class NodeTargetCheckHelper(object):
         """
         Return the cached target for the branch, if any.
         """
-        if branch.id in self.targets:
-            return self.targets[branch.id]
+        if branch in self.targets:
+            return self.targets[branch]
 
     # Event Listeners
 
     def after_node_add(self, node, branch):
         target = self.rule.check_for_target(node, branch)
         if target:
-            self.targets[branch.id] = target
+            self.targets[branch] = target
 
 class QuitFlagHelper(object):
     """
@@ -94,22 +94,22 @@ class QuitFlagHelper(object):
         """
         Whether the branch has been flagged.
         """
-        if branch.id in self.flagged:
-            return self.flagged[branch.id]
+        if branch in self.flagged:
+            return self.flagged[branch]
         return False
 
     # Event Listeners
 
     def after_branch_add(self, branch):
         parent = branch.parent
-        if parent != None and parent.id in self.flagged:
-            self.flagged[branch.id] = self.flagged[parent.id]
+        if parent:
+            self.flagged[branch] = self.flagged[parent]
         else:
-            self.flagged[branch.id] = False
+            self.flagged[branch] = False
 
     def after_apply(self, target):
         if target.get('flag'):
-            self.flagged[target['branch'].id] = True
+            self.flagged[target.branch] = True
 
 class NodeFilterHelper(object):
 
@@ -425,7 +425,7 @@ class MaxConstantsTracker(object):
         """
         Get the projected max number of constants (per world) for the branch.
         """
-        origin = branch.origin()
+        origin = branch.origin
         if origin.id in self.branch_max_constants:
             return self.branch_max_constants[origin.id]
         return 1
@@ -493,7 +493,7 @@ class MaxConstantsTracker(object):
 
     def after_trunk_build(self, tableau):
         for branch in tableau:
-            origin = branch.origin()
+            origin = branch.origin
             # In most cases, we will have only one origin branch.
             if origin.id in self.branch_max_constants:
                 return
@@ -511,12 +511,13 @@ class MaxConstantsTracker(object):
 
     def after_node_add(self, node, branch):
         if node.has('sentence'):
+            consts = node['sentence'].constants
             world = node.get('world')
             if world == None:
                 world = 0
             if world not in self.world_constants[branch.id]:
                 self.world_constants[branch.id][world] = set()
-            self.world_constants[branch.id][world].update(node.constants())
+            self.world_constants[branch.id][world].update(consts)
 
     # Private util
 
@@ -534,7 +535,7 @@ class MaxConstantsTracker(object):
 
     def _compute_needed_constants_for_node(self, node, branch):
         if node.has('sentence'):
-            return len(node['sentence'].quantifiers())
+            return len(node['sentence'].quantifiers)
         return 0
 
 class NodeAppliedConstants(object):
@@ -590,7 +591,8 @@ class NodeAppliedConstants(object):
                     'applied'   : set(),
                     'unapplied' : set(self.consts[branch.id]),
                 }
-        for c in node.constants():
+        consts = node['sentence'].constants if node.has('sentence') else emptyset
+        for c in consts:
             if c not in self.consts[branch.id]:
                 for node_id in self.node_states[branch.id]:
                     self.node_states[branch.id][node_id]['unapplied'].add(c)
@@ -629,7 +631,7 @@ class MaxWorldsTracker(object):
         """
         Get the maximum worlds projected for the branch.
         """
-        origin = branch.origin()
+        origin = branch.origin
         if origin.id in self.branch_max_worlds:
             return self.branch_max_worlds[origin.id]
 
@@ -656,7 +658,7 @@ class MaxWorldsTracker(object):
         """
         if sentence not in self.modal_complexities:
             self.modal_complexities[sentence] = len([
-                o for o in sentence.operators() if o in self.modal_operators
+                o for o in sentence.operators if o in self.modal_operators
             ])
         return self.modal_complexities[sentence]
 
@@ -671,7 +673,7 @@ class MaxWorldsTracker(object):
 
     def after_trunk_build(self, tableau):
         for branch in tableau:
-            origin = branch.origin()
+            origin = branch.origin
             # In most cases, we will have only one origin branch.
             if origin.id in self.branch_max_worlds:
                 return
@@ -703,29 +705,28 @@ class UnserialWorldsTracker(object):
 
     def __init__(self, rule):
         self.rule = rule
-        self.unserial_worlds = {}
+        self.track = {}
 
     def get_unserial_worlds(self, branch):
         """
         Get the set of unserial worlds on the branch.
         """
-        return self.unserial_worlds[branch.id]
+        return self.track[branch]
 
     # helper implementation
 
     def after_branch_add(self, branch):
         parent = branch.parent
-        if parent != None and parent.id in self.unserial_worlds:
-            self.unserial_worlds[branch.id] = set(self.unserial_worlds[parent.id])
-        else:
-            self.unserial_worlds[branch.id] = set()
+        self.track[branch] = set()
+        if parent:
+            self.track[branch].update(self.track[parent])
 
     def after_node_add(self, node, branch):
-        for w in node.worlds():
+        for w in node.worlds:
             if branch.has({'world1': w}):
-                self.unserial_worlds[branch.id].discard(w)
+                self.track[branch].discard(w)
             else:
-                self.unserial_worlds[branch.id].add(w)
+                self.track[branch].add(w)
 
 class VisibleWorldsIndex(object):
     """
@@ -740,8 +741,8 @@ class VisibleWorldsIndex(object):
         """
         Get all the worlds on the branch that are visible to the given world.
         """
-        if world in self.index[branch.id]:
-            return self.index[branch.id][world]
+        if world in self.index[branch]:
+            return self.index[branch][world]
         return set()
 
     def get_intransitives(self, branch, w1, w2):
@@ -756,22 +757,20 @@ class VisibleWorldsIndex(object):
     # helper implementation
 
     def after_branch_add(self, branch):
-        parent = branch.parent
-        if parent != None and parent.id in self.index:
-            self.index[branch.id] = {
-                w: set(self.index[parent.id][w])
-                for w in self.index[parent.id]
-            }
-        else:
-            self.index[branch.id] = {}
+        self.index[branch] = {}
+        if branch.parent:
+            self.index[branch].update({
+                w: set(self.index[branch.parent][w])
+                for w in self.index[branch.parent]
+            })
 
     def after_node_add(self, node, branch):
         if node.has('world1', 'world2'):
             w1 = node['world1']
             w2 = node['world2']
-            if w1 not in self.index[branch.id]:
-                self.index[branch.id][w1] = set()
-            self.index[branch.id][w1].add(w2)
+            if w1 not in self.index[branch]:
+                self.index[branch][w1] = set()
+            self.index[branch][w1].add(w2)
 
 class PredicatedNodesTracker(object):
     """
@@ -780,26 +779,25 @@ class PredicatedNodesTracker(object):
 
     def __init__(self, rule):
         self.rule = rule
-        self.predicated_nodes = {}
+        self.track = {}
 
     def get_predicated(self, branch):
         """
         Return all predicated nodes on the branch.
         """
-        return self.predicated_nodes[branch.id]
+        return self.track[branch]
 
     # helper implementation
 
     def after_branch_add(self, branch):
         parent = branch.parent
-        if parent != None and parent.id in self.predicated_nodes:
-            self.predicated_nodes[branch.id] = set(self.predicated_nodes[parent.id])
-        else:
-            self.predicated_nodes[branch.id] = set()
+        track = self.track[branch] = set()
+        if parent:
+            track.update(self.track[parent])
 
     def after_node_add(self, node, branch):
         if node.has('sentence') and node['sentence'].is_predicated:
-            self.predicated_nodes[branch.id].add(node)
+            self.track[branch].add(node)
 
 class AppliedNodesWorldsTracker(object):
     """
@@ -809,25 +807,25 @@ class AppliedNodesWorldsTracker(object):
 
     def __init__(self, rule):
         self.rule = rule
-        self.node_worlds_applied = {}
+        self.track = {}
 
     def is_applied(self, node, world, branch):
         """
         Whether the rule has applied to the node for the world and branch.
         """
-        return (node.id, world) in self.node_worlds_applied[branch.id]
+        return (node.id, world) in self.track[branch]
 
     # helper implementation
 
     def after_node_add(self, node, branch):
-        if branch.id not in self.node_worlds_applied:
-            self.node_worlds_applied[branch.id] = set()
+        if branch not in self.track:
+            self.track[branch] = set()
 
     def after_apply(self, target):
         if target.get('flag'):
             return
-        pair = (target['node'].id, target['world'])
-        self.node_worlds_applied[target['branch'].id].add(pair)
+        pair = (target.node.id, target['world'])
+        self.track[target.branch].add(pair)
 
 class AppliedSentenceCounter(object):
     """
@@ -844,27 +842,25 @@ class AppliedSentenceCounter(object):
         """
         Return the count for the given sentence and branch.
         """
-        if sentence not in self.counts[branch.id]:
+        if sentence not in self.counts[branch]:
             return 0
-        return self.counts[branch.id][sentence]
+        return self.counts[branch][sentence]
 
     # helper implementation
 
     def after_branch_add(self, branch):
-        parent = branch.parent
-        if parent != None and parent.id in self.counts:
-            self.counts[branch.id] = dict(self.counts[parent.id])
-        else:
-            self.counts[branch.id] = {}
+        self.counts[branch] = {}
+        if branch.parent:
+            self.counts[branch].update(self.counts[branch.parent])
 
     def after_apply(self, target):
         if target.get('flag'):
             return
-        branch = target['branch']
+        branch = target.branch
         sentence = target['sentence']
-        if sentence not in self.counts[branch.id]:
-            self.counts[branch.id][sentence] = 0
-        self.counts[branch.id][sentence] += 1
+        if sentence not in self.counts[branch]:
+            self.counts[branch][sentence] = 0
+        self.counts[branch][sentence] += 1
 
 class EllipsisExampleHelper(object):
 
@@ -910,7 +906,7 @@ class EllipsisExampleHelper(object):
             return
         if self.rule.is_closure:
             return
-        self.__addnode(target['branch'])
+        self.__addnode(target.branch)
 
     def __addnode(self, branch):
         self.applied.add(branch)

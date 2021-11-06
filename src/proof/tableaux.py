@@ -18,12 +18,16 @@
 #
 # pytableaux - tableaux module
 from lexicals import Argument, Constant
-from utils import EventEmitter, LinkedOrderedSet, Kwobj, StopWatch, get_logic, \
-    emptyset, typecheck, dictrepr
+from utils import LinkOrderSet, Kwobj, StopWatch, get_logic, \
+    emptyset, typecheck, dictrepr, Decorators
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
-from events import Events
+from events import Events, EventEmitter
 from inspect import isclass
 from itertools import chain
+
+lazyget = Decorators.lazyget
+setonce = Decorators.setonce
+checkstate = Decorators.checkstate
 
 class TableauxSystem(object):
 
@@ -41,33 +45,158 @@ class TableauxSystem(object):
         rules.groups.add(Rules.closure_rules, 'closure')
         rules.groups.extend(Rules.rule_groups)
 
-def TabRules(tableau):
+def TabRules():
 
-    _tab = tableau
-    _ruleindex = {}
-    _groupindex = {}
-    _stat = Kwobj(len = 0, locked = False)
+    writes = checkstate(locked = False)
+    def prot(self, name, *_): raise AttributeError(name)
 
-    def lock(*_): _stat.locked = True
-    _tab.once(Events.AFTER_BRANCH_ADD, lock)
+    class Common(object):
 
-    def writes(method):
-        def check(*args, **kw):
-            if _stat.locked:
-                raise IllegalStateError("rules are locked")
-            return method(*args, **kw)
-        return check
+        def __init__(self, tableau):
+            self.ruleindex = {}
+            self.groupindex = {}
+            self.stat = Kwobj(len = 0, locked = False)
+            self.tab = tableau
+            def lock(*_): self.stat.locked = True
+            tableau.once(Events.AFTER_BRANCH_ADD, lock)
+            self.__setattr__ = self.__delattr__ = prot
 
-    def RuleGroup(name):
+    class Base(object):
+        @property
+        def locked(self):
+            return self.__c.stat.locked
+        def __init__(self, common):
+            self.__c = common
+            self.__setattr__ = prot
+        def __delattr__(self, name):
+            if name.startswith('_'):
+                raise AttributeError(name)
+            return super().__delattr__(name)
 
-        _name = name
-        _rules = []
-        _index = {}
+    class TabRules(Base):
 
-        def newrule(cls):
-            if not isclass(cls):
-                cls = cls.__class__
-            return cls(_tab, **_tab.opts)
+        @property
+        def groups(self):
+            return self.__groups
+
+        @writes
+        def append(self, rule):
+            self.groups.create().append(rule)
+        add = append
+
+        @writes
+        def extend(self, rules):
+            self.groups.append(rules)
+
+        @writes
+        def clear(self):
+            self.groups.clear()
+            self.__c.ruleindex.clear()
+
+        def get(self, ref, *d):
+            rindex = self.__c.ruleindex
+            if ref in rindex:
+                return rindex[ref]
+            if isclass(ref) and ref.__name__ in rindex:
+                return rindex[ref.__name__]
+            if ref.__class__.__name__ in rindex:
+                return rindex[ref.__class__.__name__]
+            if len(d):
+                return d[0]
+            raise NotFoundError(ref)
+
+        def __init__(self, tableau):
+            common = self.__c = Common(tableau)
+            self.__groups = RuleGroups(common)
+            super().__init__(common)
+
+        def __len__(self):
+            return self.__c.stat.len
+
+        def __iter__(self):
+            return chain.from_iterable(self.groups)
+
+        def __contains__(self, item):
+            return item in self.__c.ruleindex
+
+        def __getattr__(self, name):
+            c = self.__c
+            if name in c.groupindex:
+                return c.groupindex[name]
+            if name in c.ruleindex:
+                return c.ruleindex[name]
+            raise AttributeError(name)
+
+        def __repr__(self):
+            return (
+                self.__class__.__name__, self.__c.tab.logic,
+                (len(self.groups), len(self)),
+            ).__repr__()
+
+    class RuleGroups(Base):
+
+        @writes
+        def create(self, name = None):
+            c = self.__c
+            if name != None:
+                if name in c.groupindex or name in c.ruleindex:
+                    raise DuplicateKeyError(name)
+            group = RuleGroup(name, c)
+            self.__groups.append(group)
+            if name != None:
+                c.groupindex[name] = group
+            return group
+
+        @writes
+        def append(self, rules, name = None):
+            if name == None:
+                name = getattr(rules, 'name', None)
+            self.create(name).extend(rules)
+        add = append
+
+        @writes
+        def extend(self, groups):
+            for rules in groups:
+                self.add(rules)
+
+        @writes
+        def clear(self):
+            g = self.__groups
+            for group in g:
+                group.clear()
+            g.clear()
+            self.__c.groupindex.clear()
+
+        def __init__(self, common):
+            self.__c = common
+            self.__groups = []
+            super().__init__(common)
+    
+        def __iter__(self):
+            return iter(self.__groups)
+
+        def __len__(self):
+            return len(self.__groups)
+
+        def __getitem__(self, i):
+            return self.__groups[i]
+
+        def __getattr__(self, name):
+            idx = self.__c.groupindex
+            if name in idx:
+                return idx[name]
+            raise AttributeError(name)
+
+        def __repr__(self):
+            return (self.__class__.__name__, (len(self),)).__repr__()
+
+    def newrule(cls, tab):
+        if not isclass(cls):
+            cls = cls.__class__
+        tab = tab
+        return cls(tab, **tab.opts)
+
+    class RuleGroup(Base):
 
         def lenchange(method):
             def update(self, *args, **kw):
@@ -75,183 +204,73 @@ def TabRules(tableau):
                 try:
                     return method(self, *args, **kw)
                 finally:
-                    _stat.len += len(self) - mypre
+                    self.__c.stat.len += len(self) - mypre
             return update
 
-        class _RuleGroup(object):
-
-            @property
-            def name(self):
-                return _name
-
-            @writes
-            @lenchange
-            def append(self, rule):
-                rule = newrule(rule)
-                cls = rule.__class__
-                clsname = cls.__name__
-                if clsname in _ruleindex or clsname in _groupindex:
-                    raise DuplicateKeyError(clsname)
-                _rules.append(rule)
-                _ruleindex[clsname] = _index[rule] = rule
-            add = append
-
-            @writes
-            def extend(self, rules):
-                for rule in rules:
-                    self.add(rule)
-
-            @writes
-            @lenchange
-            def clear(self):
-                for rule in _rules:
-                    del(_ruleindex[rule.__class__.__name__])
-                _rules.clear()
-
-            def __iter__(self):
-                return iter(_rules)
-
-            def __len__(self):
-                return len(_rules)
-
-            def __contains__(self, item):
-                return item in _index
-
-            def __getitem__(self, i):
-                return _rules[i]
-
-            def __getattr__(self, name):
-                if name in _index:
-                    return _index[name]
-                raise AttributeError(name)
-    
-            def __repr__(self):
-                return (self.name, (len(self),)).__repr__()
-
-        return _RuleGroup()
-
-    def RuleGroups():
-
-        _groups = []
-        _index = _groupindex
-
-        class _RuleGroups(object):
-
-            @writes
-            def create(self, name = None):
-                if name != None:
-                    if name in _index or name in _ruleindex:
-                        raise DuplicateKeyError(name)
-                group = RuleGroup(name)
-                _groups.append(group)
-                if name != None:
-                    _index[name] = group
-                return group
-
-            @writes
-            def append(self, rules, name = None):
-                if name == None:
-                    name = getattr(rules, 'name', None)
-                self.create(name).extend(rules)
-            add = append
-
-            @writes
-            def extend(self, groups):
-                for rules in groups:
-                    self.add(rules)
-
-            @writes
-            def clear(self):
-                for group in _groups:
-                    group.clear()
-                _groups.clear()
-                _index.clear()
-
-            def __iter__(self):
-                return iter(_groups)
-
-            def __len__(self):
-                return len(_groups)
-
-            def __getitem__(self, i):
-                return _groups[i]
-
-            def __getattr__(self, name):
-                if name in _index:
-                    return _index[name]
-                raise AttributeError(name)
-
-            def __repr__(self):
-                return (self.__class__.__name__, (len(self),)).__repr__()
-
-        return _RuleGroups()
-    
-    groups = RuleGroups()
-
-    class _TabRules(object):
-
         @property
-        def locked(self):
-            return _stat.locked
-
-        @property
-        def groups(self):
-            return groups
+        def name(self):
+            return self.__name
 
         @writes
+        @lenchange
         def append(self, rule):
-            groups.create().append(rule)
+            c = self.__c
+            rule = newrule(rule, c.tab)
+            cls = rule.__class__
+            clsname = cls.__name__
+            if clsname in c.ruleindex or clsname in c.groupindex:
+                raise DuplicateKeyError(clsname)
+            self.__rules.append(rule)
+            c.ruleindex[clsname] = self.__index[rule] = rule
         add = append
 
         @writes
         def extend(self, rules):
-            groups.append(rules)
+            for rule in rules:
+                self.add(rule)
 
         @writes
+        @lenchange
         def clear(self):
-            groups.clear()
-            _ruleindex.clear()
+            for rule in self.__rules:
+                del(self.__c.ruleindex[rule.__class__.__name__])
+            self.__rules.clear()
 
-        def get(self, ref, *d):
-            if ref in _ruleindex:
-                return _ruleindex[ref]
-            if isclass(ref) and ref.__name__ in _ruleindex:
-                return _ruleindex[ref.__name__]
-            if ref.__class__.__name__ in _ruleindex:
-                return _ruleindex[ref.__class__.__name__]
-            if len(d):
-                return d[0]
-            raise NotFoundError(ref)
-
-        def __len__(self):
-            return _stat.len
+        def __init__(self, name, common):
+            self.__name = name
+            self.__c = common
+            self.__rules = []
+            self.__index = {}
+            super().__init__(common)
 
         def __iter__(self):
-            return chain.from_iterable(groups)
+            return iter(self.__rules)
+
+        def __len__(self):
+            return len(self.__rules)
 
         def __contains__(self, item):
-            return item in _ruleindex
+            return item in self.__index
+
+        def __getitem__(self, i):
+            return self.__rules[i]
 
         def __getattr__(self, name):
-            if name in _groupindex:
-                return _groupindex[name]
-            if name in _ruleindex:
-                return _ruleindex[name]
+            if name in self.__index:
+                return self.__index[name]
             raise AttributeError(name)
 
         def __repr__(self):
-            return (
-                self.__class__.__name__, _tab.logic,
-                (len(groups), len(self)),
-            ).__repr__()
+            return (self.name, (len(self),)).__repr__()
 
-    return _TabRules()
+    return TabRules
+
 
 class Tableau(EventEmitter):
     """
     A tableau proof.
     """
-
+    TabRules = TabRules()
     opts = {
         'is_group_optim'  : True,
         'is_build_models' : False,
@@ -309,8 +328,7 @@ class Tableau(EventEmitter):
 
         self.__branch_list = list()
         self.__trunks = list()
-        self.__open_linkset = LinkedOrderedSet()
-        self.__open_view = self.__open_linkset.view()
+        self.__open_linkset = LinkOrderSet()
         self.__branch_dict = dict()
         self.__finished = False
         self.__premature = True
@@ -327,7 +345,7 @@ class Tableau(EventEmitter):
         }
 
         # Rules
-        self.__rules = TabRules(self)
+        self.__rules = self.TabRules(self)
 
         self.__logic = self.__argument = None
         if logic != None:
@@ -489,6 +507,7 @@ class Tableau(EventEmitter):
         """
         View of the open branches.
         """
+        return self.__open_linkset.view
         return self.__open_view
 
     def build(self):
@@ -671,10 +690,10 @@ class Tableau(EventEmitter):
     def __repr__(self):
         return dictrepr({
             self.__class__.__name__: self.id,
-            'branches': len(self),
-            'open': len(self.open),
+            'branches'     : len(self),
+            'open'         : len(self.open),
             'current_step' : self.current_step,
-            'finished': self.finished,
+            'finished'     : self.finished,
         } | {
             key: value
             for key, value in {
@@ -923,6 +942,7 @@ class Tableau(EventEmitter):
                 model.is_countermodel = model.is_countermodel_to(self.argument)
             branch.model = model
             self.models.add(model)
+TabRules = None
 
 class Branch(EventEmitter):
     """
@@ -939,11 +959,15 @@ class Branch(EventEmitter):
         
         self.__parent = parent
         self.__closed = False
-        self.__constants = set()
-        self.__worlds = set()
+
         self.__nodes = []
         self.__nodeset = set()
         self.__ticked = set()
+
+        self.__worlds = set()
+        self.__nextworld = 0
+        self.__constants = set()
+        self.__nextconst = Constant.first()
         self.__pidx = {
             'sentence'   : {},
             'designated' : {},
@@ -965,6 +989,10 @@ class Branch(EventEmitter):
         return self.__parent
 
     @property
+    def origin(self):
+        return self if self.parent == None else self.parent.origin
+
+    @property
     def closed(self):
         return self.__closed
 
@@ -977,9 +1005,10 @@ class Branch(EventEmitter):
         return self.__closed_step
 
     @closed_step.setter
+    @setonce
     def closed_step(self, n):
-        if self.__closed_step != None:
-            raise AttributeError('closed_step')
+        # if self.__closed_step != None:
+        #     raise AttributeError('closed_step')
         self.__closed_step = n
 
     @property
@@ -987,9 +1016,10 @@ class Branch(EventEmitter):
         return self.__model
 
     @model.setter
+    @setonce
     def model(self, model):
-        if self.__model != None:
-            raise AttributeError('model')
+        # if self.__model != None:
+        #     raise AttributeError('model')
         self.__model = model
 
     @property
@@ -999,6 +1029,18 @@ class Branch(EventEmitter):
     @property
     def constants_count(self):
         return len(self.__constants)
+
+    @property
+    def next_constant(self):
+        # TODO: WIP
+        return self.__nextconst
+
+    @property
+    def next_world(self):
+        """
+        Return a new world that does not appear on the branch.
+        """
+        return self.__nextworld
 
     def has(self, props, ticked = None):
         """
@@ -1076,17 +1118,26 @@ class Branch(EventEmitter):
         """
         Append a node (Node object or dict of props). Returns self.
         """
-        node = Node.create(node)
-        node.parent = self.leaf
+        node = Node.create(node, parent = self.leaf)
         self.__nodes.append(node)
         self.__nodeset.add(node)
-        self.__constants.update(node.constants())
-        self.__worlds.update(node.worlds())
+        s = node.get('sentence')
+        if s:
+            if s.constants:
+                if self.__nextconst in s.constants:
+                    # TODO: new_constant() is still a prettier result, since it
+                    #       finds the mimimum available by searching for gaps.
+                    self.__nextconst = max(s.constants).next()
+                self.__constants.update(s.constants)
+        if node.worlds:
+            maxworld = max(node.worlds)
+            if maxworld >= self.__nextworld:
+                self.__nextworld = maxworld + 1
+            self.__worlds.update(node.worlds)
 
         # Add to index *before* after_node_add callback
         self.__add_to_index(node)
         self.emit(Events.AFTER_NODE_ADD, node, self)
-
         return self
     add = append
 
@@ -1135,7 +1186,9 @@ class Branch(EventEmitter):
         branch.__nodeset = set(self.__nodeset)
         branch.__ticked = set(self.__ticked)
         branch.__constants = set(self.__constants)
+        branch.__nextconst = self.__nextconst
         branch.__worlds = set(self.__worlds)
+        branch.__nextworld = self.__nextworld
         branch.__pidx = {
             prop : {
                 key : set(self.__pidx[prop][key])
@@ -1144,14 +1197,6 @@ class Branch(EventEmitter):
             for prop in self.__pidx
         }
         return branch
-
-    def new_world(self):
-        """
-        Return a new world that does not appear on the branch.
-        """
-        if not self.__worlds:
-            return 0
-        return max(self.__worlds) + 1
 
     def constants(self):
         """
@@ -1173,48 +1218,6 @@ class Branch(EventEmitter):
             if index > maxidx:
                 index, sub = 0, sub + 1
         return Constant(index, sub)
-
-    def origin(self):
-        """
-        Traverse up through the ``parent`` property.
-        """
-        origin = self
-        while origin.parent != None:
-            origin = origin.parent
-        return origin
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.id == other.id
-
-    def __ne__(self, other):
-        return not (isinstance(other, self.__class__) and self.id == other.id)
-
-    def __hash__(self):
-        return hash(self.id)
-
-    def __getitem__(self, key):
-        return self.__nodes[key]
-
-    def __len__(self):
-        return len(self.__nodes)
-
-    def __iter__(self):
-        return iter(self.__nodes)
-
-    def __copy__(self):
-        return self.copy()
-
-    def __contains__(self, node):
-        return node in self.__nodeset
-
-    def __repr__(self):
-        clsname = self.__class__.__name__
-        return dictrepr({
-            clsname  : self.id,
-            'nodes'  : len(self),
-            'leaf'   : self.leaf.id if self.leaf else None,
-            'closed' : self.closed,
-        })
 
     def __add_to_index(self, node):
         for prop in self.__pidx:
@@ -1260,18 +1263,55 @@ class Branch(EventEmitter):
                 best_index = self
         return best_index
 
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.id == other.id
+
+    def __ne__(self, other):
+        return not (isinstance(other, self.__class__) and self.id == other.id)
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __getitem__(self, key):
+        return self.__nodes[key]
+
+    def __len__(self):
+        return len(self.__nodes)
+
+    def __iter__(self):
+        return iter(self.__nodes)
+
+    def __copy__(self):
+        return self.copy()
+
+    def __contains__(self, node):
+        return node in self.__nodeset
+
+    def __repr__(self):
+        clsname = self.__class__.__name__
+        return dictrepr({
+            clsname  : self.id,
+            'nodes'  : len(self),
+            'leaf'   : self.leaf.id if self.leaf else None,
+            'closed' : self.closed,
+        })
+
 class Node(object):
     """
     A tableau node.
     """
 
     @staticmethod
-    def create(obj):
+    def create(obj, parent = None):
         if isinstance(obj, __class__):
-            return obj
-        return __class__(obj)
+            if obj.parent == None:
+                obj.__parent = parent
+            if obj.parent == parent:
+                return obj
+            obj = obj.props
+        return __class__(props = obj, parent = parent)
 
-    def __init__(self, props = {}):
+    def __init__(self, props = {}, parent = None):
         #: A dictionary of properties for the node.
         self.props = {
             'world'      : None,
@@ -1280,8 +1320,8 @@ class Node(object):
         self.props.update(props)
 
         # TODO: branch props, protect
+        self.__parent = parent
         self.ticked = False
-        self.parent = None
         self.step = None
         self.ticked_step = None
 
@@ -1290,12 +1330,29 @@ class Node(object):
         return id(self)
 
     @property
+    def parent(self):
+        return self.__parent
+
+    @property
     def is_closure(self):
         return self.get('flag') == 'closure'
 
     @property
+    @lazyget
     def is_modal(self):
         return self.has_any('world', 'world1', 'world2', 'worlds')
+
+    @property
+    @lazyget
+    def worlds(self):
+        """
+        Return the set of worlds referenced in the node properties. This combines
+        the properties `world`, `world1`, `world2`, and `worlds`.
+        """
+        return frozenset(
+            self.get('worlds', emptyset) |
+            {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
+        )
 
     def get(self, name, default = None):
         return self.props.get(name, default)
@@ -1326,49 +1383,6 @@ class Node(object):
             if prop not in self or not props[prop] == self[prop]:
                 return False
         return True
-
-    def worlds(self):
-        """
-        Return the set of worlds referenced in the node properties. This combines
-        the properties `world`, `world1`, `world2`, and `worlds`.
-        """
-        worlds = set()
-        for name in ('world', 'world1', 'world2'):
-            if self.has(name):
-                worlds.add(self.get(name))
-        if self.has('worlds'):
-            worlds.update(self.get('worlds'))
-        return worlds
-
-    def atomics(self):
-        """
-        Return the set of atomics (recursive) of the node's `sentence`
-        property, if any. If the node does not have a sentence, return
-        an empty set.
-        """
-        if 'sentence' in self:
-            return self['sentence'].atomics()
-        return emptyset
-
-    def constants(self):
-        """
-        Return the set of constants (recursive) of the node's `sentence`
-        property, if any. If the node does not have a sentence, return
-        the empty set.
-        """
-        if 'sentence' in self:
-            return self['sentence'].constants()
-        return emptyset
-
-    def predicates(self):
-        """
-        Return the set of predicates (recursive) of the node's `sentence`
-        property, if any. If the node does not have a sentence, return
-        the empty set.
-        """
-        if 'sentence' in self:
-            return self['sentence'].predicates()
-        return emptyset
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.id == other.id

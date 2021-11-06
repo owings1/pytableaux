@@ -258,7 +258,7 @@ class TestFDE(BaseSuite):
         branch = proof.branch()
         branch.add({'sentence': parse('NAaNKbc'), 'designated': False})
         node = branch[0]
-        assert node['sentence'].operators() == ['Negation', 'Disjunction', 'Negation', 'Conjunction']
+        assert node['sentence'].operators == ('Negation', 'Disjunction', 'Negation', 'Conjunction')
         assert proof.branching_complexity(node) == 1
 
     def test_branching_complexity_undes_1_3(self):
@@ -266,7 +266,7 @@ class TestFDE(BaseSuite):
         branch = proof.branch()
         branch.add({'sentence': parse('NAab'), 'designated': False})
         node = branch[0]
-        assert node['sentence'].operators() == ['Negation', 'Disjunction']
+        assert node['sentence'].operators == ('Negation', 'Disjunction')
         assert proof.branching_complexity(node) == 1
 
     def test_branching_complexity_undes_2_1(self):
@@ -274,7 +274,7 @@ class TestFDE(BaseSuite):
         branch = proof.branch()
         branch.add({'sentence': parse('KaKab'), 'designated': False})
         node = branch[0]
-        assert node['sentence'].operators() == ['Conjunction', 'Conjunction']
+        assert node['sentence'].operators == ('Conjunction', 'Conjunction')
         assert proof.branching_complexity(node) == 2
 
     def test_invalid_existential_inside_univ_max_steps(self):
