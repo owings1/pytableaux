@@ -513,8 +513,8 @@ class TableauxRules(object):
 
         def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node)
-            cond1 = Operated(Oper.Conditional, (lhs, rhs))
-            cond2 = Operated(Oper.Conditional, (rhs, lhs))
+            cond1 = Oper.Conditional.on((lhs, rhs))
+            cond2 = Oper.Conditional.on((rhs, lhs))
             return {
                 'adds': [
                     [
@@ -553,10 +553,10 @@ class TableauxRules(object):
         of *d* is the negation of the inner setntence of *n*. Then tick *n*.
         """
         negated     = True
-        quantifier  = 'Existential'
+        quantifier  = Quantifier.Existential
         designation = True
         branch_level = 1
-        convert_to = 'Universal'
+        convert_to = Quantifier.Universal
 
         def _get_node_targets(self, node, branch):
             s = self.sentence(node)
@@ -612,7 +612,7 @@ class TableauxRules(object):
         designation = True
         branch_level = 2
         ticking      = True
-        convert_to  = Quantifier.Existential
+        convert_to   = Quantifier.Existential
 
         # override FDE.ExistentialDesignated
 

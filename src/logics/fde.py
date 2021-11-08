@@ -44,22 +44,23 @@ class Model(BaseModel):
     An FDE model 
     """
 
+    #: Ordered truth values.
+    truth_values_list = ['F', 'N', 'B', 'T']
+
     #: The set of admissible values for sentences.
     #:
     #: :type: set
     #: :value: {T, B, N, F}
     #: :meta hide-value:
-    truth_values = set(['F', 'N', 'B', 'T'])
+    truth_values = set(truth_values_list)
 
     #: The set of designated values.
     #:
     #: :type: set
     #: :value: {T, B}
     #: :meta hide-value:
-    designated_values = set(['B', 'T'])
+    designated_values = {'B', 'T'}
 
-    #: Ordered truth values.
-    truth_values_list = ['F', 'N', 'B', 'T']
 
     unassigned_value = 'N'
 
@@ -180,7 +181,7 @@ class Model(BaseModel):
                         'input'  : sentence,
                         'output' : self.atomics[sentence]
                     }
-                    for sentence in sorted(list(self.atomics.keys()))
+                    for sentence in sorted(self.atomics)
                 ]
             },
             'Opaques' : {
@@ -196,7 +197,7 @@ class Model(BaseModel):
                         'input'  : sentence,
                         'output' : self.opaques[sentence]
                     }
-                    for sentence in sorted(list(self.opaques.keys()))
+                    for sentence in sorted(self.opaques)
                 ]
             },
             'Predicates' : {
@@ -660,11 +661,10 @@ class ConjunctionReducingRule(DefaultNodeRule):
         if self.conjunct_op is NotImplemented:
             raise NotImplementedError()
 
-        lhs, rhs = self.sentence(node).operands
-        cond1 = Operated(self.conjunct_op, [lhs, rhs])
-        cond2 = Operated(self.conjunct_op, [rhs, lhs])
-
-        sc = Operated('Conjunction', [cond1, cond2])
+        lhs, rhs = self.sentence(node)
+        cond1 = Operated(self.conjunct_op, (lhs, rhs))
+        cond2 = Operated(self.conjunct_op, (rhs, lhs))
+        sc = cond1.conjoin(cond2)
 
         if self.negated:
             sc = sc.negate()
@@ -696,7 +696,7 @@ class TableauxRules(object):
         def check_for_target(self, node, branch):
             nnode = self._find_closing_node(node, branch)
             if nnode:
-                return {'nodes': set([node, nnode])}
+                return {'nodes': {node, nnode}}
 
         # rule implementation
 
@@ -710,7 +710,7 @@ class TableauxRules(object):
             return self.tracker.cached_target(branch)
 
         def example_nodes(self, branch = None):
-            a = Atomic(0, 0)
+            a = Atomic.first()
             return [
                 {'sentence': a, 'designated': True },
                 {'sentence': a, 'designated': False},
@@ -826,7 +826,7 @@ class TableauxRules(object):
                     [
                         # keep designation neutral for inheritance below
                         {'sentence': operand, 'designated': self.designation}
-                        for operand in self.sentence(node).operands
+                        for operand in self.sentence(node)
                     ]
                 ]
             }
@@ -849,7 +849,7 @@ class TableauxRules(object):
                         # keep designation neutral for inheritance below
                         {'sentence': operand.negate(), 'designated': self.designation},
                     ]
-                    for operand in self.sentence(node).operands
+                    for operand in self.sentence(node)
                 ]
             }
 
@@ -870,7 +870,7 @@ class TableauxRules(object):
                         # keep designation neutral for inheritance below
                         {'sentence': operand, 'designated': self.designation},
                     ]
-                    for operand in self.sentence(node).operands
+                    for operand in self.sentence(node)
                 ]
             }
 
@@ -890,7 +890,7 @@ class TableauxRules(object):
                     [
                         # keep designation neutral for inheritance below
                         {'sentence': operand.negate(), 'designated': self.designation}
-                        for operand in self.sentence(node).operands
+                        for operand in self.sentence(node)
                     ]
                 ]
             }

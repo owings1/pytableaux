@@ -26,7 +26,7 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 30
 
-from lexicals import operarity, Operated
+from lexicals import Operated, Operator as Oper
 from . import fde, k3
 
 class Model(k3.Model):
@@ -36,7 +36,7 @@ class Model(k3.Model):
     """
 
     def truth_function(self, operator, a, b=None):
-        if operarity(operator) == 2 and (a == 'N' or b == 'N'):
+        if operator.arity == 2 and (a == 'N' or b == 'N'):
             return 'N'
         return super().truth_function(operator, a, b)
 
@@ -46,13 +46,13 @@ class TableauxSystem(fde.TableauxSystem):
     employing designation markers, and building the trunk in the same way.
     """
     branchables = {
-        'Negation': {
+        Oper.Negation: {
             True : {
                 True  : 0,
                 False : 0,
             },
         },
-        'Assertion': {
+        Oper.Assertion: {
             False : {
                 True  : 0,
                 False : 0,
@@ -62,7 +62,7 @@ class TableauxSystem(fde.TableauxSystem):
                 False : 0,
             },
         },
-        'Conjunction': {
+        Oper.Conjunction: {
             False : {
                 True  : 0,
                 False : 1,
@@ -72,7 +72,7 @@ class TableauxSystem(fde.TableauxSystem):
                 False : 2,
             },
         },
-        'Disjunction': {
+        Oper.Disjunction: {
             False  : {
                 True  : 2,
                 False : 2,
@@ -83,7 +83,7 @@ class TableauxSystem(fde.TableauxSystem):
             },
         },
         # reduction
-        'Material Conditional': {
+        Oper.MaterialConditional: {
             False  : {
                 True  : 0,
                 False : 0,
@@ -94,7 +94,7 @@ class TableauxSystem(fde.TableauxSystem):
             },
         },
         # reduction
-        'Material Biconditional': {
+        Oper.MaterialBiconditional: {
             False  : {
                 True  : 0,
                 False : 0,
@@ -105,7 +105,7 @@ class TableauxSystem(fde.TableauxSystem):
             },
         },
         # reduction
-        'Conditional': {
+        Oper.Conditional: {
             False  : {
                 True  : 0,
                 False : 0,
@@ -116,7 +116,7 @@ class TableauxSystem(fde.TableauxSystem):
             },
         },
         # reduction
-        'Biconditional': {
+        Oper.Biconditional: {
             False  : {
                 True  : 0,
                 False : 0,
@@ -176,7 +176,7 @@ class TableauxRules(object):
         designated nodes with the negation of each conjunct. Then tick *n*.
         """
         negated     = True
-        operator    = 'Conjunction'
+        operator    = Oper.Conjunction
         designation = True
         branch_level = 3
 
@@ -211,7 +211,7 @@ class TableauxRules(object):
         Then tick *n*. 
         """
         negated     = True
-        operator    = 'Conjunction'
+        operator    = Oper.Conjunction
         designation = False
         branch_level = 3
 
@@ -243,7 +243,7 @@ class TableauxRules(object):
         disjunct, and a designated node with the second disjunct. On *b'''* add a
         designated node with each disjunct. Then tick *n*.
         """
-        operator    = 'Disjunction'
+        operator    = Oper.Disjunction
         designation = True
         branch_level = 3
 
@@ -277,7 +277,7 @@ class TableauxRules(object):
         second disjunct and its negation. On *b'''* add designated nodes for the negation
         of each disjunct. Then tick *n*.
         """
-        operator    = 'Disjunction'
+        operator    = Oper.Disjunction
         designation = False
         branch_level = 3
 
@@ -311,7 +311,7 @@ class TableauxRules(object):
         disjunct and its negation, respectively. Then tick *n*.
         """
         negated     = True
-        operator    = 'Disjunction'
+        operator    = Oper.Disjunction
         designation = False
         branch_level = 3
 
@@ -337,13 +337,13 @@ class TableauxRules(object):
         """
         This rule reduces to a disjunction.
         """
-        operator    = 'Material Conditional'
+        operator    = Oper.MaterialConditional
         designation = True
         branch_level = 1
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
+            lhs, rhs = self.sentence(node)
+            disj = lhs.negate().disjoin(rhs)
             return {
                 'adds': [
                     [
@@ -357,13 +357,13 @@ class TableauxRules(object):
         This rule reduces to a negated disjunction.
         """
         negated     = True
-        operator    = 'Material Conditional'
+        operator    = Oper.MaterialConditional
         designation = True
         branch_level = 1
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
+            lhs, rhs = self.sentence(node)
+            disj = lhs.negate().disjoin(rhs)
             return {
                 'adds': [
                     [
@@ -390,15 +390,16 @@ class TableauxRules(object):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        operator    = 'Material Biconditional'
+        operator    = Oper.MaterialBiconditional
         designation = True
         branch_level = 1
+        convert_to   = Oper.MaterialConditional
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            cond1 = Operated('Material Conditional', s.operands)
-            cond2 = Operated('Material Conditional', list(reversed(s.operands)))
-            conj = Operated('Conjunction', [cond1, cond2])
+            lhs, rhs = self.sentence(node)
+            cond1 = Operated(self.convert_to, (lhs, rhs))
+            cond2 = Operated(self.convert_to, (rhs, lhs))
+            conj = cond1.conjoin(cond2)
             return {
                 'adds': [
                     [
@@ -412,15 +413,16 @@ class TableauxRules(object):
         This rule reduces to a negated conjunction of material conditionals.
         """
         negated     = True
-        operator    = 'Material Biconditional'
+        operator    = Oper.MaterialBiconditional
         designation = True
         branch_level = 1
+        convert_to   = Oper.MaterialConditional
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            cond1 = Operated('Material Conditional', s.operands)
-            cond2 = Operated('Material Conditional', list(reversed(s.operands)))
-            conj = Operated('Conjunction', [cond1, cond2])
+            lhs, rhs = self.sentence(node)
+            cond1 = Operated(self.convert_to, (lhs, rhs))
+            cond2 = Operated(self.convert_to, (rhs, lhs))
+            conj = cond1.conjoin(cond2)
             return {
                 'adds': [
                     [
@@ -445,49 +447,49 @@ class TableauxRules(object):
         """
         Same as for the material conditional designated.
         """
-        operator = 'Conditional'
+        operator = Oper.Conditional
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
         """
         Same as for the negated material conditional designated.
         """
-        operator = 'Conditional'
+        operator = Oper.Conditional
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         """
         Same as for the material conditional undesignated.
         """
-        operator = 'Conditional'
+        operator = Oper.Conditional
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
         """
         Same as for the negated material conditional undesignated.
         """
-        operator = 'Conditional'
+        operator = Oper.Conditional
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         """
         Same as for the material biconditional designated.
         """
-        operator = 'Biconditional'
+        operator = Oper.Biconditional
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
         """
         Same as for the negated material biconditional designated.
         """
-        operator = 'Biconditional'
+        operator = Oper.Biconditional
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
         """
         Same as for the material biconditional undesignated.
         """
-        operator = 'Biconditional'
+        operator = Oper.Biconditional
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
         """
         Same as for the negated material biconditional undesignated.
         """
-        operator = 'Biconditional'
+        operator = Oper.Biconditional
 
     class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
         pass

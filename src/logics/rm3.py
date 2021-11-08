@@ -26,7 +26,7 @@ class Meta(object):
     tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
     category_display_order = 130
 
-from lexicals import Operated
+from lexicals import Operator as Oper
 from . import fde, lp
 
 class Model(lp.Model):
@@ -47,7 +47,7 @@ class Model(lp.Model):
         return super().value_of_operated(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
-        if operator == 'Conditional' and self.nvals[a] > self.nvals[b]:
+        if operator == Oper.Conditional and self.nvals[a] > self.nvals[b]:
             return 'F'
         return super().truth_function(operator, a, b)
 
@@ -58,9 +58,8 @@ class TableauxSystem(fde.TableauxSystem):
 
     .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
-    branchables = dict(fde.TableauxSystem.branchables)
-    branchables.update({
-        'Conditional': {
+    branchables = fde.TableauxSystem.branchables | {
+        Oper.Conditional: {
             False  : {
                 True  : 2,
                 False : 1,
@@ -70,7 +69,7 @@ class TableauxSystem(fde.TableauxSystem):
                 False : 1,
             },
         },
-        'Biconditional': {
+        Oper.Biconditional: {
             False  : {
                 True  : 2,
                 False : 1,
@@ -80,7 +79,7 @@ class TableauxSystem(fde.TableauxSystem):
                 False : 1,
             },
         },
-    })
+    }
 
 class DefaultNodeRule(fde.DefaultNodeRule):
     pass
@@ -177,7 +176,7 @@ class TableauxRules(object):
         the antecedent, its negation, the consequent, and its negation,
         respectively. Then tick *n*.
         """
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = True
         branch_level = 3
 
@@ -211,7 +210,7 @@ class TableauxRules(object):
         On *b''*, add an undesignated node with the negation of the antecedent,
         and a designated node with the negation of the consequent. Then tick *n*.
         """
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = False
         branch_level = 2
 
@@ -241,12 +240,12 @@ class TableauxRules(object):
         the negation of each operand. On *b'''*, add four designated nodes, one
         with each operand, and one for the negation of each operand. Then tick *n*.
         """
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = True
         branch_level = 3
 
         def _get_node_targets(self, node, branch):
-            lhs, rhs = self.sentence(node).operands
+            lhs, rhs = self.sentence(node)
             return {
                 'adds': [
                     [
@@ -276,14 +275,14 @@ class TableauxRules(object):
         with the same operands as *n*, and the second conjunct being a conditional
         with the reversed operands of *n*, then tick *n*.
         """
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = False
         branch_level = 2
 
         def _get_node_targets(self, node, branch):
-            lhs, rhs = self.sentence(node).operands
-            cond1 = Operated('Conditional', [lhs, rhs])
-            cond2 = Operated('Conditional', [rhs, lhs])
+            lhs, rhs = self.sentence(node)
+            cond1 = Oper.Conditional.on((lhs, rhs))
+            cond2 = Oper.Conditional.on((rhs, lhs))
             return {
                 'adds': [
                     [
@@ -303,12 +302,12 @@ class TableauxRules(object):
         each operand. Then tick *n*.
         """
         negated     = True
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = False
         branch_level = 2
 
         def _get_node_targets(self, node, branch):
-            lhs, rhs = self.sentence(node).operands
+            lhs, rhs = self.sentence(node)
             return {
                 'adds': [
                     [

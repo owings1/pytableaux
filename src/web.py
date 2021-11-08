@@ -22,8 +22,7 @@ import examples, fixed
 from errors import TimeoutError
 from fixed import issues_href, source_href, version
 from lexicals import Argument, Predicate, Predicates, RenderSet, \
-    create_lexwriter, list_operators, list_quantifiers, \
-    notations as lexwriter_notations, Operator, Quantifier
+    create_lexwriter, notations as lexwriter_notations, Operator, Quantifier
 from parsers import create_parser, notations as parser_notations
 from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
@@ -154,10 +153,10 @@ base_view_data = {
     'logics'              : modules['logics'],
     # 'parser_names'        : parser_notations,
     'parser_tables'       : parser_tables,
-    'operators_list'      : list_operators(),
-    'quantifiers'         : list_quantifiers(),
+    'operators_list'      : list(Operator),
+    'quantifiers'         : list(Quantifier),
     'source_href'         : source_href,
-    'system_predicates'   : {p.name: p for p in Predicates},
+    'system_predicates'   : {p.name: p for p in Predicates.System},
     'tabwriter_formats'   : tabwriter_formats,
     'version'             : version,
     'view_version'        : 'v2',

@@ -38,10 +38,10 @@ class Model(fde.Model):
     .. _FDE model: fde.html#logics.fde.Model
     """
 
+    truth_values_list = ('F', 'B', 'T')
     #: The admissible values
-    truth_values = set(['F', 'B', 'T'])
+    truth_values = set(truth_values_list)
 
-    truth_values_list = ['F', 'B', 'T']
     unassigned_value = 'F'
 
     nvals = {
@@ -92,7 +92,7 @@ class TableauxRules(object):
         def check_for_target(self, node, branch):
             nnode = self.__find_closing_node(node, branch)
             if nnode:
-                return {'nodes': set([node, nnode])}
+                return {'nodes': {node, nnode}}
 
         # rule implementation
 
@@ -106,7 +106,7 @@ class TableauxRules(object):
             return self.tracker.cached_target(branch)
 
         def example_nodes(self, branch = None):
-            a = Atomic(0, 0)
+            a = Atomic.first()
             return (
                 {'sentence': a         , 'designated': False},
                 {'sentence': a.negate(), 'designated': False},

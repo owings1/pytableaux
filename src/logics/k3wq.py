@@ -26,7 +26,7 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 40
 
-from lexicals import Operated, Quantified
+from lexicals import Quantifier
 from . import fde, k3w, k3
 
 class Model(k3w.Model):
@@ -235,7 +235,7 @@ class TableauxRules(object):
         The other node is a substitution of a constant new to `b`. Then tick `n`.
         """
         negated     = False
-        quantifier  = 'Existential'
+        quantifier  = Quantifier.Existential
         designation = True
         branch_level = 1
 
@@ -247,8 +247,8 @@ class TableauxRules(object):
             si = s.sentence
             r = si.substitute(c, v)
 
-            disji = Operated('Disjunction', [si, si.negate()])
-            sq = Quantified('Universal', v, disji)
+            disji = si.disjoin(si.negate())
+            sq = Quantifier.Universal.over(v, disji)
 
             return [
                 {'sentence': sq, 'designated': True},
@@ -268,7 +268,7 @@ class TableauxRules(object):
         Then tick `n`.
         """
         negated     = False
-        quantifier  = 'Existential'
+        quantifier  = Quantifier.Existential
         designation = False
         branch_level = 2
 
@@ -295,9 +295,10 @@ class TableauxRules(object):
 
         def _get_translation_node(self, node, branch):
             s = self.sentence(node)
+            q = Quantifier.Universal
             v = s.variable
             si = s.sentence
-            sq = Quantified('Universal', v, si.negate())
+            sq = q.over(v, si.negate())
             return {'sentence': sq, 'designated': True}
 
     class ExistentialNegatedUndesignated(DefaultNewConstantRule):
@@ -308,7 +309,7 @@ class TableauxRules(object):
         tick `n`.
         """
         negated     = True
-        quantifier  = 'Existential'
+        quantifier  = Quantifier.Existential
         designation = False
         branch_level = 1
 
@@ -335,7 +336,7 @@ class TableauxRules(object):
         variable. Then tick `n`.
         """
         negated     = True
-        quantifier  = 'Universal'
+        quantifier  = Quantifier.Universal
         designation = True
         branch_level = 1
 
@@ -343,12 +344,12 @@ class TableauxRules(object):
 
         def get_new_nodes_for_constant(self, c, node, branch):
             s = self.sentence(node)
+            q = self.quantifier
             v = s.variable
             si = s.sentence
             r = si.substitute(c, v)
-
-            disji = Operated('Disjunction', [si, si.negate()])
-            sq = Quantified('Universal', v, disji)
+            disji = si.disjoin(si.negate())
+            sq = q.over(v, disji)
 
             return [
                 {'sentence': sq        , 'designated': True},
@@ -367,7 +368,7 @@ class TableauxRules(object):
         a designated node with the negatum of `n`. Then tick `n`.
         """
         negated     = True
-        quantifier  = 'Universal'
+        quantifier  = Quantifier.Universal
         designation = False
         branch_level = 2
 
@@ -394,9 +395,7 @@ class TableauxRules(object):
 
         def _get_translation_node(self, node, branch):
             s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            sq = Quantified('Universal', v, si)
+            sq = self.quantifier.over(s.variable, s.sentence)
             return {'sentence': sq, 'designated': True}
 
     closure_rules = [

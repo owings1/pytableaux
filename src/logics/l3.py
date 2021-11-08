@@ -27,7 +27,7 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 80
 
-from lexicals import Operated
+from lexicals import Operated, Operator as Oper
 from . import fde, k3
 
 class Model(k3.Model):
@@ -37,7 +37,7 @@ class Model(k3.Model):
     """
 
     def truth_function(self, operator, a, b=None):
-        if operator == 'Conditional':
+        if operator == Oper.Conditional:
             if a == 'N' and b == 'N':
                 return 'T'
         return super().truth_function(operator, a, b)
@@ -47,17 +47,16 @@ class TableauxSystem(fde.TableauxSystem):
     :m:`L3`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
     employing designation markers, and building the trunk in the same way.
     """
-    branchables = dict(fde.TableauxSystem.branchables)
-    branchables.update({
-        'Conditional': {
+    branchables = fde.TableauxSystem.branchables | {
+        Oper.Conditional: {
             False : {True: 1, False: 1},
             True  : {True: 0, False: 1},
         },
-        'Biconditional': {
+        Oper.Biconditional: {
             False : {True: 1, False: 1},
             True  : {True: 1, False: 1},
         },
-    })
+    }
 
 class DefaultNodeRule(fde.DefaultNodeRule):
     pass
@@ -151,23 +150,23 @@ class TableauxRules(object):
         a node with the consequent, and a node with the negation of the consequent.
         Then tick *n*.
         """
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = True
         branch_level = 2
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
+            lhs, rhs = self.sentence(node)
+            disj = lhs.negate().disjoin(rhs)
             return {
                 'adds': [
                     [
                         {'sentence': disj, 'designated': True},
                     ],
                     [
-                        {'sentence': s.lhs         , 'designated': False},
-                        {'sentence': s.lhs.negate(), 'designated': False},
-                        {'sentence': s.rhs         , 'designated': False},
-                        {'sentence': s.rhs.negate(), 'designated': False},
+                        {'sentence': lhs         , 'designated': False},
+                        {'sentence': lhs.negate(), 'designated': False},
+                        {'sentence': rhs         , 'designated': False},
+                        {'sentence': rhs.negate(), 'designated': False},
                     ],
                 ],
             }
@@ -183,7 +182,7 @@ class TableauxRules(object):
         add undesignated nodes for the antecedent and its negation, and a designated
         with the negation of the consequent. Then tick *n*.   
         """
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = False
         branch_level = 2
 
@@ -214,23 +213,23 @@ class TableauxRules(object):
         nodes, with the antecedent, the negation of the antecedent, the consequent,
         and the negation of the consequent, respectively. Then tick *n*.
         """
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = True
         branch_level = 2
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            bicond = Operated('Material Biconditional', s.operands)
+            lhs, rhs = self.sentence(node)
+            bicond = Operated(Oper.MaterialBiconditional, (lhs, rhs))
             return {
                 'adds': [
                     [
                         {'sentence': bicond, 'designated': True},
                     ],
                     [
-                        {'sentence': s.lhs         , 'designated': False},
-                        {'sentence': s.lhs.negate(), 'designated': False},
-                        {'sentence': s.rhs         , 'designated': False},
-                        {'sentence': s.rhs.negate(), 'designated': False},
+                        {'sentence': lhs         , 'designated': False},
+                        {'sentence': lhs.negate(), 'designated': False},
+                        {'sentence': rhs         , 'designated': False},
+                        {'sentence': rhs.negate(), 'designated': False},
                     ],
                 ],
             }
@@ -245,14 +244,14 @@ class TableauxRules(object):
         node with the same operands. On *b''* add an undesignated conditional node
         with the reversed operands. Then tick *n*.
         """
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = False
         branch_level = 2
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            cond1 = Operated('Conditional', [s.lhs, s.rhs])
-            cond2 = Operated('Conditional', [s.rhs, s.lhs])
+            lhs, rhs = self.sentence(node)
+            cond1 = Operated(Oper.Conditional, (lhs, rhs))
+            cond2 = Operated(Oper.Conditional, (rhs, lhs))
             return {
                 'adds': [
                     [
@@ -273,23 +272,23 @@ class TableauxRules(object):
         and the negation of the consequent, respectively. Then tick *n*.
         """
         negated     = True
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = False
         branch_level = 2
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            bicond = Operated('Material Biconditional', s.operands)
+            lhs, rhs = self.sentence(node)
+            bicond = Operated(Oper.MaterialBiconditional, (lhs, rhs))
             return {
                 'adds': [
                     [
                         {'sentence': bicond.negate(), 'designated': False},
                     ],
                     [
-                        {'sentence': s.lhs         , 'designated': False},
-                        {'sentence': s.lhs.negate(), 'designated': False},
-                        {'sentence': s.rhs         , 'designated': False},
-                        {'sentence': s.rhs.negate(), 'designated': False},
+                        {'sentence': lhs         , 'designated': False},
+                        {'sentence': lhs.negate(), 'designated': False},
+                        {'sentence': rhs         , 'designated': False},
+                        {'sentence': rhs.negate(), 'designated': False},
                     ],
                 ],
             }

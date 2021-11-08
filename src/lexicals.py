@@ -26,7 +26,7 @@ from itertools import chain
 from past.builtins import basestring
 from types import DynamicClassAttribute
 from utils import CacheNotationData, Decorators as decs, ReadOnlyDict, cat, isstr, \
-    sortedbyval, typecheck, condcheck, emptyset, kwrepr, dictrepr, Kwobj
+    typecheck, condcheck, emptyset, kwrepr
 lazyget = decs.lazyget
 setonce = decs.setonce
 nosetattr = decs.nosetattr
@@ -54,57 +54,6 @@ def create_lexwriter(notn=None, enc=None, **opts):
         opts['renderset'] = RenderSet.fetch(notn, enc)
     return lexwriter_classes[notn](**opts)
 
-def operarity(oper):
-    """
-    Get the arity of an operator.
-
-    Note: to get the arity of a predicate, use ``predicate.arity``.
-
-    :param str oper: The operator.
-    :return: The arity of the operator.
-    :rtype: int
-    :raises errors.NotFoundError: if the operator does not exist.
-    """
-    try:
-        return Operator[oper].arity
-    except KeyError:
-        raise NotFoundError(oper)
-
-def is_operator(obj):
-    """
-    Whether the object is an operator string.
-
-    :param any obj: The object to check.
-    :return: Whether it is an operator.
-    :rtype: bool
-    """
-    return obj in Operator
-
-def list_operators():
-    """
-    Get a list of all the operator strings.
-
-    :rtype: list(str)
-    """
-    return list(Operator)
-
-def is_quantifier(obj):
-    """
-    Whether the object is an quantifier string.
-
-    :param any obj: The object to check.
-    :return: Whether it is an quantifier.
-    :rtype: bool
-    """
-    return obj in Quantifier
-
-def list_quantifiers():
-    """
-    Get a list of all the quantifier strings.
-
-    :rtype: list(str)
-    """
-    return list(Quantifier)
 
 def _isreadonly(cls):
     return (
@@ -183,6 +132,12 @@ class LexEnumMeta(EnumMetaBase):
     @DynamicClassAttribute
     def TYPE(cls):
         return LexType[cls.__name__] 
+    # def __new__(cls, clsname, bases, attrs):
+    #     return super().__new__(cls, clsname, bases, attrs)
+    def __call__(cls, *args, **kw):
+        if len(args) == 1 and isinstance(args[0], cls._keytypes) and args[0] in cls:
+            return args[0]
+        return super().__call__(*args, **kw)
 
 class LexItemMeta(type):
 
@@ -190,8 +145,8 @@ class LexItemMeta(type):
     def TYPE(cls):
         return LexType[cls.__name__]
 
-    def __new__(cls, clsname, bases, attrs):
-        return super().__new__(cls, clsname, bases, attrs)
+    # def __new__(cls, clsname, bases, attrs):
+    #     return super().__new__(cls, clsname, bases, attrs)
 
     def __setattr__(cls, a, v):
         if a in ('System',) and bool(getattr(cls, a, None)):
@@ -199,6 +154,11 @@ class LexItemMeta(type):
         return super().__setattr__(a, v)
 
     def __delattr__(cls, attr): raise AttributeError(cls, attr)
+
+    def __call__(cls, *args, **kw):
+        if len(args) == 1 and isinstance(args[0], cls):
+            return args[0]
+        return super().__call__(*args, **kw)
 
 class Lexical(object):
     """
@@ -354,7 +314,6 @@ class LexItem(Lexical, metaclass = LexItemMeta):
 
     def __eq__(self, other):
         return self.TYPE == getattr(other, 'TYPE', None) and self.ident == other.ident
-        return isinstance(other, self.__class__) and self.ident == other.ident
 
     def __new__(cls, *args):
         if cls not in LexType: raise TypeError('Abstract type %s' % cls)
@@ -371,6 +330,8 @@ class Quantifier(LexEnum):
     Existential = (0, 'Existential')
     Universal   = (1, 'Universal')
 
+    def over(self, variable, sentence):
+        return Quantified(self, variable, sentence)
 @unique
 class Operator(LexEnum):
     Assertion               = (10,  'Assertion',    1)
@@ -383,6 +344,9 @@ class Operator(LexEnum):
     Biconditional           = (80,  'Biconditional', 2)
     Possibility             = (90,  'Possibility',   1)
     Necessity               = (100, 'Necessity',     1)
+
+    def on(self, operands):
+        return Operated(self, operands)
 
     def __init__(self, *value):
         self.arity = value[2]
@@ -1397,15 +1361,6 @@ class LexWriter(object):
         """
         # NB: implementations should avoid calling this method, e.g.
         #     dropping parens will screw up since it is recursive.
-
-        if isstr(item):
-            raise TypeError('string found for write item %s' % item)
-            if item in Operator:
-                item = Operator[item]
-            elif item in Quantifier:
-                item = Quantifier[item]
-            else:
-                raise TypeError('Unknown lexical string type: {}'.format(item))
         if isinstance(item, Operator):
             return self._write_operator(item)
         if isinstance(item, Quantifier):
@@ -1416,7 +1371,7 @@ class LexWriter(object):
             return self._write_predicate(item)
         if isinstance(item, Sentence):
             return self._write_sentence(item)
-        raise TypeError('Unknown lexical type: {}'.format(item))
+        raise TypeError("Unknown lexical type '%s': %s" % (type(item), item))
 
     def _write_parameter(self, param):
         if isinstance(param, Constant):
@@ -1473,7 +1428,7 @@ class BaseLexWriter(LexWriter):
         )
 
     def _write_predicate(self, predicate):
-        if predicate in Predicates.System:
+        if predicate.is_system:
             typ, key = ('system_predicate', predicate.name)
         else:
             typ, key = ('user_predicate', predicate.index)
@@ -1500,11 +1455,11 @@ class BaseLexWriter(LexWriter):
         )
 
     def _write_quantified(self, sentence):
-        return ''.join([
+        return ''.join((
             self._write_quantifier(sentence.quantifier),
             self._write_variable(sentence.variable),
             self._write_sentence(sentence.sentence),
-        ])
+        ))
 
     def _write_predicated(self, sentence):
         s = self._write_predicate(sentence.predicate)
@@ -1554,7 +1509,7 @@ class StandardLexWriter(BaseLexWriter):
 
     def _write_operated(self, sentence, drop_parens = False):
         oper = sentence.operator
-        arity = operarity(oper)
+        arity = oper.arity
         if arity == 1:
             operand = sentence.operand
             if (oper == Operator.Negation and
@@ -1615,7 +1570,7 @@ _builtin = {
                 'subscript': '{0}',
             },
             'strings' : {
-                'atomic'   : ['a', 'b', 'c', 'd', 'e'],
+                'atomic'   : ('a', 'b', 'c', 'd', 'e'),
                 'operator' : {
                     Operator.Assertion              : 'T',
                     Operator.Negation               : 'N',
@@ -1628,8 +1583,8 @@ _builtin = {
                     Operator.Possibility            : 'M',
                     Operator.Necessity              : 'L',
                 },
-                'variable'   : ['x', 'y', 'z', 'v'],
-                'constant'   : ['m', 'n', 'o', 's'],
+                'variable'   : ('x', 'y', 'z', 'v'),
+                'constant'   : ('m', 'n', 'o', 's'),
                 'quantifier' : {
                     Quantifier.Universal   : 'V',
                     Quantifier.Existential : 'S',
@@ -1639,10 +1594,10 @@ _builtin = {
                     'Existence' : 'J',
                     'NegatedIdentity' : NotImplemented,
                 },
-                'user_predicate' : ['F', 'G', 'H', 'O'],
-                'paren_open'     : [NotImplemented],
-                'paren_close'    : [NotImplemented],
-                'whitespace'     : [' '],
+                'user_predicate' : ('F', 'G', 'H', 'O',),
+                'paren_open'     : (NotImplemented,),
+                'paren_close'    : (NotImplemented,),
+                'whitespace'     : (' ',),
                 'meta': {
                     'conseq': '|-',
                     'non-conseq': '|/-',
@@ -1668,7 +1623,7 @@ _builtin.update({
                 'subscript': '{0}',
             },
             'strings': {
-                'atomic' : ['A', 'B', 'C', 'D', 'E'],
+                'atomic' : ('A', 'B', 'C', 'D', 'E'),
                 'operator' : {
                     Operator.Assertion              :  '*',
                     Operator.Negation               :  '~',
@@ -1681,8 +1636,8 @@ _builtin.update({
                     Operator.Possibility            :  'P',
                     Operator.Necessity              :  'N',
                 },
-                'variable' : ['x', 'y', 'z', 'v'],
-                'constant' : ['a', 'b', 'c', 'd'],
+                'variable' : ('x', 'y', 'z', 'v'),
+                'constant' : ('a', 'b', 'c', 'd'),
                 'quantifier' : {
                     Quantifier.Universal   : 'L',
                     Quantifier.Existential : 'X',
@@ -1692,10 +1647,10 @@ _builtin.update({
                     'Existence' : 'E!',
                     'NegatedIdentity' : '!=',
                 },
-                'user_predicate'  : ['F', 'G', 'H', 'O'],
-                'paren_open'      : ['('],
-                'paren_close'     : [')'],
-                'whitespace'      : [' '],
+                'user_predicate'  : ('F', 'G', 'H', 'O'),
+                'paren_open'      : ('(',),
+                'paren_close'     : (')',),
+                'whitespace'      : (' ',),
                 'meta': {
                     'conseq': '|-',
                     'non-conseq': '|/-'
@@ -1711,7 +1666,7 @@ _builtin.update({
                 'subscript': lambda sub: ''.join(chr(0x2080 + int(d)) for d in str(sub))
             },
             'strings': {
-                'atomic'   : ['A', 'B', 'C', 'D', 'E'],
+                'atomic'   : ('A', 'B', 'C', 'D', 'E'),
                 'operator' : {
                     # 'Assertion'              : '°',
                     Operator.Assertion              : '○',
@@ -1725,8 +1680,8 @@ _builtin.update({
                     Operator.Possibility            : '◇',
                     Operator.Necessity              : '◻',
                 },
-                'variable'   : ['x', 'y', 'z', 'v'],
-                'constant'   : ['a', 'b', 'c', 'd'],
+                'variable'   : ('x', 'y', 'z', 'v'),
+                'constant'   : ('a', 'b', 'c', 'd'),
                 'quantifier' : {
                     Quantifier.Universal   : '∀' ,
                     Quantifier.Existential : '∃' ,
@@ -1736,10 +1691,10 @@ _builtin.update({
                     'Existence' : 'E!',
                     'NegatedIdentity' : '≠',
                 },
-                'user_predicate'  : ['F', 'G', 'H', 'O'],
-                'paren_open'      : ['('],
-                'paren_close'     : [')'],
-                'whitespace'      : [' '],
+                'user_predicate'  : ('F', 'G', 'H', 'O'),
+                'paren_open'      : ('(',),
+                'paren_close'     : (')',),
+                'whitespace'      : (' ',),
                 'meta': {
                     'conseq': '⊢',
                     'nonconseq': '⊬',
@@ -1755,7 +1710,7 @@ _builtin.update({
                 'subscript': '<sub>{0}</sub>',
             },
             'strings': {
-                'atomic'   : ['A', 'B', 'C', 'D', 'E'],
+                'atomic'   : ('A', 'B', 'C', 'D', 'E'),
                 'operator' : {
                     # 'Assertion'              : '&deg;'   ,
                     Operator.Assertion             : '&#9675;' ,
@@ -1769,8 +1724,8 @@ _builtin.update({
                     Operator.Possibility           : '&#9671;' ,
                     Operator.Necessity             : '&#9723;' ,
                 },
-                'variable'   : ['x', 'y', 'z', 'v'],
-                'constant'   : ['a', 'b', 'c', 'd'],
+                'variable'   : ('x', 'y', 'z', 'v'),
+                'constant'   : ('a', 'b', 'c', 'd'),
                 'quantifier' : {
                     Quantifier.Universal   : '&forall;' ,
                     Quantifier.Existential : '&exist;'  ,
@@ -1780,10 +1735,10 @@ _builtin.update({
                     'Existence' : 'E!',
                     'NegatedIdentity' : '&ne;',
                 },
-                'user_predicate'  : ['F', 'G', 'H', 'O'],
-                'paren_open'      : ['('],
-                'paren_close'     : [')'],
-                'whitespace'      : [' '],
+                'user_predicate'  : ('F', 'G', 'H', 'O'),
+                'paren_open'      : ('(',),
+                'paren_close'     : (')',),
+                'whitespace'      : (' ',),
                 'meta': {
                     'conseq': '⊢',
                     'nonconseq': '⊬',
@@ -1801,8 +1756,3 @@ lexwriter_classes.update({
     'polish'   : PolishLexWriter,
     'standard' : StandardLexWriter,
 })
-
-# Initialize order.
-# LexicalItem._initorder()
-# Init system predicates
-# Predicates._initsys()

@@ -188,7 +188,7 @@ class Model(BaseModel):
                 'member_datatype' : 'int',
                 'member_typehint' : 'world',
                 'symbol'          : 'W',
-                'values'          : sorted(list(self.frames.keys())),
+                'values'          : sorted(self.frames),
             },
             'Access': {
                 'description'     : 'access relation',
@@ -198,7 +198,7 @@ class Model(BaseModel):
                 'member_datatype' : 'tuple',
                 'member_typehint' : 'access',
                 'symbol'          : 'R',
-                'values'          : sorted(list(self.access)),
+                'values'          : sorted(self.access),
             },
             'Frames': {
                 'description'     : 'world frames',

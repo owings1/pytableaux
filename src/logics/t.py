@@ -104,7 +104,7 @@ class TableauxRules(object):
             branch.add({'world1': target['world'], 'world2': target['world']})
 
         def example_nodes(self, branch = None):
-            return ({'sentence': Atomic(0, 0), 'world': 0},)
+            return ({'sentence': Atomic.first(), 'world': 0},)
 
         # private util
 

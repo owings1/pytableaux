@@ -19,7 +19,7 @@
 # pytableaux - example arguments
 
 from lexicals import Predicates, Constant, Variable, Atomic, \
-    Predicated, Operated, Quantified, operarity
+    Predicated, Operated, Quantified
 from parsers import create_parser
 
 # polish notation
@@ -157,14 +157,7 @@ def existence():
     return Predicated('Existence', [a])
 
 def quantified(quantifier):
-    x = Variable(0, 0)
-    p = preds[(0, 0)]
-    x_is_f = Predicated(p, [x])
-    return Quantified(quantifier, x, x_is_f)
+    return Quantified.first(quantifier)
 
 def operated(operator):
-    a = Atomic(0, 0)
-    operands = [a]
-    for x in range(operarity(operator) - 1):
-        operands.append(operands[-1].next())
-    return Operated(operator, operands)
+    return Operated.first(operator)

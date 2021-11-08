@@ -20,7 +20,7 @@
 from models import BaseModel
 from utils import OrderedAttrsView, isint, isstr, rcurry, lcurry, emptyset
 from lexicals import Constant, Variable, Predicate, Predicated, Atomic, Quantified, \
-    Operated, operarity
+    Operated
 
 class AdzHelper(object):
 

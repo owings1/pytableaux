@@ -35,21 +35,21 @@ class Model(fde.Model):
     A K3 model is like an :ref:`FDE model <fde-model>` without the :m:`B` value.
     """
 
+    truth_values_list = ('F', 'N', 'T')
     #: The set of admissible values for sentences in a model.
     #:
     #: :type: set
     #: :value: {T, N, F}
     #: :meta hide-value:
-    truth_values = set(['F', 'N', 'T'])
+    truth_values = frozenset(truth_values_list)
 
     #: The (singleton) set of designated values in model.
     #:
     #: :type: set
     #: :value: {T}
     #: :meta hide-value:
-    designated_values = set(['T'])
+    designated_values = frozenset(('T',))
 
-    truth_values_list = ['F', 'N', 'T']
     unassigned_value = 'N'
 
     #tmp
@@ -94,7 +94,7 @@ class TableauxRules(object):
             """
             nnode = self.__find_closing_node(node, branch)
             if nnode:
-               return {'nodes': set([node, nnode])}
+               return {'nodes': {node, nnode}}
 
         # rule implementation
 
@@ -107,7 +107,7 @@ class TableauxRules(object):
             return self.tracker.cached_target(branch)
 
         def example_nodes(self, branch = None):
-            a = Atomic(0, 0)
+            a = Atomic.first()
             return (
                 {'sentence': a         , 'designated': True},
                 {'sentence': a.negate(), 'designated': True},

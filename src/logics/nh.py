@@ -29,7 +29,7 @@ class Meta(object):
     tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
     category_display_order = 110
 
-from lexicals import Operated
+from lexicals import Operator as Oper
 from . import fde, lp, mh
 
 class Model(lp.Model):
@@ -49,10 +49,10 @@ class Model(lp.Model):
         return super().is_sentence_opaque(sentence)
 
     def truth_function(self, operator, a, b = None):
-        if operator == 'Conjunction':
+        if operator == Oper.Conjunction:
             if a == 'B' and b == 'B':
                 return 'T'
-        elif operator == 'Conditional':
+        elif operator == Oper.Conditional:
             if a != 'F' and b == 'F':
                 return 'F'
             return 'T'
@@ -67,37 +67,37 @@ class TableauxSystem(fde.TableauxSystem):
     """
     # operator => negated => designated
     branchables = {
-        'Negation': {
+        Oper.Negation: {
             True  : {True: 0, False: 0},
         },
-        'Assertion': {
+        Oper.Assertion: {
             False : {True: 0, False: 0},
             True  : {True: 0, False: 0},
         },
-        'Conjunction': {
+        Oper.Conjunction: {
             False : {True: 0, False: 1},
             True  : {True: 3, False: 1},
         },
-        'Disjunction': {
+        Oper.Disjunction: {
             False : {True: 1, False: 0},
             True  : {True: 0, False: 1},
         },
         # for now, reduce to negated disjunction
-        'Material Conditional': {
+        Oper.MaterialConditional: {
             False : {True: 0, False: 0},
             True  : {True: 0, False: 0},
         },
         # for now, reduce to conjunction
-        'Material Biconditional': {
+        Oper.MaterialBiconditional: {
             False : {True: 0, False: 0},
             True  : {True: 0, False: 0},
         },
-        'Conditional': {
+        Oper.Conditional: {
             False : {True: 1, False: 0},
             True  : {True: 0, False: 1},
         },
         # for now, reduce to conjunction
-        'Biconditional': {
+        Oper.Biconditional: {
             False : {True: 0, False: 0},
             True  : {True: 0, False: 0},
         },
@@ -164,29 +164,29 @@ class TableauxRules(object):
         Then, tick *n*.
         """
         negated      = True
-        operator     = 'Conjunction'
+        operator     = Oper.Conjunction
         designation  = True
         branch_level = 4
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+            lhs, rhs = self.sentence(node)
             return {
                 'adds': [
                     [
-                        {'sentence':        s.lhs , 'designated': False},
+                        {'sentence': lhs, 'designated': False},
                     ],
                     [
-                        {'sentence':        s.lhs , 'designated': False},
+                        {'sentence': lhs, 'designated': False},
                     ],
                     [
-                        {'sentence':        s.lhs , 'designated': True},
-                        {'sentence': s.lhs.negate(), 'designated': True},
-                        {'sentence': s.rhs.negate(), 'designated': False},
+                        {'sentence': lhs         ,  'designated': True},
+                        {'sentence': lhs.negate(), 'designated': True},
+                        {'sentence': rhs.negate(), 'designated': False},
                     ],
                     [
-                        {'sentence':        s.rhs , 'designated': True},
-                        {'sentence': s.rhs.negate(), 'designated': True},
-                        {'sentence': s.lhs.negate(), 'designated': False},
+                        {'sentence': rhs         , 'designated': True},
+                        {'sentence': rhs.negate(), 'designated': True},
+                        {'sentence': lhs.negate(), 'designated': False},
                     ],
                 ],
             }
@@ -202,23 +202,23 @@ class TableauxRules(object):
         for each of the conjuncts and its negation. Then tick *n*.
         """
         negated      = True
-        operator     = 'Conjunction'
+        operator     = Oper.Conjunction
         designation  = False
         branch_level = 2
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+            lhs, rhs = self.sentence(node)
             return {
                 'adds': [
                     [
-                        {'sentence': s.lhs.negate(), 'designated': False},
-                        {'sentence': s.rhs.negate(), 'designated': False},
+                        {'sentence': lhs.negate(), 'designated': False},
+                        {'sentence': rhs.negate(), 'designated': False},
                     ],
                     [
-                        {'sentence':        s.lhs , 'designated': True},
-                        {'sentence': s.lhs.negate(), 'designated': True},
-                        {'sentence':        s.rhs , 'designated': True},
-                        {'sentence': s.rhs.negate(), 'designated': True},
+                        {'sentence': lhs         , 'designated': True},
+                        {'sentence': lhs.negate(), 'designated': True},
+                        {'sentence': rhs         , 'designated': True},
+                        {'sentence': rhs.negate(), 'designated': True},
                     ],
                 ],
             }
@@ -239,13 +239,13 @@ class TableauxRules(object):
         """
         This rule reduces to a disjunction.
         """
-        operator     = 'Material Conditional'
+        operator     = Oper.MaterialConditional
         designation  = True
         branch_level = 1
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
+            lhs, rhs = self.sentence(node)
+            disj = lhs.negate().disjoin(rhs)
             return {
                 'adds': [
                     [
@@ -259,13 +259,13 @@ class TableauxRules(object):
         This rule reduces to a negated disjunction.
         """
         negated      = True
-        operator     = 'Material Conditional'
+        operator     = Oper.MaterialConditional
         designation  = True
         branch_level = 1
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            disj = Operated('Disjunction', [s.lhs.negate(), s.rhs])
+            lhs, rhs = self.sentence(node)
+            disj = lhs.negate().disjoin(rhs)
             return {
                 'adds': [
                     [
@@ -292,15 +292,15 @@ class TableauxRules(object):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        operator     = 'Material Biconditional'
+        operator     = Oper.MaterialBiconditional
         designation  = True
         branch_level = 1
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            cond1 = Operated('Material Conditional', s.operands)
-            cond2 = Operated('Material Conditional', list(reversed(s.operands)))
-            conj = Operated('Conjunction', [cond1, cond2])
+            lhs, rhs = self.sentence(node)
+            cond1 = Oper.MaterialConditional.on((lhs, rhs))
+            cond2 = Oper.MaterialConditional.on((rhs, lhs))
+            conj = cond1.conjoin(cond2)
             return {
                 'adds': [
                     [
@@ -314,15 +314,15 @@ class TableauxRules(object):
         This rule reduces to a negated conjunction of material conditionals.
         """
         negated      = True
-        operator     = 'Material Biconditional'
+        operator     = Oper.MaterialBiconditional
         designation  = True
         branch_level = 1
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            cond1 = Operated('Material Conditional', s.operands)
-            cond2 = Operated('Material Conditional', list(reversed(s.operands)))
-            conj = Operated('Conjunction', [cond1, cond2])
+            lhs, rhs = self.sentence(node)
+            cond1 = Oper.MaterialConditional.on((lhs, rhs))
+            cond2 = Oper.MaterialConditional.on((rhs, lhs))
+            conj = cond1.conjoin(cond2)
             return {
                 'adds': [
                     [
@@ -359,15 +359,15 @@ class TableauxRules(object):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = True
         branch_level = 1
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            cond1 = Operated('Conditional', s.operands)
-            cond2 = Operated('Conditional', list(reversed(s.operands)))
-            conj = Operated('Conjunction', [cond1, cond2])
+            lhs, rhs = self.sentence(node)
+            cond1 = Oper.Conditional.on((lhs, rhs))
+            cond2 = Oper.Conditional.on((rhs, lhs))
+            conj = cond1.conjoin(cond2)
             return {
                 'adds': [
                     [
@@ -381,15 +381,15 @@ class TableauxRules(object):
         This rule reduces to a negated conjunction of conditionals.
         """
         negated     = True
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = True
         branch_level = 1
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            cond1 = Operated('Conditional', s.operands)
-            cond2 = Operated('Conditional', list(reversed(s.operands)))
-            conj = Operated('Conjunction', [cond1, cond2])
+            lhs, rhs = self.sentence(node)
+            cond1 = Oper.Conditional.on((lhs, rhs))
+            cond2 = Oper.Conditional.on((rhs, lhs))
+            conj = cond1.conjoin(cond2)
             return {
                 'adds': [
                     [

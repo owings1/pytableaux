@@ -49,11 +49,11 @@ class TableauxSystem(fde.TableauxSystem):
 
     branchables = dict(fde.TableauxSystem.branchables)
     branchables.update({
-        'Conditional': {
+        Oper.Conditional: {
             False : {True: 1, False: 1},
             True  : {True: 1, False: 1},
         },
-        'Biconditional': {
+        Oper.Biconditional: {
             False : {True: 0, False: 0},
             True  : {True: 0, False: 0},
         },

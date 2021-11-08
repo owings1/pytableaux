@@ -19,8 +19,8 @@
 #
 # pytableaux - tableaux rules module
 from inspect import isclass
-from lexicals import Predicated, Atomic, Quantified, Operated, Predicate, Variable, operarity
-from utils import StopWatch, dictrepr, istableau, safeprop, typecheck
+from lexicals import Predicated, Atomic, Quantified, Operated, Predicate, Variable
+from utils import StopWatch, dictrepr, istableau, safeprop
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper, \
     NodeFilterHelper, Getters, Filters
@@ -673,15 +673,14 @@ class FilterNodeRule(PotentialNodeRule):
         a = Atomic(0, 0)
         if self.operator != None:
             params = []
-            arity = operarity(self.operator)
+            arity = self.operator.arity
             if arity > 0:
                 params.append(a)
             for i in range(arity - 1):
                 params.append(params[-1].next())
             sentence = Operated(self.operator, params)
         elif self.quantifier != None:
-            import examples
-            sentence = examples.quantified(self.quantifier)
+            sentence = Quantified.first(quantifier = self.quantifier)
         if self.negated:
             if sentence == None:
                 sentence = a
