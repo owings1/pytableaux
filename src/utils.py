@@ -116,7 +116,7 @@ def condcheck(cond, msg = None, name = 'parameter', err = ValueError):
     if cond:
         return
     if msg == None:
-        msg = 'Invalid value for `{0}`'.format(name)
+        msg = 'Invalid value for `%s`' % name
     raise err(msg)
 
 def nowms():
@@ -192,7 +192,7 @@ def isrule(obj):
 
 def safeprop(self, name, value = None):
     if hasattr(self, name):
-        raise KeyError("'{}' already exists".format(name))
+        raise KeyError("'%s' already exists" % (name))
     setattr(self, name, value)
 
 def sortedbyval(map):
@@ -218,25 +218,32 @@ def lcurry(func, largs):
 def Decorators():
     def privkey(method):
         name = method.__name__
-        key = '.'.join(('_', __name__, '__lazy_', name))
+        key = cat('_', __name__, '__lazy_', name)
         return (name, key)
+    def isreadonly(obj, *args, cls=None, check=None,**kw):
+        if cls: obj = obj.__class__
+        if check != None:
+            if not check(obj): return False
+        return True
 
     class Decorators(object):
+
         def lazyget(method):
             name, key = privkey(method)
             def fget(self):
-                if key not in self.__dict__:
-                    self.__dict__[key] = method(self)
-                return self.__dict__[key]
+                if not hasattr(self, key):
+                    # print('lookup %s.%s' % (self.__class__.__name__, name))
+                    setattr(self, key, method(self))
+                return getattr(self, key)
             return fget
+
         def setonce(method):
             name, key = privkey(method)
             def fset(self, val):
-                if key in self.__dict__:
-                    raise AttributeError(name)
-                method(self, val)
-                self.__dict__[key] = val
+                if hasattr(self, key): raise AttributeError(name)
+                setattr(self, key, method(self, val))
             return fset
+
         def checkstate(**attrs):
             def wrap(func):
                 def check(self, *args, **kw):
@@ -246,6 +253,20 @@ def Decorators():
                     return func(self, *args, **kw)
                 return check
             return wrap
+
+        def nosetattr(*args, **kw):
+            if args and callable(args[0]):
+                origin = args[0]
+            else:
+                origin = None
+            def wrap(origin):
+                def fset(self, attr, val):
+                    if isreadonly(self, **kw):
+                        raise AttributeError('%s is readonly' % self)
+                    return origin(self, attr, val)
+                return fset
+            return wrap(origin) if origin else wrap
+            
     return Decorators
 Decorators = Decorators()
             
@@ -292,15 +313,15 @@ class CacheNotationData(object):
         try:
             return cls.__instances[notn]
         except KeyError:
-            raise ValueError("Invalid notation '{0}'".format(notn))
+            raise ValueError("Invalid notation '%s'" % notn)
 
     @classmethod
     def _initcache(cls, notns, builtin):
         a_ = '_initcache'
         if cls == __class__:
-            raise TypeError("Cannot invoke '{1}' on {0}".format(cls, a_))
+            raise TypeError("Cannot invoke '%s' on %s" % (cls, a_))
         if hasattr(cls, '__builtin'):
-            raise AttributeError("{0} has no attribute '{1}'".format(cls, a_))
+            raise AttributeError("%s has no attribute '%s'" % (cls, a_))
         builtin = cls.__builtin = dict(builtin)
         notns = set(notns).union(builtin)
         cls.__instances = {notn: {} for notn in notns}
@@ -555,3 +576,30 @@ def LinkOrderSet():
     return LinkOrderSet
 
 LinkOrderSet = LinkOrderSet()
+
+def ReadOnlyDict(src, cls = object):
+    
+    class rodict(cls):
+        def get(self, *args):
+            return src.get(*args)
+        def keys(self):
+            return src.keys()
+        def items(self):
+            return src.items()
+        def values(self):
+            return src.values()
+        def copy(self):
+            return src.copy()
+        def __getitem__(self, key):
+            return src[key]
+        def __contains__(self, key):
+            return key in src
+        def __iter__(self):
+            return iter(src)
+        def __len__(self):
+            return len(src)
+        def __eq__(self, other):
+            return src == other
+        def __repr__(self):
+            return 'ReadOnly(%s)' % src.__repr__()
+    return rodict()

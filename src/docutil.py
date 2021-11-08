@@ -34,8 +34,8 @@ logger = logging.getLogger(__name__)
 from utils import cat, isstr, get_logic
 from events import Events
 import examples
-from lexicals import list_operators, operarity, create_lexwriter, is_operator, \
-    Constant, Variable, RenderSet, Predicates
+from lexicals import create_lexwriter,  \
+    Constant, Variable, RenderSet, Predicates, Operator
 from parsers import create_parser, parse_argument, CharTable
 from proof.tableaux import Tableau, TableauxSystem as TabSys, Node
 from proof.writers import create_tabwriter
@@ -202,7 +202,7 @@ class Helper(object):
         lgc = get_logic(lgc)
         tables = [
             self.html_truth_table(lgc, operator)
-            for operator in list_operators()
+            for operator in Operator
             if operator in lgc.Model.truth_functional_operators
         ]
         lines = '\n'.join(tables).split('\n')
@@ -246,16 +246,15 @@ class Helper(object):
         """
         Build the csv table for the operators reference table.
         """
-        oplist = list_operators()
         sympol, symstd = (
-            {o: table.char('operator', o) for o in oplist}
+            {o: table.char('operator', o) for o in Operator}
             for table in (
                 CharTable.fetch('polish'),
                 CharTable.fetch('standard'),
             )
         )
         symhtml, symunic = (
-            {o: rset.strfor('operator', o) for o in oplist}
+            {o: rset.strfor('operator', o) for o in Operator}
             for rset in (
                 RenderSet.fetch('standard', 'html'),
                 RenderSet.fetch('standard', 'unicode')
@@ -273,7 +272,7 @@ class Helper(object):
             '"{0}","``{1}``","``{2}``","{3}","{4}"'.format(*row)
             for row in (
                 (o, sympol[o], symstd[o], htmlun(symhtml[o]), symunic[o])
-                for o in oplist
+                for o in Operator
             )
         ]
         return indent_lines(lines, indent = indent)
@@ -483,17 +482,17 @@ class Helper(object):
         rule.apply(rule.get_target(b))
         return pw.write(proof.finish())
 
-    def html_truth_table(self, lgc, operator, classes=[]):
+    def html_truth_table(self, lgc, oper, classes=[]):
         """
         Returns rendered truth table HTML for a single operator.
         """
         lgc = get_logic(lgc)
-        table = truth_table(lgc, operator, reverse = self.opts['truth_tables_rev'])
+        oper = Operator[oper]
+        table = truth_table(lgc, oper, reverse = self.opts['truth_tables_rev'])
         return truth_table_template.render({
-            'arity'      : operarity(operator),
             'num_values' : len(lgc.Model.truth_values),
             'table'      : table,
-            'operator'   : operator,
+            'operator'   : oper,
             'lw'         : self.lw,
             'classes'    : [] + classes,
             # Theme hint for conditional class class name.
@@ -561,7 +560,7 @@ class Helper(object):
                 elif ctype == 'system_predicate':
                     what = 'predicate'
                     _, name = table.item(char)
-                    item = Predicates.system[name]
+                    item = Predicates[name]
                     classes.extend(('system_predicate', item.name))
         if not what:
             what = 'sentence'

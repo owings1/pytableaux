@@ -1,25 +1,25 @@
 from utils import get_logic
-from lexicals import operarity
+from lexicals import Operator
 import itertools
 
 class BaseModel(object):
 
     # Default set
-    truth_functional_operators = set([
-        'Assertion'              ,
-        'Negation'               ,
-        'Conjunction'            ,
-        'Disjunction'            ,
-        'Material Conditional'   ,
-        'Conditional'            ,
-        'Material Biconditional' ,
-        'Biconditional'          ,
-    ])
+    truth_functional_operators = {
+        Operator.Assertion             ,
+        Operator.Negation              ,
+        Operator.Conjunction           ,
+        Operator.Disjunction           ,
+        Operator.MaterialConditional   ,
+        Operator.Conditional           ,
+        Operator.MaterialBiconditional ,
+        Operator.Biconditional         ,
+    }
     # Default set
-    modal_operators = set([
-        'Necessity'  ,
-        'Possibility',
-    ])
+    modal_operators = {
+        Operator.Necessity  ,
+        Operator.Possibility,
+    }
 
     def __init__(self):
         self.id = id(self)
@@ -60,13 +60,13 @@ class BaseModel(object):
         raise NotImplementedError()
 
     def value_of_operated(self, sentence, **kw):
-        operator = sentence.operator
-        if operator in self.truth_functional_operators:
+        oper = sentence.operator
+        if oper in self.truth_functional_operators:
             return self.truth_function(
-                operator,
+                oper,
                 *[
                     self.value_of(operand, **kw)
-                    for operand in sentence.operands
+                    for operand in sentence
                 ]
             )
         raise NotImplementedError()
@@ -81,13 +81,14 @@ class BaseModel(object):
         return dict()
 
 
-def truth_table(logic, operator, reverse=False):
+def truth_table(logic, oper, reverse=False):
+    oper = Operator[oper]
     model = get_logic(logic).Model()
-    inputs = model.truth_table_inputs(operarity(operator))
+    inputs = model.truth_table_inputs(oper.arity)
     if reverse:
         inputs = tuple(reversed(inputs))
     outputs = [
-        model.truth_function(operator, *values)
+        model.truth_function(oper, *values)
         for values in inputs
     ]
     return {'inputs': inputs, 'outputs': outputs}
@@ -95,6 +96,6 @@ def truth_table(logic, operator, reverse=False):
 def truth_tables(logic, **kw):
     model = get_logic(logic).Model()
     return {
-        operator: truth_table(logic, operator, **kw)
-        for operator in model.truth_functional_operators
+        oper: truth_table(logic, oper, **kw)
+        for oper in model.truth_functional_operators
     }

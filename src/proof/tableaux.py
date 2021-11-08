@@ -1210,7 +1210,7 @@ class Branch(EventEmitter):
         """
         if not self.__constants:
             return Constant(0, 0)
-        maxidx = Constant.MAXI
+        maxidx = Constant.TYPE.maxi
         coordset = set(c.coords for c in self.__constants)
         index, sub = 0, 0
         while (index, sub) in coordset:

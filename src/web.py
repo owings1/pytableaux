@@ -23,7 +23,7 @@ from errors import TimeoutError
 from fixed import issues_href, source_href, version
 from lexicals import Argument, Predicate, Predicates, RenderSet, \
     create_lexwriter, list_operators, list_quantifiers, \
-    notations as lexwriter_notations
+    notations as lexwriter_notations, Operator, Quantifier
 from parsers import create_parser, notations as parser_notations
 from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
@@ -127,7 +127,7 @@ base_browser_data = {
     'example_predicates'    : examples.test_pred_data,
     # nups: "notation-user-predicate-symbols"
     'nups'                  : nups,
-    'num_predicate_symbols' : Predicate.MAXI + 1,
+    'num_predicate_symbols' : Predicate.TYPE.maxi + 1,
     'example_arguments'     : example_arguments,
     'is_debug'              : opts['is_debug'],
 }
@@ -157,7 +157,7 @@ base_view_data = {
     'operators_list'      : list_operators(),
     'quantifiers'         : list_quantifiers(),
     'source_href'         : source_href,
-    'system_predicates'   : {p.name: p for p in Predicates.system},
+    'system_predicates'   : {p.name: p for p in Predicates},
     'tabwriter_formats'   : tabwriter_formats,
     'version'             : version,
     'view_version'        : 'v2',
@@ -516,7 +516,7 @@ class App(object):
             raise RequestDataError(errors)
 
         return {
-            'type'     : sentence.type,
+            'type'     : sentence.TYPE.name,
             'rendered' : {
                 notn: {
                     fmt: lexwriters[notn][fmt].write(sentence)

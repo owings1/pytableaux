@@ -20,8 +20,8 @@
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError, NotFoundError
 from lexicals import Constant, Variable, Atomic, Predicated, Quantified, \
-    Operated, Sentence, Predicates, Argument, operarity
-from utils import CacheNotationData, cat, isstr, condcheck, typecheck
+    Operated, Sentence, Predicates, Argument, Operator as Oper, Quantifier
+from utils import CacheNotationData, cat, isstr, typecheck
 
 parser_classes = {
     # Values populated after class declarations below.
@@ -74,7 +74,7 @@ def create_parser(notn = None, vocab = None, table = None, **opts):
     if notn == None:
         notn = default_notation
     elif notn not in parser_classes:
-        raise ValueError('Invalid notation: {0}'.format(str(notn)))
+        raise ValueError('Invalid notation: %s' % notn)
     if table == None:
         table = 'default'
     if isstr(table):
@@ -254,7 +254,7 @@ class BaseParser(Parser):
         if ctype == 'system_predicate':
             _, name = self.table.item(pchar)
             self._advance()
-            return Predicates.system[name]
+            return Predicates.System[name]
         try:
             return self.vocab[self._read_coords()]
         except KeyError:
@@ -382,7 +382,7 @@ class BaseParser(Parser):
         """
         if not self._has_current():
             raise ParseError(
-                'Unexpected end of input at position {0}.'.format(self.pos)
+                'Unexpected end of input at position %d.' % self.pos
             )
         return self._typeof(self._current())
 
@@ -465,7 +465,7 @@ class PolishParser(BaseParser):
         if ctype == 'operator':
             _, operator = self.table.item(self._current())
             self._advance()
-            operands = [self._read() for x in range(operarity(operator))]
+            operands = [self._read() for x in range(operator.arity)]
             s = Operated(operator, operands)
         else:
             s = super()._read()
@@ -508,7 +508,7 @@ class StandardParser(BaseParser):
 
     def __read_operator_sentence(self):
         _, operator = self.table.item(self._current())
-        arity = operarity(operator)
+        arity = operator.arity
         # only unary operators can be prefix operators
         if arity != 1:
             raise ParseError(
@@ -556,7 +556,7 @@ class StandardParser(BaseParser):
                 depth += 1
             elif ptype == 'operator':
                 _, peek_operator = self.table.item(peek)
-                if operarity(peek_operator) == 2 and depth == 1:
+                if peek_operator.arity == 2 and depth == 1:
                     if operator != None:
                         raise ParseError(
                             'Unexpected binary operator symbol at position {0}.'.format(self.pos + length)
@@ -678,16 +678,16 @@ CharTable._initcache(notations, {
             'C' : ('atomic', 2),
             'D' : ('atomic', 3),
             'E' : ('atomic', 4),
-            '*' : ('operator', 'Assertion'),
-            '~' : ('operator', 'Negation'),
-            '&' : ('operator', 'Conjunction'),
-            'V' : ('operator', 'Disjunction'),
-            '>' : ('operator', 'Material Conditional'),
-            '<' : ('operator', 'Material Biconditional'),
-            '$' : ('operator', 'Conditional'),
-            '%' : ('operator', 'Biconditional'),
-            'P' : ('operator', 'Possibility'),
-            'N' : ('operator', 'Necessity'),
+            '*' : ('operator', Oper.Assertion),
+            '~' : ('operator', Oper.Negation),
+            '&' : ('operator', Oper.Conjunction),
+            'V' : ('operator', Oper.Disjunction),
+            '>' : ('operator', Oper.MaterialConditional),
+            '<' : ('operator', Oper.MaterialBiconditional),
+            '$' : ('operator', Oper.Conditional),
+            '%' : ('operator', Oper.Biconditional),
+            'P' : ('operator', Oper.Possibility),
+            'N' : ('operator', Oper.Necessity),
             'x' : ('variable', 0),
             'y' : ('variable', 1),
             'z' : ('variable', 2),
@@ -702,8 +702,8 @@ CharTable._initcache(notations, {
             'G' : ('user_predicate', 1),
             'H' : ('user_predicate', 2),
             'O' : ('user_predicate', 3),
-            'L' : ('quantifier', 'Universal'),
-            'X' : ('quantifier', 'Existential'),
+            'L' : ('quantifier', Quantifier.Universal),
+            'X' : ('quantifier', Quantifier.Existential),
             '(' : ('paren_open', 0),
             ')' : ('paren_close', 0),
             ' ' : ('whitespace', 0),
@@ -726,16 +726,16 @@ CharTable._initcache(notations, {
             'c' : ('atomic', 2),
             'd' : ('atomic', 3),
             'e' : ('atomic', 4),
-            'T' : ('operator', 'Assertion'),
-            'N' : ('operator', 'Negation'),
-            'K' : ('operator', 'Conjunction'),
-            'A' : ('operator', 'Disjunction'),
-            'C' : ('operator', 'Material Conditional'),
-            'E' : ('operator', 'Material Biconditional'),
-            'U' : ('operator', 'Conditional'),
-            'B' : ('operator', 'Biconditional'),
-            'M' : ('operator', 'Possibility'),
-            'L' : ('operator', 'Necessity'),
+            'T' : ('operator', Oper.Assertion),
+            'N' : ('operator', Oper.Negation),
+            'K' : ('operator', Oper.Conjunction),
+            'A' : ('operator', Oper.Disjunction),
+            'C' : ('operator', Oper.MaterialConditional),
+            'E' : ('operator', Oper.MaterialBiconditional),
+            'U' : ('operator', Oper.Conditional),
+            'B' : ('operator', Oper.Biconditional),
+            'M' : ('operator', Oper.Possibility),
+            'L' : ('operator', Oper.Necessity),
             'x' : ('variable', 0),
             'y' : ('variable', 1),
             'z' : ('variable', 2),
@@ -750,8 +750,8 @@ CharTable._initcache(notations, {
             'G' : ('user_predicate', 1),
             'H' : ('user_predicate', 2),
             'O' : ('user_predicate', 3),
-            'V' : ('quantifier', 'Universal'),
-            'S' : ('quantifier', 'Existential'),
+            'V' : ('quantifier', Quantifier.Universal),
+            'S' : ('quantifier', Quantifier.Existential),
             ' ' : ('whitespace', 0),
             '0' : ('digit', 0),
             '1' : ('digit', 1),

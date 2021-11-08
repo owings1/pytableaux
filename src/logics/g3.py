@@ -21,18 +21,14 @@
 name = 'G3'
 
 class Meta(object):
-
     title    = 'Gödel 3-valued logic'
     category = 'Many-valued'
-
     description = 'Three-valued logic (T, F, N) with alternate negation and conditional'
-
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
-
     category_display_order = 90
 
 from . import fde, l3, k3
-
+from lexicals import Operator as Oper
 class Model(l3.Model):
     """
     A :m:`G3` model is similar to a :ref:`K3 model <k3-model>`, but with different tables
@@ -40,7 +36,7 @@ class Model(l3.Model):
     """
 
     def truth_function(self, operator, a, b=None):
-        if operator == 'Negation':
+        if operator == Oper.Negation:
             if a == 'N':
                 return 'F'
         return super().truth_function(operator, a, b)
@@ -86,7 +82,7 @@ class TableauxRules(object):
         add an undesignated node with the negatum of `n`. Then tick `n`.
         """
         negated     = True
-        operator    = 'Negation'
+        operator    = Oper.Negation
         designation = True
         branch_level = 1
 
@@ -105,7 +101,7 @@ class TableauxRules(object):
         add a designated node with the negatum of `n`. Then tick `n`.
         """
         negated     = True
-        operator    = 'Negation'
+        operator    = Oper.Negation
         designation = False
         branch_level = 1
 
@@ -191,7 +187,7 @@ class TableauxRules(object):
         of the consequent. Then tick `n`.
         """
         negated     = True
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = True
         branch_level = 2
 
@@ -222,7 +218,7 @@ class TableauxRules(object):
         node with the negation of the consequent. Then tick `n`.
         """
         negated     = True
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = False
         branch_level = 2
 
@@ -243,36 +239,36 @@ class TableauxRules(object):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = True
-        conjunct_op = 'Conditional'
+        conjunct_op = Oper.Conditional
 
     class BiconditionalNegatedDesignated(fde.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
         negated     = True
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = True
-        conjunct_op = 'Conditional'
+        conjunct_op = Oper.Conditional
 
     class BiconditionalUndesignated(fde.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
         negated     = False
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = False
-        conjunct_op = 'Conditional'
+        conjunct_op = Oper.Conditional
 
     class BiconditionalNegatedUndesignated(fde.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
         negated     = True
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = False
-        conjunct_op = 'Conditional'
+        conjunct_op = Oper.Conditional
 
     class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
         pass

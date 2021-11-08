@@ -26,7 +26,7 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 50
 
-from lexicals import Operated
+from lexicals import Operator as Oper
 from . import k3, k3w, fde
 
 def gap(v):
@@ -41,15 +41,15 @@ class Model(k3w.Model):
     """
 
     def truth_function(self, operator, a, b=None):
-        if operator == 'Assertion':
+        if operator == Oper.Assertion:
             return self.cvals[crunch(self.nvals[a])]
-        elif operator == 'Conditional':
+        elif operator == Oper.Conditional:
             return self.truth_function(
-                'Disjunction',
-                self.truth_function('Negation', self.truth_function('Assertion', a)),
-                self.truth_function('Assertion', b)
+                Oper.Disjunction,
+                self.truth_function(Oper.Negation, self.truth_function(Oper.Assertion, a)),
+                self.truth_function(Oper.Assertion, b)
             )
-        elif operator == 'Biconditional':
+        elif operator == Oper.Biconditional:
             return fde.Model.truth_function(self, operator, a, b)
         return super().truth_function(operator, a, b)
 
@@ -60,19 +60,18 @@ class TableauxSystem(fde.TableauxSystem):
     """
 
     # operator => negated => designated
-    branchables = dict(k3w.TableauxSystem.branchables)
-    branchables.update({
+    branchables = k3w.TableauxSystem.branchables | {
         # reduction
-        'Conditional': {
+        Oper.Conditional: {
             False : {True: 0, False: 0},
             True  : {True: 0, False: 0},
         },
         # reduction
-        'Biconditional': {
+        Oper.Biconditional: {
             False : {True: 0, False: 0},
             True  : {True: 0, False: 0},
         },
-    })
+    }
 
 class DefaultNodeRule(fde.DefaultNodeRule):
     pass
@@ -105,7 +104,7 @@ class TableauxRules(object):
         add an undesignated node to *b* with the assertion of *n*, then tick *n*.
         """
         negated     = True
-        operator    = 'Assertion'
+        operator    = Oper.Assertion
         designation = True
         branch_level = 1
 
@@ -200,16 +199,13 @@ class TableauxRules(object):
         first disjunction is the negation of the assertion of the antecedent,
         and the second disjunct is the assertion of the consequent. Then tick *n*.
         """
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = True
         branch_level = 1
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            sn = Operated(
-                'Disjunction',
-                [s.lhs.asserted().negate(), s.rhs.asserted()]
-            )
+            lhs, rhs = self.sentence(node)
+            sn = lhs.asserted().negate().disjoin(rhs.asserted())
             # keep negated neutral for inheritance below
             if self.negated:
                 sn = sn.negate()
@@ -229,7 +225,7 @@ class TableauxRules(object):
         with the consequent to *b*. Then tick *n*.
         """
         negated     = True
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = True
         branch_level = 1
 
@@ -270,21 +266,15 @@ class TableauxRules(object):
         is the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = True
         branch_level = 2
 
         def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+            lhs, rhs = self.sentence(node)
             d = self.designation
-            sn1 = Operated('Disjunction', [
-                s.lhs.asserted().negate(),
-                s.rhs.asserted(),
-            ])
-            sn2 = Operated('Disjunction', [
-                s.rhs.asserted().negate(),
-                s.lhs.asserted(),
-            ])
+            sn1 = lhs.asserted().negate().disjoin(rhs.asserted())
+            sn2 = rhs.asserted().negate().disjoin(lhs.asserted())
             # keep negated neutral for inheritance below
             if self.negated:
                 sn1 = sn1.negate()

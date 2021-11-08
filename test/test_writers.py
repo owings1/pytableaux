@@ -93,7 +93,7 @@ class TestStandard(object):
         # assert res == ss
 
     def test_write_predicate_sys(self):
-        res = std.write(Predicates.system['Identity'])
+        res = std.write(Predicates.System['Identity'])
         assert res == '='
 
     # def test_write_parameter_not_impl_base_param(self):

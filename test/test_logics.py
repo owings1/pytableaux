@@ -1604,7 +1604,7 @@ class TestK(BaseSuite):
         s = self.p('Imn')
         model = self.logic.Model()
         model.set_predicated_value(s, 'T', world=0)
-        extension = model.get_extension(Predicates.system['Identity'], world=0)
+        extension = model.get_extension(Predicate.Identity, world=0)
         assert len(extension) > 0
         assert (Constant(0, 0), Constant(1, 0)) in extension
 

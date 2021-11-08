@@ -27,17 +27,17 @@ class Meta(object):
     category_display_order = 10
 
 from models import BaseModel
-from lexicals import Atomic, Operated, Quantified, Predicates
+from lexicals import Atomic, Operated, Quantified, Predicate, Operator as Oper, Quantifier
 
 from proof.tableaux import TableauxSystem as BaseSystem
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
     NewConstantStoppingRule, Rule, Target
-from proof.helpers import AdzHelper, Getters, Filters, NodeFilterHelper
+from proof.helpers import AdzHelper, Filters, NodeFilterHelper
 
 from errors import ModelValueError
 
-Identity = Predicates.system['Identity']
-Existence = Predicates.system['Existence']
+Identity = Predicate.Identity
+Existence = Predicate.Existence
 
 class Model(BaseModel):
     """
@@ -250,7 +250,7 @@ class Model(BaseModel):
                 is_literal = self.is_sentence_literal(sentence)
                 is_opaque = self.is_sentence_opaque(sentence)
                 if is_literal or is_opaque:
-                    if sentence.operator == 'Negation':
+                    if sentence.operator == Oper.Negation:
                         # If the sentence is negated, set the value of the negatum
                         sentence = sentence.negatum
                         if node['designated']:
@@ -314,7 +314,7 @@ class Model(BaseModel):
         pass
 
     def is_sentence_literal(self, sentence):
-        if sentence.operator == 'Negation' and self.is_sentence_opaque(sentence.operand):
+        if sentence.operator == Oper.Negation and self.is_sentence_opaque(sentence.operand):
             return True
         return sentence.is_literal
 
@@ -323,8 +323,8 @@ class Model(BaseModel):
             self._raise_value('UnknownForSentence', value, sentence)
         if self.is_sentence_opaque(sentence):
             self.set_opaque_value(sentence, value)
-        elif sentence.is_operated and sentence.operator == 'Negation':
-            self.set_literal_value(sentence.operand, self.truth_function('Negation', value))
+        elif sentence.is_operated and sentence.operator == Oper.Negation:
+            self.set_literal_value(sentence.operand, self.truth_function(Oper.Negation, value))
         elif sentence.is_atomic:
             self.set_atomic_value(sentence, value)
         elif sentence.is_predicated:
@@ -406,42 +406,42 @@ class Model(BaseModel):
 
     def value_of_quantified(self, sentence, **kw):
         q = sentence.quantifier
-        if q == 'Existential':
+        if q == Quantifier.Existential:
             return self.value_of_existential(sentence, **kw)
-        elif q == 'Universal':
+        elif q == Quantifier.Universal:
             return self.value_of_universal(sentence, **kw)
         return super().value_of_quantified(sentence, **kw)
 
     def truth_function(self, operator, a, b=None):
 
         # Define as generically as possible for reuse.
-        if operator == 'Assertion':
+        if operator == Oper.Assertion:
             return a
-        if operator == 'Negation':
+        if operator == Oper.Negation:
             if a == 'F':
                 return 'T'
             if a == 'T':
                 return 'F'
             return a
-        elif operator == 'Conjunction':
+        elif operator == Oper.Conjunction:
             return self.cvals[min(self.nvals[a], self.nvals[b])]
-        elif operator == 'Disjunction':
+        elif operator == Oper.Disjunction:
             return self.cvals[max(self.nvals[a], self.nvals[b])]
-        elif operator == 'Material Conditional':
-            return self.truth_function('Disjunction', self.truth_function('Negation', a), b)
-        elif operator == 'Material Biconditional':
+        elif operator == Oper.MaterialConditional:
+            return self.truth_function(Oper.Disjunction, self.truth_function(Oper.Negation, a), b)
+        elif operator == Oper.MaterialBiconditional:
             return self.truth_function(
-                'Conjunction',
-                self.truth_function('Material Conditional', a, b),
-                self.truth_function('Material Conditional', b, a)
+                Oper.Conjunction,
+                self.truth_function(Oper.MaterialConditional, a, b),
+                self.truth_function(Oper.MaterialConditional, b, a)
             )
-        elif operator == 'Conditional':
-            return self.truth_function('Material Conditional', a, b)
-        elif operator == 'Biconditional':
+        elif operator == Oper.Conditional:
+            return self.truth_function(Oper.MaterialConditional, a, b)
+        elif operator == Oper.Biconditional:
             return self.truth_function(
-                'Conjunction',
-                self.truth_function('Conditional', a, b),
-                self.truth_function('Conditional', b, a)
+                Oper.Conjunction,
+                self.truth_function(Oper.Conditional, a, b),
+                self.truth_function(Oper.Conditional, b, a)
             )
         else:
             raise NotImplementedError()
@@ -476,34 +476,34 @@ class TableauxSystem(BaseSystem):
 
     # operator => negated => designated
     branchables = {
-        'Negation': {
+        Oper.Negation: {
             True: {True: 0, False: 0},
         },
-        'Assertion': {
+        Oper.Assertion: {
             False : {True: 0, False: 0},
             True  : {True: 0, False: 0},
         },
-        'Conjunction': {
+        Oper.Conjunction: {
             False : {True: 0, False: 1},
             True  : {True: 1, False: 0},
         },
-        'Disjunction': {
+        Oper.Disjunction: {
             False : {True: 1, False: 0},
             True  : {True: 0, False: 1},
         },
-        'Material Conditional': {
+        Oper.MaterialConditional: {
             False : {True: 1, False: 0},
             True  : {True: 0, False: 1},
         },
-        'Material Biconditional': {
+        Oper.MaterialBiconditional: {
             False : {True: 1, False: 1},
             True  : {True: 1, False: 1},
         },
-        'Conditional': {
+        Oper.Conditional: {
             False : {True: 1, False: 0},
             True  : {True: 0, False: 1},
         },
-        'Biconditional': {
+        Oper.Biconditional: {
             False : {True: 1, False: 1},
             True  : {True: 1, False: 1},
         },
@@ -532,7 +532,7 @@ class TableauxSystem(BaseSystem):
         # while len(operators):
         #     operator = operators.pop(0)
         for operator in sentence.operators:
-            if operator == 'Negation':
+            if operator == Oper.Negation:
                 #if last_is_negated:
                 #    last_is_negated = False
                 #    continue
@@ -731,7 +731,7 @@ class TableauxRules(object):
         node to *b* with the double-negatum of *n*, then tick *n*.
         """
         negated     = True
-        operator    = 'Negation'
+        operator    = Oper.Negation
         designation = True
         branch_level = 1
 
@@ -759,7 +759,7 @@ class TableauxRules(object):
         From an unticked, designated, assertion node *n* on a branch *b*, add a designated
         node to *b* with the operand of *b*, then tick *n*.
         """
-        operator   = 'Assertion'
+        operator   = Oper.Assertion
         designation = True
         branch_level = 1
 
@@ -788,7 +788,7 @@ class TableauxRules(object):
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
         negated     = True
-        operator    = 'Assertion'
+        operator    = Oper.Assertion
         designation = True
         branch_level = 1
 
@@ -816,7 +816,7 @@ class TableauxRules(object):
         From an unticked designated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add a designated node with *c* to *b*, then tick *n*.
         """
-        operator    = 'Conjunction'
+        operator    = Oper.Conjunction
         designation = True
         branch_level = 1
 
@@ -838,7 +838,7 @@ class TableauxRules(object):
         then tick *n*.
         """
         negated     = True
-        operator    = 'Conjunction'
+        operator    = Oper.Conjunction
         designation = True
         branch_level = 2
 
@@ -859,7 +859,7 @@ class TableauxRules(object):
         *c*, make a new branch *b'* from *b* and add an undesignated node with *c* to *b'*,
         then tick *n*.
         """
-        operator    = 'Conjunction'
+        operator    = Oper.Conjunction
         designation = False
         branch_level = 2
 
@@ -880,7 +880,7 @@ class TableauxRules(object):
         *c*, add an undesignated node with the negation of *c* to *b*, then tick *n*.
         """
         negated     = True
-        operator    = 'Conjunction'
+        operator    = Oper.Conjunction
         designation = False
         branch_level = 1
 
@@ -902,7 +902,7 @@ class TableauxRules(object):
         then tick *n*.
         """
 
-        operator    = 'Disjunction'
+        operator    = Oper.Disjunction
         designation = True
 
     class DisjunctionNegatedDesignated(ConjunctionNegatedUndesignated):
@@ -910,7 +910,7 @@ class TableauxRules(object):
         From an unticked designated negated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add a designated node with the negation of *d* to *b*, then tick *n*.
         """
-        operator    = 'Disjunction'
+        operator    = Oper.Disjunction
         designation = True
 
     class DisjunctionUndesignated(ConjunctionDesignated):
@@ -918,7 +918,7 @@ class TableauxRules(object):
         From an unticked undesignated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add an undesignated node with *d* to *b*, then tick *n*.
         """
-        operator    = 'Disjunction'
+        operator    = Oper.Disjunction
         designation = False
 
     class DisjunctionNegatedUndesignated(ConjunctionNegatedDesignated):
@@ -927,7 +927,7 @@ class TableauxRules(object):
         *d*, make a new branch *b'* from *b* and add an undesignated node with the negation of *d* to
         *b'*, then tick *n*.
         """
-        operator    = 'Disjunction'
+        operator    = Oper.Disjunction
         designation = False
 
     class MaterialConditionalDesignated(DefaultNodeRule):
@@ -937,7 +937,7 @@ class TableauxRules(object):
         of the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
-        operator    = 'Material Conditional'
+        operator    = Oper.MaterialConditional
         designation = True
         branch_level = 2
 
@@ -962,7 +962,7 @@ class TableauxRules(object):
         consequent to *b*, then tick *n*.
         """
         negated     = True
-        operator    = 'Material Conditional'
+        operator    = Oper.MaterialConditional
         designation = True
         branch_level = 1
 
@@ -984,7 +984,7 @@ class TableauxRules(object):
         an undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
-        operator    = 'Material Conditional'
+        operator    = Oper.MaterialConditional
         designation = False
         branch_level = 1
 
@@ -1008,7 +1008,7 @@ class TableauxRules(object):
         tick *n*.
         """
         negated     = True
-        operator    = 'Material Conditional'
+        operator    = Oper.MaterialConditional
         designation = False
         branch_level = 2
 
@@ -1034,7 +1034,7 @@ class TableauxRules(object):
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
-        operator    = 'Material Biconditional'
+        operator    = Oper.MaterialBiconditional
         designation = True
         branch_level = 2
 
@@ -1063,7 +1063,7 @@ class TableauxRules(object):
         then tick *n*.
         """
         negated     = True
-        operator    = 'Material Biconditional'
+        operator    = Oper.MaterialBiconditional
         designation = True
         branch_level = 2
 
@@ -1115,7 +1115,7 @@ class TableauxRules(object):
         then tick *n*.
         """
         negated     = False
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = True
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
@@ -1127,7 +1127,7 @@ class TableauxRules(object):
         the consequent to *b*, then tick *n*.
         """
         negated     = True
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = True
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
@@ -1139,7 +1139,7 @@ class TableauxRules(object):
         with the consequent to *b*, then tick *n*.
         """
         negated     = False
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = False
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
@@ -1152,7 +1152,7 @@ class TableauxRules(object):
         tick *n*.
         """
         negated     = True
-        operator    = 'Conditional'
+        operator    = Oper.Conditional
         designation = False
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
@@ -1166,7 +1166,7 @@ class TableauxRules(object):
         consequent to *b''*, then tick *n*.
         """
         negated     = False
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = True
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
@@ -1180,7 +1180,7 @@ class TableauxRules(object):
         then tick *n*.
         """
         negated     = True
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = True
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
@@ -1194,7 +1194,7 @@ class TableauxRules(object):
         the consequent to *b''*, then tick *n*.
         """
         negated     = False
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = False
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
@@ -1208,7 +1208,7 @@ class TableauxRules(object):
         consequent to *b''*, then tick *n*.
         """
         negated     = True
-        operator    = 'Biconditional'
+        operator    = Oper.Biconditional
         designation = False
 
     class ExistentialDesignated(DefaultNewConstantRule):
@@ -1217,7 +1217,7 @@ class TableauxRules(object):
         variable *v* into sentence *s*, add a designated node to *b* with the substitution
         into *s* of a new constant not yet appearing on *b* for *v*, then tick *n*.
         """
-        quantifier  = 'Existential'
+        quantifier  = Quantifier.Existential
         designation = True
 
         branch_level = 1
@@ -1242,10 +1242,10 @@ class TableauxRules(object):
         :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
         negated     = True
-        quantifier  = 'Existential'
+        quantifier  = Quantifier.Existential
         designation = True
         branch_level = 1
-        convert_to  = 'Universal'
+        convert_to  = Quantifier.Universal
 
         def _get_node_targets(self, node, branch):
             s = self.sentence(node)
@@ -1268,7 +1268,7 @@ class TableauxRules(object):
         If there are no constants yet on *b*, then instantiate with a new constant. The node
         *n* is never ticked.
         """
-        quantifier  = 'Existential'
+        quantifier  = Quantifier.Existential
         designation = False
         branch_level = 1
 
@@ -1290,9 +1290,9 @@ class TableauxRules(object):
         that universally quantifies over *v* into the negation of *s* (e.g. change
         :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
-        quantifier  = 'Existential'
+        quantifier  = Quantifier.Existential
         designation = False
-        convert_to  = 'Universal'
+        convert_to  = Quantifier.Universal
 
     class UniversalDesignated(ExistentialUndesignated):
         """
@@ -1302,7 +1302,7 @@ class TableauxRules(object):
         are no constants yet on *b*, then instantiate with a new constant. The node *n* is
         never ticked.
         """
-        quantifier  = 'Universal'
+        quantifier  = Quantifier.Universal
         designation = True
 
     class UniversalNegatedDesignated(ExistentialNegatedDesignated):
@@ -1312,9 +1312,9 @@ class TableauxRules(object):
         with the existential quantifier over *v* into the negation of *s* (e.g. change
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
-        quantifier  = 'Universal'
+        quantifier  = Quantifier.Universal
         designation = True
-        convert_to  = 'Existential'
+        convert_to  = Quantifier.Existential
 
     class UniversalUndesignated(ExistentialDesignated):
         """
@@ -1322,7 +1322,7 @@ class TableauxRules(object):
         into sentence *s*, add an undesignated node to *b* with the result of substituting into
         *s* a constant new to *b* for *v*, then tick *n*.
         """
-        quantifier  = 'Universal'
+        quantifier  = Quantifier.Universal
         designation = False
 
     class UniversalNegatedUndesignated(ExistentialNegatedDesignated):
@@ -1332,9 +1332,9 @@ class TableauxRules(object):
         with the existential quantifier over *v* into the negation of *s* (e.g. change
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
-        quantifier  = 'Universal'
+        quantifier  = Quantifier.Universal
         designation = False
-        convert_to  = 'Existential'
+        convert_to  = Quantifier.Existential
 
     closure_rules = [
         DesignationClosure,
