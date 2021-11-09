@@ -18,10 +18,10 @@
 # ------------------
 # pytableaux - parsers module
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
-    IllegalStateError, NotFoundError
-from lexicals import Constant, Variable, Atomic, Predicated, Quantified, \
-    Operated, Sentence, Predicates, Argument, Operator as Oper, Quantifier
-from utils import CacheNotationData, cat, isstr, typecheck
+    IllegalStateError
+from lexicals import Predicate, Constant, Variable, Atomic, Predicated, Quantified, \
+    Operated, Sentence, Predicates, Argument, Operator as Oper, Quantifier, LexType
+from utils import CacheNotationData, cat, EmptySet, isstr, typecheck
 
 parser_classes = {
     # Values populated after class declarations below.
@@ -70,7 +70,7 @@ def create_parser(notn = None, vocab = None, table = None, **opts):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
     if vocab == None:
-        vocab = Predicates()
+        vocab = EmptySet
     if notn == None:
         notn = default_notation
     elif notn not in parser_classes:
@@ -252,9 +252,9 @@ class BaseParser(Parser):
         cpos = self.pos
         ctype = self._typeof(pchar)
         if ctype == 'system_predicate':
-            _, name = self.table.item(pchar)
+            _, pred = self.table.item(pchar)
             self._advance()
-            return Predicates.System[name]
+            return pred
         try:
             return self.vocab[self._read_coords()]
         except KeyError:
@@ -696,8 +696,8 @@ CharTable._initcache(notations, {
             'b' : ('constant', 1),
             'c' : ('constant', 2),
             'd' : ('constant', 3),
-            '=' : ('system_predicate', 'Identity'),
-            '!' : ('system_predicate', 'Existence'),
+            '=' : ('system_predicate', Predicate.Identity),
+            '!' : ('system_predicate', Predicate.Existence),
             'F' : ('user_predicate', 0),
             'G' : ('user_predicate', 1),
             'H' : ('user_predicate', 2),
@@ -744,8 +744,8 @@ CharTable._initcache(notations, {
             'n' : ('constant', 1),
             'o' : ('constant', 2),
             's' : ('constant', 3),
-            'I' : ('system_predicate', 'Identity'),
-            'J' : ('system_predicate', 'Existence'),
+            'I' : ('system_predicate', Predicate.Identity),
+            'J' : ('system_predicate', Predicate.Existence),
             'F' : ('user_predicate', 0),
             'G' : ('user_predicate', 1),
             'H' : ('user_predicate', 2),

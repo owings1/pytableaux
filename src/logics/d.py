@@ -26,10 +26,12 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 2
 
-from proof.rules import PotentialNodeRule, Target
-from proof.helpers import MaxWorldsTracker, UnserialWorldsTracker
+from proof.rules import Rule
+from proof.helpers import MaxWorldsTracker, UnserialWorldsTracker, FilterHelper, \
+    Filters, clshelpers
 from lexicals import Atomic
 from . import k
+
 
 class Model(k.Model):
     """
@@ -61,7 +63,15 @@ class TableauxRules:
     Serial rule, which operates on the accessibility relation for worlds.
     """
 
-    class Serial(PotentialNodeRule):
+    @clshelpers(
+        nf  = FilterHelper,
+        mw  = MaxWorldsTracker,
+        ust = UnserialWorldsTracker,
+    )
+    @FilterHelper.clsfilters(
+        modal = Filters.Node.Modal,
+    )
+    class Serial(Rule):
         """
         .. _serial-rule:
 
@@ -76,40 +86,34 @@ class TableauxRules:
         no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
-        Helpers = (
-            *PotentialNodeRule.Helpers,
-            ('max_worlds_tracker', MaxWorldsTracker),
-            ('unserial_tracker'  , UnserialWorldsTracker),
-        )
+        # Helpers = (
+        #     ('nf' , FilterHelper),
+        #     ('mw' , MaxWorldsTracker),
+        #     ('ust', UnserialWorldsTracker),
+        # )
+        # NodeFilters = (
+        #     ('modal', Filters.Node.Modal),
+        # )
+
         modal = True
 
-        # rule implementation
-
-        def is_potential_node(self, node, branch):
-            return node.has_any('world', 'world1', 'world2')
-
-        def get_targets_for_node(self, node, branch):
-
-            unserials = self.unserial_tracker.get_unserial_worlds(branch)
-
+        @FilterHelper.node_targets
+        def _get_targets(self, node, branch):
+            unserials = self.ust.get_unserial_worlds(branch)
             if not unserials:
                 return
-
             if not self.__should_apply(branch):
                 return
+            return tuple({'world': w} for w in unserials)
 
-            return [{'world': w} for w in unserials]
-
-        def apply_to_node_target(self, node, branch, target):
-            assert isinstance(target, Target)
-            assert target.branch == branch
-            branch.add({ 
-                'world1': target['world'], 
-                'world2': branch.next_world,
+        def _apply(self, target):
+            target.branch.add({
+                'world1': target['world'],
+                'world2': target.branch.next_world,
             })
 
         def example_nodes(self, branch = None):
-            return ({'sentence': Atomic(0, 0), 'world': 0},)
+            return ({'sentence': Atomic.first(), 'world': 0},)
 
         # util
 
@@ -124,7 +128,7 @@ class TableauxRules:
                 return False
 
             # As above, this is unnecessary
-            if self.max_worlds_tracker.max_worlds_exceeded(branch):
+            if self.mw.max_worlds_exceeded(branch):
                 return False
 
             return True

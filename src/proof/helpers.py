@@ -17,21 +17,47 @@
 # ------------------
 #
 # pytableaux - rule helpers module
+from copy import copy
 from models import BaseModel
-from utils import OrderedAttrsView, isint, isstr, rcurry, lcurry, emptyset
-from lexicals import Constant, Variable, Predicate, Predicated, Atomic, Quantified, \
-    Operated
+from utils import OrderedAttrsView, LinkOrderSet, EmptySet, kwrepr, isstr
+from .common import Target
+from itertools import chain
+from events import Events
+
+def clshelpers(**kw):
+    """
+    Class decorator to add to Helpers attribute through mro.
+    Attribute name is ``Helpers``.
+    """
+    def addhelpers(cls):
+        attr = 'Helpers'
+        value = _dedupvalue(_collectattr(cls, attr, **kw))
+        setattr(cls, attr, tuple(value))
+        return cls
+    return addhelpers
 
 class AdzHelper(object):
 
-    def __init__(self, rule):
+    def adztarget(getadds):
+        def adz_transform(self, *args, **kw):
+            res = getadds(self, *args, **kw)
+            if not res: return res
+            if isinstance(res, dict):
+                res = (res,)
+            if not isinstance(res, (tuple, list)):
+                raise TypeError('expecting tuple/list, %s' % res)
+            return {'adds': res}
+        return adz_transform
+
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.Node = rule.Node
         self.tableau = rule.tableau
 
     def apply_to_target(self, target):
-        branch = target['branch']
-        for i in range(len(target['adds'])):
+        branch = target.branch
+        adds = target.get('adds', 0)
+        for i in range(len(adds)):
             if i == 0:
                 continue
             b = self.rule.branch(branch)
@@ -47,7 +73,7 @@ class AdzHelper(object):
         for nodes in target['adds']:
             nodes = [self.Node(node) for node in nodes]
             for rule in self.tableau.rules.closure:
-                if rule.nodes_will_close_branch(nodes, target['branch']):
+                if rule.nodes_will_close_branch(nodes, target.branch):
                     close_count += 1
                     break
         return float(close_count / min(1, len(target['adds'])))
@@ -62,7 +88,7 @@ class NodeTargetCheckHelper(object):
     NB: The rule must implement ``check_for_target(self, node, branch)``.
     """
 
-    def __init__(self, rule):
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.targets = {}
 
@@ -86,7 +112,7 @@ class QuitFlagHelper(object):
     is considered flagged when the target has a non-empty ``flag`` property.
     """
 
-    def __init__(self, rule):
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.flagged = {}
 
@@ -111,21 +137,157 @@ class QuitFlagHelper(object):
         if target.get('flag'):
             self.flagged[target.branch] = True
 
-class NodeFilterHelper(object):
+class BranchCache(object):
 
-    def __init__(self, rule):
-        self.rule = rule
-        self.__flist = []
-        self.__fmap = {}
-        self.__cache = {}
-        self.__include_ticked = None
-        self.__viewfilters = OrderedAttrsView(self.__fmap, self.__flist)
-        for name, cls in getattr(rule, 'NodeFilters', tuple()):
-            self.add_filter(name, cls)
+    _valuetype = bool
+    def __init__(self, *args, **kw):
+        pass
 
-    # API
+    def __getitem__(self, branch):
+        return self.__cache[branch]
+
+    def __setitem__(self, branch, value):
+        if branch in self.__cache:
+            raise KeyError('Branch %s already in cache' % branch.id)
+        self.__linkset.add(branch)
+        self.__cache[branch] = value
+
+    def __delitem__(self, branch):
+        del(self.__cache[branch])
+        del(self.__linkset[branch])
+
+    def __contains__(self, branch):
+        return branch in self.__cache
+
+    def __len__(self):
+        return len(self.__cache)
+
+    def __iter__(self):
+        return iter(self.__linkset)
+
+    def __reversed__(self):
+        return reversed(self.__linkset)
+
+    def __new__(cls, rule, *args):
+        inst = super().__new__(cls)
+        inst.__linkset = LinkOrderSet()
+        inst.__cache = {}
+        inst.rule = rule
+        inst.tab = rule.tableau
+        inst.tab.on(Events.AFTER_BRANCH_ADD,   inst.__BranchCache_after_branch_add)
+        inst.tab.on(Events.AFTER_BRANCH_CLOSE, inst.__BranchCache_after_branch_close)
+        return inst
+
+    def __BranchCache_after_branch_close(self, branch):
+        del(self[branch])
+
+    def __BranchCache_after_branch_add(self, branch):
+        if branch.parent:
+            self[branch] = copy(self[branch.parent])
+        else:
+            self[branch] = self._valuetype()
+
+    # Other
+    def _reprdict(self):
+        return {'branches': len(self)}
+
+    def __repr__(self):
+        return '<%s>:' % self.__class__.__name__ + kwrepr(
+            **self._reprdict()
+        )
+
+class BranchNodeCache(BranchCache):
+    _valuetype = set
+    
+    # Induced Rule Properties
+
+    __ignore_ticked = None
+
+    @property
+    def ignore_ticked(self):
+        if self.__ignore_ticked != None:
+            return self.__ignore_ticked
+        return getattr(self.rule, 'ignore_ticked', None)
+
+    @ignore_ticked.setter
+    def ignore_ticked(self, val):
+        self.__ignore_ticked = val
+
+    def __new__(cls, rule, *args):
+        inst = super().__new__(cls, rule)
+        inst.tab.on(Events.AFTER_NODE_ADD,  inst._BranchNodeCache_after_node_add)
+        inst.tab.on(Events.AFTER_NODE_TICK, inst._BranchNodeCache_after_node_tick)
+        return inst
+
+    # Event Listeners
+
+    def _BranchNodeCache_after_node_add(self, node, branch):
+        res = self(node, branch)
+        if res != None:
+            self[branch].add(res)
+
+    def _BranchNodeCache_after_node_tick(self, node, branch):
+        if self.ignore_ticked:
+            self[branch].discard(node)
+
+    def __call__(self, *args, **kw):
+        pass
+
+class PredicatedNodesTracker(BranchNodeCache):
+    """
+    Track all predicated nodes on the branch.
+    """
+    def __call__(self, node, *a, **kw):
+        if node.has('sentence') and node['sentence'].is_predicated:
+            return node
+
+class FilterHelper(BranchNodeCache):
+    """
+    Set configurable and chainable filters in ``NodeFilters``
+    class attribute.
+    """
+
+    clsattr = 'NodeFilters'
+
+    # Decorators
+
+    @classmethod
+    def clsfilters(cls, **kw):
+        """
+        Class decorator to add to ``NodeFilters`` attribute
+        through mro.
+        """
+        def addfilters(rulecls):
+            attr = cls.clsattr
+            value = _dedupvalue(_collectattr(rulecls, attr, **kw))
+            setattr(rulecls, attr, tuple(value))
+            return rulecls
+        return addfilters
+
+    @classmethod
+    def node_targets(cls, _get_targets):
+        """
+        Method decorator to only iterate through nodes matching the
+        configured FilterHelper filters.
+        """
+        def get_targets_filtered(self, branch):
+            helper = self.helpers[cls]
+            resgen = (
+                (_get_targets(self, node, branch), branch, node)
+                for node in helper[branch]
+            )
+            filt = (x for x in resgen if bool(x[0]))
+            create = (
+                Target.create(res, branch=branch, node=node, rule=self)
+                for res, branch, node in filt
+            )
+            return tuple(create)
+        return get_targets_filtered
 
     def add_filter(self, name, cls):
+        """
+        Instantiate a filter class from the NodeFilters config.
+        """
         if name in self.__fmap:
             raise KeyError('{} exists'.format(name))
         if not isstr(name):
@@ -139,7 +301,8 @@ class NodeFilterHelper(object):
         return self.__viewfilters
 
     def filter(self, node, branch):
-        if not self.include_ticked and branch.is_ticked(node):
+        self.callcount += 1
+        if not self.ignore_ticked and branch.is_ticked(node):
             return False
         for func in self.__flist:
             if not func(node):
@@ -159,250 +322,25 @@ class NodeFilterHelper(object):
                     node.update(ret)
         return node
 
-    # Subscript API
-
-    def __getitem__(self, branch):
-        return self.__cache[branch]
-
-    def __setitem__(self, branch, value):
-        if branch in self.__cache:
-            raise KeyError('Branch {} already in cache'.format(branch.id))
-        self.__cache[branch] = value
-
-    def __delitem__(self, branch):
-        del(self.__cache[branch])
-
-    def __contains__(self, branch):
-        return branch in self.__cache
-
-    def __len__(self):
-        return len(self.__cache)
-
-    def __iter__(self):
-        return iter(self.__cache)
-    # Induced Rule Properties
-
-    @property
-    def include_ticked(self):
-        if self.__include_ticked != None:
-            return self.__include_ticked
-        return getattr(self.rule, 'include_ticked', None)
-
-    @include_ticked.setter
-    def include_ticked(self, val):
-        self.__include_ticked = val
-
-    # Event Listeners
-
-    def after_branch_add(self, branch):
-        self[branch] = set()
-        if branch.parent:
-            self[branch].update(self[branch.parent])
-
-    def after_branch_close(self, branch):
-        del(self[branch])
-
-    def after_node_add(self, node, branch):
+    def __call__(self, node, branch):
         if self.filter(node, branch):
-            self[branch].add(node)
+            return node
 
-    def after_node_tick(self, node, branch):
-        if not self.include_ticked:
-            self[branch].discard(node)
+    def __init__(self, rule, attr = None, *args, **kw):
+        super().__init__(rule, *args, **kw)
+        self.rule = rule
+        self.callcount = 0
+        self.__flist = []
+        self.__fmap = {}
+        self.__viewfilters = OrderedAttrsView(self.__fmap, self.__flist)
+        clsval = getattr(rule, self.__class__.clsattr, tuple())
+        for name, cls in clsval:
+            self.add_filter(name, cls)
 
-class Getters(object):
-
-    def __new__(cls, *items):
-        return cls.chain(*items)
-
-    @staticmethod
-    def chain(*items):
-        chain = [cls(*args) for cls, *args in items]
-        last = chain.pop()
-        class chained(object):
-            def __call__(self, obj, *args):
-                for func in chain:
-                    obj = func(obj)
-                return last(obj, *args)
-        return chained()
-
-    class Getter(object):
-        curry = rcurry
-        def __new__(cls, *args):
-            inst = object.__new__(cls)
-            if args:
-                return cls.curry(inst, args)
-            return inst
-
-    class Attr(Getter):
-        def __call__(self, obj, name):
-            return getattr(obj, name)
-
-    class AttrSafe(Getter):
-        def __call__(self, obj, name):
-            return getattr(obj, name, None)
-
-    class Key(Getter):
-        def __call__(self, obj, key):
-            return obj[key]
-
-    class KeySafe(Getter):
-        def __call__(self, obj, key):
-            try:
-                return obj[key]
-            except KeyError:
-                pass
-
-    class It(Getter):
-        curry = lcurry
-        def __call__(self, obj, _ = None):
-            return obj
-
-    attr = Attr()
-    attrsafe = AttrSafe()
-    key = Key()
-    keysafe = KeySafe()
-    it = It()
-
-class Filters(object):
-
-    class Method(object):
-
-        args = tuple()
-        kw = {}
-
-        get = Getters.attr
-        example = None.__class__
-
-        def __init__(self, meth, *args, **kw):
-            self.meth = meth
-            if args:
-                self.args = args
-            self.kw.update(kw)
-
-        def __call__(self, rhs):
-            func = self.get(rhs, self.meth)
-            return bool(func(*self.args, **self.kw))
-
-    class Attr(object):
-
-        attrs = tuple()
-
-        lget = Getters.attrsafe
-        rget = Getters.attr
-
-        def __init__(self, lhs, **attrmap):
-            self.lhs = lhs
-            self.attrs = tuple(self.attrs + tuple(attrmap.items()))
-
-        def __call__(self, rhs):
-            for lattr, rattr in self.attrs:
-                val = self.lget(self.lhs, lattr)
-                if val != None and val != self.rget(rhs, rattr):
-                    return False
-            return True
-
-        def example(self):
-            props = {}
-            for attr, rattr in self.attrs:
-                val = self.lget(self.lhs, attr)
-                if val != None:
-                    props[rattr] = val
-            return props
-
-    class Sentence(object):
-
-        rget = Getters.it
-
-        @property
-        def negated(self):
-            if self.__negated != None:
-                return self.__negated
-            return Getters.attrsafe(self.lhs, 'negated')
-
-        @negated.setter
-        def negated(self, val):
-            self.__negated = val
-
-        @property
-        def lhs(self):
-            return self.__lhs
-
-        @property
-        def applies(self):
-            return self.__applies
-
-        def get(self, rhs):
-            s = self.rget(rhs)
-            if s:
-                if not self.negated:
-                    return s
-                if s.is_negated:
-                    return s.operand
-
-        def example(self):
-            if not self.applies:
-                return
-            lhs = self.lhs
-            if lhs.operator != None:
-                s = Operated.first(lhs.operator)
-            elif lhs.quantifier != None:
-                s = Quantified.first(lhs.quantifier)
-            if lhs.negated:
-                s = s.negate()
-            return s
-
-        def __init__(self, lhs, negated = None):
-            self.__negated = None
-            self.__lhs = lhs
-            self.__applies = any((lhs.operator, lhs.quantifier, lhs.predicate))
-            if negated != None:
-                self.negated = negated
-
-        def __call__(self, rhs):
-            if not self.applies:
-                return True
-            s = self.get(rhs)
-            if not s:
-                return False
-            lhs = self.lhs
-            if lhs.operator and lhs.operator != s.operator:
-                return False
-            if lhs.quantifier and lhs.quantifier != s.quantifier:
-                return False
-            if lhs.predicate:
-                if not s.predicate or lhs.predicate not in s.predicate.refs:
-                    return False
-            return True
-    Node = None
-
-class NodeFilters(object):
-
-    class Sentence(Filters.Sentence):
-        rget = Getters.KeySafe('sentence')
-        def example_node(self):
-            n = {}
-            s = self.example()
-            if s:
-                n['sentence'] = s
-            return n
-
-    class Designation(Filters.Attr):
-        attrs = (('designation', 'designated'),)
-        rget = Getters.key
-        def example_node(self):
-            return self.example()
-
-    class Modal(Filters.Attr):
-        attrs = (('modal', 'is_modal'),)
-        def example_node(self):
-            n = {}
-            attrs = self.example()
-            if attrs.get('is_modal'):
-                n['world'] = 0
-            return n
-
-Filters.Node = NodeFilters
+    def _reprdict(self):
+        return super()._reprdict() | {
+            'filters': '(%s) %s' % (len(self.filters), self.filters),
+        }
 
 class MaxConstantsTracker(object):
     """
@@ -410,7 +348,7 @@ class MaxConstantsTracker(object):
     by examining the branches after the trunk is built.
     """
 
-    def __init__(self, rule):
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         #: Track the maximum number of constants that should be on the branch
         #: (per world) so we can halt on infinite branches. Map from ``branch.id```
@@ -547,7 +485,7 @@ class NodeAppliedConstants(object):
     method are tracked.
     """
 
-    def __init__(self, rule):
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.node_states = {}
         self.consts = {}
@@ -591,7 +529,7 @@ class NodeAppliedConstants(object):
                     'applied'   : set(),
                     'unapplied' : set(self.consts[branch.id]),
                 }
-        consts = node['sentence'].constants if node.has('sentence') else emptyset
+        consts = node['sentence'].constants if node.has('sentence') else EmptySet
         for c in consts:
             if c not in self.consts[branch.id]:
                 for node_id in self.node_states[branch.id]:
@@ -619,7 +557,7 @@ class MaxWorldsTracker(object):
 
     modal_operators = set(BaseModel.modal_operators)
 
-    def __init__(self, rule):
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         # Track the maximum number of worlds that should be on the branch
         # so we can halt on infinite branches.
@@ -703,7 +641,7 @@ class UnserialWorldsTracker(object):
     Track the unserial worlds on the branch.
     """
 
-    def __init__(self, rule):
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.track = {}
 
@@ -733,7 +671,7 @@ class VisibleWorldsIndex(object):
     Index the visible worlds for each world on the branch.
     """
 
-    def __init__(self, rule):
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.index = {}
 
@@ -772,40 +710,13 @@ class VisibleWorldsIndex(object):
                 self.index[branch][w1] = set()
             self.index[branch][w1].add(w2)
 
-class PredicatedNodesTracker(object):
-    """
-    Track all predicated nodes on the branch.
-    """
-
-    def __init__(self, rule):
-        self.rule = rule
-        self.track = {}
-
-    def get_predicated(self, branch):
-        """
-        Return all predicated nodes on the branch.
-        """
-        return self.track[branch]
-
-    # helper implementation
-
-    def after_branch_add(self, branch):
-        parent = branch.parent
-        track = self.track[branch] = set()
-        if parent:
-            track.update(self.track[parent])
-
-    def after_node_add(self, node, branch):
-        if node.has('sentence') and node['sentence'].is_predicated:
-            self.track[branch].add(node)
-
 class AppliedNodesWorldsTracker(object):
     """
     Track the nodes applied to by the rule for each world on the branch. The
     rule's target must have `branch`, `node`, and `world` keys.
     """
 
-    def __init__(self, rule):
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.track = {}
 
@@ -834,7 +745,7 @@ class AppliedSentenceCounter(object):
     the `branch` key.
     """
 
-    def __init__(self, rule):
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.counts = {}
 
@@ -867,7 +778,7 @@ class EllipsisExampleHelper(object):
     mynode = {'ellipsis': True}
     closenodes = []
 
-    def __init__(self, rule):
+    def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.applied = set()
         if rule.is_closure:
@@ -911,3 +822,26 @@ class EllipsisExampleHelper(object):
     def __addnode(self, branch):
         self.applied.add(branch)
         branch.add(self.mynode)
+
+def _collectattr(cls, attr, **adds):
+    return filter (bool, chain(
+        * (
+            c.__dict__.get(attr, tuple())
+            for c in reversed(cls.mro())
+        ),
+        (
+            (name, value)
+            for name, value in adds.items()
+        )
+    ))
+
+def _dedupvalue(value):
+    track = {}
+    dedup = []
+    for k, v in value:
+        if k not in track:
+            track[k] = v
+            dedup.append((k, v))
+        elif track[k] != v:
+            raise ValueError('Conflict %s / %s / %s' % (k, v, track[k]))
+    return dedup

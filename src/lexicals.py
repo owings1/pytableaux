@@ -20,13 +20,11 @@
 from copy import deepcopy
 from enum import Enum, EnumMeta, unique
 from errors import NotFoundError
-
-from inspect import isclass
 from itertools import chain
 from past.builtins import basestring
 from types import DynamicClassAttribute
 from utils import CacheNotationData, Decorators as decs, ReadOnlyDict, cat, isstr, \
-    typecheck, condcheck, emptyset, kwrepr
+    typecheck, condcheck, EmptySet, kwrepr
 lazyget = decs.lazyget
 setonce = decs.setonce
 nosetattr = decs.nosetattr
@@ -89,7 +87,7 @@ class EnumMetaBase(EnumMeta):
         return enumcls
 
     def _member_keys(cls, member):
-        return emptyset
+        return EmptySet
 
     def _members_init(cls, members):
         pass
@@ -132,8 +130,10 @@ class LexEnumMeta(EnumMetaBase):
     @DynamicClassAttribute
     def TYPE(cls):
         return LexType[cls.__name__] 
+
     # def __new__(cls, clsname, bases, attrs):
     #     return super().__new__(cls, clsname, bases, attrs)
+
     def __call__(cls, *args, **kw):
         if len(args) == 1 and isinstance(args[0], cls._keytypes) and args[0] in cls:
             return args[0]
@@ -332,6 +332,10 @@ class Quantifier(LexEnum):
 
     def over(self, variable, sentence):
         return Quantified(self, variable, sentence)
+
+    def __call__(self, *spec):
+        return Quantified(self, *spec)
+
 @unique
 class Operator(LexEnum):
     Assertion               = (10,  'Assertion',    1)
@@ -351,6 +355,9 @@ class Operator(LexEnum):
     def __init__(self, *value):
         self.arity = value[2]
         super().__init__(*value)
+
+    def __call__(self, *spec):
+        return Operated(self, *spec)
 
 class CoordsItem(LexItem):
 
@@ -437,7 +444,7 @@ class Predicate(CoordsItem):
     Predicate
 
     The parameters can be passed either expanded, or as a single
-    ``list``/``tuple``. A valid spec consists of 3 integers in
+    ``tuple``. A valid spec consists of 3 integers in
     the order of `index`, `subscript`, `arity`, for example::
 
         Predicate(0, 0, 1)
@@ -489,6 +496,8 @@ class Predicate(CoordsItem):
             spec = (0, self.subscript + 1, arity)
         return self.__class__(spec)
 
+    def to(self, params):
+        return Predicated(self, params)
     @property
     def arity(self):
         return self.__arity
@@ -523,7 +532,7 @@ class Predicate(CoordsItem):
             self.coords, self.sort_tuple, self.ident, self.name
         })
 
-    System = emptyset
+    System = EmptySet
     def __init__(self, *spec):
         if len(spec) == 1 and isinstance(spec[0], (tuple, list)):
             spec, = spec
@@ -547,6 +556,9 @@ class Predicate(CoordsItem):
         else:
             name = self.spec
         self.__name = name
+
+    def __call__(self, *spec):
+        return Predicated(self, *spec)
 
 class Sentence(LexItem):
 
@@ -645,7 +657,7 @@ class Sentence(LexItem):
 
         :rtype: set(Predicate)
         """
-        return emptyset
+        return EmptySet
 
     @property
     def constants(self):
@@ -654,7 +666,7 @@ class Sentence(LexItem):
 
         :rtype: set(Constant)
         """
-        return emptyset
+        return EmptySet
 
     @property
     def variables(self):
@@ -663,7 +675,7 @@ class Sentence(LexItem):
 
         :rtype: set(Variable)
         """
-        return emptyset
+        return EmptySet
 
     @property
     def atomics(self):
@@ -672,7 +684,7 @@ class Sentence(LexItem):
 
         :rtype: set(Atomic)
         """
-        return emptyset
+        return EmptySet
 
     @property
     def quantifiers(self):
@@ -1200,7 +1212,8 @@ class PredicatesMeta(type):
     def __new__(cls, clsname, bases, attrs):
 
         Predicates = super().__new__(cls, clsname, bases, attrs)
-
+        if Predicate.System:
+            return Predicates
         base = Predicates.SystemEnum
         class System(object):
             def __getattr__(self, a):
@@ -1333,6 +1346,8 @@ class Argument(object):
         return self.__conclusion
 
     def __repr__(self):
+        if self.title:
+            return repr(self.title)
         return (self.premises, self.conclusion).__repr__()
 
     def __hash__(self):
@@ -1410,26 +1425,26 @@ class BaseLexWriter(LexWriter):
         return self.renderset.strfor(*args, **kw)
 
     def _write_operator(self, operator):
-        return self._strfor('operator', operator)
+        return self._strfor(LexType.Operator, operator)
 
     def _write_quantifier(self, quantifier):
-        return self._strfor('quantifier', quantifier)
+        return self._strfor(LexType.Quantifier, quantifier)
 
     def _write_constant(self, constant):
         return cat(
-            self._strfor('constant', constant.index),
+            self._strfor(LexType.Constant, constant.index),
             self._write_subscript(constant.subscript),
         )
 
     def _write_variable(self, variable):
         return cat(
-            self._strfor('variable', variable.index),
+            self._strfor(LexType.Variable, variable.index),
             self._write_subscript(variable.subscript),
         )
 
     def _write_predicate(self, predicate):
         if predicate.is_system:
-            typ, key = ('system_predicate', predicate.name)
+            typ, key = ('system_predicate', predicate)
         else:
             typ, key = ('user_predicate', predicate.index)
         return cat(
@@ -1450,7 +1465,7 @@ class BaseLexWriter(LexWriter):
 
     def _write_atomic(self, sentence):
         return cat(
-            self._strfor('atomic', sentence.index),
+            self._strfor(LexType.Atomic, sentence.index),
             self._write_subscript(sentence.subscript)
         )
 
@@ -1519,15 +1534,15 @@ class StandardLexWriter(BaseLexWriter):
             else:
                 return self._write_operator(oper) + self._write_sentence(operand)
         elif arity == 2:
-            return ''.join([
+            return ''.join((
                 self._strfor('paren_open', 0) if not drop_parens else '',
-                self._strfor('whitespace', 0).join([
+                self._strfor('whitespace', 0).join((
                     self._write_sentence(sentence.lhs),
                     self._write_operator(oper),
                     self._write_sentence(sentence.rhs),
-                ]),
+                )),
                 self._strfor('paren_close', 0) if not drop_parens else '',
-            ])
+            ))
         raise NotImplementedError('{0}-ary operators not supported'.format(arity))
 
     def _write_negated_identity(self, sentence):
@@ -1535,7 +1550,7 @@ class StandardLexWriter(BaseLexWriter):
         return cat(
             self._write_parameter(params[0]),
             self._strfor('whitespace', 0),
-            self._strfor('system_predicate', 'NegatedIdentity'),
+            self._strfor('system_predicate', (Operator.Negation, Predicate.Identity)),
             self._strfor('whitespace', 0),
             self._write_parameter(params[1]),
         )
@@ -1570,8 +1585,8 @@ _builtin = {
                 'subscript': '{0}',
             },
             'strings' : {
-                'atomic'   : ('a', 'b', 'c', 'd', 'e'),
-                'operator' : {
+                LexType.Atomic   : ('a', 'b', 'c', 'd', 'e'),
+                LexType.Operator : {
                     Operator.Assertion              : 'T',
                     Operator.Negation               : 'N',
                     Operator.Conjunction            : 'K',
@@ -1583,16 +1598,16 @@ _builtin = {
                     Operator.Possibility            : 'M',
                     Operator.Necessity              : 'L',
                 },
-                'variable'   : ('x', 'y', 'z', 'v'),
-                'constant'   : ('m', 'n', 'o', 's'),
-                'quantifier' : {
+                LexType.Variable   : ('x', 'y', 'z', 'v'),
+                LexType.Constant   : ('m', 'n', 'o', 's'),
+                LexType.Quantifier : {
                     Quantifier.Universal   : 'V',
                     Quantifier.Existential : 'S',
                 },
                 'system_predicate'  : {
-                    'Identity'  : 'I',
-                    'Existence' : 'J',
-                    'NegatedIdentity' : NotImplemented,
+                    Predicate.Identity  : 'I',
+                    Predicate.Existence : 'J',
+                    (Operator.Negation, Predicate.Identity) : NotImplemented,
                 },
                 'user_predicate' : ('F', 'G', 'H', 'O',),
                 'paren_open'     : (NotImplemented,),
@@ -1623,8 +1638,8 @@ _builtin.update({
                 'subscript': '{0}',
             },
             'strings': {
-                'atomic' : ('A', 'B', 'C', 'D', 'E'),
-                'operator' : {
+                LexType.Atomic : ('A', 'B', 'C', 'D', 'E'),
+                LexType.Operator : {
                     Operator.Assertion              :  '*',
                     Operator.Negation               :  '~',
                     Operator.Conjunction            :  '&',
@@ -1636,16 +1651,16 @@ _builtin.update({
                     Operator.Possibility            :  'P',
                     Operator.Necessity              :  'N',
                 },
-                'variable' : ('x', 'y', 'z', 'v'),
-                'constant' : ('a', 'b', 'c', 'd'),
-                'quantifier' : {
+                LexType.Variable : ('x', 'y', 'z', 'v'),
+                LexType.Constant : ('a', 'b', 'c', 'd'),
+                LexType.Quantifier : {
                     Quantifier.Universal   : 'L',
                     Quantifier.Existential : 'X',
                 },
                 'system_predicate'  : {
-                    'Identity'  : '=',
-                    'Existence' : 'E!',
-                    'NegatedIdentity' : '!=',
+                    Predicate.Identity  : '=',
+                    Predicate.Existence : 'E!',
+                    (Operator.Negation, Predicate.Identity) : '!=',
                 },
                 'user_predicate'  : ('F', 'G', 'H', 'O'),
                 'paren_open'      : ('(',),
@@ -1666,8 +1681,8 @@ _builtin.update({
                 'subscript': lambda sub: ''.join(chr(0x2080 + int(d)) for d in str(sub))
             },
             'strings': {
-                'atomic'   : ('A', 'B', 'C', 'D', 'E'),
-                'operator' : {
+                LexType.Atomic   : ('A', 'B', 'C', 'D', 'E'),
+                LexType.Operator : {
                     # 'Assertion'              : '°',
                     Operator.Assertion              : '○',
                     Operator.Negation               : '¬',
@@ -1680,16 +1695,16 @@ _builtin.update({
                     Operator.Possibility            : '◇',
                     Operator.Necessity              : '◻',
                 },
-                'variable'   : ('x', 'y', 'z', 'v'),
-                'constant'   : ('a', 'b', 'c', 'd'),
-                'quantifier' : {
+                LexType.Variable   : ('x', 'y', 'z', 'v'),
+                LexType.Constant   : ('a', 'b', 'c', 'd'),
+                LexType.Quantifier : {
                     Quantifier.Universal   : '∀' ,
                     Quantifier.Existential : '∃' ,
                 },
                 'system_predicate'  : {
-                    'Identity'  : '=',
-                    'Existence' : 'E!',
-                    'NegatedIdentity' : '≠',
+                    Predicate.Identity  : '=',
+                    Predicate.Existence : 'E!',
+                    (Operator.Negation, Predicate.Identity) : '≠',
                 },
                 'user_predicate'  : ('F', 'G', 'H', 'O'),
                 'paren_open'      : ('(',),
@@ -1710,8 +1725,8 @@ _builtin.update({
                 'subscript': '<sub>{0}</sub>',
             },
             'strings': {
-                'atomic'   : ('A', 'B', 'C', 'D', 'E'),
-                'operator' : {
+                LexType.Atomic   : ('A', 'B', 'C', 'D', 'E'),
+                LexType.Operator : {
                     # 'Assertion'              : '&deg;'   ,
                     Operator.Assertion             : '&#9675;' ,
                     Operator.Negation              : '&not;'   ,
@@ -1724,16 +1739,16 @@ _builtin.update({
                     Operator.Possibility           : '&#9671;' ,
                     Operator.Necessity             : '&#9723;' ,
                 },
-                'variable'   : ('x', 'y', 'z', 'v'),
-                'constant'   : ('a', 'b', 'c', 'd'),
-                'quantifier' : {
+                LexType.Variable   : ('x', 'y', 'z', 'v'),
+                LexType.Constant   : ('a', 'b', 'c', 'd'),
+                LexType.Quantifier : {
                     Quantifier.Universal   : '&forall;' ,
                     Quantifier.Existential : '&exist;'  ,
                 },
                 'system_predicate'  : {
-                    'Identity'  : '=',
-                    'Existence' : 'E!',
-                    'NegatedIdentity' : '&ne;',
+                    Predicate.Identity  : '=',
+                    Predicate.Existence : 'E!',
+                    (Operator.Negation, Predicate.Identity) : '&ne;',
                 },
                 'user_predicate'  : ('F', 'G', 'H', 'O'),
                 'paren_open'      : ('(',),

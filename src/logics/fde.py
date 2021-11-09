@@ -28,11 +28,11 @@ class Meta(object):
 
 from models import BaseModel
 from lexicals import Atomic, Operated, Quantified, Predicate, Operator as Oper, Quantifier
-
 from proof.tableaux import TableauxSystem as BaseSystem
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
-    NewConstantStoppingRule, Rule, Target
-from proof.helpers import AdzHelper, Filters, NodeFilterHelper
+    NewConstantStoppingRule, Rule
+from proof.common import Filters, Target
+from proof.helpers import AdzHelper, FilterHelper, clshelpers
 
 from errors import ModelValueError
 
@@ -547,82 +547,53 @@ class TableauxSystem(BaseSystem):
         return complexity
 
 
-
-class DefaultNodeRule(Rule):
-
-    Helpers = (
-        ('adz', AdzHelper),
-        ('nf', NodeFilterHelper),
-    )
-
-    # AdzHelper
-    ticking = True
-
-    # NodeFilterHelper
-    include_ticked = None
-
-    NodeFilters = (
-        ('designation', Filters.Node.Designation),
-        ('sentence', Filters.Node.Sentence),
-    )
-
+@FilterHelper.clsfilters(
+    designation = Filters.Node.Designation,
+    sentence    = Filters.Node.Sentence,
+)
+@clshelpers(nf = FilterHelper)
+class DefaultRule(Rule):
+    # FilterHelper
+    # ----------------
+    ignore_ticked = True
     # Filters.Node.Sentence
     negated = operator = quantifier = predicate = None
-
-    # DesignationFilter
+    # Filters.Node.Designation
     designation = None
-
-    def _apply(self, target):
-        """
-        :implements: Rule
-        """
-        self.adz.apply_to_target(target)
-
-    def score_candidate(self, target):
-        """
-        :overrides: Rule
-        """
-        return self.adz.closure_score(target)
-
+    # :overrides: Rule
     def sentence(self, node):
-        """
-        :overrides: Rule
-        """
         return self.nf.filters.sentence.get(node)
-
+    # :implements: Rule
     def example_nodes(self):
-        """
-        :implements: Rule
-        """
         return (self.nf.example_node(),)
 
-    def _get_targets(self, branch):
-        """
-        :implements: Rule
-        """
-        targets = list()
-        # misses = {}
-        for node in self.nf[branch]:
-            res = self._get_node_targets(node, branch)
-            if res:
-                targets.extend(
-                    Target.all(res, branch = branch, node = node)
-                )
-                continue
-        #     if not self.nf.filter(node, branch):
-        #         if branch not in misses:
-        #             misses[branch] = set()
-        #         misses[branch].add(node)
-        # for branch in misses:
-        #     for node in misses[branch]:
-        #        self.nf[branch].discard(node)
-        return targets
+@clshelpers(adz = AdzHelper)
+class AdzApply(Rule):
+    ticking = True
+    # :implements: Rule
+    def _apply(self, target):
+        self.adz.apply_to_target(target)
 
+@clshelpers(adz = AdzHelper)
+class AdzClosureScore(Rule):
+    # :overrides: Rule
+    def score_candidate(self, target):
+        return self.adz.closure_score(target)
+
+@clshelpers(nf = FilterHelper)
+class GetNodeTargets(Rule):
+    # :implements: Rule, delegates to _get_node_targets
+    @FilterHelper.node_targets
+    def _get_targets(self, node, branch):
+        return self._get_node_targets(node, branch)
+    # :abstract:
     def _get_node_targets(self, node, branch):
-        """
-        :meta abstract:
-        """
         raise NotImplementedError()
+
+@clshelpers()
+class DefaultNodeRule(GetNodeTargets, DefaultRule, AdzClosureScore, AdzApply):
+    pass
+
 class OldDefaultNodeRule(FilterNodeRule):
 
     ticking = True
@@ -636,7 +607,7 @@ class OldDefaultNodeRule(FilterNodeRule):
 class DefaultNewConstantRule(OldDefaultNodeRule, NewConstantStoppingRule):
 
     def score_candidate(self, target):
-        return -1 * self.tableau.branching_complexity(target['node'])
+        return -1 * self.tableau.branching_complexity(target.node)
 
 class DefaultAllConstantsRule(OldDefaultNodeRule, AllConstantsStoppingRule):
 
@@ -647,7 +618,7 @@ class DefaultAllConstantsRule(OldDefaultNodeRule, AllConstantsStoppingRule):
             return 1
         if self.adz.closure_score(target) == 1:
             return 1
-        node_apply_count = self.node_application_count(target['node'], target['branch'])
+        node_apply_count = self.node_application_count(target.node, target.branch)
         return float(1 / (node_apply_count + 1))
 
 class ConjunctionReducingRule(DefaultNodeRule):
@@ -842,7 +813,9 @@ class TableauxRules(object):
         designation = True
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        
+        @FilterHelper.node_targets
+        def _get_targets(self, node, branch):
             return {
                 'adds': [
                     [
@@ -1251,7 +1224,7 @@ class TableauxRules(object):
             s = self.sentence(node)
             v = s.variable
             si = s.sentence
-            sq = Quantified(self.convert_to, v, si.negate())
+            sq = self.convert_to(v, si.negate())
             return {
                 'adds': [
                     [

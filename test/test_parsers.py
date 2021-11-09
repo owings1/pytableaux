@@ -59,7 +59,7 @@ def test_argument_parse_prems_preparsed_conclusion():
 def test_argument_repr_coverage():
     a = argument(conclusion='a', notn='polish', title='TestArg')
     res = a.__repr__()
-    assert '(0, 0)' in res
+    assert '(0, 0)' in res or 'TestArg' in res
 
 class TestStandard(object):
 

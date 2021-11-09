@@ -26,7 +26,7 @@ from itertools import islice
 from time import time
 from types import ModuleType
 from past.builtins import basestring
-emptyset = frozenset()
+EmptySet = frozenset()
 
 def get_module(ref, package = None):
 
@@ -130,8 +130,10 @@ def wrparens(*args):
 
 def dictrepr(d, limit = 10):
     pairs = (
-        cat(k, '=', v.__name__
-        if isclass(v) else v.__repr__())
+        cat(str(k), '=', v.__name__
+        if isclass(v) else (
+            v if isstr(v) else v.__repr__()
+        ))
         for k,v in islice(d.items(), limit)
     )
     return wrparens(', '.join(pairs))
@@ -384,6 +386,9 @@ class StopWatch(object):
 
 class OrderedAttrsView(object):
 
+    def get(self, key, default = None):
+        return self.__map.get(key, default)
+
     def __init__(self, attrmap, valuelist):
         self.__list = valuelist
         self.__map = attrmap
@@ -407,9 +412,8 @@ class OrderedAttrsView(object):
 
     def __iter__(self):
         return iter(self.__list)
-
-    def get(self, key, default = None):
-        return self.__map.get(key, default)
+    def __repr__(self):
+        return repr(self.__list)
 
 def LinkOrderSet():
 
@@ -552,6 +556,9 @@ def LinkOrderSet():
         def __getitem__(self, key):
             return self.__idx[key].item
 
+        def __delitem__(self, key):
+            self.remove(key)
+
         def __iter__(self):
             cur = self.__first
             while cur:
@@ -577,29 +584,64 @@ def LinkOrderSet():
 
 LinkOrderSet = LinkOrderSet()
 
-def ReadOnlyDict(src, cls = object):
+# def ReadOnlyDict(src, cls = object):
     
-    class rodict(cls):
-        def get(self, *args):
-            return src.get(*args)
-        def keys(self):
-            return src.keys()
-        def items(self):
-            return src.items()
-        def values(self):
-            return src.values()
-        def copy(self):
-            return src.copy()
-        def __getitem__(self, key):
-            return src[key]
-        def __contains__(self, key):
-            return key in src
-        def __iter__(self):
-            return iter(src)
-        def __len__(self):
-            return len(src)
-        def __eq__(self, other):
-            return src == other
-        def __repr__(self):
-            return 'ReadOnly(%s)' % src.__repr__()
-    return rodict()
+#     class rodict(cls):
+#         def get(self, *args):
+#             return src.get(*args)
+#         def keys(self):
+#             return src.keys()
+#         def items(self):
+#             return src.items()
+#         def values(self):
+#             return src.values()
+#         def copy(self):
+#             return src.copy()
+#         def __getitem__(self, key):
+#             return src[key]
+#         def __contains__(self, key):
+#             return key in src
+#         def __iter__(self):
+#             return iter(src)
+#         def __len__(self):
+#             return len(src)
+#         def __eq__(self, other):
+#             return src == other
+#         def __repr__(self):
+#             return 'ReadOnly(%s)' % src.__repr__()
+#     return rodict()
+
+from types import MappingProxyType
+
+def ReadOnlyDict(src):
+    return MappingProxyType(src)
+# class RoDict(dict):
+#     def __init__(self, *args, **kw):
+#         super().__init__(*args, **kw)
+#         d = {'_init_': True}
+#         self.__dict__ = MappingProxyType(d)
+#         # self.__dict__['_init_'] = True
+#     def __setattr__(self, attr, val):
+#         if self.__dict__.get('_init_'):
+#         # if not hasattr(self, '__dict__'):
+#             raise AttributeError('ReadOnly')
+#         super().__setattr__(attr, val)
+#     def __delattr__(self, attr):
+#         raise AttributeError('ReadOnly')
+#     def __setitem__(self, key, val):
+#         if self.__dict__.get('_init_'):
+#         # if not hasattr(self, '__dict__'):
+#             raise KeyError('ReadOnly')
+#         super().__setitem__(key, val)
+#     def __delitem__(self, key):
+#         raise KeyError('ReadOnly')
+#     def clear(self, *args):
+#         raise KeyError('ReadOnly')
+#     def pop(self, *args):
+#         raise KeyError('ReadOnly')
+#     def popitem(self, *args):
+#         raise KeyError('ReadOnly')
+#     def update(self, *args):
+#         raise KeyError('ReadOnly')
+#     def setdefault(self, *args):
+#         raise KeyError('ReadOnly')

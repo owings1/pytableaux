@@ -3,7 +3,7 @@ from errors import *
 from events import Events
 from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau
 from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
-from proof.helpers import AdzHelper, NodeFilterHelper, Getters, Filters
+from proof.helpers import AdzHelper, FilterHelper, Getters, Filters
 from lexicals import Atomic, Constant, Predicated
 from utils import get_logic
 import examples
@@ -402,13 +402,13 @@ class TestFilters(BaseSuite):
 
 class NodeFilterRule(Rule):
 
-    include_ticked = None
+    ignore_ticked = None
     designation = None
     modal = None
     negated = operator = quantifier = predicate = None
 
     Helpers = (
-        ('nf', NodeFilterHelper),
+        ('nf', FilterHelper),
         ('adz', AdzHelper),
     )
 
@@ -483,35 +483,35 @@ class Test_NodeFilter(BaseSuite):
         b.tick(nn[0])
         assert nf[b] == {nn[1]}
 
-    def test_include_ticked_helper_attr(self):
+    def test_ignore_ticked_helper_attr(self):
         nf, b, nn = self.case1(NodeFilterRule, n=3)
-        nf.include_ticked = True
+        nf.ignore_ticked = True
         b.tick(nn[0], nn[1])
         assert nf[b] == set(nn)
 
-    def test_include_ticked_rule_cls_attr(self):
+    def test_ignore_ticked_rule_cls_attr(self):
         class Impl(NodeFilterRule):
-            include_ticked = True
+            ignore_ticked = True
         nf, b, nn = self.case1(Impl, n=3)
         b.tick(nn[0], nn[1])
         assert nf[b] == set(nn)
 
-    def test_include_ticked_rule_attr_pre_super(self):
+    def test_ignore_ticked_rule_attr_pre_super(self):
         class Impl(NodeFilterRule):
             def __init__(self, *args, **opts):
-                self.include_ticked = True
+                self.ignore_ticked = True
                 super().__init__(*args, **opts)
         nf, b, nn = self.case1(Impl, n=3)
         b.tick(nn[0], nn[1])
         assert nf[b] == set(nn)
 
-    def test_include_ticked_rule_attr_post_init(self):
+    def test_ignore_ticked_rule_attr_post_init(self):
         class Impl(NodeFilterRule):
-            include_ticked = False
+            ignore_ticked = False
         nf, b = self.case1(Impl, n = None)
         nn = self.nn1(3)
-        assert nf.include_ticked == False
-        nf.rule.include_ticked = True
+        assert nf.ignore_ticked == False
+        nf.rule.ignore_ticked = True
         b.extend(nn).tick(nn[0], nn[1])
         assert nf[b] == set(nn)
 

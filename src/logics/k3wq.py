@@ -248,7 +248,7 @@ class TableauxRules(object):
             r = si.substitute(c, v)
 
             disji = si.disjoin(si.negate())
-            sq = Quantifier.Universal.over(v, disji)
+            sq = Quantifier.Universal(v, disji)
 
             return [
                 {'sentence': sq, 'designated': True},
@@ -295,10 +295,9 @@ class TableauxRules(object):
 
         def _get_translation_node(self, node, branch):
             s = self.sentence(node)
-            q = Quantifier.Universal
             v = s.variable
             si = s.sentence
-            sq = q.over(v, si.negate())
+            sq = Quantifier.Universal(v, si.negate())
             return {'sentence': sq, 'designated': True}
 
     class ExistentialNegatedUndesignated(DefaultNewConstantRule):
@@ -349,7 +348,7 @@ class TableauxRules(object):
             si = s.sentence
             r = si.substitute(c, v)
             disji = si.disjoin(si.negate())
-            sq = q.over(v, disji)
+            sq = q(v, disji)
 
             return [
                 {'sentence': sq        , 'designated': True},
@@ -395,7 +394,7 @@ class TableauxRules(object):
 
         def _get_translation_node(self, node, branch):
             s = self.sentence(node)
-            sq = self.quantifier.over(s.variable, s.sentence)
+            sq = self.quantifier(s.variable, s.sentence)
             return {'sentence': sq, 'designated': True}
 
     closure_rules = [

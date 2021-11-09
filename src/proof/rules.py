@@ -18,27 +18,26 @@
 # ------------------
 #
 # pytableaux - tableaux rules module
-from inspect import isclass
-from lexicals import Predicated, Atomic, Quantified, Operated, Predicate, Variable
-from utils import StopWatch, dictrepr, istableau, safeprop
+from lexicals import Atomic, Quantified, Operated
+from utils import StopWatch, istableau, safeprop, kwrepr
+from .common import Target
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
-    MaxConstantsTracker, QuitFlagHelper, \
-    NodeFilterHelper, Getters, Filters
+    MaxConstantsTracker, QuitFlagHelper
 from events import Events, EventEmitter
+from itertools import chain
+from typing import Generator
 
 class Rule(EventEmitter):
     """
-    Base class for a tableau rule.
+    Base class for a Tableau rule.
     """
 
-    Helpers = tuple()#(('adz', AdzHelper),)
+    Helpers = tuple()
     Timers = tuple()
 
     branch_level = 1
 
-    opts = {
-        'is_rank_optim' : True
-    }
+    opts = {'is_rank_optim': True}
 
     def __init__(self, tableau, **opts):
         if not istableau(tableau):
@@ -58,6 +57,7 @@ class Rule(EventEmitter):
         self.__helpers = []
         self.__tableau = tableau
 
+        self.helpers = {}
         for name, helper in self.Helpers:
             self.add_helper(helper, name)
         self.add_timer(*self.Timers)
@@ -149,17 +149,20 @@ class Rule(EventEmitter):
         """
         for name in names:
             if name in self.timers:
-                raise KeyError("Timer '{}' already exists".format(name))
+                raise KeyError("Timer '%s' already exists" % name)
             self.timers[name] = StopWatch()
 
-    def add_helper(self, helper, attr = None):
+    def add_helper(self, cls, attr = None, **opts):
         """
         Add a helper.
 
         :meta public:
         """
-        if isclass(helper):
-            helper = helper(self)
+        if cls in self.helpers or cls.__name__ in self.helpers:
+            raise KeyError('Helper %s already exists' % cls.__name__)
+        helper = self.helpers[cls] = cls(self, **opts)
+        self.helpers[cls.__name__] = helper
+        self.helpers[helper] = self
         if attr != None:
             safeprop(self, attr, helper)
         for event, meth in (
@@ -178,7 +181,7 @@ class Rule(EventEmitter):
         ):
             if hasattr(helper, meth):
                 self.tableau.on(event, getattr(helper, meth))
-        self.__helpers.append(helper)
+        self.__helpers.append((attr, helper))
         return helper
 
     # Abstract methods
@@ -238,7 +241,18 @@ class Rule(EventEmitter):
     # Other
 
     def __repr__(self):
-        return dictrepr({'class': self.__class__, 'name': self.name})
+        return kwrepr(
+            rule        = self.name,
+            module      = self.__module__,
+            apply_count = self.apply_count,
+            helpers      ='(%s):%s' % (
+                len(self.__helpers),
+                ','.join(
+                    '<%s>[%s]' % (helper.__class__.__name__, attr if attr else '')
+                    for attr, helper in self.__helpers
+                )
+            )
+        )
 
     # Private Util
 
@@ -257,8 +271,20 @@ class Rule(EventEmitter):
         :param tableaux.Branch branch: The branch.
         :return: ``None``
         """
+        # print(type(targets))
+        # print(targets)
+        # if isinstance(targets, chain):
+        #     targets = list(targets)
+        #     if not len(targets):
+        #         return
         if self.opts['is_rank_optim']:
-            scores = [self.score_candidate(target) for target in targets]
+            # if isinstance(targets, Generator):
+            #     targets, scores = zip()
+            targets, scores = zip(*(
+                 (target, self.score_candidate(target))
+                 for target in targets
+            ))
+            # scores = [self.score_candidate(target) for target in targets]
         else:
             scores = [0]
         max_score = max(scores)
@@ -293,88 +319,6 @@ class Rule(EventEmitter):
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
 
-class Target(object):
-
-    __reqd = {'branch'}
-    __attrs = {'branch', 'node', 'rule'}
-
-    @classmethod
-    def create(cls, obj, **data):
-        if obj == True:
-            target = cls(data)
-        else:
-            if isinstance(obj, cls):
-                target = obj
-                target.update(data)
-            else:
-                target = cls(obj, **data)
-        return target
-
-    @classmethod
-    def all(cls, objs, **data):
-        if isinstance(objs, (cls, dict)):
-            objs = (objs,)
-        return (cls.create(obj, **data) for obj in objs)
-
-    def __init__(self, obj, **data):
-        if isinstance(obj, self.__class__):
-            raise TypeError(self.__class__)
-        self.__data = {}
-        if obj != True:
-            self.update(obj)
-        self.update(data)
-        miss = self.__reqd.difference(self.__data)
-        if miss:
-            raise TypeError("missing {}".format(miss))
-
-    def __getitem__(self, item):
-        return self.__data[item]
-
-    def __setitem__(self, key, val):
-        if self.__data.get(key, val) != val:
-            raise KeyError("conflict '{}'".format(key))
-        self.__data[key] = val
-
-    def __contains__(self, item):
-        return item in self.__data
-
-    def __getattr__(self, name):
-        if name in self.__attrs:
-            try:
-                return self.__data[name]
-            except:
-                pass
-        raise AttributeError(name)
-
-    def __setattr__(self, name, val):
-        if name in self.__attrs:
-            self[name] = val
-        elif not hasattr(self, name) or name in self.__dict__:
-            self.__dict__[name] = val
-        else:
-            raise AttributeError(name)
-
-    def __repr__(self):
-        return (self.__class__.__name__, ('type', self.type)).__repr__()
-
-    def update(self, obj):
-        for k in obj:
-            self[k] = obj[k]
-
-    def get(self, key, default = None):
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
-    @property
-    def type(self):
-        if 'nodes' in self.__data:
-            return 'Nodes'
-        if 'node' in self.__data:
-            return 'Node'
-        return 'Branch'
-
 
 class ClosureRule(Rule):
     """
@@ -387,9 +331,7 @@ class ClosureRule(Rule):
         ('tracker', NodeTargetCheckHelper),
     )
 
-    opts = {
-        'is_rank_optim' : False
-    }
+    opts = {'is_rank_optim': False}
 
     def _get_targets(self, branch):
         """
@@ -670,7 +612,7 @@ class FilterNodeRule(PotentialNodeRule):
         if self.designation != None:
             props['designated'] = self.designation
         sentence = None
-        a = Atomic(0, 0)
+        a = Atomic.first()
         if self.operator != None:
             params = []
             arity = self.operator.arity

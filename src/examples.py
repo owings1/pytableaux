@@ -21,6 +21,8 @@
 from lexicals import Predicates, Constant, Variable, Atomic, \
     Predicated, Operated, Quantified
 from parsers import create_parser
+from utils import isstr
+from itertools import chain
 
 # polish notation
 args = {
@@ -161,3 +163,13 @@ def quantified(quantifier):
 
 def operated(operator):
     return Operated.first(operator)
+
+def tabiter(logic=None, *args, **kw):
+    from proof.tableaux import Tableau
+    from www.conf import available
+    
+    logics = iter(tuple((logic,) if logic else available['logics']))
+    return chain.from_iterable(
+        (Tableau(logic, arg, **kw).build() for arg in arguments())
+        for logic in logics
+    )

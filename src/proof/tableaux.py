@@ -18,12 +18,12 @@
 #
 # pytableaux - tableaux module
 from lexicals import Argument, Constant
-from utils import LinkOrderSet, Kwobj, StopWatch, get_logic, \
-    emptyset, typecheck, dictrepr, Decorators
+from utils import LinkOrderSet, Kwobj, StopWatch, ReadOnlyDict, get_logic, \
+    EmptySet, typecheck, dictrepr, Decorators, kwrepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import Events, EventEmitter
 from inspect import isclass
-from itertools import chain
+from itertools import chain, islice
 
 lazyget = Decorators.lazyget
 setonce = Decorators.setonce
@@ -127,11 +127,16 @@ def TabRules():
                 return c.ruleindex[name]
             raise AttributeError(name)
 
+        def __dir__(self):
+            return [rule.__class__.__name__ for rule in self]
+
         def __repr__(self):
-            return (
-                self.__class__.__name__, self.__c.tab.logic,
-                (len(self.groups), len(self)),
-            ).__repr__()
+            return kwrepr(
+                cls=self.__class__.__name__,
+                logic=self.__c.tab.logic.name,
+                groups=len(self.groups),
+                rules=len(self),
+            )
 
     class RuleGroups(Base):
 
@@ -188,7 +193,14 @@ def TabRules():
             raise AttributeError(name)
 
         def __repr__(self):
-            return (self.__class__.__name__, (len(self),)).__repr__()
+            return kwrepr(
+                cls=self.__class__.__name__,
+                logic=self.__c.tab.logic.name,
+                groups=','.join(
+                    group.name if group.name else str(i)
+                    for i, group in enumerate(self.__groups)
+                ),
+            )
 
     def newrule(cls, tab):
         if not isclass(cls):
@@ -264,7 +276,6 @@ def TabRules():
             return (self.name, (len(self),)).__repr__()
 
     return TabRules
-
 
 class Tableau(EventEmitter):
     """
@@ -598,6 +609,7 @@ class Tableau(EventEmitter):
         self.__branch_dict[branch] = {
             'index': index,
             'parent': parent,
+            'branch': branch,
         }
         self.__after_branch_add(branch)
         return self
@@ -681,27 +693,28 @@ class Tableau(EventEmitter):
     def __iter__(self):
         return iter(self.__branch_list)
 
-    def __reversed__(self):
-        return reversed(self.__branch_list)
-
     def __contains__(self, branch):
         return branch in self.__branch_dict
 
     def __repr__(self):
         return dictrepr({
             self.__class__.__name__: self.id,
-            'branches'     : len(self),
-            'open'         : len(self.open),
-            'current_step' : self.current_step,
-            'finished'     : self.finished,
+            'logic': (self.logic and self.logic.name),
+            'len'  : len(self),
+            'open' : len(self.open),
+            'step' : self.current_step,
+            'finished' : self.finished,
         } | {
             key: value
             for key, value in {
                 prop: getattr(self, prop)
-                for prop in ('premature', 'valid', 'invalid', 'argument')
+                for prop in ('premature', 'valid', 'invalid',)
             }.items()
-            if value
-        })
+            if self.finished and value
+        } | (
+            {'argument': self.argument}
+            if self.argument else {}
+        ))
 
     ## :===============================:
     ## :       Private Methods         :
@@ -1118,7 +1131,7 @@ class Branch(EventEmitter):
         """
         Append a node (Node object or dict of props). Returns self.
         """
-        node = Node.create(node, parent = self.leaf)
+        node = Node(node, parent = self.leaf)
         self.__nodes.append(node)
         self.__nodeset.add(node)
         s = node.get('sentence')
@@ -1296,29 +1309,33 @@ class Branch(EventEmitter):
             'closed' : self.closed,
         })
 
-class Node(object):
+class NodeMeta(type):
+    pass
+    def __call__(cls, props = {}, parent = None):
+        if isinstance(props, cls):
+            if parent == props.parent:
+                return props
+            if props == parent:
+                raise TypeError('A node cannot be its own parent %s=%s', (props.id, parent.id))
+            if parent != None:
+                props = {} | props
+        return super().__call__(props=props, parent=parent)
+
+class Node(object, metaclass = NodeMeta):
     """
     A tableau node.
     """
 
     @staticmethod
     def create(obj, parent = None):
-        if isinstance(obj, __class__):
-            if obj.parent == None:
-                obj.__parent = parent
-            if obj.parent == parent:
-                return obj
-            obj = obj.props
-        return __class__(props = obj, parent = parent)
+        return __class__(obj, parent = parent)
 
     def __init__(self, props = {}, parent = None):
         #: A dictionary of properties for the node.
-        self.props = {
+        self.props = ReadOnlyDict({
             'world'      : None,
             'designated' : None,
-        }
-        self.props.update(props)
-
+        } | props)
         # TODO: branch props, protect
         self.__parent = parent
         self.ticked = False
@@ -1350,7 +1367,7 @@ class Node(object):
         the properties `world`, `world1`, `world2`, and `worlds`.
         """
         return frozenset(
-            self.get('worlds', emptyset) |
+            self.get('worlds', EmptySet) |
             {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
         )
 
@@ -1384,6 +1401,12 @@ class Node(object):
                 return False
         return True
 
+    def keys(self):
+        return self.props.keys()
+
+    def items(self):
+        return self.props.items()
+
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.id == other.id
 
@@ -1402,13 +1425,43 @@ class Node(object):
     def __iter__(self):
         return iter(self.props)
 
+    def __copy__(self):
+        return self.__class__(self.props, parent = self.parent)
+
+    def __or__(self, other):
+        if isinstance(other, self.__class__):
+            other = other.props
+        if isinstance(other, dict):
+            return dict.__or__(self.props, other)
+        raise TypeError(
+            'Unsupported %s operator between %s and %s'
+            % ('|', self.__class__, other.__class__)
+        )
+
+    def __ror__(self, other):
+        if isinstance(other, self.__class__):
+            other = other.props
+        if isinstance(other, dict):
+            return dict.__ror__(self.props, other)
+        raise TypeError(
+            'Unsupported %s operator between %s and %s' %
+            ('|', other.__class__, self.__class__)
+        )
+
     def __repr__(self):
         clsname = self.__class__.__name__
         return dictrepr({
             clsname  : self.id,
+        } | {k: v for k, v in {
+            'parent' : self.parent.id if self.parent else None,
             'ticked' : self.ticked,
             'step'   : self.step,
-            'parent' : self.parent.id if self.parent else None,
+        }.items() if v != None
+        } | {
+            'props': dictrepr({
+            k: str(self[k])[0:10] for k in
+            islice((k for k in self), 5)
+            })
         })
 
 class StepEntry(object):

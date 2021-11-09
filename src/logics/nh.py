@@ -298,8 +298,8 @@ class TableauxRules(object):
 
         def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node)
-            cond1 = Oper.MaterialConditional.on((lhs, rhs))
-            cond2 = Oper.MaterialConditional.on((rhs, lhs))
+            cond1 = Oper.MaterialConditional((lhs, rhs))
+            cond2 = Oper.MaterialConditional((rhs, lhs))
             conj = cond1.conjoin(cond2)
             return {
                 'adds': [
@@ -320,8 +320,8 @@ class TableauxRules(object):
 
         def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node)
-            cond1 = Oper.MaterialConditional.on((lhs, rhs))
-            cond2 = Oper.MaterialConditional.on((rhs, lhs))
+            cond1 = Oper.MaterialConditional((lhs, rhs))
+            cond2 = Oper.MaterialConditional((rhs, lhs))
             conj = cond1.conjoin(cond2)
             return {
                 'adds': [
@@ -365,8 +365,8 @@ class TableauxRules(object):
 
         def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node)
-            cond1 = Oper.Conditional.on((lhs, rhs))
-            cond2 = Oper.Conditional.on((rhs, lhs))
+            cond1 = Oper.Conditional((lhs, rhs))
+            cond2 = Oper.Conditional((rhs, lhs))
             conj = cond1.conjoin(cond2)
             return {
                 'adds': [
@@ -387,8 +387,8 @@ class TableauxRules(object):
 
         def _get_node_targets(self, node, branch):
             lhs, rhs = self.sentence(node)
-            cond1 = Oper.Conditional.on((lhs, rhs))
-            cond2 = Oper.Conditional.on((rhs, lhs))
+            cond1 = Oper.Conditional((lhs, rhs))
+            cond2 = Oper.Conditional((rhs, lhs))
             conj = cond1.conjoin(cond2)
             return {
                 'adds': [
