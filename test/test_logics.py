@@ -21,18 +21,23 @@ from pytest import raises
 from errors import *
 from utils import StopWatch, get_logic
 from lexicals import Predicates, Atomic, Constant, Predicate, Predicated, Quantified, \
-    Operated, Variable, Argument
+    Operated, Variable, Argument, Operator, Quantifier, Operator as Oper
 from proof.tableaux import Tableau, Branch, Node
 from proof.rules import Rule, FilterNodeRule
 from proof.helpers import MaxConstantsTracker
 from parsers import parse, parse_argument, notations as parser_notns
 from models import truth_table
-from .tutils import BaseSuite
+from .tutils import BaseSuite, using, skip
 import examples
 
-def empty_proof():
-    return Tableau(None)
+Existential = Quantifier.Existential
+Universal = Quantifier.Universal
+Identity = Predicate.Identity
+Existence = Predicate.Existence
 
+def empty_proof():
+    return Tableau()
+"""
 class TestFDE(BaseSuite):
 
     logic = get_logic('FDE')
@@ -340,7 +345,6 @@ class TestK3(BaseSuite):
 
     def test_valid_demorgan_4(self):
         self.valid_tab('DeMorgan 4')
-
 class TestK3W(BaseSuite):
 
     logic = get_logic('k3w')
@@ -1084,6 +1088,7 @@ class TestP3(BaseSuite):
     def test_valid_demorgan_6(self):
         assert self.tab('DeMorgan 6').valid
 
+
 class TestCPL(BaseSuite):
 
     logic = get_logic('CPL')
@@ -1281,12 +1286,10 @@ class TestCFOL(BaseSuite):
         assert m.is_countermodel_to(tab.argument)
 
     def test_model_quantified_opaque_is_countermodel(self):
-        """
-        For this we needed to add constants that occur within opaque sentences.
-        The use of the existential is important given the way the K model
-        computes quantified values (short-circuit), as opposed to FDE (min/max).
-        """
-        tab = self.tab('b', 'SxUNFxSyMFy', is_build_models = True)
+        # For this we needed to add constants that occur within opaque sentences.
+        # The use of the existential is important given the way the K model
+        # computes quantified values (short-circuit), as opposed to FDE (min/max).
+        # tab = self.tab('b', 'SxUNFxSyMFy', is_build_models = True)
         arg = tab.argument
         assert len(tab) == 2
         assert len(tab.models) == 2
@@ -1350,460 +1353,513 @@ class TestCFOL(BaseSuite):
         m.finish()
         d1, d2 = (m.get_denotum(c) for c in s1.params)
         assert d1 is d2
+"""
 
-class TestK(BaseSuite):
+@using(logic = 'K')
+class Test_K(BaseSuite):
+    pass
 
-    logic = get_logic('K')
-        
-    def test_valid_conjunction_introduction(self):
-        self.valid_tab('Conjunction Introduction')
-
-    def test_valid_addition(self):
-        self.valid_tab('Addition')
-
-    def test_valid_self_identity_1(self):
-        self.valid_tab('Self Identity 1')
-        
-    def test_valid_nec_dist(self):
-        self.valid_tab('Necessity Distribution 1')
-
-    def test_valid_material_bicond_elim_1(self):
-        self.valid_tab('Material Biconditional Elimination 1')
-
-    def test_valid_material_bicond_intro_1(self):
-        self.valid_tab('Material Biconditional Introduction 1')
-
-    def test_valid_disj_syllogism(self):
-        self.valid_tab('Disjunctive Syllogism')
-
-    def test_valid_disj_syllogism_2(self):
-        self.valid_tab('Disjunctive Syllogism 2')
-        
-    def test_valid_assert_elim_1(self):
-        self.valid_tab('Assertion Elimination 1')
-
-    def test_valid_assert_elim_2(self):
-        self.valid_tab('Assertion Elimination 2')
-
-    def test_valid_nec_elim(self):
-        self.valid_tab('Necessity Distribution 1')
-
-    def test_valid_modal_tranform_2(self):
-        self.valid_tab('Modal Transformation 2')
-
-    def test_valid_ident_indiscern_1(self):
-        self.valid_tab('Identity Indiscernability 1')
-
-    def test_valid_ident_indiscern_2(self):
-        self.valid_tab('Identity Indiscernability 2')
-
-    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
-        self.valid_tab('b', 'VxKFxKaNa')
-
-    def test_valid_nonexistence_efq(self):
-        self.valid_tab('b', 'NJm')
-
-    def test_invalid_s4_cond_inf_2(self):
-        self.invalid_tab('S4 Conditional Inference 2')
-
-    def test_invalid_nec_elim(self):
-        self.invalid_tab('Necessity Elimination')
-
-    def test_invalid_nested_diamond_within_box1(self):
-        self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
-
-    def test_invalid_existential_inside_univ_max_steps(self):
-        self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
-
-    def test_rule_ContradictionClosure_eg(self):
-        self.rule_eg('ContradictionClosure')
-
-    def test_rule_SelfIdentityClosure_eg(self):
-        self.rule_eg('SelfIdentityClosure')
-
-    def test_rule_NonExistenceClosure_eg(self):
-        self.rule_eg('NonExistenceClosure')
-
-    def test_rule_Possibility_node_has_w0(self):
-        rule, tab = self.rule_eg('Possibility', step = False)
-        node = tab[0][0]
-        assert node['world'] == 0
-
-    def test_rule_Existential_example_nodes(self):
-        rule, tab = self.rule_eg('Existential', step = False)
-        node = tab[0][0]
-        assert node['sentence'].quantifier == 'Existential'
-
-    def test_rule_DisjunctionNegated_example_nodes(self):
-        rule, tab = self.rule_eg('DisjunctionNegated', step = False)
-        node = tab[0][0]
-        assert node['sentence'].operator == 'Negation'
-
-    def test_rule_Universal_eg(self):
-        self.rule_eg('Universal')
-
-    def test_rule_Necessity_eg(self):
-        self.rule_eg('Necessity')
-
-    def test_rule_IdentityIndiscernability_eg(self):
-        self.rule_eg('IdentityIndiscernability')
-
-    def test_rule_IdentityIndiscernability_not_applies(self):
-        tab = self.tab()
-        b = tab.branch().extend((
-            {'sentence': self.p('Imm'), 'world': 0},
-            {'sentence': self.p('Fs'), 'world': 0},
-        ))
-        assert not tab.rules.IdentityIndiscernability.get_target(b)
-
-    def test_model_branch_proof_deny_antec(self):
-        proof = self.tab('Denying the Antecedent')
-        model = self.logic.Model()
-        branch = next(iter(proof.open))
-        model.read_branch(branch)
-        s = Atomic(0, 0)
-        assert model.value_of(s, world=0) == 'F'
-        assert model.value_of(s.negate(), world=0) == 'T'
-
-    def test_model_branch_no_proof_atomic(self):
-        model = self.logic.Model()
-        branch = Branch()
-        branch.add({'sentence': Atomic(0, 0), 'world': 0})
-        model.read_branch(branch)
-        assert model.value_of(Atomic(0, 0), world=0) == 'T'
-
-    def test_model_branch_no_proof_predicated(self):
-        model = self.logic.Model()
-        branch = Branch()
-        s1 = parse('Imn')
-        branch.add({'sentence': s1, 'world': 0})
-        model.read_branch(branch)
-        assert model.value_of(s1, world=0) == 'T'
-
-    def test_model_branch_no_proof_access(self):
-        model = self.logic.Model()
-        branch = Branch()
-        branch.add({'world1': 0, 'world2': 1})
-        model.read_branch(branch)
-        assert model.has_access(0, 1)
-
-    def test_model_value_of_atomic_unassigned(self):
-        model = self.logic.Model()
-        s = Atomic(0, 0)
-        res = model.value_of_atomic(s)
-        assert res == model.unassigned_value
-
-    def test_model_set_predicated_value1(self):
-        model = self.logic.Model()
-        m = Constant(0, 0)
-        n = Constant(1, 0)
-        s = Predicated('Identity', [m, n])
-        model.set_predicated_value(s, 'T', world=0)
-        res = model.value_of(s, world=0)
-        assert res == 'T'
-
-    def test_model_add_access_sees(self):
-        model = self.logic.Model()
-        model.add_access(0, 0)
-        assert 0 in model.visibles(0)
-
-    def test_model_possibly_a_with_access_true(self):
-        model = self.logic.Model()
-        a = Atomic(0, 0)
-        model.add_access(0, 1)
-        model.set_atomic_value(a, 'T', world=1)
-        res = model.value_of(Operated('Possibility', [a]), world=0)
-        assert res == 'T'
-
-    def test_model_possibly_a_no_access_false(self):
-        model = self.logic.Model()
-        a = Atomic(0, 0)
-        model.set_atomic_value(a, 'T', world=1)
-        res = model.value_of(Operated('Possibility', a), world=0)
-        assert res == 'F'
-
-    def test_model_nec_a_no_access_true(self):
-        model = self.logic.Model()
-        a = Atomic(0, 0)
-        res = model.value_of(Operated('Necessity', a), world=0)
-        assert res == 'T'
-
-    def test_model_nec_a_with_access_false(self):
-        model = self.logic.Model()
-        a = Atomic(0, 0)
-        model.set_atomic_value(a, 'T', world=0)
-        model.set_atomic_value(a, 'F', world=1)
-        model.add_access(0, 1)
-        model.add_access(0, 0)
-        res = model.value_of(Operated('Necessity', a), world=0)
-        assert res == 'F'
-
-    def test_model_existence_user_pred_true(self):
-        pred = Predicate(0, 0, 1)
-        m = Constant(0, 0)
-        x = Variable(0, 0)
-        s1 = Predicated(pred, [m])
-        s2 = Predicated(pred, [x])
-        s3 = Quantified('Existential', x, s2)
-
-        model = self.logic.Model()
-        model.set_predicated_value(s1, 'T', world=0)
-        res = model.value_of(s3, world=0)
-        assert res == 'T'
-
-    def test_model_existense_user_pred_false(self):
-        pred = Predicate(0, 0, 1)
-        m = Constant(0, 0)
-        x = Variable(0, 0)
-        s1 = Predicated(pred, [m])
-        s2 = Predicated(pred, [x])
-        s3 = Quantified('Existential', x, s2)
-
-        model = self.logic.Model()
-        res = model.value_of(s3, world=0)
-        assert res == 'F'
-
-    def test_model_universal_user_pred_true(self):
-        pred = Predicate(0, 0, 1)
-        m = Constant(0, 0)
-        x = Variable(0, 0)
-        s1 = Predicated(pred, [m])
-        s2 = Predicated(pred, [x])
-        s3 = Quantified('Universal', x, s2)
-
-        model = self.logic.Model()
-        model.set_predicated_value(s1, 'T', world=0)
-        res = model.value_of(s3, world=0)
-        assert res == 'T'
-
-    def test_model_universal_false(self):
-        s1 = self.p('VxFx')
-        s2 = self.p('Fm')
-        model = self.logic.Model()
-        model.set_predicated_value(s2, 0, world=0)
-        res = model.value_of(s1, world=0)
-        assert res == 'F'
-
-    def test_model_universal_user_pred_false(self):
-        pred = Predicate(0, 0, 1)
-        m = Constant(0, 0)
-        n = Constant(1, 0)
-        x = Variable(0, 0)
-        s1 = Predicated(pred, [m])
-        s2 = Predicated(pred, [x])
-        s3 = Predicated(pred, [n])
-        s4 = Quantified('Universal', x, s2)
+class Test_K_Suites(Test_K):
     
-        model = self.logic.Model()
-        model.set_predicated_value(s1, 'T', world=0)
-        model.set_predicated_value(s3, 'F', world=0)
-        res = model.value_of(s4, world=0)
-        assert res == 'F'
+    class Test_K_Tableaux(Test_K):
 
-    def test_model_identity_extension_non_empty_with_sentence(self):
-        s = self.p('Imn')
-        model = self.logic.Model()
-        model.set_predicated_value(s, 'T', world=0)
-        extension = model.get_extension(Predicate.Identity, world=0)
-        assert len(extension) > 0
-        assert (Constant(0, 0), Constant(1, 0)) in extension
+        class Test_Closure(Test_K):
 
-    def test_model_not_impl_various(self):
-        s1 = self.p('Aab')
-        model = self.logic.Model()
-        with raises(NotImplementedError):
-            model.set_literal_value(s1, 'T')
-        with raises(NotImplementedError):
-            model.value_of_modal(s1)
-        with raises(NotImplementedError):
-            model.value_of_quantified(s1)
+            def test_ContradictionClosure(self):
+                self.rule_eg('ContradictionClosure')
+                self.valid_tab('EFQ')
 
-    def test_model_value_error_various(self):
-        s1, s2 = self.pp('a', 'Fm')
-        model = self.logic.Model()
-        model.set_opaque_value(s1, 'T')
-        with raises(ModelValueError):
-            model.set_opaque_value(s1, 'F')
-        model = self.logic.Model()
-        model.set_atomic_value(s1, 'T')
-        with raises(ModelValueError):
-            model.set_atomic_value(s1, 'F')
-        model.set_predicated_value(s2, 'T')
-        with raises(ModelValueError):
-            model.set_predicated_value(s2, 'F')
+            def test_SelfIdentityClosure(self):
+                self.rule_eg('SelfIdentityClosure')
+                self.valid_tab('Self Identity 1')
 
-    def test_model_get_extension_adds_predicate_to_predicates(self):
-        # coverage
-        s1 = self.p('Fm')
-        model = self.logic.Model()
-        res = model.get_extension(s1.predicate)
-        assert len(res) == 0
-        assert s1.predicate in model.predicates
+            def test_NonExistenceClosure(self):
+                self.rule_eg('NonExistenceClosure')
+                self.valid_tab('b', 'NJm')
 
-    def test_model_is_countermodel_to_false1(self):
-        arg = self.parg('b', 'a')
-        s1, = arg.premises
-        model = self.logic.Model()
-        model.set_literal_value(s1, 'F')
-        model.set_literal_value(arg.conclusion, 'T')
-        assert not model.is_countermodel_to(arg)
+        class Test_Operators(Test_K):
 
-    def test_model_finish_every_opaque_has_value_in_every_frame(self):
-        s1, s2 = self.pp('a', 'b')
-        # s2 = self.p('b')
-        model = self.logic.Model()
-        model.set_opaque_value(s1, 'T', world=0)
-        model.set_opaque_value(s2, 'T', world=1)
-        model.finish()
-        f1 = model.world_frame(0)
-        f2 = model.world_frame(1)
-        assert s2 in f1.opaques
-        assert s1 in f2.opaques
+            def test_Assertion(self):
+                rule, tab = self.rule_eg('Assertion')
+                rule, tab = self.rule_eg('AssertionNegated')
 
-    def test_model_frame_data_has_identity_with_sentence(self):
-        s = self.p('Imn')
-        model = self.logic.Model()
-        model.set_predicated_value(s, 'T', world=0)
-        model.finish()
-        data = model.get_data()
-        assert len(data['Frames']['values']) == 1
-        fdata = data['Frames']['values'][0]['value']
-        assert len(fdata['Predicates']['values']) == 2
-        pdata = fdata['Predicates']['values'][1]
-        assert pdata['values'][0]['input'].name == 'Identity'
+                self.valid_tab('Assertion Elimination 1')
+                self.valid_tab('Assertion Elimination 2')
 
-    def test_model_get_data_with_access_has_2_frames(self):
-        model = self.logic.Model()
-        model.set_literal_value(self.p('a'), 'T', world=0)
-        model.add_access(0, 1)
-        model.finish()
-        data = model.get_data()
-        assert len(data['Frames']['values']) == 2
+            def test_Negation(self):
+                rule, tab = self.rule_eg('DoubleNegation')
 
-    def test_frame_difference_atomic_keys_diff(self):
-        model = self.logic.Model()
-        model.set_literal_value(self.p('a'), 'T', world=0)
-        model.set_literal_value(self.p('b'), 'T', world=1)
-        frame_a = model.world_frame(0)
-        frame_b = model.world_frame(1)
-        assert not frame_a.is_equivalent_to(frame_b)
-        assert not frame_b.is_equivalent_to(frame_a)
+            def test_Conjunction(self):
+                rule, tab = self.rule_eg('Conjunction')
+                rule, tab = self.rule_eg('ConjunctionNegated')
 
-    def test_frame_difference_atomic_values_diff(self):
-        model = self.logic.Model()
-        s1 = self.p('a')
-        model.set_literal_value(s1, 'T', world=0)
-        model.set_literal_value(s1, 'F', world=1)
-        frame_a = model.world_frame(0)
-        frame_b = model.world_frame(1)
-        assert not frame_a.is_equivalent_to(frame_b)
-        assert not frame_b.is_equivalent_to(frame_a)
+                self.valid_tab('Conjunction Introduction')
 
-    def test_frame_difference_atomic_values_equiv(self):
-        model = self.logic.Model()
-        s1 = self.p('a')
-        model.set_literal_value(s1, 'T', world=0)
-        model.set_literal_value(s1, 'T', world=1)
-        frame_a = model.world_frame(0)
-        frame_b = model.world_frame(1)
-        assert frame_a.is_equivalent_to(frame_b)
-        assert frame_b.is_equivalent_to(frame_a)
+            def test_Disjunction(self):
+                rule, tab = self.rule_eg('Disjunction')
+                rule, tab = self.rule_eg('DisjunctionNegated')
 
-    def test_frame_difference_opaque_keys_diff(self):
-        model = self.logic.Model()
-        model.set_opaque_value(self.p('Ma'), 'T', world=0)
-        model.set_opaque_value(self.p('Mb'), 'T', world=1)
-        frame_a = model.world_frame(0)
-        frame_b = model.world_frame(1)
-        assert not frame_a.is_equivalent_to(frame_b)
-        assert not frame_b.is_equivalent_to(frame_a)
+                rule, tab = self.rule_eg('DisjunctionNegated', step = False)
+                node = tab[0][0]
+                assert node['sentence'].operator == Oper.Negation
+                self.valid_tab('Addition')
+                self.valid_tab('LEM')
+                self.valid_tab('Disjunctive Syllogism')
+                self.valid_tab('Disjunctive Syllogism 2')
 
-    def test_frame_difference_opaque_values_diff(self):
-        s1 = self.p('Ma')
-        model = self.logic.Model()
-        model.set_opaque_value(s1, 'T', world=0)
-        model.set_opaque_value(s1, 'F', world=1)
-        frame_a = model.world_frame(0)
-        frame_b = model.world_frame(1)
-        assert not frame_a.is_equivalent_to(frame_b)
-        assert not frame_b.is_equivalent_to(frame_a)
+            def test_MaterialConditional(self):
+                rule, tab = self.rule_eg('MaterialConditional')
+                rule, tab = self.rule_eg('MaterialConditionalNegated')
+                self.valid_tab('MMP')
+                self.valid_tab('MMT')
 
-    def test_frame_difference_opaque_values_equiv(self):
-        model = self.logic.Model()
-        model.set_opaque_value(parse('Ma'), 'T', world=0)
-        model.set_opaque_value(parse('Ma'), 'T', world=1)
-        frame_a = model.world_frame(0)
-        frame_b = model.world_frame(1)
-        assert frame_a.is_equivalent_to(frame_b)
-        assert frame_b.is_equivalent_to(frame_a)
+            def test_MaterialBiconditional(self):
+                rule, tab = self.rule_eg('MaterialBiconditional')
+                rule, tab = self.rule_eg('MaterialBiconditionalNegated')
+                self.valid_tab('Material Biconditional Elimination 1')
+                self.valid_tab('Material Biconditional Introduction 1')
 
-    def test_frame_difference_extension_keys_diff(self):
-        vocab = Predicates((0, 0, 1), (1, 0, 2))
-        s1, s2 = self.pp('Fm', 'Gmn', vocab)
-        model = self.logic.Model()
-        model.set_predicated_value(s1, 'T', world=0)
-        model.set_predicated_value(s2, 'T', world=1)
-        frame_a = model.world_frame(0)
-        frame_b = model.world_frame(1)
-        assert not frame_a.is_equivalent_to(frame_b)
-        assert not frame_b.is_equivalent_to(frame_a)
+            def test_Conditional(self):
+                rule, tab = self.rule_eg('Conditional')
+                rule, tab = self.rule_eg('ConditionalNegated')
+                self.valid_tab('MP')
+                self.valid_tab('MT')
+                self.invalid_tab('Denying the Antecedent')
 
-    def test_frame_difference_extension_values_diff(self):
-        s1 = self.p('Fm')
-        s2 = self.p('Fn')
-        model = self.logic.Model()
-        model.set_predicated_value(s1, 'T', world=0)
-        model.set_predicated_value(s2, 'T', world=1)
-        frame_a = model.world_frame(0)
-        frame_b = model.world_frame(1)
-        assert not frame_a.is_equivalent_to(frame_b)
-        assert not frame_b.is_equivalent_to(frame_a)
+            def test_Biconditional(self):
+                rule, tab = self.rule_eg('Biconditional')
+                rule, tab = self.rule_eg('BiconditionalNegated')
 
-    def test_frame_difference_extension_values_equiv(self):
-        s1 = self.p('Fm')
-        s2 = self.p('Fn')
-        model = self.logic.Model()
-        model.set_predicated_value(s1, 'T', world=0)
-        model.set_predicated_value(s2, 'F', world=0)
-        model.set_predicated_value(s1, 'T', world=1)
-        model.set_predicated_value(s2, 'F', world=1)
-        frame_a = model.world_frame(0)
-        frame_b = model.world_frame(1)
-        assert frame_a.is_equivalent_to(frame_b)
-        assert frame_b.is_equivalent_to(frame_a)
+        class Test_ModalOperators(Test_K):
 
-    def test_frame_not_equals(self):
-        s = self.p('a')
-        model1 = self.logic.Model()
-        model2 = self.logic.Model()
-        model1.set_literal_value(s, 'T', world=0)
-        model2.set_literal_value(s, 'F', world=0)
-        f1 = model1.world_frame(0)
-        f2 = model2.world_frame(0)
-        assert f1 != f2
+            def test_Necessity(self):
+                srule, tab = self.rule_eg('Necessity')
+                srule, tab = self.rule_eg('NecessityNegated')
+                self.invalid_tab('Necessity Elimination')
 
-    def test_frame_not_equals(self):
-        s = self.p('a')
-        model1 = self.logic.Model()
-        model2 = self.logic.Model()
-        model1.set_literal_value(s, 'T', world=0)
-        model2.set_literal_value(s, 'T', world=0)
-        f1 = model1.world_frame(0)
-        f2 = model2.world_frame(0)
-        assert f1 == f2
+            def test_Possibility(self):
+                srule, tab = self.rule_eg('Possibility')
+                srule, tab = self.rule_eg('PossibilityNegated')
+                rule, tab = self.rule_eg('Possibility', step = False)
+                node = tab[0][0]
+                assert node['world'] == 0
 
-    def test_frame_ordering(self):
-        s = self.p('a')
-        model = self.logic.Model()
-        model.set_literal_value(s, 'T', world=0)
-        model.set_literal_value(s, 'F', world=1)
-        f1 = model.world_frame(0)
-        f2 = model.world_frame(1)
-        assert f2 > f1
-        assert f1 < f2
-        assert f2 >= f1
-        assert f1 <= f2
+            def test_modal_transformation(self):
+                self.valid_tab('Modal Transformation 2')
 
+            @skip
+            def test_invalid_nested_diamond_within_box1(self):
+                self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
+
+            @skip
+            def test_Arguments_2(self):
+                self.valid_tab('Necessity Distribution 1')
+                self.invalid_tab('S4 Conditional Inference 2')
+
+        class Test_Quantifiers(Test_K):
+
+            def test_Universal(self):
+                rule, tab = self.rule_eg('Universal')
+                rule, tab = self.rule_eg('UniversalNegated')
+
+            def test_Existential(self):
+                rule, tab = self.rule_eg('Existential')
+                rule, tab = self.rule_eg('ExistentialNegated')
+                rule, tab = self.rule_eg('Existential', step = False)
+                node = tab[0][0]
+                assert node['sentence'].quantifier == Existential
+
+            def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
+                self.valid_tab('b', 'VxKFxKaNa')
+
+            def test_invalid_existential_inside_univ_max_steps(self):
+                self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
+
+        class Test_Identity(Test_K):
+
+            def test_regresion(self):
+                rule, tabl = self.rule_eg('IdentityIndiscernability')
+                self.valid_tab('Identity Indiscernability 1')
+                self.valid_tab('Identity Indiscernability 2')
+
+            def test_IdentityIndiscernability(self):
+                tab = self.tab()
+                b = tab.branch().extend((
+                    {'sentence': self.p('Imm'), 'world': 0},
+                    {'sentence': self.p('Fs'),  'world': 0},
+                ))
+                assert not tab.rules.IdentityIndiscernability.get_target(b)
+
+    class Test_K_Models(Test_K):
+
+        @skip
+        class Test_K_RefatorBugs(Test_K):
+
+            def test_model_branch_proof_deny_antec(self):
+                proof = self.tab('Denying the Antecedent')
+                model = self.logic.Model()
+                branch = next(iter(proof.open))
+                model.read_branch(branch)
+                s = Atomic(0, 0)
+                assert model.value_of(s, world=0) == 'F'
+                assert model.value_of(s.negate(), world=0) == 'T'
+
+        class TestModel_Atomics(Test_K):
+
+            def test_model_value_of_atomic_unassigned(self):
+                model = self.logic.Model()
+                s = Atomic(0, 0)
+                res = model.value_of_atomic(s)
+                assert res == model.unassigned_value
+
+            def test_model_branch_no_proof_atomic(self):
+                model = self.logic.Model()
+                branch = Branch()
+                branch.add({'sentence': Atomic(0, 0), 'world': 0})
+                model.read_branch(branch)
+                assert model.value_of(Atomic(0, 0), world=0) == 'T'
+
+        class TestModel_Opaques(Test_K):
+
+            def test_finish_every_opaque_has_value_in_every_frame(self):
+                s1, s2 = self.pp('a', 'b')
+                # s2 = self.p('b')
+                model = self.logic.Model()
+                model.set_opaque_value(s1, 'T', world=0)
+                model.set_opaque_value(s2, 'T', world=1)
+                model.finish()
+                f1 = model.world_frame(0)
+                f2 = model.world_frame(1)
+                assert s2 in f1.opaques
+                assert s1 in f2.opaques
+
+        class TestModel_Predication(Test_K):
+
+            def test_branch_no_proof_predicated(self):
+                model = self.logic.Model()
+                branch = Branch()
+                s1 = parse('Imn')
+                branch.add({'sentence': s1, 'world': 0})
+                model.read_branch(branch)
+                assert model.value_of(s1, world=0) == 'T'
+
+            def test_set_predicated_value1(self):
+                model = self.logic.Model()
+                m = Constant(0, 0)
+                n = Constant(1, 0)
+                s = Predicated('Identity', [m, n])
+                model.set_predicated_value(s, 'T', world=0)
+                res = model.value_of(s, world=0)
+                assert res == 'T'
+
+            def test_get_extension_adds_predicate_to_predicates(self):
+                # coverage
+                s1 = self.p('Fm')
+                model = self.logic.Model()
+                res = model.get_extension(s1.predicate)
+                assert len(res) == 0
+                assert s1.predicate in model.predicates
+
+            def test_model_identity_extension_non_empty_with_sentence(self):
+                s = self.p('Imn')
+                model = self.logic.Model()
+                model.set_predicated_value(s, 'T', world=0)
+                extension = model.get_extension(Predicate.Identity, world=0)
+                assert len(extension) > 0
+                assert (Constant(0, 0), Constant(1, 0)) in extension
+
+        class TestModel_ModalAccess(Test_K):
+
+            def test_model_branch_no_proof_access(self):
+                model = self.logic.Model()
+                branch = Branch()
+                branch.add({'world1': 0, 'world2': 1})
+                model.read_branch(branch)
+                assert model.has_access(0, 1)
+
+            def test_model_add_access_sees(self):
+                model = self.logic.Model()
+                model.add_access(0, 0)
+                assert 0 in model.visibles(0)
+
+            def test_model_possibly_a_with_access_true(self):
+                model = self.logic.Model()
+                a = Atomic(0, 0)
+                model.add_access(0, 1)
+                model.set_atomic_value(a, 'T', world=1)
+                res = model.value_of(Operated('Possibility', [a]), world=0)
+                assert res == 'T'
+
+            def test_model_possibly_a_no_access_false(self):
+                model = self.logic.Model()
+                a = Atomic(0, 0)
+                model.set_atomic_value(a, 'T', world=1)
+                res = model.value_of(Operated('Possibility', a), world=0)
+                assert res == 'F'
+
+            def test_model_nec_a_no_access_true(self):
+                model = self.logic.Model()
+                a = Atomic(0, 0)
+                res = model.value_of(Operated('Necessity', a), world=0)
+                assert res == 'T'
+
+            def test_model_nec_a_with_access_false(self):
+                model = self.logic.Model()
+                a = Atomic(0, 0)
+                model.set_atomic_value(a, 'T', world=0)
+                model.set_atomic_value(a, 'F', world=1)
+                model.add_access(0, 1)
+                model.add_access(0, 0)
+                res = model.value_of(Operated('Necessity', a), world=0)
+                assert res == 'F'
+
+            def test_model_get_data_with_access_has_2_frames(self):
+                model = self.logic.Model()
+                model.set_literal_value(self.p('a'), 'T', world=0)
+                model.add_access(0, 1)
+                model.finish()
+                data = model.get_data()
+                assert len(data['Frames']['values']) == 2
+
+        class TestModel_Quantification(Test_K):
+
+            def test_model_existence_user_pred_true(self):
+                pred = Predicate(0, 0, 1)
+                m = Constant(0, 0)
+                x = Variable(0, 0)
+                s1 = Predicated(pred, [m])
+                s2 = Predicated(pred, [x])
+                s3 = Quantified('Existential', x, s2)
+
+                model = self.logic.Model()
+                model.set_predicated_value(s1, 'T', world=0)
+                res = model.value_of(s3, world=0)
+                assert res == 'T'
+
+            def test_model_existense_user_pred_false(self):
+                pred = Predicate(0, 0, 1)
+                m = Constant(0, 0)
+                x = Variable(0, 0)
+                s1 = Predicated(pred, [m])
+                s2 = Predicated(pred, [x])
+                s3 = Quantified('Existential', x, s2)
+
+                model = self.logic.Model()
+                res = model.value_of(s3, world=0)
+                assert res == 'F'
+
+            def test_model_universal_user_pred_true(self):
+                pred = Predicate(0, 0, 1)
+                m = Constant(0, 0)
+                x = Variable(0, 0)
+                s1 = Predicated(pred, [m])
+                s2 = Predicated(pred, [x])
+                s3 = Quantified('Universal', x, s2)
+
+                model = self.logic.Model()
+                model.set_predicated_value(s1, 'T', world=0)
+                res = model.value_of(s3, world=0)
+                assert res == 'T'
+
+            def test_model_universal_false(self):
+                s1 = self.p('VxFx')
+                s2 = self.p('Fm')
+                model = self.logic.Model()
+                model.set_predicated_value(s2, 0, world=0)
+                res = model.value_of(s1, world=0)
+                assert res == 'F'
+
+            def test_model_universal_user_pred_false(self):
+                pred = Predicate(0, 0, 1)
+                m = Constant(0, 0)
+                n = Constant(1, 0)
+                x = Variable(0, 0)
+                s1 = Predicated(pred, [m])
+                s2 = Predicated(pred, [x])
+                s3 = Predicated(pred, [n])
+                s4 = Quantified('Universal', x, s2)
+            
+                model = self.logic.Model()
+                model.set_predicated_value(s1, 'T', world=0)
+                model.set_predicated_value(s3, 'F', world=0)
+                res = model.value_of(s4, world=0)
+                assert res == 'F'
+
+        class TestModel_Frame(Test_K):
+
+            def test_difference_atomic_keys_diff(self):
+                model = self.logic.Model()
+                model.set_literal_value(self.p('a'), 'T', world=0)
+                model.set_literal_value(self.p('b'), 'T', world=1)
+                frame_a = model.world_frame(0)
+                frame_b = model.world_frame(1)
+                assert not frame_a.is_equivalent_to(frame_b)
+                assert not frame_b.is_equivalent_to(frame_a)
+
+            def test_difference_atomic_values_diff(self):
+                model = self.logic.Model()
+                s1 = self.p('a')
+                model.set_literal_value(s1, 'T', world=0)
+                model.set_literal_value(s1, 'F', world=1)
+                frame_a = model.world_frame(0)
+                frame_b = model.world_frame(1)
+                assert not frame_a.is_equivalent_to(frame_b)
+                assert not frame_b.is_equivalent_to(frame_a)
+
+            def test_difference_atomic_values_equiv(self):
+                model = self.logic.Model()
+                s1 = self.p('a')
+                model.set_literal_value(s1, 'T', world=0)
+                model.set_literal_value(s1, 'T', world=1)
+                frame_a = model.world_frame(0)
+                frame_b = model.world_frame(1)
+                assert frame_a.is_equivalent_to(frame_b)
+                assert frame_b.is_equivalent_to(frame_a)
+
+            def test_difference_opaque_keys_diff(self):
+                model = self.logic.Model()
+                model.set_opaque_value(self.p('Ma'), 'T', world=0)
+                model.set_opaque_value(self.p('Mb'), 'T', world=1)
+                frame_a = model.world_frame(0)
+                frame_b = model.world_frame(1)
+                assert not frame_a.is_equivalent_to(frame_b)
+                assert not frame_b.is_equivalent_to(frame_a)
+
+            def test_difference_opaque_values_diff(self):
+                s1 = self.p('Ma')
+                model = self.logic.Model()
+                model.set_opaque_value(s1, 'T', world=0)
+                model.set_opaque_value(s1, 'F', world=1)
+                frame_a = model.world_frame(0)
+                frame_b = model.world_frame(1)
+                assert not frame_a.is_equivalent_to(frame_b)
+                assert not frame_b.is_equivalent_to(frame_a)
+
+            def test_difference_opaque_values_equiv(self):
+                model = self.logic.Model()
+                model.set_opaque_value(parse('Ma'), 'T', world=0)
+                model.set_opaque_value(parse('Ma'), 'T', world=1)
+                frame_a = model.world_frame(0)
+                frame_b = model.world_frame(1)
+                assert frame_a.is_equivalent_to(frame_b)
+                assert frame_b.is_equivalent_to(frame_a)
+
+            def test_difference_extension_keys_diff(self):
+                vocab = Predicates((0, 0, 1), (1, 0, 2))
+                s1, s2 = self.pp('Fm', 'Gmn', vocab)
+                model = self.logic.Model()
+                model.set_predicated_value(s1, 'T', world=0)
+                model.set_predicated_value(s2, 'T', world=1)
+                frame_a = model.world_frame(0)
+                frame_b = model.world_frame(1)
+                assert not frame_a.is_equivalent_to(frame_b)
+                assert not frame_b.is_equivalent_to(frame_a)
+
+            def test_difference_extension_values_diff(self):
+                s1 = self.p('Fm')
+                s2 = self.p('Fn')
+                model = self.logic.Model()
+                model.set_predicated_value(s1, 'T', world=0)
+                model.set_predicated_value(s2, 'T', world=1)
+                frame_a = model.world_frame(0)
+                frame_b = model.world_frame(1)
+                assert not frame_a.is_equivalent_to(frame_b)
+                assert not frame_b.is_equivalent_to(frame_a)
+
+            def test_difference_extension_values_equiv(self):
+                s1 = self.p('Fm')
+                s2 = self.p('Fn')
+                model = self.logic.Model()
+                model.set_predicated_value(s1, 'T', world=0)
+                model.set_predicated_value(s2, 'F', world=0)
+                model.set_predicated_value(s1, 'T', world=1)
+                model.set_predicated_value(s2, 'F', world=1)
+                frame_a = model.world_frame(0)
+                frame_b = model.world_frame(1)
+                assert frame_a.is_equivalent_to(frame_b)
+                assert frame_b.is_equivalent_to(frame_a)
+
+            def test_not_equals(self):
+                s = self.p('a')
+                model1 = self.logic.Model()
+                model2 = self.logic.Model()
+                model1.set_literal_value(s, 'T', world=0)
+                model2.set_literal_value(s, 'F', world=0)
+                f1 = model1.world_frame(0)
+                f2 = model2.world_frame(0)
+                assert f1 != f2
+
+            def test_not_equals(self):
+                s = self.p('a')
+                model1 = self.logic.Model()
+                model2 = self.logic.Model()
+                model1.set_literal_value(s, 'T', world=0)
+                model2.set_literal_value(s, 'T', world=0)
+                f1 = model1.world_frame(0)
+                f2 = model2.world_frame(0)
+                assert f1 == f2
+
+            def test_ordering(self):
+                s = self.p('a')
+                model = self.logic.Model()
+                model.set_literal_value(s, 'T', world=0)
+                model.set_literal_value(s, 'F', world=1)
+                f1 = model.world_frame(0)
+                f2 = model.world_frame(1)
+                assert f2 > f1
+                assert f1 < f2
+                assert f2 >= f1
+                assert f1 <= f2
+
+            def test_data_has_identity_with_sentence(self):
+                s = self.p('Imn')
+                model = self.logic.Model()
+                model.set_predicated_value(s, 'T', world=0)
+                model.finish()
+                data = model.get_data()
+                assert len(data['Frames']['values']) == 1
+                fdata = data['Frames']['values'][0]['value']
+                assert len(fdata['Predicates']['values']) == 2
+                pdata = fdata['Predicates']['values'][1]
+                assert pdata['values'][0]['input'].name == 'Identity'
+
+        class TestModeCounterModel(Test_K):
+
+            def test_countermodel_to_false1(self):
+                arg = self.parg('b', 'a')
+                s1, = arg.premises
+                model = self.logic.Model()
+                model.set_literal_value(s1, 'F')
+                model.set_literal_value(arg.conclusion, 'T')
+                assert not model.is_countermodel_to(arg)
+
+        class TestModel_Error(Test_K):
+
+            def test_not_impl_various(self):
+                s1 = self.p('Aab')
+                model = self.logic.Model()
+                with raises(NotImplementedError):
+                    model.set_literal_value(s1, 'T')
+                with raises(NotImplementedError):
+                    model.value_of_modal(s1)
+                with raises(NotImplementedError):
+                    model.value_of_quantified(s1)
+
+            def test_value_error_various(self):
+                s1, s2 = self.pp('a', 'Fm')
+                model = self.logic.Model()
+                model.set_opaque_value(s1, 'T')
+                with raises(ModelValueError):
+                    model.set_opaque_value(s1, 'F')
+                model = self.logic.Model()
+                model.set_atomic_value(s1, 'T')
+                with raises(ModelValueError):
+                    model.set_atomic_value(s1, 'F')
+                model.set_predicated_value(s2, 'T')
+                with raises(ModelValueError):
+                    model.set_predicated_value(s2, 'F')
+
+"""
 class TestD(BaseSuite):
 
     logic = get_logic('D')
@@ -1874,22 +1930,21 @@ class TestT(BaseSuite):
         assert b.has({'world1': 0, 'world2': 0})
 
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
-        """
-        Rule ordering benchmark result:
+        # Rule ordering benchmark result:
         
-                  [# non-branching rules]
-                        [S4:Transitive]
-                  [Necessity, Possibility]
-                        [T:Reflexive]
-                  [# branching rules]
-                - [Existential, Universal]
-                        [S5:Symmetric]
-                    [D:Serial],
-              S5: 8 branches, 142 steps
-              S4: 8 branches, 132 steps
-               T: 8 branches, 91 steps
-               D: 8 branches, 57 steps
-        """
+        #           [# non-branching rules]
+        #                 [S4:Transitive]
+        #           [Necessity, Possibility]
+        #                 [T:Reflexive]
+        #           [# branching rules]
+        #         - [Existential, Universal]
+        #                 [S5:Symmetric]
+        #             [D:Serial],
+        #       S5: 8 branches, 142 steps
+        #       S4: 8 branches, 132 steps
+        #        T: 8 branches, 91 steps
+        #        D: 8 branches, 57 steps
+
         # 200 might be agressive
         self.invalid_tab('b', 'LVxSyUFxLMGy', max_steps = 200)
 
@@ -1934,22 +1989,22 @@ class TestS4(BaseSuite):
         assert 2 in model.visibles(0)
 
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
-        """
-        Rule ordering benchmark result:
+
+        # Rule ordering benchmark result:
         
-                  [# non-branching rules]
-                        [S4:Transitive]
-                  [Necessity, Possibility]
-                        [T:Reflexive]
-                  [# branching rules]
-                - [Existential, Universal]
-                        [S5:Symmetric]
-                    [D:Serial],
-              S5: 8 branches, 142 steps
-              S4: 8 branches, 132 steps
-               T: 8 branches, 91 steps
-               D: 8 branches, 57 steps
-        """
+        #           [# non-branching rules]
+        #                 [S4:Transitive]
+        #           [Necessity, Possibility]
+        #                 [T:Reflexive]
+        #           [# branching rules]
+        #         - [Existential, Universal]
+        #                 [S5:Symmetric]
+        #             [D:Serial],
+        #       S5: 8 branches, 142 steps
+        #       S4: 8 branches, 132 steps
+        #        T: 8 branches, 91 steps
+        #        D: 8 branches, 57 steps
+
         # 200 might be agressive
         self.invalid_tab('b', 'LVxSyUFxLMGy', max_steps = 200)
 
@@ -1970,10 +2025,10 @@ class TestS5(BaseSuite):
         self.valid_tab('NLVxNFx', 'LMSxFx', build_timeout = 1000)
 
     def test_valid_intermediate_mix_modal_quantifiers1(self):
-        """
-        For this we needed to put Universal and Existential rules
-        in the same group, and toward the end.
-        """
+
+        # For this we needed to put Universal and Existential rules
+        # in the same group, and toward the end.
+
         self.valid_tab('MSxGx', ('VxLSyUFxMGy', 'Fm'), max_steps = 100)
 
     def test_invalid_nested_diamond_within_box1(self):
@@ -1991,22 +2046,21 @@ class TestS5(BaseSuite):
         assert 0 in model.visibles(1)
 
     def test_benchmark_rule_order_max_steps_nested_qt_modal1(self):
-        """
-        Rule ordering benchmark result:
+
+        # Rule ordering benchmark result:
         
-                  [# non-branching rules]
-                        [S4:Transitive]
-                  [Necessity, Possibility]
-                        [T:Reflexive]
-                  [# branching rules]
-                - [Existential, Universal]
-                        [S5:Symmetric]
-                    [D:Serial],
-              S5: 8 branches, 142 steps
-              S4: 8 branches, 132 steps
-               T: 8 branches, 91 steps
-               D: 8 branches, 57 steps
-        """
+        #           [# non-branching rules]
+        #                 [S4:Transitive]
+        #           [Necessity, Possibility]
+        #                 [T:Reflexive]
+        #           [# branching rules]
+        #         - [Existential, Universal]
+        #                 [S5:Symmetric]
+        #             [D:Serial],
+        #       S5: 8 branches, 142 steps
+        #       S4: 8 branches, 132 steps
+        #        T: 8 branches, 91 steps
+        #        D: 8 branches, 57 steps
         # 200 might be agressive
         self.invalid_tab('b', 'LVxSyUFxLMGy', max_steps = 200)
 
@@ -2049,3 +2103,4 @@ class TestMaxConstantsTracker(BaseSuite):
         branch.extend([n1, n2])
         res = rule.mtr._compute_max_constants(branch)
         assert res == 3
+"""

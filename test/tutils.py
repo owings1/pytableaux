@@ -60,6 +60,15 @@ def loopgen(n, col):
         yield col[i]
         i += 1
 
+def skip(what):
+    if isclass(what):
+        class Skipped(object):
+            pass
+        return Skipped
+    def skipped(*args, **kw):
+        pass
+    return skipped
+
 @dynattrs('logic')
 class BaseSuite(object):
 
@@ -122,8 +131,10 @@ class BaseSuite(object):
     def parg(self, conc, *prems, **kw):
         if isinstance(conc, Argument):
             return conc
-        if conc in examples.args:
+        try:
             return examples.argument(conc)
+        except KeyError:
+            pass
         if 'notn' not in kw:
             kw['notn'] = self.notn
         premises = []

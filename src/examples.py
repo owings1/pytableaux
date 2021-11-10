@@ -18,11 +18,12 @@
 #
 # pytableaux - example arguments
 
-from lexicals import Predicates, Constant, Variable, Atomic, \
+from lexicals import Predicate, Predicates, Constant, Variable, Atomic, \
     Predicated, Operated, Quantified
 from parsers import create_parser
 from utils import isstr
 from itertools import chain
+import re
 
 # polish notation
 args = {
@@ -117,23 +118,41 @@ args = {
 args_list = sorted(args.keys())
 
 # Test vocabulary predicate data
-test_pred_data = [
-    [0, 0, 1],
-    [1, 0, 1],
-    [2, 0, 1],
-]
+# test_pred_data = [
+#     [0, 0, 1],
+#     [1, 0, 1],
+#     [2, 0, 1],
+# ]
 
-preds = vocab = vocabulary = Predicates(test_pred_data)
+preds = vocab = vocabulary = Predicates(*Predicate.gen(3))
 parser = create_parser(notn='polish', vocab=vocab)
 
-def argument(name):
-    info = args[name]
+aliases = {
+    'Law of Excluded Middle': ('LEM',),
+    'Law of Non-contradiction': ('LNC',),
+    'Explosion': ('EFQ',),
+    'Conditional Modus Ponens': ('MP','Modus Ponens'),
+    'Conditional Modus Tollens': ('MT', 'Modus Tollens'),
+    'Material Modus Ponens': ('MMP',),
+    'Material Modus Tollens': ('MMT',),
+}
+_idx = {}
+for name in args:
+    _idx.update({
+        k.lower(): name for k in (
+            name, re.sub(' ','', name), *aliases.get(name, set())
+        )
+    })
+
+def argument(key):
+    title = _idx[key.lower()]
+    info = args[title]
     if isinstance(info, list):
         premises, conclusion = info
     else:
         premises = []
         conclusion = info
-    return parser.argument(conclusion, premises, title=name)
+    return parser.argument(conclusion, premises, title=title)
 
 def arguments(names=None):
     if names == None:
@@ -141,22 +160,17 @@ def arguments(names=None):
     return [argument(name) for name in names]
 
 def predicated():
-    c = Constant(0, 0)
-    p = preds[(0, 0)]
-    return Predicated(p, [c])
+    return Predicated.first()
 
 def identity():
-    a = Constant(0, 0)
-    b = Constant(1, 0)
-    return Predicated('Identity', [a, b])
+    return Predicate.Identity(tuple([*Constant.gen(2)]))
 
 def self_identity():
-    a = Constant(0, 0)
-    return Predicated('Identity', [a, a])
+    a = Constant.first()
+    return Predicate.Identity((a, a))
 
 def existence():
-    a = Constant(0, 0)
-    return Predicated('Existence', [a])
+    return Predicate.Identity((Constant.first(),))
 
 def quantified(quantifier):
     return Quantified.first(quantifier)
@@ -167,7 +181,6 @@ def operated(operator):
 def tabiter(logic=None, *args, **kw):
     from proof.tableaux import Tableau
     from www.conf import available
-    
     logics = iter(tuple((logic,) if logic else available['logics']))
     return chain.from_iterable(
         (Tableau(logic, arg, **kw).build() for arg in arguments())

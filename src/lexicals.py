@@ -29,28 +29,7 @@ lazyget = decs.lazyget
 setonce = decs.setonce
 nosetattr = decs.nosetattr
 flatiter = chain.from_iterable
-lexwriter_classes = {
-    # Values populated after class declarations below.
-    'polish'   : None,
-    'standard' : None,
-}
-notations = tuple(sorted(lexwriter_classes.keys()))
-default_notation = notations[notations.index('polish')]
-default_notn_encs = {
-    notations[notations.index('polish')]   : 'ascii',
-    notations[notations.index('standard')] : 'unicode',
-}
 
-def create_lexwriter(notn=None, enc=None, **opts):
-    if not notn:
-        notn = default_notation
-    if notn not in notations:
-        raise ValueError(notn)
-    if not enc:
-        enc = default_notn_encs[notn]
-    if 'renderset' not in opts:
-        opts['renderset'] = RenderSet.fetch(notn, enc)
-    return lexwriter_classes[notn](**opts)
 
 
 def _isreadonly(cls):
@@ -1226,8 +1205,12 @@ class PredicatesMeta(type):
             def __len__(self): return len(base)
             def __iter__(self): return iter(base.Ordered)
             def __repr__(self): return (Predicates, base).__repr__()
+        # Empty = Predicates.Empty = Predicates()
+        # Empty.add = Empty.update = None
         Predicate.System = Predicates.System = System()
-        Predicate._readonly = Predicates._readonly = True
+        Predicates._readonly = True
+        Predicate._readonly  = True
+        base._readonly = True
         return Predicates
 
     @nosetattr(check=lambda c: c.SystemEnum._readonly)
@@ -1309,61 +1292,77 @@ class Predicates(object, metaclass = PredicatesMeta):
         return self.__idx[ref] if ref in self.__idx else self.System[ref]
 
     def __iter__(self):
+        return iter(self.__uset)
         return chain(self.System, self.__uset)
 
     def __len__(self):
+        return len(self.__uset)
         return len(self.__uset) + len(self.System)
 
     def __contains__(self, ref):
         return ref in self.__idx or ref in self.System
 
+    def __bool__(self):
+        return True
     def __copy__(self):
         preds = self.__class__()
         preds.__uset = set(self.__uset)
         preds.__idx = dict(self.__idx)
         return preds
 
-class Argument(object):
-    """
-    Create an argument from sentence objects. For parsing strings into arguments,
-    see ``Parser.argument``.
-    """
-    def __init__(self, conclusion, premises = None, title = None):
-        typecheck(conclusion, Sentence, 'conclusion')
-        premises = tuple(premises or ())
-        for s in premises:
-            typecheck(s, Sentence, 'premise')
-        self.title = title
-        self.__premises = premises
-        self.__conclusion = conclusion
+lexwriter_classes = {
+    # Values populated after class declarations below.
+    'polish'   : None,
+    'standard' : None,
+}
+notations = tuple(sorted(lexwriter_classes.keys()))
+default_notation = notations[notations.index('polish')]
+default_notn_encs = {
+    notations[notations.index('polish')]   : 'ascii',
+    notations[notations.index('standard')] : 'unicode',
+}
 
-    @property
-    def premises(self):
-        return self.__premises
+# def create_lexwriter(*args, **opts):
+#     return LexWriter(*args, **opts)
+def create_lexwriter(notn=None, enc=None, **opts):
+    if not notn:
+        notn = default_notation
+    if notn not in notations:
+        raise ValueError(notn)
+    if not enc:
+        enc = default_notn_encs[notn]
+    if 'renderset' not in opts:
+        opts['renderset'] = RenderSet.fetch(notn, enc)
+    return lexwriter_classes[notn](**opts)
 
-    @property
-    def conclusion(self):
-        return self.__conclusion
+class RenderSet(CacheNotationData):
 
-    def __repr__(self):
-        if self.title:
-            return repr(self.title)
-        return (self.premises, self.conclusion).__repr__()
+    default_fetch_name = 'ascii'
 
-    def __hash__(self):
-        return hash((self.conclusion,) + tuple(self.premises))
+    def __init__(self, data):
+        typecheck(data, dict, 'data')
+        self.name = data['name']
+        self.encoding = data['encoding']
+        self.renders = data.get('renders', {})
+        self.formats = data.get('formats', {})
+        self.strings = data.get('strings', {})
+        self.data = data
 
-    def __eq__(self, other):
-        """
-        Two arguments are considered equal just when their conclusions are equal, and their
-        premises are equal (and in the same order) The title is not considered in equality.
-        """
-        return isinstance(other, self.__class__) and hash(self) == hash(other)
+    def strfor(self, ctype, value):
+        if ctype in self.renders:
+            return self.renders[ctype](value)
+        if ctype in self.formats:
+            return self.formats[ctype].format(value)
+        return self.strings[ctype][value]
 
-    def __iter__(self):
-        return iter((self.conclusion, self.premises))
-
-class LexWriter(object):
+class LexWriterMeta(type):
+    pass
+#     def __call__(cls, notn=None, enc=None, **opts):
+#         if cls == LexWriter or cls == BaseLexWriter:
+#             return create_lexwriter(notn=None, enc=None, **opts)
+#         return super().__call__
+#     pass
+class LexWriter(object, metaclass = LexWriterMeta):
 
     opts = {}
 
@@ -1413,6 +1412,34 @@ class LexWriter(object):
     def _write_sentence(self, item):
         raise NotImplementedError()
 
+    # def __init__(self, *args, **kw):
+    #     for arg in args:
+    #         if isinstance(arg, basestring):
+    #             if arg in notations:
+    #                 if 'notn' in kw:
+    #                     raise TypeError('duplicate arg for kw notn', arg)
+    #                 kw['notn'] = arg
+    #             else:
+    #                 raise TypeError('Unknown arg', arg)
+    #         elif isinstance(arg, RenderSet):
+    #             if 'renderset' in kw:
+    #                 raise TypeError('duplicate arg for kw renderset', arg)
+    #             kw['renderset'] = arg
+    #         else:
+    #             raise TypeError(type(arg), arg)
+    #     notn = kw.pop('notn', default_notation)
+    #     enc = kw.pop('enc', default_notn_encs[notn])
+    #     if 'renderset' in kw:
+    #         renderset = kw['renderset']
+    #         if not isinstance(renderset, RenderSet):
+    #             renderset = RenderSet.fetch(notn, enc)
+    #     else:
+    #         renderset = RenderSet.fetch(notn, enc)
+    #     self.renderset = renderset
+    #     self.encoding = renderset.encoding
+    #     self.opts = self.opts | kw
+    #     # return create_lexwriter(**kw)
+            
 class BaseLexWriter(LexWriter):
 
     def __init__(self, renderset, **opts):
@@ -1555,25 +1582,48 @@ class StandardLexWriter(BaseLexWriter):
             self._write_parameter(params[1]),
         )
 
-class RenderSet(CacheNotationData):
+class Argument(object):
+    """
+    Create an argument from sentence objects. For parsing strings into arguments,
+    see ``Parser.argument``.
+    """
+    def __init__(self, conclusion, premises = None, title = None):
+        typecheck(conclusion, Sentence, 'conclusion')
+        premises = tuple(premises or ())
+        for s in premises:
+            typecheck(s, Sentence, 'premise')
+        self.title = title
+        self.__premises = premises
+        self.__conclusion = conclusion
 
-    default_fetch_name = 'ascii'
+    @property
+    def premises(self):
+        return self.__premises
 
-    def __init__(self, data):
-        typecheck(data, dict, 'data')
-        self.name = data['name']
-        self.encoding = data['encoding']
-        self.renders = data.get('renders', {})
-        self.formats = data.get('formats', {})
-        self.strings = data.get('strings', {})
-        self.data = data
+    @property
+    def conclusion(self):
+        return self.__conclusion
 
-    def strfor(self, ctype, value):
-        if ctype in self.renders:
-            return self.renders[ctype](value)
-        if ctype in self.formats:
-            return self.formats[ctype].format(value)
-        return self.strings[ctype][value]
+    def __repr__(self):
+        if self.title:
+            desc = repr(self.title)
+        else:
+            desc = 'len(%d)' % (len(self.premises) + 1)
+            
+        return '<%s:%s>' % (self.__class__.__name__, desc)
+
+    def __hash__(self):
+        return hash((self.conclusion,) + tuple(self.premises))
+
+    def __eq__(self, other):
+        """
+        Two arguments are considered equal just when their conclusions are equal, and their
+        premises are equal (and in the same order) The title is not considered in equality.
+        """
+        return isinstance(other, self.__class__) and hash(self) == hash(other)
+
+    def __iter__(self):
+        return iter((self.conclusion, self.premises))
 
 _builtin = {
     'polish': {

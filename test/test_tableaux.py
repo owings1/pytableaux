@@ -3,14 +3,15 @@ from errors import *
 from events import Events
 from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau
 from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
-from proof.helpers import AdzHelper, FilterHelper, Getters, Filters
+from proof.helpers import AdzHelper, FilterHelper
+from proof.common import Getters, Filters
 from lexicals import Atomic, Constant, Predicated
 from utils import get_logic
 import examples
 
 import time
 from pytest import raises
-from .tutils import BaseSuite, dynattrs, using
+from .tutils import BaseSuite,  using
 
 class TestTableauxSystem(object):
 

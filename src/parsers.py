@@ -49,6 +49,7 @@ def parse_argument(conclusion, premises = None, title = None, **kw):
     """
     return create_parser(**kw).argument(conclusion, premises, title = title)
 
+
 def create_parser(notn = None, vocab = None, table = None, **opts):
     """
     Create a sentence parser with the given spec. This is
@@ -70,7 +71,10 @@ def create_parser(notn = None, vocab = None, table = None, **opts):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
     if vocab == None:
-        vocab = EmptySet
+        empty = create_parser._EmptyPreds
+        if not empty or len(empty):
+            empty = create_parser._EmptyPreds = Predicates()
+        vocab = empty
     if notn == None:
         notn = default_notation
     elif notn not in parser_classes:
@@ -80,7 +84,7 @@ def create_parser(notn = None, vocab = None, table = None, **opts):
     if isstr(table):
         table = CharTable.fetch(notn, table)
     return parser_classes[notn](table, vocab, **opts)
-
+create_parser._EmptyPreds = None
 class Parser(object):
 
     def parse(self, input):

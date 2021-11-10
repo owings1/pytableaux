@@ -20,7 +20,7 @@
 # pytableaux - tableaux rules module
 from lexicals import Atomic, Quantified, Operated
 from utils import StopWatch, istableau, safeprop, kwrepr
-from .common import Target
+from .common import Node, Target
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper
 from events import Events, EventEmitter
@@ -101,11 +101,11 @@ class Rule(EventEmitter):
     @property
     def Node(self):
         """
-        Reference to the :class:`~tableaux.Node` class.
+        Reference to the :class:`~Node` class.
 
         :type: class
         """
-        return self.tableau.Node
+        return Node
 
     def get_target(self, branch):
         """

@@ -813,7 +813,6 @@ class TableauxRules(object):
         designation = True
         branch_level = 2
 
-        
         @FilterHelper.node_targets
         def _get_targets(self, node, branch):
             return {
@@ -874,7 +873,6 @@ class TableauxRules(object):
         *d*, make a new branch *b'* from *b* and add a designated node with *d* to *b'*,
         then tick *n*.
         """
-
         operator    = Oper.Disjunction
         designation = True
 
@@ -1192,7 +1190,6 @@ class TableauxRules(object):
         """
         quantifier  = Quantifier.Existential
         designation = True
-
         branch_level = 1
 
         # NewConstantStoppingRule implementation

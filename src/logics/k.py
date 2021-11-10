@@ -707,7 +707,7 @@ class TableauxSystem(BaseSystem):
 class DefaultRule(Rule):
     # FilterHelper
     # ----------------
-    ignore_ticked = None
+    ignore_ticked = True
     # Filters.Node.Sentence
     negated = operator = quantifier = predicate = None
     # Filters.Node.Modal

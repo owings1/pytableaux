@@ -20,9 +20,10 @@
 from copy import copy
 from models import BaseModel
 from utils import OrderedAttrsView, LinkOrderSet, EmptySet, kwrepr, isstr
-from .common import Target
+from .common import Node, Target
 from itertools import chain
 from events import Events
+flatiter = chain.from_iterable
 
 def clshelpers(**kw):
     """
@@ -51,7 +52,6 @@ class AdzHelper(object):
 
     def __init__(self, rule, *args, **kw):
         self.rule = rule
-        self.Node = rule.Node
         self.tableau = rule.tableau
 
     def apply_to_target(self, target):
@@ -71,7 +71,7 @@ class AdzHelper(object):
     def closure_score(self, target):
         close_count = 0
         for nodes in target['adds']:
-            nodes = [self.Node(node) for node in nodes]
+            nodes = [Node(node) for node in nodes]
             for rule in self.tableau.rules.closure:
                 if rule.nodes_will_close_branch(nodes, target.branch):
                     close_count += 1
@@ -269,6 +269,12 @@ class FilterHelper(BranchNodeCache):
         """
         Method decorator to only iterate through nodes matching the
         configured FilterHelper filters.
+
+        The rule may return a falsy value for no targets, a single
+        target (True, non-empty dict, Target), an iterator or an
+        iterable.
+        
+        Returns a flat list of targets.
         """
         def get_targets_filtered(self, branch):
             helper = self.helpers[cls]
@@ -278,10 +284,10 @@ class FilterHelper(BranchNodeCache):
             )
             filt = (x for x in resgen if bool(x[0]))
             create = (
-                Target.create(res, branch=branch, node=node, rule=self)
+                Target.list(res, branch=branch, node=node, rule=self)
                 for res, branch, node in filt
             )
-            return tuple(create)
+            return list(flatiter(create))
         return get_targets_filtered
 
     def add_filter(self, name, cls):

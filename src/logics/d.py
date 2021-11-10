@@ -27,8 +27,8 @@ class Meta(object):
     category_display_order = 2
 
 from proof.rules import Rule
-from proof.helpers import MaxWorldsTracker, UnserialWorldsTracker, FilterHelper, \
-    Filters, clshelpers
+from proof.helpers import MaxWorldsTracker, UnserialWorldsTracker, FilterHelper, clshelpers
+from proof.common import Filters
 from lexicals import Atomic
 from . import k
 
@@ -86,14 +86,6 @@ class TableauxRules:
         no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
-        # Helpers = (
-        #     ('nf' , FilterHelper),
-        #     ('mw' , MaxWorldsTracker),
-        #     ('ust', UnserialWorldsTracker),
-        # )
-        # NodeFilters = (
-        #     ('modal', Filters.Node.Modal),
-        # )
 
         modal = True
 
