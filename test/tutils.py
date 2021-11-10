@@ -1,10 +1,12 @@
 import examples
-from inspect import isclass
+from inspect import isclass, getmembers
 from lexicals import Argument, Predicates, create_lexwriter
 from parsers import notations as parser_notns, create_parser, parse_argument, parse
 from proof.tableaux import Tableau, Branch, Node
 from utils import get_logic, isint
+from itertools import chain
 
+from enum import Enum
 def _setattrs(obj, **attrs):
     if isclass(obj):
         cls = obj
@@ -53,6 +55,14 @@ def dynattrs(*names):
         return cls
     return wrapper
 
+def larg(*largs):
+    def decor(what):
+        if isclass(what): raise TypeError()
+        def operwrap(self, *args, **kw):
+            what(self, *largs, *args, **kw)
+        return operwrap
+    return decor
+
 def loopgen(n, col):
     i = 0
     for x in range(n):
@@ -69,6 +79,14 @@ def skip(what):
         pass
     return skipped
 
+def clsmbrsrecurse(cls):
+    mine = list(
+        m for n,m in getmembers(cls)
+        if isclass(m) and n[0] != '_'
+    )
+    return chain(mine, chain.from_iterable(
+        clsmbrsrecurse(c) for c in mine
+    ))
 @dynattrs('logic')
 class BaseSuite(object):
 
@@ -81,7 +99,11 @@ class BaseSuite(object):
     @classmethod
     def dynamic(cls, attr, val):
         if attr == 'logic':
-            cls.logic = get_logic(val)
+            val = get_logic(val)
+            cls.logic = val
+            for member in clsmbrsrecurse(cls):
+                member.logic = val
+
     def set_logic(self, logic):
         self.logic = get_logic(logic)
     def crparser(self, *args, **kw):
@@ -133,7 +155,7 @@ class BaseSuite(object):
             return conc
         try:
             return examples.argument(conc)
-        except KeyError:
+        except (KeyError, TypeError):
             pass
         if 'notn' not in kw:
             kw['notn'] = self.notn
@@ -201,6 +223,7 @@ class BaseSuite(object):
     def cmm(self, *args, **kw):
         return self.acmm(*args, **kw)[1]
 
+    # return one model
     def cm(self, *args, **kw):
         return self.acmm(*args, **kw)[1][0]
 

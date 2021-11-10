@@ -1607,7 +1607,7 @@ class TableauxRules(object):
                 if s.predicate == Identity and params[0] == params[1]:
                     continue
                 # Create a node with the substituted param.
-                s_new = s.predicate.to(params)
+                s_new = s.predicate(params)
                 n_new = {'sentence': s_new, 'world': node.get('world')}
                 # Check if it already appears on the branch.
                 if branch.has(n_new):
@@ -1622,7 +1622,7 @@ class TableauxRules(object):
         def example_nodes(self):
             world = 0 if self.modal else None
             s1 = Predicated.first()
-            s2 = Identity.to((s1[0], s1[0].next()))
+            s2 = Identity((s1[0], s1[0].next()))
             return (
                 {'sentence': s1, 'world': world},
                 {'sentence': s2, 'world': world},

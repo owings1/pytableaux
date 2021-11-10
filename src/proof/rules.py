@@ -19,7 +19,7 @@
 #
 # pytableaux - tableaux rules module
 from lexicals import Atomic, Quantified, Operated
-from utils import StopWatch, istableau, safeprop, kwrepr
+from utils import StopWatch, istableau, safeprop, kwrepr, orepr
 from .common import Node, Target
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
     MaxConstantsTracker, QuitFlagHelper
@@ -241,17 +241,10 @@ class Rule(EventEmitter):
     # Other
 
     def __repr__(self):
-        return kwrepr(
-            rule        = self.name,
+        return orepr(self,
             module      = self.__module__,
             apply_count = self.apply_count,
-            helpers      ='(%s):%s' % (
-                len(self.__helpers),
-                ','.join(
-                    '<%s>[%s]' % (helper.__class__.__name__, attr if attr else '')
-                    for attr, helper in self.__helpers
-                )
-            )
+            helpers     = len(self.__helpers),
         )
 
     # Private Util
@@ -271,20 +264,16 @@ class Rule(EventEmitter):
         :param tableaux.Branch branch: The branch.
         :return: ``None``
         """
-        # print(type(targets))
-        # print(targets)
-        # if isinstance(targets, chain):
-        #     targets = list(targets)
-        #     if not len(targets):
-        #         return
+        if not isinstance(targets, (tuple, list)):
+            raise TypeError('Targets must be a (tuple, list): %s' % type(targets))
         if self.opts['is_rank_optim']:
             # if isinstance(targets, Generator):
             #     targets, scores = zip()
-            targets, scores = zip(*(
-                 (target, self.score_candidate(target))
-                 for target in targets
-            ))
-            # scores = [self.score_candidate(target) for target in targets]
+            # targets, scores = zip(*(
+            #      (target, self.score_candidate(target))
+            #      for target in targets
+            # ))
+            scores = [self.score_candidate(target) for target in targets]
         else:
             scores = [0]
         max_score = max(scores)

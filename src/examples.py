@@ -19,7 +19,7 @@
 # pytableaux - example arguments
 
 from lexicals import Predicate, Predicates, Constant, Variable, Atomic, \
-    Predicated, Operated, Quantified
+    Predicated, Operated, Quantified, Argument
 from parsers import create_parser
 from utils import isstr
 from itertools import chain
@@ -145,6 +145,10 @@ for name in args:
     })
 
 def argument(key):
+    if isinstance(key, Argument):
+        return key
+    if not isstr(key):
+        raise TypeError('Only string keys allowed, got %s' % type(key))
     title = _idx[key.lower()]
     info = args[title]
     if isinstance(info, list):

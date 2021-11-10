@@ -18,8 +18,8 @@
 #
 # pytableaux - tableaux module
 from lexicals import Argument, Constant
-from utils import LinkOrderSet, Kwobj, StopWatch, ReadOnlyDict, get_logic, \
-    EmptySet, typecheck, dictrepr, Decorators, kwrepr
+from utils import LinkOrderSet, Kwobj, StopWatch, cat, get_logic, \
+    EmptySet, typecheck, dictrepr, Decorators, kwrepr, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import Events, EventEmitter
 from inspect import isclass
@@ -61,11 +61,18 @@ def TabRules():
             def lock(*_): self.stat.locked = True
             tableau.once(Events.AFTER_BRANCH_ADD, lock)
             self.__setattr__ = self.__delattr__ = prot
+        
 
     class Base(object):
         @property
         def locked(self):
             return self.__c.stat.locked
+        @property
+        def tab(self):
+            return self.__c.tab
+        @property
+        def logic(self):
+            return self.__c.tab.logic
         def __init__(self, common):
             self.__c = common
             self.__setattr__ = prot
@@ -132,11 +139,10 @@ def TabRules():
             return [rule.__class__.__name__ for rule in self]
 
         def __repr__(self):
-            return kwrepr(
-                cls=self.__class__.__name__,
-                logic=self.__c.tab.logic.name,
-                groups=len(self.groups),
-                rules=len(self),
+            return orepr(self,
+                logic  = self.logic,
+                groups = len(self.groups),
+                rules  = len(self),
             )
 
     class RuleGroups(Base):
@@ -173,6 +179,10 @@ def TabRules():
             g.clear()
             self.__c.groupindex.clear()
 
+        @property
+        def names(self):
+            return list(filter(bool, (group.name for group in self)))
+
         def __init__(self, common):
             self.__c = common
             self.__groups = []
@@ -193,14 +203,14 @@ def TabRules():
                 return idx[name]
             raise AttributeError(name)
 
+        def __dir__(self):
+            return self.names
+
         def __repr__(self):
-            return kwrepr(
-                cls=self.__class__.__name__,
-                logic=self.__c.tab.logic.name,
-                groups=','.join(
-                    group.name if group.name else str(i)
-                    for i, group in enumerate(self.__groups)
-                ),
+            return orepr(self,
+                logic = self.logic,
+                groups = len(self),
+                rules = self.__c.stat.len
             )
 
     def newrule(arg, tab):
@@ -210,7 +220,10 @@ def TabRules():
         try:
             return cls(tab, **tab.opts)
         except:
-            raise TypeError('Failed to instantiate %s' % arg)
+            raise TypeError(
+                'Failed to instantiate rule: %s (%s, logic: %s)' %
+                (arg, type(arg), tab.logic.name if tab.logic else None)
+            )
 
     class RuleGroup(Base):
 
@@ -231,7 +244,7 @@ def TabRules():
         @lenchange
         def append(self, rule):
             c = self.__c
-            rule = newrule(rule, c.tab)
+            rule = newrule(rule, self.tab)
             cls = rule.__class__
             clsname = cls.__name__
             if clsname in c.ruleindex or clsname in c.groupindex:
@@ -277,7 +290,7 @@ def TabRules():
             raise AttributeError(name)
 
         def __repr__(self):
-            return (self.name, (len(self),)).__repr__()
+            return orepr(self, name = self.name, rules = len(self))
 
     return TabRules
 
@@ -599,11 +612,12 @@ class Tableau(EventEmitter):
         """
         if branch in self:
             raise ValueError(
-                'Branch {0} already on tableau'.format(branch.id)
+                'Branch %s already on tableau' % branch.id
             )
         parent = branch.parent
         if parent != None and parent not in self:
-            raise TypeError('unknown parent')
+            if not isinstance(Branch, parent):
+                raise TypeError('Expecting %s, got %s' % (Branch, type(parent)))
         index = len(self)
         self.__branch_list.append(branch)
         if not branch.closed:
@@ -611,9 +625,9 @@ class Tableau(EventEmitter):
         if not branch.parent:
             self.__trunks.append(branch)
         self.__branch_dict[branch] = {
-            'index': index,
-            'parent': parent,
-            'branch': branch,
+            'index'  : index,
+            'parent' : parent,
+            'branch' : branch,
         }
         self.__after_branch_add(branch)
         return self
@@ -1024,8 +1038,6 @@ class Branch(EventEmitter):
     @closed_step.setter
     @setonce
     def closed_step(self, n):
-        # if self.__closed_step != None:
-        #     raise AttributeError('closed_step')
         self.__closed_step = n
 
     @property
@@ -1035,8 +1047,6 @@ class Branch(EventEmitter):
     @model.setter
     @setonce
     def model(self, model):
-        # if self.__model != None:
-        #     raise AttributeError('model')
         self.__model = model
 
     @property
@@ -1226,7 +1236,7 @@ class Branch(EventEmitter):
         Return a new constant that does not appear on the branch.
         """
         if not self.__constants:
-            return Constant(0, 0)
+            return Constant.first()
         maxidx = Constant.TYPE.maxi
         coordset = set(c.coords for c in self.__constants)
         index, sub = 0, 0
@@ -1234,7 +1244,7 @@ class Branch(EventEmitter):
             index += 1
             if index > maxidx:
                 index, sub = 0, sub + 1
-        return Constant(index, sub)
+        return Constant((index, sub))
 
     def __add_to_index(self, node):
         for prop in self.__pidx:
@@ -1305,13 +1315,13 @@ class Branch(EventEmitter):
         return node in self.__nodeset
 
     def __repr__(self):
-        clsname = self.__class__.__name__
-        return dictrepr({
-            clsname  : self.id,
-            'nodes'  : len(self),
-            'leaf'   : self.leaf.id if self.leaf else None,
-            'closed' : self.closed,
-        })
+
+        return orepr(self, 
+            clsname  = self.id,
+            nodes  = len(self),
+            leaf   = self.leaf.id if self.leaf else None,
+            closed = self.closed,
+        )
 
 
 

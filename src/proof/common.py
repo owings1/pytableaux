@@ -2,10 +2,22 @@ from utils import rcurry, lcurry, dictrepr, Decorators, isstr, EmptySet, ReadOnl
 from lexicals import Operated, Quantified
 from itertools import islice
 from typing import Generator
+from enum import Enum
 lazyget = Decorators.lazyget
 
+class BoolPropEnum(Enum):
+    def __str__(self):
+        return self.name
+    def __repr__(self):
+        return self.__str__()
+    def __bool__(self):
+        return self.value
+    def __eq__(self, other):
+        return other is self or other in (self.value, self.name)
+    def __hash__(self):
+        return self.value
+
 class NodeMeta(type):
-    pass
     def __call__(cls, props = {}, parent = None):
         if isinstance(props, cls):
             if parent == props.parent:
@@ -155,6 +167,15 @@ class Node(object, metaclass = NodeMeta):
             })
         })
 
+    class Properties(object):
+
+        class Designation(BoolPropEnum):
+            Designated = True
+            Undesignated = False
+        # Designation.key = 'designated'
+        # Designation.attr = 'designation'
+
+
 
 class Target(object):
 
@@ -262,9 +283,12 @@ class Target(object):
     def __bool__(self):
         return True
 
-    def update(self, obj):
-        for k in obj:
-            self[k] = obj[k]
+    def update(self, _obj = None, **kw):
+        if _obj != None:
+            for k in _obj:
+                self[k] = _obj[k]
+        for k in kw:
+            self[k] = kw[k]
 
     def get(self, key, default = None):
         try:
@@ -297,6 +321,7 @@ class Target(object):
         )
         istr = ','.join(['%s:%s' % (k, str(v)[0:20]) for k,v in items])
         return '%s[%s]' % (self.__class__.__name__, istr)
+
 class StepEntry(object):
 
     def __init__(self, *entry):
@@ -531,3 +556,4 @@ class NodeFilters(Filters):
             return n
 
 Filters.Node = NodeFilters
+

@@ -30,8 +30,6 @@ setonce = decs.setonce
 nosetattr = decs.nosetattr
 flatiter = chain.from_iterable
 
-
-
 def _isreadonly(cls):
     return (
         getattr(cls, '_clsinit', False) and
@@ -475,8 +473,6 @@ class Predicate(CoordsItem):
             spec = (0, self.subscript + 1, arity)
         return self.__class__(spec)
 
-    def to(self, params):
-        return Predicated(self, params)
     @property
     def arity(self):
         return self.__arity
@@ -890,19 +886,21 @@ class Predicated(Sentence):
     def __init__(self, pred, params):
         if isstr(pred):
             try:
-                pred = Predicates[pred]
+                pred = Predicates.System[pred]
             except KeyError:
                 raise NotFoundError(pred)
-        typecheck(pred, Predicate, 'pred')
-        condcheck(
-            len(params) == pred.arity,
-            "{0} is {1}-ary, got {2} params".format(
-                pred.name, pred.arity, len(params)
-            ),
-            err = TypeError,
-        )
-        for param in params:
-            typecheck(param, Parameter, 'param')
+        if not isinstance(pred, Predicate):
+            raise TypeError(pred)
+        if isinstance(params, Parameter):
+            if pred.arity != 1:
+                raise TypeError('arity %s predicate got 1 param' % pred.arity)
+            params = (params,)
+        else:
+            if len(params) != pred.arity:
+                raise TypeError('arity %s predicate got %s params' % (pred.arity, len(params)))
+            for param in params:
+                if not isinstance(param, Parameter):
+                    raise TypeError('expecting a %s got a %s' % (Parameter, type(param)))
         self.__pred = pred
         self.__params = tuple(params)
         self.__paramset = frozenset(params)
@@ -1163,6 +1161,7 @@ class LexType(EnumBase, metaclass = LexTypeMeta):
     Predicated  = (50,  Predicated, Sentence,   None)
     Quantified  = (60,  Quantified, Sentence,   None)
     Operated    = (70,  Operated,   Sentence,   None)
+
 
     def __init__(self, *value):
         super().__init__()

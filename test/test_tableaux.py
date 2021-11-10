@@ -3,7 +3,7 @@ from errors import *
 from events import Events
 from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau
 from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
-from proof.helpers import AdzHelper, FilterHelper
+from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
 from proof.common import Getters, Filters
 from lexicals import Atomic, Constant, Predicated
 from utils import get_logic
@@ -549,8 +549,46 @@ class Test_K_DefaultNodeFilterRule(BaseSuite):
 
     def test_rule_sentence_impl(self):
         rule, tab = self.case1()
-        
-        # tab.step()
+
+class MtrTestRule(FilterNodeRule):
+    Helpers = (
+        *FilterNodeRule.Helpers,
+        ('mtr', MaxConstantsTracker),
+    )
+
+class TestMaxConstantsTracker(BaseSuite):
+
+    logic = get_logic('S5')
+
+    def test_argument_trunk_two_qs_returns_3(self):
+        proof = self.tab()
+        proof.rules.add(MtrTestRule)
+        proof.argument = self.parg('NLVxNFx', 'LMSxFx')
+        rule = proof.rules.MtrTestRule
+        branch = proof[0]
+        assert rule.mtr._compute_max_constants(branch) == 3
+
+    def xtest_compute_for_node_one_q_returns_1(self):
+        n = {'sentence': self.p('VxFx'), 'world': 0}
+        node = Node(n)
+        proof = Tableau()
+        rule = Rule(proof)
+        branch = proof.branch()
+        branch.add(node)
+        res = rule.mtr._compute_needed_constants_for_node(node, branch)
+        assert res == 1
+
+    def compute_for_branch_two_nodes_one_q_each_returns_3(self):
+        s1 = self.p('LxFx')
+        s2 = self.p('SxFx')
+        n1 = {'sentence': s1, 'world': 0}
+        n2 = {'sentence': s2, 'world': 0}
+        proof = Tableau()
+        rule = Rule(proof)
+        branch = proof.branch()
+        branch.extend([n1, n2])
+        res = rule.mtr._compute_max_constants(branch)
+        assert res == 3
 
 @using(logic = 'CPL')
 class TestTestDecorator(BaseSuite):

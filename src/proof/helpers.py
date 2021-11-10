@@ -37,6 +37,18 @@ def clshelpers(**kw):
         return cls
     return addhelpers
 
+def _targets_from_nodes_iter(get_node_targets):
+    def targets_iter(rule, nodes, branch):
+        results = (
+            Target.list(
+                get_node_targets(rule, node, branch),
+                rule = rule, branch = branch, node = node
+            )
+            for node in nodes
+        )
+        return chain.from_iterable(filter(bool, results))
+    return targets_iter
+
 class AdzHelper(object):
 
     def adztarget(getadds):
@@ -264,8 +276,9 @@ class FilterHelper(BranchNodeCache):
             return rulecls
         return addfilters
 
+
     @classmethod
-    def node_targets(cls, _get_targets):
+    def node_targets(cls, get_node_targets):
         """
         Method decorator to only iterate through nodes matching the
         configured FilterHelper filters.
@@ -276,18 +289,11 @@ class FilterHelper(BranchNodeCache):
         
         Returns a flat list of targets.
         """
-        def get_targets_filtered(self, branch):
-            helper = self.helpers[cls]
-            resgen = (
-                (_get_targets(self, node, branch), branch, node)
-                for node in helper[branch]
-            )
-            filt = (x for x in resgen if bool(x[0]))
-            create = (
-                Target.list(res, branch=branch, node=node, rule=self)
-                for res, branch, node in filt
-            )
-            return list(flatiter(create))
+        targets_iter = _targets_from_nodes_iter(get_node_targets)
+        def get_targets_filtered(rule, branch):
+            helper = rule.helpers[cls]
+            nodes = helper[branch]
+            return list(targets_iter(rule, nodes, branch))
         return get_targets_filtered
 
     def add_filter(self, name, cls):

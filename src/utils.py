@@ -100,6 +100,9 @@ def get_logic(ref):
     """
     return get_module(ref, package = 'logics')
 
+def islogic(obj):
+    return ismodule(obj) and obj.__name__.startswith('logics.')
+
 def typecheck(obj, types, name = 'parameter', err = TypeError):
     if isclass(types):
         types = (types,)
@@ -128,16 +131,27 @@ def cat(*args):
 def wrparens(*args):
     return cat('(', *args, ')')
 
-def dictrepr(d, limit = 10):
+def dictrepr(d, limit = 10, j = ', ', vj='=', paren = True):
     pairs = (
-        cat(str(k), '=', v.__name__
+        cat(str(k), vj, v.__name__
         if isclass(v) else (
-            v if isstr(v) else v.__repr__()
+            v if isstr(v) else (
+                v.name if islogic(v)
+                else v.__repr__()
+            )
         ))
         for k,v in islice(d.items(), limit)
     )
-    return wrparens(', '.join(pairs))
+    istr = j.join(pairs)
+    if paren:
+        return wrparens(istr)
+    return istr
 def kwrepr(**kw): return dictrepr(kw)
+
+def orepr(obj, _d = None, **kw):
+    oname = obj if isstr(obj) else obj.__class__.__name__
+    istr = dictrepr(_d if _d != None else kw, j= ' ', vj=':',paren = False)
+    return '<%s %s>' % (oname, istr)
 
 def isstr(obj):
     return isinstance(obj, basestring)
