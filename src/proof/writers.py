@@ -1,6 +1,6 @@
 from lexicals import create_lexwriter, default_notation, default_notn_encs
 from utils import cat
-
+from proof.tableaux import KEY, FLAG
 from os import path
 from copy import deepcopy
 
@@ -107,6 +107,8 @@ class TemplateWriter(TableauWriter):
             'conclusion' : conclusion,
             'lw'         : self.lw,
             'opts'       : self.opts,
+            'KEY'        : KEY,
+            'FLAG'       : FLAG,
         }
 
     def _write_tableau(self, tableau):

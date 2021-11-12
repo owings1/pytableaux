@@ -286,8 +286,8 @@ if utils.testlw == None:
     utils.testlw = BaseSuite.lw
 def tp(tab):
     print(
-        '\n'.join([
-            ','.join([str(n) for n in nodes])
+        '\n\n'.join([
+            '\n'.join([str(n) for n in nodes])
             for nodes in (b for b in tab)
         ])
     )

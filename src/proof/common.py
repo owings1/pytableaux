@@ -1,9 +1,13 @@
-from utils import rcurry, lcurry, dictrepr, orepr, Decorators, isstr, EmptySet, ReadOnlyDict
+from utils import rcurry, lcurry, dictrepr, orepr, Decorators, isstr, EmptySet
 from lexicals import Operated, Quantified
 from itertools import islice
-from typing import Generator
+from types import MappingProxyType
+from typing import Generator, Union
 from enum import Enum, Flag, IntFlag
 lazyget = Decorators.lazyget
+
+dict_keys = type({}.keys())
+dict_items = type({}.items())
 
 class Getters(object):
 
@@ -236,93 +240,41 @@ class NodeFilters(Filters):
 
 Filters.Node = NodeFilters
 
-
-# class TypeFilters(Enum):
-#     INTEGR = int
-#     def __new__(cls, value):
-#         # print(value)
-#         classinfo = value
-#         # print(label, classinfo)
-#         # obj = Filters.Type()
-#         obj = object.__new__(Filters.Type)
-#         obj.classinfo = classinfo
-#         # setattr(Filters.Type, label, obj)
-#         obj._value_ = obj
-#         return obj
-
-# class BoolPropEnum(Enum):
-#     def __str__(self):
-#         return self.name
-#     def __repr__(self):
-#         return self.__str__()
-#     def __bool__(self):
-#         return self.value
-#     def __eq__(self, other):
-#         return other is self or other in (self.value, self.name)
-#     def __hash__(self):
-#         return self.value
-
 class NodeMeta(type):
-    # TODO: A new Node is created when their parents are different, even if their
-    #       properties are the same. Since the properties are read-only, we could
-    #       potentially use a reference instead of a copy.
     def __call__(cls, props = {}):
         if isinstance(props, cls):
             return props
         return super().__call__(props)
-        # parent = None
-        # if isinstance(props, cls):
-        #     other = props
-        #     return other
-            # if parent == other.parent:
-            #     # Redundant
-            #     return other
-            # if other == parent:
-            #     raise TypeError('A node cannot be its own parent %s=%s', (props.id, parent.id))
-            # if parent != None:
-            #     props = {} | props
-        # return super().__call__(props)
 
 class Node(object, metaclass = NodeMeta):
     """
     A tableau node.
     """
 
-    defaults = {'world': None, 'designated': None}
-    ticked = False
-    step = None
-    ticked_step = None
-    # __parent = None
-
+    defaults = MappingProxyType({'world': None, 'designated': None})
 
     def __init__(self, props = {}):
         #: A dictionary of properties for the node.
         p = dict(self.defaults)
         p.update(props)
-        self.props = ReadOnlyDict(p)
-        # TODO: branch props, protect
-        # self.__parent = parent
+        self.props = MappingProxyType(p)
 
     @property
-    def id(self):
+    def id(self) -> int:
         return id(self)
 
-    # @property
-    # def parent(self):
-    #     return None#self.__parent
-
     @property
-    def is_closure(self):
+    def is_closure(self) -> bool:
         return self.get('flag') == 'closure'
 
     @property
     @lazyget
-    def is_modal(self):
+    def is_modal(self) -> bool:
         return self.has_any('world', 'world1', 'world2', 'worlds')
 
     @property
     @lazyget
-    def worlds(self):
+    def worlds(self) -> frozenset[int]:
         """
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
@@ -335,7 +287,7 @@ class Node(object, metaclass = NodeMeta):
     def get(self, name, default = None):
         return self.props.get(name, default)
 
-    def has(self, *names):
+    def has(self, *names: str) -> bool:
         """
         Whether the node has a non-``None`` property of all the given names.
         """
@@ -344,7 +296,7 @@ class Node(object, metaclass = NodeMeta):
                 return False
         return True
 
-    def has_any(self, *names):
+    def has_any(self, *names: str) -> bool:
         """
         Whether the node has a non-``None`` property of any of the given names.
         """
@@ -353,7 +305,7 @@ class Node(object, metaclass = NodeMeta):
                 return True
         return False
 
-    def has_props(self, props):
+    def has_props(self, props: dict) -> bool:
         """
         Whether the node properties match all those give in ``props`` (dict).
         """
@@ -362,10 +314,10 @@ class Node(object, metaclass = NodeMeta):
                 return False
         return True
 
-    def keys(self):
+    def keys(self) -> dict_keys:
         return self.props.keys()
 
-    def items(self):
+    def items(self) -> dict_items:
         return self.props.items()
 
     def __eq__(self, other):
@@ -424,18 +376,12 @@ class Node(object, metaclass = NodeMeta):
             }, limit = 4, paren = False, j = ',')
         )
 
-    # class Properties(object):
-
-    #     class Designation(BoolPropEnum):
-    #         Designated = True
-    #         Undesignated = False
-        # Designation.key = 'designated'
-        # Designation.attr = 'designation'
+NodeType = Union[Node, dict]
 
 class Target(object):
 
     __reqd = {'branch'}
-    __attrs = {'branch', 'rule', 'node', 'nodes', 'world', 'world1', 'world2', 'sentence', 'designated'}
+    __attrs = {'branch', 'rule', 'node', 'nodes', 'world', 'world1', 'world2', 'sentence', 'designated', 'flag'}
 
     @classmethod
     def create(cls, obj, **context):
@@ -447,20 +393,6 @@ class Target(object):
             obj.update(context)
             return obj
         return cls(obj, **context)
-        # if not obj:
-        #     raise TypeError('Cannot create a target from a falsy object: %s' % type(obj))
-        # if isinstance(obj, cls):
-        #     obj.update(context)
-        #     return obj
-        # if obj == True:
-        #     target = cls(context)
-        # else:
-        #     if isinstance(obj, cls):
-        #         target = obj
-        #         target.update(context)
-        #     else:
-        #         target = cls(obj, **context)
-        # return target
 
     @classmethod
     def list(cls, objs, **context):
@@ -489,7 +421,7 @@ class Target(object):
         return [cls.create(obj, **context) for obj in objs]
 
     @property
-    def type(self):
+    def type(self) -> str:
         if 'nodes' in self.__data:
             return 'Nodes'
         if 'node' in self.__data:

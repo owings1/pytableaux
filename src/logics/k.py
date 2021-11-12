@@ -36,7 +36,7 @@ from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
     NewConstantStoppingRule, Rule 
 from proof.common import Filters, Target
 from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
-    MaxWorldsTracker, PredicatedNodesTracker, QuitFlagHelper, AdzHelper, \
+    MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
     FilterHelper, clshelpers
 
 from errors import DenotationError, ModelValueError
@@ -1318,20 +1318,20 @@ class TableauxRules(object):
 
         Helpers = (
             *DefaultNodeRule.Helpers,
-            ('applied_sentences' , AppliedSentenceCounter),
+            ('apsc' , AppliedSentenceCounter),
             ('max_worlds'        , MaxWorldsTracker),
-            ('quit_flagger'      , QuitFlagHelper),
+            ('apqf'      , AppliedQuitFlag),
         )
 
         def is_potential_node(self, node, branch):
-            if self.quit_flagger.has_flagged(branch):
+            if self.apqf.get(branch):
                 return False
             return super().is_potential_node(node, branch)
 
         def get_target_for_node(self, node, branch):
 
             if not self._should_apply(branch):
-                if not self.quit_flagger.has_flagged(branch):
+                if not self.apqf.get(branch):
                     return self._get_flag_target(branch)
                 return
 
@@ -1362,7 +1362,7 @@ class TableauxRules(object):
 
             # Don't bother checking for closure since we will always have a new world
 
-            track_count = self.applied_sentences.get_count(si, branch)
+            track_count = self.apsc[branch].get(si, 0)
             if track_count == 0:
                 return 1
 
@@ -1377,7 +1377,7 @@ class TableauxRules(object):
             s = self.sentence(target.node)
             si = s.operand
 
-            return -1 * self.applied_sentences.get_count(si, branch)
+            return -1 * self.apsc[branch].get(si, 0)
 
         # private util
 
@@ -1430,8 +1430,8 @@ class TableauxRules(object):
         Helpers = (
             *DefaultNodeRule.Helpers,
             ('max_worlds'          , MaxWorldsTracker),
-            ('node_worlds_applied' , AppliedNodesWorldsTracker),
-            ('quit_flagger'        , QuitFlagHelper),
+            ('apnw' , AppliedNodesWorldsTracker),
+            ('apqf'        , AppliedQuitFlag),
         )
 
         Timers = (
@@ -1443,7 +1443,7 @@ class TableauxRules(object):
         )
 
         def is_potential_node(self, node, branch):
-            if self.quit_flagger.has_flagged(branch):
+            if self.apqf.get(branch):
                 return False
             return super().is_potential_node(node, branch)
             
@@ -1451,7 +1451,7 @@ class TableauxRules(object):
 
             # Check for max worlds reached
             if not self.__should_apply(branch):
-                if not self.quit_flagger.has_flagged(branch):
+                if not self.apqf.get(branch):
                     return [self.__get_flag_target(branch)]
                 return
 
@@ -1471,7 +1471,7 @@ class TableauxRules(object):
 
                     w2 = anode['world2']
 
-                    if self.node_worlds_applied.is_applied(node, w2, branch):
+                    if (node, w2) in self.apnw[branch]:
                         continue
 
                     with self.timers['check_target_condtn1']:

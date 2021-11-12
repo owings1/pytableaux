@@ -19,11 +19,10 @@
 # pytableaux - rule helpers module
 from copy import copy
 from models import BaseModel
-from utils import OrderedAttrsView, LinkOrderSet, EmptySet, kwrepr, isstr
+from utils import OrderedAttrsView, LinkOrderSet, EmptySet, isstr, orepr
 from .common import Node, Target
 from itertools import chain
 from events import Events
-flatiter = chain.from_iterable
 
 def clshelpers(**kw):
     """
@@ -118,50 +117,21 @@ class NodeTargetCheckHelper(object):
         if target:
             self.targets[branch] = target
 
-class QuitFlagHelper(object):
-    """
-    Track the application of a flag node by the rule for each branch. A branch
-    is considered flagged when the target has a non-empty ``flag`` property.
-    """
-
-    def __init__(self, rule, *args, **kw):
-        self.rule = rule
-        self.flagged = {}
-
-    def has_flagged(self, branch):
-        """
-        Whether the branch has been flagged.
-        """
-        if branch in self.flagged:
-            return self.flagged[branch]
-        return False
-
-    # Event Listeners
-
-    def after_branch_add(self, branch):
-        parent = branch.parent
-        if parent:
-            self.flagged[branch] = self.flagged[parent]
-        else:
-            self.flagged[branch] = False
-
-    def after_apply(self, target):
-        if target.get('flag'):
-            self.flagged[target.branch] = True
-
 class BranchCache(object):
 
     _valuetype = bool
+
     def __init__(self, *args, **kw):
         pass
 
+    def get(self, branch, *args):
+        return self.__cache.get(branch, *args)
     def __getitem__(self, branch):
         return self.__cache[branch]
 
     def __setitem__(self, branch, value):
-        if branch in self.__cache:
-            raise KeyError('Branch %s already in cache' % branch.id)
-        self.__linkset.add(branch)
+        if branch not in self.__cache:
+            self.__linkset.add(branch)
         self.__cache[branch] = value
 
     def __delitem__(self, branch):
@@ -186,14 +156,16 @@ class BranchCache(object):
         inst.__cache = {}
         inst.rule = rule
         inst.tab = rule.tableau
-        inst.tab.on(Events.AFTER_BRANCH_ADD,   inst.__BranchCache_after_branch_add)
-        inst.tab.on(Events.AFTER_BRANCH_CLOSE, inst.__BranchCache_after_branch_close)
+        inst.tab.on({
+            Events.AFTER_BRANCH_ADD  : inst._BranchCache_after_branch_add,
+            Events.AFTER_BRANCH_CLOSE: inst._BranchCache_after_branch_close,
+        })
         return inst
 
-    def __BranchCache_after_branch_close(self, branch):
+    def _BranchCache_after_branch_close(self, branch):
         del(self[branch])
 
-    def __BranchCache_after_branch_add(self, branch):
+    def _BranchCache_after_branch_add(self, branch):
         if branch.parent:
             self[branch] = copy(self[branch.parent])
         else:
@@ -204,11 +176,26 @@ class BranchCache(object):
         return {'branches': len(self)}
 
     def __repr__(self):
-        return '<%s>:' % self.__class__.__name__ + kwrepr(
-            **self._reprdict()
-        )
+        return orepr(self, self._reprdict())
 
-class BranchNodeCache(BranchCache):
+class BranchDictCache(BranchCache):
+
+    _valuetype = dict
+
+    def __new__(cls, rule, *args):
+        inst = super().__new__(cls, rule)
+        inst.tab.on({
+            Events.AFTER_BRANCH_ADD: inst._BranchDictCache_after_branch_add,
+        })
+        return inst
+
+    def _BranchDictCache_after_branch_add(self, branch):
+        if branch.parent:
+            for key in self[branch]:
+                self[branch][key] = copy(self[branch.parent][key])
+
+class FilterNodeCache(BranchCache):
+
     _valuetype = set
     
     # Induced Rule Properties
@@ -227,37 +214,108 @@ class BranchNodeCache(BranchCache):
 
     def __new__(cls, rule, *args):
         inst = super().__new__(cls, rule)
-        inst.tab.on(Events.AFTER_NODE_ADD,  inst._BranchNodeCache_after_node_add)
-        inst.tab.on(Events.AFTER_NODE_TICK, inst._BranchNodeCache_after_node_tick)
+        inst.tab.on({
+            Events.AFTER_NODE_ADD: inst._BranchNodeSetCache_after_node_add,
+            Events.AFTER_NODE_TICK: inst._BranchNodeSetCache_after_node_tick,
+        })
         return inst
 
     # Event Listeners
 
-    def _BranchNodeCache_after_node_add(self, node, branch):
-        res = self(node, branch)
-        if res != None:
-            self[branch].add(res)
+    def _BranchNodeSetCache_after_node_add(self, node, branch):
+        if self(node, branch):
+            self[branch].add(node)
 
-    def _BranchNodeCache_after_node_tick(self, node, branch):
+    def _BranchNodeSetCache_after_node_tick(self, node, branch):
         if self.ignore_ticked:
             self[branch].discard(node)
 
     def __call__(self, *args, **kw):
-        pass
+        raise NotImplementedError()
 
-class PredicatedNodesTracker(BranchNodeCache):
+class AppliedQuitFlag(BranchCache):
+    """
+    Track the application of a flag node by the rule for each branch. A branch
+    is considered flagged when the target has a non-empty ``flag`` property.
+    """
+    _valuetype = bool
+
+    def __new__(cls, rule, *args):
+        inst = super().__new__(cls, rule)
+        inst.rule.on(Events.AFTER_APPLY, inst)
+        return inst
+
+    def __call__(self, target):
+        self[target.branch] = bool(target.get('flag'))
+
+class AppliedNodesWorldsTracker(BranchCache):
+    """
+    Track the nodes applied to by the rule for each world on the branch. The
+    target must have `node`, and `world` attributes. The values of the cache
+    are ``(node, world)`` pairs.
+    """
+    _valuetype = set
+
+    def __new__(cls, rule, *args):
+        inst = super().__new__(cls, rule)
+        inst.rule.on(Events.AFTER_APPLY, inst)
+        return inst
+
+    def __call__(self, target):
+        if target.get('flag'):
+            return
+        self[target.branch].add((target.node, target.world))
+
+class UnserialWorldsTracker(BranchCache):
+    """
+    Track the unserial worlds on the branch.
+    """
+    _valuetype = set
+
+    def __new__(cls, rule, *args):
+        inst = super().__new__(cls, rule)
+        inst.tab.on(Events.AFTER_NODE_ADD, inst)
+        return inst
+
+    def __call__(self, node, branch):
+        for w in node.worlds:
+            if node.get('world1') == w or branch.has({'world1': w}):
+                self[branch].discard(w)
+            else:
+                self[branch].add(w)
+
+class AppliedSentenceCounter(BranchDictCache):
+    """
+    Count the times the rule has applied for a sentence per branch. This tracks
+    the `sentence` property of the rule's target. The target should also include
+    the `branch` key.
+    """
+    def __new__(cls, rule, *args):
+        inst = super().__new__(cls, rule)
+        inst.rule.on(Events.AFTER_APPLY, inst)
+        return inst
+
+    def __call__(self, target):
+        if target.get('flag'):
+            return
+        b = target.branch
+        s = target.sentence
+        self[b][s] = self[b].get(s, 0) + 1
+
+class PredicatedNodesTracker(FilterNodeCache):
     """
     Track all predicated nodes on the branch.
     """
     def __call__(self, node, *a, **kw):
-        if node.has('sentence') and node['sentence'].is_predicated:
-            return node
+        return node.has('sentence') and node['sentence'].is_predicated
 
-class FilterHelper(BranchNodeCache):
+class FilterHelper(FilterNodeCache):
     """
     Set configurable and chainable filters in ``NodeFilters``
     class attribute.
     """
+    def __call__(self, node, branch):
+        return self.filter(node, branch)
 
     clsattr = 'NodeFilters'
 
@@ -275,7 +333,6 @@ class FilterHelper(BranchNodeCache):
             setattr(rulecls, attr, tuple(value))
             return rulecls
         return addfilters
-
 
     @classmethod
     def node_targets(cls, get_node_targets):
@@ -314,7 +371,7 @@ class FilterHelper(BranchNodeCache):
 
     def filter(self, node, branch):
         self.callcount += 1
-        if not self.ignore_ticked and branch.is_ticked(node):
+        if self.ignore_ticked and branch.is_ticked(node):
             return False
         for func in self.__flist:
             if not func(node):
@@ -333,10 +390,6 @@ class FilterHelper(BranchNodeCache):
                 if isinstance(ret, dict):
                     node.update(ret)
         return node
-
-    def __call__(self, node, branch):
-        if self.filter(node, branch):
-            return node
 
     def __init__(self, rule, attr = None, *args, **kw):
         super().__init__(rule, *args, **kw)
@@ -648,36 +701,6 @@ class MaxWorldsTracker(object):
             return self.modal_complexity(node['sentence'])
         return 0
 
-class UnserialWorldsTracker(object):
-    """
-    Track the unserial worlds on the branch.
-    """
-
-    def __init__(self, rule, *args, **kw):
-        self.rule = rule
-        self.track = {}
-
-    def get_unserial_worlds(self, branch):
-        """
-        Get the set of unserial worlds on the branch.
-        """
-        return self.track[branch]
-
-    # helper implementation
-
-    def after_branch_add(self, branch):
-        parent = branch.parent
-        self.track[branch] = set()
-        if parent:
-            self.track[branch].update(self.track[parent])
-
-    def after_node_add(self, node, branch):
-        for w in node.worlds:
-            if branch.has({'world1': w}):
-                self.track[branch].discard(w)
-            else:
-                self.track[branch].add(w)
-
 class VisibleWorldsIndex(object):
     """
     Index the visible worlds for each world on the branch.
@@ -721,69 +744,6 @@ class VisibleWorldsIndex(object):
             if w1 not in self.index[branch]:
                 self.index[branch][w1] = set()
             self.index[branch][w1].add(w2)
-
-class AppliedNodesWorldsTracker(object):
-    """
-    Track the nodes applied to by the rule for each world on the branch. The
-    rule's target must have `branch`, `node`, and `world` keys.
-    """
-
-    def __init__(self, rule, *args, **kw):
-        self.rule = rule
-        self.track = {}
-
-    def is_applied(self, node, world, branch):
-        """
-        Whether the rule has applied to the node for the world and branch.
-        """
-        return (node.id, world) in self.track[branch]
-
-    # helper implementation
-
-    def after_node_add(self, node, branch):
-        if branch not in self.track:
-            self.track[branch] = set()
-
-    def after_apply(self, target):
-        if target.get('flag'):
-            return
-        pair = (target.node.id, target['world'])
-        self.track[target.branch].add(pair)
-
-class AppliedSentenceCounter(object):
-    """
-    Count the times the rule has applied for a sentence per branch. This tracks
-    the `sentence` property of the rule's target. The target should also include
-    the `branch` key.
-    """
-
-    def __init__(self, rule, *args, **kw):
-        self.rule = rule
-        self.counts = {}
-
-    def get_count(self, sentence, branch):
-        """
-        Return the count for the given sentence and branch.
-        """
-        if sentence not in self.counts[branch]:
-            return 0
-        return self.counts[branch][sentence]
-
-    # helper implementation
-
-    def after_branch_add(self, branch):
-        self.counts[branch] = {}
-        if branch.parent:
-            self.counts[branch].update(self.counts[branch.parent])
-
-    def after_apply(self, target):
-        if target.get('flag'):
-            return
-        branch = target.branch
-        sentence = target['sentence']
-        if sentence not in self.counts[branch]:
-            self.counts[branch][sentence] = 0
-        self.counts[branch][sentence] += 1
 
 class EllipsisExampleHelper(object):
 

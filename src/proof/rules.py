@@ -22,12 +22,47 @@ from lexicals import Atomic, Quantified, Operated
 from utils import StopWatch, istableau, safeprop, kwrepr, orepr
 from .common import Node, Target
 from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
-    MaxConstantsTracker, QuitFlagHelper
+    MaxConstantsTracker, AppliedQuitFlag
 from events import Events, EventEmitter
 from itertools import chain
-from typing import Generator
+from past.builtins import basestring
+from typing import Generator, NamedTuple, final
 
-class Rule(EventEmitter):
+class RuleType(type):
+    def __new__(cls, clsname, bases, attrs, **kw):
+        for attr, value in attrs.items():
+            try:
+                if attr == 'Helpers':
+                    if not isinstance(value, tuple):
+                        raise TypeError()
+                    clsset = set()
+                    nameset = set()                
+                    for item in value:
+                        if not isinstance (item, tuple):
+                            raise TypeError()
+                        if len(item) != 2:
+                            raise TypeError()
+                        hattr, hcls = item
+                        if hattr != None and not isinstance(hattr, basestring):
+                            raise TypeError()
+                        if not isinstance(hcls, type):
+                            raise TypeError()
+                        if hattr != None and hattr in nameset:
+                            raise TypeError()
+                        if hcls in clsset:
+                            raise TypeError()
+            except TypeError:
+                raise TypeError('Invalid %s attribute for class %s' % (attr, clsname))
+        rulecls = super().__new__(cls, clsname, bases, attrs, **kw)
+        return rulecls
+
+class Rule(EventEmitter, metaclass = RuleType):
+    class HelperInfo(NamedTuple):
+        cls  : type
+        inst : object
+        attr : str
+
+class Rule(Rule):
     """
     Base class for a Tableau rule.
     """
@@ -53,15 +88,17 @@ class Rule(EventEmitter):
 
         self.opts = self.opts | opts
 
+        self.helpers = {}
         self.__apply_count = 0
         self.__helpers = []
         self.__tableau = tableau
 
-        self.helpers = {}
+        
         for name, helper in self.Helpers:
             self.add_helper(helper, name)
         self.add_timer(*self.Timers)
 
+    @final
     @property
     def apply_count(self):
         """
@@ -89,6 +126,7 @@ class Rule(EventEmitter):
         """
         return self.__class__.__name__
 
+    @final
     @property
     def tableau(self):
         """
@@ -98,38 +136,28 @@ class Rule(EventEmitter):
         """
         return self.__tableau
 
-    @property
-    def Node(self):
-        """
-        Reference to the :class:`~Node` class.
-
-        :type: class
-        """
-        return Node
-
-    def get_target(self, branch):
+    @final
+    def get_target(self, branch) -> Target:
         """
         :meta public final:
         """
-        # Concrete classes should not override this, but should implement
-        # ``_get_targets()`` instead.
         targets = self._get_targets(branch)
         if targets:
             self.__extend_targets(targets)
             return self.__select_best_target(targets)
 
+    @final
     def apply(self, target):
         """
         :meta public final:
         """
-        # Concrete classes should not override this, but should implement
-        # ``_apply()`` instead.
         with self.apply_timer:
             self.emit(Events.BEFORE_APPLY, target)
             self._apply(target)
             self.__apply_count += 1
             self.emit(Events.AFTER_APPLY, target)
 
+    @final
     def branch(self, parent = None):
         """
         Create a new branch on the tableau. Convenience for ``self.tableau.branch()``.
@@ -141,6 +169,7 @@ class Rule(EventEmitter):
         """
         return self.tableau.branch(parent)
 
+    @final
     def add_timer(self, *names):
         """
         Add a timer.
@@ -152,25 +181,24 @@ class Rule(EventEmitter):
                 raise KeyError("Timer '%s' already exists" % name)
             self.timers[name] = StopWatch()
 
+    @final
     def add_helper(self, cls, attr = None, **opts):
         """
         Add a helper.
 
         :meta public:
         """
-        if cls in self.helpers or cls.__name__ in self.helpers:
-            raise KeyError('Helper %s already exists' % cls.__name__)
-        helper = self.helpers[cls] = cls(self, **opts)
-        self.helpers[cls.__name__] = helper
-        self.helpers[helper] = self
+        inst = cls(self, **opts)
+        info = Rule.HelperInfo(cls, inst, attr)
+        self.helpers[cls] = inst
         if attr != None:
-            safeprop(self, attr, helper)
+            setattr(self, attr, inst)
         for event, meth in (
             (Events.AFTER_APPLY  , 'after_apply'),
             (Events.BEFORE_APPLY , 'before_apply'),
         ):
-            if hasattr(helper, meth):
-                self.on(event, getattr(helper, meth))
+            if hasattr(inst, meth):
+                self.on(event, getattr(inst, meth))
         for event, meth in (
             (Events.AFTER_BRANCH_ADD   , 'after_branch_add'),
             (Events.AFTER_BRANCH_CLOSE , 'after_branch_close'),
@@ -179,10 +207,10 @@ class Rule(EventEmitter):
             (Events.AFTER_TRUNK_BUILD  , 'after_trunk_build'),
             (Events.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
         ):
-            if hasattr(helper, meth):
-                self.tableau.on(event, getattr(helper, meth))
-        self.__helpers.append((attr, helper))
-        return helper
+            if hasattr(inst, meth):
+                self.tableau.on(event, getattr(inst, meth))
+        self.__helpers.append(info)
+        return info
 
     # Abstract methods
     def example_nodes(self):
@@ -633,7 +661,7 @@ class NewConstantStoppingRule(FilterNodeRule):
     Helpers = (
         *FilterNodeRule.Helpers,
         ('max_constants', MaxConstantsTracker),
-        ('quit_flagger' , QuitFlagHelper),
+        ('apqf' , AppliedQuitFlag),
     )
 
     def get_new_nodes_for_constant(self, c, node, branch):
@@ -660,7 +688,7 @@ class NewConstantStoppingRule(FilterNodeRule):
         Implements ``PotentialNodeRule``.
         """
         if not self.__should_apply(branch, node.get('world')):
-            if not self.quit_flagger.has_flagged(branch):
+            if not self.apqf.get(branch):
                 return self.__get_flag_target(branch)
             return
 
@@ -701,7 +729,7 @@ class AllConstantsStoppingRule(FilterNodeRule):
         *FilterNodeRule.Helpers,
         ('max_constants'     , MaxConstantsTracker),
         ('applied_constants' , NodeAppliedConstants),
-        ('quit_flagger'      , QuitFlagHelper),
+        ('apqf'      , AppliedQuitFlag),
     )
 
     Timers = (
@@ -773,7 +801,7 @@ class AllConstantsStoppingRule(FilterNodeRule):
         # Slight difference with FDE here -- using world
         return (
             self.max_constants.max_constants_exceeded(branch, world) and
-            not self.quit_flagger.has_flagged(branch)
+            not self.apqf.get(branch)
         )
 
     def __get_flag_target(self, branch):

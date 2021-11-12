@@ -91,7 +91,7 @@ class TableauxRules:
 
         @FilterHelper.node_targets
         def _get_targets(self, node, branch):
-            unserials = self.ust.get_unserial_worlds(branch)
+            unserials = self.ust[branch]
             if not unserials:
                 return
             if not self.__should_apply(branch):

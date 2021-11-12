@@ -31,8 +31,8 @@ from enum import Enum
 import examples
 Existential = Quantifier.Existential
 Universal = Quantifier.Universal
-Identity = Predicates.SystemEnum.Identity.pred
-Existence = Predicates.SystemEnum.Existence.pred
+Identity = Predicates.System.Identity
+Existence = Predicates.System.Existence
 
 
 class BoolPropEnum(Enum):
