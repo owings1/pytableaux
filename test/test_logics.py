@@ -34,15 +34,12 @@ Universal = Quantifier.Universal
 Identity = Predicates.SystemEnum.Identity.pred
 Existence = Predicates.SystemEnum.Existence.pred
 
-Designated = des = Node.Properties.Designation.Designated
-Undesignated = undes = Node.Properties.Designation.Undesignated
-Negated = 'Negated'
 
 class BoolPropEnum(Enum):
     def __str__(self):
         return self.name
-    def __repr__(self):
-        return self.__str__()
+    # def __repr__(self):
+    #     return self.__str__()
     def __bool__(self):
         return self.value
     def __eq__(self, other):
@@ -55,6 +52,12 @@ class Designation(BoolPropEnum):
     Undesignated = False
 # Designation.key = 'designated'
 # Designation.attr = 'designation'
+
+Designated = des = Designation.Designated
+Undesignated = undes = Designation.Undesignated
+Negated = 'Negated'
+
+A = Atomic.first()
 
 @using(logic = 'FDE')
 class Test_FDE(BaseSuite):
@@ -80,7 +83,11 @@ class Test_FDE(BaseSuite):
                 self.rule_eg('%s%s' % (o, Undesignated))
                 self.rule_eg('%s%s%s' % (o, Negated, des))
                 self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+                # ¬ ○ A  ⊢  ¬ A
+                Oper.Negation(Oper.Assertion(A))
+                Oper.Negation(A)
                 self.valid_tab('Na', 'NTa')
+                pass
 
             @larg(Oper.Conjunction)
             def test_Conjunction(self, o):
@@ -94,7 +101,6 @@ class Test_FDE(BaseSuite):
                 n = rtnd[1].history[0].target.node; s = n['sentence']
                 assert (s.operator, s.negatum.operator, n['designated']) \
                     == (Oper.Negation, Oper.Conjunction, True)
-
 
             @larg(Oper.Disjunction)
             def test_Disjunction(self, o):
@@ -1253,6 +1259,8 @@ class TestP3(BaseSuite):
     def test_valid_demorgan_6(self):
         assert self.tab('DeMorgan 6').valid
 
+
+
 @using(logic = 'CPL')
 class TestCPL(BaseSuite):
   
@@ -1515,6 +1523,8 @@ class TestCFOL(BaseSuite):
         m.finish()
         d1, d2 = (m.get_denotum(c) for c in s1.params)
         assert d1 is d2
+
+
 
 @using(logic = 'K')
 class Test_K(BaseSuite):

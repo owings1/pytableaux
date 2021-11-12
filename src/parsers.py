@@ -95,6 +95,7 @@ class Parser(object):
         :return: The parsed sentence.
         :rtype: lexicals.Sentence
         :raises errors.ParseError:
+        :raises TypeError:
         """
         raise NotImplementedError()
 
@@ -107,6 +108,7 @@ class Parser(object):
         :return: The argument.
         :rtype: lexicals.Argument
         :raises errors.ParseError:
+        :raises TypeError:
         """
         return Argument(
             self.parse(conclusion),
@@ -625,7 +627,7 @@ class CharTable(CacheNotationData):
             typ: sorted(set(item[1] for item in vals if item[0] == typ))
             for typ in self._types
         }
-        # chars for each type, no duplicates
+        # chars for each type, duplicates discarded
         self._chars = {
             typ: tuple(self._reverse[(typ, val)] for val in self._values[typ])
             for typ in self._types
@@ -636,6 +638,7 @@ class CharTable(CacheNotationData):
         :param str char: The character symbol.
         :return: The symbol type, or ``None`` if not in table.
         :rtype: str
+        :raises TypeError: for unhashable type, e.g. dict.
         """
         item = self._table.get(char)
         return item[0] if item else None

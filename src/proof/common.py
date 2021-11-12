@@ -1,349 +1,9 @@
-from utils import rcurry, lcurry, dictrepr, Decorators, isstr, EmptySet, ReadOnlyDict
+from utils import rcurry, lcurry, dictrepr, orepr, Decorators, isstr, EmptySet, ReadOnlyDict
 from lexicals import Operated, Quantified
 from itertools import islice
 from typing import Generator
-from enum import Enum
+from enum import Enum, Flag, IntFlag
 lazyget = Decorators.lazyget
-
-class BoolPropEnum(Enum):
-    def __str__(self):
-        return self.name
-    def __repr__(self):
-        return self.__str__()
-    def __bool__(self):
-        return self.value
-    def __eq__(self, other):
-        return other is self or other in (self.value, self.name)
-    def __hash__(self):
-        return self.value
-
-class NodeMeta(type):
-    def __call__(cls, props = {}, parent = None):
-        if isinstance(props, cls):
-            if parent == props.parent:
-                return props
-            if props == parent:
-                raise TypeError('A node cannot be its own parent %s=%s', (props.id, parent.id))
-            if parent != None:
-                props = {} | props
-        return super().__call__(props=props, parent=parent)
-
-class Node(object, metaclass = NodeMeta):
-    """
-    A tableau node.
-    """
-
-    def __init__(self, props = {}, parent = None):
-        #: A dictionary of properties for the node.
-        self.props = ReadOnlyDict({
-            'world'      : None,
-            'designated' : None,
-        } | props)
-        # TODO: branch props, protect
-        self.__parent = parent
-        self.ticked = False
-        self.step = None
-        self.ticked_step = None
-
-    @property
-    def id(self):
-        return id(self)
-
-    @property
-    def parent(self):
-        return self.__parent
-
-    @property
-    def is_closure(self):
-        return self.get('flag') == 'closure'
-
-    @property
-    @lazyget
-    def is_modal(self):
-        return self.has_any('world', 'world1', 'world2', 'worlds')
-
-    @property
-    @lazyget
-    def worlds(self):
-        """
-        Return the set of worlds referenced in the node properties. This combines
-        the properties `world`, `world1`, `world2`, and `worlds`.
-        """
-        return frozenset(
-            self.get('worlds', EmptySet) |
-            {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
-        )
-
-    def get(self, name, default = None):
-        return self.props.get(name, default)
-
-    def has(self, *names):
-        """
-        Whether the node has a non-``None`` property of all the given names.
-        """
-        for name in names:
-            if self.get(name) == None:
-                return False
-        return True
-
-    def has_any(self, *names):
-        """
-        Whether the node has a non-``None`` property of any of the given names.
-        """
-        for name in names:
-            if self.get(name) != None:
-                return True
-        return False
-
-    def has_props(self, props):
-        """
-        Whether the node properties match all those give in ``props`` (dict).
-        """
-        for prop in props:
-            if prop not in self or not props[prop] == self[prop]:
-                return False
-        return True
-
-    def keys(self):
-        return self.props.keys()
-
-    def items(self):
-        return self.props.items()
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.id == other.id
-
-    def __ne__(self, other):
-        return not (isinstance(other, self.__class__) and self.id == other.id)
-
-    def __hash__(self):
-        return hash(self.id)
-
-    def __getitem__(self, key):
-        return self.props[key]
-
-    def __contains__(self, item):
-        return item in self.props
-
-    def __iter__(self):
-        return iter(self.props)
-
-    def __copy__(self):
-        return self.__class__(self.props, parent = self.parent)
-
-    def __or__(self, other):
-        if isinstance(other, self.__class__):
-            other = other.props
-        if isinstance(other, dict):
-            return dict.__or__(self.props, other)
-        raise TypeError(
-            'Unsupported %s operator between %s and %s'
-            % ('|', self.__class__, other.__class__)
-        )
-
-    def __ror__(self, other):
-        if isinstance(other, self.__class__):
-            other = other.props
-        if isinstance(other, dict):
-            return dict.__ror__(self.props, other)
-        raise TypeError(
-            'Unsupported %s operator between %s and %s' %
-            ('|', other.__class__, self.__class__)
-        )
-
-    def __repr__(self):
-        clsname = self.__class__.__name__
-        return dictrepr({
-            clsname  : self.id,
-        } | {k: v for k, v in {
-            'parent' : self.parent.id if self.parent else None,
-            'ticked' : self.ticked,
-            'step'   : self.step,
-        }.items() if v != None
-        } | {
-            'props': dictrepr({
-            k: str(self[k])[0:10] for k in
-            islice((k for k in self), 5)
-            })
-        })
-
-    class Properties(object):
-
-        class Designation(BoolPropEnum):
-            Designated = True
-            Undesignated = False
-        # Designation.key = 'designated'
-        # Designation.attr = 'designation'
-
-
-
-class Target(object):
-
-    __reqd = {'branch'}
-    __attrs = {'branch', 'rule', 'node', 'nodes', 'world', 'world1', 'world2', 'sentence', 'designated'}
-
-    @classmethod
-    def create(cls, obj, **context):
-        """
-        Always returns a Target object.
-        :param obj: True, Target, dict.
-        """
-        if isinstance(obj, cls):
-            obj.update(context)
-            return obj
-        return cls(obj, **context)
-        # if not obj:
-        #     raise TypeError('Cannot create a target from a falsy object: %s' % type(obj))
-        # if isinstance(obj, cls):
-        #     obj.update(context)
-        #     return obj
-        # if obj == True:
-        #     target = cls(context)
-        # else:
-        #     if isinstance(obj, cls):
-        #         target = obj
-        #         target.update(context)
-        #     else:
-        #         target = cls(obj, **context)
-        # return target
-
-    @classmethod
-    def list(cls, objs, **context):
-        """
-        Normalize to a list, possibly empty, of Target objects.
-        
-        If the parameter qualifies as a single target type, it is cast to a
-        list before ``create()`` is called.
-        
-        Acceptable types for ``objs`` param:
-            - a single falsy object, in which case an empty list is returned
-            - a single target (dict, Target object, or True)
-            - tuple, list, or iterator.
-        """
-        # Falsy
-        if not objs:
-            return []
-        if isinstance(objs, (cls, dict, bool)):
-            # Cast to list
-            objs = [objs,]
-        elif not (
-            isinstance(objs, (tuple, list)) or
-            callable(getattr(objs, '__next__', None))
-        ):
-            raise TypeError('Cannot create targets from %s object' % type(objs))
-        return [cls.create(obj, **context) for obj in objs]
-
-    def __init__(self, obj, **context):
-        self.__data = {}
-        if isinstance(obj, self.__class__):
-            raise TypeError(self.__class__)
-        if not obj:
-            raise TypeError('Cannot create a target from a falsy object: %s' % type(obj))
-        if not isinstance(obj, (bool, dict)):
-            raise TypeError(('Cannot create a target from a %s' % type(obj)))
-        if obj != True:
-            self.update(obj)
-        self.update(context)
-        miss = self.__reqd.difference(self.__data)
-        if miss:
-            raise TypeError("missing %s" % miss)
-
-    def __getitem__(self, item):
-        return self.__data[item]
-
-    def __setitem__(self, key, val):
-        if not isstr(key):
-            raise TypeError('Only string subscript allowed, not %s : %s' % (type(key), str(key)))
-        if self.__data.get(key, val) != val:
-            raise ValueError("Value conflict with key '%s' (%s != %s)" % (key, val, self.__data[key]))
-        self.__data[key] = val
-
-    def __contains__(self, item):
-        return item in self.__data
-
-    def __getattr__(self, name):
-        if name in self.__attrs:
-            try:
-                return self.__data[name]
-            except:
-                pass
-        raise AttributeError(name)
-
-    def __setattr__(self, name, val):
-        if name in self.__attrs:
-            self[name] = val
-        elif not hasattr(self, name) or name in self.__dict__:
-            self.__dict__[name] = val
-        else:
-            raise AttributeError(name)
-
-    def __repr__(self):
-        return (self.__class__.__name__, ('type', self.type)).__repr__()
-
-    def __bool__(self):
-        return True
-
-    def update(self, _obj = None, **kw):
-        if _obj != None:
-            for k in _obj:
-                self[k] = _obj[k]
-        for k in kw:
-            self[k] = kw[k]
-
-    def get(self, key, default = None):
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
-    @property
-    def type(self):
-        if 'nodes' in self.__data:
-            return 'Nodes'
-        if 'node' in self.__data:
-            return 'Node'
-        return 'Branch'
-
-    def __dir__(self):
-        return [
-            attr for attr in self.__attrs
-            if self.__data.get(attr, None) != None
-        ]
-    def __repr__(self):
-        bid = self.__data['branch'].id if 'branch' in self.__data else '?'
-        items = (
-            ('branch', bid),
-            ('type', self.type), *islice((
-                (attr, self[attr]) for attr in
-                ('rule', 'sentence', 'designated', 'world', 'worlds')
-                if attr in self
-            ), 3)
-        )
-        istr = ','.join(['%s:%s' % (k, str(v)[0:20]) for k,v in items])
-        return '%s[%s]' % (self.__class__.__name__, istr)
-
-class StepEntry(object):
-
-    def __init__(self, *entry):
-        if len(entry) < 3:
-            raise TypeError('Expecting more than {} arguments'.format(len(entry)))
-        self.__entry = entry
-
-    @property
-    def rule(self):
-        return self.__entry[0]
-
-    @property
-    def target(self):
-        return self.__entry[1]
-
-    @property
-    def duration_ms(self):
-        return self.__entry[2]
-
-    @property
-    def entry(self):
-        return self.__entry
 
 class Getters(object):
 
@@ -402,8 +62,12 @@ class Getters(object):
 class Filters(object):
 
     class Filter(object):
+
+        lhs = None
+
         def __call__(self, *args, **kw):
             raise NotImplemented()
+
         def __repr__(self):
             me = self.__class__.__qualname__
             them = self.lhs.__class__.__name__
@@ -527,6 +191,21 @@ class Filters(object):
                     return False
             return True
 
+    class Type(Filter):
+
+        classinfo = object
+
+        def __init__(self, classinfo):
+            self.classinfo = classinfo
+
+        def __call__(self, obj):
+            return isinstance(obj, self.classinfo)
+
+        def __repr__(self):
+            me = self.__class__.__qualname__
+            return '%s for classinfo %s' % (me, self.classinfo)
+
+    Type.INT = Type(int)
     Node = None
 
 class NodeFilters(Filters):
@@ -557,3 +236,369 @@ class NodeFilters(Filters):
 
 Filters.Node = NodeFilters
 
+
+# class TypeFilters(Enum):
+#     INTEGR = int
+#     def __new__(cls, value):
+#         # print(value)
+#         classinfo = value
+#         # print(label, classinfo)
+#         # obj = Filters.Type()
+#         obj = object.__new__(Filters.Type)
+#         obj.classinfo = classinfo
+#         # setattr(Filters.Type, label, obj)
+#         obj._value_ = obj
+#         return obj
+
+# class BoolPropEnum(Enum):
+#     def __str__(self):
+#         return self.name
+#     def __repr__(self):
+#         return self.__str__()
+#     def __bool__(self):
+#         return self.value
+#     def __eq__(self, other):
+#         return other is self or other in (self.value, self.name)
+#     def __hash__(self):
+#         return self.value
+
+class NodeMeta(type):
+    # TODO: A new Node is created when their parents are different, even if their
+    #       properties are the same. Since the properties are read-only, we could
+    #       potentially use a reference instead of a copy.
+    def __call__(cls, props = {}):
+        if isinstance(props, cls):
+            return props
+        return super().__call__(props)
+        # parent = None
+        # if isinstance(props, cls):
+        #     other = props
+        #     return other
+            # if parent == other.parent:
+            #     # Redundant
+            #     return other
+            # if other == parent:
+            #     raise TypeError('A node cannot be its own parent %s=%s', (props.id, parent.id))
+            # if parent != None:
+            #     props = {} | props
+        # return super().__call__(props)
+
+class Node(object, metaclass = NodeMeta):
+    """
+    A tableau node.
+    """
+
+    defaults = {'world': None, 'designated': None}
+    ticked = False
+    step = None
+    ticked_step = None
+    # __parent = None
+
+
+    def __init__(self, props = {}):
+        #: A dictionary of properties for the node.
+        p = dict(self.defaults)
+        p.update(props)
+        self.props = ReadOnlyDict(p)
+        # TODO: branch props, protect
+        # self.__parent = parent
+
+    @property
+    def id(self):
+        return id(self)
+
+    # @property
+    # def parent(self):
+    #     return None#self.__parent
+
+    @property
+    def is_closure(self):
+        return self.get('flag') == 'closure'
+
+    @property
+    @lazyget
+    def is_modal(self):
+        return self.has_any('world', 'world1', 'world2', 'worlds')
+
+    @property
+    @lazyget
+    def worlds(self):
+        """
+        Return the set of worlds referenced in the node properties. This combines
+        the properties `world`, `world1`, `world2`, and `worlds`.
+        """
+        return frozenset(filter(Filters.Type.INT,
+            self.get('worlds', EmptySet) |
+            {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
+        ))
+
+    def get(self, name, default = None):
+        return self.props.get(name, default)
+
+    def has(self, *names):
+        """
+        Whether the node has a non-``None`` property of all the given names.
+        """
+        for name in names:
+            if self.get(name) == None:
+                return False
+        return True
+
+    def has_any(self, *names):
+        """
+        Whether the node has a non-``None`` property of any of the given names.
+        """
+        for name in names:
+            if self.get(name) != None:
+                return True
+        return False
+
+    def has_props(self, props):
+        """
+        Whether the node properties match all those give in ``props`` (dict).
+        """
+        for prop in props:
+            if prop not in self or not props[prop] == self[prop]:
+                return False
+        return True
+
+    def keys(self):
+        return self.props.keys()
+
+    def items(self):
+        return self.props.items()
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.id == other.id
+
+    def __ne__(self, other):
+        return not (isinstance(other, self.__class__) and self.id == other.id)
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __getitem__(self, key):
+        return self.props[key]
+
+    def __contains__(self, item):
+        return item in self.props
+
+    def __iter__(self):
+        return iter(self.props)
+
+    def __copy__(self):
+        return self.__class__(self.props, parent = self.parent)
+
+    def __or__(self, other):
+        # self | other
+        if isinstance(other, self.__class__):
+            return self.props | other.props
+        if isinstance(other, self.props.__class__):
+            return self.props | other
+        if isinstance(other, dict):
+            return dict(self.props) | other
+        raise TypeError(
+            'Unsupported %s operator between %s and %s'
+            % ('|', self.__class__, other.__class__)
+        )
+
+    def __ror__(self, other):
+        # other | self
+        if isinstance(other, self.__class__):
+            return other.props | self.props
+        if isinstance(other, self.props.__class__):
+            return other | self.props
+        if isinstance(other, dict):
+            return other | dict(self.props)
+        raise TypeError(
+            'Unsupported %s operator between %s and %s'
+            % ('|', other.__class__, self.__class__)
+        )
+
+    def __repr__(self):
+        return orepr(self,
+            id = self.id,
+            # parent = self.parent.id if self.parent else None,
+            props = dictrepr({
+                k: v for k,v in self.props.items() if v != None
+            }, limit = 4, paren = False, j = ',')
+        )
+
+    # class Properties(object):
+
+    #     class Designation(BoolPropEnum):
+    #         Designated = True
+    #         Undesignated = False
+        # Designation.key = 'designated'
+        # Designation.attr = 'designation'
+
+class Target(object):
+
+    __reqd = {'branch'}
+    __attrs = {'branch', 'rule', 'node', 'nodes', 'world', 'world1', 'world2', 'sentence', 'designated'}
+
+    @classmethod
+    def create(cls, obj, **context):
+        """
+        Always returns a Target object.
+        :param obj: True, Target, dict.
+        """
+        if isinstance(obj, cls):
+            obj.update(context)
+            return obj
+        return cls(obj, **context)
+        # if not obj:
+        #     raise TypeError('Cannot create a target from a falsy object: %s' % type(obj))
+        # if isinstance(obj, cls):
+        #     obj.update(context)
+        #     return obj
+        # if obj == True:
+        #     target = cls(context)
+        # else:
+        #     if isinstance(obj, cls):
+        #         target = obj
+        #         target.update(context)
+        #     else:
+        #         target = cls(obj, **context)
+        # return target
+
+    @classmethod
+    def list(cls, objs, **context):
+        """
+        Normalize to a list, possibly empty, of Target objects.
+        
+        If the parameter qualifies as a single target type, it is cast to a
+        list before ``create()`` is called.
+        
+        Acceptable types for ``objs`` param:
+            - a single falsy object, in which case an empty list is returned
+            - a single target (dict, Target object, or True)
+            - tuple, list, or iterator.
+        """
+        # Falsy
+        if not objs:
+            return []
+        if isinstance(objs, (cls, dict, bool)):
+            # Cast to list
+            objs = [objs,]
+        elif not (
+            isinstance(objs, (tuple, list)) or
+            callable(getattr(objs, '__next__', None))
+        ):
+            raise TypeError('Cannot create Target from %s object' % type(objs))
+        return [cls.create(obj, **context) for obj in objs]
+
+    @property
+    def type(self):
+        if 'nodes' in self.__data:
+            return 'Nodes'
+        if 'node' in self.__data:
+            return 'Node'
+        return 'Branch'
+
+    def get(self, key, default = None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def update(self, _obj = None, **kw):
+        if _obj != None:
+            for k in _obj:
+                self[k] = _obj[k]
+        for k in kw:
+            self[k] = kw[k]
+
+    def __init__(self, obj, **context):
+        self.__data = {}
+        if isinstance(obj, self.__class__):
+            raise TypeError(self.__class__)
+        if not obj:
+            raise TypeError('Cannot create a Target from a falsy object: %s' % type(obj))
+        if not isinstance(obj, (bool, dict)):
+            raise TypeError(('Cannot create a Target from a %s' % type(obj)))
+        if obj != True:
+            self.update(obj)
+        self.update(context)
+        for attr in self.__reqd:
+            if attr not in self.__data:
+                raise TypeError("Missing required keys: %s" % self.__reqd.difference(self.__data))
+
+    def __getitem__(self, item):
+        return self.__data[item]
+
+    def __setitem__(self, key, val):
+        if not isstr(key):
+            raise TypeError('Only string subscript allowed, not %s : %s' % (type(key), str(key)))
+        if self.__data.get(key, val) != val:
+            raise ValueError("Value conflict with key '%s' (%s != %s)" % (key, val, self.__data[key]))
+        self.__data[key] = val
+
+    def __contains__(self, item):
+        return item in self.__data
+
+    def __getattr__(self, name):
+        if name in self.__attrs:
+            try:
+                return self.__data[name]
+            except:
+                pass
+        raise AttributeError(name)
+
+    def __setattr__(self, name, val):
+        if name in self.__attrs:
+            self[name] = val
+        elif not hasattr(self, name) or name in self.__dict__:
+            self.__dict__[name] = val
+        else:
+            raise AttributeError(name)
+
+    def __bool__(self):
+        return True
+
+    def __dir__(self):
+        return [
+            attr for attr in self.__attrs
+            if self.__data.get(attr, None) != None
+        ]
+
+    def __repr__(self):
+        bid = self.__data['branch'].id if 'branch' in self.__data else '?'
+        items = (
+            ('branch', bid),
+            ('type', self.type), *islice((
+                (attr, self[attr]) for attr in
+                ('rule', 'sentence', 'designated', 'world', 'worlds')
+                if attr in self
+            ), 3)
+        )
+        istr = ','.join(['%s:%s' % (k, str(v)[0:20]) for k,v in items])
+        return '%s[%s]' % (self.__class__.__name__, istr)
+
+class StepEntry(object):
+
+    def __init__(self, *entry):
+        if len(entry) < 3:
+            raise TypeError('Expecting more than {} arguments'.format(len(entry)))
+        self.__entry = entry
+
+    @property
+    def rule(self):
+        return self.__entry[0]
+
+    @property
+    def target(self):
+        return self.__entry[1]
+
+    @property
+    def duration_ms(self):
+        return self.__entry[2]
+
+    @property
+    def entry(self):
+        return self.__entry
+
+    def __len__(self):
+        return min(2, len(self.__entry))
+    def __iter__(self):
+        return islice(self.__entry, 2)

@@ -24,7 +24,7 @@ from importlib import import_module
 from inspect import isclass
 from itertools import islice
 from time import time
-from types import ModuleType
+from types import ModuleType, MappingProxyType
 from past.builtins import basestring
 EmptySet = frozenset()
 
@@ -131,13 +131,17 @@ def cat(*args):
 def wrparens(*args):
     return cat('(', *args, ')')
 
+testlw = None
 def dictrepr(d, limit = 10, j = ', ', vj='=', paren = True):
     pairs = (
         cat(str(k), vj, v.__name__
         if isclass(v) else (
             v if isstr(v) else (
-                v.name if islogic(v)
-                else v.__repr__()
+                testlw.write(v) if testlw and testlw.canwrite(v)
+                else (
+                    v.name if islogic(v)
+                    else v.__repr__()
+                )
             )
         ))
         for k,v in islice(d.items(), limit)
@@ -146,6 +150,7 @@ def dictrepr(d, limit = 10, j = ', ', vj='=', paren = True):
     if paren:
         return wrparens(istr)
     return istr
+
 def kwrepr(**kw): return dictrepr(kw)
 
 def orepr(obj, _d = None, **kw):
@@ -269,7 +274,7 @@ def Decorators():
                     return func(self, *args, **kw)
                 return check
             return wrap
-
+   
         def nosetattr(*args, **kw):
             if args and callable(args[0]):
                 origin = args[0]
@@ -598,64 +603,5 @@ def LinkOrderSet():
 
 LinkOrderSet = LinkOrderSet()
 
-# def ReadOnlyDict(src, cls = object):
-    
-#     class rodict(cls):
-#         def get(self, *args):
-#             return src.get(*args)
-#         def keys(self):
-#             return src.keys()
-#         def items(self):
-#             return src.items()
-#         def values(self):
-#             return src.values()
-#         def copy(self):
-#             return src.copy()
-#         def __getitem__(self, key):
-#             return src[key]
-#         def __contains__(self, key):
-#             return key in src
-#         def __iter__(self):
-#             return iter(src)
-#         def __len__(self):
-#             return len(src)
-#         def __eq__(self, other):
-#             return src == other
-#         def __repr__(self):
-#             return 'ReadOnly(%s)' % src.__repr__()
-#     return rodict()
-
-from types import MappingProxyType
-
 def ReadOnlyDict(src):
     return MappingProxyType(src)
-# class RoDict(dict):
-#     def __init__(self, *args, **kw):
-#         super().__init__(*args, **kw)
-#         d = {'_init_': True}
-#         self.__dict__ = MappingProxyType(d)
-#         # self.__dict__['_init_'] = True
-#     def __setattr__(self, attr, val):
-#         if self.__dict__.get('_init_'):
-#         # if not hasattr(self, '__dict__'):
-#             raise AttributeError('ReadOnly')
-#         super().__setattr__(attr, val)
-#     def __delattr__(self, attr):
-#         raise AttributeError('ReadOnly')
-#     def __setitem__(self, key, val):
-#         if self.__dict__.get('_init_'):
-#         # if not hasattr(self, '__dict__'):
-#             raise KeyError('ReadOnly')
-#         super().__setitem__(key, val)
-#     def __delitem__(self, key):
-#         raise KeyError('ReadOnly')
-#     def clear(self, *args):
-#         raise KeyError('ReadOnly')
-#     def pop(self, *args):
-#         raise KeyError('ReadOnly')
-#     def popitem(self, *args):
-#         raise KeyError('ReadOnly')
-#     def update(self, *args):
-#         raise KeyError('ReadOnly')
-#     def setdefault(self, *args):
-#         raise KeyError('ReadOnly')

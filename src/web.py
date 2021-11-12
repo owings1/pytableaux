@@ -123,7 +123,7 @@ form_defaults = {
 ## JS Data   ##
 ###############
 base_browser_data = {
-    'example_predicates'    : examples.test_pred_data,
+    'example_predicates'    : tuple(p.spec for p in examples.preds),
     # nups: "notation-user-predicate-symbols"
     'nups'                  : nups,
     'num_predicate_symbols' : Predicate.TYPE.maxi + 1,

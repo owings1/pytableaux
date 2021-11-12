@@ -63,7 +63,7 @@
                     <tr class="system-predicate">
                         <td>
                             {% for notn, table in parser_tables.items() %}
-                                {%- set symbol = table.char('system_predicate', name) -%}
+                                {%- set symbol = table.char('system_predicate', predicate) -%}
                                 {%- set subscript = predicate.subscript -%}
                                 <span class="predicate-symbol notation-{{ notn|e }} hidden">
                                     {{- symbol|e }}{% if subscript > 0 %}<sub>{{ subscript|e }}</sub>{% endif -%}

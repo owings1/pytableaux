@@ -25,46 +25,94 @@ from lexicals import Predicates, Variable, Constant, Parameter, Predicate, \
 from parsers import parse
 from errors import *
 from copy import copy, deepcopy
-
+from .tutils import *
 from pytest import raises
+from utils import EmptySet
+
+a, b, c = Constant.gen(3)
+x, y, z = Variable.gen(3)
+A, B, C = Atomic.gen(3)
+F, G, H = Predicate.gen(3)
 
 class TestParameter(object):
+
     def test_cannot_construct(self):
         with raises(TypeError):
             Parameter(0, 0)
 
+    class TestConstant(BaseSuite):
+
+        def test_sorting(self):
+            c1 = Constant(1, 0)
+            c2 = Constant(2, 0)
+            res = sorted([c2, c1])
+            assert res[0] == c1
+            assert res[1] == c2
+
+        def test_index_too_large(self):
+            with raises(ValueError):
+                Constant(Constant.TYPE.maxi + 1, 0)
+
+        def test_is_constante(self):
+            c = Constant(0, 0)
+            assert c.is_constant
+            assert not c.is_variable
+
+        def test_str_contains_subscript(self):
+            c = Constant(0, 8)
+            res = str(c)
+            assert '8' in res
+
+    class TestVariable(BaseSuite):
+
+        def test_variable_index_too_large(self):
+            with raises(ValueError):
+                Variable(Variable.TYPE.maxi + 1, 0)
+
 class TestPredicate(object):
-    def test_sys_name_not_allowed(self):
+
+    def test_errors(self):
         with raises(ValueError):
             Predicate(1, 0, 2, 'Identity')
-
-    def test_neg_idx_not_allowed(self):
         with raises(ValueError):
             Predicate(-1, 4, 2)
+        with raises(TypeError):
+            Predicate(0, None, 1)
+        with raises(ValueError):
+            Predicate(0, -1, 1)
+
+    def test_predicate_is_system_predicate_true(self):
+        assert Predicate.Identity.is_system
 
 class TestPredicates(object):
 
-    def test_predicate_error_pred_defs_duple(self):
+    def test_errors(self):
+        with raises(TypeError):
+            Predicates().add('foo')
         with raises(TypeError):
             Predicates([('foo', 4)])
-
-    def test_get_predicate_by_name_sys_identity(self):
-        assert Predicates()['Identity'].name == 'Identity'
+        with raises(KeyError):
+            Predicates()['NonExistentPredicate']
+        with raises(KeyError):
+            Predicates()[(-1, 2)]
+        with raises(KeyError):
+            Predicates()[(1, 2)]
+        with raises(ValueError):
+            Predicates().add((0, 0, 2, 'Identity'))
+        with raises(TypeError): # bad arity
+            Predicates().add((0, 0, None))
+        with raises(TypeError): # bad arity
+            Predicates().add((0, 0,))
+        with raises(ValueError): # bad arity
+            Predicates().add((0, 0, 0))
+        with raises(ValueError): # index too large
+            Predicates().add((Predicate.TYPE.maxi + 1, 0, 1))
+        preds = Predicates((0, 0, 1))
+        with raises(ValueError): # arity mismatch
+            preds.add((0, 0, 2))
 
     def test_get_predicate_by_index_subscript_sys_identity(self):
         assert Predicates()[(-1, 0)].name == 'Identity'
-
-    def test_get_predicate_notfound_bad_name(self):
-        with raises(KeyError):
-            Predicates()['NonExistentPredicate']
-
-    def test_get_predicate_notfound_bad_custom_index(self):
-        with raises(KeyError):
-            Predicates()[(1, 2)]
-
-    def test_get_predicate_no_such_predicate_error_bad_sys_index(self):
-        with raises(KeyError):
-            Predicates()[(-1, 2)]
 
     def test_get_pred_coords_tuple(self):
         assert Predicates().add((1, 1, 1)).coords == (1, 1)
@@ -91,185 +139,12 @@ class TestPredicates(object):
         v2 = copy(v)
         assert v2[spec] == predicate
 
-    def test_add_predicate_raises_non_predicate(self):
-        with raises(TypeError):
-            Predicates().add('foo')
-
-    def test_declare_already_declared_sys(self):
-        with raises(ValueError):
-            Predicates().add((0, 0, 2, 'Identity'))
-
-    def test_add_arity_mismatch(self):
-        v = Predicates((0, 0, 1))
-        v.add((0, 0, 1))
-        with raises(ValueError):
-            v.add((0, 0, 2))
-
-    def test_declare_index_too_large(self):
-        with raises(ValueError):
-            Predicates().add((Predicate.TYPE.maxi + 1, 0, 1))
-
-    def test_declare_arity_non_int(self):
-        with raises(TypeError):
-            Predicates().add((0, 0, None))
-        with raises(TypeError):
-            Predicates().add((0, 0,))
-
-    def test_declare_arity_0_error(self):
-        with raises(ValueError):
-            Predicates().add((0, 0, 0))
-
-    def test_new_predicate_subscript_non_int(self):
-        with raises(TypeError):
-            Predicate(0, None, 1)
-
-    def test_new_predicate_subscript_less_than_0_error(self):
-        with raises(ValueError):
-            Predicate(0, -1, 1)
-
-    def test_predicate_is_system_predicate_true(self):
-        assert Predicate.Identity.is_system
-
-    def test_predicate_eq_true(self):
-        assert Predicate.System['Identity'] == Predicate.Identity
-
-    def test_predicate_system_less_than_user(self):
+    def test_compare_id_with_user_pred(self):
         pred = Predicates().add((0, 0, 1))
         assert Predicate.Identity < pred
-
-    def test_predicate_system_less_than_or_equal_to_user(self):
-        pred = Predicates().add((0, 0, 1))
         assert Predicate.Identity <= pred
-
-    def test_predicate_user_greater_than_system(self):
-        pred = Predicates().add((0, 0, 1))
         assert pred > Predicate.Identity
-
-    def test_predicate_user_greater_than_or_equal_to_system(self):
-        pred = Predicates().add((0, 0, 1))
         assert pred >= Predicate.Identity
-
-    def test_constant_index_too_large(self):
-        with raises(ValueError):
-            Constant(Constant.TYPE.maxi + 1, 0)
-
-    def test_constant_is_constant_not_variable(self):
-        c = Constant(0, 0)
-        assert c.is_constant
-        assert not c.is_variable
-
-    def test_variable_index_too_large(self):
-        with raises(ValueError):
-            Variable(Variable.TYPE.maxi + 1, 0)
-
-    def test_base_cannot_construct(self):
-        with raises(TypeError):
-            Sentence()
-
-    def test_atomic_index_too_large(self):
-        with raises(ValueError):
-            Atomic(Atomic.TYPE.maxi + 1, 0)
-        
-    def test_atomic_substitute(self):
-        s = Atomic(0, 0)
-        c = Constant(0, 0)
-        v = Variable(0, 0)
-        res = s.substitute(c, v)
-        assert res == s
-
-    def test_atomic_constants_empty(self):
-        assert len(Atomic(0, 0).constants) == 0
-
-    def test_atomic_variables_empty(self):
-        assert len(Atomic(0, 0).variables) == 0
-
-    def test_atomic_next_a0_to_b0(self):
-        s = Atomic(0, 0)
-        res = s.next()
-        assert res.index == 1
-        assert res.subscript == 0
-
-    def test_atomic_next_e0_to_a1(self):
-        s = Atomic(Atomic.TYPE.maxi, 0)
-        res = s.next()
-        assert res.index == 0
-        assert res.subscript == 1
-
-    def test_predicated_no_such_predicate_no_vocab(self):
-        params = [Constant(0, 0), Constant(1, 0)]
-        with raises(ValueError):
-            Predicated('MyPredicate', params)
-
-    def test_predicated_arity_mismatch_identity(self):
-        params = [Constant(0, 0)]
-        with raises(TypeError):
-            Predicated('Identity', params)
-
-    def test_predicated_substitute_a_for_x_identity(self):
-        s = Predicated('Identity', [Variable(0, 0), Constant(1, 0)])
-        res = s.substitute(Constant(0, 0), Variable(0, 0))
-        assert res.params[0] == Constant(0, 0)
-        assert res.params[1] == Constant(1, 0)
-
-    def test_quantified_substitute_inner_quantified(self):
-        x = Variable(0, 0)
-        y = Variable(1, 0)
-        m = Constant(0, 0)
-        q = Quantifier.Existential
-        s1 = Predicated('Identity', [x, y])
-        s2 = Quantified(q, x, s1)
-        s3 = Quantified(q, y, s2)
-        res = s3.sentence.substitute(m, y)
-        check = Quantified(
-            q,
-            Variable(0, 0),
-            Predicated(
-                'Identity', [Variable(0, 0), Constant(0, 0)]
-            )
-        )
-        assert res == check
-
-    def test_operated_no_such_operator(self):
-        s = Atomic(0, 0)
-        with raises(ValueError):
-            Operated('Misjunction', [s, s])
-
-    def test_operated_arity_mismatch_negation(self):
-        s = Atomic(0, 0)
-        o = Operator.Negation
-        Operated(o, (s,))
-        with raises(TypeError):
-            Operated(o, [s, s])
-
-    def test_constant_repr_contains_subscript(self):
-        c = Constant(0, 8)
-        res = str(c)
-        assert '8' in res
-
-    def test_atomic_less_than_predicated(self):
-        s1 = Atomic(0, 4)
-        s2 = examples.predicated()
-        assert s1 < s2
-        assert s1 <= s2
-        assert s2 > s1
-        assert s2 >= s1
-
-    def test_sentence_operators_collection(self):
-        s = parse('KAMVxJxNbTNNImn')
-        ops = s.operators
-        assert len(ops) == 7
-        assert ','.join(str(o) for o in ops) == (
-            'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
-        )
-
-    def test_complex_quantified_substitution(self):
-        vocab = Predicates()
-        vocab.add((0, 0, 2))
-        s1 = parse('SxMVyFxy', vocab=vocab)
-        m = Constant(0, 0)
-        s2 = s1.sentence.substitute(m, s1.variable)
-        s3 = parse('MVyFmy', vocab=vocab)
-        assert s2 == s3
 
     def test_with_pred_defs_single_pred_with_length4(self):
         v = Predicates((0, 0, 1))
@@ -286,28 +161,6 @@ class TestPredicates(object):
         predicate = vocab[(0, 0)]
         assert predicate.arity == 3
 
-    def test_sorting_constants(self):
-        c1 = Constant(1, 0)
-        c2 = Constant(2, 0)
-        res = list(sorted([c2, c1]))
-        assert res[0] == c1
-        assert res[1] == c2
-
-    def test_sorting_predicated_sentences(self):
-        """
-        Lexical items should be sortable for models.
-        """
-        c1 = Constant(1, 0)
-        c2 = Constant(2, 0)
-        vocab = Predicates()
-        p = vocab.add((0, 0, 1))
-        s1 = Predicated(p, [c1])
-        s2 = Predicated(p, [c2])
-        sentences = [s2, s1]
-        res = list(sorted(sentences))
-        assert res[0] == s1
-        assert res[1] == s2
-
     def test_copy_preds(self):
         p1, p2, p3 = Predicate.gen(3)
         v1 = Predicates(p1, p2)
@@ -318,13 +171,196 @@ class TestPredicates(object):
         assert p3 in v1
         assert p3 not in v2
 
-    def test_sys_preds_enum_value(self):
-        Pred, Preds = Predicate, Predicates
-        assert Pred != Preds
-        assert Pred.System is Preds.System
-        assert Pred.Identity is Preds.System['Identity']
-        assert Pred.Identity.TYPE == Predicate
-        Id = Pred.Identity
-        assert Id == Preds['Identity']
-        assert Id == Preds.System.Identity
-        assert list(Preds) == list(Preds.System.Ordered)
+    class TestSystem(BaseSuite):
+
+        def test_predicate_equality(self):
+            assert Predicates()['Identity'].name == 'Identity'
+            assert Predicate.System['Identity'] == Predicate.Identity
+
+        def test_sys_preds_enum_value(self):
+            Pred, Preds = Predicate, Predicates
+            assert Pred != Preds
+            assert Pred.System is Preds.System
+            assert Pred.Identity is Preds.System['Identity']
+            assert Pred.Identity.TYPE == Predicate
+            Id = Pred.Identity
+            assert Id == Preds['Identity']
+            assert Id == Preds.System.Identity
+            assert list(Preds) == list(Preds.System)
+            assert sorted(Preds) == list(Preds.System)
+
+
+class TestSentence(BaseSuite):
+
+    def test_base_cannot_construct(self):
+        with raises(TypeError):
+            Sentence()
+
+    class TestAtomic(BaseSuite):
+
+        def test_errors(self):
+            with raises(ValueError):
+                Atomic(Atomic.TYPE.maxi + 1, 0)
+
+        def test_setence_impl(self):
+            s = A
+            assert s.operator == None
+            assert s.quantifier == None
+            assert s.predicate == None
+            assert s.is_atomic == True
+            assert s.is_predicated == False
+            assert s.is_quantified == False
+            assert s.is_operated == False
+            assert s.is_literal == True
+            assert s.is_negated == False
+            assert s.constants == EmptySet
+            assert s.variables == EmptySet
+            assert s.predicates == EmptySet
+            assert s.atomics == {s}
+            assert s.operators == tuple()
+            assert s.substitute(a, x) == s
+            assert s.negate() == self.p('Na')
+            assert s.negative() == self.p('Na')
+            assert s.asserted() == self.p('Ta')
+            assert s.disjoin(B) == self.p('Aab')
+            assert s.conjoin(B) == self.p('Kab')
+            assert s.variable_occurs(x) == False
+
+        def test_next(self):
+            s = A.next()
+            assert s.index == 1
+            assert s.subscript == 0
+            s =  Atomic(Atomic.TYPE.maxi, 0).next()
+            assert s.index == 0
+            assert s.subscript == 1
+
+    class TestPredicated(BaseSuite):
+
+        def test_errors(self):
+            with raises(ValueError):
+                Predicated('MyPredicate', (a, b))
+            with raises(TypeError):
+                Predicated('Identity', (a,))
+        def test_setence_impl(self):
+            s = Predicated(F,(a,))
+            assert s.operator == None
+            assert s.quantifier == None
+            assert s.predicate == Predicate((0, 0, 1))
+            assert s.is_atomic == False
+            assert s.is_predicated == True
+            assert s.is_quantified == False
+            assert s.is_operated == False
+            assert s.is_literal == True
+            assert s.is_negated == False
+            assert s.constants == {a}
+            assert s.variables == EmptySet
+            assert s.predicates == {F}
+            assert s.atomics == EmptySet
+            assert s.operators == tuple()
+            assert s.substitute(a, x) == s
+            assert s.negate() == self.p('NFm')
+            assert s.negative() == self.p('NFm')
+            assert s.asserted() == self.p('TFm')
+            assert s.disjoin(B) == self.p('AFmb')
+            assert s.conjoin(B) == self.p('KFmb')
+            assert s.variable_occurs(x) == False
+            s = Predicated(F, (x,))
+            assert s.is_predicated == True
+            assert s.substitute(a, x) == F((a,))
+            assert s.variables == {x}
+            assert s.variable_occurs(x) == True
+
+        def test_atomic_less_than_predicated(self):
+            s2 = Predicated.first()
+            assert A < s2
+            assert A <= s2
+            assert s2 > A
+            assert s2 >= A
+
+        def test_sorting_predicated_sentences(self):
+            # Lexical items should be sortable for models.
+            vocab = Predicates()
+            p = vocab.add((0, 0, 1))
+            s1 = Predicated(p, (a,))
+            s2 = Predicated(p, (b,))
+            sentences = [s2, s1]
+            res = list(sorted(sentences))
+            assert res[0] == s1
+            assert res[1] == s2
+
+        def test_predicated_substitute_a_for_x_identity(self):
+            s = Predicated('Identity', [x, b])
+            res = s.substitute(a, x)
+            assert res.params[0] == a
+            assert res.params[1] == b
+
+    class TestQuantified(BaseSuite):
+
+        def test_quantified_substitute_inner_quantified(self):
+            q = Quantifier.Existential
+            s1 = Predicated('Identity', (x, y))
+            s2 = Quantified(q, x, s1)
+            s3 = Quantified(q, y, s2)
+            res = s3.sentence.substitute(a, y)
+            check = Quantified(
+                q,
+                Variable(0, 0),
+                Predicated(
+                    'Identity', [Variable(0, 0), Constant(0, 0)]
+                )
+            )
+            assert res == check
+
+        def test_complex_quantified_substitution(self):
+            vocab = Predicates()
+            vocab.add((0, 0, 2))
+            s1 = parse('SxMVyFxy', vocab=vocab)
+            m = Constant(0, 0)
+            s2 = s1.sentence.substitute(m, s1.variable)
+            s3 = parse('MVyFmy', vocab=vocab)
+            assert s2 == s3
+
+    class TestOperated(BaseSuite):
+
+        def test_errors(self):
+            with raises(ValueError):
+                Operated('Misjunction', (A, A))
+            with raises(TypeError):
+                Operated(Operator.Negation, (A, A))
+
+        def test_operators(self):
+            s = parse('KAMVxJxNbTNNImn')
+            ops = s.operators
+            assert len(ops) == 7
+            assert ','.join(str(o) for o in ops) == (
+                'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
+            )
+
+class TestArgument(BaseSuite):
+
+    class TestSorting(BaseSuite):
+
+        def test_compare1(self):
+            # len(a1) == len(a2) == 3
+            # a1.conclusion == b
+            # a2.conclusion === NBab
+            a1 = self.parg('Denying the Antecedent')
+            a2 = self.parg('Biconditional Introduction 3')
+            assert a1.conclusion < a2.conclusion
+            assert len(a1) == len(a2)
+            assert a2 > a1
+            assert a2 >= a1
+            assert a1 < a2
+            assert a1 <= a2
+
+        def test_gen_sentence1(self):
+            a1 = Argument(A)
+            for _ in range(10):
+                a2 = Argument(a1.conclusion.next())
+                assert a2 > a1
+                assert a2 >= a1
+                assert a1 < a2
+                assert a1 <= a2
+                assert a1 != a2
+                a1 = a2
+

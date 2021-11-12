@@ -1,17 +1,17 @@
 
 from errors import *
 from events import Events
-from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau
+from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau, KEY, FLAG
 from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
 from proof.common import Getters, Filters
 from lexicals import Atomic, Constant, Predicated
-from utils import get_logic
+from utils import get_logic, ReadOnlyDict
 import examples
-
+from types import ModuleType, MappingProxyType
 import time
 from pytest import raises
-from .tutils import BaseSuite,  using
+from .tutils import BaseSuite,  using, skip
 
 class TestTableauxSystem(object):
 
@@ -25,6 +25,8 @@ def mock_sleep_5ms():
 
 def exarg(*args, **kw):
     return examples.argument(*args, **kw)
+
+sen = 'sentence'
 
 @using(logic = 'CPL')
 class TestTableau(BaseSuite):
@@ -42,13 +44,13 @@ class TestTableau(BaseSuite):
         assert 'finished' in tab.__repr__()
 
     def test_build_premature_max_steps(self):
-        tab = self.tab('Material Modus Ponens', max_steps=1)
+        tab = self.tab('MMP', max_steps=1)
         assert tab.premature
 
     def test_construct_sets_is_rank_optim_option(self):
-        proof = Tableau('cpl', is_rank_optim=False)
-        assert proof.rules.get('Conjunction')
-        assert not proof.opts['is_rank_optim']
+        tab = self.tab(is_rank_optim=False)
+        assert tab.rules.get('Conjunction')
+        assert not tab.opts['is_rank_optim']
 
     def test_timeout_1ms(self):
         proof = Tableau('cpl', exarg('Addition'), build_timeout=1)
@@ -88,10 +90,6 @@ class TestTableau(BaseSuite):
         assert isinstance(r, Rule)
         assert r is rule
 
-# from proof.tableaux import *
-# import examples
-# arg = examples.argument('Triviality 1')
-# tab = Tableau('cpl', arg)
     def test_after_branch_add_with_nodes_no_parent(self):
 
         class MockRule(Rule):
@@ -115,6 +113,15 @@ class TestTableau(BaseSuite):
     #def test_add_rule_group_instance_mock(self):
     #    class MockRule1():
 
+    def test_ticked_step_flag_refactored_from_node(self):
+        sen='sentence'
+        tab, b = self.tabb([
+            {sen: s} for s in self.pp('NNa', 'Kab', 'Aab')
+        ])
+        rule, target = tab.step()
+        stat = tab.stat(b, target.node, KEY.FLAGS)
+        assert FLAG.TICKED in stat
+        pass
 class TestBranch(object):
 
     def test_next_world_returns_w0(self):
@@ -141,38 +148,28 @@ class TestBranch(object):
     def test_has_all_true_1(self):
         b = Branch()
         s1, s2, s3 = Atomic.gen(3)
-        b.extend([{'sentence': s1}, {'sentence': s2}, {'sentence': s3}])
-        check = [{'sentence': s1, 'sentence': s2}]
+        b.extend([{sen: s1}, {sen: s2}, {sen: s3}])
+        check = [{sen: s1, sen: s2}]
         assert b.has_all(check)
 
     def test_has_all_false_1(self):
         b = Branch()
         s1, s2, s3 = Atomic.gen(3)
-        b.extend([{'sentence': s1}, {'sentence': s3}])
-        check = [{'sentence': s1, 'sentence': s2}]
+        b.extend([{sen: s1}, {sen: s3}])
+        check = [{sen: s1, sen: s2}]
         assert not b.has_all(check)
-
-    # def test_atomics_1(self):
-    #     b = Branch()
-    #     s1 = Atomic(0, 0)
-    #     s2 = Atomic(1, 0).negate()
-    #     s3 = Atomic(1, 0)
-    #     b.extend([{'sentence': s1}, {'sentence': s2}])
-    #     res = b.atomics
-    #     assert s1 in res
-    #     assert s3 in res
-
-    # def test_predicates(self):
-    #     b = Branch()
-    #     s1 = examples.predicated()
-    #     s2 = s1.negate().negate()
-    #     b.add({'sentence': s2})
-    #     assert s1.predicate in b.predicates()
 
     def test_branch_has_world1(self):
         proof = Tableau()
         branch = proof.branch().add({'world1': 4, 'world2': 1})
         assert branch.has({'world1': 4})
+
+    # def test_append_existing_node_fails(self):
+    #     b, n = Branch(), Node()
+    #     b.append(n)
+    #     assert len(b) == 1 and n in b
+    #     with raises(ValueError):
+    #         b.append(n)
 
     def test_regression_branch_has_works_with_newly_added_node_on_after_node_add(self):
 
@@ -229,6 +226,7 @@ class TestBranch(object):
         branch.close()
         assert branch.has({'is_flag': True, 'flag': 'closure'})
 
+
     # def test_constants_or_new_returns_pair_no_constants(self):
     #     branch = Branch()
     #     res = branch.constants_or_new()
@@ -240,7 +238,7 @@ class TestBranch(object):
     # def test_constants_or_new_returns_pair_with_constants(self):
     #     branch = Branch()
     #     s1 = Predicated('Identity', [Constant(0, 0), Constant(1, 0)])
-    #     branch.add({'sentence': s1})
+    #     branch.add({sen: s1})
     #     res = branch.constants_or_new()
     #     assert len(res) == 2
     #     constants, is_new = res
@@ -261,8 +259,11 @@ class TestBranch(object):
 
     def test_for_in_iter_nodes(self):
         b, nn = self.case1()
+        npp = tuple(n.props for n in nn)
         assert tuple(n for n in iter(b)) == nn
         assert tuple(n for n in b) == nn
+        assert tuple(n.props for n in iter(b)) == npp
+        assert tuple(n.props for n in b) == npp
 
     def test_subscript_1(self):
         b, nn = self.case1(n=5)
@@ -302,7 +303,7 @@ class TestBranch(object):
 class TestNode(object):
 
     def test_worlds_contains_worlds(self):
-        node = Node({'worlds': set([0, 1])})
+        node = Node({'worlds': {0, 1}})
         res = node.worlds
         assert 0 in res
         assert 1 in res
@@ -313,6 +314,34 @@ class TestNode(object):
         node = branch[0]
         assert node.has('is_flag')
 
+    def test_create_node_with_various_types(self):
+        exp = dict(Node.defaults)
+        exp.update({'a':1,'b':2,'c':3})
+        for inp in [
+            zip(('a', 'b', 'c'), (1, 2, 3)),
+            MappingProxyType(exp),
+            exp.items()
+        ]:
+            n = Node(inp)
+            assert dict(n.props) == exp
+
+    def test_or_ror_operators(self):
+        pa = dict(Node.defaults)
+        pb = dict(Node.defaults)
+        pa.update({'a': 1, 'b': 3, 'C': 3, 'x': 1})
+        pb.update({'A': 1, 'b': 2, 'c': 4, 'y': 3})
+        exp1 = pa | pb
+        exp2 = pb | pa
+        n1, n2 = (Node(n) for n in (pa, pb))
+        assert n1 | n2 == exp1
+        assert n1 | n2.props == exp1
+        assert n1.props | n2 == exp1
+        assert n1.props | n2.props == exp1
+        assert n2 | n1 == exp2
+        assert n2 | n1.props == exp2
+        assert n2.props | n1 == exp2
+        assert n2.props | n1.props == exp2
+        
 class TestRule(object):
 
     def test_base_not_impl_various(self):
@@ -382,9 +411,9 @@ class TestFilters(BaseSuite):
 
     def test_MethodFilter_node_has_props_sentence(self):
         s1, s2 = self.pp('a', 'b')
-        f = Filters.Method('has_props', {'sentence': s1})
-        assert f(Node({'sentence': s1}))
-        assert not f(Node({'sentence': s2}))
+        f = Filters.Method('has_props', {sen: s1})
+        assert f(Node({sen: s1}))
+        assert not f(Node({sen: s2}))
 
     def test_AttrFilter_node_is_modal(self):
         class Lhs(object):
@@ -423,16 +452,17 @@ class NodeFilterRule(Rule):
     NodeFilters = (
         ('designation', DesignationFilter),
         ('modal', ModalFilter),
-        ('sentence', Filters.Node.Sentence),
+        (sen, Filters.Node.Sentence),
     )
 
+@skip
 @using(logic = 'CPL')
 class Test_NodeFilter(BaseSuite):
 
     def nn1(self, n = 2):
         return tuple(
             Node({
-                'sentence': s,
+                sen: s,
                 'designated': None if i == 0 else bool(i % 2),
             })
             for i, s in enumerate(self.sgen(n))
@@ -453,16 +483,16 @@ class Test_NodeFilter(BaseSuite):
         nf, b, nn = self.case1(NodeFilterRule, 4)
         fview = nf.filters
         assert len(fview) == 3
-        assert 'sentence' in fview
+        assert sen in fview
         assert isinstance(fview.sentence, Filters.Node.Sentence)
-        assert fview['sentence'] == fview.sentence
+        assert fview[sen] == fview.sentence
         assert fview.sentence in set(fview)
         with raises(AttributeError):
             fview.foo
         with raises(AttributeError):
             del(fview.sentence)
         with raises(TypeError):
-            del(fview['sentence'])
+            del(fview[sen])
 
     def test_sentence_no_filters(self):
         nf, b, nn = self.case1(NodeFilterRule)
@@ -532,13 +562,13 @@ class Test_K_DefaultNodeFilterRule(BaseSuite):
         for i in range(n):
             s = sgen.__next__()
             if i == 0:
-                n = {'sentence':s}
+                n = {sen:s}
             elif i % 3 == 0:
                 w1 = wn
                 w2 = wn = w1 + 1
                 n = {'world1':w1, 'world2':w2}
             else:
-                n = {'sentence':s, 'world':wn}
+                n = {sen:s, 'world':wn}
             yield Node(n)
         sgen.close()
 
@@ -569,7 +599,7 @@ class TestMaxConstantsTracker(BaseSuite):
         assert rule.mtr._compute_max_constants(branch) == 3
 
     def xtest_compute_for_node_one_q_returns_1(self):
-        n = {'sentence': self.p('VxFx'), 'world': 0}
+        n = {sen: self.p('VxFx'), 'world': 0}
         node = Node(n)
         proof = Tableau()
         rule = Rule(proof)
@@ -581,8 +611,8 @@ class TestMaxConstantsTracker(BaseSuite):
     def compute_for_branch_two_nodes_one_q_each_returns_3(self):
         s1 = self.p('LxFx')
         s2 = self.p('SxFx')
-        n1 = {'sentence': s1, 'world': 0}
-        n2 = {'sentence': s2, 'world': 0}
+        n1 = {sen: s1, 'world': 0}
+        n2 = {sen: s2, 'world': 0}
         proof = Tableau()
         rule = Rule(proof)
         branch = proof.branch()

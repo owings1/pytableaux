@@ -1,4 +1,4 @@
-{%- macro write_node(lw, node) -%}
+{%- macro write_node(lw, tab, node) -%}
     <div class="node {{- ' ticked' if node.ticked }}"{#
         #} id="node_{{ node.id }}"{#
         #} data-node-id="{{ node.id }}"{#

@@ -1,4 +1,4 @@
-import examples
+import examples, utils
 from inspect import isclass, getmembers
 from lexicals import Argument, Predicates, create_lexwriter
 from parsers import notations as parser_notns, create_parser, parse_argument, parse
@@ -211,6 +211,23 @@ class BaseSuite(object):
         assert tab.invalid
         return tab
 
+    def tabb(self, *args, **kw):
+        b = Branch()
+        # maybe this will work
+        if args and isinstance(args[0], (dict, list, tuple)):
+            arg, *args = args
+            if isinstance(arg, dict):
+                arg = (arg,)
+            try:
+                b.extend(arg)
+            except TypeError:
+                print (arg)
+                print (args)
+                raise
+        tab = self.tab(*args, **kw)
+        tab.add(b)
+        return (tab, b)
+
     def acmm(self, *args, **kw):
         kw['is_build_models'] = True
         tab = self.invalid_tab(*args, **kw)
@@ -265,3 +282,20 @@ class BaseSuite(object):
         return self.logic.Model
 
 
+if utils.testlw == None:
+    utils.testlw = BaseSuite.lw
+def tp(tab):
+    print(
+        '\n'.join([
+            ','.join([str(n) for n in nodes])
+            for nodes in (b for b in tab)
+        ])
+    )
+def titer(tab):
+    return  chain.from_iterable(iter(b) for b in tab)
+    nn = titer(tab)
+
+    # print the sentences
+    ss = filter(bool, (n.get('sentence') for n in nn))
+    pr = (lw.write(s) for s in ss)
+    print('\n'.join(list(pr)))

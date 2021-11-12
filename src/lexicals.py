@@ -22,9 +22,9 @@ from enum import Enum, EnumMeta, unique
 from errors import NotFoundError
 from itertools import chain
 from past.builtins import basestring
-from types import DynamicClassAttribute
+from types import DynamicClassAttribute, MappingProxyType
 from utils import CacheNotationData, Decorators as decs, ReadOnlyDict, cat, isstr, \
-    typecheck, condcheck, EmptySet, kwrepr
+    typecheck, condcheck, EmptySet, kwrepr, orepr
 lazyget = decs.lazyget
 setonce = decs.setonce
 nosetattr = decs.nosetattr
@@ -35,17 +35,53 @@ def _isreadonly(cls):
         getattr(cls, '_clsinit', False) and
         getattr(cls, '_readonly', False)
     )
+def _raise(errcls = AttributeError):
+    def fraise(cls, *args, **kw):
+        raise errcls('Unsupported operation for %s' % cls)
+    return fraise
+def _lexstr(item):
+    try:
+        return _syslw.write(item)
+    except NameError:
+        try:
+            return str(item.ident)
+        except AttributeError as e:
+            try:
+                return '%s(%s)' % (item.TYPE.name, e)
+            except AttributeError as e:
+                return '%s(%s)' % (item.__class__.__name__, e)
+def _lexrepr(item):
+    try:
+        return '<%s: %s>' % (item.TYPE.role, str(item))
+    except AttributeError:
+        return '<%s: ?>' % item.__class__.__name__
+
+class MetaBase(type):
+    _readonly = True
+    __setattr__ = nosetattr(type.__setattr__, check=_isreadonly)
+    __delattr__ = _raise(AttributeError)
 
 class EnumMetaBase(EnumMeta):
 
     _keytypes = (basestring,)
 
     def __new__(cls, clsname, bases, attrs, **kw):
+        keytypes = attrs.get('_keytypes', None)
+        if callable(keytypes):
+            keytypes = keytypes()
+            attrs.pop('_keytypes')
+        membersinit = attrs.get('_members_init', None)
         enumcls = super().__new__(cls, clsname, bases, attrs, **kw)
-        clsdict = enumcls.__dict__
+        if keytypes:
+            enumcls._keytypes = keytypes
         names = enumcls._member_names_
         if len(names):
             members = [enumcls._member_map_[name] for name in names]
+            if callable(membersinit):
+                membersinit(enumcls, members)
+                enumcls._members_init = None
+            else:
+                enumcls._members_init(members)
             index = {}
             for i, member in enumerate(members):
                 next = members[i + 1] if i < len(members) - 1 else None
@@ -53,13 +89,9 @@ class EnumMetaBase(EnumMeta):
                     k: (member, i, next) for k in
                     enumcls._member_keys(member)
                 })
-            if _isreadonly(enumcls):
-                index = ReadOnlyDict(index)
-            enumcls._Index = index
+            enumcls._Index = MappingProxyType(index)
             enumcls._Ordered = tuple(members)
-            enumcls._members_init(members)
-            if '_members_init' in clsdict:
-                clsdict.pop('_members_init')
+            enumcls._Set = frozenset(members)
             enumcls._clsinit = True
         return enumcls
 
@@ -72,9 +104,6 @@ class EnumMetaBase(EnumMeta):
     def get(cls, key, dflt = None):
         return cls[key] if key in cls else dflt
 
-    def iget(cls, i):
-        return cls._Ordered[i]
-
     def index(cls, member):
         return cls._Index[member.name][1]
 
@@ -83,6 +112,8 @@ class EnumMetaBase(EnumMeta):
             return key
         if isinstance(key, cls._keytypes):
             return cls._Index[key][0]
+        if isinstance(key, (int, slice)):
+            return cls._Ordered[key]
         return super().__getitem__(key)
 
     def __contains__(cls, key):
@@ -90,47 +121,32 @@ class EnumMetaBase(EnumMeta):
             return key in cls._Index
         return super().__contains__(key)
 
-    def __delattr__(cls, attr): raise AttributeError(attr)
-
-    @nosetattr(check=_isreadonly)
-    def __setattr__(cls, a, v): return super().__setattr__(a, v)
+    __delattr__ = _raise(AttributeError)
+    __setattr__ = nosetattr(EnumMeta.__setattr__, check=_isreadonly)
 
 class EnumBase(Enum, metaclass = EnumMetaBase):
 
-    @nosetattr(check=_isreadonly, cls=True)
-    def __setattr__(self, a, v): return super().__setattr__(a, v)
+    __delattr__ = _raise(AttributeError)
+    __setattr__ = nosetattr(Enum.__setattr__, check=_isreadonly, cls=True)
+
+EnumBase._readonly = True
 
 class LexEnumMeta(EnumMetaBase):
-
-    _readonly = True
 
     @DynamicClassAttribute
     def TYPE(cls):
         return LexType[cls.__name__] 
-
-    # def __new__(cls, clsname, bases, attrs):
-    #     return super().__new__(cls, clsname, bases, attrs)
 
     def __call__(cls, *args, **kw):
         if len(args) == 1 and isinstance(args[0], cls._keytypes) and args[0] in cls:
             return args[0]
         return super().__call__(*args, **kw)
 
-class LexItemMeta(type):
+class LexItemMeta(MetaBase):
 
     @DynamicClassAttribute
     def TYPE(cls):
         return LexType[cls.__name__]
-
-    # def __new__(cls, clsname, bases, attrs):
-    #     return super().__new__(cls, clsname, bases, attrs)
-
-    def __setattr__(cls, a, v):
-        if a in ('System',) and bool(getattr(cls, a, None)):
-            raise AttributeError(cls, a)
-        return super().__setattr__(a, v)
-
-    def __delattr__(cls, attr): raise AttributeError(cls, attr)
 
     def __call__(cls, *args, **kw):
         if len(args) == 1 and isinstance(args[0], cls):
@@ -192,20 +208,34 @@ class Lexical(object):
             if item:
                 yield item
 
-    def __delattr__(self, attr):
-        raise AttributeError('Attribute deletion not supported')
+    def _sortcheck(sort_comparator):
+        def compare(self, other):
+            try:
+                return sort_comparator(self, other)
+            except AttributeError:
+                raise TypeError('sort comparisons not available between %s and %s', (
+                self.TYPE, other.__class__
+            ))
+        return compare
 
+    @_sortcheck
     def __lt__(self, other):
         return self.TYPE < other.TYPE or self.sort_tuple < other.sort_tuple
 
+    @_sortcheck
     def __le__(self, other):
         return self.TYPE <= other.TYPE or self.sort_tuple <= other.sort_tuple
 
+    @_sortcheck
     def __gt__(self, other):
         return self.TYPE > other.TYPE or self.sort_tuple > other.sort_tuple
 
+    @_sortcheck
     def __ge__(self, other):
         return self.TYPE >= other.TYPE or self.sort_tuple >= other.sort_tuple
+
+    def __repr__(self):
+        return _lexrepr(self)
 
 class LexEnum(Lexical, EnumBase, metaclass = LexEnumMeta):
     """
@@ -224,9 +254,9 @@ class LexEnum(Lexical, EnumBase, metaclass = LexEnumMeta):
         """
         :implements: Lexical
         """
-        return cls.iget(0)
+        return cls[0]
 
-    def next(self, loop = True, **kw):
+    def next(self, loop = False, **kw):
         """
         :implements: Lexical
         """
@@ -236,7 +266,7 @@ class LexEnum(Lexical, EnumBase, metaclass = LexEnumMeta):
             if not loop:
                 return
             i = 0
-        return cls.iget(i)
+        return cls[i]
 
     def __init__(self, order, label, *_):
         self.spec = self.name
@@ -253,9 +283,8 @@ class LexEnum(Lexical, EnumBase, metaclass = LexEnumMeta):
             return other in (self.name, self.label)
         return EnumBase.__eq__(self, other)
 
-    def __repr__(self): return self.name
-
-    def __str__(self): return self.name
+    def __str__(self):
+        return self.name
 
     @staticmethod
     def _member_keys(member):
@@ -264,7 +293,7 @@ class LexEnum(Lexical, EnumBase, metaclass = LexEnumMeta):
     @classmethod
     def _members_init(cls, members):
         for member in members:
-            member.index = EnumMetaBase.index(member.__class__, member)
+            member.index = members.index(member)
 
 class LexItem(Lexical, metaclass = LexItemMeta):
     """
@@ -296,19 +325,13 @@ class LexItem(Lexical, metaclass = LexItemMeta):
         if cls not in LexType: raise TypeError('Abstract type %s' % cls)
         return super().__new__(cls)
 
-    def __repr__(self):
-        try:
-            return self.ident.__repr__()
-        except AttributeError as e:
-            return (self.TYPE.name, e).__repr__()
+    def __str__(self):
+        return _lexstr(self)
 
 @unique
 class Quantifier(LexEnum):
     Existential = (0, 'Existential')
     Universal   = (1, 'Universal')
-
-    def over(self, variable, sentence):
-        return Quantified(self, variable, sentence)
 
     def __call__(self, *spec):
         return Quantified(self, *spec)
@@ -325,9 +348,6 @@ class Operator(LexEnum):
     Biconditional           = (80,  'Biconditional', 2)
     Possibility             = (90,  'Possibility',   1)
     Necessity               = (100, 'Necessity',     1)
-
-    def on(self, operands):
-        return Operated(self, operands)
 
     def __init__(self, *value):
         self.arity = value[2]
@@ -504,7 +524,7 @@ class Predicate(CoordsItem):
         :type: tuple
         """
         return tuple({
-            self.coords, self.sort_tuple, self.ident, self.name
+            self.coords, self.spec, self.ident, self.name
         })
 
     System = EmptySet
@@ -531,6 +551,11 @@ class Predicate(CoordsItem):
         else:
             name = self.spec
         self.__name = name
+
+    def __str__(self):
+        if self.is_system:
+            return self.name
+        return super().__str__()
 
     def __call__(self, *spec):
         return Predicated(self, *spec)
@@ -991,7 +1016,7 @@ class Quantified(Sentence):
         try:
             quantifier = Quantifier[quantifier]
         except KeyError:
-            raise TypeError(quantifier)
+            raise TypeError(quantifier) from None
         if not isinstance(variable, Variable):
             raise TypeError(variable)
         if not isinstance(sentence, Sentence):
@@ -1131,41 +1156,38 @@ class Operated(Sentence):
     def __contains__(self, s):
         return s in self.operands
 
-class LexTypeMeta(EnumMetaBase):
-
-    _readonly = True
-    _keytypes = (basestring, LexItemMeta, LexEnumMeta)
-
-    def _member_keys(cls, member):
-        return (member.name, member.cls)
-
-    def _members_init(cls, members):
-        cls.byrank = ReadOnlyDict({
-            member.rank: member for member in members
-        })
-
 @unique
-class LexType(EnumBase, metaclass = LexTypeMeta):
+class LexType(EnumBase, metaclass = EnumMetaBase):
     """
     - rank
     - cls
-    - category
+    - role
     - maxi
     """
-    Predicate   = (10,  Predicate,  LexItem,       3)
+    Predicate   = (10,  Predicate,  Predicate,     3)
     Constant    = (20,  Constant,   Parameter,     3)
     Variable    = (30,  Variable,   Parameter,     3)
-    Quantifier  = (33,  Quantifier, LexEnum,    None)
-    Operator    = (35,  Operator,   LexEnum,    None)
+    Quantifier  = (33,  Quantifier, Quantifier, None)
+    Operator    = (35,  Operator,   Operator,   None)
     Atomic      = (40,  Atomic,     Sentence,      4)
     Predicated  = (50,  Predicated, Sentence,   None)
     Quantified  = (60,  Quantified, Sentence,   None)
     Operated    = (70,  Operated,   Sentence,   None)
 
+    def _keytypes(): return (basestring, LexItemMeta, LexEnumMeta)
+
+    def _members_init(cls, members):
+        cls.byrank = MappingProxyType({
+            member.rank: member for member in members
+        })
+
+    @staticmethod
+    def _member_keys(member): return (member.name, member.cls)
 
     def __init__(self, *value):
         super().__init__()
-        self.rank, self.cls, self.category, self.maxi = value
+        self.rank, self.cls, self.generic, self.maxi = value
+        self.role = self.generic.__name__
         self.hash = hash(self.__class__.__name__) + self.rank
  
     def __hash__(self):
@@ -1175,68 +1197,39 @@ class LexType(EnumBase, metaclass = LexTypeMeta):
         cls = self.cls
         return cls is other or cls is getattr(other, 'cls', None)
 
+    def _sortcheck(fcmp):
+        opers = {'__lt__': '<', '__le__': '<=', '__gt__': '>', '__ge__': '>='}
+        fname = fcmp.__name__
+        def fcmpwrap(self, other):
+            try:
+                return fcmp(self, other)
+            except (AttributeError, TypeError):
+                raise TypeError('%s not supported between %s and %s' %
+                    (opers.get(fname, fname),
+                    self.__class__.__name__, other.__class__.__name__)
+                ) from None
+        return fcmpwrap
+
+    @_sortcheck
     def __lt__(self, other): return self.rank < other.rank
+    @_sortcheck
     def __le__(self, other): return self.rank <= other.rank
+    @_sortcheck
     def __gt__(self, other): return self.rank > other.rank
+    @_sortcheck
     def __ge__(self, other): return self.rank >= other.rank
 
     def __repr__(self):
         return kwrepr(
-            Type=self.name, rank=self.rank, category=self.category
+            Type=self.name, rank=self.rank, role=self.role
         )
 
-class PredicatesMeta(type):
+class PredicatesMeta(MetaBase):
 
-    def __new__(cls, clsname, bases, attrs):
-
-        Predicates = super().__new__(cls, clsname, bases, attrs)
-        if Predicate.System:
-            return Predicates
-        base = Predicates.SystemEnum
-        class System(object):
-            def __getattr__(self, a):
-                try: return base.Index[a]
-                except KeyError: return getattr(base, a)
-            def __setattr__(self, a, v): raise AttributeError(a)
-            def __delattr__(self, a): raise AttributeError(a)
-            def __getitem__(self, k): return base.Index[k]
-            def __contains__(self, k): return k in base
-            def __len__(self): return len(base)
-            def __iter__(self): return iter(base.Ordered)
-            def __repr__(self): return (Predicates, base).__repr__()
-        # Empty = Predicates.Empty = Predicates()
-        # Empty.add = Empty.update = None
-        Predicate.System = Predicates.System = System()
-        Predicates._readonly = True
-        Predicate._readonly  = True
-        base._readonly = True
-        return Predicates
-
-    @nosetattr(check=lambda c: c.SystemEnum._readonly)
-    def __setattr__(cls, a, v): return super().__setattr__(a, v)
-    def __delattr__(cls, attr): raise AttributeError(attr)
     def __getitem__(cls, key): return cls.System[key]
     def __contains__(cls, key): return key in cls.System
     def __len__(cls): return len(cls.System)
     def __iter__(cls): return iter(cls.System)
-
-    class SystemEnumMeta(EnumMetaBase):
-        _readonly = False
-        _keytypes = (basestring, tuple, Predicate, Enum)
-
-        def __new__(cls, clsname, bases, attrs, **kw):
-            return super().__new__(cls, clsname, bases, attrs, **kw)
-
-        def _member_keys(cls, member):
-            return (*member.pred.refs, member.pred)
-        def _members_init(cls, members):
-            cls._Index = ReadOnlyDict(cls._Index)
-            cls.Index = ReadOnlyDict({
-                ref: member.pred for
-                ref, (member, *_) in cls._Index.items()
-            })
-            cls.Set = frozenset(cls.Index.values())
-            cls.Ordered = tuple(sorted(cls.Set))
 
 class Predicates(object, metaclass = PredicatesMeta):
     """
@@ -1244,14 +1237,19 @@ class Predicates(object, metaclass = PredicatesMeta):
     """
 
     @unique
-    class SystemEnum(EnumBase, metaclass = PredicatesMeta.SystemEnumMeta):
-        Identity  = (-1, 0, 2, 'Identity')
+    class System(EnumBase, metaclass = EnumMetaBase):
+        pass
         Existence = (-2, 0, 1, 'Existence')
-
-        def __init__(self, *args):
-            super().__init__()
-            self.pred = pred = Predicate(self.value)
+        Identity  = (-1, 0, 2, 'Identity')
+        def __new__(self, *spec):
+            pred = Predicate(spec)
+            pred._value_ = pred
             setattr(Predicate, pred.name, pred)
+            return pred
+        @staticmethod
+        def _member_keys(pred):
+            return (*pred.refs, pred)
+        def _keytypes(): return (basestring, tuple, Predicate)
 
     def add(self, pred):
         """
@@ -1292,22 +1290,26 @@ class Predicates(object, metaclass = PredicatesMeta):
 
     def __iter__(self):
         return iter(self.__uset)
-        return chain(self.System, self.__uset)
 
     def __len__(self):
         return len(self.__uset)
-        return len(self.__uset) + len(self.System)
 
     def __contains__(self, ref):
         return ref in self.__idx or ref in self.System
 
     def __bool__(self):
         return True
+
     def __copy__(self):
         preds = self.__class__()
         preds.__uset = set(self.__uset)
         preds.__idx = dict(self.__idx)
         return preds
+
+    def __repr__(self):
+        return orepr(self, len=len(self))
+Predicates._clsinit = True
+Predicate.System = Predicates.System
 
 lexwriter_classes = {
     # Values populated after class declarations below.
@@ -1354,19 +1356,19 @@ class RenderSet(CacheNotationData):
             return self.formats[ctype].format(value)
         return self.strings[ctype][value]
 
-class LexWriterMeta(type):
-    pass
-#     def __call__(cls, notn=None, enc=None, **opts):
-#         if cls == LexWriter or cls == BaseLexWriter:
-#             return create_lexwriter(notn=None, enc=None, **opts)
-#         return super().__call__
-#     pass
-class LexWriter(object, metaclass = LexWriterMeta):
+class LexWriter(object, metaclass = MetaBase):
 
     opts = {}
 
     def __init__(self, **opts):
         self.opts = self.opts | opts
+
+    @staticmethod
+    def canwrite(item):
+        try:
+            return item.__class__.__name__ in LexType
+        except AttributeError:
+            return False
 
     def write(self, item):
         """
@@ -1596,33 +1598,57 @@ class Argument(object):
         self.__conclusion = conclusion
 
     @property
+    def conclusion(self):
+        return self.__conclusion
+
+    @property
     def premises(self):
         return self.__premises
 
-    @property
-    def conclusion(self):
-        return self.__conclusion
+    def __len__(self):
+        return bool(self.conclusion) + len(self.premises)
+
+    def __iter__(self):
+        return iter(s for s in (self.conclusion, *self.premises))
+
+    def _cmp(self, other):
+        if not isinstance(other, self.__class__):
+            raise TypeError('Cannot compare between %s and %s' % (
+                self.__class__.__name__, other.__class__.__name__
+            ))
+        cmp = bool(self.conclusion) - bool(other.conclusion)
+        cmp = len(self) - len(other)
+        if cmp: return cmp
+        cmp = len(self.premises) - len(other.premises)
+        if cmp: return cmp
+        for a, b in zip(self, other):
+            if a < b: return -1
+            if a > b: return 1
+        return cmp
+
+    def __lt__(self, other): return self._cmp(other) < 0
+    def __le__(self, other): return self._cmp(other) <= 0
+    def __gt__(self, other): return self._cmp(other) > 0
+    def __ge__(self, other): return self._cmp(other) >= 0
+
+    def __hash__(self):
+        return hash(tuple(self))
+
+    def __eq__(self, other):
+        """
+        Two arguments are considered equal just when their conclusions are equal, and their
+        premises are equal (and in the same order). The title is not considered in equality.
+        """
+        return isinstance(other, self.__class__) and (
+            self._cmp(other) == 0 and tuple(self) == tuple(other)
+        )
 
     def __repr__(self):
         if self.title:
             desc = repr(self.title)
         else:
-            desc = 'len(%d)' % (len(self.premises) + 1)
-            
+            desc = 'len(%d)' % len(self)
         return '<%s:%s>' % (self.__class__.__name__, desc)
-
-    def __hash__(self):
-        return hash((self.conclusion,) + tuple(self.premises))
-
-    def __eq__(self, other):
-        """
-        Two arguments are considered equal just when their conclusions are equal, and their
-        premises are equal (and in the same order) The title is not considered in equality.
-        """
-        return isinstance(other, self.__class__) and hash(self) == hash(other)
-
-    def __iter__(self):
-        return iter((self.conclusion, self.premises))
 
 _builtin = {
     'polish': {
@@ -1820,3 +1846,7 @@ lexwriter_classes.update({
     'polish'   : PolishLexWriter,
     'standard' : StandardLexWriter,
 })
+
+_syslw = create_lexwriter()
+
+LexItem._clsinit = True

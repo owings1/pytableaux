@@ -18,13 +18,14 @@
 #
 # pytableaux - tableaux module
 from lexicals import Argument, Constant
-from utils import LinkOrderSet, Kwobj, StopWatch, cat, get_logic, \
+from utils import LinkOrderSet, Kwobj, StopWatch, ReadOnlyDict, cat, get_logic, \
     EmptySet, typecheck, dictrepr, Decorators, kwrepr, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import Events, EventEmitter
 from inspect import isclass
 from itertools import chain, islice
 from .common import Node, StepEntry
+from enum import auto, Enum, Flag
 
 lazyget = Decorators.lazyget
 setonce = Decorators.setonce
@@ -294,6 +295,25 @@ def TabRules():
 
     return TabRules
 
+
+class KEY(Enum):
+    FLAGS       = auto()
+    STEP_ADDED  = auto()
+    STEP_TICKED = auto()
+    STEP_CLOSED = auto()
+    INDEX       = auto()
+    PARENT      = auto()
+    NODES       = auto()
+
+class FLAG(Flag):
+    NONE   = 0
+    TICKED = 1
+    CLOSED = 2
+    PREMATURE   = 4
+    FINISHED    = 8
+    TIMED_OUT   = 16
+    TRUNK_BUILT = 32
+
 class Tableau(EventEmitter):
     """
     A tableau proof.
@@ -305,6 +325,23 @@ class Tableau(EventEmitter):
         'build_timeout'   : None,
         'max_steps'       : None,
     }
+
+    @staticmethod
+    def NodeStat():
+        return  {
+            KEY.FLAGS       : FLAG.NONE,
+            KEY.STEP_TICKED : None,
+        }
+
+    @staticmethod
+    def BranchStat():
+        return {
+            KEY.FLAGS       : FLAG.NONE,
+            KEY.STEP_CLOSED : FLAG.NONE,
+            KEY.INDEX       : None,
+            KEY.PARENT      : None,
+            KEY.NODES       : {},
+        }
 
     def __init__(self, logic = None, argument = None, **opts):
 
@@ -345,6 +382,7 @@ class Tableau(EventEmitter):
         self.models = None
         self.stats = None
 
+        self._flag = FLAG.PREMATURE
         # Timers
         self.__build_timer = StopWatch()
         self.__models_timer = StopWatch()
@@ -357,14 +395,10 @@ class Tableau(EventEmitter):
         self.__branch_list = list()
         self.__trunks = list()
         self.__open_linkset = LinkOrderSet()
-        self.__branch_dict = dict()
-        self.__finished = False
-        self.__premature = True
-        self.__timed_out = False
-        self.__trunk_built = False
+        self.__branchstat = dict()
 
         # Cache for the nodes' branching complexities
-        self.__branching_complexities = dict()
+        self.__branching_complexities = {}
 
         self.__branch_listeners = {
             Events.AFTER_BRANCH_CLOSE : self.__after_branch_close,
@@ -461,7 +495,8 @@ class Tableau(EventEmitter):
 
         :type: bool
         """
-        return self.__finished
+        return FLAG.FINISHED in self._flag
+        # return self.__finished
 
     @property
     def completed(self):
@@ -471,7 +506,8 @@ class Tableau(EventEmitter):
 
         :type: bool
         """
-        return self.finished and not self.__premature
+        return FLAG.FINISHED in self._flag and FLAG.PREMATURE not in self._flag
+        # return self.finished not self.__premature
 
     @property
     def premature(self):
@@ -481,7 +517,8 @@ class Tableau(EventEmitter):
 
         :type: bool
         """
-        return self.finished and self.__premature
+        return FLAG.FINISHED in self._flag and FLAG.PREMATURE in self._flag
+        # return self.finished and self.__premature
 
     @property
     def valid(self):
@@ -518,7 +555,7 @@ class Tableau(EventEmitter):
 
         :type: bool
         """
-        return self.__trunk_built
+        return FLAG.TRUNK_BUILT in self._flag
 
     @property
     def current_step(self):
@@ -536,7 +573,7 @@ class Tableau(EventEmitter):
         View of the open branches.
         """
         return self.__open_linkset.view
-        return self.__open_view
+        # return self.__open_view
 
     def build(self):
         """
@@ -575,7 +612,8 @@ class Tableau(EventEmitter):
             if not self.__is_max_steps_exceeded():
                 step = self.next_step()
                 if not step:
-                    self.__premature = False
+                    self._flag = self._flag & ~FLAG.PREMATURE
+                    # self.__premature = False
             if step:
                 rule, target = step
                 rule.apply(target)
@@ -624,11 +662,11 @@ class Tableau(EventEmitter):
             self.__open_linkset.add(branch)
         if not branch.parent:
             self.__trunks.append(branch)
-        self.__branch_dict[branch] = {
-            'index'  : index,
-            'parent' : parent,
-            'branch' : branch,
-        }
+        stat = self.__branchstat[branch] = self.BranchStat()
+        stat.update({
+            KEY.INDEX: index,
+            KEY.PARENT: parent,
+        })
         self.__after_branch_add(branch)
         return self
 
@@ -646,7 +684,7 @@ class Tableau(EventEmitter):
         with self.__tunk_build_timer:
             self.emit(Events.BEFORE_TRUNK_BUILD, self)
             self.System.build_trunk(self, self.argument)
-            self.__trunk_built = True
+            self._flag |= FLAG.TRUNK_BUILT
             self.emit(Events.AFTER_TRUNK_BUILD, self)
         return self
 
@@ -666,18 +704,18 @@ class Tableau(EventEmitter):
         if self.finished:
             return self
 
-        self.__finished = True
+        self._flag |= FLAG.FINISHED
 
         if self.invalid and self.opts.get('is_build_models'):
             with self.__models_timer:
                 self.__build_models()
 
-        if not self.__timed_out:
+        if FLAG.TIMED_OUT not in self._flag: # self.__timed_out:
             # In case of a timeout, we do `not` build the tree in order to best
             # respect the timeout. In case of `max_steps` excess, however, we
             # `do` build the tree.
             with self.__tree_timer:
-                self.tree = make_tree_structure(list(self))
+                self.tree = make_tree_structure(self, list(self))
 
         self.stats = self.__compute_stats()
 
@@ -702,6 +740,24 @@ class Tableau(EventEmitter):
                 self.System.branching_complexity(node)
         return self.__branching_complexities[node]
 
+    def stat(self, branch, *keys):
+        stat = self.__branchstat[branch]
+        if not keys:
+            return {k: stat[k] for k in stat if k in KEY and k not in (KEY.NODES,)}
+        keys = list(keys)
+        nkey = keys.pop(0)
+        try:
+            key = KEY(nkey)
+        except ValueError:
+            stat = stat[KEY.NODES][nkey]
+            if not keys:
+                return dict(stat)
+            nkey = keys.pop(0)
+            if keys:
+                raise ValueError('Too many keys to lookup')
+            key = KEY(nkey)
+        return stat[key]
+
     def __getitem__(self, index):
         return self.__branch_list[index]
 
@@ -712,7 +768,7 @@ class Tableau(EventEmitter):
         return iter(self.__branch_list)
 
     def __contains__(self, branch):
-        return branch in self.__branch_dict
+        return branch in self.__branchstat
 
     def __repr__(self):
         return dictrepr({
@@ -759,15 +815,30 @@ class Tableau(EventEmitter):
         branch.on(self.__branch_listeners)
 
     def __after_branch_close(self, branch):
+        stat = self.__branchstat[branch]
+        stat[KEY.STEP_CLOSED] = self.current_step
+        stat[KEY.FLAGS] |= FLAG.CLOSED
+
         branch.closed_step = self.current_step
         self.__open_linkset.remove(branch)
         self.emit(Events.AFTER_BRANCH_CLOSE, branch)
 
     def __after_node_add(self, node, branch):
+        stat = self.__branchstat[branch][KEY.NODES][node] = self.NodeStat()
+        stat[KEY.STEP_ADDED] = self.current_step
         node.step = self.current_step
         self.emit(Events.AFTER_NODE_ADD, node, branch)
 
     def __after_node_tick(self, node, branch):
+
+        curstep = self.current_step
+        stat = self.__branchstat[branch][KEY.NODES].setdefault(node, self.NodeStat())
+        if FLAG.TICKED not in stat[KEY.FLAGS]:
+            stat[KEY.FLAGS] = stat[KEY.FLAGS] | FLAG.TICKED
+        elif stat[KEY.STEP_TICKED] == None or curstep > stat[KEY.STEP_TICKED]:
+            stat[KEY.STEP_TICKED] = curstep
+        # self.emit(Events.AFTER_NODE_TICK, node, branch)
+
         if node.ticked_step == None or self.current_step > node.ticked_step:
             node.ticked_step = self.current_step
         self.emit(Events.AFTER_NODE_TICK, node, branch)
@@ -929,7 +1000,8 @@ class Tableau(EventEmitter):
             return
         if self.__build_timer.elapsed() > timeout:
             self.__build_timer.stop()
-            self.__timed_out = True
+            self._flag |= FLAG.TIMED_OUT
+            # self.__timed_out = True
             self.finish()
             raise TimeoutError('Timeout of {0}ms exceeded.'.format(timeout))
 
@@ -1111,7 +1183,7 @@ class Branch(EventEmitter):
         Find the first node on the branch that matches the given properties, optionally
         filtered by ticked status. Returns ``None`` if not found.
         """
-        results = self.search_nodes(props, ticked=ticked, limit=1)
+        results = self.search_nodes(props, ticked = ticked, limit = 1)
         if results:
             return results[0]
         return None
@@ -1145,7 +1217,7 @@ class Branch(EventEmitter):
         """
         Append a node (Node object or dict of props). Returns self.
         """
-        node = Node(node, parent = self.leaf)
+        node = Node(node)
         self.__nodes.append(node)
         self.__nodeset.add(node)
         s = node.get('sentence')
@@ -1317,7 +1389,7 @@ class Branch(EventEmitter):
     def __repr__(self):
 
         return orepr(self, 
-            clsname  = self.id,
+            id     = self.id,
             nodes  = len(self),
             leaf   = self.leaf.id if self.leaf else None,
             closed = self.closed,
@@ -1325,7 +1397,7 @@ class Branch(EventEmitter):
 
 
 
-def make_tree_structure(branches, node_depth=0, track=None):
+def make_tree_structure(tab, branches, node_depth=0, track=None):
     is_root = track == None
     if track == None:
         track = {
@@ -1383,7 +1455,7 @@ def make_tree_structure(branches, node_depth=0, track=None):
     while True:
         relevant = [branch for branch in branches if len(branch) > node_depth]
         for branch in relevant:
-            if branch.closed:
+            if FLAG.CLOSED in tab.stat(branch, KEY.FLAGS):
                 s['has_closed'] = True
             else:
                 s['has_open'] = True
@@ -1406,11 +1478,13 @@ def make_tree_structure(branches, node_depth=0, track=None):
         break
     track['distinct_nodes'] += len(s['nodes'])
     if len(branches) == 1:
+        stat = tab.stat(branch)
+        flags = stat[KEY.FLAGS]
         branch = branches[0]
-        s['closed'] = branch.closed
+        s['closed'] = FLAG.CLOSED in flags #branch.closed
         s['open'] = not branch.closed
         if s['closed']:
-            s['closed_step'] = branch.closed_step
+            s['closed_step'] = stat[KEY.STEP_CLOSED]
             s['has_closed'] = True
         else:
             s['has_open'] = True
@@ -1434,7 +1508,7 @@ def make_tree_structure(branches, node_depth=0, track=None):
             ]
 
             # recurse
-            child = make_tree_structure(child_branches, node_depth, track)
+            child = make_tree_structure(tab, child_branches, node_depth, track)
 
             s['descendant_node_count'] = len(child['nodes']) + child['descendant_node_count']
             s['width'] += child['width']
