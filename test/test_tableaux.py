@@ -1,12 +1,12 @@
 
 from errors import *
 from events import Events
-from proof.tableaux import TableauxSystem as TabSys, Branch, Node, Tableau, KEY, FLAG
-from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule, Rule
+from proof.tableaux import Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG
+from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
-from proof.common import Getters, Filters
+from proof.common import Getters, Filters, Branch, Node
 from lexicals import Atomic, Constant, Predicated
-from utils import get_logic, ReadOnlyDict
+from utils import get_logic
 import examples
 from types import ModuleType, MappingProxyType
 import time

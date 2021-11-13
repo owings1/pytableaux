@@ -1,10 +1,12 @@
 from utils import rcurry, lcurry, dictrepr, orepr, Decorators, isstr, EmptySet
-from lexicals import Operated, Quantified
+from events import Events, EventEmitter
+from lexicals import Constant, Operated, Quantified
 from itertools import islice
 from types import MappingProxyType
-from typing import Generator, Union
+from typing import Generator, Iterable, Union
 from enum import Enum, Flag, IntFlag
 lazyget = Decorators.lazyget
+setonce = Decorators.setonce
 
 dict_keys = type({}.keys())
 dict_items = type({}.items())
@@ -230,11 +232,14 @@ class NodeFilters(Filters):
             return self.example()
 
     class Modal(Filters.Attr):
-        attrs = (('modal', 'is_modal'),)
+        attrs = (('modal', 'is_modal'), ('access', 'is_access'))
         def example_node(self):
             n = {}
             attrs = self.example()
-            if attrs.get('is_modal'):
+            if attrs.get('is_access'):
+                n['world1'] = 0
+                n['world2'] = 1
+            elif attrs.get('is_modal'):
                 n['world'] = 0
             return n
 
@@ -271,6 +276,11 @@ class Node(object, metaclass = NodeMeta):
     @lazyget
     def is_modal(self) -> bool:
         return self.has_any('world', 'world1', 'world2', 'worlds')
+
+    @property
+    @lazyget
+    def is_access(self) -> bool:
+        return self.has('world1', 'world2')
 
     @property
     @lazyget
@@ -377,6 +387,355 @@ class Node(object, metaclass = NodeMeta):
         )
 
 NodeType = Union[Node, dict]
+
+class Branch(EventEmitter):
+    pass
+class Branch(Branch):
+    """
+    Represents a tableau branch.
+    """
+
+    def __init__(self, parent: Branch = None):
+        if parent != None:
+            if parent == self:
+                raise ValueError('A branch cannot be its own parent')
+            if not isinstance(parent, Branch):
+                raise TypeError('Expecting %s, got %s' % (Branch, type(parent)))
+            self.__origin = parent.origin
+        else:
+            self.__origin = self
+        self.__parent = parent
+
+        super().__init__(
+            Events.AFTER_BRANCH_CLOSE,
+            Events.AFTER_NODE_ADD,
+            Events.AFTER_NODE_TICK,
+        )
+        # Make sure properties are copied if needed in copy()
+        
+        
+        self.__closed = False
+
+        self.__nodes = []
+        self.__nodeset = set()
+        self.__ticked = set()
+
+        self.__worlds = set()
+        self.__nextworld = 0
+        self.__constants = set()
+        self.__nextconst = Constant.first()
+        self.__pidx = {
+            'sentence'   : {},
+            'designated' : {},
+            'world'      : {},
+            'world1'     : {},
+            'world2'     : {},
+            'w1Rw2'      : {},
+        }
+
+        self.__model = None
+
+    @property
+    def id(self) -> int:
+        return id(self)
+
+    @property
+    def parent(self) -> Branch:
+        return self.__parent
+
+    @property
+    def origin(self) -> Branch:
+        return self.__origin
+
+    @property
+    def closed(self) -> bool:
+        return self.__closed
+
+    @property
+    def leaf(self) -> Node:
+        return self[-1] if len(self) else None
+
+    @property
+    def model(self):
+        return self.__model
+
+    @model.setter
+    @setonce
+    def model(self, model):
+        self.__model = model
+
+    @property
+    def world_count(self):
+        return len(self.__worlds)
+
+    @property
+    def constants_count(self):
+        return len(self.__constants)
+
+    @property
+    def next_constant(self):
+        # TODO: WIP
+        return self.__nextconst
+
+    @property
+    def next_world(self) -> int:
+        """
+        Return a new world that does not appear on the branch.
+        """
+        return self.__nextworld
+
+    def has(self, props: dict, ticked: bool = None) -> bool:
+        """
+        Check whether there is a node on the branch that matches the given properties,
+        optionally filtered by ticked status.
+        """
+        return self.find(props, ticked = ticked) != None
+
+    def has_access(self, w1: int, w2: int) -> bool:
+        """
+        Check whether a tuple of the given worlds is on the branch.
+
+        This is a performant way to check typical "access" nodes on the
+        branch with `world1` and `world2` properties. For more advanced
+        searches, use the ``has()`` method.
+        """
+        return (w1, w2) in self.__pidx['w1Rw2']
+
+    def has_any(self, props_list: Iterable[dict], ticked: bool = None) -> bool:
+        """
+        Check a list of property dictionaries against the ``has()`` method. Return ``True``
+        when the first match is found.
+        """
+        for props in props_list:
+            if self.has(props, ticked=ticked):
+                return True
+        return False
+
+    def has_all(self, props_list: Iterable[dict], ticked: bool = None) -> bool:
+        """
+        Check a list of property dictionaries against the ``has()`` method. Return ``False``
+        when the first non-match is found.
+        """
+        for props in props_list:
+            if not self.has(props, ticked=ticked):
+                return False
+        return True
+
+    def find(self, props: dict, ticked: bool = None) -> Node:
+        """
+        Find the first node on the branch that matches the given properties, optionally
+        filtered by ticked status. Returns ``None`` if not found.
+        """
+        results = self.search_nodes(props, ticked = ticked, limit = 1)
+        if results:
+            return results[0]
+        return None
+
+    def find_all(self, props: dict, ticked: bool = None) -> list[Node]:
+        """
+        Find all the nodes on the branch that match the given properties, optionally
+        filtered by ticked status. Returns a list.
+        """
+        return self.search_nodes(props, ticked = ticked)
+
+    def search_nodes(self, props: dict, ticked = None, limit = None) -> list[Node]:
+        """
+        Find all the nodes on the branch that match the given properties, optionally
+        filtered by ticked status, up to the limit, if given. Returns a list.
+        """
+        results = []
+        best_haystack = self.__select_index(props, ticked)
+        if not best_haystack:
+            return results
+        for node in best_haystack:
+            if limit != None and len(results) >= limit:
+                break
+            if ticked != None and self.is_ticked(node) != ticked:
+                continue
+            if node.has_props(props):
+                results.append(node)
+        return results
+
+    def append(self, node: NodeType) -> Branch:
+        """
+        Append a node (Node object or dict of props). Returns self.
+        """
+        node = Node(node)
+        self.__nodes.append(node)
+        self.__nodeset.add(node)
+        s = node.get('sentence')
+        if s:
+            if s.constants:
+                if self.__nextconst in s.constants:
+                    # TODO: new_constant() is still a prettier result, since it
+                    #       finds the mimimum available by searching for gaps.
+                    self.__nextconst = max(s.constants).next()
+                self.__constants.update(s.constants)
+        if node.worlds:
+            maxworld = max(node.worlds)
+            if maxworld >= self.__nextworld:
+                self.__nextworld = maxworld + 1
+            self.__worlds.update(node.worlds)
+
+        # Add to index *before* after_node_add callback
+        self.__add_to_index(node)
+        self.emit(Events.AFTER_NODE_ADD, node, self)
+        return self
+    add = append
+
+    def extend(self, nodes: Iterable[NodeType]) -> Branch:
+        """
+        Add multiple nodes. Returns self.
+        """
+        for node in nodes:
+            self.append(node)
+        return self
+
+    def tick(self, *nodes: Node) -> Branch:
+        """
+        Tick a node for the branch. Returns self.
+        """
+        for node in nodes:
+            if not self.is_ticked(node):
+                self.__ticked.add(node)
+                node.ticked = True
+                self.emit(Events.AFTER_NODE_TICK, node, self)
+        return self
+
+    def close(self) -> Branch:
+        """
+        Close the branch. Returns self.
+        """
+        if not self.closed:
+            self.__closed = True
+            self.append({'is_flag': True, 'flag': 'closure'})
+            self.emit(Events.AFTER_BRANCH_CLOSE, self)
+        return self
+
+    def is_ticked(self, node: Node) -> bool:
+        """
+        Whether the node is ticked relative to the branch.
+        """
+        return node in self.__ticked
+
+    def copy(self, parent: Branch = None) -> Branch:
+        """
+        Return a copy of the branch. Event listeners are *not* copied.
+        Parent is not copied, but can be explicitly set.
+        """
+        branch = self.__class__(parent = parent)
+        branch.__nodes = list(self.__nodes)
+        branch.__nodeset = set(self.__nodeset)
+        branch.__ticked = set(self.__ticked)
+        branch.__constants = set(self.__constants)
+        branch.__nextconst = self.__nextconst
+        branch.__worlds = set(self.__worlds)
+        branch.__nextworld = self.__nextworld
+        branch.__pidx = {
+            prop : {
+                key : set(self.__pidx[prop][key])
+                for key in self.__pidx[prop]
+            }
+            for prop in self.__pidx
+        }
+        return branch
+
+    def constants(self) -> set[Constant]:
+        """
+        Return the set of constants that appear on the branch.
+        """
+        return self.__constants
+
+    def new_constant(self) -> Constant:
+        """
+        Return a new constant that does not appear on the branch.
+        """
+        if not self.__constants:
+            return Constant.first()
+        maxidx = Constant.TYPE.maxi
+        coordset = set(c.coords for c in self.__constants)
+        index, sub = 0, 0
+        while (index, sub) in coordset:
+            index += 1
+            if index > maxidx:
+                index, sub = 0, sub + 1
+        return Constant((index, sub))
+
+    def __add_to_index(self, node):
+        for prop in self.__pidx:
+            val = None
+            found = False
+            if prop == 'w1Rw2':
+                if node.has('world1', 'world2'):
+                    val = (node['world1'], node['world2'])
+                    found = True
+            elif prop in node:
+                val = node[prop]
+                found = True
+            if found:
+                if val not in self.__pidx[prop]:
+                    self.__pidx[prop][val] = set()
+                self.__pidx[prop][val].add(node)
+
+    def __select_index(self, props, ticked):
+        best_index = None
+        for prop in self.__pidx:
+            val = None
+            found = False
+            if prop == 'w1Rw2':
+                if 'world1' in props and 'world2' in props:
+                    val = (props['world1'], props['world2'])
+                    found = True
+            elif prop in props:
+                val = props[prop]
+                found = True
+            if found:
+                if val not in self.__pidx[prop]:
+                    return False
+                index = self.__pidx[prop][val]
+                if best_index == None or len(index) < len(best_index):
+                    best_index = index
+                # we could do no better
+                if len(best_index) == 1:
+                    break
+        if not best_index:
+            if ticked:
+                best_index = self.__ticked
+            else:
+                best_index = self
+        return best_index
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.id == other.id
+
+    def __ne__(self, other):
+        return not (isinstance(other, self.__class__) and self.id == other.id)
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __getitem__(self, key):
+        return self.__nodes[key]
+
+    def __len__(self):
+        return len(self.__nodes)
+
+    def __iter__(self):
+        return iter(self.__nodes)
+
+    def __copy__(self):
+        return self.copy()
+
+    def __contains__(self, node):
+        return node in self.__nodeset
+
+    def __repr__(self):
+        return orepr(self, 
+            id     = self.id,
+            nodes  = len(self),
+            leaf   = self.leaf.id if self.leaf else None,
+            closed = self.closed,
+        )
 
 class Target(object):
 

@@ -20,24 +20,26 @@
 from copy import copy
 from models import BaseModel
 from utils import OrderedAttrsView, LinkOrderSet, EmptySet, isstr, orepr
-from .common import Node, Target
+from .common import Branch, Node, Target
+from .tableaux import Rule, RuleMeta
 from itertools import chain
 from events import Events
+from typing import Callable, Iterable
 
-def clshelpers(**kw):
+def clshelpers(**kw) -> Callable:
     """
     Class decorator to add to Helpers attribute through mro.
     Attribute name is ``Helpers``.
     """
-    def addhelpers(cls):
+    def addhelpers(cls: type) -> type:
         attr = 'Helpers'
         value = _dedupvalue(_collectattr(cls, attr, **kw))
         setattr(cls, attr, tuple(value))
         return cls
     return addhelpers
 
-def _targets_from_nodes_iter(get_node_targets):
-    def targets_iter(rule, nodes, branch):
+def _targets_from_nodes_iter(get_node_targets: Callable) -> Callable:
+    def targets_iter(rule, nodes: Iterable[Node], branch: Branch) -> Iterable[Target]:
         results = (
             Target.list(
                 get_node_targets(rule, node, branch),
@@ -65,7 +67,7 @@ class AdzHelper(object):
         self.rule = rule
         self.tableau = rule.tableau
 
-    def apply_to_target(self, target):
+    def apply_to_target(self, target: Target):
         branch = target.branch
         adds = target.get('adds', 0)
         for i in range(len(adds)):
@@ -79,7 +81,7 @@ class AdzHelper(object):
         if self.rule.ticking:
             branch.tick(target['node'])
 
-    def closure_score(self, target):
+    def closure_score(self, target: Target) -> float:
         close_count = 0
         for nodes in target['adds']:
             nodes = [Node(node) for node in nodes]
@@ -103,7 +105,7 @@ class NodeTargetCheckHelper(object):
         self.rule = rule
         self.targets = {}
 
-    def cached_target(self, branch):
+    def cached_target(self, branch: Branch):
         """
         Return the cached target for the branch, if any.
         """
@@ -112,7 +114,7 @@ class NodeTargetCheckHelper(object):
 
     # Event Listeners
 
-    def after_node_add(self, node, branch):
+    def after_node_add(self, node: Node, branch: Branch):
         target = self.rule.check_for_target(node, branch)
         if target:
             self.targets[branch] = target
@@ -124,21 +126,22 @@ class BranchCache(object):
     def __init__(self, *args, **kw):
         pass
 
-    def get(self, branch, *args):
+    def get(self, branch: Branch, *args):
         return self.__cache.get(branch, *args)
-    def __getitem__(self, branch):
+
+    def __getitem__(self, branch: Branch):
         return self.__cache[branch]
 
-    def __setitem__(self, branch, value):
+    def __setitem__(self, branch: Branch, value):
         if branch not in self.__cache:
             self.__linkset.add(branch)
         self.__cache[branch] = value
 
-    def __delitem__(self, branch):
+    def __delitem__(self, branch: Branch):
         del(self.__cache[branch])
         del(self.__linkset[branch])
 
-    def __contains__(self, branch):
+    def __contains__(self, branch: Branch):
         return branch in self.__cache
 
     def __len__(self):
@@ -150,49 +153,47 @@ class BranchCache(object):
     def __reversed__(self):
         return reversed(self.__linkset)
 
-    def __new__(cls, rule, *args):
+    def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls)
         inst.__linkset = LinkOrderSet()
         inst.__cache = {}
         inst.rule = rule
         inst.tab = rule.tableau
+        def after_branch_add(branch: Branch):
+            if branch.parent:
+                inst[branch] = copy(inst[branch.parent])
+            else:
+                inst[branch] = inst._valuetype()
+        def after_branch_close(branch: Branch):
+            del(inst[branch])
         inst.tab.on({
-            Events.AFTER_BRANCH_ADD  : inst._BranchCache_after_branch_add,
-            Events.AFTER_BRANCH_CLOSE: inst._BranchCache_after_branch_close,
+            Events.AFTER_BRANCH_ADD  : after_branch_add,
+            Events.AFTER_BRANCH_CLOSE: after_branch_close,
         })
         return inst
 
-    def _BranchCache_after_branch_close(self, branch):
-        del(self[branch])
-
-    def _BranchCache_after_branch_add(self, branch):
-        if branch.parent:
-            self[branch] = copy(self[branch.parent])
-        else:
-            self[branch] = self._valuetype()
-
-    # Other
-    def _reprdict(self):
-        return {'branches': len(self)}
+    def __copy__(self):
+        # not clear whether to copy listeners
+        raise NotImplementedError()
 
     def __repr__(self):
         return orepr(self, self._reprdict())
+
+    def _reprdict(self) -> dict:
+        return {'branches': len(self)}
 
 class BranchDictCache(BranchCache):
 
     _valuetype = dict
 
-    def __new__(cls, rule, *args):
+    def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
-        inst.tab.on({
-            Events.AFTER_BRANCH_ADD: inst._BranchDictCache_after_branch_add,
-        })
+        def after_branch_add(branch: Branch):
+            if branch.parent:
+                for key in inst[branch]:
+                    inst[branch][key] = copy(inst[branch.parent][key])
+        inst.tab.on(Events.AFTER_BRANCH_ADD, after_branch_add)
         return inst
-
-    def _BranchDictCache_after_branch_add(self, branch):
-        if branch.parent:
-            for key in self[branch]:
-                self[branch][key] = copy(self[branch.parent][key])
 
 class FilterNodeCache(BranchCache):
 
@@ -212,25 +213,21 @@ class FilterNodeCache(BranchCache):
     def ignore_ticked(self, val):
         self.__ignore_ticked = val
 
-    def __new__(cls, rule, *args):
+    def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
+        def after_node_add(node: Node, branch: Branch):
+            if inst(node, branch):
+                inst[branch].add(node)
+        def after_node_tick(node: Node, branch: Branch):
+            if inst.ignore_ticked:
+                inst[branch].discard(node)
         inst.tab.on({
-            Events.AFTER_NODE_ADD: inst._BranchNodeSetCache_after_node_add,
-            Events.AFTER_NODE_TICK: inst._BranchNodeSetCache_after_node_tick,
+            Events.AFTER_NODE_ADD: after_node_add,
+            Events.AFTER_NODE_TICK: after_node_tick,
         })
         return inst
 
-    # Event Listeners
-
-    def _BranchNodeSetCache_after_node_add(self, node, branch):
-        if self(node, branch):
-            self[branch].add(node)
-
-    def _BranchNodeSetCache_after_node_tick(self, node, branch):
-        if self.ignore_ticked:
-            self[branch].discard(node)
-
-    def __call__(self, *args, **kw):
+    def __call__(self, *args, **kw) -> bool:
         raise NotImplementedError()
 
 class AppliedQuitFlag(BranchCache):
@@ -240,12 +237,12 @@ class AppliedQuitFlag(BranchCache):
     """
     _valuetype = bool
 
-    def __new__(cls, rule, *args):
+    def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
-    def __call__(self, target):
+    def __call__(self, target: Target):
         self[target.branch] = bool(target.get('flag'))
 
 class AppliedNodesWorldsTracker(BranchCache):
@@ -256,12 +253,12 @@ class AppliedNodesWorldsTracker(BranchCache):
     """
     _valuetype = set
 
-    def __new__(cls, rule, *args):
+    def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
-    def __call__(self, target):
+    def __call__(self, target: Target):
         if target.get('flag'):
             return
         self[target.branch].add((target.node, target.world))
@@ -272,12 +269,12 @@ class UnserialWorldsTracker(BranchCache):
     """
     _valuetype = set
 
-    def __new__(cls, rule, *args):
+    def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
         inst.tab.on(Events.AFTER_NODE_ADD, inst)
         return inst
 
-    def __call__(self, node, branch):
+    def __call__(self, node: Node, branch: Branch):
         for w in node.worlds:
             if node.get('world1') == w or branch.has({'world1': w}):
                 self[branch].discard(w)
@@ -290,23 +287,65 @@ class AppliedSentenceCounter(BranchDictCache):
     the `sentence` property of the rule's target. The target should also include
     the `branch` key.
     """
-    def __new__(cls, rule, *args):
+    def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
-    def __call__(self, target):
+    def __call__(self, target: Target):
         if target.get('flag'):
             return
         b = target.branch
         s = target.sentence
         self[b][s] = self[b].get(s, 0) + 1
 
+class AppliedNodeCount(BranchDictCache):
+
+    def __new__(cls, rule: Rule, *args):
+        inst = super().__new__(cls, rule)
+        inst.rule.on(Events.AFTER_APPLY, inst)
+        return inst
+
+    def __call__(self, target: Target):
+        if target.get('flag'):
+            return
+        b = target.branch
+        n = target.node
+        self[b][n] = self[b].get(n, 0) + 1
+
+class VisibleWorldsIndex(BranchDictCache):
+    """
+    Index the visible worlds for each world on the branch.
+    """
+    def intransitives(self, branch: Branch, w1: int, w2: int) -> set[int]:
+        """
+        Get all the worlds on the branch that are visible to w2, but are not
+        visible to w1.
+        """
+        # TODO: can we make this more efficient? for each world pair,
+        #       track the intransitives?
+        return self[branch].get(w2, EmptySet).difference(
+            self[branch].get(w1, EmptySet)
+        )
+
+    def __new__(cls, rule: Rule, *args):
+        inst = super().__new__(cls, rule)
+        inst.tab.on(Events.AFTER_NODE_ADD, inst)
+        return inst
+
+    def __call__(self, node: Node, branch: Branch):        
+        if node.has('world1', 'world2'):
+            w1 = node['world1']
+            w2 = node['world2']
+            if w1 not in self[branch]:
+                self[branch][w1] = set()
+            self[branch][w1].add(w2)
+
 class PredicatedNodesTracker(FilterNodeCache):
     """
     Track all predicated nodes on the branch.
     """
-    def __call__(self, node, *a, **kw):
+    def __call__(self, node: Node, *a, **kw) -> bool:
         return node.has('sentence') and node['sentence'].is_predicated
 
 class FilterHelper(FilterNodeCache):
@@ -314,7 +353,7 @@ class FilterHelper(FilterNodeCache):
     Set configurable and chainable filters in ``NodeFilters``
     class attribute.
     """
-    def __call__(self, node, branch):
+    def __call__(self, node: Node, branch: Branch) -> bool:
         return self.filter(node, branch)
 
     clsattr = 'NodeFilters'
@@ -322,12 +361,12 @@ class FilterHelper(FilterNodeCache):
     # Decorators
 
     @classmethod
-    def clsfilters(cls, **kw):
+    def clsfilters(cls, **kw) -> Callable:
         """
         Class decorator to add to ``NodeFilters`` attribute
         through mro.
         """
-        def addfilters(rulecls):
+        def addfilters(rulecls: RuleMeta) -> RuleMeta:
             attr = cls.clsattr
             value = _dedupvalue(_collectattr(rulecls, attr, **kw))
             setattr(rulecls, attr, tuple(value))
@@ -335,7 +374,7 @@ class FilterHelper(FilterNodeCache):
         return addfilters
 
     @classmethod
-    def node_targets(cls, get_node_targets):
+    def node_targets(cls, get_node_targets: Callable) -> Callable:
         """
         Method decorator to only iterate through nodes matching the
         configured FilterHelper filters.
@@ -347,13 +386,13 @@ class FilterHelper(FilterNodeCache):
         Returns a flat list of targets.
         """
         targets_iter = _targets_from_nodes_iter(get_node_targets)
-        def get_targets_filtered(rule, branch):
+        def get_targets_filtered(rule: Rule, branch: Branch) -> list:
             helper = rule.helpers[cls]
             nodes = helper[branch]
             return list(targets_iter(rule, nodes, branch))
         return get_targets_filtered
 
-    def add_filter(self, name, cls):
+    def add_filter(self, name: str, cls: type):
         """
         Instantiate a filter class from the NodeFilters config.
         """
@@ -366,10 +405,10 @@ class FilterHelper(FilterNodeCache):
         self.__flist.append(filt)
 
     @property
-    def filters(self):
+    def filters(self) -> OrderedAttrsView:
         return self.__viewfilters
 
-    def filter(self, node, branch):
+    def filter(self, node: Node, branch: Branch) -> bool:
         self.callcount += 1
         if self.ignore_ticked and branch.is_ticked(node):
             return False
@@ -378,7 +417,7 @@ class FilterHelper(FilterNodeCache):
                 return False
         return True
 
-    def example_node(self):
+    def example_node(self) -> dict:
         node = {}
         for filt in self.filters:
             if callable(getattr(filt, 'example_node', None)):
@@ -391,7 +430,7 @@ class FilterHelper(FilterNodeCache):
                     node.update(ret)
         return node
 
-    def __init__(self, rule, attr = None, *args, **kw):
+    def __init__(self, rule: Rule, attr: str = None, *args, **kw):
         super().__init__(rule, *args, **kw)
         self.rule = rule
         self.callcount = 0
@@ -402,7 +441,7 @@ class FilterHelper(FilterNodeCache):
         for name, cls in clsval:
             self.add_filter(name, cls)
 
-    def _reprdict(self):
+    def _reprdict(self) -> dict:
         return super()._reprdict() | {
             'filters': '(%s) %s' % (len(self.filters), self.filters),
         }
@@ -701,50 +740,6 @@ class MaxWorldsTracker(object):
             return self.modal_complexity(node['sentence'])
         return 0
 
-class VisibleWorldsIndex(object):
-    """
-    Index the visible worlds for each world on the branch.
-    """
-
-    def __init__(self, rule, *args, **kw):
-        self.rule = rule
-        self.index = {}
-
-    def get_visibles(self, branch, world):
-        """
-        Get all the worlds on the branch that are visible to the given world.
-        """
-        if world in self.index[branch]:
-            return self.index[branch][world]
-        return set()
-
-    def get_intransitives(self, branch, w1, w2):
-        """
-        Get all the worlds on the branch that are visible to w2, but are not
-        visible to w1.
-        """
-        # TODO: can we make this more efficient? for each world pair,
-        #       track the intransitives?
-        return self.get_visibles(branch, w2).difference(self.get_visibles(branch, w1))
-
-    # helper implementation
-
-    def after_branch_add(self, branch):
-        self.index[branch] = {}
-        if branch.parent:
-            self.index[branch].update({
-                w: set(self.index[branch.parent][w])
-                for w in self.index[branch.parent]
-            })
-
-    def after_node_add(self, node, branch):
-        if node.has('world1', 'world2'):
-            w1 = node['world1']
-            w2 = node['world2']
-            if w1 not in self.index[branch]:
-                self.index[branch][w1] = set()
-            self.index[branch][w1].add(w2)
-
 class EllipsisExampleHelper(object):
 
     mynode = {'ellipsis': True}
@@ -795,7 +790,7 @@ class EllipsisExampleHelper(object):
         self.applied.add(branch)
         branch.add(self.mynode)
 
-def _collectattr(cls, attr, **adds):
+def _collectattr(cls: type, attr: str, **adds) -> filter:
     return filter (bool, chain(
         * (
             c.__dict__.get(attr, tuple())

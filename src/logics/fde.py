@@ -28,10 +28,10 @@ class Meta(object):
 
 from models import BaseModel
 from lexicals import Atomic, Operated, Quantified, Predicate, Operator as Oper, Quantifier
-from proof.tableaux import TableauxSystem as BaseSystem
+from proof.tableaux import TableauxSystem as BaseSystem, Rule
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
-    NewConstantStoppingRule, Rule
-from proof.common import Filters, Target
+    NewConstantStoppingRule
+from proof.common import Branch, Node, Filters, Target
 from proof.helpers import AdzHelper, FilterHelper, clshelpers
 
 from errors import ModelValueError
@@ -561,7 +561,7 @@ class DefaultRule(Rule):
     # Filters.Node.Designation
     designation = None
     # :overrides: Rule
-    def sentence(self, node):
+    def sentence(self, node: Node):
         return self.nf.filters.sentence.get(node)
     # :implements: Rule
     def example_nodes(self):
@@ -571,23 +571,23 @@ class DefaultRule(Rule):
 class AdzApply(Rule):
     ticking = True
     # :implements: Rule
-    def _apply(self, target):
+    def _apply(self, target: Target):
         self.adz.apply_to_target(target)
 
 @clshelpers(adz = AdzHelper)
 class AdzClosureScore(Rule):
     # :overrides: Rule
-    def score_candidate(self, target):
+    def score_candidate(self, target: Target):
         return self.adz.closure_score(target)
 
 @clshelpers(nf = FilterHelper)
 class GetNodeTargets(Rule):
     # :implements: Rule, delegates to _get_node_targets
     @FilterHelper.node_targets
-    def _get_targets(self, node, branch):
+    def _get_targets(self, node: Node, branch: Branch):
         return self._get_node_targets(node, branch)
     # :abstract:
-    def _get_node_targets(self, node, branch):
+    def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
 @clshelpers()

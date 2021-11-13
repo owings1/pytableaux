@@ -26,8 +26,7 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 4
 
-from proof.rules import PotentialNodeRule
-from proof.helpers import MaxWorldsTracker, VisibleWorldsIndex
+from proof.helpers import MaxWorldsTracker, VisibleWorldsIndex, clshelpers
 
 from . import k, t
 
@@ -62,7 +61,11 @@ class TableauxRules(object):
     Transitive rule, which operates on the accessibility relation for worlds.
     """
     
-    class Transitive(PotentialNodeRule):
+    @clshelpers(
+        maxw = MaxWorldsTracker,
+        vwidx = VisibleWorldsIndex,
+    )
+    class Transitive(k.GetNodeTargets, k.DefaultRule):
         """
         .. _transitive-rule:
 
@@ -70,44 +73,44 @@ class TableauxRules(object):
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
         appear on *b*, then add *wRw''* to *b*.
         """
-        Helpers = (
-            *PotentialNodeRule.Helpers,
-            ('max_worlds_tracker', MaxWorldsTracker),
-            ('visibles'          , VisibleWorldsIndex),
-        )
-        modal = True
-
+        access = True
         # rule implmentation
 
-        def is_potential_node(self, node, branch):
-            return node.has('world1', 'world2')
-
-        def get_targets_for_node(self, node, branch):
-            if not self.__should_apply(branch):
+        def _get_node_targets(self, node, branch):
+            if self.maxw.max_worlds_reached(branch):
                 return
             w1 = node['world1']
             w2 = node['world2']
-            targets = list()
-            for w3 in self.visibles.get_intransitives(branch, w1, w2):
-                # sanity check
-                if not branch.has_access(w1, w3):
-                    targets.append({
-                        'world1': w1,
-                        'world2': w3,
-                        'branch': branch,
-                        'nodes' : set([node, branch.find({'world1': w2, 'world2': w3})]),
-                    })
-            return targets
+            return (
+                {
+                    'world1': w1,
+                    'world2': w3,
+                    'branch': branch,
+                    'nodes' : {node, branch.find({'world1': w2, 'world2': w3})},
+                } for w3 in self.vwidx.intransitives(branch, w1, w2)
+            )
+            # targets = list()
+            # intransitives = self.vwidx.intransitives(branch, w1, w2)
+            # for w3 in intransitives:
+            #     # sanity check
+            #     if not branch.has_access(w1, w3):
+            #         targets.append({
+            #             'world1': w1,
+            #             'world2': w3,
+            #             'branch': branch,
+            #             'nodes' : set([node, branch.find({'world1': w2, 'world2': w3})]),
+            #         })
+            # return targets
+
+        def _apply(self, target):
+            target.branch.add({
+                'world1': target['world1'],
+                'world2': target['world2'],
+            })
 
         def score_candidate(self, target):
             # Rank the highest world
             return target['world2']
-
-        def apply_to_node_target(self, node, branch, target):
-            branch.add({
-                'world1': target['world1'],
-                'world2': target['world2'],
-            })
 
         def example_nodes(self, branch = None):
             w1, w2, w3 = range(3)
@@ -115,11 +118,6 @@ class TableauxRules(object):
                 {'world1': w1, 'world2': w2},
                 {'world1': w2, 'world2': w3},
             ]
-
-        # private util
-
-        def __should_apply(self, branch):
-            return not self.max_worlds_tracker.max_worlds_reached(branch)
 
     closure_rules = list(k.TableauxRules.closure_rules)
 

@@ -31,13 +31,13 @@ from lexicals import Predicate, Atomic, Constant, Operated, Predicated, \
     Operator as Oper, Quantifier
 from models import BaseModel
 
-from proof.tableaux import TableauxSystem as BaseSystem
+from proof.tableaux import TableauxSystem as BaseSystem, Rule
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
-    NewConstantStoppingRule, Rule 
-from proof.common import Filters, Target
+    NewConstantStoppingRule
+from proof.common import Branch, Filters, Node, Target
 from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
-    FilterHelper, clshelpers
+    FilterHelper, AppliedNodeCount, clshelpers
 
 from errors import DenotationError, ModelValueError
 
@@ -712,6 +712,7 @@ class DefaultRule(Rule):
     negated = operator = quantifier = predicate = None
     # Filters.Node.Modal
     modal = True
+    access = None
     # :overrides: Rule
     def sentence(self, node): return self.nf.filters.sentence.get(node)
     # :implements: Rule
@@ -1266,7 +1267,8 @@ class TableauxRules(object):
                 ],
             }
 
-    class Universal(OldDefaultNodeRule, AllConstantsStoppingRule):
+    @clshelpers(apnc=AppliedNodeCount)
+    class Universal(DefaultNodeRule, AllConstantsStoppingRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -1282,9 +1284,12 @@ class TableauxRules(object):
                 return 1
             if self.adz.closure_score(target) == 1:
                 return 1
-            node_apply_count = self.node_application_count(target.node, target.branch)
+            node_apply_count = self.apnc[target.branch].get(target.node, 0)
             return float(1 / (node_apply_count + 1))
 
+        def _get_node_targets(self, node: Node, branch: Branch):
+            # Delegate to AllConstantsStoppingRule
+            return self.get_targets_for_node(node, branch)
         # AllConstantsStoppingRule implementation
 
         def get_new_nodes_for_constant(self, c, node, branch):
@@ -1307,7 +1312,12 @@ class TableauxRules(object):
         quantifier = Quantifier.Universal
         convert_to = Quantifier.Existential
 
-    class Possibility(OldDefaultNodeRule):
+    @clshelpers(
+        apqf = AppliedQuitFlag,
+        apsc = AppliedSentenceCounter,
+        max_worlds = MaxWorldsTracker,
+    )
+    class Possibility(DefaultNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -1316,19 +1326,12 @@ class TableauxRules(object):
         operator = Oper.Possibility
         branch_level = 1
 
-        Helpers = (
-            *DefaultNodeRule.Helpers,
-            ('apsc' , AppliedSentenceCounter),
-            ('max_worlds'        , MaxWorldsTracker),
-            ('apqf'      , AppliedQuitFlag),
-        )
-
         def is_potential_node(self, node, branch):
             if self.apqf.get(branch):
                 return False
             return super().is_potential_node(node, branch)
 
-        def get_target_for_node(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
 
             if not self._should_apply(branch):
                 if not self.apqf.get(branch):
@@ -1431,7 +1434,8 @@ class TableauxRules(object):
             *DefaultNodeRule.Helpers,
             ('max_worlds'          , MaxWorldsTracker),
             ('apnw' , AppliedNodesWorldsTracker),
-            ('apqf'        , AppliedQuitFlag),
+            ('apqf' , AppliedQuitFlag),
+            ('apnc' , AppliedNodeCount),
         )
 
         Timers = (
@@ -1447,7 +1451,7 @@ class TableauxRules(object):
                 return False
             return super().is_potential_node(node, branch)
             
-        def get_targets_for_node(self, node, branch):
+        def get_targets_for_node(self, node: Node, branch: Branch):
 
             # Check for max worlds reached
             if not self.__should_apply(branch):
@@ -1498,7 +1502,7 @@ class TableauxRules(object):
                             })
             return targets
 
-        def score_candidate(self, target):
+        def score_candidate(self, target: Target):
 
             if target.get('flag'):
                 return 1
@@ -1511,28 +1515,22 @@ class TableauxRules(object):
                 return 1
 
             # Not applied to yet
-            node_apply_count = self.node_application_count(
-                target['node'].id,
-                target['branch'].id,
-            )
+            node_apply_count = self.apnc[target.branch].get(target.node, 0)
             if node_apply_count == 0:
                 return 1
 
             # Pick the least branching complexity
             return -1 * self.tableau.branching_complexity(target['node'])
 
-        def group_score(self, target):
+        def group_score(self, target: Target):
 
             if self.score_candidate(target) > 0:
                 return 1
 
-            return -1 * self.node_application_count(
-                target['node'].id,
-                target['branch'].id,
-            )
+            return -1 * self.apnc[target.branch].get(target.node, 0)
             #return -1 * min(target['track_count'], self.tableau.branching_complexity(target['node']))
 
-        def example_nodes(self, branch = None):
+        def example_nodes(self):
             s = Operated.first(self.operator)
             return [
                 {'sentence': s, 'world': 0},
@@ -1545,11 +1543,11 @@ class TableauxRules(object):
             return not self.max_worlds.max_worlds_exceeded(branch)
 
         def __is_least_applied_to(self, node, branch):
-            node_apply_count = self.node_application_count(node.id, branch.id)
+            node_apply_count = self.apnc[branch].get(node, 0)
             min_apply_count = self.min_application_count(branch.id)
             return min_apply_count >= node_apply_count
 
-        def __get_flag_target(self, branch):
+        def __get_flag_target(self, branch: Branch):
             return {
                 'flag': True,
                 'adds': [

@@ -17,163 +17,566 @@
 # ------------------
 #
 # pytableaux - tableaux module
-from lexicals import Argument, Constant
+from lexicals import Argument, Constant, Sentence
 from utils import LinkOrderSet, Kwobj, StopWatch, cat, get_logic, \
     EmptySet, typecheck, dictrepr, Decorators, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import Events, EventEmitter
 from inspect import isclass
 from itertools import chain, islice
-from .common import Node, NodeType, Target
+from .common import Branch, Node, NodeType, Target
+from past.builtins import basestring
 from enum import auto, Enum, Flag
 from types import ModuleType
-from typing import Any, Iterable, NamedTuple, Union
+from typing import Any, Callable, Collection, Iterable, NamedTuple, Union, final
 
 lazyget = Decorators.lazyget
 setonce = Decorators.setonce
 checkstate = Decorators.checkstate
 
-class TableauxSystem(object):
+LogicRef = Union[ModuleType, str]
 
-    @classmethod
-    def build_trunk(cls, tableau, argument):
+class RuleMeta(type):
+    def __new__(cls, clsname, bases, attrs, **kw):
+        for attr, value in attrs.items():
+            try:
+                if attr == 'Helpers':
+                    if not isinstance(value, tuple):
+                        raise TypeError()
+                    clsset = set()
+                    nameset = set()                
+                    for item in value:
+                        if not isinstance (item, tuple):
+                            raise TypeError()
+                        if len(item) != 2:
+                            raise TypeError()
+                        hattr, hcls = item
+                        if hattr != None and not isinstance(hattr, basestring):
+                            raise TypeError()
+                        if not isinstance(hcls, type):
+                            raise TypeError()
+                        if hattr != None and hattr in nameset:
+                            raise TypeError()
+                        if hcls in clsset:
+                            raise TypeError()
+            except TypeError:
+                raise TypeError('Invalid %s attribute for class %s' % (attr, clsname))
+        rulecls = super().__new__(cls, clsname, bases, attrs, **kw)
+        return rulecls
+
+class Rule(EventEmitter, metaclass = RuleMeta):
+    class HelperInfo(NamedTuple):
+        cls  : type
+        inst : object
+        attr : str
+
+    RuleEvents = (
+        Events.AFTER_APPLY,
+        Events.BEFORE_APPLY,
+    )
+    DefaultHelperRuleEventMethods = (
+        (Events.AFTER_APPLY  , 'after_apply'),
+        (Events.BEFORE_APPLY , 'before_apply'),
+    )
+    DefaultHelperTabEventMethods = (
+        (Events.AFTER_BRANCH_ADD   , 'after_branch_add'),
+        (Events.AFTER_BRANCH_CLOSE , 'after_branch_close'),
+        (Events.AFTER_NODE_ADD     , 'after_node_add'),
+        (Events.AFTER_NODE_TICK    , 'after_node_tick'),
+        (Events.AFTER_TRUNK_BUILD  , 'after_trunk_build'),
+        (Events.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
+    )
+class KEY(Enum):
+    FLAGS       = auto()
+    STEP_ADDED  = auto()
+    STEP_TICKED = auto()
+    STEP_CLOSED = auto()
+    INDEX       = auto()
+    PARENT      = auto()
+    NODES       = auto()
+
+class FLAG(Flag):
+    NONE   = 0
+    TICKED = 1
+    CLOSED = 2
+    PREMATURE   = 4
+    FINISHED    = 8
+    TIMED_OUT   = 16
+    TRUNK_BUILT = 32
+
+class Tableau(EventEmitter):
+
+    class RuleTarget(NamedTuple):
+        rule   : Rule
+        target : Target
+
+    class StepEntry(NamedTuple):
+        rule   : Rule
+        target : Target
+        duration_ms: int
+
+    TableauEvents = (
+        Events.AFTER_BRANCH_ADD,
+        Events.AFTER_BRANCH_CLOSE,
+        Events.AFTER_NODE_ADD,
+        Events.AFTER_NODE_TICK,
+        Events.AFTER_TRUNK_BUILD,
+        Events.BEFORE_TRUNK_BUILD,
+    )
+    class NodeStat(dict):
+
+        def __init__(self):
+            super().__init__()
+            self.update({
+                KEY.FLAGS       : FLAG.NONE,
+                KEY.STEP_ADDED  : FLAG.NONE,
+                KEY.STEP_TICKED : None,
+            })
+
+    class BranchStat(dict):
+
+        def __init__(self):
+            super().__init__()
+            self.update({
+                KEY.FLAGS       : FLAG.NONE,
+                KEY.STEP_ADDED  : FLAG.NONE,
+                KEY.STEP_CLOSED : FLAG.NONE,
+                KEY.INDEX       : None,
+                KEY.PARENT      : None,
+                KEY.NODES       : {},
+            })
+
+        def node(self, node: Node) -> dict:
+            try:
+                return self[KEY.NODES][node]
+            except KeyError:
+                self[KEY.NODES][node] = Tableau.NodeStat()
+            return self[KEY.NODES][node]
+
+        def view(self) -> dict:
+            return {
+                k: self[k]
+                for k in self
+                if k in KEY and 
+                k not in (KEY.NODES,)
+            }
+
+class Rule(Rule):
+    """
+    Base class for a Tableau rule.
+    """
+
+    Helpers = tuple()
+    Timers = tuple()
+
+    branch_level = 1
+
+    opts = {'is_rank_optim': True}
+
+    def __init__(self, tableau: Tableau, **opts):
+        if not isinstance(tableau, Tableau):
+            raise TypeError(tableau.__class__)
+        super().__init__(Rule.RuleEvents)
+
+        self.search_timer = StopWatch()
+        self.apply_timer = StopWatch()
+        self.timers = {}
+
+        self.opts = self.opts | opts
+
+        self.helpers = {}
+        self.__apply_count = 0
+        self.__helpers = []
+        self.__tableau = tableau
+
+        for name, helper in self.Helpers:
+            self.add_helper(helper, name)
+        self.add_timer(*self.Timers)
+
+    @final
+    @property
+    def apply_count(self):
+        """
+        The number of times the rule has applied.
+
+        :type: int
+        """
+        return self.__apply_count
+
+    @property
+    def is_closure(self) -> bool:
+        """
+        Whether this is an instance of :class:`~rules.ClosureRule`.
+
+        :type: bool
+        """
+        return False
+
+    @property
+    def name(self) -> str:
+        """
+        The rule name, default it the class name.
+
+        :type: str
+        """
+        return self.__class__.__name__
+
+    @final
+    @property
+    def tableau(self) -> Tableau:
+        """
+        Reference to the tableau instance.
+
+        :type: Tableau
+        """
+        return self.__tableau
+
+    @final
+    def get_target(self, branch: Branch) -> Target:
+        """
+        :meta public final:
+        """
+        targets = self._get_targets(branch)
+        if targets:
+            self.__extend_targets(targets)
+            return self.__select_best_target(targets)
+
+    @final
+    def apply(self, target: Target):
+        """
+        :meta public final:
+        """
+        with self.apply_timer:
+            self.emit(Events.BEFORE_APPLY, target)
+            self._apply(target)
+            self.__apply_count += 1
+            self.emit(Events.AFTER_APPLY, target)
+
+    @final
+    def branch(self, parent: Branch = None) -> Branch:
+        """
+        Create a new branch on the tableau. Convenience for ``self.tableau.branch()``.
+
+        :param tableaux.Branch parent: The parent branch, if any.
+        :return: The new branch.
+        :rtype: tableaux.Branch
+        :meta public final:
+        """
+        return self.tableau.branch(parent)
+
+    @final
+    def add_timer(self, *names: str):
+        """
+        Add a timer.
+
+        :meta public:
+        """
+        for name in names:
+            if name in self.timers:
+                raise KeyError("Timer '%s' already exists" % name)
+            self.timers[name] = StopWatch()
+
+    @final
+    def add_helper(self, cls: type, attr: str = None, **opts) -> Rule.HelperInfo:
+        """
+        Add a helper.
+
+        :meta public:
+        """
+        inst = cls(self, **opts)
+        info = Rule.HelperInfo(cls, inst, attr)
+        self.helpers[cls] = inst
+        if attr != None:
+            setattr(self, attr, inst)
+        for event, meth in Rule.DefaultHelperRuleEventMethods:
+            if hasattr(inst, meth):
+                self.on(event, getattr(inst, meth))
+        for event, meth in Rule.DefaultHelperTabEventMethods:
+            if hasattr(inst, meth):
+                self.tableau.on(event, getattr(inst, meth))
+        self.__helpers.append(info)
+        return info
+
+    # Abstract methods
+    def example_nodes(self) -> list[NodeType]:
+        """
+        :meta abstract:
+        """
         raise NotImplementedError()
 
-    @classmethod
-    def branching_complexity(cls, node):
-        return 0
+    def _get_targets(self, branch: Branch) -> list[Target]:
+        """
+        :meta protected abstract:
+        """
+        # Intermediate classes such as ``ClosureRule``, ``PotentialNodeRule``,
+        # (and its child ``FilterNodeRule``) implement this and ``select_best_target()``,
+        # and define finer-grained methods for concrete classes to implement.
+        raise NotImplementedError()
 
-    @classmethod
-    def add_rules(cls, logic, rules):
-        Rules = logic.TableauxRules
-        rules.groups.add(Rules.closure_rules, 'closure')
-        rules.groups.extend(Rules.rule_groups)
+    def _apply(self, target: Target):
+        """
+        Apply the rule to the target. Implementations should modify the tableau directly,
+        with no return value.
 
-def TabRules():
+        :meta abstract:
+        """
+        raise NotImplementedError()
 
+    # Default implementation
+
+    def sentence(self, node: Node) -> Sentence:
+        """
+        Get the sentence for the node, or ``None``.
+
+        :param tableaux.Node node:
+        :rtype: lexicals.Sentence
+        """
+        return node.get('sentence')
+
+    # Scoring
+
+    def group_score(self, target: Target) -> float:
+        # Called in tableau
+        return self.score_candidate(target) / max(1, self.branch_level)
+
+    # Candidate score implementation options ``is_rank_optim``
+
+    def score_candidate(self, target: Target) -> float:
+        return sum(self.score_candidate_list(target))
+
+    def score_candidate_list(self, target: Target) -> Collection[float]:
+        return self.score_candidate_map(target).values()
+
+    def score_candidate_map(self, target: Target) -> dict[Any: float]:
+        # Will sum to 0 by default
+        return {}
+
+    # Other
+
+    def __repr__(self):
+        return orepr(self,
+            module      = self.__module__,
+            apply_count = self.apply_count,
+            helpers     = len(self.__helpers),
+        )
+
+    # Private Util
+
+    def __extend_targets(self, targets: Collection[Target]):
+        """
+        Augment the targets with the following keys:
+        
+        - `rule`
+        - `is_rank_optim`
+        - `candidate_score`
+        - `total_candidates`
+        - `min_candidate_score`
+        - `max_candidate_score`
+
+        :param iterable(dict) targets: The list of targets.
+        :param tableaux.Branch branch: The branch.
+        :return: ``None``
+        """
+        if not isinstance(targets, (tuple, list)):
+            raise TypeError('Targets must be a (tuple, list): %s' % type(targets))
+        if self.opts['is_rank_optim']:
+            # if isinstance(targets, Generator):
+            #     targets, scores = zip()
+            # targets, scores = zip(*(
+            #      (target, self.score_candidate(target))
+            #      for target in targets
+            # ))
+            scores = [self.score_candidate(target) for target in targets]
+        else:
+            scores = [0]
+        max_score = max(scores)
+        min_score = min(scores)
+        for i, target in enumerate(targets):
+            target.update({
+                'rule'            : self,
+                'total_candidates': len(targets),
+            })
+            if self.opts['is_rank_optim']:
+                target.update({
+                    'is_rank_optim'       : True,
+                    'candidate_score'     : scores[i],
+                    'min_candidate_score' : min_score,
+                    'max_candidate_score' : max_score,
+                })
+            else:
+                target.update({
+                    'is_rank_optim'       : False,
+                    'candidate_score'     : None,
+                    'min_candidate_score' : None,
+                    'max_candidate_score' : None,
+                })
+
+    def __select_best_target(self, targets: Collection[Target]):
+        """
+        Selects the best target. Assumes targets have been extended.
+        """
+        for target in targets:
+            if not self.opts['is_rank_optim']:
+                return target
+            if target['candidate_score'] == target['max_candidate_score']:
+                return target
+
+RuleType = Union[RuleMeta, Rule]
+RuleRef = Union[RuleType, str]
+
+class TabRules(object):
+
+    class Base(object):
+
+        @property
+        def locked(self):
+            return self.__c.stat.locked
+
+        @property
+        def tab(self):
+            return self.__c.tab
+
+        @property
+        def logic(self):
+            return self.__c.tab.logic
+
+        def __init__(self, common):
+            self.__c = common
+            self.__setattr__ = TabRules._prot
+
+        def __delattr__(self, name):
+            if name.startswith('_'):
+                raise AttributeError(name)
+            return super().__delattr__(name)
+
+class TabRules(TabRules.Base):
+
+    def _prot(self, name, *_):
+        raise AttributeError(name)
+    
     writes = checkstate(locked = False)
-    def prot(self, name, *_): raise AttributeError(name)
+
+    class RuleGroup(TabRules.Base):
+        pass
+
+    class RuleGroups(TabRules.Base):
+        pass
 
     class Common(object):
 
-        def __init__(self, tableau):
+        def __init__(self, tableau: Tableau):
             self.ruleindex = {}
             self.groupindex = {}
             self.stat = Kwobj(len = 0, locked = False)
             self.tab = tableau
             def lock(*_): self.stat.locked = True
             tableau.once(Events.AFTER_BRANCH_ADD, lock)
-            self.__setattr__ = self.__delattr__ = prot
+            self.__setattr__ = self.__delattr__ = TabRules._prot
 
-    class Base(object):
-        @property
-        def locked(self):
-            return self.__c.stat.locked
-        @property
-        def tab(self):
-            return self.__c.tab
-        @property
-        def logic(self):
-            return self.__c.tab.logic
-        def __init__(self, common):
-            self.__c = common
-            self.__setattr__ = prot
-        def __delattr__(self, name):
-            if name.startswith('_'):
-                raise AttributeError(name)
-            return super().__delattr__(name)
+class TabRules(TabRules):
 
-    class TabRules(Base):
+    @property
+    def groups(self):
+        return self.__groups
 
-        @property
-        def groups(self):
-            return self.__groups
+    @TabRules.writes
+    def append(self, rule: RuleType):
+        self.groups.create().append(rule)
+    add = append
 
-        @writes
-        def append(self, rule):
-            self.groups.create().append(rule)
-        add = append
+    @TabRules.writes
+    def extend(self, rules: Iterable[RuleType]):
+        self.groups.append(rules)
 
-        @writes
-        def extend(self, rules):
-            self.groups.append(rules)
+    @TabRules.writes
+    def clear(self):
+        self.groups.clear()
+        self.__c.ruleindex.clear()
 
-        @writes
-        def clear(self):
-            self.groups.clear()
-            self.__c.ruleindex.clear()
+    def get(self, ref: RuleRef, *dflt: Any) -> Rule:
+        rindex = self.__c.ruleindex
+        if ref in rindex:
+            return rindex[ref]
+        if isclass(ref) and ref.__name__ in rindex:
+            return rindex[ref.__name__]
+        if ref.__class__.__name__ in rindex:
+            return rindex[ref.__class__.__name__]
+        if len(dflt):
+            return dflt[0]
+        raise NotFoundError(ref)
 
-        def get(self, ref, *d):
-            rindex = self.__c.ruleindex
-            if ref in rindex:
-                return rindex[ref]
-            if isclass(ref) and ref.__name__ in rindex:
-                return rindex[ref.__name__]
-            if ref.__class__.__name__ in rindex:
-                return rindex[ref.__class__.__name__]
-            if len(d):
-                return d[0]
-            raise NotFoundError(ref)
+    def __init__(self, tableau: Tableau):
+        common = self.__c = TabRules.Common(tableau)
+        self.__groups = TabRules.RuleGroups(common)
+        super().__init__(common)
 
-        def __init__(self, tableau):
-            common = self.__c = Common(tableau)
-            self.__groups = RuleGroups(common)
-            super().__init__(common)
+    def __len__(self):
+        return self.__c.stat.len
 
-        def __len__(self):
-            return self.__c.stat.len
+    def __iter__(self):
+        return chain.from_iterable(self.groups)
 
-        def __iter__(self):
-            return chain.from_iterable(self.groups)
+    def __contains__(self, item):
+        return item in self.__c.ruleindex
 
-        def __contains__(self, item):
-            return item in self.__c.ruleindex
+    def __getattr__(self, name):
+        c = self.__c
+        if name in c.groupindex:
+            return c.groupindex[name]
+        if name in c.ruleindex:
+            return c.ruleindex[name]
+        raise AttributeError(name)
 
-        def __getattr__(self, name):
-            c = self.__c
-            if name in c.groupindex:
-                return c.groupindex[name]
-            if name in c.ruleindex:
-                return c.ruleindex[name]
-            raise AttributeError(name)
+    def __dir__(self):
+        return [rule.__class__.__name__ for rule in self]
 
-        def __dir__(self):
-            return [rule.__class__.__name__ for rule in self]
+    def __repr__(self):
+        return orepr(self,
+            logic  = self.logic,
+            groups = len(self.groups),
+            rules  = len(self),
+        )
 
-        def __repr__(self):
-            return orepr(self,
-                logic  = self.logic,
-                groups = len(self.groups),
-                rules  = len(self),
+    @staticmethod
+    def _create_rule(arg: RuleType, tab: Tableau) -> Rule:
+        cls = arg
+        if not isclass(cls):
+            cls = cls.__class__
+        try:
+            return cls(tab, **tab.opts)
+        except:
+            raise TypeError(
+                'Failed to instantiate rule: %s (%s, logic: %s)' %
+                (arg, type(arg), tab.logic.name if tab.logic else None)
             )
 
-    class RuleGroups(Base):
+    class RuleGroups(TabRules.RuleGroups):
 
-        @writes
-        def create(self, name = None):
+        @TabRules.writes
+        def create(self, name: str = None) -> TabRules.RuleGroup:
             c = self.__c
             if name != None:
                 if name in c.groupindex or name in c.ruleindex:
                     raise DuplicateKeyError(name)
-            group = RuleGroup(name, c)
+            group = TabRules.RuleGroup(name, c)
             self.__groups.append(group)
             if name != None:
                 c.groupindex[name] = group
             return group
 
-        @writes
-        def append(self, rules, name = None):
+        @TabRules.writes
+        def append(self, rules: Iterable[RuleType], name: str = None):
             if name == None:
                 name = getattr(rules, 'name', None)
             self.create(name).extend(rules)
         add = append
 
-        @writes
-        def extend(self, groups):
+        @TabRules.writes
+        def extend(self, groups: Iterable[Iterable[RuleType]]):
             for rules in groups:
                 self.add(rules)
 
-        @writes
+        @TabRules.writes
         def clear(self):
             g = self.__groups
             for group in g:
@@ -215,21 +618,9 @@ def TabRules():
                 rules = self.__c.stat.len
             )
 
-    def newrule(arg, tab):
-        cls = arg
-        if not isclass(cls):
-            cls = cls.__class__
-        try:
-            return cls(tab, **tab.opts)
-        except:
-            raise TypeError(
-                'Failed to instantiate rule: %s (%s, logic: %s)' %
-                (arg, type(arg), tab.logic.name if tab.logic else None)
-            )
+    class RuleGroup(TabRules.RuleGroup):
 
-    class RuleGroup(Base):
-
-        def lenchange(method):
+        def lenchange(method: Callable) -> Callable:
             def update(self, *args, **kw):
                 mypre = len(self)
                 try:
@@ -239,14 +630,14 @@ def TabRules():
             return update
 
         @property
-        def name(self):
+        def name(self) -> str:
             return self.__name
 
-        @writes
+        @TabRules.writes
         @lenchange
-        def append(self, rule):
+        def append(self, rule: RuleType):
             c = self.__c
-            rule = newrule(rule, self.tab)
+            rule = TabRules._create_rule(rule, self.tab)
             cls = rule.__class__
             clsname = cls.__name__
             if clsname in c.ruleindex or clsname in c.groupindex:
@@ -255,12 +646,12 @@ def TabRules():
             c.ruleindex[clsname] = self.__index[rule] = rule
         add = append
 
-        @writes
-        def extend(self, rules):
+        @TabRules.writes
+        def extend(self, rules: Iterable[RuleType]):
             for rule in rules:
                 self.add(rule)
 
-        @writes
+        @TabRules.writes
         @lenchange
         def clear(self):
             for rule in self.__rules:
@@ -294,431 +685,28 @@ def TabRules():
         def __repr__(self):
             return orepr(self, name = self.name, rules = len(self))
 
-    return TabRules
+class TableauxSystem(object):
 
-class Branch(EventEmitter):
-    pass
-class Branch(Branch):
-    """
-    Represents a tableau branch.
-    """
+    @classmethod
+    def build_trunk(cls, tableau: Tableau, argument: Argument):
+        raise NotImplementedError()
 
-    def __init__(self, parent: Branch = None):
-        if parent != None:
-            if parent == self:
-                raise ValueError('A branch cannot be its own parent')
-            if not isinstance(parent, Branch):
-                raise TypeError('Expecting %s, got %s' % (Branch, type(parent)))
-            self.__origin = parent.origin
-        else:
-            self.__origin = self
-        self.__parent = parent
+    @classmethod
+    def branching_complexity(cls, node: Node) -> int:
+        return 0
 
-        super().__init__(
-            Events.AFTER_BRANCH_CLOSE,
-            Events.AFTER_NODE_ADD,
-            Events.AFTER_NODE_TICK,
-        )
-        # Make sure properties are copied if needed in copy()
-        
-        
-        self.__closed = False
-
-        self.__nodes = []
-        self.__nodeset = set()
-        self.__ticked = set()
-
-        self.__worlds = set()
-        self.__nextworld = 0
-        self.__constants = set()
-        self.__nextconst = Constant.first()
-        self.__pidx = {
-            'sentence'   : {},
-            'designated' : {},
-            'world'      : {},
-            'world1'     : {},
-            'world2'     : {},
-            'w1Rw2'      : {},
-        }
-
-        self.__model = None
-
-    @property
-    def id(self) -> int:
-        return id(self)
-
-    @property
-    def parent(self) -> Branch:
-        return self.__parent
-
-    @property
-    def origin(self) -> Branch:
-        return self.__origin
-
-    @property
-    def closed(self) -> bool:
-        return self.__closed
-
-    @property
-    def leaf(self) -> Node:
-        return self[-1] if len(self) else None
-
-    @property
-    def model(self):
-        return self.__model
-
-    @model.setter
-    @setonce
-    def model(self, model):
-        self.__model = model
-
-    @property
-    def world_count(self):
-        return len(self.__worlds)
-
-    @property
-    def constants_count(self):
-        return len(self.__constants)
-
-    @property
-    def next_constant(self):
-        # TODO: WIP
-        return self.__nextconst
-
-    @property
-    def next_world(self) -> int:
-        """
-        Return a new world that does not appear on the branch.
-        """
-        return self.__nextworld
-
-    def has(self, props: dict, ticked: bool = None) -> bool:
-        """
-        Check whether there is a node on the branch that matches the given properties,
-        optionally filtered by ticked status.
-        """
-        return self.find(props, ticked = ticked) != None
-
-    def has_access(self, w1: int, w2: int) -> bool:
-        """
-        Check whether a tuple of the given worlds is on the branch.
-
-        This is a performant way to check typical "access" nodes on the
-        branch with `world1` and `world2` properties. For more advanced
-        searches, use the ``has()`` method.
-        """
-        return (w1, w2) in self.__pidx['w1Rw2']
-
-    def has_any(self, props_list: Iterable[dict], ticked: bool = None) -> bool:
-        """
-        Check a list of property dictionaries against the ``has()`` method. Return ``True``
-        when the first match is found.
-        """
-        for props in props_list:
-            if self.has(props, ticked=ticked):
-                return True
-        return False
-
-    def has_all(self, props_list: Iterable[dict], ticked: bool = None) -> bool:
-        """
-        Check a list of property dictionaries against the ``has()`` method. Return ``False``
-        when the first non-match is found.
-        """
-        for props in props_list:
-            if not self.has(props, ticked=ticked):
-                return False
-        return True
-
-    def find(self, props: dict, ticked: bool = None) -> Node:
-        """
-        Find the first node on the branch that matches the given properties, optionally
-        filtered by ticked status. Returns ``None`` if not found.
-        """
-        results = self.search_nodes(props, ticked = ticked, limit = 1)
-        if results:
-            return results[0]
-        return None
-
-    def find_all(self, props: dict, ticked: bool = None) -> list[Node]:
-        """
-        Find all the nodes on the branch that match the given properties, optionally
-        filtered by ticked status. Returns a list.
-        """
-        return self.search_nodes(props, ticked = ticked)
-
-    def search_nodes(self, props: dict, ticked = None, limit = None) -> list[Node]:
-        """
-        Find all the nodes on the branch that match the given properties, optionally
-        filtered by ticked status, up to the limit, if given. Returns a list.
-        """
-        results = []
-        best_haystack = self.__select_index(props, ticked)
-        if not best_haystack:
-            return results
-        for node in best_haystack:
-            if limit != None and len(results) >= limit:
-                break
-            if ticked != None and self.is_ticked(node) != ticked:
-                continue
-            if node.has_props(props):
-                results.append(node)
-        return results
-
-    def append(self, node: NodeType) -> Branch:
-        """
-        Append a node (Node object or dict of props). Returns self.
-        """
-        node = Node(node)
-        self.__nodes.append(node)
-        self.__nodeset.add(node)
-        s = node.get('sentence')
-        if s:
-            if s.constants:
-                if self.__nextconst in s.constants:
-                    # TODO: new_constant() is still a prettier result, since it
-                    #       finds the mimimum available by searching for gaps.
-                    self.__nextconst = max(s.constants).next()
-                self.__constants.update(s.constants)
-        if node.worlds:
-            maxworld = max(node.worlds)
-            if maxworld >= self.__nextworld:
-                self.__nextworld = maxworld + 1
-            self.__worlds.update(node.worlds)
-
-        # Add to index *before* after_node_add callback
-        self.__add_to_index(node)
-        self.emit(Events.AFTER_NODE_ADD, node, self)
-        return self
-    add = append
-
-    def extend(self, nodes: Iterable[NodeType]) -> Branch:
-        """
-        Add multiple nodes. Returns self.
-        """
-        for node in nodes:
-            self.append(node)
-        return self
-
-    def tick(self, *nodes: Node) -> Branch:
-        """
-        Tick a node for the branch. Returns self.
-        """
-        for node in nodes:
-            if not self.is_ticked(node):
-                self.__ticked.add(node)
-                node.ticked = True
-                self.emit(Events.AFTER_NODE_TICK, node, self)
-        return self
-
-    def close(self) -> Branch:
-        """
-        Close the branch. Returns self.
-        """
-        if not self.closed:
-            self.__closed = True
-            self.append({'is_flag': True, 'flag': 'closure'})
-            self.emit(Events.AFTER_BRANCH_CLOSE, self)
-        return self
-
-    def is_ticked(self, node: Node) -> bool:
-        """
-        Whether the node is ticked relative to the branch.
-        """
-        return node in self.__ticked
-
-    def copy(self, parent: Branch = None) -> Branch:
-        """
-        Return a copy of the branch. Event listeners are *not* copied.
-        Parent is not copied, but can be explicitly set.
-        """
-        branch = self.__class__(parent = parent)
-        branch.__nodes = list(self.__nodes)
-        branch.__nodeset = set(self.__nodeset)
-        branch.__ticked = set(self.__ticked)
-        branch.__constants = set(self.__constants)
-        branch.__nextconst = self.__nextconst
-        branch.__worlds = set(self.__worlds)
-        branch.__nextworld = self.__nextworld
-        branch.__pidx = {
-            prop : {
-                key : set(self.__pidx[prop][key])
-                for key in self.__pidx[prop]
-            }
-            for prop in self.__pidx
-        }
-        return branch
-
-    def constants(self) -> set[Constant]:
-        """
-        Return the set of constants that appear on the branch.
-        """
-        return self.__constants
-
-    def new_constant(self) -> Constant:
-        """
-        Return a new constant that does not appear on the branch.
-        """
-        if not self.__constants:
-            return Constant.first()
-        maxidx = Constant.TYPE.maxi
-        coordset = set(c.coords for c in self.__constants)
-        index, sub = 0, 0
-        while (index, sub) in coordset:
-            index += 1
-            if index > maxidx:
-                index, sub = 0, sub + 1
-        return Constant((index, sub))
-
-    def __add_to_index(self, node):
-        for prop in self.__pidx:
-            val = None
-            found = False
-            if prop == 'w1Rw2':
-                if node.has('world1', 'world2'):
-                    val = (node['world1'], node['world2'])
-                    found = True
-            elif prop in node:
-                val = node[prop]
-                found = True
-            if found:
-                if val not in self.__pidx[prop]:
-                    self.__pidx[prop][val] = set()
-                self.__pidx[prop][val].add(node)
-
-    def __select_index(self, props, ticked):
-        best_index = None
-        for prop in self.__pidx:
-            val = None
-            found = False
-            if prop == 'w1Rw2':
-                if 'world1' in props and 'world2' in props:
-                    val = (props['world1'], props['world2'])
-                    found = True
-            elif prop in props:
-                val = props[prop]
-                found = True
-            if found:
-                if val not in self.__pidx[prop]:
-                    return False
-                index = self.__pidx[prop][val]
-                if best_index == None or len(index) < len(best_index):
-                    best_index = index
-                # we could do no better
-                if len(best_index) == 1:
-                    break
-        if not best_index:
-            if ticked:
-                best_index = self.__ticked
-            else:
-                best_index = self
-        return best_index
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.id == other.id
-
-    def __ne__(self, other):
-        return not (isinstance(other, self.__class__) and self.id == other.id)
-
-    def __hash__(self):
-        return hash(self.id)
-
-    def __getitem__(self, key):
-        return self.__nodes[key]
-
-    def __len__(self):
-        return len(self.__nodes)
-
-    def __iter__(self):
-        return iter(self.__nodes)
-
-    def __copy__(self):
-        return self.copy()
-
-    def __contains__(self, node):
-        return node in self.__nodeset
-
-    def __repr__(self):
-        return orepr(self, 
-            id     = self.id,
-            nodes  = len(self),
-            leaf   = self.leaf.id if self.leaf else None,
-            closed = self.closed,
-        )
-
-class KEY(Enum):
-    FLAGS       = auto()
-    STEP_ADDED  = auto()
-    STEP_TICKED = auto()
-    STEP_CLOSED = auto()
-    INDEX       = auto()
-    PARENT      = auto()
-    NODES       = auto()
-
-class FLAG(Flag):
-    NONE   = 0
-    TICKED = 1
-    CLOSED = 2
-    PREMATURE   = 4
-    FINISHED    = 8
-    TIMED_OUT   = 16
-    TRUNK_BUILT = 32
-
-class Tableau(EventEmitter):
-
-    TabRules = TabRules()
-
-    class RuleTarget(NamedTuple):
-        rule   : object
-        target : Target
-
-    class StepEntry(NamedTuple):
-        rule   : object
-        target : Target
-        duration_ms: int
-
-    class NodeStat(dict):
-
-        def __init__(self):
-            super().__init__()
-            self.update({
-                KEY.FLAGS       : FLAG.NONE,
-                KEY.STEP_ADDED  : FLAG.NONE,
-                KEY.STEP_TICKED : None,
-            })
-
-    class BranchStat(dict):
-
-        def __init__(self):
-            super().__init__()
-            self.update({
-                KEY.FLAGS       : FLAG.NONE,
-                KEY.STEP_ADDED  : FLAG.NONE,
-                KEY.STEP_CLOSED : FLAG.NONE,
-                KEY.INDEX       : None,
-                KEY.PARENT      : None,
-                KEY.NODES       : {},
-            })
-
-        def node(self, node: Node):
-            try:
-                return self[KEY.NODES][node]
-            except KeyError:
-                self[KEY.NODES][node] = Tableau.NodeStat()
-            return self[KEY.NODES][node]
-
-        def view(self):
-            return {
-                k: self[k]
-                for k in self
-                if k in KEY and 
-                k not in (KEY.NODES,)
-            }
+    @classmethod
+    def add_rules(cls, logic: ModuleType, rules: TabRules):
+        Rules = logic.TableauxRules
+        rules.groups.add(Rules.closure_rules, 'closure')
+        rules.groups.extend(Rules.rule_groups)
 
 class Tableau(Tableau):
     """
     A tableau proof.
     """
-    
+
+    # TabRules = TabRules()
     opts = {
         'is_group_optim'  : True,
         'is_build_models' : False,
@@ -726,16 +714,9 @@ class Tableau(Tableau):
         'max_steps'       : None,
     }
 
-    def __init__(self, logic = None, argument = None, **opts):
+    def __init__(self, logic: LogicRef = None, argument: Argument = None, **opts):
 
-        super().__init__(
-            Events.AFTER_BRANCH_ADD,
-            Events.AFTER_BRANCH_CLOSE,
-            Events.AFTER_NODE_ADD,
-            Events.AFTER_NODE_TICK,
-            Events.AFTER_TRUNK_BUILD,
-            Events.BEFORE_TRUNK_BUILD,
-        )
+        super().__init__(Tableau.TableauEvents)
 
         #: The history of rule applications. Each application is a ``dict``
         #: with the following keys:
@@ -790,7 +771,7 @@ class Tableau(Tableau):
         }
 
         # Rules
-        self.__rules = self.TabRules(self)
+        self.__rules = TabRules(self)
 
         self.__logic = self.__argument = None
         if logic != None:
@@ -817,7 +798,7 @@ class Tableau(Tableau):
         return self.__logic
 
     @logic.setter
-    def logic(self, logic: Union[ModuleType, str]):
+    def logic(self, logic: LogicRef):
         """
         Setter for ``logic`` property. Assumes building has not started.
         """
@@ -829,11 +810,11 @@ class Tableau(Tableau):
             self.build_trunk()
 
     @property
-    def rules(self):
+    def rules(self) -> TabRules:
         return self.__rules
 
     @property
-    def System(self):
+    def System(self) -> TableauxSystem:
         """
         Convenience property for ``self.logic.TableauxSystem``. If the ``logic``
         property is ``None``, the value will be ``None``.
@@ -845,7 +826,7 @@ class Tableau(Tableau):
         return self.logic.TableauxSystem
 
     @property
-    def argument(self):
+    def argument(self) -> Argument:
         """
         The argument of the tableau.
 
@@ -948,7 +929,7 @@ class Tableau(Tableau):
         return len(self.history) + int(self.trunk_built)
 
     @property
-    def open(self):
+    def open(self) -> Collection:
         """
         View of the open branches.
         """
@@ -968,7 +949,7 @@ class Tableau(Tableau):
         self.finish()
         return self
 
-    def step(self):
+    def step(self) -> Union[Tableau.StepEntry, None, bool]:
         """
         Find, execute, and return the next rule application. If no rule can
         be applied, the ``finish()`` method is called, and ``None`` is returned.
@@ -1152,8 +1133,8 @@ class Tableau(Tableau):
         return branch in self.__branchstat
 
     def __repr__(self):
-        return dictrepr({
-            self.__class__.__name__: self.id,
+        return orepr(self, {
+            'id'   : self.id,
             'logic': (self.logic and self.logic.name),
             'len'  : len(self),
             'open' : len(self.open),
@@ -1239,7 +1220,7 @@ class Tableau(Tableau):
             if res:
                 return res
 
-    def __get_group_application(self, branch: Branch, rules) -> Tableau.RuleTarget:
+    def __get_group_application(self, branch: Branch, rules: Iterable[Rule]) -> Tableau.RuleTarget:
         """
         Find and return the next available rule application for the given open
         branch and rule group. The ``rules`` parameter is a list of rules, and
@@ -1312,7 +1293,7 @@ class Tableau(Tableau):
                 })
                 return res
 
-    def __compute_stats(self):
+    def __compute_stats(self) -> dict:
         """
         Compute the stats property after the tableau is finished.
         """
@@ -1343,7 +1324,7 @@ class Tableau(Tableau):
             ],
         }
 
-    def __compute_rule_stats(self, rule):
+    def __compute_rule_stats(self, rule: Rule) -> dict:
         """
         Compute the stats for a rule after the tableau is finished.
         """
@@ -1391,7 +1372,7 @@ class Tableau(Tableau):
         if self.current_step > 0:
             raise IllegalStateError("Tableau is already started.")
 
-    def __result_word(self):
+    def __result_word(self) -> str:
         if self.valid:
             return 'Valid'
         if self.invalid:
@@ -1415,7 +1396,6 @@ class Tableau(Tableau):
                 model.is_countermodel = model.is_countermodel_to(self.argument)
             branch.model = model
             self.models.add(model)
-TabRules = None
 
 def make_tree_structure(tab, branches, node_depth=0, track=None):
     is_root = track == None
@@ -1555,5 +1535,3 @@ def make_tree_structure(tab, branches, node_depth=0, track=None):
     if is_root:
         s['distinct_nodes'] = track['distinct_nodes']
     return s
-
-

@@ -23,7 +23,8 @@ from errors import NotFoundError
 from itertools import chain
 from past.builtins import basestring
 from types import DynamicClassAttribute, MappingProxyType
-from utils import CacheNotationData, Decorators as decs, ReadOnlyDict, cat, isstr, \
+from typing import Callable, FrozenSet, Iterable, NamedTuple, Set, Union
+from utils import CacheNotationData, Decorators as decs, cat, isstr, \
     typecheck, condcheck, EmptySet, kwrepr, orepr
 lazyget = decs.lazyget
 setonce = decs.setonce
@@ -192,11 +193,13 @@ class Lexical(object):
     #: :type: int
     hash = NotImplemented
 
+class Lexical(Lexical):
+
     @classmethod
-    def first(cls):
+    def first(cls) -> Lexical:
         raise NotImplementedError()
 
-    def next(self, **kw):
+    def next(self, **kw) -> Lexical:
         raise NotImplementedError()
 
     @classmethod
@@ -208,8 +211,8 @@ class Lexical(object):
             if item:
                 yield item
 
-    def _sortcheck(sort_comparator):
-        def compare(self, other):
+    def _sortcheck(sort_comparator: Callable) -> Callable:
+        def compare(self, other: Lexical) -> bool:
             try:
                 return sort_comparator(self, other)
             except AttributeError:
@@ -219,19 +222,19 @@ class Lexical(object):
         return compare
 
     @_sortcheck
-    def __lt__(self, other):
+    def __lt__(self, other: Lexical):
         return self.TYPE < other.TYPE or self.sort_tuple < other.sort_tuple
 
     @_sortcheck
-    def __le__(self, other):
+    def __le__(self, other: Lexical):
         return self.TYPE <= other.TYPE or self.sort_tuple <= other.sort_tuple
 
     @_sortcheck
-    def __gt__(self, other):
+    def __gt__(self, other: Lexical):
         return self.TYPE > other.TYPE or self.sort_tuple > other.sort_tuple
 
     @_sortcheck
-    def __ge__(self, other):
+    def __ge__(self, other: Lexical):
         return self.TYPE >= other.TYPE or self.sort_tuple >= other.sort_tuple
 
     def __repr__(self):
@@ -250,13 +253,13 @@ class LexEnum(Lexical, EnumBase, metaclass = LexEnumMeta):
     """
             
     @classmethod
-    def first(cls):
+    def first(cls) -> Lexical:
         """
         :implements: Lexical
         """
         return cls[0]
 
-    def next(self, loop = False, **kw):
+    def next(self, loop = False, **kw) -> Lexical:
         """
         :implements: Lexical
         """
@@ -302,7 +305,7 @@ class LexItem(Lexical, metaclass = LexItemMeta):
 
     @property
     @lazyget
-    def ident(self):
+    def ident(self) -> tuple:
         """
         :implements: Lexical
         """
@@ -310,7 +313,7 @@ class LexItem(Lexical, metaclass = LexItemMeta):
 
     @property
     @lazyget
-    def hash(self):
+    def hash(self) -> int:
         """
         :implements: Lexical
         """
@@ -356,16 +359,20 @@ class Operator(LexEnum):
     def __call__(self, *spec):
         return Operated(self, *spec)
 
+class Coords(NamedTuple):
+    index     : int
+    subscript : int
+
 class CoordsItem(LexItem):
 
     @classmethod
-    def first(cls):
+    def first(cls) -> LexItem:
         """
         :implements: Lexical
         """
         return cls(0, 0)
 
-    def next(self, **kw):
+    def next(self, **kw) -> LexItem:
         """
         :implements: Lexical
         """
@@ -376,26 +383,26 @@ class CoordsItem(LexItem):
         return self.__class__(*coords)
 
     @property
-    def coords(self):
+    def coords(self) -> Coords:
         return self.__coords
 
     @property
-    def index(self):
-        return self.coords[0]
+    def index(self) -> int:
+        return self.coords.index
 
     @property
-    def subscript(self):
-        return self.coords[1]
+    def subscript(self) -> int:
+        return self.coords.subscript
 
     @property
     @lazyget
-    def scoords(self):
-        return (self.subscript, self.index)
+    def scoords(self) -> tuple[int]:
+        return (self.coords.subscript, self.coords.index)
 
-    def __init__(self, *coords):
+    def __init__(self, *coords: Coords):
         if len(coords) == 1:
             coords, = coords
-        index, subscript = self.__coords = coords
+        index, subscript = self.__coords = Coords(*coords)
         maxi = self.TYPE.maxi
         sub = subscript
         typecheck(index, int, 'index')
@@ -406,28 +413,28 @@ class CoordsItem(LexItem):
 class Parameter(CoordsItem):
 
     @property
-    def spec(self):
+    def spec(self) -> Coords:
         """
         :implements: Lexical
         """
         return self.coords
 
     @property
-    def sort_tuple(self):
+    def sort_tuple(self) -> tuple[int]:
         """
         :implements: Lexical
         """
         return self.scoords
 
     @property
-    def is_constant(self):
+    def is_constant(self) -> bool:
         return self.TYPE == Constant
 
     @property
-    def is_variable(self):
+    def is_variable(self) -> bool:
         return self.TYPE == Variable
 
-    def __init__(self, *coords):
+    def __init__(self, *coords: int):
         CoordsItem.__init__(self, *coords)
 
 class Constant(Parameter):
@@ -436,7 +443,12 @@ class Constant(Parameter):
 class Variable(Parameter):
     pass
 
-class Predicate(CoordsItem):
+class PredicateCoords(NamedTuple):
+    index: int
+    subscript: int
+    arity: int
+class Predicate(CoordsItem): pass
+class Predicate(Predicate):
     """
     Predicate
 
@@ -456,29 +468,28 @@ class Predicate(CoordsItem):
         Predicate((1, 3, 2, 'MyLabel'))
     """
     @property
-    @lazyget
-    def spec(self):
+    def spec(self) -> PredicateCoords:
         """
         :implements: Lexical
         """
-        return self.coords + (self.arity,)
+        return self.__pcoords
 
     @property
     @lazyget
-    def sort_tuple(self):
+    def sort_tuple(self) -> tuple[int]:
         """
         :implements: Lexical
         """
         return self.scoords + (self.arity,)
 
     @classmethod
-    def first(cls):
+    def first(cls) -> Predicate:
         """
         :implements: Lexical
         """
         return cls((0, 0, 1))
 
-    def next(self, **kw):
+    def next(self, **kw) -> Predicate:
         """
         :implements: Lexical
         """
@@ -494,20 +505,20 @@ class Predicate(CoordsItem):
         return self.__class__(spec)
 
     @property
-    def arity(self):
-        return self.__arity
+    def arity(self) -> int:
+        return self.__pcoords.arity
 
     @property
-    def name(self):
+    def name(self) -> Union[PredicateCoords, str]:
         return self.__name
 
     @property
-    def is_system(self):
+    def is_system(self) -> bool:
         return self.index < 0
 
     @property
     @lazyget
-    def refs(self):
+    def refs(self) -> tuple[Union[tuple, str]]:
         """
         The coords and other attributes, each of which uniquely identify this
         instance among other predicates. These are used to create hash indexes
@@ -533,7 +544,8 @@ class Predicate(CoordsItem):
             spec, = spec
         if len(spec) not in (3, 4):
             raise TypeError('need 3 or 4 elements, got %s' % len(spec))
-        index, subscript, arity = spec[0:3]
+        pcoords = PredicateCoords(*spec[0:3])
+        index, subscript, arity = pcoords
         name = spec[3] if len(spec) == 4 else None
         super().__init__((index, subscript))
         if self.System and index < 0:
@@ -542,7 +554,8 @@ class Predicate(CoordsItem):
             raise TypeError('`arity` %s' % type(arity))
         if arity <= 0:
             raise ValueError('`arity` must be > 0')
-        self.__arity = arity
+        self.__pcoords = pcoords
+        # self.__arity = arity
         if name != None:
             if name in self.System:
                 raise ValueError('system predicate', name)
@@ -553,9 +566,7 @@ class Predicate(CoordsItem):
         self.__name = name
 
     def __str__(self):
-        if self.is_system:
-            return self.name
-        return super().__str__()
+        return self.name if self.is_system else super().__str__()
 
     def __call__(self, *spec):
         return Predicated(self, *spec)
@@ -563,7 +574,7 @@ class Predicate(CoordsItem):
 class Sentence(LexItem):
 
     @property
-    def operator(self):
+    def operator(self) -> Union[Operator, None]:
         """
         The operator, if any.
 
@@ -572,7 +583,7 @@ class Sentence(LexItem):
         return None
 
     @property
-    def quantifier(self):
+    def quantifier(self) -> Union[Quantifier, None]:
         """
         The quantifier, if any.
 
@@ -581,7 +592,7 @@ class Sentence(LexItem):
         return None
 
     @property
-    def predicate(self):
+    def predicate(self) -> Union[Predicate, None]:
         """
         The predicate, if any.
 
@@ -590,7 +601,7 @@ class Sentence(LexItem):
         return None
 
     @property
-    def is_atomic(self):
+    def is_atomic(self) -> bool:
         """
         Whether this is an atomic sentence.
 
@@ -599,7 +610,7 @@ class Sentence(LexItem):
         return self.TYPE == Atomic
 
     @property
-    def is_predicated(self):
+    def is_predicated(self) -> bool:
         """
         Whether this is a predicated sentence.
 
@@ -608,7 +619,7 @@ class Sentence(LexItem):
         return self.TYPE == Predicated
 
     @property
-    def is_quantified(self):
+    def is_quantified(self) -> bool:
         """
         Whether this a quantified sentence.
 
@@ -617,7 +628,7 @@ class Sentence(LexItem):
         return self.TYPE == Quantified
 
     @property
-    def is_operated(self):
+    def is_operated(self) -> bool:
         """
         Whether this is an operated sentence.
 
@@ -627,7 +638,7 @@ class Sentence(LexItem):
 
     @property
     @lazyget
-    def is_literal(self):
+    def is_literal(self) -> bool:
         """
         Whether the sentence is a literal. Here a literal is either a
         predicated sentence, the negation of a predicated sentence,
@@ -642,7 +653,7 @@ class Sentence(LexItem):
         )
 
     @property
-    def is_negated(self):
+    def is_negated(self) -> bool:
         """
         Whether this is a negated sentence.
 
@@ -651,60 +662,60 @@ class Sentence(LexItem):
         return self.operator == Operator.Negation
 
     @property
-    def predicates(self):
+    def predicates(self) -> Set[Predicate]:
         """
         Set of predicates, recursive.
 
-        :rtype: set(Predicate)
+        :rtype: set[Predicate]
         """
         return EmptySet
 
     @property
-    def constants(self):
+    def constants(self) -> Set[Constant]:
         """
         Set of constants, recursive.
 
-        :rtype: set(Constant)
+        :rtype: set[Constant]
         """
         return EmptySet
 
     @property
-    def variables(self):
+    def variables(self) -> Set[Variable]:
         """
         Set of variables, recursive.
 
-        :rtype: set(Variable)
+        :rtype: set[Variable]
         """
         return EmptySet
 
     @property
-    def atomics(self):
+    def atomics(self) -> Set:
         """
         Set of atomic sentences, recursive.
 
-        :rtype: set(Atomic)
+        :rtype: set[Atomic]
         """
         return EmptySet
 
     @property
-    def quantifiers(self):
+    def quantifiers(self) -> tuple[Quantifier]:
         """
         Tuple of quantifiers, recursive.
 
-        :rtype: tuple(Quantifier)
+        :rtype: tuple[Quantifier]
         """
         return tuple()
 
     @property
-    def operators(self):
+    def operators(self) -> tuple[Operator]:
         """
         Tuple of operators, recursive.
 
-        :rtype: tuple(Operator)
+        :rtype: tuple[Operator]
         """
         return tuple()
 
-    def substitute(self, new_param, old_param):
+    def substitute(self, new_param: Parameter, old_param: Parameter):
         """
         Recursively substitute ``new_param`` for all occurrences of ``old_param``.
         May return self, or a new sentence.
@@ -762,17 +773,18 @@ class Sentence(LexItem):
         """
         return v in self.variables
 
-class Atomic(Sentence, CoordsItem):
+class Atomic(Sentence, CoordsItem): pass
+class Atomic(Atomic):
 
     @property
-    def spec(self):
+    def spec(self) -> Coords:
         """
         :implements: Lexical
         """
         return self.coords
 
     @property
-    def sort_tuple(self):
+    def sort_tuple(self) -> tuple[int]:
         """
         :implements: Lexical
         """
@@ -780,36 +792,35 @@ class Atomic(Sentence, CoordsItem):
 
     @property
     @lazyget
-    def atomics(self):
+    def atomics(self) -> FrozenSet[Atomic]:
         """
         :overrides: Sentence
         """
         return frozenset({self})
 
-    def variable_occurs(self, v):
+    def variable_occurs(self, v: Variable) -> bool:
         """
         :overrides: Sentence
         """
         return False
 
-    def __init__(self, *coords):
+    def __init__(self, *coords: Coords):
         CoordsItem.__init__(self, *coords)
 
-class Predicated(Sentence):
+class Predicated(Sentence): pass
+class Predicated(Predicated):
 
     @property
     @lazyget
-    def spec(self):
+    def spec(self) -> tuple[tuple[str, PredicateCoords], tuple[tuple[str, Coords]]]:
         """
         :implements: Lexical
         """
-        return self.predicate.spec + tuple(
-            param.spec for param in self
-        )
+        return (self.predicate.ident, tuple(param.ident for param in self))
 
     @property
     @lazyget
-    def sort_tuple(self):
+    def sort_tuple(self) -> tuple:
         """
         :implements: Lexical
         """
@@ -818,7 +829,7 @@ class Predicated(Sentence):
         )
 
     @classmethod
-    def first(cls, predicate = None):
+    def first(cls, predicate: Predicate = None) -> Predicated:
         """
         :overrides: CoordsItem
         """
@@ -827,7 +838,7 @@ class Predicated(Sentence):
         params = tuple(c for i in range(pred.arity))
         return cls(pred, params)
 
-    def next(self, **kw):
+    def next(self, **kw) -> Predicated:
         """
         :implements: Lexical
         """
@@ -836,7 +847,7 @@ class Predicated(Sentence):
         return self.__class__(pred, params)
 
     @property
-    def predicate(self):
+    def predicate(self) -> Predicate:
         """
         :overrides: Sentence
         """
@@ -844,7 +855,7 @@ class Predicated(Sentence):
 
     @property
     @lazyget
-    def predicates(self):
+    def predicates(self) -> FrozenSet[Predicate]:
         """
         :overrides: Sentence
         """
@@ -852,7 +863,7 @@ class Predicated(Sentence):
 
     @property
     @lazyget
-    def constants(self):
+    def constants(self) -> FrozenSet[Constant]:
         """
         :overrides: Sentence
         """
@@ -860,13 +871,13 @@ class Predicated(Sentence):
 
     @property
     @lazyget
-    def variables(self):
+    def variables(self) -> FrozenSet[Variable]:
         """
         :overrides: Sentence
         """
         return frozenset({param for param in self if param.is_variable})
 
-    def substitute(self, new_param, old_param):
+    def substitute(self, new_param: Parameter, old_param: Parameter) -> Predicated:
         """
         :overrides: Sentence
         """
@@ -876,24 +887,24 @@ class Predicated(Sentence):
         )
         return self.__class__(self.predicate, params)
 
-    def variable_occurs(self, v):
+    def variable_occurs(self, v) -> bool:
         """
         :overrides: Sentence
         """
         return v in self.__paramset and v.is_variable
 
     @property
-    def params(self):
+    def params(self) -> tuple[Parameter]:
         """
         The sentence params.
 
-        :type: type(Parameter)
+        :type: tuple[Parameter]
         """
         return self.__params
 
     @property
     @lazyget
-    def paramset(self):
+    def paramset(self) -> FrozenSet[Parameter]:
         return frozenset(self.params)
 
     def __iter__(self):
@@ -930,20 +941,17 @@ class Predicated(Sentence):
         self.__params = tuple(params)
         self.__paramset = frozenset(params)
 
-class Quantified(Sentence):
+class Quantified(Sentence): pass
+class Quantified(Quantified):
 
     @property
     @lazyget
-    def spec(self):
-        return (
-            self.quantifier,
-            self.variable.spec,
-            self.sentence.spec,
-        )
+    def spec(self) -> tuple[tuple[str, str], tuple[str, Coords], tuple]:
+        return (self.quantifier.ident, self.variable.ident, self.sentence.ident)
 
     @property
     @lazyget
-    def sort_tuple(self):
+    def sort_tuple(self) -> tuple:
         return (
             self.quantifier.order,
             self.variable.sort_tuple,
@@ -951,18 +959,18 @@ class Quantified(Sentence):
         )
 
     @property
-    def quantifier(self):
+    def quantifier(self) -> Quantifier:
         return self.__quantifier
 
     @classmethod
-    def first(cls, quantifier = None):
+    def first(cls, quantifier: Quantifier = None) -> Quantified:
         q = Quantifier[quantifier or Quantifier.first()]
         v = Variable.first()
         pred = Predicate.first()
         params = (v, *Constant.gen(pred.arity - 1))
         return cls(q, v, Predicated(pred, params))
 
-    def next(self, **kw):
+    def next(self, **kw) -> Quantified:
         q = self.quantifier
         v = self.variable
         s = self.sentence.next(**kw)
@@ -971,48 +979,48 @@ class Quantified(Sentence):
         return self.__class__(q, v, s)
 
     @property
-    def variable(self):
+    def variable(self) -> Variable:
         return self.__variable
 
     @property
-    def sentence(self):
+    def sentence(self) -> Sentence:
         return self.__sentence
 
     @property
-    def constants(self):
+    def constants(self) -> Set[Sentence]:
         return self.sentence.constants
 
     @property
-    def variables(self):
+    def variables(self) -> Set[Variable]:
         return self.sentence.variables
 
     @property
-    def atomics(self):
+    def atomics(self) -> Set[Atomic]:
         return self.sentence.atomics
 
     @property
-    def predicates(self):
+    def predicates(self) -> Set[Predicate]:
         return self.sentence.predicates
 
     @property
-    def operators(self):
+    def operators(self) -> tuple[Operator]:
         return self.sentence.operators
 
     @property
     @lazyget
-    def quantifiers(self):
+    def quantifiers(self) -> tuple[Quantifier]:
         return (self.quantifier, *(q for q in self.sentence.quantifiers))
 
-    def substitute(self, new_param, old_param):
+    def substitute(self, new_param: Parameter, old_param: Parameter) -> Quantified:
         # Always return a new sentence.
         si = self.sentence
         r = si.substitute(new_param, old_param)
         return self.__class__(self.quantifier, self.variable, r)
 
-    def variable_occurs(self, v):
+    def variable_occurs(self, v: Variable) -> bool:
         return self.variable == v or self.sentence.variable_occurs(v)
 
-    def __init__(self, quantifier, variable, sentence):
+    def __init__(self, quantifier: Quantifier, variable: Variable, sentence: Sentence):
         try:
             quantifier = Quantifier[quantifier]
         except KeyError:
@@ -1025,94 +1033,90 @@ class Quantified(Sentence):
         self.__variable = variable
         self.__sentence = sentence
 
-class Operated(Sentence):
+class Operated(Sentence): pass
+class Operated(Operated):
 
     @property
     @lazyget
-    def spec(self):
-        return (
-            (self.operator,) +
-            tuple(s.spec for s in self)
-        )
+    def spec(self) -> tuple[str, tuple[tuple]]:
+        return (self.operator.spec, tuple(s.ident for s in self))
 
     @property
     @lazyget
-    def sort_tuple(self):
+    def sort_tuple(self) -> tuple:
         return (
             (self.operator.order,) +
             tuple(s.sort_tuple for s in self)
         )
 
     @classmethod
-    def first(cls, operator = None):
+    def first(cls, operator: Operator = None):
         operator = Operator[operator or Operator.first()]
         operands = tuple(Atomic.gen(operator.arity))
         return cls(operator, operands)
 
-    def next(self, **kw):
+    def next(self, **kw) -> Operated:
         operands = list(self.operands)
         operands[-1] = operands[-1].next(**kw)
         return self.__class__(self.operator, operands)
 
     @property
-    def operator(self):
+    def operator(self) -> Operator:
         return self.__operator
 
     @property
-    def operands(self):
+    def operands(self) -> tuple[Sentence]:
         return self.__operands
 
     @property
-    def arity(self):
+    def arity(self) -> int:
         return self.operator.arity
 
     @property
-    def operand(self):
+    def operand(self) -> Union[Sentence, None]:
         return self[0] if len(self) == 1 else None
 
     @property
-    def negatum(self):
+    def negatum(self) -> Union[Sentence, None]:
         return self[0] if self.is_negated else None
 
     @property
-    def lhs(self):
+    def lhs(self) -> Union[Sentence, None]:
         return self[0] if len(self) == 2 else None
 
     @property
-    def rhs(self):
+    def rhs(self) -> Union[Sentence, None]:
         return self[1] if len(self) == 2 else None
 
     @property
     @lazyget
-    def predicates(self):
+    def predicates(self) -> FrozenSet[Predicate]:
         return frozenset(flatiter(s.predicates for s in self))
 
     @property
     @lazyget
-    def constants(self):
+    def constants(self) -> FrozenSet[Constant]:
         return frozenset(flatiter(s.constants for s in self))
 
     @property
     @lazyget
-    def variables(self):
+    def variables(self) -> FrozenSet[Variable]:
         return frozenset(flatiter(s.variables for s in self))
 
     @property
     @lazyget
-    def atomics(self):
+    def atomics(self) -> FrozenSet[Atomic]:
         return frozenset(flatiter(s.atomics for s in self))
 
     @property
     @lazyget
-    def quantifiers(self):
+    def quantifiers(self) -> tuple[Quantifier]:
         return tuple(flatiter(s.quantifiers for s in self))
 
     @property
     @lazyget
-    def operators(self):
-        return (self.operator,) + tuple(
-            flatiter(s.operators for s in self)
-        )
+    def operators(self) -> tuple[Operator]:
+        return (self.operator,) + tuple(flatiter(s.operators for s in self))
 
     def substitute(self, new_param, old_param):
         # Always return a new sentence
@@ -1308,6 +1312,7 @@ class Predicates(object, metaclass = PredicatesMeta):
 
     def __repr__(self):
         return orepr(self, len=len(self))
+
 Predicates._clsinit = True
 Predicate.System = Predicates.System
 

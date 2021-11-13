@@ -167,50 +167,6 @@ def isint(obj):
 def ismodule(obj):
     return isinstance(obj, ModuleType)
 
-def istableau(obj):
-    """
-    Check if an object is a tableau.
-    """
-    cache = _myattr(istableau)
-    cls = obj.__class__
-    if cls in cache:
-        return True
-    d = obj.__dict__
-    if not (
-        callable(getattr(obj, 'branch', None)) and
-        #: TODO: move the Tableau impl to Rule class, then we don't need this check
-        callable(getattr(obj, 'branching_complexity', None)) and
-        isinstance(d.get('history'), list) and
-        True
-    ):
-        return False
-    cache.add(cls)
-    return True
-
-def isrule(obj):
-    """
-    Checks if an object is a rule instance.
-    """
-    cache = _myattr(isrule)
-    cls = obj.__class__
-    if cls in cache:
-        return True
-    d = obj.__dict__
-    if not (
-        callable(getattr(obj, 'get_target', None)) and
-        callable(getattr(obj, 'apply', None)) and
-        isstr(getattr(obj, 'name')) and
-        istableau(getattr(obj, 'tableau')) and
-        isinstance(getattr(obj, 'apply_count'), int) and
-        isinstance(getattr(obj, 'timers'), dict) and
-        isinstance(getattr(obj, 'apply_timer'), StopWatch) and
-        isinstance(getattr(obj, 'search_timer'), StopWatch) and
-        True
-    ):
-        return False
-    cache.add(cls)
-    return True
-
 def safeprop(self, name, value = None):
     if hasattr(self, name):
         raise KeyError("'%s' already exists" % (name))
@@ -434,7 +390,9 @@ class OrderedAttrsView(object):
     def __repr__(self):
         return repr(self.__list)
 
-def LinkOrderSet():
+
+
+class LinkOrderSet(object):
 
     class LinkEntry(object):
         def __init__(self, item):
@@ -451,7 +409,7 @@ def LinkOrderSet():
             return (self.item).__repr__()
 
     def View(obj):
-        class Viewer(object):
+        class LinkOrderSetView(object):
             def __iter__(self):
                 return iter(obj)
             def __reversed__(self):
@@ -464,144 +422,333 @@ def LinkOrderSet():
                 return obj.first()
             def last(self):
                 return obj.last()
-        return Viewer()
+            def __repr__(self):
+                return obj.__class__.__repr__(self)
+            def __copy__(self):
+                return self.__class__()
+        return LinkOrderSetView()
 
-    class LinkOrderSet(object):
+    def item(item_method):
+        def wrap(self, *args, **kw):
+            item = self._genitem_(*args, **kw)
+            return item_method(self, item)
+        return wrap
 
-        def item(item_method):
-            def wrap(self, *args, **kw):
-                item = self._genitem_(*args, **kw)
-                return item_method(self, item)
-            return wrap
+    def iter_items(iter_item_method):
+        def wrap(self, *args, **kw):
+            for item in self._genitems_(*args, **kw):
+                iter_item_method(self, item)
+            return 
+        return wrap
 
-        def iter_items(iter_item_method):
-            def wrap(self, *args, **kw):
-                for item in self._genitems_(*args, **kw):
-                    iter_item_method(self, item)
-                return 
-            return wrap
-
-        def entry(link_entry_method):
-            def prep(self, item):
-                if item in self:
-                    raise DuplicateKeyError(item)
-                entry = self.__idx[item] = LinkEntry(item)
-                if self.__first == None:
-                    self.__first = self.__last = entry
-                    return
-                if self.__first == self.__last:
-                    self.__first.next = entry
-                link_entry_method(self, entry)
-            return prep
-
-        def _genitem_(self, item):
-            return item
-
-        def _genitems_(self, items):
-            return (self._genitem_(item) for item in items)
-
-        @item
-        @entry
-        def append(self, entry):
+    def entry(link_entry_method):
+        def prep(self, item):
+            if item in self:
+                raise DuplicateKeyError(item)
+            entry = self.__idx[item] = LinkOrderSet.LinkEntry(item)
+            if self.__first == None:
+                self.__first = self.__last = entry
+                return
             if self.__first == self.__last:
                 self.__first.next = entry
-            entry.prev = self.__last
-            entry.prev.next = entry
-            self.__last = entry
-        add = append
-        extend = iter_items(append)
+            link_entry_method(self, entry)
+        return prep
 
-        @item
-        @entry
-        def prepend(self, entry):
-            if self.__first == self.__last:
-                self.__last.prev = entry
-            entry.next = self.__first
-            entry.next.prev = entry
-            self.__first = entry
-        prextend = iter_items(prepend)
+class LinkOrderSet(LinkOrderSet):
 
-        @item
-        def remove(self, item):
-            entry = self.__idx.pop(item)
-            if entry.prev == None:
-                if entry.next == None:
-                    # Empty
-                    self.__first = self.__last = None
-                else:
-                    # Remove first
-                    entry.next.prev = None
-                    self.__first = entry.next
+    def _genitem_(self, item):
+        return item
+
+    def _genitems_(self, items):
+        return (self._genitem_(item) for item in items)
+
+    @LinkOrderSet.item
+    @LinkOrderSet.entry
+    def append(self, entry):
+        if self.__first == self.__last:
+            self.__first.next = entry
+        entry.prev = self.__last
+        entry.prev.next = entry
+        self.__last = entry
+    add = append
+    extend = LinkOrderSet.iter_items(append)
+    update = extend
+
+    @LinkOrderSet.item
+    @LinkOrderSet.entry
+    def prepend(self, entry):
+        if self.__first == self.__last:
+            self.__last.prev = entry
+        entry.next = self.__first
+        entry.next.prev = entry
+        self.__first = entry
+    unshift = prepend
+    prextend = LinkOrderSet.iter_items(prepend)
+
+    @LinkOrderSet.item
+    def remove(self, item):
+        entry = self.__idx.pop(item)
+        if entry.prev == None:
+            if entry.next == None:
+                # Empty
+                self.__first = self.__last = None
             else:
-                if entry.next == None:
-                    # Remove last
-                    entry.prev.next = None
-                    self.__last = entry.prev
-                else:
-                    # Remove in-between
-                    entry.prev.next = entry.next
-                    entry.next.prev = entry.prev
+                # Remove first
+                entry.next.prev = None
+                self.__first = entry.next
+        else:
+            if entry.next == None:
+                # Remove last
+                entry.prev.next = None
+                self.__last = entry.prev
+            else:
+                # Remove in-between
+                entry.prev.next = entry.next
+                entry.next.prev = entry.prev
 
-        @item
-        def discard(self, item):
-            if item in self:
-                self.remove(item)
+    def pop(self):
+        if not len(self):
+            raise IndexError('pop from empty collection')
+        item = self.last()
+        self.remove(item)
+        return item
+
+    def shift(self):
+        if not len(self):
+            raise IndexError('shift from empty collection')
+        item = self.first()
+        self.remove(item)
+        return item
+
+    @LinkOrderSet.item
+    def discard(self, item):
+        if item in self:
+            self.remove(item)
+    
+    def clear(self):
+        self.__idx.clear()
+        self.__first = self.__last = None
+
+    def first(self):
+        return self.__first.item if self.__first else None
+
+    def last(self):
+        return self.__last.item if self.__last else None
+
+    @property
+    @Decorators.lazyget
+    def view(self):
+        return LinkOrderSet.View(self)
+
+    def __init__(self, items = None):
+        self.__first = self.__last = None
+        self.__idx = {}
+        if items != None:
+            self.extend(items)
+
+    def __len__(self):
+        return len(self.__idx)
+
+    def __contains__(self, item):
+        return item in self.__idx
+
+    def __getitem__(self, key):
+        return self.__idx[key].item
+
+    def __delitem__(self, key):
+        self.remove(key)
+
+    def __iter__(self):
+        cur = self.__first
+        while cur:
+            item = cur.item
+            yield item
+            cur = cur.next
+                
+    def __reversed__(self):
+        cur = self.__last
+        while cur:
+            item = cur.item
+            yield item
+            cur = cur.prev
+
+    def __copy__(self):
+        return self.__class__((x for x in self))
+
+    def __repr__(self):
+        return orepr(self,
+            len=len(self),
+            first=self.first(),
+            last=self.last(),
+        )
+
+# def LinkOrderSet():
+    # class LinkEntry(object):
+    #     def __init__(self, item):
+    #         self.prev = self.next = None
+    #         self.item = item
+    #     def __eq__(self, other):
+    #         return self.item == other or (
+    #             isinstance(other, self.__class__) and
+    #             self.item == other.item
+    #         )
+    #     def __hash__(self):
+    #         return hash(self.item)
+    #     def __repr__(self):
+    #         return (self.item).__repr__()
+
+    # def View(obj):
+    #     class Viewer(object):
+    #         def __iter__(self):
+    #             return iter(obj)
+    #         def __reversed__(self):
+    #             return reversed(obj)
+    #         def __contains__(self, item):
+    #             return item in obj
+    #         def __len__(self):
+    #             return len(obj)
+    #         def first(self):
+    #             return obj.first()
+    #         def last(self):
+    #             return obj.last()
+    #     return Viewer()
+
+    # class LinkOrderSet(object):
+
+    #     def item(item_method):
+    #         def wrap(self, *args, **kw):
+    #             item = self._genitem_(*args, **kw)
+    #             return item_method(self, item)
+    #         return wrap
+
+    #     def iter_items(iter_item_method):
+    #         def wrap(self, *args, **kw):
+    #             for item in self._genitems_(*args, **kw):
+    #                 iter_item_method(self, item)
+    #             return 
+    #         return wrap
+
+    #     def entry(link_entry_method):
+    #         def prep(self, item):
+    #             if item in self:
+    #                 raise DuplicateKeyError(item)
+    #             entry = self.__idx[item] = LinkEntry(item)
+    #             if self.__first == None:
+    #                 self.__first = self.__last = entry
+    #                 return
+    #             if self.__first == self.__last:
+    #                 self.__first.next = entry
+    #             link_entry_method(self, entry)
+    #         return prep
+
+    #     def _genitem_(self, item):
+    #         return item
+
+    #     def _genitems_(self, items):
+    #         return (self._genitem_(item) for item in items)
+
+    #     @item
+    #     @entry
+    #     def append(self, entry):
+    #         if self.__first == self.__last:
+    #             self.__first.next = entry
+    #         entry.prev = self.__last
+    #         entry.prev.next = entry
+    #         self.__last = entry
+    #     add = append
+    #     extend = iter_items(append)
+
+    #     @item
+    #     @entry
+    #     def prepend(self, entry):
+    #         if self.__first == self.__last:
+    #             self.__last.prev = entry
+    #         entry.next = self.__first
+    #         entry.next.prev = entry
+    #         self.__first = entry
+    #     prextend = iter_items(prepend)
+
+    #     @item
+    #     def remove(self, item):
+    #         entry = self.__idx.pop(item)
+    #         if entry.prev == None:
+    #             if entry.next == None:
+    #                 # Empty
+    #                 self.__first = self.__last = None
+    #             else:
+    #                 # Remove first
+    #                 entry.next.prev = None
+    #                 self.__first = entry.next
+    #         else:
+    #             if entry.next == None:
+    #                 # Remove last
+    #                 entry.prev.next = None
+    #                 self.__last = entry.prev
+    #             else:
+    #                 # Remove in-between
+    #                 entry.prev.next = entry.next
+    #                 entry.next.prev = entry.prev
+
+    #     @item
+    #     def discard(self, item):
+    #         if item in self:
+    #             self.remove(item)
         
-        def clear(self):
-            self.__idx.clear()
-            self.__first = self.__last = None
+    #     def clear(self):
+    #         self.__idx.clear()
+    #         self.__first = self.__last = None
 
-        def first(self):
-            return self.__first.item if self.__first else None
+    #     def first(self):
+    #         return self.__first.item if self.__first else None
 
-        def last(self):
-            return self.__last.item if self.__last else None
+    #     def last(self):
+    #         return self.__last.item if self.__last else None
 
-        @property
-        @Decorators.lazyget
-        def view(self):
-            return View(self)
+    #     @property
+    #     @Decorators.lazyget
+    #     def view(self):
+    #         return View(self)
 
-        def __init__(self):
-            self.__first = self.__last = None
-            self.__idx = {}
+    #     def __init__(self):
+    #         self.__first = self.__last = None
+    #         self.__idx = {}
 
-        def __len__(self):
-            return len(self.__idx)
+    #     def __len__(self):
+    #         return len(self.__idx)
 
-        def __contains__(self, item):
-            return item in self.__idx
+    #     def __contains__(self, item):
+    #         return item in self.__idx
 
-        def __getitem__(self, key):
-            return self.__idx[key].item
+    #     def __getitem__(self, key):
+    #         return self.__idx[key].item
 
-        def __delitem__(self, key):
-            self.remove(key)
+    #     def __delitem__(self, key):
+    #         self.remove(key)
 
-        def __iter__(self):
-            cur = self.__first
-            while cur:
-                item = cur.item
-                yield item
-                cur = cur.next
+    #     def __iter__(self):
+    #         cur = self.__first
+    #         while cur:
+    #             item = cur.item
+    #             yield item
+    #             cur = cur.next
                     
-        def __reversed__(self):
-            cur = self.__last
-            while cur:
-                item = cur.item
-                yield item
-                cur = cur.prev
+    #     def __reversed__(self):
+    #         cur = self.__last
+    #         while cur:
+    #             item = cur.item
+    #             yield item
+    #             cur = cur.prev
 
-        def __repr__(self):
-            return (self.__class__.__name__, kwrepr(
-                len=len(self),
-                first=self.__first,
-                last=self.__last,
-            )).__repr__()
+    #     def __repr__(self):
+    #         return (self.__class__.__name__, kwrepr(
+    #             len=len(self),
+    #             first=self.__first,
+    #             last=self.__last,
+    #         )).__repr__()
 
-    return LinkOrderSet
+#     return LinkOrderSet
 
-LinkOrderSet = LinkOrderSet()
+# LinkOrderSet = LinkOrderSet()
 
 def ReadOnlyDict(src):
     return MappingProxyType(src)
