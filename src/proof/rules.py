@@ -381,9 +381,18 @@ class NewConstantStoppingRule(FilterNodeRule):
         """
         Implements ``PotentialNodeRule``.
         """
-        if not self.__should_apply(branch, node.get('world')):
+        # if not self.__should_apply(branch, node.get('world')):
+        if self.max_constants.max_constants_exceeded(branch, node.get('world')):
             if not self.apqf.get(branch):
-                return self.__get_flag_target(branch)
+                return {
+                    'flag': True,
+                    'adds': [
+                        [
+                            self.max_constants.quit_flag(branch),
+                        ]
+                    ],
+                }
+                # return self.__get_flag_target(branch)
             return
 
         c = branch.new_constant()
@@ -404,18 +413,18 @@ class NewConstantStoppingRule(FilterNodeRule):
 
         return target
 
-    def __should_apply(self, branch, world):
-        return not self.max_constants.max_constants_exceeded(branch, world)
+    # def __should_apply(self, branch, world):
+    #     return not self.max_constants.max_constants_exceeded(branch, world)
 
-    def __get_flag_target(self, branch):
-        return {
-            'flag': True,
-            'adds': [
-                [
-                    self.max_constants.quit_flag(branch),
-                ]
-            ],
-        }
+    # def __get_flag_target(self, branch):
+    #     return {
+    #         'flag': True,
+    #         'adds': [
+    #             [
+    #                 self.max_constants.quit_flag(branch),
+    #             ]
+    #         ],
+    #     }
 
 class AllConstantsStoppingRule(FilterNodeRule):
 

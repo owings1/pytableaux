@@ -356,7 +356,7 @@ class FilterHelper(FilterNodeCache):
     def __call__(self, node: Node, branch: Branch) -> bool:
         return self.filter(node, branch)
 
-    clsattr = 'NodeFilters'
+    clsattr_node = 'NodeFilters'
 
     # Decorators
 
@@ -367,9 +367,9 @@ class FilterHelper(FilterNodeCache):
         through mro.
         """
         def addfilters(rulecls: RuleMeta) -> RuleMeta:
-            attr = cls.clsattr
-            value = _dedupvalue(_collectattr(rulecls, attr, **kw))
-            setattr(rulecls, attr, tuple(value))
+            for attr in (cls.clsattr_node,):
+                value = _dedupvalue(_collectattr(rulecls, attr, **kw))
+                setattr(rulecls, attr, tuple(value))
             return rulecls
         return addfilters
 
@@ -389,7 +389,16 @@ class FilterHelper(FilterNodeCache):
         def get_targets_filtered(rule: Rule, branch: Branch) -> list:
             helper = rule.helpers[cls]
             nodes = helper[branch]
-            return list(targets_iter(rule, nodes, branch))
+            targets = list(targets_iter(rule, nodes, branch))
+            # if targets and getattr(rule, 'post_filter', None) and len(targets) < len(nodes):
+            #     applied_nodes = set(target.node for target in targets)
+            #     removes = nodes.difference(applied_nodes)
+            #     for node in removes:
+            #         print('removing', node)
+            #         raise TypeError()
+            #         helper[branch].discard(node)
+            #     raise TypeError('applied_nodes', applied_nodes, 'removes', removes)
+            return targets
         return get_targets_filtered
 
     def add_filter(self, name: str, cls: type):
@@ -437,7 +446,7 @@ class FilterHelper(FilterNodeCache):
         self.__flist = []
         self.__fmap = {}
         self.__viewfilters = OrderedAttrsView(self.__fmap, self.__flist)
-        clsval = getattr(rule, self.__class__.clsattr, tuple())
+        clsval = getattr(rule, self.__class__.clsattr_node, tuple())
         for name, cls in clsval:
             self.add_filter(name, cls)
 

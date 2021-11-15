@@ -28,13 +28,13 @@ class Meta(object):
     category_display_order = 1
 
 from lexicals import Predicate, Atomic, Constant, Operated, Predicated, \
-    Operator as Oper, Quantifier
+    Operator as Oper, Quantifier, Argument, Sentence, Predicates
 from models import BaseModel
 
-from proof.tableaux import TableauxSystem as BaseSystem, Rule
+from proof.tableaux import TableauxSystem as BaseSystem, Rule, Tableau
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
     NewConstantStoppingRule
-from proof.common import Branch, Filters, Node, Target
+from proof.common import Branch, Filters, Node, NodeType, Target
 from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
     FilterHelper, AppliedNodeCount, clshelpers
@@ -665,7 +665,7 @@ class TableauxSystem(BaseSystem):
     pos_branchable = {Oper.Disjunction, Oper.MaterialConditional, Oper.Conditional}
 
     @classmethod
-    def build_trunk(cls, tableau, argument):
+    def build_trunk(cls, tableau: Tableau, argument: Argument):
         """
         To build the trunk for an argument, add a node with each premise, with
         world :m:`*w0*`, followed by a node with the negation of the conclusion
@@ -677,10 +677,10 @@ class TableauxSystem(BaseSystem):
         branch.add({'sentence': argument.conclusion.negate(), 'world': 0})
 
     @classmethod
-    def branching_complexity(cls, node):
+    def branching_complexity(cls, node: Node) -> int:
         if not node.has('sentence'):
             return 0
-        sentence = node['sentence']
+        sentence: Sentence = node['sentence']
         last_is_negated = False
         complexity = 0
         for operator in sentence.operators:
@@ -714,103 +714,40 @@ class DefaultRule(Rule):
     modal = True
     access = None
     # :overrides: Rule
-    def sentence(self, node): return self.nf.filters.sentence.get(node)
+    def sentence(self, node: Node) -> Sentence:
+        return self.nf.filters.sentence.get(node)
     # :implements: Rule
-    def example_nodes(self): return (self.nf.example_node(),)
+    def example_nodes(self) -> tuple[NodeType]:
+        return (self.nf.example_node(),)
 
 @clshelpers(adz = AdzHelper)
 class AdzApply(Rule):
     ticking = True
     # :implements: Rule
-    def _apply(self, target): self.adz.apply_to_target(target)
+    def _apply(self, target: Target):
+        self.adz.apply_to_target(target)
 
 @clshelpers(adz = AdzHelper)
 class AdzClosureScore(Rule):
     # :overrides: Rule
-    def score_candidate(self, target):  return self.adz.closure_score(target)
+    def score_candidate(self, target: Target) -> float:
+        return self.adz.closure_score(target)
 
 @clshelpers(nf = FilterHelper)
 class GetNodeTargets(Rule):
     # :implements: Rule, delegates to _get_node_targets
     @FilterHelper.node_targets
-    def _get_targets(self, node, branch):
+    def _get_targets(self, node: Node, branch: Branch):
         return self._get_node_targets(node, branch)
     # :abstract:
-    def _get_node_targets(self, node, branch): raise NotImplementedError()
+    def _get_node_targets(self, node: Node, branch: Branch):
+        raise NotImplementedError()
 
 @clshelpers()
 class DefaultNodeRule(GetNodeTargets, DefaultRule, AdzClosureScore, AdzApply):
     pass
 
-# class DefaultNodeRule(Rule):
 
-#     Helpers = (
-#         ('adz', AdzHelper),
-#         ('nf', FilterHelper),
-#     )
-
-#     # AdzHelper
-#     ticking = True
-
-#     # FilterHelper
-#     ignore_ticked = None
-
-#     NodeFilters = (
-#         ('sentence', Filters.Node.Sentence),
-#         ('modal'   , Filters.Node.Modal),
-#     )
-
-#     # Filters.Node.Sentence
-#     negated = operator = quantifier = predicate = None
-
-#     # ModalFilter
-#     modal = True
-
-#     def _apply(self, target):
-#         """
-#         :implements: Rule
-#         """
-#         self.adz.apply_to_target(target)
-
-#     def score_candidate(self, target):
-#         """
-#         :overrides: Rule
-#         """
-#         return self.adz.closure_score(target)
-
-#     def sentence(self, node):
-#         """
-#         :overrides: Rule
-#         """
-#         return self.nf.filters.sentence.get(node)
-
-#     def example_nodes(self):
-#         """
-#         :implements: Rule
-#         """
-#         return (self.nf.example_node(),)
-
-#     def _get_targets(self, branch):
-#         """
-#         :implements: Rule
-#         """
-#         targets = list()
-#         # misses = {}
-#         for node in self.nf[branch]:
-#             res = self._get_node_targets(node, branch)
-#             if res:
-#                 targets.extend(
-#                     Target.all(res, branch = branch, node = node)
-#                 )
-#                 continue
-#         #     if not self.nf.filter(node, branch):
-#         #         if branch not in misses:
-#         #             misses[branch] = set()
-#         #         misses[branch].add(node)
-#         # for branch in misses:
-#         #     for node in misses[branch]:
-#         #        self.nf[branch].discard(node)
-#         return targets
 
 class OldDefaultNodeRule(FilterNodeRule):
     modal = True
@@ -1231,6 +1168,10 @@ class TableauxRules(object):
         def score_candidate(self, target):
             return -1 * self.tableau.branching_complexity(target['node'])
 
+        # def _get_node_targets(self, node: Node, branch: Branch):
+        #     # Delegate to NewConstantStoppingRule
+        #     return self.get_targets_for_node(node, branch)
+
         # NewConstantStoppingRule implementation
 
         def get_new_nodes_for_constant(self, c, node, branch):
@@ -1325,11 +1266,12 @@ class TableauxRules(object):
         """
         operator = Oper.Possibility
         branch_level = 1
+        # post_filter = True
 
-        def is_potential_node(self, node, branch):
+        def _get_target(self, branch: Branch):
             if self.apqf.get(branch):
-                return False
-            return super().is_potential_node(node, branch)
+                return
+            return super()._get_target(branch)
 
         def _get_node_targets(self, node: Node, branch: Branch):
 
@@ -1446,12 +1388,19 @@ class TableauxRules(object):
             'check_target_condtn2',
         )
 
+
         def is_potential_node(self, node, branch):
             if self.apqf.get(branch):
                 return False
             return super().is_potential_node(node, branch)
             
         def get_targets_for_node(self, node: Node, branch: Branch):
+
+        # def _get_target(self, branch: Branch):
+        #     if self.apqf.get(branch):
+        #         return
+        #     return super()._get_target(branch)
+        # def _get_node_targets(self, node: Node, branch: Branch):
 
             # Check for max worlds reached
             if not self.__should_apply(branch):
@@ -1567,7 +1516,7 @@ class TableauxRules(object):
         operator   = Oper.Necessity
         convert_to = Oper.Possibility
 
-    @clshelpers(pn=PredicatedNodesTracker)
+    @clshelpers(pn = PredicatedNodesTracker)
     class IdentityIndiscernability(DefaultNodeRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
@@ -1575,11 +1524,11 @@ class TableauxRules(object):
         if the replacement of that constant for the other constant of *s* is a sentence that does
         not appear on *b* at *w*, then add it.
         """
-        predicate    = Identity
+        predicate    = Predicates.System.Identity
         branch_level = 1
         ticking      = False
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             pnodes = self.pn[branch]
             targets = list()
             pa, pb = node['sentence']
@@ -1590,7 +1539,7 @@ class TableauxRules(object):
             for n in pnodes:
                 if n is node:
                     continue
-                s = n['sentence']
+                s: Predicated = n['sentence']
                 if pa in s.params:
                     p_old, p_new = pa, pb
                 elif pb in s.params:
@@ -1602,7 +1551,7 @@ class TableauxRules(object):
                 # Replace p with p1.
                 params = substitute_params(s.params, p_old, p_new)
                 # Since we have SelfIdentityClosure, we don't need a = a.
-                if s.predicate == Identity and params[0] == params[1]:
+                if s.predicate == self.predicate and params[0] == params[1]:
                     continue
                 # Create a node with the substituted param.
                 s_new = s.predicate(params)
@@ -1620,7 +1569,7 @@ class TableauxRules(object):
         def example_nodes(self):
             world = 0 if self.modal else None
             s1 = Predicated.first()
-            s2 = Identity((s1[0], s1[0].next()))
+            s2 = self.predicate((s1[0], s1[0].next()))
             return (
                 {'sentence': s1, 'world': world},
                 {'sentence': s2, 'world': world},

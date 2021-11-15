@@ -1593,7 +1593,7 @@ class Argument(object):
     Create an argument from sentence objects. For parsing strings into arguments,
     see ``Parser.argument``.
     """
-    def __init__(self, conclusion, premises = None, title = None):
+    def __init__(self, conclusion: Sentence, premises: Iterable[Sentence] = None, title: str = None):
         typecheck(conclusion, Sentence, 'conclusion')
         premises = tuple(premises or ())
         for s in premises:
@@ -1603,11 +1603,11 @@ class Argument(object):
         self.__conclusion = conclusion
 
     @property
-    def conclusion(self):
+    def conclusion(self) -> Sentence:
         return self.__conclusion
 
     @property
-    def premises(self):
+    def premises(self) -> tuple[Sentence]:
         return self.__premises
 
     def __len__(self):

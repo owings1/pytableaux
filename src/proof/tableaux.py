@@ -19,7 +19,7 @@
 # pytableaux - tableaux module
 from lexicals import Argument, Constant, Sentence
 from utils import LinkOrderSet, Kwobj, StopWatch, cat, get_logic, \
-    EmptySet, typecheck, dictrepr, Decorators, orepr
+    EmptySet, typecheck, Decorators, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import Events, EventEmitter
 from inspect import isclass
@@ -28,11 +28,7 @@ from .common import Branch, Node, NodeType, Target
 from past.builtins import basestring
 from enum import auto, Enum, Flag
 from types import ModuleType
-from typing import Any, Callable, Collection, Iterable, NamedTuple, Union, final
-
-lazyget = Decorators.lazyget
-setonce = Decorators.setonce
-checkstate = Decorators.checkstate
+from typing import Any, Callable, Collection, Iterator, Iterable, NamedTuple, Union, final
 
 LogicRef = Union[ModuleType, str]
 
@@ -176,11 +172,11 @@ class Rule(Rule):
     def __init__(self, tableau: Tableau, **opts):
         if not isinstance(tableau, Tableau):
             raise TypeError(tableau.__class__)
-        super().__init__(Rule.RuleEvents)
+        super().__init__(*Rule.RuleEvents)
 
-        self.search_timer = StopWatch()
-        self.apply_timer = StopWatch()
-        self.timers = {}
+        self.search_timer: StopWatch = StopWatch()
+        self.apply_timer: StopWatch = StopWatch()
+        self.timers: dict[str, StopWatch] = {}
 
         self.opts = self.opts | opts
 
@@ -454,7 +450,7 @@ class TabRules(TabRules.Base):
     def _prot(self, name, *_):
         raise AttributeError(name)
     
-    writes = checkstate(locked = False)
+    writes = Decorators.checkstate(locked = False)
 
     class RuleGroup(TabRules.Base):
         pass
@@ -513,10 +509,10 @@ class TabRules(TabRules):
     def __len__(self):
         return self.__c.stat.len
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Rule]:
         return chain.from_iterable(self.groups)
 
-    def __contains__(self, item):
+    def __contains__(self, item: RuleRef):
         return item in self.__c.ruleindex
 
     def __getattr__(self, name):
@@ -593,14 +589,14 @@ class TabRules(TabRules):
             self.__groups = []
             super().__init__(common)
     
-        def __iter__(self):
+        def __iter__(self) -> Iterator[TabRules.RuleGroup]:
             return iter(self.__groups)
 
         def __len__(self):
             return len(self.__groups)
 
-        def __getitem__(self, i):
-            return self.__groups[i]
+        def __getitem__(self, index: Union[int, slice]) -> TabRules.RuleGroup:
+            return self.__groups[index]
 
         def __getattr__(self, name):
             idx = self.__c.groupindex
@@ -665,16 +661,16 @@ class TabRules(TabRules):
             self.__index = {}
             super().__init__(common)
 
-        def __iter__(self):
+        def __iter__(self) -> Iterator[Rule]:
             return iter(self.__rules)
 
         def __len__(self):
             return len(self.__rules)
 
-        def __contains__(self, item):
+        def __contains__(self, item: RuleRef):
             return item in self.__index
 
-        def __getitem__(self, i):
+        def __getitem__(self, i) -> Rule:
             return self.__rules[i]
 
         def __getattr__(self, name):
@@ -716,7 +712,7 @@ class Tableau(Tableau):
 
     def __init__(self, logic: LogicRef = None, argument: Argument = None, **opts):
 
-        super().__init__(Tableau.TableauEvents)
+        super().__init__(*Tableau.TableauEvents)
 
         #: The history of rule applications. Each application is a ``dict``
         #: with the following keys:
@@ -733,7 +729,7 @@ class Tableau(Tableau):
         #:    or ``0`` if no step timer was associated.
         #:
         #: :type: list
-        self.history = list()
+        self.history: list[Tableau.StepEntry] = list()
 
         # Post-build properties
 
@@ -748,16 +744,16 @@ class Tableau(Tableau):
 
         self._flag = FLAG.PREMATURE
         # Timers
-        self.__build_timer = StopWatch()
-        self.__models_timer = StopWatch()
-        self.__tree_timer = StopWatch()
-        self.__tunk_build_timer = StopWatch()
+        self.__build_timer     : StopWatch = StopWatch()
+        self.__models_timer    : StopWatch = StopWatch()
+        self.__tree_timer      : StopWatch = StopWatch()
+        self.__tunk_build_timer: StopWatch = StopWatch()
 
         # Options
         self.opts = self.opts | opts
 
-        self.__branch_list = list()
-        self.__trunks = list()
+        self.__branch_list: list[Branch] = list()
+        self.__trunks     : list[Branch] = list()
         self.__open_linkset = LinkOrderSet()
         self.__branchstat = dict()
 
@@ -1120,16 +1116,16 @@ class Tableau(Tableau):
             return stat
         raise ValueError('Too many keys to lookup')
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: Union[int, slice]) -> Branch:
         return self.__branch_list[index]
 
     def __len__(self):
         return len(self.__branch_list)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Branch]:
         return iter(self.__branch_list)
 
-    def __contains__(self, branch):
+    def __contains__(self, branch: Branch):
         return branch in self.__branchstat
 
     def __repr__(self):
@@ -1397,7 +1393,7 @@ class Tableau(Tableau):
             branch.model = model
             self.models.add(model)
 
-def make_tree_structure(tab, branches, node_depth=0, track=None):
+def make_tree_structure(tab: Tableau, branches: list[Branch], node_depth=0, track=None):
     is_root = track == None
     if track == None:
         track = {
@@ -1469,7 +1465,7 @@ def make_tree_structure(tab, branches, node_depth=0, track=None):
                 distinct_nodeset.add(node)
                 distinct_nodes.append(node)
         if len(distinct_nodes) == 1:
-            node = relevant[0][node_depth]
+            node: Node = relevant[0][node_depth]
             step_added = tab.stat(relevant[0], node, KEY.STEP_ADDED)
             s['nodes'].append(node)
             if s['step'] == None or step_added < s['step']:

@@ -25,6 +25,7 @@ from inspect import isclass
 from itertools import islice
 from time import time
 from types import ModuleType, MappingProxyType
+from typing import Callable
 from past.builtins import basestring
 EmptySet = frozenset()
 
@@ -192,60 +193,59 @@ def lcurry(func, largs):
             return func(*largs, *rargs)
     return curried()
 
-def Decorators():
-    def privkey(method):
-        name = method.__name__
-        key = cat('_', __name__, '__lazy_', name)
-        return (name, key)
-    def isreadonly(obj, *args, cls=None, check=None,**kw):
-        if cls: obj = obj.__class__
-        if check != None:
-            if not check(obj): return False
-        return True
 
-    class Decorators(object):
+def _privkey(method):
+    name = method.__name__
+    key = cat('_', __name__, '__lazy_', name)
+    return (name, key)
+def _isreadonly(obj, *args, cls=None, check=None,**kw):
+    if cls: obj = obj.__class__
+    if check != None:
+        if not check(obj): return False
+    return True
 
-        def lazyget(method):
-            name, key = privkey(method)
-            def fget(self):
-                if not hasattr(self, key):
-                    # print('lookup %s.%s' % (self.__class__.__name__, name))
-                    setattr(self, key, method(self))
-                return getattr(self, key)
-            return fget
+class Decorators(object):
 
-        def setonce(method):
-            name, key = privkey(method)
-            def fset(self, val):
-                if hasattr(self, key): raise AttributeError(name)
-                setattr(self, key, method(self, val))
+    def lazyget(method: Callable) -> Callable:
+        name, key = _privkey(method)
+        def fget(self):
+            if not hasattr(self, key):
+                setattr(self, key, method(self))
+            return getattr(self, key)
+        return fget
+
+    def setonce(method: Callable) -> Callable:
+        name, key = _privkey(method)
+        def fset(self, val):
+            if hasattr(self, key): raise AttributeError(name)
+            setattr(self, key, method(self, val))
+        return fset
+
+    def checkstate(**attrs) -> Callable:
+        def wrap(func: Callable) -> Callable:
+            def check(self, *args, **kw):
+                for attr, val in attrs.items():
+                    if getattr(self, attr) != val:
+                        raise IllegalStateError(attr)
+                return func(self, *args, **kw)
+            return check
+        return wrap
+
+    def nosetattr(*args, **kw) -> Callable:
+        if args and callable(args[0]):
+            origin = args[0]
+        else:
+            origin = None
+        def wrap(origin):
+            def fset(self, attr, val):
+                if _isreadonly(self, **kw):
+                    raise AttributeError('%s is readonly' % self)
+                return origin(self, attr, val)
             return fset
-
-        def checkstate(**attrs):
-            def wrap(func):
-                def check(self, *args, **kw):
-                    for attr, val in attrs.items():
-                        if getattr(self, attr) != val:
-                            raise IllegalStateError(attr)
-                    return func(self, *args, **kw)
-                return check
-            return wrap
-   
-        def nosetattr(*args, **kw):
-            if args and callable(args[0]):
-                origin = args[0]
-            else:
-                origin = None
-            def wrap(origin):
-                def fset(self, attr, val):
-                    if isreadonly(self, **kw):
-                        raise AttributeError('%s is readonly' % self)
-                    return origin(self, attr, val)
-                return fset
-            return wrap(origin) if origin else wrap
+        return wrap(origin) if origin else wrap
             
-    return Decorators
-Decorators = Decorators()
+#     return Decorators
+# Decorators = Decorators()
             
 class Kwobj(object):
 
@@ -387,10 +387,9 @@ class OrderedAttrsView(object):
 
     def __iter__(self):
         return iter(self.__list)
+
     def __repr__(self):
         return repr(self.__list)
-
-
 
 class LinkOrderSet(object):
 
@@ -581,174 +580,6 @@ class LinkOrderSet(LinkOrderSet):
             first=self.first(),
             last=self.last(),
         )
-
-# def LinkOrderSet():
-    # class LinkEntry(object):
-    #     def __init__(self, item):
-    #         self.prev = self.next = None
-    #         self.item = item
-    #     def __eq__(self, other):
-    #         return self.item == other or (
-    #             isinstance(other, self.__class__) and
-    #             self.item == other.item
-    #         )
-    #     def __hash__(self):
-    #         return hash(self.item)
-    #     def __repr__(self):
-    #         return (self.item).__repr__()
-
-    # def View(obj):
-    #     class Viewer(object):
-    #         def __iter__(self):
-    #             return iter(obj)
-    #         def __reversed__(self):
-    #             return reversed(obj)
-    #         def __contains__(self, item):
-    #             return item in obj
-    #         def __len__(self):
-    #             return len(obj)
-    #         def first(self):
-    #             return obj.first()
-    #         def last(self):
-    #             return obj.last()
-    #     return Viewer()
-
-    # class LinkOrderSet(object):
-
-    #     def item(item_method):
-    #         def wrap(self, *args, **kw):
-    #             item = self._genitem_(*args, **kw)
-    #             return item_method(self, item)
-    #         return wrap
-
-    #     def iter_items(iter_item_method):
-    #         def wrap(self, *args, **kw):
-    #             for item in self._genitems_(*args, **kw):
-    #                 iter_item_method(self, item)
-    #             return 
-    #         return wrap
-
-    #     def entry(link_entry_method):
-    #         def prep(self, item):
-    #             if item in self:
-    #                 raise DuplicateKeyError(item)
-    #             entry = self.__idx[item] = LinkEntry(item)
-    #             if self.__first == None:
-    #                 self.__first = self.__last = entry
-    #                 return
-    #             if self.__first == self.__last:
-    #                 self.__first.next = entry
-    #             link_entry_method(self, entry)
-    #         return prep
-
-    #     def _genitem_(self, item):
-    #         return item
-
-    #     def _genitems_(self, items):
-    #         return (self._genitem_(item) for item in items)
-
-    #     @item
-    #     @entry
-    #     def append(self, entry):
-    #         if self.__first == self.__last:
-    #             self.__first.next = entry
-    #         entry.prev = self.__last
-    #         entry.prev.next = entry
-    #         self.__last = entry
-    #     add = append
-    #     extend = iter_items(append)
-
-    #     @item
-    #     @entry
-    #     def prepend(self, entry):
-    #         if self.__first == self.__last:
-    #             self.__last.prev = entry
-    #         entry.next = self.__first
-    #         entry.next.prev = entry
-    #         self.__first = entry
-    #     prextend = iter_items(prepend)
-
-    #     @item
-    #     def remove(self, item):
-    #         entry = self.__idx.pop(item)
-    #         if entry.prev == None:
-    #             if entry.next == None:
-    #                 # Empty
-    #                 self.__first = self.__last = None
-    #             else:
-    #                 # Remove first
-    #                 entry.next.prev = None
-    #                 self.__first = entry.next
-    #         else:
-    #             if entry.next == None:
-    #                 # Remove last
-    #                 entry.prev.next = None
-    #                 self.__last = entry.prev
-    #             else:
-    #                 # Remove in-between
-    #                 entry.prev.next = entry.next
-    #                 entry.next.prev = entry.prev
-
-    #     @item
-    #     def discard(self, item):
-    #         if item in self:
-    #             self.remove(item)
-        
-    #     def clear(self):
-    #         self.__idx.clear()
-    #         self.__first = self.__last = None
-
-    #     def first(self):
-    #         return self.__first.item if self.__first else None
-
-    #     def last(self):
-    #         return self.__last.item if self.__last else None
-
-    #     @property
-    #     @Decorators.lazyget
-    #     def view(self):
-    #         return View(self)
-
-    #     def __init__(self):
-    #         self.__first = self.__last = None
-    #         self.__idx = {}
-
-    #     def __len__(self):
-    #         return len(self.__idx)
-
-    #     def __contains__(self, item):
-    #         return item in self.__idx
-
-    #     def __getitem__(self, key):
-    #         return self.__idx[key].item
-
-    #     def __delitem__(self, key):
-    #         self.remove(key)
-
-    #     def __iter__(self):
-    #         cur = self.__first
-    #         while cur:
-    #             item = cur.item
-    #             yield item
-    #             cur = cur.next
-                    
-    #     def __reversed__(self):
-    #         cur = self.__last
-    #         while cur:
-    #             item = cur.item
-    #             yield item
-    #             cur = cur.prev
-
-    #     def __repr__(self):
-    #         return (self.__class__.__name__, kwrepr(
-    #             len=len(self),
-    #             first=self.__first,
-    #             last=self.__last,
-    #         )).__repr__()
-
-#     return LinkOrderSet
-
-# LinkOrderSet = LinkOrderSet()
 
 def ReadOnlyDict(src):
     return MappingProxyType(src)
