@@ -27,7 +27,8 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 1
 
-from lexicals import Predicate, Atomic, Constant, Operated, Predicated, \
+from events import Events
+from lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantified, \
     Operator as Oper, Quantifier, Argument, Sentence, Predicates
 from models import BaseModel
 
@@ -37,14 +38,15 @@ from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
 from proof.common import Branch, Filters, Node, NodeType, Target
 from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
-    FilterHelper, AppliedNodeCount, clshelpers
+    FilterHelper, AppliedNodeCount, MaxConstantsTracker, AppliedNodeConstants, \
+    clshelpers
 
 from errors import DenotationError, ModelValueError
 
 from . import fde
 
-Identity  = Predicate.Identity
-Existence = Predicate.Existence
+Identity: Predicate  = Predicate.Identity
+Existence: Predicate = Predicate.Existence
 
 def substitute_params(params, old_value, new_value):
     return tuple(new_value if p == old_value else p for p in params)
@@ -733,21 +735,54 @@ class AdzClosureScore(Rule):
     def score_candidate(self, target: Target) -> float:
         return self.adz.closure_score(target)
 
-@clshelpers(nf = FilterHelper)
-class GetNodeTargets(Rule):
-    # :implements: Rule, delegates to _get_node_targets
+# @clshelpers(nf = FilterHelper)
+# class GetNodeTargets(Rule):
+#     # :implements: Rule, delegates to _get_node_targets
+#     @FilterHelper.node_targets
+#     def _get_targets(self, node: Node, branch: Branch):
+#         return self._get_node_targets(node, branch)
+#     # :abstract:
+#     def _get_node_targets(self, node: Node, branch: Branch):
+#         raise NotImplementedError()
+
+@clshelpers()
+class OperatorPlainRule(DefaultRule, AdzClosureScore, AdzApply):
+
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
         return self._get_node_targets(node, branch)
-    # :abstract:
+
+    def _get_node_targets(self, node: Node, branch: Branch):
+        raise NotImplementedError()
+DefaultNodeRule = GetNodeTargets = OperatorPlainRule
+
+@clshelpers(
+    apqf = AppliedQuitFlag,
+    maxc = MaxConstantsTracker,
+)
+class QuantifierSkinnyRule(DefaultRule, AdzClosureScore, AdzApply):
+
+    @FilterHelper.node_targets
+    def _get_targets(self, node: Node, branch: Branch):
+        if self.maxc.max_constants_exceeded(branch, node.get('world')):
+            self.nf.release(node, branch)
+            if self.apqf.get(branch):
+                return
+            return {
+                'flag': True,
+                'adds': ((self.maxc.quit_flag(branch),),),
+            }
+        return self._get_node_targets(node, branch)
+
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
-@clshelpers()
-class DefaultNodeRule(GetNodeTargets, DefaultRule, AdzClosureScore, AdzApply):
+@clshelpers(
+    apnc = AppliedNodeCount,
+    apcs = AppliedNodeConstants,
+)
+class QuantifierFatRule(QuantifierSkinnyRule):
     pass
-
-
 
 class OldDefaultNodeRule(FilterNodeRule):
     modal = True
@@ -873,7 +908,7 @@ class TableauxRules(object):
             w = 0 if self.modal else None
             return ({'sentence': s, 'world': w},)
 
-    class DoubleNegation(DefaultNodeRule):
+    class DoubleNegation(OperatorPlainRule):
         """
         From an unticked double negation node *n* with world *w* on a branch *b*, add a
         node to *b* with *w* and the double-negatum of *n*, then tick *n*.
@@ -892,7 +927,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Assertion(DefaultNodeRule):
+    class Assertion(OperatorPlainRule):
         """
         From an unticked assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
@@ -910,7 +945,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class AssertionNegated(DefaultNodeRule):
+    class AssertionNegated(OperatorPlainRule):
         """
         From an unticked, negated assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the negation of the assertion of *n* and world *w*,
@@ -930,7 +965,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Conjunction(DefaultNodeRule):
+    class Conjunction(OperatorPlainRule):
         """
         From an unticked conjunction node *n* with world *w* on a branch *b*, for each conjunct,
         add a node with world *w* to *b* with the conjunct, then tick *n*.
@@ -948,7 +983,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class ConjunctionNegated(DefaultNodeRule):
+    class ConjunctionNegated(OperatorPlainRule):
         """
         From an unticked negated conjunction node *n* with world *w* on a branch *b*, for each
         conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
@@ -968,7 +1003,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class Disjunction(DefaultNodeRule):
+    class Disjunction(OperatorPlainRule):
         """
         From an unticked disjunction node *n* with world *w* on a branch *b*, for each disjunct,
         make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
@@ -987,7 +1022,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class DisjunctionNegated(DefaultNodeRule):
+    class DisjunctionNegated(OperatorPlainRule):
         """
         From an unticked negated disjunction node *n* with world *w* on a branch *b*, for each
         disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
@@ -1006,7 +1041,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class MaterialConditional(DefaultNodeRule):
+    class MaterialConditional(OperatorPlainRule):
         """
         From an unticked material conditional node *n* with world *w* on a branch *b*, make two
         new branches *b'* and *b''* from *b*, add a node with world *w* and the negation of the
@@ -1030,7 +1065,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class MaterialConditionalNegated(DefaultNodeRule):
+    class MaterialConditionalNegated(OperatorPlainRule):
         """
         From an unticked negated material conditional node *n* with world *w* on a branch *b*,
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
@@ -1052,7 +1087,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class MaterialBiconditional(DefaultNodeRule):
+    class MaterialBiconditional(OperatorPlainRule):
         """
         From an unticked material biconditional node *n* with world *w* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add two nodes with world *w* to *b'*, one with
@@ -1079,7 +1114,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class MaterialBiconditionalNegated(DefaultNodeRule):
+    class MaterialBiconditionalNegated(OperatorPlainRule):
         """
         From an unticked negated material biconditional node *n* with world *w* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add two nodes with *w* to *b'*, one with
@@ -1156,7 +1191,35 @@ class TableauxRules(object):
         negated  = True
         operator = Oper.Biconditional
 
-    class Existential(OldDefaultNodeRule, NewConstantStoppingRule):
+    # @FilterHelper.clsfilters(
+    #     sentence = Filters.Node.Sentence,
+    #     modal    = Filters.Node.Modal,
+    # )
+    # @clshelpers(nf = FilterHelper)
+    # class ExistentialOld(OldDefaultNodeRule, NewConstantStoppingRule):
+    #     """
+    #     From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
+    #     variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
+    #     into *s* of *v* with a constant new to *b*, then tick *n*.
+    #     """
+    #     quantifier = Quantifier.Existential
+    #     branch_level = 1
+
+    #     def score_candidate(self, target):
+    #         return -1 * self.tableau.branching_complexity(target['node'])
+
+    #     # NewConstantStoppingRule implementation
+
+    #     def get_new_nodes_for_constant(self, c, node, branch):
+    #         s = self.sentence(node)
+    #         v = s.variable
+    #         si = s.sentence
+    #         r = si.substitute(c, v)
+    #         return [
+    #             {'sentence': r, 'world': node.get('world')},
+    #         ]
+
+    class Existential(QuantifierSkinnyRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
@@ -1165,25 +1228,21 @@ class TableauxRules(object):
         quantifier = Quantifier.Existential
         branch_level = 1
 
-        def score_candidate(self, target):
-            return -1 * self.tableau.branching_complexity(target['node'])
+        def score_candidate(self, target: Target):
+            return -1 * self.tableau.branching_complexity(target.node)
 
-        # def _get_node_targets(self, node: Node, branch: Branch):
-        #     # Delegate to NewConstantStoppingRule
-        #     return self.get_targets_for_node(node, branch)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Quantified = self.sentence(node)
+            s = s.unquantify(branch.new_constant())
+            return {
+                'adds': (
+                    (
+                        {'sentence': s, 'world': node.get('world')},
+                    ),
+                )
+            }
 
-        # NewConstantStoppingRule implementation
-
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                {'sentence': r, 'world': node.get('world')},
-            ]
-
-    class ExistentialNegated(DefaultNodeRule):
+    class ExistentialNegated(OperatorPlainRule):
         """
         From an unticked negated existential node *n* with world *w* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
@@ -1208,8 +1267,41 @@ class TableauxRules(object):
                 ],
             }
 
-    @clshelpers(apnc=AppliedNodeCount)
-    class Universal(DefaultNodeRule, AllConstantsStoppingRule):
+    # @clshelpers(apnc=AppliedNodeCount)
+    # class UniversalOld(OperatorPlainRule, AllConstantsStoppingRule):
+    #     """
+    #     From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
+    #     sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
+    #     exists) for *v* into *s* does not appear at *w* on *b*, add a node with *w* and *r* to
+    #     *b*. The node *n* is never ticked.
+    #     """
+    #     quantifier   = Quantifier.Universal
+    #     branch_level = 1
+    #     ticking      = False
+
+    #     def score_candidate(self, target):
+    #         if target.get('flag'):
+    #             return 1
+    #         if self.adz.closure_score(target) == 1:
+    #             return 1
+    #         node_apply_count = self.apnc[target.branch].get(target.node, 0)
+    #         return float(1 / (node_apply_count + 1))
+
+    #     def _get_node_targets(self, node: Node, branch: Branch):
+    #         # Delegate to AllConstantsStoppingRule
+    #         return self.get_targets_for_node(node, branch)
+    #     # AllConstantsStoppingRule implementation
+
+    #     def get_new_nodes_for_constant(self, c, node, branch):
+    #         s = self.sentence(node)
+    #         v = s.variable
+    #         si = s.sentence
+    #         r = si.substitute(c, v)
+    #         return [
+    #             {'sentence': r, 'world': node.get('world')},
+    #         ]
+
+    class Universal(QuantifierFatRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -1220,7 +1312,7 @@ class TableauxRules(object):
         branch_level = 1
         ticking      = False
 
-        def score_candidate(self, target):
+        def score_candidate(self, target: Target):
             if target.get('flag'):
                 return 1
             if self.adz.closure_score(target) == 1:
@@ -1229,18 +1321,26 @@ class TableauxRules(object):
             return float(1 / (node_apply_count + 1))
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            # Delegate to AllConstantsStoppingRule
-            return self.get_targets_for_node(node, branch)
-        # AllConstantsStoppingRule implementation
-
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                {'sentence': r, 'world': node.get('world')},
-            ]
+            unapplied = self.apcs.get_unapplied(node, branch)
+            # Only apply if there are no constants on the branch, or we have
+            # tracked a constant that we haven't applied to.
+            if branch.constants_count and not len(unapplied):
+                # Do not release the node from filters, since new constants
+                # can appear.
+                return
+            constants = unapplied or {Constant.first()}
+            s: Quantified = self.sentence(node)
+            w: int = node.get('world')
+            return (
+                {'adds': ((n,),), 'constant': c} for (n, c) in (
+                    ({'sentence': s, 'world': w}, c)
+                    for (s, c) in (
+                        (s.unquantify(c), c)
+                        for c in constants
+                    )
+                )
+                if len(unapplied) > 0 or not branch.has(n)
+            )
 
     class UniversalNegated(ExistentialNegated):
         """
@@ -1258,7 +1358,7 @@ class TableauxRules(object):
         apsc = AppliedSentenceCounter,
         max_worlds = MaxWorldsTracker,
     )
-    class Possibility(DefaultNodeRule):
+    class Possibility(OperatorPlainRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -1266,12 +1366,11 @@ class TableauxRules(object):
         """
         operator = Oper.Possibility
         branch_level = 1
-        # post_filter = True
 
-        def _get_target(self, branch: Branch):
+        def _get_targets(self, branch: Branch):
             if self.apqf.get(branch):
                 return
-            return super()._get_target(branch)
+            return super()._get_targets(branch)
 
         def _get_node_targets(self, node: Node, branch: Branch):
 
@@ -1339,7 +1438,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class PossibilityNegated(DefaultNodeRule):
+    class PossibilityNegated(OperatorPlainRule):
         """
         From an unticked negated possibility node *n* with world *w* on a branch *b*, add a
         necessity node to *b* with *w*, whose operand is the negation of the negated 
@@ -1362,6 +1461,11 @@ class TableauxRules(object):
                 ],
             }
 
+    @FilterHelper.clsfilters(
+        sentence = Filters.Node.Sentence,
+        modal    = Filters.Node.Modal,
+    )
+    @clshelpers(nf = FilterHelper)
     class Necessity(OldDefaultNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
@@ -1373,7 +1477,7 @@ class TableauxRules(object):
         ticking      = False
 
         Helpers = (
-            *DefaultNodeRule.Helpers,
+            *OperatorPlainRule.Helpers,
             ('max_worlds'          , MaxWorldsTracker),
             ('apnw' , AppliedNodesWorldsTracker),
             ('apqf' , AppliedQuitFlag),
@@ -1381,7 +1485,7 @@ class TableauxRules(object):
         )
 
         Timers = (
-            *DefaultNodeRule.Timers,
+            *OperatorPlainRule.Timers,
             'get_targets_for_node',
             'make_target'         ,
             'check_target_condtn1',
@@ -1517,7 +1621,7 @@ class TableauxRules(object):
         convert_to = Oper.Possibility
 
     @clshelpers(pn = PredicatedNodesTracker)
-    class IdentityIndiscernability(DefaultNodeRule):
+    class IdentityIndiscernability(OperatorPlainRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,

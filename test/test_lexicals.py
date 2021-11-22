@@ -58,11 +58,6 @@ class TestParameter(object):
             assert c.is_constant
             assert not c.is_variable
 
-        def test_str_contains_subscript(self):
-            c = Constant(0, 8)
-            res = str(c)
-            assert '8' in res
-
     class TestVariable(BaseSuite):
 
         def test_variable_index_too_large(self):

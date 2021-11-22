@@ -36,10 +36,12 @@ def _isreadonly(cls):
         getattr(cls, '_clsinit', False) and
         getattr(cls, '_readonly', False)
     )
+
 def _raise(errcls = AttributeError):
     def fraise(cls, *args, **kw):
         raise errcls('Unsupported operation for %s' % cls)
     return fraise
+
 def _lexstr(item):
     try:
         return _syslw.write(item)
@@ -51,6 +53,7 @@ def _lexstr(item):
                 return '%s(%s)' % (item.TYPE.name, e)
             except AttributeError as e:
                 return '%s(%s)' % (item.__class__.__name__, e)
+
 def _lexrepr(item):
     try:
         return '<%s: %s>' % (item.TYPE.role, str(item))
@@ -173,14 +176,14 @@ class Lexical(object):
     #: digits or strings.
     #:
     #: :type: tuple
-    spec = NotImplemented
+    spec: tuple = NotImplemented
 
     #: Sorting identifier, to order tokens of the same type. Numbers only
     #: (no strings). This is also used in hashing, so equal objects should
     #: have equal hashes.
     #:
     #: :type: tuple
-    sort_tuple = NotImplemented
+    sort_tuple: tuple = NotImplemented
 
     #: Equality identifier able to compare across types. A tuple, possibly
     #: nested, containing digits and possibly strings. The first value must
@@ -188,10 +191,10 @@ class Lexical(object):
     #: by the spec.
     #:
     #: :type: tuple
-    ident = NotImplemented
+    ident: tuple = NotImplemented
 
     #: :type: int
-    hash = NotImplemented
+    hash: int = NotImplemented
 
 class Lexical(Lexical):
 
@@ -765,7 +768,7 @@ class Sentence(LexItem):
         """
         return Operated(Operator.Conjunction, (self, rhs))
 
-    def variable_occurs(self, v):
+    def variable_occurs(self, v) -> bool:
         """
         Whether a variable occurs anywhere in the sentence (recursive).
 
@@ -887,7 +890,7 @@ class Predicated(Predicated):
         )
         return self.__class__(self.predicate, params)
 
-    def variable_occurs(self, v) -> bool:
+    def variable_occurs(self, v: Variable) -> bool:
         """
         :overrides: Sentence
         """
@@ -947,23 +950,28 @@ class Quantified(Quantified):
     @property
     @lazyget
     def spec(self) -> tuple[tuple[str, str], tuple[str, Coords], tuple]:
+        """
+        :implements: Lexical
+        """
         return (self.quantifier.ident, self.variable.ident, self.sentence.ident)
 
     @property
     @lazyget
     def sort_tuple(self) -> tuple:
+        """
+        :implements: Lexical
+        """
         return (
             self.quantifier.order,
             self.variable.sort_tuple,
             self.sentence.sort_tuple,
         )
 
-    @property
-    def quantifier(self) -> Quantifier:
-        return self.__quantifier
-
     @classmethod
     def first(cls, quantifier: Quantifier = None) -> Quantified:
+        """
+        :implements: Lexical
+        """
         q = Quantifier[quantifier or Quantifier.first()]
         v = Variable.first()
         pred = Predicate.first()
@@ -971,12 +979,77 @@ class Quantified(Quantified):
         return cls(q, v, Predicated(pred, params))
 
     def next(self, **kw) -> Quantified:
+        """
+        :implements: Lexical
+        """
         q = self.quantifier
         v = self.variable
         s = self.sentence.next(**kw)
         if v not in s.variables:
             raise TypeError('%s no longer bound' % v)
         return self.__class__(q, v, s)
+
+    @property
+    def constants(self) -> Set[Sentence]:
+        """
+        :overrides: Sentence
+        """
+        return self.sentence.constants
+
+    @property
+    def variables(self) -> Set[Variable]:
+        """
+        :overrides: Sentence
+        """
+        return self.sentence.variables
+
+    @property
+    def atomics(self) -> Set[Atomic]:
+        """
+        :overrides: Sentence
+        """
+        return self.sentence.atomics
+
+    @property
+    def predicates(self) -> Set[Predicate]:
+        """
+        :overrides: Sentence
+        """
+        return self.sentence.predicates
+
+    @property
+    def operators(self) -> tuple[Operator]:
+        """
+        :overrides: Sentence
+        """
+        return self.sentence.operators
+
+    @property
+    @lazyget
+    def quantifiers(self) -> tuple[Quantifier]:
+        """
+        :overrides: Sentence
+        """
+        return (self.quantifier, *(q for q in self.sentence.quantifiers))
+
+    def substitute(self, new_param: Parameter, old_param: Parameter) -> Quantified:
+        """
+        :overrides: Sentence
+        """
+        # Always return a new sentence.
+        si = self.sentence
+        r = si.substitute(new_param, old_param)
+        return self.__class__(self.quantifier, self.variable, r)
+
+    def variable_occurs(self, v: Variable) -> bool:
+        """
+        :overrides: Sentence
+        """
+        return self.variable == v or self.sentence.variable_occurs(v)
+
+    @property
+    def quantifier(self) -> Quantifier:
+        return self.__quantifier
 
     @property
     def variable(self) -> Variable:
@@ -986,52 +1059,26 @@ class Quantified(Quantified):
     def sentence(self) -> Sentence:
         return self.__sentence
 
-    @property
-    def constants(self) -> Set[Sentence]:
-        return self.sentence.constants
+    def unquantify(self, c: Constant) -> Sentence:
+        """
+        Instantiate the variable with a constant.
+        """
+        if not isinstance(c, Constant):
+            raise TypeError(c, type(c), Constant)
+        return self.sentence.substitute(c, self.variable)
 
-    @property
-    def variables(self) -> Set[Variable]:
-        return self.sentence.variables
-
-    @property
-    def atomics(self) -> Set[Atomic]:
-        return self.sentence.atomics
-
-    @property
-    def predicates(self) -> Set[Predicate]:
-        return self.sentence.predicates
-
-    @property
-    def operators(self) -> tuple[Operator]:
-        return self.sentence.operators
-
-    @property
-    @lazyget
-    def quantifiers(self) -> tuple[Quantifier]:
-        return (self.quantifier, *(q for q in self.sentence.quantifiers))
-
-    def substitute(self, new_param: Parameter, old_param: Parameter) -> Quantified:
-        # Always return a new sentence.
-        si = self.sentence
-        r = si.substitute(new_param, old_param)
-        return self.__class__(self.quantifier, self.variable, r)
-
-    def variable_occurs(self, v: Variable) -> bool:
-        return self.variable == v or self.sentence.variable_occurs(v)
-
-    def __init__(self, quantifier: Quantifier, variable: Variable, sentence: Sentence):
+    def __init__(self, q: Quantifier, v: Variable, s: Sentence):
         try:
-            quantifier = Quantifier[quantifier]
+            q = Quantifier[q]
         except KeyError:
-            raise TypeError(quantifier) from None
-        if not isinstance(variable, Variable):
-            raise TypeError(variable)
-        if not isinstance(sentence, Sentence):
-            raise TypeError(sentence)
-        self.__quantifier = quantifier
-        self.__variable = variable
-        self.__sentence = sentence
+            raise TypeError(q, type(q), Quantifier)
+        if not isinstance(v, Variable):
+            raise TypeError(v, type(v), Variable)
+        if not isinstance(s, Sentence):
+            raise TypeError(s, type(s), Sentence)
+        self.__quantifier = q
+        self.__variable = v
+        self.__sentence = s
 
 class Operated(Sentence): pass
 class Operated(Operated):
@@ -1610,11 +1657,19 @@ class Argument(object):
     def premises(self) -> tuple[Sentence]:
         return self.__premises
 
+    @property
+    @lazyget
+    def sentences(self) -> tuple[Sentence]:
+        return (self.conclusion, *self.premises)
+
     def __len__(self):
-        return bool(self.conclusion) + len(self.premises)
+        return len(self.sentences)
 
     def __iter__(self):
-        return iter(s for s in (self.conclusion, *self.premises))
+        return iter(self.sentences)
+
+    def __getitem__(self, key: Union[int, slice]):
+        return self.sentences[key]
 
     def _cmp(self, other):
         if not isinstance(other, self.__class__):

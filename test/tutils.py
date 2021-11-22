@@ -1,9 +1,9 @@
-import examples, utils
+import examples, lexicals, utils
 from inspect import isclass, getmembers
 from lexicals import Argument, Predicates, create_lexwriter
 from parsers import notations as parser_notns, create_parser, parse_argument, parse
 from proof.tableaux import Tableau, Branch, Node
-from utils import get_logic, isint
+from utils import get_logic, isint, isstr
 from itertools import chain
 
 from enum import Enum
@@ -246,11 +246,12 @@ class BaseSuite(object):
 
     def rule_tab(self, rule, bare = False, **kw):
         manual = False
+        t = self.tab()
         try:
-            t = self.tab()
             rule = t.rules.get(rule)
         except ValueError:
-            t = self.tab()
+            if isstr(rule):
+                rule = getattr(t.logic.TableauxRules, rule)
             t.rules.add(rule)
             rule = t.rules.get(rule)
             manual = True
@@ -283,14 +284,21 @@ class BaseSuite(object):
 
 
 if utils.testlw == None:
-    utils.testlw = BaseSuite.lw
+    lexicals._syslw = utils.testlw = BaseSuite.lw
+    
 def tp(tab):
     print(
         '\n\n'.join([
-            '\n'.join([str(n) for n in nodes])
-            for nodes in (b for b in tab)
+            '\n'.join(['b%d' % i] + ['  %s' % n for n in b])
+            for i, b in enumerate(tab)
         ])
     )
+def tabtup(tab):
+    return tuple(tuple(dict(n.props) for n in b) for b in tab)
+
+def tabeq(t1, t2):
+    return tabtup(t1) == tabtup(t2)
+
 def titer(tab):
     return  chain.from_iterable(iter(b) for b in tab)
     nn = titer(tab)

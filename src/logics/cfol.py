@@ -26,9 +26,9 @@ class Meta(object):
     tags = ['bivalent', 'non-modal', 'first-order']
     category_display_order = 2
 
-from . import k, cpl
+from . import k as K, cpl as CPL
 
-class Model(k.Model):
+class Model(K.Model):
     """
     A CFOL Model is just like :ref:`CPL model <cpl-model>` but with quantification.
     """
@@ -49,7 +49,7 @@ class Model(k.Model):
     def add_access(self, w1, w2):
         raise NotImplementedError()
 
-class TableauxSystem(cpl.TableauxSystem):
+class TableauxSystem(CPL.TableauxSystem):
     """
     CFOL's Tableaux System inherits directly from :ref:`CPL <CPL>`'s.
     """
@@ -60,61 +60,61 @@ class TableauxRules(object):
     including the CPL closure rules, and adds additional rules for the quantifiers.
     """
 
-    class ContradictionClosure(cpl.TableauxRules.ContradictionClosure):
+    class ContradictionClosure(CPL.TableauxRules.ContradictionClosure):
         pass
 
-    class SelfIdentityClosure(cpl.TableauxRules.SelfIdentityClosure):
+    class SelfIdentityClosure(CPL.TableauxRules.SelfIdentityClosure):
         pass
 
-    class NonExistenceClosure(cpl.TableauxRules.NonExistenceClosure):
+    class NonExistenceClosure(CPL.TableauxRules.NonExistenceClosure):
         pass
 
-    class DoubleNegation(cpl.TableauxRules.DoubleNegation):
+    class DoubleNegation(CPL.TableauxRules.DoubleNegation):
         pass
 
-    class Assertion(cpl.TableauxRules.Assertion):
+    class Assertion(CPL.TableauxRules.Assertion):
         pass
 
-    class AssertionNegated(cpl.TableauxRules.AssertionNegated):
+    class AssertionNegated(CPL.TableauxRules.AssertionNegated):
         pass
 
-    class Conjunction(cpl.TableauxRules.Conjunction):
+    class Conjunction(CPL.TableauxRules.Conjunction):
         pass
 
-    class ConjunctionNegated(cpl.TableauxRules.ConjunctionNegated):
+    class ConjunctionNegated(CPL.TableauxRules.ConjunctionNegated):
         pass
 
-    class Disjunction(cpl.TableauxRules.Disjunction):
+    class Disjunction(CPL.TableauxRules.Disjunction):
         pass
 
-    class DisjunctionNegated(cpl.TableauxRules.DisjunctionNegated):
+    class DisjunctionNegated(CPL.TableauxRules.DisjunctionNegated):
         pass
 
-    class MaterialConditional(cpl.TableauxRules.MaterialConditional):
+    class MaterialConditional(CPL.TableauxRules.MaterialConditional):
         pass
 
-    class MaterialConditionalNegated(cpl.TableauxRules.MaterialConditionalNegated):
+    class MaterialConditionalNegated(CPL.TableauxRules.MaterialConditionalNegated):
         pass
 
-    class MaterialBiconditional(cpl.TableauxRules.MaterialBiconditional):
+    class MaterialBiconditional(CPL.TableauxRules.MaterialBiconditional):
         pass
 
-    class MaterialBiconditionalNegated(cpl.TableauxRules.MaterialBiconditionalNegated):
+    class MaterialBiconditionalNegated(CPL.TableauxRules.MaterialBiconditionalNegated):
         pass
 
-    class Conditional(cpl.TableauxRules.Conditional):
+    class Conditional(CPL.TableauxRules.Conditional):
         pass
 
-    class ConditionalNegated(cpl.TableauxRules.ConditionalNegated):
+    class ConditionalNegated(CPL.TableauxRules.ConditionalNegated):
         pass
 
-    class Biconditional(cpl.TableauxRules.Biconditional):
+    class Biconditional(CPL.TableauxRules.Biconditional):
         pass
 
-    class BiconditionalNegated(cpl.TableauxRules.BiconditionalNegated):
+    class BiconditionalNegated(CPL.TableauxRules.BiconditionalNegated):
         pass
 
-    class Existential(k.TableauxRules.Existential):
+    class Existential(K.TableauxRules.Existential):
         """
         From an unticked existential node *n* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node to *b* with the substitution
@@ -122,7 +122,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class ExistentialNegated(k.TableauxRules.ExistentialNegated):
+    class ExistentialNegated(K.TableauxRules.ExistentialNegated):
         """
         From an unticked negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
@@ -130,7 +130,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class Universal(k.TableauxRules.Universal):
+    class Universal(K.TableauxRules.Universal):
         """
         From a universal node on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
@@ -139,7 +139,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class UniversalNegated(k.TableauxRules.UniversalNegated):
+    class UniversalNegated(K.TableauxRules.UniversalNegated):
         """
         From an unticked negated universal node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add an existentially
@@ -148,7 +148,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class IdentityIndiscernability(cpl.TableauxRules.IdentityIndiscernability):
+    class IdentityIndiscernability(CPL.TableauxRules.IdentityIndiscernability):
         pass
 
     closure_rules = [

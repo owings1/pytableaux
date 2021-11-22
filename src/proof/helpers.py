@@ -24,7 +24,7 @@ from .common import Branch, Node, Target
 from .tableaux import Rule, RuleMeta
 from itertools import chain
 from events import Events
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Union
 
 def clshelpers(**kw) -> Callable:
     """
@@ -38,18 +38,6 @@ def clshelpers(**kw) -> Callable:
         return cls
     return addhelpers
 
-def _targets_from_nodes_iter(get_node_targets: Callable) -> Callable:
-    def targets_iter(rule, nodes: Iterable[Node], branch: Branch) -> Iterable[Target]:
-        results = (
-            Target.list(
-                get_node_targets(rule, node, branch),
-                rule = rule, branch = branch, node = node
-            )
-            for node in nodes
-        )
-        return chain.from_iterable(filter(bool, results))
-    return targets_iter
-
 class AdzHelper(object):
 
     def adztarget(getadds):
@@ -59,7 +47,7 @@ class AdzHelper(object):
             if isinstance(res, dict):
                 res = (res,)
             if not isinstance(res, (tuple, list)):
-                raise TypeError('expecting tuple/list, %s' % res)
+                raise TypeError(res, type(res), Union[tuple, list])
             return {'adds': res}
         return adz_transform
 
@@ -82,10 +70,14 @@ class AdzHelper(object):
             branch.tick(target['node'])
 
     def closure_score(self, target: Target) -> float:
+        try:
+            rules = self.tableau.rules.closure
+        except AttributeError:
+            rules = EmptySet
         close_count = 0
         for nodes in target['adds']:
-            nodes = [Node(node) for node in nodes]
-            for rule in self.tableau.rules.closure:
+            nodes = tuple(Node(node) for node in nodes)
+            for rule in rules:
                 if rule.nodes_will_close_branch(nodes, target.branch):
                     close_count += 1
                     break
@@ -387,7 +379,8 @@ class FilterHelper(FilterNodeCache):
         """
         targets_iter = _targets_from_nodes_iter(get_node_targets)
         def get_targets_filtered(rule: Rule, branch: Branch) -> list:
-            helper = rule.helpers[cls]
+            helper: FilterHelper = rule.helpers[cls]
+            helper.gc()
             nodes = helper[branch]
             targets = list(targets_iter(rule, nodes, branch))
             # if targets and getattr(rule, 'post_filter', None) and len(targets) < len(nodes):
@@ -439,16 +432,27 @@ class FilterHelper(FilterNodeCache):
                     node.update(ret)
         return node
 
+    def release(self, node: Node, branch: Branch):
+        self.__to_discard.add((branch, node))
+
+    def gc(self):
+        for branch, node in self.__to_discard:
+            self[branch].discard(node)
+        self.__to_discard.clear()
+
     def __init__(self, rule: Rule, attr: str = None, *args, **kw):
         super().__init__(rule, *args, **kw)
         self.rule = rule
         self.callcount = 0
         self.__flist = []
         self.__fmap = {}
+        self.__to_discard = set()
         self.__viewfilters = OrderedAttrsView(self.__fmap, self.__flist)
         clsval = getattr(rule, self.__class__.clsattr_node, tuple())
         for name, cls in clsval:
             self.add_filter(name, cls)
+
+
 
     def _reprdict(self) -> dict:
         return super()._reprdict() | {
@@ -589,7 +593,7 @@ class MaxConstantsTracker(object):
             return len(node['sentence'].quantifiers)
         return 0
 
-class NodeAppliedConstants(object):
+class AppliedNodeConstants(object):
     """
     Track the applied and unapplied constants per branch for each potential node.
     The rule's target should have `branch`, `node` and `constant` properties.
@@ -608,51 +612,51 @@ class NodeAppliedConstants(object):
         Return the set of constants that have been applied to the node for the
         branch.
         """
-        return self.node_states[branch.id][node.id]['applied']
+        return self.node_states[branch][node]['applied']
 
     def get_unapplied(self, node, branch):
         """
         Return the set of constants that have not been applied to the node for
         the branch.
         """
-        return self.node_states[branch.id][node.id]['unapplied']
+        return self.node_states[branch][node]['unapplied']
 
     # helper implementation
 
     def after_branch_add(self, branch):
         parent = branch.parent
-        if parent != None and parent.id in self.node_states:
-            self.consts[branch.id] = set(self.consts[parent.id])
-            self.node_states[branch.id] = {
-                node_id : {
-                    k : set(self.node_states[parent.id][node_id][k])
-                    for k in self.node_states[parent.id][node_id]
+        if parent != None and parent in self.node_states:
+            self.consts[branch] = set(self.consts[parent])
+            self.node_states[branch] = {
+                node : {
+                    k : set(self.node_states[parent][node][k])
+                    for k in self.node_states[parent][node]
                 }
-                for node_id in self.node_states[parent.id]
+                for node in self.node_states[parent]
             }
         else:
-            self.node_states[branch.id] = dict()
-            self.consts[branch.id] = set()
+            self.node_states[branch] = dict()
+            self.consts[branch] = set()
 
     def after_node_add(self, node, branch):
         if self.__should_track_node(node, branch):
-            if node.id not in self.node_states[branch.id]:
+            if node not in self.node_states[branch]:
                 # By tracking per node, we are tracking per world, a fortiori.
-                self.node_states[branch.id][node.id] = {
+                self.node_states[branch][node] = {
                     'applied'   : set(),
-                    'unapplied' : set(self.consts[branch.id]),
+                    'unapplied' : set(self.consts[branch]),
                 }
         consts = node['sentence'].constants if node.has('sentence') else EmptySet
         for c in consts:
-            if c not in self.consts[branch.id]:
-                for node_id in self.node_states[branch.id]:
-                    self.node_states[branch.id][node_id]['unapplied'].add(c)
-                self.consts[branch.id].add(c)
+            if c not in self.consts[branch]:
+                for node in self.node_states[branch]:
+                    self.node_states[branch][node]['unapplied'].add(c)
+                self.consts[branch].add(c)
 
-    def after_apply(self, target):
+    def after_apply(self, target: Target):
         if target.get('flag'):
             return
-        idx = self.node_states[target['branch'].id][target['node'].id]
+        idx = self.node_states[target.branch][target.node]
         c = target['constant']
         idx['applied'].add(c)
         idx['unapplied'].discard(c)
@@ -660,7 +664,11 @@ class NodeAppliedConstants(object):
     # private util
 
     def __should_track_node(self, node, branch):
-        return self.rule.is_potential_node(node, branch)
+        # TODO: remove cross-helper affinity
+        try:
+            return self.rule.nf(node, branch)
+        except AttributeError:
+            return self.rule.is_potential_node(node, branch)
 
 class MaxWorldsTracker(object):
     """
@@ -798,6 +806,18 @@ class EllipsisExampleHelper(object):
     def __addnode(self, branch):
         self.applied.add(branch)
         branch.add(self.mynode)
+
+def _targets_from_nodes_iter(get_node_targets: Callable) -> Callable:
+    def targets_iter(rule, nodes: Iterable[Node], branch: Branch) -> Iterable[Target]:
+        results = (
+            Target.list(
+                get_node_targets(rule, node, branch),
+                rule = rule, branch = branch, node = node
+            )
+            for node in nodes
+        )
+        return chain.from_iterable(filter(bool, results))
+    return targets_iter
 
 def _collectattr(cls: type, attr: str, **adds) -> filter:
     return filter (bool, chain(

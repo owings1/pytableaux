@@ -5,13 +5,13 @@ from proof.tableaux import Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG
 from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
 from proof.common import Getters, Filters, Branch, Node
-from lexicals import Atomic, Constant, Predicated
+from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
 from utils import get_logic
 import examples
 from types import ModuleType, MappingProxyType
 import time
 from pytest import raises
-from .tutils import BaseSuite,  using, skip
+from .tutils import BaseSuite, using, skip, larg, tabtup, tabeq
 
 class TestTableauxSystem(object):
 
@@ -631,4 +631,20 @@ class TestTestDecorator(BaseSuite):
 
     def test_using_restore(self):
         assert self.logic.name == 'CPL'
-    
+
+@using(logic = 'K')
+class TestNewQuantifierRules(BaseSuite):
+
+    class TestKNewExistential(BaseSuite):
+
+        def test_rule_applies(self):
+            rule, tab = self.rule_eg('Existential', bare = True)
+            # r1, t1 = self.rule_eg('ExistentialOld', bare = True)
+            # assert tabeq(tab, t1)
+
+    class TestKNewUniversal(BaseSuite):
+
+        def test_rule_applies(self):
+            rule, tab = self.rule_eg('Universal', bare = True)
+            r1, t1 = self.rule_eg('UniversalOld', bare = True)
+            assert tabeq(tab, t1)

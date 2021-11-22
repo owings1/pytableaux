@@ -19,9 +19,9 @@
 #
 # pytableaux - tableaux rules module
 from lexicals import Atomic, Quantified, Operated
-from .common import Node, Target
+from .common import Branch, Node, Target
 from .tableaux import Rule
-from .helpers import AdzHelper, NodeTargetCheckHelper, NodeAppliedConstants, \
+from .helpers import AdzHelper, NodeTargetCheckHelper, AppliedNodeConstants, \
     MaxConstantsTracker, AppliedQuitFlag
 from events import Events
 from itertools import chain
@@ -44,21 +44,21 @@ class ClosureRule(Rule):
     def is_closure(self):
         return True
 
-    def _get_targets(self, branch):
+    def _get_targets(self, branch: Branch):
         """
         :implements: Rule
         """
         target = self.applies_to_branch(branch)
         if target:
-            return [Target.create(target, branch = branch)]
+            return (Target.create(target, branch = branch),)
 
-    def _apply(self, target):
+    def _apply(self, target: Target):
         """
         :implements: Rule
         """
-        target['branch'].close()
+        target.branch.close()
 
-    def applies_to_branch(self, branch):
+    def applies_to_branch(self, branch: Branch):
         """
         :meta abstract:
         """
@@ -114,7 +114,7 @@ class PotentialNodeRule(Rule):
 
     # Implementation
 
-    def _get_targets(self, branch):
+    def _get_targets(self, branch: Branch):
         """
         :implements: Rule
         """
@@ -154,14 +154,14 @@ class PotentialNodeRule(Rule):
 
     # Default
 
-    def score_candidate(self, target):
+    def score_candidate(self, target: Target):
         score = super().score_candidate(target)
         if score == 0:
             complexity = self.tableau.branching_complexity(target['node'])
             score = -1 * complexity
         return score
 
-    def _apply(self, target):
+    def _apply(self, target: Target):
         # Default implementation, to provide a more convenient
         # method signature.
         self.apply_to_node_target(target['node'], target['branch'], target)
@@ -431,7 +431,7 @@ class AllConstantsStoppingRule(FilterNodeRule):
     Helpers = (
         *FilterNodeRule.Helpers,
         ('max_constants'     , MaxConstantsTracker),
-        ('applied_constants' , NodeAppliedConstants),
+        ('applied_constants' , AppliedNodeConstants),
         ('apqf'      , AppliedQuitFlag),
     )
 

@@ -858,13 +858,13 @@ class Target(object):
         items = (
             ('branch', bid),
             ('type', self.type), *islice((
-                (attr, self[attr]) for attr in
+                (attr, self[attr].__class__ if attr == 'rule' else self[attr])
+                for attr in
                 ('rule', 'sentence', 'designated', 'world', 'worlds')
                 if attr in self
             ), 3)
         )
-        istr = ','.join(['%s:%s' % (k, str(v)[0:20]) for k,v in items])
-        return '%s[%s]' % (self.__class__.__name__, istr)
+        return orepr(self, dict(items))
 
 class StepEntry(object):
 
