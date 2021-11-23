@@ -1,6 +1,7 @@
 from utils import rcurry, lcurry, dictrepr, orepr, Decorators, isstr, EmptySet
 from events import Events, EventEmitter
 from lexicals import Constant, Operated, Quantified
+from copy import copy
 from itertools import islice
 from types import MappingProxyType
 from typing import Generator, Iterable, Union

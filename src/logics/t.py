@@ -27,8 +27,9 @@ class Meta(object):
     category_display_order = 3
 
 from lexicals import Atomic
+from proof.common import Branch, Node, Target
 from proof.rules import PotentialNodeRule
-from proof.helpers import MaxWorldsTracker
+from proof.helpers import MaxWorldsTracker, clshelpers
 
 from . import k
 

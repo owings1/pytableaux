@@ -45,8 +45,8 @@ from errors import DenotationError, ModelValueError
 
 from . import fde
 
-Identity: Predicate  = Predicate.Identity
-Existence: Predicate = Predicate.Existence
+Identity: Predicate  = Predicates.System.Identity
+Existence: Predicate = Predicates.System.Existence
 
 def substitute_params(params, old_value, new_value):
     return tuple(new_value if p == old_value else p for p in params)
@@ -715,35 +715,36 @@ class DefaultRule(Rule):
     # Filters.Node.Modal
     modal = True
     access = None
-    # :overrides: Rule
+
     def sentence(self, node: Node) -> Sentence:
+        """
+        :overrides: Rule
+        """
         return self.nf.filters.sentence.get(node)
-    # :implements: Rule
+
     def example_nodes(self) -> tuple[NodeType]:
+        """
+        :implements: Rule
+        """
         return (self.nf.example_node(),)
 
 @clshelpers(adz = AdzHelper)
 class AdzApply(Rule):
+    # AdzHelper
     ticking = True
-    # :implements: Rule
     def _apply(self, target: Target):
+        """
+        :implements: Rule
+        """
         self.adz.apply_to_target(target)
 
 @clshelpers(adz = AdzHelper)
 class AdzClosureScore(Rule):
-    # :overrides: Rule
     def score_candidate(self, target: Target) -> float:
+        """
+        :overrides: Rule
+        """
         return self.adz.closure_score(target)
-
-# @clshelpers(nf = FilterHelper)
-# class GetNodeTargets(Rule):
-#     # :implements: Rule, delegates to _get_node_targets
-#     @FilterHelper.node_targets
-#     def _get_targets(self, node: Node, branch: Branch):
-#         return self._get_node_targets(node, branch)
-#     # :abstract:
-#     def _get_node_targets(self, node: Node, branch: Branch):
-#         raise NotImplementedError()
 
 @clshelpers()
 class OperatorPlainRule(DefaultRule, AdzClosureScore, AdzApply):

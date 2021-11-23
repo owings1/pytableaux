@@ -18,21 +18,45 @@
 #
 # pytableaux - rule helpers module
 from copy import copy
+from lexicals import Constant, Sentence
 from models import BaseModel
 from utils import OrderedAttrsView, LinkOrderSet, EmptySet, isstr, orepr
 from .common import Branch, Node, Target
-from .tableaux import Rule, RuleMeta
+from .tableaux import Rule, RuleMeta, Tableau
 from itertools import chain
 from events import Events
 from typing import Callable, Iterable, Union
+
+def _collectattr(cls: type, attr: str, **adds) -> filter:
+    return filter (bool, chain(
+        * (
+            c.__dict__.get(attr, tuple())
+            for c in reversed(cls.mro())
+        ),
+        (
+            (name, value)
+            for name, value in adds.items()
+        )
+    ))
+
+def _dedupvalue(value):
+    track = {}
+    dedup = []
+    for k, v in value:
+        if k not in track:
+            track[k] = v
+            dedup.append((k, v))
+        elif track[k] != v:
+            raise ValueError('Conflict %s / %s / %s' % (k, v, track[k]))
+    return dedup
 
 def clshelpers(**kw) -> Callable:
     """
     Class decorator to add to Helpers attribute through mro.
     Attribute name is ``Helpers``.
     """
+    attr = 'Helpers'
     def addhelpers(cls: type) -> type:
-        attr = 'Helpers'
         value = _dedupvalue(_collectattr(cls, attr, **kw))
         setattr(cls, attr, tuple(value))
         return cls
@@ -40,16 +64,16 @@ def clshelpers(**kw) -> Callable:
 
 class AdzHelper(object):
 
-    def adztarget(getadds):
-        def adz_transform(self, *args, **kw):
-            res = getadds(self, *args, **kw)
-            if not res: return res
-            if isinstance(res, dict):
-                res = (res,)
-            if not isinstance(res, (tuple, list)):
-                raise TypeError(res, type(res), Union[tuple, list])
-            return {'adds': res}
-        return adz_transform
+    # def adztarget(getadds):
+    #     def adz_transform(self, *args, **kw):
+    #         res = getadds(self, *args, **kw)
+    #         if not res: return res
+    #         if isinstance(res, dict):
+    #             res = (res,)
+    #         if not isinstance(res, (tuple, list)):
+    #             raise TypeError(res, type(res), Union[tuple, list])
+    #         return {'adds': res}
+    #     return adz_transform
 
     def __init__(self, rule, *args, **kw):
         self.rule = rule
@@ -57,7 +81,8 @@ class AdzHelper(object):
 
     def apply_to_target(self, target: Target):
         branch = target.branch
-        adds = target.get('adds', 0)
+        # adds = target.get('adds', 0)
+        adds = target['adds']
         for i in range(len(adds)):
             if i == 0:
                 continue
@@ -82,6 +107,34 @@ class AdzHelper(object):
                     close_count += 1
                     break
         return float(close_count / min(1, len(target['adds'])))
+
+@clshelpers(adz = AdzHelper)
+class AdzApply(Rule):
+    """
+    Mixin class to delegate ``_apply()`` to ``AdzHelper.apply_to_target()``.
+    """
+
+    #: Whether the target node should be ticked after application.
+    #:
+    #: :type: bool
+    ticking = True
+
+    def _apply(self, target: Target):
+        """
+        :implements: Rule
+        """
+        self.adz.apply_to_target(target)
+
+@clshelpers(adz = AdzHelper)
+class AdzClosureScore(Rule):
+    """
+    Mixin class to delegate ``score_candidate()`` to ``AdzHelper.closure_score()``.
+    """
+    def score_candidate(self, target: Target) -> float:
+        """
+        :overrides: Rule
+        """
+        return self.adz.closure_score(target)
 
 class NodeTargetCheckHelper(object):
     """
@@ -383,14 +436,6 @@ class FilterHelper(FilterNodeCache):
             helper.gc()
             nodes = helper[branch]
             targets = list(targets_iter(rule, nodes, branch))
-            # if targets and getattr(rule, 'post_filter', None) and len(targets) < len(nodes):
-            #     applied_nodes = set(target.node for target in targets)
-            #     removes = nodes.difference(applied_nodes)
-            #     for node in removes:
-            #         print('removing', node)
-            #         raise TypeError()
-            #         helper[branch].discard(node)
-            #     raise TypeError('applied_nodes', applied_nodes, 'removes', removes)
             return targets
         return get_targets_filtered
 
@@ -452,8 +497,6 @@ class FilterHelper(FilterNodeCache):
         for name, cls in clsval:
             self.add_filter(name, cls)
 
-
-
     def _reprdict(self) -> dict:
         return super()._reprdict() | {
             'filters': '(%s) %s' % (len(self.filters), self.filters),
@@ -465,7 +508,7 @@ class MaxConstantsTracker(object):
     by examining the branches after the trunk is built.
     """
 
-    def __init__(self, rule, *args, **kw):
+    def __init__(self, rule: Rule, *args, **kw):
         self.rule = rule
         #: Track the maximum number of constants that should be on the branch
         #: (per world) so we can halt on infinite branches. Map from ``branch.id```
@@ -476,16 +519,16 @@ class MaxConstantsTracker(object):
         #: :type: dict{int: set(Constant)}
         self.world_constants = {}
 
-    def get_max_constants(self, branch):
+    def get_max_constants(self, branch: Branch) -> int:
         """
         Get the projected max number of constants (per world) for the branch.
         """
-        origin = branch.origin
-        if origin.id in self.branch_max_constants:
-            return self.branch_max_constants[origin.id]
-        return 1
+        try:
+            return self.branch_max_constants[branch.origin]
+        except KeyError:
+            return 1
 
-    def get_branch_constants_at_world(self, branch, world):
+    def get_branch_constants_at_world(self, branch: Branch, world: int) -> set[Constant]:
         """
         Get the cached set of constants at a world for the branch.
 
@@ -493,11 +536,11 @@ class MaxConstantsTracker(object):
         :param int world:
         :rtype: bool
         """
-        if world not in self.world_constants[branch.id]:
-            self.world_constants[branch.id][world] = set()
-        return self.world_constants[branch.id][world]
+        # if world not in self.world_constants[branch]:
+        #     self.world_constants[branch][world] = set()
+        return self.world_constants[branch][world]
 
-    def max_constants_reached(self, branch, world=0):
+    def max_constants_reached(self, branch: Branch, world: int = 0) -> bool:
         """
         Whether we have already reached or exceeded the max number of constants
         projected for the branch (origin) at the given world.
@@ -512,7 +555,7 @@ class MaxConstantsTracker(object):
         world_constants = self.get_branch_constants_at_world(branch, world)
         return max_constants != None and len(world_constants) >= max_constants
 
-    def max_constants_exceeded(self, branch, world=0):
+    def max_constants_exceeded(self, branch: Branch, world: int = 0) -> bool:
         """
         Whether we have exceeded the max number of constants projected for
         the branch (origin) at the given world.
@@ -528,7 +571,7 @@ class MaxConstantsTracker(object):
         if max_constants != None and len(world_constants) > max_constants:
             return True
 
-    def quit_flag(self, branch):
+    def quit_flag(self, branch: Branch) -> dict:
         """
         Generate a quit flag node for the branch. Return value is a ``dict`` with the
         following keys:
@@ -546,37 +589,37 @@ class MaxConstantsTracker(object):
 
     # Helper implementation
 
-    def after_trunk_build(self, tableau):
+    def after_trunk_build(self, tableau: Tableau):
         for branch in tableau:
             origin = branch.origin
             # In most cases, we will have only one origin branch.
-            if origin.id in self.branch_max_constants:
+            if origin in self.branch_max_constants:
                 return
-            self.branch_max_constants[origin.id] = self._compute_max_constants(branch)
+            self.branch_max_constants[origin] = self._compute_max_constants(branch)
 
-    def after_branch_add(self, branch):
+    def after_branch_add(self, branch: Branch):
         parent = branch.parent
-        if parent != None and parent.id in self.world_constants:
-            self.world_constants[branch.id] = {
-                world : set(self.world_constants[parent.id][world])
-                for world in self.world_constants[parent.id]
+        if parent != None and parent in self.world_constants:
+            self.world_constants[branch] = {
+                world : copy(self.world_constants[parent][world])
+                for world in self.world_constants[parent]
             }
         else:
-            self.world_constants[branch.id] = {}
+            self.world_constants[branch] = {}
 
-    def after_node_add(self, node, branch):
-        if node.has('sentence'):
-            consts = node['sentence'].constants
+    def after_node_add(self, node: Node, branch: Branch):
+        s: Sentence = node.get('sentence')
+        if s:
             world = node.get('world')
             if world == None:
                 world = 0
-            if world not in self.world_constants[branch.id]:
-                self.world_constants[branch.id][world] = set()
-            self.world_constants[branch.id][world].update(consts)
+            if world not in self.world_constants[branch]:
+                self.world_constants[branch][world] = set()
+            self.world_constants[branch][world].update(s.constants)
 
     # Private util
 
-    def _compute_max_constants(self, branch):
+    def _compute_max_constants(self, branch: Branch) -> int:
         """
         Project the maximum number of constants for a branch (origin) as
         the number of constants already on the branch (min 1) * the number of
@@ -588,10 +631,9 @@ class MaxConstantsTracker(object):
         ])
         return max(1, branch.constants_count) * max(1, node_needed_constants) + 1
 
-    def _compute_needed_constants_for_node(self, node, branch):
-        if node.has('sentence'):
-            return len(node['sentence'].quantifiers)
-        return 0
+    def _compute_needed_constants_for_node(self, node: Node, branch: Branch) -> int:
+        s: Sentence = node.get('sentence')
+        return len(s.quantifiers) if s else 0
 
 class AppliedNodeConstants(object):
     """
@@ -819,25 +861,3 @@ def _targets_from_nodes_iter(get_node_targets: Callable) -> Callable:
         return chain.from_iterable(filter(bool, results))
     return targets_iter
 
-def _collectattr(cls: type, attr: str, **adds) -> filter:
-    return filter (bool, chain(
-        * (
-            c.__dict__.get(attr, tuple())
-            for c in reversed(cls.mro())
-        ),
-        (
-            (name, value)
-            for name, value in adds.items()
-        )
-    ))
-
-def _dedupvalue(value):
-    track = {}
-    dedup = []
-    for k, v in value:
-        if k not in track:
-            track[k] = v
-            dedup.append((k, v))
-        elif track[k] != v:
-            raise ValueError('Conflict %s / %s / %s' % (k, v, track[k]))
-    return dedup
