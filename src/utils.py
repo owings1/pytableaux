@@ -1,4 +1,3 @@
-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2021 Doug Owings.
 # 
@@ -18,13 +17,14 @@
 # ------------------
 #
 # pytableaux - utils module
-from builtins import ModuleNotFoundError
 from errors import DuplicateKeyError, IllegalStateError
+from builtins import ModuleNotFoundError
+from copy import copy
 from importlib import import_module
 from inspect import isclass
-from itertools import islice
+from itertools import chain, islice
 from time import time
-from types import ModuleType, MappingProxyType
+from types import ModuleType
 from typing import Callable
 from past.builtins import basestring
 EmptySet = frozenset()
@@ -173,7 +173,7 @@ def safeprop(self, name, value = None):
         raise KeyError("'%s' already exists" % (name))
     setattr(self, name, value)
 
-def sortedbyval(map):
+def sortedbyval(map: dict) -> list:
     return list(it[1] for it in sorted((v, k) for k, v in map.items()))
 
 def _myattr(func, cls = set, name = '_cache'):
@@ -181,33 +181,39 @@ def _myattr(func, cls = set, name = '_cache'):
         setattr(func, name, cls())
     return getattr(func, name)
 
-def rcurry(func, rargs):
-    class curried(object):
-        def __call__(self, *largs):
-            return func(*largs, *rargs)
-    return curried()
+def mroattr(cls: type, attr: str, **adds) -> filter:
+    return filter (bool, chain(
+        * (
+            c.__dict__.get(attr, EmptySet)
+            for c in reversed(cls.mro())
+        ),
+        (
+            (name, value)
+            for name, value in adds.items()
+        )
+    ))
 
-def lcurry(func, largs):
-    class curried(object):
-        def __call__(self, *rargs):
-            return func(*largs, *rargs)
-    return curried()
-
-
-def _privkey(method):
-    name = method.__name__
-    key = cat('_', __name__, '__lazy_', name)
-    return (name, key)
-def _isreadonly(obj, *args, cls=None, check=None,**kw):
-    if cls: obj = obj.__class__
-    if check != None:
-        if not check(obj): return False
-    return True
+def dedupitems(items):
+    track = {}
+    dedup = []
+    for k, v in items:
+        if k in track and v == None:
+            # A value of None clears the item.
+            item = (k, track.pop(k))
+            idx = dedup.index(item)
+            dedup.pop(idx)
+        elif k not in track:
+            if v != None:
+                track[k] = v
+                dedup.append((k, v))
+        elif track[k] != v:
+            raise ValueError('Conflict %s: %s (was: %s)' % (k, v, track[k]))
+    return dedup
 
 class Decorators(object):
 
     def lazyget(method: Callable) -> Callable:
-        name, key = _privkey(method)
+        name, key = __class__._privkey(method)
         def fget(self):
             if not hasattr(self, key):
                 setattr(self, key, method(self))
@@ -215,20 +221,20 @@ class Decorators(object):
         return fget
 
     def setonce(method: Callable) -> Callable:
-        name, key = _privkey(method)
+        name, key = __class__._privkey(method)
         def fset(self, val):
             if hasattr(self, key): raise AttributeError(name)
             setattr(self, key, method(self, val))
         return fset
 
-    def checkstate(**attrs) -> Callable:
-        def wrap(func: Callable) -> Callable:
-            def check(self, *args, **kw):
+    def checkstate(**attrs: dict) -> Callable:
+        def wrap(method: Callable) -> Callable:
+            def fcheck(self, *args, **kw):
                 for attr, val in attrs.items():
                     if getattr(self, attr) != val:
                         raise IllegalStateError(attr)
-                return func(self, *args, **kw)
-            return check
+                return method(self, *args, **kw)
+            return fcheck
         return wrap
 
     def nosetattr(*args, **kw) -> Callable:
@@ -238,14 +244,24 @@ class Decorators(object):
             origin = None
         def wrap(origin):
             def fset(self, attr, val):
-                if _isreadonly(self, **kw):
+                if __class__._isreadonly(self, **kw):
                     raise AttributeError('%s is readonly' % self)
                 return origin(self, attr, val)
             return fset
         return wrap(origin) if origin else wrap
-            
-#     return Decorators
-# Decorators = Decorators()
+
+    @staticmethod
+    def _privkey(method):
+        name = method.__name__
+        key = cat('_', __name__, '__lazy_', name)
+        return (name, key)
+
+    @staticmethod
+    def _isreadonly(obj, *args, cls = None, check = None, **kw):
+        if cls: obj = obj.__class__
+        if check != None:
+            if not check(obj): return False
+        return True
             
 class Kwobj(object):
 
@@ -391,6 +407,116 @@ class OrderedAttrsView(object):
     def __repr__(self):
         return repr(self.__list)
 
+class UniqueList(object):
+    def add(self, item):
+        if item not in self:
+            self.__set.add(item)
+            self.__list.append(item)
+    append = add
+    def update(self, items):
+        for item in items:
+            self.add(item)
+    extend = update
+    def clear(self):
+        self.__set.clear()
+        self.__list.clear()
+    def index(self, item):
+        return self.__list.index(item)
+    def pop(self, *i):
+        item = self.__list.pop(*i)
+        self.__set.remove(item)
+        return item
+    def remove(self, item):
+        self.__set.remove(item)
+        self.__list.remove(item)
+    def discard(self, item):
+        if item in self:
+            self.remove(item)
+    def reverse(self):
+        self.__list.reverse()
+    def sort(self, *args, **kw):
+        self.__list.sort(*args, **kw)
+    def union(self, other):
+        inst = copy(self)
+        if other is not self:
+            inst.update(other)
+        return inst
+    def difference(self, other):
+        if not isinstance(other, (set, dict, self.__class__)):
+            other = set(other)
+        return self.__class__((x for x in self if x not in other))
+    def difference_update(self, other):
+        for item in other:
+            self.discard(item)
+    def symmetric_difference(self, other):
+        inst = self.difference(other)
+        inst.update((x for x in other if x not in self))
+        return inst
+    def symmetric_difference_update(self, other):
+        inst = self.symmetric_difference(other)
+        self.clear()
+        self.update(inst)
+    def intersection(self, other):
+        if not isinstance(other, (set, dict, self.__class__)):
+            other = set(other)
+        return self.__class__((x for x in self if x in other))
+    def intersection_update(self, other):
+        if not isinstance(other, (set, dict, self.__class__)):
+            other = set(other)
+        for item in self.__set.difference(other):
+            self.remove(item)
+    def isdisjoint(self, other):
+        if isinstance(other, self.__class__):
+            other = other.__set
+        return self.__set.isdisjoint(other)
+    def issubset(self, other):
+        if isinstance(other, self.__class__):
+            other = other.__set
+        return self.__set.issubset(other)
+    def issuperset(self, other):
+        if isinstance(other, self.__class__):
+            other = other.__set
+        return self.__set.issuperset(other)
+    def copy(self):
+        return self.__class__(self)
+    def __len__(self):
+        return len(self.__set)
+    def __iter__(self):
+        return iter(self.__list)
+    def __contains__(self, item):
+        return item in self.__set
+    def __getitem__(self, key):
+        return self.__list[key]
+    def __delitem__(self, key):
+        if isinstance(key, slice):
+            for item in self.__list[key]:
+                self.__set.remove(item)
+            del self.__list[key]
+        elif isinstance(key, int):
+            self.pop(key)
+        else:
+            raise TypeError(key, type(key), (int, slice))
+    def __add__(self, value):
+        inst = copy(self)
+        if value is not self:
+            inst.update(value)
+        return inst
+    def __iadd__(self, value):
+        if value is not self:
+            self.update(value)
+        return self
+    __copy__ = copy
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            other = other.__list
+        return self.__list == other
+    def __init__(self, items = None):
+        self.__set = set()
+        self.__list = []
+        if items:
+            self.update(items)
+    def __repr__(self):
+        return cat(self.__class__.__name__, wrparens(self.__list.__repr__()))
 class LinkOrderSet(object):
 
     class LinkEntry(object):
@@ -409,14 +535,16 @@ class LinkOrderSet(object):
 
     def View(obj):
         class LinkOrderSetView(object):
+            def __len__(self):
+                return len(obj)
             def __iter__(self):
                 return iter(obj)
             def __reversed__(self):
                 return reversed(obj)
             def __contains__(self, item):
                 return item in obj
-            def __len__(self):
-                return len(obj)
+            def __getitem__(self, key):
+                return obj[key]
             def first(self):
                 return obj.first()
             def last(self):
@@ -576,10 +704,7 @@ class LinkOrderSet(LinkOrderSet):
 
     def __repr__(self):
         return orepr(self,
-            len=len(self),
-            first=self.first(),
-            last=self.last(),
+            len = len(self),
+            first = self.first(),
+            last = self.last(),
         )
-
-def ReadOnlyDict(src):
-    return MappingProxyType(src)
