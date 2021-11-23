@@ -444,7 +444,7 @@ class NodeFilterRule(Rule):
 
     class DesignationFilter(Filters.Attr):
         attrs = (('designation', 'designated'),)
-        rget = Getters.key
+        rget = Getters.Key()
 
     class ModalFilter(Filters.Attr):
         attrs = (('modal', 'is_modal'),)

@@ -1,10 +1,11 @@
-from utils import rcurry, lcurry, dictrepr, orepr, Decorators, isstr, EmptySet
+from utils import dictrepr, orepr, Decorators, isstr, EmptySet
 from events import Events, EventEmitter
 from lexicals import Constant, Operated, Quantified
 from copy import copy
+from inspect import getmembers, isclass
 from itertools import islice
 from types import MappingProxyType
-from typing import Generator, Iterable, Union
+from typing import Callable, Generator, Iterable, Union
 from enum import Enum, Flag, IntFlag
 lazyget = Decorators.lazyget
 setonce = Decorators.setonce
@@ -29,42 +30,97 @@ class Getters(object):
         return chained()
 
     class Getter(object):
-        curry = rcurry
+        class Curried: NotImplemented
+        class Safe: NotImplemented
         def __new__(cls, *args):
-            inst = object.__new__(cls)
             if args:
-                return cls.curry(inst, args)
-            return inst
+                return cls.Curried(*args)
+            return object.__new__(cls)
+        def __repr__(self):
+            base = getattr(self, 'Base', self.__class__).__qualname__
+            mods = self._mods()
+            if not mods:
+                return '<%s>' % base
+            return '<%s|%s>' % (base, '|'.join(mods))
+        def _mods(self):
+            return tuple()
+        def __call__(self, obj, *args):
+            raise NotImplementedError()
 
+    class Curried(object):
+
+        def currywrap(fdir: Callable) -> Callable:
+            def currier(Base: type) -> type:
+                Base.Curried = Curried = fdir(Base)
+                def fnew(cls, *cargs):
+                    inst = Base.__new__(cls)
+                    inst._cargs = cargs
+                    return inst
+                def fmods(self):
+                    return Base._mods(self) + ('%s(x%d)' % (Curried.__name__, len(self._cargs)),)
+                Curried.__new__ = fnew
+                Curried._mods = fmods
+                if not hasattr(Curried, 'Base'):
+                    Curried.Base = Base
+                for Member in (
+                    m for (k, m) in
+                    getmembers(Base, isclass)[0:-1]
+                    if k != 'Curried'
+                    and m is not Base
+                    and issubclass(m, Base)
+                    and not issubclass(m, Curried)
+                ):
+                    currier(Member)
+                return Base
+            return currier
+
+        @currywrap
+        def left(Base: type) -> type:
+            class LeftCurried(Base):
+                def __call__(self, *args):
+                    return super().__call__(*self._cargs, *args)
+            return LeftCurried
+
+        @currywrap
+        def right(Base: type) -> type:
+            class RightCurried(Base):
+                def __call__(self, *args):
+                    return super().__call__(*args, *self._cargs)
+            return RightCurried
+
+    class Safed(object):
+        def raising(*errs) -> Callable:
+            isinstance(None, errs)
+            def safe(Base: type) -> type:
+                class Safe(Base):
+                    def __call__(self, *args):
+                        try:
+                            return super().__call__(*args)
+                        except errs:
+                            pass
+                    def _mods(self):
+                        return super()._mods() + ('Safe',)
+                Base.Safe = Safe
+                Base.Safe.Base = Base
+                return Base
+            return safe
+
+    @Curried.right
+    @Safed.raising(AttributeError)
     class Attr(Getter):
         def __call__(self, obj, name):
             return getattr(obj, name)
 
-    class AttrSafe(Getter):
-        def __call__(self, obj, name):
-            return getattr(obj, name, None)
-
+    @Curried.right
+    @Safed.raising(KeyError)
     class Key(Getter):
         def __call__(self, obj, key):
             return obj[key]
 
-    class KeySafe(Getter):
-        def __call__(self, obj, key):
-            try:
-                return obj[key]
-            except KeyError:
-                pass
-
+    @Curried.left
     class It(Getter):
-        curry = lcurry
         def __call__(self, obj, _ = None):
             return obj
-
-    attr = Attr()
-    attrsafe = AttrSafe()
-    key = Key()
-    keysafe = KeySafe()
-    it = It()
 
 class Filters(object):
 
@@ -73,7 +129,7 @@ class Filters(object):
         lhs = None
 
         def __call__(self, *args, **kw):
-            raise NotImplemented()
+            raise NotImplementedError()
 
         def __repr__(self):
             me = self.__class__.__qualname__
@@ -91,7 +147,7 @@ class Filters(object):
         args = tuple()
         kw = {}
 
-        get = Getters.attr
+        get = Getters.Attr()
         example = None.__class__
 
         def __init__(self, meth, *args, **kw):
@@ -111,8 +167,8 @@ class Filters(object):
 
         attrs = tuple()
 
-        lget = Getters.attrsafe
-        rget = Getters.attr
+        lget = Getters.Attr.Safe()
+        rget = Getters.Attr()
 
         def __init__(self, lhs, **attrmap):
             self.lhs = lhs
@@ -135,13 +191,13 @@ class Filters(object):
 
     class Sentence(Filter):
 
-        rget = Getters.it
+        rget = Getters.It()
 
         @property
         def negated(self):
             if self.__negated != None:
                 return self.__negated
-            return Getters.attrsafe(self.lhs, 'negated')
+            return getattr(self.lhs, 'negated', None)
 
         @negated.setter
         def negated(self, val):
@@ -218,7 +274,7 @@ class Filters(object):
 class NodeFilters(Filters):
 
     class Sentence(Filters.Sentence):
-        rget = Getters.KeySafe('sentence')
+        rget = Getters.Key.Safe('sentence')
         def example_node(self):
             n = {}
             s = self.example()
@@ -228,7 +284,7 @@ class NodeFilters(Filters):
 
     class Designation(Filters.Attr):
         attrs = (('designation', 'designated'),)
-        rget = Getters.key
+        rget = Getters.Key()
         def example_node(self):
             return self.example()
 
@@ -401,7 +457,7 @@ class Branch(Branch):
             if parent == self:
                 raise ValueError('A branch cannot be its own parent')
             if not isinstance(parent, Branch):
-                raise TypeError('Expecting %s, got %s' % (Branch, type(parent)))
+                raise TypeError(parent, type(parent), Branch)
             self.__origin = parent.origin
         else:
             self.__origin = self
@@ -413,8 +469,7 @@ class Branch(Branch):
             Events.AFTER_NODE_TICK,
         )
         # Make sure properties are copied if needed in copy()
-        
-        
+
         self.__closed = False
 
         self.__nodes = []

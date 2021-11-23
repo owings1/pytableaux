@@ -727,26 +727,8 @@ class DefaultRule(Rule):
         """
         return (self.nf.example_node(),)
 
-@clshelpers(adz = AdzHelper)
-class AdzApply(Rule):
-    # AdzHelper
-    ticking = True
-    def _apply(self, target: Target):
-        """
-        :implements: Rule
-        """
-        self.adz.apply_to_target(target)
-
-@clshelpers(adz = AdzHelper)
-class AdzClosureScore(Rule):
-    def score_candidate(self, target: Target) -> float:
-        """
-        :overrides: Rule
-        """
-        return self.adz.closure_score(target)
-
 @clshelpers()
-class DefaultNodeRule(DefaultRule, AdzClosureScore, AdzApply):
+class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
@@ -754,13 +736,13 @@ class DefaultNodeRule(DefaultRule, AdzClosureScore, AdzApply):
 
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
-DefaultNodeRule = GetNodeTargets = DefaultNodeRule
+# GetNodeTargets = DefaultNodeRule
 
 @clshelpers(
     apqf = AppliedQuitFlag,
     maxc = MaxConstantsTracker,
 )
-class QuantifierSkinnyRule(DefaultRule, AdzClosureScore, AdzApply):
+class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
@@ -789,7 +771,7 @@ class OldDefaultNodeRule(FilterNodeRule):
     ticking = True
 
     def _apply(self, target):
-        self.adz.apply_to_target(target)
+        self.adz._apply(target)
 
     def score_candidate(self, target):
         return self.adz.closure_score(target)

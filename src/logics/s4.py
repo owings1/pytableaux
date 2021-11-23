@@ -76,10 +76,11 @@ class TableauxRules(object):
         """
         access = True
         ticking = False
-        # rule implmentation
 
-        # @FilterHelper.node_targets
         def _get_node_targets(self, node: Node, branch: Branch):
+            """
+            :implements: K.DefaultNodeRule
+            """
             if self.maxw.max_worlds_reached(branch):
                 return
             w1 = node['world1']
@@ -95,14 +96,14 @@ class TableauxRules(object):
 
         def score_candidate(self, target: Target):
             """
-            :override: AdzClosureScore
+            :overrides: AdzHelper.ClosureScore
             """
             # Rank the highest world
             return target['world2']
 
         def example_nodes(self):
             """
-            :override: K.DefaultRule
+            :overrides: K.DefaultRule
             """
             w1, w2, w3 = range(3)
             return (
@@ -110,10 +111,10 @@ class TableauxRules(object):
                 {'world1': w2, 'world2': w3},
             )
 
-    closure_rules = list(K.TabRules.closure_rules)
+    closure_rules = tuple(K.TabRules.closure_rules)
 
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
             K.TabRules.IdentityIndiscernability,
             K.TabRules.Assertion,
@@ -127,24 +128,24 @@ class TableauxRules(object):
             K.TabRules.NecessityNegated,
             K.TabRules.ExistentialNegated,
             K.TabRules.UniversalNegated,
-        ],
+        ),
         # Things seem to work better with the Transitive rule before
         # the modal operator rules, and the other access rules after.
         # However, if we put the Transitive after, then some trees
         # fail to close. It is so far an open question whether this
         # is a good idea.
-        [
+        (
             Transitive,
-        ],
-        [
+        ),
+        (
             # modal operator rules
             K.TabRules.Necessity,
             K.TabRules.Possibility,
-        ],
-        [
-            T.TableauxRules.Reflexive,
-        ],
-        [
+        ),
+        (
+            T.TabRules.Reflexive,
+        ),
+        (
             # branching rules
             K.TabRules.ConjunctionNegated,
             K.TabRules.Disjunction, 
@@ -154,9 +155,9 @@ class TableauxRules(object):
             K.TabRules.Conditional,
             K.TabRules.Biconditional,
             K.TabRules.BiconditionalNegated,
-        ],
-        [
+        ),
+        (
             K.TabRules.Existential,
             K.TabRules.Universal,
-        ],
-    ]
+        ),
+    )

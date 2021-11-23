@@ -17,38 +17,18 @@
 # ------------------
 #
 # pytableaux - rule helpers module
-from copy import copy
 from lexicals import Constant, Sentence
+from events import Events
 from models import BaseModel
-from utils import OrderedAttrsView, LinkOrderSet, EmptySet, isstr, orepr
+from utils import OrderedAttrsView, LinkOrderSet, EmptySet, \
+    dedupitems, isstr, mroattr, orepr
 from .common import Branch, Node, Target
 from .tableaux import Rule, RuleMeta, Tableau
+
+from copy import copy
+from inspect import getmembers, isclass
 from itertools import chain
-from events import Events
-from typing import Callable, Iterable, Union
-
-def _collectattr(cls: type, attr: str, **adds) -> filter:
-    return filter (bool, chain(
-        * (
-            c.__dict__.get(attr, tuple())
-            for c in reversed(cls.mro())
-        ),
-        (
-            (name, value)
-            for name, value in adds.items()
-        )
-    ))
-
-def _dedupvalue(value):
-    track = {}
-    dedup = []
-    for k, v in value:
-        if k not in track:
-            track[k] = v
-            dedup.append((k, v))
-        elif track[k] != v:
-            raise ValueError('Conflict %s / %s / %s' % (k, v, track[k]))
-    return dedup
+from typing import Callable, Iterable, Union, final
 
 def clshelpers(**kw) -> Callable:
     """
@@ -57,42 +37,32 @@ def clshelpers(**kw) -> Callable:
     """
     attr = 'Helpers'
     def addhelpers(cls: type) -> type:
-        value = _dedupvalue(_collectattr(cls, attr, **kw))
+        value = dedupitems(mroattr(cls, attr, **kw))
         setattr(cls, attr, tuple(value))
         return cls
     return addhelpers
 
 class AdzHelper(object):
 
-    # def adztarget(getadds):
-    #     def adz_transform(self, *args, **kw):
-    #         res = getadds(self, *args, **kw)
-    #         if not res: return res
-    #         if isinstance(res, dict):
-    #             res = (res,)
-    #         if not isinstance(res, (tuple, list)):
-    #             raise TypeError(res, type(res), Union[tuple, list])
-    #         return {'adds': res}
-    #     return adz_transform
+    _attr = 'adz'
 
-    def __init__(self, rule, *args, **kw):
+    def __init__(self, rule: Rule, *args, **kw):
         self.rule = rule
-        self.tableau = rule.tableau
+        self.tableau: Tableau = rule.tableau
 
-    def apply_to_target(self, target: Target):
-        branch = target.branch
-        # adds = target.get('adds', 0)
+    def _apply(self, target: Target):
+        branch: Branch = target.branch
         adds = target['adds']
-        for i in range(len(adds)):
+        for i, nodes in enumerate(adds):
             if i == 0:
                 continue
             b = self.rule.branch(branch)
-            b.extend(target['adds'][i])
+            b.extend(nodes)
             if self.rule.ticking:
-                b.tick(target['node'])
-        branch.extend(target['adds'][0])
+                b.tick(target.node)
+        branch.extend(adds[0])
         if self.rule.ticking:
-            branch.tick(target['node'])
+            branch.tick(target.node)
 
     def closure_score(self, target: Target) -> float:
         try:
@@ -108,65 +78,15 @@ class AdzHelper(object):
                     break
         return float(close_count / min(1, len(target['adds'])))
 
-@clshelpers(adz = AdzHelper)
-class AdzApply(Rule):
-    """
-    Mixin class to delegate ``_apply()`` to ``AdzHelper.apply_to_target()``.
-    """
-
-    #: Whether the target node should be ticked after application.
-    #:
-    #: :type: bool
-    ticking = True
-
-    def _apply(self, target: Target):
-        """
-        :implements: Rule
-        """
-        self.adz.apply_to_target(target)
-
-@clshelpers(adz = AdzHelper)
-class AdzClosureScore(Rule):
-    """
-    Mixin class to delegate ``score_candidate()`` to ``AdzHelper.closure_score()``.
-    """
-    def score_candidate(self, target: Target) -> float:
-        """
-        :overrides: Rule
-        """
-        return self.adz.closure_score(target)
-
-class NodeTargetCheckHelper(object):
-    """
-    Calls the rule's ``check_for_target(node, branch)`` when a node is added to
-    a branch. If a target is returned, it is cached relative to the branch. The
-    rule can then call ``cached_target(branch)``  on the helper to retrieve the
-    target. This is used primarily in closure rules for performance.
-
-    NB: The rule must implement ``check_for_target(self, node, branch)``.
-    """
-
-    def __init__(self, rule, *args, **kw):
-        self.rule = rule
-        self.targets = {}
-
-    def cached_target(self, branch: Branch):
-        """
-        Return the cached target for the branch, if any.
-        """
-        if branch in self.targets:
-            return self.targets[branch]
-
-    # Event Listeners
-
-    def after_node_add(self, node: Node, branch: Branch):
-        target = self.rule.check_for_target(node, branch)
-        if target:
-            self.targets[branch] = target
-
 class BranchCache(object):
 
+    rule: Rule = None
+    tab: Tableau = None
+
     _valuetype = bool
+
+    __cache: dict = None
+    __linkset: LinkOrderSet = None
 
     def __init__(self, *args, **kw):
         pass
@@ -240,6 +160,9 @@ class BranchDictCache(BranchCache):
         inst.tab.on(Events.AFTER_BRANCH_ADD, after_branch_add)
         return inst
 
+    def __getitem__(self, branch: Branch) -> dict:
+        return super().__getitem__(branch)
+
 class FilterNodeCache(BranchCache):
 
     _valuetype = set
@@ -259,7 +182,7 @@ class FilterNodeCache(BranchCache):
         self.__ignore_ticked = val
 
     def __new__(cls, rule: Rule, *args):
-        inst = super().__new__(cls, rule)
+        inst: FilterNodeCache = super().__new__(cls, rule)
         def after_node_add(node: Node, branch: Branch):
             if inst(node, branch):
                 inst[branch].add(node)
@@ -275,18 +198,23 @@ class FilterNodeCache(BranchCache):
     def __call__(self, *args, **kw) -> bool:
         raise NotImplementedError()
 
+    def __getitem__(self, branch: Branch) -> set:
+        return super().__getitem__(branch)
+
 class AppliedQuitFlag(BranchCache):
     """
     Track the application of a flag node by the rule for each branch. A branch
     is considered flagged when the target has a non-empty ``flag`` property.
     """
     _valuetype = bool
+    _attr = 'apqf'
 
     def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
+    @final
     def __call__(self, target: Target):
         self[target.branch] = bool(target.get('flag'))
 
@@ -297,12 +225,14 @@ class AppliedNodesWorldsTracker(BranchCache):
     are ``(node, world)`` pairs.
     """
     _valuetype = set
+    _attr = 'apnw'
 
     def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
+    @final
     def __call__(self, target: Target):
         if target.get('flag'):
             return
@@ -313,12 +243,14 @@ class UnserialWorldsTracker(BranchCache):
     Track the unserial worlds on the branch.
     """
     _valuetype = set
+    _attr = 'ust'
 
     def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
         inst.tab.on(Events.AFTER_NODE_ADD, inst)
         return inst
 
+    @final
     def __call__(self, node: Node, branch: Branch):
         for w in node.worlds:
             if node.get('world1') == w or branch.has({'world1': w}):
@@ -332,36 +264,55 @@ class AppliedSentenceCounter(BranchDictCache):
     the `sentence` property of the rule's target. The target should also include
     the `branch` key.
     """
+    _attr = 'apsc'
+
     def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
+    @final
     def __call__(self, target: Target):
         if target.get('flag'):
             return
-        b = target.branch
-        s = target.sentence
-        self[b][s] = self[b].get(s, 0) + 1
+        counts = self[target.branch]
+        sentence = target.sentence
+        counts[sentence] = counts.get(sentence, 0) + 1
 
 class AppliedNodeCount(BranchDictCache):
 
+    _attr = 'apnc'
+
     def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
+    @final
     def __call__(self, target: Target):
         if target.get('flag'):
             return
-        b = target.branch
-        n = target.node
-        self[b][n] = self[b].get(n, 0) + 1
+        counts = self[target.branch]
+        node = target.node
+        counts[node] = counts.get(node, 0) + 1
 
 class VisibleWorldsIndex(BranchDictCache):
     """
     Index the visible worlds for each world on the branch.
     """
+    _attr = 'visw'
+
+    def has(self, branch: Branch, w1: int, w2: int) -> bool:
+        """
+        Whether w1 sees w2 on the given branch.
+
+        :param Branch branch:
+        :param int w1:
+        :param int w2:
+        :rtype: bool
+        """
+        return w2 in self[branch].get(w1, EmptySet)
+
     def intransitives(self, branch: Branch, w1: int, w2: int) -> set[int]:
         """
         Get all the worlds on the branch that are visible to w2, but are not
@@ -378,6 +329,7 @@ class VisibleWorldsIndex(BranchDictCache):
         inst.tab.on(Events.AFTER_NODE_ADD, inst)
         return inst
 
+    @final
     def __call__(self, node: Node, branch: Branch):        
         if node.has('world1', 'world2'):
             w1 = node['world1']
@@ -390,14 +342,21 @@ class PredicatedNodesTracker(FilterNodeCache):
     """
     Track all predicated nodes on the branch.
     """
-    def __call__(self, node: Node, *a, **kw) -> bool:
-        return node.has('sentence') and node['sentence'].is_predicated
+    _attr = 'pn'
 
+    @final
+    def __call__(self, node: Node, *a, **kw) -> bool:
+        s: Sentence = node.get('sentence')
+        return s != None and s.is_predicated
+
+@final
 class FilterHelper(FilterNodeCache):
     """
     Set configurable and chainable filters in ``NodeFilters``
     class attribute.
     """
+    _attr = 'nf'
+
     def __call__(self, node: Node, branch: Branch) -> bool:
         return self.filter(node, branch)
 
@@ -413,7 +372,7 @@ class FilterHelper(FilterNodeCache):
         """
         def addfilters(rulecls: RuleMeta) -> RuleMeta:
             for attr in (cls.clsattr_node,):
-                value = _dedupvalue(_collectattr(rulecls, attr, **kw))
+                value = dedupitems(mroattr(rulecls, attr, **kw))
                 setattr(rulecls, attr, tuple(value))
             return rulecls
         return addfilters
@@ -501,6 +460,87 @@ class FilterHelper(FilterNodeCache):
         return super()._reprdict() | {
             'filters': '(%s) %s' % (len(self.filters), self.filters),
         }
+
+class Delegates(object):
+    """
+    Mixin Rule classes to delegate to helper methods.
+    """
+
+    class AdzHelper(object):
+
+        class Apply(Rule):
+            """
+            Delegates ``_apply()`` to ``AdzHelper._apply()``.
+            """
+            Helpers = (AdzHelper,)
+
+            #: Whether the target node should be ticked after application.
+            #:
+            #: :type: bool
+            ticking = True
+
+            def _apply(self, target: Target):
+                """
+                :implements: Rule
+                """
+                self.adz._apply(target)
+
+        class ClosureScore(Rule):
+            """
+            Delegates ``score_candidate()`` to ``AdzHelper.closure_score()``.
+            """
+            Helpers = (AdzHelper,)
+
+            def score_candidate(self, target: Target) -> float:
+                """
+                :overrides: Rule
+                """
+                return self.adz.closure_score(target)
+
+def __populate_delegates():
+    _modclasses = {
+        clsname: cls for clsname, cls in globals().items()
+        if isclass(cls) and cls.__module__ == __name__
+    }
+    for helpername, delegates in getmembers(Delegates, isclass)[0:-1]:
+        helpercls = _modclasses[helpername]
+        # hkw = {delegates.attr: helpercls}
+        for name, cls in getmembers(delegates, isclass)[0:-1]:
+            # clshelpers(**hkw)(cls)
+            # print(cls, cls.Helpers)
+            assign = (helpercls, name, cls)
+            # print(assign)
+            setattr(*assign)
+__populate_delegates()
+del(__populate_delegates)
+
+class NodeTargetCheckHelper(object):
+    """
+    Calls the rule's ``check_for_target(node, branch)`` when a node is added to
+    a branch. If a target is returned, it is cached relative to the branch. The
+    rule can then call ``cached_target(branch)``  on the helper to retrieve the
+    target. This is used primarily in closure rules for performance.
+
+    NB: The rule must implement ``check_for_target(self, node, branch)``.
+    """
+
+    def __init__(self, rule, *args, **kw):
+        self.rule = rule
+        self.targets = {}
+
+    def cached_target(self, branch: Branch):
+        """
+        Return the cached target for the branch, if any.
+        """
+        if branch in self.targets:
+            return self.targets[branch]
+
+    # Event Listeners
+
+    def after_node_add(self, node: Node, branch: Branch):
+        target = self.rule.check_for_target(node, branch)
+        if target:
+            self.targets[branch] = target
 
 class MaxConstantsTracker(object):
     """

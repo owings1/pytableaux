@@ -32,7 +32,7 @@ from proof.tableaux import TableauxSystem as BaseSystem, Rule
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
     NewConstantStoppingRule
 from proof.common import Branch, Node, Filters, Target
-from proof.helpers import AdzHelper, AdzApply, AdzClosureScore, FilterHelper, clshelpers
+from proof.helpers import AdzHelper, FilterHelper, clshelpers
 from errors import ModelValueError
 
 Identity = Predicate.Identity
@@ -572,19 +572,6 @@ class DefaultRule(Rule):
         """
         return (self.nf.example_node(),)
 
-# @clshelpers(adz = AdzHelper)
-# class AdzApply(Rule):
-#     ticking = True
-#     # :implements: Rule
-#     def _apply(self, target: Target):
-#         self.adz.apply_to_target(target)
-
-# @clshelpers(adz = AdzHelper)
-# class AdzClosureScore(Rule):
-#     # :overrides: Rule
-#     def score_candidate(self, target: Target):
-#         return self.adz.closure_score(target)
-
 @clshelpers(nf = FilterHelper)
 class GetNodeTargets(Rule):
     # :implements: Rule, delegates to _get_node_targets
@@ -596,7 +583,7 @@ class GetNodeTargets(Rule):
         raise NotImplementedError()
 
 @clshelpers()
-class DefaultNodeRule(GetNodeTargets, DefaultRule, AdzClosureScore, AdzApply):
+class DefaultNodeRule(GetNodeTargets, DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
     pass
 
 class OldDefaultNodeRule(FilterNodeRule):
@@ -604,7 +591,7 @@ class OldDefaultNodeRule(FilterNodeRule):
     ticking = True
 
     def _apply(self, target):
-        self.adz.apply_to_target(target)
+        self.adz._apply(target)
 
     def score_candidate(self, target):
         return self.adz.closure_score(target)

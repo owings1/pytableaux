@@ -18,8 +18,8 @@
 #
 # pytableaux - tableaux module
 from lexicals import Argument, Constant, Sentence
-from utils import LinkOrderSet, Kwobj, StopWatch, cat, get_logic, \
-    EmptySet, typecheck, Decorators, orepr
+from utils import Decorators, LinkOrderSet, Kwobj, StopWatch, UniqueList, EmptySet, \
+    dedupitems, get_logic, mroattr, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import Events, EventEmitter
 from inspect import isclass
@@ -27,38 +27,90 @@ from itertools import chain, islice
 from .common import Branch, Node, NodeType, Target
 from past.builtins import basestring
 from enum import auto, Enum, Flag
+from keyword import iskeyword
 from types import ModuleType
 from typing import Any, Callable, Collection, Iterator, Iterable, NamedTuple, Union, final
 
 LogicRef = Union[ModuleType, str]
 
 class RuleMeta(type):
-    def __new__(cls, clsname, bases, attrs, **kw):
-        for attr, value in attrs.items():
+    def __new__(cls, clsname: str, bases: tuple[type], clsattrs: dict, **kw):
+        taken: dict[str, Any] = dict(clsattrs)
+        helper_attrs: dict[type, str] = {}
+        helper_classes: list[type] = []
+        helpers_attr = 'Helpers'
+        if clsattrs.get('debug', False):
+            print('clsname', clsname)
+            print('bases', bases)
+            print('clsattrs', clsattrs)
+        for clsattr, rawvalue in clsattrs.items():
             try:
-                if attr == 'Helpers':
-                    if not isinstance(value, tuple):
-                        raise TypeError()
-                    clsset = set()
-                    nameset = set()                
-                    for item in value:
+                if clsattr == helpers_attr:
+                    if not isinstance(rawvalue, tuple):
+                        raise TypeError(rawvalue, type(rawvalue), tuple)
+
+                    for item in rawvalue:
+                        if isclass(item):
+                            item = (None, item)
                         if not isinstance (item, tuple):
-                            raise TypeError()
+                            raise TypeError(item, type(item), tuple)
                         if len(item) != 2:
-                            raise TypeError()
-                        hattr, hcls = item
-                        if hattr != None and not isinstance(hattr, basestring):
-                            raise TypeError()
-                        if not isinstance(hcls, type):
-                            raise TypeError()
-                        if hattr != None and hattr in nameset:
-                            raise TypeError()
-                        if hcls in clsset:
-                            raise TypeError()
-            except TypeError:
-                raise TypeError('Invalid %s attribute for class %s' % (attr, clsname))
-        rulecls = super().__new__(cls, clsname, bases, attrs, **kw)
-        return rulecls
+                            raise ValueError(item, len(item), 2, 'length')
+                        helper_attr, Helper = item
+                        if not isclass(Helper):
+                            raise TypeError(Helper, type(Helper), type)
+                        if helper_attr == None:
+                            helper_attr = getattr(Helper, '_attr', None)
+                        if helper_attr != None:
+                            if not isinstance(helper_attr, basestring):
+                                raise TypeError(helper_attr, type(helper_attr), tuple(None, basestring))
+                            helper_attr = str(helper_attr)                          
+                            if helper_attr in taken:
+                                raise ValueError(
+                                    'Attribute conflict %s: %s (was: %s)' %
+                                    (helper_attr, Helper, taken[helper_attr])
+                                )
+                            if not helper_attr.isidentifier() or iskeyword(helper_attr):
+                                raise ValueError('Invalid attribute: %s' % helper_attr)
+                        if Helper in helper_attrs:
+                            # anames = (helper_attr, helper_attrs[Helper])
+                            if helper_attr != None:
+                                if helper_attrs[Helper] == None:
+                                    # Prefer non-empty attribute
+                                    helper_attrs[Helper] = helper_attr
+                                    taken[helper_attr] = Helper
+                                elif helper_attr != helper_attrs[Helper]:
+                                    raise ValueError(
+                                        'Duplicate helper class: %s as attr: %s (was: %s)' %
+                                        (Helper, helper_attr, helper_attrs[Helper])
+                                    )
+                        else:
+                            helper_attrs[Helper] = helper_attr
+                            helper_classes.append(Helper)
+                            if helper_attr != None:
+                                taken[helper_attr] = Helper
+            except (TypeError, ValueError):
+                raise TypeError(
+                    'Invalid attribute: %s for class: %s' % (clsattr, clsname)
+                )
+        Rule = super().__new__(cls, clsname, bases, clsattrs, **kw)
+        filt = filter (bool, chain(
+            * (
+                c.__dict__.get(helpers_attr, EmptySet)
+                for c in reversed(Rule.mro()[1:])
+            ),
+            (
+                (helper_attrs[Helper], Helper) for Helper in helper_classes
+            )
+        ))
+        hlist = UniqueList((item for item in filt if item[1] != None))
+        setattr(Rule, helpers_attr, tuple(hlist))
+        # Rule.helper_classes = helper_classes
+        # Rule.helper_attrs = helper_attrs
+        # Rule.Helpers = tuple(
+        #     (helper_attrs[Helper], Helper) for Helper in helper_classes
+        # )
+        return Rule
 
 class Rule(EventEmitter, metaclass = RuleMeta):
     class HelperInfo(NamedTuple):
@@ -171,7 +223,7 @@ class Rule(Rule):
 
     def __init__(self, tableau: Tableau, **opts):
         if not isinstance(tableau, Tableau):
-            raise TypeError(tableau.__class__)
+            raise TypeError(tableau, type(tableau), Tableau)
         super().__init__(*Rule.RuleEvents)
 
         self.search_timer: StopWatch = StopWatch()
@@ -836,7 +888,8 @@ class Tableau(Tableau):
         Setter for ``argument`` property. If the tableau has a logic set, then
         ``build_trunk()`` is automatically called.
         """
-        typecheck(argument, Argument, 'argument')
+        if not isinstance(argument, Argument):
+            raise TypeError(argument, type(argument), Argument)
         self.__check_trunk_not_built()
         self.__argument = argument
         if self.logic != None:
