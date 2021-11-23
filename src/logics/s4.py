@@ -26,11 +26,12 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 4
 
-from proof.helpers import MaxWorldsTracker, VisibleWorldsIndex, clshelpers
+from proof.common import Branch, Node, Target
+from proof.helpers import FilterHelper, MaxWorldsTracker, VisibleWorldsIndex, clshelpers
 
-from . import k, t
+from . import k as K, t as T
 
-class Model(t.Model):
+class Model(T.Model):
     """
     An S4 model is just like a :ref:`T model <T>` with an additional *transitive*
     restriction on the access relation.
@@ -49,7 +50,7 @@ class Model(t.Model):
                 return
             self.access.update(to_add)
 
-class TableauxSystem(k.TableauxSystem):
+class TableauxSystem(K.TableauxSystem):
     """
     S4's Tableaux System inherits directly inherits directly from K.
     """
@@ -63,9 +64,9 @@ class TableauxRules(object):
     
     @clshelpers(
         maxw = MaxWorldsTracker,
-        vwidx = VisibleWorldsIndex,
+        visw = VisibleWorldsIndex,
     )
-    class Transitive(k.GetNodeTargets, k.DefaultRule):
+    class Transitive(K.DefaultNodeRule):
         """
         .. _transitive-rule:
 
@@ -74,9 +75,11 @@ class TableauxRules(object):
         appear on *b*, then add *wRw''* to *b*.
         """
         access = True
+        ticking = False
         # rule implmentation
 
-        def _get_node_targets(self, node, branch):
+        # @FilterHelper.node_targets
+        def _get_node_targets(self, node: Node, branch: Branch):
             if self.maxw.max_worlds_reached(branch):
                 return
             w1 = node['world1']
@@ -85,57 +88,45 @@ class TableauxRules(object):
                 {
                     'world1': w1,
                     'world2': w3,
-                    'branch': branch,
                     'nodes' : {node, branch.find({'world1': w2, 'world2': w3})},
-                } for w3 in self.vwidx.intransitives(branch, w1, w2)
+                    'adds': (({'world1': w1, 'world2': w3},),),
+                } for w3 in self.visw.intransitives(branch, w1, w2)
             )
-            # targets = list()
-            # intransitives = self.vwidx.intransitives(branch, w1, w2)
-            # for w3 in intransitives:
-            #     # sanity check
-            #     if not branch.has_access(w1, w3):
-            #         targets.append({
-            #             'world1': w1,
-            #             'world2': w3,
-            #             'branch': branch,
-            #             'nodes' : set([node, branch.find({'world1': w2, 'world2': w3})]),
-            #         })
-            # return targets
 
-        def _apply(self, target):
-            target.branch.add({
-                'world1': target['world1'],
-                'world2': target['world2'],
-            })
-
-        def score_candidate(self, target):
+        def score_candidate(self, target: Target):
+            """
+            :override: AdzClosureScore
+            """
             # Rank the highest world
             return target['world2']
 
-        def example_nodes(self, branch = None):
+        def example_nodes(self):
+            """
+            :override: K.DefaultRule
+            """
             w1, w2, w3 = range(3)
-            return [
+            return (
                 {'world1': w1, 'world2': w2},
                 {'world1': w2, 'world2': w3},
-            ]
+            )
 
-    closure_rules = list(k.TableauxRules.closure_rules)
+    closure_rules = list(K.TabRules.closure_rules)
 
     rule_groups = [
         [
             # non-branching rules
-            k.TableauxRules.IdentityIndiscernability,
-            k.TableauxRules.Assertion,
-            k.TableauxRules.AssertionNegated,
-            k.TableauxRules.Conjunction, 
-            k.TableauxRules.DisjunctionNegated, 
-            k.TableauxRules.MaterialConditionalNegated,
-            k.TableauxRules.ConditionalNegated,
-            k.TableauxRules.DoubleNegation,
-            k.TableauxRules.PossibilityNegated,
-            k.TableauxRules.NecessityNegated,
-            k.TableauxRules.ExistentialNegated,
-            k.TableauxRules.UniversalNegated,
+            K.TabRules.IdentityIndiscernability,
+            K.TabRules.Assertion,
+            K.TabRules.AssertionNegated,
+            K.TabRules.Conjunction, 
+            K.TabRules.DisjunctionNegated, 
+            K.TabRules.MaterialConditionalNegated,
+            K.TabRules.ConditionalNegated,
+            K.TabRules.DoubleNegation,
+            K.TabRules.PossibilityNegated,
+            K.TabRules.NecessityNegated,
+            K.TabRules.ExistentialNegated,
+            K.TabRules.UniversalNegated,
         ],
         # Things seem to work better with the Transitive rule before
         # the modal operator rules, and the other access rules after.
@@ -147,25 +138,25 @@ class TableauxRules(object):
         ],
         [
             # modal operator rules
-            k.TableauxRules.Necessity,
-            k.TableauxRules.Possibility,
+            K.TabRules.Necessity,
+            K.TabRules.Possibility,
         ],
         [
-            t.TableauxRules.Reflexive,
+            T.TableauxRules.Reflexive,
         ],
         [
             # branching rules
-            k.TableauxRules.ConjunctionNegated,
-            k.TableauxRules.Disjunction, 
-            k.TableauxRules.MaterialConditional, 
-            k.TableauxRules.MaterialBiconditional,
-            k.TableauxRules.MaterialBiconditionalNegated,
-            k.TableauxRules.Conditional,
-            k.TableauxRules.Biconditional,
-            k.TableauxRules.BiconditionalNegated,
+            K.TabRules.ConjunctionNegated,
+            K.TabRules.Disjunction, 
+            K.TabRules.MaterialConditional, 
+            K.TabRules.MaterialBiconditional,
+            K.TabRules.MaterialBiconditionalNegated,
+            K.TabRules.Conditional,
+            K.TabRules.Biconditional,
+            K.TabRules.BiconditionalNegated,
         ],
         [
-            k.TableauxRules.Existential,
-            k.TableauxRules.Universal,
+            K.TabRules.Existential,
+            K.TabRules.Universal,
         ],
     ]

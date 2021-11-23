@@ -32,8 +32,7 @@ from proof.tableaux import TableauxSystem as BaseSystem, Rule
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
     NewConstantStoppingRule
 from proof.common import Branch, Node, Filters, Target
-from proof.helpers import AdzHelper, FilterHelper, clshelpers
-
+from proof.helpers import AdzHelper, AdzApply, AdzClosureScore, FilterHelper, clshelpers
 from errors import ModelValueError
 
 Identity = Predicate.Identity
@@ -560,25 +559,31 @@ class DefaultRule(Rule):
     negated = operator = quantifier = predicate = None
     # Filters.Node.Designation
     designation = None
-    # :overrides: Rule
+
     def sentence(self, node: Node):
+        """
+        :overrides: Rule
+        """
         return self.nf.filters.sentence.get(node)
-    # :implements: Rule
+
     def example_nodes(self):
+        """
+        :implements: Rule
+        """
         return (self.nf.example_node(),)
 
-@clshelpers(adz = AdzHelper)
-class AdzApply(Rule):
-    ticking = True
-    # :implements: Rule
-    def _apply(self, target: Target):
-        self.adz.apply_to_target(target)
+# @clshelpers(adz = AdzHelper)
+# class AdzApply(Rule):
+#     ticking = True
+#     # :implements: Rule
+#     def _apply(self, target: Target):
+#         self.adz.apply_to_target(target)
 
-@clshelpers(adz = AdzHelper)
-class AdzClosureScore(Rule):
-    # :overrides: Rule
-    def score_candidate(self, target: Target):
-        return self.adz.closure_score(target)
+# @clshelpers(adz = AdzHelper)
+# class AdzClosureScore(Rule):
+#     # :overrides: Rule
+#     def score_candidate(self, target: Target):
+#         return self.adz.closure_score(target)
 
 @clshelpers(nf = FilterHelper)
 class GetNodeTargets(Rule):

@@ -31,9 +31,9 @@ from proof.common import Branch, Node, Target
 from proof.rules import PotentialNodeRule
 from proof.helpers import MaxWorldsTracker, clshelpers
 
-from . import k
+from . import k as K
 
-class Model(k.Model):
+class Model(K.Model):
     """
     A T model is just like a :ref:`K model <k-model>` with a *reflexive*
     restriction on the access relation.
@@ -44,18 +44,19 @@ class Model(k.Model):
             self.add_access(w, w)
         super().finish()
 
-class TableauxSystem(k.TableauxSystem):
+class TableauxSystem(K.TableauxSystem):
     """
     T's Tableaux System inherits directly inherits directly from K.
     """
     pass
 
-class TableauxRules(object):
+class TabRules(object):
     """
     The Tableaux Rules for T contain the rules for :ref:`K <K>`, as well as an additional
     Reflexive rule, which operates on the accessibility relation for worlds.
     """
 
+    @clshelpers(maxw = MaxWorldsTracker)
     class Reflexive(PotentialNodeRule):
         """
         .. _reflexive-rule:
@@ -67,10 +68,10 @@ class TableauxRules(object):
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
-        Helpers = (
-            *PotentialNodeRule.Helpers,
-            ('max_worlds_tracker', MaxWorldsTracker),
-        )
+        # Helpers = (
+        #     *PotentialNodeRule.Helpers,
+        #     ('max_worlds_tracker', MaxWorldsTracker),
+        # )
         Timers = (
             *PotentialNodeRule.Timers,
             'is_potential_node',
@@ -111,50 +112,48 @@ class TableauxRules(object):
 
         def __should_apply(self, branch):
             # why apply when necessity will not apply
-            return not self.max_worlds_tracker.max_worlds_exceeded(branch)
+            return not self.maxw.max_worlds_exceeded(branch)
 
-    closure_rules = list(k.TableauxRules.closure_rules)
+    closure_rules = list(K.TabRules.closure_rules)
 
     rule_groups = [
         [
             # non-branching rules
-            k.TableauxRules.IdentityIndiscernability,
-            k.TableauxRules.Assertion,
-            k.TableauxRules.AssertionNegated,
-            k.TableauxRules.Conjunction, 
-            k.TableauxRules.DisjunctionNegated, 
-            k.TableauxRules.MaterialConditionalNegated,
-            k.TableauxRules.ConditionalNegated,
-            k.TableauxRules.DoubleNegation,
-            k.TableauxRules.PossibilityNegated,
-            k.TableauxRules.NecessityNegated,
-            k.TableauxRules.ExistentialNegated,
-            k.TableauxRules.UniversalNegated,
+            K.TabRules.IdentityIndiscernability,
+            K.TabRules.Assertion,
+            K.TabRules.AssertionNegated,
+            K.TabRules.Conjunction, 
+            K.TabRules.DisjunctionNegated, 
+            K.TabRules.MaterialConditionalNegated,
+            K.TabRules.ConditionalNegated,
+            K.TabRules.DoubleNegation,
+            K.TabRules.PossibilityNegated,
+            K.TabRules.NecessityNegated,
+            K.TabRules.ExistentialNegated,
+            K.TabRules.UniversalNegated,
         ],
-        #[
-        #    
-        #],
         [
             # modal rules
-            k.TableauxRules.Necessity,
-            k.TableauxRules.Possibility,
+            K.TabRules.Necessity,
+            K.TabRules.Possibility,
         ],
         [
             Reflexive,
         ],
         [
             # branching rules
-            k.TableauxRules.ConjunctionNegated,
-            k.TableauxRules.Disjunction, 
-            k.TableauxRules.MaterialConditional, 
-            k.TableauxRules.MaterialBiconditional,
-            k.TableauxRules.MaterialBiconditionalNegated,
-            k.TableauxRules.Conditional,
-            k.TableauxRules.Biconditional,
-            k.TableauxRules.BiconditionalNegated,
+            K.TabRules.ConjunctionNegated,
+            K.TabRules.Disjunction, 
+            K.TabRules.MaterialConditional, 
+            K.TabRules.MaterialBiconditional,
+            K.TabRules.MaterialBiconditionalNegated,
+            K.TabRules.Conditional,
+            K.TabRules.Biconditional,
+            K.TabRules.BiconditionalNegated,
         ],
         [
-            k.TableauxRules.Existential,
-            k.TableauxRules.Universal,
+            K.TabRules.Existential,
+            K.TabRules.Universal,
         ],
     ]
+TableauxRules = TabRules

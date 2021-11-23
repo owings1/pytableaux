@@ -139,6 +139,8 @@ preds = vocab = vocabulary = Predicates(*Predicate.gen(3))
 parser = create_parser(notn='polish', vocab=vocab)
 
 aliases = {
+    'Triviality 1': ('TRIV', 'TRIV1'),
+    'Triviality 2': ('TRIV2',),
     'Law of Excluded Middle': ('LEM',),
     'Law of Non-contradiction': ('LNC',),
     'Explosion': ('EFQ',),
@@ -146,6 +148,35 @@ aliases = {
     'Conditional Modus Tollens': ('MT', 'Modus Tollens'),
     'Material Modus Ponens': ('MMP',),
     'Material Modus Tollens': ('MMT',),
+    'Conditional Identity': ('Identity', 'ID'),
+    'Conditional Contraction': ('Contraction',),
+    'Disjunctive Syllogism': ('DS',),
+    'DeMorgan 1': ('DM', 'DM1', 'DEM', 'DEM1', 'DeMorgan'),
+    'DeMorgan 2': ('DM2', 'DEM2',),
+    'DeMorgan 3': ('DM3', 'DEM3',),
+    'DeMorgan 4': ('DM4', 'DEM4',),
+    'DeMorgan 5': ('DM5', 'DEM5',),
+    'DeMorgan 6': ('DM6', 'DEM6',),
+    'DeMorgan 7': ('DM7', 'DEM7',),
+    'DeMorgan 8': ('DM8', 'DEM8',),
+
+    'Syllogism': ('SYL', 'SYLL'),
+    'Quantifier Interdefinability 1': ('Q1',),
+    'Quantifier Interdefinability 2': ('Q2',),
+    'Quantifier Interdefinability 3': ('Q3',),
+    'Quantifier Interdefinability 4': ('Q4',),
+
+    'Modal Transformation 1': ('Modal 1',),
+    'Modal Transformation 2': ('Modal 2',),
+    'Modal Transformation 3': ('Modal 3',),
+    'Modal Transformation 4': ('Modal 4',),
+
+    'Serial Inference 1': ('SER', 'SER1', 'Serial', 'Serial 1', 'D'),
+    'Serial Inference 2': ('SER2', 'Serial 2',),
+    'Reflexive Inference 1': ('T', 'Reflexive', 'Reflexivity'),
+    'S4 Material Inference 1': ('S4', 'S41', 'Transitive', 'RT', 'Transitivity'),
+    'S4 Material Inference 2': ('S42',),
+    'S5 Material Inference 1': ('S5', 'S51', 'RST'),
 }
 _idx = {}
 for name in args:
