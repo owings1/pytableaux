@@ -71,7 +71,7 @@ class TableauxSystem(fde.TableauxSystem):
     """
     pass
         
-class TableauxRules(object):
+class TabRules(object):
     """
     The Tableaux System for K3 contains all the rules from :ref:`FDE <fde-rules>`, as well
     as an additional closure rule.
@@ -294,3 +294,4 @@ class TableauxRules(object):
             UniversalUndesignated,
         ],
     ]
+TableauxRules = TabRules
