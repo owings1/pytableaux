@@ -34,9 +34,7 @@ class ClosureRule(Rule):
     closed. Sub-classes should implement the ``applies_to_branch()`` method.
     """
 
-    Helpers = (
-        ('tracker', NodeTargetCheckHelper),
-    )
+    Helpers = (NodeTargetCheckHelper,)
 
     opts = {'is_rank_optim': False}
 

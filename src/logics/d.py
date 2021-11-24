@@ -65,7 +65,7 @@ class TableauxRules:
 
     @clshelpers(
         nf  = FilterHelper,
-        mw  = MaxWorldsTracker,
+        maxw  = MaxWorldsTracker,
         ust = UnserialWorldsTracker,
     )
     @FilterHelper.clsfilters(
@@ -120,7 +120,7 @@ class TableauxRules:
                 return False
 
             # As above, this is unnecessary
-            if self.mw.max_worlds_exceeded(branch):
+            if self.maxw.max_worlds_exceeded(branch):
                 return False
 
             return True

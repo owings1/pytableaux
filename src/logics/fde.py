@@ -550,8 +550,9 @@ class TableauxSystem(BaseSystem):
     designation = Filters.Node.Designation,
     sentence    = Filters.Node.Sentence,
 )
-@clshelpers(nf = FilterHelper)
+# @clshelpers(nf = FilterHelper)
 class DefaultRule(Rule):
+    Helpers = (FilterHelper,)
     # FilterHelper
     # ----------------
     ignore_ticked = True
@@ -572,8 +573,9 @@ class DefaultRule(Rule):
         """
         return (self.nf.example_node(),)
 
-@clshelpers(nf = FilterHelper)
+# @clshelpers(nf = FilterHelper)
 class GetNodeTargets(Rule):
+    Helpers = (FilterHelper,)
     # :implements: Rule, delegates to _get_node_targets
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
@@ -582,7 +584,7 @@ class GetNodeTargets(Rule):
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
-@clshelpers()
+# @clshelpers()
 class DefaultNodeRule(GetNodeTargets, DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
     pass
 
@@ -670,7 +672,7 @@ class TableauxRules(object):
 
         def applies_to_branch(self, branch):
             # Delegate to tracker
-            return self.tracker.cached_target(branch)
+            return self.ntch.cached_target(branch)
 
         def example_nodes(self, branch = None):
             a = Atomic.first()

@@ -704,8 +704,9 @@ class TableauxSystem(BaseSystem):
     sentence = Filters.Node.Sentence,
     modal    = Filters.Node.Modal,
 )
-@clshelpers(nf = FilterHelper)
+# @clshelpers(nf = FilterHelper)
 class DefaultRule(Rule):
+    Helpers = (FilterHelper,)
     # FilterHelper
     # ----------------
     ignore_ticked = True
@@ -727,7 +728,7 @@ class DefaultRule(Rule):
         """
         return (self.nf.example_node(),)
 
-@clshelpers()
+# @clshelpers()
 class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
 
     @FilterHelper.node_targets
@@ -738,12 +739,16 @@ class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
         raise NotImplementedError()
 # GetNodeTargets = DefaultNodeRule
 
-@clshelpers(
-    apqf = AppliedQuitFlag,
-    maxc = MaxConstantsTracker,
-)
+# @clshelpers(
+#     apqf = AppliedQuitFlag,
+#     maxc = MaxConstantsTracker,
+# )
 class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
 
+    Helpers = (
+        AppliedQuitFlag,
+        MaxConstantsTracker,
+    )
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
         if self.maxc.max_constants_exceeded(branch, node.get('world')):
@@ -759,12 +764,15 @@ class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply)
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
-@clshelpers(
-    apnc = AppliedNodeCount,
-    apcs = AppliedNodeConstants,
-)
+# @clshelpers(
+#     apnc = AppliedNodeCount,
+#     apcs = AppliedNodeConstants,
+# )
 class QuantifierFatRule(QuantifierSkinnyRule):
-    pass
+    Helpers = (
+        AppliedNodeCount,
+        AppliedNodeConstants,
+    )
 
 class OldDefaultNodeRule(FilterNodeRule):
     modal = True
@@ -818,7 +826,7 @@ class TabRules(object):
 
         def applies_to_branch(self, branch):
             # Delegate to tracker
-            return self.tracker.cached_target(branch)
+            return self.ntch.cached_target(branch)
 
         # private util
 
@@ -853,7 +861,7 @@ class TabRules(object):
 
         def applies_to_branch(self, branch):
             # Delegate to tracker
-            return self.tracker.cached_target(branch)
+            return self.ntch.cached_target(branch)
 
         def example_nodes(self, branch = None):
             c = Constant.first()
@@ -883,7 +891,7 @@ class TabRules(object):
 
         def applies_to_branch(self, branch):
             # Delegate to tracker
-            return self.tracker.cached_target(branch)
+            return self.ntch.cached_target(branch)
 
         def example_nodes(self, branch = None):
             s = Predicated.first(Existence).negate()
@@ -1271,17 +1279,22 @@ class TabRules(object):
         quantifier = Quantifier.Universal
         convert_to = Quantifier.Existential
 
-    @clshelpers(
-        apqf = AppliedQuitFlag,
-        apsc = AppliedSentenceCounter,
-        max_worlds = MaxWorldsTracker,
-    )
+    # @clshelpers(
+    #     apqf = AppliedQuitFlag,
+    #     apsc = AppliedSentenceCounter,
+    #     maxw = MaxWorldsTracker,
+    # )
     class Possibility(DefaultNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
         world1 *w* and world2 *w'* to *b*, then tick *n*.
         """
+        Helpers = (
+            AppliedQuitFlag,
+            AppliedSentenceCounter,
+            MaxWorldsTracker,
+        )
         operator = Oper.Possibility
         branch_level = 1
 
@@ -1328,7 +1341,7 @@ class TabRules(object):
             if track_count == 0:
                 return 1
 
-            return -1 * self.max_worlds.modal_complexity(s) * track_count
+            return -1 * self.maxw.modal_complexity(s) * track_count
 
         def group_score(self, target):
 
@@ -1344,14 +1357,14 @@ class TabRules(object):
         # private util
 
         def _should_apply(self, branch):
-            return not self.max_worlds.max_worlds_exceeded(branch)
+            return not self.maxw.max_worlds_exceeded(branch)
 
         def _get_flag_target(self, branch):
             return {
                 'flag': True,
                 'adds': [
                     [
-                        self.max_worlds.quit_flag(branch),
+                        self.maxw.quit_flag(branch),
                     ],
                 ],
             }
@@ -1396,7 +1409,7 @@ class TabRules(object):
 
         Helpers = (
             *DefaultNodeRule.Helpers,
-            ('max_worlds'          , MaxWorldsTracker),
+            ('maxw' , MaxWorldsTracker),
             ('apnw' , AppliedNodesWorldsTracker),
             ('apqf' , AppliedQuitFlag),
             ('apnc' , AppliedNodeCount),
@@ -1511,7 +1524,7 @@ class TabRules(object):
         # private util
 
         def __should_apply(self, branch):
-            return not self.max_worlds.max_worlds_exceeded(branch)
+            return not self.maxw.max_worlds_exceeded(branch)
 
         def __is_least_applied_to(self, node, branch):
             node_apply_count = self.apnc[branch].get(node, 0)
@@ -1523,7 +1536,7 @@ class TabRules(object):
                 'flag': True,
                 'adds': [
                     [
-                        self.max_worlds.quit_flag(branch),
+                        self.maxw.quit_flag(branch),
                     ],
                 ],
             }
@@ -1538,7 +1551,7 @@ class TabRules(object):
         operator   = Oper.Necessity
         convert_to = Oper.Possibility
 
-    @clshelpers(pn = PredicatedNodesTracker)
+    # @clshelpers(pn = PredicatedNodesTracker)
     class IdentityIndiscernability(DefaultNodeRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
@@ -1546,6 +1559,7 @@ class TabRules(object):
         if the replacement of that constant for the other constant of *s* is a sentence that does
         not appear on *b* at *w*, then add it.
         """
+        Helpers = (PredicatedNodesTracker,)
         predicate    = Predicates.System.Identity
         branch_level = 1
         ticking      = False

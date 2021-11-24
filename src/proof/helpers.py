@@ -523,7 +523,7 @@ class NodeTargetCheckHelper(object):
 
     NB: The rule must implement ``check_for_target(self, node, branch)``.
     """
-
+    _attr = 'ntch'
     def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.targets = {}
@@ -547,6 +547,7 @@ class MaxConstantsTracker(object):
     Project the maximum number of constants per world required for a branch
     by examining the branches after the trunk is built.
     """
+    _attr = 'maxc'
 
     def __init__(self, rule: Rule, *args, **kw):
         self.rule = rule
@@ -683,6 +684,7 @@ class AppliedNodeConstants(object):
     Only nodes that are applicable according to the rule's ``is_potential_node()``
     method are tracked.
     """
+    _attr = 'apcs'
 
     def __init__(self, rule, *args, **kw):
         self.rule = rule
@@ -757,6 +759,7 @@ class MaxWorldsTracker(object):
     Project the maximum number of worlds required for a branch by examining the
     branches after the trunk is built.
     """
+    _attr = 'maxw'
 
     modal_operators = set(BaseModel.modal_operators)
 

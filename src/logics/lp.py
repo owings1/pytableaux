@@ -103,7 +103,7 @@ class TableauxRules(object):
 
         def applies_to_branch(self, branch):
             # Delegate to tracker
-            return self.tracker.cached_target(branch)
+            return self.ntch.cached_target(branch)
 
         def example_nodes(self, branch = None):
             a = Atomic.first()
