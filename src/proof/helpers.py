@@ -497,6 +497,32 @@ class Delegates(object):
                 """
                 return self.adz.closure_score(target)
 
+    class FilterHelper(object):
+
+        class Sentence(Rule):
+            """
+            Delegates ``sentence()`` to ``FilterHelper.sentence()``.
+            """
+            Helpers = (FilterHelper,)
+
+            def sentence(self, node: Node) -> Sentence:
+                """
+                :overrides: Rule
+                """
+                return self.nf.filters.sentence.get(node)
+
+        class ExampleNodes(Rule):
+            """
+            Delegates ``example_nodes()`` to ``FilterHelper.example_nodes()``.
+            """
+            Helpers = (FilterHelper,)
+
+            def example_nodes(self) -> tuple[dict]:
+                """
+                :implements: Rule
+                """
+                return (self.nf.example_node(),)
+
 def __populate_delegates():
     _modclasses = {
         clsname: cls for clsname, cls in globals().items()

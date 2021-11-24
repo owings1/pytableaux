@@ -704,9 +704,8 @@ class TableauxSystem(BaseSystem):
     sentence = Filters.Node.Sentence,
     modal    = Filters.Node.Modal,
 )
-# @clshelpers(nf = FilterHelper)
-class DefaultRule(Rule):
-    Helpers = (FilterHelper,)
+class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
+    # Helpers = (FilterHelper,)
     # FilterHelper
     # ----------------
     ignore_ticked = True
@@ -716,19 +715,6 @@ class DefaultRule(Rule):
     modal = True
     access = None
 
-    def sentence(self, node: Node) -> Sentence:
-        """
-        :overrides: Rule
-        """
-        return self.nf.filters.sentence.get(node)
-
-    def example_nodes(self) -> tuple[NodeType]:
-        """
-        :implements: Rule
-        """
-        return (self.nf.example_node(),)
-
-# @clshelpers()
 class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
 
     @FilterHelper.node_targets
@@ -737,18 +723,14 @@ class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
 
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
-# GetNodeTargets = DefaultNodeRule
 
-# @clshelpers(
-#     apqf = AppliedQuitFlag,
-#     maxc = MaxConstantsTracker,
-# )
 class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
 
     Helpers = (
         AppliedQuitFlag,
         MaxConstantsTracker,
     )
+
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
         if self.maxc.max_constants_exceeded(branch, node.get('world')):
@@ -764,10 +746,6 @@ class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply)
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
-# @clshelpers(
-#     apnc = AppliedNodeCount,
-#     apcs = AppliedNodeConstants,
-# )
 class QuantifierFatRule(QuantifierSkinnyRule):
     Helpers = (
         AppliedNodeCount,
@@ -804,36 +782,37 @@ class TabRules(object):
 
         # tracker implementation
 
-        def check_for_target(self, node, branch):
+        def check_for_target(self, node: Node, branch: Branch):
             nnode = self._find_closing_node(node, branch)
             if nnode:
                 return {'nodes': {node, nnode}}
 
         # rule implementation
 
-        def node_will_close_branch(self, node, branch):
+        def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
             if self._find_closing_node(node, branch):
                 return True
             return False
 
-        def example_nodes(self, branch = None):
-            a = Atomic.first()
+        def example_nodes(self):
+            a: Atomic = Atomic.first()
             w = 0 if self.modal else None
-            return [
+            return (
                 {'sentence': a         , 'world': w},
                 {'sentence': a.negate(), 'world': w},
-            ]
+            )
 
-        def applies_to_branch(self, branch):
+        def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
             return self.ntch.cached_target(branch)
 
         # private util
 
-        def _find_closing_node(self, node, branch):
-            if node.has('sentence'):
+        def _find_closing_node(self, node: Node, branch: Branch):
+            s: Sentence = node.get('sentence')
+            if s:
                 return branch.find({
-                    'sentence' : node['sentence'].negative(),
+                    'sentence' : s.negative(),
                     'world'    : node.get('world'),
                 })
 
@@ -846,24 +825,24 @@ class TabRules(object):
 
         # tracker implementation
 
-        def check_for_target(self, node, branch):
+        def check_for_target(self, node: Node, branch: Branch):
             if self.node_will_close_branch(node, branch):
                 return {'node': node}
 
         # rule implementation
 
-        def node_will_close_branch(self, node, branch):
-            if node.has('sentence'):
-                s = node['sentence']
-                if s.operator == Oper.Negation and s.operand.predicate == Identity:
-                    a, b = node['sentence'].operand.params
+        def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
+            s: Operated = node.get('sentence')
+            if s:
+                if s.is_negated and s.negatum.predicate == Identity:
+                    a, b = s.negatum
                     return a == b
 
-        def applies_to_branch(self, branch):
+        def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
             return self.ntch.cached_target(branch)
 
-        def example_nodes(self, branch = None):
+        def example_nodes(self):
             c = Constant.first()
             s = Identity((c, c)).negate()
             w = 0 if self.modal else None
@@ -878,22 +857,22 @@ class TabRules(object):
 
         # tracker implementation
 
-        def check_for_target(self, node, branch):
+        def check_for_target(self, node: Node, branch: Branch):
             if self.node_will_close_branch(node, branch):
                 return {'node': node}
 
         # rule implementation
 
-        def node_will_close_branch(self, node, branch):
-            if node.has('sentence'):
-                s = node['sentence']
-                return s.operator == Oper.Negation and s.operand.predicate == Existence
+        def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
+            s: Operated = node.get('sentence')
+            if s:
+                return s.is_negated and s.negatum.predicate == Existence
 
         def applies_to_branch(self, branch):
             # Delegate to tracker
             return self.ntch.cached_target(branch)
 
-        def example_nodes(self, branch = None):
+        def example_nodes(self):
             s = Predicated.first(Existence).negate()
             w = 0 if self.modal else None
             return ({'sentence': s, 'world': w},)
@@ -908,10 +887,11 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Sentence = self.sentence(node)
+            s: Operated = self.sentence(node)
+            w = node.get('world')
             return {
                 'adds': (
-                    ({'sentence': s.operand, 'world': node.get('world')},),
+                    ({'sentence': s.operand, 'world': w},),
                 ),
             }
 
@@ -923,14 +903,13 @@ class TabRules(object):
         operator = Oper.Assertion
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            w = node.get('world')
             return {
-                'adds': [
-                    [
-                        {'sentence': s.operand, 'world': node.get('world')},
-                    ],
-                ],
+                'adds': (
+                    ({'sentence': s.operand, 'world': w},),
+                ),
             }
 
     class AssertionNegated(DefaultNodeRule):
@@ -943,14 +922,13 @@ class TabRules(object):
         operator = Oper.Assertion
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            w = node.get('world')
             return {
-                'adds': [
-                    [
-                        {'sentence': s.operand.negate(), 'world': node.get('world')},
-                    ],
-                ],
+                'adds': (
+                    ({'sentence': s.operand.negate(), 'world': w},),
+                ),
             }
 
     class Conjunction(DefaultNodeRule):
@@ -961,14 +939,15 @@ class TabRules(object):
         operator = Oper.Conjunction
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
+            w = node.get('world')
             return {
-                'adds': [
-                    [
-                        {'sentence': operand, 'world': node.get('world')}
-                        for operand in self.sentence(node)
-                    ],
-                ],
+                'adds': (
+                    tuple(
+                        {'sentence': s, 'world': w}
+                        for s in self.sentence(node)
+                    ),
+                ),
             }
 
     class ConjunctionNegated(DefaultNodeRule):
@@ -981,14 +960,13 @@ class TabRules(object):
         operator = Oper.Conjunction
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
+            w = node.get('world')
             return {
-                'adds': [
-                    [
-                        {'sentence': operand.negate(), 'world': node.get('world')},
-                    ]
-                    for operand in self.sentence(node)
-                ],
+                'adds': tuple(
+                    ({'sentence': s.negate(), 'world': w},)
+                    for s in self.sentence(node)
+                ),
             }
 
     class Disjunction(DefaultNodeRule):
@@ -1000,14 +978,13 @@ class TabRules(object):
         operator = Oper.Disjunction
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
+            w = node.get('world')
             return {
-                'adds': [
-                    [
-                        {'sentence': operand, 'world': node.get('world')},
-                    ]
-                    for operand in self.sentence(node)
-                ],
+                'adds': tuple(
+                    ({'sentence': s, 'world': w},)
+                    for s in self.sentence(node)
+                ),
             }
 
     class DisjunctionNegated(DefaultNodeRule):
@@ -1019,14 +996,16 @@ class TabRules(object):
         operator = Oper.Disjunction
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            w = node.get('world')
             return {
-                'adds': [
-                    [
-                        {'sentence': operand.negate(), 'world': node.get('world')}
-                        for operand in self.sentence(node)
-                    ],
-                ],
+                'adds': (
+                    (
+                        {'sentence': s.lhs.negate(), 'world': w},
+                        {'sentence': s.rhs.negate(), 'world': w},
+                    ),
+                ),
             }
 
     class MaterialConditional(DefaultNodeRule):
@@ -1039,18 +1018,14 @@ class TabRules(object):
         operator = Oper.MaterialConditional
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             w = node.get('world')
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs.negate(), 'world': w},
-                    ],
-                    [
-                        {'sentence': s.rhs         , 'world': w},
-                    ],
-                ],
+                'adds': (
+                    ({'sentence': s.lhs.negate(), 'world': w},),
+                    ({'sentence': s.rhs         , 'world': w},),
+                ),
             }
 
     class MaterialConditionalNegated(DefaultNodeRule):
@@ -1063,8 +1038,8 @@ class TabRules(object):
         operator = Oper.MaterialConditional
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             w = node.get('world')
             return {
                 'adds': [
@@ -1086,8 +1061,8 @@ class TabRules(object):
         operator = Oper.MaterialBiconditional
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             w = node.get('world')
             return {
                 'adds': [
@@ -1114,8 +1089,8 @@ class TabRules(object):
         operator = Oper.MaterialBiconditional
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             w = node.get('world')
             return {
                 'adds': [
@@ -1213,8 +1188,8 @@ class TabRules(object):
         branch_level = 1
         convert_to = Quantifier.Universal
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Quantified = self.sentence(node)
             v = s.variable
             si = s.sentence
             # keep conversion neutral for inheritance below
@@ -1279,11 +1254,6 @@ class TabRules(object):
         quantifier = Quantifier.Universal
         convert_to = Quantifier.Existential
 
-    # @clshelpers(
-    #     apqf = AppliedQuitFlag,
-    #     apsc = AppliedSentenceCounter,
-    #     maxw = MaxWorldsTracker,
-    # )
     class Possibility(DefaultNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
@@ -1310,7 +1280,7 @@ class TabRules(object):
                     return self._get_flag_target(branch)
                 return
 
-            s  = self.sentence(node)
+            s: Operated = self.sentence(node)
             si = s.operand
             w1 = node['world']
             w2 = branch.next_world
@@ -1380,7 +1350,7 @@ class TabRules(object):
         branch_level = 1
         convert_to = Oper.Necessity
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
             si = s.operand
             sm = self.convert_to((si.negate(),))
@@ -1396,13 +1366,14 @@ class TabRules(object):
         sentence = Filters.Node.Sentence,
         modal    = Filters.Node.Modal,
     )
-    @clshelpers(nf = FilterHelper)
     class Necessity(OldDefaultNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
         with *s* at *w2*, add it to *b*. The node *n* is never ticked.
         """
+        Helpers = (FilterHelper,)
+
         operator     = Oper.Necessity
         branch_level = 1
         ticking      = False
@@ -1422,7 +1393,6 @@ class TabRules(object):
             'check_target_condtn1',
             'check_target_condtn2',
         )
-
 
         def is_potential_node(self, node, branch):
             if self.apqf.get(branch):
@@ -1551,7 +1521,6 @@ class TabRules(object):
         operator   = Oper.Necessity
         convert_to = Oper.Possibility
 
-    # @clshelpers(pn = PredicatedNodesTracker)
     class IdentityIndiscernability(DefaultNodeRule):
         """
         From an unticked node *n* having an Identity sentence *s* at world *w* on an open branch *b*,
@@ -1560,7 +1529,8 @@ class TabRules(object):
         not appear on *b* at *w*, then add it.
         """
         Helpers = (PredicatedNodesTracker,)
-        predicate    = Predicates.System.Identity
+
+        predicate    = Identity
         branch_level = 1
         ticking      = False
 
@@ -1611,14 +1581,14 @@ class TabRules(object):
                 {'sentence': s2, 'world': world},
             )
 
-    closure_rules = [
+    closure_rules = (
         ContradictionClosure,
         SelfIdentityClosure,
         NonExistenceClosure,
-    ]
+    )
 
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
             IdentityIndiscernability,
             Assertion,
@@ -1632,8 +1602,8 @@ class TabRules(object):
             NecessityNegated,
             ExistentialNegated,
             UniversalNegated,
-        ],
-        [
+        ),
+        (
             # branching rules
             ConjunctionNegated,
             Disjunction,
@@ -1643,15 +1613,15 @@ class TabRules(object):
             Conditional,
             Biconditional,
             BiconditionalNegated,
-        ],
-        [
+        ),
+        (
             # modal operator rules
             Necessity,
             Possibility,
-        ],
-        [
+        ),
+        (
             Existential,
             Universal,
-        ],
-    ]
+        ),
+    )
 TableauxRules = TabRules
