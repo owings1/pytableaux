@@ -27,7 +27,6 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 1
 
-from events import Events
 from lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantified, \
     Operator as Oper, Quantifier, Argument, Sentence, Predicates
 from models import BaseModel
@@ -37,12 +36,11 @@ from proof.rules import ClosureRule, FilterNodeRule
 from proof.common import Branch, Filters, Node, NodeType, Target
 from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
-    FilterHelper, AppliedNodeCount, MaxConstantsTracker, AppliedNodeConstants, \
-    clshelpers
+    FilterHelper, AppliedNodeCount, MaxConstantsTracker, AppliedNodeConstants
 
 from errors import DenotationError, ModelValueError
 
-from . import fde
+from . import fde as FDE
 
 Identity: Predicate  = Predicates.System.Identity
 Existence: Predicate = Predicates.System.Existence
@@ -96,7 +94,7 @@ class Model(BaseModel):
         self.constants = set()
 
         self.predicates = {Identity, Existence}
-        self.fde = fde.Model()
+        self.fde = FDE.Model()
 
         # ensure there is a w0
         self.world_frame(0)
@@ -794,7 +792,7 @@ class TabRules(object):
                 return True
             return False
 
-        def example_nodes(self):
+        def example_nodes(self) -> tuple[dict]:
             a: Atomic = Atomic.first()
             w = 0 if self.modal else None
             return (
@@ -1042,12 +1040,12 @@ class TabRules(object):
             s: Operated = self.sentence(node)
             w = node.get('world')
             return {
-                'adds': [
-                    [
+                'adds': (
+                    (
                         {'sentence': s.lhs         , 'world': w}, 
                         {'sentence': s.rhs.negate(), 'world': w},
-                    ],
-                ],
+                    ),
+                ),
             }
 
     class MaterialBiconditional(DefaultNodeRule):
@@ -1065,16 +1063,16 @@ class TabRules(object):
             s: Operated = self.sentence(node)
             w = node.get('world')
             return {
-                'adds': [
-                    [
+                'adds': (
+                    (
                         {'sentence': s.lhs.negate(), 'world': w},
                         {'sentence': s.rhs.negate(), 'world': w},
-                    ],
-                    [
+                    ),
+                    (
                         {'sentence': s.rhs, 'world': w},
                         {'sentence': s.lhs, 'world': w},
-                    ],
-                ],
+                    ),
+                ),
             }
 
     class MaterialBiconditionalNegated(DefaultNodeRule):
@@ -1093,16 +1091,16 @@ class TabRules(object):
             s: Operated = self.sentence(node)
             w = node.get('world')
             return {
-                'adds': [
-                    [
+                'adds': (
+                    (
                         {'sentence': s.lhs         , 'world': w},
                         {'sentence': s.rhs.negate(), 'world': w},
-                    ],
-                    [
+                    ),
+                    (
                         {'sentence': s.rhs.negate(), 'world': w},
                         {'sentence': s.lhs         , 'world': w},
-                    ],
-                ],
+                    ),
+                ),
             }
 
     class Conditional(MaterialConditional):
@@ -1190,16 +1188,12 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Quantified = self.sentence(node)
-            v = s.variable
-            si = s.sentence
             # keep conversion neutral for inheritance below
-            sq = self.convert_to(v, si.negate())
+            sq = self.convert_to(s.variable, s.sentence.negate())
             return {
-                'adds': [
-                    [
-                        {'sentence': sq, 'world': node.get('world')},
-                    ],
-                ],
+                'adds': (
+                    ({'sentence': sq, 'world': node.get('world')},),
+                ),
             }
 
     class Universal(QuantifierFatRule):
@@ -1287,12 +1281,12 @@ class TabRules(object):
 
             return {
                 'sentence' : si,
-                'adds'     : [
-                    [
+                'adds'     : (
+                    (
                         {'sentence': si, 'world': w2},
                         {'world1': w1, 'world2': w2},
-                    ]
-                ]
+                    ),
+                ),
             }
 
         def score_candidate(self, target):
@@ -1332,11 +1326,9 @@ class TabRules(object):
         def _get_flag_target(self, branch):
             return {
                 'flag': True,
-                'adds': [
-                    [
-                        self.maxw.quit_flag(branch),
-                    ],
-                ],
+                'adds': (
+                    (self.maxw.quit_flag(branch),),
+                ),
             }
 
     class PossibilityNegated(DefaultNodeRule):
@@ -1351,15 +1343,13 @@ class TabRules(object):
         convert_to = Oper.Necessity
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s = self.sentence(node)
+            s: Operated = self.sentence(node)
             si = s.operand
             sm = self.convert_to((si.negate(),))
             return {
-                'adds': [
-                    [
-                        {'sentence': sm, 'world': node['world']},
-                    ],
-                ],
+                'adds': (
+                    ({'sentence': sm, 'world': node['world']},),
+                ),
             }
 
     @FilterHelper.clsfilters(
@@ -1448,11 +1438,7 @@ class TabRules(object):
                                 'sentence' : si,
                                 'world'    : w2,
                                 'nodes'    : {node, anode},
-                                'adds'     : [
-                                    [
-                                        {'sentence': si, 'world': w2}
-                                    ]
-                                ]
+                                'adds'     : (({'sentence': si, 'world': w2},),),
                             })
             return targets
 
@@ -1493,10 +1479,10 @@ class TabRules(object):
 
         # private util
 
-        def __should_apply(self, branch):
+        def __should_apply(self, branch: Branch):
             return not self.maxw.max_worlds_exceeded(branch)
 
-        def __is_least_applied_to(self, node, branch):
+        def __is_least_applied_to(self, node: Node, branch: Branch):
             node_apply_count = self.apnc[branch].get(node, 0)
             min_apply_count = self.min_application_count(branch.id)
             return min_apply_count >= node_apply_count
@@ -1504,11 +1490,7 @@ class TabRules(object):
         def __get_flag_target(self, branch: Branch):
             return {
                 'flag': True,
-                'adds': [
-                    [
-                        self.maxw.quit_flag(branch),
-                    ],
-                ],
+                'adds': ((self.maxw.quit_flag(branch),),),
             }
 
     class NecessityNegated(PossibilityNegated):
@@ -1573,12 +1555,12 @@ class TabRules(object):
             return targets
 
         def example_nodes(self):
-            world = 0 if self.modal else None
+            w = 0 if self.modal else None
             s1 = Predicated.first()
             s2 = self.predicate((s1[0], s1[0].next()))
             return (
-                {'sentence': s1, 'world': world},
-                {'sentence': s2, 'world': world},
+                {'sentence': s1, 'world': w},
+                {'sentence': s2, 'world': w},
             )
 
     closure_rules = (
