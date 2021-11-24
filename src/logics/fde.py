@@ -27,16 +27,17 @@ class Meta(object):
     category_display_order = 10
 
 from models import BaseModel
-from lexicals import Atomic, Operated, Quantified, Predicate, Operator as Oper, Quantifier
+from lexicals import Atomic, Operated, Quantified, Predicate, Operator as Oper, \
+    Quantifier, Predicates
 from proof.tableaux import TableauxSystem as BaseSystem, Rule
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
     NewConstantStoppingRule
 from proof.common import Branch, Node, Filters, Target
-from proof.helpers import AdzHelper, FilterHelper, clshelpers
+from proof.helpers import AdzHelper, AppliedQuitFlag, FilterHelper, MaxConstantsTracker
 from errors import ModelValueError
 
-Identity = Predicate.Identity
-Existence = Predicate.Existence
+Identity: Predicate  = Predicates.System.Identity
+Existence: Predicate = Predicates.System.Existence
 
 class Model(BaseModel):
     """
@@ -465,7 +466,6 @@ class Model(BaseModel):
             fmt = self._error_formats[ErrorClass][fmt]
         raise ErrorClass(fmt, *(str(arg) for arg in args))
 
-
 class TableauxSystem(BaseSystem):
     """
     Nodes for FDE have a boolean *designation* property, and a branch is closed iff
@@ -545,14 +545,11 @@ class TableauxSystem(BaseSystem):
                 last_is_negated = False
         return complexity
 
-
 @FilterHelper.clsfilters(
     designation = Filters.Node.Designation,
     sentence    = Filters.Node.Sentence,
 )
-# @clshelpers(nf = FilterHelper)
-class DefaultRule(Rule):
-    Helpers = (FilterHelper,)
+class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
     # FilterHelper
     # ----------------
     ignore_ticked = True
@@ -561,32 +558,36 @@ class DefaultRule(Rule):
     # Filters.Node.Designation
     designation = None
 
-    def sentence(self, node: Node):
-        """
-        :overrides: Rule
-        """
-        return self.nf.filters.sentence.get(node)
+class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
 
-    def example_nodes(self):
-        """
-        :implements: Rule
-        """
-        return (self.nf.example_node(),)
-
-# @clshelpers(nf = FilterHelper)
-class GetNodeTargets(Rule):
-    Helpers = (FilterHelper,)
-    # :implements: Rule, delegates to _get_node_targets
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
         return self._get_node_targets(node, branch)
-    # :abstract:
+
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
-# @clshelpers()
-class DefaultNodeRule(GetNodeTargets, DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
-    pass
+class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
+
+    Helpers = (
+        AppliedQuitFlag,
+        MaxConstantsTracker,
+    )
+
+    @FilterHelper.node_targets
+    def _get_targets(self, node: Node, branch: Branch):
+        if self.maxc.max_constants_exceeded(branch, node.get('world')):
+            self.nf.release(node, branch)
+            if self.apqf.get(branch):
+                return
+            return {
+                'flag': True,
+                'adds': ((self.maxc.quit_flag(branch),),),
+            }
+        return self._get_node_targets(node, branch)
+
+    def _get_node_targets(self, node: Node, branch: Branch):
+        raise NotImplementedError()
 
 class OldDefaultNodeRule(FilterNodeRule):
 
@@ -619,30 +620,24 @@ class ConjunctionReducingRule(DefaultNodeRule):
 
     branch_level = 1
 
-    conjunct_op = NotImplemented
+    conjunct_op: Oper = NotImplemented
 
-    def _get_node_targets(self, node, branch):
-
-        if self.conjunct_op is NotImplemented:
-            raise NotImplementedError()
-
+    def _get_node_targets(self, node: Node, branch: Branch):
+        oper = self.conjunct_op
         lhs, rhs = self.sentence(node)
-        cond1 = Operated(self.conjunct_op, (lhs, rhs))
-        cond2 = Operated(self.conjunct_op, (rhs, lhs))
-        sc = cond1.conjoin(cond2)
-
+        s = oper((lhs, rhs)).conjoin(oper((rhs, lhs)))
         if self.negated:
-            sc = sc.negate()
+            s = s.negate()
 
         return {
             'adds': [
                 [
-                    {'sentence': sc, 'designated': self.designation},
+                    {'sentence': s, 'designated': self.designation},
                 ],
             ],
         }
 
-class TableauxRules(object):
+class TabRules(object):
     """
     In general, rules for connectives consist of four rules per connective:
     a designated rule, an undesignated rule, a negated designated rule, and a negated
@@ -695,13 +690,13 @@ class TableauxRules(object):
         From an unticked designated negated negation node *n* on a branch *b*, add a designated
         node to *b* with the double-negatum of *n*, then tick *n*.
         """
+        designation = True
         negated     = True
         operator    = Oper.Negation
-        designation = True
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             return {
                 'adds': [
                     [
@@ -716,20 +711,20 @@ class TableauxRules(object):
         From an unticked undesignated negated negation node *n* on a branch *b*, add an
         undesignated node to *b* with the double-negatum of *n*, then tick *n*.
         """
-        negated     = True
         designation = False
+        negated     = True
 
     class AssertionDesignated(DefaultNodeRule):
         """
         From an unticked, designated, assertion node *n* on a branch *b*, add a designated
         node to *b* with the operand of *b*, then tick *n*.
         """
-        operator   = Oper.Assertion
         designation = True
+        operator    = Oper.Assertion
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             return {
                 'adds': [
                     [
@@ -744,21 +739,21 @@ class TableauxRules(object):
         From an unticked, undesignated, assertion node *n* on a branch *b*, add an undesignated
         node to *b* with the operand of *n*, then tick *n*.
         """
-        negated     = False
         designation = False
+        negated     = False
 
     class AssertionNegatedDesignated(DefaultNodeRule):
         """
         From an unticked, designated, negated assertion node *n* on branch *b*, add a designated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
+        designation = True
         negated     = True
         operator    = Oper.Assertion
-        designation = True
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             return {
                 'adds': [
                     [
@@ -773,25 +768,25 @@ class TableauxRules(object):
         From an unticked, undesignated, negated assertion node *n* on branch *b*, add an undesignated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
-        negated     = True
         designation = False
+        negated     = True
 
     class ConjunctionDesignated(DefaultNodeRule):
         """
         From an unticked designated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add a designated node with *c* to *b*, then tick *n*.
         """
-        operator    = Oper.Conjunction
         designation = True
+        operator    = Oper.Conjunction
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             return {
                 'adds': [
                     [
                         # keep designation neutral for inheritance below
-                        {'sentence': operand, 'designated': self.designation}
-                        for operand in self.sentence(node)
+                        {'sentence': s, 'designated': self.designation}
+                        for s in self.sentence(node)
                     ]
                 ]
             }
@@ -802,9 +797,9 @@ class TableauxRules(object):
         *c*, make a new branch *b'* from *b* and add a designated node with the negation of *c* to *b'*,
         then tick *n*.
         """
+        designation = True
         negated     = True
         operator    = Oper.Conjunction
-        designation = True
         branch_level = 2
 
         @FilterHelper.node_targets
@@ -813,9 +808,9 @@ class TableauxRules(object):
                 'adds': [
                     [
                         # keep designation neutral for inheritance below
-                        {'sentence': operand.negate(), 'designated': self.designation},
+                        {'sentence': s.negate(), 'designated': self.designation},
                     ]
-                    for operand in self.sentence(node)
+                    for s in self.sentence(node)
                 ]
             }
 
@@ -825,18 +820,18 @@ class TableauxRules(object):
         *c*, make a new branch *b'* from *b* and add an undesignated node with *c* to *b'*,
         then tick *n*.
         """
-        operator    = Oper.Conjunction
         designation = False
+        operator    = Oper.Conjunction
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             return {
                 'adds': [
                     [
                         # keep designation neutral for inheritance below
-                        {'sentence': operand, 'designated': self.designation},
+                        {'sentence': s, 'designated': self.designation},
                     ]
-                    for operand in self.sentence(node)
+                    for s in self.sentence(node)
                 ]
             }
 
@@ -845,18 +840,18 @@ class TableauxRules(object):
         From an unticked undesignated negated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add an undesignated node with the negation of *c* to *b*, then tick *n*.
         """
+        designation = False
         negated     = True
         operator    = Oper.Conjunction
-        designation = False
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             return {
                 'adds': [
                     [
                         # keep designation neutral for inheritance below
-                        {'sentence': operand.negate(), 'designated': self.designation}
-                        for operand in self.sentence(node)
+                        {'sentence': s.negate(), 'designated': self.designation}
+                        for s in self.sentence(node)
                     ]
                 ]
             }
@@ -867,24 +862,24 @@ class TableauxRules(object):
         *d*, make a new branch *b'* from *b* and add a designated node with *d* to *b'*,
         then tick *n*.
         """
-        operator    = Oper.Disjunction
         designation = True
+        operator    = Oper.Disjunction
 
     class DisjunctionNegatedDesignated(ConjunctionNegatedUndesignated):
         """
         From an unticked designated negated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add a designated node with the negation of *d* to *b*, then tick *n*.
         """
-        operator    = Oper.Disjunction
         designation = True
+        operator    = Oper.Disjunction
 
     class DisjunctionUndesignated(ConjunctionDesignated):
         """
         From an unticked undesignated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add an undesignated node with *d* to *b*, then tick *n*.
         """
-        operator    = Oper.Disjunction
         designation = False
+        operator    = Oper.Disjunction
 
     class DisjunctionNegatedUndesignated(ConjunctionNegatedDesignated):
         """
@@ -892,8 +887,8 @@ class TableauxRules(object):
         *d*, make a new branch *b'* from *b* and add an undesignated node with the negation of *d* to
         *b'*, then tick *n*.
         """
-        operator    = Oper.Disjunction
         designation = False
+        operator    = Oper.Disjunction
 
     class MaterialConditionalDesignated(DefaultNodeRule):
         """
@@ -902,12 +897,12 @@ class TableauxRules(object):
         of the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
-        operator    = Oper.MaterialConditional
         designation = True
+        operator    = Oper.MaterialConditional
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             d = self.designation
             return {
                 'adds': [
@@ -926,13 +921,13 @@ class TableauxRules(object):
         a designated node with the antecedent, and a designated node with the negation of the
         consequent to *b*, then tick *n*.
         """
+        designation = True
         negated     = True
         operator    = Oper.MaterialConditional
-        designation = True
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             d = self.designation
             return {
                 'adds': [
@@ -949,12 +944,12 @@ class TableauxRules(object):
         an undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
-        operator    = Oper.MaterialConditional
         designation = False
+        operator    = Oper.MaterialConditional
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             d = self.designation
             return {
                 'adds': [
@@ -972,13 +967,13 @@ class TableauxRules(object):
         *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
         tick *n*.
         """
+        designation = False
         negated     = True
         operator    = Oper.MaterialConditional
-        designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             d = self.designation
             return {
                 'adds': [
@@ -999,12 +994,12 @@ class TableauxRules(object):
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
-        operator    = Oper.MaterialBiconditional
         designation = True
+        operator    = Oper.MaterialBiconditional
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             d = self.designation
             return {
                 'adds': [
@@ -1027,13 +1022,13 @@ class TableauxRules(object):
         with the negation of the antecedent and a designated node with the consequent to *b''*,
         then tick *n*.
         """
+        designation = True
         negated     = True
         operator    = Oper.MaterialBiconditional
-        designation = True
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             d = self.designation
             return {
                 'adds': [
@@ -1056,8 +1051,8 @@ class TableauxRules(object):
         undesignated node with the antecedent and an undesignated node with the negation of
         the consequent to *b''*, then tick *n*.
         """
-        negated     = False
         designation = False
+        negated     = False
 
     class MaterialBiconditionalNegatedUndesignated(MaterialBiconditionalDesignated):
         """
@@ -1079,9 +1074,9 @@ class TableauxRules(object):
         the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
+        designation = True
         negated     = False
         operator    = Oper.Conditional
-        designation = True
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
         """
@@ -1091,9 +1086,9 @@ class TableauxRules(object):
         designated node with the antecedent, and a designated node with the negation of
         the consequent to *b*, then tick *n*.
         """
+        designation = True
         negated     = True
         operator    = Oper.Conditional
-        designation = True
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
         """
@@ -1103,9 +1098,9 @@ class TableauxRules(object):
         undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
+        designation = False
         negated     = False
         operator    = Oper.Conditional
-        designation = False
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
         """
@@ -1116,9 +1111,9 @@ class TableauxRules(object):
         *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
         tick *n*.
         """
+        designation = False
         negated     = True
         operator    = Oper.Conditional
-        designation = False
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
         """
@@ -1130,9 +1125,9 @@ class TableauxRules(object):
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
+        designation = True
         negated     = False
         operator    = Oper.Biconditional
-        designation = True
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
         """
@@ -1144,9 +1139,9 @@ class TableauxRules(object):
         with the negation of the antecedent and a designated node with the consequent to *b''*,
         then tick *n*.
         """
+        designation = True
         negated     = True
         operator    = Oper.Biconditional
-        designation = True
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
         """
@@ -1158,9 +1153,9 @@ class TableauxRules(object):
         undesignated node with the antecedent and an undesignated node with the negation of
         the consequent to *b''*, then tick *n*.
         """
+        designation = False
         negated     = False
         operator    = Oper.Biconditional
-        designation = False
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
         """
@@ -1172,31 +1167,30 @@ class TableauxRules(object):
         and add an undesignated node with the antecedent and an undesignated node with the
         consequent to *b''*, then tick *n*.
         """
+        designation = False
         negated     = True
         operator    = Oper.Biconditional
-        designation = False
 
-    class ExistentialDesignated(DefaultNewConstantRule):
+    class ExistentialDesignated(QuantifierSkinnyRule):
         """
         From an unticked designated existential node *n* on a branch *b* quantifying over
         variable *v* into sentence *s*, add a designated node to *b* with the substitution
         into *s* of a new constant not yet appearing on *b* for *v*, then tick *n*.
         """
-        quantifier  = Quantifier.Existential
         designation = True
+        quantifier  = Quantifier.Existential
         branch_level = 1
 
-        # NewConstantStoppingRule implementation
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Quantified = self.sentence(node)
+            s = s.unquantify(branch.new_constant())
+            d = self.designation
+            return {
+                'adds': (({'sentence': s, 'designated': d},),),
+            }
 
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                # Keep designation neutral for UniversalUndesignated
-                {'sentence': r, 'designated': self.designation},
-            ]
+        def score_candidate(self, target: Target):
+            return -1 * self.tableau.branching_complexity(target.node)
 
     class ExistentialNegatedDesignated(DefaultNodeRule):
         """
@@ -1205,14 +1199,14 @@ class TableauxRules(object):
         that universally quantifies over *v* into the negation of *s* (i.e. change
         :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
+        designation = True
         negated     = True
         quantifier  = Quantifier.Existential
-        designation = True
-        branch_level = 1
         convert_to  = Quantifier.Universal
+        branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Quantified = self.sentence(node)
             v = s.variable
             si = s.sentence
             sq = self.convert_to(v, si.negate())
@@ -1232,14 +1226,14 @@ class TableauxRules(object):
         If there are no constants yet on *b*, then instantiate with a new constant. The node
         *n* is never ticked.
         """
-        quantifier  = Quantifier.Existential
         designation = False
+        quantifier  = Quantifier.Existential
         branch_level = 1
 
         # AllConstantsStoppingRule implementation
 
         def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
+            s: Quantified = self.sentence(node)
             v = s.variable
             si = s.sentence
             r = si.substitute(c, v)
@@ -1254,8 +1248,8 @@ class TableauxRules(object):
         that universally quantifies over *v* into the negation of *s* (e.g. change
         :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
-        quantifier  = Quantifier.Existential
         designation = False
+        quantifier  = Quantifier.Existential
         convert_to  = Quantifier.Universal
 
     class UniversalDesignated(ExistentialUndesignated):
@@ -1266,8 +1260,8 @@ class TableauxRules(object):
         are no constants yet on *b*, then instantiate with a new constant. The node *n* is
         never ticked.
         """
-        quantifier  = Quantifier.Universal
         designation = True
+        quantifier  = Quantifier.Universal
 
     class UniversalNegatedDesignated(ExistentialNegatedDesignated):
         """
@@ -1276,8 +1270,8 @@ class TableauxRules(object):
         with the existential quantifier over *v* into the negation of *s* (e.g. change
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
-        quantifier  = Quantifier.Universal
         designation = True
+        quantifier  = Quantifier.Universal
         convert_to  = Quantifier.Existential
 
     class UniversalUndesignated(ExistentialDesignated):
@@ -1286,8 +1280,8 @@ class TableauxRules(object):
         into sentence *s*, add an undesignated node to *b* with the result of substituting into
         *s* a constant new to *b* for *v*, then tick *n*.
         """
-        quantifier  = Quantifier.Universal
         designation = False
+        quantifier  = Quantifier.Universal
 
     class UniversalNegatedUndesignated(ExistentialNegatedDesignated):
         """
@@ -1296,8 +1290,8 @@ class TableauxRules(object):
         with the existential quantifier over *v* into the negation of *s* (e.g. change
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
-        quantifier  = Quantifier.Universal
         designation = False
+        quantifier  = Quantifier.Universal
         convert_to  = Quantifier.Existential
 
     closure_rules = [
@@ -1354,3 +1348,4 @@ class TableauxRules(object):
             UniversalUndesignated,
         ],
     ]
+TableauxRules = TabRules

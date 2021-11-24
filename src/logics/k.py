@@ -81,7 +81,7 @@ class Model(BaseModel):
         #: A map from worlds to their frame. Worlds are reprented as integers.
         #:
         #: :type: dict
-        self.frames = {}
+        self.frames: dict[int, Frame] = {}
 
         #: A set of pairs of worlds, which functions as an `access` relation.
         #:
@@ -99,14 +99,14 @@ class Model(BaseModel):
         # ensure there is a w0
         self.world_frame(0)
 
-    def value_of_operated(self, sentence, **kw):
+    def value_of_operated(self, sentence: Operated, **kw):
         if self.is_sentence_opaque(sentence):
             return self.value_of_opaque(sentence, **kw)
         if sentence.operator in self.modal_operators:
             return self.value_of_modal(sentence, **kw)
         return super().value_of_operated(sentence, **kw)
 
-    def value_of_predicated(self, sentence, **kw):
+    def value_of_predicated(self, sentence: Predicated, **kw):
         """
         A sentence for predicate `P` is true at :m:`w` iff the tuple of the parameters
         is in the extension of `P` at :m:`w`.
@@ -122,7 +122,7 @@ class Model(BaseModel):
             return 'T'
         return 'F'
 
-    def value_of_existential(self, sentence, **kw):
+    def value_of_existential(self, sentence: Quantified, **kw):
         """
         An existential sentence is true at :m:`w`, just when the sentence resulting in the
         subsitution of some constant in the domain for the variable is true at :m:`w`.
@@ -135,7 +135,7 @@ class Model(BaseModel):
                 return 'T'
         return 'F'
 
-    def value_of_universal(self, sentence, **kw):
+    def value_of_universal(self, sentence: Quantified, **kw):
         """
         A universal sentence is true at :m:`w`, just when the sentence resulting in the
         subsitution of each constant in the domain for the variable is true at :m:`w`.
@@ -148,7 +148,7 @@ class Model(BaseModel):
                 return 'F'
         return 'T'
 
-    def value_of_possibility(self, sentence, world=0, **kw):
+    def value_of_possibility(self, sentence: Operated, world=0, **kw):
         """
         A possibility sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         some :m:`w'` such that :m:`<w, w'>` in the access relation.
@@ -158,7 +158,7 @@ class Model(BaseModel):
                 return 'T'
         return 'F'
 
-    def value_of_necessity(self, sentence, world=0, **kw):
+    def value_of_necessity(self, sentence: Operated, world=0, **kw):
         """
         A necessity sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         each :m:`w'` such that :m:`<w, w'>` is in the access relation.
@@ -168,7 +168,7 @@ class Model(BaseModel):
                 return 'F'
         return 'T'
 
-    def is_countermodel_to(self, argument):
+    def is_countermodel_to(self, argument: Argument):
         """
         A model is a countermodel for an argument iff the value of each premise
         is :m:`T` at `w0` and the value of the conclusion is :m:`F` at :m:`w0`.
@@ -178,7 +178,7 @@ class Model(BaseModel):
                 return False
         return self.value_of(argument.conclusion, world=0) == 'F'
 
-    def get_data(self):
+    def get_data(self) -> dict:
         return {
             'Worlds': {
                 'description'     : 'set of worlds',
@@ -210,24 +210,24 @@ class Model(BaseModel):
             }
         }
 
-    def read_branch(self, branch):
+    def read_branch(self, branch: Branch):
         for node in branch:
             self.read_node(node)
         self.finish()
         return self
 
-    def read_node(self, node):
-        if node.has('sentence'):
-            sentence = node['sentence']
-            world = node.get('world')
-            if world == None:
-                world = 0
-            if self.is_sentence_opaque(sentence):
-                self.set_opaque_value(sentence, 'T', world=world)
-            elif self.is_sentence_literal(sentence):
-                self.set_literal_value(sentence, 'T', world=world)
-            self.predicates.update(sentence.predicates)
-        elif node.has('world1') and node.has('world2'):
+    def read_node(self, node: Node):
+        s: Sentence = node.get('sentence')
+        if s:
+            w = node.get('world')
+            if w == None:
+                w = 0
+            if self.is_sentence_opaque(s):
+                self.set_opaque_value(s, 'T', world = w)
+            elif self.is_sentence_literal(s):
+                self.set_literal_value(s, 'T', world = w)
+            self.predicates.update(s.predicates)
+        elif node.is_access:
             self.add_access(node['world1'], node['world2'])
 
     def finish(self):
@@ -235,48 +235,48 @@ class Model(BaseModel):
         atomics = set()
         opaques = set()
 
-        for world in self.frames:
+        for w in self.frames:
 
-            frame = self.world_frame(world)
+            frame = self.world_frame(w)
             atomics.update(frame.atomics.keys())
             opaques.update(frame.opaques.keys())
 
             # TODO: WIP
-            self.generate_denotation(world)
-            self.generate_property_classes(world)
+            self.generate_denotation(w)
+            self.generate_property_classes(w)
 
-            for predicate in self.predicates:
-                self.agument_extension_with_identicals(predicate, world)
-            self.ensure_self_identity(world)
-            self.ensure_self_existence(world)
+            for pred in self.predicates:
+                self.agument_extension_with_identicals(pred, w)
+            self.ensure_self_identity(w)
+            self.ensure_self_existence(w)
 
         # make sure each atomic and opaque is assigned a value in each frame
         unval = self.unassigned_value
-        for world in self.frames:
-            frame = self.world_frame(world)
+        for w in self.frames:
+            frame = self.world_frame(w)
             for s in atomics:
                 if s not in frame.atomics:
-                    self.set_literal_value(s, unval, world=world)
+                    self.set_literal_value(s, unval, world = w)
             for s in opaques:
                 if s not in frame.opaques:
-                    self.set_opaque_value(s, unval, world=world)
+                    self.set_opaque_value(s, unval, world = w)
 
-    def ensure_self_identity(self, world):
-        identity_extension = self.get_extension(Identity, world=world)
+    def ensure_self_identity(self, w):
+        ext = self.get_extension(Identity, world = w)
         for c in self.constants:
             # make sure each constant is self-identical
-            identity_extension.add((c, c))
+            ext.add((c, c))
 
-    def ensure_self_existence(self, world):
-        existence_extension = self.get_extension(Existence, world=world)
+    def ensure_self_existence(self, w):
+        ext = self.get_extension(Existence, world = w)
         for c in self.constants:
             # make sure each constant exists
-            existence_extension.add((c,))
+            ext.add((c,))
 
-    def agument_extension_with_identicals(self, predicate, world):
-        extension = self.get_extension(predicate, world=world)
+    def agument_extension_with_identicals(self, pred: Predicate, w):
+        extension = self.get_extension(pred, world = w)
         for c in self.constants:
-            identicals = self.get_identicals(c, world=world)
+            identicals = self.get_identicals(c, world = w)
             to_add = set()
             for params in extension:
                 if c in params:
@@ -285,46 +285,46 @@ class Model(BaseModel):
                         to_add.add(new_params)
             extension.update(to_add)
 
-    def generate_denotation(self, world):
-        frame = self.world_frame(world)
-        world = frame.world
+    def generate_denotation(self, w):
+        frame = self.world_frame(w)
+        w = frame.world
         todo = set(self.constants)
         for c in self.constants:
             if c in todo:
                 denotum = Denotum()
                 frame.domain.add(denotum)
-                denoters = {c}.union(self.get_identicals(c, world=world))
+                denoters = {c}.union(self.get_identicals(c, world = w))
                 frame.denotation.update({c: denotum for c in denoters})
                 todo -= denoters
         assert not todo
 
-    def generate_property_classes(self, world):
-        frame = self.world_frame(world)
-        world = frame.world
+    def generate_property_classes(self, w):
+        frame = self.world_frame(w)
+        w = frame.world
         for pred in self.predicates:
             # Skip identity and existence
             if pred in (Identity, Existence):
                 continue
             frame.property_classes[pred] = {
-                tuple(self.get_denotum(param, world=world) for param in params)
-                for params in self.get_extension(pred, world=world)
+                tuple(self.get_denotum(p, world = w) for p in params)
+                for params in self.get_extension(pred, world = w)
             }
 
     def get_identicals(self, c, **kw):
-        identity_extension = self.get_extension(Identity, **kw)
+        ext = self.get_extension(Identity, **kw)
         identicals = set()
-        for params in identity_extension:
+        for params in ext:
             if c in params:
                 identicals.update(params)
         identicals.discard(c)
         return identicals
 
-    def is_sentence_literal(self, sentence):
+    def is_sentence_literal(self, sentence: Sentence):
         if sentence.is_negated and self.is_sentence_opaque(sentence.operand):
             return True
         return sentence.is_literal
 
-    def set_literal_value(self, sentence, value, **kw):
+    def set_literal_value(self, sentence: Sentence, value, **kw):
         if self.is_sentence_opaque(sentence):
             self.set_opaque_value(sentence, value, **kw)
         elif sentence.is_negated:
@@ -337,9 +337,8 @@ class Model(BaseModel):
         else:
             raise NotImplementedError()
 
-    def set_opaque_value(self, sentence, value, world=0, **kw):
+    def set_opaque_value(self, sentence: Sentence, value, world = 0, **kw):
         frame = self.world_frame(world)
-        world = frame.world
         # if sentence in frame.opaques and frame.opaques[sentence] != value:
         if frame.opaques.get(sentence, value) != value:
             raise ModelValueError('Inconsistent value for sentence {0}'.format(sentence))
@@ -351,14 +350,13 @@ class Model(BaseModel):
         self.predicates.update(sentence.predicates)
         frame.opaques[sentence] = value
 
-    def set_atomic_value(self, sentence, value, world=0, **kw):
+    def set_atomic_value(self, sentence: Atomic, value, world = 0, **kw):
         frame = self.world_frame(world)
-        world = frame.world
         if sentence in frame.atomics and frame.atomics[sentence] != value:
             raise ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
         frame.atomics[sentence] = value
 
-    def set_predicated_value(self, sentence, value, **kw):
+    def set_predicated_value(self, sentence: Predicated, value, **kw):
         pred = sentence.predicate
         params = sentence.params
         if pred not in self.predicates:
@@ -385,41 +383,39 @@ class Model(BaseModel):
                 )
             extension.add(params)
 
-    def get_extension(self, predicate, world=0, **kw):
+    def get_extension(self, pred, world = 0, **kw):
         frame = self.world_frame(world)
-        world = frame.world
-        if predicate not in self.predicates:
-            self.predicates.add(predicate)
-        if predicate not in frame.extensions:
-            frame.extensions[predicate] = set()
-        if predicate not in frame.anti_extensions:
-            frame.anti_extensions[predicate] = set()
-        return frame.extensions[predicate]
+        if pred not in self.predicates:
+            self.predicates.add(pred)
+        if pred not in frame.extensions:
+            frame.extensions[pred] = set()
+        if pred not in frame.anti_extensions:
+            frame.anti_extensions[pred] = set()
+        return frame.extensions[pred]
 
-    def get_anti_extension(self, predicate, world=0, **kw):
+    def get_anti_extension(self, pred, world = 0, **kw):
         frame = self.world_frame(world)
-        world = frame.world
-        if predicate not in self.predicates:
-            self.predicates.add(predicate)
-        if predicate not in frame.extensions:
-            frame.extensions[predicate] = set()
-        if predicate not in frame.anti_extensions:
-            frame.anti_extensions[predicate] = set()
-        return frame.anti_extensions[predicate]
+        if pred not in self.predicates:
+            self.predicates.add(pred)
+        if pred not in frame.extensions:
+            frame.extensions[pred] = set()
+        if pred not in frame.anti_extensions:
+            frame.anti_extensions[pred] = set()
+        return frame.anti_extensions[pred]
 
-    def get_domain(self, world=0, **kw):
+    def get_domain(self, world = 0, **kw):
         # TODO: wip
         return self.world_frame(world).domain
 
-    def get_denotation(self, world=0, **kw):
+    def get_denotation(self, world = 0, **kw):
         # TODO: wip
         return self.world_frame(world).denotation
 
-    def get_denotum(self, c, world=0, **kw):
+    def get_denotum(self, c: Constant, world = 0, **kw):
         # TODO: wip
         frame = self.world_frame(world)
         world = frame.world
-        den = self.get_denotation(world=world)
+        den = self.get_denotation(world = world)
         try:
             return den[c]
         except KeyError:
@@ -449,21 +445,21 @@ class Model(BaseModel):
             self.frames[world] = Frame(world)
         return self.frames[world]
 
-    def value_of_opaque(self, sentence, world=0, **kw):
+    def value_of_opaque(self, sentence: Sentence, world=0, **kw):
         frame = self.world_frame(world)
         world = frame.world
         if sentence in frame.opaques:
             return frame.opaques[sentence]
         return self.unassigned_value
 
-    def value_of_atomic(self, sentence, world=0, **kw):
+    def value_of_atomic(self, sentence: Atomic, world=0, **kw):
         frame = self.world_frame(world)
         world = frame.world
         if sentence in frame.atomics:
             return frame.atomics[sentence]
         return self.unassigned_value
 
-    def value_of_modal(self, sentence, **kw):
+    def value_of_modal(self, sentence: Operated, **kw):
         operator = sentence.operator
         if operator == Oper.Possibility:
             return self.value_of_possibility(sentence, **kw)
@@ -472,7 +468,7 @@ class Model(BaseModel):
         else:
             raise NotImplementedError()
 
-    def value_of_quantified(self, sentence, **kw):
+    def value_of_quantified(self, sentence: Quantified, **kw):
         q = sentence.quantifier
         if q == Quantifier.Existential:
             return self.value_of_existential(sentence, **kw)
@@ -480,7 +476,7 @@ class Model(BaseModel):
             return self.value_of_universal(sentence, **kw)
         return super().value_of_quantified(sentence, **kw)
 
-    def truth_function(self, operator, a, b=None):
+    def truth_function(self, operator: Oper, a, b=None):
         return self.fde.truth_function(operator, a, b)
 
 class Denotum(object):
@@ -703,7 +699,6 @@ class TableauxSystem(BaseSystem):
     modal    = Filters.Node.Modal,
 )
 class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
-    # Helpers = (FilterHelper,)
     # FilterHelper
     # ----------------
     ignore_ticked = True
@@ -1161,19 +1156,15 @@ class TabRules(object):
         quantifier = Quantifier.Existential
         branch_level = 1
 
-        def score_candidate(self, target: Target):
-            return -1 * self.tableau.branching_complexity(target.node)
-
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Quantified = self.sentence(node)
             s = s.unquantify(branch.new_constant())
             return {
-                'adds': (
-                    (
-                        {'sentence': s, 'world': node.get('world')},
-                    ),
-                )
+                'adds': (({'sentence': s, 'world': node.get('world')},),),
             }
+
+        def score_candidate(self, target: Target):
+            return -1 * self.tableau.branching_complexity(target.node)
 
     class ExistentialNegated(DefaultNodeRule):
         """
@@ -1183,8 +1174,8 @@ class TabRules(object):
         """
         negated    = True
         quantifier = Quantifier.Existential
-        branch_level = 1
         convert_to = Quantifier.Universal
+        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Quantified = self.sentence(node)
@@ -1203,9 +1194,9 @@ class TabRules(object):
         exists) for *v* into *s* does not appear at *w* on *b*, add a node with *w* and *r* to
         *b*. The node *n* is never ticked.
         """
+        ticking      = False
         quantifier   = Quantifier.Universal
         branch_level = 1
-        ticking      = False
 
         def score_candidate(self, target: Target):
             if target.get('flag'):
@@ -1339,8 +1330,8 @@ class TabRules(object):
         """
         negated    = True
         operator   = Oper.Possibility
-        branch_level = 1
         convert_to = Oper.Necessity
+        branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
