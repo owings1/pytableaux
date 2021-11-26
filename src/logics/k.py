@@ -739,11 +739,23 @@ class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply)
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
+    def score_candidate(self, target: Target):
+        return -1 * self.tableau.branching_complexity(target.node)
+
 class QuantifierFatRule(QuantifierSkinnyRule):
+
     Helpers = (
         AppliedNodeCount,
         AppliedNodeConstants,
     )
+
+    def score_candidate(self, target: Target):
+        if target.get('flag'):
+            return 1
+        if self.adz.closure_score(target) == 1:
+            return 1
+        node_apply_count = self.apnc[target.branch].get(target.node, 0)
+        return float(1 / (node_apply_count + 1))
 
 class OldDefaultNodeRule(FilterNodeRule):
     modal = True
@@ -1163,9 +1175,6 @@ class TabRules(object):
                 'adds': (({'sentence': s, 'world': node.get('world')},),),
             }
 
-        def score_candidate(self, target: Target):
-            return -1 * self.tableau.branching_complexity(target.node)
-
     class ExistentialNegated(DefaultNodeRule):
         """
         From an unticked negated existential node *n* with world *w* on a branch *b*,
@@ -1197,14 +1206,6 @@ class TabRules(object):
         ticking      = False
         quantifier   = Quantifier.Universal
         branch_level = 1
-
-        def score_candidate(self, target: Target):
-            if target.get('flag'):
-                return 1
-            if self.adz.closure_score(target) == 1:
-                return 1
-            node_apply_count = self.apnc[target.branch].get(target.node, 0)
-            return float(1 / (node_apply_count + 1))
 
         def _get_node_targets(self, node: Node, branch: Branch):
             unapplied = self.apcs.get_unapplied(node, branch)

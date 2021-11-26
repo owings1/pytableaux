@@ -30,8 +30,7 @@ from models import BaseModel
 from lexicals import Atomic, Operated, Quantified, Predicate, Operator as Oper, \
     Quantifier, Predicates
 from proof.tableaux import TableauxSystem as BaseSystem, Rule
-from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule, \
-    NewConstantStoppingRule
+from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule
 from proof.common import Branch, Node, Filters, Target
 from proof.helpers import AdzHelper, AppliedQuitFlag, FilterHelper, MaxConstantsTracker
 from errors import ModelValueError
@@ -589,6 +588,9 @@ class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply)
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
+    def score_candidate(self, target: Target):
+        return -1 * self.tableau.branching_complexity(target.node)
+
 class OldDefaultNodeRule(FilterNodeRule):
 
     ticking = True
@@ -598,11 +600,6 @@ class OldDefaultNodeRule(FilterNodeRule):
 
     def score_candidate(self, target):
         return self.adz.closure_score(target)
-
-class DefaultNewConstantRule(OldDefaultNodeRule, NewConstantStoppingRule):
-
-    def score_candidate(self, target):
-        return -1 * self.tableau.branching_complexity(target.node)
 
 class DefaultAllConstantsRule(OldDefaultNodeRule, AllConstantsStoppingRule):
 
@@ -1188,9 +1185,6 @@ class TabRules(object):
             return {
                 'adds': (({'sentence': s, 'designated': d},),),
             }
-
-        def score_candidate(self, target: Target):
-            return -1 * self.tableau.branching_complexity(target.node)
 
     class ExistentialNegatedDesignated(DefaultNodeRule):
         """

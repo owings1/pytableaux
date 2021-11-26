@@ -114,13 +114,13 @@ class TableauxSystem(FDE.TableauxSystem):
 class DefaultNodeRule(FDE.DefaultNodeRule):
     pass
 
-class DefaultNewConstantRule(FDE.DefaultNewConstantRule):
-    pass
+# class DefaultNewConstantRule(FDE.DefaultNewConstantRule):
+#     pass
 
 class DefaultAllConstantsRule(FDE.DefaultAllConstantsRule):
     pass
 
-class TableauxRules(object):
+class TabRules(object):
     """
     The Tableaux System for K3WQ contains the `FDE closure rule`_, and the
     `K3 closure rule`_. All of the operator rules are the same as :ref:`K3W`. The
@@ -228,7 +228,7 @@ class TableauxRules(object):
     class BiconditionalNegatedUndesignated(K3W.TabRules.BiconditionalNegatedUndesignated):
         pass
 
-    class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
+    class ExistentialDesignated(FDE.QuantifierSkinnyRule):
         """
         From an unticked, designated existential node `n` on a branch `b`, add
         two designated nodes to `b`. One node is the result of universally
@@ -242,10 +242,10 @@ class TableauxRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Quantified = self.sentence(node)
-            d = self.designation
             disji = s.sentence.disjoin(s.sentence.negate())
             sq = Quantifier.Universal(s.variable, disji)
             r = s.unquantify(branch.new_constant())
+            d = self.designation
             return {
                 'adds': (
                     (
@@ -255,11 +255,10 @@ class TableauxRules(object):
                 ),
             }
 
-
     class ExistentialNegatedDesignated(FDE.TabRules.ExistentialNegatedDesignated):
         pass
 
-    class ExistentialUndesignated(DefaultNewConstantRule):
+    class ExistentialUndesignated(FDE.QuantifierSkinnyRule):
         """
         From an unticked, undesignated existential node `n` on a branch `b`, make
         two branches `b'` and `b''` from `b`. On `b'` add two undesignated nodes,
@@ -268,66 +267,52 @@ class TableauxRules(object):
         node with universal quantifier over the negation of the inner sentence.
         Then tick `n`.
         """
+        designation = False
         negated     = False
         quantifier  = Quantifier.Existential
-        designation = False
         branch_level = 2
 
-        # NewConstantStoppingRule implementation
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Quantified = self.sentence(node)
+            r = s.unquantify(branch.new_constant())
+            sq = Quantifier.Universal(s.variable, s.sentence.negate())
+            d = self.designation
+            return {
+                'adds': (
+                    (
+                        {'sentence': r         , 'designated': d},
+                        {'sentence': r.negate(), 'designated': d},
+                    ),
+                    (
+                        {'sentence': sq, 'designated': not d},
+                    ),
+                ),
+            }
 
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                {'sentence': r         , 'designated': False},
-                {'sentence': r.negate(), 'designated': False},
-            ]
-
-        def add_to_adds(self, node, branch):
-            return [
-                [
-                    self._get_translation_node(node, branch)
-                ]
-            ]
-
-        # private util
-
-        def _get_translation_node(self, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            sq = Quantifier.Universal(v, si.negate())
-            return {'sentence': sq, 'designated': True}
-
-    class ExistentialNegatedUndesignated(DefaultNewConstantRule):
+    class ExistentialNegatedUndesignated(FDE.QuantifierSkinnyRule):
         """"
         From an unticked, undesignated, negated existential node `n` on a branch
         `b`, add an undesignated node to `b` with the negation of the inner
         sentence, substituting a constant new to `b` for the variable. Then
         tick `n`.
         """
+        designation = False
         negated     = True
         quantifier  = Quantifier.Existential
-        designation = False
         branch_level = 1
 
-        # NewConstantStoppingRule implementation
-
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                {'sentence': r.negate(), 'designated': False},
-            ]
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Quantified = self.sentence(node)
+            r = s.unquantify(branch.new_constant())
+            d = self.designation
+            return {
+                'adds': (({'sentence': r.negate(), 'designated': d},),),
+            }
 
     class UniversalDesignated(FDE.TabRules.UniversalDesignated):
         pass
 
-    class UniversalNegatedDesignated(DefaultNewConstantRule):
+    class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
         """
         From an unticked, designated, negated universal node `n` on a branch `b`,
         add two designated nodes to `b`. The first node is a universally quantified
@@ -335,31 +320,30 @@ class TableauxRules(object):
         negation of the inner sentence, substituting a constant new to `b` for the
         variable. Then tick `n`.
         """
+        designation = True
         negated     = True
         quantifier  = Quantifier.Universal
-        designation = True
         branch_level = 1
 
-        # NewConstantStoppingRule implementation
-
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            q = self.quantifier
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            disji = si.disjoin(si.negate())
-            sq = q(v, disji)
-
-            return [
-                {'sentence': sq        , 'designated': True},
-                {'sentence': r.negate(), 'designated': True},
-            ]
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Quantified = self.sentence(node)
+            r = s.unquantify(branch.new_constant())
+            disj = s.sentence.disjoin(s.sentence.negate())
+            sq = self.quantifier(s.variable, disj)
+            d = self.designation
+            return {
+                'adds': (
+                    (
+                        {'sentence': sq        , 'designated': d},
+                        {'sentence': r.negate(), 'designated': d},
+                    ),
+                ),
+            }
 
     class UniversalUndesignated(FDE.TabRules.UniversalUndesignated):
         pass
 
-    class UniversalNegatedUndesignated(ExistentialUndesignated):
+    class UniversalNegatedUndesignated(FDE.QuantifierSkinnyRule):
         """
         From an unticked, undesignated, negated universal node `n` on a branch `b`,
         make two branches `b'` and `b''` from `b`. On `b'` add two undesignated nodes,
@@ -367,36 +351,27 @@ class TableauxRules(object):
         of `n`, and the other with the negation of that sentence. On `b''`, add
         a designated node with the negatum of `n`. Then tick `n`.
         """
+        designation = False
         negated     = True
         quantifier  = Quantifier.Universal
-        designation = False
         branch_level = 2
 
-        # NewConstantStoppingRule implementation
-
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                {'sentence': r         , 'designated': False},
-                {'sentence': r.negate(), 'designated': False},
-            ]
-
-        def add_to_adds(self, node, branch):
-            return [
-                [
-                    self._get_translation_node(node, branch)
-                ]
-            ]
-
-        # private util
-
-        def _get_translation_node(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Quantified = self.sentence(node)
+            r = s.unquantify(branch.new_constant())
             sq = self.quantifier(s.variable, s.sentence)
-            return {'sentence': sq, 'designated': True}
+            d = self.designation
+            return {
+                'adds': (
+                    (
+                        {'sentence': r         , 'designated': d},
+                        {'sentence': r.negate(), 'designated': d},
+                    ),
+                    (
+                        {'sentence': sq, 'designated': not d},
+                    ),
+                ),
+            }
 
     closure_rules = [
         GlutClosure,
@@ -461,3 +436,4 @@ class TableauxRules(object):
             UniversalUndesignated,
         ],
     ]
+TableauxRules = TabRules

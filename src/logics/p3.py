@@ -26,10 +26,11 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 120
 
-from lexicals import Operator as Oper, Quantifier
-from . import fde, k3
+from lexicals import Operator as Oper, Quantifier, Quantified
+from proof.common import Branch, Node, Target
+from . import fde as FDE, k3 as K3
 
-class Model(k3.Model):
+class Model(K3.Model):
     """
     A :m:`P3` model is just like a :ref:`K3 model <k3-model>` with different tables
     for some of the connectives.
@@ -72,7 +73,7 @@ class Model(k3.Model):
         i = self.truth_values_list.index(value)
         return self.truth_values_list[i - 1]
 
-class TableauxSystem(fde.TableauxSystem):
+class TableauxSystem(FDE.TableauxSystem):
     """
     :m:`P3`'s Tableaux System inherits directly from the :ref:`FDE system <fde-system>`,
     employing designation markers, and building the trunk in the same way.
@@ -116,13 +117,13 @@ class TableauxSystem(fde.TableauxSystem):
         },
     }
 
-class DefaultNodeRule(fde.DefaultNodeRule):
+class DefaultNodeRule(FDE.DefaultNodeRule):
     pass
 
-class DefaultNewConstantRule(fde.DefaultNewConstantRule):
-    pass
+# class DefaultNewConstantRule(FDE.DefaultNewConstantRule):
+#     pass
 
-class DefaultAllConstantsRule(fde.DefaultAllConstantsRule):
+class DefaultAllConstantsRule(FDE.DefaultAllConstantsRule):
     pass
 
 class TableauxRules(object):
@@ -134,10 +135,10 @@ class TableauxRules(object):
     double-negation will branch.
     """
 
-    class GlutClosure(k3.TableauxRules.GlutClosure):
+    class GlutClosure(K3.TabRules.GlutClosure):
         pass
 
-    class DesignationClosure(fde.TableauxRules.DesignationClosure):
+    class DesignationClosure(FDE.TabRules.DesignationClosure):
         pass
 
     class DoubleNegationDesignated(DefaultNodeRule):
@@ -189,16 +190,16 @@ class TableauxRules(object):
                 ],
             }
 
-    class AssertionDesignated(fde.TableauxRules.AssertionDesignated):
+    class AssertionDesignated(FDE.TabRules.AssertionDesignated):
         pass
 
-    class AssertionNegatedDesignated(fde.TableauxRules.AssertionNegatedDesignated):
+    class AssertionNegatedDesignated(FDE.TabRules.AssertionNegatedDesignated):
         pass
 
-    class AssertionUndesignated(fde.TableauxRules.AssertionUndesignated):
+    class AssertionUndesignated(FDE.TabRules.AssertionUndesignated):
         pass
 
-    class AssertionNegatedUndesignated(fde.TableauxRules.AssertionNegatedUndesignated):
+    class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated):
         pass
 
     class ConjunctionDesignated(DefaultNodeRule):
@@ -318,16 +319,16 @@ class TableauxRules(object):
                 ],
             }
 
-    class DisjunctionDesignated(fde.TableauxRules.DisjunctionDesignated):
+    class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
         pass
             
-    class DisjunctionNegatedDesignated(fde.TableauxRules.DisjunctionNegatedDesignated):
+    class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated):
         pass
 
-    class DisjunctionUndesignated(fde.TableauxRules.DisjunctionUndesignated):
+    class DisjunctionUndesignated(FDE.TabRules.DisjunctionUndesignated):
         pass
 
-    class DisjunctionNegatedUndesignated(fde.TableauxRules.DisjunctionNegatedUndesignated):
+    class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
         pass
 
     class MaterialConditionalDesignated(DefaultNodeRule):
@@ -408,7 +409,7 @@ class TableauxRules(object):
                 ],
             }
 
-    class MaterialBiconditionalDesignated(fde.ConjunctionReducingRule):
+    class MaterialBiconditionalDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -416,7 +417,7 @@ class TableauxRules(object):
         designation = True
         conjunct_op = Oper.MaterialConditional
 
-    class MaterialBiconditionalNegatedDesignated(fde.ConjunctionReducingRule):
+    class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -425,7 +426,7 @@ class TableauxRules(object):
         designation = True
         conjunct_op = Oper.MaterialConditional
 
-    class MaterialBiconditionalUndesignated(fde.ConjunctionReducingRule):
+    class MaterialBiconditionalUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -433,7 +434,7 @@ class TableauxRules(object):
         designation = False
         conjunct_op = Oper.MaterialConditional
 
-    class MaterialBiconditionalNegatedUndesignated(fde.ConjunctionReducingRule):
+    class MaterialBiconditionalNegatedUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -494,7 +495,7 @@ class TableauxRules(object):
         operator    = Oper.Biconditional
         conjunct_op = Oper.Conditional
 
-    class ExistentialDesignated(fde.TableauxRules.ExistentialDesignated):
+    class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
         pass
 
     class ExistentialNegatedDesignated(DefaultAllConstantsRule):
@@ -522,7 +523,7 @@ class TableauxRules(object):
                 {'sentence': r.negate(), 'designated': True},
             ]
             
-    class ExistentialUndesignated(fde.TableauxRules.ExistentialUndesignated):
+    class ExistentialUndesignated(FDE.TabRules.ExistentialUndesignated):
         pass
 
     class ExistentialNegatedUndesignated(DefaultAllConstantsRule):
@@ -577,28 +578,29 @@ class TableauxRules(object):
                 {'sentence': r.negate(), 'designated': False},
             ]
 
-    class UniversalNegatedDesignated(DefaultNewConstantRule):
+    class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
         """
         From an unticked, negated universal node `n` on a branch `b`, add a
         designated node to `b` with the quantified sentence, substituting a
         constant new to `b` for the variable. Then tick `n`.
         """
+        designation = True
         negated     = True
         quantifier  = Quantifier.Universal
-        designation = True
         branch_level = 1
 
-        # NewConstantStoppingRule implementation
-
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                # Keep designation neutral for UniversalUndesignated
-                {'sentence': r, 'designated': self.designation},
-            ]
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Quantified = self.sentence(node)
+            r = s.unquantify(branch.new_constant())
+            d = self.designation
+            return {
+                'adds': (
+                    (
+                        # Keep designation neutral for UniversalUndesignated
+                        {'sentence': r, 'designated': d},
+                    ),
+                ),
+            }
 
     class UniversalUndesignated(UniversalNegatedDesignated):
         """
@@ -606,10 +608,10 @@ class TableauxRules(object):
         an undesignated node to `b` with the quantified sentence, substituting
         a constant new to `b` for the variable. Then tick `n`.
         """
-        negated     = False
         designation = False
+        negated     = False
 
-    class UniversalNegatedUndesignated(DefaultNewConstantRule):
+    class UniversalNegatedUndesignated(FDE.QuantifierSkinnyRule):
         """
         From an unticked, undesignated, negated universal node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -617,29 +619,25 @@ class TableauxRules(object):
         new to `b` for the variable. On `b''` add a designated node with the
         negatum of `n`. Then tick `n`.
         """
+        designation = False
         negated     = True
         quantifier  = Quantifier.Universal
-        designation = False
         branch_level = 2
 
-        # NewConstantStoppingRule implementation
-
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                {'sentence': r, 'designated': True},
-            ]
-
-        def add_to_adds(self, node, branch):
-            return [
-                [
-                    # Add the extra branch with the quantified sentence.
-                    {'sentence': self.sentence(node), 'designated': True},
-                ]
-            ]
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Quantified = self.sentence(node)
+            r = s.unquantify(branch.new_constant())
+            d = self.designation
+            return {
+                'adds': (
+                    (
+                        {'sentence': r, 'designated': not d},
+                    ),
+                    (
+                        {'sentence': s, 'designated': not d},
+                    ),
+                ),
+            }
 
     closure_rules = [
         GlutClosure,
