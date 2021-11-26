@@ -32,10 +32,11 @@ from lexicals import Atomic, Operated, Quantified, Predicate, Operator as Oper, 
 from proof.tableaux import TableauxSystem as BaseSystem, Rule
 from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule
 from proof.common import Branch, Node, Filters, Target
-from proof.helpers import AdzHelper, AppliedQuitFlag, FilterHelper, MaxConstantsTracker
+from proof.helpers import AdzHelper, AppliedNodeConstants, AppliedNodeCount, \
+    AppliedQuitFlag, FilterHelper, MaxConstantsTracker
 from errors import ModelValueError
 
-Identity: Predicate  = Predicates.System.Identity
+Identity:  Predicate = Predicates.System.Identity
 Existence: Predicate = Predicates.System.Existence
 
 class Model(BaseModel):
@@ -566,7 +567,7 @@ class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
-class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
+class QuantifierSkinnyRule(DefaultRule, AdzHelper.Apply):
 
     Helpers = (
         AppliedQuitFlag,
@@ -590,6 +591,21 @@ class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply)
 
     def score_candidate(self, target: Target):
         return -1 * self.tableau.branching_complexity(target.node)
+
+class QuantifierFatRule(QuantifierSkinnyRule):
+
+    Helpers = (
+        AppliedNodeCount,
+        AppliedNodeConstants,
+    )
+
+    def score_candidate(self, target: Target):
+        if target.get('flag'):
+            return 1
+        if self.adz.closure_score(target) == 1:
+            return 1
+        node_apply_count = self.apnc[target.branch].get(target.node, 0)
+        return float(1 / (node_apply_count + 1))
 
 class OldDefaultNodeRule(FilterNodeRule):
 

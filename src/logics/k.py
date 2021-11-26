@@ -717,46 +717,6 @@ class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
-class QuantifierSkinnyRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
-
-    Helpers = (
-        AppliedQuitFlag,
-        MaxConstantsTracker,
-    )
-
-    @FilterHelper.node_targets
-    def _get_targets(self, node: Node, branch: Branch):
-        if self.maxc.max_constants_exceeded(branch, node.get('world')):
-            self.nf.release(node, branch)
-            if self.apqf.get(branch):
-                return
-            return {
-                'flag': True,
-                'adds': ((self.maxc.quit_flag(branch),),),
-            }
-        return self._get_node_targets(node, branch)
-
-    def _get_node_targets(self, node: Node, branch: Branch):
-        raise NotImplementedError()
-
-    def score_candidate(self, target: Target):
-        return -1 * self.tableau.branching_complexity(target.node)
-
-class QuantifierFatRule(QuantifierSkinnyRule):
-
-    Helpers = (
-        AppliedNodeCount,
-        AppliedNodeConstants,
-    )
-
-    def score_candidate(self, target: Target):
-        if target.get('flag'):
-            return 1
-        if self.adz.closure_score(target) == 1:
-            return 1
-        node_apply_count = self.apnc[target.branch].get(target.node, 0)
-        return float(1 / (node_apply_count + 1))
-
 class OldDefaultNodeRule(FilterNodeRule):
     modal = True
     ticking = True
@@ -1159,7 +1119,7 @@ class TabRules(object):
         negated  = True
         operator = Oper.Biconditional
 
-    class Existential(QuantifierSkinnyRule):
+    class Existential(FDE.QuantifierSkinnyRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
@@ -1196,7 +1156,7 @@ class TabRules(object):
                 ),
             }
 
-    class Universal(QuantifierFatRule):
+    class Universal(FDE.QuantifierFatRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
