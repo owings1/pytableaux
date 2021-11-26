@@ -1163,31 +1163,14 @@ class TabRules(object):
         exists) for *v* into *s* does not appear at *w* on *b*, add a node with *w* and *r* to
         *b*. The node *n* is never ticked.
         """
-        ticking      = False
         quantifier   = Quantifier.Universal
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch):
-            unapplied = self.apcs.get_unapplied(node, branch)
-            # Only apply if there are no constants on the branch, or we have
-            # tracked a constant that we haven't applied to.
-            if branch.constants_count and not len(unapplied):
-                # Do not release the node from filters, since new constants
-                # can appear.
-                return
-            constants = unapplied or {Constant.first()}
+        def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch):
             s: Quantified = self.sentence(node)
+            r = s.unquantify(c)
             w: int = node.get('world')
-            return (
-                {'adds': ((n,),), 'constant': c} for (n, c) in (
-                    ({'sentence': s, 'world': w}, c)
-                    for (s, c) in (
-                        (s.unquantify(c), c)
-                        for c in constants
-                    )
-                )
-                if len(unapplied) > 0 or not branch.has(n)
-            )
+            return ({'sentence': r, 'world': w},)
 
     class UniversalNegated(ExistentialNegated):
         """

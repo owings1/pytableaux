@@ -114,12 +114,6 @@ class TableauxSystem(FDE.TableauxSystem):
 class DefaultNodeRule(FDE.DefaultNodeRule):
     pass
 
-# class DefaultNewConstantRule(FDE.DefaultNewConstantRule):
-#     pass
-
-class DefaultAllConstantsRule(FDE.DefaultAllConstantsRule):
-    pass
-
 class TabRules(object):
     """
     The Tableaux System for K3WQ contains the `FDE closure rule`_, and the
@@ -373,13 +367,13 @@ class TabRules(object):
                 ),
             }
 
-    closure_rules = [
+    closure_rules = (
         GlutClosure,
         DesignationClosure,
-    ]
+    )
 
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
 
             AssertionDesignated,
@@ -410,12 +404,12 @@ class TabRules(object):
             BiconditionalUndesignated,
             BiconditionalNegatedDesignated,
             BiconditionalNegatedUndesignated,
-        ],
-        [
+        ),
+        (
             # two-branching rules
             ConjunctionUndesignated,
-        ],
-        [
+        ),
+        (
             # three-branching rules
             DisjunctionDesignated,
             DisjunctionUndesignated,
@@ -423,17 +417,17 @@ class TabRules(object):
             ConjunctionNegatedUndesignated,
             # five-branching rules (formerly)
             DisjunctionNegatedUndesignated,
-        ],
-        [
+        ),
+        (
             ExistentialDesignated,
             ExistentialNegatedUndesignated,
             ExistentialUndesignated,
             UniversalNegatedDesignated,
             UniversalNegatedUndesignated,
-        ],
-        [
+        ),
+        (
             UniversalDesignated,
             UniversalUndesignated,
-        ],
-    ]
+        ),
+    )
 TableauxRules = TabRules

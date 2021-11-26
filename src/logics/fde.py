@@ -27,10 +27,10 @@ class Meta(object):
     category_display_order = 10
 
 from models import BaseModel
-from lexicals import Atomic, Operated, Quantified, Predicate, Operator as Oper, \
-    Quantifier, Predicates
+from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
+    Atomic, Operated, Quantified, Predicates
 from proof.tableaux import TableauxSystem as BaseSystem, Rule
-from proof.rules import AllConstantsStoppingRule, ClosureRule, FilterNodeRule
+from proof.rules import ClosureRule, FilterNodeRule
 from proof.common import Branch, Node, Filters, Target
 from proof.helpers import AdzHelper, AppliedNodeConstants, AppliedNodeCount, \
     AppliedQuitFlag, FilterHelper, MaxConstantsTracker
@@ -592,12 +592,55 @@ class QuantifierSkinnyRule(DefaultRule, AdzHelper.Apply):
     def score_candidate(self, target: Target):
         return -1 * self.tableau.branching_complexity(target.node)
 
-class QuantifierFatRule(QuantifierSkinnyRule):
+class QuantifierFatRule(DefaultRule, AdzHelper.Apply):
+
+    ticking = False
 
     Helpers = (
         AppliedNodeCount,
+        AppliedQuitFlag,
         AppliedNodeConstants,
+        MaxConstantsTracker,
     )
+
+    @FilterHelper.node_targets
+    def _get_targets(self, node: Node, branch: Branch):
+        if self.maxc.max_constants_exceeded(branch, node.get('world')):
+            self.nf.release(node, branch)
+            if self.apqf.get(branch):
+                return
+            return {
+                'flag': True,
+                'adds': ((self.maxc.quit_flag(branch),),),
+            }
+        # Only apply if there are no constants on the branch, or we have
+        # tracked a constant that we haven't applied to.
+        unapplied = self.apcs.get_unapplied(node, branch)
+        if branch.constants_count and not len(unapplied):
+            # Do not release the node from filters, since new constants
+            # can appear.
+            return
+        constants = unapplied or {Constant.first()}
+        return self._get_node_targets(node, branch)
+
+    def _get_node_targets(self, node: Node, branch: Branch):
+        unapplied = self.apcs.get_unapplied(node, branch)
+        constants = unapplied or {Constant.first()}
+        return (
+            {'adds': (nodes,), 'constant': c}
+            for (nodes, c) in (
+                (
+                    self._get_constant_nodes(node, c, branch),
+                    c,
+                )
+                for c in constants
+            )
+            if len(unapplied) > 0
+            or not branch.has_all(nodes)
+        )
+
+    def _get_constant_nodes(self, c: Constant, node: Node, branch: Branch):
+        raise NotImplementedError()
 
     def score_candidate(self, target: Target):
         if target.get('flag'):
@@ -617,18 +660,6 @@ class OldDefaultNodeRule(FilterNodeRule):
     def score_candidate(self, target):
         return self.adz.closure_score(target)
 
-class DefaultAllConstantsRule(OldDefaultNodeRule, AllConstantsStoppingRule):
-
-    ticking = False
-
-    def score_candidate(self, target):
-        if target.get('flag'):
-            return 1
-        if self.adz.closure_score(target) == 1:
-            return 1
-        node_apply_count = self.node_application_count(target.node, target.branch)
-        return float(1 / (node_apply_count + 1))
-
 class ConjunctionReducingRule(DefaultNodeRule):
 
     branch_level = 1
@@ -641,13 +672,9 @@ class ConjunctionReducingRule(DefaultNodeRule):
         s = oper((lhs, rhs)).conjoin(oper((rhs, lhs)))
         if self.negated:
             s = s.negate()
-
+        d = self.designation
         return {
-            'adds': [
-                [
-                    {'sentence': s, 'designated': self.designation},
-                ],
-            ],
+            'adds': (({'sentence': s, 'designated': d},),),
         }
 
 class TabRules(object):
@@ -682,12 +709,12 @@ class TabRules(object):
             # Delegate to tracker
             return self.ntch.cached_target(branch)
 
-        def example_nodes(self, branch = None):
+        def example_nodes(self):
             a = Atomic.first()
-            return [
+            return (
                 {'sentence': a, 'designated': True },
                 {'sentence': a, 'designated': False},
-            ]
+            )
 
         # private util
 
@@ -710,13 +737,10 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        # keep designation neutral for inheritance below
-                        {'sentence': s.operand, 'designated': self.designation}
-                    ]
-                ]
+                # keep designation neutral for inheritance below
+                'adds': (({'sentence': s.operand, 'designated': d},),),
             }
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
@@ -738,13 +762,10 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        # keep designation neutral for inheritance below
-                        {'sentence': s.operand, 'designated': self.designation}
-                    ]
-                ]
+                # keep designation neutral for inheritance below
+                'adds': (({'sentence': s.operand, 'designated': d},),),
             }
 
     class AssertionUndesignated(AssertionDesignated):
@@ -767,13 +788,10 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        # keep designation neutral for inheritance below
-                        {'sentence': s.operand.negate(), 'designated': self.designation}
-                    ]
-                ]
+                # keep designation neutral for inheritance below
+                'adds': (({'sentence': s.operand.negate(), 'designated': d},),),
             }
 
     class AssertionNegatedUndesignated(AssertionNegatedDesignated):
@@ -794,14 +812,15 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
+            d = self.designation
             return {
-                'adds': [
-                    [
+                'adds': (
+                    tuple(
                         # keep designation neutral for inheritance below
-                        {'sentence': s, 'designated': self.designation}
+                        {'sentence': s, 'designated': d}
                         for s in self.sentence(node)
-                    ]
-                ]
+                    ),
+                ),
             }
 
     class ConjunctionNegatedDesignated(DefaultNodeRule):
@@ -815,16 +834,14 @@ class TabRules(object):
         operator    = Oper.Conjunction
         branch_level = 2
 
-        @FilterHelper.node_targets
-        def _get_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        # keep designation neutral for inheritance below
-                        {'sentence': s.negate(), 'designated': self.designation},
-                    ]
+                'adds': tuple(
+                    # keep designation neutral for inheritance below
+                    ({'sentence': s.negate(), 'designated': d},)
                     for s in self.sentence(node)
-                ]
+                )
             }
 
     class ConjunctionUndesignated(DefaultNodeRule):
@@ -838,14 +855,13 @@ class TabRules(object):
         branch_level = 2
 
         def _get_node_targets(self, node: Node, branch: Branch):
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        # keep designation neutral for inheritance below
-                        {'sentence': s, 'designated': self.designation},
-                    ]
+                'adds': tuple(
+                    # keep designation neutral for inheritance below
+                    ({'sentence': s, 'designated': d},)
                     for s in self.sentence(node)
-                ]
+                ),
             }
 
     class ConjunctionNegatedUndesignated(DefaultNodeRule):
@@ -859,14 +875,15 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
+            d = self.designation
             return {
-                'adds': [
-                    [
+                'adds': (
+                    tuple(
                         # keep designation neutral for inheritance below
-                        {'sentence': s.negate(), 'designated': self.designation}
+                        {'sentence': s.negate(), 'designated': d}
                         for s in self.sentence(node)
-                    ]
-                ]
+                    ),
+                ),
             }
 
     class DisjunctionDesignated(ConjunctionUndesignated):
@@ -916,16 +933,13 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
             d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs.negate(), 'designated': d},
-                    ],
-                    [
-                        {'sentence': s.rhs         , 'designated': d},
-                    ],
-                ],
+                'adds': (
+                    ({'sentence': lhs.negate(), 'designated': d},),
+                    ({'sentence': rhs         , 'designated': d},),
+                ),
             }
 
     class MaterialConditionalNegatedDesignated(DefaultNodeRule):
@@ -941,14 +955,15 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
             d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs          , 'designated': d},
-                        {'sentence': s.rhs.negate() , 'designated': d},
-                    ],
-                ],
+                'adds': (
+                    (
+                        {'sentence': lhs          , 'designated': d},
+                        {'sentence': rhs.negate() , 'designated': d},
+                    ),
+                ),
             }
 
     class MaterialConditionalUndesignated(DefaultNodeRule):
@@ -963,14 +978,15 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
             d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs.negate(), 'designated': d},
-                        {'sentence': s.rhs         , 'designated': d},
-                    ],
-                ],
+                'adds': (
+                    (
+                        {'sentence': lhs.negate(), 'designated': d},
+                        {'sentence': rhs         , 'designated': d},
+                    ),
+                ),
             }
 
     class MaterialConditionalNegatedUndesignated(DefaultNodeRule):
@@ -987,16 +1003,13 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
             d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs        , 'designated': d},
-                    ],
-                    [
-                        {'sentence': s.rhs.negate(), 'designated': d},
-                    ],
-                ],
+                'adds': (
+                    ({'sentence': lhs         , 'designated': d},),
+                    ({'sentence': rhs.negate(), 'designated': d},),
+                ),
             }
 
     class MaterialBiconditionalDesignated(DefaultNodeRule):
@@ -1013,18 +1026,19 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
             d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs.negate(), 'designated': d},
-                        {'sentence': s.rhs.negate(), 'designated': d},
-                    ],
-                    [
-                        {'sentence': s.rhs, 'designated': d},
-                        {'sentence': s.lhs, 'designated': d},
-                    ],
-                ],
+                'adds': (
+                    (
+                        {'sentence': lhs.negate(), 'designated': d},
+                        {'sentence': rhs.negate(), 'designated': d},
+                    ),
+                    (
+                        {'sentence': rhs, 'designated': d},
+                        {'sentence': lhs, 'designated': d},
+                    ),
+                ),
             }
 
     class MaterialBiconditionalNegatedDesignated(DefaultNodeRule):
@@ -1042,18 +1056,19 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
             d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs         , 'designated': d},
-                        {'sentence': s.rhs.negate(), 'designated': d},
-                    ],
-                    [
-                        {'sentence': s.lhs.negate(), 'designated': d},
-                        {'sentence': s.rhs         , 'designated': d},
-                    ],
-                ],
+                'adds': (
+                    (
+                        {'sentence': lhs         , 'designated': d},
+                        {'sentence': rhs.negate(), 'designated': d},
+                    ),
+                    (
+                        {'sentence': lhs.negate(), 'designated': d},
+                        {'sentence': rhs         , 'designated': d},
+                    ),
+                ),
             }
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
@@ -1217,18 +1232,13 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Quantified = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            sq = self.convert_to(v, si.negate())
+            sq = self.convert_to(s.variable, s.sentence.negate())
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': sq, 'designated': self.designation},
-                    ],
-                ],
+                'adds': (({'sentence': sq, 'designated': d},),),
             }
 
-    class ExistentialUndesignated(DefaultAllConstantsRule):
+    class ExistentialUndesignated(QuantifierFatRule):
         """
         From an undesignated existential node *n* on a branch *b*, for any constant *c* on
         *b* such that the result *r* of substituting *c* for the variable bound by the
@@ -1240,16 +1250,11 @@ class TabRules(object):
         quantifier  = Quantifier.Existential
         branch_level = 1
 
-        # AllConstantsStoppingRule implementation
-
-        def get_new_nodes_for_constant(self, c, node, branch):
+        def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch):
             s: Quantified = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                {'sentence': r, 'designated': self.designation},
-            ]
+            r = s.unquantify(c)
+            d = self.designation
+            return ({'sentence': r, 'designated': d},)
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """
@@ -1304,12 +1309,12 @@ class TabRules(object):
         quantifier  = Quantifier.Universal
         convert_to  = Quantifier.Existential
 
-    closure_rules = [
+    closure_rules = (
         DesignationClosure,
-    ]
+    )
 
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
             AssertionDesignated,
             AssertionUndesignated,
@@ -1329,8 +1334,8 @@ class TabRules(object):
             UniversalNegatedUndesignated,
             DoubleNegationDesignated,
             DoubleNegationUndesignated,
-        ],
-        [
+        ),
+        (
             # branching rules
             ConjunctionNegatedDesignated,
             ConjunctionUndesignated,
@@ -1348,14 +1353,14 @@ class TabRules(object):
             BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated,
-        ],
-        [
+        ),
+        (
             ExistentialDesignated,
             ExistentialUndesignated,
-        ],
-        [
+        ),
+        (
             UniversalDesignated,
             UniversalUndesignated,
-        ],
-    ]
+        ),
+    )
 TableauxRules = TabRules

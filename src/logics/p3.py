@@ -26,7 +26,8 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 120
 
-from lexicals import Operator as Oper, Quantifier, Quantified
+from lexicals import Constant, Operator as Oper, Quantifier, \
+    Quantified, Operated
 from proof.common import Branch, Node, Target
 from . import fde as FDE, k3 as K3
 
@@ -117,16 +118,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
-class DefaultNodeRule(FDE.DefaultNodeRule):
-    pass
-
-# class DefaultNewConstantRule(FDE.DefaultNewConstantRule):
-#     pass
-
-class DefaultAllConstantsRule(FDE.DefaultAllConstantsRule):
-    pass
-
-class TableauxRules(object):
+class TabRules(object):
     """
     The Tableaux System for :m:`P3` contains the FDE closure rule, and the
     :m:`K3` closure rule. Some of the operator rules are the same as :ref:`FDE <FDE>`,
@@ -141,53 +133,51 @@ class TableauxRules(object):
     class DesignationClosure(FDE.TabRules.DesignationClosure):
         pass
 
-    class DoubleNegationDesignated(DefaultNodeRule):
+    class DoubleNegationDesignated(FDE.DefaultNodeRule):
         """
         From an unticked, designated, double-negation node `n` on a branch `b`,
         add two undesignated nodes to `b`, one with the double-negatum, and one
         with the negatum. Then tick `n`.
         """
+        designation = True
         negated     = True
         operator    = Oper.Negation
-        designation = True
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             si = s.operand
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': si.negate(), 'designated': False},
-                        {'sentence': si         , 'designated': False},
-                    ],
-                ],
+                'adds': (
+                    (
+                        {'sentence': si.negate(), 'designated': not d},
+                        {'sentence': si         , 'designated': not d},
+                    ),
+                ),
             }
 
-    class DoubleNegationUndesignated(DefaultNodeRule):
+    class DoubleNegationUndesignated(FDE.DefaultNodeRule):
         """
         From an unticked, undesignated, double-negation node `n` on a branch `b`,
         make two branches `b'` and `b''` from `b`. On `b'` add a designated
         node with the negatum, and on `b'` add a designated node with the
         double-negatum. Then tick `n`.
         """
+        designation = False
         negated     = True
         operator    = Oper.Negation
-        designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             si = s.operand
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': si.negate(), 'designated': True},
-                    ],
-                    [
-                        {'sentence': si         , 'designated': True},
-                    ],
-                ],
+                'adds': (
+                    ({'sentence': si.negate(), 'designated': not d},),
+                    ({'sentence': si         , 'designated': not d},),
+                ),
             }
 
     class AssertionDesignated(FDE.TabRules.AssertionDesignated):
@@ -202,30 +192,32 @@ class TableauxRules(object):
     class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated):
         pass
 
-    class ConjunctionDesignated(DefaultNodeRule):
+    class ConjunctionDesignated(FDE.DefaultNodeRule):
         """
         From an unticked, designated conjunction node `n` on a branch `b`, add
         four undesignated nodes to `b`, one for each conjunct, and one for the
         negation of each conjunct. Then tick `n`.
         """
-        operator    = Oper.Conjunction
         designation = True
+        operator    = Oper.Conjunction
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            lhs, rhs = s
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs.negate(), 'designated': False},
-                        {'sentence': s.lhs         , 'designated': False},
-                        {'sentence': s.rhs.negate(), 'designated': False},
-                        {'sentence': s.rhs         , 'designated': False},
-                    ],
-                ],
+                'adds': (
+                    (
+                        {'sentence': lhs.negate(), 'designated': not d},
+                        {'sentence': lhs         , 'designated': not d},
+                        {'sentence': rhs.negate(), 'designated': not d},
+                        {'sentence': rhs         , 'designated': not d},
+                    ),
+                ),
             }
 
-    class ConjunctionNegatedDesignated(DefaultNodeRule):
+    class ConjunctionNegatedDesignated(FDE.DefaultNodeRule):
         """
         From an unticked, designated, negated conjunction node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -234,27 +226,29 @@ class TableauxRules(object):
         conjunct, and an undesignated node with the negation of the frist conjunct.
         Then tick `n`.
         """
+        designation = True
         negated     = True
         operator    = Oper.Conjunction
-        designation = True
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            lhs, rhs = s
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs         , 'designated': True},
-                        {'sentence': s.rhs.negate(), 'designated': False},
-                    ],
-                    [
-                        {'sentence': s.rhs         , 'designated': True},
-                        {'sentence': s.lhs.negate(), 'designated': False},
-                    ],
-                ],
+                'adds': (
+                    (
+                        {'sentence': lhs         , 'designated': d},
+                        {'sentence': rhs.negate(), 'designated': not d},
+                    ),
+                    (
+                        {'sentence': rhs         , 'designated': d},
+                        {'sentence': lhs.negate(), 'designated': not d},
+                    ),
+                ),
             }
 
-    class ConjunctionUndesignated(DefaultNodeRule):
+    class ConjunctionUndesignated(FDE.DefaultNodeRule):
         """
         From an unticked, undesignated conjunction node `n` on a branch `b`, make
         four branches `b'`, `b''`, `b'''`, and `b''''` from `b`. On `b'`, add a
@@ -263,30 +257,24 @@ class TableauxRules(object):
         node with the negation of the second conjunct. On `b''''`, add a designated
         node with the second conjunct. Then tick `n`.
         """
-        operator    = Oper.Conjunction
         designation = False
+        operator    = Oper.Conjunction
         branch_level = 4
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            lhs, rhs = s
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs.negate(), 'designated': True},
-                    ],
-                    [
-                        {'sentence': s.lhs         , 'designated': True},
-                    ],
-                    [
-                        {'sentence': s.rhs.negate(), 'designated': True},
-                    ],
-                    [
-                        {'sentence': s.rhs         , 'designated': True},
-                    ],
-                ],
+                'adds': (
+                    ({'sentence': lhs.negate(), 'designated': not d},),
+                    ({'sentence': lhs         , 'designated': not d},),
+                    ({'sentence': rhs.negate(), 'designated': not d},),
+                    ({'sentence': rhs         , 'designated': not d},),
+                ),
             }
 
-    class ConjunctionNegatedUndesignated(DefaultNodeRule):
+    class ConjunctionNegatedUndesignated(FDE.DefaultNodeRule):
         """
         From an unticked, undesignated, negated conjunction node `n` on a branch
         `b`, make three branches `b'`, `b''`, and `b'''` from `b`. On `b'`, add
@@ -295,28 +283,26 @@ class TableauxRules(object):
         the first conjunct. On `b'''`, add a designated node with the negation
         of the second conjunct. Then tick `n`.
         """
+        designation = False
         negated     = True
         operator    = Oper.Conjunction
-        designation = False
         branch_level = 3
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            lhs, rhs = s
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs.negate(), 'designated': False},
-                        {'sentence': s.lhs         , 'designated': False},
-                        {'sentence': s.rhs.negate(), 'designated': False},
-                        {'sentence': s.rhs         , 'designated': False},
-                    ],
-                    [
-                        {'sentence': s.lhs.negate(), 'designated': True},
-                    ],
-                    [
-                        {'sentence': s.rhs.negate(), 'designated': True},
-                    ],
-                ],
+                'adds': (
+                    (
+                        {'sentence': lhs.negate(), 'designated': d},
+                        {'sentence': lhs         , 'designated': d},
+                        {'sentence': rhs.negate(), 'designated': d},
+                        {'sentence': rhs         , 'designated': d},
+                    ),
+                    ({'sentence': lhs.negate(), 'designated': not d},),
+                    ({'sentence': rhs.negate(), 'designated': not d},),
+                ),
             }
 
     class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
@@ -331,116 +317,105 @@ class TableauxRules(object):
     class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
         pass
 
-    class MaterialConditionalDesignated(DefaultNodeRule):
+    class MaterialConditionalDesignated(FDE.DefaultNodeRule):
         """
         This rule reduces to a disjunction.
         """
-        operator    = Oper.MaterialConditional
         designation = True
+        operator    = Oper.MaterialConditional
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            lhs, rhs = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            lhs, rhs = s
             disj = lhs.negate().disjoin(rhs)
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': disj, 'designated': self.designation},
-                    ],
-                ],
+                'adds': (({'sentence': disj, 'designated': d},),),
             }
             
-    class MaterialConditionalNegatedDesignated(DefaultNodeRule):
+    class MaterialConditionalNegatedDesignated(FDE.DefaultNodeRule):
         """
         This rule reduces to a disjunction.
         """
-        negated     = True
-        operator    = Oper.MaterialConditional
         designation = True
-        branch_level = 1
-
-        def _get_node_targets(self, node, branch):
-            lhs, rhs = self.sentence(node)
-            disj = lhs.negate().disjoin(rhs)
-            return {
-                'adds': [
-                    [
-                        {'sentence': disj.negate(), 'designated': self.designation},
-                    ],
-                ],
-            }
-
-    class MaterialConditionalUndesignated(DefaultNodeRule):
-        """
-        This rule reduces to a disjunction.
-        """
-        operator    = Oper.MaterialConditional
-        designation = False
-        branch_level = 1
-
-        def _get_node_targets(self, node, branch):
-            lhs, rhs = self.sentence(node)
-            disj = lhs.negate().disjoin(rhs)
-            return {
-                'adds': [
-                    [
-                        {'sentence': disj, 'designated': self.designation},
-                    ],
-                ],
-            }
-
-    class MaterialConditionalNegatedUndesignated(DefaultNodeRule):
-        """
-        This rule reduces to a disjunction.
-        """
         negated     = True
         operator    = Oper.MaterialConditional
-        designation = False
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            lhs, rhs = self.sentence(node)
-            disj = lhs.negate().disjoin(rhs)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            disj = s.lhs.negate().disjoin(s.rhs)
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        {'sentence': disj.negate(), 'designated': self.designation},
-                    ],
-                ],
+                'adds': (({'sentence': disj.negate(), 'designated': d},),),
+            }
+
+    class MaterialConditionalUndesignated(FDE.DefaultNodeRule):
+        """
+        This rule reduces to a disjunction.
+        """
+        designation = False
+        operator    = Oper.MaterialConditional
+        branch_level = 1
+
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            disj = s.lhs.negate().disjoin(s.rhs)
+            d = self.designation
+            return {
+                'adds': (({'sentence': disj, 'designated': d},),),
+            }
+
+    class MaterialConditionalNegatedUndesignated(FDE.DefaultNodeRule):
+        """
+        This rule reduces to a disjunction.
+        """
+        designation = False
+        negated     = True
+        operator    = Oper.MaterialConditional
+        branch_level = 1
+
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            disj = s.lhs.negate().disjoin(s.rhs)
+            d = self.designation
+            return {
+                'adds': (({'sentence': disj.negate(), 'designated': d},),),
             }
 
     class MaterialBiconditionalDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        operator    = Oper.MaterialBiconditional
         designation = True
+        operator    = Oper.MaterialBiconditional
         conjunct_op = Oper.MaterialConditional
 
     class MaterialBiconditionalNegatedDesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
+        designation = True
         negated     = True
         operator    = Oper.MaterialBiconditional
-        designation = True
         conjunct_op = Oper.MaterialConditional
 
     class MaterialBiconditionalUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
-        operator    = Oper.MaterialBiconditional
         designation = False
+        operator    = Oper.MaterialBiconditional
         conjunct_op = Oper.MaterialConditional
 
     class MaterialBiconditionalNegatedUndesignated(FDE.ConjunctionReducingRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
+        designation = False
         negated     = True
         operator    = Oper.MaterialBiconditional
-        designation = False
         conjunct_op = Oper.MaterialConditional
 
     class ConditionalDesignated(MaterialConditionalDesignated):
@@ -498,7 +473,7 @@ class TableauxRules(object):
     class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
         pass
 
-    class ExistentialNegatedDesignated(DefaultAllConstantsRule):
+    class ExistentialNegatedDesignated(FDE.QuantifierFatRule):
         """
         From an unticked, designated, negated existential node `n` on a branch
         `b`, for any constant `c` on `b`, let `r` be the result of substituting
@@ -507,26 +482,21 @@ class TableauxRules(object):
         `r` to `b`. If there are no constants yet on `b`, use a new constant.
         The node `n` is never ticked.
         """
+        designation = True
         negated     = True
         quantifier  = Quantifier.Existential
-        designation = True
         branch_level = 1
 
-        # AllConstantsStoppingRule implementation
+        def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch):
+            s: Quantified = self.sentence(node)
+            r = s.unquantify(c)
+            d = self.designation
+            return ({'sentence': r.negate(), 'designated': d},)
 
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                {'sentence': r.negate(), 'designated': True},
-            ]
-            
     class ExistentialUndesignated(FDE.TabRules.ExistentialUndesignated):
         pass
 
-    class ExistentialNegatedUndesignated(DefaultAllConstantsRule):
+    class ExistentialNegatedUndesignated(FDE.QuantifierFatRule):
         """
         From an unticked, undesignated, negated existential node `n` on a branch
         `b`, for a new constant `c` for `b`, let `r` be the result of substituting
@@ -535,23 +505,18 @@ class TableauxRules(object):
         of `r` to `b`. If there are no constants yet on `b`, use a new constant.
         The node `n` is never ticked.
         """
+        designation = True
         negated     = True
         quantifier  = Quantifier.Existential
-        designation = True
         branch_level = 1
 
-        # AllConstantsStoppingRule implementation
+        def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch):
+            s: Quantified = self.sentence(node)
+            r = s.unquantify(c)
+            d = self.designation
+            return ({'sentence': r.negate(), 'designated': not d},)
 
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                {'sentence': r.negate(), 'designated': False}
-            ]
-
-    class UniversalDesignated(DefaultAllConstantsRule):
+    class UniversalDesignated(FDE.QuantifierFatRule):
         """
         From a designated universal node `n` on a branch `b`, if there are no
         constants on `b`, add two undesignated nodes to `b`, one with the
@@ -561,22 +526,19 @@ class TableauxRules(object):
         provided that the both the nodes to be added do not already appear on
         `b`. The node is never ticked.
         """
+        designation = True
         negated     = False
         quantifier  = Quantifier.Universal
-        designation = True
         branch_level = 1
 
-        # AllConstantsStoppingRule implementation
-
-        def get_new_nodes_for_constant(self, c, node, branch):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            r = si.substitute(c, v)
-            return [
-                {'sentence':        r , 'designated': False},
-                {'sentence': r.negate(), 'designated': False},
-            ]
+        def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch):
+            s: Quantified = self.sentence(node)
+            r = s.unquantify(c)
+            d = self.designation
+            return (
+                {'sentence': r         , 'designated': not d},
+                {'sentence': r.negate(), 'designated': not d},
+            )
 
     class UniversalNegatedDesignated(FDE.QuantifierSkinnyRule):
         """
@@ -594,12 +556,8 @@ class TableauxRules(object):
             r = s.unquantify(branch.new_constant())
             d = self.designation
             return {
-                'adds': (
-                    (
-                        # Keep designation neutral for UniversalUndesignated
-                        {'sentence': r, 'designated': d},
-                    ),
-                ),
+                # Keep designation neutral for UniversalUndesignated
+                'adds': (({'sentence': r, 'designated': d},),),
             }
 
     class UniversalUndesignated(UniversalNegatedDesignated):
@@ -630,24 +588,19 @@ class TableauxRules(object):
             d = self.designation
             return {
                 'adds': (
-                    (
-                        {'sentence': r, 'designated': not d},
-                    ),
-                    (
-                        {'sentence': s, 'designated': not d},
-                    ),
+                    ({'sentence': r, 'designated': not d},),
+                    ({'sentence': s, 'designated': not d},),
                 ),
             }
 
-    closure_rules = [
+    closure_rules = (
         GlutClosure,
         DesignationClosure,
-    ]
+    )
 
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
-
             AssertionDesignated,
             AssertionUndesignated,
             AssertionNegatedDesignated,
@@ -677,8 +630,8 @@ class TableauxRules(object):
             BiconditionalUndesignated,
             BiconditionalNegatedDesignated,
             BiconditionalNegatedUndesignated,
-        ],
-        [
+        ),
+        (
             # two-branching rules
             DoubleNegationUndesignated,
 
@@ -686,25 +639,26 @@ class TableauxRules(object):
 
             DisjunctionDesignated,
             DisjunctionNegatedUndesignated,            
-        ],
-        [
+        ),
+        (
             # three-branching rules
             ConjunctionNegatedUndesignated,
-        ],
-        [
+        ),
+        (
             # four-branching rules
             ConjunctionUndesignated,
-        ],
-        [
+        ),
+        (
             ExistentialDesignated,
             UniversalUndesignated,
             UniversalNegatedDesignated,
             UniversalNegatedUndesignated,
-        ],
-        [
+        ),
+        (
             UniversalDesignated,
             ExistentialUndesignated,
             ExistentialNegatedDesignated,
             ExistentialNegatedUndesignated,
-        ]
-    ]
+        )
+    )
+TableauxRules = TabRules
