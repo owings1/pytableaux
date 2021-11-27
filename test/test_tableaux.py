@@ -364,53 +364,6 @@ class TestClosureRule(object):
 class FilterNodeRule(Rule):
     Helpers = (FilterHelper,)
 
-@skip
-class PotentialNodeRule(object):
-
-    def test_not_impl_various(self):
-        rule = PotentialNodeRule(Tableau())
-        with raises(NotImplementedError):
-            rule.apply_to_node_target(None, None, None)
-
-    class TestFilterNodeRule(object):
-
-        def proof_with_rule(self, Rule):
-            proof = Tableau()
-            proof.rules.add(Rule)
-            return (proof, proof.rules.get(Rule))
-            
-        def test_applies_to_empty_nodes_when_no_properties_defined(self):
-
-            class MockFilterRule(FilterNodeRule):
-                pass
-
-            proof, rule = self.proof_with_rule(MockFilterRule)
-            node = Node()
-            branch = proof.branch().add(node)
-            assert rule.get_target_for_node(node, branch)
-
-        def test_default_does_not_apply_to_ticked_node(self):
-
-            class MockFilterRule(FilterNodeRule):
-                pass
-
-            proof, rule = self.proof_with_rule(MockFilterRule)
-            node = Node()
-            branch = proof.branch().add(node)
-            branch.tick(node)
-            assert not rule.get_target_for_node(node, branch)
-
-        def test_applies_to_ticked_node_with_prop_none(self):
-
-            class MockFilterRule(FilterNodeRule):
-                ticked = None
-
-            proof, rule = self.proof_with_rule(MockFilterRule)
-            node = Node()
-            branch = proof.branch().add(node)
-            branch.tick(node)
-            assert rule.get_target_for_node(node, branch)
-
 class TestFilters(BaseSuite):
 
     def test_MethodFilter_node_has_props_sentence(self):

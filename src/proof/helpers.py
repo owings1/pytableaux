@@ -441,7 +441,10 @@ class FilterHelper(FilterNodeCache):
 
     def gc(self):
         for branch, node in self.__to_discard:
-            self[branch].discard(node)
+            try:
+                self[branch].discard(node)
+            except KeyError:
+                pass
         self.__to_discard.clear()
 
     def __init__(self, rule: Rule, attr: str = None, *args, **kw):

@@ -56,7 +56,7 @@ class TableauxSystem(K.TableauxSystem):
     """
     pass
 
-class TableauxRules(object):
+class TabRules(object):
     """
     The Tableaux Rules for S4 contain the rules for :ref:`T <T>`, as well as an additional
     Transitive rule, which operates on the accessibility relation for worlds.
@@ -82,6 +82,7 @@ class TableauxRules(object):
             :implements: K.DefaultNodeRule
             """
             if self.maxw.max_worlds_reached(branch):
+                self.nf.release(node, branch)
                 return
             w1 = node['world1']
             w2 = node['world2']
@@ -161,3 +162,4 @@ class TableauxRules(object):
             K.TabRules.Universal,
         ),
     )
+TableauxRules = TabRules

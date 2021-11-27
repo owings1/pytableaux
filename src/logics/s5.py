@@ -27,17 +27,16 @@ class Meta(object):
     category = 'Bivalent Modal'
     category_display_order = 5
 
-from proof.rules import PotentialNodeRule
-from proof.helpers import MaxWorldsTracker
-
-from . import k, t, s4
+from proof.common import Branch, Node, Target
+from proof.helpers import FilterHelper, MaxWorldsTracker, VisibleWorldsIndex
+from . import k as K, t as T, s4 as S4
 
 # TODO:
 # Some problematic arguments for S5:
 #
 #   VxLUFxMSyLGy |- b       or   ∀x◻(Fx → ◇∃y◻Gy) |- B  (also bad for S4)
 
-class Model(s4.Model):
+class Model(S4.Model):
     """
     An S5 model is just like an :ref:`S4 model <s4-model>` with an additional
     *symmetric* restriction on the access relation.
@@ -55,20 +54,20 @@ class Model(s4.Model):
                 return
             self.access.update(to_add)
 
-class TableauxSystem(k.TableauxSystem):
+class TableauxSystem(K.TableauxSystem):
     """
     S5's Tableaux System inherits directly inherits directly from K.
     """
     pass
 
-class TableauxRules(object):
+class TabRules(object):
     """
     The Tableaux Rules for S5 contain the rules for :ref:`S4 <S4>`, as well
     as an additional Symmetric rule, which operates on the accessibility
     relation for worlds.
     """
     
-    class Symmetric(PotentialNodeRule):
+    class Symmetric(K.DefaultRule):
         """
         .. _symmetric-rule:
 
@@ -76,104 +75,80 @@ class TableauxRules(object):
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
         """
         Helpers = (
-            *PotentialNodeRule.Helpers,
-            ('maxw', MaxWorldsTracker),
+            MaxWorldsTracker,
+            VisibleWorldsIndex,
         )
-        Timers = (
-            *PotentialNodeRule.Timers,
-            'is_potential_node',
-        )
-        modal = True
         access = True
-        ticked = None
+        opts = {'is_rank_optim': False}
 
-        def __init__(self, *args, **opts):
-            super().__init__(*args, **opts)
-            self.opts['is_rank_optim'] = False
+        @FilterHelper.node_targets
+        def _get_targets(self, node: Node, branch: Branch):
+            if not self.maxw.max_worlds_exceeded(branch):
+                w1, w2 = node['world1'], node['world2']
+                if not self.visw.has(branch, w2, w1):
+                    return {'world1': w2, 'world2': w1}
+            self.nf.release(node, branch)
 
-        # rule implementation
-
-        def is_potential_node(self, node, branch):
-            ret = None
-            with self.timers['is_potential_node']:
-                if node.has('world1') and node.has('world2'):
-                    w1 = node['world1']
-                    w2 = node['world2']
-                    ret = not branch.has_access(w2, w1)
-            return ret
-
-        def get_target_for_node(self, node, branch):
-            if not self.__should_apply(branch):
-                return
-            if not branch.has({'world1': node['world2'], 'world2': node['world1']}):
-                return {
-                    'world1' : node['world2'],
-                    'world2' : node['world1'],
-                }
-
-        def apply_to_node_target(self, node, branch, target):
-            branch.add({
-                'world1': target['world1'],
-                'world2': target['world2'],
+        def _apply(self, target: Target):
+            target.branch.add({
+                'world1': target.world1,
+                'world2': target.world2,
             })
 
         def example_nodes(self):
             return ({'world1': 0, 'world2': 1},)
 
-        def __should_apply(self, branch):
-            # why apply when necessity will not apply
-            return not self.maxw.max_worlds_reached(branch)
+    closure_rules = K.TabRules.closure_rules
 
-    closure_rules = list(k.TableauxRules.closure_rules)
-
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
-            k.TableauxRules.IdentityIndiscernability,
-            k.TableauxRules.Assertion,
-            k.TableauxRules.AssertionNegated,
-            k.TableauxRules.Conjunction, 
-            k.TableauxRules.DisjunctionNegated, 
-            k.TableauxRules.MaterialConditionalNegated,
-            k.TableauxRules.ConditionalNegated,
-            k.TableauxRules.DoubleNegation,
-            k.TableauxRules.PossibilityNegated,
-            k.TableauxRules.NecessityNegated,
-            k.TableauxRules.ExistentialNegated,
-            k.TableauxRules.UniversalNegated,
-        ],
+            K.TabRules.IdentityIndiscernability,
+            K.TabRules.Assertion,
+            K.TabRules.AssertionNegated,
+            K.TabRules.Conjunction, 
+            K.TabRules.DisjunctionNegated, 
+            K.TabRules.MaterialConditionalNegated,
+            K.TabRules.ConditionalNegated,
+            K.TabRules.DoubleNegation,
+            K.TabRules.PossibilityNegated,
+            K.TabRules.NecessityNegated,
+            K.TabRules.ExistentialNegated,
+            K.TabRules.UniversalNegated,
+        ),
         # Things seem to work better with the Transitive rule before
         # the modal operator rules, and the other access rules after.
         # However, if we put the Transitive after, then some trees
         # fail to close. It is so far an open question whether this
         # is a good idea.
-        [
-            s4.TableauxRules.Transitive,
-        ],
-        [
+        (
+            S4.TabRules.Transitive,
+        ),
+        (
             # modal operator rules
-            k.TableauxRules.Necessity,
-            k.TableauxRules.Possibility,
-        ],
-        [
-            t.TableauxRules.Reflexive,
-        ],
-        [
+            K.TabRules.Necessity,
+            K.TabRules.Possibility,
+        ),
+        (
+            T.TabRules.Reflexive,
+        ),
+        (
             # branching rules
-            k.TableauxRules.ConjunctionNegated,
-            k.TableauxRules.Disjunction, 
-            k.TableauxRules.MaterialConditional, 
-            k.TableauxRules.MaterialBiconditional,
-            k.TableauxRules.MaterialBiconditionalNegated,
-            k.TableauxRules.Conditional,
-            k.TableauxRules.Biconditional,
-            k.TableauxRules.BiconditionalNegated,
-        ],
-        [
-            k.TableauxRules.Existential,
-            k.TableauxRules.Universal,
-        ],
-        [
+            K.TabRules.ConjunctionNegated,
+            K.TabRules.Disjunction, 
+            K.TabRules.MaterialConditional, 
+            K.TabRules.MaterialBiconditional,
+            K.TabRules.MaterialBiconditionalNegated,
+            K.TabRules.Conditional,
+            K.TabRules.Biconditional,
+            K.TabRules.BiconditionalNegated,
+        ),
+        (
+            K.TabRules.Existential,
+            K.TabRules.Universal,
+        ),
+        (
             Symmetric,
-        ],
-    ]
+        ),
+    )
+TableauxRules = TabRules

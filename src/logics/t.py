@@ -28,9 +28,7 @@ class Meta(object):
 
 from lexicals import Atomic
 from proof.common import Branch, Node, Target
-from proof.rules import PotentialNodeRule
-from proof.helpers import MaxWorldsTracker, clshelpers
-
+from proof.helpers import FilterHelper, MaxWorldsTracker, VisibleWorldsIndex
 from . import k as K
 
 class Model(K.Model):
@@ -56,8 +54,7 @@ class TabRules(object):
     Reflexive rule, which operates on the accessibility relation for worlds.
     """
 
-    @clshelpers(maxw = MaxWorldsTracker)
-    class Reflexive(PotentialNodeRule):
+    class Reflexive(K.DefaultRule):
         """
         .. _reflexive-rule:
 
@@ -68,52 +65,32 @@ class TabRules(object):
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
-        Timers = (
-            *PotentialNodeRule.Timers,
-            'is_potential_node',
+        Helpers = (
+            MaxWorldsTracker,
+            VisibleWorldsIndex,
         )
-        modal = True
 
-        def __init__(self, *args, **opts):
-            super().__init__(*args, **opts)
-            self.opts['is_rank_optim'] = False
+        opts = {'is_rank_optim': False}
 
-        # rule implementation
-
-        def is_potential_node(self, node, branch):
-            ret = None
-            with self.timers['is_potential_node']:
+        @FilterHelper.node_targets
+        def _get_targets(self, node: Node, branch: Branch):
+            if not self.maxw.max_worlds_exceeded(branch):
                 for w in node.worlds:
-                    if not branch.has_access(w, w):
-                        ret = True
-                        break
-            return ret
+                    if not self.visw.has(branch, w, w):
+                        return {'world': w}
+            self.nf.release(node, branch)
 
-        def get_target_for_node(self, node, branch):
-            # why apply when necessity will not apply
-            if not self.__should_apply(branch):
-                return
-            for world in node.worlds:
-                if not branch.has_access(world, world):
-                    return {'world': world}
-            return False
-            
-        def apply_to_node_target(self, node, branch, target):
-            branch.add({'world1': target['world'], 'world2': target['world']})
+        def _apply(self, target: Target):
+            w: int = target.world
+            target.branch.add({'world1': w, 'world2': w})
 
-        def example_nodes(self, branch = None):
+        def example_nodes(self):
             return ({'sentence': Atomic.first(), 'world': 0},)
 
-        # private util
+    closure_rules = K.TabRules.closure_rules
 
-        def __should_apply(self, branch):
-            # why apply when necessity will not apply
-            return not self.maxw.max_worlds_exceeded(branch)
-
-    closure_rules = list(K.TabRules.closure_rules)
-
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
             K.TabRules.IdentityIndiscernability,
             K.TabRules.Assertion,
@@ -127,16 +104,16 @@ class TabRules(object):
             K.TabRules.NecessityNegated,
             K.TabRules.ExistentialNegated,
             K.TabRules.UniversalNegated,
-        ],
-        [
+        ),
+        (
             # modal rules
             K.TabRules.Necessity,
             K.TabRules.Possibility,
-        ],
-        [
+        ),
+        (
             Reflexive,
-        ],
-        [
+        ),
+        (
             # branching rules
             K.TabRules.ConjunctionNegated,
             K.TabRules.Disjunction, 
@@ -146,10 +123,10 @@ class TabRules(object):
             K.TabRules.Conditional,
             K.TabRules.Biconditional,
             K.TabRules.BiconditionalNegated,
-        ],
-        [
+        ),
+        (
             K.TabRules.Existential,
             K.TabRules.Universal,
-        ],
-    ]
+        ),
+    )
 TableauxRules = TabRules

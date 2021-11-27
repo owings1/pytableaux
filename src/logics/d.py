@@ -26,14 +26,12 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 2
 
-from proof.rules import Rule
-from proof.helpers import MaxWorldsTracker, UnserialWorldsTracker, FilterHelper, clshelpers
-from proof.common import Filters
+from proof.helpers import MaxWorldsTracker, UnserialWorldsTracker, FilterHelper
+from proof.common import Branch, Node, Target
 from lexicals import Atomic
-from . import k
+from . import k as K
 
-
-class Model(k.Model):
+class Model(K.Model):
     """
     A D model is just like a :ref:`K model <k-model>` with a *serial* restriction
     on the access relation.
@@ -51,27 +49,19 @@ class Model(k.Model):
             self.add_access(w2, w2)
         super().finish()
 
-class TableauxSystem(k.TableauxSystem):
+class TableauxSystem(K.TableauxSystem):
     """
     D's Tableaux System inherits directly inherits directly from K.
     """
     pass
 
-class TableauxRules:
+class TabRules:
     """
     The Tableaux Rules for D contain the rules for :ref:`K <K>`, as well as an additional
     Serial rule, which operates on the accessibility relation for worlds.
     """
 
-    @clshelpers(
-        nf  = FilterHelper,
-        maxw  = MaxWorldsTracker,
-        ust = UnserialWorldsTracker,
-    )
-    @FilterHelper.clsfilters(
-        modal = Filters.Node.Modal,
-    )
-    class Serial(Rule):
+    class Serial(K.DefaultRule):
         """
         .. _serial-rule:
 
@@ -87,10 +77,13 @@ class TableauxRules:
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
 
-        modal = True
+        Helpers = (
+            MaxWorldsTracker,
+            UnserialWorldsTracker,
+        )
 
         @FilterHelper.node_targets
-        def _get_targets(self, node, branch):
+        def _get_targets(self, node: Node, branch: Branch):
             unserials = self.ust[branch]
             if not unserials:
                 return
@@ -98,18 +91,19 @@ class TableauxRules:
                 return
             return tuple({'world': w} for w in unserials)
 
-        def _apply(self, target):
-            target.branch.add({
-                'world1': target['world'],
-                'world2': target.branch.next_world,
+        def _apply(self, target: Target):
+            branch: Branch = target.branch
+            branch.add({
+                'world1': target.world,
+                'world2': branch.next_world,
             })
 
-        def example_nodes(self, branch = None):
+        def example_nodes(self):
             return ({'sentence': Atomic.first(), 'world': 0},)
 
         # util
 
-        def __should_apply(self, branch):
+        def __should_apply(self, branch: Branch):
 
             # TODO: Shouldn't this check the history only relative to the branch?
             #       Waiting to come up with a test case before fixing it.
@@ -129,7 +123,7 @@ class TableauxRules:
     #     alternate rule. So far I have not been able to think of a way to break it. I
     #     am leaving it here just in case
     #
-    #class IdentityIndiscernability(k.TableauxRules.IdentityIndiscernability):
+    #class IdentityIndiscernability(K.TabRules.IdentityIndiscernability):
     #    """
     #    The rule for identity indiscernability is the same as for :ref:`K <K>`, with the exception that
     #    the rule does not apply if the Serial rule was the last rule to apply to the branch.
@@ -144,53 +138,51 @@ class TableauxRules:
     #            return False
     #        return super(TableauxRules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
 
-    closure_rules = list(k.TableauxRules.closure_rules)
+    closure_rules = K.TabRules.closure_rules
 
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
-            k.TableauxRules.IdentityIndiscernability,
-            k.TableauxRules.Conjunction, 
-            k.TableauxRules.DisjunctionNegated, 
-            k.TableauxRules.MaterialConditionalNegated,
-            k.TableauxRules.ConditionalNegated,
-            k.TableauxRules.DoubleNegation,
-            k.TableauxRules.PossibilityNegated,
-            k.TableauxRules.NecessityNegated,
-            k.TableauxRules.ExistentialNegated,
-            k.TableauxRules.UniversalNegated,
-        ],
-        [
-            
-        ],
-        [
+            K.TabRules.IdentityIndiscernability,
+            K.TabRules.Conjunction, 
+            K.TabRules.DisjunctionNegated, 
+            K.TabRules.MaterialConditionalNegated,
+            K.TabRules.ConditionalNegated,
+            K.TabRules.DoubleNegation,
+            K.TabRules.PossibilityNegated,
+            K.TabRules.NecessityNegated,
+            K.TabRules.ExistentialNegated,
+            K.TabRules.UniversalNegated,
+        ),
+        (
             # modal rules
-            k.TableauxRules.Necessity,
-            k.TableauxRules.Possibility,
-        ],
-        [
+            K.TabRules.Necessity,
+            K.TabRules.Possibility,
+        ),
+        (
             # branching rules
-            k.TableauxRules.ConjunctionNegated,
-            k.TableauxRules.Disjunction, 
-            k.TableauxRules.MaterialConditional, 
-            k.TableauxRules.MaterialBiconditional,
-            k.TableauxRules.MaterialBiconditionalNegated,
-            k.TableauxRules.Conditional,
-            k.TableauxRules.Biconditional,
-            k.TableauxRules.BiconditionalNegated,
-        ],
+            K.TabRules.ConjunctionNegated,
+            K.TabRules.Disjunction, 
+            K.TabRules.MaterialConditional, 
+            K.TabRules.MaterialBiconditional,
+            K.TabRules.MaterialBiconditionalNegated,
+            K.TabRules.Conditional,
+            K.TabRules.Biconditional,
+            K.TabRules.BiconditionalNegated,
+        ),
         #[
         #    # See comment on rule above -- using K rule now
         #    ## special ordering of serial rule
         #    #IdentityIndiscernability,
         #    
         #],
-        [
-            k.TableauxRules.Existential,
-            k.TableauxRules.Universal,
-        ],
-        [
+        (
+            K.TabRules.Existential,
+            K.TabRules.Universal,
+        ),
+        (
             # special ordering of serial rule
             Serial,
-        ],
-    ]
+        ),
+    )
+TableauxRules = TabRules
