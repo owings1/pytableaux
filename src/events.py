@@ -16,7 +16,7 @@ class Events(Enum):
     BEFORE_TRUNK_BUILD = 100
 
 keytypes = (basestring, int, Enum,)
-EventId = Union[keytypes]
+EventId = Union[basestring, int, Enum]
 
 class Listeners(LinkOrderSet):
 
@@ -224,7 +224,7 @@ class EventEmitter(object):
     def off(self, *args, **kw):
         self.events.off(*args, **kw)
 
-    def emit(self, event, *args, **kw):
+    def emit(self, event, *args, **kw) -> int:
         return self.events.emit(event, *args, **kw)
 
     def __init__(self, *events):

@@ -32,11 +32,11 @@ from lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantifi
 from models import BaseModel
 
 from proof.tableaux import TableauxSystem as BaseSystem, Rule, Tableau
-from proof.rules import ClosureRule, FilterNodeRule
-from proof.common import Branch, Filters, Node, NodeType, Target
+from proof.rules import ClosureRule
+from proof.common import Branch, Filters, Node, Target
 from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
-    FilterHelper, AppliedNodeCount, MaxConstantsTracker, AppliedNodeConstants
+    FilterHelper, AppliedNodeCount
 
 from errors import DenotationError, ModelValueError
 
@@ -717,20 +717,6 @@ class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
-class OldDefaultNodeRule(FilterNodeRule):
-    modal = True
-    ticking = True
-
-    def _apply(self, target):
-        self.adz._apply(target)
-
-    def score_candidate(self, target):
-        return self.adz.closure_score(target)
-
-    # Compatibility during refactor
-    def _get_node_targets(self, *args, **kw):
-        return self.get_target_for_node(*args, **kw)
-
 class TabRules(object):
     """
     Rules for modal operators employ *world* indexes as well access-type
@@ -1291,20 +1277,17 @@ class TabRules(object):
         sentence = Filters.Node.Sentence,
         modal    = Filters.Node.Modal,
     )
-    class Necessity(OldDefaultNodeRule):
+    class Necessity(DefaultNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
         with *s* at *w2*, add it to *b*. The node *n* is never ticked.
         """
-        Helpers = (FilterHelper,)
-
-        operator     = Oper.Necessity
+        ticking = False
+        operator = Oper.Necessity
         branch_level = 1
-        ticking      = False
 
         Helpers = (
-            *DefaultNodeRule.Helpers,
             ('maxw' , MaxWorldsTracker),
             ('apnw' , AppliedNodesWorldsTracker),
             ('apqf' , AppliedQuitFlag),
@@ -1319,24 +1302,16 @@ class TabRules(object):
             'check_target_condtn2',
         )
 
-        def is_potential_node(self, node, branch):
-            if self.apqf.get(branch):
-                return False
-            return super().is_potential_node(node, branch)
-            
-        def get_targets_for_node(self, node: Node, branch: Branch):
-
-        # def _get_target(self, branch: Branch):
-        #     if self.apqf.get(branch):
-        #         return
-        #     return super()._get_target(branch)
-        # def _get_node_targets(self, node: Node, branch: Branch):
-
+        def _get_node_targets(self, node: Node, branch: Branch):
             # Check for max worlds reached
-            if not self.__should_apply(branch):
-                if not self.apqf.get(branch):
-                    return [self.__get_flag_target(branch)]
-                return
+            if self.maxw.max_worlds_exceeded(branch):
+                self.nf.release(node, branch)
+                if self.apqf.get(branch):
+                    return
+                return {
+                    'flag': True,
+                    'adds': ((self.maxw.quit_flag(branch),),),
+                }
 
             # Only count least-applied-to nodes
             if not self.__is_least_applied_to(node, branch):
@@ -1414,19 +1389,20 @@ class TabRules(object):
 
         # private util
 
-        def __should_apply(self, branch: Branch):
-            return not self.maxw.max_worlds_exceeded(branch)
-
         def __is_least_applied_to(self, node: Node, branch: Branch):
             node_apply_count = self.apnc[branch].get(node, 0)
-            min_apply_count = self.min_application_count(branch.id)
+            min_apply_count = self.__min_application_count(branch)
             return min_apply_count >= node_apply_count
 
-        def __get_flag_target(self, branch: Branch):
-            return {
-                'flag': True,
-                'adds': ((self.maxw.quit_flag(branch),),),
-            }
+        def __min_application_count(self, branch: Branch):
+            if branch in self.apnc:
+                if not len(self.apnc[branch]):
+                    return 0
+                return min({
+                    self.apnc[branch][node]
+                    for node in self.apnc[branch]
+                })
+            return 0
 
     class NecessityNegated(PossibilityNegated):
         """

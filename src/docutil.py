@@ -39,7 +39,7 @@ from lexicals import create_lexwriter,  \
 from parsers import create_parser, parse_argument, CharTable
 from proof.tableaux import Tableau, TableauxSystem as TabSys, Node
 from proof.writers import create_tabwriter
-from proof.rules import Rule, ClosureRule, PotentialNodeRule, FilterNodeRule
+from proof.rules import Rule, ClosureRule
 from proof.helpers import EllipsisExampleHelper
 from models import truth_table
 
@@ -406,8 +406,6 @@ class Helper(object):
     skip_rules = [
         Rule,
         ClosureRule,
-        PotentialNodeRule,
-        FilterNodeRule,
     ]
 
     skip_trunks = [

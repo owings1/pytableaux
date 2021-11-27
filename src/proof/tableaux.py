@@ -351,9 +351,6 @@ class Rule(Rule):
         """
         :meta protected abstract:
         """
-        # Intermediate classes such as ``ClosureRule``, ``PotentialNodeRule``,
-        # (and its child ``FilterNodeRule``) implement this and ``select_best_target()``,
-        # and define finer-grained methods for concrete classes to implement.
         raise NotImplementedError()
 
     def _apply(self, target: Target):

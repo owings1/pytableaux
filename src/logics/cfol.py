@@ -26,141 +26,130 @@ class Meta(object):
     tags = ['bivalent', 'non-modal', 'first-order']
     category_display_order = 2
 
+from lexicals import Sentence
 from . import k as K, cpl as CPL
+from itertools import chain
 
-class Model(K.Model):
+class Model(CPL.Model):
     """
     A CFOL Model is just like :ref:`CPL model <cpl-model>` but with quantification.
     """
 
-    def is_sentence_opaque(self, sentence):
+    def is_sentence_opaque(self, sentence: Sentence) -> bool:
         """
         A sentence is opaque if its operator is either Necessity or Possibility.
         """
-        if sentence.operator in self.modal_operators:
-            return True
+        if sentence.is_quantified:
+            return False
         return super().is_sentence_opaque(sentence)
-
-    def get_data(self):
-        data = self.world_frame(0).get_data()['value']
-        del data['world']
-        return data
-
-    def add_access(self, w1, w2):
-        raise NotImplementedError()
 
 class TableauxSystem(CPL.TableauxSystem):
     """
     CFOL's Tableaux System inherits directly from :ref:`CPL <CPL>`'s.
     """
 
-class TableauxRules(object):
+class TabRules(object):
     """
     The Tableaux System for CFOL contains all the rules from :ref:`CPL <CPL>`,
     including the CPL closure rules, and adds additional rules for the quantifiers.
     """
 
-    class ContradictionClosure(CPL.TableauxRules.ContradictionClosure):
+    class ContradictionClosure(CPL.TabRules.ContradictionClosure):
         pass
 
-    class SelfIdentityClosure(CPL.TableauxRules.SelfIdentityClosure):
+    class SelfIdentityClosure(CPL.TabRules.SelfIdentityClosure):
         pass
 
-    class NonExistenceClosure(CPL.TableauxRules.NonExistenceClosure):
+    class NonExistenceClosure(CPL.TabRules.NonExistenceClosure):
         pass
 
-    class DoubleNegation(CPL.TableauxRules.DoubleNegation):
+    class DoubleNegation(CPL.TabRules.DoubleNegation):
         pass
 
-    class Assertion(CPL.TableauxRules.Assertion):
+    class Assertion(CPL.TabRules.Assertion):
         pass
 
-    class AssertionNegated(CPL.TableauxRules.AssertionNegated):
+    class AssertionNegated(CPL.TabRules.AssertionNegated):
         pass
 
-    class Conjunction(CPL.TableauxRules.Conjunction):
+    class Conjunction(CPL.TabRules.Conjunction):
         pass
 
-    class ConjunctionNegated(CPL.TableauxRules.ConjunctionNegated):
+    class ConjunctionNegated(CPL.TabRules.ConjunctionNegated):
         pass
 
-    class Disjunction(CPL.TableauxRules.Disjunction):
+    class Disjunction(CPL.TabRules.Disjunction):
         pass
 
-    class DisjunctionNegated(CPL.TableauxRules.DisjunctionNegated):
+    class DisjunctionNegated(CPL.TabRules.DisjunctionNegated):
         pass
 
-    class MaterialConditional(CPL.TableauxRules.MaterialConditional):
+    class MaterialConditional(CPL.TabRules.MaterialConditional):
         pass
 
-    class MaterialConditionalNegated(CPL.TableauxRules.MaterialConditionalNegated):
+    class MaterialConditionalNegated(CPL.TabRules.MaterialConditionalNegated):
         pass
 
-    class MaterialBiconditional(CPL.TableauxRules.MaterialBiconditional):
+    class MaterialBiconditional(CPL.TabRules.MaterialBiconditional):
         pass
 
-    class MaterialBiconditionalNegated(CPL.TableauxRules.MaterialBiconditionalNegated):
+    class MaterialBiconditionalNegated(CPL.TabRules.MaterialBiconditionalNegated):
         pass
 
-    class Conditional(CPL.TableauxRules.Conditional):
+    class Conditional(CPL.TabRules.Conditional):
         pass
 
-    class ConditionalNegated(CPL.TableauxRules.ConditionalNegated):
+    class ConditionalNegated(CPL.TabRules.ConditionalNegated):
         pass
 
-    class Biconditional(CPL.TableauxRules.Biconditional):
+    class Biconditional(CPL.TabRules.Biconditional):
         pass
 
-    class BiconditionalNegated(CPL.TableauxRules.BiconditionalNegated):
+    class BiconditionalNegated(CPL.TabRules.BiconditionalNegated):
         pass
 
-    class Existential(K.TableauxRules.Existential):
+    class Existential(K.TabRules.Existential):
         """
         From an unticked existential node *n* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node to *b* with the substitution
         into *s* of *v* with a constant new to *b*, then tick *n*.
         """
-        modal = False
 
-    class ExistentialNegated(K.TableauxRules.ExistentialNegated):
+    class ExistentialNegated(K.TabRules.ExistentialNegated):
         """
         From an unticked negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a universally quantified
         node to *b* over *v* into the negation of *s*, then tick *n*.
         """
-        modal = False
 
-    class Universal(K.TableauxRules.Universal):
+    class Universal(K.TabRules.Universal):
         """
         From a universal node on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
         exists) for *v* into *s* does not appear on *b*, add a node with *r* to
         *b*. The node *n* is never ticked.
         """
-        modal = False
 
-    class UniversalNegated(K.TableauxRules.UniversalNegated):
+    class UniversalNegated(K.TabRules.UniversalNegated):
         """
         From an unticked negated universal node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add an existentially
         quantified node to *b* over *v* into the negation of *s*,
         then tick *n*.
         """
-        modal = False
 
-    class IdentityIndiscernability(CPL.TableauxRules.IdentityIndiscernability):
+    class IdentityIndiscernability(CPL.TabRules.IdentityIndiscernability):
         pass
 
-    closure_rules = [
+    closure_rules = (
         ContradictionClosure,
         SelfIdentityClosure,
         NonExistenceClosure,
-    ]
+    )
 
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
-
             IdentityIndiscernability,
             DoubleNegation,
             Assertion,
@@ -171,8 +160,8 @@ class TableauxRules(object):
             ConditionalNegated,
             ExistentialNegated,
             UniversalNegated,
-        ],
-        [
+        ),
+        (
             # branching rules
             ConjunctionNegated,
             Disjunction,
@@ -182,10 +171,14 @@ class TableauxRules(object):
             Conditional,
             Biconditional,
             BiconditionalNegated,
-        #],
-        #[
+        #),
+        #(
 
             Existential,
             Universal,
-        ]
-    ]
+        ),
+    )
+    for cls in chain(closure_rules, chain.from_iterable(rule_groups)):
+        cls.modal = False
+
+TableauxRules = TabRules

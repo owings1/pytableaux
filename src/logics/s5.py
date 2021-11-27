@@ -77,13 +77,14 @@ class TableauxRules(object):
         """
         Helpers = (
             *PotentialNodeRule.Helpers,
-            ('max_worlds_tracker', MaxWorldsTracker),
+            ('maxw', MaxWorldsTracker),
         )
         Timers = (
             *PotentialNodeRule.Timers,
             'is_potential_node',
         )
         modal = True
+        access = True
         ticked = None
 
         def __init__(self, *args, **opts):
@@ -116,12 +117,12 @@ class TableauxRules(object):
                 'world2': target['world2'],
             })
 
-        def example_nodes(self, branch = None):
+        def example_nodes(self):
             return ({'world1': 0, 'world2': 1},)
 
         def __should_apply(self, branch):
             # why apply when necessity will not apply
-            return not self.max_worlds_tracker.max_worlds_reached(branch)
+            return not self.maxw.max_worlds_reached(branch)
 
     closure_rules = list(k.TableauxRules.closure_rules)
 

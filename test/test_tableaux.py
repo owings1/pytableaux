@@ -2,7 +2,7 @@
 from errors import *
 from events import Events
 from proof.tableaux import Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG
-from proof.rules import FilterNodeRule, ClosureRule, PotentialNodeRule
+from proof.rules import ClosureRule
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
 from proof.common import Getters, Filters, Branch, Node
 from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
@@ -361,6 +361,10 @@ class TestClosureRule(object):
         with raises(NotImplementedError):
             rule.applies_to_branch(None)
 
+class FilterNodeRule(Rule):
+    Helpers = (FilterHelper,)
+
+@skip
 class PotentialNodeRule(object):
 
     def test_not_impl_various(self):

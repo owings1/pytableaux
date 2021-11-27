@@ -30,7 +30,7 @@ from models import BaseModel
 from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
     Atomic, Operated, Quantified, Predicates
 from proof.tableaux import TableauxSystem as BaseSystem, Rule
-from proof.rules import ClosureRule, FilterNodeRule
+from proof.rules import ClosureRule
 from proof.common import Branch, Node, Filters, Target
 from proof.helpers import AdzHelper, AppliedNodeConstants, AppliedNodeCount, \
     AppliedQuitFlag, FilterHelper, MaxConstantsTracker
@@ -620,7 +620,6 @@ class QuantifierFatRule(DefaultRule, AdzHelper.Apply):
             # Do not release the node from filters, since new constants
             # can appear.
             return
-        constants = unapplied or {Constant.first()}
         return self._get_node_targets(node, branch)
 
     def _get_node_targets(self, node: Node, branch: Branch):
@@ -649,16 +648,6 @@ class QuantifierFatRule(DefaultRule, AdzHelper.Apply):
             return 1
         node_apply_count = self.apnc[target.branch].get(target.node, 0)
         return float(1 / (node_apply_count + 1))
-
-class OldDefaultNodeRule(FilterNodeRule):
-
-    ticking = True
-
-    def _apply(self, target):
-        self.adz._apply(target)
-
-    def score_candidate(self, target):
-        return self.adz.closure_score(target)
 
 class ConjunctionReducingRule(DefaultNodeRule):
 
@@ -693,19 +682,19 @@ class TabRules(object):
 
         # tracker implementation
 
-        def check_for_target(self, node, branch):
+        def check_for_target(self, node: Node, branch: Branch):
             nnode = self._find_closing_node(node, branch)
             if nnode:
                 return {'nodes': {node, nnode}}
 
         # rule implementation
 
-        def node_will_close_branch(self, node, branch):
+        def node_will_close_branch(self, node: Node, branch: Branch):
             if self._find_closing_node(node, branch):
                 return True
             return False
 
-        def applies_to_branch(self, branch):
+        def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
             return self.ntch.cached_target(branch)
 
@@ -718,7 +707,7 @@ class TabRules(object):
 
         # private util
 
-        def _find_closing_node(self, node, branch):
+        def _find_closing_node(self, node: Node, branch: Branch):
             if node.has('sentence', 'designated'):
                 return branch.find({
                     'sentence'   : node['sentence'],
@@ -1211,10 +1200,10 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Quantified = self.sentence(node)
-            s = s.unquantify(branch.new_constant())
+            r = s.unquantify(branch.new_constant())
             d = self.designation
             return {
-                'adds': (({'sentence': s, 'designated': d},),),
+                'adds': (({'sentence': r, 'designated': d},),),
             }
 
     class ExistentialNegatedDesignated(DefaultNodeRule):

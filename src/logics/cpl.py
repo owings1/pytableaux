@@ -30,7 +30,7 @@ from lexicals import Sentence, Argument
 from proof.common import Branch, Node
 from proof.tableaux import Tableau
 from . import k as K
-from inspect import getmembers
+from itertools import chain
 
 class Model(K.Model):
     """
@@ -53,7 +53,7 @@ class Model(K.Model):
         del data['world']
         return data
 
-    def add_access(self, w1, w2):
+    def add_access(self, *_):
         raise NotImplementedError()
 
 class TableauxSystem(K.TableauxSystem):
@@ -81,7 +81,6 @@ class TabRules(object):
         """
         A branch is closed if a sentence and its negation appear on the branch.
         """
-        modal = False
         def _find_closing_node(self, node: Node, branch: Branch):
             s = self.sentence(node)
             if s:
@@ -93,27 +92,23 @@ class TabRules(object):
         """
         A branch is closed if a sentence of the form :s:`~ a = a` appears on the branch.
         """
-        modal = False
 
     class NonExistenceClosure(K.TabRules.NonExistenceClosure):
         """
         A branch is closed if a sentence of the form :s:`~!a` appears on the branch.
         """
-        modal = False
 
     class DoubleNegation(K.TabRules.DoubleNegation):
         """
         From an unticked double negation node *n* on a branch *b*, add a
         node to *b* with the double-negatum of *n*, then tick *n*.
         """
-        modal = False
 
     class Assertion(K.TabRules.Assertion):
         """
         From an unticked assertion node *n* on a branch *b*,
         add a node to *b* with the operand of *n*, then tick *n*.
         """
-        modal = False
 
     class AssertionNegated(K.TabRules.AssertionNegated):
         """
@@ -121,14 +116,12 @@ class TabRules(object):
         add a node to *b* with the negation of the assertion of *n*,
         then tick *n*.
         """
-        modal = False
 
     class Conjunction(K.TabRules.Conjunction):
         """
         From an unticked conjunction node *n* on a branch *b*, for each conjunct,
         add a node to *b* with the conjunct, then tick *n*.
         """
-        modal = False
 
     class ConjunctionNegated(K.TabRules.ConjunctionNegated):
         """
@@ -136,7 +129,6 @@ class TabRules(object):
         conjunct, make a new branch *b'* from *b* and add a node with the negation of
         the conjunct to *b*, then tick *n*.
         """
-        modal = False
 
     class Disjunction(K.TabRules.Disjunction):
         """
@@ -144,14 +136,12 @@ class TabRules(object):
         make a new branch *b'* from *b* and add a node with the disjunct to *b'*,
         then tick *n*.
         """
-        modal = False
 
     class DisjunctionNegated(K.TabRules.DisjunctionNegated):
         """
         From an unticked negated disjunction node *n* on a branch *b*, for each
         disjunct, add a node with the negation of the disjunct to *b*, then tick *n*.
         """
-        modal = False
 
     class MaterialConditional(K.TabRules.MaterialConditional):
         """
@@ -160,7 +150,6 @@ class TabRules(object):
         antecedent to *b'*, and add a node with the conequent to *b''*, then tick
         *n*.
         """
-        modal = False
 
     class MaterialConditionalNegated(K.TabRules.MaterialConditionalNegated):
         """
@@ -168,7 +157,6 @@ class TabRules(object):
         add two nodes to *b*, one with the antecedent and the other with the negation
         of the consequent, then tick *n*.
         """
-        modal = False
 
     class MaterialBiconditional(K.TabRules.MaterialBiconditional):
         """
@@ -178,7 +166,6 @@ class TabRules(object):
         and add two nodes to *b''*, one with the antecedent and one with the consequent,
         then tick *n*.
         """
-        modal = False
 
     class MaterialBiconditionalNegated(K.TabRules.MaterialBiconditionalNegated):
         """
@@ -188,7 +175,6 @@ class TabRules(object):
         to *b''*, one with the negation of the antecedent and the other with the consequent,
         then tick *n*.
         """
-        modal = False
 
     class Conditional(K.TabRules.Conditional):
         """
@@ -199,7 +185,6 @@ class TabRules(object):
         antecedent to *b'*, and add a node with the conequent to *b''*, then tick
         *n*.
         """
-        modal = False
 
     class ConditionalNegated(K.TabRules.ConditionalNegated):
         """
@@ -209,7 +194,6 @@ class TabRules(object):
         add two nodes to *b*, one with the antecedent and the other with the negation
         of the consequent, then tick *n*.
         """
-        modal = False
 
     class Biconditional(K.TabRules.Biconditional):
         """
@@ -221,7 +205,6 @@ class TabRules(object):
         nodes to *b''*, one with the antecedent and one with the consequent, then
         tick *n*.
         """
-        modal = False
 
     class BiconditionalNegated(K.TabRules.BiconditionalNegated):
         """
@@ -233,7 +216,6 @@ class TabRules(object):
         to *b''*, one with the negation of the antecedent and the other with the consequent,
         then tick *n*.
         """
-        modal = False
 
     class IdentityIndiscernability(K.TabRules.IdentityIndiscernability):
         """
@@ -242,7 +224,6 @@ class TabRules(object):
         if the replacement of that constant for the other constant of *s* is a sentence that does
         not appear on *b*, then add it.
         """
-        modal = False
 
     closure_rules = (
         ContradictionClosure,
@@ -274,4 +255,6 @@ class TabRules(object):
             BiconditionalNegated,
         ),
     )
+    for cls in chain(closure_rules, chain.from_iterable(rule_groups)):
+        cls.modal = False
 TableauxRules = TabRules

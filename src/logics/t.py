@@ -68,10 +68,6 @@ class TabRules(object):
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
-        # Helpers = (
-        #     *PotentialNodeRule.Helpers,
-        #     ('max_worlds_tracker', MaxWorldsTracker),
-        # )
         Timers = (
             *PotentialNodeRule.Timers,
             'is_potential_node',

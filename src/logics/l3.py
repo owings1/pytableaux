@@ -61,7 +61,7 @@ class TableauxSystem(fde.TableauxSystem):
 class DefaultNodeRule(fde.DefaultNodeRule):
     pass
 
-class TableauxRules(object):
+class TabRules(object):
     """
     The closure rules for :m:`L3` are the FDE closure rule, and the :m:`K3` closure rule.
     The operator rules for :m:`L3` are mostly the rules for :ref:`FDE <FDE>`, with
@@ -372,3 +372,4 @@ class TableauxRules(object):
             UniversalUndesignated,
         ],
     ]
+TableauxRules = TabRules
