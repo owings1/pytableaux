@@ -22,13 +22,13 @@ from events import Events
 from models import BaseModel
 from utils import OrderedAttrsView, LinkOrderSet, EmptySet, \
     dedupitems, isstr, mroattr, orepr
-from .common import Branch, Node, Target
+from .common import Access, Branch, Node, Target
 from .tableaux import Rule, RuleMeta, Tableau
 
 from copy import copy
 from inspect import getmembers, isclass
 from itertools import chain
-from typing import Callable, Iterable, Union, final
+from typing import Callable, Iterable, Iterator, Union, final
 
 def clshelpers(**kw) -> Callable:
     """
@@ -112,7 +112,7 @@ class BranchCache(object):
     def __len__(self):
         return len(self.__cache)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Branch]:
         return iter(self.__linkset)
 
     def __reversed__(self):
@@ -148,7 +148,9 @@ class BranchCache(object):
         return {'branches': len(self)}
 
 class BranchDictCache(BranchCache):
-
+    """
+    Copies each value.
+    """
     _valuetype = dict
 
     def __new__(cls, rule: Rule, *args):
@@ -201,6 +203,7 @@ class FilterNodeCache(BranchCache):
     def __getitem__(self, branch: Branch) -> set:
         return super().__getitem__(branch)
 
+@final
 class AppliedQuitFlag(BranchCache):
     """
     Track the application of a flag node by the rule for each branch. A branch
@@ -214,11 +217,11 @@ class AppliedQuitFlag(BranchCache):
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
-    @final
     def __call__(self, target: Target):
         self[target.branch] = bool(target.get('flag'))
 
-class AppliedNodesWorldsTracker(BranchCache):
+@final
+class AppliedNodesWorlds(BranchCache):
     """
     Track the nodes applied to by the rule for each world on the branch. The
     target must have `node`, and `world` attributes. The values of the cache
@@ -232,12 +235,12 @@ class AppliedNodesWorldsTracker(BranchCache):
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
-    @final
     def __call__(self, target: Target):
         if target.get('flag'):
             return
         self[target.branch].add((target.node, target.world))
 
+@final
 class UnserialWorldsTracker(BranchCache):
     """
     Track the unserial worlds on the branch.
@@ -250,7 +253,6 @@ class UnserialWorldsTracker(BranchCache):
         inst.tab.on(Events.AFTER_NODE_ADD, inst)
         return inst
 
-    @final
     def __call__(self, node: Node, branch: Branch):
         for w in node.worlds:
             if node.get('world1') == w or branch.has({'world1': w}):
@@ -258,12 +260,14 @@ class UnserialWorldsTracker(BranchCache):
             else:
                 self[branch].add(w)
 
-class AppliedSentenceCounter(BranchDictCache):
+@final
+class AppliedSentenceCounter(BranchCache):
     """
     Count the times the rule has applied for a sentence per branch. This tracks
     the `sentence` property of the rule's target. The target should also include
     the `branch` key.
     """
+    _valuetype = dict
     _attr = 'apsc'
 
     def __new__(cls, rule: Rule, *args):
@@ -271,7 +275,6 @@ class AppliedSentenceCounter(BranchDictCache):
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
-    @final
     def __call__(self, target: Target):
         if target.get('flag'):
             return
@@ -279,16 +282,25 @@ class AppliedSentenceCounter(BranchDictCache):
         sentence = target.sentence
         counts[sentence] = counts.get(sentence, 0) + 1
 
-class AppliedNodeCount(BranchDictCache):
+@final
+class AppliedNodeCount(BranchCache):
 
+    _valuetype = dict
     _attr = 'apnc'
+
+    def min(self, branch: Branch) -> int:
+        if branch in self and len(self[branch]):
+            return min(self[branch].values())
+        return 0
+
+    def isleast(self, node: Node, branch: Branch) -> bool:
+        return self.min(branch) >= self[branch].get(node, 0)
 
     def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls, rule)
         inst.rule.on(Events.AFTER_APPLY, inst)
         return inst
 
-    @final
     def __call__(self, target: Target):
         if target.get('flag'):
             return
@@ -296,11 +308,24 @@ class AppliedNodeCount(BranchDictCache):
         node = target.node
         counts[node] = counts.get(node, 0) + 1
 
+@final
 class VisibleWorldsIndex(BranchDictCache):
     """
     Index the visible worlds for each world on the branch.
     """
     _attr = 'visw'
+
+    class Nodes(BranchCache):
+
+        _valuetype = dict
+
+        def __call__(self, node: Node, branch: Branch):
+            self[branch][Access.fornode(node)] = node
+
+        def __getitem__(self, branch: Branch) -> dict[Access, Node]:
+            return super().__getitem__(branch)
+
+    nodes: Nodes = None
 
     def has(self, branch: Branch, w1: int, w2: int) -> bool:
         """
@@ -325,26 +350,30 @@ class VisibleWorldsIndex(BranchDictCache):
         )
 
     def __new__(cls, rule: Rule, *args):
-        inst = super().__new__(cls, rule)
+        inst: __class__ = super().__new__(cls, rule)
         inst.tab.on(Events.AFTER_NODE_ADD, inst)
+        inst.nodes = __class__.Nodes(rule, *args)
         return inst
 
-    @final
     def __call__(self, node: Node, branch: Branch):        
-        if node.has('world1', 'world2'):
+        if node.is_access:
             w1 = node['world1']
             w2 = node['world2']
             if w1 not in self[branch]:
                 self[branch][w1] = set()
             self[branch][w1].add(w2)
+            self.nodes(node, branch)
 
+    def __getitem__(self, branch: Branch) -> dict[int, set[int]]:
+        return super().__getitem__(branch)
+
+@final
 class PredicatedNodesTracker(FilterNodeCache):
     """
     Track all predicated nodes on the branch.
     """
     _attr = 'pn'
 
-    @final
     def __call__(self, node: Node, *a, **kw) -> bool:
         s: Sentence = node.get('sentence')
         return s != None and s.is_predicated

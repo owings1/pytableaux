@@ -24,7 +24,7 @@ from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutE
 from events import Events, EventEmitter
 from inspect import isclass
 from itertools import chain, islice
-from .common import Branch, Node, NodeType, Target
+from .common import Annotate, FLAG, KEY, Branch, Node, NodeType, Target
 from past.builtins import basestring
 from enum import auto, Enum, Flag
 from keyword import iskeyword
@@ -65,10 +65,13 @@ class RuleMeta(type):
                                 raise TypeError(helper_attr, type(helper_attr), tuple(None, basestring))
                             helper_attr = str(helper_attr)                          
                             if helper_attr in taken:
-                                raise ValueError(
-                                    'Attribute conflict %s: %s (was: %s)' %
-                                    (helper_attr, Helper, taken[helper_attr])
-                                )
+                                # Allow special annotation for typing, e.g.:
+                                #   myh: MyHelper = Annotate.HelperType
+                                if taken[helper_attr] is not Annotate.HelperAttr:
+                                    raise ValueError(
+                                        'Attribute conflict %s: %s (was: %s)' %
+                                        (helper_attr, Helper, taken[helper_attr])
+                                    )
                             if not helper_attr.isidentifier() or iskeyword(helper_attr):
                                 raise ValueError('Invalid attribute: %s' % helper_attr)
                         if Helper in helper_attrs:
@@ -129,23 +132,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         (Events.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
     )
 
-class KEY(Enum):
-    FLAGS       = auto()
-    STEP_ADDED  = auto()
-    STEP_TICKED = auto()
-    STEP_CLOSED = auto()
-    INDEX       = auto()
-    PARENT      = auto()
-    NODES       = auto()
 
-class FLAG(Flag):
-    NONE   = 0
-    TICKED = 1
-    CLOSED = 2
-    PREMATURE   = 4
-    FINISHED    = 8
-    TIMED_OUT   = 16
-    TRUNK_BUILT = 32
 
 class Tableau(Sequence, EventEmitter):
 

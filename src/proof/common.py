@@ -1,17 +1,216 @@
 from utils import dictrepr, orepr, Decorators, isstr, EmptySet
 from events import Events, EventEmitter
-from lexicals import Constant, Operated, Quantified
+from lexicals import Constant, Sentence, Operated, Quantified
 from copy import copy
+from functools import partial
 from inspect import getmembers, isclass
 from itertools import islice
+from keyword import iskeyword
+from operator import is_, is_not
 from types import MappingProxyType
-from typing import Callable, Generator, Iterable, Union
-from enum import Enum, Flag, IntFlag
+from typing import Any, Callable, Collection, ItemsView, Iterable, Iterator, KeysView, \
+    NamedTuple, Sequence, ValuesView, Union
+from enum import Enum, Flag, IntFlag, auto
+
 lazyget = Decorators.lazyget
 setonce = Decorators.setonce
 
-dict_keys = type({}.keys())
-dict_items = type({}.items())
+class NodeMeta(type):
+    def __call__(cls, props = {}):
+        if isinstance(props, cls):
+            return props
+        return super().__call__(props)
+
+class Node(object, metaclass = NodeMeta):
+    """
+    A tableau node.
+    """
+
+    defaults = MappingProxyType({'world': None, 'designated': None})
+
+    def __init__(self, props = {}):
+        #: A dictionary of properties for the node.
+        p = dict(self.defaults)
+        p.update(props)
+        self.props = MappingProxyType(p)
+
+    @property
+    def id(self) -> int:
+        return id(self)
+
+    @property
+    def is_closure(self) -> bool:
+        return self.get('flag') == 'closure'
+
+    @property
+    @lazyget
+    def is_modal(self) -> bool:
+        return self.has_any('world', 'world1', 'world2', 'worlds')
+
+    @property
+    @lazyget
+    def is_access(self) -> bool:
+        return self.has('world1', 'world2')
+
+    @property
+    @lazyget
+    def worlds(self) -> frozenset[int]:
+        """
+        Return the set of worlds referenced in the node properties. This combines
+        the properties `world`, `world1`, `world2`, and `worlds`.
+        """
+        return frozenset(filter(Filters.Type.INT,
+            self.get('worlds', EmptySet) |
+            {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
+        ))
+
+    def get(self, name, default = None):
+        try:
+            return self[name]
+        except KeyError:
+            return default
+        return self.props.get(name, default)
+
+    def has(self, *names: str) -> bool:
+        """
+        Whether the node has a non-``None`` property of all the given names.
+        """
+        for name in names:
+            if self.get(name) == None:
+                return False
+        return True
+
+    def has_any(self, *names: str) -> bool:
+        """
+        Whether the node has a non-``None`` property of any of the given names.
+        """
+        for name in names:
+            if self.get(name) != None:
+                return True
+        return False
+
+    def has_props(self, props: dict) -> bool:
+        """
+        Whether the node properties match all those give in ``props`` (dict).
+        """
+        for prop in props:
+            if prop not in self or not props[prop] == self[prop]:
+                return False
+        return True
+
+    def keys(self) -> KeysView:
+        return self.props.keys()
+
+    def items(self) -> ItemsView:
+        return self.props.items()
+
+    def values(self) -> ValuesView:
+        return self.props.values()
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.id == other.id
+
+    def __ne__(self, other):
+        return not (isinstance(other, self.__class__) and self.id == other.id)
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __len__(self):
+        return len(self.props)
+
+    def __getitem__(self, key):
+        try:
+            return self.props[key]
+        except KeyError:
+            return self.defaults[key]
+
+    def __contains__(self, item):
+        return item in self.props
+
+    def __iter__(self):
+        return iter(self.props)
+
+    def __copy__(self):
+        return self.__class__(self.props)
+
+    def __or__(self, other):
+        # self | other
+        if isinstance(other, self.__class__):
+            return self.props | other.props
+        if isinstance(other, self.props.__class__):
+            return self.props | other
+        if isinstance(other, dict):
+            return dict(self.props) | other
+        raise TypeError(
+            'Unsupported %s operator between %s and %s'
+            % ('|', self.__class__, other.__class__)
+        )
+
+    def __ror__(self, other):
+        # other | self
+        if isinstance(other, self.__class__):
+            return other.props | self.props
+        if isinstance(other, self.props.__class__):
+            return other | self.props
+        if isinstance(other, dict):
+            return other | dict(self.props)
+        raise TypeError(
+            'Unsupported %s operator between %s and %s'
+            % ('|', other.__class__, self.__class__)
+        )
+
+    def __repr__(self):
+        return orepr(self,
+            id = self.id,
+            # parent = self.parent.id if self.parent else None,
+            props = dictrepr({
+                k: v for k,v in self.props.items() if v != None
+            }, limit = 4, paren = False, j = ',')
+        )
+
+NodeType = Union[Node, dict]
+
+class Annotate(Enum):
+    HelperAttr = auto()
+
+class KEY(Enum):
+    FLAGS       = auto()
+    STEP_ADDED  = auto()
+    STEP_TICKED = auto()
+    STEP_CLOSED = auto()
+    INDEX       = auto()
+    PARENT      = auto()
+    NODES       = auto()
+
+class FLAG(Flag):
+    NONE   = 0
+    TICKED = 1
+    CLOSED = 2
+    PREMATURE   = 4
+    FINISHED    = 8
+    TIMED_OUT   = 16
+    TRUNK_BUILT = 32
+
+class Access(NamedTuple):
+
+    w1: int
+    w2: int
+
+    @property
+    def world1(self):
+        return self.w1
+
+    @property
+    def world2(self):
+        return self.w2
+
+    @classmethod
+    def fornode(cls, node: NodeType):
+        return cls(node['world1'], node['world2'])
+
+    def tonode(self):
+        return Node({'world1': self[0], 'world2': self[1]})
 
 class Getters(object):
 
@@ -22,14 +221,14 @@ class Getters(object):
     def chain(*items):
         chain = [cls(*args) for cls, *args in items]
         last = chain.pop()
-        class chained(object):
+        class chained(Callable):
             def __call__(self, obj, *args):
                 for func in chain:
                     obj = func(obj)
                 return last(obj, *args)
         return chained()
 
-    class Getter(object):
+    class Getter(Callable):
         class Curried: NotImplemented
         class Safe: NotImplemented
         def __new__(cls, *args):
@@ -124,7 +323,7 @@ class Getters(object):
 
 class Filters(object):
 
-    class Filter(object):
+    class Filter(Callable):
 
         lhs = None
 
@@ -254,6 +453,13 @@ class Filters(object):
                     return False
             return True
 
+    class Not(Filter):
+
+        def __init__(self, negatum: Callable):
+            self.negatum = negatum
+        def __call__(self, *args):
+            return not self.negatum(*args)
+
     class Type(Filter):
 
         classinfo = object
@@ -269,6 +475,7 @@ class Filters(object):
             return '%s for classinfo %s' % (me, self.classinfo)
 
     Type.INT = Type(int)
+    Type.NotNone = Not(partial(is_, None))
     Node = None
 
 class NodeFilters(Filters):
@@ -302,150 +509,7 @@ class NodeFilters(Filters):
 
 Filters.Node = NodeFilters
 
-class NodeMeta(type):
-    def __call__(cls, props = {}):
-        if isinstance(props, cls):
-            return props
-        return super().__call__(props)
-
-class Node(object, metaclass = NodeMeta):
-    """
-    A tableau node.
-    """
-
-    defaults = MappingProxyType({'world': None, 'designated': None})
-
-    def __init__(self, props = {}):
-        #: A dictionary of properties for the node.
-        p = dict(self.defaults)
-        p.update(props)
-        self.props = MappingProxyType(p)
-
-    @property
-    def id(self) -> int:
-        return id(self)
-
-    @property
-    def is_closure(self) -> bool:
-        return self.get('flag') == 'closure'
-
-    @property
-    @lazyget
-    def is_modal(self) -> bool:
-        return self.has_any('world', 'world1', 'world2', 'worlds')
-
-    @property
-    @lazyget
-    def is_access(self) -> bool:
-        return self.has('world1', 'world2')
-
-    @property
-    @lazyget
-    def worlds(self) -> frozenset[int]:
-        """
-        Return the set of worlds referenced in the node properties. This combines
-        the properties `world`, `world1`, `world2`, and `worlds`.
-        """
-        return frozenset(filter(Filters.Type.INT,
-            self.get('worlds', EmptySet) |
-            {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
-        ))
-
-    def get(self, name, default = None):
-        return self.props.get(name, default)
-
-    def has(self, *names: str) -> bool:
-        """
-        Whether the node has a non-``None`` property of all the given names.
-        """
-        for name in names:
-            if self.get(name) == None:
-                return False
-        return True
-
-    def has_any(self, *names: str) -> bool:
-        """
-        Whether the node has a non-``None`` property of any of the given names.
-        """
-        for name in names:
-            if self.get(name) != None:
-                return True
-        return False
-
-    def has_props(self, props: dict) -> bool:
-        """
-        Whether the node properties match all those give in ``props`` (dict).
-        """
-        for prop in props:
-            if prop not in self or not props[prop] == self[prop]:
-                return False
-        return True
-
-    def keys(self) -> dict_keys:
-        return self.props.keys()
-
-    def items(self) -> dict_items:
-        return self.props.items()
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.id == other.id
-
-    def __ne__(self, other):
-        return not (isinstance(other, self.__class__) and self.id == other.id)
-
-    def __hash__(self):
-        return hash(self.id)
-
-    def __getitem__(self, key):
-        return self.props[key]
-
-    def __contains__(self, item):
-        return item in self.props
-
-    def __iter__(self):
-        return iter(self.props)
-
-    def __copy__(self):
-        return self.__class__(self.props, parent = self.parent)
-
-    def __or__(self, other):
-        # self | other
-        if isinstance(other, self.__class__):
-            return self.props | other.props
-        if isinstance(other, self.props.__class__):
-            return self.props | other
-        if isinstance(other, dict):
-            return dict(self.props) | other
-        raise TypeError(
-            'Unsupported %s operator between %s and %s'
-            % ('|', self.__class__, other.__class__)
-        )
-
-    def __ror__(self, other):
-        # other | self
-        if isinstance(other, self.__class__):
-            return other.props | self.props
-        if isinstance(other, self.props.__class__):
-            return other | self.props
-        if isinstance(other, dict):
-            return other | dict(self.props)
-        raise TypeError(
-            'Unsupported %s operator between %s and %s'
-            % ('|', other.__class__, self.__class__)
-        )
-
-    def __repr__(self):
-        return orepr(self,
-            id = self.id,
-            # parent = self.parent.id if self.parent else None,
-            props = dictrepr({
-                k: v for k,v in self.props.items() if v != None
-            }, limit = 4, paren = False, j = ',')
-        )
-
-NodeType = Union[Node, dict]
-
-class Branch(EventEmitter):
+class Branch(EventEmitter, Sequence):
     pass
 class Branch(Branch):
     """
@@ -458,10 +522,10 @@ class Branch(Branch):
                 raise ValueError('A branch cannot be its own parent')
             if not isinstance(parent, Branch):
                 raise TypeError(parent, type(parent), Branch)
-            self.__origin = parent.origin
+            self.__origin: Branch = parent.origin
         else:
-            self.__origin = self
-        self.__parent = parent
+            self.__origin: Branch = self
+        self.__parent: Branch = parent
 
         super().__init__(
             Events.AFTER_BRANCH_CLOSE,
@@ -472,14 +536,14 @@ class Branch(Branch):
 
         self.__closed = False
 
-        self.__nodes = []
-        self.__nodeset = set()
-        self.__ticked = set()
+        self.__nodes: list[Node] = []
+        self.__nodeset: set[Node] = set()
+        self.__ticked: set[Node] = set()
 
-        self.__worlds = set()
-        self.__nextworld = 0
-        self.__constants = set()
-        self.__nextconst = Constant.first()
+        self.__worlds: set[int] = set()
+        self.__nextworld: int = 0
+        self.__constants: set[Constant] = set()
+        self.__nextconst: Constant = Constant.first()
         self.__pidx = {
             'sentence'   : {},
             'designated' : {},
@@ -619,7 +683,7 @@ class Branch(Branch):
         node = Node(node)
         self.__nodes.append(node)
         self.__nodeset.add(node)
-        s = node.get('sentence')
+        s: Sentence = node.get('sentence')
         if s:
             if s.constants:
                 if self.__nextconst in s.constants:
@@ -637,6 +701,7 @@ class Branch(Branch):
         self.__add_to_index(node)
         self.emit(Events.AFTER_NODE_ADD, node, self)
         return self
+
     add = append
 
     def extend(self, nodes: Iterable[NodeType]) -> Branch:
@@ -770,13 +835,13 @@ class Branch(Branch):
     def __hash__(self):
         return hash(self.id)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Node:
         return self.__nodes[key]
 
     def __len__(self):
         return len(self.__nodes)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Node]:
         return iter(self.__nodes)
 
     def __copy__(self):
@@ -796,7 +861,7 @@ class Branch(Branch):
 class Target(object):
 
     __reqd = {'branch'}
-    __attrs = {'branch', 'rule', 'node', 'nodes', 'world', 'world1', 'world2', 'sentence', 'designated', 'flag'}
+    __attrs = __reqd | {'rule', 'node', 'nodes', 'world', 'world1', 'world2', 'sentence', 'designated', 'flag'}
 
     @classmethod
     def create(cls, obj, **context):
@@ -810,7 +875,7 @@ class Target(object):
         return cls(obj, **context)
 
     @classmethod
-    def list(cls, objs, **context):
+    def list(cls, objs, **context) -> list:
         """
         Normalize to a list, possibly empty, of Target objects.
         
@@ -843,6 +908,10 @@ class Target(object):
             return 'Node'
         return 'Branch'
 
+    @property
+    def branch(self) -> Branch:
+        return self.__data['branch']
+
     def get(self, key, default = None):
         try:
             return self[key]
@@ -855,6 +924,18 @@ class Target(object):
                 self[k] = _obj[k]
         for k in kw:
             self[k] = kw[k]
+
+    def items(self) -> ItemsView[str, Any]:
+        return self.__data.items()
+
+    def keys(self) -> KeysView[str]:
+        return self.__data.keys()
+
+    def values(self) -> ValuesView:
+        return self.__data.values()
+
+    def copy(self):
+        return self.__class__(self.__data)
 
     def __init__(self, obj, **context):
         self.__data = {}
@@ -871,18 +952,29 @@ class Target(object):
             if attr not in self.__data:
                 raise TypeError("Missing required keys: %s" % self.__reqd.difference(self.__data))
 
-    def __getitem__(self, item):
-        return self.__data[item]
+    def __copy__(self):
+        return self.copy()
 
-    def __setitem__(self, key, val):
+    def __len__(self):
+        return len(self.__data)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.__data)
+
+    def __getitem__(self, key: str):
+        return self.__data[key]
+
+    def __setitem__(self, key: str, val):
         if not isstr(key):
-            raise TypeError('Only string subscript allowed, not %s : %s' % (type(key), str(key)))
+            raise TypeError(key, type(key), str)
+        if not key.isidentifier() or iskeyword(key):
+            raise ValueError('Invalid target key: %s' % key)
         if self.__data.get(key, val) != val:
-            raise ValueError("Value conflict with key '%s' (%s != %s)" % (key, val, self.__data[key]))
+            raise ValueError("Value conflict %s: %s (was: %s)" % (key, val, self.__data[key]))
         self.__data[key] = val
 
-    def __contains__(self, item):
-        return item in self.__data
+    def __contains__(self, key: str):
+        return key in self.__data
 
     def __getattr__(self, name):
         if name in self.__attrs:
@@ -922,11 +1014,11 @@ class Target(object):
         )
         return orepr(self, dict(items))
 
-class StepEntry(object):
+class StepEntry(Sequence):
 
     def __init__(self, *entry):
         if len(entry) < 3:
-            raise TypeError('Expecting more than {} arguments'.format(len(entry)))
+            raise TypeError('Expecting more than %d arguments' % len(entry))
         self.__entry = entry
 
     @property
@@ -934,18 +1026,30 @@ class StepEntry(object):
         return self.__entry[0]
 
     @property
-    def target(self):
+    def target(self) -> Target:
         return self.__entry[1]
 
     @property
-    def duration_ms(self):
+    def duration_ms(self) -> int:
         return self.__entry[2]
 
     @property
-    def entry(self):
+    def entry(self) -> tuple:
         return self.__entry
 
     def __len__(self):
         return min(2, len(self.__entry))
+
     def __iter__(self):
         return islice(self.__entry, 2)
+
+    def __getitem__(self, key):
+        if key in (0, 1):
+            return self.__entry[key]
+        return list(self)[key]
+
+    def __contains__(self, item):
+        for x in self:
+            if x == item:
+                return True
+        return False

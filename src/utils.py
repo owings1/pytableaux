@@ -20,9 +20,11 @@
 from errors import DuplicateKeyError, IllegalStateError
 from builtins import ModuleNotFoundError
 from copy import copy
+# from functools import partial
 from importlib import import_module
 from inspect import isclass
 from itertools import chain, islice
+# from operator import is_not
 from time import time
 from types import ModuleType
 from typing import Any, Callable, Collection, Iterable, Sequence, Union, cast
@@ -133,6 +135,8 @@ def cat(*args: str) -> str:
 
 def wrparens(*args: str) -> str:
     return cat('(', *args, ')')
+
+# notnone = partial(is_not, None)
 
 testlw = None
 def dictrepr(d, limit = 10, j = ', ', vj='=', paren = True):

@@ -33,10 +33,10 @@ from models import BaseModel
 
 from proof.tableaux import TableauxSystem as BaseSystem, Rule, Tableau
 from proof.rules import ClosureRule
-from proof.common import Branch, Filters, Node, Target
-from proof.helpers import AppliedNodesWorldsTracker, AppliedSentenceCounter, \
+from proof.common import Access, Annotate, Branch, Filters, Node, Target
+from proof.helpers import AppliedNodesWorlds, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
-    FilterHelper, AppliedNodeCount
+    FilterHelper, AppliedNodeCount, VisibleWorldsIndex
 
 from errors import DenotationError, ModelValueError
 
@@ -699,16 +699,24 @@ class TableauxSystem(BaseSystem):
     modal    = Filters.Node.Modal,
 )
 class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
-    # FilterHelper
-    # ----------------
+
+    nf: FilterHelper = Annotate.HelperAttr
+
     ignore_ticked = True
+
     # Filters.Node.Sentence
-    negated = operator = quantifier = predicate = None
+    negated    : bool = None
+    operator   : Oper = None
+    quantifier : Quantifier = None
+    predicate  : Predicate = None
+
     # Filters.Node.Modal
-    modal = True
-    access = None
+    modal  : bool = True
+    access : bool = None
 
 class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
+
+    adz: AdzHelper = Annotate.HelperAttr
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
@@ -949,12 +957,13 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
             w = node.get('world')
             return {
                 'adds': (
                     (
-                        {'sentence': s.lhs.negate(), 'world': w},
-                        {'sentence': s.rhs.negate(), 'world': w},
+                        {'sentence': lhs.negate(), 'world': w},
+                        {'sentence': rhs.negate(), 'world': w},
                     ),
                 ),
             }
@@ -971,11 +980,12 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
             w = node.get('world')
             return {
                 'adds': (
-                    ({'sentence': s.lhs.negate(), 'world': w},),
-                    ({'sentence': s.rhs         , 'world': w},),
+                    ({'sentence': lhs.negate(), 'world': w},),
+                    ({'sentence': rhs         , 'world': w},),
                 ),
             }
 
@@ -991,12 +1001,13 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
             w = node.get('world')
             return {
                 'adds': (
                     (
-                        {'sentence': s.lhs         , 'world': w}, 
-                        {'sentence': s.rhs.negate(), 'world': w},
+                        {'sentence': lhs         , 'world': w}, 
+                        {'sentence': rhs.negate(), 'world': w},
                     ),
                 ),
             }
@@ -1014,16 +1025,17 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
             w = node.get('world')
             return {
                 'adds': (
                     (
-                        {'sentence': s.lhs.negate(), 'world': w},
-                        {'sentence': s.rhs.negate(), 'world': w},
+                        {'sentence': lhs.negate(), 'world': w},
+                        {'sentence': rhs.negate(), 'world': w},
                     ),
                     (
-                        {'sentence': s.rhs, 'world': w},
-                        {'sentence': s.lhs, 'world': w},
+                        {'sentence': rhs, 'world': w},
+                        {'sentence': lhs, 'world': w},
                     ),
                 ),
             }
@@ -1042,16 +1054,18 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
+            lhs, rhs = s
+            nrhs = rhs.negate()
             w = node.get('world')
             return {
                 'adds': (
                     (
-                        {'sentence': s.lhs         , 'world': w},
-                        {'sentence': s.rhs.negate(), 'world': w},
+                        {'sentence': lhs , 'world': w},
+                        {'sentence': nrhs, 'world': w},
                     ),
                     (
-                        {'sentence': s.rhs.negate(), 'world': w},
-                        {'sentence': s.lhs         , 'world': w},
+                        {'sentence': nrhs, 'world': w},
+                        {'sentence': lhs , 'world': w},
                     ),
                 ),
             }
@@ -1116,9 +1130,10 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Quantified = self.sentence(node)
-            s = s.unquantify(branch.new_constant())
+            r = s.unquantify(branch.new_constant())
+            w = node.get('world')
             return {
-                'adds': (({'sentence': s, 'world': node.get('world')},),),
+                'adds': (({'sentence': r, 'world': w},),),
             }
 
     class ExistentialNegated(DefaultNodeRule):
@@ -1134,11 +1149,12 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Quantified = self.sentence(node)
-            # keep conversion neutral for inheritance below
+            # Keep conversion neutral for inheritance below.
             sq = self.convert_to(s.variable, s.sentence.negate())
+            w = node.get('world')
             return {
                 'adds': (
-                    ({'sentence': sq, 'world': node.get('world')},),
+                    ({'sentence': sq, 'world': w},),
                 ),
             }
 
@@ -1155,7 +1171,7 @@ class TabRules(object):
         def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch):
             s: Quantified = self.sentence(node)
             r = s.unquantify(c)
-            w: int = node.get('world')
+            w = node.get('world')
             return ({'sentence': r, 'world': w},)
 
     class UniversalNegated(ExistentialNegated):
@@ -1175,25 +1191,30 @@ class TabRules(object):
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
         world1 *w* and world2 *w'* to *b*, then tick *n*.
         """
+        operator = Oper.Possibility
+        branch_level = 1
+
         Helpers = (
             AppliedQuitFlag,
             AppliedSentenceCounter,
             MaxWorldsTracker,
         )
-        operator = Oper.Possibility
-        branch_level = 1
-
-        def _get_targets(self, branch: Branch):
-            if self.apqf.get(branch):
-                return
-            return super()._get_targets(branch)
+        # Helper Type Annotations
+        apqf: AppliedQuitFlag        = Annotate.HelperAttr
+        apsc: AppliedSentenceCounter = Annotate.HelperAttr
+        maxw: MaxWorldsTracker       = Annotate.HelperAttr
 
         def _get_node_targets(self, node: Node, branch: Branch):
 
-            if not self._should_apply(branch):
-                if not self.apqf.get(branch):
-                    return self._get_flag_target(branch)
-                return
+            # Check for max worlds reached
+            if self.maxw.max_worlds_exceeded(branch):
+                self.nf.release(node, branch)
+                if self.apqf.get(branch):
+                    return
+                return {
+                    'flag': True,
+                    'adds': ((self.maxw.quit_flag(branch),),),
+                }
 
             s: Operated = self.sentence(node)
             si = s.operand
@@ -1211,6 +1232,9 @@ class TabRules(object):
             }
 
         def score_candidate(self, target):
+            """
+            :overrides: AdzHelper.ClosureScore
+            """
 
             if target.get('flag'):
                 return 1
@@ -1228,7 +1252,7 @@ class TabRules(object):
 
             return -1 * self.maxw.modal_complexity(s) * track_count
 
-        def group_score(self, target):
+        def group_score(self, target: Target):
 
             if target['candidate_score'] > 0:
                 return 1
@@ -1238,19 +1262,6 @@ class TabRules(object):
             si = s.operand
 
             return -1 * self.apsc[branch].get(si, 0)
-
-        # private util
-
-        def _should_apply(self, branch):
-            return not self.maxw.max_worlds_exceeded(branch)
-
-        def _get_flag_target(self, branch):
-            return {
-                'flag': True,
-                'adds': (
-                    (self.maxw.quit_flag(branch),),
-                ),
-            }
 
     class PossibilityNegated(DefaultNodeRule):
         """
@@ -1265,18 +1276,14 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
-            si = s.operand
-            sm = self.convert_to((si.negate(),))
+            sm = self.convert_to((s.operand.negate(),))
+            w = node['world']
             return {
                 'adds': (
-                    ({'sentence': sm, 'world': node['world']},),
+                    ({'sentence': sm, 'world': w},),
                 ),
             }
 
-    @FilterHelper.clsfilters(
-        sentence = Filters.Node.Sentence,
-        modal    = Filters.Node.Modal,
-    )
     class Necessity(DefaultNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
@@ -1288,21 +1295,26 @@ class TabRules(object):
         branch_level = 1
 
         Helpers = (
-            ('maxw' , MaxWorldsTracker),
-            ('apnw' , AppliedNodesWorldsTracker),
-            ('apqf' , AppliedQuitFlag),
-            ('apnc' , AppliedNodeCount),
+            AppliedNodeCount,
+            AppliedNodesWorlds,
+            AppliedQuitFlag,
+            MaxWorldsTracker,
+            VisibleWorldsIndex,
         )
+
+        # Helper Type Annotations
+        apnc: AppliedNodeCount   = Annotate.HelperAttr
+        apnw: AppliedNodesWorlds = Annotate.HelperAttr
+        apqf: AppliedQuitFlag    = Annotate.HelperAttr
+        maxw: MaxWorldsTracker   = Annotate.HelperAttr
+        visw: VisibleWorldsIndex = Annotate.HelperAttr
 
         Timers = (
-            *DefaultNodeRule.Timers,
-            'get_targets_for_node',
-            'make_target'         ,
-            'check_target_condtn1',
-            'check_target_condtn2',
+            'get_targets',
         )
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch) -> list[Target]:
+
             # Check for max worlds reached
             if self.maxw.max_worlds_exceeded(branch):
                 self.nf.release(node, branch)
@@ -1314,14 +1326,14 @@ class TabRules(object):
                 }
 
             # Only count least-applied-to nodes
-            if not self.__is_least_applied_to(node, branch):
+            if not self.apnc.isleast(node, branch):
                 return
 
-            with self.timers['get_targets_for_node']:
+            with self.timers['get_targets']:
 
                 targets = []
 
-                s = self.sentence(node)
+                s: Operated = self.sentence(node)
                 si = s.operand
                 w1 = node['world']
 
@@ -1332,24 +1344,20 @@ class TabRules(object):
                     if (node, w2) in self.apnw[branch]:
                         continue
 
-                    with self.timers['check_target_condtn1']:
-                        meets_condtn = branch.has_access(w1, w2)
-
-                    if not meets_condtn:
+                    access = Access(w1, w2)
+                    if not self.visw.has(branch, w1, w2):
                         continue
 
-                    with self.timers['check_target_condtn2']:
-                        meets_condtn = not branch.has({'sentence': si, 'world': w2})
+                    add = {'sentence': si, 'world': w2}
 
-                    if meets_condtn:
-                        with self.timers['make_target']:
-                            anode = branch.find({'world1': w1, 'world2': w2})
-                            targets.append({
-                                'sentence' : si,
-                                'world'    : w2,
-                                'nodes'    : {node, anode},
-                                'adds'     : (({'sentence': si, 'world': w2},),),
-                            })
+                    if not branch.has(add):
+                        anode = self.visw.nodes[branch][access]
+                        targets.append({
+                            'sentence' : si,
+                            'world'    : w2,
+                            'nodes'    : {node, anode},
+                            'adds'     : ((add,),),
+                        })
             return targets
 
         def score_candidate(self, target: Target):
@@ -1358,19 +1366,19 @@ class TabRules(object):
                 return 1
 
             # We are already restricted to least-applied-to nodes by
-            # ``get_targets_for_node()``
+            # ``_get_node_targets()``
 
             # Check for closure
             if self.adz.closure_score(target) == 1:
                 return 1
 
             # Not applied to yet
-            node_apply_count = self.apnc[target.branch].get(target.node, 0)
-            if node_apply_count == 0:
+            apcount = self.apnc[target.branch].get(target.node, 0)
+            if apcount == 0:
                 return 1
 
             # Pick the least branching complexity
-            return -1 * self.tableau.branching_complexity(target['node'])
+            return -1 * self.tableau.branching_complexity(target.node)
 
         def group_score(self, target: Target):
 
@@ -1378,31 +1386,14 @@ class TabRules(object):
                 return 1
 
             return -1 * self.apnc[target.branch].get(target.node, 0)
-            #return -1 * min(target['track_count'], self.tableau.branching_complexity(target['node']))
 
         def example_nodes(self):
             s = Operated.first(self.operator)
-            return [
-                {'sentence': s, 'world': 0},
-                {'world1': 0, 'world2': 1},
-            ]
-
-        # private util
-
-        def __is_least_applied_to(self, node: Node, branch: Branch):
-            node_apply_count = self.apnc[branch].get(node, 0)
-            min_apply_count = self.__min_application_count(branch)
-            return min_apply_count >= node_apply_count
-
-        def __min_application_count(self, branch: Branch):
-            if branch in self.apnc:
-                if not len(self.apnc[branch]):
-                    return 0
-                return min({
-                    self.apnc[branch][node]
-                    for node in self.apnc[branch]
-                })
-            return 0
+            access = Access(0, 1)
+            return (
+                {'sentence': s, 'world': access.world1},
+                access.tonode(),
+            )
 
     class NecessityNegated(PossibilityNegated):
         """
@@ -1427,13 +1418,13 @@ class TabRules(object):
         branch_level = 1
         ticking      = False
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch) -> list[Target]:
             pnodes = self.pn[branch]
-            targets = list()
             pa, pb = node['sentence']
             if pa == pb:
                 # Substituting a param for itself would be silly.
                 return
+            targets = []
             # Find other nodes with one of the identicals.
             for n in pnodes:
                 if n is node:
