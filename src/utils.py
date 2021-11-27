@@ -25,11 +25,13 @@ from inspect import isclass
 from itertools import chain, islice
 from time import time
 from types import ModuleType
-from typing import Callable
+from typing import Any, Callable, Collection, Iterable, Sequence, Union, cast
 from past.builtins import basestring
-EmptySet = frozenset()
 
-def get_module(ref, package = None):
+EmptySet = frozenset()
+LogicRef = Union[ModuleType, str]
+
+def get_module(ref, package: str = None) -> ModuleType:
 
     cache = _myattr(get_module, dict)
     keys = set()
@@ -81,7 +83,7 @@ def get_module(ref, package = None):
             return ret['mod']
         return _setcache(import_module(cat(pfx, ref)))
 
-def get_logic(ref):
+def get_logic(ref) -> ModuleType:
     """
     Get the logic module from the specified reference.
 
@@ -101,7 +103,7 @@ def get_logic(ref):
     """
     return get_module(ref, package = 'logics')
 
-def islogic(obj):
+def islogic(obj) -> bool:
     return ismodule(obj) and obj.__name__.startswith('logics.')
 
 def typecheck(obj, types, name = 'parameter', err = TypeError):
@@ -123,13 +125,13 @@ def condcheck(cond, msg = None, name = 'parameter', err = ValueError):
         msg = 'Invalid value for `%s`' % name
     raise err(msg)
 
-def nowms():
+def nowms() -> int:
     return int(round(time() * 1000))
 
-def cat(*args):
+def cat(*args: str) -> str:
     return ''.join(args)
 
-def wrparens(*args):
+def wrparens(*args: str) -> str:
     return cat('(', *args, ')')
 
 testlw = None
@@ -167,11 +169,6 @@ def isint(obj):
 
 def ismodule(obj):
     return isinstance(obj, ModuleType)
-
-def safeprop(self, name, value = None):
-    if hasattr(self, name):
-        raise KeyError("'%s' already exists" % (name))
-    setattr(self, name, value)
 
 def sortedbyval(map: dict) -> list:
     return list(it[1] for it in sorted((v, k) for k, v in map.items()))
@@ -242,7 +239,7 @@ class Decorators(object):
             origin = args[0]
         else:
             origin = None
-        def wrap(origin):
+        def wrap(origin: Callable):
             def fset(self, attr, val):
                 if __class__._isreadonly(self, **kw):
                     raise AttributeError('%s is readonly' % self)
@@ -251,13 +248,13 @@ class Decorators(object):
         return wrap(origin) if origin else wrap
 
     @staticmethod
-    def _privkey(method):
+    def _privkey(method) -> tuple[str]:
         name = method.__name__
         key = cat('_', __name__, '__lazy_', name)
         return (name, key)
 
     @staticmethod
-    def _isreadonly(obj, *args, cls = None, check = None, **kw):
+    def _isreadonly(obj, *args, cls: bool = None, check: Callable = None, **kw) -> bool:
         if cls: obj = obj.__class__
         if check != None:
             if not check(obj): return False
@@ -278,7 +275,7 @@ class CacheNotationData(object):
     default_fetch_name = 'default'
 
     @classmethod
-    def load(cls, notn, name, data):
+    def load(cls, notn, name: str, data: dict):
         idx = cls.__getidx(notn)
         typecheck(name, str, 'name')
         typecheck(data, dict, 'data')
@@ -375,12 +372,12 @@ class StopWatch(object):
         if self.is_running():
             self.stop()
 
-class OrderedAttrsView(object):
+class OrderedAttrsView(Sequence):
 
     def get(self, key, default = None):
         return self.__map.get(key, default)
 
-    def __init__(self, attrmap, valuelist):
+    def __init__(self, attrmap: dict[str, Any], valuelist: Sequence):
         self.__list = valuelist
         self.__map = attrmap
 
@@ -391,7 +388,7 @@ class OrderedAttrsView(object):
             raise AttributeError(name)
 
     def __getitem__(self, key):
-        if isint(key):
+        if isinstance(key, (int, slice)):
             return self.__list[key]
         return self.__map[key]
 
@@ -407,87 +404,114 @@ class OrderedAttrsView(object):
     def __repr__(self):
         return repr(self.__list)
 
-class UniqueList(object):
+class UniqueList(Sequence):
+
     def add(self, item):
         if item not in self:
             self.__set.add(item)
             self.__list.append(item)
+
     append = add
-    def update(self, items):
+
+    def update(self, items: Iterable):
         for item in items:
             self.add(item)
+
     extend = update
+
     def clear(self):
         self.__set.clear()
         self.__list.clear()
+
     def index(self, item):
         return self.__list.index(item)
-    def pop(self, *i):
+
+    def pop(self, *i: int):
         item = self.__list.pop(*i)
         self.__set.remove(item)
         return item
+
     def remove(self, item):
         self.__set.remove(item)
         self.__list.remove(item)
+
     def discard(self, item):
         if item in self:
             self.remove(item)
+
     def reverse(self):
         self.__list.reverse()
+
     def sort(self, *args, **kw):
         self.__list.sort(*args, **kw)
-    def union(self, other):
+
+    def union(self, other: Iterable):
         inst = copy(self)
         if other is not self:
             inst.update(other)
         return inst
-    def difference(self, other):
+
+    def difference(self, other: Iterable):
         if not isinstance(other, (set, dict, self.__class__)):
             other = set(other)
         return self.__class__((x for x in self if x not in other))
-    def difference_update(self, other):
+
+    def difference_update(self, other: Iterable):
         for item in other:
             self.discard(item)
-    def symmetric_difference(self, other):
+
+    def symmetric_difference(self, other: Iterable):
         inst = self.difference(other)
         inst.update((x for x in other if x not in self))
         return inst
+
     def symmetric_difference_update(self, other):
         inst = self.symmetric_difference(other)
         self.clear()
         self.update(inst)
+
     def intersection(self, other):
         if not isinstance(other, (set, dict, self.__class__)):
             other = set(other)
         return self.__class__((x for x in self if x in other))
+
     def intersection_update(self, other):
         if not isinstance(other, (set, dict, self.__class__)):
             other = set(other)
         for item in self.__set.difference(other):
             self.remove(item)
+
     def isdisjoint(self, other):
         if isinstance(other, self.__class__):
             other = other.__set
         return self.__set.isdisjoint(other)
+
     def issubset(self, other):
         if isinstance(other, self.__class__):
             other = other.__set
         return self.__set.issubset(other)
+
     def issuperset(self, other):
         if isinstance(other, self.__class__):
             other = other.__set
         return self.__set.issuperset(other)
+
     def copy(self):
         return self.__class__(self)
+
     def __len__(self):
         return len(self.__set)
+
     def __iter__(self):
         return iter(self.__list)
+
     def __contains__(self, item):
         return item in self.__set
-    def __getitem__(self, key):
+
+    def __getitem__(self, key: Union[int, slice]):
         return self.__list[key]
-    def __delitem__(self, key):
+
+    def __delitem__(self, key: Union[int, slice]):
         if isinstance(key, slice):
             for item in self.__list[key]:
                 self.__set.remove(item)
@@ -496,45 +520,58 @@ class UniqueList(object):
             self.pop(key)
         else:
             raise TypeError(key, type(key), (int, slice))
-    def __add__(self, value):
+
+    def __add__(self, value: Iterable):
         inst = copy(self)
         if value is not self:
             inst.update(value)
         return inst
-    def __iadd__(self, value):
+
+    def __iadd__(self, value: Iterable):
         if value is not self:
             self.update(value)
         return self
+
     __copy__ = copy
+
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             other = other.__list
         return self.__list == other
-    def __init__(self, items = None):
+
+    def __init__(self, items: Iterable = None):
         self.__set = set()
         self.__list = []
         if items:
             self.update(items)
+
     def __repr__(self):
         return cat(self.__class__.__name__, wrparens(self.__list.__repr__()))
-class LinkOrderSet(object):
+
+class LinkOrderSet(Collection):
 
     class LinkEntry(object):
+
         def __init__(self, item):
-            self.prev = self.next = None
+            self.prev: LinkOrderSet.LinkEntry = None
+            self.next: LinkOrderSet.LinkEntry = None
             self.item = item
+
         def __eq__(self, other):
             return self.item == other or (
                 isinstance(other, self.__class__) and
                 self.item == other.item
             )
+
         def __hash__(self):
             return hash(self.item)
+
         def __repr__(self):
-            return (self.item).__repr__()
+            return self.item.__repr__()
 
     def View(obj):
-        class LinkOrderSetView(object):
+        obj = cast(LinkOrderSet, obj)
+        class LinkOrderSetView(Collection):
             def __len__(self):
                 return len(obj)
             def __iter__(self):
@@ -555,21 +592,21 @@ class LinkOrderSet(object):
                 return self.__class__()
         return LinkOrderSetView()
 
-    def item(item_method):
-        def wrap(self, *args, **kw):
-            item = self._genitem_(*args, **kw)
+    def item(item_method: Callable) -> Callable:
+        def wrap(self: LinkOrderSet, item, *args, **kw):
+            item = self._genitem_(item, *args, **kw)
             return item_method(self, item)
         return wrap
 
-    def iter_items(iter_item_method):
-        def wrap(self, *args, **kw):
-            for item in self._genitems_(*args, **kw):
-                iter_item_method(self, item)
+    def iter_items(iter_item_method: Callable) -> Callable:
+        def wrap(self: LinkOrderSet, items, *args, **kw):
+            for item in items:
+                iter_item_method(self, item, *args, **kw)
             return 
         return wrap
 
-    def entry(link_entry_method):
-        def prep(self, item):
+    def entry(link_entry_method: Callable) -> Callable:
+        def prep(self: LinkOrderSet, item):
             if item in self:
                 raise DuplicateKeyError(item)
             entry = self.__idx[item] = LinkOrderSet.LinkEntry(item)
@@ -581,35 +618,35 @@ class LinkOrderSet(object):
             link_entry_method(self, entry)
         return prep
 
-class LinkOrderSet(LinkOrderSet):
-
     def _genitem_(self, item):
         return item
 
-    def _genitems_(self, items):
-        return (self._genitem_(item) for item in items)
+class LinkOrderSet(LinkOrderSet):
 
     @LinkOrderSet.item
     @LinkOrderSet.entry
-    def append(self, entry):
+    def append(self, entry: LinkOrderSet.LinkEntry):
         if self.__first == self.__last:
             self.__first.next = entry
         entry.prev = self.__last
         entry.prev.next = entry
         self.__last = entry
+
     add = append
-    extend = LinkOrderSet.iter_items(append)
-    update = extend
+
+    update = extend = LinkOrderSet.iter_items(append)
 
     @LinkOrderSet.item
     @LinkOrderSet.entry
-    def prepend(self, entry):
+    def prepend(self, entry: LinkOrderSet.LinkEntry):
         if self.__first == self.__last:
             self.__last.prev = entry
         entry.next = self.__first
         entry.next.prev = entry
         self.__first = entry
+
     unshift = prepend
+
     prextend = LinkOrderSet.iter_items(prepend)
 
     @LinkOrderSet.item
@@ -667,9 +704,9 @@ class LinkOrderSet(LinkOrderSet):
     def view(self):
         return LinkOrderSet.View(self)
 
-    def __init__(self, items = None):
+    def __init__(self, items: Iterable = None):
         self.__first = self.__last = None
-        self.__idx = {}
+        self.__idx: dict[Any, LinkOrderSet.LinkEntry] = {}
         if items != None:
             self.extend(items)
 

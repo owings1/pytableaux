@@ -26,14 +26,18 @@ class Meta(object):
     tags = ['bivalent', 'non-modal']
     category_display_order = 1
 
+from lexicals import Sentence, Argument
+from proof.common import Branch, Node
+from proof.tableaux import Tableau
 from . import k as K
+from inspect import getmembers
 
 class Model(K.Model):
     """
     A CPL Model is just a :ref:`K model <k-model>` with a single :ref:`frame <k-frame>`.
     """
 
-    def is_sentence_opaque(self, sentence):
+    def is_sentence_opaque(self, sentence: Sentence) -> bool:
         """
         A sentence is opaque if it is a quantified sentence, or its operator is
         either Necessity or Possibility.
@@ -44,7 +48,7 @@ class Model(K.Model):
             return True
         return super().is_sentence_opaque(sentence)
 
-    def get_data(self):
+    def get_data(self) -> dict:
         data = self.world_frame(0).get_data()['value']
         del data['world']
         return data
@@ -55,7 +59,7 @@ class Model(K.Model):
 class TableauxSystem(K.TableauxSystem):
 
     @classmethod
-    def build_trunk(cls, tableau, argument):
+    def build_trunk(cls, tableau: Tableau, argument: Argument):
         """
         To build the trunk for an argument, add a node for each premise, and
         a node with the negation of the conclusion.        
@@ -65,8 +69,7 @@ class TableauxSystem(K.TableauxSystem):
             branch.add({'sentence': premise})
         branch.add({'sentence': argument.conclusion.negate()})
 
-
-class TableauxRules(object):
+class TabRules(object):
     """
     In general, rules for connectives consist of two rules per connective:
     a "plain" rule, and a negated rule. The special case of negation has only
@@ -74,43 +77,45 @@ class TableauxRules(object):
     predicate.
     """
 
-    class ContradictionClosure(K.TableauxRules.ContradictionClosure):
+    class ContradictionClosure(K.TabRules.ContradictionClosure):
         """
         A branch is closed if a sentence and its negation appear on the branch.
         """
         modal = False
-        def _find_closing_node(self, node, branch):
-            if node.has('sentence'):
+        def _find_closing_node(self, node: Node, branch: Branch):
+            s = self.sentence(node)
+            if s:
                 return branch.find({
-                    'sentence' : node['sentence'].negative()
+                    'sentence' : s.negative()
                 })
-    class SelfIdentityClosure(K.TableauxRules.SelfIdentityClosure):
+
+    class SelfIdentityClosure(K.TabRules.SelfIdentityClosure):
         """
         A branch is closed if a sentence of the form :s:`~ a = a` appears on the branch.
         """
         modal = False
 
-    class NonExistenceClosure(K.TableauxRules.NonExistenceClosure):
+    class NonExistenceClosure(K.TabRules.NonExistenceClosure):
         """
         A branch is closed if a sentence of the form :s:`~!a` appears on the branch.
         """
         modal = False
 
-    class DoubleNegation(K.TableauxRules.DoubleNegation):
+    class DoubleNegation(K.TabRules.DoubleNegation):
         """
         From an unticked double negation node *n* on a branch *b*, add a
         node to *b* with the double-negatum of *n*, then tick *n*.
         """
         modal = False
 
-    class Assertion(K.TableauxRules.Assertion):
+    class Assertion(K.TabRules.Assertion):
         """
         From an unticked assertion node *n* on a branch *b*,
         add a node to *b* with the operand of *n*, then tick *n*.
         """
         modal = False
 
-    class AssertionNegated(K.TableauxRules.AssertionNegated):
+    class AssertionNegated(K.TabRules.AssertionNegated):
         """
         From an unticked, negated assertion node *n* on a branch *b*,
         add a node to *b* with the negation of the assertion of *n*,
@@ -118,14 +123,14 @@ class TableauxRules(object):
         """
         modal = False
 
-    class Conjunction(K.TableauxRules.Conjunction):
+    class Conjunction(K.TabRules.Conjunction):
         """
         From an unticked conjunction node *n* on a branch *b*, for each conjunct,
         add a node to *b* with the conjunct, then tick *n*.
         """
         modal = False
 
-    class ConjunctionNegated(K.TableauxRules.ConjunctionNegated):
+    class ConjunctionNegated(K.TabRules.ConjunctionNegated):
         """
         From an unticked negated conjunction node *n* on a branch *b*, for each
         conjunct, make a new branch *b'* from *b* and add a node with the negation of
@@ -133,7 +138,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class Disjunction(K.TableauxRules.Disjunction):
+    class Disjunction(K.TabRules.Disjunction):
         """
         From an unticked disjunction node *n* on a branch *b*, for each disjunct,
         make a new branch *b'* from *b* and add a node with the disjunct to *b'*,
@@ -141,14 +146,14 @@ class TableauxRules(object):
         """
         modal = False
 
-    class DisjunctionNegated(K.TableauxRules.DisjunctionNegated):
+    class DisjunctionNegated(K.TabRules.DisjunctionNegated):
         """
         From an unticked negated disjunction node *n* on a branch *b*, for each
         disjunct, add a node with the negation of the disjunct to *b*, then tick *n*.
         """
         modal = False
 
-    class MaterialConditional(K.TableauxRules.MaterialConditional):
+    class MaterialConditional(K.TabRules.MaterialConditional):
         """
         From an unticked material conditional node *n*on a branch *b*, make two
         new branches *b'* and *b''* from *b*, add a node with the negation of the
@@ -157,7 +162,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class MaterialConditionalNegated(K.TableauxRules.MaterialConditionalNegated):
+    class MaterialConditionalNegated(K.TabRules.MaterialConditionalNegated):
         """
         From an unticked negated material conditional node *n* on a branch *b*,
         add two nodes to *b*, one with the antecedent and the other with the negation
@@ -165,7 +170,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class MaterialBiconditional(K.TableauxRules.MaterialBiconditional):
+    class MaterialBiconditional(K.TabRules.MaterialBiconditional):
         """
         From an unticked material biconditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add two nodes to *b'*, one with
@@ -175,7 +180,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class MaterialBiconditionalNegated(K.TableauxRules.MaterialBiconditionalNegated):
+    class MaterialBiconditionalNegated(K.TabRules.MaterialBiconditionalNegated):
         """
         From an unticked negated material biconditional node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add two nodes to *b'*, one with
@@ -185,7 +190,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class Conditional(K.TableauxRules.Conditional):
+    class Conditional(K.TabRules.Conditional):
         """
         The rule functions the same as the corresponding material conditional rule.
 
@@ -196,7 +201,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class ConditionalNegated(K.TableauxRules.ConditionalNegated):
+    class ConditionalNegated(K.TabRules.ConditionalNegated):
         """
         The rule functions the same as the corresponding material conditional rule.
 
@@ -206,7 +211,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class Biconditional(K.TableauxRules.Biconditional):
+    class Biconditional(K.TabRules.Biconditional):
         """
         The rule functions the same as the corresponding material biconditional rule.
 
@@ -218,7 +223,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class BiconditionalNegated(K.TableauxRules.BiconditionalNegated):
+    class BiconditionalNegated(K.TabRules.BiconditionalNegated):
         """
         The rule functions the same as the corresponding material biconditional rule.
 
@@ -230,7 +235,7 @@ class TableauxRules(object):
         """
         modal = False
 
-    class IdentityIndiscernability(K.TableauxRules.IdentityIndiscernability):
+    class IdentityIndiscernability(K.TabRules.IdentityIndiscernability):
         """
         From an unticked node *n* having an Identity sentence *s* on an open branch *b*,
         and a predicated node *n'* whose sentence *s'* has a constant that is a parameter of *s*,
@@ -239,14 +244,14 @@ class TableauxRules(object):
         """
         modal = False
 
-    closure_rules = [
+    closure_rules = (
         ContradictionClosure,
         SelfIdentityClosure,
         NonExistenceClosure,
-    ]
+    )
 
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
             IdentityIndiscernability,
             Assertion,
@@ -256,8 +261,8 @@ class TableauxRules(object):
             MaterialConditionalNegated,
             ConditionalNegated,
             DoubleNegation,
-        ],
-        [
+        ),
+        (
             # branching rules
             ConjunctionNegated,
             Disjunction,
@@ -267,5 +272,6 @@ class TableauxRules(object):
             Conditional,
             Biconditional,
             BiconditionalNegated,
-        ]
-    ]
+        ),
+    )
+TableauxRules = TabRules

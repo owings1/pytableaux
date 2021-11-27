@@ -673,24 +673,24 @@ class TableauxSystem(BaseSystem):
 
     @classmethod
     def branching_complexity(cls, node: Node) -> int:
-        if not node.has('sentence'):
+        s: Sentence = node.get('sentence')
+        if not s:
             return 0
-        sentence: Sentence = node['sentence']
         last_is_negated = False
         complexity = 0
-        for operator in sentence.operators:
-            if operator == Oper.Assertion:
+        for oper in s.operators:
+            if oper == Oper.Assertion:
                 continue
-            if operator == Oper.Negation:
+            if oper == Oper.Negation:
                 if last_is_negated:
                     last_is_negated = False
                     continue
                 last_is_negated = True
             elif last_is_negated:
-                if operator in cls.neg_branchable:
+                if oper in cls.neg_branchable:
                     complexity += 1
                     last_is_negated = False
-            elif operator in cls.pos_branchable:
+            elif oper in cls.pos_branchable:
                 complexity += 1
         return complexity
 

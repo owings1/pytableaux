@@ -18,8 +18,8 @@
 #
 # pytableaux - tableaux module
 from lexicals import Argument, Constant, Sentence
-from utils import Decorators, LinkOrderSet, Kwobj, StopWatch, UniqueList, EmptySet, \
-    dedupitems, get_logic, mroattr, orepr
+from utils import Decorators, LinkOrderSet, Kwobj, StopWatch, UniqueList, \
+    LogicRef, EmptySet, get_logic, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import Events, EventEmitter
 from inspect import isclass
@@ -28,10 +28,9 @@ from .common import Branch, Node, NodeType, Target
 from past.builtins import basestring
 from enum import auto, Enum, Flag
 from keyword import iskeyword
-from types import ModuleType
-from typing import Any, Callable, Collection, Iterator, Iterable, NamedTuple, Union, final
-
-LogicRef = Union[ModuleType, str]
+from types import MappingProxyType, ModuleType
+from typing import Any, Callable, Collection, Iterator, Iterable, NamedTuple, \
+    Sequence, Union, cast, final
 
 class RuleMeta(type):
     def __new__(cls, clsname: str, bases: tuple[type], clsattrs: dict, **kw):
@@ -39,10 +38,10 @@ class RuleMeta(type):
         helper_attrs: dict[type, str] = {}
         helper_classes: list[type] = []
         helpers_attr = 'Helpers'
-        if clsattrs.get('debug', False):
-            print('clsname', clsname)
-            print('bases', bases)
-            print('clsattrs', clsattrs)
+        # if clsattrs.get('debug', False):
+        #     print('clsname', clsname)
+        #     print('bases', bases)
+        #     print('clsattrs', clsattrs)
         for clsattr, rawvalue in clsattrs.items():
             try:
                 if clsattr == helpers_attr:
@@ -105,11 +104,6 @@ class RuleMeta(type):
         ))
         hlist = UniqueList((item for item in filt if item[1] != None))
         setattr(Rule, helpers_attr, tuple(hlist))
-        # Rule.helper_classes = helper_classes
-        # Rule.helper_attrs = helper_attrs
-        # Rule.Helpers = tuple(
-        #     (helper_attrs[Helper], Helper) for Helper in helper_classes
-        # )
         return Rule
 
 class Rule(EventEmitter, metaclass = RuleMeta):
@@ -134,6 +128,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         (Events.AFTER_TRUNK_BUILD  , 'after_trunk_build'),
         (Events.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
     )
+
 class KEY(Enum):
     FLAGS       = auto()
     STEP_ADDED  = auto()
@@ -152,7 +147,7 @@ class FLAG(Flag):
     TIMED_OUT   = 16
     TRUNK_BUILT = 32
 
-class Tableau(EventEmitter):
+class Tableau(Sequence, EventEmitter):
 
     class RuleTarget(NamedTuple):
         rule   : Rule
@@ -171,6 +166,7 @@ class Tableau(EventEmitter):
         Events.AFTER_TRUNK_BUILD,
         Events.BEFORE_TRUNK_BUILD,
     )
+
     class NodeStat(dict):
 
         def __init__(self):
@@ -214,8 +210,8 @@ class Rule(Rule):
     Base class for a Tableau rule.
     """
 
-    Helpers = tuple()
-    Timers = tuple()
+    Helpers: tuple[tuple[str, type]] = tuple()
+    Timers: tuple[str] = tuple()
 
     branch_level = 1
 
@@ -243,7 +239,7 @@ class Rule(Rule):
 
     @final
     @property
-    def apply_count(self):
+    def apply_count(self) -> int:
         """
         The number of times the rule has applied.
 
@@ -308,7 +304,6 @@ class Rule(Rule):
         :param tableaux.Branch parent: The parent branch, if any.
         :return: The new branch.
         :rtype: tableaux.Branch
-        :meta public final:
         """
         return self.tableau.branch(parent)
 
@@ -346,13 +341,13 @@ class Rule(Rule):
         return info
 
     # Abstract methods
-    def example_nodes(self) -> list[NodeType]:
+    def example_nodes(self) -> Sequence[NodeType]:
         """
         :meta abstract:
         """
         raise NotImplementedError()
 
-    def _get_targets(self, branch: Branch) -> list[Target]:
+    def _get_targets(self, branch: Branch) -> Sequence[Target]:
         """
         :meta protected abstract:
         """
@@ -392,7 +387,7 @@ class Rule(Rule):
     def score_candidate(self, target: Target) -> float:
         return sum(self.score_candidate_list(target))
 
-    def score_candidate_list(self, target: Target) -> Collection[float]:
+    def score_candidate_list(self, target: Target) -> Sequence[float]:
         return self.score_candidate_map(target).values()
 
     def score_candidate_map(self, target: Target) -> dict[Any: float]:
@@ -410,7 +405,7 @@ class Rule(Rule):
 
     # Private Util
 
-    def __extend_targets(self, targets: Collection[Target]):
+    def __extend_targets(self, targets: Sequence[Target]):
         """
         Augment the targets with the following keys:
         
@@ -421,25 +416,19 @@ class Rule(Rule):
         - `min_candidate_score`
         - `max_candidate_score`
 
-        :param iterable(dict) targets: The list of targets.
-        :param tableaux.Branch branch: The branch.
-        :return: ``None``
+        :param Sequence[Target] targets: The list of targets.
+        :param common.Branch branch: The branch.
         """
-        if not isinstance(targets, (tuple, list)):
-            raise TypeError('Targets must be a (tuple, list): %s' % type(targets))
+        if not isinstance(targets, Sequence):
+            raise TypeError(targets, type(targets), Sequence)
         if self.opts['is_rank_optim']:
-            # if isinstance(targets, Generator):
-            #     targets, scores = zip()
-            # targets, scores = zip(*(
-            #      (target, self.score_candidate(target))
-            #      for target in targets
-            # ))
-            scores = [self.score_candidate(target) for target in targets]
+            scores = tuple(self.score_candidate(target) for target in targets)
         else:
-            scores = [0]
+            scores = (0,)
         max_score = max(scores)
         min_score = min(scores)
         for i, target in enumerate(targets):
+            target = cast(Target, target)
             target.update({
                 'rule'            : self,
                 'total_candidates': len(targets),
@@ -459,7 +448,7 @@ class Rule(Rule):
                     'max_candidate_score' : None,
                 })
 
-    def __select_best_target(self, targets: Collection[Target]):
+    def __select_best_target(self, targets: Iterable[Target]) -> Target:
         """
         Selects the best target. Assumes targets have been extended.
         """
@@ -472,108 +461,282 @@ class Rule(Rule):
 RuleType = Union[RuleMeta, Rule]
 RuleRef = Union[RuleType, str]
 
-class TabRules(object):
+class TabRulesSharedData(object):
 
-    class Base(object):
+    def lock(self, *_):
+        if self.locked:
+            raise ValueError('already locked')
+        self.ruleindex = MappingProxyType(self.ruleindex)
+        self.groupindex = MappingProxyType(self.groupindex)
+        self.locked = True
 
-        @property
-        def locked(self):
-            return self.__c.stat.locked
+    def __init__(self, tableau: Tableau, root):
+        self.ruleindex = {}
+        self.groupindex = {}
+        self.locked = False
+        self.tab: Tableau = tableau
+        self.root: TabRules = root
+        tableau.once(Events.AFTER_BRANCH_ADD, self.lock)
 
-        @property
-        def tab(self):
-            return self.__c.tab
+    def __delattr__(self, attr: str):
+        raise AttributeError(attr)
 
-        @property
-        def logic(self):
-            return self.__c.tab.logic
+    def __setattr__(self, attr, val):
+        if getattr(self, 'locked', False):
+            raise AttributeError('locked (%s)' % attr)
+        if hasattr(self, 'root') and attr != 'locked':
+            if attr in ('ruleindex', 'groupindex') and (
+                isinstance(val, MappingProxyType) and
+                not isinstance(getattr(self, attr), MappingProxyType)
+            ):
+                pass
+            else:
+                raise AttributeError(attr)
+        super().__setattr__(attr, val)
 
-        def __init__(self, common):
-            self.__c = common
-            self.__setattr__ = TabRules._prot
+class TabRulesBase(Sequence):
 
-        def __delattr__(self, name):
-            if name.startswith('_'):
-                raise AttributeError(name)
-            return super().__delattr__(name)
+    @property
+    def locked(self) -> bool:
+        return self._common.locked
 
-class TabRules(TabRules.Base):
+    @property
+    def tab(self) -> Tableau:
+        return self._common.tab
 
-    def _prot(self, name, *_):
+    @property
+    def logic(self) -> ModuleType:
+        return self._common.tab.logic
+
+    @property
+    def _ruleindex(self):
+        return self._common.ruleindex
+
+    @property
+    def _groupindex(self):
+        return self._common.groupindex
+
+    @property
+    def _common(self):
+        return self.__common
+
+    @property
+    def _root(self):
+        return self._common.root
+
+    def __init__(self, common: TabRulesSharedData):
+        self.__common: TabRulesSharedData = common
+
+    def __delattr__(self, name: str):
         raise AttributeError(name)
+
+    def __setattr__(self, attr, val):
+        if '_' + __class__.__name__ + '__common' in self.__dict__:
+            raise AttributeError(attr)
+        super().__setattr__(attr, val)
     
     writes = Decorators.checkstate(locked = False)
 
-    class RuleGroup(TabRules.Base):
-        pass
+class RuleGroup(TabRulesBase):
 
-    class RuleGroups(TabRules.Base):
-        pass
-
-    class Common(object):
-
-        def __init__(self, tableau: Tableau):
-            self.ruleindex = {}
-            self.groupindex = {}
-            self.stat = Kwobj(len = 0, locked = False)
-            self.tab = tableau
-            def lock(*_): self.stat.locked = True
-            tableau.once(Events.AFTER_BRANCH_ADD, lock)
-            self.__setattr__ = self.__delattr__ = TabRules._prot
-
-class TabRules(TabRules):
+    writes = TabRulesBase.writes
 
     @property
-    def groups(self):
-        return self.__groups
+    def name(self) -> str:
+        return self.__name
 
-    @TabRules.writes
+    @writes
     def append(self, rule: RuleType):
-        self.groups.create().append(rule)
+        rule = TabRules._create_rule(rule, self.tab)
+        cls = rule.__class__
+        clsname = cls.__name__
+        if clsname in self._ruleindex or clsname in self._groupindex:
+            raise DuplicateKeyError(clsname)
+        if hasattr(self._root, clsname):
+            raise AttributeError('Duplicate attribute %s' % clsname)
+        self.__rules.append(rule)
+        self._ruleindex[clsname] = self.__index[rule] = rule
+
     add = append
 
-    @TabRules.writes
+    @writes
+    def extend(self, rules: Iterable[RuleType]):
+        for rule in rules:
+            self.add(rule)
+
+    @writes
+    def clear(self):
+        for rule in self.__rules:
+            del(self._ruleindex[rule.__class__.__name__])
+        self.__rules.clear()
+
+    def __init__(self, name: str, common: TabRulesSharedData):
+        self.__name = name
+        self.__rules = []
+        self.__index = {}
+        super().__init__(common)
+
+    def __iter__(self) -> Iterator[Rule]:
+        return iter(self.__rules)
+
+    def __len__(self):
+        return len(self.__rules)
+
+    def __contains__(self, item: RuleRef):
+        return item in self.__index
+
+    def __getitem__(self, i) -> Rule:
+        return self.__rules[i]
+
+    def __getattr__(self, name):
+        if name in self.__index:
+            return self.__index[name]
+        raise AttributeError(name)
+
+    def __repr__(self):
+        return orepr(self, name = self.name, rules = len(self))
+
+    del(writes)
+
+class RuleGroups(TabRulesBase):
+
+    writes = TabRulesBase.writes
+
+    @writes
+    def create(self, name: str = None) -> RuleGroup:
+        if name != None:
+            if name in self._groupindex or name in self._ruleindex:
+                raise DuplicateKeyError(name)
+            if hasattr(self._root, name):
+                raise AttributeError('Duplicate attribute %s' % name)
+        group = RuleGroup(name, self._common)
+        self.__groups.append(group)
+        if name != None:
+            self._groupindex[name] = group
+        return group
+
+    @writes
+    def append(self, rules: Iterable[RuleType], name: str = None):
+        if name == None:
+            name = getattr(rules, 'name', None)
+        self.create(name).extend(rules)
+
+    add = append
+
+    @writes
+    def extend(self, groups: Iterable[Iterable[RuleType]]):
+        for rules in groups:
+            self.add(rules)
+
+    @writes
+    def clear(self):
+        g = self.__groups
+        for group in g:
+            group.clear()
+        g.clear()
+        self._groupindex.clear()
+
+    @property
+    def names(self):
+        return list(filter(bool, (group.name for group in self)))
+
+    def __init__(self, common: TabRulesSharedData):
+        self.__groups: list[RuleGroup] = []
+        super().__init__(common)
+
+    def __iter__(self) -> Iterator[RuleGroup]:
+        return iter(self.__groups)
+
+    def __len__(self):
+        return len(self.__groups)
+
+    def __getitem__(self, index: Union[int, slice]) -> RuleGroup:
+        return self.__groups[index]
+
+    def __getattr__(self, name):
+        idx = self._groupindex
+        if name in idx:
+            return idx[name]
+        raise AttributeError(name)
+
+    def __contains__(self, item):
+        return item in self._groupindex or item in self.__groups
+
+    def __dir__(self):
+        return self.names
+
+    def __repr__(self):
+        return orepr(self,
+            logic = self.logic,
+            groups = len(self),
+            rules = sum(len(g) for g in self)
+        )
+
+    del(writes)
+
+class TabRules(TabRulesBase):
+
+    writes = TabRulesBase.writes
+
+    @property
+    def groups(self) -> RuleGroups:
+        return self.__groups
+
+    @writes
+    def append(self, rule: RuleType):
+        self.groups.create().append(rule)
+
+    add = append
+
+    @writes
     def extend(self, rules: Iterable[RuleType]):
         self.groups.append(rules)
 
-    @TabRules.writes
+    @writes
     def clear(self):
         self.groups.clear()
-        self.__c.ruleindex.clear()
+        self._ruleindex.clear()
 
-    def get(self, ref: RuleRef, *dflt: Any) -> Rule:
-        rindex = self.__c.ruleindex
-        if ref in rindex:
-            return rindex[ref]
-        if isclass(ref) and ref.__name__ in rindex:
-            return rindex[ref.__name__]
-        if ref.__class__.__name__ in rindex:
-            return rindex[ref.__class__.__name__]
-        if len(dflt):
-            return dflt[0]
+    def get(self, ref: RuleRef, *default: Any) -> Rule:
+        idx = self._ruleindex
+        if ref in idx:
+            return idx[ref]
+        if isclass(ref) and ref.__name__ in idx:
+            return idx[ref.__name__]
+        if ref.__class__.__name__ in idx:
+            return idx[ref.__class__.__name__]
+        if len(default):
+            return default[0]
         raise NotFoundError(ref)
 
     def __init__(self, tableau: Tableau):
-        common = self.__c = TabRules.Common(tableau)
-        self.__groups = TabRules.RuleGroups(common)
+        common = TabRulesSharedData(tableau, self)
+        self.__groups = RuleGroups(common)
         super().__init__(common)
 
     def __len__(self):
-        return self.__c.stat.len
+        return len(self._ruleindex)
 
     def __iter__(self) -> Iterator[Rule]:
         return chain.from_iterable(self.groups)
 
     def __contains__(self, item: RuleRef):
-        return item in self.__c.ruleindex
+        return item in self._ruleindex
 
-    def __getattr__(self, name):
-        c = self.__c
-        if name in c.groupindex:
-            return c.groupindex[name]
-        if name in c.ruleindex:
-            return c.ruleindex[name]
-        raise AttributeError(name)
+    def __getitem__(self, key) -> Rule:
+        if isinstance(key, (int, slice)):
+            return list(self)[key]
+        try:
+            return self.get(key)
+        except NotFoundError:
+            raise KeyError(key) from None
+
+    def __getattr__(self, attr):
+        if attr in self._groupindex:
+            return self._groupindex[attr]
+        if attr in self._ruleindex:
+            return self._ruleindex[attr]
+        raise AttributeError(attr)
 
     def __dir__(self):
         return [rule.__class__.__name__ for rule in self]
@@ -598,140 +761,9 @@ class TabRules(TabRules):
                 (arg, type(arg), tab.logic.name if tab.logic else None)
             )
 
-    class RuleGroups(TabRules.RuleGroups):
+    del(writes)
 
-        @TabRules.writes
-        def create(self, name: str = None) -> TabRules.RuleGroup:
-            c = self.__c
-            if name != None:
-                if name in c.groupindex or name in c.ruleindex:
-                    raise DuplicateKeyError(name)
-            group = TabRules.RuleGroup(name, c)
-            self.__groups.append(group)
-            if name != None:
-                c.groupindex[name] = group
-            return group
-
-        @TabRules.writes
-        def append(self, rules: Iterable[RuleType], name: str = None):
-            if name == None:
-                name = getattr(rules, 'name', None)
-            self.create(name).extend(rules)
-        add = append
-
-        @TabRules.writes
-        def extend(self, groups: Iterable[Iterable[RuleType]]):
-            for rules in groups:
-                self.add(rules)
-
-        @TabRules.writes
-        def clear(self):
-            g = self.__groups
-            for group in g:
-                group.clear()
-            g.clear()
-            self.__c.groupindex.clear()
-
-        @property
-        def names(self):
-            return list(filter(bool, (group.name for group in self)))
-
-        def __init__(self, common):
-            self.__c = common
-            self.__groups = []
-            super().__init__(common)
-    
-        def __iter__(self) -> Iterator[TabRules.RuleGroup]:
-            return iter(self.__groups)
-
-        def __len__(self):
-            return len(self.__groups)
-
-        def __getitem__(self, index: Union[int, slice]) -> TabRules.RuleGroup:
-            return self.__groups[index]
-
-        def __getattr__(self, name):
-            idx = self.__c.groupindex
-            if name in idx:
-                return idx[name]
-            raise AttributeError(name)
-
-        def __dir__(self):
-            return self.names
-
-        def __repr__(self):
-            return orepr(self,
-                logic = self.logic,
-                groups = len(self),
-                rules = self.__c.stat.len
-            )
-
-    class RuleGroup(TabRules.RuleGroup):
-
-        def lenchange(method: Callable) -> Callable:
-            def update(self, *args, **kw):
-                mypre = len(self)
-                try:
-                    return method(self, *args, **kw)
-                finally:
-                    self.__c.stat.len += len(self) - mypre
-            return update
-
-        @property
-        def name(self) -> str:
-            return self.__name
-
-        @TabRules.writes
-        @lenchange
-        def append(self, rule: RuleType):
-            c = self.__c
-            rule = TabRules._create_rule(rule, self.tab)
-            cls = rule.__class__
-            clsname = cls.__name__
-            if clsname in c.ruleindex or clsname in c.groupindex:
-                raise DuplicateKeyError(clsname)
-            self.__rules.append(rule)
-            c.ruleindex[clsname] = self.__index[rule] = rule
-        add = append
-
-        @TabRules.writes
-        def extend(self, rules: Iterable[RuleType]):
-            for rule in rules:
-                self.add(rule)
-
-        @TabRules.writes
-        @lenchange
-        def clear(self):
-            for rule in self.__rules:
-                del(self.__c.ruleindex[rule.__class__.__name__])
-            self.__rules.clear()
-
-        def __init__(self, name, common):
-            self.__name = name
-            self.__c = common
-            self.__rules = []
-            self.__index = {}
-            super().__init__(common)
-
-        def __iter__(self) -> Iterator[Rule]:
-            return iter(self.__rules)
-
-        def __len__(self):
-            return len(self.__rules)
-
-        def __contains__(self, item: RuleRef):
-            return item in self.__index
-
-        def __getitem__(self, i) -> Rule:
-            return self.__rules[i]
-
-        def __getattr__(self, name):
-            if name in self.__index:
-                return self.__index[name]
-            raise AttributeError(name)
-
-        def __repr__(self):
-            return orepr(self, name = self.name, rules = len(self))
+del(TabRulesBase.writes)
 
 class TableauxSystem(object):
 

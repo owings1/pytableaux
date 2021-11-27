@@ -38,7 +38,8 @@ def crunch(v):
 
 class Model(K3W.Model):
     """
-    A :m:`B3E` model is just like a :ref:`K3W <K3W>` with different tables for some of the connectives.
+    A :m:`B3E` model is just like a :ref:`K3W <K3W>` with different tables for
+    some of the connectives.
     """
 
     def truth_function(self, operator, a, b = None):
@@ -77,8 +78,9 @@ class TableauxSystem(FDE.TableauxSystem):
 class TabRules(object):
     """
     The closure rules for :m:`B3E` are the FDE closure rule, and the K3 closure rule.
-    The operator rules are mostly a mix of :ref:`FDE <FDE>` and :ref:`K3W <K3W>` rules, but
-    with different rules for the assertion, conditional and biconditional operators.
+    The operator rules are mostly a mix of :ref:`FDE <FDE>` and :ref:`K3W <K3W>`
+    rules, but with different rules for the assertion, conditional and
+    biconditional operators.
     """
 
     class GlutClosure(K3.TabRules.GlutClosure):
@@ -101,19 +103,16 @@ class TabRules(object):
         From an unticked, designated, negated assertion node *n* on a branch *b*,
         add an undesignated node to *b* with the assertion of *n*, then tick *n*.
         """
+        designation = True
         negated     = True
         operator    = Oper.Assertion
-        designation = True
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
             return {
-                'adds': [
-                    [
-                        {'sentence': s.operand, 'designated': False},
-                    ],
-                ],
+                # Keep designation fixed to False for inheritance below
+                'adds': (({'sentence': s.operand, 'designated': False},),),
             }
 
     class AssertionUndesignated(AssertionNegatedDesignated):
@@ -194,23 +193,21 @@ class TabRules(object):
         first disjunction is the negation of the assertion of the antecedent,
         and the second disjunct is the assertion of the consequent. Then tick *n*.
         """
-        operator    = Oper.Conditional
         designation = True
+        operator    = Oper.Conditional
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            lhs, rhs = self.sentence(node)
-            sn = lhs.asserted().negate().disjoin(rhs.asserted())
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            lhsa, rhsa = (operand.asserted() for operand in s)
+            sn = lhsa.negate().disjoin(rhsa)
             # keep negated neutral for inheritance below
             if self.negated:
                 sn = sn.negate()
+            d = self.designation
             return {
-                'adds': [
-                    [
-                        # keep designation neutral for inheritance below
-                        {'sentence': sn, 'designated': self.designation},
-                    ],
-                ],
+                # keep designation neutral for inheritance below
+                'adds': (({'sentence': sn, 'designated': d},),),
             }
 
     class ConditionalNegatedDesignated(FDE.DefaultNodeRule):
@@ -219,20 +216,22 @@ class TabRules(object):
         add a designated node with the antecedent, and an undesigntated node
         with the consequent to *b*. Then tick *n*.
         """
+        designation = True
         negated     = True
         operator    = Oper.Conditional
-        designation = True
         branch_level = 1
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
+        def _get_node_targets(self, node: Node, branch: Branch):
+            s: Operated = self.sentence(node)
+            lhs, rhs = s
             return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs, 'designated': True},
-                        {'sentence': s.rhs, 'designated': False},
-                    ],
-                ],
+                # Keep designation fixed for inheritance below.
+                'adds': (
+                    (
+                        {'sentence': lhs, 'designated': True},
+                        {'sentence': rhs, 'designated': False},
+                    ),
+                ),
             }
 
     class ConditionalUndesignated(ConditionalNegatedDesignated):
@@ -241,8 +240,8 @@ class TabRules(object):
         add a designated node with the antecedent, and an undesigntated node
         with the consequent to *b*. Then tick *n*.
         """
-        negated     = False
         designation = False
+        negated     = False
 
     class ConditionalNegatedUndesignated(ConditionalDesignated):
         """
@@ -250,15 +249,15 @@ class TabRules(object):
         add an undesignated node to *b* with a negated material conditional, where the
         operands are preceded by the Assertion operator, then tick *n*.
         """
-        negated     = True
         designation = False
+        negated     = True
 
     class BiconditionalDesignated(FDE.DefaultNodeRule):
         """
-        From an unticked, designated biconditional node *n* on a branch *b*, add two
-        designated nodes to *b*, one with a disjunction, where the
-        first disjunct is the negated asserted antecedent, and the second disjunct
-        is the asserted consequent, and the other node is the same with the disjuncts
+        From an unticked, designated biconditional node *n* on a branch *b*, add
+        two designated nodes to *b*, one with a disjunction, where the first
+        disjunct is the negated asserted antecedent, and the second disjunct is
+        the asserted consequent, and the other node is the same with the disjuncts
         inverted. Then tick *n*.
         """
         designation = True
@@ -267,17 +266,17 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
-            lhs, rhs = s
-            sn1 = lhs.asserted().negate().disjoin(rhs.asserted())
-            sn2 = rhs.asserted().negate().disjoin(lhs.asserted())
-            # keep negated neutral for inheritance below
+            lhsa, rhsa = (operand.asserted() for operand in s)
+            sn1 = lhsa.negate().disjoin(rhsa)
+            sn2 = rhsa.negate().disjoin(lhsa)
+            # Keep negated neutral for inheritance below.
             if self.negated:
                 sn1 = sn1.negate()
                 sn2 = sn2.negate()
             d = self.designation
             return {
+                # Keep designation neutral for inheritance below.
                 'adds': (
-                        # keep designation neutral for inheritance below
                     (
                         {'sentence': sn1, 'designated': d},
                         {'sentence': sn2, 'designated': d},
