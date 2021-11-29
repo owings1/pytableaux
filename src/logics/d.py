@@ -26,10 +26,11 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 2
 
-from proof.helpers import MaxWorldsTracker, UnserialWorldsTracker, FilterHelper
-from proof.common import Branch, Node, Target
+from proof.helpers import UnserialWorldsTracker
+from proof.common import Annotate, Branch, Node, Target
 from lexicals import Atomic
 from . import k as K
+from typing import Generator
 
 class Model(K.Model):
     """
@@ -61,7 +62,7 @@ class TabRules:
     Serial rule, which operates on the accessibility relation for worlds.
     """
 
-    class Serial(K.DefaultRule):
+    class Serial(K.ModalNodeRule):
         """
         .. _serial-rule:
 
@@ -76,27 +77,26 @@ class TabRules:
         no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
+        Helpers = (UnserialWorldsTracker,)
+        ust: UnserialWorldsTracker = Annotate.HelperAttr
+        ignore_ticked = False
+        ticking = False
 
-        Helpers = (
-            MaxWorldsTracker,
-            UnserialWorldsTracker,
-        )
-
-        @FilterHelper.node_targets
-        def _get_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch) -> Generator:
             unserials = self.ust[branch]
             if not unserials:
                 return
             if not self.__should_apply(branch):
                 return
-            return tuple({'world': w} for w in unserials)
-
-        def _apply(self, target: Target):
-            branch: Branch = target.branch
-            branch.add({
-                'world1': target.world,
-                'world2': branch.next_world,
-            })
+            return (
+                {
+                    'world': w,
+                    'adds': (
+                        ({'world1': w, 'world2': branch.next_world},),
+                    )
+                }
+                for w in unserials
+            )
 
         def example_nodes(self):
             return ({'sentence': Atomic.first(), 'world': 0},)

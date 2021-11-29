@@ -18,7 +18,7 @@
 #
 # pytableaux - tableaux module
 from lexicals import Argument, Constant, Sentence
-from utils import Decorators, LinkOrderSet, Kwobj, StopWatch, UniqueList, \
+from utils import Decorators, LinkOrderSet, StopWatch, UniqueList, \
     LogicRef, EmptySet, get_logic, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import Events, EventEmitter
@@ -32,16 +32,15 @@ from types import MappingProxyType, ModuleType
 from typing import Any, Callable, Collection, Iterator, Iterable, NamedTuple, \
     Sequence, Union, cast, final
 
+abstract = Decorators.abstract
+
 class RuleMeta(type):
+
     def __new__(cls, clsname: str, bases: tuple[type], clsattrs: dict, **kw):
         taken: dict[str, Any] = dict(clsattrs)
         helper_attrs: dict[type, str] = {}
         helper_classes: list[type] = []
         helpers_attr = 'Helpers'
-        # if clsattrs.get('debug', False):
-        #     print('clsname', clsname)
-        #     print('bases', bases)
-        #     print('clsattrs', clsattrs)
         for clsattr, rawvalue in clsattrs.items():
             try:
                 if clsattr == helpers_attr:
@@ -109,7 +108,13 @@ class RuleMeta(type):
         setattr(Rule, helpers_attr, tuple(hlist))
         return Rule
 
-class Rule(EventEmitter, metaclass = RuleMeta):
+class AbstractRule(EventEmitter, metaclass = RuleMeta):
+
+    Helpers: tuple[tuple[str, type]] = tuple()
+    Timers: tuple[str] = tuple()
+
+    branch_level: int = NotImplemented
+
     class HelperInfo(NamedTuple):
         cls  : type
         inst : object
@@ -119,10 +124,12 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         Events.AFTER_APPLY,
         Events.BEFORE_APPLY,
     )
+
     DefaultHelperRuleEventMethods = (
         (Events.AFTER_APPLY  , 'after_apply'),
         (Events.BEFORE_APPLY , 'before_apply'),
     )
+
     DefaultHelperTabEventMethods = (
         (Events.AFTER_BRANCH_ADD   , 'after_branch_add'),
         (Events.AFTER_BRANCH_CLOSE , 'after_branch_close'),
@@ -132,16 +139,41 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         (Events.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
     )
 
+    @abstract
+    def get_target(self, branch: Branch) -> Target: pass
 
+    @abstract
+    def apply(self, target: Target): pass
+
+    @abstract
+    def example_nodes(self) -> Sequence[NodeType]: pass
+
+    @abstract
+    def branch(self, parent: Branch = None) -> Branch: pass
+
+    @abstract
+    def add_timer(self, *names: str): pass
+
+    @abstract
+    def add_helper(self, cls: type, attr: str = None, **opts) -> HelperInfo: pass
+
+    @abstract
+    def sentence(self, node: Node) -> Sentence: pass
+
+    @abstract
+    def group_score(self, target: Target) -> float: pass
+
+    @abstract
+    def score_candidate(self, target: Target) -> float: pass
 
 class Tableau(Sequence, EventEmitter):
 
     class RuleTarget(NamedTuple):
-        rule   : Rule
+        rule   : AbstractRule
         target : Target
 
     class StepEntry(NamedTuple):
-        rule   : Rule
+        rule   : AbstractRule
         target : Target
         duration_ms: int
 
@@ -192,17 +224,63 @@ class Tableau(Sequence, EventEmitter):
                 k not in (KEY.NODES,)
             }
 
-class Rule(Rule):
+    @abstract
+    def build(self): pass
+
+    @abstract
+    def step(self) -> Union[StepEntry, None, bool]: pass
+
+    @abstract
+    def add(self, branch: Branch): pass
+
+    @abstract
+    def branch(self, parent: Branch = None) -> Branch: pass
+
+    @abstract
+    def finish(self): pass
+
+    @abstract
+    def stat(self, branch: Branch, *keys: Union[Node, KEY]) -> Any: pass
+
+    @abstract
+    def next_step(self) -> RuleTarget: pass
+
+    @abstract
+    def branching_complexity(self, node: Node) -> int: pass
+
+class Rule(AbstractRule):
     """
     Base class for a Tableau rule.
     """
 
-    Helpers: tuple[tuple[str, type]] = tuple()
-    Timers: tuple[str] = tuple()
-
     branch_level = 1
 
     opts = {'is_rank_optim': True}
+
+    @abstract
+    def _get_targets(self, branch: Branch) -> Sequence[Target]: pass
+
+    @abstract
+    def _apply(self, target: Target): pass
+
+    # Default implementation
+    def sentence(self, node: Node) -> Sentence:
+        """
+        Get the sentence for the node, or ``None``.
+
+        :param tableaux.Node node:
+        :rtype: lexicals.Sentence
+        """
+        return node.get('sentence')
+
+    # Scoring
+    def group_score(self, target: Target) -> float:
+        # Called in tableau
+        return self.score_candidate(target) / max(1, self.branch_level)
+
+    # Candidate score implementation options ``is_rank_optim``
+    def score_candidate(self, target: Target) -> float:
+        return 0
 
     def __init__(self, tableau: Tableau, **opts):
         if not isinstance(tableau, Tableau):
@@ -224,8 +302,8 @@ class Rule(Rule):
             self.add_helper(helper, name)
         self.add_timer(*self.Timers)
 
-    @final
     @property
+    @final
     def apply_count(self) -> int:
         """
         The number of times the rule has applied.
@@ -252,8 +330,8 @@ class Rule(Rule):
         """
         return self.__class__.__name__
 
-    @final
     @property
+    @final
     def tableau(self) -> Tableau:
         """
         Reference to the tableau instance.
@@ -307,7 +385,7 @@ class Rule(Rule):
             self.timers[name] = StopWatch()
 
     @final
-    def add_helper(self, cls: type, attr: str = None, **opts) -> Rule.HelperInfo:
+    def add_helper(self, cls: type, attr: str = None, **opts) -> AbstractRule.HelperInfo:
         """
         Add a helper.
 
@@ -327,67 +405,12 @@ class Rule(Rule):
         self.__helpers.append(info)
         return info
 
-    # Abstract methods
-    def example_nodes(self) -> Sequence[NodeType]:
-        """
-        :meta abstract:
-        """
-        raise NotImplementedError()
-
-    def _get_targets(self, branch: Branch) -> Sequence[Target]:
-        """
-        :meta protected abstract:
-        """
-        raise NotImplementedError()
-
-    def _apply(self, target: Target):
-        """
-        Apply the rule to the target. Implementations should modify the tableau directly,
-        with no return value.
-
-        :meta abstract:
-        """
-        raise NotImplementedError()
-
-    # Default implementation
-
-    def sentence(self, node: Node) -> Sentence:
-        """
-        Get the sentence for the node, or ``None``.
-
-        :param tableaux.Node node:
-        :rtype: lexicals.Sentence
-        """
-        return node.get('sentence')
-
-    # Scoring
-
-    def group_score(self, target: Target) -> float:
-        # Called in tableau
-        return self.score_candidate(target) / max(1, self.branch_level)
-
-    # Candidate score implementation options ``is_rank_optim``
-
-    def score_candidate(self, target: Target) -> float:
-        return sum(self.score_candidate_list(target))
-
-    def score_candidate_list(self, target: Target) -> Sequence[float]:
-        return self.score_candidate_map(target).values()
-
-    def score_candidate_map(self, target: Target) -> dict[Any: float]:
-        # Will sum to 0 by default
-        return {}
-
-    # Other
-
     def __repr__(self):
         return orepr(self,
             module      = self.__module__,
             apply_count = self.apply_count,
             helpers     = len(self.__helpers),
         )
-
-    # Private Util
 
     def __extend_targets(self, targets: Sequence[Target]):
         """
@@ -770,7 +793,6 @@ class Tableau(Tableau):
     A tableau proof.
     """
 
-    # TabRules = TabRules()
     opts = {
         'is_group_optim'  : True,
         'is_build_models' : False,
@@ -1013,6 +1035,18 @@ class Tableau(Tableau):
                 self.step()
         self.finish()
         return self
+
+    def next_step(self) -> Tableau.RuleTarget:
+        """
+        Choose the next rule step to perform. Returns the (rule, target)
+        pair, or ``None``if no rule can be applied.
+
+        This iterates over the open branches and calls ``__get_branch_application()``.
+        """
+        for branch in self.open:
+            res = self.__get_branch_application(branch)
+            if res:
+                return res
 
     def step(self) -> Union[Tableau.StepEntry, None, bool]:
         """
@@ -1263,18 +1297,6 @@ class Tableau(Tableau):
     # : Util      :
     # :-----------:
 
-    def next_step(self) -> Tableau.RuleTarget:
-        """
-        Choose the next rule step to perform. Returns the (rule, target)
-        pair, or ``None``if no rule can be applied.
-
-        This iterates over the open branches and calls ``__get_branch_application()``.
-        """
-        for branch in self.open:
-            res = self.__get_branch_application(branch)
-            if res:
-                return res
-
     def __get_branch_application(self, branch: Branch) -> Tableau.RuleTarget:
         """
         Find and return the next available rule application for the given open
@@ -1325,7 +1347,7 @@ class Tableau(Tableau):
         if results:
             return self.__select_optim_group_application(results)
 
-    def __select_optim_group_application(self, results: list[Tableau.RuleTarget]) -> Tableau.RuleTarget:
+    def __select_optim_group_application(self, results: Sequence[Tableau.RuleTarget]) -> Tableau.RuleTarget:
         """
         Choose the highest scoring element from given results. The ``results``
         parameter is assumed to be a non-empty list/tuple of (rule, target) pairs.

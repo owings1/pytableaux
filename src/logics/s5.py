@@ -27,8 +27,8 @@ class Meta(object):
     category = 'Bivalent Modal'
     category_display_order = 5
 
-from proof.common import Branch, Node, Target
-from proof.helpers import FilterHelper, MaxWorldsTracker, VisibleWorldsIndex
+from proof.common import Access, Branch, Node
+from proof.helpers import VisibleWorldsIndex
 from . import k as K, t as T, s4 as S4
 
 # TODO:
@@ -67,36 +67,28 @@ class TabRules(object):
     relation for worlds.
     """
     
-    class Symmetric(K.DefaultRule):
+    class Symmetric(K.ModalNodeRule):
         """
         .. _symmetric-rule:
 
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
         """
-        Helpers = (
-            MaxWorldsTracker,
-            VisibleWorldsIndex,
-        )
+        Helpers = (VisibleWorldsIndex,)
+        visw: VisibleWorldsIndex
         access = True
         opts = {'is_rank_optim': False}
 
-        @FilterHelper.node_targets
-        def _get_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             if not self.maxw.max_worlds_exceeded(branch):
-                w1, w2 = node['world1'], node['world2']
-                if not self.visw.has(branch, w2, w1):
-                    return {'world1': w2, 'world2': w1}
+                access: Access = Access.fornode(node).reverse()
+                if not self.visw.has(branch, access):
+                    add = access.todict()
+                    return add | {'adds': ((add,),)}
             self.nf.release(node, branch)
 
-        def _apply(self, target: Target):
-            target.branch.add({
-                'world1': target.world1,
-                'world2': target.world2,
-            })
-
         def example_nodes(self):
-            return ({'world1': 0, 'world2': 1},)
+            return (Access(0, 1).todict(),)
 
     closure_rules = K.TabRules.closure_rules
 

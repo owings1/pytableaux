@@ -27,8 +27,8 @@ class Meta(object):
     category_display_order = 3
 
 from lexicals import Atomic
-from proof.common import Branch, Node, Target
-from proof.helpers import FilterHelper, MaxWorldsTracker, VisibleWorldsIndex
+from proof.common import Access, Annotate, Branch, Node
+from proof.helpers import VisibleWorldsIndex
 from . import k as K
 
 class Model(K.Model):
@@ -54,7 +54,7 @@ class TabRules(object):
     Reflexive rule, which operates on the accessibility relation for worlds.
     """
 
-    class Reflexive(K.DefaultRule):
+    class Reflexive(K.ModalNodeRule):
         """
         .. _reflexive-rule:
 
@@ -65,24 +65,24 @@ class TabRules(object):
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
-        Helpers = (
-            MaxWorldsTracker,
-            VisibleWorldsIndex,
-        )
+        Helpers = (VisibleWorldsIndex,)
+        visw: VisibleWorldsIndex = Annotate.HelperAttr
+
+        ignore_ticked = False
+        ticking = False
 
         opts = {'is_rank_optim': False}
 
-        @FilterHelper.node_targets
-        def _get_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             if not self.maxw.max_worlds_exceeded(branch):
                 for w in node.worlds:
-                    if not self.visw.has(branch, w, w):
-                        return {'world': w}
+                    access = Access(w, w)
+                    if not self.visw.has(branch, access):
+                        return {
+                            'world': w,
+                            'adds': ((access.todict(),),),
+                        }
             self.nf.release(node, branch)
-
-        def _apply(self, target: Target):
-            w: int = target.world
-            target.branch.add({'world1': w, 'world2': w})
 
         def example_nodes(self):
             return ({'sentence': Atomic.first(), 'world': 0},)

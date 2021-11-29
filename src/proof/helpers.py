@@ -200,7 +200,7 @@ class FilterNodeCache(BranchCache):
     def __call__(self, *args, **kw) -> bool:
         raise NotImplementedError()
 
-    def __getitem__(self, branch: Branch) -> set:
+    def __getitem__(self, branch: Branch) -> set[Node]:
         return super().__getitem__(branch)
 
 @final
@@ -260,6 +260,9 @@ class UnserialWorldsTracker(BranchCache):
             else:
                 self[branch].add(w)
 
+    def __getitem__(self, branch: Branch) -> set[int]:
+        return super().__getitem__(branch)
+
 @final
 class AppliedSentenceCounter(BranchCache):
     """
@@ -281,6 +284,9 @@ class AppliedSentenceCounter(BranchCache):
         counts = self[target.branch]
         sentence = target.sentence
         counts[sentence] = counts.get(sentence, 0) + 1
+
+    def __getitem__(self, branch: Branch) -> dict[Sentence, int]:
+        return super().__getitem__(branch)
 
 @final
 class AppliedNodeCount(BranchCache):
@@ -308,6 +314,9 @@ class AppliedNodeCount(BranchCache):
         node = target.node
         counts[node] = counts.get(node, 0) + 1
 
+    def __getitem__(self, branch: Branch) -> dict[Node, int]:
+        return super().__getitem__(branch)
+
 @final
 class VisibleWorldsIndex(BranchDictCache):
     """
@@ -327,7 +336,7 @@ class VisibleWorldsIndex(BranchDictCache):
 
     nodes: Nodes = None
 
-    def has(self, branch: Branch, w1: int, w2: int) -> bool:
+    def has(self, branch: Branch, access: Access) -> bool:
         """
         Whether w1 sees w2 on the given branch.
 
@@ -336,7 +345,7 @@ class VisibleWorldsIndex(BranchDictCache):
         :param int w2:
         :rtype: bool
         """
-        return w2 in self[branch].get(w1, EmptySet)
+        return access[1] in self[branch].get(access[0], EmptySet)
 
     def intransitives(self, branch: Branch, w1: int, w2: int) -> set[int]:
         """

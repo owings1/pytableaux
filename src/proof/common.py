@@ -8,8 +8,8 @@ from itertools import islice
 from keyword import iskeyword
 from operator import is_, is_not
 from types import MappingProxyType
-from typing import Any, Callable, Collection, ItemsView, Iterable, Iterator, KeysView, \
-    NamedTuple, Sequence, ValuesView, Union
+from typing import Any, Callable, Collection, Dict, FrozenSet, ItemsView, Iterable, \
+    Iterator, KeysView, List, Mapping, NamedTuple, Sequence, Set, Tuple, ValuesView, Union
 from enum import Enum, Flag, IntFlag, auto
 
 lazyget = Decorators.lazyget
@@ -30,7 +30,8 @@ class Node(object, metaclass = NodeMeta):
 
     def __init__(self, props = {}):
         #: A dictionary of properties for the node.
-        p = dict(self.defaults)
+        # p = dict(self.defaults)
+        p = {}
         p.update(props)
         self.props = MappingProxyType(p)
 
@@ -54,7 +55,7 @@ class Node(object, metaclass = NodeMeta):
 
     @property
     @lazyget
-    def worlds(self) -> frozenset[int]:
+    def worlds(self) -> FrozenSet[int]:
         """
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
@@ -63,13 +64,6 @@ class Node(object, metaclass = NodeMeta):
             self.get('worlds', EmptySet) |
             {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
         ))
-
-    def get(self, name, default = None):
-        try:
-            return self[name]
-        except KeyError:
-            return default
-        return self.props.get(name, default)
 
     def has(self, *names: str) -> bool:
         """
@@ -98,6 +92,12 @@ class Node(object, metaclass = NodeMeta):
                 return False
         return True
 
+    def get(self, name, default = None):
+        try:
+            return self[name]
+        except KeyError:
+            return default
+
     def keys(self) -> KeysView:
         return self.props.keys()
 
@@ -119,14 +119,17 @@ class Node(object, metaclass = NodeMeta):
     def __len__(self):
         return len(self.props)
 
+    def __bool__(self):
+        return True
+
     def __getitem__(self, key):
         try:
             return self.props[key]
         except KeyError:
             return self.defaults[key]
 
-    def __contains__(self, item):
-        return item in self.props
+    def __contains__(self, key):
+        return key in self.props
 
     def __iter__(self):
         return iter(self.props)
@@ -134,7 +137,7 @@ class Node(object, metaclass = NodeMeta):
     def __copy__(self):
         return self.__class__(self.props)
 
-    def __or__(self, other):
+    def __or__(self, other) -> Mapping:
         # self | other
         if isinstance(other, self.__class__):
             return self.props | other.props
@@ -147,7 +150,7 @@ class Node(object, metaclass = NodeMeta):
             % ('|', self.__class__, other.__class__)
         )
 
-    def __ror__(self, other):
+    def __ror__(self, other) -> Mapping:
         # other | self
         if isinstance(other, self.__class__):
             return other.props | self.props
@@ -169,7 +172,15 @@ class Node(object, metaclass = NodeMeta):
             }, limit = 4, paren = False, j = ',')
         )
 
-NodeType = Union[Node, dict]
+    def __setattr__(self, attr, val):
+        if hasattr(self, attr) and getattr(self, attr) != val:
+            raise AttributeError('Node.%s is readonly' % attr)
+        super().__setattr__(attr, val)
+
+    def __delattr__(self, attr):
+        raise AttributeError('Node is readonly')
+
+NodeType = Union[Node, Mapping]
 
 class Annotate(Enum):
     HelperAttr = auto()
@@ -206,11 +217,17 @@ class Access(NamedTuple):
         return self.w2
 
     @classmethod
-    def fornode(cls, node: NodeType):
+    def fornode(cls, node: NodeType) -> Tuple:
         return cls(node['world1'], node['world2'])
 
-    def tonode(self):
-        return Node({'world1': self[0], 'world2': self[1]})
+    def todict(self) -> dict[str, int]:
+        return {'world1': self[0], 'world2': self[1]}
+
+    def tonode(self) -> Node:
+        return Node(Access.todict(self))
+
+    def reverse(self) -> Tuple:
+        return Access(self[1], self[0])
 
 class Getters(object):
 
@@ -457,6 +474,7 @@ class Filters(object):
 
         def __init__(self, negatum: Callable):
             self.negatum = negatum
+
         def __call__(self, *args):
             return not self.negatum(*args)
 
@@ -604,7 +622,7 @@ class Branch(Branch):
         """
         return self.__nextworld
 
-    def has(self, props: dict, ticked: bool = None) -> bool:
+    def has(self, props: NodeType, ticked: bool = None) -> bool:
         """
         Check whether there is a node on the branch that matches the given properties,
         optionally filtered by ticked status.
@@ -621,7 +639,7 @@ class Branch(Branch):
         """
         return (w1, w2) in self.__pidx['w1Rw2']
 
-    def has_any(self, props_list: Iterable[dict], ticked: bool = None) -> bool:
+    def has_any(self, props_list: Iterable[NodeType], ticked: bool = None) -> bool:
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``True``
         when the first match is found.
@@ -631,7 +649,7 @@ class Branch(Branch):
                 return True
         return False
 
-    def has_all(self, props_list: Iterable[dict], ticked: bool = None) -> bool:
+    def has_all(self, props_list: Iterable[NodeType], ticked: bool = None) -> bool:
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``False``
         when the first non-match is found.
@@ -641,7 +659,7 @@ class Branch(Branch):
                 return False
         return True
 
-    def find(self, props: dict, ticked: bool = None) -> Node:
+    def find(self, props: NodeType, ticked: bool = None) -> Node:
         """
         Find the first node on the branch that matches the given properties, optionally
         filtered by ticked status. Returns ``None`` if not found.
@@ -651,14 +669,14 @@ class Branch(Branch):
             return results[0]
         return None
 
-    def find_all(self, props: dict, ticked: bool = None) -> list[Node]:
+    def find_all(self, props: NodeType, ticked: bool = None) -> list[Node]:
         """
         Find all the nodes on the branch that match the given properties, optionally
         filtered by ticked status. Returns a list.
         """
         return self.search_nodes(props, ticked = ticked)
 
-    def search_nodes(self, props: dict, ticked = None, limit = None) -> list[Node]:
+    def search_nodes(self, props: NodeType, ticked: bool = None, limit: int = None) -> list[Node]:
         """
         Find all the nodes on the branch that match the given properties, optionally
         filtered by ticked status, up to the limit, if given. Returns a list.
@@ -761,7 +779,7 @@ class Branch(Branch):
         }
         return branch
 
-    def constants(self) -> set[Constant]:
+    def constants(self) -> Set[Constant]:
         """
         Return the set of constants that appear on the branch.
         """
@@ -829,9 +847,6 @@ class Branch(Branch):
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.id == other.id
 
-    def __ne__(self, other):
-        return not (isinstance(other, self.__class__) and self.id == other.id)
-
     def __hash__(self):
         return hash(self.id)
 
@@ -847,7 +862,7 @@ class Branch(Branch):
     def __copy__(self):
         return self.copy()
 
-    def __contains__(self, node):
+    def __contains__(self, node: Node):
         return node in self.__nodeset
 
     def __repr__(self):
@@ -858,7 +873,7 @@ class Branch(Branch):
             closed = self.closed,
         )
 
-class Target(object):
+class Target(Mapping):
 
     __reqd = {'branch'}
     __attrs = __reqd | {'rule', 'node', 'nodes', 'world', 'world1', 'world2', 'sentence', 'designated', 'flag'}

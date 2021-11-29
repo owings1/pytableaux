@@ -315,7 +315,8 @@ class TestNode(object):
         assert node.has('is_flag')
 
     def test_create_node_with_various_types(self):
-        exp = dict(Node.defaults)
+        # exp = dict(Node.defaults)
+        exp = {}
         exp.update({'a':1,'b':2,'c':3})
         for inp in [
             zip(('a', 'b', 'c'), (1, 2, 3)),

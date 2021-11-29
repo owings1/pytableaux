@@ -725,6 +725,11 @@ class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError()
 
+class ModalNodeRule(DefaultNodeRule):
+    Helpers = (AppliedQuitFlag, MaxWorldsTracker)
+    apqf: AppliedQuitFlag  = Annotate.HelperAttr
+    maxw: MaxWorldsTracker = Annotate.HelperAttr
+
 class TabRules(object):
     """
     Rules for modal operators employ *world* indexes as well access-type
@@ -749,16 +754,14 @@ class TabRules(object):
         # rule implementation
 
         def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
-            if self._find_closing_node(node, branch):
-                return True
-            return False
+            return bool(self._find_closing_node(node, branch))
 
         def example_nodes(self) -> tuple[dict]:
-            a: Atomic = Atomic.first()
+            s: Atomic = Atomic.first()
             w = 0 if self.modal else None
             return (
-                {'sentence': a         , 'world': w},
-                {'sentence': a.negate(), 'world': w},
+                {'sentence': s         , 'world': w},
+                {'sentence': s.negate(), 'world': w},
             )
 
         def applies_to_branch(self, branch: Branch):
@@ -1185,7 +1188,7 @@ class TabRules(object):
         quantifier = Quantifier.Universal
         convert_to = Quantifier.Existential
 
-    class Possibility(DefaultNodeRule):
+    class Possibility(ModalNodeRule):
         """
         From an unticked possibility node with world *w* on a branch *b*, add a node with a
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
@@ -1194,15 +1197,8 @@ class TabRules(object):
         operator = Oper.Possibility
         branch_level = 1
 
-        Helpers = (
-            AppliedQuitFlag,
-            AppliedSentenceCounter,
-            MaxWorldsTracker,
-        )
-        # Helper Type Annotations
-        apqf: AppliedQuitFlag        = Annotate.HelperAttr
+        Helpers = (AppliedSentenceCounter,)
         apsc: AppliedSentenceCounter = Annotate.HelperAttr
-        maxw: MaxWorldsTracker       = Annotate.HelperAttr
 
         def _get_node_targets(self, node: Node, branch: Branch):
 
@@ -1231,7 +1227,7 @@ class TabRules(object):
                 ),
             }
 
-        def score_candidate(self, target):
+        def score_candidate(self, target: Target):
             """
             :overrides: AdzHelper.ClosureScore
             """
@@ -1241,7 +1237,7 @@ class TabRules(object):
 
             # override
             branch = target.branch
-            s = self.sentence(target.node)
+            s: Operated = self.sentence(target.node)
             si = s.operand
 
             # Don't bother checking for closure since we will always have a new world
@@ -1257,11 +1253,10 @@ class TabRules(object):
             if target['candidate_score'] > 0:
                 return 1
 
-            branch = target.branch
-            s = self.sentence(target.node)
+            s: Operated = self.sentence(target.node)
             si = s.operand
 
-            return -1 * self.apsc[branch].get(si, 0)
+            return -1 * self.apsc[target.branch].get(si, 0)
 
     class PossibilityNegated(DefaultNodeRule):
         """
@@ -1284,7 +1279,7 @@ class TabRules(object):
                 ),
             }
 
-    class Necessity(DefaultNodeRule):
+    class Necessity(ModalNodeRule):
         """
         From a necessity node *n* with world *w1* and operand *s* on a branch *b*, for any
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
@@ -1297,16 +1292,11 @@ class TabRules(object):
         Helpers = (
             AppliedNodeCount,
             AppliedNodesWorlds,
-            AppliedQuitFlag,
-            MaxWorldsTracker,
             VisibleWorldsIndex,
         )
 
-        # Helper Type Annotations
         apnc: AppliedNodeCount   = Annotate.HelperAttr
         apnw: AppliedNodesWorlds = Annotate.HelperAttr
-        apqf: AppliedQuitFlag    = Annotate.HelperAttr
-        maxw: MaxWorldsTracker   = Annotate.HelperAttr
         visw: VisibleWorldsIndex = Annotate.HelperAttr
 
         Timers = (
@@ -1345,7 +1335,7 @@ class TabRules(object):
                         continue
 
                     access = Access(w1, w2)
-                    if not self.visw.has(branch, w1, w2):
+                    if not self.visw.has(branch, access):
                         continue
 
                     add = {'sentence': si, 'world': w2}

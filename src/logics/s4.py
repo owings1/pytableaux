@@ -26,10 +26,10 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 4
 
-from proof.common import Branch, Node, Target
-from proof.helpers import FilterHelper, MaxWorldsTracker, VisibleWorldsIndex, clshelpers
-
+from proof.common import Annotate, Branch, Node, Target
+from proof.helpers import VisibleWorldsIndex
 from . import k as K, t as T
+from typing import Generator
 
 class Model(T.Model):
     """
@@ -62,11 +62,11 @@ class TabRules(object):
     Transitive rule, which operates on the accessibility relation for worlds.
     """
     
-    @clshelpers(
-        maxw = MaxWorldsTracker,
-        visw = VisibleWorldsIndex,
-    )
-    class Transitive(K.DefaultNodeRule):
+    # @clshelpers(
+    #     maxw = MaxWorldsTracker,
+    #     visw = VisibleWorldsIndex,
+    # )
+    class Transitive(K.ModalNodeRule):
         """
         .. _transitive-rule:
 
@@ -74,13 +74,12 @@ class TabRules(object):
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
         appear on *b*, then add *wRw''* to *b*.
         """
+        Helpers = (VisibleWorldsIndex,)
+        visw: VisibleWorldsIndex = Annotate.HelperAttr
         access = True
         ticking = False
 
-        def _get_node_targets(self, node: Node, branch: Branch):
-            """
-            :implements: K.DefaultNodeRule
-            """
+        def _get_node_targets(self, node: Node, branch: Branch) -> Generator:
             if self.maxw.max_worlds_reached(branch):
                 self.nf.release(node, branch)
                 return

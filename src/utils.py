@@ -27,7 +27,8 @@ from itertools import chain, islice
 # from operator import is_not
 from time import time
 from types import ModuleType
-from typing import Any, Callable, Collection, Iterable, Sequence, Union, cast
+from typing import Any, Callable, Collection, Iterable, Sequence, Union, \
+    abstractmethod, cast
 from past.builtins import basestring
 
 EmptySet = frozenset()
@@ -212,6 +213,12 @@ def dedupitems(items):
     return dedup
 
 class Decorators(object):
+
+    def abstract(method: Callable) -> Callable:
+        @abstractmethod
+        def notimplemented(*args, **kw):
+            raise NotImplementedError(method)
+        return notimplemented
 
     def lazyget(method: Callable) -> Callable:
         name, key = __class__._privkey(method)
