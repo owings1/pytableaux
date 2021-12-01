@@ -209,11 +209,11 @@ class Access(NamedTuple):
     w2: int
 
     @property
-    def world1(self):
+    def world1(self) -> int:
         return self.w1
 
     @property
-    def world2(self):
+    def world2(self) -> int:
         return self.w2
 
     @classmethod
@@ -356,6 +356,7 @@ class Filters(object):
                 them = self.lhs.__class__.__qualname__
             except AttributeError:
                 pass
+            return orepr(me, for_=them)
             return '%s for %s' % (me, them)
 
     class Method(Filter):
@@ -527,14 +528,14 @@ class NodeFilters(Filters):
 
 Filters.Node = NodeFilters
 
-class Branch(EventEmitter, Sequence):
+class AbstractBranch(EventEmitter, Sequence):
     pass
-class Branch(Branch):
+class Branch(AbstractBranch):
     """
     Represents a tableau branch.
     """
 
-    def __init__(self, parent: Branch = None):
+    def __init__(self, parent: AbstractBranch = None):
         if parent != None:
             if parent == self:
                 raise ValueError('A branch cannot be its own parent')
@@ -578,11 +579,11 @@ class Branch(Branch):
         return id(self)
 
     @property
-    def parent(self) -> Branch:
+    def parent(self) -> AbstractBranch:
         return self.__parent
 
     @property
-    def origin(self) -> Branch:
+    def origin(self) -> AbstractBranch:
         return self.__origin
 
     @property
@@ -629,15 +630,15 @@ class Branch(Branch):
         """
         return self.find(props, ticked = ticked) != None
 
-    def has_access(self, w1: int, w2: int) -> bool:
-        """
-        Check whether a tuple of the given worlds is on the branch.
+    # def has_access(self, w1: int, w2: int) -> bool:
+    #     """
+    #     Check whether a tuple of the given worlds is on the branch.
 
-        This is a performant way to check typical "access" nodes on the
-        branch with `world1` and `world2` properties. For more advanced
-        searches, use the ``has()`` method.
-        """
-        return (w1, w2) in self.__pidx['w1Rw2']
+    #     This is a performant way to check typical "access" nodes on the
+    #     branch with `world1` and `world2` properties. For more advanced
+    #     searches, use the ``has()`` method.
+    #     """
+    #     return (w1, w2) in self.__pidx['w1Rw2']
 
     def has_any(self, props_list: Iterable[NodeType], ticked: bool = None) -> bool:
         """
@@ -694,7 +695,7 @@ class Branch(Branch):
                 results.append(node)
         return results
 
-    def append(self, node: NodeType) -> Branch:
+    def append(self, node: NodeType) -> AbstractBranch:
         """
         Append a node (Node object or dict of props). Returns self.
         """
@@ -722,7 +723,7 @@ class Branch(Branch):
 
     add = append
 
-    def extend(self, nodes: Iterable[NodeType]) -> Branch:
+    def extend(self, nodes: Iterable[NodeType]) -> AbstractBranch:
         """
         Add multiple nodes. Returns self.
         """
@@ -730,18 +731,18 @@ class Branch(Branch):
             self.append(node)
         return self
 
-    def tick(self, *nodes: Node) -> Branch:
+    def tick(self, *nodes: Node):
         """
-        Tick a node for the branch. Returns self.
+        Tick a node for the branch.
         """
         for node in nodes:
             if not self.is_ticked(node):
                 self.__ticked.add(node)
                 node.ticked = True
                 self.emit(Events.AFTER_NODE_TICK, node, self)
-        return self
+        # return self
 
-    def close(self) -> Branch:
+    def close(self) -> AbstractBranch:
         """
         Close the branch. Returns self.
         """
@@ -757,7 +758,7 @@ class Branch(Branch):
         """
         return node in self.__ticked
 
-    def copy(self, parent: Branch = None) -> Branch:
+    def copy(self, parent: AbstractBranch = None) -> AbstractBranch:
         """
         Return a copy of the branch. Event listeners are *not* copied.
         Parent is not copied, but can be explicitly set.

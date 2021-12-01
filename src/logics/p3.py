@@ -71,8 +71,8 @@ class Model(K3.Model):
         return super().truth_function(operator, a, b)
         
     def back_cycle(self, value):
-        i = self.truth_values_list.index(value)
-        return self.truth_values_list[i - 1]
+        i = self.truth_values.index(value)
+        return self.truth_values[i - 1]
 
 class TableauxSystem(FDE.TableauxSystem):
     """

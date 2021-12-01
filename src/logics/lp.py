@@ -29,6 +29,7 @@ class Meta(object):
 from lexicals import Atomic
 from proof.rules import ClosureRule
 from . import fde
+from utils import UniqueList
 
 class Model(fde.Model):
     """
@@ -38,9 +39,8 @@ class Model(fde.Model):
     .. _FDE model: fde.html#logics.fde.Model
     """
 
-    truth_values_list = ('F', 'B', 'T')
     #: The admissible values
-    truth_values = set(truth_values_list)
+    truth_values = UniqueList(('F', 'B', 'T'))#set(truth_values_list)
 
     unassigned_value = 'F'
 

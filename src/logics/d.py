@@ -27,7 +27,7 @@ class Meta(object):
     category_display_order = 2
 
 from proof.helpers import UnserialWorldsTracker
-from proof.common import Annotate, Branch, Node, Target
+from proof.common import Access, Annotate, Branch, Node, Target
 from lexicals import Atomic
 from . import k as K
 from typing import Generator
@@ -92,7 +92,7 @@ class TabRules:
                 {
                     'world': w,
                     'adds': (
-                        ({'world1': w, 'world2': branch.next_world},),
+                        (Access(w, branch.next_world).todict(),),
                     )
                 }
                 for w in unserials

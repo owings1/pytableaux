@@ -194,6 +194,7 @@ class TestBranch(object):
         assert rule.should_be
         assert not rule.shouldnt_be
 
+    @skip
     def test_has_access_1(self):
         b = Branch().extend((
             {'world1': 0, 'world2': 1},
@@ -500,7 +501,8 @@ class Test_NodeFilter(BaseSuite):
         nn = self.nn1(3)
         assert nf.ignore_ticked == False
         nf.rule.ignore_ticked = True
-        b.extend(nn).tick(nn[0], nn[1])
+        b.extend(nn)
+        b.tick(nn[0], nn[1])
         assert nf[b] == set(nn)
 
     def test_designation_true(self):

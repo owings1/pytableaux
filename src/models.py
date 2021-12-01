@@ -1,9 +1,11 @@
-from utils import get_logic
-from lexicals import Operator
+from utils import Decorators, UniqueList, get_logic
+from lexicals import Operator, Sentence
 import itertools
+abstract = Decorators.abstract
 
 class BaseModel(object):
 
+    truth_values: UniqueList
     # Default set
     truth_functional_operators = {
         Operator.Assertion             ,
@@ -26,10 +28,10 @@ class BaseModel(object):
         # flag to be set externally
         self.is_countermodel = None
 
-    def read_branch(self, branch):
-        raise NotImplementedError()
+    @abstract
+    def read_branch(self, branch): ...
 
-    def value_of(self, sentence, **kw):
+    def value_of(self, sentence: Sentence, **kw):
         if self.is_sentence_opaque(sentence):
             return self.value_of_opaque(sentence, **kw)
         elif sentence.is_operated:
@@ -41,25 +43,25 @@ class BaseModel(object):
         elif sentence.is_quantified:
             return self.value_of_quantified(sentence, **kw)
 
-    def truth_function(self, operator, a, b=None):
-        raise NotImplementedError()
+    @abstract
+    def truth_function(self, operator: Operator, a, b=None): ...
 
     def truth_table_inputs(self, narity):
-        return tuple(itertools.product(*[self.truth_values_list for x in range(narity)]))
+        return tuple(itertools.product(*[self.truth_values for x in range(narity)]))
 
     def is_sentence_opaque(self, sentence, **kw):
         return False
 
-    def value_of_opaque(self, sentence, **kw):
-        raise NotImplementedError()
+    @abstract
+    def value_of_opaque(self, sentence: Sentence, **kw): ...
 
-    def value_of_atomic(self, sentence, **kw):
-        raise NotImplementedError()
+    @abstract
+    def value_of_atomic(self, sentence: Sentence, **kw): ...
 
-    def value_of_predicated(self, sentence, **kw):
-        raise NotImplementedError()
+    @abstract
+    def value_of_predicated(self, sentence: Sentence, **kw): ...
 
-    def value_of_operated(self, sentence, **kw):
+    def value_of_operated(self, sentence: Sentence, **kw):
         oper = sentence.operator
         if oper in self.truth_functional_operators:
             return self.truth_function(
@@ -71,13 +73,13 @@ class BaseModel(object):
             )
         raise NotImplementedError()
 
-    def value_of_quantified(self, sentence, **kw):
-        raise NotImplementedError()
+    @abstract
+    def value_of_quantified(self, sentence: Sentence, **kw): ...
 
-    def is_countermodel_to(self, argument):
-        raise NotImplementedError()
+    @abstract
+    def is_countermodel_to(self, argument) -> bool: ...
 
-    def get_data(self):
+    def get_data(self) -> dict:
         return dict()
 
 

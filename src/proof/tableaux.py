@@ -113,7 +113,7 @@ class AbstractRule(EventEmitter, metaclass = RuleMeta):
     Helpers: tuple[tuple[str, type]] = tuple()
     Timers: tuple[str] = tuple()
 
-    branch_level: int = NotImplemented
+    branch_level: int
 
     class HelperInfo(NamedTuple):
         cls  : type
@@ -516,15 +516,15 @@ class TabRulesBase(Sequence):
         return self._common.tab.logic
 
     @property
-    def _ruleindex(self):
+    def _ruleindex(self) -> dict:
         return self._common.ruleindex
 
     @property
-    def _groupindex(self):
+    def _groupindex(self) -> dict:
         return self._common.groupindex
 
     @property
-    def _common(self):
+    def _common(self) -> TabRulesSharedData:
         return self.__common
 
     @property

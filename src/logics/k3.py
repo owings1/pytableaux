@@ -30,19 +30,18 @@ from lexicals import Atomic
 from proof.common import Branch, Node
 from proof.rules import ClosureRule
 from . import fde as FDE
-
+from utils import UniqueList
 class Model(FDE.Model):
     """
     A K3 model is like an :ref:`FDE model <fde-model>` without the :m:`B` value.
     """
 
-    truth_values_list = ('F', 'N', 'T')
     #: The set of admissible values for sentences in a model.
     #:
     #: :type: set
     #: :value: {T, N, F}
     #: :meta hide-value:
-    truth_values = frozenset(truth_values_list)
+    truth_values = UniqueList(('F', 'N', 'T'))
 
     #: The (singleton) set of designated values in model.
     #:

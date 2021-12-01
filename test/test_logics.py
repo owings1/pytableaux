@@ -257,7 +257,8 @@ class Test_FDE(BaseSuite):
         def test_model_necessity_opaque_des_value_branch(self):
             s1 = self.p('La')
             b = Branch().add({'sentence': s1, 'designated': True})
-            m = self.Model().read_branch(b)
+            m = self.Model()
+            m.read_branch(b)
             assert m.value_of(s1) in ('B', 'T')
 
         def test_model_necessity_opaque_b_value_branch(self):
@@ -266,13 +267,15 @@ class Test_FDE(BaseSuite):
                 {'sentence': s1         , 'designated': True},
                 {'sentence': s1.negate(), 'designated': True},
             ))
-            m = self.Model().read_branch(b)
+            m = self.Model()
+            m.read_branch(b)
             assert m.value_of(s1) == 'B'
 
         def test_model_atomic_undes_value_branch(self):
             s1 = self.p('a')
             b = Branch().add({'sentence': s1, 'designated': False})
-            m = self.Model().read_branch(b)
+            m = self.Model()
+            m.read_branch(b)
             assert m.value_of(s1) in ('F', 'N')
 
         def test_model_atomic_t_value_branch(self):
@@ -282,8 +285,9 @@ class Test_FDE(BaseSuite):
                 {'sentence': s         , 'designated': True},
                 {'sentence': s.negate(), 'designated': False},
             ])
-            model = self.Model().read_branch(branch)
-            assert model.value_of(s) == 'T'
+            m = self.Model()
+            m.read_branch(branch)
+            assert m.value_of(s) == 'T'
 
         def test_model_atomic_f_value_branch(self):
             branch = Branch()
@@ -292,8 +296,9 @@ class Test_FDE(BaseSuite):
                 {'sentence': s         , 'designated': False},
                 {'sentence': s.negate(), 'designated': True},
             ])
-            model = self.Model().read_branch(branch)
-            assert model.value_of(s) == 'F'
+            m = self.Model()
+            m.read_branch(branch)
+            assert m.value_of(s) == 'F'
 
         def test_model_get_data_various(self):
             s1 = self.p('a')
@@ -1352,7 +1357,8 @@ class TestCPL(BaseSuite):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': s})
-        model = self.logic.Model().read_branch(branch)
+        model = self.logic.Model()
+        model.read_branch(branch)
         assert model.value_of(s) == 'T'
 
     def test_model_opaque_neg_necessity_branch_make_model(self):
@@ -1360,7 +1366,8 @@ class TestCPL(BaseSuite):
         proof = Tableau(self.logic)
         branch = proof.branch()
         branch.add({'sentence': s.negate()})
-        model = self.logic.Model().read_branch(branch)
+        model = self.logic.Model()
+        model.read_branch(branch)
         assert model.value_of(s) == 'F'
 
     def test_model_get_data_triv(self):

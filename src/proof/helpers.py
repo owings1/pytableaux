@@ -20,7 +20,7 @@
 from lexicals import Constant, Sentence
 from events import Events
 from models import BaseModel
-from utils import OrderedAttrsView, LinkOrderSet, EmptySet, \
+from utils import Decorators, DictAttrView, LinkOrderSet, EmptySet, \
     dedupitems, isstr, mroattr, orepr
 from .common import Access, Branch, Node, Target
 from .tableaux import Rule, RuleMeta, Tableau
@@ -28,7 +28,9 @@ from .tableaux import Rule, RuleMeta, Tableau
 from copy import copy
 from inspect import getmembers, isclass
 from itertools import chain
-from typing import Callable, Iterable, Iterator, Union, final
+from typing import Callable, Iterable, Iterator, OrderedDict, Union, final
+
+abstract = Decorators.abstract
 
 def clshelpers(**kw) -> Callable:
     """
@@ -80,13 +82,13 @@ class AdzHelper(object):
 
 class BranchCache(object):
 
-    rule: Rule = None
-    tab: Tableau = None
+    rule: Rule
+    tab: Tableau
 
     _valuetype = bool
 
-    __cache: dict = None
-    __linkset: LinkOrderSet = None
+    __cache: dict
+    __linkset: LinkOrderSet
 
     def __init__(self, *args, **kw):
         pass
@@ -137,9 +139,8 @@ class BranchCache(object):
         })
         return inst
 
-    def __copy__(self):
-        # not clear whether to copy listeners
-        raise NotImplementedError()
+    @abstract
+    def __copy__(self): ... # not clear whether to copy listeners
 
     def __repr__(self):
         return orepr(self, self._reprdict())
@@ -197,8 +198,8 @@ class FilterNodeCache(BranchCache):
         })
         return inst
 
-    def __call__(self, *args, **kw) -> bool:
-        raise NotImplementedError()
+    @abstract
+    def __call__(self, *args, **kw): ...
 
     def __getitem__(self, branch: Branch) -> set[Node]:
         return super().__getitem__(branch)
@@ -220,48 +221,7 @@ class AppliedQuitFlag(BranchCache):
     def __call__(self, target: Target):
         self[target.branch] = bool(target.get('flag'))
 
-@final
-class AppliedNodesWorlds(BranchCache):
-    """
-    Track the nodes applied to by the rule for each world on the branch. The
-    target must have `node`, and `world` attributes. The values of the cache
-    are ``(node, world)`` pairs.
-    """
-    _valuetype = set
-    _attr = 'apnw'
 
-    def __new__(cls, rule: Rule, *args):
-        inst = super().__new__(cls, rule)
-        inst.rule.on(Events.AFTER_APPLY, inst)
-        return inst
-
-    def __call__(self, target: Target):
-        if target.get('flag'):
-            return
-        self[target.branch].add((target.node, target.world))
-
-@final
-class UnserialWorldsTracker(BranchCache):
-    """
-    Track the unserial worlds on the branch.
-    """
-    _valuetype = set
-    _attr = 'ust'
-
-    def __new__(cls, rule: Rule, *args):
-        inst = super().__new__(cls, rule)
-        inst.tab.on(Events.AFTER_NODE_ADD, inst)
-        return inst
-
-    def __call__(self, node: Node, branch: Branch):
-        for w in node.worlds:
-            if node.get('world1') == w or branch.has({'world1': w}):
-                self[branch].discard(w)
-            else:
-                self[branch].add(w)
-
-    def __getitem__(self, branch: Branch) -> set[int]:
-        return super().__getitem__(branch)
 
 @final
 class AppliedSentenceCounter(BranchCache):
@@ -316,7 +276,54 @@ class AppliedNodeCount(BranchCache):
 
     def __getitem__(self, branch: Branch) -> dict[Node, int]:
         return super().__getitem__(branch)
+@final
+class AppliedNodesWorlds(BranchCache):
+    """
+    Track the nodes applied to by the rule for each world on the branch. The
+    target must have `node`, and `world` attributes. The values of the cache
+    are ``(node, world)`` pairs.
+    """
+    _valuetype = set
+    _attr = 'apnw'
 
+    def __new__(cls, rule: Rule, *args):
+        inst = super().__new__(cls, rule)
+        inst.rule.on(Events.AFTER_APPLY, inst)
+        return inst
+
+    def __call__(self, target: Target):
+        if target.get('flag'):
+            return
+        self[target.branch].add((target.node, target.world))
+
+class WorldNodes(BranchCache):
+    """
+    Track no
+    """
+    _valuetype = dict
+    _attr = 'wn'
+@final
+class UnserialWorldsTracker(BranchCache):
+    """
+    Track the unserial worlds on the branch.
+    """
+    _valuetype = set
+    _attr = 'ust'
+
+    def __new__(cls, rule: Rule, *args):
+        inst = super().__new__(cls, rule)
+        inst.tab.on(Events.AFTER_NODE_ADD, inst)
+        return inst
+
+    def __call__(self, node: Node, branch: Branch):
+        for w in node.worlds:
+            if node.get('world1') == w or branch.has({'world1': w}):
+                self[branch].discard(w)
+            else:
+                self[branch].add(w)
+
+    def __getitem__(self, branch: Branch) -> set[int]:
+        return super().__getitem__(branch)
 @final
 class VisibleWorldsIndex(BranchDictCache):
     """
@@ -334,7 +341,7 @@ class VisibleWorldsIndex(BranchDictCache):
         def __getitem__(self, branch: Branch) -> dict[Access, Node]:
             return super().__getitem__(branch)
 
-    nodes: Nodes = None
+    nodes: Nodes
 
     def has(self, branch: Branch, access: Access) -> bool:
         """
@@ -366,8 +373,7 @@ class VisibleWorldsIndex(BranchDictCache):
 
     def __call__(self, node: Node, branch: Branch):        
         if node.is_access:
-            w1 = node['world1']
-            w2 = node['world2']
+            w1, w2 = Access.fornode(node)
             if w1 not in self[branch]:
                 self[branch][w1] = set()
             self[branch][w1].add(w2)
@@ -393,6 +399,8 @@ class FilterHelper(FilterNodeCache):
     Set configurable and chainable filters in ``NodeFilters``
     class attribute.
     """
+    filters: DictAttrView
+
     _attr = 'nf'
 
     def __call__(self, node: Node, branch: Branch) -> bool:
@@ -416,7 +424,7 @@ class FilterHelper(FilterNodeCache):
         return addfilters
 
     @classmethod
-    def node_targets(cls, get_node_targets: Callable) -> Callable:
+    def node_targets(cls, fget_node_targets: Callable) -> Callable:
         """
         Method decorator to only iterate through nodes matching the
         configured FilterHelper filters.
@@ -427,43 +435,27 @@ class FilterHelper(FilterNodeCache):
         
         Returns a flat list of targets.
         """
-        targets_iter = _targets_from_nodes_iter(get_node_targets)
+        fiter_targets = _targets_from_nodes_iter(fget_node_targets)
         def get_targets_filtered(rule: Rule, branch: Branch) -> list:
             helper: FilterHelper = rule.helpers[cls]
             helper.gc()
             nodes = helper[branch]
-            targets = list(targets_iter(rule, nodes, branch))
+            targets = list(fiter_targets(rule, nodes, branch))
             return targets
         return get_targets_filtered
-
-    def add_filter(self, name: str, cls: type):
-        """
-        Instantiate a filter class from the NodeFilters config.
-        """
-        if name in self.__fmap:
-            raise KeyError('{} exists'.format(name))
-        if not isstr(name):
-            raise TypeError('name not a string')
-        filt = cls(self.rule)
-        self.__fmap[name] = filt
-        self.__flist.append(filt)
-
-    @property
-    def filters(self) -> OrderedAttrsView:
-        return self.__viewfilters
 
     def filter(self, node: Node, branch: Branch) -> bool:
         self.callcount += 1
         if self.ignore_ticked and branch.is_ticked(node):
             return False
-        for func in self.__flist:
-            if not func(node):
+        for filt in self.__fmap.values():
+            if not filt(node):
                 return False
         return True
 
     def example_node(self) -> dict:
         node = {}
-        for filt in self.filters:
+        for filt in self.__fmap.values():
             if callable(getattr(filt, 'example_node', None)):
                 n = filt.example_node()
                 if n:
@@ -489,17 +481,33 @@ class FilterHelper(FilterNodeCache):
         super().__init__(rule, *args, **kw)
         self.rule = rule
         self.callcount = 0
-        self.__flist = []
-        self.__fmap = {}
+        self.__fmap = OrderedDict()
+        self.filters = DictAttrView(self.__fmap)
         self.__to_discard = set()
-        self.__viewfilters = OrderedAttrsView(self.__fmap, self.__flist)
-        clsval = getattr(rule, self.__class__.clsattr_node, tuple())
-        for name, cls in clsval:
-            self.add_filter(name, cls)
+        rawvalue = getattr(rule, self.__class__.clsattr_node, EmptySet)
+        for item in rawvalue:
+            if isclass(item):
+                item = (None, item)
+            name, cls = item
+            self._add_filter(cls, name)
+
+    def _add_filter(self, cls: type, name: str = None):
+        """
+        Instantiate a filter class from the NodeFilters config.
+        """
+        if name == None:
+            name = cls.__name__.lower()
+        if name in self.__fmap:
+            raise KeyError('%s exists' % name)
+        if not isstr(name):
+            raise TypeError('name not a string')
+        filt = cls(self.rule)
+        self.__fmap[name] = filt
+        # self.__flist.append(filt)
 
     def _reprdict(self) -> dict:
         return super()._reprdict() | {
-            'filters': '(%s) %s' % (len(self.filters), self.filters),
+            'filters': '(%s) %s' % (len(self.filters), dict(self.filters)),
         }
 
 class Delegates(object):
@@ -514,6 +522,7 @@ class Delegates(object):
             Delegates ``_apply()`` to ``AdzHelper._apply()``.
             """
             Helpers = (AdzHelper,)
+            adz: AdzHelper
 
             #: Whether the target node should be ticked after application.
             #:
@@ -531,6 +540,7 @@ class Delegates(object):
             Delegates ``score_candidate()`` to ``AdzHelper.closure_score()``.
             """
             Helpers = (AdzHelper,)
+            adz: AdzHelper
 
             def score_candidate(self, target: Target) -> float:
                 """
@@ -545,6 +555,7 @@ class Delegates(object):
             Delegates ``sentence()`` to ``FilterHelper.sentence()``.
             """
             Helpers = (FilterHelper,)
+            nf: FilterHelper
 
             def sentence(self, node: Node) -> Sentence:
                 """
@@ -557,6 +568,7 @@ class Delegates(object):
             Delegates ``example_nodes()`` to ``FilterHelper.example_nodes()``.
             """
             Helpers = (FilterHelper,)
+            nf: FilterHelper
 
             def example_nodes(self) -> tuple[dict]:
                 """
@@ -564,22 +576,17 @@ class Delegates(object):
                 """
                 return (self.nf.example_node(),)
 
-def __populate_delegates():
-    _modclasses = {
+def populate_delegates():
+    modclasses = {
         clsname: cls for clsname, cls in globals().items()
         if isclass(cls) and cls.__module__ == __name__
     }
     for helpername, delegates in getmembers(Delegates, isclass)[0:-1]:
-        helpercls = _modclasses[helpername]
-        # hkw = {delegates.attr: helpercls}
+        helpercls = modclasses[helpername]
         for name, cls in getmembers(delegates, isclass)[0:-1]:
-            # clshelpers(**hkw)(cls)
-            # print(cls, cls.Helpers)
-            assign = (helpercls, name, cls)
-            # print(assign)
-            setattr(*assign)
-__populate_delegates()
-del(__populate_delegates)
+            setattr(helpercls, name, cls)
+populate_delegates()
+del(populate_delegates)
 
 class NodeTargetCheckHelper(object):
     """
@@ -959,11 +966,11 @@ class EllipsisExampleHelper(object):
         self.applied.add(branch)
         branch.add(self.mynode)
 
-def _targets_from_nodes_iter(get_node_targets: Callable) -> Callable:
+def _targets_from_nodes_iter(fget_node_targets: Callable) -> Callable:
     def targets_iter(rule, nodes: Iterable[Node], branch: Branch) -> Iterable[Target]:
         results = (
             Target.list(
-                get_node_targets(rule, node, branch),
+                fget_node_targets(rule, node, branch),
                 rule = rule, branch = branch, node = node
             )
             for node in nodes

@@ -27,8 +27,8 @@ from itertools import chain, islice
 # from operator import is_not
 from time import time
 from types import ModuleType
-from typing import Any, Callable, Collection, Iterable, Sequence, Union, \
-    abstractmethod, cast
+from typing import Any, Callable, Collection, Dict, ItemsView, Iterable, KeysView, \
+    OrderedDict, Sequence, Union, ValuesView, abstractmethod, cast
 from past.builtins import basestring
 
 EmptySet = frozenset()
@@ -271,15 +271,15 @@ class Decorators(object):
             if not check(obj): return False
         return True
             
-class Kwobj(object):
+# class Kwobj(object):
 
-    def __init__(self, *dicts, **kw):
-        for d in dicts:
-            self.__dict__.update(d)
-        self.__dict__.update(kw)
+#     def __init__(self, *dicts, **kw):
+#         for d in dicts:
+#             self.__dict__.update(d)
+#         self.__dict__.update(kw)
 
-    def __repr__(self):
-        return dictrepr(self.__dict__)
+#     def __repr__(self):
+#         return dictrepr(self.__dict__)
 
 class CacheNotationData(object):
 
@@ -383,37 +383,54 @@ class StopWatch(object):
         if self.is_running():
             self.stop()
 
-class OrderedAttrsView(Sequence):
+class DictAttrView(Collection):
 
     def get(self, key, default = None):
-        return self.__map.get(key, default)
+        return self.__base.get(key, default)
 
-    def __init__(self, attrmap: dict[str, Any], valuelist: Sequence):
-        self.__list = valuelist
-        self.__map = attrmap
+    def items(self) -> ItemsView:
+        return self.__base.items()
+
+    def keys(self) -> KeysView:
+        return self.__base.keys()
+
+    def values(self) -> ValuesView:
+        return self.__base.values()
+
+    def __copy__(self):
+        return self.__class__(self.__base)
+
+    copy = __copy__
+
+    def __init__(self, base: Dict):
+        self.__base = base
 
     def __getattr__(self, name):
         try:
-            return self.__map[name]
+            return self.__base[name]
         except KeyError:
             raise AttributeError(name)
 
     def __getitem__(self, key):
-        if isinstance(key, (int, slice)):
-            return self.__list[key]
-        return self.__map[key]
+        return self.__base[key]
 
     def __contains__(self, key):
-        return key in self.__map
+        return key in self.__base
 
     def __len__(self):
-        return len(self.__map)
+        return len(self.__base)
 
     def __iter__(self):
-        return iter(self.__list)
+        return iter(self.__base)
+
+    def __dir__(self):
+        return list(self)
 
     def __repr__(self):
-        return repr(self.__list)
+        return cat(
+            self.__class__.__name__,
+            wrparens(self.__base.__repr__()),
+        )
 
 class UniqueList(Sequence):
 
