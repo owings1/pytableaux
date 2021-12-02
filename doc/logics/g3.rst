@@ -37,7 +37,7 @@ Gödel 3-valued logic (:m:`T`, :m:`F`, and :m:`N`) with classical-like negation.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Notes

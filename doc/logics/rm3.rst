@@ -39,7 +39,7 @@ It is similar to :ref:`LP`, with a different conditional operator.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Notes

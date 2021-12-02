@@ -93,7 +93,7 @@ value (:m:`T` or :m:`F`).
 
     .. cssclass:: tableaux-rules
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Notes

@@ -73,7 +73,7 @@ from classical logic, as well as more well-known many-valued systems.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     References

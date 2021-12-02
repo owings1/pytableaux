@@ -48,7 +48,7 @@ rules for the quantifiers, given the behavior of those operators in
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Notes

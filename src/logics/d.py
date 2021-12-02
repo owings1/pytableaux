@@ -134,9 +134,9 @@ class TabRules:
     #    
     #
     #    def get_targets_for_node(self, node, branch):
-    #        if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TableauxRules.Serial):
+    #        if len(self.tableau.history) and isinstance(self.tableau.history[-1]['rule'], TabRules.Serial):
     #            return False
-    #        return super(TableauxRules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
+    #        return super(TabRules.IdentityIndiscernability, self).get_targets_for_node(node, branch)
 
     closure_rules = K.TabRules.closure_rules
 

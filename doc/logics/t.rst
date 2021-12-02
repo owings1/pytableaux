@@ -54,5 +54,5 @@ which states that for every world *w*, *w* accesses *w* (itself).
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:

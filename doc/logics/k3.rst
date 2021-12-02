@@ -76,7 +76,7 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Notes

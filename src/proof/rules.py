@@ -30,6 +30,7 @@ class ClosureRule(Rule):
     """
 
     Helpers = (NodeTargetCheckHelper,)
+    ntch: NodeTargetCheckHelper
 
     opts = {'is_rank_optim': False}
 

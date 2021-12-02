@@ -21,7 +21,7 @@ MH - Paracomplete Hybrid Logic
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Logical Consequence

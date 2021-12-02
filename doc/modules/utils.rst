@@ -5,4 +5,4 @@ Utils Module
 .. contents:: :local:
 
 .. automodule:: utils
-    :members: get_logic, EventEmitter, StopWatch
+    :members: get_logic

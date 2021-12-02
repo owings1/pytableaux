@@ -54,7 +54,7 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
 
     .. cssclass:: tableauxrules
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Notes

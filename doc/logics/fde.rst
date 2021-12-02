@@ -81,7 +81,7 @@ values is:
 
     .. _fde-rules:
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Notes

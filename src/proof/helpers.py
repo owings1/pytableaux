@@ -221,8 +221,6 @@ class AppliedQuitFlag(BranchCache):
     def __call__(self, target: Target):
         self[target.branch] = bool(target.get('flag'))
 
-
-
 @final
 class AppliedSentenceCounter(BranchCache):
     """
@@ -276,6 +274,7 @@ class AppliedNodeCount(BranchCache):
 
     def __getitem__(self, branch: Branch) -> dict[Node, int]:
         return super().__getitem__(branch)
+
 @final
 class AppliedNodesWorlds(BranchCache):
     """
@@ -296,12 +295,9 @@ class AppliedNodesWorlds(BranchCache):
             return
         self[target.branch].add((target.node, target.world))
 
-class WorldNodes(BranchCache):
-    """
-    Track no
-    """
-    _valuetype = dict
-    _attr = 'wn'
+    def __getitem__(self, branch: Branch) -> set[tuple[Node, int]]:
+        return super().__getitem__(branch)
+
 @final
 class UnserialWorldsTracker(BranchCache):
     """
@@ -324,6 +320,7 @@ class UnserialWorldsTracker(BranchCache):
 
     def __getitem__(self, branch: Branch) -> set[int]:
         return super().__getitem__(branch)
+
 @final
 class VisibleWorldsIndex(BranchDictCache):
     """
@@ -598,7 +595,7 @@ class NodeTargetCheckHelper(object):
     NB: The rule must implement ``check_for_target(self, node, branch)``.
     """
     _attr = 'ntch'
-    def __init__(self, rule, *args, **kw):
+    def __init__(self, rule: Rule, *args, **kw):
         self.rule = rule
         self.targets = {}
 
@@ -609,6 +606,20 @@ class NodeTargetCheckHelper(object):
         if branch in self.targets:
             return self.targets[branch]
 
+    def get(self, branch: Branch, default = None) -> Target:
+        return self.targets.get(branch, default)
+
+    def __contains__(self, branch: Branch):
+        return branch in self.targets
+
+    def __len__(self):
+        return len(self.targets)
+
+    def __iter__(self) -> Iterator[Branch]:
+        return iter(self.targets)
+
+    def __getitem__(self, branch: Branch) -> Target:
+        return self.targets[branch]
     # Event Listeners
 
     def after_node_add(self, node: Node, branch: Branch):
@@ -917,7 +928,7 @@ class MaxWorldsTracker(object):
         return 0
 
 class EllipsisExampleHelper(object):
-
+    # TODO: fix for closure rules
     mynode = {'ellipsis': True}
     closenodes = []
 
@@ -960,7 +971,14 @@ class EllipsisExampleHelper(object):
             return
         if self.rule.is_closure:
             return
-        self.__addnode(target.branch)
+        if False and target.get('adds'):
+            print(target['adds'])
+            adds = list(target['adds'])
+            adds[0] = tuple([self.mynode] + list(adds[0]))
+            target._Target__data['adds'] = adds
+            self.applied.add(target.branch)
+        else:
+            self.__addnode(target.branch)
 
     def __addnode(self, branch):
         self.applied.add(branch)

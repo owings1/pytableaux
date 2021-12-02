@@ -33,7 +33,7 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Logical Consequence

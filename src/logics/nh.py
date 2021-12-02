@@ -106,14 +106,7 @@ class TableauxSystem(fde.TableauxSystem):
 class DefaultNodeRule(fde.DefaultNodeRule):
     pass
 
-class TableauxRules(object):
-    """
-    The closure rules for NH are the `FDE closure rule`_, and the `LP closure rule`_.
-    ...
-    
-    .. _FDE closure rule: fde.html#logics.fde.TableauxRules.DesignationClosure
-    .. _LP closure rule: lp.html#logics.lp.TableauxRules.GapClosure
-    """
+class TabRules(object):
 
     class GapClosure(lp.TableauxRules.GapClosure):
         pass
@@ -456,3 +449,4 @@ class TableauxRules(object):
             ConjunctionNegatedDesignated,
         ],
     ]
+TableauxRules = TabRules

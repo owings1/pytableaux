@@ -62,7 +62,7 @@ a world *w'* such that *w* accesses *w'*.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Notes

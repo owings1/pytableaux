@@ -75,7 +75,7 @@ known as Bochvar Internal (:m:`B3`). A common interpretation of these values is:
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Notes

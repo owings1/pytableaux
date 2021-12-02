@@ -50,7 +50,7 @@ Universal (:s:`L`) and Existential (:s:`X`).
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
 

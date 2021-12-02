@@ -657,6 +657,9 @@ class QuantifierFatRule(DefaultRule, AdzHelper.Apply):
         node_apply_count = self.apnc[target.branch].get(target.node, 0)
         return float(1 / (node_apply_count + 1))
 
+def sd(s: Sentence, d: bool):
+    return {'sentence': s, 'designated': d}
+
 class ConjunctionReducingRule(DefaultNodeRule):
 
     conjunct_op: Oper
@@ -669,9 +672,7 @@ class ConjunctionReducingRule(DefaultNodeRule):
         if self.negated:
             s = s.negate()
         d = self.designation
-        return {
-            'adds': (({'sentence': s, 'designated': d},),),
-        }
+        return {'adds': ((sd(s, d),),),}
 
 class TabRules(object):
     """
@@ -706,10 +707,10 @@ class TabRules(object):
             return self.ntch.cached_target(branch)
 
         def example_nodes(self):
-            a = Atomic.first()
+            s = Atomic.first()
             return (
-                {'sentence': a, 'designated': True },
-                {'sentence': a, 'designated': False},
+                {'sentence': s, 'designated': True },
+                {'sentence': s, 'designated': False},
             )
 
         # private util
@@ -809,15 +810,8 @@ class TabRules(object):
             s: Operated = self.sentence(node)
             lhs, rhs = s
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        # keep designation neutral for inheritance below
-                        {'sentence': lhs, 'designated': d},
-                        {'sentence': rhs, 'designated': d},
-                    ),
-                ),
-            }
+            # Keep designation neutral for inheritance below.
+            return {'adds': ((sd(lhs, d), sd(rhs, d)),)}
 
     class ConjunctionNegatedDesignated(DefaultNodeRule):
         """
@@ -1269,8 +1263,8 @@ class TabRules(object):
         with the existential quantifier over *v* into the negation of *s* (e.g. change
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
-        quantifier  = Quantifier.Universal
-        convert_to  = Quantifier.Existential
+        quantifier = Quantifier.Universal
+        convert_to = Quantifier.Existential
 
     class UniversalUndesignated(ExistentialDesignated):
         """

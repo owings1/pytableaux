@@ -879,6 +879,9 @@ class Target(Mapping):
     __reqd = {'branch'}
     __attrs = __reqd | {'rule', 'node', 'nodes', 'world', 'world1', 'world2', 'sentence', 'designated', 'flag'}
 
+    branch: Branch
+    node: Node
+
     @classmethod
     def create(cls, obj, **context):
         """
@@ -923,10 +926,6 @@ class Target(Mapping):
         if 'node' in self.__data:
             return 'Node'
         return 'Branch'
-
-    @property
-    def branch(self) -> Branch:
-        return self.__data['branch']
 
     def get(self, key, default = None):
         try:

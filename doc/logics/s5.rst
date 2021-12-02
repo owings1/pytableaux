@@ -67,5 +67,5 @@ Normal modal logic with reflexive, symmetric, and transitive access relation.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:

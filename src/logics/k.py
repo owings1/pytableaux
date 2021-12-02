@@ -55,8 +55,6 @@ class Model(BaseModel):
     relation, and a set of constants (the domain).
     """
 
-    # truth_values_list = ['F', 'T']
-
     #: The set of admissible values for sentences in a model.
     #:
     #: :type: set
@@ -87,85 +85,78 @@ class Model(BaseModel):
         #: A set of pairs of worlds, which functions as an `access` relation.
         #:
         #: :type: set
-        self.access = set()
+        self.access: set[tuple[int, int]] = set()
 
         #: The fixed domain of constants, common to all worlds in the model.
         #:
         #: :type: set
-        self.constants = set()
+        self.constants: set[Constant] = set()
 
-        self.predicates = {Identity, Existence}
+        self.predicates: set[Predicate] = {Identity, Existence}
         self.fde = FDE.Model()
 
         # ensure there is a w0
         self.world_frame(0)
 
-    def value_of_operated(self, sentence: Operated, **kw):
-        if self.is_sentence_opaque(sentence):
-            return self.value_of_opaque(sentence, **kw)
-        if sentence.operator in self.modal_operators:
-            return self.value_of_modal(sentence, **kw)
-        return super().value_of_operated(sentence, **kw)
+    def value_of_operated(self, s: Operated, **kw):
+        if self.is_sentence_opaque(s):
+            return self.value_of_opaque(s, **kw)
+        if s.operator in self.modal_operators:
+            return self.value_of_modal(s, **kw)
+        return super().value_of_operated(s, **kw)
 
-    def value_of_predicated(self, sentence: Predicated, **kw):
+    def value_of_predicated(self, s: Predicated, **kw):
         """
         A sentence for predicate `P` is true at :m:`w` iff the tuple of the parameters
         is in the extension of `P` at :m:`w`.
         """
-        pred = sentence.predicate
-        params = sentence.params
+        params = s.params
         for param in params:
             if param not in self.constants:
                 raise DenotationError(
                     'Parameter {0} is not in the constants'.format(param)
                 )
-        if params in self.get_extension(pred, **kw):
+        if params in self.get_extension(s.predicate, **kw):
             return 'T'
         return 'F'
 
-    def value_of_existential(self, sentence: Quantified, **kw):
+    def value_of_existential(self, s: Quantified, **kw):
         """
         An existential sentence is true at :m:`w`, just when the sentence resulting in the
         subsitution of some constant in the domain for the variable is true at :m:`w`.
         """
-        si = sentence.sentence
-        v = sentence.variable
         for c in self.constants:
-            r = si.substitute(c, v)
-            if self.value_of(r, **kw) == 'T':
+            if self.value_of(s.unquantify(c), **kw) == 'T':
                 return 'T'
         return 'F'
 
-    def value_of_universal(self, sentence: Quantified, **kw):
+    def value_of_universal(self, s: Quantified, **kw):
         """
         A universal sentence is true at :m:`w`, just when the sentence resulting in the
         subsitution of each constant in the domain for the variable is true at :m:`w`.
         """
-        si = sentence.sentence
-        v = sentence.variable
         for c in self.constants:
-            r = si.substitute(c, v)
-            if self.value_of(r, **kw) == 'F':
+            if self.value_of(s.unquantify(c), **kw) == 'F':
                 return 'F'
         return 'T'
 
-    def value_of_possibility(self, sentence: Operated, world=0, **kw):
+    def value_of_possibility(self, s: Operated, world=0, **kw):
         """
         A possibility sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         some :m:`w'` such that :m:`<w, w'>` in the access relation.
         """
         for w2 in self.visibles(world):
-            if self.value_of(sentence.operand, world=w2, **kw) == 'T':
+            if self.value_of(s.operand, world=w2, **kw) == 'T':
                 return 'T'
         return 'F'
 
-    def value_of_necessity(self, sentence: Operated, world=0, **kw):
+    def value_of_necessity(self, s: Operated, world=0, **kw):
         """
         A necessity sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         each :m:`w'` such that :m:`<w, w'>` is in the access relation.
         """
         for w2 in self.visibles(world):
-            if self.value_of(sentence.operand, world=w2, **kw) == 'F':
+            if self.value_of(s.operand, world=w2, **kw) == 'F':
                 return 'F'
         return 'T'
 
@@ -242,13 +233,13 @@ class Model(BaseModel):
             opaques.update(frame.opaques.keys())
 
             # TODO: WIP
-            self.generate_denotation(w)
-            self.generate_property_classes(w)
+            self._generate_denotation(w)
+            self._generate_property_classes(w)
 
             for pred in self.predicates:
-                self.agument_extension_with_identicals(pred, w)
-            self.ensure_self_identity(w)
-            self.ensure_self_existence(w)
+                self._agument_extension_with_identicals(pred, w)
+            self._ensure_self_identity(w)
+            self._ensure_self_existence(w)
 
         # make sure each atomic and opaque is assigned a value in each frame
         unval = self.unassigned_value
@@ -261,19 +252,19 @@ class Model(BaseModel):
                 if s not in frame.opaques:
                     self.set_opaque_value(s, unval, world = w)
 
-    def ensure_self_identity(self, w):
+    def _ensure_self_identity(self, w):
         ext = self.get_extension(Identity, world = w)
         for c in self.constants:
             # make sure each constant is self-identical
             ext.add((c, c))
 
-    def ensure_self_existence(self, w):
+    def _ensure_self_existence(self, w):
         ext = self.get_extension(Existence, world = w)
         for c in self.constants:
             # make sure each constant exists
             ext.add((c,))
 
-    def agument_extension_with_identicals(self, pred: Predicate, w):
+    def _agument_extension_with_identicals(self, pred: Predicate, w):
         extension = self.get_extension(pred, world = w)
         for c in self.constants:
             identicals = self.get_identicals(c, world = w)
@@ -285,7 +276,7 @@ class Model(BaseModel):
                         to_add.add(new_params)
             extension.update(to_add)
 
-    def generate_denotation(self, w):
+    def _generate_denotation(self, w: int):
         frame = self.world_frame(w)
         w = frame.world
         todo = set(self.constants)
@@ -298,7 +289,7 @@ class Model(BaseModel):
                 todo -= denoters
         assert not todo
 
-    def generate_property_classes(self, w):
+    def _generate_property_classes(self, w):
         frame = self.world_frame(w)
         w = frame.world
         for pred in self.predicates:
@@ -310,7 +301,7 @@ class Model(BaseModel):
                 for params in self.get_extension(pred, world = w)
             }
 
-    def get_identicals(self, c, **kw):
+    def get_identicals(self, c: Constant, **kw) -> set[Constant]:
         ext = self.get_extension(Identity, **kw)
         identicals = set()
         for params in ext:
@@ -319,46 +310,45 @@ class Model(BaseModel):
         identicals.discard(c)
         return identicals
 
-    def is_sentence_literal(self, sentence: Sentence):
-        if sentence.is_negated and self.is_sentence_opaque(sentence.operand):
+    def is_sentence_literal(self, s: Sentence):
+        if s.is_negated and self.is_sentence_opaque(s.operand):
             return True
-        return sentence.is_literal
+        return s.is_literal
 
-    def set_literal_value(self, sentence: Sentence, value, **kw):
-        if self.is_sentence_opaque(sentence):
-            self.set_opaque_value(sentence, value, **kw)
-        elif sentence.is_negated:
-            negval = self.truth_function(sentence.operator, value)
-            self.set_literal_value(sentence.operand, negval, **kw)
-        elif sentence.is_atomic:
-            self.set_atomic_value(sentence, value, **kw)
-        elif sentence.is_predicated:
-            self.set_predicated_value(sentence, value, **kw)
+    def set_literal_value(self, s: Sentence, value, **kw):
+        if self.is_sentence_opaque(s):
+            self.set_opaque_value(s, value, **kw)
+        elif s.is_negated:
+            negval = self.truth_function(s.operator, value)
+            self.set_literal_value(s.operand, negval, **kw)
+        elif s.is_atomic:
+            self.set_atomic_value(s, value, **kw)
+        elif s.is_predicated:
+            self.set_predicated_value(s, value, **kw)
         else:
             raise NotImplementedError()
 
-    def set_opaque_value(self, sentence: Sentence, value, world = 0, **kw):
+    def set_opaque_value(self, s: Sentence, value, world = 0, **kw):
         frame = self.world_frame(world)
-        # if sentence in frame.opaques and frame.opaques[sentence] != value:
-        if frame.opaques.get(sentence, value) != value:
-            raise ModelValueError('Inconsistent value for sentence {0}'.format(sentence))
+        if frame.opaques.get(s, value) != value:
+            raise ModelValueError('Inconsistent value for sentence {0}'.format(s))
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants.
         # NB: in FDE we added the atomics to all_atomics, but we don't have that
         #     here since we do frames -- will that be a problem?
-        self.constants.update(sentence.constants)
-        self.predicates.update(sentence.predicates)
-        frame.opaques[sentence] = value
+        self.constants.update(s.constants)
+        self.predicates.update(s.predicates)
+        frame.opaques[s] = value
 
-    def set_atomic_value(self, sentence: Atomic, value, world = 0, **kw):
+    def set_atomic_value(self, s: Atomic, value, world = 0, **kw):
         frame = self.world_frame(world)
-        if sentence in frame.atomics and frame.atomics[sentence] != value:
-            raise ModelValueError('Inconsistent value for sentence {0}'.format(str(sentence)))
-        frame.atomics[sentence] = value
+        if s in frame.atomics and frame.atomics[s] != value:
+            raise ModelValueError('Inconsistent value for sentence {0}'.format(s))
+        frame.atomics[s] = value
 
-    def set_predicated_value(self, sentence: Predicated, value, **kw):
-        pred = sentence.predicate
-        params = sentence.params
+    def set_predicated_value(self, s: Predicated, value, **kw):
+        pred = s.predicate
+        params = s.params
         if pred not in self.predicates:
             self.predicates.add(pred)
         for param in params:
@@ -383,7 +373,7 @@ class Model(BaseModel):
                 )
             extension.add(params)
 
-    def get_extension(self, pred, world = 0, **kw):
+    def get_extension(self, pred, world = 0, **kw) -> set[tuple[Constant, ...]]:
         frame = self.world_frame(world)
         if pred not in self.predicates:
             self.predicates.add(pred)
@@ -393,7 +383,7 @@ class Model(BaseModel):
             frame.anti_extensions[pred] = set()
         return frame.extensions[pred]
 
-    def get_anti_extension(self, pred, world = 0, **kw):
+    def get_anti_extension(self, pred, world = 0, **kw) -> set[tuple[Constant, ...]]:
         frame = self.world_frame(world)
         if pred not in self.predicates:
             self.predicates.add(pred)
@@ -445,36 +435,27 @@ class Model(BaseModel):
             self.frames[world] = Frame(world)
         return self.frames[world]
 
-    def value_of_opaque(self, sentence: Sentence, world=0, **kw):
-        frame = self.world_frame(world)
-        world = frame.world
-        if sentence in frame.opaques:
-            return frame.opaques[sentence]
-        return self.unassigned_value
+    def value_of_opaque(self, s: Sentence, world = 0, **kw):
+        return self.world_frame(world).opaques.get(s, self.unassigned_value)
 
-    def value_of_atomic(self, sentence: Atomic, world=0, **kw):
-        frame = self.world_frame(world)
-        world = frame.world
-        if sentence in frame.atomics:
-            return frame.atomics[sentence]
-        return self.unassigned_value
+    def value_of_atomic(self, s: Atomic, world = 0, **kw):
+        return self.world_frame(world).atomics.get(s, self.unassigned_value)
 
-    def value_of_modal(self, sentence: Operated, **kw):
-        operator = sentence.operator
-        if operator == Oper.Possibility:
-            return self.value_of_possibility(sentence, **kw)
-        elif operator == Oper.Necessity:
-            return self.value_of_necessity(sentence, **kw)
-        else:
-            raise NotImplementedError()
+    def value_of_modal(self, s: Operated, **kw):
+        oper = s.operator
+        if oper == Oper.Possibility:
+            return self.value_of_possibility(s, **kw)
+        if oper == Oper.Necessity:
+            return self.value_of_necessity(s, **kw)
+        raise NotImplementedError()
 
-    def value_of_quantified(self, sentence: Quantified, **kw):
-        q = sentence.quantifier
+    def value_of_quantified(self, s: Quantified, **kw):
+        q = s.quantifier
         if q == Quantifier.Existential:
-            return self.value_of_existential(sentence, **kw)
+            return self.value_of_existential(s, **kw)
         elif q == Quantifier.Universal:
-            return self.value_of_universal(sentence, **kw)
-        return super().value_of_quantified(sentence, **kw)
+            return self.value_of_universal(s, **kw)
+        raise NotImplementedError()
 
     def truth_function(self, operator: Oper, a, b=None):
         return self.fde.truth_function(operator, a, b)
@@ -525,7 +506,7 @@ class Frame(object):
         self.domain = set()
         self.property_classes = {Identity: set(), Existence: set()}
 
-    def get_data(self):
+    def get_data(self) -> dict:
         return {
             'description' : 'frame at world {0}'.format(str(self.world)),
             'datatype'    : 'map',
@@ -596,7 +577,7 @@ class Frame(object):
             }
         }
 
-    def is_equivalent_to(self, other):
+    def is_equivalent_to(self, other) -> bool:
         # check for informational equivalence, ignoring world
         # check atomic keys
         akeys_a = set(self.atomics.keys())
@@ -694,14 +675,14 @@ class TableauxSystem(BaseSystem):
                 complexity += 1
         return complexity
 
-@FilterHelper.clsfilters(
-    sentence = Filters.Node.Sentence,
-    modal    = Filters.Node.Modal,
-)
 class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
 
-    nf: FilterHelper = Annotate.HelperAttr
+    nf: FilterHelper
 
+    NodeFilters = (
+        Filters.Node.Sentence,
+        Filters.Node.Modal,
+    )
     ignore_ticked = True
 
     # Filters.Node.Sentence
@@ -716,7 +697,7 @@ class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
 
 class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
 
-    adz: AdzHelper = Annotate.HelperAttr
+    adz: AdzHelper
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
@@ -727,8 +708,8 @@ class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
 
 class ModalNodeRule(DefaultNodeRule):
     Helpers = (AppliedQuitFlag, MaxWorldsTracker)
-    apqf: AppliedQuitFlag  = Annotate.HelperAttr
-    maxw: MaxWorldsTracker = Annotate.HelperAttr
+    apqf: AppliedQuitFlag
+    maxw: MaxWorldsTracker
 
 class TabRules(object):
     """
@@ -766,7 +747,7 @@ class TabRules(object):
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
-            return self.ntch.cached_target(branch)
+            return self.ntch.get(branch)
 
         # private util
 
@@ -1229,31 +1210,23 @@ class TabRules(object):
             """
             :overrides: AdzHelper.ClosureScore
             """
-
             if target.get('flag'):
                 return 1
-
             # override
             branch = target.branch
             s: Operated = self.sentence(target.node)
             si = s.operand
-
             # Don't bother checking for closure since we will always have a new world
-
             track_count = self.apsc[branch].get(si, 0)
             if track_count == 0:
                 return 1
-
             return -1 * self.maxw.modal_complexity(s) * track_count
 
         def group_score(self, target: Target):
-
             if target['candidate_score'] > 0:
                 return 1
-
             s: Operated = self.sentence(target.node)
             si = s.operand
-
             return -1 * self.apsc[target.branch].get(si, 0)
 
     class PossibilityNegated(DefaultNodeRule):
@@ -1295,9 +1268,7 @@ class TabRules(object):
         apnw: AppliedNodesWorlds
         visw: VisibleWorldsIndex
 
-        Timers = (
-            'get_targets',
-        )
+        Timers = ('get_targets',)
 
         def _get_node_targets(self, node: Node, branch: Branch) -> list[Target]:
 

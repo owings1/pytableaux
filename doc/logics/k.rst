@@ -69,7 +69,7 @@ of :ref:`CFOL <CFOL>`, adding the modal operators for possibility and necessity.
     .. autoclass:: TableauxSystem
         :members: build_trunk
 
-    .. autoclass:: TableauxRules
+    .. autoclass:: TabRules
         :members:
 
     Notes

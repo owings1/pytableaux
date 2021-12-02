@@ -216,7 +216,7 @@ class Helper(object):
         """
         lgc = get_logic(lgc or rule)
         found = None
-        for name, member in inspect.getmembers(lgc.TableauxRules):
+        for name, member in inspect.getmembers(lgc.TabRules):
             if name == rule or member == rule:
                 found = member
                 break
@@ -254,7 +254,7 @@ class Helper(object):
             )
         )
         symhtml, symunic = (
-            {o: rset.strfor('operator', o) for o in Operator}
+            {o: rset.strfor(o.TYPE, o) for o in Operator}
             for rset in (
                 RenderSet.fetch('standard', 'html'),
                 RenderSet.fetch('standard', 'unicode')
@@ -456,7 +456,7 @@ class Helper(object):
         lw = self.lwtrunk
         pw = self.pwtrunk
         proof = Tableau(lgc)
-        proof.rules.groups[0][0].add_helper(EllipsisExampleHelper)
+        proof.rules.groups[1][0].add_helper(EllipsisExampleHelper)
         proof.argument = arg
         proof.finish()
         return cat(
@@ -474,7 +474,9 @@ class Helper(object):
         lgc = get_logic(lgc or rule)
         proof = Tableau(lgc)
         rule = proof.rules.get(rule)
-        rule.add_helper(EllipsisExampleHelper)
+        # TODO: fix for closure rules
+        if not rule.is_closure:
+            rule.add_helper(EllipsisExampleHelper)
         pw = self.pwclosure if rule.is_closure else self.pwrule
         b = proof.branch().extend(rule.example_nodes())
         rule.apply(rule.get_target(b))
@@ -823,7 +825,7 @@ def rulegrouped(rule, lgc):
         return False
     try:
         lgc = get_logic(lgc)
-        rcls = lgc.TableauxRules
+        rcls = lgc.TabRules
         if rule in rcls.closure_rules:
             return True
         for grp in rcls.rule_groups:
@@ -891,15 +893,15 @@ class UnknownLexTypeError(Exception):
 #         return [node]
 # def sphinx_filter_signature(self, app, what, name, obj, options, signature, return_annotation):
 #     raise NotImplementedError()
-#     if what == 'class' and name.startswith('logics.') and '.TableauxRules.' in name:
+#     if what == 'class' and name.startswith('logics.') and '.TabRules.' in name:
 #         # check if it is in use in rule groups
 #         lgc = get_logic(obj)
 #         isfound = False
-#         if obj in lgc.TableauxRules.closure_rules:
+#         if obj in lgc.TabRules.closure_rules:
 #             print('CLUSRE', name, lgc.name)
 #             isfound = True
 #         if not isfound:
-#             for grp in lgc.TableauxRules.rule_groups:
+#             for grp in lgc.TabRules.rule_groups:
 #                 if obj in grp:
 #                     print('Found', name, lgc.name)
 #                     isfound = True
