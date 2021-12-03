@@ -171,13 +171,13 @@ def __populate_info():
         example_arguments[arg.title] = {}
     for notn in parser_notations:
         # Build rendered example arguments
-        w = create_lexwriter(notn=notn, enc='ascii')
+        lw = create_lexwriter(notn=notn, enc='ascii')
         for arg in exargs:
             example_arguments[arg.title][notn] = {
-                'premises': [w.write(s) for s in arg.premises],
-                'conclusion': w.write(arg.conclusion),
+                'premises': tuple(lw.write(s) for s in arg.premises),
+                'conclusion': lw.write(arg.conclusion),
             }
-        p = create_parser(notn=notn)
+        # p = create_parser(notn=notn)
         parser_tables[notn] = table = CharTable.fetch(notn)
         nups[notn] = table.chars('user_predicate')
 

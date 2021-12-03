@@ -135,7 +135,7 @@ class TestBranch(object):
         i = 0
         while i <= Constant.TYPE.maxi:
             c = Constant(i, 0)
-            sen = Predicated('Identity', [c, c])
+            sen = Predicated('Identity', (c, c))
             b.add({'sentence': sen})
             i += 1
         res = b.new_constant()

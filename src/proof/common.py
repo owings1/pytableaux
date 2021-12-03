@@ -182,8 +182,8 @@ class Node(object, metaclass = NodeMeta):
 
 NodeType = Union[Node, Mapping]
 
-class Annotate(Enum):
-    HelperAttr = auto()
+# class Annotate(Enum):
+#     HelperAttr = auto()
 
 class KEY(Enum):
     FLAGS       = auto()

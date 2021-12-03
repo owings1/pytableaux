@@ -103,21 +103,22 @@ class TabRules(object):
     .. _K3 closure rule: k3.html#logics.k3.TabRules.GlutClosure
     """
 
-    class GlutClosure(K3.TabRules.GlutClosure): pass
-    class DesignationClosure(FDE.TabRules.DesignationClosure): pass
+    class GlutClosure(K3.TabRules.GlutClosure):
+        pass
+    class DesignationClosure (FDE.TabRules.DesignationClosure): pass
 
-    class DoubleNegationDesignated(FDE.TabRules.DoubleNegationDesignated): pass
-    class DoubleNegationUndesignated(FDE.TabRules.DoubleNegationUndesignated): pass
+    class DoubleNegationDesignated   (FDE.TabRules.DoubleNegationDesignated): pass
+    class DoubleNegationUndesignated (FDE.TabRules.DoubleNegationUndesignated): pass
 
-    class AssertionDesignated(FDE.TabRules.AssertionDesignated): pass
-    class AssertionNegatedDesignated(FDE.TabRules.AssertionNegatedDesignated): pass
-    class AssertionUndesignated(FDE.TabRules.AssertionUndesignated): pass
-    class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated): pass
+    class AssertionDesignated          (FDE.TabRules.AssertionDesignated): pass
+    class AssertionNegatedDesignated   (FDE.TabRules.AssertionNegatedDesignated): pass
+    class AssertionUndesignated        (FDE.TabRules.AssertionUndesignated): pass
+    class AssertionNegatedUndesignated (FDE.TabRules.AssertionNegatedUndesignated): pass
 
-    class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated): pass
-    class ConjunctionNegatedDesignated(FDE.TabRules.ConjunctionNegatedDesignated): pass
-    class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated): pass
-    class ConjunctionNegatedUndesignated(FDE.TabRules.ConjunctionNegatedUndesignated): pass
+    class ConjunctionDesignated          (FDE.TabRules.ConjunctionDesignated): pass
+    class ConjunctionNegatedDesignated   (FDE.TabRules.ConjunctionNegatedDesignated): pass
+    class ConjunctionUndesignated        (FDE.TabRules.ConjunctionUndesignated): pass
+    class ConjunctionNegatedUndesignated (FDE.TabRules.ConjunctionNegatedUndesignated): pass
 
     class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
         pass
@@ -267,7 +268,7 @@ class TabRules(object):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
-        negated      = True
+        negated = True
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalDesignated):
         """
@@ -363,15 +364,15 @@ class TabRules(object):
         """
         This rule reduces to a conjunction of conditionals.
         """
-        designation  = True
-        operator     = Oper.Biconditional
-        conjunct_op  = Oper.Conditional
+        designation = True
+        operator    = Oper.Biconditional
+        conjunct_op = Oper.Conditional
 
     class BiconditionalNegatedDesignated(BiconditionalDesignated):
         """
         This rule reduces to a negated conjunction of conditionals.
         """
-        negated      = True
+        negated = True
 
     class BiconditionalUndesignated(BiconditionalDesignated):
         """

@@ -1,10 +1,12 @@
 import examples, lexicals, utils
 from inspect import isclass, getmembers
-from lexicals import Argument, Predicates, create_lexwriter
-from parsers import notations as parser_notns, create_parser, parse_argument, parse
-from proof.tableaux import Tableau, Branch, Node
+from lexicals import Argument, Predicates, Sentence, create_lexwriter
+from models import BaseModel
+from parsers import notations as parser_notns, create_parser, parse_argument, parse, Parser
+from proof.tableaux import Tableau, Branch, Node, Rule
 from utils import get_logic, isint, isstr
 from itertools import chain
+from typing import Callable, Iterable, Iterator
 
 from enum import Enum
 def _setattrs(obj, **attrs):
@@ -19,7 +21,7 @@ def _setattrs(obj, **attrs):
         else:
             setattr(obj, attr, val)
 
-def using(**attrs):
+def using(**attrs) -> Callable:
     def wrapper(func):
         if isclass(func):
             _setattrs(func, **attrs)
@@ -43,19 +45,17 @@ def using(**attrs):
         return wrapped
     return wrapper
 
-def dynattrs(*names):
+def dynattrs(*names) -> Callable:
     def wrapper(cls):
         assert isclass(cls)
-        if not hasattr(cls, '_dynattrs'):
-            cls._dynattrs = set()
-        cls._dynattrs.update(names)
+        cls._dynattrs = getattr(cls, '_dynattrs', tuple()) + names
         for attr in names:
             if hasattr(cls, attr):
                 cls.dynamic(attr, getattr(cls, attr))
         return cls
     return wrapper
 
-def larg(*largs):
+def larg(*largs) -> Callable:
     def decor(what):
         if isclass(what): raise TypeError()
         def operwrap(self, *args, **kw):
@@ -70,7 +70,7 @@ def loopgen(n, col):
         yield col[i]
         i += 1
 
-def skip(what):
+def skip(what) -> Callable:
     if isclass(what):
         class Skipped(object):
             pass
@@ -79,7 +79,7 @@ def skip(what):
         pass
     return skipped
 
-def clsmbrsrecurse(cls):
+def clsmbrsrecurse(cls) -> Iterator[type]:
     mine = list(
         m for n,m in getmembers(cls)
         if isclass(m) and n[0] != '_'
@@ -87,12 +87,17 @@ def clsmbrsrecurse(cls):
     return chain(mine, chain.from_iterable(
         clsmbrsrecurse(c) for c in mine
     ))
-@dynattrs('logic')
-class BaseSuite(object):
 
-    vocab = examples.vocabulary
+
+class AbstractSuite(object):
+    pass
+
+@dynattrs('logic')
+class BaseSuite(AbstractSuite):
+
+    vocab = examples.preds
     notn = 'polish'
-    logic = 'CFOL'
+    logic = get_logic('CFOL')
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
     lw = create_lexwriter(notn='standard')
 
@@ -106,7 +111,8 @@ class BaseSuite(object):
 
     def set_logic(self, logic):
         self.logic = get_logic(logic)
-    def crparser(self, *args, **kw):
+
+    def crparser(self, *args, **kw) -> Parser:
         for val in args:
             if isinstance(val, Predicates):
                 key = 'vocab'
@@ -123,10 +129,10 @@ class BaseSuite(object):
             kw['notn'] = self.notn
         return create_parser(**kw)
 
-    def p(self, s, *args, **kw):
+    def p(self, s, *args, **kw) -> Sentence:
         return self.crparser(*args, **kw).parse(s)
 
-    def pp(self, *sargs, **kw):
+    def pp(self, *sargs, **kw) -> list[Sentence]:
         args = []
         sens = []
         for val in sargs:
@@ -150,7 +156,7 @@ class BaseSuite(object):
         for i, s in enumerate(self.sgen(n, **kw)):
             yield Node(self._gennode(i, s, **kw))
 
-    def parg(self, conc, *prems, **kw):
+    def parg(self, conc, *prems, **kw) -> Argument:
         if isinstance(conc, Argument):
             return conc
         try:
@@ -173,7 +179,7 @@ class BaseSuite(object):
             kw['vocab'] = self.vocab
         return parse_argument(conc, premises, **kw)
 
-    def tab(self, *args, **kw):
+    def tab(self, *args, **kw) -> Tableau:
         is_build = kw.pop('is_build', None)# if 'is_build' in kw else None
         if 'is_build_models' not in kw:
             kw['is_build_models'] = True
@@ -201,34 +207,42 @@ class BaseSuite(object):
         self.t = tab
         return tab
 
-    def valid_tab(self, *args, **kw):
+    def valid_tab(self, *args, **kw) -> Tableau:
         tab = self.tab(*args, **kw)
         assert tab.valid
         return tab
 
-    def invalid_tab(self, *args, **kw):
+    def invalid_tab(self, *args, **kw) -> Tableau:
         tab = self.tab(*args, **kw)
         assert tab.invalid
         return tab
 
-    def tabb(self, *args, **kw):
+    def b(self, *nn) -> Branch:
         b = Branch()
-        # maybe this will work
-        if args and isinstance(args[0], (dict, list, tuple)):
-            arg, *args = args
-            if isinstance(arg, dict):
-                arg = (arg,)
-            try:
-                b.extend(arg)
-            except TypeError:
-                print (arg)
-                print (args)
-                raise
+        b.extend(nn)
+        return b
+
+    def tabb(self, *args, **kw) -> tuple[Tableau, Branch]:
+        if args and isinstance(args[0], (dict, Node, list, tuple)):
+            nn, *args = args
+            if isinstance(nn, (dict, Node)):
+                nn = (nn,)
+        else:
+            nn = tuple()
+        b = self.b(*nn)
+            # if isinstance(arg, dict):
+            #     arg = (arg,)
+            # try:
+            #     b.extend(arg)
+            # except TypeError:
+            #     print (arg)
+            #     print (args)
+            #     raise
         tab = self.tab(*args, **kw)
         tab.add(b)
         return (tab, b)
 
-    def acmm(self, *args, **kw):
+    def acmm(self, *args, **kw) -> tuple[Argument, list[BaseModel]]:
         kw['is_build_models'] = True
         tab = self.invalid_tab(*args, **kw)
         arg, models = tab.argument, list(tab.models)
@@ -237,21 +251,21 @@ class BaseSuite(object):
             assert m.is_countermodel_to(arg)
         return (arg, models)
 
-    def cmm(self, *args, **kw):
+    def cmm(self, *args, **kw) -> list[BaseModel]:
         return self.acmm(*args, **kw)[1]
 
     # return one model
-    def cm(self, *args, **kw):
+    def cm(self, *args, **kw) -> BaseModel:
         return self.acmm(*args, **kw)[1][0]
 
-    def rule_tab(self, rule, bare = False, **kw):
+    def rule_tab(self, rule, bare = False, **kw) -> tuple[Rule, Tableau]:
         manual = False
         t = self.tab()
         try:
             rule = t.rules.get(rule)
         except ValueError:
             if isstr(rule):
-                rule = getattr(t.logic.TableauxRules, rule)
+                rule = getattr(t.logic.TabRules, rule)
             t.rules.add(rule)
             rule = t.rules.get(rule)
             manual = True
@@ -264,7 +278,7 @@ class BaseSuite(object):
         rule = tab.rules.get(cls)
         return (rule, tab)
 
-    def rule_eg(self, rule, step = True, **kw):
+    def rule_eg(self, rule, step = True, **kw) -> tuple[Rule, Tableau]:
         rule, tab = self.rule_tab(rule, **kw)
         tab.branch().extend(rule.example_nodes())
         assert len(tab) == 1
@@ -276,12 +290,18 @@ class BaseSuite(object):
             assert tab.current_step == 1
             if rule.is_closure:
                 assert len(tab.open) == 0
+
         return (rule, tab)
 
-    @property
-    def Model(self):
-        return self.logic.Model
+    def m(self, b: Branch = None) -> BaseModel:
+        m: BaseModel = self.Model()
+        if b:
+            m.read_branch(b)
+        return m
 
+    @property
+    def Model(self) -> type:
+        return self.logic.Model
 
 if utils.testlw == None:
     lexicals._syslw = utils.testlw = BaseSuite.lw

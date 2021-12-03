@@ -198,7 +198,7 @@ class TestSentence(BaseSuite):
                 Atomic(Atomic.TYPE.maxi + 1, 0)
 
         def test_setence_impl(self):
-            s = A
+            s: Atomic = A
             assert s.operator == None
             assert s.quantifier == None
             assert s.predicate == None
@@ -222,7 +222,7 @@ class TestSentence(BaseSuite):
             assert s.variable_occurs(x) == False
 
         def test_next(self):
-            s = A.next()
+            s: Atomic = A.next()
             assert s.index == 1
             assert s.subscript == 0
             s =  Atomic(Atomic.TYPE.maxi, 0).next()
@@ -284,7 +284,7 @@ class TestSentence(BaseSuite):
             assert res[1] == s2
 
         def test_predicated_substitute_a_for_x_identity(self):
-            s = Predicated('Identity', [x, b])
+            s = Predicated('Identity', (x, b))
             res = s.substitute(a, x)
             assert res.params[0] == a
             assert res.params[1] == b
@@ -301,7 +301,7 @@ class TestSentence(BaseSuite):
                 q,
                 Variable(0, 0),
                 Predicated(
-                    'Identity', [Variable(0, 0), Constant(0, 0)]
+                    'Identity', (Variable(0, 0), Constant(0, 0))
                 )
             )
             assert res == check

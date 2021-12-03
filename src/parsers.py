@@ -19,9 +19,13 @@
 # pytableaux - parsers module
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError
-from lexicals import Predicate, Constant, Variable, Atomic, Predicated, Quantified, \
-    Operated, Sentence, Predicates, Argument, Operator as Oper, Quantifier, LexType
-from utils import CacheNotationData, cat, EmptySet, isstr, typecheck
+from lexicals import Lexical, Coords, Predicate, Parameter, Constant, Variable, Operator as Oper, Quantifier, \
+    Sentence, Atomic, Predicated, Quantified, Operated, LexType, Predicates, Argument
+from utils import CacheNotationData, Decorators, cat, EmptySet, isstr, typecheck
+from types import MappingProxyType
+from typing import Iterable, Union
+
+abstract = Decorators.abstract
 
 parser_classes = {
     # Values populated after class declarations below.
@@ -31,39 +35,129 @@ parser_classes = {
 notations = tuple(sorted(parser_classes.keys()))
 default_notation = notations[notations.index('polish')]
 
-def parse(input, *args, **kw):
+class CharTable(CacheNotationData):
+
+    default_fetch_name = 'default'
+
+    def __init__(self, data):
+        typecheck(data, dict, 'data')
+        vals, itms = data.values(), data.items()
+        # copy table
+        self._table = MappingProxyType(data)#{key: tuple(value) for key, value in itms}
+        # flipped table 
+        self._reverse = MappingProxyType(dict(reversed(item) for item in itms))
+        # list of types
+        self._types = tuple(sorted(set(item[0] for item in vals)))
+        # tuple of unique values for type
+        self._values = MappingProxyType({
+            # must be unique!
+            typ: tuple(sorted(set(item[1] for item in vals if item[0] == typ)))
+            for typ in self._types
+        })
+        # chars for each type, duplicates discarded
+        self._chars = MappingProxyType({
+            typ: tuple(self._reverse[(typ, val)] for val in self._values[typ])
+            for typ in self._types
+        })
+
+    def type(self, char):
+        """
+        :param str char: The character symbol.
+        :return: The symbol type, or ``None`` if not in table.
+        :rtype: str
+        :raises TypeError: for unhashable type, e.g. dict.
+        """
+        item = self._table.get(char)
+        return item[0] if item else None
+
+    def item(self, char) -> tuple:
+        """
+        :param str char: The character symbol.
+        :return: Table item pair ``(type, value)``, e.g. ``('atomic', 1)``, or
+          ``('operator', 'Negation')``.
+        :rtype: tuple(str, any)
+        :raises KeyError: if symbol not in table.
+        """
+        return self._table[char]
+
+    def value(self, char) -> Union[int, Lexical]:
+        """
+        :param str char: The character symbol.
+        :return: Table item value, e.g. ``1`` or ``Operator.Negation``.
+        :raises KeyError: if symbol not in table.
+        """
+        return self.item(char)[1]
+
+    def char(self, *item) -> str:
+        return self._reverse[item]
+
+    def values(self, typ):
+        return self._values[typ]
+
+    def chars(self, typ):
+        return self._chars[typ]
+
+    def types(self):
+        return self._types
+
+    def table(self):
+        return self._table
+
+class Parser(object):
+
+    @abstract
+    def parse(self, input: str) -> Sentence:
+        """
+        Parse a sentence from an input string.
+
+        :param input: The input string.
+        :return: The parsed sentence.
+        :raises errors.ParseError:
+        :raises TypeError:
+        """
+
+    def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
+        """
+        Parse the input strings and create an argument.
+
+        :param str conclusion: The argument's conclusion.
+        :param list(str) premises: List of premise strings, if any.
+        :return: The argument.
+        :raises errors.ParseError:
+        :raises TypeError:
+        """
+        return Argument(
+            self.parse(conclusion),
+            premises and tuple(self.parse(p) for p in premises),
+            title = title,
+        )
+
+def parse(input: str, *args, **opts) -> Sentence:
     """
     Parse a string and return a sentence.
     Convenience wrapper for ``create_parser().parse()``.
-
-    :rtype: lexicals.Sentence
     """
-    return create_parser(*args, **kw).parse(input)
+    return create_parser(*args, **opts).parse(input)
 
-def parse_argument(conclusion, premises = None, title = None, **kw):
+def parse_argument(conclusion, premises = None, title: str = None, **opts) -> Argument:
     """
     Parse conclusion, and optional premises, and return an argument.
     Convenience wrapper for ``create_parser().parse_argument()``.
 
     :rtype: lexicals.Argument
     """
-    return create_parser(**kw).argument(conclusion, premises, title = title)
+    return create_parser(**opts).argument(conclusion, premises, title = title)
 
-
-def create_parser(notn = None, vocab = None, table = None, **opts):
+def create_parser(notn: str = None, vocab: Predicates = None, table: CharTable = None, **opts) -> Parser:
     """
     Create a sentence parser with the given spec. This is
     useful if you parsing many sentences with the same notation
     and vocabulary.
 
-    :param str notn: The parser notation. Uses the default notation
-        if not passed.
-    :param lexicals.Predicates vocab: The vocabulary instance containing any
-        custom predicate definitions. If not passed, an empty instance is
-        created.
+    :param notn: The parser notation. Uses the default notation if not passed.
+    :param vocab: The predicates store for parsing user-defined predicates.
     :param CharTable table: A custom parser table to use.
     :return: The parser instance
-    :rtype: Parser
     :raises ValueError: on invalid notation, or table.
     :raises TypeError: on invalid argument types.
     """
@@ -71,10 +165,11 @@ def create_parser(notn = None, vocab = None, table = None, **opts):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
     if vocab == None:
-        empty = create_parser._EmptyPreds
-        if not empty or len(empty):
-            empty = create_parser._EmptyPreds = Predicates()
-        vocab = empty
+        vocab = Predicates.System
+        # empty = create_parser._EmptyPreds
+        # if not empty or len(empty):
+        #     empty = create_parser._EmptyPreds = Predicates()
+        # vocab = empty
     if notn == None:
         notn = default_notation
     elif notn not in parser_classes:
@@ -84,39 +179,12 @@ def create_parser(notn = None, vocab = None, table = None, **opts):
     if isstr(table):
         table = CharTable.fetch(notn, table)
     return parser_classes[notn](table, vocab, **opts)
-create_parser._EmptyPreds = None
-class Parser(object):
 
-    def parse(self, input):
-        """
-        Parse a sentence from an input string.
-
-        :param str input: The input string.
-        :return: The parsed sentence.
-        :rtype: lexicals.Sentence
-        :raises errors.ParseError:
-        :raises TypeError:
-        """
-        raise NotImplementedError()
-
-    def argument(self, conclusion, premises = None, title = None):
-        """
-        Parse the input strings and create an argument.
-
-        :param str conclusion: The argument's conclusion.
-        :param list(str) premises: List of premise strings, if any.
-        :return: The argument.
-        :rtype: lexicals.Argument
-        :raises errors.ParseError:
-        :raises TypeError:
-        """
-        return Argument(
-            self.parse(conclusion),
-            premises and [self.parse(p) for p in premises],
-            title = title,
-        )
+# create_parser._EmptyPreds = None
     
 class BaseParser(Parser):
+
+    bound_vars: set[Variable]
 
     # The base ``Parser`` class handles parsing operations common to both Polish
     # and standard notation. This consists of all parsing except for operator
@@ -136,8 +204,8 @@ class BaseParser(Parser):
     # - Operator symbols
     # - Atomic sentence (proposition) symbols
     def __init__(self, table, vocab, **opts):
-        self.table = table
-        self.vocab = vocab
+        self.table: CharTable = table
+        self.vocab: Predicates = vocab
         self.opts = opts
         self.__state = self.__State(self)
 
@@ -164,7 +232,7 @@ class BaseParser(Parser):
     ##  Medium-level parsing methods - Sentences
     ## ==========================================
 
-    def _read(self):
+    def _read(self) -> Sentence:
         """
         Internal entrypoint for reading a sentence. Implementation is recursive.
         This provides the default implementation for prefix notation sentences,
@@ -193,7 +261,7 @@ class BaseParser(Parser):
             )
         return s
 
-    def _read_atomic(self):
+    def _read_atomic(self) -> Atomic:
         """
         Read an atomic sentence starting from the current character.
 
@@ -203,7 +271,7 @@ class BaseParser(Parser):
         """
         return Atomic(self._read_coords())
 
-    def _read_predicate_sentence(self):
+    def _read_predicate_sentence(self) -> Predicated:
         """
         Read predicated sentence starting from the current character.
 
@@ -215,7 +283,7 @@ class BaseParser(Parser):
         params = self._read_params(pred.arity)
         return Predicated(pred, params)
 
-    def _read_quantified_sentence(self):
+    def _read_quantified_sentence(self) -> Quantified:
         """
         Read quantified sentence starting from the current character.
 
@@ -246,7 +314,7 @@ class BaseParser(Parser):
     ##  Medium-level parsing methods - Parameters
     ## ==========================================
 
-    def _read_predicate(self):
+    def _read_predicate(self) -> Predicate:
         """
         Read a predicate starting from the current character.
 
@@ -268,7 +336,7 @@ class BaseParser(Parser):
                 "Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos)
             )
 
-    def _read_params(self, num):
+    def _read_params(self, num) -> tuple[Parameter, ...]:
         """
         Read the given number of parameters (constants or variables) starting
         from the current character.
@@ -280,12 +348,13 @@ class BaseParser(Parser):
         :raises errors.ParseError:
         :meta private:
         """
+        return tuple(self._read_parameter() for _ in range(num))
         params = []
         while len(params) < num:
             params.append(self._read_parameter())
         return params
 
-    def _read_parameter(self):
+    def _read_parameter(self) -> Parameter:
         """
         Read a single parameter (constant or variable) from the current character.
 
@@ -309,7 +378,7 @@ class BaseParser(Parser):
             )
         return v
 
-    def _read_variable(self):
+    def _read_variable(self) -> Variable:
         """
         Read a variable starting from the current character.
 
@@ -319,7 +388,7 @@ class BaseParser(Parser):
         """
         return Variable(self._read_coords())
 
-    def _read_constant(self):
+    def _read_constant(self) -> Constant:
         """
         Read a constant starting from the current character.
 
@@ -329,7 +398,7 @@ class BaseParser(Parser):
         """
         return Constant(self._read_coords())
 
-    def _read_subscript(self):
+    def _read_subscript(self) -> int:
         """
         Read the subscript starting from the current character. If the current
         character is not a digit, or we are after last, then the subscript is
@@ -349,7 +418,7 @@ class BaseParser(Parser):
             sub.append('0')
         return int(''.join(sub))
 
-    def _read_coords(self, ctype = None):
+    def _read_coords(self, ctype = None) -> Coords:
         """
         Read (index, subscript) coords starting from the current character,
         which must be in the list of characters given. `index` is the list index in
@@ -368,13 +437,13 @@ class BaseParser(Parser):
         _, index = self.table.item(self._current())
         self._advance()
         subscript = self._read_subscript()
-        return (index, subscript)
+        return Coords(index, subscript)
 
     ## ============================
     ##  Low-level parsing methods
     ## ============================
 
-    def _current(self):
+    def _current(self) -> str:
         """
         :return: The current character, or ``None`` if after last.
         """
@@ -410,16 +479,16 @@ class BaseParser(Parser):
             "{0} '{1}' at position {2}.".format(pfx, self._current(), self.pos)
         )
 
-    def _has_next(self, n=1):
+    def _has_next(self, n = 1) -> bool:
         # Check whether there are n-many characters after the current.
         self.__state.check_started()
         return len(self.s) > self.pos + n
 
-    def _has_current(self):
+    def _has_current(self) -> bool:
         # check whether there is a current character, or return ``False``` if after last.
         return self._has_next(0)
 
-    def _next(self, n=1):
+    def _next(self, n = 1) -> Union[str, None]:
         # Get the nth character after the current, of ``None``` if ``n``` is after last.
         if self._has_next(n):
             return self.s[self.pos+n]
@@ -444,7 +513,7 @@ class BaseParser(Parser):
     class __State(object):
 
         def __init__(self, inst):
-            self.inst = inst
+            self.inst: BaseParser = inst
             self.is_parsing = False
 
         def check_started(self):
@@ -452,6 +521,7 @@ class BaseParser(Parser):
                 raise IllegalStateError(
                     'Illegal method call -- not parsing'
                 )
+
         def __enter__(self):
             if self.is_parsing:
                 raise IllegalStateError(
@@ -460,7 +530,7 @@ class BaseParser(Parser):
             self.inst.bound_vars = set()
             self.is_parsing = True
 
-        def __exit__(self, type, value, traceback):
+        def __exit__(self, typ, value, traceback):
             self.is_parsing = False
             self.inst.bound_vars = set()
 
@@ -471,7 +541,7 @@ class PolishParser(BaseParser):
         if ctype == 'operator':
             _, operator = self.table.item(self._current())
             self._advance()
-            operands = [self._read() for x in range(operator.arity)]
+            operands = tuple(self._read() for _ in range(operator.arity))
             s = Operated(operator, operands)
         else:
             s = super()._read()
@@ -512,7 +582,7 @@ class StandardParser(BaseParser):
             s = super()._read()
         return s
 
-    def __read_operator_sentence(self):
+    def __read_operator_sentence(self) -> Operated:
         _, operator = self.table.item(self._current())
         arity = operator.arity
         # only unary operators can be prefix operators
@@ -524,10 +594,11 @@ class StandardParser(BaseParser):
             )
         self._advance()
         operand = self._read()
-        return Operated(operator, [operand])
+        return Operated(operator, (operand,))
 
-    def __read_infix_predicate_sentence(self):
-        params = [self._read_parameter()]
+    def __read_infix_predicate_sentence(self) -> Predicated:
+        lhp = self._read_parameter()
+        # params = [self._read_parameter()]
         self._assert_current_is('user_predicate', 'system_predicate')
         ppos = self.pos
         pred = self._read_predicate()
@@ -537,10 +608,10 @@ class StandardParser(BaseParser):
                 cat("Unexpected {0}-ary predicate symbol at position {1}. ",
                 "Infix notation requires arity > 1.").format(arity, ppos)
             )
-        params += self._read_params(arity - 1)
-        return Predicated(pred, params)
+        # params += self._read_params(arity - 1)
+        return Predicated(pred, (lhp, *self._read_params(arity - 1)))
 
-    def __read_from_open_paren(self):
+    def __read_from_open_paren(self) -> Operated:
         # if we have an open parenthesis, then we demand a binary infix operator sentence.
         # scan ahead to:
         #   - find the corresponding close parenthesis position
@@ -601,81 +672,12 @@ class StandardParser(BaseParser):
         self._assert_current_is('paren_close')
         # move past the close paren
         self._advance()
-        return Operated(operator, [lhs, rhs])
+        return Operated(operator, (lhs, rhs))
 
 parser_classes.update({
     'polish'   : PolishParser,
     'standard' : StandardParser,
 })
-
-class CharTable(CacheNotationData):
-
-    default_fetch_name = 'default'
-
-    def __init__(self, data):
-        typecheck(data, dict, 'data')
-        vals, itms = data.values(), data.items()
-        # copy table
-        self._table = {key: tuple(value) for key, value in itms}
-        # flipped table 
-        self._reverse = dict(reversed(item) for item in itms)
-        # list of types
-        self._types = sorted(set(item[0] for item in vals))
-        # tuple of unique values for type
-        self._values = {
-            # must be unique!
-            typ: sorted(set(item[1] for item in vals if item[0] == typ))
-            for typ in self._types
-        }
-        # chars for each type, duplicates discarded
-        self._chars = {
-            typ: tuple(self._reverse[(typ, val)] for val in self._values[typ])
-            for typ in self._types
-        }
-
-    def type(self, char):
-        """
-        :param str char: The character symbol.
-        :return: The symbol type, or ``None`` if not in table.
-        :rtype: str
-        :raises TypeError: for unhashable type, e.g. dict.
-        """
-        item = self._table.get(char)
-        return item[0] if item else None
-
-    def item(self, char):
-        """
-        :param str char: The character symbol.
-        :return: Table item pair ``(type, value)``, e.g. ``('atomic', 1)``, or
-          ``('operator', 'Negation')``.
-        :rtype: tuple(str, any)
-        :raises KeyError: if symbol not in table.
-        """
-        return self._table[char]
-
-    def value(self, char):
-        """
-        :param str char: The character symbol.
-        :return: Table item value, e.g. ``1`` or ``'Negation'``.
-        :rtype: any
-        :raises KeyError: if symbol not in table.
-        """
-        return self.item(char)[1]
-
-    def char(self, *item):
-        return self._reverse[tuple(item)]
-
-    def values(self, typ):
-        return list(self._values[typ])
-
-    def chars(self, typ):
-        return list(self._chars[typ])
-
-    def types(self):
-        return list(self._types)
-
-    def table(self):
-        return dict(self._table)
 
 CharTable._initcache(notations, {
     'standard': {
@@ -703,8 +705,8 @@ CharTable._initcache(notations, {
             'b' : ('constant', 1),
             'c' : ('constant', 2),
             'd' : ('constant', 3),
-            '=' : ('system_predicate', Predicate.Identity),
-            '!' : ('system_predicate', Predicate.Existence),
+            '=' : ('system_predicate', Predicates.System.Identity),
+            '!' : ('system_predicate', Predicates.System.Existence),
             'F' : ('user_predicate', 0),
             'G' : ('user_predicate', 1),
             'H' : ('user_predicate', 2),
@@ -751,8 +753,8 @@ CharTable._initcache(notations, {
             'n' : ('constant', 1),
             'o' : ('constant', 2),
             's' : ('constant', 3),
-            'I' : ('system_predicate', Predicate.Identity),
-            'J' : ('system_predicate', Predicate.Existence),
+            'I' : ('system_predicate', Predicates.System.Identity),
+            'J' : ('system_predicate', Predicates.System.Existence),
             'F' : ('user_predicate', 0),
             'G' : ('user_predicate', 1),
             'H' : ('user_predicate', 2),

@@ -18,125 +18,122 @@
 #
 # pytableaux - example arguments
 
-from lexicals import Predicate, Predicates, Constant, Variable, Atomic, \
-    Predicated, Operated, Quantified, Argument
+from lexicals import Predicate, Predicates, Argument
 from parsers import create_parser
 from utils import isstr
 from itertools import chain
 import re
 
+logic_names = (
+    'CPL', 'CFOL', 'FDE', 'K3', 'K3W', 'K3WQ', 'B3E', 'GO', 'MH',
+    'L3', 'G3', 'P3', 'LP', 'NH', 'RM3', 'K', 'D', 'T', 'S4', 'S5',
+)
 # polish notation
+#   name: conclusion
+#   name: ((premises...), conclusion)
 args = {
-    'Addition'                         : [[ 'a' ], 'Aab'   ],
-    'Affirming a Disjunct 1'           : [[ 'Aab', 'a'  ], 'b'  ],
-    'Affirming a Disjunct 2'           : [[ 'Aab', 'a'  ], 'Nb' ],
-    'Affirming the Consequent'         : [[ 'Cab', 'b'  ], 'a'  ],
-    'Assertion Elimination 1'          : [[ 'Ta' ], 'a'   ],
-    'Assertion Elimination 2'          : [[ 'NTa' ], 'Na' ],
-    'Biconditional Elimination 1'      : [[ 'Bab', 'a'  ], 'b'  ],
-    'Biconditional Elimination 2'      : [[ 'Bab', 'Na' ], 'Nb' ],
-    'Biconditional Elimination 3'      : [[ 'NBab', 'a'],  'Nb'],
+    'Addition'                         : (('a',), 'Aab'),
+    'Affirming a Disjunct 1'           : (('Aab', 'a'), 'b'),
+    'Affirming a Disjunct 2'           : (('Aab', 'a'), 'Nb'),
+    'Affirming the Consequent'         : (('Cab', 'b'), 'a'),
+    'Assertion Elimination 1'          : (('Ta',), 'a' ),
+    'Assertion Elimination 2'          : (('NTa',), 'Na'),
+    'Biconditional Elimination 1'      : (('Bab', 'a'), 'b'),
+    'Biconditional Elimination 2'      : (('Bab', 'Na'), 'Nb'),
+    'Biconditional Elimination 3'      : (('NBab', 'a'), 'Nb'),
     'Biconditional Identity'           : 'Baa',
-    'Biconditional Introduction 1'     : [[ 'a', 'b'   ], 'Bab'],
-    'Biconditional Introduction 2'     : [[ 'Na', 'Nb' ], 'Bab'],
-    'Biconditional Introduction 3'     : [[ 'a', 'Nb'  ], 'NBab'],
-    'Conditional Contraction'          : [[ 'UaUab' ], 'Uab'   ],
-    'Conditional Contraposition 1'     : [[ 'Uab' ], 'UNbNa'],
-    'Conditional Contraposition 2'     : [[ 'UNbNa' ], 'Uab'],
-    'Conditional Equivalence'          : [[ 'Uab'   ], 'Uba'  ],
+    'Biconditional Introduction 1'     : (('a', 'b'), 'Bab'),
+    'Biconditional Introduction 2'     : (('Na', 'Nb'), 'Bab'),
+    'Biconditional Introduction 3'     : (('a', 'Nb'), 'NBab'),
+    'Conditional Contraction'          : (('UaUab',), 'Uab'),
+    'Conditional Contraposition 1'     : (('Uab',), 'UNbNa'),
+    'Conditional Contraposition 2'     : (('UNbNa',), 'Uab'),
+    'Conditional Equivalence'          : (('Uab',), 'Uba'),
     'Conditional Identity'             : 'Uaa',
-    'Conditional Modus Ponens'         : [[ 'Uab', 'a'  ], 'b'  ],
-    'Conditional Modus Tollens'        : [[ 'Uab', 'Nb' ], 'Na' ],
+    'Conditional Modus Ponens'         : (('Uab', 'a'), 'b'),
+    'Conditional Modus Tollens'        : (('Uab', 'Nb'), 'Na'),
     'Conditional Pseudo Contraction'   : 'UUaUabUab',
     'Conditional Pseudo Contraposition': 'BUabUNbNa',
-    'Conjunction Commutativity'        : [['Kab'], 'Kba'],
-    'Conjunction Elimination'          : [['Kab'], 'a'],
-    'Conjunction Introduction'         : [[ 'a', 'b' ],  'Kab'],
+    'Conjunction Commutativity'        : (('Kab',), 'Kba'),
+    'Conjunction Elimination'          : (('Kab',), 'a'),
+    'Conjunction Introduction'         : (('a', 'b'), 'Kab'),
     'Conjunction Pseudo Commutativity' : 'BKabKba',
-    'DeMorgan 1'                       : [[ 'NAab'  ], 'KNaNb' ],
-    'DeMorgan 2'                       : [[ 'NKab'  ], 'ANaNb' ],
-    'DeMorgan 3'                       : [[ 'KNaNb' ], 'NAab'  ],
-    'DeMorgan 4'                       : [[ 'ANaNb' ], 'NKab'  ],
-    'DeMorgan 5'                       : [[ 'Aab'   ], 'NKNaNb' ],
-    'DeMorgan 6'                       : [[ 'Kab'   ], 'NANaNb' ],
-    'DeMorgan 7'                       : [[ 'NKNaNb' ], 'Aab' ],
-    'DeMorgan 8'                       : [[ 'NANaNb' ], 'Kab' ],
-    'Denying the Antecedent'           : [[ 'Cab', 'Na' ], 'b'  ],
-    'Disjunction Commutativity'        : [['Aab'], 'Aba'],
+    'DeMorgan 1'                       : (('NAab',), 'KNaNb'),
+    'DeMorgan 2'                       : (('NKab',), 'ANaNb'),
+    'DeMorgan 3'                       : (('KNaNb',), 'NAab'),
+    'DeMorgan 4'                       : (('ANaNb',), 'NKab'),
+    'DeMorgan 5'                       : (('Aab',), 'NKNaNb'),
+    'DeMorgan 6'                       : (('Kab',), 'NANaNb'),
+    'DeMorgan 7'                       : (('NKNaNb',), 'Aab'),
+    'DeMorgan 8'                       : (('NANaNb',), 'Kab'),
+    'Denying the Antecedent'           : (('Cab', 'Na'), 'b'),
+    'Disjunction Commutativity'        : (('Aab',), 'Aba'),
     'Disjunction Pseudo Commutativity' : 'BAabAba',
-    'Disjunctive Syllogism'            : [[ 'Aab', 'Nb' ], 'a'  ],
-    'Disjunctive Syllogism 2'          : [[ 'ANab', 'Nb'], 'Na' ],
-    'Existential from Universal'       : [[ 'SxFx' ], 'VxFx' ],
-    'Existential Syllogism'            : [[ 'VxCFxGx', 'Fn'  ],  'Gn'],
-    'Explosion'                        : [[ 'KaNa' ], 'b' ],
-    'Extracting a Disjunct 1'          : [[ 'Aab'  ], 'b'    ],
-    'Extracting a Disjunct 2'          : [[ 'AaNb' ], 'Na'   ],
-    'Extracting the Antecedent'        : [[ 'Cab'  ], 'a'    ],
-    'Extracting the Consequent'        : [[ 'Cab'  ], 'b'    ],
-    'Identity Indiscernability 1'      : [[ 'Fm', 'Imn' ], 'Fn' ],
-    'Identity Indiscernability 2'      : [[ 'Fm', 'Inm' ], 'Fn' ],
+    'Disjunctive Syllogism'            : (('Aab', 'Nb'), 'a'),
+    'Disjunctive Syllogism 2'          : (('ANab', 'Nb'), 'Na'),
+    'Existential from Universal'       : (('SxFx',), 'VxFx'),
+    'Existential Syllogism'            : (('VxCFxGx', 'Fn'),  'Gn'),
+    'Explosion'                        : (('KaNa',), 'b'),
+    'Extracting a Disjunct 1'          : (('Aab',), 'b'),
+    'Extracting a Disjunct 2'          : (('AaNb',), 'Na'),
+    'Extracting the Antecedent'        : (('Cab',), 'a'),
+    'Extracting the Consequent'        : (('Cab',), 'b'),
+    'Identity Indiscernability 1'      : (('Fm', 'Imn'), 'Fn'),
+    'Identity Indiscernability 2'      : (('Fm', 'Inm'), 'Fn'),
     'Law of Excluded Middle'           : 'AaNa',
-    'Law of Non-contradiction'         : [[ 'KaNa' ], 'b'  ],
-    'Material Biconditional Elimination 1' : [[ 'Eab', 'a'  ], 'b'  ],
-    'Material Biconditional Elimination 2' : [[ 'Eab', 'Na' ], 'Nb' ],
-    'Material Biconditional Elimination 3' : [[ 'NEab', 'a'],  'Nb'],
-    'Material Biconditional Identity'  : 'Eaa',
-    'Material Biconditional Introduction 1': [[ 'a', 'b' ], 'Eab' ],
-    'Material Contraction'             : [[ 'CaCab' ], 'Cab'   ],
-    'Material Contraposition 1'        : [[ 'Cab' ], 'CNbNa'],
-    'Material Contraposition 2'        : [[ 'CNbNa' ], 'Cab'],
+    'Law of Non-contradiction'         : (('KaNa',), 'b'),
+    'Material Biconditional Elimination 1' : (('Eab', 'a'), 'b'),
+    'Material Biconditional Elimination 2' : (('Eab', 'Na'), 'Nb'),
+    'Material Biconditional Elimination 3' : (('NEab', 'a'),  'Nb'),
+    'Material Biconditional Identity'      : 'Eaa',
+    'Material Biconditional Introduction 1': (('a', 'b'), 'Eab'),
+    'Material Contraction'             : (('CaCab',), 'Cab'),
+    'Material Contraposition 1'        : (('Cab',), 'CNbNa'),
+    'Material Contraposition 2'        : (('CNbNa',), 'Cab'),
     'Material Identity'                : 'Caa',
-    'Material Modus Ponens'            : [[ 'Cab', 'a'  ], 'b'  ],
-    'Material Modus Tollens'           : [[ 'Cab', 'Nb' ], 'Na' ],
+    'Material Modus Ponens'            : (('Cab', 'a'), 'b'),
+    'Material Modus Tollens'           : (('Cab', 'Nb'), 'Na'),
     'Material Pseudo Contraction'      : 'CCaCabCab',
     'Material Pseudo Contraposition'   : 'ECabCNbNa',
-    'Modal Platitude 1'                : [[ 'Ma'   ], 'Ma'   ],
-    'Modal Platitude 2'                : [[ 'La'   ], 'La'   ],
-    'Modal Platitude 3'                : [[ 'LMa'  ], 'LMa'  ],
-    'Modal Transformation 1'           : [[ 'La'   ], 'NMNa' ],
-    'Modal Transformation 2'           : [[ 'NMNa' ], 'La'   ],
-    'Modal Transformation 3'           : [[ 'NLa'  ], 'MNa'  ],
-    'Modal Transformation 4'           : [[ 'MNa'  ], 'NLa'  ],
+    'Modal Platitude 1'                : (('Ma',), 'Ma'),
+    'Modal Platitude 2'                : (('La',), 'La'),
+    'Modal Platitude 3'                : (('LMa',), 'LMa'),
+    'Modal Transformation 1'           : (('La',), 'NMNa'),
+    'Modal Transformation 2'           : (('NMNa',), 'La'),
+    'Modal Transformation 3'           : (('NLa',), 'MNa'),
+    'Modal Transformation 4'           : (('MNa',), 'NLa'),
     'Necessity Distribution 1'         : 'ULUabULaLb',
-    'Necessity Distribution 2'         : [['LUab'], 'ULaLb'],
-    'Necessity Elimination'            : [[ 'La'  ], 'a' ],
-    'NP Collapse 1'                    : [[ 'LMa' ], 'Ma'],
-    'Possibility Addition'             : [[ 'a'   ], 'Ma'],
-    'Possibility Distribution'         : [[ 'KMaMb' ], 'MKab'],
-    'Quantifier Interdefinability 1'   : [[ 'VxFx'  ], 'NSxNFx' ],
-    'Quantifier Interdefinability 2'   : [[ 'NVxFx' ], 'SxNFx'  ],
-    'Quantifier Interdefinability 3'   : [[ 'SxFx'  ], 'NVxNFx' ],
-    'Quantifier Interdefinability 4'   : [[ 'NSxFx' ], 'VxNFx'  ],
+    'Necessity Distribution 2'         : (('LUab',), 'ULaLb'),
+    'Necessity Elimination'            : (('La',), 'a'),
+    'NP Collapse 1'                    : (('LMa',), 'Ma'),
+    'Possibility Addition'             : (('a',), 'Ma'),
+    'Possibility Distribution'         : (('KMaMb',), 'MKab'),
+    'Quantifier Interdefinability 1'   : (('VxFx',), 'NSxNFx'),
+    'Quantifier Interdefinability 2'   : (('NVxFx',), 'SxNFx'),
+    'Quantifier Interdefinability 3'   : (('SxFx',), 'NVxNFx'),
+    'Quantifier Interdefinability 4'   : (('NSxFx',), 'VxNFx'),
     'Reflexive Inference 1'            : 'CLaa',
     'S4 Conditional Inference 1'       : 'ULaLLa',
-    'S4 Conditional Inference 2'       : [['LUaMNb', 'Ma'], 'MNb'],
+    'S4 Conditional Inference 2'       : (('LUaMNb', 'Ma'), 'MNb'),
     'S4 Material Inference 1'          : 'CLaLLa',
-    'S4 Material Inference 2'          : [['LCaMNb', 'Ma'], 'MNb'],
+    'S4 Material Inference 2'          : (('LCaMNb', 'Ma'), 'MNb'),
     'S5 Conditional Inference 1'       : 'UaLMa',
     'S5 Material Inference 1'          : 'CaLMa',
     'Self Identity 1'                  : 'Imm',
     'Self Identity 2'                  : 'VxIxx',
     'Serial Inference 1'               : 'ULaMa',
-    'Serial Inference 2'               : [['La'], 'Ma'],
-    'Simplification'                   : [[ 'Kab' ], 'a' ],
-    'Syllogism'                        : [[ 'VxCFxGx', 'VxCGxHx' ], 'VxCFxHx'],
+    'Serial Inference 2'               : (('La',), 'Ma'),
+    'Simplification'                   : (('Kab',), 'a'),
+    'Syllogism'                        : (('VxCFxGx', 'VxCGxHx'), 'VxCFxHx'),
     'Triviality 1'                     : 'a',
-    'Triviality 2'                     : [[ 'a' ], 'b' ],
-    'Universal Predicate Syllogism'    : [[ 'VxVyCFxFy', 'Fm'], 'Fn'],
-    'Universal from Existential'       : [[ 'SxFx' ], 'VxFx' ],
+    'Triviality 2'                     : (('a',), 'b'),
+    'Universal Predicate Syllogism'    : (('VxVyCFxFy', 'Fm'), 'Fn'),
+    'Universal from Existential'       : (('SxFx',), 'VxFx'),
 }
 
-args_list = sorted(args.keys())
-
-# Test vocabulary predicate data
-# test_pred_data = [
-#     [0, 0, 1],
-#     [1, 0, 1],
-#     [2, 0, 1],
-# ]
-
+titles = tuple(sorted(args.keys()))
 preds = vocab = vocabulary = Predicates(*Predicate.gen(3))
-parser = create_parser(notn='polish', vocab=vocab)
+parser = create_parser(notn='polish', vocab = preds)
 
 aliases = {
     'Triviality 1': ('TRIV', 'TRIV1'),
@@ -186,49 +183,56 @@ for name in args:
         )
     })
 
-def argument(key):
+_cache = {}
+def argument(key: str) -> Argument:
     if isinstance(key, Argument):
         return key
     if not isstr(key):
         raise TypeError('Only string keys allowed, got %s' % type(key))
     title = _idx[key.lower()]
-    info = args[title]
-    if isinstance(info, list):
-        premises, conclusion = info
-    else:
-        premises = []
-        conclusion = info
-    return parser.argument(conclusion, premises, title=title)
+    if title not in _cache:
+        info = args[title]
+        if isinstance(info, (tuple, list)):
+            premises, conclusion = info
+        else:
+            premises = tuple()
+            conclusion = info
+        _cache[title] = parser.argument(conclusion, premises, title=title)
+    return _cache[title]
 
-def arguments(names=None):
-    if names == None:
-        names = args_list
-    return [argument(name) for name in names]
+def arguments(*keys):
+    if not len(keys):
+        keys = titles
+    return tuple(sorted(argument(name) for name in keys))
 
-def predicated():
-    return Predicated.first()
+# def predicated():
+#     return Predicated.first()
 
-def identity():
-    return Predicate.Identity(tuple([*Constant.gen(2)]))
+# def identity():
+#     return Predicates.System.Identity(tuple(Constant.gen(2)))
 
-def self_identity():
-    a = Constant.first()
-    return Predicate.Identity((a, a))
+# def self_identity():
+#     a = Constant.first()
+#     return Predicates.System.Identity((a, a))
 
-def existence():
-    return Predicate.Identity((Constant.first(),))
+# def existence():
+#     return Predicates.System.Identity((Constant.first(),))
 
-def quantified(quantifier):
-    return Quantified.first(quantifier)
+# def quantified(quantifier):
+#     return Quantified.first(quantifier)
 
-def operated(operator):
-    return Operated.first(operator)
+# def operated(operator):
+#     return Operated.first(operator)
 
-def tabiter(logic=None, *args, **kw):
+def tabiter(*logics, **opts):
     from proof.tableaux import Tableau
-    from www.conf import available
-    logics = iter(tuple((logic,) if logic else available['logics']))
+    if not logics:
+        logics = logic_names
+    # logics = iter(tuple((logic,) if logic else available['logics']))
     return chain.from_iterable(
-        (Tableau(logic, arg, **kw).build() for arg in arguments())
+        (
+            Tableau(logic, arg, **opts).build()
+            for arg in arguments()
+        )
         for logic in logics
     )

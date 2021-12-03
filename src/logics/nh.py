@@ -29,36 +29,25 @@ class Meta(object):
     tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
     category_display_order = 110
 
-from lexicals import Operator as Oper
-from . import fde, lp, mh
+from lexicals import Operator as Oper, Sentence, Operated
+from . import fde as FDE, lp as LP, mh as MH
 
-class Model(lp.Model):
+class Model(LP.Model):
 
-    def value_of_operated(self, sentence, **kw):
-        """
-        The value of a sentence with a truth-functional operator is determined by
-        the values of its operands according to the following tables.
+    def is_sentence_opaque(self, s: Sentence):
+        return s.is_quantified or super().is_sentence_opaque(s)
 
-        //truth_tables//nh//
-        """
-        return super().value_of_operated(sentence, **kw)
-
-    def is_sentence_opaque(self, sentence):
-        if sentence.is_quantified:
-            return True
-        return super().is_sentence_opaque(sentence)
-
-    def truth_function(self, operator, a, b = None):
-        if operator == Oper.Conjunction:
+    def truth_function(self, oper: Oper, a, b = None):
+        if oper == Oper.Conjunction:
             if a == 'B' and b == 'B':
                 return 'T'
-        elif operator == Oper.Conditional:
+        elif oper == Oper.Conditional:
             if a != 'F' and b == 'F':
                 return 'F'
             return 'T'
-        return super().truth_function(operator, a, b)
+        return super().truth_function(oper, a, b)
 
-class TableauxSystem(fde.TableauxSystem):
+class TableauxSystem(FDE.TableauxSystem):
     """
     NH's Tableaux System inherits directly from the `FDE system`_, employing
     designation markers, and building the trunk in the same way.
@@ -103,39 +92,23 @@ class TableauxSystem(fde.TableauxSystem):
         },
     }
 
-class DefaultNodeRule(fde.DefaultNodeRule):
-    pass
-
 class TabRules(object):
 
-    class GapClosure(lp.TableauxRules.GapClosure):
+    class GapClosure         (LP.TabRules.GapClosure): pass
+    class DesignationClosure (FDE.TabRules.DesignationClosure): pass
+
+    class DoubleNegationDesignated   (FDE.TabRules.DoubleNegationDesignated): pass
+    class DoubleNegationUndesignated (FDE.TabRules.DoubleNegationUndesignated): pass
+
+    class AssertionDesignated          (FDE.TabRules.AssertionDesignated): pass
+    class AssertionNegatedDesignated   (FDE.TabRules.AssertionNegatedDesignated): pass
+    class AssertionUndesignated        (FDE.TabRules.AssertionUndesignated): pass
+    class AssertionNegatedUndesignated (FDE.TabRules.AssertionNegatedUndesignated): pass
+
+    class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
         pass
 
-    class DesignationClosure(fde.TableauxRules.DesignationClosure):
-        pass
-
-    class DoubleNegationDesignated(fde.TableauxRules.DoubleNegationDesignated):
-        pass
-
-    class DoubleNegationUndesignated(fde.TableauxRules.DoubleNegationUndesignated):
-        pass
-
-    class AssertionDesignated(fde.TableauxRules.AssertionDesignated):
-        pass
-
-    class AssertionNegatedDesignated(fde.TableauxRules.AssertionNegatedDesignated):
-        pass
-
-    class AssertionUndesignated(fde.TableauxRules.AssertionUndesignated):
-        pass
-
-    class AssertionNegatedUndesignated(fde.TableauxRules.AssertionNegatedUndesignated):
-        pass
-
-    class ConjunctionDesignated(fde.TableauxRules.ConjunctionDesignated):
-        pass
-
-    class ConjunctionNegatedDesignated(DefaultNodeRule):
+    class ConjunctionNegatedDesignated(FDE.DefaultNodeRule):
         """
         From an unticked, negated, designated conjunction node *n* on a branch *b*,
         make four new branches from *b*: *b'*, *b''*, *b'''*, *b''''*. On *b'*, add
@@ -184,10 +157,10 @@ class TabRules(object):
                 ],
             }
 
-    class ConjunctionUndesignated(fde.TableauxRules.ConjunctionUndesignated):
+    class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated):
         pass
 
-    class ConjunctionNegatedUndesignated(DefaultNodeRule):
+    class ConjunctionNegatedUndesignated(FDE.DefaultNodeRule):
         """
         From an unticked, negated, undesignated conjunction node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'*, add two undesignated nodes,
@@ -216,19 +189,19 @@ class TabRules(object):
                 ],
             }
 
-    class DisjunctionDesignated(fde.TableauxRules.DisjunctionDesignated):
+    class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
         pass
 
-    class DisjunctionNegatedDesignated(fde.TableauxRules.DisjunctionNegatedDesignated):
+    class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated):
         pass
 
-    class DisjunctionUndesignated(fde.TableauxRules.DisjunctionUndesignated):
+    class DisjunctionUndesignated(FDE.TabRules.DisjunctionUndesignated):
         pass
 
-    class DisjunctionNegatedUndesignated(fde.TableauxRules.DisjunctionNegatedUndesignated):
+    class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
         pass
 
-    class MaterialConditionalDesignated(DefaultNodeRule):
+    class MaterialConditionalDesignated(FDE.DefaultNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -247,7 +220,7 @@ class TabRules(object):
                 ],
             }
 
-    class MaterialConditionalNegatedDesignated(DefaultNodeRule):
+    class MaterialConditionalNegatedDesignated(FDE.DefaultNodeRule):
         """
         This rule reduces to a negated disjunction.
         """
@@ -281,7 +254,7 @@ class TabRules(object):
         negated     = True
         designation = False
 
-    class MaterialBiconditionalDesignated(DefaultNodeRule):
+    class MaterialBiconditionalDesignated(FDE.DefaultNodeRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -302,7 +275,7 @@ class TabRules(object):
                 ],
             }
 
-    class MaterialBiconditionalNegatedDesignated(DefaultNodeRule):
+    class MaterialBiconditionalNegatedDesignated(FDE.DefaultNodeRule):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
@@ -336,19 +309,19 @@ class TabRules(object):
         """
         designation = False
 
-    class ConditionalDesignated(mh.TableauxRules.ConditionalDesignated):
+    class ConditionalDesignated(MH.TabRules.ConditionalDesignated):
         pass
 
-    class ConditionalNegatedDesignated(mh.TableauxRules.ConditionalNegatedDesignated):
+    class ConditionalNegatedDesignated(MH.TabRules.ConditionalNegatedDesignated):
         pass
 
-    class ConditionalUndesignated(mh.TableauxRules.ConditionalUndesignated):
+    class ConditionalUndesignated(MH.TabRules.ConditionalUndesignated):
         pass
 
-    class ConditionalNegatedUndesignated(mh.TableauxRules.ConditionalNegatedUndesignated):
+    class ConditionalNegatedUndesignated(MH.TabRules.ConditionalNegatedUndesignated):
         pass
 
-    class BiconditionalDesignated(DefaultNodeRule):
+    class BiconditionalDesignated(FDE.DefaultNodeRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
@@ -369,7 +342,7 @@ class TabRules(object):
                 ],
             }
 
-    class BiconditionalNegatedDesignated(DefaultNodeRule):
+    class BiconditionalNegatedDesignated(FDE.DefaultNodeRule):
         """
         This rule reduces to a negated conjunction of conditionals.
         """
@@ -403,14 +376,14 @@ class TabRules(object):
         """
         designation = False
 
-    closure_rules = [
+    closure_rules = (
         GapClosure,
         DesignationClosure,
-    ]
+    )
 
-    rule_groups = [
+    rule_groups = (
         # Non-branching rules.
-        [
+        (
             AssertionDesignated,
             AssertionUndesignated,
             AssertionNegatedDesignated,
@@ -434,19 +407,19 @@ class TabRules(object):
             BiconditionalNegatedUndesignated,
             DoubleNegationDesignated,
             DoubleNegationUndesignated,
-        ],
+        ),
         # 1-branching rules.
-        [
+        (
             ConjunctionUndesignated,
             ConjunctionNegatedUndesignated,
             DisjunctionDesignated,
             DisjunctionNegatedUndesignated,
             ConditionalDesignated,
             ConditionalNegatedUndesignated,
-        ],
+        ),
         # 3-branching rules.
-        [
+        (
             ConjunctionNegatedDesignated,
-        ],
-    ]
+        ),
+    )
 TableauxRules = TabRules

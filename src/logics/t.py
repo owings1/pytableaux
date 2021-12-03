@@ -27,7 +27,7 @@ class Meta(object):
     category_display_order = 3
 
 from lexicals import Atomic
-from proof.common import Access, Annotate, Branch, Node
+from proof.common import Access, Branch, Node
 from proof.helpers import VisibleWorldsIndex
 from . import k as K
 
@@ -66,7 +66,7 @@ class TabRules(object):
         is *w*.
         """
         Helpers = (VisibleWorldsIndex,)
-        visw: VisibleWorldsIndex = Annotate.HelperAttr
+        visw: VisibleWorldsIndex
 
         ignore_ticked = False
         ticking = False

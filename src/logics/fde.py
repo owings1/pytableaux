@@ -36,6 +36,7 @@ from proof.helpers import AdzHelper, AppliedNodeConstants, AppliedNodeCount, \
     AppliedQuitFlag, FilterHelper, MaxConstantsTracker
 from utils import Decorators, UniqueList
 from errors import ModelValueError
+from typing import Any
 
 abstract = Decorators.abstract
 
@@ -59,7 +60,7 @@ class Model(BaseModel):
     #: :type: set
     #: :value: {T, B}
     #: :meta hide-value:
-    designated_values = {'B', 'T'}
+    designated_values = frozenset({'B', 'T'})
 
     unassigned_value = 'N'
 
@@ -85,41 +86,47 @@ class Model(BaseModel):
         #: *n*-ary predicate is a set of *n*-tuples of constants.
         #:
         #: :type: dict
-        self.extensions = {}
+        self.extensions: dict[Predicate, set[tuple[Constant, ...]]] = {}
 
         #: A map of predicates to their anti-extension.
         #:
         #: :type: dict
-        self.anti_extensions = {}
+        self.anti_extensions: dict[Predicate, set[tuple[Constant, ...]]] = {}
 
         #: An assignment of each atomic sentence to an admissible truth value.
         #:
         #: :type: dict
-        self.atomics = {}
+        self.atomics: dict[Atomic, Any] = {}
 
         #: An assignment of each opaque (un-interpreted) sentence to a value.
         #:
         #: :type: dict
-        self.opaques = {}
+        self.opaques: dict[Sentence, Any] = {}
 
         #: Track set of atomics for performance.
-        self.all_atomics = set()
+        self.all_atomics: set[Atomic] = set()
         #: Track set of constants for performance.
-        self.constants = set()
+        self.constants: set[Constant] = set()
         #: Track set of predicates for performance.
-        self.predicates = set()
+        self.predicates: set[Predicate] = set()
 
     def value_of_predicated(self, s: Predicated, **kw):
         params = s.params
         pred = s.predicate
         extension = self.get_extension(pred)
         anti_extension = self.get_anti_extension(pred)
-        if params in extension and params in anti_extension:
-            return 'B'
         if params in extension:
+            if params in anti_extension:
+                return 'B'
             return 'T'
         if params in anti_extension:
             return 'F'
+        # if params in extension and params in anti_extension:
+        #     return 'B'
+        # if params in extension:
+        #     return 'T'
+        # if params in anti_extension:
+        #     return 'F'
         return 'N'
 
     def value_of_existential(self, s: Quantified, **kw):
@@ -145,9 +152,7 @@ class Model(BaseModel):
         A sentence is opaque if its operator is Necessity or Possibility, or if it is
         a negated sentence whose negatum has the operator Necessity or Possibility.
         """
-        if s.operator in self.modal_operators:
-            return True
-        return super().is_sentence_opaque(s)
+        return s.operator in self.modal_operators or super().is_sentence_opaque(s)
 
     def is_countermodel_to(self, argument: Argument) -> bool:
         """
@@ -160,8 +165,8 @@ class Model(BaseModel):
                 return False
         return self.value_of(argument.conclusion) not in self.designated_values
 
-    def get_data(self) -> dict:
-        data = dict()
+    def get_data(self) -> dict[str, dict]:
+        data: dict[str, dict] = {}
         data.update({
             'Atomics' : {
                 'description'     : 'atomic values',
@@ -173,10 +178,10 @@ class Model(BaseModel):
                 'symbol'          : 'v',
                 'values'          : [
                     {
-                        'input'  : sentence,
-                        'output' : self.atomics[sentence]
+                        'input'  : s,
+                        'output' : self.atomics[s]
                     }
-                    for sentence in sorted(self.atomics)
+                    for s in sorted(self.atomics)
                 ]
             },
             'Opaques' : {
@@ -189,10 +194,10 @@ class Model(BaseModel):
                 'symbol'          : 'v',
                 'values'          : [
                     {
-                        'input'  : sentence,
-                        'output' : self.opaques[sentence]
+                        'input'  : s,
+                        'output' : self.opaques[s]
                     }
-                    for sentence in sorted(self.opaques)
+                    for s in sorted(self.opaques)
                 ]
             },
             'Predicates' : {
@@ -319,7 +324,10 @@ class Model(BaseModel):
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value)
         elif s.is_negated:
-            self.set_literal_value(s.negatum, self.truth_function(s.operator, value))
+            self.set_literal_value(
+                s.negatum,
+                self.truth_function(s.operator, value)
+            )
         elif s.is_atomic:
             self.set_atomic_value(s, value)
         elif s.is_predicated:
@@ -401,7 +409,7 @@ class Model(BaseModel):
             return self.value_of_universal(s, **kw)
         return super().value_of_quantified(s, **kw)
 
-    def truth_function(self, operator: Oper, a, b=None):
+    def truth_function(self, operator: Oper, a, b = None):
 
         # Define as generically as possible for reuse.
         if operator == Oper.Assertion:
@@ -708,19 +716,13 @@ class TabRules(object):
 
         def example_nodes(self):
             s = Atomic.first()
-            return (
-                {'sentence': s, 'designated': True },
-                {'sentence': s, 'designated': False},
-            )
+            return (sd(s, True), sd(s, False))
 
         # private util
 
         def _find_closing_node(self, node: Node, branch: Branch):
             if node.has('sentence', 'designated'):
-                return branch.find({
-                    'sentence'   : node['sentence'],
-                    'designated' : not node['designated'],
-                })
+                return branch.find(sd(node['sentence'], not node['designated']))
             
     class DoubleNegationDesignated(DefaultNodeRule):
         """
@@ -1286,9 +1288,7 @@ class TabRules(object):
         quantifier  = Quantifier.Universal
         convert_to  = Quantifier.Existential
 
-    closure_rules = (
-        DesignationClosure,
-    )
+    closure_rules = (DesignationClosure,)
 
     rule_groups = (
         (

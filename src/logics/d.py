@@ -27,7 +27,7 @@ class Meta(object):
     category_display_order = 2
 
 from proof.helpers import UnserialWorldsTracker
-from proof.common import Access, Annotate, Branch, Node, Target
+from proof.common import Access, Branch, Node
 from lexicals import Atomic
 from . import k as K
 from typing import Generator
@@ -78,7 +78,7 @@ class TabRules:
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
         Helpers = (UnserialWorldsTracker,)
-        ust: UnserialWorldsTracker = Annotate.HelperAttr
+        ust: UnserialWorldsTracker
         ignore_ticked = False
         ticking = False
 

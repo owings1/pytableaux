@@ -137,7 +137,7 @@ base_browser_data = {
 base_view_data = {
     'app_name'            : opts['app_name'],
     'copyright'           : fixed.copyright,
-    'example_args_list'   : examples.args_list,
+    'example_args_list'   : examples.titles,
     'feedback_to_address' : opts['feedback_to_address'],
     'form_defaults'       : form_defaults,
     'google_analytics_id' : opts['google_analytics_id'],

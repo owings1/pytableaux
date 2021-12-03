@@ -24,9 +24,8 @@ from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutE
 from events import Events, EventEmitter
 from inspect import isclass
 from itertools import chain, islice
-from .common import Annotate, FLAG, KEY, Branch, Node, NodeType, Target
+from .common import FLAG, KEY, Branch, Node, NodeType, Target
 from past.builtins import basestring
-from enum import auto, Enum, Flag
 from keyword import iskeyword
 from types import MappingProxyType, ModuleType
 from typing import Any, Callable, Collection, Iterator, Iterable, NamedTuple, \
@@ -66,7 +65,7 @@ class RuleMeta(type):
                             if helper_attr in taken:
                                 # Allow special annotation for typing, e.g.:
                                 #   myh: MyHelper = Annotate.HelperType
-                                if taken[helper_attr] is not Annotate.HelperAttr:
+                                # if taken[helper_attr] is not Annotate.HelperAttr:
                                     raise ValueError(
                                         'Attribute conflict %s: %s (was: %s)' %
                                         (helper_attr, Helper, taken[helper_attr])

@@ -35,11 +35,12 @@ from utils import cat, isstr, get_logic
 from events import Events
 import examples
 from lexicals import create_lexwriter,  \
+    LexWriter, \
     Constant, Variable, RenderSet, Predicates, Operator
 from parsers import create_parser, parse_argument, CharTable
-from proof.tableaux import Tableau, TableauxSystem as TabSys, Node
+from proof.tableaux import Tableau, TableauxSystem as TabSys, Rule
 from proof.writers import create_tabwriter
-from proof.rules import Rule, ClosureRule
+from proof.rules import ClosureRule
 from proof.helpers import EllipsisExampleHelper
 from models import truth_table
 
@@ -452,7 +453,7 @@ class Helper(object):
         Returns rendered tableau HTML with argument and build_trunk example.
         """
         lgc = get_logic(lgc)
-        arg = parse_argument('b', ['a1', 'a2'], notn='polish')
+        arg = parse_argument('b', ['a1', 'a2'], notn = 'polish')
         lw = self.lwtrunk
         pw = self.pwtrunk
         proof = Tableau(lgc)

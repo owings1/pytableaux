@@ -33,7 +33,7 @@ from models import BaseModel
 
 from proof.tableaux import TableauxSystem as BaseSystem, Rule, Tableau
 from proof.rules import ClosureRule
-from proof.common import Access, Annotate, Branch, Filters, Node, Target
+from proof.common import Access, Branch, Filters, Node, Target
 from proof.helpers import AppliedNodesWorlds, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
     FilterHelper, AppliedNodeCount, VisibleWorldsIndex

@@ -26,13 +26,19 @@ from inspect import isclass
 from itertools import chain, islice
 # from operator import is_not
 from time import time
-from types import ModuleType
+from types import MappingProxyType, ModuleType
 from typing import Any, Callable, Collection, Dict, ItemsView, Iterable, KeysView, \
     OrderedDict, Sequence, Union, ValuesView, abstractmethod, cast
 from past.builtins import basestring
 
 EmptySet = frozenset()
 LogicRef = Union[ModuleType, str]
+CmpFnOper = MappingProxyType({
+    '__lt__': '<',
+    '__le__': '<=',
+    '__gt__': '>',
+    '__ge__': '>=',
+})
 
 def get_module(ref, package: str = None) -> ModuleType:
 
@@ -257,6 +263,31 @@ class Decorators(object):
                 return origin(self, attr, val)
             return fset
         return wrap(origin) if origin else wrap
+
+    def cmpsafe(*excepts) -> Callable:
+        def fcheck(fcmp: Callable) -> Callable:
+            fname = fcmp.__name__
+            opsym = CmpFnOper.get(fname, fname)
+            def fcmpwrap(a, b):
+                try:
+                    return fcmp(a, b)
+                except excepts:
+                    eargs = (opsym, type(a), type(b),)
+                    raise TypeError('%s not supported for %s and %s' % eargs)
+            return fcmpwrap
+        return fcheck
+
+    cmpcheck = cmpsafe(AttributeError, TypeError)
+
+    def cmptypecheck(fcmp: Callable) -> Callable:
+        fname = fcmp.__name__
+        opsym = CmpFnOper.get(fname, fname)
+        def fcmpwrap(a, b):
+            if not isinstance(b, a.__class__):
+                eargs = (opsym, type(a), type(b),)
+                raise TypeError('%s not supported for %s and %s' % eargs)
+            return fcmp(a, b)
+        return fcmpwrap
 
     @staticmethod
     def _privkey(method) -> tuple[str]:
@@ -558,6 +589,13 @@ class UniqueList(Sequence):
     def __iadd__(self, value: Iterable):
         if value is not self:
             self.update(value)
+        return self
+
+    def __sub__(self, value: Iterable):
+        return self.difference(value)
+
+    def __isub__(self, value: Iterable):
+        self.difference_update(value)
         return self
 
     __copy__ = copy

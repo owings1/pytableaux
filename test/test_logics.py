@@ -20,26 +20,25 @@
 from pytest import raises
 from errors import *
 from utils import StopWatch, get_logic
-from lexicals import Predicates, Atomic, Constant, Predicate, Predicated, Quantified, \
-    Operated, Variable, Argument, Operator, Quantifier, Quantifier as Quant, Operator as Oper
-from proof.tableaux import Tableau, Branch
-from proof.common import Node
+from lexicals import Predicate, Constant, Variable, Operator, Quantifier, Quantifier as Quant, Operator as Oper, \
+    Sentence, Atomic, Predicated, Quantified, Operated, \
+    Predicates, Argument
+from proof.tableaux import Tableau, Rule
+from proof.common import Branch, Node
 from parsers import parse, parse_argument
 from models import truth_table
 from .tutils import BaseSuite, larg, using, skip
 from enum import Enum
 import examples
+from logics import k as K, fde as FDE
 Existential = Quantifier.Existential
 Universal = Quantifier.Universal
 Identity = Predicates.System.Identity
 Existence = Predicates.System.Existence
 
-
 class BoolPropEnum(Enum):
     def __str__(self):
         return self.name
-    # def __repr__(self):
-    #     return self.__str__()
     def __bool__(self):
         return self.value
     def __eq__(self, other):
@@ -50,14 +49,13 @@ class BoolPropEnum(Enum):
 class Designation(BoolPropEnum):
     Designated = True
     Undesignated = False
-# Designation.key = 'designated'
-# Designation.attr = 'designation'
 
 Designated = des = Designation.Designated
 Undesignated = undes = Designation.Undesignated
 Negated = 'Negated'
 
-A = Atomic.first()
+A: Atomic = Atomic.first()
+Fa: Predicated = Predicated.first()
 
 @using(logic = 'FDE')
 class Test_FDE(BaseSuite):
@@ -98,7 +96,8 @@ class Test_FDE(BaseSuite):
 
                 self.invalid_tab('LNC')
 
-                n = rtnd[1].history[0].target.node; s = n['sentence']
+                n = rtnd[1].history[0].target.node
+                s: Operated = n['sentence']
                 assert (s.operator, s.negatum.operator, n['designated']) \
                     == (Oper.Negation, Oper.Conjunction, True)
 
@@ -148,7 +147,7 @@ class Test_FDE(BaseSuite):
                     self.valid_tab('DeMorgan 3')
                     self.valid_tab('DeMorgan 4')
 
-        class Test_Quantification(BaseSuite):
+        class Test_Quantifiers(BaseSuite):
 
             @larg(Quant.Existential)
             def test_Existential(self, q):
@@ -179,37 +178,38 @@ class Test_FDE(BaseSuite):
 
         class Test_BranchingComplexity(BaseSuite):
 
-            def nodecase(s, des):
+            def nodecase(s, des = False):
                 def wrap(fn):
-                    def testfn(self):
+                    def testfn(self: BaseSuite):
                         tab = self.tab()
                         tab.branch().add({'sentence': self.p(s), 'designated': des})
-                        fn(self, tab[0][0], tab)
+                        node = tab[0][0]
+                        fn(self, tab[0][0], node['sentence'], tab)
                     return testfn
                 return wrap
 
-            @nodecase('a', False)
-            def test_branching_complexity_undes_0_1(self, node, tab):
+            @nodecase('a')
+            def test_branching_complexity_undes_0_1(self, node, s: Sentence, tab: Tableau):
                 assert tab.branching_complexity(node) == 0
 
-            @nodecase('Kab', False)
-            def test_branching_complexity_undes_1_1(self, node, tab):
+            @nodecase('Kab')
+            def test_branching_complexity_undes_1_1(self, node, s: Sentence, tab: Tableau):
                 assert tab.branching_complexity(node) == 1
 
-            @nodecase('NAaNKbc', False)
-            def test_branching_complexity_undes_1_2(self, node, tab):
-                assert node['sentence'].operators == (
+            @nodecase('NAaNKbc')
+            def test_branching_complexity_undes_1_2(self, node, s: Sentence, tab: Tableau):
+                assert s.operators == (
                     Oper.Negation, Oper.Disjunction, Oper.Negation, Oper.Conjunction)
                 assert tab.branching_complexity(node) == 1
 
-            @nodecase('NAab', False)
-            def test_branching_complexity_undes_1_3(self, node, tab):
-                assert node['sentence'].operators == (Oper.Negation, Oper.Disjunction)
+            @nodecase('NAab')
+            def test_branching_complexity_undes_1_3(self, node, s: Sentence, tab: Tableau):
+                assert s.operators == (Oper.Negation, Oper.Disjunction)
                 assert tab.branching_complexity(node) == 1
 
-            @nodecase('KaKab', False)
-            def test_branching_complexity_undes_2_1(self, node, tab):
-                assert node['sentence'].operators == ('Conjunction', 'Conjunction')
+            @nodecase('KaKab')
+            def test_branching_complexity_undes_2_1(self, node, s: Sentence, tab: Tableau):
+                assert s.operators == ('Conjunction', 'Conjunction')
                 assert tab.branching_complexity(node) == 2
 
     class Test_Models(BaseSuite):
@@ -229,7 +229,7 @@ class Test_FDE(BaseSuite):
 
         def test_model_a_thus_b_is_countermodel_to_false(self):
             arg = self.parg('b', 'a')
-            model = self.logic.Model()
+            model = self.m()
             model.set_literal_value(arg.premises[0], 'F')
             model.set_literal_value(arg.conclusion, 'F')
             assert not model.is_countermodel_to(arg)
@@ -303,7 +303,7 @@ class Test_FDE(BaseSuite):
         def test_model_get_data_various(self):
             s1 = self.p('a')
             s2 = self.p('Imn')
-            model = self.logic.Model()
+            model = self.m()
             model.set_literal_value(s1, 'B')
             model.set_literal_value(s2, 'F')
             res = model.get_data()
@@ -311,7 +311,7 @@ class Test_FDE(BaseSuite):
 
         def test_model_not_impl_various(self):
             s1 = self.p('Aab')
-            model = self.logic.Model()
+            model = self.m()
             with raises(NotImplementedError):
                 model.set_literal_value(s1, 'T')
             with raises(NotImplementedError):
@@ -321,13 +321,13 @@ class Test_FDE(BaseSuite):
 
         def test_model_value_of_atomic_unassigned(self):
             s = self.p('a')
-            model = self.logic.Model()
+            model = self.m()
             res = model.value_of(s)
             assert res == model.unassigned_value
 
         def test_model_value_of_opaque_unassigned(self):
             s = self.p('La')
-            model = self.logic.Model()
+            model = self.m()
             res = model.value_of(s)
             assert res == model.unassigned_value
 
@@ -335,27 +335,27 @@ class Test_FDE(BaseSuite):
             s1 = self.p('La')
             s2 = self.p('a')
             s3 = self.p('Imn')
-            model = self.logic.Model()
+            model = self.m()
             model.set_opaque_value(s1, 'T')
             with raises(ModelValueError):
                 model.set_opaque_value(s1, 'B')
-            model = self.logic.Model()
+            model = self.m()
             model.set_atomic_value(s2, 'T')
             with raises(ModelValueError):
                 model.set_atomic_value(s2, 'B')
-            model = self.logic.Model()
+            model = self.m()
             model.set_predicated_value(s3, 'T')
             with raises(ModelValueError):
                 model.set_predicated_value(s3, 'N')
-            model = self.logic.Model()
+            model = self.m()
             model.set_predicated_value(s3, 'B')
             with raises(ModelValueError):
                 model.set_predicated_value(s3, 'T')
-            model = self.logic.Model()
+            model = self.m()
             model.set_predicated_value(s3, 'B')
             with raises(ModelValueError):
                 model.set_predicated_value(s3, 'F')
-            model = self.logic.Model()
+            model = self.m()
             model.set_predicated_value(s3, 'F')
             with raises(ModelValueError):
                 model.set_predicated_value(s3, 'N')
@@ -375,7 +375,7 @@ class Test_FDE(BaseSuite):
             proof = Tableau(self.logic, arg, is_build_models=False, max_steps=100).build()
             assert proof.invalid
             branch = proof[-1]
-            model = self.logic.Model()
+            model = self.m()
             model.read_branch(branch)
             s1 = arg.premises[0]
             assert model.value_of(s1) in model.designated_values
@@ -390,7 +390,7 @@ class Test_FDE(BaseSuite):
                 'SyMFy',        # designated
                 'VxUFxSyMFy',   # designated
             )
-            model = self.logic.Model()
+            model = self.m()
             model.set_opaque_value(s1, 'T')
             model.set_opaque_value(s2, 'T')
             model.set_opaque_value(s3, 'T')
@@ -754,106 +754,103 @@ class TestL3(BaseSuite):
 @using(logic = 'G3')
 class TestG3(BaseSuite):
 
-    def test_invalid_demorgan_8_model(self):
-        tab = self.invalid_tab('DeMorgan 8')
-        model = tab.open.first().model
-        assert model.is_countermodel_to(tab.argument)
+    class Test_Tableaux(BaseSuite):
+        class Test_Arguments(BaseSuite):
+            def test_invalid_demorgan_8_model(self):
+                tab = self.invalid_tab('DeMorgan 8')
+                model = tab.open.first().model
+                assert model.is_countermodel_to(tab.argument)
 
-    def test_valid_demorgan_6(self):
-        self.valid_tab('DeMorgan 6')
+            def test_valid_demorgan_6(self):
+                self.valid_tab('DeMorgan 6')
 
-    def test_invalid_lem(self):
-        self.invalid_tab('Law of Excluded Middle')
+            def test_invalid_lem(self):
+                self.invalid_tab('Law of Excluded Middle')
 
-    def test_invalid_not_not_a_arrow_a(self):
-        # Rescher p.45
-        arg = self.parg('UNNaa')
-        assert Tableau(self.logic, arg).build().invalid
+            def test_invalid_not_not_a_arrow_a(self):
+                # Rescher p.45
+                arg = self.parg('UNNaa')
+                assert Tableau(self.logic, arg).build().invalid
 
-    def test_invalid_not_a_arrow_not_b_arrow_b_arrow_a(self):
-        # Rescher p.45
-        arg = self.parg('UUNaNbUba')
-        assert Tableau(self.logic, arg).build().invalid
+            def test_invalid_not_a_arrow_not_b_arrow_b_arrow_a(self):
+                # Rescher p.45
+                arg = self.parg('UUNaNbUba')
+                assert Tableau(self.logic, arg).build().invalid
 
-    def test_valid_a_arrow_b_or_b_arrow_a(self):
-        # Rescher p.45
-        arg = self.parg('AUabUba')
-        assert Tableau(self.logic, arg).build().valid
+            def test_valid_a_arrow_b_or_b_arrow_a(self):
+                # Rescher p.45
+                arg = self.parg('AUabUba')
+                assert Tableau(self.logic, arg).build().valid
 
-    def test_valid_not_not_a_arrow_a_arrow_a_or_not_a(self):
-        # Rescher p.45
-        arg = self.parg('UUNNaaAaNa')
-        assert Tableau(self.logic, arg).build().valid
+            def test_valid_not_not_a_arrow_a_arrow_a_or_not_a(self):
+                # Rescher p.45
+                arg = self.parg('UUNNaaAaNa')
+                assert Tableau(self.logic, arg).build().valid
 
-    def test_valid_a_dblarrow_a(self):
-        arg = self.parg('Baa')
-        assert Tableau(self.logic, arg).build().valid
+            def test_valid_a_dblarrow_a(self):
+                arg = self.parg('Baa')
+                assert Tableau(self.logic, arg).build().valid
 
-    def test_valid_a_dblarrow_b_thus_a_arrow_b_and_b_arrow_a(self):
-        arg = self.parg('KUabUba', 'Bab')
-        assert Tableau(self.logic, arg).build().valid
+            def test_valid_a_dblarrow_b_thus_a_arrow_b_and_b_arrow_a(self):
+                arg = self.parg('KUabUba', 'Bab')
+                assert Tableau(self.logic, arg).build().valid
 
-    def test_valid_a_arrow_b_and_b_arrow_a_thus_a_dblarrow_b(self):
-        arg = self.parg('Bab', 'KUabUba')
-        assert Tableau(self.logic, arg).build().valid
+            def test_valid_a_arrow_b_and_b_arrow_a_thus_a_dblarrow_b(self):
+                arg = self.parg('Bab', 'KUabUba')
+                assert Tableau(self.logic, arg).build().valid
 
-    def test_valid_not_a_arrow_b_or_not_b_arrow_a_thus_not_a_dblarrow_b(self):
-        arg = self.parg('NBab', 'ANUabNUba')
-        assert Tableau(self.logic, arg).build().valid
+            def test_valid_not_a_arrow_b_or_not_b_arrow_a_thus_not_a_dblarrow_b(self):
+                arg = self.parg('NBab', 'ANUabNUba')
+                assert Tableau(self.logic, arg).build().valid
 
-    def test_valid_not_a_dblarrow_b_thus_not_a_arrow_b_or_not_b_arrow_a(self):
-        arg = self.parg('ANUabNUba', 'NBab')
-        assert Tableau(self.logic, arg).build().valid
+            def test_valid_not_a_dblarrow_b_thus_not_a_arrow_b_or_not_b_arrow_a(self):
+                arg = self.parg('ANUabNUba', 'NBab')
+                assert Tableau(self.logic, arg).build().valid
 
 @using(logic = 'LP')
 class TestLP(BaseSuite):
 
-    def test_rule_GapClosure_eg(self):
-        self.rule_eg('GapClosure')
+    class Test_Tableaux(BaseSuite):
+    
+        class Test_Closure(BaseSuite):
 
-    def test_valid_material_ident(self):
-        assert self.tab('Material Identity').valid
+            def test_DesignationClosure(self):
+                self.rule_eg('DesignationClosure')
 
-    def test_case_model_not_a_countermodel(self):
-        arg = self.parg('NBab', 'c', 'BcNUab')
-        model = self.logic.Model()
-        model.set_literal_value(parse('a'), 'F')
-        model.set_literal_value(parse('b'), 'T')
-        model.set_literal_value(parse('c'), 'B')
-        assert model.value_of(arg.premises[1]) == 'B'
+            def test_GapClosure(self):
+                self.rule_eg('GapClosure')
 
-    def test_case_bad_rule_neg_bicond_undes(self):
-        arg = self.parg('NBab', 'NBab')
-        proof = Tableau(self.logic, arg)
-        rule = proof.rules.BiconditionalNegatedUndesignated
-        assert rule.get_target(proof[0])
+        class Test_Operators(BaseSuite):
 
-    def test_invalid_lnc(self):
-        assert self.tab('Law of Non-contradiction').invalid
+            def test_regression_bad_rule_neg_bicond_undes(self):
+                tab = self.tab('NBab', 'NBab', is_build = False)
+                rule = tab.rules['BiconditionalNegatedUndesignated']
+                assert rule.get_target(tab[0])
+                tab.build()
+                assert tab.valid
 
-    def test_valid_b_then_a_arrow_b(self):
-        arg = self.parg('Uab', 'b')
-        assert Tableau(self.logic, arg).build().valid
+        class Test_Arguments(BaseSuite):
 
-    def test_invalid_cond_modus_ponens(self):
-        assert self.tab('Conditional Modus Ponens').invalid
+            def test_arguments(self):
+                self.invalid_tab('LNC')
+                self.invalid_tab('MP')
+                self.invalid_tab('NUab', ('a', 'UaNUbc'))
+                self.invalid_tab('NUbc', ('a', 'UaNUbc'))
+                self.invalid_tab('NBab', ('c', 'BcNUab'))
+                self.valid_tab('Material Identity')
+                self.valid_tab('Uab', 'b')
+                self.valid_tab('NUab', ('a', 'Na', 'Nb'))
 
-    def test_valid_a_not_a_not_b_thus_not_a_arrow_b(self):
-        proof = Tableau(self.logic, parse_argument('NUab', ['a', 'Na', 'Nb'])).build()
-        assert proof.valid
 
-    def test_invalid_a_a_arrow_not_b_arrow_c_thus_not_a_arrow_b(self):
-        proof = Tableau(self.logic, parse_argument('NUab', ['a', 'UaNUbc'])).build()
-        assert not proof.valid
+    class Test_Models(BaseSuite):
 
-    def test_invalid_a_a_arrow_not_b_arrow_c_thus_not_b_arrow_c(self):
-        # this is an instance of modus ponens
-        proof = Tableau(self.logic, parse_argument('NUbc', ['a', 'UaNUbc'])).build()
-        assert not proof.valid
-
-    def test_invalid_mp_with_neg_bicon(self):
-        arg = self.parg('NBab', 'c', 'BcNUab')
-        assert Tableau(self.logic, arg).build().invalid
+        def test_regression_model_not_a_countermodel(self):
+            arg = self.parg('NBab', 'c', 'BcNUab')
+            model = self.m()
+            model.set_literal_value(self.p('a'), 'F')
+            model.set_literal_value(self.p('b'), 'T')
+            model.set_literal_value(self.p('c'), 'B')
+            assert model.value_of(arg.premises[1]) == 'B'
 
 @using(logic = 'RM3')
 class TestRM3(BaseSuite):
@@ -871,7 +868,7 @@ class TestRM3(BaseSuite):
         assert tbl['outputs'][8] == 'T'
 
     def test_model_value_of_biconditional(self):
-        model = self.logic.Model()
+        model = self.m()
         model.set_literal_value(parse('a'), 'B')
         model.set_literal_value(parse('b'), 'F')
         assert model.value_of(parse('Bab')) == 'F'
@@ -1224,312 +1221,55 @@ class TestNH(BaseSuite):
 @using(logic = 'P3')
 class TestP3(BaseSuite):
 
-    logic = get_logic('P3')
+    class Test_Tableaux(BaseSuite):
 
-    def test_rule_DoubleNegationDesignated_eg(self):
-        rule, tab = self.rule_eg('DoubleNegationDesignated')
-        assert tab[0].has_all([
-            {'sentence': parse('a'), 'designated': False},
-            {'sentence': parse('Na'), 'designated': False},
-        ])
+        class Test_Operators(BaseSuite):
 
-    def test_rule_ConjunctionUndesignated_eg(self):
-        self.rule_eg('ConjunctionUndesignated')
+            @larg(Oper.Negation)
+            def test_Negation(self, o):
+                assert self.logic.name == 'P3'
+                rtd = self.rule_eg('Double%s%s' % (o, Designated))
+                rtu = self.rule_eg('Double%s%s' % (o, Undesignated))
 
-    def test_rule_MaterialConditionalDesignated_eg(self):
-        self.rule_eg('MaterialConditionalDesignated')
+                rule, tab = rtd
+                assert tab[0].has_all((
+                    {'sentence': self.p('a'),  'designated': False},
+                    {'sentence': self.p('Na'), 'designated': False},
+                ))
 
-    def test_rule_UniversalNegatedDesignated_eg(self):
-        self.rule_eg('UniversalNegatedDesignated')
+            @larg(Oper.Conjunction)
+            def test_Conjunction(self, o):
+                rtd = self.rule_eg('%s%s' % (o, Designated))
+                rtu = self.rule_eg('%s%s' % (o, Undesignated))
+                rtnd = self.rule_eg('%s%s%s' % (o, Negated, Designated))
+                rtnu = self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
 
-    def test_invalid_lem(self):
-        proof = self.tab('Law of Excluded Middle')
-        assert proof.invalid
+            @larg(Oper.MaterialConditional)
+            def test_MaterialConditional(self, o):
+                rtd = self.rule_eg('%s%s' % (o, Designated))
+                rtu = self.rule_eg('%s%s' % (o, Undesignated))
+                rtnd = self.rule_eg('%s%s%s' % (o, Negated, Designated))
+                rtnu = self.rule_eg('%s%s%s' % (o, Negated, Undesignated))
+    
+        class Test_Quantifiers(BaseSuite):
 
-    def test_invalid_demorgan_1(self):
-        assert self.tab('DeMorgan 1').invalid
+            @larg(Quant.Universal)
+            def test_Universal(self, q):
+                self.rule_eg('%s%s' % (q, Designated))
+                self.rule_eg('%s%s' % (q, Undesignated))
+                self.rule_eg('%s%s%s' % (q, Negated, Designated))
+                self.rule_eg('%s%s%s' % (q, Negated, Undesignated))
 
-    def test_invalid_demorgan_2(self):
-        assert self.tab('DeMorgan 2').invalid
+        class Test_Arguments(BaseSuite):
 
-    def test_invalid_demorgan_3(self):
-        assert self.tab('DeMorgan 3').invalid
-
-    def test_invalid_demorgan_4(self):
-        assert self.tab('DeMorgan 4').invalid
-
-    def test_invalid_demorgan_5(self):
-        assert self.tab('DeMorgan 5').invalid
-
-    def test_valid_demorgan_6(self):
-        assert self.tab('DeMorgan 6').valid
-
-
-
-@using(logic = 'CPL')
-class TestCPL(BaseSuite):
-  
-    def test_valid_simplification(self):
-        self.valid_tab('Simplification')
-
-    def test_valid_optimize_group_score_from_candidate_score(self):
-        tab = self.valid_tab('Na', ('Cab', 'Nb', 'Acd'))
-        assert len(tab) == 2
-
-    def test_invalid_syllogism(self):
-        self.invalid_tab('Syllogism')
-
-    def test_rule_ContradictionClosure_eg(self):
-        self.rule_eg('ContradictionClosure')
-
-    def test_rule_SelfIdentityClosure_eg(self):
-        self.rule_eg('SelfIdentityClosure')
-
-    def test_rule_NonExistenceClosure_eg(self):
-        self.rule_eg('NonExistenceClosure')
-
-    def test_rule_IdentityIndiscernability_eg(self):
-        self.rule_eg('IdentityIndiscernability')
-
-    def test_rule_IdentityIndiscernability_not_applies(self):
-        vocab = Predicates()
-        vocab.add((0, 0, 2))
-        proof = Tableau(self.logic)
-        s1 = parse('Fmn', vocab=vocab)
-        s2 = parse('Io1o2')
-        branch = proof.branch()
-        branch.extend([
-            {'extend': s1, 'world': 0},
-            {'sentence': s2, 'world': 0},
-        ])
-        rule = proof.rules.IdentityIndiscernability
-        assert not rule.get_target(branch)
-
-    def test_model_branch_deny_antec(self):
-        proof = self.tab('Denying the Antecedent')
-        model = self.logic.Model()
-        branch = proof.open.first()
-        model.read_branch(branch)
-        s = Atomic(0, 0)
-        assert model.value_of(s) == 'F'
-        assert model.value_of(s.negate()) == 'T'
-
-    def test_model_branch_extract_disj_2(self):
-        proof = self.tab('Extracting a Disjunct 2')
-        model = self.logic.Model()
-        branch = proof.open.first()
-        model.read_branch(branch)
-        s = Atomic(0, 0)
-        assert model.value_of(s) == 'T'
-        assert model.value_of(s.negate()) == 'F'
-
-    def test_model_branch_no_proof_predicated(self):
-        branch = Branch()
-        s1 = parse('Fm', vocab=examples.vocabulary)
-        branch.add({'sentence': s1})
-        model = self.logic.Model()
-        model.read_branch(branch)
-        assert model.value_of(s1) == 'T'
-        
-    def test_model_add_access_not_impl(self):
-        model = self.logic.Model()
-        with raises(NotImplementedError):
-            model.add_access(0, 0)
-
-    def test_model_value_of_operated_opaque(self):
-        # coverage
-        model = self.logic.Model()
-        s = parse('La')
-        model.set_opaque_value(s, 'T')
-        assert model.value_of_operated(s) == 'T'
-        
-    def test_model_set_literal_value_predicated1(self):
-        model = self.logic.Model()
-        m = Constant(0, 0)
-        n = Constant(1, 0)
-        s = Predicated('Identity', [m, n])
-        model.set_literal_value(s, 'T')
-        res = model.value_of(s)
-        assert res == 'T'
-
-    def test_model_opaque_necessity_branch_make_model(self):
-        s = parse('La')
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.add({'sentence': s})
-        model = self.logic.Model()
-        model.read_branch(branch)
-        assert model.value_of(s) == 'T'
-
-    def test_model_opaque_neg_necessity_branch_make_model(self):
-        s = parse('La')
-        proof = Tableau(self.logic)
-        branch = proof.branch()
-        branch.add({'sentence': s.negate()})
-        model = self.logic.Model()
-        model.read_branch(branch)
-        assert model.value_of(s) == 'F'
-
-    def test_model_get_data_triv(self):
-        s = parse('a')
-        model = self.logic.Model()
-        model.set_literal_value(s, 'T')
-        model.finish()
-        data = model.get_data()
-        assert 'Atomics' in data
-
-    def test_model_value_of_operated_opaque1(self):
-        s1 = parse('La')
-        model = self.logic.Model()
-        model.set_opaque_value(s1, 'F')
-        res = model.value_of_operated(s1.negate())
-        assert res == 'T'
-
-    def test_model_value_of_opaque_unassigned(self):
-        s = parse('La')
-        model = self.logic.Model()
-        res = model.value_of(s)
-        assert res == model.unassigned_value
-
-    def test_model_set_predicated_false_value_error_on_set_to_true(self):
-        s = parse('Fm', vocab=examples.vocabulary)
-        model = self.logic.Model()
-        model.set_literal_value(s, 'F')
-        with raises(ModelValueError):
-            model.set_literal_value(s, 'T')
-
-    def test_model_get_anti_extension(self):
-        # coverage
-        s = self.p('Fm')
-        model = self.logic.Model()
-        pred = s.predicate
-        anti_extension = model.get_anti_extension(pred)
-        assert len(anti_extension) == 0
-        model.set_literal_value(s, 'F')
-        assert s.params in anti_extension
-
-@using(logic = 'CFOL')
-class TestCFOL(BaseSuite):
-
-    def test_valid_syllogism(self):
-        self.valid_tab('Syllogism')
-
-    def test_invalid_possibility_addition(self):
-        self.invalid_tab('Possibility Addition')
-
-    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
-        self.valid_tab('b', 'VxKFxKaNa')
-
-    def test_invalid_existential_inside_univ_max_steps(self):
-        self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
-
-    def test_model_get_data_triv(self):
-        m = self.logic.Model()
-        s1 = self.p('a')
-        m.set_literal_value(s1, 'T')
-        m.finish()
-        assert 'Atomics' in m.get_data()
-
-    def test_model_value_of_operated_opaque1(self):
-        m = self.logic.Model()
-        s1 = self.p('La')
-        m.set_opaque_value(s1, 'F')
-        assert m.value_of_operated(s1.negate()) == 'T'
-
-    def test_model_value_of_operated_opaque2(self):
-        m = self.logic.Model()
-        s1 = self.p('La')
-        m.set_opaque_value(s1, 'T')
-        assert m.value_of_operated(s1) == 'T'
-
-    def test_model_read_node_opaque(self):
-        m = self.logic.Model()
-        s1 = self.p('La')
-        m.read_node(Node({'sentence': s1}))
-        assert m.value_of(s1) == 'T'
-
-    def test_model_add_access_not_impl(self):
-        m = self.logic.Model()
-        with raises(NotImplementedError):
-            m.add_access(0, 0)
-
-    def test_model_read_branch_with_negated_opaque_then_faithful(self):
-        tab = self.tab('a', ('NLa', 'b'), is_build_models = True)
-        m, = tab.models
-        s1, s2, s3 = self.pp('a', 'La', 'NLa')
-        assert m.value_of(s1) == 'F'
-        assert m.value_of(s2) == 'F'
-        assert m.value_of(s3) == 'T'
-        assert m.is_countermodel_to(tab.argument)
-
-    def test_model_quantified_opaque_is_countermodel(self):
-        # For this we needed to add constants that occur within opaque sentences.
-        # The use of the existential is important given the way the K model
-        # computes quantified values (short-circuit), as opposed to FDE (min/max).
-        tab = self.tab('b', 'SxUNFxSyMFy', is_build_models = True)
-        arg = tab.argument
-        assert len(tab) == 2
-        assert len(tab.models) == 2
-        m1, m2 = tab.models
-        assert m1.is_countermodel_to(arg)
-        assert m2.is_countermodel_to(arg)
-
-    def test_model_identity_predication1(self):
-        m = self.logic.Model()
-        s1, s2, s3 = self.pp('Fm', 'Imn', 'Fn')
-        for s in (s1, s2):
-            m.set_literal_value(s, 'T')
-        m.finish()
-        assert m.value_of(s3) == 'T'
-
-    def test_model_identity_predication2(self):
-        m = self.logic.Model()
-        s1, s2, s3 = self.pp('Fm', 'Imn', 'Fn')
-        for s in (s1, s2):
-            m.set_literal_value(s, 'T')
-        m.finish()
-        assert m.value_of(s3) == 'T'
-
-    def test_model_self_identity1(self):
-        m = self.logic.Model()
-        s1, s2 = self.pp('Fm', 'Imm')
-        # here we make sure the constant m is registered
-        m.set_literal_value(s1, 'F')
-        m.finish()
-        assert m.value_of(s2) == 'T'
-
-    def test_model_raises_denotation_error(self):
-        m = self.logic.Model()
-        s1 = self.p('Imm')
-        m.finish()
-        with raises(DenotationError):
-            m.value_of(s1)
-
-    def test_model_get_identicals_singleton_two_identical_constants(self):
-        m = self.logic.Model()
-        s1 = self.p('Imn')
-        c1, c2 = s1.params
-        m.set_literal_value(s1, 'T')
-        m.finish()
-        identicals = m.get_identicals(c1)
-        assert len(identicals) == 1
-        assert c2 in identicals
-
-    def test_model_singleton_domain_two_identical_constants(self):
-        m = self.logic.Model()
-        s1 = self.p('Imn')
-        m.set_literal_value(s1, 'T')
-        m.finish()
-        d = m.get_domain()
-        assert len(d) == 1
-
-    def test_model_same_denotum_two_identical_constants(self):
-        m = self.logic.Model()
-        s1 = self.p('Imn')
-        m.set_literal_value(s1, 'T')
-        m.finish()
-        d1, d2 = (m.get_denotum(c) for c in s1.params)
-        assert d1 is d2
+            def test_arguments(self):
+                self.valid_tab('DeMorgan 6')
+                self.invalid_tab('LEM')
+                self.invalid_tab('DeMorgan 1')
+                self.invalid_tab('DeMorgan 2')
+                self.invalid_tab('DeMorgan 3')
+                self.invalid_tab('DeMorgan 4')
+                self.invalid_tab('DeMorgan 5')
 
 
 
@@ -1575,8 +1315,9 @@ class Test_K(BaseSuite):
                 rule, tab = self.rule_eg('DisjunctionNegated')
 
                 rule, tab = self.rule_eg('DisjunctionNegated', step = False)
-                node = tab[0][0]
-                assert node['sentence'].operator == Oper.Negation
+                s: Sentence = tab[0][0]['sentence']
+                assert s.operator == Oper.Negation
+
                 self.valid_tab('Addition')
                 self.valid_tab('LEM')
                 self.valid_tab('Disjunctive Syllogism')
@@ -1671,34 +1412,33 @@ class Test_K(BaseSuite):
 
             def test_model_branch_proof_deny_antec(self):
                 tab = self.tab('Denying the Antecedent')
-                model = self.logic.Model()
+                model = self.m()
                 branch = tab.open.first()
                 model.read_branch(branch)
                 s = Atomic(0, 0)
                 assert model.value_of(s, world=0) == 'F'
                 assert model.value_of(s.negate(), world=0) == 'T'
 
-        class TestModel_Atomics(BaseSuite):
+        class Test_Atomics(BaseSuite):
 
             def test_model_value_of_atomic_unassigned(self):
-                model = self.logic.Model()
+                model = self.m()
                 s = Atomic(0, 0)
                 res = model.value_of_atomic(s)
                 assert res == model.unassigned_value
 
             def test_model_branch_no_proof_atomic(self):
-                model = self.logic.Model()
+                model = self.m()
                 branch = Branch()
                 branch.add({'sentence': Atomic(0, 0), 'world': 0})
                 model.read_branch(branch)
                 assert model.value_of(Atomic(0, 0), world=0) == 'T'
 
-        class TestModel_Opaques(BaseSuite):
+        class Test_Opaques(BaseSuite):
 
             def test_finish_every_opaque_has_value_in_every_frame(self):
                 s1, s2 = self.pp('a', 'b')
-                # s2 = self.p('b')
-                model = self.logic.Model()
+                model = self.m()
                 model.set_opaque_value(s1, 'T', world=0)
                 model.set_opaque_value(s2, 'T', world=1)
                 model.finish()
@@ -1707,18 +1447,18 @@ class Test_K(BaseSuite):
                 assert s2 in f1.opaques
                 assert s1 in f2.opaques
 
-        class TestModel_Predication(BaseSuite):
+        class Test_Predication(BaseSuite):
 
             def test_branch_no_proof_predicated(self):
-                model = self.logic.Model()
+                model = self.m()
                 branch = Branch()
-                s1 = parse('Imn')
+                s1 = self.p('Imn')
                 branch.add({'sentence': s1, 'world': 0})
                 model.read_branch(branch)
                 assert model.value_of(s1, world=0) == 'T'
 
             def test_set_predicated_value1(self):
-                model = self.logic.Model()
+                model = self.m()
                 s = Identity(tuple(Constant.gen(2)))
                 model.set_predicated_value(s, 'T', world=0)
                 res = model.value_of(s, world=0)
@@ -1727,35 +1467,35 @@ class Test_K(BaseSuite):
             def test_get_extension_adds_predicate_to_predicates(self):
                 # coverage
                 s1 = self.p('Fm')
-                model = self.logic.Model()
+                model = self.m()
                 res = model.get_extension(s1.predicate)
                 assert len(res) == 0
                 assert s1.predicate in model.predicates
 
             def test_model_identity_extension_non_empty_with_sentence(self):
                 s = self.p('Imn')
-                model = self.logic.Model()
+                model = self.m()
                 model.set_predicated_value(s, 'T', world=0)
                 extension = model.get_extension(Identity, world=0)
                 assert len(extension) > 0
                 assert (Constant(0, 0), Constant(1, 0)) in extension
 
-        class TestModel_ModalAccess(BaseSuite):
+        class Test_ModalAccess(BaseSuite):
 
             def test_model_branch_no_proof_access(self):
-                model = self.logic.Model()
+                model = self.m()
                 branch = Branch()
                 branch.add({'world1': 0, 'world2': 1})
                 model.read_branch(branch)
                 assert model.has_access(0, 1)
 
             def test_model_add_access_sees(self):
-                model = self.logic.Model()
+                model = self.m()
                 model.add_access(0, 0)
                 assert 0 in model.visibles(0)
 
             def test_model_possibly_a_with_access_true(self):
-                model = self.logic.Model()
+                model = self.m()
                 a = Atomic(0, 0)
                 model.add_access(0, 1)
                 model.set_atomic_value(a, 'T', world=1)
@@ -1763,20 +1503,20 @@ class Test_K(BaseSuite):
                 assert res == 'T'
 
             def test_model_possibly_a_no_access_false(self):
-                model = self.logic.Model()
+                model = self.m()
                 a = Atomic(0, 0)
                 model.set_atomic_value(a, 'T', world=1)
                 res = model.value_of(Operated('Possibility', a), world=0)
                 assert res == 'F'
 
             def test_model_nec_a_no_access_true(self):
-                model = self.logic.Model()
+                model = self.m()
                 a = Atomic(0, 0)
                 res = model.value_of(Operated('Necessity', a), world=0)
                 assert res == 'T'
 
             def test_model_nec_a_with_access_false(self):
-                model = self.logic.Model()
+                model = self.m()
                 a = Atomic(0, 0)
                 model.set_atomic_value(a, 'T', world=0)
                 model.set_atomic_value(a, 'F', world=1)
@@ -1786,20 +1526,20 @@ class Test_K(BaseSuite):
                 assert res == 'F'
 
             def test_model_get_data_with_access_has_2_frames(self):
-                model = self.logic.Model()
+                model = self.m()
                 model.set_literal_value(self.p('a'), 'T', world=0)
                 model.add_access(0, 1)
                 model.finish()
                 data = model.get_data()
                 assert len(data['Frames']['values']) == 2
 
-        class TestModel_Quantification(BaseSuite):
+        class Test_Quantification(BaseSuite):
 
             def test_model_existence_user_pred_true(self):
                 pred, x = Predicate.first(), Variable.first()
                 s1, s2 = pred(Constant.first()), pred(x)
                 s3 = Existential(x, s2)
-                model = self.logic.Model()
+                model = self.m()
                 model.set_predicated_value(s1, 'T', world=0)
                 res = model.value_of(s3, world=0)
                 assert res == 'T'
@@ -1808,11 +1548,10 @@ class Test_K(BaseSuite):
                 pred = Predicate(0, 0, 1)
                 m = Constant(0, 0)
                 x = Variable(0, 0)
-                s1 = Predicated(pred, [m])
-                s2 = Predicated(pred, [x])
+                s1, s2 = pred(m), pred(x)
                 s3 = Quantified('Existential', x, s2)
 
-                model = self.logic.Model()
+                model = self.m()
                 res = model.value_of(s3, world=0)
                 assert res == 'F'
 
@@ -1820,19 +1559,17 @@ class Test_K(BaseSuite):
                 pred = Predicate(0, 0, 1)
                 m = Constant(0, 0)
                 x = Variable(0, 0)
-                s1 = Predicated(pred, [m])
-                s2 = Predicated(pred, [x])
+                s1, s2 = pred(m), pred(x)
                 s3 = Quantified('Universal', x, s2)
 
-                model = self.logic.Model()
+                model = self.m()
                 model.set_predicated_value(s1, 'T', world=0)
                 res = model.value_of(s3, world=0)
                 assert res == 'T'
 
             def test_model_universal_false(self):
-                s1 = self.p('VxFx')
-                s2 = self.p('Fm')
-                model = self.logic.Model()
+                s1, s2 = self.pp('VxFx', 'Fm')
+                model = self.m()
                 model.set_predicated_value(s2, 0, world=0)
                 res = model.value_of(s1, world=0)
                 assert res == 'F'
@@ -1842,21 +1579,19 @@ class Test_K(BaseSuite):
                 m = Constant(0, 0)
                 n = Constant(1, 0)
                 x = Variable(0, 0)
-                s1 = Predicated(pred, [m])
-                s2 = Predicated(pred, [x])
-                s3 = Predicated(pred, [n])
+                s1, s2, s3 = (pred(p) for p in (m, x, n))
                 s4 = Quantified('Universal', x, s2)
             
-                model = self.logic.Model()
+                model = self.m()
                 model.set_predicated_value(s1, 'T', world=0)
                 model.set_predicated_value(s3, 'F', world=0)
                 res = model.value_of(s4, world=0)
                 assert res == 'F'
 
-        class TestModel_Frame(BaseSuite):
+        class Test_Frame(BaseSuite):
 
             def test_difference_atomic_keys_diff(self):
-                model = self.logic.Model()
+                model = self.m()
                 model.set_literal_value(self.p('a'), 'T', world=0)
                 model.set_literal_value(self.p('b'), 'T', world=1)
                 frame_a = model.world_frame(0)
@@ -1865,7 +1600,7 @@ class Test_K(BaseSuite):
                 assert not frame_b.is_equivalent_to(frame_a)
 
             def test_difference_atomic_values_diff(self):
-                model = self.logic.Model()
+                model = self.m()
                 s1 = self.p('a')
                 model.set_literal_value(s1, 'T', world=0)
                 model.set_literal_value(s1, 'F', world=1)
@@ -1875,7 +1610,7 @@ class Test_K(BaseSuite):
                 assert not frame_b.is_equivalent_to(frame_a)
 
             def test_difference_atomic_values_equiv(self):
-                model = self.logic.Model()
+                model = self.m()
                 s1 = self.p('a')
                 model.set_literal_value(s1, 'T', world=0)
                 model.set_literal_value(s1, 'T', world=1)
@@ -1885,7 +1620,7 @@ class Test_K(BaseSuite):
                 assert frame_b.is_equivalent_to(frame_a)
 
             def test_difference_opaque_keys_diff(self):
-                model = self.logic.Model()
+                model = self.m()
                 model.set_opaque_value(self.p('Ma'), 'T', world=0)
                 model.set_opaque_value(self.p('Mb'), 'T', world=1)
                 frame_a = model.world_frame(0)
@@ -1895,7 +1630,7 @@ class Test_K(BaseSuite):
 
             def test_difference_opaque_values_diff(self):
                 s1 = self.p('Ma')
-                model = self.logic.Model()
+                model = self.m()
                 model.set_opaque_value(s1, 'T', world=0)
                 model.set_opaque_value(s1, 'F', world=1)
                 frame_a = model.world_frame(0)
@@ -1904,7 +1639,7 @@ class Test_K(BaseSuite):
                 assert not frame_b.is_equivalent_to(frame_a)
 
             def test_difference_opaque_values_equiv(self):
-                model = self.logic.Model()
+                model = self.m()
                 model.set_opaque_value(parse('Ma'), 'T', world=0)
                 model.set_opaque_value(parse('Ma'), 'T', world=1)
                 frame_a = model.world_frame(0)
@@ -1915,7 +1650,7 @@ class Test_K(BaseSuite):
             def test_difference_extension_keys_diff(self):
                 vocab = Predicates((0, 0, 1), (1, 0, 2))
                 s1, s2 = self.pp('Fm', 'Gmn', vocab)
-                model = self.logic.Model()
+                model = self.m()
                 model.set_predicated_value(s1, 'T', world=0)
                 model.set_predicated_value(s2, 'T', world=1)
                 frame_a = model.world_frame(0)
@@ -1926,7 +1661,7 @@ class Test_K(BaseSuite):
             def test_difference_extension_values_diff(self):
                 s1 = self.p('Fm')
                 s2 = self.p('Fn')
-                model = self.logic.Model()
+                model = self.m()
                 model.set_predicated_value(s1, 'T', world=0)
                 model.set_predicated_value(s2, 'T', world=1)
                 frame_a = model.world_frame(0)
@@ -1937,7 +1672,7 @@ class Test_K(BaseSuite):
             def test_difference_extension_values_equiv(self):
                 s1 = self.p('Fm')
                 s2 = self.p('Fn')
-                model = self.logic.Model()
+                model = self.m()
                 model.set_predicated_value(s1, 'T', world=0)
                 model.set_predicated_value(s2, 'F', world=0)
                 model.set_predicated_value(s1, 'T', world=1)
@@ -1949,8 +1684,8 @@ class Test_K(BaseSuite):
 
             def test_not_equals(self):
                 s = self.p('a')
-                model1 = self.logic.Model()
-                model2 = self.logic.Model()
+                model1 = self.m()
+                model2 = self.m()
                 model1.set_literal_value(s, 'T', world=0)
                 model2.set_literal_value(s, 'F', world=0)
                 f1 = model1.world_frame(0)
@@ -1959,8 +1694,8 @@ class Test_K(BaseSuite):
 
             def test_not_equals(self):
                 s = self.p('a')
-                model1 = self.logic.Model()
-                model2 = self.logic.Model()
+                model1 = self.m()
+                model2 = self.m()
                 model1.set_literal_value(s, 'T', world=0)
                 model2.set_literal_value(s, 'T', world=0)
                 f1 = model1.world_frame(0)
@@ -1969,7 +1704,7 @@ class Test_K(BaseSuite):
 
             def test_ordering(self):
                 s = self.p('a')
-                model = self.logic.Model()
+                model = self.m()
                 model.set_literal_value(s, 'T', world=0)
                 model.set_literal_value(s, 'F', world=1)
                 f1 = model.world_frame(0)
@@ -1981,7 +1716,7 @@ class Test_K(BaseSuite):
 
             def test_data_has_identity_with_sentence(self):
                 s = self.p('Imn')
-                model = self.logic.Model()
+                model = self.m()
                 model.set_predicated_value(s, 'T', world=0)
                 model.finish()
                 data = model.get_data()
@@ -1991,21 +1726,21 @@ class Test_K(BaseSuite):
                 pdata = fdata['Predicates']['values'][1]
                 assert pdata['values'][0]['input'].name == 'Identity'
 
-        class TestModeCounterModel(BaseSuite):
+        class Test_CounterModel(BaseSuite):
 
             def test_countermodel_to_false1(self):
                 arg = self.parg('b', 'a')
                 s1, = arg.premises
-                model = self.logic.Model()
+                model = self.m()
                 model.set_literal_value(s1, 'F')
                 model.set_literal_value(arg.conclusion, 'T')
                 assert not model.is_countermodel_to(arg)
 
-        class TestModel_Error(BaseSuite):
+        class Test_Errors(BaseSuite):
 
             def test_not_impl_various(self):
                 s1 = self.p('Aab')
-                model = self.logic.Model()
+                model = self.m()
                 with raises(NotImplementedError):
                     model.set_literal_value(s1, 'T')
                 with raises(NotImplementedError):
@@ -2015,17 +1750,291 @@ class Test_K(BaseSuite):
 
             def test_value_error_various(self):
                 s1, s2 = self.pp('a', 'Fm')
-                model = self.logic.Model()
+                model = self.m()
                 model.set_opaque_value(s1, 'T')
                 with raises(ModelValueError):
                     model.set_opaque_value(s1, 'F')
-                model = self.logic.Model()
+                model = self.m()
                 model.set_atomic_value(s1, 'T')
                 with raises(ModelValueError):
                     model.set_atomic_value(s1, 'F')
                 model.set_predicated_value(s2, 'T')
                 with raises(ModelValueError):
                     model.set_predicated_value(s2, 'F')
+
+@using(logic = 'CPL')
+class TestCPL(BaseSuite):
+
+    class Test_Tableaux(BaseSuite):
+    
+        class Test_Closure(BaseSuite):
+
+            def test_ContradictionClosure(self):
+                self.rule_eg('ContradictionClosure')
+
+            def test_SelfIdentityClosure(self):
+                self.rule_eg('SelfIdentityClosure')
+
+            def test_NonExistenceClosure(self):
+                self.rule_eg('NonExistenceClosure')
+
+        class Test_Identity(BaseSuite):
+
+            def test_IdentityIndiscernability(self):
+                self.rule_eg('IdentityIndiscernability')
+
+            def test_IdentityIndiscernability_not_applies(self):
+                s1, s2 = self.pp('Fmn', 'Io1o2', vocab = Predicates((0, 0, 2)))
+                tab, b = self.tabb((
+                    {'sentence': s1, 'world': 0},
+                    {'sentence': s2, 'world': 0},
+                ))
+                rule = tab.rules['IdentityIndiscernability']
+                assert not rule.get_target(b)
+
+        class Test_Arguments(BaseSuite):
+
+            def test_arguments(self):
+                self.valid_tab('Simplification')
+                self.invalid_tab('Syllogism')
+
+        class Test_Optimizations(BaseSuite):
+
+            def test_group_score_from_candidate_score(self):
+                tab = self.valid_tab('Na', ('Cab', 'Nb', 'Acd'))
+                assert len(tab) == 2
+
+    class Test_Models(BaseSuite):
+
+        def test_branch_deny_antec(self):
+            tab = self.tab('Denying the Antecedent')
+            m = self.m()
+            m.read_branch(tab.open.first())
+            assert m.value_of(A) == 'F'
+            assert m.value_of(A.negate()) == 'T'
+
+        def test_branch_extract_disj_2(self):
+            tab = self.tab('Extracting a Disjunct 2')
+            m = self.m()
+            m.read_branch(tab.open.first())
+            assert m.value_of(A) == 'T'
+            assert m.value_of(A.negate()) == 'F'
+            # proof = self.tab('Extracting a Disjunct 2')
+            # model = self.m()
+            # branch = proof.open.first()
+            # model.read_branch(branch)
+            # s = Atomic(0, 0)
+            # assert model.value_of(s) == 'T'
+            # assert model.value_of(s.negate()) == 'F'
+
+        def test_branch_no_proof_predicated(self):
+            b = Branch()
+            b.add({'sentence': Fa})
+            m = self.m()
+            m.read_branch(b)
+            branch = Branch()
+            s1 = self.p('Fm')
+            branch.add({'sentence': s1})
+            model = self.m()
+            model.read_branch(branch)
+            assert model.value_of(s1) == 'T'
+            
+        def test_add_access_not_impl(self):
+            model = self.m()
+            with raises(NotImplementedError):
+                model.add_access(0, 0)
+
+        def test_value_of_operated_opaque(self):
+            # coverage
+            model = self.m()
+            s = self.p('La')
+            model.set_opaque_value(s, 'T')
+            assert model.value_of_operated(s) == 'T'
+            
+        def test_set_literal_value_predicated1(self):
+            model = self.m()
+            s = Predicated('Identity', tuple(Constant.gen(2)))
+            model.set_literal_value(s, 'T')
+            res = model.value_of(s)
+            assert res == 'T'
+
+        def test_opaque_necessity_branch_make_model(self):
+            s = self.p('La')
+            proof = Tableau(self.logic)
+            branch = proof.branch()
+            branch.add({'sentence': s})
+            model = self.m()
+            model.read_branch(branch)
+            assert model.value_of(s) == 'T'
+
+        def test_opaque_neg_necessity_branch_make_model(self):
+            s = self.p('La')
+            proof = Tableau(self.logic)
+            branch = proof.branch()
+            branch.add({'sentence': s.negate()})
+            model = self.m()
+            model.read_branch(branch)
+            assert model.value_of(s) == 'F'
+
+        def test_get_data_triv(self):
+            s = self.p('a')
+            model = self.m()
+            model.set_literal_value(s, 'T')
+            model.finish()
+            data = model.get_data()
+            assert 'Atomics' in data
+
+        def test_value_of_operated_opaque1(self):
+            s1 = self.p('La')
+            model = self.m()
+            model.set_opaque_value(s1, 'F')
+            res = model.value_of_operated(s1.negate())
+            assert res == 'T'
+
+        def test_value_of_opaque_unassigned(self):
+            s = self.p('La')
+            model = self.m()
+            res = model.value_of(s)
+            assert res == model.unassigned_value
+
+        def test_set_predicated_false_value_error_on_set_to_true(self):
+            s = self.p('Fm')
+            model = self.m()
+            model.set_literal_value(s, 'F')
+            with raises(ModelValueError):
+                model.set_literal_value(s, 'T')
+
+        def test_get_anti_extension(self):
+            # coverage
+            s: Predicated = Predicated.first()
+            model = self.m()
+            anti_extension = model.get_anti_extension(s.predicate)
+            assert len(anti_extension) == 0
+            model.set_literal_value(s, 'F')
+            assert s.params in anti_extension
+
+@using(logic = 'CFOL')
+class TestCFOL(BaseSuite):
+
+    def test_valid_syllogism(self):
+        self.valid_tab('Syllogism')
+
+    def test_invalid_possibility_addition(self):
+        self.invalid_tab('Possibility Addition')
+
+    def test_valid_regression_efq_univeral_with_contradiction_no_constants(self):
+        self.valid_tab('b', 'VxKFxKaNa')
+
+    def test_invalid_existential_inside_univ_max_steps(self):
+        self.invalid_tab('b', 'VxUFxSyFy', max_steps = 100)
+
+    def test_model_get_data_triv(self):
+        m = self.m()
+        s1 = self.p('a')
+        m.set_literal_value(s1, 'T')
+        m.finish()
+        assert 'Atomics' in m.get_data()
+
+    def test_model_value_of_operated_opaque1(self):
+        m = self.m()
+        s1 = self.p('La')
+        m.set_opaque_value(s1, 'F')
+        assert m.value_of_operated(s1.negate()) == 'T'
+
+    def test_model_value_of_operated_opaque2(self):
+        m = self.m()
+        s1 = self.p('La')
+        m.set_opaque_value(s1, 'T')
+        assert m.value_of_operated(s1) == 'T'
+
+    def test_model_read_node_opaque(self):
+        m = self.m()
+        s1 = self.p('La')
+        m.read_node(Node({'sentence': s1}))
+        assert m.value_of(s1) == 'T'
+
+    def test_model_add_access_not_impl(self):
+        m = self.m()
+        with raises(NotImplementedError):
+            m.add_access(0, 0)
+
+    def test_model_read_branch_with_negated_opaque_then_faithful(self):
+        tab = self.tab('a', ('NLa', 'b'), is_build_models = True)
+        m, = tab.models
+        s1, s2, s3 = self.pp('a', 'La', 'NLa')
+        assert m.value_of(s1) == 'F'
+        assert m.value_of(s2) == 'F'
+        assert m.value_of(s3) == 'T'
+        assert m.is_countermodel_to(tab.argument)
+
+    def test_model_quantified_opaque_is_countermodel(self):
+        # For this we needed to add constants that occur within opaque sentences.
+        # The use of the existential is important given the way the K model
+        # computes quantified values (short-circuit), as opposed to FDE (min/max).
+        tab = self.tab('b', 'SxUNFxSyMFy', is_build_models = True)
+        arg = tab.argument
+        assert len(tab) == 2
+        assert len(tab.models) == 2
+        m1, m2 = tab.models
+        assert m1.is_countermodel_to(arg)
+        assert m2.is_countermodel_to(arg)
+
+    def test_model_identity_predication1(self):
+        m = self.m()
+        s1, s2, s3 = self.pp('Fm', 'Imn', 'Fn')
+        for s in (s1, s2):
+            m.set_literal_value(s, 'T')
+        m.finish()
+        assert m.value_of(s3) == 'T'
+
+    def test_model_identity_predication2(self):
+        m = self.m()
+        s1, s2, s3 = self.pp('Fm', 'Imn', 'Fn')
+        for s in (s1, s2):
+            m.set_literal_value(s, 'T')
+        m.finish()
+        assert m.value_of(s3) == 'T'
+
+    def test_model_self_identity1(self):
+        m = self.m()
+        s1, s2 = self.pp('Fm', 'Imm')
+        # here we make sure the constant m is registered
+        m.set_literal_value(s1, 'F')
+        m.finish()
+        assert m.value_of(s2) == 'T'
+
+    def test_model_raises_denotation_error(self):
+        m = self.m()
+        s1 = self.p('Imm')
+        m.finish()
+        with raises(DenotationError):
+            m.value_of(s1)
+
+    def test_model_get_identicals_singleton_two_identical_constants(self):
+        m = self.m()
+        s1 = self.p('Imn')
+        c1, c2 = s1.params
+        m.set_literal_value(s1, 'T')
+        m.finish()
+        identicals = m.get_identicals(c1)
+        assert len(identicals) == 1
+        assert c2 in identicals
+
+    def test_model_singleton_domain_two_identical_constants(self):
+        m = self.m()
+        s1 = self.p('Imn')
+        m.set_literal_value(s1, 'T')
+        m.finish()
+        d = m.get_domain()
+        assert len(d) == 1
+
+    def test_model_same_denotum_two_identical_constants(self):
+        m = self.m()
+        s1 = self.p('Imn')
+        m.set_literal_value(s1, 'T')
+        m.finish()
+        d1, d2 = (m.get_denotum(c) for c in s1.params)
+        assert d1 is d2
 
 @using(logic = 'D')
 class TestD(BaseSuite):
@@ -2152,7 +2161,7 @@ class TestS4(BaseSuite):
         assert b.has({'world1': 0, 'world2': 2})
 
     def test_model_finish_transitity_visibles(self):
-        model = self.logic.Model()
+        model = self.m()
         model.add_access(0, 1)
         model.add_access(1, 2)
         model.finish()
@@ -2211,7 +2220,7 @@ class TestS5(BaseSuite):
         assert b.has({'world1': 1, 'world2': 0})
 
     def test_model_finish_symmetry_visibles(self):
-        model = self.logic.Model()
+        model = self.m()
         model.add_access(0, 1)
         model.finish()
         assert 0 in model.visibles(1)
