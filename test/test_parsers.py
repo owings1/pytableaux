@@ -23,7 +23,7 @@ from errors import *
 import examples
 from parsers import create_parser, parse, parse_argument as argument
 
-voc = examples.vocabulary
+voc = examples.preds
 std = create_parser(notn='standard', vocab=voc)
 pol = create_parser(notn='polish', vocab=voc)
 
@@ -43,14 +43,14 @@ def test_argument_no_prems_1_std_untitled():
     assert a.conclusion.is_atomic
 
 def test_argument_prems_preparsed_titled():
-    premises = [parse('Aab'), parse('Nb')]
+    premises = (parse('Aab'), parse('Nb'))
     conclusion = parse('a')
     a = argument(conclusion=conclusion, premises=premises, title='TestArgument')
     assert len(a.premises) == 2
     assert a.title == 'TestArgument'
 
 def test_argument_parse_prems_preparsed_conclusion():
-    premises = ['Aab', 'Nb']
+    premises = ('Aab', 'Nb')
     conclusion = parse('a')
     a = argument(conclusion=conclusion, premises=premises, notn='polish')
     assert len(a.premises) == 2

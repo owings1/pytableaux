@@ -22,6 +22,7 @@ class UnknownNotationError(ParseError):
 # KeyErrors
 class DuplicateKeyError(KeyError):
     pass
+
 # ValueErrors
 class NotFoundError(ValueError):
     pass
@@ -34,3 +35,5 @@ class ModelValueError(ValueError):
 
 class DenotationError(ModelValueError):
     pass
+
+# TypeErrors

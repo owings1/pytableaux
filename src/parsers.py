@@ -19,11 +19,11 @@
 # pytableaux - parsers module
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError
-from lexicals import Lexical, BiCoords, Predicate, Parameter, Constant, Variable, Operator as Oper, Quantifier, \
+from lexicals import LexicalAbc as Lexical, BiCoords, Predicate, Parameter, Constant, Variable, Operator as Oper, Quantifier, \
     Sentence, Atomic, Predicated, Quantified, Operated, LexType, Predicates, Argument
-from utils import CacheNotationData, Decorators, cat, EmptySet, isstr, typecheck
+from utils import CacheNotationData, Decorators, cat, EmptySet, isstr
 from types import MappingProxyType
-from typing import Iterable, Union
+from typing import Dict, Iterable, Union
 
 abstract = Decorators.abstract
 
@@ -39,8 +39,7 @@ class CharTable(CacheNotationData):
 
     default_fetch_name = 'default'
 
-    def __init__(self, data):
-        typecheck(data, dict, 'data')
+    def __init__(self, data: Dict):
         vals, itms = data.values(), data.items()
         # copy table
         self._table = MappingProxyType(data)#{key: tuple(value) for key, value in itms}
@@ -349,10 +348,6 @@ class BaseParser(Parser):
         :meta private:
         """
         return tuple(self._read_parameter() for _ in range(num))
-        params = []
-        while len(params) < num:
-            params.append(self._read_parameter())
-        return params
 
     def _read_parameter(self) -> Parameter:
         """

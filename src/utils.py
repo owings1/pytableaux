@@ -28,16 +28,13 @@ from itertools import chain, islice
 from time import time
 from types import MappingProxyType, ModuleType
 from typing import Any, Callable, Collection, Dict, ItemsView, Iterable, KeysView, \
-    OrderedDict, Sequence, Type, TypeVar, Union, ValuesView, abstractmethod, cast
+    Mapping, OrderedDict, Sequence, Type, TypeVar, Union, ValuesView, abstractmethod, cast
 from past.builtins import basestring
 
+# from pprint import pp
 
-from pprint import pp
-
+# Constants
 EmptySet = frozenset()
-LogicRef = Union[ModuleType, str]
-IndexTypes = (int, slice)
-IndexType = Union[IndexTypes] # type: ignore
 CmpFnOper = MappingProxyType({
     '__lt__': '<',
     '__le__': '<=',
@@ -47,6 +44,13 @@ CmpFnOper = MappingProxyType({
     '__ne__': '!=',
     '__contains__': 'in',
 })
+
+# Types
+strtype = basestring
+LogicRef = Union[ModuleType, str]
+IndexTypes = (int, slice)
+IndexType = Union[int, slice]
+
 RetType = TypeVar('RetType')
 
 def get_module(ref, package: str = None) -> ModuleType:
@@ -73,7 +77,7 @@ def get_module(ref, package: str = None) -> ModuleType:
             return ret['mod']
         ref = import_module(ref.__module__)
 
-    if ismodule(ref):
+    if isinstance(ref, ModuleType):
         if _checkref(ref.__name__):
             return ret['mod']
         if package != None and package != getattr(ref, '__package__', None):
@@ -122,26 +126,11 @@ def get_logic(ref) -> ModuleType:
     return get_module(ref, package = 'logics')
 
 def islogic(obj) -> bool:
-    return ismodule(obj) and obj.__name__.startswith('logics.')
+    return isinstance(obj, ModuleType) and obj.__name__.startswith('logics.')
 
-def typecheck(obj, types, name = 'parameter', err = TypeError):
-    if isclass(types):
-        types = (types,)
-    types = tuple(
-        basestring if val == str else val for val in types
-    )
-    if isinstance(obj, types):
-        return obj
-    raise err("`{0}` must be {1}, got '{2}'".format(name, types, obj.__class__))
-
-def condcheck(cond, msg = None, name = 'parameter', err = ValueError):
-    if callable(cond):
-        cond = cond()
-    if cond:
-        return
-    if msg == None:
-        msg = 'Invalid value for `%s`' % name
-    raise err(msg)
+def instcheck(obj, classinfo):
+    if not isinstance(obj, classinfo):
+        raise TypeError(obj, type(obj), classinfo)
 
 def nowms() -> int:
     return int(round(time() * 1000))
@@ -155,7 +144,7 @@ def wrparens(*args: str) -> str:
 # notnone = partial(is_not, None)
 
 testlw = None
-def dictrepr(d, limit = 10, j = ', ', vj='=', paren = True):
+def dictrepr(d: dict, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
     pairs = (
         cat(str(k), vj, v.__name__
         if isclass(v) else (
@@ -174,7 +163,7 @@ def dictrepr(d, limit = 10, j = ', ', vj='=', paren = True):
         return wrparens(istr)
     return istr
 
-def kwrepr(**kw): return dictrepr(kw)
+def kwrepr(**kw) -> str: return dictrepr(kw)
 
 def orepr(obj, _d = None, **kw):
     try:
@@ -184,14 +173,11 @@ def orepr(obj, _d = None, **kw):
     except:
         return '<%s ?ERR?>' % obj.__class__.__name__
 
-def isstr(obj):
-    return isinstance(obj, basestring)
+def isstr(obj) -> bool:
+    return isinstance(obj, strtype)
 
-def isint(obj):
+def isint(obj) -> bool:
     return isinstance(obj, int)
-
-def ismodule(obj):
-    return isinstance(obj, ModuleType)
 
 def sortedbyval(map: dict) -> list:
     return list(it[1] for it in sorted((v, k) for k, v in map.items()))
@@ -232,7 +218,7 @@ def dedupitems(items):
 
 class Decorators(object):
 
-    def abstract(method: Callable) -> Callable:
+    def abstract(method: Callable[..., RetType]) -> Callable[..., RetType]:
         @abstractmethod
         def notimplemented(*args, **kw):
             raise NotImplementedError(method)
@@ -246,7 +232,7 @@ class Decorators(object):
             return getattr(self, key)
         return fget
 
-    def setonce(method: Callable) -> Callable:
+    def setonce(method: Callable[..., RetType]) -> Callable[..., RetType]:
         name, key = __class__._privkey(method)
         def fset(self, val):
             if hasattr(self, key): raise AttributeError(name)
@@ -341,30 +327,20 @@ class Decorators(object):
             else:
                 obj = cls
         return bool(check(obj))
-            
-# class Kwobj(object):
-
-#     def __init__(self, *dicts, **kw):
-#         for d in dicts:
-#             self.__dict__.update(d)
-#         self.__dict__.update(kw)
-
-#     def __repr__(self):
-#         return dictrepr(self.__dict__)
 
 class CacheNotationData(object):
 
     default_fetch_name = 'default'
 
     @classmethod
-    def load(cls, notn, name: str, data: dict):
+    def load(cls, notn, name: str, data: Mapping):
         idx = cls.__getidx(notn)
-        typecheck(name, str, 'name')
-        typecheck(data, dict, 'data')
-        condcheck(
-            name not in idx,
-            '{0} {1}.{2} already defined'.format(notn, name, cls)
-        )
+        if not isinstance(name, strtype):
+            raise TypeError(name, type(name), str)
+        if not isinstance(data, Mapping):
+            raise TypeError(name, type(data), Mapping)
+        if name in idx:
+            raise DuplicateKeyError(notn, name, cls)
         idx[name] = cls(data)
         return idx[name]
 
@@ -564,33 +540,33 @@ class UniqueList(Sequence):
         inst.update((x for x in other if x not in self))
         return inst
 
-    def symmetric_difference_update(self, other):
+    def symmetric_difference_update(self, other: Iterable):
         inst = self.symmetric_difference(other)
         self.clear()
         self.update(inst)
 
-    def intersection(self, other):
+    def intersection(self, other: Iterable):
         if not isinstance(other, (set, dict, self.__class__)):
             other = set(other)
         return self.__class__((x for x in self if x in other))
 
-    def intersection_update(self, other):
+    def intersection_update(self, other: Iterable):
         if not isinstance(other, (set, dict, self.__class__)):
             other = set(other)
         for item in self.__set.difference(other):
             self.remove(item)
 
-    def isdisjoint(self, other):
+    def isdisjoint(self, other) -> bool:
         if isinstance(other, self.__class__):
             other = other.__set
         return self.__set.isdisjoint(other)
 
-    def issubset(self, other):
+    def issubset(self, other) -> bool:
         if isinstance(other, self.__class__):
             other = other.__set
         return self.__set.issubset(other)
 
-    def issuperset(self, other):
+    def issuperset(self, other) -> bool:
         if isinstance(other, self.__class__):
             other = other.__set
         return self.__set.issuperset(other)
@@ -607,10 +583,10 @@ class UniqueList(Sequence):
     def __contains__(self, item):
         return item in self.__set
 
-    def __getitem__(self, key: Union[int, slice]):
+    def __getitem__(self, key: IndexType):
         return self.__list[key]
 
-    def __delitem__(self, key: Union[int, slice]):
+    def __delitem__(self, key: IndexType):
         if isinstance(key, slice):
             for item in self.__list[key]:
                 self.__set.remove(item)
@@ -618,7 +594,7 @@ class UniqueList(Sequence):
         elif isinstance(key, int):
             self.pop(key)
         else:
-            raise TypeError(key, type(key), (int, slice))
+            raise TypeError(key, type(key), IndexTypes)
 
     def __add__(self, value: Iterable):
         inst = copy(self)
