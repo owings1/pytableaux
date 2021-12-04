@@ -31,16 +31,22 @@ from typing import Any, Callable, Collection, Dict, ItemsView, Iterable, KeysVie
     OrderedDict, Sequence, Type, TypeVar, Union, ValuesView, abstractmethod, cast
 from past.builtins import basestring
 
+
+from pprint import pp
+
 EmptySet = frozenset()
 LogicRef = Union[ModuleType, str]
+IndexTypes = (int, slice)
+IndexType = Union[IndexTypes] # type: ignore
 CmpFnOper = MappingProxyType({
     '__lt__': '<',
     '__le__': '<=',
     '__gt__': '>',
     '__ge__': '>=',
+    '__eq__': '==',
+    '__ne__': '!=',
     '__contains__': 'in',
 })
-# ParamSpec = ParamSpec('ParamSpec')
 RetType = TypeVar('RetType')
 
 def get_module(ref, package: str = None) -> ModuleType:
@@ -171,9 +177,12 @@ def dictrepr(d, limit = 10, j = ', ', vj='=', paren = True):
 def kwrepr(**kw): return dictrepr(kw)
 
 def orepr(obj, _d = None, **kw):
-    oname = obj if isstr(obj) else obj.__class__.__name__
-    istr = dictrepr(_d if _d != None else kw, j= ' ', vj=':',paren = False)
-    return '<%s %s>' % (oname, istr)
+    try:
+        oname = obj if isstr(obj) else obj.__class__.__name__
+        istr = dictrepr(_d if _d != None else kw, j= ' ', vj=':',paren = False)
+        return '<%s %s>' % (oname, istr)
+    except:
+        return '<%s ?ERR?>' % obj.__class__.__name__
 
 def isstr(obj):
     return isinstance(obj, basestring)
@@ -236,15 +245,7 @@ class Decorators(object):
                 setattr(self, key, method(self))
             return getattr(self, key)
         return fget
-    # def lazygetter():
-    #     pass
-    # def lazyget2(method: Callable[..., RetType]) -> Callable[..., RetType]:
-    #     name, key = __class__._privkey(method)
-    #     def fget(self) -> RetType:
-    #         if not hasattr(self, key):
-    #             setattr(self, key, method(self))
-    #         return getattr(self, key)
-    #     return fget
+
     def setonce(method: Callable) -> Callable:
         name, key = __class__._privkey(method)
         def fset(self, val):
@@ -263,6 +264,16 @@ class Decorators(object):
         return fcheckwrap
 
     def nosetattr(*args, **kw) -> Callable:
+        #
+        # e.g.::
+        #
+        #   __setattr__ = nosetattr(Base.__setattr__, **kw)
+        # 
+        # e.g.::
+        #
+        #   @nosetattr(**kw)
+        #   def __setattr__(self, attr, val):
+        #       super().__setattr__(attr, val)
         if args and callable(args[0]):
             origin = args[0]
         else:
@@ -271,16 +282,15 @@ class Decorators(object):
         def fsetwrap(origin: Callable):
             def fset(self, attr, val):
                 if __class__._isreadonly(self, **kw):
-                    if changeonly:
-                        if hasattr(self, attr):
-                            if getattr(self, attr) is val:
-                                return
-                            raise AttributeError('%s.%s is immutable' % (self, attr))
-                    else:
+                    if not changeonly:
                         raise AttributeError('%s is readonly' % self)
+                    if hasattr(self, attr):
+                        if getattr(self, attr) is val:
+                            return
+                        raise AttributeError('%s.%s is immutable' % (self, attr))
                 return origin(self, attr, val)
             return fset
-        return fsetwrap(origin) if origin else fsetwrap
+        return fsetwrap(origin) if origin is not None else fsetwrap
 
     def nochangeattr(*args, **kw) -> Callable:
         kw['changeonly'] = True
@@ -325,7 +335,7 @@ class Decorators(object):
     def _isreadonly(obj, *args, cls: bool = None, check: Callable = None, **kw) -> bool:
         if check is None:
             return True
-        if cls is not None:
+        if cls is not None and cls is not False:
             if cls == True:
                 obj = obj.__class__
             else:
