@@ -28,7 +28,7 @@ from itertools import chain, islice
 from time import time
 from types import MappingProxyType, ModuleType
 from typing import Any, Callable, Collection, Dict, ItemsView, Iterable, KeysView, \
-    OrderedDict, Sequence, Union, ValuesView, abstractmethod, cast
+    OrderedDict, Sequence, Type, TypeVar, Union, ValuesView, abstractmethod, cast
 from past.builtins import basestring
 
 EmptySet = frozenset()
@@ -38,7 +38,10 @@ CmpFnOper = MappingProxyType({
     '__le__': '<=',
     '__gt__': '>',
     '__ge__': '>=',
+    '__contains__': 'in',
 })
+# ParamSpec = ParamSpec('ParamSpec')
+RetType = TypeVar('RetType')
 
 def get_module(ref, package: str = None) -> ModuleType:
 
@@ -226,14 +229,22 @@ class Decorators(object):
             raise NotImplementedError(method)
         return notimplemented
 
-    def lazyget(method: Callable) -> Callable:
+    def lazyget(method: Callable[..., RetType]) -> Callable[..., RetType]:
         name, key = __class__._privkey(method)
-        def fget(self):
+        def fget(self) -> RetType:
             if not hasattr(self, key):
                 setattr(self, key, method(self))
             return getattr(self, key)
         return fget
-
+    # def lazygetter():
+    #     pass
+    # def lazyget2(method: Callable[..., RetType]) -> Callable[..., RetType]:
+    #     name, key = __class__._privkey(method)
+    #     def fget(self) -> RetType:
+    #         if not hasattr(self, key):
+    #             setattr(self, key, method(self))
+    #         return getattr(self, key)
+    #     return fget
     def setonce(method: Callable) -> Callable:
         name, key = __class__._privkey(method)
         def fset(self, val):
@@ -242,52 +253,67 @@ class Decorators(object):
         return fset
 
     def checkstate(**attrs: dict) -> Callable:
-        def wrap(method: Callable) -> Callable:
-            def fcheck(self, *args, **kw):
+        def fcheckwrap(method: Callable) -> Callable:
+            def fcheckstate(self, *args, **kw):
                 for attr, val in attrs.items():
                     if getattr(self, attr) != val:
                         raise IllegalStateError(attr)
                 return method(self, *args, **kw)
-            return fcheck
-        return wrap
+            return fcheckstate
+        return fcheckwrap
 
     def nosetattr(*args, **kw) -> Callable:
         if args and callable(args[0]):
             origin = args[0]
         else:
             origin = None
-        def wrap(origin: Callable):
+        changeonly = kw.pop('changeonly', False)
+        def fsetwrap(origin: Callable):
             def fset(self, attr, val):
                 if __class__._isreadonly(self, **kw):
-                    raise AttributeError('%s is readonly' % self)
+                    if changeonly:
+                        if hasattr(self, attr):
+                            if getattr(self, attr) is val:
+                                return
+                            raise AttributeError('%s.%s is immutable' % (self, attr))
+                    else:
+                        raise AttributeError('%s is readonly' % self)
                 return origin(self, attr, val)
             return fset
-        return wrap(origin) if origin else wrap
+        return fsetwrap(origin) if origin else fsetwrap
 
-    def cmpsafe(*excepts) -> Callable:
-        def fcheck(fcmp: Callable) -> Callable:
+    def nochangeattr(*args, **kw) -> Callable:
+        kw['changeonly'] = True
+        return __class__.nosetattr(*args, **kw)
+
+    def cmperrors(*excepts: type) -> Callable:
+        def fcmpwrap(fcmp: Callable) -> Callable:
             fname = fcmp.__name__
             opsym = CmpFnOper.get(fname, fname)
-            def fcmpwrap(a, b):
+            def fcmpsafe(a, b):
                 try:
                     return fcmp(a, b)
-                except excepts:
+                except excepts: # type: ignore
                     eargs = (opsym, type(a), type(b),)
-                    raise TypeError('%s not supported for %s and %s' % eargs)
-            return fcmpwrap
-        return fcheck
-
-    cmpcheck = cmpsafe(AttributeError, TypeError)
-
-    def cmptypecheck(fcmp: Callable) -> Callable:
-        fname = fcmp.__name__
-        opsym = CmpFnOper.get(fname, fname)
-        def fcmpwrap(a, b):
-            if not isinstance(b, a.__class__):
-                eargs = (opsym, type(a), type(b),)
-                raise TypeError('%s not supported for %s and %s' % eargs)
-            return fcmp(a, b)
+                    raise TypeError("'%s' not supported for %s and %s" % eargs)
+            return fcmpsafe
         return fcmpwrap
+
+    cmperr = cmperrors(AttributeError, TypeError)
+
+    def cmptypes(*types: type) -> Callable:
+        def fcmpwrap(fcmp: Callable) -> Callable:
+            fname = fcmp.__name__
+            opsym = CmpFnOper.get(fname, fname)
+            def fcmpcheck(a, b):
+                if not isinstance(b, types or a.__class__):
+                    eargs = (opsym, type(a), type(b),)
+                    raise TypeError("'%s' not supported for %s and %s" % eargs)
+                return fcmp(a, b)
+            return fcmpcheck
+        return fcmpwrap
+
+    cmptype = cmptypes()
 
     @staticmethod
     def _privkey(method) -> tuple[str]:
@@ -297,10 +323,14 @@ class Decorators(object):
 
     @staticmethod
     def _isreadonly(obj, *args, cls: bool = None, check: Callable = None, **kw) -> bool:
-        if cls: obj = obj.__class__
-        if check != None:
-            if not check(obj): return False
-        return True
+        if check is None:
+            return True
+        if cls is not None:
+            if cls == True:
+                obj = obj.__class__
+            else:
+                obj = cls
+        return bool(check(obj))
             
 # class Kwobj(object):
 

@@ -28,8 +28,8 @@ from .common import FLAG, KEY, Branch, Node, NodeType, Target
 from past.builtins import basestring
 from keyword import iskeyword
 from types import MappingProxyType, ModuleType
-from typing import Any, Callable, Collection, Iterator, Iterable, NamedTuple, \
-    Sequence, Union, cast, final
+from typing import Any, Callable, Collection, Dict, Iterator, Iterable, Literal, \
+    Mapping, MutableSequence, NamedTuple, Sequence, Union, cast, final
 
 abstract = Decorators.abstract
 
@@ -165,87 +165,161 @@ class AbstractRule(EventEmitter, metaclass = RuleMeta):
     @abstract
     def score_candidate(self, target: Target) -> float: pass
 
-class Tableau(Sequence, EventEmitter):
+class RuleTarget(NamedTuple):
+    #: :type: Rule
+    rule   : AbstractRule
+    target : Target
 
-    class RuleTarget(NamedTuple):
-        rule   : AbstractRule
-        target : Target
+class StepEntry(NamedTuple):
+    #: The :class:`~Rule` instance that was applied.
+    #:
+    #: :type: Rule
+    rule   : AbstractRule
+    #: The :class:`~common.Target` returned by the rule.
+    target : Target
+    #: The duration in milliseconds of the application.
+    duration_ms: int
 
-    class StepEntry(NamedTuple):
-        rule   : AbstractRule
-        target : Target
-        duration_ms: int
+NodeStatValueType = Union[FLAG, int, None]
+class NodeStat(dict[KEY, NodeStatValueType]):
 
-    TableauEvents = (
-        Events.AFTER_BRANCH_ADD,
-        Events.AFTER_BRANCH_CLOSE,
-        Events.AFTER_NODE_ADD,
-        Events.AFTER_NODE_TICK,
-        Events.AFTER_TRUNK_BUILD,
-        Events.BEFORE_TRUNK_BUILD,
-    )
+    def __init__(self):
+        super().__init__()
+        self.update({
+            KEY.FLAGS       : FLAG.NONE,
+            KEY.STEP_ADDED  : FLAG.NONE,
+            KEY.STEP_TICKED : None,
+        })
 
-    class NodeStat(dict):
+BranchStatValueType = Union[NodeStatValueType, Branch, dict[Node, NodeStat]]
+class BranchStat(dict[KEY, BranchStatValueType]):
 
-        def __init__(self):
-            super().__init__()
-            self.update({
-                KEY.FLAGS       : FLAG.NONE,
-                KEY.STEP_ADDED  : FLAG.NONE,
-                KEY.STEP_TICKED : None,
-            })
+    def __init__(self):
+        super().__init__()
+        self.update({
+            KEY.FLAGS       : FLAG.NONE,
+            KEY.STEP_ADDED  : FLAG.NONE,
+            KEY.STEP_CLOSED : FLAG.NONE,
+            KEY.INDEX       : None,
+            KEY.PARENT      : None,
+            KEY.NODES       : {},
+        })
 
-    class BranchStat(dict):
-
-        def __init__(self):
-            super().__init__()
-            self.update({
-                KEY.FLAGS       : FLAG.NONE,
-                KEY.STEP_ADDED  : FLAG.NONE,
-                KEY.STEP_CLOSED : FLAG.NONE,
-                KEY.INDEX       : None,
-                KEY.PARENT      : None,
-                KEY.NODES       : {},
-            })
-
-        def node(self, node: Node) -> dict:
-            try:
-                return self[KEY.NODES][node]
-            except KeyError:
-                self[KEY.NODES][node] = Tableau.NodeStat()
+    def node(self, node: Node) -> NodeStat:
+        try:
             return self[KEY.NODES][node]
+        except KeyError:
+            self[KEY.NODES][node] = NodeStat()
+        return self[KEY.NODES][node]
 
-        def view(self) -> dict:
-            return {
-                k: self[k]
-                for k in self
-                if k in KEY and 
-                k not in (KEY.NODES,)
-            }
+    def view(self) -> dict[KEY, Union[NodeStatValueType, Branch]]:
+        return {
+            k: self[k]
+            for k in self
+            if k in KEY and 
+            k not in (KEY.NODES,)
+        }
+
+class AbstractTableau(Sequence[Branch], EventEmitter):
+
+    #: The unique object ID of the tableau.
+    id: int
+
+    #: The logic of the tableau.
+    logic: ModuleType
+
+    #: The argument of the tableau.
+    #:
+    #: :type: lexicals.Argument
+    argument: Argument
+
+    #: Alias for ``self.logic.TableauxSystem``
+    #:
+    #: :type: TableauxSystem
+    System: object
+
+    #: The rule instances.
+    #:
+    #: :type: TabRules
+    rules: Sequence[AbstractRule]
+
+    #: The build options.
+    opts: Mapping[str, Union[bool, int, None]]
+
+    #: The FlagEnum value.
+    flag: FLAG
+
+    #: Whether the tableau is completed. A tableau is `completed` iff all rules
+    #: that can be applied have been applied.
+    completed: bool
+
+    #: Whether the tableau is finished. A tableau is `finished` iff `any` of the
+    #: following conditions apply:
+    #:
+    #: i. The tableau is `completed`.
+    #: ii. The `max_steps` option is met or exceeded.
+    #: iii. The `build_timeout` option is exceeded.
+    #: iv. The ``finish()`` method is manually invoked.
+    finished: bool
+
+    #: Whether the tableau is finished prematurely. A tableau is `premature` iff
+    #: it is `finished` but not `completed`.
+    premature: bool
+
+    #: Whether the tableau's argument is valid (proved). A tableau with an
+    #: argument is `valid` iff it is `completed` and it has no open branches.
+    #: If the tableau is not completed, or it has no argument, the value will
+    #: be ``None``.
+    valid: bool
+
+    #: Whether the tableau's argument is invalid (disproved). A tableau with
+    #: an argument is `invalid` iff it is `completed` and it has at least one
+    #: open branch. If the tableau is not completed, or it has no argument,
+    #: the value will be ``None``.
+    invalid: bool
+
+    trunk_built: bool
+
+    #: The current step number. This is the number of rule applications, plus ``1``
+    #: if the argument trunk is built.
+    current_step: int
+
+    #: Ordered view of the open branches.
+    open: Collection[Branch]
+
+    #: The history of rule applications.
+    history: MutableSequence[StepEntry]
+
+    #: A tree structure of the tableau. This is generated after the tableau
+    #: is finished. If the `build_timeout` was exceeded, the tree is `not`
+    #: built.
+    tree: dict
+    stats: dict
+    models: set
 
     @abstract
-    def build(self): pass
+    def build(self): ...
 
     @abstract
-    def step(self) -> Union[StepEntry, None, bool]: pass
+    def step(self) -> StepEntry: ...
 
     @abstract
-    def add(self, branch: Branch): pass
+    def add(self, branch: Branch): ...
 
     @abstract
-    def branch(self, parent: Branch = None) -> Branch: pass
+    def branch(self, parent: Branch = None) -> Branch: ...
 
     @abstract
-    def finish(self): pass
+    def finish(self): ...
 
     @abstract
-    def stat(self, branch: Branch, *keys: Union[Node, KEY]) -> Any: pass
+    def stat(self, branch: Branch, *keys: Union[Node, KEY]) -> Any: ...
 
     @abstract
-    def next_step(self) -> RuleTarget: pass
+    def next_step(self) -> RuleTarget: ...
 
     @abstract
-    def branching_complexity(self, node: Node) -> int: pass
+    def branching_complexity(self, node: Node) -> int: ...
 
 class Rule(AbstractRule):
     """
@@ -281,7 +355,7 @@ class Rule(AbstractRule):
     def score_candidate(self, target: Target) -> float:
         return 0
 
-    def __init__(self, tableau: Tableau, **opts):
+    def __init__(self, tableau: AbstractTableau, **opts):
         if not isinstance(tableau, Tableau):
             raise TypeError(tableau, type(tableau), Tableau)
         super().__init__(*Rule.RuleEvents)
@@ -331,7 +405,7 @@ class Rule(AbstractRule):
 
     @property
     @final
-    def tableau(self) -> Tableau:
+    def tableau(self) -> AbstractTableau:
         """
         Reference to the tableau instance.
 
@@ -476,7 +550,7 @@ class TabRulesSharedData(object):
         self.groupindex = MappingProxyType(self.groupindex)
         self.locked = True
 
-    def __init__(self, tableau: Tableau, root):
+    def __init__(self, tableau: AbstractTableau, root):
         self.ruleindex = {}
         self.groupindex = {}
         self.locked = False
@@ -500,14 +574,14 @@ class TabRulesSharedData(object):
                 raise AttributeError(attr)
         super().__setattr__(attr, val)
 
-class TabRulesBase(Sequence):
+class TabRulesBase(object):
 
     @property
     def locked(self) -> bool:
         return self._common.locked
 
     @property
-    def tab(self) -> Tableau:
+    def tab(self) -> AbstractTableau:
         return self._common.tab
 
     @property
@@ -543,7 +617,7 @@ class TabRulesBase(Sequence):
     
     writes = Decorators.checkstate(locked = False)
 
-class RuleGroup(TabRulesBase):
+class RuleGroup(Sequence[Rule], TabRulesBase):
 
     writes = TabRulesBase.writes
 
@@ -552,10 +626,23 @@ class RuleGroup(TabRulesBase):
         return self.__name
 
     @writes
-    def append(self, rule: RuleType):
-        rule = TabRules._create_rule(rule, self.tab)
-        cls = rule.__class__
-        clsname = cls.__name__
+    def append(self, ruletype: RuleType):
+        cls = ruletype
+        if not isclass(cls):
+            cls = cls.__class__
+        tab = self.tab
+        try:
+            rule = cls(tab, **tab.opts)
+            cls = rule.__class__
+            clsname = cls.__name__
+        except:
+            raise TypeError(
+                'Failed to instantiate rule: %s (%s, logic: %s)' %
+                (ruletype, type(ruletype), tab.logic.name if tab.logic else None)
+            )
+        # rule = TabRules._create_rule(rule, self.tab)
+        # cls = rule.__class__
+        # clsname = cls.__name__
         if clsname in self._ruleindex or clsname in self._groupindex:
             raise DuplicateKeyError(clsname)
         if hasattr(self._root, clsname):
@@ -604,7 +691,7 @@ class RuleGroup(TabRulesBase):
 
     del(writes)
 
-class RuleGroups(TabRulesBase):
+class RuleGroups(Sequence[RuleGroup], TabRulesBase):
 
     writes = TabRulesBase.writes
 
@@ -680,7 +767,7 @@ class RuleGroups(TabRulesBase):
 
     del(writes)
 
-class TabRules(TabRulesBase):
+class TabRules(Sequence[Rule], TabRulesBase):
 
     writes = TabRulesBase.writes
 
@@ -715,7 +802,7 @@ class TabRules(TabRulesBase):
             return default[0]
         raise NotFoundError(ref)
 
-    def __init__(self, tableau: Tableau):
+    def __init__(self, tableau: AbstractTableau):
         common = TabRulesSharedData(tableau, self)
         self.__groups = RuleGroups(common)
         super().__init__(common)
@@ -754,18 +841,18 @@ class TabRules(TabRulesBase):
             rules  = len(self),
         )
 
-    @staticmethod
-    def _create_rule(arg: RuleType, tab: Tableau) -> Rule:
-        cls = arg
-        if not isclass(cls):
-            cls = cls.__class__
-        try:
-            return cls(tab, **tab.opts)
-        except:
-            raise TypeError(
-                'Failed to instantiate rule: %s (%s, logic: %s)' %
-                (arg, type(arg), tab.logic.name if tab.logic else None)
-            )
+    # @staticmethod
+    # def _create_rule(arg: RuleType, tab: AbstractTableau) -> Rule:
+    #     cls = arg
+    #     if not isclass(cls):
+    #         cls = cls.__class__
+    #     try:
+    #         return cls(tab, **tab.opts)
+    #     except:
+    #         raise TypeError(
+    #             'Failed to instantiate rule: %s (%s, logic: %s)' %
+    #             (arg, type(arg), tab.logic.name if tab.logic else None)
+    #         )
 
     del(writes)
 
@@ -774,8 +861,8 @@ del(TabRulesBase.writes)
 class TableauxSystem(object):
 
     @classmethod
-    def build_trunk(cls, tableau: Tableau, argument: Argument):
-        raise NotImplementedError()
+    @abstract
+    def build_trunk(cls, tableau: AbstractTableau, argument: Argument): ...
 
     @classmethod
     def branching_complexity(cls, node: Node) -> int:
@@ -783,11 +870,20 @@ class TableauxSystem(object):
 
     @classmethod
     def add_rules(cls, logic: ModuleType, rules: TabRules):
-        Rules = logic.TableauxRules
+        Rules = logic.TabRules
         rules.groups.add(Rules.closure_rules, 'closure')
         rules.groups.extend(Rules.rule_groups)
 
-class Tableau(Tableau):
+TabEvents = (
+    Events.AFTER_BRANCH_ADD,
+    Events.AFTER_BRANCH_CLOSE,
+    Events.AFTER_NODE_ADD,
+    Events.AFTER_NODE_TICK,
+    Events.AFTER_TRUNK_BUILD,
+    Events.BEFORE_TRUNK_BUILD,
+)
+
+class Tableau(AbstractTableau):
     """
     A tableau proof.
     """
@@ -801,85 +897,46 @@ class Tableau(Tableau):
 
     def __init__(self, logic: LogicRef = None, argument: Argument = None, **opts):
 
-        super().__init__(*Tableau.TableauEvents)
+        # Events init
+        super().__init__(*TabEvents)
+        self.__branch_listeners = MappingProxyType({
+            Events.AFTER_BRANCH_CLOSE : self.__after_branch_close,
+            Events.AFTER_NODE_ADD     : self.__after_node_add,
+            Events.AFTER_NODE_TICK    : self.__after_node_tick,
+        })
 
-        #: The history of rule applications. Each application is a ``dict``
-        #: with the following keys:
-        #:
-        #: - `rule` - The :class:`~proof.rules.Rule` instance that was applied.
-        #:
-        #: - `target` - A ``dict`` containing information about the elements to
-        #:    which the rule was applied, as well as any auxilliary information
-        #:    that may be tracked for various rules and optimizations. There is
-        #:    no hard constraint on what keys are in a target, but all current
-        #:    implementations at least provide a `branch` key.
-        #:
-        #: - `duration_ms` - The duration in milliseconds of the application,
-        #:    or ``0`` if no step timer was associated.
-        #:
-        #: :type: list
-        self.history: list[Tableau.StepEntry] = list()
+        # Exposed attributes
+        self.history = []
+        self.tree = self.models = self.stats = None
+        self.opts = self.opts | opts
 
-        # Post-build properties
+        # Property attributes
+        self.__logic = self.__argument = None
+        self.__flag = FLAG.PREMATURE
+        self.__branch_list = []
+        self.__open  = LinkOrderSet()
+        self.__branchstat: dict[Branch, BranchStat] = {}
+        self.__rules = TabRules(self)
 
-        #: A tree structure of the tableau. This is generated after the tableau
-        #: is finished. If the `build_timeout` was exceeded, the tree is `not`
-        #: built.
-        #:
-        #: :type: dict
-        self.tree = None
-        self.models = None
-        self.stats = None
-
-        self._flag = FLAG.PREMATURE
-        # Timers
+        # Private
         self.__build_timer     : StopWatch = StopWatch()
         self.__models_timer    : StopWatch = StopWatch()
         self.__tree_timer      : StopWatch = StopWatch()
         self.__tunk_build_timer: StopWatch = StopWatch()
+        self.__branching_complexities: dict[Node, int] = {}
 
-        # Options
-        self.opts = self.opts | opts
-
-        self.__branch_list: list[Branch] = list()
-        self.__trunks     : list[Branch] = list()
-        self.__open_linkset = LinkOrderSet()
-        self.__branchstat = dict()
-
-        # Cache for the nodes' branching complexities
-        self.__branching_complexities = {}
-
-        self.__branch_listeners = {
-            Events.AFTER_BRANCH_CLOSE : self.__after_branch_close,
-            Events.AFTER_NODE_ADD     : self.__after_node_add,
-            Events.AFTER_NODE_TICK    : self.__after_node_tick,
-        }
-
-        # Rules
-        self.__rules = TabRules(self)
-
-        self.__logic = self.__argument = None
-        if logic != None:
+        # Init
+        if logic is not None:
             self.logic = logic
-        if argument != None:
+        if argument is not None:
             self.argument = argument
 
     @property
     def id(self) -> int:
-        """
-        The unique object ID of the tableau.
-
-        :type: int
-        """
         return id(self)
 
     @property
     def logic(self) -> ModuleType:
-        """
-        The logic of the tableau.
-
-        :type: ModuleType
-        """
         return self.__logic
 
     @logic.setter
@@ -891,7 +948,7 @@ class Tableau(Tableau):
         self.__logic = get_logic(logic)
         self.rules.clear()
         self.System.add_rules(self.logic, self.rules)
-        if self.argument != None:
+        if self.argument is not None:
             self.build_trunk()
 
     @property
@@ -899,24 +956,17 @@ class Tableau(Tableau):
         return self.__rules
 
     @property
-    def System(self) -> TableauxSystem:
-        """
-        Convenience property for ``self.logic.TableauxSystem``. If the ``logic``
-        property is ``None``, the value will be ``None``.
+    def flag(self) -> FLAG:
+        return self.__flag
 
-        :type: TableauxSystem
-        """
-        if self.logic == None:
+    @property
+    def System(self) -> TableauxSystem:
+        if self.logic is None:
             return None
         return self.logic.TableauxSystem
 
     @property
     def argument(self) -> Argument:
-        """
-        The argument of the tableau.
-
-        :type: lexicals.Argument
-        """
         return self.__argument
 
     @argument.setter
@@ -925,103 +975,54 @@ class Tableau(Tableau):
         Setter for ``argument`` property. If the tableau has a logic set, then
         ``build_trunk()`` is automatically called.
         """
+        argument = Argument(argument)
         if not isinstance(argument, Argument):
             raise TypeError(argument, type(argument), Argument)
         self.__check_trunk_not_built()
         self.__argument = argument
-        if self.logic != None:
+        if self.logic is not None:
             self.build_trunk()
 
     @property
     def finished(self) -> bool:
-        """
-        Whether the tableau is finished. A tableau is `finished` iff `any` of the
-        following conditions apply:
-
-        i. The tableau is `completed`.
-        ii. The `max_steps` option is met or exceeded.
-        iii. The `build_timeout` option is exceeded.
-        iv. The ``finish()`` method is manually invoked.
-
-        :type: bool
-        """
-        return FLAG.FINISHED in self._flag
+        return FLAG.FINISHED in self.__flag
 
     @property
     def completed(self) -> bool:
-        """
-        Whether the tableau is completed. A tableau is `completed` iff all rules
-        that can be applied have been applied.
-
-        :type: bool
-        """
-        return FLAG.FINISHED in self._flag and FLAG.PREMATURE not in self._flag
+        return FLAG.FINISHED in self.__flag and FLAG.PREMATURE not in self.__flag
 
     @property
     def premature(self) -> bool:
-        """
-        Whether the tableau is finished prematurely. A tableau is `premature` iff
-        it is `finished` but not `completed`.
+        return FLAG.FINISHED in self.__flag and FLAG.PREMATURE in self.__flag
 
-        :type: bool
-        """
-        return FLAG.FINISHED in self._flag and FLAG.PREMATURE in self._flag
+    @property
+    def trunk_built(self) -> bool:
+        return FLAG.TRUNK_BUILT in self.__flag
 
     @property
     def valid(self) -> bool:
-        """
-        Whether the tableau's argument is valid (proved). A tableau with an
-        argument is `valid` iff it is `completed` and it has no open branches.
-        If the tableau is not completed, or it has no argument, the value will
-        be ``None``.
-
-        :type: bool
-        """
-        if not self.completed or self.argument == None:
+        if not self.completed or self.argument is None:
             return None
         return len(self.open) == 0
 
     @property
     def invalid(self) -> bool:
-        """
-        Whether the tableau's argument is invalid (disproved). A tableau with
-        an argument is `invalid` iff it is `completed` and it has at least one
-        open branch. If the tableau is not completed, or it has no argument,
-        the value will be ``None``.
-
-        :type: bool
-        """
-        if not self.completed or self.argument == None:
+        if not self.completed or self.argument is None:
             return None
         return len(self.open) > 0
 
     @property
-    def trunk_built(self) -> bool:
-        """
-        Whether the trunk has been built.
-
-        :type: bool
-        """
-        return FLAG.TRUNK_BUILT in self._flag
-
-    @property
     def current_step(self) -> int:
-        """
-        The current step number. This is the number of rule applications, plus ``1``
-        if the trunk is built.
-
-        :type: int
-        """
         return len(self.history) + int(self.trunk_built)
 
     @property
-    def open(self) -> Collection:
+    def open(self) -> Collection[Branch]:
         """
         View of the open branches.
         """
-        return self.__open_linkset.view
+        return self.__open.view
 
-    def build(self) -> Tableau:
+    def build(self) -> AbstractTableau:
         """
         Build the tableau.
 
@@ -1035,7 +1036,7 @@ class Tableau(Tableau):
         self.finish()
         return self
 
-    def next_step(self) -> Tableau.RuleTarget:
+    def next_step(self) -> RuleTarget:
         """
         Choose the next rule step to perform. Returns the (rule, target)
         pair, or ``None``if no rule can be applied.
@@ -1047,7 +1048,7 @@ class Tableau(Tableau):
             if res:
                 return res
 
-    def step(self) -> Union[Tableau.StepEntry, None, bool]:
+    def step(self) -> Union[StepEntry, None, bool]:
         """
         Find, execute, and return the next rule application. If no rule can
         be applied, the ``finish()`` method is called, and ``None`` is returned.
@@ -1062,7 +1063,7 @@ class Tableau(Tableau):
           if previously finished.
         :raises errors.IllegalStateError: if the trunk is not built.
         """
-        if self.finished:
+        if FLAG.FINISHED in self.__flag:
             return False
         self.__check_trunk_built()
         ruletarget = stepentry = None
@@ -1070,10 +1071,10 @@ class Tableau(Tableau):
             if not self.__is_max_steps_exceeded():
                 ruletarget = self.next_step()
                 if not ruletarget:
-                    self._flag = self._flag & ~FLAG.PREMATURE
+                    self.__flag = self.__flag & ~FLAG.PREMATURE
             if ruletarget:
                 ruletarget.rule.apply(ruletarget.target)
-                stepentry = Tableau.StepEntry(*ruletarget, timer.elapsed())
+                stepentry = StepEntry(*ruletarget, timer.elapsed())
                 self.history.append(stepentry)
             else:
                 self.finish()
@@ -1089,14 +1090,14 @@ class Tableau(Tableau):
         :return: The new branch.
         :rtype: Branch
         """
-        if parent == None:
+        if parent is None:
             branch = Branch()
         else:
             branch = parent.copy(parent = parent)
         self.add(branch)
         return branch
 
-    def add(self, branch: Branch) -> Tableau:
+    def add(self, branch: Branch) -> AbstractTableau:
         """
         Add a new branch to the tableau. Returns self.
 
@@ -1104,26 +1105,29 @@ class Tableau(Tableau):
         :return: self
         :rtype: Tableau
         """
-        if branch in self:
-            raise ValueError(
-                'Branch %s already on tableau' % branch.id
-            )
         index = len(self)
-        self.__branch_list.append(branch)
         if not branch.closed:
-            self.__open_linkset.add(branch)
-        if not branch.parent:
-            self.__trunks.append(branch)
-        stat = self.__branchstat[branch] = Tableau.BranchStat()
+            self.__open.add(branch)
+        elif branch in self:
+            raise ValueError('Branch %s already on tableau' % branch.id)
+        self.__branch_list.append(branch)
+        stat = self.__branchstat[branch] = BranchStat()
         stat.update({
             KEY.STEP_ADDED: self.current_step,
             KEY.INDEX     : index,
             KEY.PARENT    : branch.parent,
         })
-        self.__after_branch_add(branch)
+        # self.__after_branch_add(branch)
+        # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
+        # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
+        nodes = tuple(branch) if branch.parent is None else EmptySet
+        self.emit(Events.AFTER_BRANCH_ADD, branch)
+        for node in nodes:
+            self.__after_node_add(node, branch)
+        branch.on(self.__branch_listeners)
         return self
 
-    def build_trunk(self) -> Tableau:
+    def build_trunk(self) -> AbstractTableau:
         """
         Build the trunk of the tableau. Delegates to the ``build_trunk()`` method
         of ``TableauxSystem``. This is called automatically when the
@@ -1137,11 +1141,11 @@ class Tableau(Tableau):
         with self.__tunk_build_timer:
             self.emit(Events.BEFORE_TRUNK_BUILD, self)
             self.System.build_trunk(self, self.argument)
-            self._flag |= FLAG.TRUNK_BUILT
+            self.__flag |= FLAG.TRUNK_BUILT
             self.emit(Events.AFTER_TRUNK_BUILD, self)
         return self
 
-    def finish(self) -> Tableau:
+    def finish(self) -> AbstractTableau:
         """
         Mark the tableau as finished, and perform post-build tasks, including
         populating the ``tree``, ``stats``, and ``models`` properties.
@@ -1154,13 +1158,13 @@ class Tableau(Tableau):
         :return: self
         :rtype: Tableau
         """
-        if self.finished:
+        if FLAG.FINISHED in self.__flag:
             return self
-        self._flag |= FLAG.FINISHED
+        self.__flag |= FLAG.FINISHED
         if self.invalid and self.opts.get('is_build_models'):
             with self.__models_timer:
                 self.__build_models()
-        if FLAG.TIMED_OUT not in self._flag:
+        if FLAG.TIMED_OUT not in self.__flag:
             # In case of a timeout, we do `not` build the tree in order to best
             # respect the timeout. In case of `max_steps` excess, however, we
             # `do` build the tree.
@@ -1181,40 +1185,44 @@ class Tableau(Tableau):
         # TODO: Consider potential optimization using hash equivalence for nodes,
         #       to avoid redundant calculations. Perhaps the TableauxSystem should
         #       provide a special branch-complexity node hashing function.
-        if node not in self.__branching_complexities:
-            if self.System == None:
+        cache = self.__branching_complexities
+        if node not in cache:
+            sys = self.System
+            if sys is None:
                 return 0
-            self.__branching_complexities[node] = \
-                self.System.branching_complexity(node)
-        return self.__branching_complexities[node]
+            cache[node] = sys.branching_complexity(node)
+        return cache[node]
 
     def stat(self, branch: Branch, *keys: Union[Node, KEY]) -> Any:
-        # branch -> key
-        # branch -> node
-        # branch -> node -> key
+        # Lookup options:
+        # - branch
+        # - branch, key
+        # - branch, node
+        # - branch, node, key
         stat = self.__branchstat[branch]
-        # branch
         if len(keys) == 0:
+            # branch
             return stat.view()
         kit = iter(keys)
         key = next(kit)
         if isinstance(key, Node):
-            # branch -> node [-> key]
+            # branch, node
             stat = stat[KEY.NODES][key]
             try:
                 key = next(kit)
+                # branch, node, key
                 stat = stat[KEY(key)]
                 next(kit)
             except StopIteration:
                 return stat
             raise ValueError('Too many keys to lookup')
-        # branch -> key
         try:
+            # branch, key
             stat = stat[KEY(key)]
             next(kit)
         except StopIteration:
             if key == KEY.NODES:
-                return dict(stat)
+                return stat.copy()
             return stat
         raise ValueError('Too many keys to lookup')
 
@@ -1223,6 +1231,9 @@ class Tableau(Tableau):
 
     def __len__(self):
         return len(self.__branch_list)
+
+    def __bool__(self):
+        return True
 
     def __iter__(self) -> Iterator[Branch]:
         return iter(self.__branch_list)
@@ -1258,24 +1269,24 @@ class Tableau(Tableau):
     # : Callbacks :
     # :-----------:
 
-    def __after_branch_add(self, branch: Branch):
-        if not branch.parent:
-            # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
-            # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
-            nodes = list(branch)
-        else:
-            nodes = None
-        self.emit(Events.AFTER_BRANCH_ADD, branch)
-        if not branch.parent:
-            for node in nodes:
-                self.__after_node_add(node, branch)
-        branch.on(self.__branch_listeners)
+    # def __after_branch_add(self, branch: Branch):
+    #     # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
+    #     # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
+    #     nodes = tuple(branch) if branch.parent is None else EmptySet
+    #     self.emit(Events.AFTER_BRANCH_ADD, branch)
+    #     for node in nodes:
+    #         self.__after_node_add(node, branch)
+    #     branch.on({
+    #         event: method.__get__(self)
+    #         for event, method in self.BranchListeners
+    #     })
+    #     # branch.on(self.__branch_listeners)
 
     def __after_branch_close(self, branch: Branch):
         stat = self.__branchstat[branch]
         stat[KEY.STEP_CLOSED] = self.current_step
         stat[KEY.FLAGS] |= FLAG.CLOSED
-        self.__open_linkset.remove(branch)
+        self.__open.remove(branch)
         self.emit(Events.AFTER_BRANCH_CLOSE, branch)
 
     def __after_node_add(self, node: Node, branch: Branch):
@@ -1288,15 +1299,20 @@ class Tableau(Tableau):
     def __after_node_tick(self, node: Node, branch: Branch):
         curstep = self.current_step
         stat = self.__branchstat[branch].node(node)
-        stat[KEY.FLAGS] = stat[KEY.FLAGS] | FLAG.TICKED
+        stat[KEY.FLAGS] |= FLAG.TICKED
         stat[KEY.STEP_TICKED] = curstep
         self.emit(Events.AFTER_NODE_TICK, node, branch)
 
+    # BranchListeners = (
+    #     (Events.AFTER_BRANCH_CLOSE, __after_branch_close),
+    #     (Events.AFTER_NODE_ADD    , __after_node_add),
+    #     (Events.AFTER_NODE_TICK   , __after_node_tick),
+    # )
     # :-----------:
     # : Util      :
     # :-----------:
 
-    def __get_branch_application(self, branch: Branch) -> Tableau.RuleTarget:
+    def __get_branch_application(self, branch: Branch) -> RuleTarget:
         """
         Find and return the next available rule application for the given open
         branch.
@@ -1306,7 +1322,7 @@ class Tableau(Tableau):
             if res:
                 return res
 
-    def __get_group_application(self, branch: Branch, rules: Iterable[Rule]) -> Tableau.RuleTarget:
+    def __get_group_application(self, branch: Branch, rules: Iterable[Rule]) -> RuleTarget:
         """
         Find and return the next available rule application for the given open
         branch and rule group. The ``rules`` parameter is a list of rules, and
@@ -1329,24 +1345,25 @@ class Tableau(Tableau):
         :return: A (rule, target) pair, or ``None``.
         """
         results = []
+        is_group_optim = self.opts.get('is_group_optim')
         for rule in rules:
             with rule.search_timer:
                 target = rule.get_target(branch)
             if target:
-                rule_target = Tableau.RuleTarget(rule, target)
-                if not self.opts.get('is_group_optim'):
+                ruletarget = RuleTarget(rule, target)
+                if not is_group_optim:
                     target.update({
                         'group_score'         : None,
                         'total_group_targets' : 1,
                         'min_group_score'     : None,
                         'is_group_optim'      : False,
                     })
-                    return rule_target
-                results.append(rule_target)
+                    return ruletarget
+                results.append(ruletarget)
         if results:
             return self.__select_optim_group_application(results)
 
-    def __select_optim_group_application(self, results: Sequence[Tableau.RuleTarget]) -> Tableau.RuleTarget:
+    def __select_optim_group_application(self, results: Sequence[RuleTarget]) -> RuleTarget:
         """
         Choose the highest scoring element from given results. The ``results``
         parameter is assumed to be a non-empty list/tuple of (rule, target) pairs.
@@ -1434,28 +1451,31 @@ class Tableau(Tableau):
 
     def __check_timeout(self):
         timeout = self.opts.get('build_timeout')
-        if timeout == None or timeout < 0:
+        if timeout is None or timeout < 0:
             return
         if self.__build_timer.elapsed() > timeout:
             self.__build_timer.stop()
-            self._flag |= FLAG.TIMED_OUT
+            self.__flag |= FLAG.TIMED_OUT
             self.finish()
             raise TimeoutError('Timeout of {0}ms exceeded.'.format(timeout))
 
     def __is_max_steps_exceeded(self):
         max_steps = self.opts.get('max_steps')
-        return max_steps != None and len(self.history) >= max_steps
+        return max_steps is not None and len(self.history) >= max_steps
 
     def __check_trunk_built(self):
-        if self.argument != None and not self.trunk_built:
+        if FLAG.TRUNK_BUILT not in self.__flag and self.argument is not None:
+        # if self.argument is not None and not self.trunk_built:
             raise IllegalStateError("Trunk is not built.")
 
     def __check_trunk_not_built(self):
-        if self.trunk_built:
+        if FLAG.TRUNK_BUILT in self.__flag:
+        # if self.trunk_built:
             raise IllegalStateError("Trunk is already built.")
 
     def __check_not_started(self):
-        if self.current_step > 0:
+        if FLAG.TRUNK_BUILT in self.__flag or len(self.history) > 0:
+        # if self.current_step > 0:
             raise IllegalStateError("Tableau is already started.")
 
     def __result_word(self) -> str:
@@ -1471,21 +1491,21 @@ class Tableau(Tableau):
         """
         Build models for the open branches.
         """
-        if self.logic == None:
+        if self.logic is None:
             return
         self.models = set()
         for branch in self.open:
             self.__check_timeout()
             model = self.logic.Model()
             model.read_branch(branch)
-            if self.argument != None:
+            if self.argument is not None:
                 model.is_countermodel = model.is_countermodel_to(self.argument)
             branch.model = model
             self.models.add(model)
 
 def make_tree_structure(tab: Tableau, branches: list[Branch], node_depth=0, track=None):
-    is_root = track == None
-    if track == None:
+    is_root = track is None
+    if track is None:
         track = {
             'pos'            : 0,
             'depth'          : 0,
@@ -1558,7 +1578,7 @@ def make_tree_structure(tab: Tableau, branches: list[Branch], node_depth=0, trac
             node: Node = relevant[0][node_depth]
             step_added = tab.stat(relevant[0], node, KEY.STEP_ADDED)
             s['nodes'].append(node)
-            if s['step'] == None or step_added < s['step']:
+            if s['step'] is None or step_added < s['step']:
                 s['step'] = step_added
             node_depth += 1
             continue
@@ -1578,7 +1598,7 @@ def make_tree_structure(tab: Tableau, branches: list[Branch], node_depth=0, trac
         s['width'] = 1
         s['leaf'] = True
         s['branch_id'] = branch.id
-        if branch.model != None:
+        if branch.model is not None:
             s['model_id'] = branch.model.id
         if track['depth'] == 0:
             s['is_only_branch'] = True

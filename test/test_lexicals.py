@@ -34,6 +34,8 @@ x, y, z = Variable.gen(3)
 A, B, C = Atomic.gen(3)
 F, G, H = Predicate.gen(3)
 
+Pred, Preds = Predicate, Predicates
+Sys = Predicates.System
 class TestParameter(object):
 
     def test_cannot_construct(self):
@@ -77,7 +79,7 @@ class TestPredicate(object):
             Predicate(0, -1, 1)
 
     def test_predicate_is_system_predicate_true(self):
-        assert Predicate.Identity.is_system
+        assert Predicates.System.Identity.is_system
 
 class TestPredicates(object):
 
@@ -107,10 +109,12 @@ class TestPredicates(object):
             preds.add((0, 0, 2))
 
     def test_get_predicate_by_index_subscript_sys_identity(self):
-        assert Predicates()[(-1, 0)].name == 'Identity'
+        assert Predicates()[-1, 0].name == 'Identity'
 
     def test_get_pred_coords_tuple(self):
-        assert Predicates().add((1, 1, 1)).coords == (1, 1)
+        pred = Predicates().add((1, 1, 1))
+        assert pred.coords == (1, 1, 1)
+        assert pred.bicoords == (1, 1)
 
     def test_pred_no_name(self):
         v = Predicates()
@@ -173,7 +177,6 @@ class TestPredicates(object):
             assert Predicate.System['Identity'] == Predicate.Identity
 
         def test_sys_preds_enum_value(self):
-            Pred, Preds = Predicate, Predicates
             assert Pred != Preds
             assert Pred.System is Preds.System
             assert Pred.Identity is Preds.System['Identity']

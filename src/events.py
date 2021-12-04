@@ -1,7 +1,10 @@
 from enum import Enum, unique
 from past.builtins import basestring
-from utils import LinkOrderSet, orepr, typecheck
-from typing import Callable, Iterator, Sequence, Union
+from utils import Decorators, LinkOrderSet, orepr
+from typing import Callable, ItemsView, Iterator, KeysView, Mapping, \
+    MutableMapping, Sequence, Union, ValuesView, final
+
+cmptypes = Decorators.cmptypes
 
 @unique
 class Events(Enum):
@@ -15,64 +18,79 @@ class Events(Enum):
     BEFORE_APPLY       = 80
     BEFORE_TRUNK_BUILD = 100
 
-keytypes = (basestring, int, Enum,)
-EventId = Union[basestring, int, Enum]
+EventIdTypes = (basestring, int, Enum,)
+EventId = Union[EventIdTypes] # type: ignore
+
+class Listener(Callable):
+
+    cb        : Callable
+    once      : bool
+    event     : EventId
+    callcount : int
+
+    def __call__(self, *args, **kw):
+        self.callcount += 1
+        return self.cb(*args, **kw)
+
+    def __eq__(self, other: Callable):
+        return self is other or self.cb == other or (
+            isinstance(other, self.__class__) and
+            self.cb == other.cb
+        )
+
+    def __hash__(self):
+        return hash(self.cb)
+
+    def __init__(self, cb: Callable, once: bool = False, event: EventId = None):
+        if not callable(cb):
+            raise TypeError(cb, type(cb), Callable)
+        self.cb = cb
+        self.once = once
+        self.event = event
+        self.callcount = 0
+
+    def __repr__(self):
+        return orepr(self,
+            event = self.event,
+            once = self.once,
+            cb = self.cb,
+            callcount = self.callcount,
+        )
+
+    def __setattr__(self, attr, val):
+        if attr == 'callcount':
+            if not isinstance(val, int):
+                raise TypeError(val, type(val), int)
+        elif hasattr(self, 'event'):
+            # Immutable
+            raise AttributeError('cannot set %s' % attr)
+        super().__setattr__(attr, val)
+
+    def __delattr__(self, attr):
+        # Immutable
+        raise AttributeError('cannot delete %s')
 
 class Listeners(LinkOrderSet):
 
-    class Listener(Callable):
+    Listener = Listener
 
-        def __init__(self, cb: Callable, once: bool = False, event: EventId = None):
-            self.cb = cb
-            self.once = once
-            self.event = event
-            self.callcount = 0
-
-        def __call__(self, *args, **kw):
-            self.callcount += 1
-            return self.cb(*args, **kw)
-
-        def __eq__(self, other):
-            return self.cb == other or (
-                isinstance(other, __class__) and
-                self.cb == other.cb
-            )
-
-        def __hash__(self):
-            return hash(self.cb)
-
-        def __repr__(self):
-            return orepr(self,
-                event = self.event,
-                listener = self.cb.__name__,
-                callcount = self.callcount,
-                once = self.once,
-                cb = self.cb.__class__,
-            )
+    emitcount: int
+    callcount: int
 
     @property
-    def name(self) -> EventId:
-        return self.__name
+    def event(self) -> EventId:
+        return self.__event
 
-    @property
-    def emitcount(self) -> int:
-        return self.__emitcount
-
-    @property
-    def callcount(self) -> int:
-        return self.__callcount
-
-    def _genitem_(self, cb: Callable, once = False):
+    def _genitem_(self, cb: Callable, once = False) -> Listener:
+        Listener = self.Listener
         if cb in self:
             return cb
-        if isinstance(cb, __class__.Listener):
+        if isinstance(cb, Listener):
             cb = cb.cb
-        if not callable(cb):
-            raise TypeError(cb.__class__)
-        return __class__.Listener(cb, once, self.name)
+        return Listener(cb, once, self.event)
 
     def emit(self, *args, **kw) -> int:
-        self.__emitcount += 1
+        self.emitcount += 1
         count = 0
         try:
             for listener in self:
@@ -83,56 +101,31 @@ class Listeners(LinkOrderSet):
                     if listener.once:
                         self.remove(listener)
         finally:
-            self.__callcount += count
+            self.callcount += count
         return count
 
-    def __init__(self, name):
+    def __init__(self, event: EventId):
         super().__init__()
-        self.__name = name
-        self.__callcount = 0
-        self.__emitcount = 0
+        self.__event = event
+        self.callcount = 0
+        self.emitcount = 0
 
     def __repr__(self):
         return orepr(self,
-            event = self.name,
-            listenercount = len(self),
+            event = self.event,
+            listeners = len(self),
             emitcount = self.emitcount,
             callcount = self.callcount,
         )
 
-def checkkey(*keys):
-    for key in keys:
-        typecheck(key, keytypes, 'event')
+class EventsListeners(MutableMapping[EventId, Listeners]):
 
-def evargs(method: Callable) -> Callable:
-    def normalize(self, *args, **kw):
-        if kw:
-            if args: raise TypeError()
-            return normalize(self, kw)
-        if not args: raise TypeError()
-        arg = args[0]
-        if isinstance(arg, keytypes):
-            event, *cbs = args
-            return method(self, event, *cbs)
-        if len(args) > 1: raise TypeError()
-        if isinstance(arg, dict):
-            ret = None
-            for event, cbs in arg.items():
-                if not isinstance(cbs, Sequence):
-                    cbs = (cbs,)
-                ret = method(self, event, *cbs)
-            return ret
-        raise TypeError()
-    return normalize
+    emitcount: int
+    callcount: int
 
-class EventsListeners(object):
-
-    @property
-    def emitcount(self) -> int:
-        return self.__emitcount
+    __base__: dict[EventId, Listeners]
 
     def create(self, *events: EventId):
-        checkkey(*events)
         for event in events:
             if event not in self:
                 self[event] = Listeners(event)
@@ -140,80 +133,163 @@ class EventsListeners(object):
     def delete(self, event: EventId):
         del(self[event])
 
-    def clear(self):
-        for event in self:
-            self.remove(event)
-        self.__base.clear()
+    def normargs(feventmod: Callable) -> Callable:
+        def normalize(self, *args, **kw):
+            if not (args or kw) or (args and kw):
+                raise TypeError()
+            arg, *cbs = (kw,) if kw else args
+            if isinstance(arg, EventIdTypes):
+                feventmod(self, arg, *cbs)
+                return
+            if isinstance(arg, Mapping) and not len(cbs):
+                for event, cbs in arg.items():
+                    if not isinstance(cbs, Sequence):
+                        cbs = (cbs,)
+                    feventmod(self, event, *cbs)
+                return
+            raise TypeError()
+        return normalize
 
-    @evargs
+    @normargs
     def on(self, event: EventId, *cbs: Callable):
         self[event].extend(cbs)
 
-    @evargs
+    @normargs
     def once(self, event: EventId, *cbs: Callable):
         self[event].extend(cbs, once = True)
 
-    @evargs
+    @normargs
     def off(self, event: EventId, *cbs: Callable):
         ev = self[event]
         for cb in cbs:
             ev.discard(cb)
 
+    del(normargs)
+
     def emit(self, event: EventId, *args, **kw) -> int:
-        return self[event].emit(*args, **kw)
-
-    def __init__(self, *names: EventId):
-        self.__base: dict[EventId, Listeners] = {}
-        self.create(*names)
-        self.__emitcount = 0
-
-    def __repr__(self):
-        return orepr(self,
-            eventcount = len(self),
-            emitcount = self.__emitcount,
-        )
+        self.emitcount += 1
+        callcount = self[event].emit(*args, **kw)
+        self.callcount += callcount
+        return callcount
 
     # Delegate to base dict.
 
-    def get(self, item, defval = None) -> Listeners:
-        return self.__base.get(item, defval)
+    def clear(self):
+        self.__base__.clear()
 
-    def keys(self):
-        return self.__base.keys()
+    def get(self, key: EventId, default = None) -> Listeners:
+        try:
+            return self[key]
+        except KeyError:
+            return default
 
-    def values(self):
-        return self.__base.values()
+    def keys(self) -> KeysView[EventId]:
+        return self.__base__.keys()
 
-    def items(self):
-        return self.__base.items()
+    def values(self) -> ValuesView[Listeners]:
+        return self.__base__.values()
+
+    def items(self) -> ItemsView[EventId, Listeners]:
+        return self.__base__.items()
+
+    def pop(self, key: EventId, *default) -> Listeners:
+        try:
+            return self.__base__.pop(key)
+        except KeyError:
+            if default:
+                return default[0]
+            raise
+
+    def popitem(self) -> tuple[EventId, Listeners]:
+        return self.__base__.popitem()
+
+    def setdefault(self, key, value = None):
+        try:
+            return self[key]
+        except KeyError:
+            pass
+        self[key] = value
+        return value
+
+    def copy(self):
+        cls = self.__class__
+        inst = cls.__new__(cls)
+        inst.__dict__.update(self.__dict__ | {
+            '__base__': self.__base__.copy()
+        })
+        return inst
+
+    def barecopy(self):
+        # Only copy event keys, not listeners
+        cls = self.__class__
+        inst = cls.__new__(cls)
+        __class__.__init__(inst, *self)
+        return inst
 
     def __len__(self):
-        return len(self.__base)
+        return len(self.__base__)
 
     def __iter__(self) -> Iterator[EventId]:
-        return iter(self.__base)
+        return iter(self.__base__)
 
+    @cmptypes(EventIdTypes)
     def __contains__(self, key: EventId):
-        return key in self.__base
+        return key in self.__base__
 
-    def __getitem__(self, key: EventId) ->  Listeners:
-        return self.__base[key]
+    def __getitem__(self, key: EventId) -> Listeners:
+        return self.__base__[key]
 
     def __setitem__(self, key: EventId, val: Listeners):
-        if not isinstance(key, keytypes):
-            raise TypeError(key, type(key), keytypes)
+        if not isinstance(key, EventIdTypes):
+            raise TypeError(key, type(key), EventIdTypes)
         if not isinstance(val, Listeners):
             raise TypeError(val, type(val), Listeners)
-        self.__base[key] = val
+        self.__base__[key] = val
 
     def __delitem__(self, key: EventId):
-        del(self.__base[key])
+        del(self.__base__[key])
+
+    def __eq__(self, other):
+        return self is other or (
+            isinstance(other, self.__class__) and
+            self.__base__ == other.__base__
+        )
+
+    __copy__ = copy
+
+    def __init__(self, *names: EventId):
+        self.__base__ = {}
+        self.emitcount = self.callcount = 0
+        self.create(*names)
+
+    def __repr__(self):
+        return orepr(self,
+            events = len(self),
+            listeners = sum(len(v) for v in self.values()),
+            emitcount = self.emitcount,
+            callcount = self.callcount,
+        )
+
+    def __setattr__(self, attr, val):
+        # Protect __base__
+        if attr == '__base__' and getattr(self, attr, None) != None:
+            raise AttributeError('cannot set %s' % attr)
+        if attr in ('callcount', 'emitcount'):
+            if not isinstance(val, int):
+                raise TypeError(val, type(val), int)
+        super().__setattr__(attr, val)
 
 class EventEmitter(object):
 
     @property
     def events(self) -> EventsListeners:
         return self.__events
+
+    @events.setter
+    def events(self, value: EventsListeners):
+        if not isinstance(value, EventsListeners):
+            raise TypeError(value, type(value), EventsListeners)
+        self.__events = value
 
     def on(self, *args, **kw):
         self.events.on(*args, **kw)
@@ -224,8 +300,16 @@ class EventEmitter(object):
     def off(self, *args, **kw):
         self.events.off(*args, **kw)
 
-    def emit(self, event, *args, **kw) -> int:
+    def emit(self, event: EventId, *args, **kw) -> int:
         return self.events.emit(event, *args, **kw)
 
+    def copy(self):
+        cls = self.__class__
+        inst = cls.__new__(cls)
+        inst.events = inst.events.copy()
+        return inst
+
+    __copy__ = copy
+
     def __init__(self, *events):
-        self.__events = EventsListeners(*events)
+        self.events = EventsListeners(*events)

@@ -18,11 +18,10 @@
 #
 # pytableaux - rule helpers module
 from lexicals import Constant, Sentence
-from events import Events
 from models import BaseModel
 from utils import Decorators, DictAttrView, LinkOrderSet, EmptySet, \
     dedupitems, isstr, mroattr, orepr
-from .common import Access, Branch, Node, Target
+from .common import Access, Branch, Events, Node, Target
 from .tableaux import Rule, RuleMeta, Tableau
 
 from copy import copy

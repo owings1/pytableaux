@@ -19,9 +19,8 @@
 # pytableaux - Logic of Paradox
 name = 'LP'
 
-print('__name__', __name__)
 class Meta(object):
-    title    = 'Logic of Paradox'
+    title = 'Logic of Paradox'
     category = 'Many-valued'
     description = 'Three-valued logic (T, F, B)'
     tags = ('many-valued', 'glutty', 'non-modal', 'first-order')

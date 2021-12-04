@@ -529,41 +529,36 @@ class NodeFilters(Filters):
 Filters.Node = NodeFilters
 
 class AbstractBranch(EventEmitter, Sequence):
-    pass
+    BranchEvents = (
+        Events.AFTER_BRANCH_CLOSE,
+        Events.AFTER_NODE_ADD,
+        Events.AFTER_NODE_TICK,
+    )
+
 class Branch(AbstractBranch):
     """
     Represents a tableau branch.
     """
 
     def __init__(self, parent: AbstractBranch = None):
-        if parent != None:
-            if parent == self:
-                raise ValueError('A branch cannot be its own parent')
-            if not isinstance(parent, Branch):
-                raise TypeError(parent, type(parent), Branch)
-            self.__origin: Branch = parent.origin
-        else:
-            self.__origin: Branch = self
-        self.__parent: Branch = parent
 
-        super().__init__(
-            Events.AFTER_BRANCH_CLOSE,
-            Events.AFTER_NODE_ADD,
-            Events.AFTER_NODE_TICK,
-        )
+        self.__init_parent(parent)
+
+        super().__init__(*Branch.BranchEvents)
+
         # Make sure properties are copied if needed in copy()
 
         self.__closed = False
 
-        self.__nodes: list[Node] = []
-        self.__nodeset: set[Node] = set()
-        self.__ticked: set[Node] = set()
+        self.__nodes   : list[Node] = []
+        self.__nodeset : set[Node] = set()
+        self.__ticked  : set[Node] = set()
 
-        self.__worlds: set[int] = set()
-        self.__nextworld: int = 0
-        self.__constants: set[Constant] = set()
-        self.__nextconst: Constant = Constant.first()
-        self.__pidx = {
+        self.__worlds    : set[int] = set()
+        self.__nextworld : int = 0
+        self.__constants : set[Constant] = set()
+        self.__nextconst : Constant = Constant.first()
+        self.__pidx      : dict[str, dict[Any, set[Node]]]= {
             'sentence'   : {},
             'designated' : {},
             'world'      : {},
@@ -758,27 +753,58 @@ class Branch(AbstractBranch):
         """
         return node in self.__ticked
 
-    def copy(self, parent: AbstractBranch = None) -> AbstractBranch:
+    def copy(self, parent: AbstractBranch = None, events: bool = False) -> AbstractBranch:
         """
         Return a copy of the branch. Event listeners are *not* copied.
         Parent is not copied, but can be explicitly set.
         """
-        branch = self.__class__(parent = parent)
-        branch.__nodes = list(self.__nodes)
-        branch.__nodeset = set(self.__nodeset)
-        branch.__ticked = set(self.__ticked)
-        branch.__constants = set(self.__constants)
-        branch.__nextconst = self.__nextconst
-        branch.__worlds = set(self.__worlds)
-        branch.__nextworld = self.__nextworld
-        branch.__pidx = {
+        # branch = self.__class__(parent = parent)
+        cls = self.__class__
+        b = cls.__new__(cls)
+        b.__init_parent(parent)
+
+        b.events = self.events.copy() if events else self.events.barecopy()
+        
+        b.__closed = self.__closed
+
+        b.__nodes   = self.__nodes.copy()
+        b.__nodeset = self.__nodeset.copy()
+        b.__ticked  = self.__ticked.copy()
+
+        b.__worlds    = self.__worlds.copy()
+        b.__nextworld = self.__nextworld
+        b.__constants = self.__constants.copy()
+        b.__nextconst = self.__nextconst
+        b.__pidx = {
             prop : {
-                key : set(self.__pidx[prop][key])
+                key : self.__pidx[prop][key].copy()
                 for key in self.__pidx[prop]
             }
             for prop in self.__pidx
         }
-        return branch
+        b.__model = self.__model
+
+        # self.__closed = False
+
+        # self.__nodes   : list[Node] = []
+        # self.__nodeset : set[Node] = set()
+        # self.__ticked  : set[Node] = set()
+
+        # self.__worlds    : set[int] = set()
+        # self.__nextworld : int = 0
+        # self.__constants : set[Constant] = set()
+        # self.__nextconst : Constant = Constant.first()
+        # self.__pidx = {
+        #     'sentence'   : {},
+        #     'designated' : {},
+        #     'world'      : {},
+        #     'world1'     : {},
+        #     'world2'     : {},
+        #     'w1Rw2'      : {},
+        # }
+
+        # self.__model = None
+        return b
 
     def constants(self) -> Set[Constant]:
         """
@@ -800,6 +826,17 @@ class Branch(AbstractBranch):
             if index > maxidx:
                 index, sub = 0, sub + 1
         return Constant((index, sub))
+
+    def __init_parent(self, parent: Union[AbstractBranch, None]):
+        if parent != None:
+            if parent == self:
+                raise ValueError('A branch cannot be its own parent')
+            if not isinstance(parent, Branch):
+                raise TypeError(parent, type(parent), Branch)
+            self.__origin: Branch = parent.origin
+        else:
+            self.__origin: Branch = self
+        self.__parent: Branch = parent
 
     def __add_to_index(self, node):
         for prop in self.__pidx:
@@ -846,7 +883,10 @@ class Branch(AbstractBranch):
         return best_index
 
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.id == other.id
+        return self is other
+        # return (
+        #     isinstance(other, self.__class__) and self.id == other.id
+        # )
 
     def __hash__(self):
         return hash(self.id)
@@ -860,8 +900,10 @@ class Branch(AbstractBranch):
     def __iter__(self) -> Iterator[Node]:
         return iter(self.__nodes)
 
-    def __copy__(self):
-        return self.copy()
+    def __bool__(self):
+        return True
+
+    __copy__ = copy
 
     def __contains__(self, node: Node):
         return node in self.__nodeset

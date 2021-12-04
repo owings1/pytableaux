@@ -32,7 +32,6 @@ from docutils.parsers.rst import Directive, directives, roles
 
 logger = logging.getLogger(__name__)
 from utils import cat, isstr, get_logic
-from events import Events
 import examples
 from lexicals import create_lexwriter,  \
     LexWriter, \

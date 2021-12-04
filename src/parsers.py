@@ -19,7 +19,7 @@
 # pytableaux - parsers module
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError
-from lexicals import Lexical, Coords, Predicate, Parameter, Constant, Variable, Operator as Oper, Quantifier, \
+from lexicals import Lexical, BiCoords, Predicate, Parameter, Constant, Variable, Operator as Oper, Quantifier, \
     Sentence, Atomic, Predicated, Quantified, Operated, LexType, Predicates, Argument
 from utils import CacheNotationData, Decorators, cat, EmptySet, isstr, typecheck
 from types import MappingProxyType
@@ -418,7 +418,7 @@ class BaseParser(Parser):
             sub.append('0')
         return int(''.join(sub))
 
-    def _read_coords(self, ctype = None) -> Coords:
+    def _read_coords(self, ctype = None) -> BiCoords:
         """
         Read (index, subscript) coords starting from the current character,
         which must be in the list of characters given. `index` is the list index in
@@ -437,7 +437,7 @@ class BaseParser(Parser):
         _, index = self.table.item(self._current())
         self._advance()
         subscript = self._read_subscript()
-        return Coords(index, subscript)
+        return BiCoords(index, subscript)
 
     ## ============================
     ##  Low-level parsing methods
