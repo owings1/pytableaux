@@ -17,20 +17,22 @@
 # ------------------
 #
 # pytableaux - utils module
-from errors import DuplicateKeyError, IllegalStateError
 from builtins import ModuleNotFoundError
+from collections import deque
+from collections.abc import Callable, Collection, ItemsView, Iterable, Iterator, \
+    KeysView, Mapping, MutableSet, Sequence, ValuesView
 from copy import copy
 # from functools import partial
 from importlib import import_module
 from inspect import isclass
 from itertools import chain, islice
 # from operator import is_not
+from past.builtins import basestring
 from time import time
 from types import MappingProxyType, ModuleType
-from typing import Any, Callable, Collection, Dict, ItemsView, Iterable, KeysView, \
-    Mapping, OrderedDict, Sequence, Type, TypeVar, Union, ValuesView, abstractmethod, cast
-from past.builtins import basestring
+from typing import Any, NamedTuple, TypeVar, Union, abstractmethod, cast
 
+from errors import DuplicateKeyError, IllegalStateError
 # from pprint import pp
 
 # Constants
@@ -51,6 +53,7 @@ LogicRef = Union[ModuleType, str]
 IndexTypes = (int, slice)
 IndexType = Union[int, slice]
 
+T = TypeVar('T')
 RetType = TypeVar('RetType')
 
 def get_module(ref, package: str = None) -> ModuleType:
@@ -131,6 +134,12 @@ def islogic(obj) -> bool:
 def instcheck(obj, classinfo):
     if not isinstance(obj, classinfo):
         raise TypeError(obj, type(obj), classinfo)
+    return obj
+
+def subclscheck(cls, typeinfo):
+    if not issubclass(cls, typeinfo):
+        raise TypeError(cls, typeinfo)
+    return cls
 
 def nowms() -> int:
     return int(round(time() * 1000))
@@ -203,13 +212,13 @@ def dedupitems(items):
     track = {}
     dedup = []
     for k, v in items:
-        if k in track and v == None:
+        if k in track and v is None:
             # A value of None clears the item.
             item = (k, track.pop(k))
             idx = dedup.index(item)
             dedup.pop(idx)
         elif k not in track:
-            if v != None:
+            if v is not None:
                 track[k] = v
                 dedup.append((k, v))
         elif track[k] != v:
@@ -221,7 +230,7 @@ class Decorators(object):
     def abstract(method: Callable[..., RetType]) -> Callable[..., RetType]:
         @abstractmethod
         def notimplemented(*args, **kw):
-            raise NotImplementedError(method)
+            raise NotImplementedError('abstractmethod', method)
         return notimplemented
 
     def lazyget(method: Callable[..., RetType]) -> Callable[..., RetType]:
@@ -250,16 +259,6 @@ class Decorators(object):
         return fcheckwrap
 
     def nosetattr(*args, **kw) -> Callable:
-        #
-        # e.g.::
-        #
-        #   __setattr__ = nosetattr(Base.__setattr__, **kw)
-        # 
-        # e.g.::
-        #
-        #   @nosetattr(**kw)
-        #   def __setattr__(self, attr, val):
-        #       super().__setattr__(attr, val)
         if args and callable(args[0]):
             origin = args[0]
         else:
@@ -267,6 +266,7 @@ class Decorators(object):
         changeonly = kw.pop('changeonly', False)
         def fsetwrap(origin: Callable):
             def fset(self, attr, val):
+                # print('check', self.__class__.__name__)
                 if __class__._isreadonly(self, **kw):
                     if not changeonly:
                         raise AttributeError('%s is readonly' % self)
@@ -274,6 +274,7 @@ class Decorators(object):
                         if getattr(self, attr) is val:
                             return
                         raise AttributeError('%s.%s is immutable' % (self, attr))
+                # print('not readonly', self.__class__.__name__)
                 return origin(self, attr, val)
             return fset
         return fsetwrap(origin) if origin is not None else fsetwrap
@@ -327,6 +328,31 @@ class Decorators(object):
             else:
                 obj = cls
         return bool(check(obj))
+
+class SortBiCoords(NamedTuple):
+    subscript : int
+    index     : int
+
+class BiCoords(NamedTuple):
+    index     : int
+    subscript : int
+    first   = (0, 0)
+    Sorting = SortBiCoords
+    def sorting(self) -> tuple[int, ...]:
+        return self.Sorting(self.subscript, self.index, *self[2:])
+
+class SortTriCoords(NamedTuple):
+    subscript : int
+    index     : int
+    arity     : int
+
+class TriCoords(NamedTuple):
+    index     : int
+    subscript : int
+    arity     : int
+    first   = (0, 0, 1)
+    Sorting = SortTriCoords
+    sorting = BiCoords.sorting
 
 class CacheNotationData(object):
 
@@ -430,7 +456,7 @@ class StopWatch(object):
         if self.is_running():
             self.stop()
 
-class DictAttrView(Collection):
+class DictAttrView(Mapping):
 
     def get(self, key, default = None):
         return self.__base.get(key, default)
@@ -449,7 +475,7 @@ class DictAttrView(Collection):
 
     copy = __copy__
 
-    def __init__(self, base: Dict):
+    def __init__(self, base: Mapping):
         self.__base = base
 
     def __getattr__(self, name):
@@ -479,7 +505,7 @@ class DictAttrView(Collection):
             wrparens(self.__base.__repr__()),
         )
 
-class UniqueList(Sequence):
+class UniqueList(Sequence, MutableSet):
 
     def add(self, item):
         if item not in self:
@@ -497,6 +523,9 @@ class UniqueList(Sequence):
     def clear(self):
         self.__set.clear()
         self.__list.clear()
+
+    def count(self, item):
+        return int(item in self)
 
     def index(self, item):
         return self.__list.index(item)
@@ -827,3 +856,111 @@ class LinkOrderSet(LinkOrderSet):
             first = self.first(),
             last = self.last(),
         )
+
+
+class DequeCache(Collection[T]):
+
+    abstract = Decorators.abstract
+
+    ItemType = T
+
+    maxlen: int
+    idx: int
+    rev: Mapping[Any, ItemType]
+
+    @abstract
+    def clear(self): ...
+
+    @abstract
+    def add(self, item: ItemType, keys = None): ...
+
+    @abstract
+    def update(self, d: dict): ...
+
+    @abstract
+    def get(self, key, default = None): ...
+
+    @abstract
+    def __len__(self): ...
+
+    @abstract
+    def __iter__(self) -> Iterator[ItemType]: ...
+
+    @abstract
+    def __reversed__(self) -> Iterator[ItemType]: ...
+
+    @abstract
+    def __contains__(self, item: ItemType): ...
+
+    @abstract
+    def __getitem__(self, key) -> ItemType: ...
+
+    @abstract
+    def __setitem__(self, key, item: ItemType): ...
+
+    def __new__(cls, ItemType: type, maxlen = 10):
+
+        if issubclass(ItemType, IndexTypes):
+            raise TypeError()
+        instcheck(ItemType, type)
+
+        idx      : dict[Any, ItemType] = {}
+        idxproxy : Mapping[Any, ItemType] = MappingProxyType(idx)
+
+        rev      : dict[ItemType, set] = {}
+        revproxy : Mapping[ItemType, set] = MappingProxyType(rev)
+
+        deck     : deque[ItemType] = deque(maxlen = maxlen)
+
+        class Api(DequeCache, Collection[ItemType]):
+
+            maxlen: int = property(lambda _: deck.maxlen)
+            idx: int = property(lambda _: idxproxy)
+            rev: Mapping[Any, ItemType] = property(lambda _: revproxy)
+
+            def clear(self):
+                for d in (idx, rev, deck): d.clear()
+
+            def add(self, item: ItemType, keys = None):
+                self[item] = item
+                if keys is not None:
+                    for k in keys: self[k] = item
+
+            def update(self, d: dict):
+                for k, v in d.items(): self[k] = v
+
+            def get(self, key, default = None):
+                try: return self[key]
+                except KeyError: return default
+
+            def __len__(self):
+                return len(deck)
+
+            def __iter__(self) -> Iterator[ItemType]:
+                return iter(deck)
+
+            def __reversed__(self) -> Iterator[ItemType]:
+                return reversed(deck)
+
+            def __contains__(self, item: ItemType):
+                return item in rev
+
+            def __getitem__(self, key) -> ItemType:
+                if isinstance(key, IndexTypes): return deck[key]
+                return idx[key]
+
+            def __setitem__(self, key, item: ItemType):
+                instcheck(item, ItemType)
+                if item in self: item = self[item]
+                else:
+                    if len(deck) == deck.maxlen:
+                        old = deck.popleft()
+                        for k in rev.pop(old): del(idx[k])
+                    idx[item] = item
+                    rev[item] = {item}
+                    deck.append(item)
+                idx[key] = item
+                rev[item].add(key)
+
+        Api.__qualname__ = 'DequeCache.Api'
+        return object.__new__(Api)

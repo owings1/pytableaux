@@ -20,7 +20,7 @@
 
 from lexicals import Predicate, Predicates, Argument
 from parsers import create_parser
-from utils import isstr
+from utils import strtype
 from itertools import chain
 import re
 
@@ -187,7 +187,7 @@ _cache = {}
 def argument(key: str) -> Argument:
     if isinstance(key, Argument):
         return key
-    if not isstr(key):
+    if not isinstance(key, strtype):
         raise TypeError('Only string keys allowed, got %s' % type(key))
     title = _idx[key.lower()]
     if title not in _cache:
@@ -228,11 +228,12 @@ def tabiter(*logics, **opts):
     from proof.tableaux import Tableau
     if not logics:
         logics = logic_names
+    argmts = arguments()
     # logics = iter(tuple((logic,) if logic else available['logics']))
     return chain.from_iterable(
         (
             Tableau(logic, arg, **opts).build()
-            for arg in arguments()
+            for arg in argmts
         )
         for logic in logics
     )

@@ -19,7 +19,6 @@
 # pytableaux - lexicals module tests
 # import pytest
 
-import examples
 from lexicals import Predicates, Variable, Constant, Parameter, Predicate, \
     Atomic, Predicated, Quantified, Operated, Sentence, Operator, Quantifier
 from parsers import parse
@@ -29,13 +28,14 @@ from .tutils import *
 from pytest import raises
 from utils import EmptySet
 
+F, G, H = Predicate.gen(3)
 a, b, c = Constant.gen(3)
 x, y, z = Variable.gen(3)
 A, B, C = Atomic.gen(3)
-F, G, H = Predicate.gen(3)
 
 Pred, Preds = Predicate, Predicates
 Sys = Predicates.System
+
 class TestParameter(object):
 
     def test_cannot_construct(self):
@@ -45,11 +45,9 @@ class TestParameter(object):
     class TestConstant(BaseSuite):
 
         def test_sorting(self):
-            c1 = Constant(1, 0)
-            c2 = Constant(2, 0)
-            res = sorted([c2, c1])
-            assert res[0] == c1
-            assert res[1] == c2
+            res = sorted([b, a])
+            assert res[0] == a
+            assert res[1] == b
 
         def test_index_too_large(self):
             with raises(ValueError):
@@ -334,14 +332,45 @@ class TestSentence(BaseSuite):
                 'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
             )
 
+class TestCrossSorting(BaseSuite):
+    def test_le_lt_ge_gt_symmetry(self):
+        assert F < a
+        assert a < x
+        assert x < A
+        assert F < A
+
+        assert F <= a
+        assert a <= x
+        assert x <= A
+        assert F <= A
+
+        assert a > F
+        assert x > a
+        assert A > x
+        assert A > F
+
+        assert a >= F
+        assert x >= a
+        assert A >= x
+        assert A >= F
+    def test_le_ge(self):
+        p = Predicate((3, 200, 23))
+        c = Constant(0, 0)
+        assert p < c
+        assert p <= c
+        assert c > p
+        assert c >= p
+
+        assert a < x
+        assert a <= x
+        assert not (x < a)
+        assert not (x <= a)
+
 class TestArgument(BaseSuite):
 
     class TestSorting(BaseSuite):
 
         def test_compare1(self):
-            # len(a1) == len(a2) == 3
-            # a1.conclusion == b
-            # a2.conclusion === NBab
             a1 = self.parg('Denying the Antecedent')
             a2 = self.parg('Biconditional Introduction 3')
             assert a1.conclusion < a2.conclusion

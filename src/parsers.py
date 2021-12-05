@@ -19,11 +19,13 @@
 # pytableaux - parsers module
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError
-from lexicals import LexicalAbc as Lexical, BiCoords, Predicate, Parameter, Constant, Variable, Operator as Oper, Quantifier, \
+from lexicals import Lexical, BiCoords, Predicate, Parameter, Constant, Variable, Operator as Oper, Quantifier, \
     Sentence, Atomic, Predicated, Quantified, Operated, LexType, Predicates, Argument
 from utils import CacheNotationData, Decorators, cat, EmptySet, isstr
+
+from collections.abc import Iterable, Mapping
 from types import MappingProxyType
-from typing import Dict, Iterable, Union
+from typing import Union
 
 abstract = Decorators.abstract
 
@@ -39,7 +41,7 @@ class CharTable(CacheNotationData):
 
     default_fetch_name = 'default'
 
-    def __init__(self, data: Dict):
+    def __init__(self, data: Mapping):
         vals, itms = data.values(), data.items()
         # copy table
         self._table = MappingProxyType(data)#{key: tuple(value) for key, value in itms}
@@ -165,10 +167,6 @@ def create_parser(notn: str = None, vocab: Predicates = None, table: CharTable =
         notn, vocab = (vocab, notn)
     if vocab == None:
         vocab = Predicates.System
-        # empty = create_parser._EmptyPreds
-        # if not empty or len(empty):
-        #     empty = create_parser._EmptyPreds = Predicates()
-        # vocab = empty
     if notn == None:
         notn = default_notation
     elif notn not in parser_classes:

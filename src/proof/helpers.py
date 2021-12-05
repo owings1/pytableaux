@@ -25,9 +25,11 @@ from .common import Access, Branch, Events, Node, Target
 from .tableaux import Rule, RuleMeta, Tableau
 
 from copy import copy
+from collections import OrderedDict
+from collections.abc import Callable, Iterable, Iterator
 from inspect import getmembers, isclass
 from itertools import chain
-from typing import Callable, Iterable, Iterator, OrderedDict, Union, final
+from typing import Union, final
 
 abstract = Decorators.abstract
 

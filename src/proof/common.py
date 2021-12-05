@@ -1,16 +1,17 @@
 from utils import dictrepr, orepr, Decorators, isstr, EmptySet
+from collections.abc import Callable, Iterable, ItemsView, \
+    Iterator, KeysView, Mapping, Sequence, ValuesView
 from events import Events, EventEmitter
 from lexicals import Constant, Sentence, Operated, Quantified
-from copy import copy
+# from copy import copy
 from functools import partial
 from inspect import getmembers, isclass
 from itertools import islice
 from keyword import iskeyword
 from operator import is_, is_not
 from types import MappingProxyType
-from typing import Any, Callable, Collection, Dict, FrozenSet, ItemsView, Iterable, \
-    Iterator, KeysView, List, Mapping, NamedTuple, Sequence, Set, Tuple, ValuesView, Union
-from enum import Enum, Flag, IntFlag, auto
+from typing import Any, NamedTuple, Tuple, Union
+from enum import Enum, Flag, auto
 
 lazyget = Decorators.lazyget
 setonce = Decorators.setonce
@@ -55,7 +56,7 @@ class Node(object, metaclass = NodeMeta):
 
     @property
     @lazyget
-    def worlds(self) -> FrozenSet[int]:
+    def worlds(self) -> frozenset[int]:
         """
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
@@ -806,7 +807,7 @@ class Branch(AbstractBranch):
         # self.__model = None
         return b
 
-    def constants(self) -> Set[Constant]:
+    def constants(self) -> set[Constant]:
         """
         Return the set of constants that appear on the branch.
         """

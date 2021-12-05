@@ -17,19 +17,21 @@
 # ------------------
 #
 # pytableaux - tableaux module
+from .common import FLAG, KEY, Branch, Node, NodeType, Target
 from lexicals import Argument, Constant, Sentence
 from utils import Decorators, LinkOrderSet, StopWatch, UniqueList, \
     LogicRef, EmptySet, get_logic, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import Events, EventEmitter
+
+from collections.abc import Collection, Iterator, Iterable, \
+    Mapping, MutableSequence, Sequence
 from inspect import isclass
-from itertools import chain, islice
-from .common import FLAG, KEY, Branch, Node, NodeType, Target
+from itertools import chain
 from past.builtins import basestring
 from keyword import iskeyword
 from types import MappingProxyType, ModuleType
-from typing import Any, Callable, Collection, Dict, Iterator, Iterable, Literal, \
-    Mapping, MutableSequence, NamedTuple, Sequence, Union, cast, final
+from typing import Any, NamedTuple, Union, cast, final
 
 abstract = Decorators.abstract
 
