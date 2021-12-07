@@ -1,10 +1,11 @@
 
+from callables import Key as GetKey
 from errors import *
 from events import Events
 from proof.tableaux import Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG
 from proof.rules import ClosureRule
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
-from proof.common import Getters, Filters, Branch, Node
+from proof.common import Filters, Branch, Node, NodeFilters
 from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
 from utils import get_logic
 import examples
@@ -27,6 +28,11 @@ def exarg(*args, **kw):
     return examples.argument(*args, **kw)
 
 sen = 'sentence'
+
+class RuleStub(Rule):
+    def _apply(self, target): pass
+    def _get_targets(self, branch): pass
+    def example_nodes(self): return tuple()
 
 @using(logic = 'CPL')
 class TestTableau(BaseSuite):
@@ -70,6 +76,7 @@ class TestTableau(BaseSuite):
                 return True
             def node_will_close_branch(self, node, branch):
                 return True
+            def example_nodes(self): return tuple()
         tab = Tableau()
         tab.rules.add(MockRule)
         tab.branch()
@@ -92,7 +99,7 @@ class TestTableau(BaseSuite):
 
     def test_after_branch_add_with_nodes_no_parent(self):
 
-        class MockRule(Rule):
+        class MockRule(RuleStub):
             def __init__(self, *args, **opts):
                 super().__init__(*args, **opts)
                 self.tableau.on(Events.AFTER_BRANCH_ADD, self.__after_branch_add)
@@ -173,7 +180,7 @@ class TestBranch(object):
 
     def test_regression_branch_has_works_with_newly_added_node_on_after_node_add(self):
 
-        class MyRule(Rule):
+        class MyRule(RuleStub):
 
             should_be = False
             shouldnt_be = True
@@ -344,35 +351,22 @@ class TestNode(object):
         assert n2.props | n1 == exp2
         assert n2.props | n1.props == exp2
         
-class TestRule(object):
+class TestRule(BaseSuite):
 
     def test_base_not_impl_various(self):
-        rule = Rule(Tableau())
-        with raises(NotImplementedError):
-            rule._get_targets(None)
+        with raises(TypeError):
+            Rule(Tableau())
 
-    def test_base_repr_equals_rule(self):
-        rule = Rule(Tableau())
-        res = rule.__repr__()
-        assert 'Rule' in res
+class TestClosureRule(BaseSuite):
 
-class TestClosureRule(object):
+    def test_base_not_impl_various(self):
+        with raises(TypeError):
+            ClosureRule(Tableau())
 
-    def test_applies_to_branch_not_impl(self):
-        rule = ClosureRule(Tableau())
-        with raises(NotImplementedError):
-            rule.applies_to_branch(None)
-
-class FilterNodeRule(Rule):
+class FilterNodeRule(RuleStub):
     Helpers = (FilterHelper,)
 
 class TestFilters(BaseSuite):
-
-    def test_MethodFilter_node_has_props_sentence(self):
-        s1, s2 = self.pp('a', 'b')
-        f = Filters.Method('has_props', {sen: s1})
-        assert f(Node({sen: s1}))
-        assert not f(Node({sen: s2}))
 
     def test_AttrFilter_node_is_modal(self):
         class Lhs(object):
@@ -385,11 +379,11 @@ class TestFilters(BaseSuite):
         class Lhs(object):
             testname = True
         f = Filters.Attr(Lhs(), testname = 'designated')
-        f.rget = Getters.Key()
+        f.rget = GetKey()
         assert f(Node({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
 
-class NodeFilterRule(Rule):
+class NodeFilterRule(RuleStub):
 
     ignore_ticked = None
     designation = None
@@ -403,7 +397,7 @@ class NodeFilterRule(Rule):
 
     class DesignationFilter(Filters.Attr):
         attrs = (('designation', 'designated'),)
-        rget = Getters.Key()
+        rget = GetKey()
 
     class ModalFilter(Filters.Attr):
         attrs = (('modal', 'is_modal'),)
@@ -411,7 +405,7 @@ class NodeFilterRule(Rule):
     NodeFilters = (
         ('designation', DesignationFilter),
         ('modal', ModalFilter),
-        (sen, Filters.Node.Sentence),
+        (sen, NodeFilters.Sentence),
     )
 @skip
 @using(logic = 'CPL')
@@ -442,7 +436,7 @@ class Test_NodeFilter(BaseSuite):
         fview = nf.filters
         assert len(fview) == 3
         assert sen in fview
-        assert isinstance(fview.sentence, Filters.Node.Sentence)
+        assert isinstance(fview.sentence, NodeFilters.Sentence)
         assert fview[sen] == fview.sentence
         assert fview.sentence in set(fview)
         with raises(AttributeError):

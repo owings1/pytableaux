@@ -61,11 +61,7 @@ class TabRules(object):
     The Tableaux Rules for S4 contain the rules for :ref:`T <T>`, as well as an additional
     Transitive rule, which operates on the accessibility relation for worlds.
     """
-    
-    # @clshelpers(
-    #     maxw = MaxWorldsTracker,
-    #     visw = VisibleWorldsIndex,
-    # )
+
     class Transitive(K.ModalNodeRule):
         """
         .. _transitive-rule:

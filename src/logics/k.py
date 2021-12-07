@@ -33,7 +33,7 @@ from models import BaseModel
 
 from proof.tableaux import TableauxSystem as BaseSystem, Rule, Tableau
 from proof.rules import ClosureRule
-from proof.common import Access, Branch, Filters, Node, Target
+from proof.common import Access, Branch, Node, NodeFilters, Target
 from proof.helpers import AppliedNodesWorlds, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
     FilterHelper, AppliedNodeCount, VisibleWorldsIndex
@@ -678,20 +678,19 @@ class TableauxSystem(BaseSystem):
 class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
 
     nf: FilterHelper
-
-    NodeFilters = (
-        Filters.Node.Sentence,
-        Filters.Node.Modal,
-    )
     ignore_ticked = True
 
-    # Filters.Node.Sentence
+    NodeFilters = (
+        NodeFilters.Sentence,
+        NodeFilters.Modal,
+    )
+    # NodeFilters.Sentence
     negated    : bool = None
     operator   : Oper = None
     quantifier : Quantifier = None
     predicate  : Predicate = None
 
-    # Filters.Node.Modal
+    # NodeFilters.Modal
     modal  : bool = True
     access : bool = None
 

@@ -36,11 +36,15 @@ A, B, C = Atomic.gen(3)
 Pred, Preds = Predicate, Predicates
 Sys = Predicates.System
 
-class TestParameter(object):
+class TestClasses(BaseSuite):
+    pass
+class TestParameter(BaseSuite):
 
-    def test_cannot_construct(self):
-        with raises(TypeError):
-            Parameter(0, 0)
+    class TestAbstract(BaseSuite):
+
+        def test_cannot_construct(self):
+            with raises(TypeError):
+                Parameter(0, 0)
 
     class TestConstant(BaseSuite):
 
@@ -64,7 +68,7 @@ class TestParameter(object):
             with raises(ValueError):
                 Variable(Variable.TYPE.maxi + 1, 0)
 
-class TestPredicate(object):
+class TestPredicate(BaseSuite):
 
     def test_errors(self):
         with raises(ValueError):
@@ -79,7 +83,7 @@ class TestPredicate(object):
     def test_predicate_is_system_predicate_true(self):
         assert Predicates.System.Identity.is_system
 
-class TestPredicates(object):
+class TestPredicates(BaseSuite):
 
     def test_errors(self):
         with raises(TypeError):
@@ -188,9 +192,10 @@ class TestPredicates(object):
 
 class TestSentence(BaseSuite):
 
-    def test_base_cannot_construct(self):
-        with raises(TypeError):
-            Sentence()
+    class TestAbstract(BaseSuite):
+        def test_base_cannot_construct(self):
+            with raises(TypeError):
+                Sentence()
 
     class TestAtomic(BaseSuite):
 
@@ -237,6 +242,7 @@ class TestSentence(BaseSuite):
                 Predicated('MyPredicate', (a, b))
             with raises(TypeError):
                 Predicated('Identity', (a,))
+
         def test_setence_impl(self):
             s = Predicated(F,(a,))
             assert s.operator == None
@@ -332,39 +338,36 @@ class TestSentence(BaseSuite):
                 'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
             )
 
-class TestCrossSorting(BaseSuite):
-    def test_le_lt_ge_gt_symmetry(self):
-        assert F < a
-        assert a < x
-        assert x < A
-        assert F < A
+class TestCrossCompare(BaseSuite):
 
-        assert F <= a
-        assert a <= x
-        assert x <= A
-        assert F <= A
+    class TestCrossSorting(BaseSuite):
 
-        assert a > F
-        assert x > a
-        assert A > x
-        assert A > F
+        def test_le_lt_ge_gt_symmetry(self):
+            assert F < a
+            assert a < x
+            assert x < A
+            assert F < A
 
-        assert a >= F
-        assert x >= a
-        assert A >= x
-        assert A >= F
-    def test_le_ge(self):
-        p = Predicate((3, 200, 23))
-        c = Constant(0, 0)
-        assert p < c
-        assert p <= c
-        assert c > p
-        assert c >= p
+            assert F <= a
+            assert a <= x
+            assert x <= A
+            assert F <= A
 
-        assert a < x
-        assert a <= x
-        assert not (x < a)
-        assert not (x <= a)
+            assert a > F
+            assert x > a
+            assert A > x
+            assert A > F
+
+            assert a >= F
+            assert x >= a
+            assert A >= x
+            assert A >= F
+
+        def test_bug_le_ge(self):
+            assert a < x
+            assert a <= x
+            assert not (x < a)
+            assert not (x <= a)
 
 class TestArgument(BaseSuite):
 

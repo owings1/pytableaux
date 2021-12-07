@@ -31,7 +31,7 @@ from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
     Sentence, Atomic, Predicated, Quantified, Operated, Argument, Predicates
 from proof.tableaux import TableauxSystem as BaseSystem, Rule
 from proof.rules import ClosureRule
-from proof.common import Branch, Node, Filters, Target
+from proof.common import Branch, Node, NodeFilters, Target
 from proof.helpers import AdzHelper, AppliedNodeConstants, AppliedNodeCount, \
     AppliedQuitFlag, FilterHelper, MaxConstantsTracker
 from utils import Decorators, UniqueList
@@ -545,22 +545,22 @@ class TableauxSystem(BaseSystem):
                 last_is_negated = False
         return complexity
 
-@FilterHelper.clsfilters(
-    designation = Filters.Node.Designation,
-    sentence    = Filters.Node.Sentence,
-)
 class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
 
     nf: FilterHelper
-    # FilterHelper
-    # ----------------
-    ignore_ticked: bool = True
-    # Filters.Node.Sentence
-    negated: bool = None
-    operator: Oper = None
-    quantifier: Quantifier = None
-    predicate: Predicate = None
-    # Filters.Node.Designation
+    ignore_ticked = True
+
+    NodeFilters = (
+        NodeFilters.Designation,
+        NodeFilters.Sentence,
+    )
+    # NodeFilters.Sentence
+    negated    : bool = None
+    operator   : Oper = None
+    quantifier : Quantifier = None
+    predicate  : Predicate = None
+
+    # NodeFilters.Designation
     designation: bool = None
 
 class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):

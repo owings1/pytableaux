@@ -1271,8 +1271,6 @@ class TestP3(BaseSuite):
                 self.invalid_tab('DeMorgan 4')
                 self.invalid_tab('DeMorgan 5')
 
-
-
 @using(logic = 'K')
 class Test_K(BaseSuite):
     

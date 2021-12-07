@@ -17,26 +17,34 @@
 # ------------------
 #
 # pytableaux - tableaux module
-from .common import FLAG, KEY, Branch, Node, NodeType, Target
-from lexicals import Argument, Constant, Sentence
+from .common import FLAG, KEY, Branch, Node, NodeType, RuleEvents, Target
+from lexicals import Argument, Sentence
 from utils import Decorators, LinkOrderSet, StopWatch, UniqueList, \
     LogicRef, EmptySet, get_logic, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
-from events import Events, EventEmitter
+from events import EventId, Events, EventEmitter
 
-from collections.abc import Collection, Iterator, Iterable, \
-    Mapping, MutableSequence, Sequence
+from abc import ABCMeta
+from collections.abc import Collection, Iterator, Iterable, Mapping, \
+    MutableSequence, Sequence
 from inspect import isclass
 from itertools import chain
-from past.builtins import basestring
 from keyword import iskeyword
 from types import MappingProxyType, ModuleType
-from typing import Any, NamedTuple, Union, cast, final
+from typing import Any, ClassVar, Final, NamedTuple, Union, cast, final
 
 abstract = Decorators.abstract
 
-class RuleMeta(type):
+NodeStatValueType = Union[FLAG, int, None]
+NodeStatType = dict[KEY, NodeStatValueType]
+BranchStatViewValueType = Union[NodeStatValueType, Branch]
+BranchStatValueType = Union[BranchStatViewValueType, dict[Node, NodeStatValueType]]
+BranchStatType = dict[KEY, BranchStatValueType]
+BranchStatViewType = dict[KEY, BranchStatViewValueType]
 
+class RuleMeta(ABCMeta):
+
+    __slots__ = ()
     def __new__(cls, clsname: str, bases: tuple[type], clsattrs: dict, **kw):
         taken: dict[str, Any] = dict(clsattrs)
         helper_attrs: dict[type, str] = {}
@@ -61,8 +69,8 @@ class RuleMeta(type):
                         if helper_attr == None:
                             helper_attr = getattr(Helper, '_attr', None)
                         if helper_attr != None:
-                            if not isinstance(helper_attr, basestring):
-                                raise TypeError(helper_attr, type(helper_attr), tuple(None, basestring))
+                            if not isinstance(helper_attr, str):
+                                raise TypeError(helper_attr, type(helper_attr), tuple(None, str))
                             helper_attr = str(helper_attr)                          
                             if helper_attr in taken:
                                 # Allow special annotation for typing, e.g.:
@@ -109,82 +117,58 @@ class RuleMeta(type):
         setattr(Rule, helpers_attr, tuple(hlist))
         return Rule
 
-class AbstractRule(EventEmitter, metaclass = RuleMeta):
+class RuleHelperInfo(NamedTuple):
+    cls  : type
+    inst : object
+    attr : str
 
-    Helpers: tuple[tuple[str, type]] = tuple()
-    Timers: tuple[str] = tuple()
+class RuleInterface(EventEmitter, metaclass = RuleMeta):
 
-    branch_level: int
+    Helpers: ClassVar[Sequence[tuple[str, type]]]
 
-    class HelperInfo(NamedTuple):
-        cls  : type
-        inst : object
-        attr : str
-
-    RuleEvents = (
-        Events.AFTER_APPLY,
-        Events.BEFORE_APPLY,
-    )
-
-    DefaultHelperRuleEventMethods = (
-        (Events.AFTER_APPLY  , 'after_apply'),
-        (Events.BEFORE_APPLY , 'before_apply'),
-    )
-
-    DefaultHelperTabEventMethods = (
-        (Events.AFTER_BRANCH_ADD   , 'after_branch_add'),
-        (Events.AFTER_BRANCH_CLOSE , 'after_branch_close'),
-        (Events.AFTER_NODE_ADD     , 'after_node_add'),
-        (Events.AFTER_NODE_TICK    , 'after_node_tick'),
-        (Events.AFTER_TRUNK_BUILD  , 'after_trunk_build'),
-        (Events.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
-    )
+    tableau: object
+    opts: Mapping
+    helpers: Mapping[type, object]
+    timers: Mapping[str, StopWatch]
 
     @abstract
-    def get_target(self, branch: Branch) -> Target: pass
+    def get_target(self, branch: Branch) -> Target: ...
 
     @abstract
-    def apply(self, target: Target): pass
+    def apply(self, target: Target): ...
 
     @abstract
-    def example_nodes(self) -> Sequence[NodeType]: pass
+    def example_nodes(self) -> Sequence[NodeType]: ...
 
     @abstract
-    def branch(self, parent: Branch = None) -> Branch: pass
+    def branch(self, parent: Branch = None) -> Branch: ...
 
     @abstract
-    def add_timer(self, *names: str): pass
+    def add_helper(self, cls: type, attr: str = None, **opts) -> RuleHelperInfo: ...
 
     @abstract
-    def add_helper(self, cls: type, attr: str = None, **opts) -> HelperInfo: pass
+    def sentence(self, node: Node) -> Sentence: ...
 
     @abstract
-    def sentence(self, node: Node) -> Sentence: pass
+    def group_score(self, target: Target) -> float: ...
 
     @abstract
-    def group_score(self, target: Target) -> float: pass
-
-    @abstract
-    def score_candidate(self, target: Target) -> float: pass
+    def score_candidate(self, target: Target) -> float: ...
 
 class RuleTarget(NamedTuple):
-    #: :type: Rule
-    rule   : AbstractRule
+    rule   : RuleInterface
     target : Target
 
 class StepEntry(NamedTuple):
-    #: The :class:`~Rule` instance that was applied.
-    #:
-    #: :type: Rule
-    rule   : AbstractRule
-    #: The :class:`~common.Target` returned by the rule.
+    #: The rule instance that was applied.
+    rule   : RuleInterface
+    #: The target returned by the rule.
     target : Target
     #: The duration in milliseconds of the application.
     duration_ms: int
 
-NodeStatValueType = Union[FLAG, int, None]
-class NodeStat(dict[KEY, NodeStatValueType]):
-
+class NodeStat(NodeStatType):
+    __slots__ = ()
     def __init__(self):
         super().__init__()
         self.update({
@@ -193,9 +177,8 @@ class NodeStat(dict[KEY, NodeStatValueType]):
             KEY.STEP_TICKED : None,
         })
 
-BranchStatValueType = Union[NodeStatValueType, Branch, dict[Node, NodeStat]]
-class BranchStat(dict[KEY, BranchStatValueType]):
-
+class BranchStat(BranchStatType):
+    __slots__ = ()
     def __init__(self):
         super().__init__()
         self.update({
@@ -207,14 +190,14 @@ class BranchStat(dict[KEY, BranchStatValueType]):
             KEY.NODES       : {},
         })
 
-    def node(self, node: Node) -> NodeStat:
+    def node(self, node: Node) -> NodeStatType:
         try:
             return self[KEY.NODES][node]
         except KeyError:
             self[KEY.NODES][node] = NodeStat()
         return self[KEY.NODES][node]
 
-    def view(self) -> dict[KEY, Union[NodeStatValueType, Branch]]:
+    def view(self) -> BranchStatViewType:
         return {
             k: self[k]
             for k in self
@@ -243,7 +226,7 @@ class AbstractTableau(Sequence[Branch], EventEmitter):
     #: The rule instances.
     #:
     #: :type: TabRules
-    rules: Sequence[AbstractRule]
+    rules: Sequence[RuleInterface]
 
     #: The build options.
     opts: Mapping[str, Union[bool, int, None]]
@@ -323,12 +306,26 @@ class AbstractTableau(Sequence[Branch], EventEmitter):
     @abstract
     def branching_complexity(self, node: Node) -> int: ...
 
-class Rule(AbstractRule):
+class Rule(RuleInterface):
     """
     Base class for a Tableau rule.
     """
 
-    branch_level = 1
+    Helpers = tuple()
+    Timers: ClassVar[Sequence[str]] = tuple()
+    HelperRuleEventMethods: ClassVar[Sequence[tuple[EventId, str]]] = (
+        (Events.AFTER_APPLY  , 'after_apply'),
+        (Events.BEFORE_APPLY , 'before_apply'),
+    )
+    HelperTabEventMethods: ClassVar[Sequence[tuple[EventId, str]]] = (
+        (Events.AFTER_BRANCH_ADD   , 'after_branch_add'),
+        (Events.AFTER_BRANCH_CLOSE , 'after_branch_close'),
+        (Events.AFTER_NODE_ADD     , 'after_node_add'),
+        (Events.AFTER_NODE_TICK    , 'after_node_tick'),
+        (Events.AFTER_TRUNK_BUILD  , 'after_trunk_build'),
+        (Events.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
+    )
+    branch_level: int = 1
 
     opts = {'is_rank_optim': True}
 
@@ -360,7 +357,7 @@ class Rule(AbstractRule):
     def __init__(self, tableau: AbstractTableau, **opts):
         if not isinstance(tableau, Tableau):
             raise TypeError(tableau, type(tableau), Tableau)
-        super().__init__(*Rule.RuleEvents)
+        super().__init__(*RuleEvents)
 
         self.search_timer: StopWatch = StopWatch()
         self.apply_timer: StopWatch = StopWatch()
@@ -460,21 +457,21 @@ class Rule(AbstractRule):
             self.timers[name] = StopWatch()
 
     @final
-    def add_helper(self, cls: type, attr: str = None, **opts) -> AbstractRule.HelperInfo:
+    def add_helper(self, cls: type, attr: str = None, **opts) -> RuleHelperInfo:
         """
         Add a helper.
 
         :meta public:
         """
         inst = cls(self, **opts)
-        info = Rule.HelperInfo(cls, inst, attr)
+        info = RuleHelperInfo(cls, inst, attr)
         self.helpers[cls] = inst
         if attr != None:
             setattr(self, attr, inst)
-        for event, meth in Rule.DefaultHelperRuleEventMethods:
+        for event, meth in self.HelperRuleEventMethods:
             if hasattr(inst, meth):
                 self.on(event, getattr(inst, meth))
-        for event, meth in Rule.DefaultHelperTabEventMethods:
+        for event, meth in self.HelperTabEventMethods:
             if hasattr(inst, meth):
                 self.tableau.on(event, getattr(inst, meth))
         self.__helpers.append(info)
@@ -544,6 +541,8 @@ RuleType = Union[RuleMeta, Rule]
 RuleRef = Union[RuleType, str]
 
 class TabRulesSharedData(object):
+
+    __slots__ = ('ruleindex', 'groupindex', 'locked', 'tab', 'root')
 
     def lock(self, *_):
         if self.locked:
@@ -842,19 +841,6 @@ class TabRules(Sequence[Rule], TabRulesBase):
             groups = len(self.groups),
             rules  = len(self),
         )
-
-    # @staticmethod
-    # def _create_rule(arg: RuleType, tab: AbstractTableau) -> Rule:
-    #     cls = arg
-    #     if not isclass(cls):
-    #         cls = cls.__class__
-    #     try:
-    #         return cls(tab, **tab.opts)
-    #     except:
-    #         raise TypeError(
-    #             'Failed to instantiate rule: %s (%s, logic: %s)' %
-    #             (arg, type(arg), tab.logic.name if tab.logic else None)
-    #         )
 
     del(writes)
 
@@ -1271,19 +1257,6 @@ class Tableau(AbstractTableau):
     # : Callbacks :
     # :-----------:
 
-    # def __after_branch_add(self, branch: Branch):
-    #     # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
-    #     # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
-    #     nodes = tuple(branch) if branch.parent is None else EmptySet
-    #     self.emit(Events.AFTER_BRANCH_ADD, branch)
-    #     for node in nodes:
-    #         self.__after_node_add(node, branch)
-    #     branch.on({
-    #         event: method.__get__(self)
-    #         for event, method in self.BranchListeners
-    #     })
-    #     # branch.on(self.__branch_listeners)
-
     def __after_branch_close(self, branch: Branch):
         stat = self.__branchstat[branch]
         stat[KEY.STEP_CLOSED] = self.current_step
@@ -1305,11 +1278,6 @@ class Tableau(AbstractTableau):
         stat[KEY.STEP_TICKED] = curstep
         self.emit(Events.AFTER_NODE_TICK, node, branch)
 
-    # BranchListeners = (
-    #     (Events.AFTER_BRANCH_CLOSE, __after_branch_close),
-    #     (Events.AFTER_NODE_ADD    , __after_node_add),
-    #     (Events.AFTER_NODE_TICK   , __after_node_tick),
-    # )
     # :-----------:
     # : Util      :
     # :-----------:

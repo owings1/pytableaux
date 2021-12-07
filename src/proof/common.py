@@ -1,28 +1,67 @@
-from utils import dictrepr, orepr, Decorators, isstr, EmptySet
+from callables import Callee, fpreds, Attr as GetAttr, Key as GetKey, It as GetIt
+from containers import ABCMeta
+from events import Events, EventEmitter
+import lexicals
+from lexicals import Constant, Sentence, Operated, Quantified
+from utils import Decorators, drepr, orepr, instcheck, subclscheck, \
+    strtype, EmptySet, RetType, T
+
+from collections import defaultdict, deque
 from collections.abc import Callable, Iterable, ItemsView, \
     Iterator, KeysView, Mapping, Sequence, ValuesView
-from events import Events, EventEmitter
-from lexicals import Constant, Sentence, Operated, Quantified
-# from copy import copy
-from functools import partial
 from inspect import getmembers, isclass
-from itertools import islice
+from itertools import chain, islice
 from keyword import iskeyword
-from operator import is_, is_not
 from types import MappingProxyType
-from typing import Any, NamedTuple, Tuple, Union
-from enum import Enum, Flag, auto
+import typing
+from typing import Annotated, Any, ClassVar, Final, NamedTuple, TypeVar, Union, final
+from enum import Enum, auto
+import enum
+# from copy import copy
 
+import operator as opr
+
+abstract = Decorators.abstract
 lazyget = Decorators.lazyget
 setonce = Decorators.setonce
 
-class NodeMeta(type):
+RuleEvents = (
+    Events.AFTER_APPLY,
+    Events.BEFORE_APPLY,
+)
+
+BranchEvents = (
+    Events.AFTER_BRANCH_CLOSE,
+    Events.AFTER_NODE_ADD,
+    Events.AFTER_NODE_TICK,
+)
+
+class KEY(Enum):
+    FLAGS       = auto()
+    STEP_ADDED  = auto()
+    STEP_TICKED = auto()
+    STEP_CLOSED = auto()
+    INDEX       = auto()
+    PARENT      = auto()
+    NODES       = auto()
+
+class FLAG(enum.Flag):
+    NONE   = 0
+    TICKED = 1
+    CLOSED = 2
+    PREMATURE   = 4
+    FINISHED    = 8
+    TIMED_OUT   = 16
+    TRUNK_BUILT = 32
+
+
+class NodeMeta(ABCMeta):
     def __call__(cls, props = {}):
         if isinstance(props, cls):
             return props
         return super().__call__(props)
 
-class Node(object, metaclass = NodeMeta):
+class Node(Mapping, metaclass = NodeMeta):
     """
     A tableau node.
     """
@@ -61,7 +100,7 @@ class Node(object, metaclass = NodeMeta):
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
         """
-        return frozenset(filter(Filters.Type.INT,
+        return frozenset(filter(fpreds.instanceof[int],
             self.get('worlds', EmptySet) |
             {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
         ))
@@ -109,10 +148,7 @@ class Node(object, metaclass = NodeMeta):
         return self.props.values()
 
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.id == other.id
-
-    def __ne__(self, other):
-        return not (isinstance(other, self.__class__) and self.id == other.id)
+        return self is other
 
     def __hash__(self):
         return hash(self.id)
@@ -167,8 +203,7 @@ class Node(object, metaclass = NodeMeta):
     def __repr__(self):
         return orepr(self,
             id = self.id,
-            # parent = self.parent.id if self.parent else None,
-            props = dictrepr({
+            props = drepr({
                 k: v for k,v in self.props.items() if v != None
             }, limit = 4, paren = False, j = ',')
         )
@@ -182,27 +217,6 @@ class Node(object, metaclass = NodeMeta):
         raise AttributeError('Node is readonly')
 
 NodeType = Union[Node, Mapping]
-
-# class Annotate(Enum):
-#     HelperAttr = auto()
-
-class KEY(Enum):
-    FLAGS       = auto()
-    STEP_ADDED  = auto()
-    STEP_TICKED = auto()
-    STEP_CLOSED = auto()
-    INDEX       = auto()
-    PARENT      = auto()
-    NODES       = auto()
-
-class FLAG(Flag):
-    NONE   = 0
-    TICKED = 1
-    CLOSED = 2
-    PREMATURE   = 4
-    FINISHED    = 8
-    TIMED_OUT   = 16
-    TRUNK_BUILT = 32
 
 class Access(NamedTuple):
 
@@ -218,7 +232,7 @@ class Access(NamedTuple):
         return self.w2
 
     @classmethod
-    def fornode(cls, node: NodeType) -> Tuple:
+    def fornode(cls, node: NodeType) -> tuple[int, int]:
         return cls(node['world1'], node['world2'])
 
     def todict(self) -> dict[str, int]:
@@ -227,193 +241,94 @@ class Access(NamedTuple):
     def tonode(self) -> Node:
         return Node(Access.todict(self))
 
-    def reverse(self) -> Tuple:
+    def reverse(self) -> tuple[int, int]:
         return Access(self[1], self[0])
 
-class Getters(object):
+LHS = TypeVar('LHS')
+RHS = TypeVar('RHS')
 
-    def __new__(cls, *items):
-        return cls.chain(*items)
+class Comparer(Callable[..., bool]):
 
-    @staticmethod
-    def chain(*items):
-        chain = [cls(*args) for cls, *args in items]
-        last = chain.pop()
-        class chained(Callable):
-            def __call__(self, obj, *args):
-                for func in chain:
-                    obj = func(obj)
-                return last(obj, *args)
-        return chained()
+    __slots__ = ('__lhs', '__dict__')
 
-    class Getter(Callable):
-        class Curried: NotImplemented
-        class Safe: NotImplemented
-        def __new__(cls, *args):
-            if args:
-                return cls.Curried(*args)
-            return object.__new__(cls)
-        def __repr__(self):
-            base = getattr(self, 'Base', self.__class__).__qualname__
-            mods = self._mods()
-            if not mods:
-                return '<%s>' % base
-            return '<%s|%s>' % (base, '|'.join(mods))
-        def _mods(self):
-            return tuple()
-        def __call__(self, obj, *args):
-            raise NotImplementedError()
+    @property
+    def lhs(self): return self.__lhs
 
-    class Curried(object):
+    def __init__(self, lhs):
+        self.__lhs = lhs
 
-        def currywrap(fdir: Callable) -> Callable:
-            def currier(Base: type) -> type:
-                Base.Curried = Curried = fdir(Base)
-                def fnew(cls, *cargs):
-                    inst = Base.__new__(cls)
-                    inst._cargs = cargs
-                    return inst
-                def fmods(self):
-                    return Base._mods(self) + ('%s(x%d)' % (Curried.__name__, len(self._cargs)),)
-                Curried.__new__ = fnew
-                Curried._mods = fmods
-                if not hasattr(Curried, 'Base'):
-                    Curried.Base = Base
-                for Member in (
-                    m for (k, m) in
-                    getmembers(Base, isclass)[0:-1]
-                    if k != 'Curried'
-                    and m is not Base
-                    and issubclass(m, Base)
-                    and not issubclass(m, Curried)
-                ):
-                    currier(Member)
-                return Base
-            return currier
+    def __repr__(self):
+        me = self.__class__.__qualname__
+        them = self._lhsrepr(self.lhs)
+        return orepr(me, lhs = them)
 
-        @currywrap
-        def left(Base: type) -> type:
-            class LeftCurried(Base):
-                def __call__(self, *args):
-                    return super().__call__(*self._cargs, *args)
-            return LeftCurried
-
-        @currywrap
-        def right(Base: type) -> type:
-            class RightCurried(Base):
-                def __call__(self, *args):
-                    return super().__call__(*args, *self._cargs)
-            return RightCurried
-
-    class Safed(object):
-        def raising(*errs) -> Callable:
-            isinstance(None, errs)
-            def safe(Base: type) -> type:
-                class Safe(Base):
-                    def __call__(self, *args):
-                        try:
-                            return super().__call__(*args)
-                        except errs:
-                            pass
-                    def _mods(self):
-                        return super()._mods() + ('Safe',)
-                Base.Safe = Safe
-                Base.Safe.Base = Base
-                return Base
-            return safe
-
-    @Curried.right
-    @Safed.raising(AttributeError)
-    class Attr(Getter):
-        def __call__(self, obj, name):
-            return getattr(obj, name)
-
-    @Curried.right
-    @Safed.raising(KeyError)
-    class Key(Getter):
-        def __call__(self, obj, key):
-            return obj[key]
-
-    @Curried.left
-    class It(Getter):
-        def __call__(self, obj, _ = None):
-            return obj
-
+    def _lhsrepr(self, lhs) -> str:
+        try: return lhs.__class__.__qualname__
+        except AttributeError: return lhs.__class__.__name__
 class Filters(object):
 
-    class Filter(Callable):
+    # class Filter(Filter): pass
 
-        lhs = None
+    # class Method(Comparer):
 
-        def __call__(self, *args, **kw):
-            raise NotImplementedError()
+    #     args: tuple
+    #     kw: dict
 
-        def __repr__(self):
-            me = self.__class__.__qualname__
-            them = self.lhs.__class__.__name__
-            try:
-                them = self.lhs.__class__
-                them = self.lhs.__class__.__name__
-                them = self.lhs.__class__.__qualname__
-            except AttributeError:
-                pass
-            return orepr(me, for_=them)
-            return '%s for %s' % (me, them)
+    #     #: Method getter
+    #     rget: ClassVar[Callable[[RHS, str], Callable[..., bool]]] = GetAttr()
 
-    class Method(Filter):
+    #     def __init__(self, lhs: str, *args, **kw):
+    #         super().__init__(lhs)
+    #         self.args = args
+    #         self.kw = kw
 
-        args = tuple()
-        kw = {}
+    #     def __call__(self, rhs: RHS) -> bool:
+    #         func = self.rget(rhs, self.lhs)
+    #         return bool(func(*self.args, **self.kw))
 
-        get = Getters.Attr()
-        example = None.__class__
+    #     example: ClassVar[Callable] = None.__class__
 
-        def __init__(self, meth, *args, **kw):
-            self.meth = self.lhs = meth
-            if args:
-                self.args = args
-            self.kw.update(kw)
+    class Attr(Comparer):
 
-        def __call__(self, rhs):
-            func = self.get(rhs, self.meth)
-            return bool(func(*self.args, **self.kw))
+        #: LHS attr -> RHS attr mapping.
+        attrmap: dict[str, str] = {}
 
-        def __repr__(self):
-            return '%s for %s' % (self.__class__.__name__, self.meth.__name__)
-    
-    class Attr(Filter):
+        #: Attribute getters
+        lget: ClassVar[Callable[[LHS, str], Any]] = GetAttr(flag = Callee.SAFE)
+        rget: ClassVar[Callable[[RHS, str], Any]] = GetAttr()
+        #: Comparison
+        fcmp: ClassVar[Callable[[Any, Any], bool]] = opr.eq
 
-        attrs = tuple()
+        def __init__(self, lhs: LHS, **attrmap):
+            super().__init__(lhs)
+            self.attrmap = self.attrmap | attrmap
 
-        lget = Getters.Attr.Safe()
-        rget = Getters.Attr()
-
-        def __init__(self, lhs, **attrmap):
-            self.lhs = lhs
-            self.attrs = tuple(self.attrs + tuple(attrmap.items()))
-
-        def __call__(self, rhs):
-            for lattr, rattr in self.attrs:
+        def __call__(self, rhs: RHS) -> bool:
+            for lattr, rattr in self.attrmap.items():
                 val = self.lget(self.lhs, lattr)
-                if val != None and val != self.rget(rhs, rattr):
+                if val is not None and val != self.rget(rhs, rattr):
                     return False
             return True
 
-        def example(self):
+        def example(self) -> dict:
+            {k:v for k,v in dict(
+                (rattr, self.lget(self.lhs, lattr))
+                for lattr, rattr in self.attrmap.items()
+            ).items() if v is not None}
             props = {}
-            for attr, rattr in self.attrs:
+            for attr, rattr in self.attrmap.items():
                 val = self.lget(self.lhs, attr)
-                if val != None:
+                if val is not None:
                     props[rattr] = val
             return props
 
-    class Sentence(Filter):
+    class Sentence(Comparer):
 
-        rget = Getters.It()
+        rget: Callable[[RHS], lexicals.Sentence] = GetIt()
 
         @property
-        def negated(self):
-            if self.__negated != None:
+        def negated(self) -> bool:
+            if self.__negated is not None:
                 return self.__negated
             return getattr(self.lhs, 'negated', None)
 
@@ -422,22 +337,16 @@ class Filters(object):
             self.__negated = val
 
         @property
-        def lhs(self):
-            return self.__lhs
-
-        @property
-        def applies(self):
+        def applies(self) -> bool:
             return self.__applies
 
-        def get(self, rhs):
-            s = self.rget(rhs)
+        def get(self, rhs: RHS) -> lexicals.Sentence:
+            s: lexicals.Sentence = self.rget(rhs)
             if s:
-                if not self.negated:
-                    return s
-                if s.is_negated:
-                    return s.operand
+                if not self.negated: return s
+                if s.is_negated: return s.operand
 
-        def example(self):
+        def example(self) -> lexicals.Sentence:
             if not self.applies:
                 return
             lhs = self.lhs
@@ -449,19 +358,17 @@ class Filters(object):
                 s = s.negate()
             return s
 
-        def __init__(self, lhs, negated = None):
+        def __init__(self, lhs: LHS, negated = None):
+            super().__init__(lhs)
             self.__negated = None
-            self.__lhs = lhs
             self.__applies = any((lhs.operator, lhs.quantifier, lhs.predicate))
-            if negated != None:
+            if negated is not None:
                 self.negated = negated
 
-        def __call__(self, rhs):
-            if not self.applies:
-                return True
+        def __call__(self, rhs: RHS) -> bool:
+            if not self.applies: return True
             s = self.get(rhs)
-            if not s:
-                return False
+            if not s: return False
             lhs = self.lhs
             if lhs.operator and lhs.operator != s.operator:
                 return False
@@ -472,69 +379,48 @@ class Filters(object):
                     return False
             return True
 
-    class Not(Filter):
+    class ItemValue(Comparer):
 
-        def __init__(self, negatum: Callable):
-            self.negatum = negatum
-
-        def __call__(self, *args):
-            return not self.negatum(*args)
-
-    class Type(Filter):
-
-        classinfo = object
-
-        def __init__(self, classinfo):
-            self.classinfo = classinfo
-
-        def __call__(self, obj):
-            return isinstance(obj, self.classinfo)
-
-        def __repr__(self):
-            me = self.__class__.__qualname__
-            return '%s for classinfo %s' % (me, self.classinfo)
-
-    Type.INT = Type(int)
-    Type.NotNone = Not(partial(is_, None))
-    Node = None
+        lhs: Callable[[Any], bool]
+        rget: opr.itemgetter(1)
+        def __call__(self, rhs):
+            return bool(self.lhs(self.rget(rhs)))
 
 class NodeFilters(Filters):
 
     class Sentence(Filters.Sentence):
-        rget = Getters.Key.Safe('sentence')
-        def example_node(self):
+
+        rget: Callable[[Node], lexicals.Sentence] = GetKey('sentence', flag = Callee.SAFE)
+
+        def example_node(self) -> dict:
             n = {}
             s = self.example()
-            if s:
-                n['sentence'] = s
+            if s: n['sentence'] = s
             return n
 
     class Designation(Filters.Attr):
-        attrs = (('designation', 'designated'),)
-        rget = Getters.Key()
-        def example_node(self):
+
+        attrmap = {'designation': 'designated'}
+        rget: Callable[[Node], bool] = GetKey()
+
+        def example_node(self) -> dict:
             return self.example()
 
     class Modal(Filters.Attr):
-        attrs = (('modal', 'is_modal'), ('access', 'is_access'))
-        def example_node(self):
+
+        attrmap = {'modal': 'is_modal', 'access': 'is_access'}
+
+        def example_node(self) -> dict:
             n = {}
             attrs = self.example()
             if attrs.get('is_access'):
-                n['world1'] = 0
-                n['world2'] = 1
+                n.update(Access(0, 1).todict())
             elif attrs.get('is_modal'):
                 n['world'] = 0
             return n
 
-Filters.Node = NodeFilters
-
-class AbstractBranch(EventEmitter, Sequence):
-    BranchEvents = (
-        Events.AFTER_BRANCH_CLOSE,
-        Events.AFTER_NODE_ADD,
-        Events.AFTER_NODE_TICK,
-    )
+class AbstractBranch(EventEmitter, Sequence[Node]):
+    pass
 
 class Branch(AbstractBranch):
     """
@@ -545,7 +431,7 @@ class Branch(AbstractBranch):
 
         self.__init_parent(parent)
 
-        super().__init__(*Branch.BranchEvents)
+        super().__init__(*BranchEvents)
 
         # Make sure properties are copied if needed in copy()
 
@@ -784,27 +670,6 @@ class Branch(AbstractBranch):
             for prop in self.__pidx
         }
         b.__model = self.__model
-
-        # self.__closed = False
-
-        # self.__nodes   : list[Node] = []
-        # self.__nodeset : set[Node] = set()
-        # self.__ticked  : set[Node] = set()
-
-        # self.__worlds    : set[int] = set()
-        # self.__nextworld : int = 0
-        # self.__constants : set[Constant] = set()
-        # self.__nextconst : Constant = Constant.first()
-        # self.__pidx = {
-        #     'sentence'   : {},
-        #     'designated' : {},
-        #     'world'      : {},
-        #     'world1'     : {},
-        #     'world2'     : {},
-        #     'w1Rw2'      : {},
-        # }
-
-        # self.__model = None
         return b
 
     def constants(self) -> set[Constant]:
@@ -885,9 +750,6 @@ class Branch(AbstractBranch):
 
     def __eq__(self, other):
         return self is other
-        # return (
-        #     isinstance(other, self.__class__) and self.id == other.id
-        # )
 
     def __hash__(self):
         return hash(self.id)
@@ -917,7 +779,7 @@ class Branch(AbstractBranch):
             closed = self.closed,
         )
 
-class Target(Mapping):
+class Target(Mapping[str, Any]):
 
     __reqd = {'branch'}
     __attrs = __reqd | {'rule', 'node', 'nodes', 'world', 'world1', 'world2', 'sentence', 'designated', 'flag'}
@@ -1023,7 +885,7 @@ class Target(Mapping):
         return self.__data[key]
 
     def __setitem__(self, key: str, val):
-        if not isstr(key):
+        if not isinstance(key, strtype):
             raise TypeError(key, type(key), str)
         if not key.isidentifier() or iskeyword(key):
             raise ValueError('Invalid target key: %s' % key)
@@ -1071,43 +933,3 @@ class Target(Mapping):
             ), 3)
         )
         return orepr(self, dict(items))
-
-class StepEntry(Sequence):
-
-    def __init__(self, *entry):
-        if len(entry) < 3:
-            raise TypeError('Expecting more than %d arguments' % len(entry))
-        self.__entry = entry
-
-    @property
-    def rule(self):
-        return self.__entry[0]
-
-    @property
-    def target(self) -> Target:
-        return self.__entry[1]
-
-    @property
-    def duration_ms(self) -> int:
-        return self.__entry[2]
-
-    @property
-    def entry(self) -> tuple:
-        return self.__entry
-
-    def __len__(self):
-        return min(2, len(self.__entry))
-
-    def __iter__(self):
-        return islice(self.__entry, 2)
-
-    def __getitem__(self, key):
-        if key in (0, 1):
-            return self.__entry[key]
-        return list(self)[key]
-
-    def __contains__(self, item):
-        for x in self:
-            if x == item:
-                return True
-        return False

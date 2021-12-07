@@ -17,22 +17,25 @@
 # ------------------
 #
 # pytableaux - utils module
+
+from errors import DuplicateKeyError, IllegalStateError
+
 from builtins import ModuleNotFoundError
-from collections import deque
-from collections.abc import Callable, Collection, ItemsView, Iterable, Iterator, \
-    KeysView, Mapping, MutableSet, Sequence, ValuesView
+from collections import deque #, namedtuple
+from collections.abc import Callable, Collection, Hashable, ItemsView, Iterable,\
+    Iterator, KeysView, Mapping, MutableSet, Sequence, ValuesView
 from copy import copy
-# from functools import partial
+import enum
 from importlib import import_module
 from inspect import isclass
 from itertools import chain, islice
-# from operator import is_not
-from past.builtins import basestring
 from time import time
 from types import MappingProxyType, ModuleType
-from typing import Any, NamedTuple, TypeVar, Union, abstractmethod, cast
+import typing
+from typing import Any, Annotated, NamedTuple, TypeVar, Union, abstractmethod, cast
 
-from errors import DuplicateKeyError, IllegalStateError
+# from functools import partial
+# from operator import is_not
 # from pprint import pp
 
 # Constants
@@ -44,29 +47,61 @@ CmpFnOper = MappingProxyType({
     '__ge__': '>=',
     '__eq__': '==',
     '__ne__': '!=',
+    '__or__': '|',
+    '__ror__': '|',
     '__contains__': 'in',
 })
 
 # Types
-strtype = basestring
+strtype = str
 LogicRef = Union[ModuleType, str]
 IndexTypes = (int, slice)
 IndexType = Union[int, slice]
 
 T = TypeVar('T')
+T2 = TypeVar('T2')
 RetType = TypeVar('RetType')
+
+
+class Annotate(enum.Enum):
+    MroMerge = enum.auto()
+    SubclsMerge = enum.auto()
+
+class AttrNote(NamedTuple):
+
+    cls: type
+    attr: str
+    otype: type
+    meta: set
+    endtype: type
+    args: list
+
+    @classmethod
+    def forclass(cls, Class: type, metaset: set = EmptySet) -> Iterator[tuple[str, ...]]:
+        annot = Class.__annotations__
+        notes = (
+            cls(Class, attr, *vals[0:2], vals[ - (len(vals) > 2)], vals)
+            for attr, vals in (
+                (k, typing.get_args(v))
+                for k, v in annot.items()
+                if typing.get_origin(v) is Annotated
+            )
+        )
+        filt = (n for n in notes if metaset.issubset(n.meta))
+        return ((n.attr,n) for n in filt)
+
 
 def get_module(ref, package: str = None) -> ModuleType:
 
-    cache = _myattr(get_module, dict)
+    cache = get_module.__dict__
     keys = set()
     ret = {'mod': None}
 
     def _checkref(ref):
+        if ref is None: return
         key = (package, ref)
-        if key in cache:
-            return bool(_setcache(cache[key]))
-        keys.add(key)
+        try: return bool(_setcache(cache[key]))
+        except KeyError: keys.add(key)
         return False
 
     def _setcache(val):
@@ -83,19 +118,19 @@ def get_module(ref, package: str = None) -> ModuleType:
     if isinstance(ref, ModuleType):
         if _checkref(ref.__name__):
             return ret['mod']
-        if package != None and package != getattr(ref, '__package__', None):
+        if package is not None and package != getattr(ref, '__package__', None):
             raise ModuleNotFoundError(
                 "Module '{0}' not in package '{1}'".format(ref.__name__, package)
             )
         return _setcache(ref)
 
-    if not isstr(ref):
+    if not isinstance(ref, strtype):
         raise TypeError("ref must be string or module, or have __module__ attribute")
 
-    ref = ref.lower()
+    ref: str = ref.lower()
     if _checkref(ref):
         return ret['mod']
-    if package == None:
+    if package is None:
         return _setcache(import_module(ref))
     pfx = cat(package, '.')
     try:
@@ -128,37 +163,45 @@ def get_logic(ref) -> ModuleType:
     """
     return get_module(ref, package = 'logics')
 
-def islogic(obj) -> bool:
-    return isinstance(obj, ModuleType) and obj.__name__.startswith('logics.')
 
-def instcheck(obj, classinfo):
-    if not isinstance(obj, classinfo):
+def instcheck(obj, classinfo, exp = True):
+    if isinstance(obj, classinfo) != exp:
         raise TypeError(obj, type(obj), classinfo)
     return obj
 
-def subclscheck(cls, typeinfo):
-    if not issubclass(cls, typeinfo):
+def isstr(obj) -> bool:
+    return isinstance(obj, strtype)
+
+def subclscheck(cls, typeinfo, exp = True):
+    if issubclass(cls, typeinfo) != exp:
         raise TypeError(cls, typeinfo)
     return cls
 
 def nowms() -> int:
+    """Current time in milliseconds"""
     return int(round(time() * 1000))
 
 def cat(*args: str) -> str:
+    """Concat all argument strings"""
     return ''.join(args)
 
+def errstr(err):
+    if isinstance(err, Exception):
+        return '%s: %s' % (err.__class__.__name__, err)
+    return str(err)
+
 def wrparens(*args: str) -> str:
+    """Concat all argument strings and wrap in parentheses"""
     return cat('(', *args, ')')
 
-# notnone = partial(is_not, None)
-
-testlw = None
-def dictrepr(d: dict, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
+def drepr(d: dict, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
+    lw = drepr.lw
+    islogic = drepr.islogic
     pairs = (
         cat(str(k), vj, v.__name__
         if isclass(v) else (
-            v if isstr(v) else (
-                testlw.write(v) if testlw and testlw.canwrite(v)
+            v if isinstance(v, strtype) else (
+                lw.write(v) if lw is not None and lw.canwrite(v)
                 else (
                     v.name if islogic(v)
                     else v.__repr__()
@@ -171,61 +214,44 @@ def dictrepr(d: dict, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
     if paren:
         return wrparens(istr)
     return istr
+drepr.islogic = lambda obj: (
+    isinstance(obj, ModuleType) and
+    obj.__name__.startswith('logics.')
+)
+# For testing, set this to a LexWriter instance.
+drepr.lw = None
 
-def kwrepr(**kw) -> str: return dictrepr(kw)
-
-def orepr(obj, _d = None, **kw):
+def orepr(obj, _d: dict = None, **kw) -> str:
+    d = _d if _d is not None else kw
+    if isinstance(obj, strtype):
+        oname = obj
+    else:
+        try: oname = obj.__class__.__qualname__
+        except AttributeError: oname = obj.__class__.__name__
     try:
-        oname = obj if isstr(obj) else obj.__class__.__name__
-        istr = dictrepr(_d if _d != None else kw, j= ' ', vj=':',paren = False)
-        return '<%s %s>' % (oname, istr)
-    except:
-        return '<%s ?ERR?>' % obj.__class__.__name__
+        if callable(d): d = d()
+        dstr = drepr(d, j = ' ', vj = ':', paren = False)
+        return '<%s %s>' % (oname, dstr)
+    except Exception as e:
+        return '<%s !ERR: %s !>' % (oname, errstr(e))
 
-def isstr(obj) -> bool:
-    return isinstance(obj, strtype)
+def fixedreturn(val: Hashable) -> Callable:
+    """Returns a function that returns the argument."""
+    try: return fixedreturn.__dict__[val]
+    except KeyError: pass
+    def fnfixed(*_, **_k): return val
+    return fixedreturn.__dict__.setdefault(val, fnfixed)
 
-def isint(obj) -> bool:
-    return isinstance(obj, int)
-
-def sortedbyval(map: dict) -> list:
-    return list(it[1] for it in sorted((v, k) for k, v in map.items()))
-
-def _myattr(func, cls = set, name = '_cache'):
-    if not hasattr(func, name):
-        setattr(func, name, cls())
-    return getattr(func, name)
-
-def mroattr(cls: type, attr: str, **adds) -> filter:
-    return filter (bool, chain(
-        * (
-            c.__dict__.get(attr, EmptySet)
-            for c in reversed(cls.mro())
-        ),
-        (
-            (name, value)
-            for name, value in adds.items()
-        )
-    ))
-
-def dedupitems(items):
-    track = {}
-    dedup = []
-    for k, v in items:
-        if k in track and v is None:
-            # A value of None clears the item.
-            item = (k, track.pop(k))
-            idx = dedup.index(item)
-            dedup.pop(idx)
-        elif k not in track:
-            if v is not None:
-                track[k] = v
-                dedup.append((k, v))
-        elif track[k] != v:
-            raise ValueError('Conflict %s: %s (was: %s)' % (k, v, track[k]))
-    return dedup
+def fixedprop(val: Hashable) -> property:
+    """Returns a property that returns the argument."""
+    try: return fixedprop.__dict__[val]
+    except KeyError: pass
+    prop = property(fixedreturn(val))
+    return fixedprop.__dict__.setdefault(val, prop)
 
 class Decorators(object):
+
+    __new__ = None
 
     def abstract(method: Callable[..., RetType]) -> Callable[..., RetType]:
         @abstractmethod
@@ -249,12 +275,13 @@ class Decorators(object):
         return fset
 
     def checkstate(**attrs: dict) -> Callable:
-        def fcheckwrap(method: Callable) -> Callable:
+        def fcheckwrap(method: Callable[..., RetType]) -> Callable[..., RetType]:
             def fcheckstate(self, *args, **kw):
                 for attr, val in attrs.items():
                     if getattr(self, attr) != val:
                         raise IllegalStateError(attr)
                 return method(self, *args, **kw)
+            fcheckstate.__qualname__ = method.__name__
             return fcheckstate
         return fcheckwrap
 
@@ -284,33 +311,48 @@ class Decorators(object):
         return __class__.nosetattr(*args, **kw)
 
     def cmperrors(*excepts: type) -> Callable:
-        def fcmpwrap(fcmp: Callable) -> Callable:
+        def fcmpwrap(fcmp: Callable[..., RetType]) -> Callable[..., RetType]:
             fname = fcmp.__name__
             opsym = CmpFnOper.get(fname, fname)
-            def fcmpsafe(a, b):
+            def fcmperrs(a, b):
                 try:
                     return fcmp(a, b)
                 except excepts: # type: ignore
                     eargs = (opsym, type(a), type(b),)
                     raise TypeError("'%s' not supported for %s and %s" % eargs)
-            return fcmpsafe
+            fcmperrs.__qualname__ = fname
+            return fcmperrs
         return fcmpwrap
 
     cmperr = cmperrors(AttributeError, TypeError)
 
     def cmptypes(*types: type) -> Callable:
-        def fcmpwrap(fcmp: Callable) -> Callable:
+        def fcmpwrap(fcmp: Callable[..., RetType]) -> Callable[..., RetType]:
             fname = fcmp.__name__
             opsym = CmpFnOper.get(fname, fname)
-            def fcmpcheck(a, b):
-                if not isinstance(b, types or a.__class__):
+            eflag = TypeError()
+            def fcmptypecheck(a, b):
+                try:
+                    if not isinstance(b, types or a.__class__):
+                        raise eflag
+                    return fcmp(a, b)
+                except TypeError as err:
+                    if err is eflag: err = None
                     eargs = (opsym, type(a), type(b),)
-                    raise TypeError("'%s' not supported for %s and %s" % eargs)
-                return fcmp(a, b)
-            return fcmpcheck
+                    raise TypeError("'%s' not supported for %s and %s" % eargs) \
+                        from err
+            fcmptypecheck.__qualname__ = fname
+            return fcmptypecheck
         return fcmpwrap
 
     cmptype = cmptypes()
+
+    def argslice(*spec) -> Callable:
+        slc = spec[0] if isinstance(spec[0], slice) else slice(*spec)
+        def fslicewrap(func: Callable) -> Callable:
+            def fslice(*args): return func(*args[slc])
+            return fslice
+        return fslicewrap
 
     @staticmethod
     def _privkey(method) -> tuple[str]:
@@ -322,37 +364,92 @@ class Decorators(object):
     def _isreadonly(obj, *args, cls: bool = None, check: Callable = None, **kw) -> bool:
         if check is None:
             return True
-        if cls is not None and cls is not False:
-            if cls == True:
-                obj = obj.__class__
-            else:
-                obj = cls
+        if cls:
+            if cls == True: obj = obj.__class__
+            else: obj = cls
         return bool(check(obj))
 
+def px(self): return self.index
+def py(self): return self.subscript
+def pz(self): return self.arity
+px = property(px)
+py = property(py)
+pz = property(pz)
+
 class SortBiCoords(NamedTuple):
+
+    # y : int
+    # x : int
+    # subscript = py
+    # index     = px
+
     subscript : int
     index     : int
+    x = px
+    y = py
 
 class BiCoords(NamedTuple):
+
+    # x : int
+    # y : int
+    # index     = px
+    # subscript = py
+
     index     : int
     subscript : int
-    first   = (0, 0)
+    x = px
+    y = py
+ 
     Sorting = SortBiCoords
+
     def sorting(self) -> tuple[int, ...]:
+        # return self.Sorting(self.y, self.x, *self[2:])
         return self.Sorting(self.subscript, self.index, *self[2:])
 
+    first   = (0, 0)
+
 class SortTriCoords(NamedTuple):
+
+    # y: int
+    # x: int
+    # z: int
+    # subscript = py
+    # index     = px
+    # arity     = pz
+
     subscript : int
     index     : int
     arity     : int
+    x = px
+    y = py
+    z = pz
 
 class TriCoords(NamedTuple):
+
+    # x: int
+    # y: int
+    # z: int
+    # index     = px
+    # subscript = py
+    # arity     = pz
+
     index     : int
     subscript : int
     arity     : int
-    first   = (0, 0, 1)
+    x = px
+    y = py
+    z = pz
+
     Sorting = SortTriCoords
     sorting = BiCoords.sorting
+
+    first   = (0, 0, 1)
+
+def ftmp():
+    for cls in (BiCoords, TriCoords):
+        cls.first = cls(*cls.first)
+ftmp()
+del(ftmp)
 
 class CacheNotationData(object):
 
@@ -402,6 +499,8 @@ class CacheNotationData(object):
 
 class StopWatch(object):
 
+    __slots__ = ('_start_time', '_elapsed', '_is_running', '_times_started')
+
     def __init__(self, started=False):
         self._start_time = None
         self._elapsed = 0
@@ -431,18 +530,18 @@ class StopWatch(object):
             self._start_time = nowms()
         return self
 
-    def elapsed(self):
+    def elapsed(self) -> float:
         if self._is_running:
             return self._elapsed + (nowms() - self._start_time)
         return self._elapsed
 
-    def elapsed_avg(self):
+    def elapsed_avg(self) -> float:
         return self.elapsed() / max(1, self.times_started())
 
-    def is_running(self):
+    def is_running(self) -> bool:
         return self._is_running
 
-    def times_started(self):
+    def times_started(self) -> int:
         return self._times_started
 
     def __repr__(self):
@@ -456,56 +555,11 @@ class StopWatch(object):
         if self.is_running():
             self.stop()
 
-class DictAttrView(Mapping):
 
-    def get(self, key, default = None):
-        return self.__base.get(key, default)
 
-    def items(self) -> ItemsView:
-        return self.__base.items()
+class UniqueList(Sequence[T], MutableSet[T]):
 
-    def keys(self) -> KeysView:
-        return self.__base.keys()
-
-    def values(self) -> ValuesView:
-        return self.__base.values()
-
-    def __copy__(self):
-        return self.__class__(self.__base)
-
-    copy = __copy__
-
-    def __init__(self, base: Mapping):
-        self.__base = base
-
-    def __getattr__(self, name):
-        try:
-            return self.__base[name]
-        except KeyError:
-            raise AttributeError(name)
-
-    def __getitem__(self, key):
-        return self.__base[key]
-
-    def __contains__(self, key):
-        return key in self.__base
-
-    def __len__(self):
-        return len(self.__base)
-
-    def __iter__(self):
-        return iter(self.__base)
-
-    def __dir__(self):
-        return list(self)
-
-    def __repr__(self):
-        return cat(
-            self.__class__.__name__,
-            wrparens(self.__base.__repr__()),
-        )
-
-class UniqueList(Sequence, MutableSet):
+    __slots__ = ('__set', '__list')
 
     def add(self, item):
         if item not in self:
@@ -514,7 +568,7 @@ class UniqueList(Sequence, MutableSet):
 
     append = add
 
-    def update(self, items: Iterable):
+    def update(self, items: Iterable[T]):
         for item in items:
             self.add(item)
 
@@ -524,13 +578,13 @@ class UniqueList(Sequence, MutableSet):
         self.__set.clear()
         self.__list.clear()
 
-    def count(self, item):
+    def count(self, item) -> int:
         return int(item in self)
 
-    def index(self, item):
+    def index(self, item) -> int:
         return self.__list.index(item)
 
-    def pop(self, *i: int):
+    def pop(self, *i: int) -> T:
         item = self.__list.pop(*i)
         self.__set.remove(item)
         return item
@@ -606,13 +660,13 @@ class UniqueList(Sequence, MutableSet):
     def __len__(self):
         return len(self.__set)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T]:
         return iter(self.__list)
 
     def __contains__(self, item):
         return item in self.__set
 
-    def __getitem__(self, key: IndexType):
+    def __getitem__(self, key: IndexType) -> T:
         return self.__list[key]
 
     def __delitem__(self, key: IndexType):
@@ -625,21 +679,21 @@ class UniqueList(Sequence, MutableSet):
         else:
             raise TypeError(key, type(key), IndexTypes)
 
-    def __add__(self, value: Iterable):
+    def __add__(self, value: Iterable[T]):
         inst = copy(self)
         if value is not self:
             inst.update(value)
         return inst
 
-    def __iadd__(self, value: Iterable):
+    def __iadd__(self, value: Iterable[T]):
         if value is not self:
             self.update(value)
         return self
 
-    def __sub__(self, value: Iterable):
+    def __sub__(self, value: Iterable[T]):
         return self.difference(value)
 
-    def __isub__(self, value: Iterable):
+    def __isub__(self, value: Iterable[T]):
         self.difference_update(value)
         return self
 
@@ -661,7 +715,9 @@ class UniqueList(Sequence, MutableSet):
 
 class LinkOrderSet(Collection):
 
-    class LinkEntry(object):
+    class LinkEntry:
+
+        __slots__ = ('prev', 'next', 'item')
 
         def __init__(self, item):
             self.prev: LinkOrderSet.LinkEntry = None
@@ -683,6 +739,7 @@ class LinkOrderSet(Collection):
     def View(obj):
         obj = cast(LinkOrderSet, obj)
         class LinkOrderSetView(Collection):
+            __slots__ = ()
             def __len__(self):
                 return len(obj)
             def __iter__(self):
@@ -719,9 +776,11 @@ class LinkOrderSet(Collection):
     def entry(link_entry_method: Callable) -> Callable:
         def prep(self: LinkOrderSet, item):
             if item in self:
-                raise DuplicateKeyError(item)
+                if self.strict:
+                    raise DuplicateKeyError(item)
+                return
             entry = self.__idx[item] = LinkOrderSet.LinkEntry(item)
-            if self.__first == None:
+            if self.__first is None:
                 self.__first = self.__last = entry
                 return
             if self.__first == self.__last:
@@ -733,6 +792,8 @@ class LinkOrderSet(Collection):
         return item
 
 class LinkOrderSet(LinkOrderSet):
+
+    slots = ('__first', '__last', '__idx', 'strict', '_utils__lazy_view')
 
     @LinkOrderSet.item
     @LinkOrderSet.entry
@@ -815,10 +876,11 @@ class LinkOrderSet(LinkOrderSet):
     def view(self):
         return LinkOrderSet.View(self)
 
-    def __init__(self, items: Iterable = None):
+    def __init__(self, items: Iterable = None, strict = True):
+        self.strict = strict
         self.__first = self.__last = None
         self.__idx: dict[Any, LinkOrderSet.LinkEntry] = {}
-        if items != None:
+        if items is not None:
             self.extend(items)
 
     def __len__(self):
@@ -860,6 +922,7 @@ class LinkOrderSet(LinkOrderSet):
 
 class DequeCache(Collection[T]):
 
+    __slots__ = ()
     abstract = Decorators.abstract
 
     ItemType = T
@@ -898,6 +961,8 @@ class DequeCache(Collection[T]):
     @abstract
     def __setitem__(self, key, item: ItemType): ...
 
+    del(abstract)
+
     def __new__(cls, ItemType: type, maxlen = 10):
 
         if issubclass(ItemType, IndexTypes):
@@ -913,6 +978,8 @@ class DequeCache(Collection[T]):
         deck     : deque[ItemType] = deque(maxlen = maxlen)
 
         class Api(DequeCache, Collection[ItemType]):
+
+            __slots__ = ()
 
             maxlen: int = property(lambda _: deck.maxlen)
             idx: int = property(lambda _: idxproxy)

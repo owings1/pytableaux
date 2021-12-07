@@ -17,33 +17,22 @@
 # ------------------
 #
 # pytableaux - rule helpers module
+from containers import DictAttrView
 from lexicals import Constant, Sentence
 from models import BaseModel
-from utils import Decorators, DictAttrView, LinkOrderSet, EmptySet, \
-    dedupitems, isstr, mroattr, orepr
+from utils import Decorators, LinkOrderSet, EmptySet, T, \
+    isstr, orepr
 from .common import Access, Branch, Events, Node, Target
 from .tableaux import Rule, RuleMeta, Tableau
 
 from copy import copy
-from collections import OrderedDict
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, MutableMapping, \
+    ItemsView, KeysView, ValuesView
 from inspect import getmembers, isclass
 from itertools import chain
-from typing import Union, final
+from typing import ClassVar, Union, final
 
 abstract = Decorators.abstract
-
-def clshelpers(**kw) -> Callable:
-    """
-    Class decorator to add to Helpers attribute through mro.
-    Attribute name is ``Helpers``.
-    """
-    attr = 'Helpers'
-    def addhelpers(cls: type) -> type:
-        value = dedupitems(mroattr(cls, attr, **kw))
-        setattr(cls, attr, tuple(value))
-        return cls
-    return addhelpers
 
 class AdzHelper(object):
 
@@ -81,15 +70,16 @@ class AdzHelper(object):
                     break
         return float(close_count / min(1, len(target['adds'])))
 
-class BranchCache(object):
+class BranchCache(MutableMapping[Branch, T]):
+# class BranchCache(object):
 
     rule: Rule
     tab: Tableau
 
     _valuetype = bool
 
-    __cache: dict
-    __linkset: LinkOrderSet
+    __cache: dict[Branch, T]
+    __linkset: LinkOrderSet[T]
 
     def __init__(self, *args, **kw):
         pass
@@ -97,10 +87,16 @@ class BranchCache(object):
     def get(self, branch: Branch, *args):
         return self.__cache.get(branch, *args)
 
-    def __getitem__(self, branch: Branch):
+    def keys(self) -> KeysView[Branch]:
+        return self.__cache.keys()
+    def values(self) -> ValuesView[T]:
+        return self.__cache.values()
+    def items(self) -> ItemsView[Branch, T]:
+        return self.__cache.items()
+    def __getitem__(self, branch: Branch) -> T:
         return self.__cache[branch]
 
-    def __setitem__(self, branch: Branch, value):
+    def __setitem__(self, branch: Branch, value: T):
         if branch not in self.__cache:
             self.__linkset.add(branch)
         self.__cache[branch] = value
@@ -118,7 +114,7 @@ class BranchCache(object):
     def __iter__(self) -> Iterator[Branch]:
         return iter(self.__linkset)
 
-    def __reversed__(self):
+    def __reversed__(self) -> Iterator[Branch]:
         return reversed(self.__linkset)
 
     def __new__(cls, rule: Rule, *args):
@@ -140,8 +136,11 @@ class BranchCache(object):
         })
         return inst
 
-    @abstract
-    def __copy__(self): ... # not clear whether to copy listeners
+    # @abstract
+    # def __copy__(self): ... # not clear whether to copy listeners
+
+    def __hash__(self):
+        return hash(id(self))
 
     def __repr__(self):
         return orepr(self, self._reprdict())
@@ -409,19 +408,6 @@ class FilterHelper(FilterNodeCache):
     # Decorators
 
     @classmethod
-    def clsfilters(cls, **kw) -> Callable:
-        """
-        Class decorator to add to ``NodeFilters`` attribute
-        through mro.
-        """
-        def addfilters(rulecls: RuleMeta) -> RuleMeta:
-            for attr in (cls.clsattr_node,):
-                value = dedupitems(mroattr(rulecls, attr, **kw))
-                setattr(rulecls, attr, tuple(value))
-            return rulecls
-        return addfilters
-
-    @classmethod
     def node_targets(cls, fget_node_targets: Callable) -> Callable:
         """
         Method decorator to only iterate through nodes matching the
@@ -479,7 +465,7 @@ class FilterHelper(FilterNodeCache):
         super().__init__(rule, *args, **kw)
         self.rule = rule
         self.callcount = 0
-        self.__fmap = OrderedDict()
+        self.__fmap = {}#OrderedDict()
         self.filters = DictAttrView(self.__fmap)
         self.__to_discard = set()
         rawvalue = getattr(rule, self.__class__.clsattr_node, EmptySet)
@@ -767,7 +753,7 @@ class AppliedNodeConstants(object):
     Track the applied and unapplied constants per branch for each potential node.
     The rule's target should have `branch`, `node` and `constant` properties.
 
-    Only nodes that are applicable according to the rule's ``is_potential_node()``
+    Only nodes that are applicable according to the rule's ``NodeFilter`` helper.
     method are tracked.
     """
     _attr = 'apcs'
@@ -835,10 +821,7 @@ class AppliedNodeConstants(object):
 
     def __should_track_node(self, node, branch):
         # TODO: remove cross-helper affinity
-        try:
-            return self.rule.nf(node, branch)
-        except AttributeError:
-            return self.rule.is_potential_node(node, branch)
+        return self.rule.nf(node, branch)
 
 class MaxWorldsTracker(object):
     """

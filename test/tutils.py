@@ -1,12 +1,13 @@
 import examples, lexicals, utils
-from inspect import isclass, getmembers
 from lexicals import Argument, Predicates, Sentence, create_lexwriter
 from models import BaseModel
 from parsers import notations as parser_notns, create_parser, parse_argument, parse, Parser
 from proof.tableaux import Tableau, Branch, Node, Rule
-from utils import get_logic, isint, isstr
+from utils import get_logic, strtype
+
+from collections.abc import Callable, Iterable, Iterator
+from inspect import isclass, getmembers
 from itertools import chain
-from typing import Callable, Iterable, Iterator
 
 from enum import Enum
 def _setattrs(obj, **attrs):
@@ -197,7 +198,7 @@ class BaseSuite(AbstractSuite):
             is_build = True
         tab = Tableau(self.logic, arg, **kw)
         if nn:
-            if isint(nn):
+            if isinstance(nn, int):
                 nn = self.ngen(nn, **kw)
                 kw.pop('ss', None)
             b = tab[0] if len(tab) else tab.branch()
@@ -264,7 +265,7 @@ class BaseSuite(AbstractSuite):
         try:
             rule = t.rules.get(rule)
         except ValueError:
-            if isstr(rule):
+            if isinstance(rule, strtype):
                 rule = getattr(t.logic.TabRules, rule)
             t.rules.add(rule)
             rule = t.rules.get(rule)
@@ -303,8 +304,9 @@ class BaseSuite(AbstractSuite):
     def Model(self) -> type:
         return self.logic.Model
 
-if utils.testlw == None:
-    lexicals._syslw = utils.testlw = BaseSuite.lw
+utils.drepr.lw = lexicals._syslw = BaseSuite.lw
+# if utils._testlw is None:
+#     lexicals._syslw = utils._testlw = BaseSuite.lw
     
 def tp(tab):
     print(
