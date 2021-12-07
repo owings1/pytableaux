@@ -19,17 +19,17 @@
 # pytableaux - lexicals module
 from abc import ABCMeta
 from copy import deepcopy
-from collections.abc import Callable, Generator, Hashable, \
+from collections.abc import Callable, Collection, Generator, Hashable, \
     Iterable, Iterator, Mapping, MutableMapping, Sequence \
-    # Collection, ItemsView, KeysView, ValuesView
+    # ItemsView, KeysView, ValuesView
 from enum import Enum, EnumMeta, unique
 from itertools import chain
 import operator as opr
-from types import DynamicClassAttribute, MappingProxyType
+from types import MappingProxyType
 from typing import Any, ClassVar, Final, Literal, NamedTuple, Union, cast, final
 
 from utils import CacheNotationData, Decorators, DequeCache, UniqueList, \
-    BiCoords, SortBiCoords, TriCoords, SortTriCoords, \
+    BiCoords, TriCoords, \
     EmptySet, IndexType, IndexTypes, RetType, strtype, \
     cat, orepr, instcheck, subclscheck
 from pprint import pp
@@ -61,6 +61,12 @@ def raises(errcls = AttributeError) -> Callable:
         raise errcls('Unsupported operation for %s' % cls)
     return fraise
 
+def fixedreturn(val):
+    def fnfixed(*args, **kw): return val
+    return fnfixed
+
+def fixedprop(val): return property(fixedreturn(val))
+    
 def _lexstr(item):
     try:
         return _syslw.write(item)
@@ -79,7 +85,6 @@ def _lexrepr(item):
     except (AttributeError, NameError):
         return '<%s: ?>' % item.__class__.__name__
 
-def nonereturn(*args, **kw): return None
 
 ##############################################################
 
@@ -169,10 +174,8 @@ class EnumMetaBase(EnumMeta):
     def __call__(cls, *args, **kw) -> Enum:
         if len(args) == 1 and isinstance(args[0], cls._ktypes):
             key, = args
-            try:
-                return cls[key]
-            except KeyError:
-                pass
+            try: return cls[key]
+            except KeyError: pass
         return super().__call__(*args, **kw)
 
 class EnumBase(Enum, metaclass = EnumMetaBase):
@@ -299,8 +302,7 @@ class Lexical(object):
     __setattr__ = nosetattr(object, cls = LexicalItemMeta)
 
     def cmpwrap(oper):
-        def fcmp(self, other):
-            return oper(Lexical.cmpitems(self, other), 0)
+        def fcmp(self, other): return oper(Lexical.cmpitems(self, other), 0)
         fcmp.__name__ = fcmp.__qualname__ = '__%s__' % oper.__name__
         return fcmp
 
@@ -346,10 +348,9 @@ class Lexical(object):
     @staticmethod
     @final
     def cmpitems(item, other):
-        # item: Lexical = item
-        # other: Lexical = other
+        item: Lexical = item ; other: Lexical = other
         if item is other: return 0
-        cmp = LexType.rankitem(item) - LexType.rankitem(other)
+        cmp = item.TYPE.rank - other.TYPE.rank
         if cmp: return cmp
         a, b = item.sort_tuple, other.sort_tuple
         for x, y in zip(a, b):
@@ -412,13 +413,10 @@ class Lexical(object):
     @classmethod
     @abstract
     def first(cls): ...
-
     @abstract
     def next(self, **kw): ...
-
     @abstract
     def __eq__(self, other): ...
-
     @abstract
     def __hash__(self): ...
 
@@ -708,7 +706,7 @@ class Predicate(CoordsItem):
         """
         return tuple({self.spec, self.ident, self.bicoords, self.name})
 
-    System: EnumBase = EmptySet
+    System: Collection[CoordsItem] = EmptySet
 
     def __init__(self, *spec):
         if len(spec) == 1 and isinstance(spec[0], tuple):
@@ -751,168 +749,49 @@ class Parameter(CoordsItem):
 
 class Constant(Parameter):
 
-    @property
-    def is_constant(self) -> bool:
-        """
-        :implements: Parameter
-        """
-        return True
-
-    @property
-    def is_variable(self) -> bool:
-        """
-        :implements: Parameter
-        """
-        return False
+    is_constant: Literal[True]  = fixedprop(True)
+    is_variable: Literal[False] = fixedprop(False)
 
 class Variable(Parameter):
 
-    @property
-    def is_constant(self) -> bool:
-        """
-        :implements: Parameter
-        """
-        return False
-
-    @property
-    def is_variable(self) -> bool:
-        """
-        :implements: Parameter
-        """
-        return True
+    is_constant: Literal[False] = fixedprop(False)
+    is_variable: Literal[True]  = fixedprop(True)
 
 ##############################################################
 
 class Sentence(LexicalItem):
-
-    @property
-    def is_predicated(self): return False
-    @property
-    def is_atomic(self): return False
-    @property
-    def is_literal(self): return False
-    @property
-    def is_quantified(self): return False
-    @property
-    def is_operated(self): return False
-    @property
-    def is_negated(self): return False
-
-    # ----------------------------------
 
     predicate  : Union[Predicate, None]
     quantifier : Union[Quantifier, None]
     operator   : Union[Operator, None]
 
     #: Whether this is an atomic sentence.
-    is_atomic: bool
+    is_atomic: bool = fixedprop(False)
     #: Whether this is a predicated sentence.
-    is_predicated: bool
+    is_predicated: bool = fixedprop(False)
     #: Whether this is a quantified sentence.
-    is_quantified: bool
+    is_quantified: bool = fixedprop(False)
     #: Whether this is an operated sentence.
-    is_operated: bool
+    is_operated: bool = fixedprop(False)
     #: Whether this is a literal sentence. Here a literal is either a
     #: predicated sentence, the negation of a predicated sentence,
     #: an atomic sentence, or the negation of an atomic sentence.
-    is_literal: bool
+    is_literal: bool = fixedprop(False)
     #: Whether this is an atomic sentence.
-    is_negated: bool
+    is_negated: bool = fixedprop(False)
 
-    # @property
-    # def is_atomic(self) -> bool:
-    #     """
-    #     Whether this is an atomic sentence.
-    #     """
-    #     return self.TYPE == Atomic
-
-    # @property
-    # def is_predicated(self) -> bool:
-    #     """
-    #     Whether this is a predicated sentence.
-    #     """
-    #     return self.TYPE == Predicated
-
-    # @property
-    # def is_quantified(self) -> bool:
-    #     """
-    #     Whether this a quantified sentence.
-    #     """
-    #     return self.TYPE == Quantified
-
-    # @property
-    # def is_operated(self) -> bool:
-    #     """
-    #     Whether this is an operated sentence.
-    #     """
-    #     return self.TYPE == Operated
-
-    # @property
-    # @lazyget
-    # def is_literal(self) -> bool:
-    #     """
-    #     Whether the sentence is a literal. Here a literal is either a
-    #     predicated sentence, the negation of a predicated sentence,
-    #     an atomic sentence, or the negation of an atomic sentence.
-
-    #     :type: bool
-    #     """
-    #     return self.TYPE in (Atomic, Predicated) or (
-    #         self.is_negated and self[0].TYPE in (
-    #             (Atomic, Predicated)
-    #         )
-    #     )
-
-    # @property
-    # def is_negated(self) -> bool:
-    #     """
-    #     Whether this is a negated sentence.
-    #     """
-    #     return self.operator == Operator.Negation
-
-    @property
-    def predicates(self) -> frozenset[Predicate]:
-        """
-        Set of predicates, recursive.
-        """
-        return EmptySet
-
-    @property
-    def constants(self) -> frozenset[Constant]:
-        """
-        Set of constants, recursive.
-        """
-        return EmptySet
-
-    @property
-    def variables(self) -> frozenset[Variable]:
-        """
-        Set of variables, recursive.
-        """
-        return EmptySet
-
-    @property
-    def atomics(self) -> frozenset:
-        """
-        Set of atomic sentences, recursive.
-
-        :type: set[Atomic]
-        """
-        return EmptySet
-
-    @property
-    def quantifiers(self) -> tuple[Quantifier, ...]:
-        """
-        Tuple of quantifiers, recursive.
-        """
-        return tuple()
-
-    @property
-    def operators(self) -> tuple[Operator, ...]:
-        """
-        Tuple of operators, recursive.
-        """
-        return tuple()
+    #: Set of predicates, recursive.
+    predicates: frozenset[Predicate] = fixedprop(EmptySet)
+    #: Set of constants, recursive.
+    constants: frozenset[Constant] = fixedprop(EmptySet)
+    #: Set of variables, recursive.
+    variables: frozenset[Variable] = fixedprop(EmptySet)
+    #: Set of atomic sentences, recursive.
+    atomics: frozenset = fixedprop(EmptySet)
+    #: Tuple of quantifiers, recursive.
+    quantifiers: tuple[Quantifier, ...] = fixedprop(tuple())
+    #: Tuple of operators, recursive.
+    operators: tuple[Operator, ...] = fixedprop(tuple())
 
     def substitute(self, pnew: Parameter, pold: Parameter):
         """
@@ -974,22 +853,13 @@ class Sentence(LexicalItem):
 
 class Atomic(Sentence, CoordsItem):
 
-    predicate = quantifier = operator = property(nonereturn)
+    predicate  : Literal[None] = fixedprop(None)
+    quantifier : Literal[None] = fixedprop(None)
+    operator   : Literal[None] = fixedprop(None)
 
-    @property
-    def is_atomic(self): return True
-    @property
-    def is_literal(self): return True
-
-    is_atomic: Literal[True]
-    is_literal: Literal[True]
-
-    # @property
-    # def predicate(self): return None
-    # @property
-    # def quantifier(self): return None
-    # @property
-    # def operator(self): return None
+    is_atomic : Literal[True] = fixedprop(True)
+    is_literal: Literal[True] = fixedprop(True)
+    variable_occurs: Literal[False] = fixedreturn(False)
 
     @property
     @lazyget
@@ -999,21 +869,13 @@ class Atomic(Sentence, CoordsItem):
         """
         return frozenset({self})
 
-    def variable_occurs(self, v: Variable) -> Literal[False]: return False
-
-    def __init__(self, *coords: int):
-        CoordsItem.__init__(self, *coords)
+    __init__ = CoordsItem.__init__
+    # def __init__(self, *coords: int):
+        # CoordsItem.__init__(self, *coords)
 
 class Predicated(Sentence, Sequence[Parameter]):
 
     SpecType = tuple[Predicate.SpecType, tuple[Parameter.IdentType, ...]]
-
-    quantifier = operator = property(nonereturn)
-
-    @property
-    def is_predicated(self): return True
-    @property
-    def is_literal(self): return True
 
     #: The predicate.
     predicate: Predicate
@@ -1027,8 +889,10 @@ class Predicated(Sentence, Sequence[Parameter]):
     #: The arity of the predicate.
     arity: int
 
-    is_predicated : Literal[True]
-    is_literal    : Literal[True]
+    quantifier    : Literal[None] = fixedprop(None)
+    operator      : Literal[None] = fixedprop(None)
+    is_predicated : Literal[True] = fixedprop(True)
+    is_literal    : Literal[True] = fixedprop(True)
 
     @property
     @lazyget
@@ -1118,11 +982,6 @@ class Quantified(Sentence, Sequence[QuantifiedItemsType]):
     ItemTypes = (Quantifier, Variable, Sentence)
     ItemsType = QuantifiedItemsType
 
-    predicate = operator = property(nonereturn)
-
-    @property
-    def is_quantified(self): return True
-
     #: The quantifier
     quantifier: Quantifier
 
@@ -1135,7 +994,9 @@ class Quantified(Sentence, Sequence[QuantifiedItemsType]):
     #: The items sequence: Quantifer, Variable, Sentence.
     items: tuple[ItemTypes]
 
-    is_quantified: Literal[True]
+    predicate     : Literal[None] = fixedprop(None)
+    operator      : Literal[None] = fixedprop(None)
+    is_quantified : Literal[True] = fixedprop(True)
 
     @property
     @lazyget
@@ -1232,29 +1093,22 @@ class Operated(Sentence, Sequence[Sentence]):
 
     SpecType = tuple[str, tuple[Sentence.IdentType, ...]]
 
-    predicate = quantifier = property(nonereturn)
-
-    @property
-    def is_operated(self): return True
-
     @property
     def arity(self) -> int: return self.operator.arity
-
     @property
     def operand(self) -> Union[Sentence, None]:
         return self[0] if len(self) == 1 else None
-
     @property
     def negatum(self) -> Union[Sentence, None]:
         return self[0] if self.is_negated else None
-
     @property
     def lhs(self) -> Sentence: return self[0]
-
     @property
     def rhs(self) -> Sentence: return self[-1]
 
-    is_operated: Literal[True]
+    predicate  : Literal[True] = fixedprop(None)
+    quantifier : Literal[True] = fixedprop(None)
+    is_operated: Literal[True] = fixedprop(True)
 
     #: The operator
     operator: Operator
@@ -1373,16 +1227,10 @@ class LexType(TypeEnumAbc):
     Quantified  = (60,  Quantified, Sentence,   None)
     Operated    = (70,  Operated,   Sentence,   None)
 
- 
     @classmethod
     def rankitem(cls, item) -> int: return cls(item.__class__).rank
 
     def __call__(self, *args, **kw) -> Lexical: return self.cls(*args, **kw)
-
-    def __hash__(self): return self.hash
-
-    def __eq__(self, other):
-        return self is other or self.cls is other or self is LexType.get(other)
 
     @cmperr
     def __lt__(self, b: TypeEnumAbc): return self.rank < b.rank
@@ -1392,6 +1240,10 @@ class LexType(TypeEnumAbc):
     def __gt__(self, b: TypeEnumAbc): return self.rank > b.rank
     @cmperr
     def __ge__(self, b: TypeEnumAbc): return self.rank >= b.rank
+
+    def __hash__(self): return self.hash
+    def __eq__(self, other):
+        return self is other or self.cls is other or self is LexType.get(other)
 
     def __init__(self, *value):
         super().__init__()
@@ -1438,10 +1290,11 @@ class Predicates(Sequence[Predicate], metaclass = PredicatesMeta):
             pred = Predicate(spec)
             pred._value_ = pred
             setattr(Predicate, pred.name, pred)
+            Predicate.__annotations__.update({pred.name: Predicate})
             return pred
 
         @classmethod
-        def _member_keys(cls, pred: Predicate) -> set[Hashable]:
+        def _member_keys(cls, pred: Predicate) -> set:
             return set(super()._member_keys(pred)).union(pred.refs) | {pred}
 
         @classmethod
@@ -1451,7 +1304,7 @@ class Predicates(Sequence[Predicate], metaclass = PredicatesMeta):
         @classmethod
         def _after_init(cls):
             super()._after_init()
-            Predicate.__annotations__['System'] = cls
+            Predicate.__annotations__.update(System = EnumMetaBase)
             Predicate.System = cls
 
     def add(self, pred: ItemSpecType) -> Predicate:
@@ -1591,23 +1444,15 @@ class Argument(Sequence[Sentence], metaclass = ArgumentMeta):
         return cmp
 
     @cmptype
-    def __lt__(self, other):
-        return self._cmp(other) < 0
-
+    def __lt__(self, other): return self._cmp(other) < 0
     @cmptype
-    def __le__(self, other):
-        return self._cmp(other) <= 0
-
+    def __le__(self, other): return self._cmp(other) <= 0
     @cmptype
-    def __gt__(self, other):
-        return self._cmp(other) > 0
-
+    def __gt__(self, other): return self._cmp(other) > 0
     @cmptype
-    def __ge__(self, other):
-        return self._cmp(other) >= 0
+    def __ge__(self, other): return self._cmp(other) >= 0
 
-    def __hash__(self):
-        return self.hash
+    def __hash__(self): return self.hash
 
     def __eq__(self, other):
         """
@@ -1758,11 +1603,11 @@ class LexWriter(object, metaclass = AbcMetaBase):
 # def create_lexwriter(*args, **opts):
 #     return LexWriter(*args, **opts)
 def create_lexwriter(notn = None, enc = None, **opts) -> LexWriter:
-    if not notn:
+    if notn is None:
         notn = default_notation
     if notn not in notations:
         raise ValueError(notn)
-    if not enc:
+    if enc is None:
         enc = default_notn_encs[notn]
     if 'renderset' not in opts:
         opts['renderset'] = RenderSet.fetch(notn, enc)
@@ -2106,4 +1951,4 @@ lexwriter_classes.update({
 _syslw = create_lexwriter()
 
 ftmp = None
-del(_builtin, ftmp, isreadonly, raises, nonereturn)
+del(_builtin, ftmp, isreadonly, raises)
