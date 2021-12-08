@@ -1,4 +1,5 @@
-from utils import Decorators, UniqueList, get_logic
+from containers import  UniqueList
+from utils import Decorators, get_logic
 from lexicals import Operator, Sentence
 import itertools
 abstract = Decorators.abstract

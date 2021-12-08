@@ -17,19 +17,22 @@
 #
 # ------------------
 # pytableaux - lexicals module
+from __future__ import annotations
+
 import abc, enum
 # from abc import ABCMeta
 # from enum import Enum
 from copy import deepcopy
 from collections.abc import Callable, Collection, Generator, Hashable, \
     Iterable, Iterator, Mapping, MutableMapping, Sequence \
-    # ItemsView, KeysView, ValuesView
+
 from itertools import chain
 import operator as opr
 from types import MappingProxyType
 from typing import Any, ClassVar, Final, Literal, NamedTuple, Union, cast, final
 
-from utils import CacheNotationData, Decorators, DequeCache, UniqueList, \
+from containers import UniqueList
+from utils import CacheNotationData, Decorators, DequeCache, \
     BiCoords, TriCoords, \
     EmptySet, IndexType, IndexTypes, RetType, strtype, \
     cat, orepr, instcheck, subclscheck

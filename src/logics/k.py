@@ -27,6 +27,7 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 1
 
+from containers import UniqueList
 from lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantified, \
     Operator as Oper, Quantifier, Argument, Sentence, Predicates
 from models import BaseModel
@@ -38,7 +39,7 @@ from proof.helpers import AppliedNodesWorlds, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
     FilterHelper, AppliedNodeCount, VisibleWorldsIndex
 
-from utils import EmptySet, UniqueList
+from utils import EmptySet
 from errors import DenotationError, ModelValueError
 
 from . import fde as FDE

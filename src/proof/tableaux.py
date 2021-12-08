@@ -17,9 +17,10 @@
 # ------------------
 #
 # pytableaux - tableaux module
+from containers import UniqueList
 from .common import FLAG, KEY, Branch, Node, NodeType, RuleEvents, Target
 from lexicals import Argument, Sentence
-from utils import Decorators, LinkOrderSet, StopWatch, UniqueList, \
+from utils import Decorators, LinkOrderSet, StopWatch, \
     LogicRef, EmptySet, get_logic, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import EventId, Events, EventEmitter

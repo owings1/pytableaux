@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - rule helpers module
-from containers import DictAttrView
+from containers import MapAttrView
 from lexicals import Constant, Sentence
 from models import BaseModel
 from utils import Decorators, LinkOrderSet, EmptySet, T, \
@@ -396,7 +396,7 @@ class FilterHelper(FilterNodeCache):
     Set configurable and chainable filters in ``NodeFilters``
     class attribute.
     """
-    filters: DictAttrView
+    filters: MapAttrView
 
     _attr = 'nf'
 
@@ -466,7 +466,7 @@ class FilterHelper(FilterNodeCache):
         self.rule = rule
         self.callcount = 0
         self.__fmap = {}#OrderedDict()
-        self.filters = DictAttrView(self.__fmap)
+        self.filters = MapAttrView(self.__fmap)
         self.__to_discard = set()
         rawvalue = getattr(rule, self.__class__.clsattr_node, EmptySet)
         for item in rawvalue:

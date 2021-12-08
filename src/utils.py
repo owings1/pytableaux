@@ -17,6 +17,7 @@
 # ------------------
 #
 # pytableaux - utils module
+from __future__ import annotations
 
 from errors import DuplicateKeyError, IllegalStateError
 
@@ -52,6 +53,10 @@ CmpFnOper = MappingProxyType({
     '__contains__': 'in',
 })
 
+
+# ((k, typing.get_args(v))
+# for k, v in annot.items()
+# if typing.get_origin(v) is Annotated)
 # Types
 strtype = str
 LogicRef = Union[ModuleType, str]
@@ -63,32 +68,38 @@ T2 = TypeVar('T2')
 RetType = TypeVar('RetType')
 
 
-class Annotate(enum.Enum):
-    MroMerge = enum.auto()
-    SubclsMerge = enum.auto()
+class AttrFlag(enum.Flag):
+    Blank      = 0
+    ClassVar   = 1
+    Merge      = 2
+    SubClass   = 4
+    MergeSubClassVar = ClassVar | Merge | SubClass
 
 class AttrNote(NamedTuple):
 
     cls: type
     attr: str
     otype: type
-    meta: set
-    endtype: type
-    args: list
+    flag: AttrFlag
+    merger: Any = None
+    endtype: type = None
+    extra: list = []
+    # endtype: type
+    # args: list
 
     @classmethod
-    def forclass(cls, Class: type, metaset: set = EmptySet) -> Iterator[tuple[str, ...]]:
-        annot = Class.__annotations__
+    def forclass(cls, Class: type) -> dict[str, AttrNote]:
+        annot = typing.get_type_hints(Class, include_extras = True)
         notes = (
-            cls(Class, attr, *vals[0:2], vals[ - (len(vals) > 2)], vals)
+            # cls(Class, attr, *vals[0:2], vals[ - (len(vals) > 2)], vals)
+            cls(Class, attr, *vals[0:4], vals[4:])
             for attr, vals in (
                 (k, typing.get_args(v))
                 for k, v in annot.items()
                 if typing.get_origin(v) is Annotated
             )
         )
-        filt = (n for n in notes if metaset.issubset(n.meta))
-        return ((n.attr,n) for n in filt)
+        return dict((n.attr,n) for n in notes)
 
 
 def get_module(ref, package: str = None) -> ModuleType:
@@ -555,163 +566,6 @@ class StopWatch(object):
         if self.is_running():
             self.stop()
 
-
-
-class UniqueList(Sequence[T], MutableSet[T]):
-
-    __slots__ = ('__set', '__list')
-
-    def add(self, item):
-        if item not in self:
-            self.__set.add(item)
-            self.__list.append(item)
-
-    append = add
-
-    def update(self, items: Iterable[T]):
-        for item in items:
-            self.add(item)
-
-    extend = update
-
-    def clear(self):
-        self.__set.clear()
-        self.__list.clear()
-
-    def count(self, item) -> int:
-        return int(item in self)
-
-    def index(self, item) -> int:
-        return self.__list.index(item)
-
-    def pop(self, *i: int) -> T:
-        item = self.__list.pop(*i)
-        self.__set.remove(item)
-        return item
-
-    def remove(self, item):
-        self.__set.remove(item)
-        self.__list.remove(item)
-
-    def discard(self, item):
-        if item in self:
-            self.remove(item)
-
-    def reverse(self):
-        self.__list.reverse()
-
-    def sort(self, *args, **kw):
-        self.__list.sort(*args, **kw)
-
-    def union(self, other: Iterable):
-        inst = copy(self)
-        if other is not self:
-            inst.update(other)
-        return inst
-
-    def difference(self, other: Iterable):
-        if not isinstance(other, (set, dict, self.__class__)):
-            other = set(other)
-        return self.__class__((x for x in self if x not in other))
-
-    def difference_update(self, other: Iterable):
-        for item in other:
-            self.discard(item)
-
-    def symmetric_difference(self, other: Iterable):
-        inst = self.difference(other)
-        inst.update((x for x in other if x not in self))
-        return inst
-
-    def symmetric_difference_update(self, other: Iterable):
-        inst = self.symmetric_difference(other)
-        self.clear()
-        self.update(inst)
-
-    def intersection(self, other: Iterable):
-        if not isinstance(other, (set, dict, self.__class__)):
-            other = set(other)
-        return self.__class__((x for x in self if x in other))
-
-    def intersection_update(self, other: Iterable):
-        if not isinstance(other, (set, dict, self.__class__)):
-            other = set(other)
-        for item in self.__set.difference(other):
-            self.remove(item)
-
-    def isdisjoint(self, other) -> bool:
-        if isinstance(other, self.__class__):
-            other = other.__set
-        return self.__set.isdisjoint(other)
-
-    def issubset(self, other) -> bool:
-        if isinstance(other, self.__class__):
-            other = other.__set
-        return self.__set.issubset(other)
-
-    def issuperset(self, other) -> bool:
-        if isinstance(other, self.__class__):
-            other = other.__set
-        return self.__set.issuperset(other)
-
-    def copy(self):
-        return self.__class__(self)
-
-    def __len__(self):
-        return len(self.__set)
-
-    def __iter__(self) -> Iterator[T]:
-        return iter(self.__list)
-
-    def __contains__(self, item):
-        return item in self.__set
-
-    def __getitem__(self, key: IndexType) -> T:
-        return self.__list[key]
-
-    def __delitem__(self, key: IndexType):
-        if isinstance(key, slice):
-            for item in self.__list[key]:
-                self.__set.remove(item)
-            del self.__list[key]
-        elif isinstance(key, int):
-            self.pop(key)
-        else:
-            raise TypeError(key, type(key), IndexTypes)
-
-    def __add__(self, value: Iterable[T]):
-        inst = copy(self)
-        if value is not self:
-            inst.update(value)
-        return inst
-
-    def __iadd__(self, value: Iterable[T]):
-        if value is not self:
-            self.update(value)
-        return self
-
-    def __sub__(self, value: Iterable[T]):
-        return self.difference(value)
-
-    def __isub__(self, value: Iterable[T]):
-        self.difference_update(value)
-        return self
-
-    __copy__ = copy
-
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            other = other.__list
-        return self.__list == other
-
-    def __init__(self, items: Iterable = None):
-        self.__set = set()
-        self.__list = []
-        if items:
-            self.update(items)
-
-    def __repr__(self):
-        return cat(self.__class__.__name__, wrparens(self.__list.__repr__()))
 
 class LinkOrderSet(Collection):
 

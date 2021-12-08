@@ -1,4 +1,4 @@
-from callables import Callee, fpreds, Attr as GetAttr, Key as GetKey, It as GetIt
+from callables import Caller, calls, preds
 from containers import ABCMeta
 from events import Events, EventEmitter
 import lexicals
@@ -100,7 +100,7 @@ class Node(Mapping, metaclass = NodeMeta):
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
         """
-        return frozenset(filter(fpreds.instanceof[int],
+        return frozenset(filter(preds.instanceof[int],
             self.get('worlds', EmptySet) |
             {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
         ))
@@ -267,35 +267,14 @@ class Comparer(Callable[..., bool]):
         except AttributeError: return lhs.__class__.__name__
 class Filters(object):
 
-    # class Filter(Filter): pass
-
-    # class Method(Comparer):
-
-    #     args: tuple
-    #     kw: dict
-
-    #     #: Method getter
-    #     rget: ClassVar[Callable[[RHS, str], Callable[..., bool]]] = GetAttr()
-
-    #     def __init__(self, lhs: str, *args, **kw):
-    #         super().__init__(lhs)
-    #         self.args = args
-    #         self.kw = kw
-
-    #     def __call__(self, rhs: RHS) -> bool:
-    #         func = self.rget(rhs, self.lhs)
-    #         return bool(func(*self.args, **self.kw))
-
-    #     example: ClassVar[Callable] = None.__class__
-
     class Attr(Comparer):
 
         #: LHS attr -> RHS attr mapping.
         attrmap: dict[str, str] = {}
 
         #: Attribute getters
-        lget: ClassVar[Callable[[LHS, str], Any]] = GetAttr(flag = Callee.SAFE)
-        rget: ClassVar[Callable[[RHS, str], Any]] = GetAttr()
+        lget: ClassVar[Callable[[LHS, str], Any]] = calls.attr(flag = Caller.SAFE)
+        rget: ClassVar[Callable[[RHS, str], Any]] = calls.attr()
         #: Comparison
         fcmp: ClassVar[Callable[[Any, Any], bool]] = opr.eq
 
@@ -324,7 +303,7 @@ class Filters(object):
 
     class Sentence(Comparer):
 
-        rget: Callable[[RHS], lexicals.Sentence] = GetIt()
+        rget: Callable[[RHS], lexicals.Sentence] = calls.thru()
 
         @property
         def negated(self) -> bool:
@@ -390,7 +369,7 @@ class NodeFilters(Filters):
 
     class Sentence(Filters.Sentence):
 
-        rget: Callable[[Node], lexicals.Sentence] = GetKey('sentence', flag = Callee.SAFE)
+        rget: Callable[[Node], lexicals.Sentence] = calls.key('sentence', flag = Caller.SAFE)
 
         def example_node(self) -> dict:
             n = {}
@@ -401,7 +380,7 @@ class NodeFilters(Filters):
     class Designation(Filters.Attr):
 
         attrmap = {'designation': 'designated'}
-        rget: Callable[[Node], bool] = GetKey()
+        rget: Callable[[Node], bool] = calls.key()
 
         def example_node(self) -> dict:
             return self.example()

@@ -1,5 +1,5 @@
 
-from callables import Key as GetKey
+from callables import calls
 from errors import *
 from events import Events
 from proof.tableaux import Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG
@@ -379,7 +379,7 @@ class TestFilters(BaseSuite):
         class Lhs(object):
             testname = True
         f = Filters.Attr(Lhs(), testname = 'designated')
-        f.rget = GetKey()
+        f.rget = calls.key()
         assert f(Node({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
 
@@ -397,7 +397,7 @@ class NodeFilterRule(RuleStub):
 
     class DesignationFilter(Filters.Attr):
         attrs = (('designation', 'designated'),)
-        rget = GetKey()
+        rget = calls.key()
 
     class ModalFilter(Filters.Attr):
         attrs = (('modal', 'is_modal'),)

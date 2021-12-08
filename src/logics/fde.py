@@ -26,6 +26,7 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
     category_display_order = 10
 
+from containers import UniqueList
 from models import BaseModel
 from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
     Sentence, Atomic, Predicated, Quantified, Operated, Argument, Predicates
@@ -34,7 +35,7 @@ from proof.rules import ClosureRule
 from proof.common import Branch, Node, NodeFilters, Target
 from proof.helpers import AdzHelper, AppliedNodeConstants, AppliedNodeCount, \
     AppliedQuitFlag, FilterHelper, MaxConstantsTracker
-from utils import Decorators, UniqueList
+from utils import Decorators
 from errors import ModelValueError
 from typing import Any
 
@@ -121,12 +122,6 @@ class Model(BaseModel):
             return 'T'
         if params in anti_extension:
             return 'F'
-        # if params in extension and params in anti_extension:
-        #     return 'B'
-        # if params in extension:
-        #     return 'T'
-        # if params in anti_extension:
-        #     return 'F'
         return 'N'
 
     def value_of_existential(self, s: Quantified, **kw):
@@ -706,9 +701,7 @@ class TabRules(object):
         # rule implementation
 
         def node_will_close_branch(self, node: Node, branch: Branch):
-            if self._find_closing_node(node, branch):
-                return True
-            return False
+            return bool(self._find_closing_node(node, branch))
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
