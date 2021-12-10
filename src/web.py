@@ -21,8 +21,8 @@
 import examples, fixed
 from errors import TimeoutError
 from fixed import issues_href, source_href, version
-from lexicals import Argument, Predicate, Predicates, RenderSet, \
-    create_lexwriter, notations as lexwriter_notations, Operator, Quantifier
+from lexicals import Argument, Predicate, Predicates, LexWriter, RenderSet, \
+    Operator, Quantifier, Notation
 from parsers import create_parser, notations as parser_notations
 from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
@@ -82,12 +82,12 @@ cp_config = {
 # For notn, only include those common to all, until UI suports
 # notn-specific choice.
 lexwriter_encodings = {
-    notn: RenderSet.available(notn)
-    for notn in lexwriter_notations
+    notn.name: RenderSet.available(notn.name)
+    for notn in Notation
 }
 _enc = set(enc for encs in lexwriter_encodings.values() for enc in encs)
-for notn in lexwriter_notations:
-    _enc = _enc.intersection(RenderSet.available(notn))
+for notn in Notation:
+    _enc = _enc.intersection(RenderSet.available(notn.name))
 lexwriter_encodings_common = sorted(_enc)
 del(_enc)
 
@@ -95,11 +95,11 @@ del(_enc)
 ## Static LexWriters  ##
 ########################
 lexwriters = {
-    notn: {
-        enc: create_lexwriter(notn=notn, enc=enc)
-        for enc in RenderSet.available(notn)
+    notn.name: {
+        enc: LexWriter(notn, enc=enc)
+        for enc in RenderSet.available(notn.name)
     }
-    for notn in lexwriter_notations 
+    for notn in Notation 
 }
 
 #####################
@@ -145,7 +145,7 @@ base_view_data = {
     'is_feedback'         : opts['feedback_enabled'],
     'is_google_analytics' : bool(opts['google_analytics_id']),
     'issues_href'         : issues_href,
-    'lexwriter_notations' : lexwriter_notations,
+    'lexwriter_notations' : Notation.names,
     'lexwriter_encodings' : lexwriter_encodings_common,
     'lwstdhtm'            : lexwriters['standard']['html'],
     'logic_categories'    : logic_categories,

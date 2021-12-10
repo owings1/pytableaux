@@ -6,8 +6,6 @@ Lexicals Module
 
 .. automodule:: lexicals
 
-    .. autofunction:: create_lexwriter
-
     .. autoclass:: LexWriter
         :members: write
 

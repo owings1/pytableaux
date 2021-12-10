@@ -19,7 +19,7 @@
 # pytableaux - First Degree Entailment Logic
 name = 'FDE'
 
-class Meta(object):
+class Meta:
     title    = 'First Degree Entailment'
     category = 'Many-valued'
     description = 'Four-valued logic (True, False, Neither, Both)'

@@ -19,7 +19,7 @@
 # pytableaux - Web App Configuration
 from utils import get_logic
 from parsers import create_parser, notations as parser_notations, CharTable
-from lexicals import create_lexwriter
+from lexicals import LexWriter
 import examples
 import importlib, logging, os, os.path
 import prometheus_client as prom
@@ -171,7 +171,7 @@ def __populate_info():
         example_arguments[arg.title] = {}
     for notn in parser_notations:
         # Build rendered example arguments
-        lw = create_lexwriter(notn=notn, enc='ascii')
+        lw = LexWriter(notn=notn, enc='ascii')
         for arg in exargs:
             example_arguments[arg.title][notn] = {
                 'premises': tuple(lw.write(s) for s in arg.premises),

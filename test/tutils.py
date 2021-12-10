@@ -1,5 +1,5 @@
 import examples, lexicals, utils
-from lexicals import Argument, Predicates, Sentence, create_lexwriter
+from lexicals import Argument, Predicates, Sentence, LexWriter
 from models import BaseModel
 from parsers import notations as parser_notns, create_parser, parse_argument, parse, Parser
 from proof.tableaux import Tableau, Branch, Node, Rule
@@ -100,7 +100,7 @@ class BaseSuite(AbstractSuite):
     notn = 'polish'
     logic = get_logic('CFOL')
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
-    lw = create_lexwriter(notn='standard')
+    lw = LexWriter(notn='standard')
 
     @classmethod
     def dynamic(cls, attr, val):

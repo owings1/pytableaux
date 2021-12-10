@@ -1,4 +1,4 @@
-from callables import Caller, calls, preds
+from callables import Caller, calls, gets, preds
 from containers import ABCMeta
 from events import Events, EventEmitter
 import lexicals
@@ -110,7 +110,7 @@ class Node(Mapping, metaclass = NodeMeta):
         Whether the node has a non-``None`` property of all the given names.
         """
         for name in names:
-            if self.get(name) == None:
+            if self.get(name) is None:
                 return False
         return True
 
@@ -119,7 +119,7 @@ class Node(Mapping, metaclass = NodeMeta):
         Whether the node has a non-``None`` property of any of the given names.
         """
         for name in names:
-            if self.get(name) != None:
+            if self.get(name) is not None:
                 return True
         return False
 
@@ -273,8 +273,8 @@ class Filters(object):
         attrmap: dict[str, str] = {}
 
         #: Attribute getters
-        lget: ClassVar[Callable[[LHS, str], Any]] = calls.attr(flag = Caller.SAFE)
-        rget: ClassVar[Callable[[RHS, str], Any]] = calls.attr()
+        lget: ClassVar[Callable[[LHS, str], Any]] = gets.attr(flag = Caller.SAFE)
+        rget: ClassVar[Callable[[RHS, str], Any]] = gets.attr()
         #: Comparison
         fcmp: ClassVar[Callable[[Any, Any], bool]] = opr.eq
 
@@ -303,7 +303,7 @@ class Filters(object):
 
     class Sentence(Comparer):
 
-        rget: Callable[[RHS], lexicals.Sentence] = calls.thru()
+        rget: Callable[[RHS], lexicals.Sentence] = gets.thru()
 
         @property
         def negated(self) -> bool:
@@ -369,7 +369,7 @@ class NodeFilters(Filters):
 
     class Sentence(Filters.Sentence):
 
-        rget: Callable[[Node], lexicals.Sentence] = calls.key('sentence', flag = Caller.SAFE)
+        rget: Callable[[Node], lexicals.Sentence] = gets.key('sentence', flag = Caller.SAFE)
 
         def example_node(self) -> dict:
             n = {}
@@ -380,7 +380,7 @@ class NodeFilters(Filters):
     class Designation(Filters.Attr):
 
         attrmap = {'designation': 'designated'}
-        rget: Callable[[Node], bool] = calls.key()
+        rget: Callable[[Node], bool] = gets.key()
 
         def example_node(self) -> dict:
             return self.example()

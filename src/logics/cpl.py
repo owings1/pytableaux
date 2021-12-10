@@ -69,7 +69,7 @@ class TableauxSystem(K.TableauxSystem):
             branch.add({'sentence': premise})
         branch.add({'sentence': argument.conclusion.negate()})
 
-class TabRules(object):
+class TabRules:
     """
     In general, rules for connectives consist of two rules per connective:
     a "plain" rule, and a negated rule. The special case of negation has only
@@ -257,4 +257,5 @@ class TabRules(object):
     )
     for cls in chain(closure_rules, chain.from_iterable(rule_groups)):
         cls.modal = False
+    del(cls)
 TableauxRules = TabRules

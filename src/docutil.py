@@ -33,9 +33,8 @@ from docutils.parsers.rst import Directive, directives, roles
 logger = logging.getLogger(__name__)
 from utils import cat, isstr, get_logic
 import examples
-from lexicals import create_lexwriter,  \
-    LexWriter, \
-    Constant, Variable, RenderSet, Predicates, Operator
+from lexicals import \
+    Constant, Variable, RenderSet, Predicates, Operator, LexWriter
 from parsers import create_parser, parse_argument, CharTable
 from proof.tableaux import Tableau, TableauxSystem as TabSys, Rule
 from proof.writers import create_tabwriter
@@ -138,7 +137,7 @@ class Helper(object):
 
         wrnotn = self.opts['write_notation']
 
-        self.lw = create_lexwriter(notn = wrnotn, enc = 'html')
+        self.lw = LexWriter(notn = wrnotn, enc = 'html')
         self.pwrule = create_tabwriter(
             notn = wrnotn,
             format = 'html',
@@ -159,7 +158,7 @@ class Helper(object):
             '<sub>{0}</sub>'.format('n' if sub == 2 else sub)
         )
         rset = RenderSet(rsdata)
-        self.lwtrunk = create_lexwriter(notn = wrnotn, renderset = rset)
+        self.lwtrunk = LexWriter(notn = wrnotn, renderset = rset)
         self.pwtrunk = create_tabwriter(
             notn = wrnotn,
             format = 'html',
@@ -260,7 +259,7 @@ class Helper(object):
                 RenderSet.fetch('standard', 'unicode')
             )
         )
-        # lwhtm = create_lexwriter('standard', enc='unicode')
+        # lwhtm = LexWriter('standard', enc='unicode')
         # symhtml = {
         #     # o: htmlun(lwhtm.write(o)) for o in oplist
         #     o: lwhtm.write(o) for o in oplist

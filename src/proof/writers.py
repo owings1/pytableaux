@@ -1,4 +1,4 @@
-from lexicals import create_lexwriter, default_notation, default_notn_encs
+from lexicals import LexWriter, Notation
 from utils import cat
 from proof.tableaux import KEY, FLAG
 from os import path
@@ -9,7 +9,10 @@ from jinja2 import Environment, FileSystemLoader
 formats = ('text', 'html')
 default_format = 'text'
 default_format_notn_encs = {
-    'text' : default_notn_encs,
+    'text' : {
+        notn.name: notn.default_encoding
+        for notn in Notation
+    },
     'html' : {'polish': 'html', 'standard': 'html'},
 }
 
@@ -18,7 +21,7 @@ def write_tableau(tableau, *args, **kw):
 
 def create_tabwriter(notn=None, format=None, **opts):
     if not notn:
-        notn = default_notation
+        notn = Notation.default.name
     if not format:
         format = default_format
     if 'lw' not in opts:
@@ -28,8 +31,8 @@ def create_tabwriter(notn=None, format=None, **opts):
             if defencs and notn in defencs:
                 lwopts['enc'] = defencs[notn]
             else:
-                lwopts['enc'] = default_notn_encs[notn]
-        opts['lw'] = create_lexwriter(notn=notn, **lwopts, **opts)
+                lwopts['enc'] = Notation(notn).default_encoding
+        opts['lw'] = LexWriter(notn=notn, **lwopts, **opts)
     if format == 'html':
         return HtmlTableauWriter(**opts)
     elif format == 'text':

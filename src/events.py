@@ -1,5 +1,4 @@
 from enum import Enum, unique
-from past.builtins import basestring
 from utils import Decorators, LinkOrderSet, orepr
 from typing import Callable, ItemsView, Iterator, KeysView, Mapping, \
     MutableMapping, Sequence, Union, ValuesView, final
@@ -18,7 +17,7 @@ class Events(Enum):
     BEFORE_APPLY       = 80
     BEFORE_TRUNK_BUILD = 100
 
-EventIdTypes = (basestring, int, Enum,)
+EventIdTypes = (str, int, Enum,)
 EventId = Union[EventIdTypes] # type: ignore
 
 class Listener(Callable):

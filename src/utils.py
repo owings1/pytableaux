@@ -27,13 +27,14 @@ from collections.abc import Callable, Collection, Hashable, ItemsView, Iterable,
     Iterator, KeysView, Mapping, MutableSet, Sequence, ValuesView
 from copy import copy
 import enum
+from functools import partial
 from importlib import import_module
 from inspect import isclass
 from itertools import chain, islice
 from time import time
 from types import MappingProxyType, ModuleType
 import typing
-from typing import Any, Annotated, NamedTuple, TypeVar, Union, abstractmethod, cast
+from typing import Any, Annotated, NamedTuple, ParamSpec, TypeVar, Union, abstractmethod, cast
 
 # from functools import partial
 # from operator import is_not
@@ -65,6 +66,7 @@ IndexType = Union[int, slice]
 
 T = TypeVar('T')
 T2 = TypeVar('T2')
+P = ParamSpec('P')
 RetType = TypeVar('RetType')
 
 
@@ -79,19 +81,17 @@ class AttrNote(NamedTuple):
 
     cls: type
     attr: str
+
     otype: type
     flag: AttrFlag
     merger: Any = None
     endtype: type = None
     extra: list = []
-    # endtype: type
-    # args: list
 
     @classmethod
     def forclass(cls, Class: type) -> dict[str, AttrNote]:
         annot = typing.get_type_hints(Class, include_extras = True)
         notes = (
-            # cls(Class, attr, *vals[0:2], vals[ - (len(vals) > 2)], vals)
             cls(Class, attr, *vals[0:4], vals[4:])
             for attr, vals in (
                 (k, typing.get_args(v))
@@ -175,7 +175,7 @@ def get_logic(ref) -> ModuleType:
     return get_module(ref, package = 'logics')
 
 
-def instcheck(obj, classinfo, exp = True):
+def instcheck(obj, classinfo: type[T], exp = True) -> T:
     if isinstance(obj, classinfo) != exp:
         raise TypeError(obj, type(obj), classinfo)
     return obj
@@ -183,86 +183,100 @@ def instcheck(obj, classinfo, exp = True):
 def isstr(obj) -> bool:
     return isinstance(obj, strtype)
 
-def subclscheck(cls, typeinfo, exp = True):
+def subclscheck(cls: type, typeinfo: T, exp = True) -> T:
     if issubclass(cls, typeinfo) != exp:
         raise TypeError(cls, typeinfo)
     return cls
 
 def nowms() -> int:
-    """Current time in milliseconds"""
+    'Current time in milliseconds'
     return int(round(time() * 1000))
 
 def cat(*args: str) -> str:
-    """Concat all argument strings"""
+    'Concat all argument strings'
     return ''.join(args)
 
-def errstr(err):
+def errstr(err) -> str:
     if isinstance(err, Exception):
         return '%s: %s' % (err.__class__.__name__, err)
     return str(err)
 
 def wrparens(*args: str) -> str:
-    """Concat all argument strings and wrap in parentheses"""
-    return cat('(', *args, ')')
+    'Concat all argument strings and wrap in parentheses'
+    return cat('(', ''.join(args), ')')
 
 def drepr(d: dict, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
     lw = drepr.lw
-    islogic = drepr.islogic
     pairs = (
-        cat(str(k), vj, v.__name__
-        if isclass(v) else (
-            v if isinstance(v, strtype) else (
-                lw.write(v) if lw is not None and lw.canwrite(v)
-                else (
-                    v.name if islogic(v)
-                    else v.__repr__()
-                )
-            )
-        ))
+        cat(str(k), vj, valrepr(v, lw = lw))
         for k,v in islice(d.items(), limit)
     )
     istr = j.join(pairs)
     if paren:
         return wrparens(istr)
     return istr
-drepr.islogic = lambda obj: (
-    isinstance(obj, ModuleType) and
-    obj.__name__.startswith('logics.')
-)
 # For testing, set this to a LexWriter instance.
 drepr.lw = None
 
-def orepr(obj, _d: dict = None, **kw) -> str:
+def valrepr(v, lw = drepr.lw, **opts) -> str:
+    if isinstance(v, str): return v
+    if isclass(v): return v.__name__
+    if isinstance(v, ModuleType):
+        if v.__name__.startswith('logics.'):
+            return getattr(v, 'name', v.__name__)
+    try: return lw(v)
+    except TypeError: pass
+    return v.__repr__()
+
+def orepr(obj, _d: dict = None, _ = None, **kw) -> str:
     d = _d if _d is not None else kw
     if isinstance(obj, strtype):
         oname = obj
     else:
         try: oname = obj.__class__.__qualname__
         except AttributeError: oname = obj.__class__.__name__
+    if _ is not None: oname = cat(oname, '.', valrepr(_))
     try:
         if callable(d): d = d()
         dstr = drepr(d, j = ' ', vj = ':', paren = False)
-        return '<%s %s>' % (oname, dstr)
+        if dstr:
+            return '<%s %s>' % (oname, dstr)
+        return '<%s>' % oname
     except Exception as e:
         return '<%s !ERR: %s !>' % (oname, errstr(e))
 
-def fixedreturn(val: Hashable) -> Callable:
-    """Returns a function that returns the argument."""
+def wraprepr(obj, inner) -> str:
+    return cat(obj.__class__.__name__, wrparens(inner.__repr__()))
+
+def fixedreturn(val: T) -> Callable[..., T]:
+    'Returns a function that returns the argument.'
     try: return fixedreturn.__dict__[val]
     except KeyError: pass
     def fnfixed(*_, **_k): return val
     return fixedreturn.__dict__.setdefault(val, fnfixed)
 
-def fixedprop(val: Hashable) -> property:
-    """Returns a property that returns the argument."""
+def fixedprop(val: T) -> Union[property, T]:
+    'Returns a property that returns the argument.'
     try: return fixedprop.__dict__[val]
     except KeyError: pass
     prop = property(fixedreturn(val))
     return fixedprop.__dict__.setdefault(val, prop)
 
+def renamefn(fnew: T, forig) -> T:
+    fnew.__qualname__ = forig.__qualname__
+    fnew.__name__ = forig.__name__
+    return fnew
+
 class Decorators(object):
 
     __new__ = None
+
+    def argwrap(decorator):
+        def wrapped(*args, **kw):
+            if args and callable(args[0]):
+                return decorator()(*args, **kw)
+            return decorator(*args, *kw)
+        return renamefn(wrapped, decorator)
 
     def abstract(method: Callable[..., RetType]) -> Callable[..., RetType]:
         @abstractmethod
@@ -270,13 +284,27 @@ class Decorators(object):
             raise NotImplementedError('abstractmethod', method)
         return notimplemented
 
-    def lazyget(method: Callable[..., RetType]) -> Callable[..., RetType]:
-        name, key = __class__._privkey(method)
-        def fget(self) -> RetType:
-            if not hasattr(self, key):
-                setattr(self, key, method(self))
-            return getattr(self, key)
-        return fget
+    @argwrap
+    def lazyget(name = None, fset = None) -> Callable[..., Callable[..., T]]:
+        def wrap(method: Callable[..., T]) -> Callable[..., T]:
+            key = '_%s' % method.__name__ if name is None else name
+            def fget(self) -> T:
+                try: return getattr(self, key)
+                except AttributeError: val = method(self)
+                setattr(self, key, val)
+                return val
+            return renamefn(fget, method)
+        return wrap
+
+    def lazyprop(func):
+        return property(Decorators.lazyget(func))
+
+    # def lazyget(method: Callable[..., T]) -> Callable[..., T]: ...
+    # lazyget = lazygetter()
+
+    def lazy_(method: Callable[..., T]) -> Callable[..., T]: ...
+    lazy_ = lazyget
+    # lazy_ = lazygetter(True)
 
     def setonce(method: Callable[..., RetType]) -> Callable[..., RetType]:
         name, key = __class__._privkey(method)
@@ -292,8 +320,7 @@ class Decorators(object):
                     if getattr(self, attr) != val:
                         raise IllegalStateError(attr)
                 return method(self, *args, **kw)
-            fcheckstate.__qualname__ = method.__name__
-            return fcheckstate
+            return renamefn(fcheckstate, method)
         return fcheckwrap
 
     def nosetattr(*args, **kw) -> Callable:
@@ -304,7 +331,6 @@ class Decorators(object):
         changeonly = kw.pop('changeonly', False)
         def fsetwrap(origin: Callable):
             def fset(self, attr, val):
-                # print('check', self.__class__.__name__)
                 if __class__._isreadonly(self, **kw):
                     if not changeonly:
                         raise AttributeError('%s is readonly' % self)
@@ -312,7 +338,6 @@ class Decorators(object):
                         if getattr(self, attr) is val:
                             return
                         raise AttributeError('%s.%s is immutable' % (self, attr))
-                # print('not readonly', self.__class__.__name__)
                 return origin(self, attr, val)
             return fset
         return fsetwrap(origin) if origin is not None else fsetwrap
@@ -337,23 +362,23 @@ class Decorators(object):
 
     cmperr = cmperrors(AttributeError, TypeError)
 
+    def cmpoprwrap(oper, fn = None):
+        fname = '__%s__' % oper.__name__
+        if not fn:
+            def wrap(method):
+                def fn(a, b):
+                    return 
     def cmptypes(*types: type) -> Callable:
+        msg = "'%s' not supported for '%s' and '%s' objects"
         def fcmpwrap(fcmp: Callable[..., RetType]) -> Callable[..., RetType]:
             fname = fcmp.__name__
             opsym = CmpFnOper.get(fname, fname)
-            eflag = TypeError()
             def fcmptypecheck(a, b):
-                try:
-                    if not isinstance(b, types or a.__class__):
-                        raise eflag
-                    return fcmp(a, b)
-                except TypeError as err:
-                    if err is eflag: err = None
-                    eargs = (opsym, type(a), type(b),)
-                    raise TypeError("'%s' not supported for %s and %s" % eargs) \
-                        from err
-            fcmptypecheck.__qualname__ = fname
-            return fcmptypecheck
+                if not isinstance(b, types or a.__class__):
+                    eargs = (opsym, *(o.__class__.__name__ for o in (a, b)))
+                    raise TypeError(msg % eargs)
+                return fcmp(a, b)
+            return renamefn(fcmptypecheck, fcmp)
         return fcmpwrap
 
     cmptype = cmptypes()
@@ -364,6 +389,10 @@ class Decorators(object):
             def fslice(*args): return func(*args[slc])
             return fslice
         return fslicewrap
+
+    def initfn(f, *args, **kw):
+        'Call and return None'
+        f(*args, **kw)
 
     @staticmethod
     def _privkey(method) -> tuple[str]:
@@ -462,7 +491,7 @@ def ftmp():
 ftmp()
 del(ftmp)
 
-class CacheNotationData(object):
+class CacheNotationData:
 
     default_fetch_name = 'default'
 
@@ -508,7 +537,7 @@ class CacheNotationData(object):
         notns = set(notns).union(builtin)
         cls.__instances = {notn: {} for notn in notns}
 
-class StopWatch(object):
+class StopWatch:
 
     __slots__ = ('_start_time', '_elapsed', '_is_running', '_times_started')
 
@@ -819,8 +848,7 @@ class DequeCache(Collection[T]):
 
     def __new__(cls, ItemType: type, maxlen = 10):
 
-        if issubclass(ItemType, IndexTypes):
-            raise TypeError()
+        subclscheck(ItemType, IndexType, False)
         instcheck(ItemType, type)
 
         idx      : dict[Any, ItemType] = {}

@@ -20,7 +20,7 @@
 import pytest
 
 from lexicals import Atomic, Operated, BaseLexWriter, Predicates, \
-    create_lexwriter
+    LexWriter
 from parsers import parse, create_parser
 from errors import *
 from proof.tableaux import Tableau
@@ -29,12 +29,12 @@ import examples
 
 # Sentence Writers
 
-std = create_lexwriter(notn='standard')
-stdasc = create_lexwriter(notn='standard', enc='ascii')
-stduni = create_lexwriter(notn='standard', enc='unicode')
-stdhtm = create_lexwriter(notn='standard', enc='html')
+std = LexWriter(notn='standard')
+stdasc = LexWriter(notn='standard', enc='ascii')
+stduni = LexWriter(notn='standard', enc='unicode')
+stdhtm = LexWriter(notn='standard', enc='html')
 
-pol = create_lexwriter(notn='polish')
+pol = LexWriter(notn='polish')
 pstd = create_parser('standard')
 
 class TestBase(object):
@@ -71,19 +71,19 @@ class TestStandard(object):
         assert ')' in res
     def test_drop_parens_asc(self):
         s = parse('Uab')
-        lw = create_lexwriter('standard', 'ascii', drop_parens=True)
+        lw = LexWriter('standard', 'ascii', drop_parens=True)
         res = lw.write(s)
         assert '(' not in res
         assert ')' not in res
     def test_drop_parens_uni(self):
         s = parse('Uab')
-        lw = create_lexwriter('standard', 'unicode', drop_parens=True)
+        lw = LexWriter('standard', 'unicode', drop_parens=True)
         res = lw.write(s)
         assert '(' not in res
         assert ')' not in res
     def test_drop_parens_htm(self):
         s = parse('Uab')
-        lw = create_lexwriter('standard', 'html', drop_parens=True)
+        lw = LexWriter('standard', 'html', drop_parens=True)
         res = lw.write(s)
         assert '(' not in res
         assert ')' not in res
