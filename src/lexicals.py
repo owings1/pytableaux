@@ -35,6 +35,7 @@ from typing import Any, ClassVar, Final, NamedTuple, TypeAlias, TypeVar, final
 from callables import calls, preds
 import containers
 from containers import UniqueList
+from decorators import lazyget
 from utils import AttrNote, CacheNotationData, Decorators, DequeCache, \
     BiCoords, SortBiCoords, SortTriCoords, TriCoords, \
     EmptySet, IndexType, IndexTypes, strtype, \
@@ -183,7 +184,6 @@ class EnumMeta(enum.EnumMeta):
             except KeyError: pass
         return super().__call__(*args, **kw)
 
-
     @DynamicClassAttribute
     def names(cls):
         return cls._member_names_
@@ -282,16 +282,11 @@ class Lexical:
     'Lexical mixin class for both ``LexicalEnum`` and ``LexicalItem`` classes.'
 
     __slots__ = ()
-    # -----------------------------------
-    # General Methods & Class Attributes
-    # -----------------------------------
 
     #: Type for attribute ``spec``
-    SpecType: ClassVar[type[tuple]]  = tuple
-
+    SpecType: ClassVar[type[tuple]] = tuple
     #: Type for attribute ``ident``
     IdentType: ClassVar[type[tuple[str, Lexical.SpecType]]]  = tuple[str, SpecType]
-
     # LexType instance populated below.
     TYPE: ClassVar[LexType]
 
@@ -507,12 +502,10 @@ class LexicalItem(Lexical, metaclass = LexicalItemMeta):
     # Lexical Implementation
     __slots__ = '_ident', '_hash'
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def ident(self) -> Lexical.IdentType: return Lexical.identitem(self)
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def hash(self) -> int: return Lexical.hashitem(self)
 
     def __hash__(self):
@@ -546,12 +539,10 @@ class CoordsItem(LexicalItem):
 
     __slots__ = 'spec', 'coords', 'index', 'subscript', '_sort_tuple', '_scoords'
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def sort_tuple(self): return self.scoords
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def scoords(self) -> SortBiCoords: return self.coords.sorting()
 
     @classmethod
@@ -580,7 +571,8 @@ class CoordsItem(LexicalItem):
             raise ValueError('%d < %d' % (self.subscript, 0))
 
     _fieldsenumerated: ClassVar[tuple[tuple[int, str], ...]]
-    def __init_subclass__(subcls: type[CoordsItem]):
+    def __init_subclass__(subcls: type[CoordsItem], **kw):
+        super().__init_subclass__(**kw)
         subcls._fieldsenumerated = tuple(enumerate(subcls.Coords._fields))
 
 ##############################################################
@@ -650,17 +642,14 @@ class Predicate(CoordsItem):
 
     #: The coords arity.
     arity: int
-
     #: Whether this is a system predicate.
     is_system: bool
-
     #: The name or spec
     name: IntTuple | str
 
     __slots__ = 'arity', 'is_system', 'name', '_bicoords', '_refs'
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def bicoords(self) -> BiCoords:
         return BiCoords(*self.spec[0:2])
 
@@ -674,8 +663,7 @@ class Predicate(CoordsItem):
                     return pred
         return super().next(**kw)
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def refs(self) -> tuple[Predicate.RefType, ...]:
         """
         The coords and other attributes, each of which uniquely identify this
@@ -774,9 +762,9 @@ class Variable(Parameter):
 
 class Sentence(LexicalItem):
 
-    predicate  : Predicate | None
+    predicate  : Predicate  | None
     quantifier : Quantifier | None
-    operator   : Operator | None
+    operator   : Operator   | None
 
     #: Whether this is an atomic sentence.
     is_atomic: bool = fixedprop(False)
@@ -852,8 +840,7 @@ class Atomic(Sentence, CoordsItem):
 
     __slots__ = ('atomics_',)
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def atomics(self) -> frozenset[Atomic]: return frozenset({self})
 
     __init__ = CoordsItem.__init__
@@ -881,13 +868,11 @@ class Predicated(Sentence, Sequence[Parameter]):
     spec: PredicatedSpec
 
     @property
-    @property
     def arity(self) -> int:
         'The arity of the predicate'
         return self.predicate.arity
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def paramset(self) -> frozenset[Parameter]:
         'The set of parameters.'
         return frozenset(self.params)
@@ -902,13 +887,11 @@ class Predicated(Sentence, Sequence[Parameter]):
     is_predicated = fixedprop(True)
     is_literal    = fixedprop(True)
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def spec(self) -> PredicatedSpec:
         return (self.predicate.spec, tuple(p.ident for p in self))
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def sort_tuple(self):
         items = (self.predicate, *self)
         return tuple(flatiter(it.sort_tuple for it in items))
@@ -923,18 +906,15 @@ class Predicated(Sentence, Sequence[Parameter]):
     def next(self, **kw) -> Predicated:
         return Predicated(self.predicate.next(**kw), self.params)
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def predicates(self) -> frozenset[Predicate]:
         return frozenset({self.predicate})
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def constants(self) -> frozenset[Constant]:
         return frozenset(p for p in self.paramset if p.is_constant)
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def variables(self) -> frozenset[Variable]:
         return frozenset(p for p in self.paramset if p.is_variable)
 
@@ -996,13 +976,11 @@ class Quantified(Sentence, Sequence[Lexical]):
     operator      = fixedprop(None)
     is_quantified = fixedprop(True)
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def spec(self) -> QuantifiedSpec:
         return self.quantifier.spec + (self.variable.spec, self.sentence.ident)
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def sort_tuple(self) -> IntTuple:
         return tuple(flatiter(item.sort_tuple for item in self))
 
@@ -1041,8 +1019,7 @@ class Quantified(Sentence, Sequence[Lexical]):
     def operators(self) -> tuple[Operator, ...]:
         return self.sentence.operators
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def quantifiers(self) -> tuple[Quantifier, ...]:
         return (self.quantifier, *self.sentence.quantifiers)
 
@@ -1125,18 +1102,16 @@ class Operated(Sentence, Sequence[Sentence]):
         'operator', 'operands', '_is_literal', '_spec', '_sort_tuple',
         '_predicates', '_constants', '_variables', '_atomics', '_operators',
     )
-    @property
-    @Decorators.lazy_
+
+    @lazyget.prop
     def is_literal(self) -> bool:
         return self.is_negated and self[0].TYPE in (Atomic, Predicated)
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def spec(self) -> OperatedSpec:
         return self.operator.spec + (tuple(s.ident for s in self),)
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def sort_tuple(self) -> IntTuple:
         return tuple(flatiter(it.sort_tuple for it in (self.operator, *self)))
 
@@ -1151,33 +1126,27 @@ class Operated(Sentence, Sequence[Sentence]):
         operands[-1] = operands[-1].next(**kw)
         return self.__class__(self.operator, tuple(operands))
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def predicates(self) -> frozenset[Predicate]:
         return frozenset(flatiter(s.predicates for s in self))
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def constants(self) -> frozenset[Constant]:
         return frozenset(flatiter(s.constants for s in self))
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def variables(self) -> frozenset[Variable]:
         return frozenset(flatiter(s.variables for s in self))
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def atomics(self) -> frozenset[Atomic]:
         return frozenset(flatiter(s.atomics for s in self))
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def quantifiers(self) -> tuple[Quantifier, ...]:
         return tuple(flatiter(s.quantifiers for s in self))
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def operators(self) -> tuple[Operator, ...]:
         return (self.operator,) + tuple(flatiter(s.operators for s in self))
 
@@ -1426,8 +1395,7 @@ class Argument(Sequence[Sentence], metaclass = ArgumentMeta):
     def premises(self) -> tuple[Sentence, ...]:
         return self.sentences[1:]
 
-    @property
-    @Decorators.lazy_
+    @lazyget.prop
     def hash(self) -> int:
         return hash(tuple(self))
 
@@ -1539,6 +1507,7 @@ class Notation(Enum, metaclass = NotationMeta):
 
     def __repr__(self):
         return orepr(self.__class__.__name__, _=self.name)
+
     @classmethod
     def _member_keys(cls, member: Notation) -> set:
         return set(super()._member_keys(member)) | set({member.name})
@@ -1602,7 +1571,8 @@ class LexWriter(metaclass = LexWriterMeta):
             notation.default_writer = subcls
         return subcls
 
-    def __init_subclass__(subcls: type[LexWriter]):
+    def __init_subclass__(subcls: type[LexWriter], **kw):
+        super().__init_subclass__(**kw)
         cls = __class__
         methmap: dict = cls.merge_mroattr(subcls, '_methodmap', supcls = cls)
         subcls._methodmap = MappingProxyType(methmap)

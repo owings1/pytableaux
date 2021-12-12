@@ -21,20 +21,23 @@ from __future__ import annotations
 
 from errors import DuplicateKeyError, IllegalStateError
 
+import abc
 from builtins import ModuleNotFoundError
 from collections import deque #, namedtuple
 from collections.abc import Callable, Collection, Hashable, ItemsView, Iterable,\
     Iterator, KeysView, Mapping, MutableSet, Sequence, ValuesView
 from copy import copy
 import enum
-from functools import partial
+from functools import partial, reduce
 from importlib import import_module
 from inspect import isclass
 from itertools import chain, islice
+import operator as opr
 from time import time
 from types import MappingProxyType, ModuleType
 import typing
-from typing import Any, Annotated, NamedTuple, ParamSpec, TypeVar, Union, abstractmethod, cast
+from typing import Any, Annotated, Generic, NamedTuple, ParamSpec, TypeAlias, TypeVar, Union, \
+    abstractmethod, cast
 
 # from functools import partial
 # from operator import is_not
@@ -62,44 +65,15 @@ CmpFnOper = MappingProxyType({
 strtype = str
 LogicRef = Union[ModuleType, str]
 IndexTypes = (int, slice)
-IndexType = Union[int, slice]
+IndexType: TypeAlias = int | slice
 
+K = TypeVar('K')
 T = TypeVar('T')
 T2 = TypeVar('T2')
 P = ParamSpec('P')
 RetType = TypeVar('RetType')
 
 
-class AttrFlag(enum.Flag):
-    Blank      = 0
-    ClassVar   = 1
-    Merge      = 2
-    SubClass   = 4
-    MergeSubClassVar = ClassVar | Merge | SubClass
-
-class AttrNote(NamedTuple):
-
-    cls: type
-    attr: str
-
-    otype: type
-    flag: AttrFlag
-    merger: Any = None
-    endtype: type = None
-    extra: list = []
-
-    @classmethod
-    def forclass(cls, Class: type) -> dict[str, AttrNote]:
-        annot = typing.get_type_hints(Class, include_extras = True)
-        notes = (
-            cls(Class, attr, *vals[0:4], vals[4:])
-            for attr, vals in (
-                (k, typing.get_args(v))
-                for k, v in annot.items()
-                if typing.get_origin(v) is Annotated
-            )
-        )
-        return dict((n.attr,n) for n in notes)
 
 
 def get_module(ref, package: str = None) -> ModuleType:
@@ -266,6 +240,93 @@ def renamefn(fnew: T, forig) -> T:
     fnew.__qualname__ = forig.__qualname__
     fnew.__name__ = forig.__name__
     return fnew
+
+
+class MetaFlag(enum.Flag):
+    blank      = 0
+    # ClassVar   = 1
+    # Merge      = 2
+    # SubClass   = 4
+    # MergeSubClassVar = ClassVar | Merge | SubClass
+    temp = 8
+class AttrNote(NamedTuple):
+
+    cls: type
+    attr: str
+
+    otype: type
+    flag: MetaFlag
+    merger: Any = None
+    endtype: type = None
+    extra: list = []
+
+    @classmethod
+    def forclass(cls, Class: type) -> dict[str, AttrNote]:
+        annot = typing.get_type_hints(Class, include_extras = True)
+        notes = (
+            cls(Class, attr, *vals[0:4], vals[4:])
+            for attr, vals in (
+                (k, typing.get_args(v))
+                for k, v in annot.items()
+                if typing.get_origin(v) is Annotated
+            )
+        )
+        return dict((n.attr,n) for n in notes)
+
+class ABCMeta(abc.ABCMeta):
+
+
+    def __new__(cls, clsname, bases, attrs: dict, **kw):
+        for k,v in attrs.copy().items():
+            flag = getattr(v, '_metaflag', MetaFlag.blank)
+            if MetaFlag.temp in flag:
+                del attrs[k]
+        Class = super().__new__(cls, clsname, bases, attrs, **kw)
+        return Class
+
+    @staticmethod
+    def merge_mroattr(subcls: type, attr: str, supcls: type = None, oper: Callable = opr.or_) -> dict:
+        return reduce(oper, (
+            getattr(c, attr)
+            for c in reversed(subcls.mro())
+            if issubclass(c, supcls or subcls)
+        ))
+
+class KeyCacheFactory(dict[K, T]):
+
+    def __getitem__(self, key: K) -> T:
+        try: return super().__getitem__(key)
+        except KeyError:
+            val = self[key] = self.__fncreate__(key)
+            return val
+
+    def __call__(self, key: K) -> T:
+        return self[key]
+
+    __slots__ = ('__fncreate__',)
+    __fncreate__: Callable[[K], T]
+
+    def __init__(self, fncreate: Callable[[K], T]):
+        super().__init__()
+        self.__fncreate__ = fncreate
+
+_ga = object.__getattribute__
+
+class AttrCacheFactory(Generic[T]):
+
+    def __getattribute__(self, name: str) -> T:
+        if name.startswith('__'): return _ga(self, name)
+        cache: dict = _ga(self, '__cache__')
+        return cache[name]
+
+    __slots__ = ('__cache__',)
+    __cache__: KeyCacheFactory[str, T]
+
+    def __init__(self, fncreate: Callable[[str], T]):
+        self.__cache__ = KeyCacheFactory(fncreate)
+
+    def __dir__(self):
+        return list(self.__cache__.keys())
 
 class Decorators(object):
 

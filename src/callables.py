@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import containers
-from containers import ABCMeta, KeyCacheFactory, AttrCacheFactory
-from containers import AttrFlag, AttrNote
 # from utils import AttrFlag, AttrNote
-from utils import Decorators, IndexType, \
+from utils import ABCMeta, IndexType, KeyCacheFactory, AttrCacheFactory, \
     instcheck, orepr, subclscheck
 
 # import abc
@@ -15,9 +12,8 @@ from functools import partial
 import operator as opr
 from types import MappingProxyType
 from typing import Annotated, Any, ClassVar, Generic, ParamSpec, TypeAlias, TypeVar, \
-    final
+    abstractmethod, final
 
-abstract = Decorators.abstract
 P = ParamSpec('P')
 K = TypeVar('K')
 T = TypeVar('T')
@@ -41,31 +37,19 @@ class Flag(enum.Flag):
 
     Copy   = 512
 
-# CallerSpec = Callable | tuple[type, ...]
-# ErrorsType = tuple[type[Exception], ...]
-# FlagParamType = Union[Flag, Callable[[Flag], Flag]]
-
-# class ABCMeta(abc.ABCMeta):
-#     __attrnotes__: Mapping[str, AttrNote]
-#     def __new__(cls, clsname, bases, attrs, **kw):
-#         Class = super().__new__(cls, clsname, bases, attrs, **kw)
-#         Class.__attrnotes__ = MappingProxyType(AttrNote.forclass(Class))
-#         return Class
+ExceptsParam: TypeAlias = tuple[type[Exception], ...]
+FlagParam: TypeAlias = Flag | Callable[[Flag], Flag]
 
 class Caller(Callable, metaclass = ABCMeta):
-
-    ErrorsType = tuple[type[Exception], ...]
-    FlagParamType = Flag | Callable[[Flag], Flag]
 
     SAFE = Flag.Safe
     LEFT = Flag.Left
     STAR = Flag.Star
 
     cls_flag     : ClassVar[Flag] = Flag.Blank
-    safe_errs    : ClassVar[ErrorsType]
+    safe_errs    : ClassVar[ExceptsParam]
     safe_default : ClassVar[Any] = None
 
-    # Annotated[dict, AttrFlag.MergeSubClassVar, opr.or_, MappingProxyType]
     attrhints: Mapping[str, Flag] = dict(
         flag     = Flag.Blank,
         bindargs = Flag.Bound,
@@ -79,11 +63,11 @@ class Caller(Callable, metaclass = ABCMeta):
     flag     : Flag
     bindargs : tuple
     aslice   : slice
-    excepts  : ErrorsType
+    excepts  : ExceptsParam
     default  : Any
 
-    @abstract
-    def _get(self, *args): ...
+    @abstractmethod
+    def _call(self, *args): ...
 
     def __new__(cls: type[Caller], *args, **kw) -> Caller:
         inst = object.__new__(cls)
@@ -91,10 +75,10 @@ class Caller(Callable, metaclass = ABCMeta):
         return inst
 
     def __init__(self, *bindargs,
-        flag: FlagParamType = None,
+        flag: FlagParam = None,
         aslice: slice = None,
         aorder: tuple[int, ...] = None,
-        excepts: ErrorsType = None,
+        excepts: ExceptsParam = None,
         default: Any = None,
     ):
         f = self.flag
@@ -119,9 +103,8 @@ class Caller(Callable, metaclass = ABCMeta):
         self.flag = f | f.Init | f.Lock
 
     @final
-    def __call__(self, *args):
-        # print(args)
-        try: return self._get(*self.getargs(args))
+    def __call__(self, *args, **kw):
+        try: return self._call(*self.getargs(args), **kw)
         except Exception as err:
             if Flag.Safe in self.flag and isinstance(err, self.excepts):
                 return self.default
@@ -137,13 +120,13 @@ class Caller(Callable, metaclass = ABCMeta):
         if f.Order in f: args = [args[n] for n in list(self.aorder)]
         return args
 
-    def attrnames(self) -> Iterator[str]:
+    def attrnames(self) -> list[str]:
         f = self.flag
         hints = self.attrhints
-        return (a for a in hints if hints[a] in f)
+        return list(a for a in hints if hints[a] in f)
 
-    def attritems(self) -> Iterator[tuple[str, Any]]:
-        return ((a, getattr(self, a)) for a in self.attrnames())
+    def attritems(self) -> list[tuple[str, Any]]:
+        return list((a, getattr(self, a)) for a in self.attrnames())
 
     def attrs(self) -> dict[str, Any]:
         return dict(self.attritems())
@@ -199,39 +182,55 @@ class Caller(Callable, metaclass = ABCMeta):
     def __class_getitem__(cls, key):
         return super().__class_getitem__(key)
 
-    def __init_subclass__(subcls: type[Caller]):
+    def __init_subclass__(subcls: type[Caller], **kw):
+        super().__init_subclass__(**kw)
         cls = __class__
         subcls.attrhints = MappingProxyType(cls.attrhints | subcls.attrhints)
 
+ChainItem: TypeAlias = Callable | tuple[Caller, tuple]
 class Chain(Sequence[Callable], metaclass = ABCMeta):
 
     funcs: list[Callable]
-    __slots__ = ('funcs',)
+    __slots__ = 'funcs',
 
-    ItemSpecType = Callable | tuple[type, ...]
-    def __init__(self, *items: ItemSpecType):
+    def __init__(self, *items: ChainItem):
         self.funcs = list()
         if items: self.extend(items)
 
-    def append(self, item: ItemSpecType):
+    def append(self, item: ChainItem):
         self.funcs.append(self._genitem_(item))
 
-    def extend(self, items: Iterable[ItemSpecType]):
-        self.funcs.extend((self._genitem_(it) for it in items))
+    def extend(self, items: Iterable[ChainItem]):
+        self.funcs.extend(map(self._genitem_, items))
 
     def reverse(self):
         self.funcs.reverse()
 
+    def clear(self):
+        self.funcs.clear()
+
     def bound_iterator(self, *args:P.args, **kw:P.kwargs) -> Iterator[T]:
         return (f(*args, **kw) for f in self)
+
+    def recur_iterator(self, *args, **kw) -> Iterator:
+        it = iter(self)
+        val = next(it)(*args, **kw)
+        yield val
+        for func in it:
+            val = func(val)
+            yield val
 
     def for_caller(self, caller: Callable[[Iterator[P]], T]) -> Callable[P, T]:
         def consume(*args: P.args, **kw: P.kwargs) -> T:
             return caller(self.bound_iterator(*args, **kw))
         return consume
 
+    def reduce(self, *args, **kw):
+        for val in self.recur_iterator(*args, **kw): pass
+        return val
+
     @classmethod
-    def _genitem_(cls, item: ItemSpecType) -> Callable:
+    def _genitem_(cls, item: ChainItem) -> Callable:
         if callable(item): return item
         gcls, *args = item
         return subclscheck(gcls, Caller)(*args)
@@ -240,7 +239,7 @@ class Chain(Sequence[Callable], metaclass = ABCMeta):
         return len(self.funcs)
 
     def __iter__(self) -> Iterator[Callable]:
-        return iter(self.funcs)
+        yield from self.funcs
 
     def __contains__(self, item: Callable):
         return item in self.funcs
@@ -248,47 +247,12 @@ class Chain(Sequence[Callable], metaclass = ABCMeta):
     def __getitem__(self, index: IndexType) -> Callable:
         return self.funcs[index]
 
-# class KeyCacheFactory(dict[K, T]):
-
-#     def __getitem__(self, key: K) -> T:
-#         try: return super().__getitem__(key)
-#         except KeyError:
-#             val = self[key] = self.__fncreate__(key)
-#             return val
-
-#     def __call__(self, key: K) -> T:
-#         return self[key]
-
-#     __slots__ = ('__fncreate__',)
-#     __fncreate__: Callable[[K], T]
-
-#     def __init__(self, fncreate: Callable[[K], T]):
-#         super().__init__()
-#         self.__fncreate__ = fncreate
-
-# _ga = object.__getattribute__
-# class AttrCacheFactory(Generic[T]):
-
-#     def __getattribute__(self, name: str) -> T:
-#         if name.startswith('__'): return _ga(self, name)
-#         cache: dict = _ga(self, '__cache__')
-#         return cache[name]
-
-#     __slots__ = ('__cache__',)
-#     __cache__: KeyCacheFactory[str, T]
-
-#     def __init__(self, fncreate: Callable[[str], T]):
-#         self.__cache__ = KeyCacheFactory(fncreate)
-
-#     def __dir__(self):
-#         return list(self.__cache__.keys())
-
 class calls:
     __new__ = None
 
     class func(Caller):
         'Function wrapper.'
-        def _get(self, *args, **kw):
+        def _call(self, *args, **kw):
             return self.func(*args, **kw)
         def __init__(self, func: Callable, *args, **opts):
             self.func = instcheck(func, Callable)
@@ -297,17 +261,16 @@ class calls:
         attrhints = dict(func = Flag.Blank)
         __slots__ = tuple(attrhints)
 
-    # func(partial, 0, flag=partial(opr.and_, ~ Flag.Left))
     class method(Caller):
         'Method caller.'
-        def _get(self, obj, *args, **kw):
+        def _call(self, obj, *args, **kw):
             return getattr(obj, self.method)(*args, **kw)
         def __init__(self, method: str, *args, **opts):
             if not method.isidentifier():
                 raise TypeError(method)
             self.method = method
             super().__init__(*args, **opts)
-        safe_errs = (AttributeError,)
+        safe_errs = AttributeError,
         method: str
         attrhints = dict(method = Flag.Blank)
         __slots__ = tuple(attrhints)
@@ -319,23 +282,36 @@ class gets:
     __new__ = None
     class attr(Caller):
         'Attribute getter.'
-        def _get(self, obj, name: str): return getattr(obj, name)
-        safe_errs = (AttributeError,)
+        def _call(self, obj, name: str): return getattr(obj, name)
+        safe_errs = AttributeError,
     class key(Caller):
         'Subscript getter.'
-        def _get(self, obj, key): return obj[key]
-        safe_errs = (KeyError,IndexError,)
+        def _call(self, obj, key): return obj[key]
+        safe_errs = KeyError, IndexError,
     class thru(Caller):
         'Passthrough getter.'
-        def _get(self, obj, *_): return obj
+        def _call(self, obj, *_): return obj
         cls_flag = Flag.Left
 
 class sets:
     __new__ = None
     class attr(Caller):
         'Attribute setter.'
-        def _get(self, obj, name: str, val): setattr(obj, name, val)
-        safe_errs = (AttributeError,)
+        def _call(self, obj, name: str, val): setattr(obj, name, val)
+        def __init__(self, attr, value = Flag.Blank, **kw):
+            if value is Flag.Blank:
+                super().__init__(attr, aorder = (1, 0, 2), **kw)
+                return
+            super().__init__(attr, value, aorder = (2, 0, 1), **kw)
+        safe_errs = AttributeError,
+        cls_flag = Flag.Left
+
+class dels:
+    __new__ = None
+    class attr(Caller):
+        'Attribute deleter.'
+        def _call(self, obj, name: str): delattr(obj, name)
+        safe_errs = AttributeError,
 
 methodproxy: AttrCacheFactory[Callable[[str], calls.method]] = \
     AttrCacheFactory(partial(calls.func, calls.method))
@@ -351,6 +327,9 @@ class cchain:
 
     def asfilter(*funcs: Callable[P, bool]) -> Callable[[Iterable[P]], filter]:
         return partial(filter, cchain.forall(*funcs))
+
+    def reducer(*funcs: Callable[P, T]) -> Callable[P, T]:
+        return partial(Chain(*funcs).reduce)
 
 class preds:
     __new__ = None
