@@ -1,97 +1,237 @@
 from __future__ import annotations
 
-from callables import calls, cchain, gets, preds
-from utils import instcheck, MetaFlag
+from callables import calls, cchain, gets, preds, raiser, Caller
+from utils import MetaFlag, instcheck, subclscheck
 
-from collections.abc import Callable
-from functools import partial, wraps
+from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
+import functools
+from functools import partial, reduce
+# from inspect import getsource
+from itertools import chain
 import operator as opr
 from types import DynamicClassAttribute, FunctionType, MappingProxyType
-from typing import Any, ClassVar, ParamSpec, TypeVar, abstractmethod
+from typing import Any, ClassVar, Literal, NamedTuple, ParamSpec, TypeVar, abstractmethod
 
 P = ParamSpec('P')
 T = TypeVar('T')
 
+_ = None
 _LZINSTATTR = '__lazyget__'
-
-
-def renamef(fnew: T, forig = None, /, **kw) -> T:
-    fgv = lambda a: kw.get(a) or getattr((forig or fnew), a, getattr(fnew, a, None))
-    for attr in ('__qualname__', '__name__', '__doc__'):
-        setattr(fnew, attr, fgv(attr))
-        # val = kw.get(attr, getattr(forig, attr, getattr(fnew, attr, None)))
-        # setattr(fnew, attr, val)
-    for attr in ('__annotations__',):
-        setattr(fnew, attr, getattr(fnew, attr) | fgv(attr) or {})
-        # setattr(fnew, getattr(fnew, attr) | fgv(attr, {})getattr(forig, attr))
-    return fnew
-
-def _asdef(c: Callable, forig: Callable = None) -> FunctionType:
-    # call = f.__call__
-    def f(*args, **kw): return c(*args, **kw)
-    if forig: f = renamef(f, forig)
-    return f
-
-def _idstrcheck(val, errcls = ValueError):
-    if not preds.isidentifier(val):
-        raise errcls("invalid identifier '%s'" % val)
-
+_WRAPSINSTATTR = '__wraps__'
+_FIXVALCODE = (lambda *args, **kw: _).__code__
 _new = object.__new__
+# _valisstr = cchain.reducer(gets.key(1), preds.instanceof[str])
+# _mapfilter = partial(filter, preds.instanceof[Mapping])
+_valfilter = partial(filter, gets.key(1))
+_getmixed = gets.mixed(flag=Caller.SAFE)
+@functools.lru_cache
+def _fixeddata(val): return dict(_ = val), {'return': type(val)}
+del(_)
 
-class delegate:
+class OwnerName(NamedTuple):
+    owner: type
+    name: str
+
+class NamedMember:
+
+    def __set_name__(self, owner, name):
+        self._owner_name = OwnerName(owner, name)
+        self.__name__ = name
+        self.__qualname__ = '%s.%s' % (owner.__name__, name)
+
+    def __repr__(self):
+        if not hasattr(self, '__qualname__'):
+            return object.__repr__(self)
+        return '<function %s at %s>' % (self.__qualname__, hex(id(self)))
+
+    __slots__ = '__name__', '__qualname__', '_owner_name'
+
+class fixed:
+
+    __new__ = None
+
+    class value(NamedMember):
+
+        __slots__ = 'value', 'ismethod'
+
+        def __init__(self, value):
+            self.value: T = value
+
+        def __call__(self, method: Callable = None) -> Callable[..., T]:
+            return wraps(method)(self._getf())
+
+        def __set_name__(self, owner, name):
+            super().__set_name__(owner, name)
+            setattr(owner, name, self())
+
+        def _getf(self):
+            glob, annot = _fixeddata(self.value)
+            func = FunctionType(_FIXVALCODE, glob)
+            func.__annotations__ = annot
+            if hasattr(self, '_owner_name'):
+                wraps(None).update(self).update(dict(
+                    __module__ = self._owner_name.owner.__module__,
+                    __annotations__ = func.__annotations__,
+                )).write(func)
+            return func
+
+    class prop(value):
+
+        __slots__ = ()
+
+        def __call__(self, method = None) -> property:
+            return property(super().__call__(method))
+
+    class dynca(value):
+        __slots__ = ()
+        def __call__(self, method = None) -> DynamicClassAttribute:
+            return DynamicClassAttribute(super().__call__(method))
+
+class wraps:
+
+    def __init__(self, fin: Callable | Mapping):
+        'Initialize argument, intial input function that will be decorated.'
+        self._adds = {}
+        self._initial = self.read(fin)
+        # self.update(self._initial)
+
+    def __call__(self, fout: Callable[P, T]) -> Callable[P, T]:
+        'Decorate function. Receives the wrapper function and updates its attributes.'
+        self.update(self.read(fout))
+        self.write(fout)
+        return fout
+
+    @classmethod
+    def read(cls, obj):
+        return dict(
+            _valfilter(
+                (k, _getmixed(obj, k)) for k in cls.attrs
+            )
+        )
+
+    def update(self, data: Mapping) -> wraps:
+        if not isinstance(data, Mapping):
+            data = self.read(data)
+        adds = self._adds
+        initial = self._initial
+        for attr, val in _valfilter((k, data.get(k)) for k in self.attrs):
+            ival = initial.get(attr)
+            if ival:
+                if attr == '__doc__':
+                    continue
+                if attr == '__annotations__':
+                    continue
+            adds[attr] = val
+        return self
+
+    def merged(self):
+        adds = self._adds
+        initial = self._initial
+        return dict(
+            _valfilter(
+                (k, initial.get(k, adds.get(k))) for k in self.attrs
+            )
+        )
+
+    def write(self, obj: T) -> T:
+        for attr, val in self.merged().items():
+            try:
+                setattr(obj, attr, val)
+            except AttributeError:
+                raise
+        try:
+            setattr(obj, _WRAPSINSTATTR, self)
+        except AttributeError:
+            raise
+        return obj
+
+    attrs = frozenset({
+        '__module__', '__name__', '__qualname__',
+        '__doc__', '__annotations__'
+    })
+    # mapattrs = frozenset({'__annotations__'})
+
+    __slots__ = '_initial', '_adds'
+
+class abstract:
+
+    def __new__(cls, method: Callable[P, T]) -> Callable[P, T]:
+        'Decorator'
+        @abstractmethod
+        @wraps(method)
+        def f(*args, **kw):
+            raise NotImplementedError('abstractmethod', method)
+        return f
+
     __slots__ = ()
 
-    def __new__(cls, target: Callable | str):
-        'argument'
-        if callable(target): target = target.__name__
-        _idstrcheck(target)
-        return calls.func(_new(cls), calls.method(target))
+class raises(NamedMember):
 
-    def __call__(self, method: Callable, target: Callable):
-        'decorator'
-        instcheck(method, Callable)
-        instcheck(target, Callable)
-        return _asdef(target)
+    def __init__(self, ErrorType: type[Exception], msg = None):
+        if msg is None:
+            eargs = ()
+        else:
+            eargs = (msg,)
+        self.raiser = raiser(ErrorType, eargs)
+
+    def __call__(self, *args, **kw):
+        self.raiser(*args, **kw)
+
+    def __set_name__(self, owner, name):
+        super().__set_name__(owner, name)
+        r = self.raiser
+        if not len(r.eargs):
+            self.raiser = raiser(r.ErrorType, (
+                'Method %s not allowed' % name,
+            ))
+            del r
+
+    __slots__ = 'raiser',
+
+class delegate:
+
+    def __init__(self, target: Callable | str):
+        'Initialize argument'
+        if not isinstance(target, str):
+            target = target.__name__
+        if not preds.isidentifier(target):
+            raise ValueError(target)
+        self.target = calls.method(target).asobj()
+
+    def __call__(self, method: Callable):
+        'Decorate function'
+        return wraps(method)(self.target)
+
+    __slots__ = 'target', 'wraps'
 
 class meta:
 
-    __slots__ = ()
     __new__ = None
 
     class flag:
 
-        __slots__ = ()
+        def __init__(self, flag: MetaFlag):
+            if not isinstance(flag, MetaFlag):
+                self.flag = MetaFlag[flag]
+            else:
+                self.flag = flag
 
-        def __new__(cls, flag: MetaFlag):
-            'argument'
-            return calls.func(_new(cls), flag)
-    
-        def __call__(self, method: Callable, flag: MetaFlag):
-            'decorator'
+        def __call__(self, method: Callable):
             if not hasattr(method, '_metaflag'):
                 method._metaflag = MetaFlag.blank
-            method._metaflag |= MetaFlag(flag)
+            method._metaflag |= MetaFlag(self.flag)
             return method
 
-        # def named(fn: Callable[P, T]) -> Callable[P, T]:
-        def named(fn: Callable) -> Callable:
-            flag = MetaFlag[fn.__name__]
-            @wraps(fn)
-            def f(method):
-                return meta.flag(flag)(method)
-            return f
-        # @named
-        # def temp(): ...
-    @flag.named
-    def temp(f):...
-    # @flag.named
-    # class temp:
-    #     ...
-        # __new__: Callable[[Callable[P, T]], Callable[P, T]]
+        __slots__ = 'flag',
+
+    temp = flag(MetaFlag.temp)
+    init_attrs = flag(MetaFlag.init_attrs)
+
+    __slots__ = ()
+
 class lazyget:
 
-    __slots__ = ('__lazyattr__',)
-
+    __slots__ = '__lazyattr__',
 
     def __new__(cls, method: Callable[P, T], attr: str = None) -> Callable[P, T]:
         'decorator. submethods add second parameter.'
@@ -111,7 +251,6 @@ class lazyget:
             return value
         setattr(fget, _LZINSTATTR, self)
         return fget
-        # return renamef(fget, method)
 
     def attr(attr: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
         'Set the name of the cache attribute, default is _method.'
@@ -136,24 +275,23 @@ class lazyget:
         else:
             raise TypeError(type(fmt))
         testout = fnfmt(lazyget.update)
-        _idstrcheck(testout, TypeError)
+        if not preds.isidentifier(testout):
+            raise TypeError(testout, 'Invalid identifier')
         class templated(lazyget):
             _formatattr = fnfmt
         return templated
 
-    # Decorator
+    # Internal decorator
     def _mod(f):
         @wraps(f)
         def mod(flaz):
             inst: lazyget = getattr(flaz, _LZINSTATTR)
-
             def wrap(method):
                 fmod = f(inst, method)
                 setattr(fmod, _LZINSTATTR, inst)
                 return renamef(fmod, method)
             return wrap
         return mod
-        # return renamef(mod, f)
 
     @_mod
     def update(self, method: Callable) -> Callable:
@@ -178,44 +316,13 @@ class lazyget:
     del(_mod)
 
 
-# @_argwrap
-# def lazyget(name = None) -> Callable[..., Callable[..., T]]:
-#     def wrap(method: Callable[..., T]) -> Callable[..., T]:
-#         attr = '_%s' % method.__name__ if name is None else name
-#         fgetcache = gets.attr(attr)
-#         fsetcache = sets.attr(attr)
-#         fdelcache = dels.attr(attr)
-#         def fgetset(self) -> T:
-#             try: return fgetcache(self)
-#             except AttributeError: val = method(self)
-#             fgetset._set(self, val)
-#             return val
-#         fgetset._set = fsetcache
-#         fgetset._del = fdelcache
-#         return renamef(fgetset, method)
-#     return wrap
-
-# @_argwrap
-# def lazyprop(name = None) -> Callable[[Callable[..., T]], property | T]:
-#     def wrap(method: Callable[..., T]) -> property | T:
-#         return property(lazyget(name)(method))
-#     return wrap
-
-# def lazyprop_update(prop: property) -> property:
-#     def wrap(method: Callable):
-#         def fset(self, val):
-#             val = method(self, val)
-#             prop.fget._set(self, val)
-#         return prop.setter(renamef(fset, method))
-#     return wrap
-# lazyprop.update = lazyprop_update
-
-# def lazyprop_clear(prop: property) -> property:
-#     def wrap(method: Callable):
-#         def fdel(self, val):
-#             if method(self): prop.fget._del(self)
-#         return prop.deleter(renamef(fdel, method))
-#     return wrap
-# lazyprop.clear = lazyprop_clear
-
-# del(lazyprop_update, lazyprop_clear)
+def renamef(fnew: T, forig = None, /, **kw) -> T:
+    fgv = lambda a: kw.get(a) or getattr((forig or fnew), a, getattr(fnew, a, None))
+    for attr in ('__qualname__', '__name__', '__doc__'):
+        setattr(fnew, attr, fgv(attr))
+        # val = kw.get(attr, getattr(forig, attr, getattr(fnew, attr, None)))
+        # setattr(fnew, attr, val)
+    for attr in ('__annotations__',):
+        setattr(fnew, attr, getattr(fnew, attr) | fgv(attr) or {})
+        # setattr(fnew, getattr(fnew, attr) | fgv(attr, {})getattr(forig, attr))
+    return fnew

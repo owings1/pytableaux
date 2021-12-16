@@ -36,8 +36,8 @@ A, B, C = Atomic.gen(3)
 Pred, Preds = Predicate, Predicates
 Sys = Predicates.System
 
-class TestClasses(BaseSuite):
-    pass
+Predicate.System
+
 class TestParameter(BaseSuite):
 
     class TestAbstract(BaseSuite):
@@ -79,9 +79,24 @@ class TestPredicate(BaseSuite):
             Predicate(0, None, 1)
         with raises(ValueError):
             Predicate(0, -1, 1)
-
-    def test_predicate_is_system_predicate_true(self):
-        assert Predicates.System.Identity.is_system
+        with raises(AttributeError):
+            F._value_
+        with raises(AttributeError):
+            F._value_ = F
+        with raises(AttributeError):
+            F._name_
+        with raises(AttributeError):
+            F._name_ = F.name
+        with raises(AttributeError):
+            F.__objclass__
+        with raises(AttributeError):
+            F.__objclass__ = F.__class__
+    def test_sys_attrs(self):
+        p = Sys.Identity
+        assert p._value_ is p
+        assert p._name_ == p.name
+        assert p.__objclass__ is Sys
+        assert p.is_system
 
 class TestPredicates(BaseSuite):
 
@@ -184,10 +199,9 @@ class TestPredicates(BaseSuite):
             assert Pred.Identity is Preds.System['Identity']
             assert Pred.Identity.TYPE == Predicate
             Id = Pred.Identity
-            assert Id == Preds['Identity']
             assert Id == Preds.System.Identity
-            assert list(Preds) == list(Preds.System)
-            assert sorted(Preds) == list(Preds.System)
+            assert list(Pred.System) == list(Preds.System)
+            assert sorted(Preds.System) == list(Preds.System)
 
 
 class TestSentence(BaseSuite):
@@ -393,4 +407,17 @@ class TestArgument(BaseSuite):
                 assert a1 <= a2
                 assert a1 != a2
                 a1 = a2
+
+class TestClasses(BaseSuite):
+    def test_readonly(self):
+        with raises(AttributeError):
+            Predicate.x = 1
+        with raises(AttributeError):
+            del Predicate.Coords
+        with raises(AttributeError):
+            del Predicate.first().arity
+        with raises(AttributeError):
+            s = Atomic.first()
+            s.index = 2
+        A.index = A.index
 

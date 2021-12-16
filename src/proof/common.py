@@ -1,5 +1,6 @@
 from callables import Caller, calls, gets, preds
 from containers import ABCMeta
+from decorators import lazyget
 from events import Events, EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
@@ -22,7 +23,6 @@ import enum
 import operator as opr
 
 abstract = Decorators.abstract
-lazyget = Decorators.lazyget
 setonce = Decorators.setonce
 
 RuleEvents = (
@@ -83,18 +83,15 @@ class Node(Mapping, metaclass = NodeMeta):
     def is_closure(self) -> bool:
         return self.get('flag') == 'closure'
 
-    @property
-    @lazyget
+    @lazyget.prop
     def is_modal(self) -> bool:
         return self.has_any('world', 'world1', 'world2', 'worlds')
 
-    @property
-    @lazyget
+    @lazyget.prop
     def is_access(self) -> bool:
         return self.has('world1', 'world2')
 
-    @property
-    @lazyget
+    @lazyget.prop
     def worlds(self) -> frozenset[int]:
         """
         Return the set of worlds referenced in the node properties. This combines
@@ -182,10 +179,7 @@ class Node(Mapping, metaclass = NodeMeta):
             return self.props | other
         if isinstance(other, dict):
             return dict(self.props) | other
-        raise TypeError(
-            'Unsupported %s operator between %s and %s'
-            % ('|', self.__class__, other.__class__)
-        )
+        return NotImplemented
 
     def __ror__(self, other) -> Mapping:
         # other | self
@@ -195,10 +189,7 @@ class Node(Mapping, metaclass = NodeMeta):
             return other | self.props
         if isinstance(other, dict):
             return other | dict(self.props)
-        raise TypeError(
-            'Unsupported %s operator between %s and %s'
-            % ('|', other.__class__, self.__class__)
-        )
+        return NotImplemented
 
     def __repr__(self):
         return orepr(self,

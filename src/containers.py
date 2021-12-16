@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from decorators import delegate, meta
+from decorators import delegate, meta, wraps
 from errors import DuplicateKeyError
-from utils import ABCMeta, IndexType, IndexTypes, cat, instcheck, orepr, wrparens
+from utils import ABCMeta, IndexType, cat, instcheck, notsubclscheck, subclscheck, orepr, wrparens
 
 # import abc
+from collections import deque
 from collections.abc import *
 from copy import copy
 import enum
-from functools import reduce, wraps
+from functools import reduce
 from itertools import chain, filterfalse
 import operator as opr
 from types import MappingProxyType, MethodType
@@ -58,7 +59,6 @@ class MapAttrView(MappingView, Mapping[str, T], metaclass = ABCMeta):
     def __reversed__(self) -> Iterator[str]:
         try: return reversed(self._mapping)
         except TypeError: raise NotImplementedError()
-
 
 class UniqueList(MutableSequence[V], MutableSet, metaclass = ABCMeta):
     'A list/set hybrid.'
@@ -278,7 +278,7 @@ class UniqueList(MutableSequence[V], MutableSet, metaclass = ABCMeta):
         oper = getattr(opr, oname)
         setfunc = getattr(Set, oname)
         @wraps(method)
-        def f(self, other):
+        def f(self: UniqueList, other):
             setcmp = setfunc(self, other)
             if setcmp is NotImplemented:
                 if isinstance(other, list):
@@ -429,13 +429,45 @@ class LinkedView(Collection[T], Reversible, metaclass = ABCMeta):
     @abstractmethod
     def last(self) -> T: ...
 
+class LinkOrderSetView(LinkedView[T]):
+
+    __slots__ = ()
+
+    def __new__(cls, base: LinkedView):
+
+        class ViewProxy(LinkOrderSetView):
+            __slots__ = ()
+            def __len__(self):
+                return len(base)
+            def __iter__(self) -> Iterator[T]:
+                return iter(base)
+            def __reversed__(self) -> Iterator[T]:
+                return reversed(base)
+            def __contains__(self, item):
+                return item in base
+            def __getitem__(self, key) -> T:
+                return base[key]
+            def first(self, *a) -> T:
+                return base.first(*a)
+            def last(self, *a) -> T:
+                return base.last((a))
+            def iterfrom(self, *a, **k):
+                return base.iterfrom(*a, **k)
+            def __repr__(self):
+                return base.__class__.__repr__(self)
+            __new__ = object.__new__
+        ViewProxy.__qualname__ = '.'.join(
+            (base.__class__.__qualname__, ViewProxy.__name__)
+        )
+        return ViewProxy()
+
 class LinkEntry(Generic[T], Hashable, metaclass = ABCMeta):
     'An item container with prev/next attributes.'
 
     value: T
     prev: LinkEntry[T]
     next: LinkEntry[T]
-    __slots__ = ('prev', 'next', 'value')
+    __slots__ = 'prev', 'next', 'value'
 
     def __init__(self, value, prev = None, next = None):
         self.value = value
@@ -460,7 +492,7 @@ class LinkEntry(Generic[T], Hashable, metaclass = ABCMeta):
     def __repr__(self):
         return cat(self.__class__.__name__, wrparens(self.value.__repr__()))
 
-class LinkOrderSet(LinkedView[T], Collection):
+class LinkOrderSet(LinkedView[T], Collection, metaclass = ABCMeta):
 
     def __init__(self, values: Iterable[T] = None, strict: bool = True):
         self.strict = strict
@@ -469,7 +501,7 @@ class LinkOrderSet(LinkedView[T], Collection):
         if values is not None:
             self.extend(values)
 
-    slots = ('_link_first', '_link_last', '_link_map', 'strict', '_link_viewcls')
+    slots = '_link_first', '_link_last', '_link_map', 'strict', '_link_viewcls'
 
     def _genitem_(self, value) -> T:
         """Overridable hook method to transform an value before add/remove methods.
@@ -478,17 +510,16 @@ class LinkOrderSet(LinkedView[T], Collection):
         with the remainder of the arguments for each value."""
         return value
 
-    #: Decorators
-
+    @meta.temp
     def itemhook(item_method: Callable[[T], R]) -> Callable[[T], R]:
         'Wrapper for add/remove methods that calls the _genitem_ hook.'
         @wraps(item_method)
         def wrap(self: LinkOrderSet, value, *args, **kw):
             value = self._genitem_(value, *args, **kw)
             return item_method(self, value)
-        return item_method
-        # return renamef(wrap, item_method)
+        return wrap
 
+    @meta.temp
     def newlink(link_method: Callable[[LinkEntry[T]], R]) -> Callable[[T], R]:
         """Wrapper for add item methods. Ensures the value is not already in the
         collection, and creates a LinkEntry. If the collection is empty, sets
@@ -507,8 +538,7 @@ class LinkOrderSet(LinkedView[T], Collection):
             if self._link_first is self._link_last:
                 self._link_first.next = link
             link_method(self, link)
-        return link_method
-        # return renamef(prep, link_method)
+        return prep
 
     @itemhook
     @newlink
@@ -653,37 +683,109 @@ class LinkOrderSet(LinkedView[T], Collection):
             last  = self.last(),
         )
 
-    del(itemhook, newlink)
 
-class LinkOrderSetView(LinkedView[T]):
+class DequeCache(Collection[V], metaclass = ABCMeta):
 
     __slots__ = ()
 
-    def __new__(cls, base: LinkedView):
+    maxlen: int
+    idx: int
+    rev: Mapping[Any, V]
 
-        class ViewProxy(LinkOrderSetView):
+    @abstractmethod
+    def clear(self): ...
+
+    @abstractmethod
+    def add(self, item: V, keys = None): ...
+
+    @abstractmethod
+    def update(self, d: dict): ...
+
+    @abstractmethod
+    def get(self, key, default = None): ...
+
+    @abstractmethod
+    def __len__(self): ...
+
+    @abstractmethod
+    def __iter__(self) -> Iterator[V]: ...
+
+    @abstractmethod
+    def __reversed__(self) -> Iterator[V]: ...
+
+    @abstractmethod
+    def __contains__(self, item: V): ...
+
+    @abstractmethod
+    def __getitem__(self, key) -> V: ...
+
+    @abstractmethod
+    def __setitem__(self, key, item: V): ...
+
+    def __new__(cls, V: type, maxlen = 10):
+
+        notsubclscheck(V, IndexType)
+        instcheck(V, type)
+
+        idx      : dict[Any, V] = {}
+        idxproxy : Mapping[Any, V] = MappingProxyType(idx)
+
+        rev      : dict[V, set] = {}
+        revproxy : Mapping[V, set] = MappingProxyType(rev)
+
+        deck     : deque[V] = deque(maxlen = maxlen)
+
+        class Api(DequeCache, Collection[V]):
+
             __slots__ = ()
-            def __len__(self):
-                return len(base)
-            def __iter__(self) -> Iterator[T]:
-                return iter(base)
-            def __reversed__(self) -> Iterator[T]:
-                return reversed(base)
-            def __contains__(self, item):
-                return item in base
-            def __getitem__(self, key) -> T:
-                return base[key]
-            def first(self, *a) -> T:
-                return base.first(*a)
-            def last(self, *a) -> T:
-                return base.last((a))
-            def iterfrom(self, *a, **k):
-                return base.iterfrom(*a, **k)
-            def __repr__(self):
-                return base.__class__.__repr__(self)
-            __new__ = object.__new__
-        ViewProxy.__qualname__ = '.'.join(
-            (base.__class__.__qualname__, ViewProxy.__name__)
-        )
-        return ViewProxy()
 
+            maxlen: int = property(lambda _: deck.maxlen)
+            idx: int = property(lambda _: idxproxy)
+            rev: Mapping[Any, V] = property(lambda _: revproxy)
+
+            def clear(self):
+                for d in (idx, rev, deck): d.clear()
+
+            def add(self, item: V, keys = None):
+                self[item] = item
+                if keys is not None:
+                    for k in keys: self[k] = item
+
+            def update(self, d: dict):
+                for k, v in d.items(): self[k] = v
+
+            def get(self, key, default = None):
+                try: return self[key]
+                except KeyError: return default
+
+            def __len__(self):
+                return len(deck)
+
+            def __iter__(self) -> Iterator[V]:
+                return iter(deck)
+
+            def __reversed__(self) -> Iterator[V]:
+                return reversed(deck)
+
+            def __contains__(self, item: V):
+                return item in rev
+
+            def __getitem__(self, key) -> V:
+                if isinstance(key, IndexType): return deck[key]
+                return idx[key]
+
+            def __setitem__(self, key, item: V):
+                instcheck(item, V)
+                if item in self: item = self[item]
+                else:
+                    if len(deck) == deck.maxlen:
+                        old = deck.popleft()
+                        for k in rev.pop(old): del(idx[k])
+                    idx[item] = item
+                    rev[item] = {item}
+                    deck.append(item)
+                idx[key] = item
+                rev[item].add(key)
+
+        Api.__qualname__ = 'DequeCache.Api'
+        return object.__new__(Api)

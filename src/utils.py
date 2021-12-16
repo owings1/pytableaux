@@ -23,10 +23,11 @@ from errors import DuplicateKeyError, IllegalStateError
 
 import abc
 from builtins import ModuleNotFoundError
-from collections import deque #, namedtuple
-from collections.abc import Callable, Collection, Hashable, ItemsView, Iterable,\
-    Iterator, KeysView, Mapping, MutableSet, Sequence, ValuesView
-from copy import copy
+# from collections import deque #, namedtuple
+from collections.abc import Callable, Mapping
+    #  Collection, Hashable, ItemsView, Iterable,\
+    # Iterator, KeysView, , MutableSet, Sequence, ValuesView
+# from copy import copy
 import enum
 from functools import partial, reduce
 from importlib import import_module
@@ -36,8 +37,8 @@ import operator as opr
 from time import time
 from types import MappingProxyType, ModuleType
 import typing
-from typing import Any, Annotated, Generic, NamedTuple, ParamSpec, TypeAlias, TypeVar, Union, \
-    abstractmethod, cast
+from typing import Any, Annotated, DefaultDict, Generic, NamedTuple, ParamSpec, TypeAlias, TypeVar, Union, \
+    abstractmethod
 
 # from functools import partial
 # from operator import is_not
@@ -58,12 +59,8 @@ CmpFnOper = MappingProxyType({
 })
 
 
-# ((k, typing.get_args(v))
-# for k, v in annot.items()
-# if typing.get_origin(v) is Annotated)
-# Types
 strtype = str
-LogicRef = Union[ModuleType, str]
+LogicRef = ModuleType | str
 IndexTypes = (int, slice)
 IndexType: TypeAlias = int | slice
 
@@ -109,7 +106,7 @@ def get_module(ref, package: str = None) -> ModuleType:
             )
         return _setcache(ref)
 
-    if not isinstance(ref, strtype):
+    if not isinstance(ref, str):
         raise TypeError("ref must be string or module, or have __module__ attribute")
 
     ref: str = ref.lower()
@@ -149,16 +146,24 @@ def get_logic(ref) -> ModuleType:
     return get_module(ref, package = 'logics')
 
 
-def instcheck(obj, classinfo: type[T], exp = True) -> T:
-    if isinstance(obj, classinfo) != exp:
-        raise TypeError(obj, type(obj), classinfo)
+def instcheck(obj, classinfo: type[T]) -> T:
+    if not isinstance(obj, classinfo):
+        raise TypeError(type(obj), classinfo)
     return obj
 
 def isstr(obj) -> bool:
     return isinstance(obj, strtype)
 
-def subclscheck(cls: type, typeinfo: T, exp = True) -> T:
-    if issubclass(cls, typeinfo) != exp:
+def ispow2(n):
+    return n != 0 and n & (n-1) == 0
+
+def subclscheck(cls: type, typeinfo: T) -> T:
+    if not issubclass(cls, typeinfo):
+        raise TypeError(cls, typeinfo)
+    return cls
+
+def notsubclscheck(cls: type, typeinfo):
+    if issubclass(cls, typeinfo):
         raise TypeError(cls, typeinfo)
     return cls
 
@@ -204,7 +209,7 @@ def valrepr(v, lw = drepr.lw, **opts) -> str:
 
 def orepr(obj, _d: dict = None, _ = None, **kw) -> str:
     d = _d if _d is not None else kw
-    if isinstance(obj, strtype):
+    if isinstance(obj, str):
         oname = obj
     else:
         try: oname = obj.__class__.__qualname__
@@ -220,21 +225,23 @@ def orepr(obj, _d: dict = None, _ = None, **kw) -> str:
         return '<%s !ERR: %s !>' % (oname, errstr(e))
 
 def wraprepr(obj, inner) -> str:
-    return cat(obj.__class__.__name__, wrparens(inner.__repr__()))
+    if not isinstance(obj, str):
+        obj = obj.__class__.__name__
+    return cat(obj, wrparens(inner.__repr__()))
 
-def fixedreturn(val: T) -> Callable[..., T]:
-    'Returns a function that returns the argument.'
-    try: return fixedreturn.__dict__[val]
-    except KeyError: pass
-    def fnfixed(*_, **_k): return val
-    return fixedreturn.__dict__.setdefault(val, fnfixed)
+# def fixedreturn(val: T) -> Callable[..., T]:
+#     'Returns a function that returns the argument.'
+#     try: return fixedreturn.__dict__[val]
+#     except KeyError: pass
+#     def fnfixed(*_, **_k): return val
+#     return fixedreturn.__dict__.setdefault(val, fnfixed)
 
-def fixedprop(val: T) -> Union[property, T]:
-    'Returns a property that returns the argument.'
-    try: return fixedprop.__dict__[val]
-    except KeyError: pass
-    prop = property(fixedreturn(val))
-    return fixedprop.__dict__.setdefault(val, prop)
+# def fixedprop(val: T) -> Union[property, T]:
+#     'Returns a property that returns the argument.'
+#     try: return fixedprop.__dict__[val]
+#     except KeyError: pass
+#     prop = property(fixedreturn(val))
+#     return fixedprop.__dict__.setdefault(val, prop)
 
 def renamefn(fnew: T, forig) -> T:
     fnew.__qualname__ = forig.__qualname__
@@ -248,7 +255,10 @@ class MetaFlag(enum.Flag):
     # Merge      = 2
     # SubClass   = 4
     # MergeSubClassVar = ClassVar | Merge | SubClass
+    init_attrs = 4
     temp = 8
+    pre_init = temp | init_attrs
+
 class AttrNote(NamedTuple):
 
     cls: type
@@ -277,15 +287,42 @@ class ABCMeta(abc.ABCMeta):
 
 
     def __new__(cls, clsname, bases, attrs: dict, **kw):
-        for k,v in attrs.copy().items():
-            flag = getattr(v, '_metaflag', MetaFlag.blank)
-            if MetaFlag.temp in flag:
-                del attrs[k]
+        cls.init_attrs(attrs, bases, **kw)
         Class = super().__new__(cls, clsname, bases, attrs, **kw)
         return Class
 
     @staticmethod
-    def merge_mroattr(subcls: type, attr: str, supcls: type = None, oper: Callable = opr.or_) -> dict:
+    def init_attrs(attrs: dict, bases, **kw):
+        remd = DefaultDict(dict)
+        for k,v in attrs.copy().items():
+            mf = getattr(v, '_metaflag', MetaFlag.blank)
+            pf = mf & MetaFlag.pre_init
+            if not pf.value: continue
+            for f in MetaFlag:
+                if not ispow2(f.value): continue
+                if f in pf:
+                    remd[f][k] = v
+            attrs.pop(k)
+        for func in remd[MetaFlag.init_attrs].values():
+            func(attrs, bases, **kw)
+        return remd
+
+    @staticmethod
+    def annotated_attrs(obj):
+        annot = typing.get_type_hints(obj, include_extras = True)
+        return {
+            k: typing.get_args(v)
+            for k,v in annot.items()
+            if typing.get_origin(v) is Annotated
+        }
+
+    @staticmethod
+    def merge_mroattr(
+        subcls: type,
+        attr: str,
+        supcls: type = None,
+        oper: Callable = opr.or_
+    ) -> dict:
         return reduce(oper, (
             getattr(c, attr)
             for c in reversed(subcls.mro())
@@ -303,7 +340,7 @@ class KeyCacheFactory(dict[K, T]):
     def __call__(self, key: K) -> T:
         return self[key]
 
-    __slots__ = ('__fncreate__',)
+    __slots__ = '__fncreate__',
     __fncreate__: Callable[[K], T]
 
     def __init__(self, fncreate: Callable[[K], T]):
@@ -319,7 +356,7 @@ class AttrCacheFactory(Generic[T]):
         cache: dict = _ga(self, '__cache__')
         return cache[name]
 
-    __slots__ = ('__cache__',)
+    __slots__ = '__cache__',
     __cache__: KeyCacheFactory[str, T]
 
     def __init__(self, fncreate: Callable[[str], T]):
@@ -332,40 +369,18 @@ class Decorators(object):
 
     __new__ = None
 
-    def argwrap(decorator):
-        def wrapped(*args, **kw):
-            if args and callable(args[0]):
-                return decorator()(*args, **kw)
-            return decorator(*args, *kw)
-        return renamefn(wrapped, decorator)
+    # def argwrap(decorator):
+    #     def wrapped(*args, **kw):
+    #         if args and callable(args[0]):
+    #             return decorator()(*args, **kw)
+    #         return decorator(*args, *kw)
+    #     return renamefn(wrapped, decorator)
 
     def abstract(method: Callable[..., RetType]) -> Callable[..., RetType]:
         @abstractmethod
         def notimplemented(*args, **kw):
             raise NotImplementedError('abstractmethod', method)
         return notimplemented
-
-    @argwrap
-    def lazyget(name = None, fset = None) -> Callable[..., Callable[..., T]]:
-        def wrap(method: Callable[..., T]) -> Callable[..., T]:
-            key = '_%s' % method.__name__ if name is None else name
-            def fget(self) -> T:
-                try: return getattr(self, key)
-                except AttributeError: val = method(self)
-                setattr(self, key, val)
-                return val
-            return renamefn(fget, method)
-        return wrap
-
-    def lazyprop(func):
-        return property(Decorators.lazyget(func))
-
-    # def lazyget(method: Callable[..., T]) -> Callable[..., T]: ...
-    # lazyget = lazygetter()
-
-    def lazy_(method: Callable[..., T]) -> Callable[..., T]: ...
-    lazy_ = lazyget
-    # lazy_ = lazygetter(True)
 
     def setonce(method: Callable[..., RetType]) -> Callable[..., RetType]:
         name, key = __class__._privkey(method)
@@ -407,53 +422,16 @@ class Decorators(object):
         kw['changeonly'] = True
         return __class__.nosetattr(*args, **kw)
 
-    def cmperrors(*excepts: type) -> Callable:
-        def fcmpwrap(fcmp: Callable[..., RetType]) -> Callable[..., RetType]:
-            fname = fcmp.__name__
-            opsym = CmpFnOper.get(fname, fname)
-            def fcmperrs(a, b):
-                try:
-                    return fcmp(a, b)
-                except excepts: # type: ignore
-                    eargs = (opsym, type(a), type(b),)
-                    raise TypeError("'%s' not supported for %s and %s" % eargs)
-            fcmperrs.__qualname__ = fname
-            return fcmperrs
-        return fcmpwrap
+    # def argslice(*spec) -> Callable:
+    #     slc = spec[0] if isinstance(spec[0], slice) else slice(*spec)
+    #     def fslicewrap(func: Callable) -> Callable:
+    #         def fslice(*args): return func(*args[slc])
+    #         return fslice
+    #     return fslicewrap
 
-    cmperr = cmperrors(AttributeError, TypeError)
-
-    def cmpoprwrap(oper, fn = None):
-        fname = '__%s__' % oper.__name__
-        if not fn:
-            def wrap(method):
-                def fn(a, b):
-                    return 
-    def cmptypes(*types: type) -> Callable:
-        msg = "'%s' not supported for '%s' and '%s' objects"
-        def fcmpwrap(fcmp: Callable[..., RetType]) -> Callable[..., RetType]:
-            fname = fcmp.__name__
-            opsym = CmpFnOper.get(fname, fname)
-            def fcmptypecheck(a, b):
-                if not isinstance(b, types or a.__class__):
-                    eargs = (opsym, *(o.__class__.__name__ for o in (a, b)))
-                    raise TypeError(msg % eargs)
-                return fcmp(a, b)
-            return renamefn(fcmptypecheck, fcmp)
-        return fcmpwrap
-
-    cmptype = cmptypes()
-
-    def argslice(*spec) -> Callable:
-        slc = spec[0] if isinstance(spec[0], slice) else slice(*spec)
-        def fslicewrap(func: Callable) -> Callable:
-            def fslice(*args): return func(*args[slc])
-            return fslice
-        return fslicewrap
-
-    def initfn(f, *args, **kw):
-        'Call and return None'
-        f(*args, **kw)
+    # def initfn(f, *args, **kw):
+    #     'Call and return None'
+    #     f(*args, **kw)
 
     @staticmethod
     def _privkey(method) -> tuple[str]:
@@ -559,7 +537,7 @@ class CacheNotationData:
     @classmethod
     def load(cls, notn, name: str, data: Mapping):
         idx = cls.__getidx(notn)
-        if not isinstance(name, strtype):
+        if not isinstance(name, str):
             raise TypeError(name, type(name), str)
         if not isinstance(data, Mapping):
             raise TypeError(name, type(data), Mapping)
@@ -656,321 +634,3 @@ class StopWatch:
         if self.is_running():
             self.stop()
 
-
-class LinkOrderSet(Collection):
-
-    class LinkEntry:
-
-        __slots__ = ('prev', 'next', 'item')
-
-        def __init__(self, item):
-            self.prev: LinkOrderSet.LinkEntry = None
-            self.next: LinkOrderSet.LinkEntry = None
-            self.item = item
-
-        def __eq__(self, other):
-            return self.item == other or (
-                isinstance(other, self.__class__) and
-                self.item == other.item
-            )
-
-        def __hash__(self):
-            return hash(self.item)
-
-        def __repr__(self):
-            return self.item.__repr__()
-
-    def View(obj):
-        obj = cast(LinkOrderSet, obj)
-        class LinkOrderSetView(Collection):
-            __slots__ = ()
-            def __len__(self):
-                return len(obj)
-            def __iter__(self):
-                return iter(obj)
-            def __reversed__(self):
-                return reversed(obj)
-            def __contains__(self, item):
-                return item in obj
-            def __getitem__(self, key):
-                return obj[key]
-            def first(self):
-                return obj.first()
-            def last(self):
-                return obj.last()
-            def __repr__(self):
-                return obj.__class__.__repr__(self)
-            def __copy__(self):
-                return self.__class__()
-        return LinkOrderSetView()
-
-    def item(item_method: Callable) -> Callable:
-        def wrap(self: LinkOrderSet, item, *args, **kw):
-            item = self._genitem_(item, *args, **kw)
-            return item_method(self, item)
-        return wrap
-
-    def iter_items(iter_item_method: Callable) -> Callable:
-        def wrap(self: LinkOrderSet, items, *args, **kw):
-            for item in items:
-                iter_item_method(self, item, *args, **kw)
-            return 
-        return wrap
-
-    def entry(link_entry_method: Callable) -> Callable:
-        def prep(self: LinkOrderSet, item):
-            if item in self:
-                if self.strict:
-                    raise DuplicateKeyError(item)
-                return
-            entry = self.__idx[item] = LinkOrderSet.LinkEntry(item)
-            if self.__first is None:
-                self.__first = self.__last = entry
-                return
-            if self.__first == self.__last:
-                self.__first.next = entry
-            link_entry_method(self, entry)
-        return prep
-
-    def _genitem_(self, item):
-        return item
-
-class LinkOrderSet(LinkOrderSet):
-
-    slots = ('__first', '__last', '__idx', 'strict', '_utils__lazy_view')
-
-    @LinkOrderSet.item
-    @LinkOrderSet.entry
-    def append(self, entry: LinkOrderSet.LinkEntry):
-        if self.__first == self.__last:
-            self.__first.next = entry
-        entry.prev = self.__last
-        entry.prev.next = entry
-        self.__last = entry
-
-    add = append
-
-    update = extend = LinkOrderSet.iter_items(append)
-
-    @LinkOrderSet.item
-    @LinkOrderSet.entry
-    def prepend(self, entry: LinkOrderSet.LinkEntry):
-        if self.__first == self.__last:
-            self.__last.prev = entry
-        entry.next = self.__first
-        entry.next.prev = entry
-        self.__first = entry
-
-    unshift = prepend
-
-    prextend = LinkOrderSet.iter_items(prepend)
-
-    @LinkOrderSet.item
-    def remove(self, item):
-        entry = self.__idx.pop(item)
-        if entry.prev == None:
-            if entry.next == None:
-                # Empty
-                self.__first = self.__last = None
-            else:
-                # Remove first
-                entry.next.prev = None
-                self.__first = entry.next
-        else:
-            if entry.next == None:
-                # Remove last
-                entry.prev.next = None
-                self.__last = entry.prev
-            else:
-                # Remove in-between
-                entry.prev.next = entry.next
-                entry.next.prev = entry.prev
-
-    def pop(self):
-        if not len(self):
-            raise IndexError('pop from empty collection')
-        item = self.last()
-        self.remove(item)
-        return item
-
-    def shift(self):
-        if not len(self):
-            raise IndexError('shift from empty collection')
-        item = self.first()
-        self.remove(item)
-        return item
-
-    @LinkOrderSet.item
-    def discard(self, item):
-        if item in self:
-            self.remove(item)
-    
-    def clear(self):
-        self.__idx.clear()
-        self.__first = self.__last = None
-
-    def first(self):
-        return self.__first.item if self.__first else None
-
-    def last(self):
-        return self.__last.item if self.__last else None
-
-    @property
-    @Decorators.lazyget
-    def view(self):
-        return LinkOrderSet.View(self)
-
-    def __init__(self, items: Iterable = None, strict = True):
-        self.strict = strict
-        self.__first = self.__last = None
-        self.__idx: dict[Any, LinkOrderSet.LinkEntry] = {}
-        if items is not None:
-            self.extend(items)
-
-    def __len__(self):
-        return len(self.__idx)
-
-    def __contains__(self, item):
-        return item in self.__idx
-
-    def __getitem__(self, key):
-        return self.__idx[key].item
-
-    def __delitem__(self, key):
-        self.remove(key)
-
-    def __iter__(self):
-        cur = self.__first
-        while cur:
-            item = cur.item
-            yield item
-            cur = cur.next
-                
-    def __reversed__(self):
-        cur = self.__last
-        while cur:
-            item = cur.item
-            yield item
-            cur = cur.prev
-
-    def __copy__(self):
-        return self.__class__((x for x in self))
-
-    def __repr__(self):
-        return orepr(self,
-            len = len(self),
-            first = self.first(),
-            last = self.last(),
-        )
-
-
-class DequeCache(Collection[T]):
-
-    __slots__ = ()
-    abstract = Decorators.abstract
-
-    ItemType = T
-
-    maxlen: int
-    idx: int
-    rev: Mapping[Any, ItemType]
-
-    @abstract
-    def clear(self): ...
-
-    @abstract
-    def add(self, item: ItemType, keys = None): ...
-
-    @abstract
-    def update(self, d: dict): ...
-
-    @abstract
-    def get(self, key, default = None): ...
-
-    @abstract
-    def __len__(self): ...
-
-    @abstract
-    def __iter__(self) -> Iterator[ItemType]: ...
-
-    @abstract
-    def __reversed__(self) -> Iterator[ItemType]: ...
-
-    @abstract
-    def __contains__(self, item: ItemType): ...
-
-    @abstract
-    def __getitem__(self, key) -> ItemType: ...
-
-    @abstract
-    def __setitem__(self, key, item: ItemType): ...
-
-    del(abstract)
-
-    def __new__(cls, ItemType: type, maxlen = 10):
-
-        subclscheck(ItemType, IndexType, False)
-        instcheck(ItemType, type)
-
-        idx      : dict[Any, ItemType] = {}
-        idxproxy : Mapping[Any, ItemType] = MappingProxyType(idx)
-
-        rev      : dict[ItemType, set] = {}
-        revproxy : Mapping[ItemType, set] = MappingProxyType(rev)
-
-        deck     : deque[ItemType] = deque(maxlen = maxlen)
-
-        class Api(DequeCache, Collection[ItemType]):
-
-            __slots__ = ()
-
-            maxlen: int = property(lambda _: deck.maxlen)
-            idx: int = property(lambda _: idxproxy)
-            rev: Mapping[Any, ItemType] = property(lambda _: revproxy)
-
-            def clear(self):
-                for d in (idx, rev, deck): d.clear()
-
-            def add(self, item: ItemType, keys = None):
-                self[item] = item
-                if keys is not None:
-                    for k in keys: self[k] = item
-
-            def update(self, d: dict):
-                for k, v in d.items(): self[k] = v
-
-            def get(self, key, default = None):
-                try: return self[key]
-                except KeyError: return default
-
-            def __len__(self):
-                return len(deck)
-
-            def __iter__(self) -> Iterator[ItemType]:
-                return iter(deck)
-
-            def __reversed__(self) -> Iterator[ItemType]:
-                return reversed(deck)
-
-            def __contains__(self, item: ItemType):
-                return item in rev
-
-            def __getitem__(self, key) -> ItemType:
-                if isinstance(key, IndexTypes): return deck[key]
-                return idx[key]
-
-            def __setitem__(self, key, item: ItemType):
-                instcheck(item, ItemType)
-                if item in self: item = self[item]
-                else:
-                    if len(deck) == deck.maxlen:
-                        old = deck.popleft()
-                        for k in rev.pop(old): del(idx[k])
-                    idx[item] = item
-                    rev[item] = {item}
-                    deck.append(item)
-                idx[key] = item
-                rev[item].add(key)
-
-        Api.__qualname__ = 'DequeCache.Api'
-        return object.__new__(Api)

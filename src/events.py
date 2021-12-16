@@ -1,9 +1,12 @@
-from enum import Enum, unique
-from utils import Decorators, LinkOrderSet, orepr
-from typing import Callable, ItemsView, Iterator, KeysView, Mapping, \
-    MutableMapping, Sequence, Union, ValuesView, final
+from containers import LinkOrderSet
+from decorators import meta, raises
+from utils import ABCMeta, orepr
 
-cmptypes = Decorators.cmptypes
+from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, \
+    MutableMapping, Sequence, ValuesView
+from enum import Enum, unique
+from typing import TypeAlias, final
+
 
 @unique
 class Events(Enum):
@@ -17,15 +20,15 @@ class Events(Enum):
     BEFORE_APPLY       = 80
     BEFORE_TRUNK_BUILD = 100
 
-EventIdTypes = (str, int, Enum,)
-EventId = Union[EventIdTypes] # type: ignore
-
-class Listener(Callable):
+EventId: TypeAlias = str | int | Enum
+class Listener(Callable, metaclass = ABCMeta):
 
     cb        : Callable
     once      : bool
     event     : EventId
     callcount : int
+
+    __slots__ = 'cb', 'once', 'event', 'callcount'
 
     def __call__(self, *args, **kw):
         self.callcount += 1
@@ -65,16 +68,16 @@ class Listener(Callable):
             raise AttributeError('cannot set %s' % attr)
         super().__setattr__(attr, val)
 
-    def __delattr__(self, attr):
-        # Immutable
-        raise AttributeError('cannot delete %s')
+    __delattr__ = raises(AttributeError)
 
-class Listeners(LinkOrderSet):
+class Listeners(LinkOrderSet[Listener], metaclass = ABCMeta):
 
     Listener = Listener
 
     emitcount: int
     callcount: int
+
+    __slots__ = 'emitcount', 'callcount', '__event'
 
     @property
     def event(self) -> EventId:
@@ -117,12 +120,14 @@ class Listeners(LinkOrderSet):
             callcount = self.callcount,
         )
 
-class EventsListeners(MutableMapping[EventId, Listeners]):
+class EventsListeners(MutableMapping[EventId, Listeners], metaclass = ABCMeta):
 
     emitcount: int
     callcount: int
 
-    __base__: dict[EventId, Listeners]
+    __base: dict[EventId, Listeners]
+
+    __slots__ = 'emitcount', 'callcount', '__base'
 
     def create(self, *events: EventId):
         for event in events:
@@ -132,12 +137,13 @@ class EventsListeners(MutableMapping[EventId, Listeners]):
     def delete(self, event: EventId):
         del(self[event])
 
+    @meta.temp
     def normargs(feventmod: Callable) -> Callable:
         def normalize(self, *args, **kw):
             if not (args or kw) or (args and kw):
                 raise TypeError()
             arg, *cbs = (kw,) if kw else args
-            if isinstance(arg, EventIdTypes):
+            if isinstance(arg, EventId):
                 feventmod(self, arg, *cbs)
                 return
             if isinstance(arg, Mapping) and not len(cbs):
@@ -163,8 +169,6 @@ class EventsListeners(MutableMapping[EventId, Listeners]):
         for cb in cbs:
             ev.discard(cb)
 
-    del(normargs)
-
     def emit(self, event: EventId, *args, **kw) -> int:
         self.emitcount += 1
         callcount = self[event].emit(*args, **kw)
@@ -174,7 +178,7 @@ class EventsListeners(MutableMapping[EventId, Listeners]):
     # Delegate to base dict.
 
     def clear(self):
-        self.__base__.clear()
+        self.__base.clear()
 
     def get(self, key: EventId, default = None) -> Listeners:
         try:
@@ -183,24 +187,24 @@ class EventsListeners(MutableMapping[EventId, Listeners]):
             return default
 
     def keys(self) -> KeysView[EventId]:
-        return self.__base__.keys()
+        return self.__base.keys()
 
     def values(self) -> ValuesView[Listeners]:
-        return self.__base__.values()
+        return self.__base.values()
 
     def items(self) -> ItemsView[EventId, Listeners]:
-        return self.__base__.items()
+        return self.__base.items()
 
     def pop(self, key: EventId, *default) -> Listeners:
         try:
-            return self.__base__.pop(key)
+            return self.__base.pop(key)
         except KeyError:
             if default:
                 return default[0]
             raise
 
     def popitem(self) -> tuple[EventId, Listeners]:
-        return self.__base__.popitem()
+        return self.__base.popitem()
 
     def setdefault(self, key, value = None):
         try:
@@ -214,7 +218,7 @@ class EventsListeners(MutableMapping[EventId, Listeners]):
         cls = self.__class__
         inst = cls.__new__(cls)
         inst.__dict__.update(self.__dict__ | {
-            '__base__': self.__base__.copy()
+            '__base': self.__base.copy()
         })
         return inst
 
@@ -226,38 +230,38 @@ class EventsListeners(MutableMapping[EventId, Listeners]):
         return inst
 
     def __len__(self):
-        return len(self.__base__)
+        return len(self.__base)
 
     def __iter__(self) -> Iterator[EventId]:
-        return iter(self.__base__)
+        return iter(self.__base)
 
-    @cmptypes(EventIdTypes)
     def __contains__(self, key: EventId):
-        return key in self.__base__
+        return isinstance(key, EventId) and key in self.__base
 
     def __getitem__(self, key: EventId) -> Listeners:
-        return self.__base__[key]
+        return self.__base[key]
 
     def __setitem__(self, key: EventId, val: Listeners):
-        if not isinstance(key, EventIdTypes):
-            raise TypeError(key, type(key), EventIdTypes)
+        if not isinstance(key, EventId):
+            raise TypeError(key, type(key), EventId)
         if not isinstance(val, Listeners):
             raise TypeError(val, type(val), Listeners)
-        self.__base__[key] = val
+        self.__base[key] = val
 
     def __delitem__(self, key: EventId):
-        del(self.__base__[key])
+        del(self.__base[key])
 
     def __eq__(self, other):
         return self is other or (
             isinstance(other, self.__class__) and
-            self.__base__ == other.__base__
+            self.__base == other.__base
         )
 
-    __copy__ = copy
+    def __copy__(self):
+        return self.copy()
 
     def __init__(self, *names: EventId):
-        self.__base__ = {}
+        self.__base = {}
         self.emitcount = self.callcount = 0
         self.create(*names)
 
@@ -270,15 +274,17 @@ class EventsListeners(MutableMapping[EventId, Listeners]):
         )
 
     def __setattr__(self, attr, val):
-        # Protect __base__
-        if attr == '__base__' and getattr(self, attr, None) != None:
+        # Protect __base
+        if attr == '__base' and getattr(self, attr, None) != None:
             raise AttributeError('cannot set %s' % attr)
         if attr in ('callcount', 'emitcount'):
             if not isinstance(val, int):
                 raise TypeError(val, type(val), int)
         super().__setattr__(attr, val)
 
-class EventEmitter(object):
+class EventEmitter:
+
+    __slots__ = '__events',
 
     @property
     def events(self) -> EventsListeners:

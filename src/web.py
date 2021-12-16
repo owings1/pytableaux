@@ -21,15 +21,19 @@
 import examples, fixed
 from errors import TimeoutError
 from fixed import issues_href, source_href, version
+import lexicals
 from lexicals import Argument, Predicate, Predicates, LexWriter, RenderSet, \
     Operator, Quantifier, Notation
 from parsers import create_parser, notations as parser_notations
 from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
 from utils import get_logic, isstr
-import json, re, time, traceback
+
 
 import cherrypy as server
+from functools import partial
+import json, re, time, traceback
+import operator as opr
 import prometheus_client as prom
 
 from cherrypy._cpdispatch import Dispatcher
@@ -155,6 +159,7 @@ base_view_data = {
     'parser_tables'       : parser_tables,
     'operators_list'      : list(Operator),
     'quantifiers'         : list(Quantifier),
+    'lexicals'            : lexicals,
     'source_href'         : source_href,
     'system_predicates'   : {p.name: p for p in Predicates.System},
     'tabwriter_formats'   : tabwriter_formats,
@@ -769,24 +774,24 @@ class App(object):
 
         return (Argument(conclusion, premises), vocab)
 
-    def parse_predicates_data(self, predicates):
-        vocab = Predicates()
+    def parse_predicates_data(self, predicates) -> Predicates:
+        preds = Predicates()
         errors = dict()
-        i = 1
-        for pdata in predicates:
-            if isinstance(pdata, dict):
-                pdata = tuple(
-                    pdata.get(k) for k in
-                    ('index', 'subscript', 'arity')
-                )
+        Coords = Predicate.Coords
+        fields = Coords._fields
+        for i, pdata in enumerate(predicates, start = 1):
             try:
-                vocab.add(pdata)
+                if isinstance(pdata, dict):
+                    keys = fields
+                else:
+                    keys = range(len(fields))
+                coords = Coords(*map(partial(opr.getitem, pdata), keys))
+                preds.add(coords)
             except Exception as e:
                 errors['Predicate {0}'.format(str(i))] = errstr(e)
-            i += 1
         if errors:
             raise RequestDataError(errors)
-        return vocab
+        return preds
 
 #############
 ## Main    ##

@@ -17,10 +17,10 @@
 # ------------------
 #
 # pytableaux - tableaux module
-from containers import UniqueList
+from containers import LinkOrderSet, UniqueList
 from .common import FLAG, KEY, Branch, Node, NodeType, RuleEvents, Target
 from lexicals import Argument, Sentence
-from utils import Decorators, LinkOrderSet, StopWatch, \
+from utils import Decorators, StopWatch, \
     LogicRef, EmptySet, get_logic, orepr
 from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
 from events import EventId, Events, EventEmitter
@@ -1009,7 +1009,7 @@ class Tableau(AbstractTableau):
         """
         View of the open branches.
         """
-        return self.__open.view
+        return self.__open.view()
 
     def build(self) -> AbstractTableau:
         """

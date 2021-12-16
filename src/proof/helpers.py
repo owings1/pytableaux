@@ -17,10 +17,10 @@
 # ------------------
 #
 # pytableaux - rule helpers module
-from containers import MapAttrView
+from containers import MapAttrView, LinkOrderSet
 from lexicals import Constant, Sentence
 from models import BaseModel
-from utils import Decorators, LinkOrderSet, EmptySet, T, \
+from utils import Decorators, EmptySet, \
     isstr, orepr
 from .common import Access, Branch, Events, Node, Target
 from .tableaux import Rule, RuleMeta, Tableau
@@ -30,10 +30,11 @@ from collections.abc import Callable, Iterable, Iterator, MutableMapping, \
     ItemsView, KeysView, ValuesView
 from inspect import getmembers, isclass
 from itertools import chain
-from typing import ClassVar, Union, final
+from typing import ClassVar, Union, TypeAlias, TypeVar, final
 
 abstract = Decorators.abstract
 
+T = TypeVar('T')
 class AdzHelper(object):
 
     _attr = 'adz'

@@ -559,7 +559,7 @@ class Helper(object):
                 elif ctype == 'system_predicate':
                     what = 'predicate'
                     _, name = table.item(char)
-                    item = Predicates[name]
+                    item = Predicates.System[name]
                     classes.extend(('system_predicate', item.name))
         if not what:
             what = 'sentence'

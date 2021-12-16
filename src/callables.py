@@ -39,7 +39,16 @@ class Flag(enum.Flag):
 
 ExceptsParam: TypeAlias = tuple[type[Exception], ...]
 FlagParam: TypeAlias = Flag | Callable[[Flag], Flag]
-
+SETATTROK = frozenset({
+    '__module__', '__name__', '__qualname__',
+    '__doc__', '__annotations__',
+})
+class objwrap(Callable):
+    __slots__ = 'caller', '__dict__'
+    def __init__(self, caller: Callable):
+        self.caller = caller
+    def __call__(self, *a, **kw):
+        return self.caller(*a, **kw)
 class Caller(Callable, metaclass = ABCMeta):
 
     SAFE = Flag.Safe
@@ -58,7 +67,7 @@ class Caller(Callable, metaclass = ABCMeta):
         excepts  = Flag.Safe,
         default  = Flag.Safe,
     )
-    __slots__ = (*attrhints.keys(),)
+    __slots__ = tuple(attrhints)
 
     flag     : Flag
     bindargs : tuple
@@ -69,7 +78,7 @@ class Caller(Callable, metaclass = ABCMeta):
     @abstractmethod
     def _call(self, *args): ...
 
-    def __new__(cls: type[Caller], *args, **kw) -> Caller:
+    def __new__(cls, *args, **kw) -> Caller:
         inst = object.__new__(cls)
         inst.flag = Flag.Blank | cls.cls_flag
         return inst
@@ -117,7 +126,7 @@ class Caller(Callable, metaclass = ABCMeta):
         if f.Bound in f:
             if f.Left in f: args = self.bindargs + args
             else: args = args + self.bindargs
-        if f.Order in f: args = [args[n] for n in list(self.aorder)]
+        if f.Order in f: args = [args[n] for n in self.aorder]
         return args
 
     def attrnames(self) -> list[str]:
@@ -142,7 +151,7 @@ class Caller(Callable, metaclass = ABCMeta):
         try: f = self.flag
         except AttributeError: pass
         else:
-            if f.Lock in f:
+            if f.Lock in f and attr not in SETATTROK:
                 raise AttributeError(attr, f.Lock)
         object.__setattr__(self, attr, val)
 
@@ -186,6 +195,8 @@ class Caller(Callable, metaclass = ABCMeta):
         super().__init_subclass__(**kw)
         cls = __class__
         subcls.attrhints = MappingProxyType(cls.attrhints | subcls.attrhints)
+    def asobj(self):
+        return objwrap(self)
 
 ChainItem: TypeAlias = Callable | tuple[Caller, tuple]
 class Chain(Sequence[Callable], metaclass = ABCMeta):
@@ -270,8 +281,8 @@ class calls:
                 raise TypeError(method)
             self.method = method
             super().__init__(*args, **opts)
-        safe_errs = AttributeError,
         method: str
+        safe_errs = AttributeError,
         attrhints = dict(method = Flag.Blank)
         __slots__ = tuple(attrhints)
 
@@ -288,6 +299,23 @@ class gets:
         'Subscript getter.'
         def _call(self, obj, key): return obj[key]
         safe_errs = KeyError, IndexError,
+    class mixed(Caller):
+        'Attribute or subscript.'
+        def _call(self, obj, keyattr):
+            if Flag.Usr1 in self.flag:
+                return self.__attrfirst(obj, keyattr)
+            try: return obj[keyattr]
+            except TypeError: return getattr(obj, keyattr)
+        def __attrfirst(self, obj, keyattr):
+            try: return getattr(obj, keyattr)
+            except AttributeError:
+                try: return obj[keyattr]
+                except TypeError: pass
+                raise
+        def __init__(self, *args, attrfirst = False, **kw):
+            if attrfirst: self.flag |= Flag.Usr1
+            super().__init__(*args, **kw)
+        safe_errs = AttributeError, KeyError, IndexError
     class thru(Caller):
         'Passthrough getter.'
         def _call(self, obj, *_): return obj
@@ -312,6 +340,20 @@ class dels:
         'Attribute deleter.'
         def _call(self, obj, name: str): delattr(obj, name)
         safe_errs = AttributeError,
+
+class raiser(Caller):
+    'Error raiser.'
+    def _call(self, *args, **kw):
+        raise self.ErrorType(*self.eargs)
+    def __init__(self,
+        ErrorType: type[Exception],
+        eargs: Sequence = (), /):
+        self.ErrorType = subclscheck(ErrorType, Exception)
+        self.eargs = instcheck(eargs, Sequence)
+    ErrorType: type[Exception]
+    eargs: Sequence
+    attrhints = dict(ErrorType = Flag.Blank, eargs = Flag.Blank)
+    __slots__ = tuple(attrhints)
 
 methodproxy: AttrCacheFactory[Callable[[str], calls.method]] = \
     AttrCacheFactory(partial(calls.func, calls.method))

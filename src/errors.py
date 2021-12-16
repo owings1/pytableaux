@@ -5,6 +5,12 @@ class IllegalStateError(Exception):
 class TimeoutError(Exception):
     pass
 
+# Attribute Errors
+class ReadOnlyAttributeError(AttributeError):
+    def __init__(self, name: str, obj, /, *args, **kw):
+        # kw |= dict(name = name, obj = obj)
+        msg = "'%s' object attribute '%s' is read-only" % (type(obj).__name__, name)
+        super().__init__(msg, *args, name=name, obj=obj, **kw)
 # ParseErrors
 
 class ParseError(Exception):

@@ -205,25 +205,6 @@ def arguments(*keys):
         keys = titles
     return tuple(sorted(argument(name) for name in keys))
 
-# def predicated():
-#     return Predicated.first()
-
-# def identity():
-#     return Predicates.System.Identity(tuple(Constant.gen(2)))
-
-# def self_identity():
-#     a = Constant.first()
-#     return Predicates.System.Identity((a, a))
-
-# def existence():
-#     return Predicates.System.Identity((Constant.first(),))
-
-# def quantified(quantifier):
-#     return Quantified.first(quantifier)
-
-# def operated(operator):
-#     return Operated.first(operator)
-
 def tabiter(*logics, **opts):
     from proof.tableaux import Tableau
     if not logics:

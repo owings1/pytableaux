@@ -15,7 +15,7 @@
                     {% for operator in operators_list -%}
                         <tr>
                             <td><span class="operator-symbol">{{ table.char('operator', operator)|e }}</span></td>
-                            <td class="html-ref-symbol">{{ lwh.write(operator) }}</td>
+                            <td class="html-ref-symbol">{{ lwh(operator) }}</td>
                             <td>{{ operator|e }}</td>
                         </tr>
                     {% endfor %}
@@ -48,7 +48,7 @@
                                     {{- table.char('quantifier', quantifier)|e -}}
                                 </span>
                             </td>
-                            <td class="html-ref-symbol">{{ lwh.write(quantifier) }}</td>
+                            <td class="html-ref-symbol">{{ lwh(quantifier) }}</td>
                             <td>{{ quantifier|e }}</td>
                         </tr>
                     {% endfor %}
@@ -59,19 +59,19 @@
         <div class="lexicon predicates">
             <span class="label">Predicates</span>
             <table class="predicates operator-symbols predicate-symbols">
-                {% for name, predicate in system_predicates.items() -%}
+                {% for pred in lexicals.Predicates.System -%}
                     <tr class="system-predicate">
                         <td>
                             {% for notn, table in parser_tables.items() %}
-                                {%- set symbol = table.char('system_predicate', predicate) -%}
-                                {%- set subscript = predicate.subscript -%}
+                                {%- set symbol = table.char('system_predicate', pred) -%}
+                                {%- set subscript = pred.subscript -%}
                                 <span class="predicate-symbol notation-{{ notn|e }} hidden">
-                                    {{- symbol|e }}{% if subscript > 0 %}<sub>{{ subscript|e }}</sub>{% endif -%}
+                                    {{- symbol|e }}{% if pred.subscript > 0 %}<sub>{{ pred.subscript|e }}</sub>{% endif -%}
                                 </span>
                             {% endfor %}
                         </td>
-                        <td class="html-ref-symbol">{{ lwh.write(predicate) }}</td>
-                        <td>{{ name|e }}</td>
+                        <td class="html-ref-symbol">{{ lwh(pred) }}</td>
+                        <td>{{ pred.name|e }}</td>
                     </tr>
                 {% endfor %}
                 {% for label in form_data['user_predicate_symbols[]'] %}
