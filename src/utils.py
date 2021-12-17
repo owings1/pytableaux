@@ -23,26 +23,27 @@ from errors import DuplicateKeyError, IllegalStateError
 
 import abc
 from builtins import ModuleNotFoundError
-# from collections import deque #, namedtuple
 from collections.abc import Callable, Iterable, Mapping
+import enum
+from functools import reduce
+from importlib import import_module
+from inspect import isclass
+from itertools import islice
+import operator as opr
+from types import MappingProxyType, ModuleType
+import typing
+from typing import Any, Annotated, DefaultDict, \
+    Generic, NamedTuple, \
+    ParamSpec, TypeAlias, TypeVar, \
+    abstractmethod
+
+# from collections import deque #, namedtuple
     #  Collection, Hashable, ItemsView, ,\
     # Iterator, KeysView, , MutableSet, Sequence, ValuesView
 # from copy import copy
-import enum
-from functools import partial, reduce
-from importlib import import_module
-from inspect import isclass
-from itertools import chain, islice
-import operator as opr
-from time import time
-from types import MappingProxyType, ModuleType
-import typing
-from typing import Any, Annotated, DefaultDict, Generic, NamedTuple, ParamSpec, TypeAlias, TypeVar, Union, \
-    abstractmethod
-
 # from functools import partial
-# from operator import is_not
 # from pprint import pp
+# from time import time
 
 # Constants
 NOARG = enum.auto()
@@ -174,9 +175,6 @@ def notsubclscheck(cls: type, typeinfo):
         raise TypeError(cls, typeinfo)
     return cls
 
-def nowms() -> int:
-    'Current time in milliseconds'
-    return int(round(time() * 1000))
 
 def cat(*args: str) -> str:
     'Concat all argument strings'
@@ -296,13 +294,7 @@ class ABCMeta(abc.ABCMeta):
             pf = mf & MetaFlag.pre_init
             if not pf.value: continue
             for f in powflags:
-                if f in pf:
-                    remd[f][k] = v
-            # if not pf.value: continue
-            # for f in MetaFlag:
-            #     if not ispow2(f.value): continue
-            #     if f in pf:
-            #         remd[f][k] = v
+                if f in pf: remd[f][k] = v
             todel.add(k)
         for func in remd[MetaFlag.init_attrs].values():
             func(attrs, bases, **kw)
@@ -589,6 +581,7 @@ class StopWatch:
 
     __slots__ = ('_start_time', '_elapsed', '_is_running', '_times_started')
 
+
     def __init__(self, started=False):
         self._start_time = None
         self._elapsed = 0
@@ -600,7 +593,7 @@ class StopWatch:
     def start(self):
         if self._is_running:
             raise IllegalStateError('StopWatch already started.')
-        self._start_time = nowms()
+        self._start_time = self._nowms()
         self._is_running = True
         self._times_started += 1
         return self
@@ -609,18 +602,18 @@ class StopWatch:
         if not self._is_running:
             raise IllegalStateError('StopWatch already stopped.')
         self._is_running = False
-        self._elapsed += nowms() - self._start_time
+        self._elapsed += self._nowms() - self._start_time
         return self
 
     def reset(self):
         self._elapsed = 0
         if self._is_running:
-            self._start_time = nowms()
+            self._start_time = self._nowms()
         return self
 
     def elapsed(self) -> float:
         if self._is_running:
-            return self._elapsed + (nowms() - self._start_time)
+            return self._elapsed + (self._nowms() - self._start_time)
         return self._elapsed
 
     def elapsed_avg(self) -> float:
@@ -643,3 +636,10 @@ class StopWatch:
         if self.is_running():
             self.stop()
 
+    def _nowms(t) -> int:
+        'Current time in milliseconds'
+        return int(round(t() * 1000))
+    import time
+    _nowms.__defaults__ = time.time,
+    _nowms = staticmethod(_nowms)
+    del(time)

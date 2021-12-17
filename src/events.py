@@ -1,11 +1,11 @@
 from containers import LinkOrderSet
-from decorators import meta, raises
+from decorators import metad, raisen
 from utils import ABCMeta, orepr
 
 from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, \
     MutableMapping, Sequence, ValuesView
 from enum import Enum, unique
-from typing import TypeAlias, final
+from typing import TypeAlias
 
 
 @unique
@@ -68,7 +68,7 @@ class Listener(Callable, metaclass = ABCMeta):
             raise AttributeError('cannot set %s' % attr)
         super().__setattr__(attr, val)
 
-    __delattr__ = raises(AttributeError)
+    __delattr__ = raisen(AttributeError)
 
 class Listeners(LinkOrderSet[Listener], metaclass = ABCMeta):
 
@@ -137,7 +137,7 @@ class EventsListeners(MutableMapping[EventId, Listeners], metaclass = ABCMeta):
     def delete(self, event: EventId):
         del(self[event])
 
-    @meta.temp
+    @metad.temp
     def normargs(feventmod: Callable) -> Callable:
         def normalize(self, *args, **kw):
             if not (args or kw) or (args and kw):

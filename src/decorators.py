@@ -10,7 +10,7 @@ from inspect import signature
 from itertools import chain
 import operator as opr
 from types import DynamicClassAttribute, FunctionType, MappingProxyType
-from typing import Any, ClassVar, Literal, NamedTuple, ParamSpec, TypeVar, abstractmethod
+from typing import Any, ClassVar, Generic, Literal, NamedTuple, ParamSpec, TypeVar, abstractmethod
 
 P = ParamSpec('P')
 T = TypeVar('T')
@@ -24,6 +24,7 @@ _valfilter = partial(filter, gets.key(1))
 _getmixed = gets.mixed(flag=Caller.SAFE)
 _checkcallable = calls.func(instcheck, Callable)
 _thru = gets.thru()
+class _nonerr(Exception): __new__ = None
 # _ = None
 # _FIXVALCODE = (lambda *args, **kw: _).__code__
 # @functools.lru_cache
@@ -186,7 +187,36 @@ class operd:
                 def fapply(*args): return oper(*args)
             return wraps(info)(fapply)
 
+    class order(_base):
+        '''Wrap an ordering func with oper like: ``oper(func(a, b), 0)``. By
+        default, except (AttributeError, TypeError), and return
+        ``NotImplemented``.'''
+
+
+        def __init__(self, oper: Callable, info = None, *errs):
+            super().__init__(oper, info)
+            if errs:
+                if errs == (None,): self.errs = (_nonerr,)
+                else: self.errs = errs
+            else: self.errs = AttributeError, TypeError
+
+        __slots__ =  'errs','fcmp',
+
+        def __call__(self, fcmp: Callable):
+            info = self._getinfo(fcmp)
+            oper, fcmp = map(_checkcallable, (self.oper, fcmp))
+            errs = self.errs
+            @wraps(info)
+            def f(lhs, rhs):
+                try: return oper(fcmp(lhs, rhs), 0)
+                except errs: return NotImplemented
+            return f
+
     class iterself(_base):
+        'Self-reduce / pac-man args.'
+
+        __slots__ = ()
+
         def __call__(self, info = None):
             info = self._getinfo(info)
             oper = _checkcallable(self.oper)
@@ -294,7 +324,7 @@ class raisen(NamedMember):
                 'Method %s not allowed' % name,
             ))
             del r
-raises = raised = raisen
+
 class metad:
 
     __new__ = None
@@ -317,22 +347,22 @@ class metad:
     init_attrs = flag(MetaFlag.init_attrs)
 
     __slots__ = ()
-meta = metad
 
-class lazyget:
+
+V = TypeVar('V')
+
+class lazyget(NamedMember):
 
     __slots__ = 'name',
 
-    def __new__(cls, method: Callable[P, T], attr: str = None) -> Callable[P, T]:
-        'decorator. submethods add second parameter.'
-        instcheck(method, Callable)
-        if attr is None: attr = cls._formatattr(method)
-        inst = _new(cls)
-        inst.name = attr
-        return inst(method)
+    def __init__(self, attr: str = None):
+        'Initialize argument.'
+        self.name = attr
 
-    def __call__(self, method: Callable[P, T]) -> T:
+    def __call__(self, method: Callable[P, T]) -> Callable[P, T]:
         name = self.name
+        if name is None:
+            name = self.format(method.__name__)
         @wraps(method)
         def fget(self):
             try: return getattr(self, name)
@@ -340,88 +370,14 @@ class lazyget:
             value = method(self)
             setattr(self, name, value)
             return value
-        setattr(fget, _LZINSTATTR, self)
+        # setattr(fget, _LZINSTATTR, self)
         return fget
 
-    def attr(attr: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
-        'Set the name of the cache attribute, default is _method.'
-        return calls.func(lazyget, attr)
-
-    def prop(method: Callable[P, T]) -> T:
+    @staticmethod
+    def prop(method: Callable[[Any], V]) -> property:
         """Return a property with the getter. NB: a setter/deleter should be
         sure to use the correct cache attribute."""
-        method = lazyget(method)
-        return property(method, doc=method.__doc__)
-        # @wraps(method)
-        # def wrap(attr = None):
-        #     def toprop(method):
-        #         return property(lazyget(method, attr))
-        #     return toprop
-        # return wrap()(arg) if callable(arg) else wrap(arg)
+        return property(__class__()(method), doc=method.__doc__)
 
-    # def template(
-    #     fmt: str | Callable[[Callable], str],
-    #     oper: Callable | None = opr.mod
-    # ) -> type[lazyget]:
-    #     'Returns a new factory with the given default attribute format'
-    #     fnfmt = testout = None
-    #     if isinstance(fmt, str):
-    #         fnfmt = cchain.reducer(gets.attr('__name__'), partial(oper, fmt))
-    #     elif callable(fmt):
-    #         fnfmt = fmt
-    #     else:
-    #         raise TypeError(type(fmt))
-    #     testout = fnfmt(lazyget.update)
-    #     if not preds.isidentifier(testout):
-    #         raise TypeError(testout, 'Invalid identifier')
-    #     class templated(lazyget):
-    #         __slots__ = ()
-    #         _formatattr = fnfmt
-    #     return templated
-
-    # Internal decorator
-    def _mod(f):
-        @wraps(f)
-        def mod(flaz):
-            inst: lazyget = getattr(flaz, _LZINSTATTR)
-            def wrap(method):
-                fmod = f(inst, method)
-                setattr(fmod, _LZINSTATTR, inst)
-                return wraps(method)(fmod)
-                # return renamef(fmod, method)
-            return wrap
-        return mod
-
-    @_mod
-    def update(self, method: Callable) -> Callable:
-        """Decorates a setter method for updating the value. The value is update
-        with the return value of the method."""
-        def fset(obj, value):
-            setattr(obj, self.name, method(obj, value))
-        return fset
-
-    @_mod
-    def clear(self, method: Callable[P, bool]) -> Callable[P, None]:
-        """Decorates a deleter method. The attribute is deleted if the method
-        returns a truthy value."""
-        def fdel(obj):
-            if method(obj): delattr(obj, self.name)
-        return fdel
-
-    @classmethod
-    def _formatattr(cls, method: Callable) -> str:
-        return '_%s' % method.__name__
-
-    del(_mod)
-
-
-# def renamef(fnew: T, forig = None, /, **kw) -> T:
-#     fgv = lambda a: kw.get(a) or getattr((forig or fnew), a, getattr(fnew, a, None))
-#     for attr in ('__qualname__', '__name__', '__doc__'):
-#         setattr(fnew, attr, fgv(attr))
-#         # val = kw.get(attr, getattr(forig, attr, getattr(fnew, attr, None)))
-#         # setattr(fnew, attr, val)
-#     for attr in ('__annotations__',):
-#         setattr(fnew, attr, getattr(fnew, attr) | fgv(attr) or {})
-#         # setattr(fnew, getattr(fnew, attr) | fgv(attr, {})getattr(forig, attr))
-#     return fnew
+    def format(self, name: str) -> str:
+        return '_%s' % name
