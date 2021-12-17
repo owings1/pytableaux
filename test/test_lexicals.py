@@ -105,12 +105,16 @@ class TestPredicates(BaseSuite):
             Predicates().add('foo')
         with raises(TypeError):
             Predicates([('foo', 4)])
-        with raises(KeyError):
-            Predicates()['NonExistentPredicate']
-        with raises(KeyError):
+        with raises(TypeError):
+            Predicates()['nonIndexKey']
+        with raises(TypeError):
             Predicates()[(-1, 2)]
         with raises(KeyError):
-            Predicates()[(1, 2)]
+            Predicates().get('NonExistentPred')
+        with raises(KeyError):
+            Predicates().get((-1, 2))
+        with raises(KeyError):
+            Predicates().get((1, 2))
         with raises(ValueError):
             Predicates().add((0, 0, 2, 'Identity'))
         with raises(TypeError): # bad arity
@@ -126,7 +130,7 @@ class TestPredicates(BaseSuite):
             preds.add((0, 0, 2))
 
     def test_get_predicate_by_index_subscript_sys_identity(self):
-        assert Predicates()[-1, 0].name == 'Identity'
+        assert Predicates().get((-1, 0)).name == 'Identity'
 
     def test_get_pred_coords_tuple(self):
         pred = Predicates().add((1, 1, 1))
@@ -136,10 +140,10 @@ class TestPredicates(BaseSuite):
     def test_pred_no_name(self):
         v = Predicates()
         p = v.add((1, 0, 1))
-        p1 = v[(1, 0)]
+        p1 = v.get((1, 0))
         assert p == p1
         p = v.add((1, 1, 2))
-        p2 = v[(1, 1)]
+        p2 = v.get((1, 1))
         assert p == p2
 
     def test_declare1(self):
@@ -148,19 +152,19 @@ class TestPredicates(BaseSuite):
         assert p.subscript == 0
         assert p.arity == 1
 
-    def test_vocab_copy_get_predicate(self):
+    def test_copy_get_predicate(self):
         v = Predicates()
         spec = (0, 0, 1)
         predicate = v.add(spec)
         v2 = copy(v)
-        assert v2[spec] == predicate
+        assert v2.get(spec) == predicate
 
     def test_compare_id_with_user_pred(self):
         pred = Predicates().add((0, 0, 1))
-        assert Predicate.Identity < pred
-        assert Predicate.Identity <= pred
-        assert pred > Predicate.Identity
-        assert pred >= Predicate.Identity
+        assert Sys.Identity < pred
+        assert Sys.Identity <= pred
+        assert pred > Sys.Identity
+        assert pred >= Sys.Identity
 
     def test_with_pred_defs_single_pred_with_length4(self):
         v = Predicates((0, 0, 1))
@@ -168,14 +172,14 @@ class TestPredicates(BaseSuite):
         assert (0, 0, 1) in v
 
     def test_with_pred_defs_single_def_list(self):
-        vocab = Predicates([(0, 0, 2)])
-        predicate = vocab[(0, 0)]
-        assert predicate.arity == 2
+        v = Predicates([(0, 0, 2)])
+        p = v.get((0, 0))
+        assert p.arity == 2
 
     def test_with_pred_defs_single_def_tuple(self):
-        vocab = Predicates(((0, 0, 3),))
-        predicate = vocab[(0, 0)]
-        assert predicate.arity == 3
+        v = Predicates(((0, 0, 3),))
+        p = v.get((0, 0))
+        assert p.arity == 3
 
     def test_copy_preds(self):
         p1, p2, p3 = Predicate.gen(3)
@@ -190,16 +194,13 @@ class TestPredicates(BaseSuite):
     class TestSystem(BaseSuite):
 
         def test_predicate_equality(self):
-            assert Predicates()['Identity'].name == 'Identity'
-            assert Predicate.System['Identity'] == Predicate.Identity
+            assert Predicates().get('Identity').name == 'Identity'
+            assert Predicate.System['Identity'] == Predicates.System.Identity
 
         def test_sys_preds_enum_value(self):
             assert Pred != Preds
             assert Pred.System is Preds.System
-            assert Pred.Identity is Preds.System['Identity']
-            assert Pred.Identity.TYPE == Predicate
-            Id = Pred.Identity
-            assert Id == Preds.System.Identity
+            assert Pred.System.Identity is Preds.System['Identity']
             assert list(Pred.System) == list(Preds.System)
             assert sorted(Preds.System) == list(Preds.System)
 

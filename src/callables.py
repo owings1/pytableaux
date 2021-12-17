@@ -11,7 +11,7 @@ from functools import partial
 # import itertools
 import operator as opr
 from types import MappingProxyType
-from typing import Annotated, Any, ClassVar, Generic, ParamSpec, TypeAlias, TypeVar, \
+from typing import Annotated, Any, ClassVar, Generic, Literal, ParamSpec, TypeAlias, TypeVar, \
     abstractmethod, final
 
 P = ParamSpec('P')
@@ -51,9 +51,9 @@ class objwrap(Callable):
         return self.caller(*a, **kw)
 class Caller(Callable, metaclass = ABCMeta):
 
-    SAFE = Flag.Safe
-    LEFT = Flag.Left
-    STAR = Flag.Star
+    SAFE: Literal[Flag.Safe] = Flag.Safe
+    LEFT: Literal[Flag.Left] = Flag.Left
+    STAR: Literal[Flag.Star] = Flag.Star
 
     cls_flag     : ClassVar[Flag] = Flag.Blank
     safe_errs    : ClassVar[ExceptsParam]

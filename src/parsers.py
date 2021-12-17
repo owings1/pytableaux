@@ -19,15 +19,16 @@
 # pytableaux - parsers module
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError
-from lexicals import Lexical, BiCoords, Predicate, Parameter, Constant, Variable, Operator as Oper, Quantifier, \
-    Sentence, Atomic, Predicated, Quantified, Operated, LexType, Predicates, Argument
-from utils import CacheNotationData, Decorators, cat, EmptySet, isstr
+from containers import Abc
+from decorators import abstract
+from lexicals import Predicate, Parameter, Constant, Variable, \
+    Operator as Oper, Quantifier, Sentence, Atomic, Predicated, \
+    Quantified, Operated, LexType, Predicates, Argument, Types
+from utils import BiCoords, CacheNotationData, cat
 
 from collections.abc import Iterable, Mapping
-from types import MappingProxyType
+from types import MappingProxyType as MapProxy
 from typing import Union
-
-abstract = Decorators.abstract
 
 parser_classes = {
     # Values populated after class declarations below.
@@ -44,22 +45,24 @@ class CharTable(CacheNotationData):
     def __init__(self, data: Mapping):
         vals, itms = data.values(), data.items()
         # copy table
-        self._table = MappingProxyType(data)#{key: tuple(value) for key, value in itms}
+        self._table = MapProxy(data)#{key: tuple(value) for key, value in itms}
         # flipped table 
-        self._reverse = MappingProxyType(dict(reversed(item) for item in itms))
+        self._reverse = MapProxy(dict(reversed(item) for item in itms))
         # list of types
         self._types = tuple(sorted(set(item[0] for item in vals)))
         # tuple of unique values for type
-        self._values = MappingProxyType({
+        self._values = MapProxy({
             # must be unique!
             typ: tuple(sorted(set(item[1] for item in vals if item[0] == typ)))
             for typ in self._types
         })
         # chars for each type, duplicates discarded
-        self._chars = MappingProxyType({
+        self._chars = MapProxy({
             typ: tuple(self._reverse[(typ, val)] for val in self._values[typ])
             for typ in self._types
         })
+
+    __slots__ = '_table', '_reverse', '_types', '_values', '_chars'
 
     def type(self, char):
         """
@@ -81,7 +84,7 @@ class CharTable(CacheNotationData):
         """
         return self._table[char]
 
-    def value(self, char) -> Union[int, Lexical]:
+    def value(self, char) -> Union[int, Types.Lexical]:
         """
         :param str char: The character symbol.
         :return: Table item value, e.g. ``1`` or ``Operator.Negation``.
@@ -104,7 +107,7 @@ class CharTable(CacheNotationData):
     def table(self):
         return self._table
 
-class Parser(object):
+class Parser(Abc):
 
     @abstract
     def parse(self, input: str) -> Sentence:
@@ -162,7 +165,7 @@ def create_parser(notn: str = None, vocab: Predicates = None, table: CharTable =
     :raises ValueError: on invalid notation, or table.
     :raises TypeError: on invalid argument types.
     """
-    if isinstance(notn, Predicates) or isstr(vocab):
+    if isinstance(notn, Predicates) or isinstance(vocab, str):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
     if vocab == None:
@@ -173,7 +176,7 @@ def create_parser(notn: str = None, vocab: Predicates = None, table: CharTable =
         raise ValueError('Invalid notation: %s' % notn)
     if table == None:
         table = 'default'
-    if isstr(table):
+    if isinstance(table, str):
         table = CharTable.fetch(notn, table)
     return parser_classes[notn](table, vocab, **opts)
 
@@ -327,7 +330,7 @@ class BaseParser(Parser):
             self._advance()
             return pred
         try:
-            return self.vocab[self._read_coords()]
+            return self.vocab.get(self._read_coords())
         except KeyError:
             raise ParseError(
                 "Undefined predicate symbol '{0}' at position {1}.".format(pchar, cpos)

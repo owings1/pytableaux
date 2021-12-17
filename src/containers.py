@@ -1,19 +1,24 @@
 from __future__ import annotations
 
-from decorators import delegate, meta, wraps
+from decorators import deleg, operd, meta, wraps
 from errors import DuplicateKeyError
-from utils import ABCMeta, IndexType, cat, instcheck, notsubclscheck, subclscheck, orepr, wrparens
+from utils import ABCMeta, IndexType, cat, instcheck, notsubclscheck, \
+    orepr, wrparens, wraprepr \
+    # subclscheck
+    
 
 # import abc
 from collections import deque
-from collections.abc import *
-from copy import copy
+from collections.abc import Callable, Collection, Hashable, Iterable, Iterator, \
+    Mapping, MappingView, Reversible
+import collections.abc as bases
+# from copy import copy
 import enum
-from functools import reduce
-from itertools import chain, filterfalse
+# from functools import reduce
+# from itertools import chain, filterfalse
 import operator as opr
-from types import MappingProxyType, MethodType
-import typing
+from types import MappingProxyType #, MethodType
+# import typing
 from typing import Any, Annotated, Generic, NamedTuple, TypeVar, abstractmethod, final
 
 from callables import calls, cchain, gets, preds
@@ -25,307 +30,225 @@ V = TypeVar('V')
 
 NOARG = enum.auto()
 
-class SetlistPair(NamedTuple):
-    set: set
-    list: list
+class Abc(metaclass = ABCMeta):
+    __slots__ = ()
 
-class MapAttrView(MappingView, Mapping[str, T], metaclass = ABCMeta):
-    'A Mapping view with attribute access.'
+class Copyable(Abc):
 
-    # MappingView uses the '_mapping' slot.
-    __slots__ = ('_mapping',)
+    @abstractmethod
+    def __copy__(self): ...
 
-    def __init__(self, base: Mapping[str, T]):
-        self._mapping = instcheck(base, Mapping)
+    def copy(self):
+        return self.__copy__()
 
-    def __getattr__(self, name: str):
-        try: return self._mapping[name]
-        except KeyError: raise AttributeError(name)
+class SetApi(bases.Set[V], Copyable):
 
-    def __dir__(self):
-        return list(filter(preds.isidentifier, self))
+    __slots__ = ()
 
-    def __copy__(self) -> MapAttrView[T]:
-        inst = object.__new__(self.__class__)
-        inst._mapping = self._mapping
-        return inst
+    rdckw = dict(freturn = opr.methodcaller('_from_iterable'))
 
-    def __getitem__(self, key: str) -> T:
-        return self._mapping[key]
+    union        = operd.reduce(opr.or_,  info = set.union,        **rdckw)
+    intersection = operd.reduce(opr.and_, info = set.intersection, **rdckw)
+    difference   = operd.reduce(opr.sub,  info = set.difference,   **rdckw)
 
-    def __iter__(self) -> Iterator[T]:
-        yield from self._mapping
+    del(rdckw)
 
-    def __reversed__(self) -> Iterator[str]:
-        try: return reversed(self._mapping)
-        except TypeError: raise NotImplementedError()
+    symmetric_difference = operd.apply(opr.xor,
+        info = set.symmetric_difference
+    )
 
-class UniqueList(MutableSequence[V], MutableSet, metaclass = ABCMeta):
-    'A list/set hybrid.'
+    issubset   = operd.apply(opr.le, info = set.issubset)
+    issuperset = operd.apply(opr.ge, info = set.issuperset)
 
-    __slots__ = '__base',
+class MutableSetApi(bases.MutableSet, SetApi):
 
-    def __init__(self, items: Iterable[V] = None):
-        self.__base = SetlistPair(set(), [])
-        if items is not None:
-            self.update(items)
+    __slots__ = ()
+
+    # ------- builtin set ------------
+    update              = operd.iterself(opr.ior,  info = set.update)
+    intersection_update = operd.iterself(opr.iand, info = set.intersection_update)
+    difference_update   = operd.iterself(opr.isub, info = set.difference_update)
+
+    symmetric_difference_update = operd.apply(opr.ixor,
+        info = set.symmetric_difference_update
+    )
+
+class SequenceApi(bases.Sequence[V], Copyable):
+
+    __slots__ = ()
+
+    @abstractmethod
+    def __add__(self, other): ...
+
+class MutableSequenceApi(bases.MutableSequence, SequenceApi):
+
+    __slots__ = ()
+
+    # ---------- builtin list -----------
+
+    extend = operd.apply(opr.iadd, info = list.extend)
+
+    @abstractmethod
+    def sort(self, /, *, key = None, reverse = False): ...
+
+    @abstractmethod
+    def reverse(self): ...
+
+class SetSeqPair(NamedTuple):
+    set: SetApi
+    seq: SequenceApi
+
+class MutSetSeqPair(SetSeqPair):
+    set: MutableSetApi
+    seq: MutableSequenceApi
+
+class SequenceSetView(SetApi[V], SequenceApi):
+
+    __slots__ = '_setseq_',
+
+    @abstractmethod
+    def __init__(self, setseq: SetSeqPair):
+        self._setseq_ = instcheck(setseq, SetSeqPair)
 
     # -------------   Collection ---------------
 
     def __contains__(self, value: V):
-        return value in self.__base.set
+        return value in self._setseq_.set
 
     def __len__(self):
-        return len(self.__base.list)
+        return len(self._setseq_.seq)
 
     # -------------------  Sequence  -------------------
 
     def __getitem__(self, index: IndexType) -> V:
-        'Get value by index or slice.'
-        return self.__base.list[index]
+        return self._setseq_.seq[index]
 
     def count(self, value: V) -> int:
         'Returns 1 if in the set, else 0.'
         return int(value in self)
 
     def index(self, value: V, start = 0, stop = None) -> int:
-        'Get the index of the value in the list.'
+        'Get the index of the value in the set.'
         if value not in self:
-            raise ValueError('%s is not in the list' % value)
-        return Sequence.index(self, value, start, stop)
+            raise ValueError('%s is not in the set' % value)
+        return super().index(value, start, stop)
+
+    __add__ = operd.apply(opr.or_)
+
+    # -----------  Copyable -----------
+
+    def __copy__(self) -> SequenceSetView[V]:
+        inst = object.__new__(self.__class__)
+        inst._setseq_ = self._setseq_.__class__(*self._setseq_)
+        return inst
+
+    # -----------  Other -----------
+
+    def __repr__(self):
+        return wraprepr(self, self._setseq_.seq)
+
+    ImplNotes: Annotated[dict, {
+        Collection: dict(
+            implement = {'__contains__', '__len__'},
+        ),
+        SequenceApi: dict(
+            implement = {'__getitem__', '__add__'},
+            override  = {'count', 'index'},
+            inherit   = {'__iter__', '__reversed__'},
+        ),
+        SetApi: dict(
+            inherit = {
+                '__and__', '__rand__', '__or__', '__ror__',
+                '__sub__', '__rsub__', '__xor__', '__rxor__',
+                '__le__', '__lt__', '__gt__', '__ge__', '__eq__',
+                '_hash', 'isdisjoint',
+                'union', 'intersection', 'difference',
+                'symmetric_difference', 
+                'issubset', 'issuperset',
+            },
+        ),
+    }]
+
+class FrozenSequenceSet(SequenceSetView[V]):
+    'Immutable sequence set.'
+
+    __slots__ = ()
+
+    def __init__(self, values: Iterable[V] = None):
+        d = dict.fromkeys(() if values is None else values)
+        setseq = SetSeqPair(frozenset(d), tuple(d.keys()))
+        super().__init__(setseq)
+        del(d)
+
+class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
+    'Mutable sequence set.'
+
+    __slots__ = ()
+
+    _setseq_: MutSetSeqPair
+
+    @abstractmethod
+    def __init__(self, setseq: MutSetSeqPair):
+        self._setseq_ = instcheck(setseq, MutSetSeqPair)
 
     # ---------------   MutableSequence ---------------
 
-    def __delitem__(self, key: IndexType):
+    def __delitem__(self, index: IndexType):
         'Delete by index or slice.'
-        value = self[key]
-        b = self.__base
-        if isinstance(key, int):
+        value = self[index]
+        b = self._setseq_
+        if isinstance(index, int):
             b.set.remove(value)
         else:
-            for value in self[key]:
+            for value in self[index]:
                 b.set.remove(value)            
-        del b.list[key]
+        del b.seq[index]
 
     def __setitem__(self, index: int, value: V):
-        'Set an the index to a value. Raises ValueError for duplicate..'
+        'Set an the index to a value. Raises ValueError for duplicate.'
         instcheck(index, int)
         old = self[index]
         if value in self:
             if value == old:
                 return
             raise ValueError('Duplicate: %s' % value)
-        b = self.__base
+        b = self._setseq_
         b.set.add(value)
-        b.list[index] = value
+        b.seq[index] = value
 
     def insert(self, index: int, value: V):
         'Insert a value before an index. Raises ValueError for duplicate.'
         if value in self:
             raise ValueError('Duplicate: %s' % value)
-        b = self.__base
-        b.list.insert(index, value)
+        b = self._setseq_
+        b.seq.insert(index, value)
         b.set.add(value)
 
     def append(self, value: V):
         'Append an value. Raises ValueError for duplicate.'
         if value in self:
             raise ValueError('Duplicate: %s' % value)
-        return MutableSequence.append(self, value)
+        return super().append(value)
 
     def reverse(self):
         'Reverse in place.'
-        self.__base.list.reverse()
+        self._setseq_.seq.reverse()
 
     def clear(self):
         'Clear the list and set.'
         if not len(self):
             return
-        st, ls = self.__base
+        st, sq = self._setseq_
+        setseq = self._setseq_.__class__(st.__class__(), sq.__class__())
         # from sys import getrefcount
         # if getrefcount(st) + getrefcount(ls) > 4:
         #     MutableSequence.clear(self)
-        del(st, ls, self.__base)
-        self.__base = SetlistPair(set(), [])
+        del(st, sq, self._setseq_)
+        self._setseq_ = setseq
 
-    # ----------- builtin list --------------
-
-    def __add__(self, rhs: Iterable[V]) -> UniqueList[V]:
-        'Copy and extend, ignoring duplicates.'
-        inst = self.copy()
-        if rhs is not self:
-            inst.update(rhs)
-        return inst
-
-    def sort(self, **kw):
+    def sort(self, /, *, key = None, reverse = False):
         'Sort the list in place.'
-        self.__base.list.sort(**kw)
-
-    # ------- builtin set (non-mutating methods) ------------
-
-    @meta.temp
-    class iterator:
-        '''Takes a method that returns an iterator, makes variations
-        for the math operators, and replaces it with a method that
-        returns a new collection.'''
-        iterator: Callable
-        left: Callable
-        right: Callable
-
-        def __new__(cls, iter_method) -> UniqueList.iterator:
-
-            @wraps(iter_method)
-            def method(self, other):
-                return self._from_iterable(iter_method(self, other))
-
-            def math_left(self, other):
-                if not isinstance(other, Iterable):
-                    return NotImplemented
-                return self._from_iterable(iter_method(self, other))
-
-            def math_right(self, other):
-                if not isinstance(other, Iterable):
-                    return NotImplemented
-                if isinstance(other, Sequence):
-                    fnew = self._from_iterable
-                else:
-                    fnew = set
-                return fnew(iter_method(self, other))
-
-            method: UniqueList.iterator = method
-            method.iterator = iter_method
-            method.left = math_left
-            method.right = math_right
-            return method
-
-    @iterator
-    def union(self, other: Iterable) -> UniqueList[V]:
-        'Return the union as a new instance, appending new values.'
-        if self is other: return iter(self)
-        return chain(self, other)
-
-    @iterator
-    def intersection(self, other: Iterable) -> UniqueList[V]:
-        'Return the intersection as a new instance.'
-        if self is other: return iter(())
-        if not isinstance(other, Container):
-            other = set(other)
-        return filter(other.__contains__, self)
-
-    @iterator
-    def difference(self, other: Iterable) -> UniqueList[V]:
-        'Return the difference as a new instance, maintaining original order.'
-        if self is other: return iter(())
-        if not isinstance(other, Container):
-            other = set(other)
-        return filterfalse(other.__contains__, self)
-
-    @iterator
-    def symmetric_difference(self, other: Iterable) -> UniqueList[V]:
-        'Return the symmetric difference as a new instance, appending new values.'
-        if self is other: return iter(())
-        if not isinstance(other, Container):
-            other = set(other)
-        return iter(()) if self is other else chain(
-            filterfalse(other.__contains__, self),
-            filterfalse(self.__contains__, other),
-        )
-
-    def issubset(self, other) -> bool:
-        'Delegate to set.'
-        return self is other or self.__base.set.issubset(other)
-
-    def issuperset(self, other) -> bool:
-        'Delegate to set.'
-        return self is other or self.__base.set.issuperset(other)
-
-    # --------------------- Set ------------------------
-
-    @meta.temp
-    def math(source):
-        def f(method):
-            wraps(method)(source)
-            return source
-        return f
-
-    @math(intersection.left)
-    def __and__(): ...
-    @math(intersection.right)
-    def __rand__(): ...
-
-    @math(union.left)
-    def __or__(): ...
-    @math(union.right)
-    def __ror__(): ...
-
-    @math(difference.left)
-    def __sub__(): ...
-    @math(difference.right)
-    def __rsub__(): ...
-
-    @math(symmetric_difference.left)
-    def __xor__(): ...
-    @math(symmetric_difference.right)
-    def __rxor__(): ...
-
-    @meta.temp
-    def order(method):
-        # The Set implementation of < is subset.
-        # Builtin list implements for list type only, so we add support here,
-        #   since we can just compare the bases.
-        # Disadvantage here is that our [1, 2] != list([2, 1]), but does equal {2, 1}
-        oname = method.__name__
-        oper = getattr(opr, oname)
-        setfunc = getattr(Set, oname)
-        @wraps(method)
-        def f(self: UniqueList, other):
-            setcmp = setfunc(self, other)
-            if setcmp is NotImplemented:
-                if isinstance(other, list):
-                    return oper(self.__base.list, other)
-            return setcmp
-        return f
-
-    @order
-    def __le__(): ...
-    @order
-    def __lt__(): ...
-    @order
-    def __gt__(): ...
-    @order
-    def __ge__(): ...
-    @order
-    def __eq__(): ...
-
-
-    # ------- builtin set (mutating methods) ------------
-
-    def update(self, values: Iterable):
-        'Append all values not in the set.'
-        for value in values:
-            self.add(value)
-
-    def intersection_update(self, other: Iterable):
-        'Remove any value that is not in the other.'
-        if self is other:
-            return
-        for value in filterfalse(other.__contains__, self):
-            self.remove(value)
-
-    def difference_update(self, other: Iterable):
-        'Discard any items contained in the other collection.'
-        if other is self:
-            return
-        for value in filter(self.__contains__, other):
-            self.remove(value)
-
-    def symmetric_difference_update(self, other: Iterable):
-        'Update the instance to contain the symmetric difference.'
-        # It is cheaper to reconstruct the list than perform
-        # individual removals.
-        inst = self.symmetric_difference(other)
-        self.clear()
-        self.update(inst)
+        self._setseq_.seq.sort(key = key, reverse = reverse)
 
     # ---------------  MutableSet  --------------------
 
@@ -336,93 +259,92 @@ class UniqueList(MutableSequence[V], MutableSet, metaclass = ABCMeta):
 
     def discard(self, value: V):
         'Calls ``remove()`` and catches ValueError.'
-        try:
-            self.remove(value)
-        except ValueError:
-            pass
+        try: self.remove(value)
+        except ValueError: pass
 
-    @meta.temp
-    def imath(source):
-        def wrapper(method):
-            @wraps(method)
-            def f(self, it):
-                if not isinstance(it, Iterable):
-                    return NotImplemented
-                source(self, it)
-                return self
-            return f
-        return wrapper
-
-    @imath(update)
-    def __ior__(): ...
-    @imath(intersection_update)
-    def __iand__(): ...
-    @imath(symmetric_difference_update)
-    def __ixor__(): ...
-    @imath(difference_update)
-    def __isub__(): ...
-
-    # -----------  Other -----------
-
-    def __copy__(self):
-        return self.copy()
-
-    def copy(self) -> UniqueList[V]:
-        return self.__class__(self)
-
-    def __repr__(self):
-        return cat(
-            self.__class__.__name__,
-            wrparens(self.__base.list.__repr__())
-        )
-
-    ImplNotes: Annotated[dict, {
-        Collection: dict(
-            implement = {'__contains__', '__len__'},
-            inherit   = {'__iter__'},
-        ),
-        Sequence: dict(
-            implement = {'__getitem__'},
-            override  = {'count'},
-            extend    = {'index'},
-            inherit   = {'__reversed__'},
-        ),
-        MutableSequence: dict(
-            implement = {'__setitem__', '__delitem__', 'insert'},
-            override  = {'reverse', 'clear'},
-            extend    = {'append'},
-            inherit   = {'extend', 'pop', 'remove', '__iadd__'},
-        ),
-        list: dict(
-            override = {'__add__'},
-            delegate = {'sort'}
-        ),
-        set: dict(
-            implement = {
-                'union', 'intersection', 'difference', 'symmetric_difference', 
-                'issubset','issuperset',
+    ImplNotes: Annotated[dict, dict(
+        implement = {
+            MutableSequenceApi: {'__setitem__', '__delitem__', 'insert', 'sort'},
+            MutableSetApi:      {'add', 'discard'}
+        },
+        override = {
+            MutableSequenceApi: {'clear', 'reverse', 'append'},
+            MutableSetApi:      {'clear',},
+        },
+        inherit = {
+            MutableSequenceApi: {
+                'extend', 'pop', 'remove', '__iadd__',
+            },
+            MutableSetApi: {
+                '__ior__', '__iand__', '__ixor__', '__isub__',
                 'update', 'intersection_update', 'difference_update',
                 'symmetric_difference_update',
-            }
-        ),
-        Set: dict(
-            override = {
+            },
+            SequenceSetView: {
+                '__contains__', '__len__', '__iter__', '__reversed__',
+                '__getitem__', 'count', 'index', '__add__',
+
                 '__and__', '__rand__', '__or__', '__ror__',
                 '__sub__', '__rsub__', '__xor__', '__rxor__',
-            },
-            extend   = {'__le__', '__lt__', '__gt__', '__ge__', '__eq__'},
-            inherit = {'_hash', 'isdisjoint'},
-        ),
-        MutableSet: dict(
-            implement = {'add', 'discard', },
-            override  = {'remove', 'pop', 'clear',},
-            inherit   = {'__ior__', '__iand__', '__ixor__', '__isub__'},
-        )
-    }]
+                '__le__', '__lt__', '__gt__', '__ge__', '__eq__',
+                'union', 'intersection', 'difference', 'symmetric_difference', 
+                'issubset', 'issuperset', 'isdisjoint', '_hash',
 
-class LinkedView(Collection[T], Reversible, metaclass = ABCMeta):
+                '__copy__', '__repr__',
+            },
+        },
+        resolve = {
+            'pop'   : MutableSequenceApi,
+            'remove': MutableSequenceApi,
+        }
+    )]
+
+class ListSet(MutableSequenceSet[V]):
+
+    __slots__ = ()
+
+    def __init__(self, values: Iterable[V] = None):
+        super().__init__(MutSetSeqPair(set(), []))
+        if values is not None:
+            self.update(values)
+
+UniqueList = ListSet
+
+class MapAttrView(MappingView[str, V], Mapping, Copyable):
+    'A Mapping view with attribute access.'
+
+    # MappingView uses the '_mapping' slot.
+    __slots__ = ()
+
+    def __init__(self, base: Mapping[str, V]):
+        self._mapping = instcheck(base, Mapping)
+
+    def __getattr__(self, name: str):
+        try: return self._mapping[name]
+        except KeyError: raise AttributeError(name)
+
+    def __dir__(self):
+        return list(filter(preds.isidentifier, self))
+
+    def __copy__(self) -> MapAttrView[V]:
+        inst = object.__new__(self.__class__)
+        inst._mapping = self._mapping
+        return inst
+
+    def __getitem__(self, key: str) -> V:
+        return self._mapping[key]
+
+    def __iter__(self) -> Iterator[str]:
+        yield from self._mapping
+
+    def __reversed__(self) -> Iterator[str]:
+        try: return reversed(self._mapping)
+        except TypeError: raise NotImplementedError()
+
+class LinkedView(Collection[T], Reversible, Abc):
     'Abstract class for a linked collection view.'
 
+    __slots__ = ()
     @abstractmethod
     def first(self) -> T: ...
 
@@ -461,12 +383,13 @@ class LinkOrderSetView(LinkedView[T]):
         )
         return ViewProxy()
 
-class LinkEntry(Generic[T], Hashable, metaclass = ABCMeta):
+class LinkEntry(Generic[T], Hashable, Abc):
     'An item container with prev/next attributes.'
 
     value: T
     prev: LinkEntry[T]
     next: LinkEntry[T]
+
     __slots__ = 'prev', 'next', 'value'
 
     def __init__(self, value, prev = None, next = None):
@@ -492,7 +415,7 @@ class LinkEntry(Generic[T], Hashable, metaclass = ABCMeta):
     def __repr__(self):
         return cat(self.__class__.__name__, wrparens(self.value.__repr__()))
 
-class LinkOrderSet(LinkedView[T], Collection, metaclass = ABCMeta):
+class LinkOrderSet(LinkedView[T], Collection, Copyable):
 
     def __init__(self, values: Iterable[T] = None, strict: bool = True):
         self.strict = strict
@@ -670,11 +593,8 @@ class LinkOrderSet(LinkedView[T], Collection, metaclass = ABCMeta):
         self._link_viewcls = view.__class__
         return view
 
-    def copy(self) -> LinkOrderSet[T]:
-        return self.__class__(self, self.strict)
-
     def __copy__(self) -> LinkOrderSet[T]:
-        return self.copy()
+        return self.__class__(self, self.strict)
 
     def __repr__(self):
         return orepr(self,
@@ -683,8 +603,7 @@ class LinkOrderSet(LinkedView[T], Collection, metaclass = ABCMeta):
             last  = self.last(),
         )
 
-
-class DequeCache(Collection[V], metaclass = ABCMeta):
+class DequeCache(Collection[V], Abc):
 
     __slots__ = ()
 

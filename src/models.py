@@ -1,4 +1,4 @@
-from containers import  UniqueList
+from containers import FrozenSequenceSet
 from utils import Decorators, get_logic
 from lexicals import Operator, Sentence
 import itertools
@@ -6,7 +6,7 @@ abstract = Decorators.abstract
 
 class BaseModel(object):
 
-    truth_values: UniqueList
+    truth_values: FrozenSequenceSet
     # Default set
     truth_functional_operators = {
         Operator.Assertion             ,

@@ -63,6 +63,7 @@ strtype = str
 LogicRef = ModuleType | str
 IndexTypes = (int, slice)
 IndexType: TypeAlias = int | slice
+IntTuple: TypeAlias = tuple[int, ...]
 
 K = TypeVar('K')
 T = TypeVar('T')
@@ -180,9 +181,9 @@ def errstr(err) -> str:
         return '%s: %s' % (err.__class__.__name__, err)
     return str(err)
 
-def wrparens(*args: str) -> str:
+def wrparens(*args: str, parens='()') -> str:
     'Concat all argument strings and wrap in parentheses'
-    return cat('(', ''.join(args), ')')
+    return cat(parens[0], ''.join(args), parens[-1])
 
 def drepr(d: dict, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
     lw = drepr.lw
@@ -224,24 +225,11 @@ def orepr(obj, _d: dict = None, _ = None, **kw) -> str:
     except Exception as e:
         return '<%s !ERR: %s !>' % (oname, errstr(e))
 
-def wraprepr(obj, inner) -> str:
+def wraprepr(obj, inner, **kw) -> str:
     if not isinstance(obj, str):
         obj = obj.__class__.__name__
-    return cat(obj, wrparens(inner.__repr__()))
+    return cat(obj, wrparens(inner.__repr__(), **kw))
 
-# def fixedreturn(val: T) -> Callable[..., T]:
-#     'Returns a function that returns the argument.'
-#     try: return fixedreturn.__dict__[val]
-#     except KeyError: pass
-#     def fnfixed(*_, **_k): return val
-#     return fixedreturn.__dict__.setdefault(val, fnfixed)
-
-# def fixedprop(val: T) -> Union[property, T]:
-#     'Returns a property that returns the argument.'
-#     try: return fixedprop.__dict__[val]
-#     except KeyError: pass
-#     prop = property(fixedreturn(val))
-#     return fixedprop.__dict__.setdefault(val, prop)
 
 def renamefn(fnew: T, forig) -> T:
     fnew.__qualname__ = forig.__qualname__
@@ -257,7 +245,8 @@ class MetaFlag(enum.Flag):
     # MergeSubClassVar = ClassVar | Merge | SubClass
     init_attrs = 4
     temp = 8
-    pre_init = temp | init_attrs
+    pre_init = init_attrs | temp
+    # clean_attrs = temp
 
 class AttrNote(NamedTuple):
 
@@ -294,18 +283,32 @@ class ABCMeta(abc.ABCMeta):
     @staticmethod
     def init_attrs(attrs: dict, bases, **kw):
         remd = DefaultDict(dict)
-        for k,v in attrs.copy().items():
+        todel = set()
+        powflags = [f for f in MetaFlag if ispow2(f.value) and f in MetaFlag.pre_init]
+        for k,v in attrs.items():
             mf = getattr(v, '_metaflag', MetaFlag.blank)
             pf = mf & MetaFlag.pre_init
             if not pf.value: continue
-            for f in MetaFlag:
-                if not ispow2(f.value): continue
+            for f in powflags:
                 if f in pf:
                     remd[f][k] = v
-            attrs.pop(k)
+            # if not pf.value: continue
+            # for f in MetaFlag:
+            #     if not ispow2(f.value): continue
+            #     if f in pf:
+            #         remd[f][k] = v
+            todel.add(k)
         for func in remd[MetaFlag.init_attrs].values():
             func(attrs, bases, **kw)
+        for k in todel:
+            del(attrs[k])
         return remd
+
+    @staticmethod
+    def basesmap(bases):
+        bmap = DefaultDict(list)
+        for b in bases: bmap[b.__name__].append(b)
+        return bmap
 
     @staticmethod
     def annotated_attrs(obj):
