@@ -20,8 +20,7 @@
 
 from lexicals import Predicate, Predicates, Argument
 from parsers import create_parser
-from utils import strtype
-from itertools import chain
+import itertools
 import re
 
 logic_names = (
@@ -132,7 +131,7 @@ args = {
 }
 
 titles = tuple(sorted(args.keys()))
-preds = vocab = vocabulary = Predicates(*Predicate.gen(3))
+preds = vocab = vocabulary = Predicates._from_iterable(Predicate.gen(3))
 parser = create_parser(notn='polish', vocab = preds)
 
 aliases = {
@@ -187,7 +186,7 @@ _cache = {}
 def argument(key: str) -> Argument:
     if isinstance(key, Argument):
         return key
-    if not isinstance(key, strtype):
+    if not isinstance(key, str):
         raise TypeError('Only string keys allowed, got %s' % type(key))
     title = _idx[key.lower()]
     if title not in _cache:
@@ -211,7 +210,7 @@ def tabiter(*logics, **opts):
         logics = logic_names
     argmts = arguments()
     # logics = iter(tuple((logic,) if logic else available['logics']))
-    return chain.from_iterable(
+    return itertools.chain.from_iterable(
         (
             Tableau(logic, arg, **opts).build()
             for arg in argmts

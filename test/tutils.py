@@ -301,7 +301,7 @@ class BaseSuite(AbstractSuite):
         return m
 
     @property
-    def Model(self) -> type:
+    def Model(self) -> type[BaseModel]:
         return self.logic.Model
 
 utils.drepr.lw = lexicals._syslw = BaseSuite.lw

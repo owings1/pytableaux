@@ -20,7 +20,8 @@
 # import pytest
 
 from lexicals import Predicates, Variable, Constant, Parameter, Predicate, \
-    Atomic, Predicated, Quantified, Operated, Sentence, Operator, Quantifier
+    Atomic, Predicated, Quantified, Operated, Sentence, Operator, Quantifier, \
+    LexType, Types
 from parsers import parse
 from errors import *
 from copy import copy, deepcopy
@@ -125,7 +126,7 @@ class TestPredicates(BaseSuite):
             Predicates().add((0, 0, 0))
         with raises(ValueError): # index too large
             Predicates().add((Predicate.TYPE.maxi + 1, 0, 1))
-        preds = Predicates((0, 0, 1))
+        preds = Predicates({(0, 0, 1)})
         with raises(ValueError): # arity mismatch
             preds.add((0, 0, 2))
 
@@ -133,21 +134,23 @@ class TestPredicates(BaseSuite):
         assert Predicates().get((-1, 0)).name == 'Identity'
 
     def test_get_pred_coords_tuple(self):
-        pred = Predicates().add((1, 1, 1))
+        pred, = Predicates({(1, 1, 1)})
         assert pred.coords == (1, 1, 1)
         assert pred.bicoords == (1, 1)
 
     def test_pred_no_name(self):
         v = Predicates()
-        p = v.add((1, 0, 1))
+        p = Predicate((1, 0, 1))
+        v.add(p)
         p1 = v.get((1, 0))
         assert p == p1
-        p = v.add((1, 1, 2))
+        p = Predicate((1, 1, 2))
+        v.add(p)
         p2 = v.get((1, 1))
         assert p == p2
 
     def test_declare1(self):
-        p = Predicates().add((0, 0, 1))
+        p, = Predicates({(0, 0, 1)})
         assert p.index == 0
         assert p.subscript == 0
         assert p.arity == 1
@@ -155,35 +158,40 @@ class TestPredicates(BaseSuite):
     def test_copy_get_predicate(self):
         v = Predicates()
         spec = (0, 0, 1)
-        predicate = v.add(spec)
+        v.add(spec)
+        pred = v.get(spec)
         v2 = copy(v)
-        assert v2.get(spec) == predicate
+        assert v2.get(spec) == pred
+        assert v is not v2
 
     def test_compare_id_with_user_pred(self):
-        pred = Predicates().add((0, 0, 1))
+        pred, = Predicates({(0, 0, 1)})
         assert Sys.Identity < pred
         assert Sys.Identity <= pred
         assert pred > Sys.Identity
         assert pred >= Sys.Identity
 
-    def test_with_pred_defs_single_pred_with_length4(self):
-        v = Predicates((0, 0, 1))
+    def test_lookup_refs(self):
+        v = Predicates(((0, 0, 1),))
         assert (0, 0) in v
         assert (0, 0, 1) in v
 
-    def test_with_pred_defs_single_def_list(self):
+    def test_init_iter_types(self):
         v = Predicates([(0, 0, 2)])
         p = v.get((0, 0))
         assert p.arity == 2
-
-    def test_with_pred_defs_single_def_tuple(self):
         v = Predicates(((0, 0, 3),))
         p = v.get((0, 0))
         assert p.arity == 3
+        v = Predicates(Predicate.gen(4))
+        assert len(v) == 4
+        v2 = Predicates(v)
+        assert v == v2 and len(v2) == 4
+        assert v is not v2
 
     def test_copy_preds(self):
         p1, p2, p3 = Predicate.gen(3)
-        v1 = Predicates(p1, p2)
+        v1 = Predicates((p1, p2))
         v2 = copy(v1)
         assert v1 == v2 and v1 is not v2
         assert p3 not in v1
@@ -296,20 +304,17 @@ class TestSentence(BaseSuite):
 
         def test_sorting_predicated_sentences(self):
             # Lexical items should be sortable for models.
-            vocab = Predicates()
-            p = vocab.add((0, 0, 1))
-            s1 = Predicated(p, (a,))
-            s2 = Predicated(p, (b,))
-            sentences = [s2, s1]
-            res = list(sorted(sentences))
-            assert res[0] == s1
-            assert res[1] == s2
+            ss = list(map(Predicate.first(), Constant.gen(2)))
+            s1, s2 = ss
+            ss.reverse()
+            assert ss == [s2, s1]
+            res = sorted(ss)
+            assert res == [s1, s2]
 
         def test_predicated_substitute_a_for_x_identity(self):
             s = Predicated('Identity', (x, b))
             res = s.substitute(a, x)
-            assert res.params[0] == a
-            assert res.params[1] == b
+            assert res.params == (a, b)
 
     class TestQuantified(BaseSuite):
 
@@ -352,6 +357,22 @@ class TestSentence(BaseSuite):
             assert ','.join(str(o) for o in ops) == (
                 'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
             )
+class TestGenericApi(BaseSuite):
+    def test_first_next(self):
+        for lt in LexType:
+            cls = lt.cls
+            inst = cls.first()
+            for x in range(2):
+                assert isinstance(inst, cls)
+                assert isinstance(inst, Types.Lexical)
+                inst = inst.next()
+                st = inst.sort_tuple
+                assert isinstance(st, tuple)
+                assert len(st)
+                for v in st:
+                    assert isinstance(v, int)
+                assert isinstance(hash(inst), int)
+                if cls is Quantifier: break
 
 class TestCrossCompare(BaseSuite):
 

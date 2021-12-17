@@ -20,7 +20,8 @@
 from pytest import raises
 from errors import *
 from utils import StopWatch, get_logic
-from lexicals import Predicate, Constant, Variable, Operator, Quantifier, Quantifier as Quant, Operator as Oper, \
+from lexicals import Predicate, Constant, Variable, Operator, Quantifier, \
+    Quantifier as Quant, Operator as Oper, \
     Sentence, Atomic, Predicated, Quantified, Operated, \
     Predicates, Argument
 from proof.tableaux import Tableau, Rule
@@ -1646,7 +1647,7 @@ class Test_K(BaseSuite):
                 assert frame_b.is_equivalent_to(frame_a)
 
             def test_difference_extension_keys_diff(self):
-                vocab = Predicates((0, 0, 1), (1, 0, 2))
+                vocab = Predicates({(0, 0, 1), (1, 0, 2)})
                 s1, s2 = self.pp('Fm', 'Gmn', vocab)
                 model = self.m()
                 model.set_predicated_value(s1, 'T', world=0)
@@ -1782,7 +1783,8 @@ class TestCPL(BaseSuite):
                 self.rule_eg('IdentityIndiscernability')
 
             def test_IdentityIndiscernability_not_applies(self):
-                s1, s2 = self.pp('Fmn', 'Io1o2', vocab = Predicates((0, 0, 2)))
+                preds = Predicates({(0, 0, 2)})
+                s1, s2 = self.pp('Fmn', 'Io1o2', vocab = preds)
                 tab, b = self.tabb((
                     {'sentence': s1, 'world': 0},
                     {'sentence': s2, 'world': 0},

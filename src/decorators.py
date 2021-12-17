@@ -321,23 +321,24 @@ meta = metad
 
 class lazyget:
 
-    __slots__ = '__lazyattr__',
+    __slots__ = 'name',
 
     def __new__(cls, method: Callable[P, T], attr: str = None) -> Callable[P, T]:
         'decorator. submethods add second parameter.'
         instcheck(method, Callable)
         if attr is None: attr = cls._formatattr(method)
         inst = _new(cls)
-        inst.__lazyattr__ = attr
+        inst.name = attr
         return inst(method)
 
-    def __call__(self, method: Callable[P, T]) -> Callable[P, T]:
+    def __call__(self, method: Callable[P, T]) -> T:
+        name = self.name
         @wraps(method)
-        def fget(obj):
-            try: return getattr(obj, self.__lazyattr__)
+        def fget(self):
+            try: return getattr(self, name)
             except AttributeError: pass
-            value = method(obj)
-            setattr(obj, self.__lazyattr__, value)
+            value = method(self)
+            setattr(self, name, value)
             return value
         setattr(fget, _LZINSTATTR, self)
         return fget
@@ -346,7 +347,7 @@ class lazyget:
         'Set the name of the cache attribute, default is _method.'
         return calls.func(lazyget, attr)
 
-    def prop(method: Callable[..., T]) -> property | T:
+    def prop(method: Callable[P, T]) -> T:
         """Return a property with the getter. NB: a setter/deleter should be
         sure to use the correct cache attribute."""
         method = lazyget(method)
@@ -358,25 +359,25 @@ class lazyget:
         #     return toprop
         # return wrap()(arg) if callable(arg) else wrap(arg)
 
-    def template(
-        fmt: str | Callable[[Callable], str],
-        oper: Callable | None = opr.mod
-    ) -> type[lazyget]:
-        'Returns a new factory with the given default attribute format'
-        fnfmt = testout = None
-        if isinstance(fmt, str):
-            fnfmt = cchain.reducer(gets.attr('__name__'), partial(oper, fmt))
-        elif callable(fmt):
-            fnfmt = fmt
-        else:
-            raise TypeError(type(fmt))
-        testout = fnfmt(lazyget.update)
-        if not preds.isidentifier(testout):
-            raise TypeError(testout, 'Invalid identifier')
-        class templated(lazyget):
-            __slots__ = ()
-            _formatattr = fnfmt
-        return templated
+    # def template(
+    #     fmt: str | Callable[[Callable], str],
+    #     oper: Callable | None = opr.mod
+    # ) -> type[lazyget]:
+    #     'Returns a new factory with the given default attribute format'
+    #     fnfmt = testout = None
+    #     if isinstance(fmt, str):
+    #         fnfmt = cchain.reducer(gets.attr('__name__'), partial(oper, fmt))
+    #     elif callable(fmt):
+    #         fnfmt = fmt
+    #     else:
+    #         raise TypeError(type(fmt))
+    #     testout = fnfmt(lazyget.update)
+    #     if not preds.isidentifier(testout):
+    #         raise TypeError(testout, 'Invalid identifier')
+    #     class templated(lazyget):
+    #         __slots__ = ()
+    #         _formatattr = fnfmt
+    #     return templated
 
     # Internal decorator
     def _mod(f):
@@ -396,7 +397,7 @@ class lazyget:
         """Decorates a setter method for updating the value. The value is update
         with the return value of the method."""
         def fset(obj, value):
-            setattr(obj, self.__lazyattr__, method(obj, value))
+            setattr(obj, self.name, method(obj, value))
         return fset
 
     @_mod
@@ -404,7 +405,7 @@ class lazyget:
         """Decorates a deleter method. The attribute is deleted if the method
         returns a truthy value."""
         def fdel(obj):
-            if method(obj): delattr(obj, self.__lazyattr__)
+            if method(obj): delattr(obj, self.name)
         return fdel
 
     @classmethod

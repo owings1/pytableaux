@@ -24,8 +24,8 @@ from errors import DuplicateKeyError, IllegalStateError
 import abc
 from builtins import ModuleNotFoundError
 # from collections import deque #, namedtuple
-from collections.abc import Callable, Mapping
-    #  Collection, Hashable, ItemsView, Iterable,\
+from collections.abc import Callable, Iterable, Mapping
+    #  Collection, Hashable, ItemsView, ,\
     # Iterator, KeysView, , MutableSet, Sequence, ValuesView
 # from copy import copy
 import enum
@@ -147,6 +147,11 @@ def get_logic(ref) -> ModuleType:
     """
     return get_module(ref, package = 'logics')
 
+
+def it_drain(it: Iterable):
+    try:
+        while True: next(it)
+    except StopIteration: pass
 
 def instcheck(obj, classinfo: type[T]) -> T:
     if not isinstance(obj, classinfo):

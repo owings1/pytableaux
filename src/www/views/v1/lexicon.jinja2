@@ -69,19 +69,19 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for name, predicate in system_predicates.items() -%}
+                    {% for pred in lexicals.Predicates.System -%}
                         <tr class="systemPredicate">
                             <td>
                                 {% for notn, table in parser_tables.items() %}
-                                    {%- set symbol = table.char('system_predicate', predicate) -%}
-                                    {%- set subscript = predicate.subscript -%}
+                                    {%- set symbol = table.char('system_predicate', pred) -%}
+                                    {%- set subscript = pred.subscript -%}
                                     <span class="predicateSymbol notation-{{ notn|e }} hidden">
                                         {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript|e }}</span>{% endif -%}
                                     </span>
                                 {% endfor %}
                             </td>
-                            <td>{{ name|e }}</td>
-                            <td>{{ predicate.arity }}</td>
+                            <td>{{ pred.name|e }}</td>
+                            <td>{{ pred.arity }}</td>
                         </tr>
                     {% endfor %}
                     {% for label in form_data['user_predicate_symbols[]'] %}

@@ -58,7 +58,25 @@ class SetApi(bases.Set[V], Copyable):
 
     del(rdckw)
 
-class MutableSetApi(bases.MutableSet, SetApi):
+    def __copy__(self):
+        return self._from_iterable(self)
+
+class zset(SetApi[V]):
+    'SetApi wrapper around built-in frozenset type.'
+
+    __slots__ = '_set_',
+    def __init__(self, it: Iterable[V] = None):
+        if it is None: it = ()
+        self._set_ = frozenset(it)
+    def __contains__(self, value: V):
+        return value in self._set_
+    def __iter__(self) -> Iterator[V]:
+        return iter(self._set_)
+    def __len__(self):
+        return len(self._set_)
+    def __repr__(self):
+        return self._set_.__repr__()
+class MutableSetApi(bases.MutableSet[V], SetApi):
 
     __slots__ = ()
 
@@ -72,6 +90,19 @@ class MutableSetApi(bases.MutableSet, SetApi):
     )
     # -------------------------------
 
+class cset(MutableSetApi[V], zset):
+    'MutableSetApi wrapper around built-in set type.'
+
+    __slots__ = ()
+
+    def __init__(self, it: Iterable[V] = None):
+        self._set_ = set()
+        if it is not None: self.update(it)
+    def add(self, value: V):
+        self._set_.add(value)
+    def discard(self, value: V):
+        self._set_.discard(value)
+
 class SequenceApi(bases.Sequence[V], Copyable):
 
     __slots__ = ()
@@ -79,7 +110,7 @@ class SequenceApi(bases.Sequence[V], Copyable):
     @abstractmethod
     def __add__(self, other): ...
 
-class MutableSequenceApi(bases.MutableSequence, SequenceApi):
+class MutableSequenceApi(bases.MutableSequence[V], SequenceApi):
 
     __slots__ = ()
 
@@ -137,7 +168,7 @@ class SequenceSetView(SetApi[V], SequenceApi):
 
     # -----------  Copyable -----------
 
-    def __copy__(self) -> SequenceSetView[V]:
+    def __copy__(self):
         inst = object.__new__(self.__class__)
         inst._setseq_ = self._setseq_.__class__(*self._setseq_)
         return inst
@@ -169,7 +200,7 @@ class SequenceSetView(SetApi[V], SequenceApi):
         ),
     }]
 
-class FrozenSequenceSet(SequenceSetView[V]):
+class zqset(SequenceSetView[V]):
     'Immutable sequence set.'
 
     __slots__ = ()
@@ -185,7 +216,6 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
     Sequence methods such as ``append`` raises ``ValueError`` on duplicate values."""
 
     __slots__ = ()
-
     _setseq_: MutSetSeqPair
 
     @abstractmethod
@@ -194,16 +224,19 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
 
     def _new_value(self, value) -> V:
         'Hook to return the new value before it is added.'
-        print(value)
         return value
+
+    def _before_add(self, value: V):
+        'Before add hook.'
 
     def _after_add(self, value: V):
         'After add hook.'
-        pass
+
+    def _before_remove(self, value: V):
+        'Before remove hook.'
 
     def _after_remove(self, value: V):
         'After remove hook.'
-        pass
 
     # ---------------   MutableSequence ---------------
 
@@ -212,6 +245,8 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
         values = self[index]
         if isinstance(index, int): values = values,
         else: instcheck(values, Collection)
+        for value in values:
+            self._before_remove(value)
         b = self._setseq_
         del b.seq[index]
         for value in values:
@@ -219,22 +254,16 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
         for value in values:
             self._after_remove(value)
 
-        # if isinstance(index, int):
-        #     b.set.remove(value)
-        #     self._after_remove(value)
-        # else:
-        #     for value in self[index]:
-        #         b.set.remove(value)
-        # del b.seq[index]
-
     def __setitem__(self, index: int, value: V):
-        'Set an the index to a value. Raises ``DuplicateValueError``.'
+        """Set an the index to a value. Only ``int`` supported, not slice.
+        Raises ``DuplicateValueError``."""
         instcheck(index, int)
         old = self[index]
         value = self._new_value(value)
         if value in self:
             if value == old: return
-            raise DuplicateValueError('Duplicate: %s' % value)
+            raise DuplicateValueError(value)
+        self._before_add(value)
         b = self._setseq_
         b.seq[index] = value
         b.set.add(value)
@@ -244,17 +273,13 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
         'Insert a value before an index. Raises ``DuplicateValueError``.'
         value = self._new_value(value)
         if value in self:
-            raise DuplicateValueError('Duplicate: %s' % value)
+            raise DuplicateValueError(value)
+        self._before_add(value)
         b = self._setseq_
         b.seq.insert(index, value)
         b.set.add(value)
         self._after_add(value)
-
-    # def append(self, value: V):
-    #     'Append an value. Raises ValueError for duplicate.'
-    #     if value in self:
-    #         raise ValueError('Duplicate: %s' % value)
-    #     return super().append(value)
+    # --
 
     def reverse(self):
         'Reverse in place.'
@@ -265,16 +290,6 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
         b = self._setseq_
         b.seq.clear()
         b.set.clear()
-        
-        # if not len(self):
-        #     return
-        # st, sq = self._setseq_
-        # setseq = self._setseq_.__class__(st.__class__(), sq.__class__())
-        # # from sys import getrefcount
-        # # if getrefcount(st) + getrefcount(ls) > 4:
-        # #     MutableSequence.clear(self)
-        # del(st, sq, self._setseq_)
-        # self._setseq_ = setseq
 
     def sort(self, /, *, key = None, reverse = False):
         'Sort the list in place.'
@@ -292,6 +307,8 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
         try: self.remove(value)
         except DuplicateValueError: pass
 
+    # ------------
+
     ImplNotes: Annotated[dict, dict(
         implement = {
             MutableSequenceApi: {'__setitem__', '__delitem__', 'insert', 'sort'},
@@ -300,6 +317,9 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
         override = {
             MutableSequenceApi: {'clear', 'reverse',},
             MutableSetApi:      {'clear',},
+        },
+        newmethods = {
+            '__init__', '_new_value', '_after_add', '_after_remove'
         },
         inherit = {
             MutableSequenceApi: {
@@ -329,7 +349,8 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
         }
     )]
 
-class ListSet(MutableSequenceSet[V]):
+
+class cqset(MutableSequenceSet[V]):
     'MutableSequenceSet implementation with built-in set and list.'
 
     __slots__ = ()

@@ -27,7 +27,7 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 1
 
-from containers import FrozenSequenceSet
+from containers import zqset
 from lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantified, \
     Operator as Oper, Quantifier, Argument, Sentence, Predicates
 from models import BaseModel
@@ -61,7 +61,7 @@ class Model(BaseModel):
     #: :type: set
     #: :value: {T, F}
     #: :meta hide-value:
-    truth_values = FrozenSequenceSet(('F', 'T'))#frozenset(truth_values_list)
+    truth_values = zqset(('F', 'T'))#frozenset(truth_values_list)
 
     unassigned_value = 'F'
 

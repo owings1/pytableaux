@@ -161,7 +161,6 @@ base_view_data = {
     'quantifiers'         : list(Quantifier),
     'lexicals'            : lexicals,
     'source_href'         : source_href,
-    'system_predicates'   : {p.name: p for p in Predicates.System},
     'tabwriter_formats'   : tabwriter_formats,
     'version'             : version,
     'view_version'        : 'v2',
@@ -251,8 +250,6 @@ class App(object):
 
         data = dict(base_view_data)
         browser_data = dict(base_browser_data)
-
-        # vocab = Predicates()
 
         if req_data.get('v') in ('v1', 'v2'):
             view_version = req_data['v']
@@ -504,13 +501,13 @@ class App(object):
             errors['Notation'] = 'Invalid notation'
 
         try:
-            vocab = self.parse_predicates_data(body['predicates'])
+            preds = self.parse_predicates_data(body['predicates'])
         except RequestDataError as err:
             errors.update(err.errors)
-            vocab = Predicates()
+            preds = Predicates()
 
         if len(errors) == 0:
-            parser = create_parser(body['notation'], vocab)
+            parser = create_parser(body['notation'], preds)
             try:
                 sentence = parser.parse(body['input'])
             except Exception as err:
@@ -739,7 +736,7 @@ class App(object):
         if 'premises' not in adata:
             adata['premises'] = list()
 
-        vocab = Predicates()
+        preds = Predicates()
 
         errors = dict()
 
@@ -751,10 +748,10 @@ class App(object):
 
         if not errors:
             try:
-                vocab = self.parse_predicates_data(adata['predicates'])
+                preds = self.parse_predicates_data(adata['predicates'])
             except RequestDataError as err:
                 errors.update(err.errors)
-            parser = create_parser(notn=adata['notation'], vocab=vocab)
+            parser = create_parser(adata['notation'], preds)
             i = 1
             premises = []
             for premise in adata['premises']:
@@ -772,7 +769,7 @@ class App(object):
         if errors:
             raise RequestDataError(errors)
 
-        return (Argument(conclusion, premises), vocab)
+        return (Argument(conclusion, premises), preds)
 
     def parse_predicates_data(self, predicates) -> Predicates:
         preds = Predicates()

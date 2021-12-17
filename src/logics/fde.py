@@ -26,7 +26,7 @@ class Meta:
     tags = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
     category_display_order = 10
 
-from containers import FrozenSequenceSet
+from containers import zqset
 from models import BaseModel
 from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
     Sentence, Atomic, Predicated, Quantified, Operated, Argument, Predicates
@@ -54,7 +54,7 @@ class Model(BaseModel):
     #: :type: set
     #: :value: {T, B, N, F}
     #: :meta hide-value:
-    truth_values = FrozenSequenceSet(('F', 'N', 'B', 'T'))
+    truth_values = zqset(('F', 'N', 'B', 'T'))
 
     #: The set of designated values.
     #:
