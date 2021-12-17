@@ -168,13 +168,13 @@ def create_parser(notn: str = None, vocab: Predicates = None, table: CharTable =
     if isinstance(notn, Predicates) or isinstance(vocab, str):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
-    if vocab == None:
+    if vocab is None:
         vocab = Predicates.System
-    if notn == None:
+    if notn is None:
         notn = default_notation
     elif notn not in parser_classes:
         raise ValueError('Invalid notation: %s' % notn)
-    if table == None:
+    if table is None:
         table = 'default'
     if isinstance(table, str):
         table = CharTable.fetch(notn, table)

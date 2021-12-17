@@ -108,7 +108,7 @@ class Types:
         MappingProxyType      as MapProxy
 
     from utils import \
-        ABCMeta as ABCMetaBase, \
+        ABCMeta as _ABCMetaBase, \
         BiCoords, \
         CacheNotationData, \
         EmptySet, \
@@ -118,9 +118,14 @@ class Types:
         TriCoords
 
     from containers import \
+        ABCMeta as ABCMetaBase, \
         DequeCache, \
-        ListSet
+        ListSet, \
+        MutableSequenceSet, \
+        MutSetSeqPair, \
+        SequenceApi \
 
+    Spec = tuple
     Ident = tuple[str, tuple]
 
     PredicateSpec  = TriCoords
@@ -174,8 +179,8 @@ class Metas:
 
     __new__ = None
 
-    class Plain(Types.ABCMetaBase):
-        'General-purpose base Metaclass for all (non-Enum) classes.'
+    class Abc(Types.ABCMetaBase):
+        'General-purpose base Metaclass for all Abc (non-Enum) classes.'
         _readonly : bool
         __delattr__ = raisen(AttributeError)
         __setattr__ = nosetattr(type)
@@ -202,7 +207,7 @@ class Metas:
             return index
 
         def __new__(cls, clsname, bases, attrs, **kw):
-            Metas.Plain.init_attrs(attrs, bases, **kw)
+            Metas.Abc.init_attrs(attrs, bases, **kw)
             Class = super().__new__(cls, clsname, bases, attrs, **kw)
             Class._member_map_ = Types.MapProxy(Class._member_map_)
             Class._member_names_ = names = tuple(Class._member_names_)
@@ -296,7 +301,7 @@ class Metas:
             try: return cls._Seq
             except AttributeError: return ()
 
-    class LexicalItem(Plain):
+    class LexicalItem(Abc):
         'Metaclass for LexicalItem classes (Constant, Predicate, Sentence, etc.).'
 
         Cache: ClassVar[Types.DequeCache]
@@ -329,7 +334,7 @@ class Metas:
             cache[clsname, spec] = inst
             return inst
 
-    class Argument(Plain):
+    class Argument(Abc):
         'Argument Metaclass.'
 
         def __call__(cls, *args, **kw):
@@ -337,7 +342,7 @@ class Metas:
                 return args[0]
             return super().__call__(*args, **kw)
 
-    class LexWriter(Plain):
+    class LexWriter(Abc):
         'LexWriter Metaclass.'
 
         def __call__(cls, notn = None, *args, **kw):
@@ -358,6 +363,130 @@ class Metas:
 class Bases:
 
     __new__ = None
+
+    class Lexical:
+        'Lexical mixin class for both ``LexicalEnum`` and ``LexicalItem`` classes.'
+
+        __delattr__ = raisen(AttributeError)
+        __setattr__ = nosetattr(object, cls = Metas.LexicalItem)
+
+        __slots__ = ()
+
+        #: Type for attribute ``spec``
+        SpecType: ClassVar[type[tuple]] = tuple
+        #: Type for attribute ``ident``
+        IdentType: ClassVar[type[Types.Ident]] = Types.Ident
+        # LexType instance populated below.
+        TYPE: ClassVar[LexType]
+
+        @staticmethod
+        @final
+        def cmpitems(item: Bases.Lexical, other: Bases.Lexical) -> int:
+            'Pairwise sorting comparison based on LexType and numeric sort tuple.'
+            if item is other: return 0
+            cmp = item.TYPE.rank - other.TYPE.rank
+            if cmp: return cmp
+            a, b = item.sort_tuple, other.sort_tuple
+            for x, y in zip(a, b):
+                cmp = x - y
+                if cmp: return cmp
+            return len(a) - len(b)
+
+        def cmpwrap(oper: Callable) -> Callable[[Bases.Lexical, Bases.Lexical], int]:
+            fname = '__%s__' % oper.__name__
+            qname = 'Lexical.%s' % fname
+            def f(self, other):
+                return oper(Lexical.cmpitems(self, other), 0)
+            f.__name__ = fname
+            f.__qualname__ = qname
+            return f
+
+        __lt__ = cmpwrap(opr.lt)
+        __le__ = cmpwrap(opr.le)
+        __gt__ = cmpwrap(opr.gt)
+        __ge__ = cmpwrap(opr.ge)
+
+        del(cmpwrap)
+
+        @staticmethod
+        def identitem(item: Bases.Lexical) -> Types.Ident:
+            'Build an ``ident`` tuple from the class name and initialization spec.'
+            return (item.__class__.__name__, item.spec)
+
+        @staticmethod
+        def hashitem(item: Bases.Lexical) -> int:
+            'Compute a hash based on class name and sort tuple.'
+            return hash((item.__class__.__name__, item.sort_tuple))
+
+        @classmethod
+        def gen(cls, n: int, first: Bases.Lexical = None, **opts) -> Iterator[Bases.Lexical]:
+            'Generate items.'
+            if first is not None:
+                instcheck(first, cls)
+            for i in range(n):
+                item = item.next(**opts) if i else (first or cls.first())
+                if item: yield item
+
+        # -----------------
+        # Default Methods
+        # -----------------
+
+        __bool__ = fixed.value(True)
+        __repr__ = _lexrepr
+        __str__  = _lexstr
+
+        # -------------------------------
+        # Abstract instance attributes
+        # -------------------------------
+
+        #: The arguments roughly needed to construct, given that we know the
+        #: type, i.e. in intuitive order. A tuple, possibly nested, containing
+        #: digits or strings.
+        spec: Types.Spec
+
+        #: Sorting identifier, to order tokens of the same type. Numbers only
+        #: (no strings). This is also used in hashing, so equal objects should
+        #: have equal sort_tuples. The first value must be the lexical rank of
+        # the type.
+        sort_tuple: Types.IntTuple
+
+        #: Equality identifier able to compare across types. A tuple, possibly
+        #: nested, containing digits and possibly strings. The first should be
+        #: the class name. Most naturally this would be followed by the spec.
+        ident: Types.Ident
+
+        #: The integer hash property.
+        hash: int
+
+        # ------------------
+        # Abstract methods
+        # -----------------
+
+        @classmethod
+        @abstract
+        def first(cls): ...
+        @abstract
+        def next(self, **kw): ...
+
+        @abstract
+        def __eq__(self, other): ...
+        @abstract
+        def __hash__(self): ...
+
+        # ----------------------------------------
+        # Mixin attributes for Metaclasses to copy.
+        # ----------------------------------------
+        __copyattrs__ = callables.calls.now(
+            lambda d, keys: Types.MapProxy({k:d[k] for k in keys}),
+            locals(), (
+                'gen', '__repr__', '__str__', '__bool__',
+                'identitem', 'hashitem', 'cmpitems',
+                '__lt__', '__le__', '__gt__', '__ge__',
+            )
+        )
+
+    Types.Lexical = Lexical
+    Metas.LexicalItem.Cache = Types.DequeCache(Lexical, ITEM_CACHE_SIZE)
 
     class Enum(enum.Enum, metaclass = Metas.Enum):
         'Generic base class for all Enum classes.'
@@ -393,137 +522,13 @@ class Bases:
             memo[id(self)] = self
             return self
 
-    class Lexical:
-        'Lexical mixin class for both ``LexicalEnum`` and ``LexicalItem`` classes.'
-
-        __delattr__ = raisen(AttributeError)
-        __setattr__ = nosetattr(object, cls = Metas.LexicalItem)
-
-        __slots__ = ()
-
-        #: Type for attribute ``spec``
-        SpecType: ClassVar[type[tuple]] = tuple
-        #: Type for attribute ``ident``
-        IdentType: ClassVar[type[Types.Ident]] = Types.Ident
-        # LexType instance populated below.
-        TYPE: ClassVar[LexType]
-
-        @staticmethod
-        @final
-        def cmpitems(item: Bases.Lexical, other: Bases.Lexical) -> int:
-            'Pairwise sorting comparison based on LexType and numeric sort tuple.'
-            if item is other: return 0
-            cmp = item.TYPE.rank - other.TYPE.rank
-            if cmp: return cmp
-            a, b = item.sort_tuple, other.sort_tuple
-            for x, y in zip(a, b):
-                cmp = x - y
-                if cmp: return cmp
-            return len(a) - len(b)
-
-        def cmpwrap(oper: Callable) -> Callable[[Bases.Lexical, Bases.Lexical], int]:
-            fname = '__%s__' % oper.__name__
-            qname = 'Lexical.%s' % fname
-            def f(self, other):
-                return oper(Bases.Lexical.cmpitems(self, other), 0)
-            f.__name__ = fname
-            f.__qualname__ = qname
-            return f
-
-        __lt__ = cmpwrap(opr.lt)
-        __le__ = cmpwrap(opr.le)
-        __gt__ = cmpwrap(opr.gt)
-        __ge__ = cmpwrap(opr.ge)
-
-        del(cmpwrap)
-
-        @staticmethod
-        def identitem(item: Bases.Lexical) -> Bases.Lexical.IdentType:
-            'Build an ``ident`` tuple from the class name and initialization spec.'
-            return (item.__class__.__name__, item.spec)
-
-        @staticmethod
-        def hashitem(item: Bases.Lexical) -> int:
-            'Compute a hash based on class name and sort tuple.'
-            return hash((item.__class__.__name__, item.sort_tuple))
-
-        @classmethod
-        def gen(cls, n: int, first: Bases.Lexical = None, **opts) -> Iterator[Bases.Lexical]:
-            'Generate items.'
-            if first is not None:
-                instcheck(first, cls)
-            for i in range(n):
-                item = item.next(**opts) if i else (first or cls.first())
-                if item: yield item
-
-        # -----------------
-        # Default Methods
-        # -----------------
-
-        __bool__ = fixed.value(True)
-        __repr__ = _lexrepr
-        __str__  = _lexstr
-
-        # -------------------------------
-        # Abstract instance attributes
-        # -------------------------------
-
-        #: The arguments roughly needed to construct, given that we know the
-        #: type, i.e. in intuitive order. A tuple, possibly nested, containing
-        #: digits or strings.
-        spec: Bases.Lexical.SpecType
-
-        #: Sorting identifier, to order tokens of the same type. Numbers only
-        #: (no strings). This is also used in hashing, so equal objects should
-        #: have equal sort_tuples. The first value must be the lexical rank of
-        # the type.
-        sort_tuple: Types.IntTuple
-
-        #: Equality identifier able to compare across types. A tuple, possibly
-        #: nested, containing digits and possibly strings. The first should be
-        #: the class name. Most naturally this would be followed by the spec.
-        ident: Bases.Lexical.IdentType
-
-        #: The integer hash property.
-        hash: int
-
-        # ------------------
-        # Abstract methods
-        # -----------------
-
-        @classmethod
-        @abstract
-        def first(cls): ...
-        @abstract
-        def next(self, **kw): ...
-
-        @abstract
-        def __eq__(self, other): ...
-        @abstract
-        def __hash__(self): ...
-
-        # ----------------------------------------
-        # Mixin attributes for Metaclasses to copy.
-        # ----------------------------------------
-        __copyattrs__ = callables.calls.now(
-            lambda d, keys: Types.MapProxy({k:d[k] for k in keys}),
-            locals(), (
-                'gen', '__repr__', '__str__', '__bool__',
-                'identitem', 'hashitem', 'cmpitems',
-                '__lt__', '__le__', '__gt__', '__ge__',
-            )
-        )
-
-    Types.Lexical = Lexical
-    Metas.LexicalItem.Cache = Types.DequeCache(Lexical, ITEM_CACHE_SIZE)
-
     class LexicalEnum(Lexical, Enum):
         'Base Enum implementation of Lexical. For Quantifier and Operator classes.'
 
         @metad.init_attrs
         def copy_lexical(attrs, bases, **kw):
-            LexicalClass, = Metas.Plain.basesmap(bases)['Lexical']
-            attrs |= LexicalClass.__copyattrs__
+            Lexical, = Metas.Abc.basesmap(bases)['Lexical']
+            attrs |= Lexical.__copyattrs__
 
         # ----------------------
         # Lexical Implementation
@@ -620,9 +625,8 @@ class Bases:
 
         @metad.init_attrs
         def copy_lexical(attrs, bases, **kw):
-            bmap = Metas.Plain.basesmap(bases)
-            LexicalClass, = bmap['Lexical']
-            attrs |= LexicalClass.__copyattrs__
+            Lexical, = Metas.Abc.basesmap(bases)['Lexical']
+            attrs |= Lexical.__copyattrs__
 
         def __init_subclass__(subcls, **kw):
             super().__init_subclass__(**kw)
@@ -648,7 +652,7 @@ class Bases:
         __slots__ = '_ident', '_hash'
 
         @lazyget.prop
-        def ident(self) -> Bases.Lexical.IdentType:
+        def ident(self) -> Types.Ident:
             return Lexical.identitem(self)
 
         @lazyget.prop
@@ -802,7 +806,6 @@ class Predicate(CoordsItem):
     def bicoords(self) -> Types.BiCoords:
         return Types.BiCoords(*self.spec[0:2])
 
-    # first: Callable[..., Predicate]
     def next(self, **kw) -> Predicate:
         arity = self.arity
         if self.is_system:
@@ -1407,8 +1410,112 @@ Types.LexType = LexType
 ##############################################################
 ##############################################################
 
-class Predicates(Sequence[Predicate], metaclass = Metas.Plain):
+class Predicates(Types.MutableSequenceSet[Predicate], metaclass = Metas.Abc):
     'Predicate store'
+
+    def _new_value(self, value: Types.PredsItemSpec) -> Predicate:
+        pred: Predicate = Predicate(value)
+        if self.get(pred.bicoords, pred) != pred:
+            raise ValueError('%s != %s' % (pred, self.get(pred.bicoords)))
+        return pred
+
+    def _after_add(self, pred: Predicate):
+        m = self.__idx
+        for ref in pred.refs:
+            m[ref] = pred
+        m[pred] = pred
+
+    def _after_remove(self, pred: Predicate):
+        m = self.__idx
+        for ref in pred.refs:
+            del(m[ref])
+        del(m[pred])
+
+    def add(self, pred: Types.PredsItemSpec) -> Predicate:
+        'Add a predicate. Returns predicate.'
+        # pred: Predicate = Predicate(pred)
+        super().add(pred)
+        return self.get(pred)
+        # if self.get(pred.bicoords, pred) != pred:
+        #     raise ValueError('%s != %s' % (pred, self.get(pred.bicoords)))
+        # self.__idx.update({ref: pred for ref in pred.refs + (pred,)})
+        # self.__ulist.add(pred)
+        # return pred
+
+    # def update(self, preds: Iterable[Types.PredsItemRef]):
+    #     for pred in preds: self.add(pred)
+
+    def get(self, ref: Types.PredsItemRef, default = NOARG) -> Predicate:
+        """Get a predicate by any reference. Also searches System predicates.
+        Raises KeyError when no default specified."""
+        try: return self.__idx[ref]
+        except KeyError:
+            try: return self.System[ref]
+            except KeyError: pass
+            if default is NOARG: raise
+            return default
+
+    # def sort(self, *args, **kw):
+    #     self.__ulist.sort(*args, **kw)
+
+    # def reverse(self):
+    #     self.__ulist.reverse()
+
+    def clear(self):
+        super().clear()
+        self.__idx.clear()
+        # self.__ulist.clear()
+
+    # def count(self, pred: Predicate) -> int:
+    #     return int(pred in self)
+
+    # def index(self, ref: Types.PredsItemRef):
+    #     return self.__ulist.index(self.__idx[ref])
+
+    # def __getitem__(self, index: Types.IndexType) -> Predicate:
+    #     return self.__ulist[index]
+
+    # def __iter__(self) -> Iterator[Predicate]:
+    #     return iter(self.__ulist)
+
+    # def __reversed__(self) -> Iterator[Predicate]:
+    #     return reversed(self.__ulist)
+
+    # def __len__(self):
+    #     return len(self.__ulist)
+
+    def __contains__(self, ref: Types.PredsItemRef):
+        return ref in self.__idx
+
+    def __bool__(self):
+        return True
+
+    def __copy__(self):
+        inst = super().__copy__()
+        # cls = self.__class__
+        # inst = cls.__new__(cls)
+        # inst.__ulist = self.__ulist.copy()
+        inst.__idx = self.__idx.copy()
+        return inst
+
+    def __init__(self, *specs: Types.PredsItemSpec):
+        super().__init__(Types.MutSetSeqPair(set(), []))
+        self.__idx: dict[Types.PredsItemRef, Predicate] = {}
+        # self.__ulist: Types.ListSet[Predicate] = Types.ListSet()
+        if len(specs) == 1 and isinstance(specs[0], (list, tuple)):
+            if specs[0] and isinstance(specs[0][0], (tuple)):
+                specs, = specs
+        self.update(specs)
+
+    @classmethod
+    def _from_iterable(cls, it):
+        inst = cls()
+        inst.update(it)
+        return inst
+    __slots__ = '__idx', #'__ulist'
+
+    # def __repr__(self):
+    #     return orepr(self, len=len(self))
 
     class System(Predicate.System):
 
@@ -1416,7 +1523,7 @@ class Predicates(Sequence[Predicate], metaclass = Metas.Plain):
         def expand(attrs, bases, **kw):
             members = {
                 name: spec for name, (vtype, spec) in
-                Metas.Plain.annotated_attrs(Predicate.System).items()
+                Metas.Abc.annotated_attrs(Predicate.System).items()
                 if vtype is Predicate
             }
             attrs |= members
@@ -1439,82 +1546,6 @@ class Predicates(Sequence[Predicate], metaclass = Metas.Plain):
             for pred in cls:
                 setattr(Predicate, pred.name, pred)
             Predicate.System = cls
-
-    def add(self, pred: Types.PredsItemSpec) -> Predicate:
-        'Add a predicate. Returns predicate.'
-        pred = Predicate(pred)
-        if self.get(pred.bicoords, pred) != pred:
-            raise ValueError('%s != %s' % (pred, self.get(pred.bicoords)))
-        self.__idx.update({ref: pred for ref in pred.refs + (pred,)})
-        self.__ulist.add(pred)
-        return pred
-
-    def update(self, preds: Iterable[Types.PredsItemRef]):
-        for pred in preds: self.add(pred)
-
-    def get(self, ref: Types.PredsItemRef, default = NOARG) -> Predicate:
-        """Get a predicate by any reference. Also searches System predicates.
-        Raises KeyError when no default specified."""
-        try: return self.__idx[ref]
-        except KeyError:
-            try: return self.System[ref]
-            except KeyError: pass
-            if default is NOARG: raise
-            return default
-
-    def sort(self, *args, **kw):
-        self.__ulist.sort(*args, **kw)
-
-    def reverse(self):
-        self.__ulist.reverse()
-
-    def clear(self):
-        self.__idx.clear()
-        self.__ulist.clear()
-
-    def count(self, pred: Predicate) -> int:
-        return int(pred in self)
-
-    def index(self, ref: Types.PredsItemRef):
-        return self.__ulist.index(self.__idx[ref])
-
-    def __getitem__(self, index: Types.IndexType) -> Predicate:
-        return self.__ulist[index]
-
-    def __iter__(self) -> Iterator[Predicate]:
-        return iter(self.__ulist)
-
-    def __reversed__(self) -> Iterator[Predicate]:
-        return reversed(self.__ulist)
-
-    def __len__(self):
-        return len(self.__ulist)
-
-    def __contains__(self, ref: Types.PredsItemRef):
-        return ref in self.__idx #or ref in Predicates.System
-
-    def __bool__(self):
-        return True
-
-    def __copy__(self):
-        cls = self.__class__
-        inst = cls.__new__(cls)
-        inst.__ulist = self.__ulist.copy()
-        inst.__idx = self.__idx.copy()
-        return inst
-
-    def __init__(self, *specs: Types.PredsItemSpec):
-        self.__idx: dict[Types.PredsItemRef, Predicate] = {}
-        self.__ulist: Types.ListSet[Predicate] = Types.ListSet()
-        if len(specs) == 1 and isinstance(specs[0], (list, tuple)):
-            if specs[0] and isinstance(specs[0][0], (tuple)):
-                specs, = specs
-        self.update(specs)
-
-    __slots__ = '__idx', '__ulist'
-
-    def __repr__(self):
-        return orepr(self, len=len(self))
 
 class Argument(Sequence[Sentence], metaclass = Metas.Argument):
     """

@@ -185,7 +185,7 @@ class TestPredicates(BaseSuite):
         p1, p2, p3 = Predicate.gen(3)
         v1 = Predicates(p1, p2)
         v2 = copy(v1)
-        assert v1 != v2
+        assert v1 == v2 and v1 is not v2
         assert p3 not in v1
         v1.add(p3)
         assert p3 in v1

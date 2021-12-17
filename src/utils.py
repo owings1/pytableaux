@@ -45,6 +45,7 @@ from typing import Any, Annotated, DefaultDict, Generic, NamedTuple, ParamSpec, 
 # from pprint import pp
 
 # Constants
+NOARG = enum.auto()
 EmptySet = frozenset()
 CmpFnOper = MappingProxyType({
     '__lt__': '<',

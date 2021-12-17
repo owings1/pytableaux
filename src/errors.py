@@ -30,6 +30,9 @@ class DuplicateKeyError(KeyError):
     pass
 
 # ValueErrors
+class DuplicateValueError(ValueError):
+    pass
+
 class NotFoundError(ValueError):
     pass
 
