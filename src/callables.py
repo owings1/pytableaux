@@ -344,7 +344,7 @@ class dels:
 class raiser(Caller):
     'Error raiser.'
     def _call(self, *args, **kw):
-        raise self.ErrorType(*self.eargs)
+        raise self.ErrorType(*self.eargs, *args[0:1])
     def __init__(self,
         ErrorType: type[Exception],
         eargs: Sequence = (), /):

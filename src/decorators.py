@@ -1,30 +1,34 @@
 from __future__ import annotations
 
-from callables import calls, cchain, gets, preds, raiser, Caller
-from utils import MetaFlag, instcheck, subclscheck
+from callables import calls, gets, raiser, Caller#, cchain, preds
+from utils import ABCMeta, MetaFlag, instcheck, subclscheck
 
-from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
-import functools
+from collections.abc import Callable, Iterable, Mapping
 from functools import partial, reduce
 from inspect import signature
-from itertools import chain
 import operator as opr
-from types import DynamicClassAttribute, FunctionType, MappingProxyType
-from typing import Any, ClassVar, Generic, Literal, NamedTuple, ParamSpec, TypeVar, abstractmethod
+from types import DynamicClassAttribute, FunctionType#, MappingProxyType
+from typing import Any, NamedTuple, ParamSpec, TypeVar, abstractmethod
+#, subclscheck
+#, Collection, Hashable, Sequence
+#import functools
+# from itertools import chain
+# ClassVar, Generic, Literal, 
 
 P = ParamSpec('P')
 T = TypeVar('T')
 
-_LZINSTATTR = '__lazyget__'
 _WRAPSINSTATTR = '__wraps__'
-_new = object.__new__
-# _valisstr = cchain.reducer(gets.key(1), preds.instanceof[str])
-# _mapfilter = partial(filter, preds.instanceof[Mapping])
 _valfilter = partial(filter, gets.key(1))
 _getmixed = gets.mixed(flag=Caller.SAFE)
 _checkcallable = calls.func(instcheck, Callable)
 _thru = gets.thru()
 class _nonerr(Exception): __new__ = None
+
+# _LZINSTATTR = '__lazyget__'
+# _new = object.__new__
+# _valisstr = cchain.reducer(gets.key(1), preds.instanceof[str])
+# _mapfilter = partial(filter, preds.instanceof[Mapping])
 # _ = None
 # _FIXVALCODE = (lambda *args, **kw: _).__code__
 # @functools.lru_cache
@@ -60,6 +64,11 @@ class NamedMember:
     def owner(self):
         try: return self._owner_name.owner
         except AttributeError: pass
+
+class rund:
+    __slots__ = ()
+    def __new__(cls, func: Callable[P, Any], *args, **kw) -> Callable[P, None]:
+        return calls.func(func)(*args, **kw)
 
 class fixed:
 
@@ -192,12 +201,14 @@ class operd:
         default, except (AttributeError, TypeError), and return
         ``NotImplemented``.'''
 
-
-        def __init__(self, oper: Callable, info = None, *errs):
+        def __init__(self, oper: Callable,/, *errs, info = None):
             super().__init__(oper, info)
             if errs:
                 if errs == (None,): self.errs = (_nonerr,)
                 else: self.errs = errs
+                for ecls in self.errs:
+                    instcheck(ecls, type)
+                    subclscheck(ecls, Exception)
             else: self.errs = AttributeError, TypeError
 
         __slots__ =  'errs','fcmp',
@@ -321,30 +332,58 @@ class raisen(NamedMember):
         r = self.raiser
         if not len(r.eargs):
             self.raiser = raiser(r.ErrorType, (
-                'Method %s not allowed' % name,
+                "Method '%s' not allowed for %s" % (name, owner),
             ))
             del r
 
 class metad:
 
-    __new__ = None
+    F = Flag = MetaFlag
 
     class flag:
 
-        def __init__(self, flag: MetaFlag):
-            if isinstance(flag, MetaFlag): self.flag = flag
-            else: self.flag = MetaFlag[flag]
+        F = Flag = MetaFlag
+        _clsflag = F.blank
+        attrname = ABCMeta._metaflag_attr
+        __slots__ = 'value',
 
-        def __call__(self, method: Callable):
-            if not hasattr(method, '_metaflag'):
-                method._metaflag = MetaFlag.blank
-            method._metaflag |= MetaFlag(self.flag)
-            return method
+        def __new__(cls, target: Callable = None, /, *args, **kw):
+            'init, and decorate if target is passed.'
+            inst = object.__new__(cls)
+            inst.value = cls._clsflag
+            if target is None: return inst
+            instcheck(target, Callable)
+            if len(args) or len(kw): raise TypeError()
+            inst.__init__()
+            return inst(target)
 
-        __slots__ = 'flag',
+        def __init__(self, on: F = F.blank, off = ~F.blank):
+            "initialize the flag value."
+            self.on(on)
+            self.off(off)
 
-    temp = flag(MetaFlag.temp)
-    init_attrs = flag(MetaFlag.init_attrs)
+        def __call__(self, target):
+            "decorate the target."
+            self.write(target)
+            return target
+
+        def on(self, value): self.value |= value
+
+        def off(self, value): self.value &= value
+
+        def write(self, target):
+            attr = self.attrname
+            value = getattr(target, attr, self.F.blank)
+            setattr(target, attr, value | self.value)
+
+        def __init_subclass__(subcls, on = F.blank, off = ~F.blank, **kw):
+            super().__init_subclass__(**kw)
+            subcls._clsflag |= on
+            subcls._clsflag &= off
+
+    class temp(flag, on = F.temp):     __slots__ = ()
+    class nsinit(flag, on = F.nsinit): __slots__ = ()
+
 
     __slots__ = ()
 

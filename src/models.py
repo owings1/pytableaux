@@ -1,4 +1,4 @@
-from containers import zqset
+from containers import qsetf
 from utils import Decorators, get_logic
 from lexicals import Operator, Sentence
 import itertools
@@ -6,7 +6,7 @@ abstract = Decorators.abstract
 
 class BaseModel(object):
 
-    truth_values: zqset
+    truth_values: qsetf
     # Default set
     truth_functional_operators = {
         Operator.Assertion             ,

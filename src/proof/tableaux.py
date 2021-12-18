@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - tableaux module
-from containers import LinkOrderSet, zqset
+from containers import LinkOrderSet, qsetf
 from .common import FLAG, KEY, Branch, Node, NodeType, RuleEvents, Target
 from lexicals import Argument, Sentence
 from utils import Decorators, StopWatch, \
@@ -114,7 +114,7 @@ class RuleMeta(ABCMeta):
                 (helper_attrs[Helper], Helper) for Helper in helper_classes
             )
         ))
-        hlist = zqset((item for item in filt if item[1] != None))
+        hlist = qsetf((item for item in filt if item[1] != None))
         setattr(Rule, helpers_attr, tuple(hlist))
         return Rule
 

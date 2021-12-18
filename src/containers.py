@@ -61,21 +61,6 @@ class SetApi(bases.Set[V], Copyable):
     def __copy__(self):
         return self._from_iterable(self)
 
-class zset(SetApi[V]):
-    'SetApi wrapper around built-in frozenset type.'
-
-    __slots__ = '_set_',
-    def __init__(self, it: Iterable[V] = None):
-        if it is None: it = ()
-        self._set_ = frozenset(it)
-    def __contains__(self, value: V):
-        return value in self._set_
-    def __iter__(self) -> Iterator[V]:
-        return iter(self._set_)
-    def __len__(self):
-        return len(self._set_)
-    def __repr__(self):
-        return self._set_.__repr__()
 class MutableSetApi(bases.MutableSet[V], SetApi):
 
     __slots__ = ()
@@ -90,19 +75,6 @@ class MutableSetApi(bases.MutableSet[V], SetApi):
     )
     # -------------------------------
 
-class cset(MutableSetApi[V], zset):
-    'MutableSetApi wrapper around built-in set type.'
-
-    __slots__ = ()
-
-    def __init__(self, it: Iterable[V] = None):
-        self._set_ = set()
-        if it is not None: self.update(it)
-    def add(self, value: V):
-        self._set_.add(value)
-    def discard(self, value: V):
-        self._set_.discard(value)
-
 class SequenceApi(bases.Sequence[V], Copyable):
 
     __slots__ = ()
@@ -110,7 +82,7 @@ class SequenceApi(bases.Sequence[V], Copyable):
     @abstractmethod
     def __add__(self, other): ...
 
-class MutableSequenceApi(bases.MutableSequence[V], SequenceApi):
+class MutableSequenceApi(bases.MutableSequence, SequenceApi[V]):
 
     __slots__ = ()
 
@@ -132,7 +104,7 @@ class MutSetSeqPair(SetSeqPair):
     set: MutableSetApi
     seq: MutableSequenceApi
 
-class SequenceSetView(SetApi[V], SequenceApi):
+class SequenceSet(SetApi, SequenceApi[V]):
     'Sequence set (ordered set) read interface.'
 
     __slots__ = '_setseq_',
@@ -200,18 +172,7 @@ class SequenceSetView(SetApi[V], SequenceApi):
         ),
     }]
 
-class zqset(SequenceSetView[V]):
-    'Immutable sequence set.'
-
-    __slots__ = ()
-
-    def __init__(self, values: Iterable[V] = None):
-        d = dict.fromkeys(() if values is None else values)
-        setseq = SetSeqPair(frozenset(d), tuple(d.keys()))
-        super().__init__(setseq)
-        del(d)
-
-class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
+class MutableSequenceSet(MutableSequenceApi, MutableSetApi, SequenceSet[V]):
     """Mutable sequence set. Set-like properties are primary, such as comparisons.
     Sequence methods such as ``append`` raises ``ValueError`` on duplicate values."""
 
@@ -330,7 +291,7 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
                 'update', 'intersection_update', 'difference_update',
                 'symmetric_difference_update',
             },
-            SequenceSetView: {
+            SequenceSet: {
                 '__contains__', '__len__', '__iter__', '__reversed__',
                 '__getitem__', 'count', 'index', '__add__',
 
@@ -349,8 +310,48 @@ class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi, SequenceSetView):
         }
     )]
 
+class setf(SetApi[V]):
+    'SetApi wrapper around built-in frozenset type.'
 
-class cqset(MutableSequenceSet[V]):
+    __slots__ = '_set_',
+
+    def __init__(self, it: Iterable[V] = None):
+        if it is None: it = ()
+        self._set_ = frozenset(it)
+    def __contains__(self, value: V):
+        return value in self._set_
+    def __iter__(self) -> Iterator[V]:
+        return iter(self._set_)
+    def __len__(self):
+        return len(self._set_)
+    def __repr__(self):
+        return self._set_.__repr__()
+
+class setm(MutableSetApi[V], setf):
+    'MutableSetApi wrapper around built-in set type.'
+
+    __slots__ = ()
+
+    def __init__(self, it: Iterable[V] = None):
+        self._set_ = set()
+        if it is not None: self.update(it)
+    def add(self, value: V):
+        self._set_.add(value)
+    def discard(self, value: V):
+        self._set_.discard(value)
+
+class qsetf(SequenceSet[V]):
+    'Immutable sequence set.'
+
+    __slots__ = ()
+
+    def __init__(self, values: Iterable[V] = None):
+        d = dict.fromkeys(() if values is None else values)
+        setseq = SetSeqPair(frozenset(d), tuple(d.keys()))
+        super().__init__(setseq)
+        del(d)
+
+class qsetm(MutableSequenceSet[V]):
     'MutableSequenceSet implementation with built-in set and list.'
 
     __slots__ = ()

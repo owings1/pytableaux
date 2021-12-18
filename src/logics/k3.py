@@ -30,7 +30,7 @@ from lexicals import Atomic
 from proof.common import Branch, Node
 from proof.rules import ClosureRule
 from . import fde as FDE
-from containers import zqset
+from containers import qsetf
 class Model(FDE.Model):
     """
     A K3 model is like an :ref:`FDE model <fde-model>` without the :m:`B` value.
@@ -41,7 +41,7 @@ class Model(FDE.Model):
     #: :type: set
     #: :value: {T, N, F}
     #: :meta hide-value:
-    truth_values = zqset(('F', 'N', 'T'))
+    truth_values = qsetf(('F', 'N', 'T'))
 
     #: The (singleton) set of designated values in model.
     #:

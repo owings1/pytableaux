@@ -23,7 +23,7 @@ from errors import DuplicateKeyError, IllegalStateError
 
 import abc
 from builtins import ModuleNotFoundError
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 import enum
 from functools import reduce
 from importlib import import_module
@@ -63,17 +63,17 @@ CmpFnOper = MappingProxyType({
 
 strtype = str
 LogicRef = ModuleType | str
-IndexTypes = (int, slice)
 IndexType: TypeAlias = int | slice
 IntTuple: TypeAlias = tuple[int, ...]
+# enumerated field (0, 'name') etc.
+FieldSeqItem: TypeAlias = tuple[int, str]
+FieldItemSequence: TypeAlias = Sequence[FieldSeqItem]
 
 K = TypeVar('K')
 T = TypeVar('T')
 T2 = TypeVar('T2')
 P = ParamSpec('P')
 RetType = TypeVar('RetType')
-
-
 
 
 def get_module(ref, package: str = None) -> ModuleType:
@@ -242,15 +242,10 @@ def renamefn(fnew: T, forig) -> T:
 
 
 class MetaFlag(enum.Flag):
-    blank      = 0
-    # ClassVar   = 1
-    # Merge      = 2
-    # SubClass   = 4
-    # MergeSubClassVar = ClassVar | Merge | SubClass
-    init_attrs = 4
-    temp = 8
-    pre_init = init_attrs | temp
-    # clean_attrs = temp
+    blank  = 0
+    nsinit = 4
+    temp   = 8
+    nsclean = nsinit | temp
 
 class AttrNote(NamedTuple):
 
@@ -278,30 +273,32 @@ class AttrNote(NamedTuple):
 
 class ABCMeta(abc.ABCMeta):
 
+    _metaflag_attr = '_metaflag'
 
     def __new__(cls, clsname, bases, attrs: dict, **kw):
-        cls.init_attrs(attrs, bases, **kw)
+        cls.nsinit(attrs, bases, **kw)
         Class = super().__new__(cls, clsname, bases, attrs, **kw)
+        cls.nsclean(Class, attrs, bases, **kw)
         return Class
 
     @staticmethod
-    def init_attrs(attrs: dict, bases, **kw):
-        remd = DefaultDict(dict)
-        todel = set()
-        powflags = [f for f in MetaFlag if ispow2(f.value) and f in MetaFlag.pre_init]
-        for k,v in attrs.items():
-            mf = getattr(v, '_metaflag', MetaFlag.blank)
-            pf = mf & MetaFlag.pre_init
-            if not pf.value: continue
-            for f in powflags:
-                if f in pf: remd[f][k] = v
-            todel.add(k)
-        for func in remd[MetaFlag.init_attrs].values():
-            func(attrs, bases, **kw)
-        for k in todel:
-            del(attrs[k])
-        return remd
+    def nsinit(attrs: dict, bases, **kw):
+        attrname = __class__._metaflag_attr
+        kit = list(attrs)
+        for v in (attrs[k] for k in kit):
+            mf = getattr(v, attrname, MetaFlag.blank)
+            if MetaFlag.nsinit in mf:
+                instcheck(v, Callable)(attrs, bases, **kw)
 
+    @staticmethod
+    def nsclean(Class, attrs: dict, bases, deleter = delattr, **kw):
+        attrname = __class__._metaflag_attr
+        kit = attrs.keys()
+        for k, v in ((k,attrs[k]) for k in kit):
+            mf = getattr(v, attrname, MetaFlag.blank)
+            if mf is not mf.blank and mf in MetaFlag.nsclean:
+                deleter(Class, k)
+    
     @staticmethod
     def basesmap(bases):
         bmap = DefaultDict(list)
@@ -465,8 +462,8 @@ class SortBiCoords(NamedTuple):
 
     subscript : int
     index     : int
-    x = px
-    y = py
+    # x = px
+    # y = py
 
 class BiCoords(NamedTuple):
 
