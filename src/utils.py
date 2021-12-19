@@ -23,12 +23,12 @@ from errors import DuplicateKeyError, IllegalStateError
 
 import abc
 from builtins import ModuleNotFoundError
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 import enum
 from functools import reduce
 from importlib import import_module
 from inspect import isclass
-from itertools import islice
+from itertools import islice, repeat, starmap
 import operator as opr
 from types import MappingProxyType, ModuleType
 import typing
@@ -39,7 +39,7 @@ from typing import Any, Annotated, DefaultDict, \
 
 # from collections import deque #, namedtuple
     #  Collection, Hashable, ItemsView, ,\
-    # Iterator, KeysView, , MutableSet, Sequence, ValuesView
+    # , KeysView, , MutableSet, Sequence, ValuesView
 # from copy import copy
 # from functools import partial
 # from pprint import pp
@@ -69,9 +69,9 @@ IntTuple: TypeAlias = tuple[int, ...]
 FieldSeqItem: TypeAlias = tuple[int, str]
 FieldItemSequence: TypeAlias = Sequence[FieldSeqItem]
 
-K = TypeVar('K')
 T = TypeVar('T')
-T2 = TypeVar('T2')
+KT = TypeVar('KT')
+VT = TypeVar('VT')
 P = ParamSpec('P')
 RetType = TypeVar('RetType')
 
@@ -154,6 +154,16 @@ def it_drain(it: Iterable):
         while True: next(it)
     except StopIteration: pass
 
+def items_from_keys(keys: Iterable[KT], d: dict[KT, VT]) -> Iterator[tuple[KT, VT]]:
+    'Return an iterator of items in ``d`` of keys from ``keys``'
+    return zip(
+        keys,
+        starmap(
+            opr.getitem,
+            zip(repeat(d), keys)
+        )
+    )
+
 def instcheck(obj, classinfo: type[T]) -> T:
     if not isinstance(obj, classinfo):
         raise TypeError(type(obj), classinfo)
@@ -174,7 +184,6 @@ def notsubclscheck(cls: type, typeinfo):
     if issubclass(cls, typeinfo):
         raise TypeError(cls, typeinfo)
     return cls
-
 
 def cat(*args: str) -> str:
     'Concat all argument strings'
@@ -327,21 +336,21 @@ class ABCMeta(abc.ABCMeta):
             if issubclass(c, supcls or subcls)
         ))
 
-class KeyCacheFactory(dict[K, T]):
+class KeyCacheFactory(dict[KT, VT]):
 
-    def __getitem__(self, key: K) -> T:
+    def __getitem__(self, key: KT) -> VT:
         try: return super().__getitem__(key)
         except KeyError:
             val = self[key] = self.__fncreate__(key)
             return val
 
-    def __call__(self, key: K) -> T:
+    def __call__(self, key: KT) -> VT:
         return self[key]
 
     __slots__ = '__fncreate__',
-    __fncreate__: Callable[[K], T]
+    __fncreate__: Callable[[KT], VT]
 
-    def __init__(self, fncreate: Callable[[K], T]):
+    def __init__(self, fncreate: Callable[[KT], VT]):
         super().__init__()
         self.__fncreate__ = fncreate
 

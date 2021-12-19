@@ -8,7 +8,7 @@ from utils import ABCMeta, IndexType, NOARG, cat, instcheck, notsubclscheck, \
 
 from collections import deque
 from collections.abc import Callable, Collection, Hashable, Iterable, Iterator, \
-    Mapping, MappingView, Reversible
+    Mapping, MappingView, Sized, Reversible
 import collections.abc as bases
 import operator as opr
 from types import MappingProxyType as MapProxy
@@ -38,30 +38,33 @@ class Copyable(Abc):
         return self.__copy__()
 
 class SetApi(bases.Set[V], Copyable):
+    'Fusion interface of collections.abc.Set and built-in frozenset.'
 
     __slots__ = ()
 
-    rdckw = dict(freturn = opr.methodcaller('_from_iterable'))
+    _opts = dict(freturn = opr.methodcaller('_from_iterable'))
 
     # ------- Builtin set API ------------
     issubset   = operd.apply(opr.le, info = set.issubset)
     issuperset = operd.apply(opr.ge, info = set.issuperset)
 
-    union        = operd.reduce(opr.or_,  info = set.union,        **rdckw)
-    intersection = operd.reduce(opr.and_, info = set.intersection, **rdckw)
-    difference   = operd.reduce(opr.sub,  info = set.difference,   **rdckw)
+    union        = operd.reduce(opr.or_,  info = set.union,        **_opts)
+    intersection = operd.reduce(opr.and_, info = set.intersection, **_opts)
+    difference   = operd.reduce(opr.sub,  info = set.difference,   **_opts)
 
     symmetric_difference = operd.apply(opr.xor,
         info = set.symmetric_difference
     )
     # -------------------------------
 
-    del(rdckw)
+    del(_opts)
 
     def __copy__(self):
         return self._from_iterable(self)
 
-class MutableSetApi(bases.MutableSet[V], SetApi):
+
+class MutableSetApi(bases.MutableSet[V], SetApi[V]):
+    'Fusion interface of collections.abc.MutableSet and built-in set.'
 
     __slots__ = ()
 
@@ -82,7 +85,7 @@ class SequenceApi(bases.Sequence[V], Copyable):
     @abstractmethod
     def __add__(self, other): ...
 
-class MutableSequenceApi(bases.MutableSequence, SequenceApi[V]):
+class MutableSequenceApi(bases.MutableSequence[V], SequenceApi[V]):
 
     __slots__ = ()
 
@@ -100,17 +103,18 @@ class SetSeqPair(NamedTuple):
     set: SetApi
     seq: SequenceApi
 
-class MutSetSeqPair(SetSeqPair):
-    set: MutableSetApi
-    seq: MutableSequenceApi
+class MutSetSeqPair(SetSeqPair[V]):
+    set: MutableSetApi[V]
+    seq: MutableSequenceApi[V]
 
-class SequenceSet(SetApi, SequenceApi[V]):
+class SequenceSet(SetApi[V], SequenceApi[V]):
     'Sequence set (ordered set) read interface.'
 
     __slots__ = '_setseq_',
+    _setseq_: SetSeqPair[V]
 
     @abstractmethod
-    def __init__(self, setseq: SetSeqPair):
+    def __init__(self, setseq: SetSeqPair[V]):
         self._setseq_ = instcheck(setseq, SetSeqPair)
 
     # -------------   Collection ---------------
@@ -165,22 +169,22 @@ class SequenceSet(SetApi, SequenceApi[V]):
                 '__sub__', '__rsub__', '__xor__', '__rxor__',
                 '__le__', '__lt__', '__gt__', '__ge__', '__eq__',
                 '_hash', 'isdisjoint',
+                'issubset', 'issuperset',
                 'union', 'intersection', 'difference',
                 'symmetric_difference', 
-                'issubset', 'issuperset',
             },
         ),
     }]
 
-class MutableSequenceSet(MutableSequenceApi, MutableSetApi, SequenceSet[V]):
+class MutableSequenceSet(MutableSequenceApi[V], MutableSetApi[V], SequenceSet[V]):
     """Mutable sequence set. Set-like properties are primary, such as comparisons.
     Sequence methods such as ``append`` raises ``ValueError`` on duplicate values."""
 
     __slots__ = ()
-    _setseq_: MutSetSeqPair
+    _setseq_: MutSetSeqPair[V]
 
     @abstractmethod
-    def __init__(self, setseq: MutSetSeqPair):
+    def __init__(self, setseq: MutSetSeqPair[V]):
         self._setseq_ = instcheck(setseq, MutSetSeqPair)
 
     def _new_value(self, value) -> V:
@@ -315,9 +319,9 @@ class setf(SetApi[V]):
 
     __slots__ = '_set_',
 
-    def __init__(self, it: Iterable[V] = None):
-        if it is None: it = ()
-        self._set_ = frozenset(it)
+    def __init__(self, values: Iterable[V] = None):
+        if values is None: values = ()
+        self._set_ = frozenset(values)
     def __contains__(self, value: V):
         return value in self._set_
     def __iter__(self) -> Iterator[V]:
@@ -327,14 +331,14 @@ class setf(SetApi[V]):
     def __repr__(self):
         return self._set_.__repr__()
 
-class setm(MutableSetApi[V], setf):
+class setm(MutableSetApi[V], setf[V]):
     'MutableSetApi wrapper around built-in set type.'
 
     __slots__ = ()
 
-    def __init__(self, it: Iterable[V] = None):
+    def __init__(self, values: Iterable[V] = None):
         self._set_ = set()
-        if it is not None: self.update(it)
+        if values is not None: self.update(values)
     def add(self, value: V):
         self._set_.add(value)
     def discard(self, value: V):
@@ -346,10 +350,8 @@ class qsetf(SequenceSet[V]):
     __slots__ = ()
 
     def __init__(self, values: Iterable[V] = None):
-        d = dict.fromkeys(() if values is None else values)
-        setseq = SetSeqPair(frozenset(d), tuple(d.keys()))
-        super().__init__(setseq)
-        del(d)
+        seq = () if values is None else tuple(dict.fromkeys(values))
+        super().__init__(SetSeqPair(frozenset(seq), seq))
 
 class qsetm(MutableSequenceSet[V]):
     'MutableSequenceSet implementation with built-in set and list.'
@@ -361,7 +363,7 @@ class qsetm(MutableSequenceSet[V]):
         if values is not None:
             self.update(values)
 
-class MapAttrView(MappingView[str, V], Mapping, Copyable):
+class MapAttrView(MappingView[str, V], Mapping[str, V], Copyable):
     'A Mapping view with attribute access.'
 
     # MappingView uses the '_mapping' slot.
@@ -658,7 +660,7 @@ class LinkOrderSet(LinkedView[T], Collection, Copyable):
             last  = self.last(),
         )
 
-class DequeCache(Collection[V], Abc):
+class DequeCache(Collection[V], Reversible, Sized, Abc):
 
     __slots__ = ()
 
@@ -668,27 +670,6 @@ class DequeCache(Collection[V], Abc):
 
     @abstractmethod
     def clear(self): ...
-
-    @abstractmethod
-    def add(self, item: V, keys = None): ...
-
-    @abstractmethod
-    def update(self, d: dict): ...
-
-    @abstractmethod
-    def get(self, key, default = None): ...
-
-    @abstractmethod
-    def __len__(self): ...
-
-    @abstractmethod
-    def __iter__(self) -> Iterator[V]: ...
-
-    @abstractmethod
-    def __reversed__(self) -> Iterator[V]: ...
-
-    @abstractmethod
-    def __contains__(self, item: V): ...
 
     @abstractmethod
     def __getitem__(self, key) -> V: ...
@@ -709,48 +690,38 @@ class DequeCache(Collection[V], Abc):
 
         deck     : deque[V] = deque(maxlen = maxlen)
 
-        class Api(DequeCache, Collection[V]):
+        VT = TypeVar('VT')
+        class Api(DequeCache[VT]):
 
             __slots__ = ()
 
-            maxlen: int = property(lambda _: deck.maxlen)
-            idx: int = property(lambda _: idxproxy)
-            rev: Mapping[Any, V] = property(lambda _: revproxy)
+            maxlen = property(lambda _: deck.maxlen)
+            idx = property(lambda _: idxproxy)
+            rev = property(lambda _: revproxy)
 
             def clear(self):
                 for d in (idx, rev, deck): d.clear()
 
-            def add(self, item: V, keys = None):
-                self[item] = item
-                if keys is not None:
-                    for k in keys: self[k] = item
-
-            def update(self, d: dict):
-                for k, v in d.items(): self[k] = v
-
-            def get(self, key, default = None):
-                try: return self[key]
-                except KeyError: return default
-
             def __len__(self):
                 return len(deck)
 
-            def __iter__(self) -> Iterator[V]:
+            def __iter__(self) -> Iterator[VT]:
                 return iter(deck)
 
-            def __reversed__(self) -> Iterator[V]:
+            def __reversed__(self) -> Iterator[VT]:
                 return reversed(deck)
 
-            def __contains__(self, item: V):
+            def __contains__(self, item: VT):
                 return item in rev
 
-            def __getitem__(self, key) -> V:
-                if isinstance(key, IndexType): return deck[key]
+            def __getitem__(self, key) -> VT:
+                # if isinstance(key, IndexType): return deck[key]
                 return idx[key]
 
-            def __setitem__(self, key, item: V):
+            def __setitem__(self, key, item: VT):
                 instcheck(item, V)
-                if item in self: item = self[item]
+                if item in self:
+                    item = self[item]
                 else:
                     if len(deck) == deck.maxlen:
                         old = deck.popleft()

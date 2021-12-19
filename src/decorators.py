@@ -136,7 +136,8 @@ class operd:
         def __set_name__(self, owner, name):
             super().__set_name__(owner, name)
             if self.info is None: self.info = self
-            setattr(owner, name, self())
+            f = self()
+            setattr(owner, name, f)
 
         def _getinfo(self, info = None):
             if info is None:
@@ -217,10 +218,13 @@ class operd:
             info = self._getinfo(fcmp)
             oper, fcmp = map(_checkcallable, (self.oper, fcmp))
             errs = self.errs
-            @wraps(info)
-            def f(lhs, rhs):
-                try: return oper(fcmp(lhs, rhs), 0)
+            @wraps(oper)
+            def f(self, other) -> bool:
+                try: return oper(fcmp(self, other), 0)
                 except errs: return NotImplemented
+            # w = wraps(oper)
+            # w.update(info)
+            # w._adds.setdefault('__annotations__', {})['return'] = bool
             return f
 
     class iterself(_base):
@@ -413,10 +417,14 @@ class lazyget(NamedMember):
         return fget
 
     @staticmethod
-    def prop(method: Callable[[Any], V]) -> property:
+    def prop(method: Callable[[Any], V], attr: str = None) -> property:
         """Return a property with the getter. NB: a setter/deleter should be
         sure to use the correct cache attribute."""
-        return property(__class__()(method), doc=method.__doc__)
+        return property(__class__(attr)(method), doc=method.__doc__)
+
+    @staticmethod
+    def dynca(method: Callable[[Any], V], attr: str = None) -> DynamicClassAttribute:
+        return DynamicClassAttribute(__class__(attr)(method), doc=method.__doc__)
 
     def format(self, name: str) -> str:
         return '_%s' % name
