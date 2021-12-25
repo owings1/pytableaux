@@ -1,8 +1,9 @@
 from containers import qsetf
+from decorators import abstract
 from utils import Decorators, get_logic
 from lexicals import Operator, Sentence
 import itertools
-abstract = Decorators.abstract
+# abstract = Decorators.abstract
 
 class BaseModel(object):
 

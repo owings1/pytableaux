@@ -19,25 +19,15 @@
 # pytableaux - lexicals module
 from __future__ import annotations
 
-ITEM_CACHE_SIZE = 10000
-
-_syslw: LexWriter
-def _lexstr(item: Bases.Lexical):
-    try:
-        if isinstance(item, Bases.Enum):
-            return item.name
-        return _syslw.write(item)
-    except NameError:
-        try:
-            return str(item.ident)
-        except AttributeError as e:
-            try:
-                return '%s(%s)' % (item.TYPE.name, e)
-            except AttributeError as e:
-                return '%s(%s)' % (item.__class__.__name__, e)
-
+__all__ = (
+    'Operator', 'Quantifier', 'Parameter', 'Constant', 'Variable', 'Predicate',
+    'Sentence', 'Atomic', 'Predicated', 'Quantified', 'Operated',
+    'LexType', 'Predicates', 'Argument', 
+    'LexWriter', 'BaseLexWriter', 'PolishLexWriter', 'StandardLexWriter',
+)
 ##############################################################
 
+ITEM_CACHE_SIZE = 10000
 import operator as opr
 from utils import instcheck as _instcheck
 class std:
@@ -78,7 +68,6 @@ class d:
                 acheck = checkobj._readonly
             except AttributeError: pass
             else:
-                # if acheck:
                 if acheck:
                     if changeonly:
                         if getattr(self, attr, val) is not val:
@@ -104,8 +93,7 @@ class fict:
     def sorttmap(it: std.Iterable[Bases.Lexical]) -> std.Iterable[Types.IntTuple]:...
     sorttmap = partial(map, opr.attrgetter('sort_tuple'))
 
-    __slots__ = __new__ = ()
-
+    __new__ = None
 
 class Types:
 
@@ -495,8 +483,6 @@ class Metas:
         def default(cls: type[Notation]) -> Notation:
             return cls.polish
 
-##############################################################
-
 class Bases:
 
     __new__ = None
@@ -726,9 +712,8 @@ class Bases:
             'Returns the name.'
             return self.name
 
-        # --------------------------
-        # Instance init.
-        # --------------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         def __init__(self, order, label, *_):
             self.spec = (self.name,)
             self.order, self.label = order, label
@@ -764,7 +749,6 @@ class Bases:
             super()._on_init(Class)
             for i, member in enumerate(Class): member._index = i
 
-
     class LexicalItem(Lexical, metaclass = Metas.LexicalItem):
         'Base Lexical Item class.'
 
@@ -777,18 +761,19 @@ class Bases:
 
         def __str__(self):
             'Write the item with the default LexWriter.'
-            return _lexstr(self)
+            try: return LexWriter._sys(self)
+            except NameError:
+                try: return str(self.ident)
+                except AttributeError as e:
+                    return '%s(%s)' % (self.__class__.__name__, e)
 
-        # --------------------------
-        # Instance init.
-        # --------------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         @d.abstract
         def __init__(self): ...
 
-        # -----------------------
-        # Attribute Access
-        # -----------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         __slots__ = '_ident', '_hash'
 
         __delattr__ = d.raises(AttributeError)
@@ -803,9 +788,8 @@ class Bases:
 
     class CoordsItem(LexicalItem):
 
-        # -------------------------
-        # Class Variables
-        # -------------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         Coords: std.ClassVar[type[Types.BiCoords]] = Types.BiCoords
         _fieldsenumerated: std.ClassVar[Types.FieldItemSequence]
 
@@ -832,10 +816,11 @@ class Bases:
         def scoords(self) -> Types.SortBiCoords:
             return self.coords.sorting()
 
-         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         @classmethod
         def first(cls) -> Bases.CoordsItem:
+            'Return the first instance of this type.'
             return cls(cls.Coords.first)
 
         def next(self, **kw) -> Bases.CoordsItem:
@@ -848,9 +833,8 @@ class Bases:
             coords = self.Coords(idx, sub, *cargs)
             return self.__class__(coords)
 
-        # --------------------------
-        # Instance init.
-        # --------------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         def __init__(self, *coords: Types.IntTuple):
             if len(coords) == 1: coords, = coords
             self.coords = self.spec = self.Coords(*coords)
@@ -865,12 +849,10 @@ class Bases:
             except AttributeError:
                 raise TypeError(type(self)) from None
 
-        # -----------------------
-        # Attribute Access
-        # -----------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         __slots__ = (
-            'spec', 'coords', 'index', 'subscript',
-            '_sort_tuple', '_scoords',
+            'spec', 'coords', 'index', 'subscript', '_sort_tuple', '_scoords',
         )
 
         # --------------------------
@@ -955,14 +937,12 @@ class Predicate(Bases.CoordsItem):
         Predicate(1, 3, 2, 'MyLabel')
         Predicate((1, 3, 2, 'MyLabel'))
     """
-    # -------------------
-    # Class Variables
-    # -------------------
-    Coords   : std.ClassVar[type[Types.TriCoords]] = Types.TriCoords
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-    # -------------------------
-    # Instance Variables
-    # -------------------------
+    Coords: std.ClassVar[type[Types.TriCoords]] = Types.TriCoords
+
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     spec    : Types.TriCoords
     coords  : Types.TriCoords
     scoords : Types.SortBiCoords
@@ -1024,9 +1004,8 @@ class Predicate(Bases.CoordsItem):
                     return pred
         return super().next(**kw)
 
-    # --------------------------
-    # Instance init.
-    # --------------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def __init__(self, *spec: Types.PredicatedSpec):
         if len(spec) == 1:
             if isinstance(spec[0], tuple):
@@ -1037,7 +1016,7 @@ class Predicate(Bases.CoordsItem):
         self.is_system = self.index < 0
         if self.is_system and len(self.System):
             raise ValueError('`index` must be >= 0')
-        if _instcheck(self.arity, int) <= 0:
+        if self.arity <= 0:
             raise ValueError('`arity` must be > 0')
         name = spec[3] if len(spec) == 4 else None
         self.name = self.spec if name is None else name
@@ -1046,9 +1025,8 @@ class Predicate(Bases.CoordsItem):
                 raise ValueError('System predicate: %s' % name)
             _instcheck(name, (tuple, str))
 
-    # -----------------------
-    # Attribute Access
-    # -----------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     __slots__ = 'arity', 'is_system', 'name', '_bicoords', '_refs', '_refkeys'
 
     # --------------------------
@@ -1099,6 +1077,8 @@ class Sentence(Bases.LexicalItem):
 
     __slots__ = ()
 
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     predicate  : Predicate  | None
     quantifier : Quantifier | None
     operator   : Operator   | None
@@ -1115,9 +1095,8 @@ class Sentence(Bases.LexicalItem):
     #: predicated sentence, the negation of a predicated sentence,
     #: an atomic sentence, or the negation of an atomic sentence.
     is_literal = d.fixed.prop(False)
-    #: Whether this is an atomic sentence.
+    #: Whether this is a negated sentence.
     is_negated = d.fixed.prop(False)
-
     #: Set of predicates, recursive.
     predicates: frozenset[Predicate] = d.fixed.prop(Types.EmptySet)
     #: Set of constants, recursive.
@@ -1184,10 +1163,7 @@ class Atomic(Sentence, Bases.CoordsItem):
 class Predicated(Sentence, std.Sequence[Parameter]):
     'Predicated sentence.'
 
-    # -------------------------
-    #  Instance Variables
-    # -------------------------
-    spec: Types.PredicatedSpec
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     #: The predicate.
     predicate: Predicate
@@ -1212,11 +1188,11 @@ class Predicated(Sentence, std.Sequence[Parameter]):
 
     @d.lazy.prop
     def spec(self) -> Types.PredicatedSpec:
-        return self.predicate.spec, tuple(p.ident for p in self)
+        return self.predicate.spec, tuple(p.ident for p in self.params)
 
     @d.lazy.prop
     def sort_tuple(self) -> Types.IntTuple:
-        return self.TYPE.rank, *fict.flat(fict.sorttmap((self.predicate, *self)))
+        return self.TYPE.rank, *fict.flat(fict.sorttmap((self.predicate, *self.params)))
 
     @d.lazy.prop
     def predicates(self) -> frozenset[Predicate]:
@@ -1239,9 +1215,8 @@ class Predicated(Sentence, std.Sequence[Parameter]):
             (pnew if p == pold else p for p in self)
         ))
 
-    # --------------------
-    #  Instance init.
-    # --------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def __init__(self, pred, params: std.Iterable[Parameter] | Parameter):
         if isinstance(pred, str):
             self.predicate = Predicate.System(pred)
@@ -1279,9 +1254,8 @@ class Predicated(Sentence, std.Sequence[Parameter]):
     def __contains__(self, p: Parameter):
         return p in self.paramset
 
-    # -----------------------
-    #  Attribute Access
-    # -----------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     __slots__ = (
         'predicate', 'params',
         '_spec', '_sort_tuple', '_paramset',
@@ -1290,10 +1264,8 @@ class Predicated(Sentence, std.Sequence[Parameter]):
 
 class Quantified(Sentence, std.Sequence[Types.QuantifiedItem]):
     'Quantified sentence.'
-    # -------------------------
-    # Instance Variables
-    # -------------------------
-    spec: Types.QuantifiedSpec
+
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     #: The quantifier
     quantifier: Quantifier
@@ -1359,9 +1331,8 @@ class Quantified(Sentence, std.Sequence[Types.QuantifiedItem]):
         'Instantiate the variable with a constant.'
         return self.sentence.substitute(Constant(c), self.variable)
 
-    # --------------------
-    #  Instance init.
-    # --------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def __init__(self, q: Quantifier, v: Variable, s: Sentence):
         self.quantifier, self.variable, self.sentence = self.items = (
             Quantifier(q), Variable(v), Sentence(s)
@@ -1404,9 +1375,8 @@ class Quantified(Sentence, std.Sequence[Types.QuantifiedItem]):
     def index(self, item: Types.QuantifiedItem) -> int:
         return self.items.index(item)
 
-    # -----------------------
-    #  Attribute Access
-    # -----------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     __slots__ = (
         'quantifier', 'variable', 'sentence', 'items',
         '_spec', '_sort_tuple', '_quantifiers',
@@ -1415,10 +1385,7 @@ class Quantified(Sentence, std.Sequence[Types.QuantifiedItem]):
 class Operated(Sentence, std.Sequence[Sentence]):
     'Operated sentence.'
 
-    # -------------------------
-    # Instance Variables
-    # -------------------------
-    spec: Types.OperatedSpec
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     #: The operator
     operator: Operator
@@ -1509,9 +1476,8 @@ class Operated(Sentence, std.Sequence[Sentence]):
         operands = (s.substitute(pnew, pold) for s in self)
         return self.__class__(self.operator, tuple(operands))
 
-    # --------------------
-    #  Instance init.
-    # --------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def __init__(self, oper: Operator, operands: std.Iterable[Sentence] | Sentence):
         if isinstance(operands, Sentence):
             self.operands = operands,
@@ -1536,9 +1502,8 @@ class Operated(Sentence, std.Sequence[Sentence]):
     def __contains__(self, s: Sentence):
         return s in self.operands
 
-    # -----------------------
-    #  Attribute Access
-    # -----------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     __slots__ = (
         'operator', 'operands', '_is_literal', '_spec', '_sort_tuple',
         '_predicates', '_constants', '_variables', '_atomics', '_quantifiers',
@@ -1549,6 +1514,8 @@ class Operated(Sentence, std.Sequence[Sentence]):
 ##############################################################
 
 class LexType(Bases.Enum):
+
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     classes: std.ClassVar[Types.SequenceSet[type[Bases.Lexical]]]
 
@@ -1883,9 +1850,8 @@ class Notation(Bases.Enum, metaclass = Metas.Notation):
 class LexWriter(metaclass = Metas.LexWriter):
     'LexWriter Api and Coordinator class.'
 
-    # --------------------------
-    # Class Variables.
-    # --------------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     notation: Notation
     _methodmap: std.Mapping[LexType, str] = Types.MapProxy({
         ltype: NotImplemented for ltype in LexType
@@ -1994,9 +1960,8 @@ class RenderSet(Types.CacheNotationData):
 
 class BaseLexWriter(LexWriter, metaclass = Metas.LexWriter):
 
-    # --------------------------
-    #  Class Variables
-    # --------------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     notation: std.ClassVar[Notation]
     defaults: std.ClassVar[dict] = {}
     _methodmap: std.ClassVar = {
@@ -2159,7 +2124,7 @@ def _():
                     'subscript': '{0}',
                 },
                 'strings' : {
-                    LexType.Atomic   : ('a', 'b', 'c', 'd', 'e'),
+                    LexType.Atomic   : tuple('abcde'),
                     LexType.Operator : {
                         Operator.Assertion              : 'T',
                         Operator.Negation               : 'N',
@@ -2172,8 +2137,8 @@ def _():
                         Operator.Possibility            : 'M',
                         Operator.Necessity              : 'L',
                     },
-                    LexType.Variable   : ('x', 'y', 'z', 'v'),
-                    LexType.Constant   : ('m', 'n', 'o', 's'),
+                    LexType.Variable   : tuple('xyzv'),
+                    LexType.Constant   : tuple('mnos'),
                     LexType.Quantifier : {
                         Quantifier.Universal   : 'V',
                         Quantifier.Existential : 'S',
@@ -2183,7 +2148,7 @@ def _():
                         Predicates.System.Existence.index : 'J',
                         (Operator.Negation, Predicates.System.Identity): NotImplemented,
                     },
-                    (LexType.Predicate, False) : ('F', 'G', 'H', 'O'),
+                    (LexType.Predicate, False) : tuple('FGHO'),
                     'paren_open'     : (NotImplemented,),
                     'paren_close'    : (NotImplemented,),
                     'whitespace'     : (' ',),
@@ -2195,14 +2160,15 @@ def _():
             }
         }
     }
-    # return data
-    data['polish']['html'] = deepcopy(data['polish']['ascii'])
-    data['polish']['html'].update({
-        'name': 'polish.html',
-        'encoding': 'html',
-        'formats': {'subscript': '<sub>{0}</sub>'},
-    })
+
+    data['polish']['html'] = deepcopy(data['polish']['ascii']) | {
+        'name'     : 'polish.html',
+        'encoding' : 'html',
+        'formats'  : {'subscript': '<sub>{0}</sub>'},
+    }
+
     data['polish']['unicode'] = data['polish']['ascii']
+
     data.update({
         'standard': {
             'ascii': {
@@ -2213,7 +2179,7 @@ def _():
                     'subscript': '{0}',
                 },
                 'strings': {
-                    LexType.Atomic : ('A', 'B', 'C', 'D', 'E'),
+                    LexType.Atomic : tuple('ABCDE'),
                     LexType.Operator : {
                         Operator.Assertion              :  '*',
                         Operator.Negation               :  '~',
@@ -2226,8 +2192,8 @@ def _():
                         Operator.Possibility            :  'P',
                         Operator.Necessity              :  'N',
                     },
-                    LexType.Variable : ('x', 'y', 'z', 'v'),
-                    LexType.Constant : ('a', 'b', 'c', 'd'),
+                    LexType.Variable : tuple('xyzv'),
+                    LexType.Constant : tuple('abcd'),
                     LexType.Quantifier : {
                         Quantifier.Universal   : 'L',
                         Quantifier.Existential : 'X',
@@ -2237,7 +2203,7 @@ def _():
                         Predicates.System.Existence.index : 'E!',
                         (Operator.Negation, Predicates.System.Identity): '!=',
                     },
-                    (LexType.Predicate, False) : ('F', 'G', 'H', 'O'),
+                    (LexType.Predicate, False) : tuple('FGHO'),
                     'paren_open'      : ('(',),
                     'paren_close'     : (')',),
                     'whitespace'      : (' ',),
@@ -2256,7 +2222,7 @@ def _():
                     'subscript': lambda sub: ''.join(chr(0x2080 + int(d)) for d in str(sub))
                 },
                 'strings': {
-                    LexType.Atomic   : ('A', 'B', 'C', 'D', 'E'),
+                    LexType.Atomic   : tuple('ABCDE'),
                     LexType.Operator : {
                         # 'Assertion'              : '°',
                         Operator.Assertion              : '○',
@@ -2270,8 +2236,8 @@ def _():
                         Operator.Possibility            : '◇',
                         Operator.Necessity              : '◻',
                     },
-                    LexType.Variable   : ('x', 'y', 'z', 'v'),
-                    LexType.Constant   : ('a', 'b', 'c', 'd'),
+                    LexType.Variable   : tuple('xyzv'),
+                    LexType.Constant   : tuple('abcd'),
                     LexType.Quantifier : {
                         Quantifier.Universal   : '∀' ,
                         Quantifier.Existential : '∃' ,
@@ -2281,7 +2247,7 @@ def _():
                         Predicates.System.Existence.index : 'E!',
                         (Operator.Negation, Predicates.System.Identity): '≠',
                     },
-                    (LexType.Predicate, False) : ('F', 'G', 'H', 'O'),
+                    (LexType.Predicate, False) : tuple('FGHO'),
                     'paren_open'      : ('(',),
                     'paren_close'     : (')',),
                     'whitespace'      : (' ',),
@@ -2300,7 +2266,7 @@ def _():
                     'subscript': '<sub>{0}</sub>',
                 },
                 'strings': {
-                    LexType.Atomic   : ('A', 'B', 'C', 'D', 'E'),
+                    LexType.Atomic   : tuple('ABCDE'),
                     LexType.Operator : {
                         # 'Assertion'              : '&deg;'   ,
                         Operator.Assertion             : '&#9675;' ,
@@ -2314,8 +2280,8 @@ def _():
                         Operator.Possibility           : '&#9671;' ,
                         Operator.Necessity             : '&#9723;' ,
                     },
-                    LexType.Variable   : ('x', 'y', 'z', 'v'),
-                    LexType.Constant   : ('a', 'b', 'c', 'd'),
+                    LexType.Variable   : tuple('xyzv'),
+                    LexType.Constant   : tuple('abcd'),
                     LexType.Quantifier : {
                         Quantifier.Universal   : '&forall;' ,
                         Quantifier.Existential : '&exist;'  ,
@@ -2325,7 +2291,7 @@ def _():
                         Predicates.System.Existence.index : 'E!',
                         (Operator.Negation, Predicates.System.Identity): '&ne;',
                     },
-                    (LexType.Predicate, False) : ('F', 'G', 'H', 'O'),
+                    (LexType.Predicate, False) : tuple('FGHO'),
                     'paren_open'      : ('(',),
                     'paren_close'     : (')',),
                     'whitespace'      : (' ',),
@@ -2340,9 +2306,6 @@ def _():
     RenderSet._initcache(Notation.names, data)
 
 
-_syslw = LexWriter()
-
-# foo = _
 ##############################################################
 
 @d.run
@@ -2350,5 +2313,5 @@ def _():
     for cls in (Bases.Enum, Bases.LexicalItem, Predicates, Argument, Bases.Lexical):
         cls._readonly = True
 
-del(_, )
+del(_)
 

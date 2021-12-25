@@ -304,7 +304,7 @@ class BaseSuite(AbstractSuite):
     def Model(self) -> type[BaseModel]:
         return self.logic.Model
 
-utils.drepr.lw = lexicals._syslw = BaseSuite.lw
+utils.drepr.lw = LexWriter._sys = BaseSuite.lw
 # if utils._testlw is None:
 #     lexicals._syslw = utils._testlw = BaseSuite.lw
     

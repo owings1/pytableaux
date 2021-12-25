@@ -1,6 +1,6 @@
 from callables import Caller, calls, gets, preds
 from containers import ABCMeta
-from decorators import lazyget
+from decorators import abstract, lazyget
 from events import Events, EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
@@ -10,7 +10,7 @@ from utils import Decorators, drepr, orepr, instcheck, subclscheck, \
 from collections import defaultdict, deque
 from collections.abc import Callable, Iterable, ItemsView, \
     Iterator, KeysView, Mapping, Sequence, ValuesView
-from inspect import getmembers, isclass
+# from inspect import getmembers, isclass
 from itertools import chain, islice
 from keyword import iskeyword
 from types import MappingProxyType
@@ -22,7 +22,7 @@ import enum
 
 import operator as opr
 
-abstract = Decorators.abstract
+# abstract = Decorators.abstract
 setonce = Decorators.setonce
 
 RuleEvents = (
@@ -66,6 +66,7 @@ class Node(Mapping, metaclass = NodeMeta):
     A tableau node.
     """
 
+    __slots__ = 'props', 'step', 'ticked', '_is_access', '_is_modal', '_worlds'
     defaults = MappingProxyType({'world': None, 'designated': None})
 
     def __init__(self, props = {}):

@@ -19,6 +19,7 @@
 # pytableaux - tableaux module
 from containers import LinkOrderSet, qsetf
 from .common import FLAG, KEY, Branch, Node, NodeType, RuleEvents, Target
+from decorators import abstract
 from lexicals import Argument, Sentence
 from utils import Decorators, StopWatch, \
     LogicRef, EmptySet, get_logic, orepr
@@ -34,7 +35,7 @@ from keyword import iskeyword
 from types import MappingProxyType, ModuleType
 from typing import Any, ClassVar, Final, NamedTuple, Union, cast, final
 
-abstract = Decorators.abstract
+# abstract = Decorators.abstract
 
 NodeStatValueType = Union[FLAG, int, None]
 NodeStatType = dict[KEY, NodeStatValueType]

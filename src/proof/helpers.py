@@ -18,21 +18,21 @@
 #
 # pytableaux - rule helpers module
 from containers import MapAttrView, LinkOrderSet
+from decorators import abstract
 from lexicals import Constant, Sentence
 from models import BaseModel
-from utils import Decorators, EmptySet, \
-    isstr, orepr
+from utils import EmptySet, orepr
 from .common import Access, Branch, Events, Node, Target
-from .tableaux import Rule, RuleMeta, Tableau
+from .tableaux import Rule, Tableau
 
 from copy import copy
 from collections.abc import Callable, Iterable, Iterator, MutableMapping, \
     ItemsView, KeysView, ValuesView
 from inspect import getmembers, isclass
 from itertools import chain
-from typing import ClassVar, Union, TypeAlias, TypeVar, final
+from typing import TypeVar, final
 
-abstract = Decorators.abstract
+# abstract = Decorators.abstract
 
 T = TypeVar('T')
 class AdzHelper(object):
@@ -484,7 +484,7 @@ class FilterHelper(FilterNodeCache):
             name = cls.__name__.lower()
         if name in self.__fmap:
             raise KeyError('%s exists' % name)
-        if not isstr(name):
+        if not isinstance(name, str):
             raise TypeError('name not a string')
         filt = cls(self.rule)
         self.__fmap[name] = filt

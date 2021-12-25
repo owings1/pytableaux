@@ -376,18 +376,6 @@ class Decorators(object):
 
     __new__ = None
 
-    # def argwrap(decorator):
-    #     def wrapped(*args, **kw):
-    #         if args and callable(args[0]):
-    #             return decorator()(*args, **kw)
-    #         return decorator(*args, *kw)
-    #     return renamefn(wrapped, decorator)
-
-    def abstract(method: Callable[..., RetType]) -> Callable[..., RetType]:
-        @abstractmethod
-        def notimplemented(*args, **kw):
-            raise NotImplementedError('abstractmethod', method)
-        return notimplemented
 
     def setonce(method: Callable[..., RetType]) -> Callable[..., RetType]:
         name, key = __class__._privkey(method)
@@ -406,85 +394,20 @@ class Decorators(object):
             return renamefn(fcheckstate, method)
         return fcheckwrap
 
-    def nosetattr(*args, **kw) -> Callable:
-        if args and callable(args[0]):
-            origin = args[0]
-        else:
-            origin = None
-        changeonly = kw.pop('changeonly', False)
-        def fsetwrap(origin: Callable):
-            def fset(self, attr, val):
-                if __class__._isreadonly(self, **kw):
-                    if not changeonly:
-                        raise AttributeError('%s is readonly' % self)
-                    if hasattr(self, attr):
-                        if getattr(self, attr) is val:
-                            return
-                        raise AttributeError('%s.%s is immutable' % (self, attr))
-                return origin(self, attr, val)
-            return fset
-        return fsetwrap(origin) if origin is not None else fsetwrap
-
-    def nochangeattr(*args, **kw) -> Callable:
-        kw['changeonly'] = True
-        return __class__.nosetattr(*args, **kw)
-
-    # def argslice(*spec) -> Callable:
-    #     slc = spec[0] if isinstance(spec[0], slice) else slice(*spec)
-    #     def fslicewrap(func: Callable) -> Callable:
-    #         def fslice(*args): return func(*args[slc])
-    #         return fslice
-    #     return fslicewrap
-
-    # def initfn(f, *args, **kw):
-    #     'Call and return None'
-    #     f(*args, **kw)
-
     @staticmethod
     def _privkey(method) -> tuple[str]:
         name = method.__name__
         key = cat('_', __name__, '__lazy_', name)
         return (name, key)
 
-    @staticmethod
-    def _isreadonly(obj, *args, cls: bool = None, check: Callable = None, **kw) -> bool:
-        if check is None:
-            return True
-        if cls:
-            if cls == True: obj = obj.__class__
-            else: obj = cls
-        return bool(check(obj))
-
-def px(self): return self.index
-def py(self): return self.subscript
-def pz(self): return self.arity
-px = property(px)
-py = property(py)
-pz = property(pz)
 
 class SortBiCoords(NamedTuple):
-
-    # y : int
-    # x : int
-    # subscript = py
-    # index     = px
-
     subscript : int
     index     : int
-    # x = px
-    # y = py
 
 class BiCoords(NamedTuple):
-
-    # x : int
-    # y : int
-    # index     = px
-    # subscript = py
-
     index     : int
     subscript : int
-    x = px
-    y = py
  
     Sorting = SortBiCoords
 
@@ -495,37 +418,14 @@ class BiCoords(NamedTuple):
     first   = (0, 0)
 
 class SortTriCoords(NamedTuple):
-
-    # y: int
-    # x: int
-    # z: int
-    # subscript = py
-    # index     = px
-    # arity     = pz
-
     subscript : int
     index     : int
     arity     : int
-    x = px
-    y = py
-    z = pz
 
 class TriCoords(NamedTuple):
-
-    # x: int
-    # y: int
-    # z: int
-    # index     = px
-    # subscript = py
-    # arity     = pz
-
     index     : int
     subscript : int
     arity     : int
-    x = px
-    y = py
-    z = pz
-
     Sorting = SortTriCoords
     sorting = BiCoords.sorting
 

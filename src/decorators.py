@@ -8,7 +8,7 @@ from functools import partial, reduce
 from inspect import signature
 import operator as opr
 from types import DynamicClassAttribute, FunctionType#, MappingProxyType
-from typing import Any, NamedTuple, ParamSpec, TypeVar, abstractmethod
+from typing import Any, Generic, NamedTuple, ParamSpec, TypeVar, abstractmethod
 #, subclscheck
 #, Collection, Hashable, Sequence
 #import functools
@@ -361,7 +361,7 @@ class metad:
             inst.__init__()
             return inst(target)
 
-        def __init__(self, on: F = F.blank, off = ~F.blank):
+        def __init__(self, on: F = F.blank, off = F.blank):
             "initialize the flag value."
             self.on(on)
             self.off(off)
@@ -373,7 +373,7 @@ class metad:
 
         def on(self, value): self.value |= value
 
-        def off(self, value): self.value &= value
+        def off(self, value): self.value &= ~value
 
         def write(self, target):
             attr = self.attrname
@@ -417,13 +417,13 @@ class lazyget(NamedMember):
         return fget
 
     @staticmethod
-    def prop(method: Callable[[Any], V], attr: str = None) -> property:
+    def prop(method: Callable[[Any], V], attr: str = None) -> property[V]:
         """Return a property with the getter. NB: a setter/deleter should be
         sure to use the correct cache attribute."""
         return property(__class__(attr)(method), doc=method.__doc__)
 
     @staticmethod
-    def dynca(method: Callable[[Any], V], attr: str = None) -> DynamicClassAttribute:
+    def dynca(method: Callable[[Any], V], attr: str = None) -> DynamicClassAttribute[V]:
         return DynamicClassAttribute(__class__(attr)(method), doc=method.__doc__)
 
     def format(self, name: str) -> str:

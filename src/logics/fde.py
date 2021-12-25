@@ -27,6 +27,7 @@ class Meta:
     category_display_order = 10
 
 from containers import qsetf
+from decorators import abstract
 from models import BaseModel
 from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
     Sentence, Atomic, Predicated, Quantified, Operated, Argument, Predicates
@@ -35,11 +36,8 @@ from proof.rules import ClosureRule
 from proof.common import Branch, Node, NodeFilters, Target
 from proof.helpers import AdzHelper, AppliedNodeConstants, AppliedNodeCount, \
     AppliedQuitFlag, FilterHelper, MaxConstantsTracker
-from utils import Decorators
 from errors import ModelValueError
 from typing import Any
-
-abstract = Decorators.abstract
 
 Identity:  Predicate = Predicates.System.Identity
 Existence: Predicate = Predicates.System.Existence
@@ -660,7 +658,7 @@ class QuantifierFatRule(DefaultRule, AdzHelper.Apply):
         node_apply_count = self.apnc[target.branch].get(target.node, 0)
         return float(1 / (node_apply_count + 1))
 
-def sd(s: Sentence, d: bool):
+def sd(s: Sentence, d: bool) -> dict:
     return {'sentence': s, 'designated': d}
 
 class ConjunctionReducingRule(DefaultNodeRule):
