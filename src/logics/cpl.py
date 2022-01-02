@@ -54,7 +54,7 @@ class Model(K.Model):
         return data
 
     def add_access(self, *_):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 class TableauxSystem(K.TableauxSystem):
 

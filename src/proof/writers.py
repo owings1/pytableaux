@@ -63,7 +63,7 @@ class TableauWriter(object):
         return self._write_tableau(tableau)
 
     def _write_tableau(self, tableau):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 templates_basedir = path.join(path.dirname(path.abspath(__file__)), 'templates')
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pytableaux, a multi-logic proof generator.
 # Copyright (C) 2014-2021 Doug Owings.
 # 
@@ -17,6 +18,7 @@
 # ------------------
 #
 # pytableaux - First Degree Entailment Logic
+from __future__ import annotations
 name = 'FDE'
 
 class Meta:
@@ -30,7 +32,7 @@ from containers import qsetf
 from decorators import abstract
 from models import BaseModel
 from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
-    Sentence, Atomic, Predicated, Quantified, Operated, Argument, Predicates
+    Sentence, Atomic, Predicated, Quantified, Operated, Argument
 from proof.tableaux import TableauxSystem as BaseSystem, Rule
 from proof.rules import ClosureRule
 from proof.common import Branch, Node, NodeFilters, Target
@@ -39,8 +41,8 @@ from proof.helpers import AdzHelper, AppliedNodeConstants, AppliedNodeCount, \
 from errors import ModelValueError
 from typing import Any
 
-Identity:  Predicate = Predicates.System.Identity
-Existence: Predicate = Predicates.System.Existence
+Identity:  Predicate = Predicate.System.Identity
+Existence: Predicate = Predicate.System.Existence
 
 class Model(BaseModel):
     """
@@ -326,7 +328,7 @@ class Model(BaseModel):
         elif s.is_predicated:
             self.set_predicated_value(s, value)
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
 
     def set_opaque_value(self, s: Sentence, value):
         if value not in self.truth_values:
@@ -438,7 +440,7 @@ class Model(BaseModel):
                 self.truth_function(Oper.Conditional, b, a)
             )
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
 
     _error_formats = {
         ModelValueError: {

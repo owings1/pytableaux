@@ -18,7 +18,7 @@
 # ------------------
 #
 # pytableaux - tableaux rules module
-from lexicals import Atomic, Quantified, Operated
+# from lexicals import Atomic, Quantified, Operated
 from .common import Branch, Node, Target
 from .tableaux import Rule
 from .helpers import NodeTargetCheckHelper
@@ -56,7 +56,7 @@ class ClosureRule(Rule):
         """
         :meta abstract:
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def nodes_will_close_branch(self, nodes, branch):
         """
@@ -72,9 +72,9 @@ class ClosureRule(Rule):
                 return True
 
     def node_will_close_branch(self, node, branch):
-        raise NotImplementedError()
+        raise NotImplementedError
 
     # NodeTargetCheckHelper implementation
 
     def check_for_target(self, node, branch):
-        raise NotImplementedError()
+        raise NotImplementedError

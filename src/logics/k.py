@@ -18,6 +18,7 @@
 # ------------------
 #
 # pytableaux - Kripke Normal Modal Logic
+from __future__ import annotations
 name = 'K'
 
 class Meta(object):
@@ -327,7 +328,7 @@ class Model(BaseModel):
         elif s.is_predicated:
             self.set_predicated_value(s, value, **kw)
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
 
     def set_opaque_value(self, s: Sentence, value, world = 0, **kw):
         frame = self.world_frame(world)
@@ -448,7 +449,7 @@ class Model(BaseModel):
             return self.value_of_possibility(s, **kw)
         if oper == Oper.Necessity:
             return self.value_of_necessity(s, **kw)
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def value_of_quantified(self, s: Quantified, **kw):
         q = s.quantifier
@@ -456,7 +457,7 @@ class Model(BaseModel):
             return self.value_of_existential(s, **kw)
         elif q == Quantifier.Universal:
             return self.value_of_universal(s, **kw)
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def truth_function(self, operator: Oper, a, b=None):
         return self.fde.truth_function(operator, a, b)
@@ -704,7 +705,7 @@ class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
         return self._get_node_targets(node, branch)
 
     def _get_node_targets(self, node: Node, branch: Branch):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 class ModalNodeRule(DefaultNodeRule):
     Helpers = (AppliedQuitFlag, MaxWorldsTracker)

@@ -91,7 +91,7 @@ master_doc = 'index'
 add_module_names = False
 
 def sphinxcontrib_autodoc_filterparams(fun, param):
-    raise NotImplementedError()
+    raise NotImplementedError
 
 def setup(app):
     docutil.init_sphinx(app, {

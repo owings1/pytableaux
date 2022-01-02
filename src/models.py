@@ -73,7 +73,7 @@ class BaseModel(object):
                     for operand in sentence
                 ]
             )
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstract
     def value_of_quantified(self, sentence: Sentence, **kw): ...

@@ -84,7 +84,7 @@ class fict:
 
     from functools import partial, reduce
     from itertools import chain, repeat, starmap, zip_longest as lzip
-    from containers import setf, setm, qsetf
+    from containers import setf, setm, qsetf, qsetm
     from utils import it_drain as drain#, items_from_keys as dkeys
 
     def flat(): ...
@@ -116,10 +116,8 @@ class Types:
         TriCoords
 
     from containers import \
-        DequeCache,         \
-        MutableSequenceSet, \
-        MutSetSeqPair,      \
-        SequenceSet,    \
+        DequeCache,        \
+        SequenceSetApi,    \
         SetApi
 
     class EnumLookupValue(std.NamedTuple):
@@ -979,7 +977,7 @@ class Predicate(Bases.CoordsItem):
         return tuple({self.spec, self.ident, self.bicoords, self.name})
 
     @d.lazy.prop
-    def refkeys(self) -> Types.SequenceSet[Types.PredicateRef | Predicate]:
+    def refkeys(self) -> fict.qsetf[Types.PredicateRef | Predicate]:
         'The ``refs`` plus the predicate object.'
         return fict.qsetf({*self.refs, self})
 
@@ -1517,7 +1515,7 @@ class LexType(Bases.Enum):
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-    classes: std.ClassVar[Types.SequenceSet[type[Bases.Lexical]]]
+    classes: std.ClassVar[Types.SequenceSetApi[type[Bases.Lexical]]]
 
     rank    : int
     cls     : type[Bases.Lexical]
@@ -1611,14 +1609,15 @@ Types.LexType = LexType
 ##############################################################
 ##############################################################
 
-class Predicates(Types.MutableSequenceSet[Predicate], metaclass = Metas.Abc):
+class Predicates(fict.qsetm[Predicate], metaclass = Metas.Abc):
     'Predicate store'
 
-    def __init__(self, specs: std.Iterable[Types.PredsItemSpec] = None):
-        super().__init__(Types.MutSetSeqPair(set(), []))
+    def __init__(self, values: std.Iterable[Types.PredsItemSpec] = None):
+        # super().__init__(Types.MutSetSeqPair(set(), []))
         self._lookup = {}
-        if specs is not None:
-            self.update(specs)
+        super().__init__(values)
+        # if specs is not None:
+        #     self.update(specs)
 
     _lookup: dict[Types.PredsItemRef, Predicate]
     __slots__ = '_lookup',
@@ -1634,7 +1633,7 @@ class Predicates(Types.MutableSequenceSet[Predicate], metaclass = Metas.Abc):
             return default
 
     # -------------------------------
-    #  MutableSequenceSet hooks.
+    #  MutableSequenceSetApi hooks.
     # -------------------------------
     def _new_value(self, value: Types.PredsItemSpec) -> Predicate:
         'Implement new_value hook. Return a predicate.'
@@ -1666,7 +1665,7 @@ class Predicates(Types.MutableSequenceSet[Predicate], metaclass = Metas.Abc):
             raise errors.DuplicateValueError(pred, *conflict)
 
     # -------------------------------
-    #  Override MutableSequenceSet
+    #  Override MutableSequenceSetApi
     # -------------------------------
     def clear(self):
         super().clear()
@@ -1697,7 +1696,7 @@ class Predicates(Types.MutableSequenceSet[Predicate], metaclass = Metas.Abc):
         # Enum meta hooks.
         # --------------------------
         @classmethod
-        def _member_keys(cls, pred: Predicate) -> Types.SetApi[Types.PredsItemRef]:
+        def _member_keys(cls, pred: Predicate) -> fict.setm[Types.PredsItemRef]:
             'Enum lookup index init hook. Add all predicate keys.'
             return fict.setm(super()._member_keys(pred)) | \
                 pred.refkeys

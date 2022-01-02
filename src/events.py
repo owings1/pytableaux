@@ -72,8 +72,6 @@ class Listener(Callable, metaclass = ABCMeta):
 
 class Listeners(LinkOrderSet[Listener], metaclass = ABCMeta):
 
-    Listener = Listener
-
     emitcount: int
     callcount: int
 
@@ -83,12 +81,11 @@ class Listeners(LinkOrderSet[Listener], metaclass = ABCMeta):
     def event(self) -> EventId:
         return self.__event
 
-    def _genitem_(self, cb: Callable, once = False) -> Listener:
-        Listener = self.Listener
-        if cb in self:
-            return cb
-        if isinstance(cb, Listener):
-            cb = cb.cb
+    def _new_value(self, cb: Callable, once = False) -> Listener:
+        # if cb in self:
+        #     return cb
+        # if isinstance(cb, Listener):
+        #     cb = cb.cb
         return Listener(cb, once, self.event)
 
     def emit(self, *args, **kw) -> int:

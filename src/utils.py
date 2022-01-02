@@ -412,7 +412,6 @@ class BiCoords(NamedTuple):
     Sorting = SortBiCoords
 
     def sorting(self) -> tuple[int, ...]:
-        # return self.Sorting(self.y, self.x, *self[2:])
         return self.Sorting(self.subscript, self.index, *self[2:])
 
     first   = (0, 0)

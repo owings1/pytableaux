@@ -35,7 +35,6 @@ from keyword import iskeyword
 from types import MappingProxyType, ModuleType
 from typing import Any, ClassVar, Final, NamedTuple, Union, cast, final
 
-# abstract = Decorators.abstract
 
 NodeStatValueType = Union[FLAG, int, None]
 NodeStatType = dict[KEY, NodeStatValueType]

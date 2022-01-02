@@ -1,6 +1,7 @@
 from .tutils import BaseSuite
 from pytest import raises
 from errors import *
+from events import EventsListeners, Listener, Listeners, EventEmitter
 from lexicals import *
 
 from containers import *
@@ -30,3 +31,13 @@ class TestSetList(BaseSuite):
 
         with raises(ValueError):
             g(1).append(1)
+class TestListeners(BaseSuite):
+    def test_once_listener(self):
+        e = EventsListeners()
+        e.create('test')
+        def cb(): pass
+        e.once('test', cb)
+        assert len(e['test']) == 1
+        assert cb in e['test']
+        e.emit('test')
+        assert len(e['test']) == 0

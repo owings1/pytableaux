@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - rule helpers module
-from containers import MapAttrView, LinkOrderSet
+from containers import MapAttrView
 from decorators import abstract
 from lexicals import Constant, Sentence
 from models import BaseModel
@@ -80,7 +80,6 @@ class BranchCache(MutableMapping[Branch, T]):
     _valuetype = bool
 
     __cache: dict[Branch, T]
-    __linkset: LinkOrderSet[T]
 
     def __init__(self, *args, **kw):
         pass
@@ -98,13 +97,10 @@ class BranchCache(MutableMapping[Branch, T]):
         return self.__cache[branch]
 
     def __setitem__(self, branch: Branch, value: T):
-        if branch not in self.__cache:
-            self.__linkset.add(branch)
         self.__cache[branch] = value
 
     def __delitem__(self, branch: Branch):
         del(self.__cache[branch])
-        del(self.__linkset[branch])
 
     def __contains__(self, branch: Branch):
         return branch in self.__cache
@@ -113,14 +109,13 @@ class BranchCache(MutableMapping[Branch, T]):
         return len(self.__cache)
 
     def __iter__(self) -> Iterator[Branch]:
-        return iter(self.__linkset)
+        return iter(self.__cache)
 
     def __reversed__(self) -> Iterator[Branch]:
-        return reversed(self.__linkset)
+        return reversed(self.__cache)
 
     def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls)
-        inst.__linkset = LinkOrderSet()
         inst.__cache = {}
         inst.rule = rule
         inst.tab = rule.tableau
