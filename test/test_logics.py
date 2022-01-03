@@ -759,7 +759,7 @@ class TestG3(BaseSuite):
         class Test_Arguments(BaseSuite):
             def test_invalid_demorgan_8_model(self):
                 tab = self.invalid_tab('DeMorgan 8')
-                model = tab.open.first().model
+                model = tab.open[0].model
                 assert model.is_countermodel_to(tab.argument)
 
             def test_valid_demorgan_6(self):
@@ -1412,7 +1412,7 @@ class Test_K(BaseSuite):
             def test_model_branch_proof_deny_antec(self):
                 tab = self.tab('Denying the Antecedent')
                 model = self.m()
-                branch = tab.open.first()
+                branch = tab.open[0]
                 model.read_branch(branch)
                 s = Atomic(0, 0)
                 assert model.value_of(s, world=0) == 'F'
@@ -1809,19 +1809,19 @@ class TestCPL(BaseSuite):
         def test_branch_deny_antec(self):
             tab = self.tab('Denying the Antecedent')
             m = self.m()
-            m.read_branch(tab.open.first())
+            m.read_branch(tab.open[0])
             assert m.value_of(A) == 'F'
             assert m.value_of(A.negate()) == 'T'
 
         def test_branch_extract_disj_2(self):
             tab = self.tab('Extracting a Disjunct 2')
             m = self.m()
-            m.read_branch(tab.open.first())
+            m.read_branch(tab.open[0])
             assert m.value_of(A) == 'T'
             assert m.value_of(A.negate()) == 'F'
             # proof = self.tab('Extracting a Disjunct 2')
             # model = self.m()
-            # branch = proof.open.first()
+            # branch = proof.open[0]
             # model.read_branch(branch)
             # s = Atomic(0, 0)
             # assert model.value_of(s) == 'T'

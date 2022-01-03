@@ -24,8 +24,8 @@ class UnboundVariableError(ParseError):
 class BoundVariableError(ParseError):
     pass
 
-class UnknownNotationError(ParseError):
-    pass
+# class UnknownNotationError(ParseError):
+#     pass
 
 # KeyErrors
 class DuplicateKeyError(KeyError):
@@ -35,13 +35,13 @@ class DuplicateKeyError(KeyError):
 class DuplicateValueError(ValueError):
     pass
 
+class MissingValueError(ValueError):
+    pass
+
 class ValueMismatchError(ValueError):
     def __init__(self, lhs, rhs, /, *args, **kw):
         msg = "'%s' does not match '%s'" % (lhs, rhs)
         super().__init__(msg, *args, **kw)
-    pass
-
-class NotFoundError(ValueError):
     pass
 
 class ConfigError(ValueError):
@@ -54,3 +54,8 @@ class DenotationError(ModelValueError):
     pass
 
 # TypeErrors
+
+# Runtime Errors
+
+class SanityError(RuntimeError):
+    pass

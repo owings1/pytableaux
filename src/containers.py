@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from decorators import operd, metad, wraps #deleg, 
-from errors import DuplicateKeyError, DuplicateValueError
-from utils import ABCMeta, IndexType, NOARG, cat, instcheck, notsubclscheck, \
-    wrparens, wraprepr \
-    # orepr, subclscheck
+from decorators import operd #, metad, wraps #deleg, 
+from errors import DuplicateKeyError, DuplicateValueError, MissingValueError, SanityError
+from utils import ABCMeta, IndexType, instcheck, notsubclscheck, \
+    wraprepr \
+    # cat, wrparens, orepr, subclscheck, NOARG
 
 from collections import deque
 from collections.abc import Callable, Collection, Hashable, Iterable, Iterator, \
     Mapping, MappingView, Sized, Reversible
 import collections.abc as bases
+import enum
 import itertools
 import operator as opr
 from types import MappingProxyType as MapProxy
@@ -34,7 +35,8 @@ __all__ = (
     'SequenceApi', 'MutableSequenceApi',
     'SequenceSetApi', 'MutableSequenceSetApi',
     'qsetf', 'qsetm', # MutSetSeqPair,
-    # LinkSequenceApi, LinkSequenceView, LinkOrderSet # LinkEntry
+    # MutableLinkSequenceSetApi, LinkSequenceView, # LinkEntry
+    'linqset',
     # MapAttrView
     # DequeCache
 )
@@ -44,9 +46,10 @@ class Abc(metaclass = ABCMeta):
 class Copyable(Abc):
 
     @abstractmethod
-    def __copy__(self): ...
+    def __copy__(self):
+        raise NotImplementedError
 
-    def copy(self):
+    def copy(self: T) -> T:
         return self.__copy__()
 
 # -------------- Sequence ---------------#
@@ -57,20 +60,30 @@ class SequenceApi(bases.Sequence[V], Copyable):
     __slots__ = ()
 
     @abstractmethod
-    def __add__(self, other): ...
+    def __add__(self, other):
+        return NotImplemented
+
+    def _absindex(self, index: int, verify = True) -> int:
+        'Normalize to positive/absolute index.'
+        instcheck(index, int)
+        if index < 0:
+            index = len(self) + index
+        if verify and (index >= len(self) or index < 0):
+            raise IndexError('sequence index out of range')
+        return index
 
 class MutableSequenceApi(bases.MutableSequence[V], SequenceApi[V]):
     'Fusion interface of collections.abc.MutableSequence and built-in list.'
 
     __slots__ = ()
 
-    extend = operd.apply(opr.iadd, info = list.extend)
+    @abstractmethod
+    def sort(self, /, *, key = None, reverse = False):
+        raise NotImplementedError
 
     @abstractmethod
-    def sort(self, /, *, key = None, reverse = False): ...
-
-    @abstractmethod
-    def reverse(self): ...
+    def reverse(self):
+        raise NotImplementedError
 
 # -------------- Set ---------------#
 
@@ -155,14 +168,14 @@ class SequenceSetApi(SetApi[V], SequenceApi[V]):
 
     __slots__ = ()
 
-    def count(self, value: V) -> int:
+    def count(self, value: V, /) -> int:
         'Returns 1 if in the set, else 0.'
         return int(value in self)
 
-    def index(self, value: V, start = 0, stop = None) -> int:
+    def index(self, value: V, start = 0, stop = None, /) -> int:
         'Get the index of the value in the set.'
         if value not in self:
-            raise ValueError('%s is not in the set' % value)
+            raise MissingValueError(value)
         return super().index(value, start, stop)
 
     __add__ = operd.apply(opr.or_)
@@ -170,7 +183,7 @@ class SequenceSetApi(SetApi[V], SequenceApi[V]):
     @abstractmethod
     def __contains__(self, value):
         'Set-based `contains` implementation.'
-        ...
+        return False
 
     ImplNotes: Annotated[dict, dict(
         implement = {
@@ -217,14 +230,14 @@ class MutableSequenceSetApi(MutableSequenceApi[V], MutableSetApi[V], SequenceSet
         'After remove hook.'
 
     def add(self, value: V):
-        'Calls ``append()`` and catches ``DuplicateValueError``.'
-        try: self.append(value)
-        except DuplicateValueError: pass
+        'Append if value is not already a member.'
+        if value not in self:
+            self.append(value)
 
     def discard(self, value: V):
-        'Calls ``remove()`` and catches ``ValueError``.'
-        try: self.remove(value)
-        except ValueError: pass
+        'Remove if value is a member.'
+        if value in self:
+            self.remove(value)
 
     ImplNotes: Annotated[dict, dict(
         implement = {
@@ -342,9 +355,14 @@ class qsetm(MutableSequenceSetApi[V], qsetf[V]):
             self._after_remove(value)
 
     def __setitem__(self, index: int, value: V):
-        """Set an the index to a value. Only ``int`` supported, not slice.
-        Raises ``DuplicateValueError``."""
-        instcheck(index, int)
+        'Set value by index. Raises ``DuplicateValueError``. Slice not implemented.'
+        try:
+            instcheck(index, int)
+        except TypeError:
+            if isinstance(index, slice):
+                # TODO: implement slice
+                raise NotImplementedError
+            raise
         old = self[index]
         value = self._new_value(value)
         if value in self:
@@ -412,58 +430,35 @@ class qsetm(MutableSequenceSetApi[V], qsetf[V]):
         }
     )]
 
-class LinkSequenceApi(SequenceApi[V], Abc):
-    'Abstract class for a linked sequence view.'
+# ----------- Links ------------------ #
 
-    __slots__ = ()
+class LinkSub(enum.Enum):
+    'Link directional/subscript enum.'
 
-    @abstractmethod
-    def first(self) -> V: ...
+    prev = -1
+    self = 0
+    next = 1
 
-    @abstractmethod
-    def last(self) -> V: ...
+    def __neg__(self) -> LinkSub:
+        return __class__(-self.value)
 
-    @abstractmethod
-    def iterfrom(self, value: V, /, reverse = False) -> Iterator[V]: ...
+    def __int__(self):
+        return self.value
 
-class LinkSequenceView(LinkSequenceApi[T]):
+    def __add__(self, value) -> LinkSub:
+        return __class__(self.value + int(value))
 
-    __slots__ = ()
+    def __radd__(self, value) -> int:
+        return self.value + value
 
-    def __new__(cls, base: LinkSequenceApi):
+    def __sub__(self, value) -> LinkSub:
+        return __class__(self.value - int(value))
 
-        class ViewProxy(LinkSequenceView):
-            __slots__ = ()
-            def __len__(self):
-                return len(base)
-            def __iter__(self) -> Iterator[T]:
-                return iter(base)
-            def __reversed__(self) -> Iterator[T]:
-                return reversed(base)
-            def __contains__(self, item):
-                return item in base
-            def __getitem__(self, key) -> T:
-                return base[key]
-            def first(self, *a) -> T:
-                return base.first(*a)
-            def last(self, *a) -> T:
-                return base.last((a))
-            def iterfrom(self, *a, **k):
-                return base.iterfrom(*a, **k)
-            def __add__(self, other):
-                return LinkSequenceView(base + other)
-            def __copy__(self):
-                return self.__class__()
-            def __repr__(self):
-                return base.__class__.__repr__(self)
-            __new__ = object.__new__
-        ViewProxy.__qualname__ = '.'.join(
-            (base.__class__.__qualname__, ViewProxy.__name__)
-        )
-        return ViewProxy()
+    def __rsub__(self, value) -> int:
+        return self.value - value
 
-class LinkEntry(Generic[V], Abc):
-    'A value container with prev/next attributes.'
+class LinkEntry(Generic[V], Copyable):
+    'Link value container with prev/next attributes.'
 
     value: V
     prev: LinkEntry[V]
@@ -471,7 +466,11 @@ class LinkEntry(Generic[V], Abc):
 
     __slots__ = 'prev', 'next', 'value'
 
-    def __init__(self, value, prev = None, next = None):
+    @property
+    def self(self: T) -> T:
+        return self
+
+    def __init__(self, value, prev: LinkEntry[V] = None, next: LinkEntry[V] = None):
         self.value = value
         self.prev = prev
         self.next = next
@@ -482,276 +481,458 @@ class LinkEntry(Generic[V], Abc):
             self.value == other.value
         )
 
-    def dir(self, n):
-        if n == 1: return self.next
-        if n == -1: return self.prev
-        if isinstance(n, int): raise ValueError(n)
-        raise TypeError(n)
+    def __getitem__(self, sub: LinkSub) -> LinkEntry[V] | None:
+        'Get previous, self, or next with ``LinkSub`` enum.'
+        return getattr(self, LinkSub(sub).name)
 
-    def __hash__(self):
-        return hash(self.value)
+    def __setitem__(self, sub: LinkSub, link: LinkEntry[V]):
+        'Set previous, self, or next with ``LinkSub`` enum.'
+        setattr(self, LinkSub(sub).name, link)
+
+    def __copy__(self):
+        inst = object.__new__(self.__class__)
+        inst.value = self.value
+        inst.prev = self.prev
+        inst.next = self.next
+        return inst
+
+    def invert(self):
+        'Invert prev and next attributes in place.'
+        self.prev, self.next = self.next, self.prev
 
     def __repr__(self):
         return wraprepr(self, self.value)
-        # return cat(self.__class__.__name__, wrparens(self.value.__repr__()))
 
-class LinkOrderSet(LinkSequenceApi[T]):
+class LinkHashEntry(LinkEntry[V]):
 
-    _link_map: dict[T, LinkEntry[T]]
-    _link_first: LinkEntry[T]
-    _link_last: LinkEntry[T]
-    _link_viewcls: type[LinkSequenceView[T]]
+    __slots__ = ()
 
-    slots = '_link_first', '_link_last', '_link_map', '_link_viewcls'
+    def __eq__(self, other):
+        return super().__eq__(other)
 
-    def __init__(self, values: Iterable[T] = None, /):
-        self._link_first = self._link_last = None
-        self._link_map = {}
-        if values is not None:
-            self.extend(values)
+    def __hash__(self):
+        return hash(self.value)
+ 
+class LinkIterApi(Iterator[T]):
+    'Linked sequence iterator interface.'
 
-    def _new_value(self, value) -> T:
-        """Overridable hook method to transform an value before add/remove methods.
-        The method must take at least one positional argument. Iterating methods
-        such as ``extend`` iterate over the first argument, and call _new_value
-        with the remainder of the arguments for each value."""
-        return value
+    _link: LinkEntry
+    _sub: LinkSub
 
-    # @metad.temp
-    # def itemhook(item_method: Callable[[T], R]) -> Callable[[T], R]:
-    #     'Wrapper for add/remove methods that calls the _new_value hook.'
-    #     @wraps(item_method)
-    #     def wrap(self: LinkOrderSet, value, *args, **kw):
-    #         value = self._new_value(value, *args, **kw)
-    #         return item_method(self, value)
-    #     return wrap
+    __slots__ = '_link', '_sub'
 
-    # @metad.temp
-    # def newlink(link_method: Callable[[LinkEntry[T]], R]) -> Callable[[T], R]:
-    #     """Wrapper for add item methods. Ensures the value is not already in the
-    #     collection, and creates a LinkEntry. If the collection is empty, sets
-    #     first and last, and returns. Otherwise, calls the original method with
-    #     the link as the argument."""
-    #     @wraps(link_method)
-    #     def prep(self: LinkOrderSet, value):
-    #         if value in self:
-    #             raise DuplicateValueError(value)
-    #         link = self._link_map[value] = LinkEntry(value)
-    #         if self._link_first is None:
-    #             self._link_first = self._link_last = link
-    #             return
-    #         if self._link_first is self._link_last:
-    #             self._link_first.next = link
-    #         link_method(self, link)
-    #     return prep
+    def __init__(self, link: LinkEntry, sub: LinkSub):
+        self._link = link
+        self._sub = sub
 
-    # -----
-    def __getitem__(self, index: int):
-        instcheck(index, int)
-        if index < 0:
-            index = len(self) + index
-        if index >= len(self):
-            raise IndexError('sequence index out of range')
-        if index > len(self) / 2:
-            itsrc = reversed(self)
-            index = len(self) - index - 1
+    def __next__(self) -> T:
+        link = self._link
+        if link is None:
+            raise StopIteration
+        self._link = link[self._sub]
+        return self._get(link)
+
+    def __iter__(self):
+        return self
+
+    @abstractmethod
+    def _get(self, link: LinkEntry) -> T:
+        raise StopIteration
+
+class LinkEntryIter(LinkIterApi[LinkEntry[V]]):
+    'Linked sequence iterator over LinkEntry objects.'
+
+    __slots__ = ()
+
+    def _get(self, link: LinkEntry[V]) -> LinkEntry[V]:
+        return link
+
+class LinkValueIter(LinkIterApi[V]):
+    'Linked sequence iterator over values.'
+
+    __slots__ = ()
+
+    def _get(self, link: LinkEntry[V]) -> V:
+        return link.value
+
+# ----------- LinkSequence ------------------ #
+
+class LinkSequenceApi(SequenceApi[V]):
+    'Linked sequence read interface.'
+
+    __slots__ = ()
+
+    @property
+    @abstractmethod
+    def _link_first_(self) -> LinkEntry[V]:
+        return None
+
+    @property
+    @abstractmethod
+    def _link_last_(self) -> LinkEntry[V]:
+        return None
+
+    def __iter__(self) -> Iterator[V]:
+        return LinkValueIter(self._link_first_, LinkSub.next)
+
+    def __reversed__(self) -> Iterator[V]:
+        return LinkValueIter(self._link_last_, LinkSub.prev)
+
+    def __getitem__(self, index: int) -> V:
+        'Get element by index. Slice not implemented.'
+        try:
+            instcheck(index, int)
+        except TypeError:
+            if isinstance(index, slice):
+                # TODO: Implement slice
+                raise NotImplementedError
+            raise
+
+        return self._link_at(index).value
+
+    def _link_at(self, index: int) -> LinkHashEntry[V]:
+        'Get a link entry by index.'
+
+        index = self._absindex(index)
+
+        # Direct access for first/last.
+        if index == 0:
+            return self._link_first_
+        if index == len(self) - 1:
+            return self._link_last_
+
+        # TODO: warn performance
+
+        # Choose best iteration direction.
+        len_ = len(self)
+        if index > len_ / 2:
+            it = LinkEntryIter(self._link_last_, LinkSub.prev)
+            index = len_ - index - 1
         else:
-            itsrc = self
-        for i, value in enumerate(itsrc):
+            it = LinkEntryIter(self._link_first_, LinkSub.next)
+
+        # Advance iterator.
+        for i, link in enumerate(it):
             if i == index:
-                return value
+                return link
 
+        raise SanityError
 
+    def __repr__(self):
+        return wraprepr(self, list(self))
 
-    # @itemhook
-    # @newlink
-    # def append(self, link: LinkEntry[T]):
-    #     if self._link_first is self._link_last:
-    #         self._link_first.next = link
-    #     link.prev = self._link_last
-    #     link.prev.next = link
-    #     self._link_last = link
+class LinkSequenceView(LinkSequenceApi[V]):
+    'Linked sequence view proxy.'
 
-    def append(self, value, *args, **kw):
-        if len(self):
-            self.insert_after(self.last(), value, *args, **kw)
-            return
-        value = self._new_value(value, *args, **kw)
-        self._link_first = self._link_last = self._link_map[value] = LinkEntry(value)
-        
-    def insert_before(self, before_value: V, value, *args, **kw):
+    __slots__ = ()
+
+    def __new__(cls, base: LinkSequenceApi):
+
+        def getfirst(_):
+            return base._link_first_
+
+        def getlast(_):
+            return base._link_last_
+
+        basecls = base.__class__
+
+        class proxy(LinkSequenceView[V]):
+
+            __slots__ = ()
+
+            _link_first_ = property(getfirst)
+            _link_last_  = property(getlast)
+
+            __len__      = base.__len__
+            __contains__ = base.__contains__
+            __getitem__  = base.__getitem__
+
+            __repr__ = basecls.__repr__
+            __new__  = object.__new__
+
+            def __add__(self, other):
+                return cls(base + other)
+
+            def __copy__(self):
+                return self
+
+            def __deepcopy__(self, memo):
+                memo[id(self)] = self
+                return self
+
+        proxy.__qualname__ = '.'.join(
+            (basecls.__qualname__, proxy.__name__)
+        )
+        proxy.__name__ = cls.__name__
+        return proxy()
+
+class MutableLinkSequenceApi(LinkSequenceApi[V], MutableSequenceApi[V]):
+    'Linked sequence write interface.'
+
+    __slots__ = '__viewcls',
+
+    @abstractmethod
+    def put_before(self, neighbor: V, value: V):
+        'Insert a value before another value.'
+        raise NotImplementedError
+
+    @abstractmethod
+    def put_after(self, neighbor: V, value: V):
+        'Insert a value after another value.'
+        raise NotImplementedError
+
+    @abstractmethod
+    def remove(self, value: V):
+        'Remove element by value.'
+        raise NotImplementedError
+
+    def __delitem__(self, index: int):
+        'Remove element by index. Slice not yet implemented.'
         try:
-            before_link = self._link_map[before_value]
-        except KeyError:
-            raise ValueError(before_value) from None
-        value = self._new_value(value, *args, **kw)
-        if value in self:
-            raise DuplicateValueError(value)
-        link = self._link_map[value] = LinkEntry(value, before_link.prev, before_link)
-        if before_link.prev is not None:
-            before_link.prev.next = link
-        before_link.prev = link
-        if link.prev is None:
-            self._link_first = link
+            instcheck(index, int)
+        except TypeError:
+            if isinstance(index, slice):
+                # TODO: Implement slice
+                raise NotImplementedError
+            raise
+        self.remove(self[index])
 
-    def insert_after(self, after_value: V, value, *args, **kw):
-        try:
-            after_link = self._link_map[after_value]
-        except KeyError:
-            raise ValueError(after_value) from None
-        value = self._new_value(value, *args, **kw)
-        if value in self:
-            raise DuplicateValueError(value)
-        link = self._link_map[value] = LinkEntry(value, after_link, after_link.next)
-        if after_link.next is not None:
-            after_link.next.prev = link
-        after_link.next = link
-        if link.next is None:
-            self._link_last = link
+    def view(self) -> LinkSequenceApi[V]:
+        'Return a read-only view proxy.'
+        try: return self.__viewcls()
+        except AttributeError: pass
+        view = LinkSequenceView(self)
+        self.__viewcls = view.__class__
+        return view
 
-    # @itemhook
-    def remove(self, value: T):
-        try:
-            link = self._link_map.pop(value)
-        except KeyError:
-            raise ValueError(value) from None
-        if link.prev is None:
-            if link.next is None:
-                # Empty
-                self._link_first = self._link_last = None
-            else:
-                # Remove first
-                link.next.prev = None
-                self._link_first = link.next
-        else:
-            if link.next is None:
-                # Remove last
-                link.prev.next = None
-                self._link_last = link.prev
-            else:
-                # Remove in-between
-                link.prev.next = link.next
-                link.next.prev = link.prev
-        # del self[value]
+# ----------- LinkSequenceSet ------------------ #
 
-    def clear(self):
-        self._link_map.clear()
-        self._link_first = self._link_last = None
+class MutableLinkSequenceSetApi(MutableLinkSequenceApi[V], LinkSequenceApi[V], MutableSequenceSetApi[V]):
+    'Linked sequence set read/write interface.'
 
-    # def __delitem__(self, item: T | LinkEntry[T]):
-    #     # TODO: convert to sequence index
-    #     self.remove(item)
+    __slots__ = ()
 
+    @abstractmethod
+    def _link_of(self, value: V) -> LinkEntry[V]:
+        'Get a link entry by value.'
+        raise NotImplementedError
 
+    def iter_from_value(self, value: V, /, reverse = False) -> Iterator[V]:
+        'Return an iterator starting from ``value``.'
+        return LinkValueIter(self._link_of(value), LinkSub(-1 if reverse else 1))
 
-    # -----
+class linqset(MutableLinkSequenceSetApi[V]):
+    'MutableLinkSequenceSetApi implementation.'
+
+    _link_first : LinkHashEntry[V]
+    _link_last  : LinkHashEntry[V]
+    _link_map   : dict[V, LinkHashEntry[V]]
+
+    __slots__ = '_link_first', '_link_last', '_link_map'
+
+    def __init__(self, values: Iterable[V] = None, /):
+        self._link_map = {}
+        self._link_first = None
+        self._link_last = None
+        if values is not None:
+            self.update(values)
+
+    @property
+    def _link_first_(self) -> LinkEntry[V]:
+        return self._link_first
+
+    @property
+    def _link_last_(self) -> LinkEntry[V]:
+        return self._link_last
 
     def __len__(self):
         return len(self._link_map)
 
-    def __contains__(self, item: T | LinkEntry[T]):
-        return item in self._link_map
+    def __contains__(self, value: V):
+        return value in self._link_map
 
-    def __iter__(self) -> Iterator[T]:
-        if len(self):
-            yield from self.iterfrom(self.first())
+    def _link_of(self, value: V) -> LinkHashEntry[V]:
+        'Get a link entry by value.'
+        if value in self._link_map:
+            return self._link_map[value]
+        raise MissingValueError(value)
 
-    def __reversed__(self) -> Iterator[T]:
-        if len(self):
-            yield from self.iterfrom(self.last(), reverse = True)
+    def __setitem__(self, index: int, value: V):
+        'Set value by index. Raises ``DuplicateValueError``. Slice not implemented.'
+        try:
+            instcheck(index, int)
+        except TypeError:
+            if isinstance(index, slice):
+                # TODO: Implement slice
+                raise NotImplementedError
+            raise
 
-    def iterfrom(self, value: T, /, reverse = False) -> Iterator[T]:
-        cur = self._link_map[value]
-        dir_ = -1 if reverse else 1
-        while cur:
-            value = cur.value
-            yield value
-            cur = cur.dir(dir_)
+        # Check for duplicate.
+        link_old = self._link_at(index)
+        value = self._new_value(value)
+        if value in self:
+            if value == link_old.value:
+                return
+            raise DuplicateValueError(value)
 
-    def first(self, default = NOARG) -> T:
-        if len(self):
-            return self._link_first.value
-        if default is not NOARG:
-            return default
-        raise IndexError('Empty collection')
+        # Create link.
+        link = link_old.copy()
+        link.value = value
 
-    def last(self, default = NOARG) -> T:
-        if len(self):
-            return self._link_last.value
-        if default is not NOARG:
-            return default
-        raise IndexError('Empty collection')
+        # Remove old element.
+        self.remove(link_old.value)
 
-    def view(self) -> LinkSequenceApi[T]:
-        try: return self._link_viewcls()
-        except AttributeError: pass
-        view = LinkSequenceView(self)
-        self._link_viewcls = view.__class__
-        return view
+        # Add new element.
+        self._before_add(value)
+        if link.prev is None:
+            # New first element.
+            self._link_first = link
+        else:
+            # Connect to previous element.
+            link.prev.next = link
+        if link.next is None:
+            # New last element.
+            self._link_last = link
+        else:
+            # Connect to next element.
+            link.next.prev = link
+        self._link_map[value] = link
+        self._after_add(value)
+
+    def insert(self, index: int, value: V):
+        'Insert a value before an index. Raises ``DuplicateValueError``.'
+        index = self._absindex(index, False)
+
+        if len(self) == 0:
+            # Singleton.
+            value = self._new_value(value)
+            # Create link.
+            link = LinkHashEntry(value)
+            # Add new element.
+            self._before_add(value)
+            self._link_first = link
+            self._link_last = link
+            self._link_map[value] = link
+            self._after_add(value)
+            return
+
+        if index >= len(self):
+            # Append.
+            self._put_common(LinkSub.next, self._link_last_, value)
+            return
+
+        if index <= 0:
+            # Prepend.
+            self._put_common(LinkSub.prev, self._link_first_, value)
+            return
+
+        # TODO: warn performance
+
+        # In-between.
+        self._put_common(LinkSub.prev, self._link_at(index), value)
+
+    def remove(self, value: V):
+        'Remove element by value.'
+        link = self._link_of(value)
+        self._before_remove(value)
+        if link.prev is None:
+            if link.next is None:
+                # No more elements.
+                self._link_first = None
+                self._link_last = None
+            else:
+                # Promote new first element.
+                link.next.prev = None
+                self._link_first = link.next
+        else:
+            if link.next is None:
+                # Promote new last element.
+                link.prev.next = None
+                self._link_last = link.prev
+            else:
+                # Patch the gap.
+                link.prev.next = link.next
+                link.next.prev = link.prev
+        del self._link_map[value]
+        self._after_remove(value)
+
+    def reverse(self):
+        'Reverse in place.'
+        link = self._link_last
+        while link is not None:
+            link.invert()
+            link = link.next
+        self._link_first, self._link_last = self._link_last, self._link_first
+
+    def sort(self, /, *, key = None, reverse = False):
+        'Sort in place.'
+        if len(self) < 2:
+            return
+        values = sorted(self, key = key, reverse = reverse)
+        it = iter(values)
+        link = None
+        try:
+            while True:
+                link_prev = link
+                link = self._link_of(next(it))
+                link.prev = link_prev
+                if link_prev is not None:
+                    link_prev.next = link
+
+        except StopIteration:
+            link.next = None
+        self._link_first = self._link_of(values[0])
+        self._link_last = self._link_of(values[-1])
+
+    def put_before(self, neighbor: V, value: V):
+        'Insert a value before another value. Raises ``DuplicateValueError``.'
+        self._put_common(LinkSub.prev, self._link_of(neighbor), value)
+
+    def put_after(self, neighbor: V, value: V):
+        'Insert a value after another value. Raises ``DuplicateValueError``.'
+        self._put_common(LinkSub.next, self._link_of(neighbor), value)
+
+    def clear(self):
+        self._link_map.clear()
+        self._link_first = None
+        self._link_last = None
 
     # -------
 
-    def extend(self, values: Iterable[T], *args, **kw):
-        'Iterable version of ``append()``.'
-        for value in values:
-            self.append(value, *args, **kw)
+    def _put_common(self, sub: LinkSub, link_neigh: LinkHashEntry[V], value: V, /):
+        'Generic put before/after value method. Raises ``DuplicateValueError``.'
 
-    def add(self, value: T, *args, **kw):
-        'Alias for ``append()``.'
-        return self.append(value, *args, **kw)
+        # Check for duplicate.
+        value = self._new_value(value)
+        if value in self:
+            raise DuplicateValueError(value)
 
-    # TODO: temp until SequenceSetApi is added to bases
-    def __add__(self, other):
-        return self._from_iterable(itertools.chain(self, other))
-    @classmethod
-    def _from_iterable(cls, it):
-        return cls(it)
-    def __copy__(self) -> LinkOrderSet[T]:
-        return self.__class__(self)
+        # Arg checks.
+        sub = LinkSub(sub)
+        if sub is LinkSub.self:
+            raise NotImplementedError
+        instcheck(link_neigh, LinkHashEntry)
 
-    # def __repr__(self):
-    #     return orepr(self,
-    #         len   = len(self),
-    #         first = self.first(),
-    #         last  = self.last(),
-    #     )
+        # Create link.
+        link = LinkHashEntry(value)
+        link[sub] = link_neigh[sub]
+        link[-sub] = link_neigh
 
-    # def pop(self) -> T:
-    #     'Remove and return the last value.'
-    #     value = self.last()
-    #     del self[value]
-    #     return value
-
-    # def shift(self) -> T:
-    #     'Remove and return the first value.'
-    #     value = self.first()
-    #     del self[value]
-    #     return value
-
-    # def prependall(self, values: Iterable[T], *args, **kw):
-    #     'Iterable version of ``prepend()``.'
-    #     for value in values:
-    #         self.prepend(value, *args, **kw)
-
-
-    # def update(self, values: Iterable[T], *args, **kw):
-    #     'Alias for ``extend()``.'
-    #     return self.extend(values, *args, **kw)
-
-    # def discard(self, value: T, *args, **kw):
-    #     'KeyError safe version of ``remove()``.'
-    #     try: self.remove(value, *args, **kw)
-    #     except KeyError: pass
-
-
-    # @itemhook
-    # @newlink
-    # def prepend(self, link: LinkEntry[T]):
-    #     if self._link_first is self._link_last:
-    #         self._link_last.prev = link
-    #     link.next = self._link_first
-    #     link.next.prev = link
-    #     self._link_first = link
+        # Add new element.
+        self._before_add(value)
+        if link_neigh[sub] is not None:
+            # Point neighbor's old neighbor to new link.
+            link_neigh[sub][-sub] = link
+        # Point neighbor to new link.
+        link_neigh[sub] = link
+        if link[sub] is None:
+            # Promote new first/last element.
+            if sub is LinkSub.prev:
+                self._link_first = link
+            else:
+                self._link_last = link
+        self._link_map[value] = link
+        self._after_add(value)
 
 class MapAttrView(MappingView[str, V], Mapping[str, V], Copyable):
     'A Mapping view with attribute access.'

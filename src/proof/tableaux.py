@@ -17,13 +17,13 @@
 # ------------------
 #
 # pytableaux - tableaux module
-from containers import LinkOrderSet, qsetf
+from containers import linqset, qsetf
 from .common import FLAG, KEY, Branch, Node, NodeType, RuleEvents, Target
 from decorators import abstract
 from lexicals import Argument, Sentence
 from utils import Decorators, StopWatch, \
     LogicRef, EmptySet, get_logic, orepr
-from errors import DuplicateKeyError, IllegalStateError, NotFoundError, TimeoutError
+from errors import DuplicateKeyError, IllegalStateError, MissingValueError, TimeoutError
 from events import EventId, Events, EventEmitter
 
 from abc import ABCMeta
@@ -802,7 +802,7 @@ class TabRules(Sequence[Rule], TabRulesBase):
             return idx[ref.__class__.__name__]
         if len(default):
             return default[0]
-        raise NotFoundError(ref)
+        raise MissingValueError(ref)
 
     def __init__(self, tableau: AbstractTableau):
         common = TabRulesSharedData(tableau, self)
@@ -823,7 +823,7 @@ class TabRules(Sequence[Rule], TabRulesBase):
             return list(self)[key]
         try:
             return self.get(key)
-        except NotFoundError:
+        except MissingValueError:
             raise KeyError(key) from None
 
     def __getattr__(self, attr):
@@ -903,7 +903,7 @@ class Tableau(AbstractTableau):
         self.__logic = self.__argument = None
         self.__flag = FLAG.PREMATURE
         self.__branch_list = []
-        self.__open  = LinkOrderSet()
+        self.__open  = linqset()
         self.__branchstat: dict[Branch, BranchStat] = {}
         self.__rules = TabRules(self)
 

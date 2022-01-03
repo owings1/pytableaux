@@ -1,4 +1,4 @@
-from containers import LinkOrderSet
+from containers import linqset
 from decorators import metad, raisen
 from utils import ABCMeta, orepr
 
@@ -70,7 +70,7 @@ class Listener(Callable, metaclass = ABCMeta):
 
     __delattr__ = raisen(AttributeError)
 
-class Listeners(LinkOrderSet[Listener], metaclass = ABCMeta):
+class Listeners(linqset[Listener]):
 
     emitcount: int
     callcount: int
@@ -81,12 +81,16 @@ class Listeners(LinkOrderSet[Listener], metaclass = ABCMeta):
     def event(self) -> EventId:
         return self.__event
 
-    def _new_value(self, cb: Callable, once = False) -> Listener:
-        # if cb in self:
-        #     return cb
-        # if isinstance(cb, Listener):
-        #     cb = cb.cb
-        return Listener(cb, once, self.event)
+    # def _new_value(self, cb: Callable, once = False) -> Listener:
+    #     # if cb in self:
+    #     #     return cb
+    #     # if isinstance(cb, Listener):
+    #     #     cb = cb.cb
+    #     return Listener(cb, once, self.event)
+
+    def _before_add(self, value):
+        if not isinstance(value, Listener):
+            raise TypeError(type(value))
 
     def emit(self, *args, **kw) -> int:
         self.emitcount += 1
@@ -138,7 +142,7 @@ class EventsListeners(MutableMapping[EventId, Listeners], metaclass = ABCMeta):
     def normargs(feventmod: Callable) -> Callable:
         def normalize(self, *args, **kw):
             if not (args or kw) or (args and kw):
-                raise TypeError()
+                raise TypeError
             arg, *cbs = (kw,) if kw else args
             if isinstance(arg, EventId):
                 feventmod(self, arg, *cbs)
@@ -149,16 +153,18 @@ class EventsListeners(MutableMapping[EventId, Listeners], metaclass = ABCMeta):
                         cbs = (cbs,)
                     feventmod(self, event, *cbs)
                 return
-            raise TypeError()
+            raise TypeError
         return normalize
 
     @normargs
     def on(self, event: EventId, *cbs: Callable):
-        self[event].extend(cbs)
+        # self[event].extend(cbs)
+        self[event].extend(Listener(cb, False, event) for cb in cbs)
 
     @normargs
     def once(self, event: EventId, *cbs: Callable):
-        self[event].extend(cbs, once = True)
+        # self[event].extend(cbs, once = True)
+        self[event].extend(Listener(cb, True, event) for cb in cbs)
 
     @normargs
     def off(self, event: EventId, *cbs: Callable):
