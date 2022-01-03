@@ -17,11 +17,11 @@
 # ------------------
 #
 # pytableaux - rule helpers module
-from containers import MapAttrView
+from containers import EMPTY_SET, MapAttrView
 from decorators import abstract
 from lexicals import Constant, Sentence
 from models import BaseModel
-from utils import EmptySet, orepr
+from utils import orepr
 from .common import Access, Branch, Events, Node, Target
 from .tableaux import Rule, Tableau
 
@@ -61,7 +61,7 @@ class AdzHelper(object):
         try:
             rules = self.tableau.rules.closure
         except AttributeError:
-            rules = EmptySet
+            rules = EMPTY_SET
         close_count = 0
         for nodes in target['adds']:
             nodes = tuple(Node(node) for node in nodes)
@@ -345,7 +345,7 @@ class VisibleWorldsIndex(BranchDictCache):
         :param int w2:
         :rtype: bool
         """
-        return access[1] in self[branch].get(access[0], EmptySet)
+        return access[1] in self[branch].get(access[0], EMPTY_SET)
 
     def intransitives(self, branch: Branch, w1: int, w2: int) -> set[int]:
         """
@@ -354,8 +354,8 @@ class VisibleWorldsIndex(BranchDictCache):
         """
         # TODO: can we make this more efficient? for each world pair,
         #       track the intransitives?
-        return self[branch].get(w2, EmptySet).difference(
-            self[branch].get(w1, EmptySet)
+        return self[branch].get(w2, EMPTY_SET).difference(
+            self[branch].get(w1, EMPTY_SET)
         )
 
     def __new__(cls, rule: Rule, *args):
@@ -464,7 +464,7 @@ class FilterHelper(FilterNodeCache):
         self.__fmap = {}#OrderedDict()
         self.filters = MapAttrView(self.__fmap)
         self.__to_discard = set()
-        rawvalue = getattr(rule, self.__class__.clsattr_node, EmptySet)
+        rawvalue = getattr(rule, self.__class__.clsattr_node, EMPTY_SET)
         for item in rawvalue:
             if isclass(item):
                 item = (None, item)
@@ -798,7 +798,7 @@ class AppliedNodeConstants(object):
                     'applied'   : set(),
                     'unapplied' : set(self.consts[branch]),
                 }
-        consts = node['sentence'].constants if node.has('sentence') else EmptySet
+        consts = node['sentence'].constants if node.has('sentence') else EMPTY_SET
         for c in consts:
             if c not in self.consts[branch]:
                 for node in self.node_states[branch]:

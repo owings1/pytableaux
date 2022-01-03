@@ -17,12 +17,12 @@
 # ------------------
 #
 # pytableaux - tableaux module
-from containers import linqset, qsetf
+from containers import EMPTY_SET, linqset, qsetf
 from .common import FLAG, KEY, Branch, Node, NodeType, RuleEvents, Target
 from decorators import abstract
 from lexicals import Argument, Sentence
 from utils import Decorators, StopWatch, \
-    LogicRef, EmptySet, get_logic, orepr
+    LogicRef, get_logic, orepr
 from errors import DuplicateKeyError, IllegalStateError, MissingValueError, TimeoutError
 from events import EventId, Events, EventEmitter
 
@@ -107,7 +107,7 @@ class RuleMeta(ABCMeta):
         Rule = super().__new__(cls, clsname, bases, clsattrs, **kw)
         filt = filter (bool, chain(
             * (
-                c.__dict__.get(helpers_attr, EmptySet)
+                c.__dict__.get(helpers_attr, EMPTY_SET)
                 for c in reversed(Rule.mro()[1:])
             ),
             (
@@ -1109,7 +1109,7 @@ class Tableau(AbstractTableau):
         # self.__after_branch_add(branch)
         # For corner case of an AFTER_BRANCH_ADD callback adding a node, make
         # sure we don't emit AFTER_NODE_ADD twice, so prefetch the nodes.
-        nodes = tuple(branch) if branch.parent is None else EmptySet
+        nodes = tuple(branch) if branch.parent is None else EMPTY_SET
         self.emit(Events.AFTER_BRANCH_ADD, branch)
         for node in nodes:
             self.__after_node_add(node, branch)

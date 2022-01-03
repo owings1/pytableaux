@@ -28,7 +28,7 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 1
 
-from containers import qsetf
+from containers import qsetf, EMPTY_SET
 from lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantified, \
     Operator as Oper, Quantifier, Argument, Sentence, Predicates
 from models import BaseModel
@@ -40,7 +40,6 @@ from proof.helpers import AppliedNodesWorlds, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
     FilterHelper, AppliedNodeCount, VisibleWorldsIndex
 
-from utils import EmptySet
 from errors import DenotationError, ModelValueError
 
 from . import fde as FDE
@@ -1295,7 +1294,7 @@ class TabRules(object):
                 si = s.operand
                 w1 = node['world']
 
-                for w2 in self.visw[branch].get(w1, EmptySet):
+                for w2 in self.visw[branch].get(w1, EMPTY_SET):
                     if (node, w2) in self.apnw[branch]:
                         continue
                     add = {'sentence': si, 'world': w2}

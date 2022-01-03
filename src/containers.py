@@ -21,7 +21,7 @@ from typing import Any, Annotated, Generic, NamedTuple, TypeVar, abstractmethod 
 # from itertools import chain, filterfalse
 # import typing
 
-from callables import preds #, calls, cchain, gets
+from callables import preds, calls#, cchain, gets
 
 K = TypeVar('K')
 T = TypeVar('T')
@@ -29,14 +29,13 @@ R = TypeVar('R')
 V = TypeVar('V')
 
 __all__ = (
-    'Abc', 'Copyable',
-    'SetApi', 'MutableSetApi',
+    'Abc', #'Copyable',
+    'SetApi', #'MutableSetApi',
     'setf', 'setm', # SetSeqPair,
-    'SequenceApi', 'MutableSequenceApi',
-    'SequenceSetApi', 'MutableSequenceSetApi',
+    #'SequenceApi', #'MutableSequenceApi',
+    'SequenceSetApi', #'MutableSequenceSetApi',
     'qsetf', 'qsetm', # MutSetSeqPair,
-    # MutableLinkSequenceSetApi, LinkSequenceView, # LinkEntry
-    'linqset',
+    'linqset', # MutableLinkSequenceSetApi, LinkSequenceView, # LinkEntry
     # MapAttrView
     # DequeCache
 )
@@ -92,7 +91,7 @@ class SetApi(bases.Set[V], Copyable):
 
     __slots__ = ()
 
-    _opts = dict(freturn = opr.methodcaller('_from_iterable'))
+    _opts = dict(freturn = calls.method('_from_iterable'))
 
     issubset   = operd.apply(opr.le, info = set.issubset)
     issuperset = operd.apply(opr.ge, info = set.issuperset)
@@ -144,6 +143,8 @@ class setf(SetApi[V]):
 
     def __repr__(self):
         return self._set_.__repr__()
+
+EMPTY_SET = setf()
 
 class setm(MutableSetApi[V], setf[V]):
     'MutableSetApi wrapper around built-in set.'

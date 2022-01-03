@@ -30,6 +30,13 @@ __all__ = (
 ITEM_CACHE_SIZE = 10000
 import operator as opr
 from utils import instcheck as _instcheck
+
+class cons:
+    'constants'
+    NOARG = object()
+    NOGET = object()
+    from containers import EMPTY_SET
+
 class std:
     'misc standard/common imports'
 
@@ -51,7 +58,7 @@ class errors:
 class d:
     'decorators'
 
-    from decorators import  abstract, fixed, lazyget as lazy, metad as meta, \
+    from decorators import abstract, fixed, lazyget as lazy, metad as meta, \
         operd as oper, raisen as raises, rund as run, wraps
 
     from typing import final
@@ -90,15 +97,12 @@ class fict:
     def flat(): ...
     flat = chain.from_iterable
 
-    def sorttmap(it: std.Iterable[Bases.Lexical]) -> std.Iterable[Types.IntTuple]:...
+    def sorttmap(it: std.Iterable[Bases.Lexical]) -> std.Iterable[Types.IntTuple]: ...
     sorttmap = partial(map, opr.attrgetter('sort_tuple'))
 
     __new__ = None
 
 class Types:
-
-    NOARG = object()
-    NOGET = object()
 
     from types import \
         DynamicClassAttribute as DynClsAttr, \
@@ -108,7 +112,6 @@ class Types:
         ABCMeta,           \
         BiCoords,          \
         CacheNotationData, \
-        EmptySet,          \
         FieldItemSequence, \
         IndexType,         \
         IntTuple,          \
@@ -137,7 +140,6 @@ class Types:
     ParameterSpec   = BiCoords
     ParameterIdent  = tuple[str, BiCoords]
 
-
     QuantifierSpec = tuple[str]
     OperatorSpec   = tuple[str]
 
@@ -165,7 +167,7 @@ class Types:
     def __new__(cls):
         attrs = dict(cls.__dict__)
         try: todo: set = attrs.pop('deferred')
-        except KeyError: raise TypeError() from None
+        except KeyError: raise TypeError from None
         reader = cls.MapProxy(attrs)
         def setitem(key, value):
             todo.remove(key)
@@ -182,7 +184,6 @@ class Types:
                 try: return reader[name]
                 except KeyError: pass
                 raise AttributeError(name)
-                # return object.__getattribute__(self, name)
         Journal.__qualname__ = cls.__qualname__
         Journal.__name__ = cls.__name__
         return object.__new__(Journal)
@@ -310,9 +311,9 @@ class Metas:
         # Subclass Init Hooks       
         #----------------------
 
-        def _member_keys(cls, member: Bases.Enum) -> std.Iterable:
+        def _member_keys(cls, member: Bases.Enum) -> Types.SetApi:
             'Init hook to get the index lookup keys for a member.'
-            return Types.EmptySet
+            return cons.EMPTY_SET
 
         def _on_init(cls, Class: Metas.Enum):
             '''Init hook after all members have been initialized, before index
@@ -325,7 +326,7 @@ class Metas:
         # Container behavior   
         #----------------------
         def __contains__(cls, key):
-            return cls.get(key, Types.NOGET) is not Types.NOGET
+            return cls.get(key, cons.NOGET) is not cons.NOGET
 
         def __getitem__(cls, key):
             if key.__class__ is cls: return key
@@ -375,12 +376,12 @@ class Metas:
             try: return cls._seq
             except AttributeError: return ()
 
-        def get(cls, key, default = Types.NOARG) -> Bases.Enum:
+        def get(cls, key, default = cons.NOARG) -> Bases.Enum:
             '''Get a member by an indexed reference key. Raises KeyError if not
             found and no default specified.'''
             try: return cls[key]
             except KeyError:
-                if default is Types.NOARG: raise
+                if default is cons.NOARG: raise
                 return default
 
         def indexof(cls, key) -> int:
@@ -471,7 +472,7 @@ class Metas:
         @_sys.setter
         def _sys(cls, value: LexWriter):
             try: _instcheck(value, LexWriter)
-            except NameError: raise AttributeError()
+            except NameError: raise AttributeError
             setattr(LexWriter, '__sys', value)
 
     class Notation(Enum):
@@ -728,18 +729,12 @@ class Bases:
             'label', '_index', 'order', 'strings',
         )
 
-        # --------------------------
-        # Enum meta hooks.
-        # --------------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Enum Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         @classmethod
-        def _member_keys(cls, member: Bases.LexicalEnum) -> set:
+        def _member_keys(cls, member: Bases.LexicalEnum) -> Types.SetApi:
             'Enum init hook. Index keys for Enum members lookups.'
-            return fict.setm(super()._member_keys(member)) | {
-                # member.name,
-                # (member.name,),
-                member.label,
-                member.value,
-            }
+            return super()._member_keys(member) | {member.label, member.value}
 
         @classmethod
         def _on_init(cls, Class: type[Bases.LexicalEnum]):
@@ -845,7 +840,7 @@ class Bases:
                 if self.subscript < 0:
                     raise ValueError('%d < %d' % (self.subscript, 0))
             except AttributeError:
-                raise TypeError(type(self)) from None
+                raise TypeError(self) from None
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -1096,13 +1091,13 @@ class Sentence(Bases.LexicalItem):
     #: Whether this is a negated sentence.
     is_negated = d.fixed.prop(False)
     #: Set of predicates, recursive.
-    predicates: frozenset[Predicate] = d.fixed.prop(Types.EmptySet)
+    predicates: frozenset[Predicate] = d.fixed.prop(cons.EMPTY_SET)
     #: Set of constants, recursive.
-    constants: frozenset[Constant] = d.fixed.prop(Types.EmptySet)
+    constants: frozenset[Constant] = d.fixed.prop(cons.EMPTY_SET)
     #: Set of variables, recursive.
-    variables: frozenset[Variable] = d.fixed.prop(Types.EmptySet)
+    variables: frozenset[Variable] = d.fixed.prop(cons.EMPTY_SET)
     #: Set of atomic sentences, recursive.
-    atomics: frozenset[Atomic] = d.fixed.prop(Types.EmptySet)
+    atomics: frozenset[Atomic] = d.fixed.prop(cons.EMPTY_SET)
     #: Tuple of quantifiers, recursive.
     quantifiers: tuple[Quantifier, ...] = d.fixed.prop(tuple())
     #: Tuple of operators, recursive.
@@ -1581,28 +1576,24 @@ class LexType(Bases.Enum):
     def foritem(cls, obj) -> LexType:
         '''Get the LexType for a Lexical instance. Performance focused.
         Raises TypeError.'''
-        try: return cls._lookup[obj.__class__].member
+        try: return cls._lookup[type(obj)].member
         except KeyError:
-            raise TypeError(obj.__class__, LexType) from None
+            raise TypeError(type(obj)) from None
 
-    # --------------------------
-    # Enum meta hooks.
-    # --------------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Enum Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     @classmethod
-    def _after_init(cls: type[LexType]):
+    def _after_init(cls):
+        'Build classes list, expand sort_tuple.'
         super()._after_init()
         cls.classes = fict.qsetf((m.cls for m in cls))
-        for inst in fict.chain(Operator, Quantifier):
+        for inst in fict.chain[Bases.LexicalEnum](Operator, Quantifier):
             inst.sort_tuple = inst.TYPE.rank, *inst.sort_tuple
-        pass
 
     @classmethod
-    def _member_keys(cls, member: LexType) -> set:
+    def _member_keys(cls, member: LexType) -> Types.SetApi:
         'Enum lookup index init hook.'
-        return fict.setm(super()._member_keys(member)) | {
-            member.cls
-        }
+        return super()._member_keys(member) | {member.cls}
 
 Types.LexType = LexType
 
@@ -1613,27 +1604,24 @@ class Predicates(fict.qsetm[Predicate], metaclass = Metas.Abc):
     'Predicate store'
 
     def __init__(self, values: std.Iterable[Types.PredsItemSpec] = None):
-        # super().__init__(Types.MutSetSeqPair(set(), []))
         self._lookup = {}
         super().__init__(values)
-        # if specs is not None:
-        #     self.update(specs)
 
     _lookup: dict[Types.PredsItemRef, Predicate]
     __slots__ = '_lookup',
 
-    def get(self, ref: Types.PredsItemRef, default = Types.NOARG) -> Predicate:
+    def get(self, ref: Types.PredsItemRef, default = cons.NOARG) -> Predicate:
         """Get a predicate by any reference. Also searches System predicates.
         Raises KeyError when no default specified."""
         try: return self._lookup[ref]
         except KeyError:
             try: return self.System[ref]
             except KeyError: pass
-            if default is Types.NOARG: raise
+            if default is cons.NOARG: raise
             return default
 
     # -------------------------------
-    #  MutableSequenceSetApi hooks.
+    #  qsetm hooks.
     # -------------------------------
     def _new_value(self, value: Types.PredsItemSpec) -> Predicate:
         'Implement new_value hook. Return a predicate.'
@@ -1665,7 +1653,7 @@ class Predicates(fict.qsetm[Predicate], metaclass = Metas.Abc):
             raise errors.DuplicateValueError(pred, *conflict)
 
     # -------------------------------
-    #  Override MutableSequenceSetApi
+    #  Override qsetm
     # -------------------------------
     def clear(self):
         super().clear()
@@ -1696,10 +1684,9 @@ class Predicates(fict.qsetm[Predicate], metaclass = Metas.Abc):
         # Enum meta hooks.
         # --------------------------
         @classmethod
-        def _member_keys(cls, pred: Predicate) -> fict.setm[Types.PredsItemRef]:
+        def _member_keys(cls, pred: Predicate) -> Types.SetApi[Types.PredsItemRef]:
             'Enum lookup index init hook. Add all predicate keys.'
-            return fict.setm(super()._member_keys(pred)) | \
-                pred.refkeys
+            return super()._member_keys(pred) | pred.refkeys
 
         @classmethod
         def _after_init(cls):

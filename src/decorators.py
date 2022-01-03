@@ -23,6 +23,7 @@ _valfilter = partial(filter, gets.key(1))
 _getmixed = gets.mixed(flag=Caller.SAFE)
 _checkcallable = calls.func(instcheck, Callable)
 _thru = gets.thru()
+_thru2 = gets.thru(aslice = slice(1, None))
 class _nonerr(Exception): __new__ = None
 
 # _LZINSTATTR = '__lazyget__'
@@ -154,7 +155,7 @@ class operd:
             finit: Callable = None,
         ):
             super().__init__(oper, info)
-            self.freturn = _thru if freturn is None else freturn
+            self.freturn = _thru2 if freturn is None else freturn
             self.finit = _thru if finit is None else finit
 
         __slots__ = 'freturn', 'finit'
@@ -166,7 +167,7 @@ class operd:
             )
             @wraps(info)
             def freduce(self, *operands: Iterable):
-                return freturn(reduce(oper, operands, finit(self)))
+                return freturn(self, reduce(oper, operands, finit(self)))
             return freduce
 
         def template(*argdefs, **kwdefs):

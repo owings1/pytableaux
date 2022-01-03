@@ -1,11 +1,10 @@
 from callables import Caller, calls, gets, preds
-from containers import ABCMeta
+from containers import ABCMeta, EMPTY_SET, setf
 from decorators import abstract, lazyget
 from events import Events, EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
-from utils import Decorators, drepr, orepr, instcheck, subclscheck, \
-    strtype, EmptySet, RetType, T
+from utils import Decorators, drepr, orepr
 
 from collections import defaultdict, deque
 from collections.abc import Callable, Iterable, ItemsView, \
@@ -19,6 +18,7 @@ from typing import Annotated, Any, ClassVar, Final, NamedTuple, TypeVar, Union, 
 from enum import Enum, auto
 import enum
 # from copy import copy
+# from utils import strtype, instcheck, subclscheck, RetType, T
 
 import operator as opr
 
@@ -93,13 +93,13 @@ class Node(Mapping, metaclass = NodeMeta):
         return self.has('world1', 'world2')
 
     @lazyget.prop
-    def worlds(self) -> frozenset[int]:
+    def worlds(self) -> setf[int]:
         """
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
         """
-        return frozenset(filter(preds.instanceof[int],
-            self.get('worlds', EmptySet) |
+        return setf(filter(preds.instanceof[int],
+            self.get('worlds', EMPTY_SET) |
             {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
         ))
 
@@ -856,8 +856,8 @@ class Target(Mapping[str, Any]):
         return self.__data[key]
 
     def __setitem__(self, key: str, val):
-        if not isinstance(key, strtype):
-            raise TypeError(key, type(key), str)
+        if not isinstance(key, str):
+            raise TypeError(key)
         if not key.isidentifier() or iskeyword(key):
             raise ValueError('Invalid target key: %s' % key)
         if self.__data.get(key, val) != val:

@@ -47,7 +47,7 @@ from typing import Any, Annotated, DefaultDict, \
 
 # Constants
 NOARG = enum.auto()
-EmptySet = frozenset()
+# EmptySet = frozenset()
 CmpFnOper = MappingProxyType({
     '__lt__': '<',
     '__le__': '<=',
@@ -166,7 +166,7 @@ def items_from_keys(keys: Iterable[KT], d: dict[KT, VT]) -> Iterator[tuple[KT, V
 
 def instcheck(obj, classinfo: type[T]) -> T:
     if not isinstance(obj, classinfo):
-        raise TypeError(type(obj), classinfo)
+        raise TypeError(obj)
     return obj
 
 def isstr(obj) -> bool:

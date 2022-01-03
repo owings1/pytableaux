@@ -19,6 +19,7 @@
 # pytableaux - lexicals module tests
 # import pytest
 
+from containers import EMPTY_SET
 from lexicals import Predicates, Variable, Constant, Parameter, Predicate, \
     Atomic, Predicated, Quantified, Operated, Sentence, Operator, Quantifier, \
     LexType, Types
@@ -27,7 +28,6 @@ from errors import *
 from copy import copy, deepcopy
 from .tutils import *
 from pytest import raises
-from utils import EmptySet
 import operator as opr
 from itertools import product
 
@@ -247,9 +247,9 @@ class TestSentence(BaseSuite):
             assert s.is_operated == False
             assert s.is_literal == True
             assert s.is_negated == False
-            assert s.constants == EmptySet
-            assert s.variables == EmptySet
-            assert s.predicates == EmptySet
+            assert s.constants == EMPTY_SET
+            assert s.variables == EMPTY_SET
+            assert s.predicates == EMPTY_SET
             assert s.atomics == {s}
             assert s.operators == tuple()
             assert s.substitute(a, x) == s
@@ -289,9 +289,9 @@ class TestSentence(BaseSuite):
             assert s.is_literal == True
             assert s.is_negated == False
             assert s.constants == {a}
-            assert s.variables == EmptySet
+            assert s.variables == EMPTY_SET
             assert s.predicates == {F}
-            assert s.atomics == EmptySet
+            assert s.atomics == EMPTY_SET
             assert s.operators == tuple()
             assert s.substitute(a, x) == s
             assert s.negate() == self.p('NFm')
