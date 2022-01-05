@@ -45,7 +45,7 @@ class Listener(Callable, metaclass = ABCMeta):
 
     def __init__(self, cb: Callable, once: bool = False, event: EventId = None):
         if not callable(cb):
-            raise TypeError(cb, type(cb), Callable)
+            raise TypeError(cb)
         self.cb = cb
         self.once = once
         self.event = event
@@ -62,7 +62,7 @@ class Listener(Callable, metaclass = ABCMeta):
     def __setattr__(self, attr, val):
         if attr == 'callcount':
             if not isinstance(val, int):
-                raise TypeError(val, type(val), int)
+                raise TypeError(val)
         elif hasattr(self, 'event'):
             # Immutable
             raise AttributeError('cannot set %s' % attr)
@@ -81,16 +81,9 @@ class Listeners(linqset[Listener]):
     def event(self) -> EventId:
         return self.__event
 
-    # def _new_value(self, cb: Callable, once = False) -> Listener:
-    #     # if cb in self:
-    #     #     return cb
-    #     # if isinstance(cb, Listener):
-    #     #     cb = cb.cb
-    #     return Listener(cb, once, self.event)
-
     def _before_add(self, value):
         if not isinstance(value, Listener):
-            raise TypeError(type(value))
+            raise TypeError(value)
 
     def emit(self, *args, **kw) -> int:
         self.emitcount += 1

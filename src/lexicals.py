@@ -91,7 +91,7 @@ class fict:
 
     from functools import partial, reduce
     from itertools import chain, repeat, starmap, zip_longest as lzip
-    from containers import setf, setm, qsetf, qsetm
+    from containers import setf, setm, qsetf, qset
     from utils import it_drain as drain#, items_from_keys as dkeys
 
     def flat(): ...
@@ -1600,7 +1600,7 @@ Types.LexType = LexType
 ##############################################################
 ##############################################################
 
-class Predicates(fict.qsetm[Predicate], metaclass = Metas.Abc):
+class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
     'Predicate store'
 
     def __init__(self, values: std.Iterable[Types.PredsItemSpec] = None):
@@ -1621,11 +1621,13 @@ class Predicates(fict.qsetm[Predicate], metaclass = Metas.Abc):
             return default
 
     # -------------------------------
-    #  qsetm hooks.
+    #  qset hooks.
     # -------------------------------
     def _new_value(self, value: Types.PredsItemSpec) -> Predicate:
         'Implement new_value hook. Return a predicate.'
-        return Predicate(value)
+        if not isinstance(value, Predicate):
+            return Predicate(value)
+        return value
 
     def _before_add(self, pred: Predicate):
         'Implement before_add hook. Check for arity/value conflicts.'
@@ -1653,8 +1655,21 @@ class Predicates(fict.qsetm[Predicate], metaclass = Metas.Abc):
             raise errors.DuplicateValueError(pred, *conflict)
 
     # -------------------------------
-    #  Override qsetm
+    #  Override qset
     # -------------------------------
+
+    # def insert(self, index, value):
+    #     return super().insert(index, Predicate(value))
+
+    # def __setitem__(self, index, value):
+    #     if isinstance(index, slice):
+    #         value = list(map(Predicate, value))
+    #         for v in value: self._before_add(v)
+    #     else:
+    #         value = Predicate(value)
+    #         self._before_add(value)
+    #     return super().__setitem__(index, value)
+
     def clear(self):
         super().clear()
         self._lookup.clear()
@@ -1662,8 +1677,8 @@ class Predicates(fict.qsetm[Predicate], metaclass = Metas.Abc):
     def __contains__(self, ref: Types.PredsItemRef):
         return ref in self._lookup
 
-    def __copy__(self):
-        inst = super().__copy__()
+    def copy(self) -> Predicates:
+        inst = super().copy()
         inst._lookup = self._lookup.copy()
         return inst
 

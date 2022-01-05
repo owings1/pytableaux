@@ -255,6 +255,7 @@ class MetaFlag(enum.Flag):
     nsinit = 4
     temp   = 8
     nsclean = nsinit | temp
+    
 
 class AttrNote(NamedTuple):
 

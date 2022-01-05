@@ -10,8 +10,8 @@ class TestSetList(BaseSuite):
 
     def test_equalities(self):
 
-        _ = qsetm
-        def g(*items) -> qsetm: return _(items)
+        _ = qset
+        def g(*items) -> qset: return _(items)
         
         assert {1, 2, 3} == g(2, 1, 2, 3)
         assert _(range(5)) | _(range(6)) == set(range(6))
@@ -26,7 +26,7 @@ class TestSetList(BaseSuite):
         assert sorted({2, 3, 1, 1, 2}) == [1, 2, 3]
     def test_errors(self):
 
-        _ = qsetm
+        _ = qset
         def g(*items): return _(items)
 
         with raises(ValueError):
@@ -77,6 +77,18 @@ class TestLinkSet(BaseSuite):
         x.clear()
         with raises(IndexError): x[0]
         with raises(IndexError): x[-1]
+
+    def test_getitem_slice(self):
+        x = linqset(range(10))
+        y = list(range(10))
+        assert list(x[:]) == y[:]
+        assert list(x[-1:]) == y[-1:]
+        assert list(x[-1:4]) == y[-1:4]
+        assert list(x[-1:4:-1]) == y[-1:4:-1]
+        assert list(x[::2]) == y[::2]
+        assert list(x[::4]) == y[::4]
+        assert list(x[::9]) == y[::9]
+        assert list(x[3::2]) == y[3::2]
 
     def test_delitem(self):
         fnew = lambda: linqset(range(0,8,2))
@@ -137,18 +149,18 @@ class TestLinkSet(BaseSuite):
         x.reverse()
         assert list(x) == list('abc')
 
-    def test_put_before_after(self):
+    def test_wedge(self):
         x = linqset('abcdeg')
-        x.put_before('g', 'f')
+        x.wedge(-1, 'g', 'f')
         assert list(x) == list('abcdefg')
 
         x = linqset('abcdeg')
-        x.put_after('e', 'f')
+        x.wedge(1, 'e', 'f')
         assert list(x) == list('abcdefg')
 
     def test_view(self):
         x = linqset('abcdef')
-        v = x.view()
+        v = SequenceView(x)
         assert len(v) == 6
         assert list(v) == list('abcdef')
         x.append('g')

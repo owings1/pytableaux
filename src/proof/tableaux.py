@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - tableaux module
-from containers import EMPTY_SET, linqset, qsetf
+from containers import EMPTY_SET, linqset, qsetf, SequenceView
 from .common import FLAG, KEY, Branch, Node, NodeType, RuleEvents, Target
 from decorators import abstract
 from lexicals import Argument, Sentence
@@ -904,6 +904,7 @@ class Tableau(AbstractTableau):
         self.__flag = FLAG.PREMATURE
         self.__branch_list = []
         self.__open  = linqset()
+        self.__openview = None
         self.__branchstat: dict[Branch, BranchStat] = {}
         self.__rules = TabRules(self)
 
@@ -1005,11 +1006,13 @@ class Tableau(AbstractTableau):
         return len(self.history) + int(self.trunk_built)
 
     @property
-    def open(self) -> Collection[Branch]:
+    def open(self) -> SequenceView[Branch]:
         """
         View of the open branches.
         """
-        return self.__open.view()
+        if self.__openview is None:
+            self.__openview = SequenceView(self.__open)
+        return self.__openview
 
     def build(self) -> AbstractTableau:
         """
