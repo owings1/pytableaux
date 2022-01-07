@@ -77,7 +77,7 @@ class TabRules(object):
         Helpers = (VisibleWorldsIndex,)
         visw: VisibleWorldsIndex
         access = True
-        opts = {'is_rank_optim': False}
+        _defaults = {'is_rank_optim': False}
 
         def _get_node_targets(self, node: Node, branch: Branch):
             if not self.maxw.max_worlds_exceeded(branch):

@@ -43,8 +43,6 @@ Tableaux Module
         .. automethod:: branch
 
         .. automethod:: add
-        
-        .. automethod:: build_trunk
 
     .. autoclass:: Branch
 

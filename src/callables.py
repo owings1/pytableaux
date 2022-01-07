@@ -1,23 +1,24 @@
 from __future__ import annotations
 
-# from utils import AttrFlag, AttrNote
-from utils import ABCMeta, IndexType, KeyCacheFactory, AttrCacheFactory, \
-    instcheck, orepr, subclscheck
+from errors import instcheck
+# from utils import AttrFlag, AttrNote, AttrCacheFactory
+from utils import ABCMeta, IndexType, KeyCacheFactory, \
+    orepr, subclscheck
 
 # import abc
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-import enum
 from functools import partial
 # import itertools
 import operator as opr
 from types import MappingProxyType
-from typing import Annotated, Any, ClassVar, Generic, Literal, ParamSpec, TypeAlias, TypeVar, \
+from typing import Any, ClassVar, Literal, ParamSpec, TypeAlias, TypeVar, \
     abstractmethod, final
-
+# Annotated Generic
 P = ParamSpec('P')
 K = TypeVar('K')
 T = TypeVar('T')
 
+import enum
 @enum.unique
 class Flag(enum.Flag):
 
@@ -36,6 +37,7 @@ class Flag(enum.Flag):
     User   = Safe | Star | Left | Usr1
 
     Copy   = 512
+del(enum)
 
 ExceptsParam: TypeAlias = tuple[type[Exception], ...]
 FlagParam: TypeAlias = Flag | Callable[[Flag], Flag]
@@ -76,7 +78,8 @@ class Caller(Callable, metaclass = ABCMeta):
     default  : Any
 
     @abstractmethod
-    def _call(self, *args): ...
+    def _call(self, *args):
+        raise NotImplementedError
 
     def __new__(cls, *args, **kw) -> Caller:
         inst = object.__new__(cls)
@@ -187,14 +190,15 @@ class Caller(Callable, metaclass = ABCMeta):
     def __copy__(self):
         return self.copy()
 
-    @classmethod
-    def __class_getitem__(cls, key):
-        return super().__class_getitem__(key)
+    # @classmethod
+    # def __class_getitem__(cls, key):
+    #     return super().__class_getitem__(key)
 
     def __init_subclass__(subcls: type[Caller], **kw):
         super().__init_subclass__(**kw)
         cls = __class__
         subcls.attrhints = MappingProxyType(cls.attrhints | subcls.attrhints)
+
     def asobj(self):
         return objwrap(self)
 
@@ -355,8 +359,8 @@ class raiser(Caller):
     attrhints = dict(ErrorType = Flag.Blank, eargs = Flag.Blank)
     __slots__ = tuple(attrhints)
 
-methodproxy: AttrCacheFactory[Callable[[str], calls.method]] = \
-    AttrCacheFactory(partial(calls.func, calls.method))
+# methodproxy: AttrCacheFactory[Callable[[str], calls.method]] = \
+#     AttrCacheFactory(partial(calls.func, calls.method))
 
 class cchain:
     __new__ = None
@@ -371,7 +375,7 @@ class cchain:
         return partial(filter, cchain.forall(*funcs))
 
     def reducer(*funcs: Callable[P, T]) -> Callable[P, T]:
-        return partial(Chain(*funcs).reduce)
+        return Chain(*funcs).reduce
 
 class preds:
     __new__ = None
@@ -381,4 +385,6 @@ class preds:
     subclassof: KeyCacheFactory[type, calls.func] = \
         KeyCacheFactory(partial(calls.func, issubclass))
 
-    isidentifier = cchain.forall(instanceof[str],  methodproxy.isidentifier())
+    isidentifier = cchain.forall(instanceof[str], str.isidentifier)
+    from keyword import iskeyword
+    isattrstr = cchain.forall(instanceof[str], str.isidentifier, cchain.reducer(iskeyword, opr.not_))

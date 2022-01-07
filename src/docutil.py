@@ -408,7 +408,7 @@ class Helper(object):
     ]
 
     skip_trunks = [
-        Tableau.build_trunk
+        # Tableau.build_trunk
     ]
 
     def sphinx_obj_lines_append_autodoc(self, app, what, name, obj, options, lines):
@@ -474,9 +474,10 @@ class Helper(object):
         proof = Tableau(lgc)
         rule = proof.rules.get(rule)
         # TODO: fix for closure rules
-        if not rule.is_closure:
+        isclosure = isinstance(rule, ClosureRule)
+        if not isclosure:
             rule.add_helper(EllipsisExampleHelper)
-        pw = self.pwclosure if rule.is_closure else self.pwrule
+        pw = self.pwclosure if isclosure else self.pwrule
         b = proof.branch().extend(rule.example_nodes())
         rule.apply(rule.get_target(b))
         return pw.write(proof.finish())

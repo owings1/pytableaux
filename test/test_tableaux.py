@@ -1,11 +1,10 @@
 
 from callables import calls, gets
 from errors import *
-from events import Events
 from proof.tableaux import Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG
 from proof.rules import ClosureRule
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
-from proof.common import Filters, Branch, Node, NodeFilters
+from proof.common import Filters, Branch, Node, NodeFilters, TabEvent
 from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
 from utils import get_logic
 import examples
@@ -40,10 +39,10 @@ class TestTableau(BaseSuite):
     def test_step_returns_false_when_finished(self):
         assert Tableau().finish().step() == False
 
-    def test_build_trunk_already_built_error(self):
-        tab = self.tab('Addition')
-        with raises(IllegalStateError):
-            tab.build_trunk()
+    # def test_build_trunk_already_built_error(self):
+    #     tab = self.tab('Addition')
+    #     with raises(IllegalStateError):
+    #         tab.build_trunk()
 
     def test_repr_contains_finished(self):
         tab = self.tab('Addition')
@@ -102,7 +101,7 @@ class TestTableau(BaseSuite):
         class MockRule(RuleStub):
             def __init__(self, *args, **opts):
                 super().__init__(*args, **opts)
-                self.tableau.on(Events.AFTER_BRANCH_ADD, self.__after_branch_add)
+                self.tableau.on(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
 
             def __after_branch_add(self, branch):
                 self._checkbranch = branch
@@ -187,7 +186,7 @@ class TestBranch(object):
 
             def __init__(self, *args, **opts):
                 super().__init__(*args, **opts)
-                self.tableau.on(Events.AFTER_NODE_ADD, self.__after_node_add)
+                self.tableau.on(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
 
             def __after_node_add(self, node, branch):
                 self.should_be = branch.has({'world1': 7})

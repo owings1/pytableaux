@@ -19,7 +19,7 @@
 # pytableaux - utils module
 from __future__ import annotations
 
-from errors import DuplicateKeyError, IllegalStateError
+from errors import instcheck, DuplicateKeyError, IllegalStateError
 
 import abc
 from builtins import ModuleNotFoundError
@@ -46,7 +46,7 @@ from typing import Any, Annotated, DefaultDict, \
 # from time import time
 
 # Constants
-NOARG = enum.auto()
+NOARG = object()
 # EmptySet = frozenset()
 CmpFnOper = MappingProxyType({
     '__lt__': '<',
@@ -164,10 +164,10 @@ def items_from_keys(keys: Iterable[KT], d: dict[KT, VT]) -> Iterator[tuple[KT, V
         )
     )
 
-def instcheck(obj, classinfo: type[T]) -> T:
-    if not isinstance(obj, classinfo):
-        raise TypeError(obj)
-    return obj
+# def instcheck(obj, classinfo: type[T]) -> T:
+#     if not isinstance(obj, classinfo):
+#         raise TypeError(obj)
+#     return obj
 
 def isstr(obj) -> bool:
     return isinstance(obj, strtype)
@@ -285,26 +285,27 @@ class ABCMeta(abc.ABCMeta):
 
     _metaflag_attr = '_metaflag'
 
-    def __new__(cls, clsname, bases, attrs: dict, **kw):
-        cls.nsinit(attrs, bases, **kw)
-        Class = super().__new__(cls, clsname, bases, attrs, **kw)
-        cls.nsclean(Class, attrs, bases, **kw)
+    def __new__(cls, clsname, bases, ns: dict, **kw):
+        cls.nsinit(ns, bases, **kw)
+        Class = super().__new__(cls, clsname, bases, ns, **kw)
+        cls.nsclean(Class, ns, bases, **kw)
         return Class
 
     @staticmethod
-    def nsinit(attrs: dict, bases, **kw):
-        attrname = __class__._metaflag_attr
-        kit = list(attrs)
-        for v in (attrs[k] for k in kit):
-            mf = getattr(v, attrname, MetaFlag.blank)
-            if MetaFlag.nsinit in mf:
-                instcheck(v, Callable)(attrs, bases, **kw)
+    def nsinit(ns: dict, bases, /, **kw):
+        mfattr = __class__._metaflag_attr
+        # kit = list(attrs)
+        # for v in (attrs[k] for k in kit):
+        for v in tuple(ns.values()):
+            # mf = getattr(v, attrname, MetaFlag.blank)
+            if MetaFlag.nsinit in getattr(v, mfattr, MetaFlag.blank):
+                instcheck(v, Callable)(ns, bases, **kw)
 
     @staticmethod
-    def nsclean(Class, attrs: dict, bases, deleter = delattr, **kw):
+    def nsclean(Class, ns: dict, bases, deleter = delattr, **kw):
         attrname = __class__._metaflag_attr
-        kit = attrs.keys()
-        for k, v in ((k,attrs[k]) for k in kit):
+        kit = ns.keys()
+        for k, v in ((k,ns[k]) for k in kit):
             mf = getattr(v, attrname, MetaFlag.blank)
             if mf is not mf.blank and mf in MetaFlag.nsclean:
                 deleter(Class, k)
@@ -336,6 +337,19 @@ class ABCMeta(abc.ABCMeta):
             for c in reversed(subcls.mro())
             if issubclass(c, supcls or subcls)
         ))
+
+    @staticmethod
+    def check_mrodict(mro: Sequence[type], names: Sequence[str]):
+        if len(names) and not len(mro):
+            return NotImplemented
+        for name in names:
+            for base in mro:
+                if name in base.__dict__:
+                    if base.__dict__[name] is None:
+                        return NotImplemented
+                    break
+        return True
+
 
 class KeyCacheFactory(dict[KT, VT]):
 
@@ -401,41 +415,38 @@ class Decorators(object):
         key = cat('_', __name__, '__lazy_', name)
         return (name, key)
 
-
-class SortBiCoords(NamedTuple):
-    subscript : int
-    index     : int
-
 class BiCoords(NamedTuple):
     index     : int
     subscript : int
  
-    Sorting = SortBiCoords
+    class Sorting(NamedTuple):
+        subscript : int
+        index     : int
 
-    def sorting(self) -> tuple[int, ...]:
-        return self.Sorting(self.subscript, self.index, *self[2:])
+    def sorting(self) -> BiCoords.Sorting:
+        return self.Sorting(self.subscript, self.index)
 
-    first   = (0, 0)
+    first = (0, 0)
 
-class SortTriCoords(NamedTuple):
-    subscript : int
-    index     : int
-    arity     : int
+BiCoords.first = BiCoords._make(BiCoords.first)
 
 class TriCoords(NamedTuple):
     index     : int
     subscript : int
     arity     : int
-    Sorting = SortTriCoords
-    sorting = BiCoords.sorting
 
-    first   = (0, 0, 1)
+    class Sorting(NamedTuple):
+        subscript : int
+        index     : int
+        arity     : int
 
-def ftmp():
-    for cls in (BiCoords, TriCoords):
-        cls.first = cls(*cls.first)
-ftmp()
-del(ftmp)
+    def sorting(self) -> TriCoords.Sorting:
+        return self.Sorting(self.subscript, self.index, self.arity)
+
+    first = (0, 0, 1)
+
+TriCoords.first = TriCoords._make(TriCoords.first)
+
 
 class CacheNotationData:
 
@@ -484,68 +495,83 @@ class CacheNotationData:
         cls.__instances = {notn: {} for notn in notns}
 
 class StopWatch:
+    'Millisecond stopwatch.'
 
-    __slots__ = ('_start_time', '_elapsed', '_is_running', '_times_started')
+    __slots__ = '_start_time', '_accum', '_running', 'count'
 
-
-    def __init__(self, started=False):
+    def __init__(self, started = False):
         self._start_time = None
-        self._elapsed = 0
-        self._is_running = False
-        self._times_started = 0
+        self._accum = 0
+        self.count = 0
+        self._running = False
         if started:
             self.start()
 
     def start(self):
-        if self._is_running:
+        'Start the StopWatch. Raises IllegalStateError if already started.'
+        if self._running:
             raise IllegalStateError('StopWatch already started.')
+        self.count += 1
+        self._running = True
         self._start_time = self._nowms()
-        self._is_running = True
-        self._times_started += 1
-        return self
 
     def stop(self):
-        if not self._is_running:
+        'Stop the StopWatch. Raises IllegalStateError if already stopped.'
+        if not self._running:
             raise IllegalStateError('StopWatch already stopped.')
-        self._is_running = False
-        self._elapsed += self._nowms() - self._start_time
-        return self
+        self._running = False
+        self._accum += self._nowms() - self._start_time
 
     def reset(self):
-        self._elapsed = 0
-        if self._is_running:
+        'Reset elapsed to 0.'
+        self._accum = 0
+        if self._running:
             self._start_time = self._nowms()
-        return self
 
-    def elapsed(self) -> float:
-        if self._is_running:
-            return self._elapsed + (self._nowms() - self._start_time)
-        return self._elapsed
+    @property
+    def elapsed(self) -> int:
+        'Elapsed milliseconds.'
+        if self._running:
+            return self._accum + (self._nowms() - self._start_time)
+        return self._accum
 
+    @property
     def elapsed_avg(self) -> float:
-        return self.elapsed() / max(1, self.times_started())
+        'Elapsed milliseconds / count.'
+        try:
+            return self.elapsed / self.count
+        except ZeroDivisionError:
+            return 0
 
-    def is_running(self) -> bool:
-        return self._is_running
-
-    def times_started(self) -> int:
-        return self._times_started
+    @property
+    def running(self) -> bool:
+        'Whether the StopWatch is running.'
+        return self._running
 
     def __repr__(self):
-        return self.elapsed().__repr__()
+        return wraprepr(self, self.elapsed)
 
-    def __enter__(self):
+    def __float__(self):
+        return float(self.elapsed)
+
+    def __int__(self):
+        return self.elapsed
+
+    def __str__(self):
+        return str(self.elapsed)
+
+    def __enter__(self) -> StopWatch:
+        'Start/stop context entry.'
         self.start()
         return self
 
     def __exit__(self, type, value, traceback):
-        if self.is_running():
+        if self._running:
             self.stop()
 
-    def _nowms(t) -> int:
+    from time import time as _time
+    @staticmethod
+    def _nowms(time = _time) -> int:
         'Current time in milliseconds'
-        return int(round(t() * 1000))
-    import time
-    _nowms.__defaults__ = time.time,
-    _nowms = staticmethod(_nowms)
-    del(time)
+        return int(round(time() * 1000))
+    del(_time)

@@ -32,11 +32,11 @@ class ClosureRule(Rule):
     Helpers = (NodeTargetCheckHelper,)
     ntch: NodeTargetCheckHelper
 
-    opts = {'is_rank_optim': False}
+    _defaults = {'is_rank_optim': False}
 
-    @property
-    def is_closure(self):
-        return True
+    # @property
+    # def is_closure(self):
+    #     return True
 
     def _get_targets(self, branch: Branch):
         """

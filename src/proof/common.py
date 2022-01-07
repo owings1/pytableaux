@@ -1,22 +1,24 @@
-from callables import Caller, calls, gets, preds
-from containers import ABCMeta, EMPTY_SET, setf
+from __future__ import annotations
+from callables import Caller, gets, preds #calls, 
+from containers import EMPTY_SET, qset, setf
 from decorators import abstract, lazyget
-from events import Events, EventEmitter
+from events import EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
-from utils import Decorators, drepr, orepr
+from utils import ABCMeta, Decorators, drepr, orepr
 
-from collections import defaultdict, deque
 from collections.abc import Callable, Iterable, ItemsView, \
     Iterator, KeysView, Mapping, Sequence, ValuesView
-# from inspect import getmembers, isclass
 from itertools import chain, islice
 from keyword import iskeyword
 from types import MappingProxyType
-import typing
-from typing import Annotated, Any, ClassVar, Final, NamedTuple, TypeVar, Union, final
-from enum import Enum, auto
+from typing import Any, ClassVar, NamedTuple, TypeVar
 import enum
+# from collections import defaultdict, deque
+# from inspect import getmembers, isclass
+# from typing import Annotated, Final, Union, final
+# from enum import Enum, auto
+# import typing
 # from copy import copy
 # from utils import strtype, instcheck, subclscheck, RetType, T
 
@@ -25,25 +27,32 @@ import operator as opr
 # abstract = Decorators.abstract
 setonce = Decorators.setonce
 
-RuleEvents = (
-    Events.AFTER_APPLY,
-    Events.BEFORE_APPLY,
-)
 
-BranchEvents = (
-    Events.AFTER_BRANCH_CLOSE,
-    Events.AFTER_NODE_ADD,
-    Events.AFTER_NODE_TICK,
-)
+class BranchEvent(enum.Enum):
+    AFTER_BRANCH_CLOSE = enum.auto()
+    AFTER_NODE_ADD     = enum.auto()
+    AFTER_NODE_TICK    = enum.auto()
 
-class KEY(Enum):
-    FLAGS       = auto()
-    STEP_ADDED  = auto()
-    STEP_TICKED = auto()
-    STEP_CLOSED = auto()
-    INDEX       = auto()
-    PARENT      = auto()
-    NODES       = auto()
+class RuleEvent(enum.Enum):
+    BEFORE_APPLY = enum.auto()
+    AFTER_APPLY  = enum.auto()
+
+class TabEvent(enum.Enum):
+    AFTER_BRANCH_ADD    = enum.auto()
+    AFTER_BRANCH_CLOSE  = enum.auto()
+    AFTER_NODE_ADD      = enum.auto()
+    AFTER_NODE_TICK     = enum.auto()
+    AFTER_TRUNK_BUILD   = enum.auto()
+    BEFORE_TRUNK_BUILD  = enum.auto()
+
+class KEY(enum.Enum):
+    FLAGS       = enum.auto()
+    STEP_ADDED  = enum.auto()
+    STEP_TICKED = enum.auto()
+    STEP_CLOSED = enum.auto()
+    INDEX       = enum.auto()
+    PARENT      = enum.auto()
+    NODES       = enum.auto()
 
 class FLAG(enum.Flag):
     NONE   = 0
@@ -62,9 +71,7 @@ class NodeMeta(ABCMeta):
         return super().__call__(props)
 
 class Node(Mapping, metaclass = NodeMeta):
-    """
-    A tableau node.
-    """
+    'A tableau node.'
 
     __slots__ = 'props', 'step', 'ticked', '_is_access', '_is_modal', '_worlds'
     defaults = MappingProxyType({'world': None, 'designated': None})
@@ -121,12 +128,12 @@ class Node(Mapping, metaclass = NodeMeta):
                 return True
         return False
 
-    def has_props(self, props: dict) -> bool:
+    def has_props(self, props: Mapping) -> bool:
         """
-        Whether the node properties match all those give in ``props`` (dict).
+        Whether the node properties match all those give in ``props``.
         """
         for prop in props:
-            if prop not in self or not props[prop] == self[prop]:
+            if prop not in self or props[prop] != self[prop]:
                 return False
         return True
 
@@ -208,7 +215,7 @@ class Node(Mapping, metaclass = NodeMeta):
     def __delattr__(self, attr):
         raise AttributeError('Node is readonly')
 
-NodeType = Union[Node, Mapping]
+NodeType = Node|Mapping
 
 class Access(NamedTuple):
 
@@ -241,7 +248,7 @@ RHS = TypeVar('RHS')
 
 class Comparer(Callable[..., bool]):
 
-    __slots__ = ('__lhs', '__dict__')
+    __slots__ = '__lhs', '__dict__'
 
     @property
     def lhs(self): return self.__lhs
@@ -257,6 +264,7 @@ class Comparer(Callable[..., bool]):
     def _lhsrepr(self, lhs) -> str:
         try: return lhs.__class__.__qualname__
         except AttributeError: return lhs.__class__.__name__
+
 class Filters(object):
 
     class Attr(Comparer):
@@ -312,7 +320,7 @@ class Filters(object):
             return self.__applies
 
         def get(self, rhs: RHS) -> lexicals.Sentence:
-            s: lexicals.Sentence = self.rget(rhs)
+            s = self.rget(rhs)
             if s:
                 if not self.negated: return s
                 if s.is_negated: return s.operand
@@ -390,19 +398,15 @@ class NodeFilters(Filters):
                 n['world'] = 0
             return n
 
-class AbstractBranch(EventEmitter, Sequence[Node]):
-    pass
 
-class Branch(AbstractBranch):
-    """
-    Represents a tableau branch.
-    """
+class Branch(Sequence[Node], EventEmitter):
+    'Represents a tableau branch.'
 
-    def __init__(self, parent: AbstractBranch = None):
+    def __init__(self, parent: Branch = None, /):
 
         self.__init_parent(parent)
 
-        super().__init__(*BranchEvents)
+        super().__init__(*BranchEvent)
 
         # Make sure properties are copied if needed in copy()
 
@@ -432,11 +436,11 @@ class Branch(AbstractBranch):
         return id(self)
 
     @property
-    def parent(self) -> AbstractBranch:
+    def parent(self) -> Branch:
         return self.__parent
 
     @property
-    def origin(self) -> AbstractBranch:
+    def origin(self) -> Branch:
         return self.__origin
 
     @property
@@ -548,7 +552,7 @@ class Branch(AbstractBranch):
                 results.append(node)
         return results
 
-    def append(self, node: NodeType) -> AbstractBranch:
+    def append(self, node: NodeType) -> Branch:
         """
         Append a node (Node object or dict of props). Returns self.
         """
@@ -571,12 +575,12 @@ class Branch(AbstractBranch):
 
         # Add to index *before* after_node_add callback
         self.__add_to_index(node)
-        self.emit(Events.AFTER_NODE_ADD, node, self)
+        self.emit(BranchEvent.AFTER_NODE_ADD, node, self)
         return self
 
     add = append
 
-    def extend(self, nodes: Iterable[NodeType]) -> AbstractBranch:
+    def extend(self, nodes: Iterable[NodeType]) -> Branch:
         """
         Add multiple nodes. Returns self.
         """
@@ -592,17 +596,17 @@ class Branch(AbstractBranch):
             if not self.is_ticked(node):
                 self.__ticked.add(node)
                 node.ticked = True
-                self.emit(Events.AFTER_NODE_TICK, node, self)
+                self.emit(BranchEvent.AFTER_NODE_TICK, node, self)
         # return self
 
-    def close(self) -> AbstractBranch:
+    def close(self) -> Branch:
         """
         Close the branch. Returns self.
         """
         if not self.closed:
             self.__closed = True
             self.append({'is_flag': True, 'flag': 'closure'})
-            self.emit(Events.AFTER_BRANCH_CLOSE, self)
+            self.emit(BranchEvent.AFTER_BRANCH_CLOSE, self)
         return self
 
     def is_ticked(self, node: Node) -> bool:
@@ -611,7 +615,7 @@ class Branch(AbstractBranch):
         """
         return node in self.__ticked
 
-    def copy(self, parent: AbstractBranch = None, events: bool = False) -> AbstractBranch:
+    def copy(self, parent: Branch = None, events: bool = False) -> Branch:
         """
         Return a copy of the branch. Event listeners are *not* copied.
         Parent is not copied, but can be explicitly set.
@@ -664,18 +668,20 @@ class Branch(AbstractBranch):
                 index, sub = 0, sub + 1
         return Constant((index, sub))
 
-    def __init_parent(self, parent: Union[AbstractBranch, None]):
-        if parent != None:
-            if parent == self:
+    def __init_parent(self, parent: Branch | None):
+        if hasattr(self, '_Branch__parent'):
+            raise AttributeError
+        if parent is not None:
+            if parent is self:
                 raise ValueError('A branch cannot be its own parent')
             if not isinstance(parent, Branch):
-                raise TypeError(parent, type(parent), Branch)
-            self.__origin: Branch = parent.origin
+                raise TypeError(parent)
+            self.__origin = parent.origin
         else:
-            self.__origin: Branch = self
-        self.__parent: Branch = parent
+            self.__origin = self
+        self.__parent = parent
 
-    def __add_to_index(self, node):
+    def __add_to_index(self, node: Node):
         for prop in self.__pidx:
             val = None
             found = False
@@ -753,7 +759,10 @@ class Branch(AbstractBranch):
 class Target(Mapping[str, Any]):
 
     __reqd = {'branch'}
-    __attrs = __reqd | {'rule', 'node', 'nodes', 'world', 'world1', 'world2', 'sentence', 'designated', 'flag'}
+    __attrs = __reqd | {
+        'rule', 'node', 'nodes', 'world', 'world1', 'world2',
+        'sentence', 'designated', 'flag'
+    }
 
     branch: Branch
     node: Node
@@ -904,3 +913,5 @@ class Target(Mapping[str, Any]):
             ), 3)
         )
         return orepr(self, dict(items))
+
+del(EventEmitter)

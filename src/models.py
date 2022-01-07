@@ -1,11 +1,10 @@
 from containers import qsetf
 from decorators import abstract
-from utils import Decorators, get_logic
+from utils import get_logic
 from lexicals import Operator, Sentence
 import itertools
-# abstract = Decorators.abstract
 
-class BaseModel(object):
+class BaseModel:
 
     truth_values: qsetf
     # Default set

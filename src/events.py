@@ -1,5 +1,6 @@
 from containers import linqset
 from decorators import metad, raisen
+from errors import instcheck
 from utils import ABCMeta, orepr
 
 from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, \
@@ -8,17 +9,17 @@ from enum import Enum, unique
 from typing import TypeAlias
 
 
-@unique
-class Events(Enum):
-    AFTER_APPLY        = 10
-    AFTER_BRANCH_ADD   = 20
-    AFTER_BRANCH_CLOSE = 30
-    AFTER_NODE_ADD     = 40
-    AFTER_NODE_TICK    = 50
-    AFTER_RULE_APPLY   = 60
-    AFTER_TRUNK_BUILD  = 70
-    BEFORE_APPLY       = 80
-    BEFORE_TRUNK_BUILD = 100
+# @unique
+# class Events(Enum):
+#     # AFTER_APPLY        = 10
+#     AFTER_BRANCH_ADD   = 20
+#     AFTER_BRANCH_CLOSE = 30
+#     AFTER_NODE_ADD     = 40
+#     AFTER_NODE_TICK    = 50
+#     AFTER_RULE_APPLY   = 60
+#     AFTER_TRUNK_BUILD  = 70
+#     # BEFORE_APPLY       = 80
+#     BEFORE_TRUNK_BUILD = 100
 
 EventId: TypeAlias = str | int | Enum
 class Listener(Callable, metaclass = ABCMeta):
@@ -61,8 +62,7 @@ class Listener(Callable, metaclass = ABCMeta):
 
     def __setattr__(self, attr, val):
         if attr == 'callcount':
-            if not isinstance(val, int):
-                raise TypeError(val)
+            instcheck(val, int)
         elif hasattr(self, 'event'):
             # Immutable
             raise AttributeError('cannot set %s' % attr)
@@ -82,8 +82,7 @@ class Listeners(linqset[Listener]):
         return self.__event
 
     def _before_add(self, value):
-        if not isinstance(value, Listener):
-            raise TypeError(value)
+        instcheck(value, Listener)
 
     def emit(self, *args, **kw) -> int:
         self.emitcount += 1
@@ -151,12 +150,10 @@ class EventsListeners(MutableMapping[EventId, Listeners], metaclass = ABCMeta):
 
     @normargs
     def on(self, event: EventId, *cbs: Callable):
-        # self[event].extend(cbs)
         self[event].extend(Listener(cb, False, event) for cb in cbs)
 
     @normargs
     def once(self, event: EventId, *cbs: Callable):
-        # self[event].extend(cbs, once = True)
         self[event].extend(Listener(cb, True, event) for cb in cbs)
 
     @normargs
@@ -238,11 +235,7 @@ class EventsListeners(MutableMapping[EventId, Listeners], metaclass = ABCMeta):
         return self.__base[key]
 
     def __setitem__(self, key: EventId, val: Listeners):
-        if not isinstance(key, EventId):
-            raise TypeError(key, type(key), EventId)
-        if not isinstance(val, Listeners):
-            raise TypeError(val, type(val), Listeners)
-        self.__base[key] = val
+        self.__base[instcheck(key, EventId)] = instcheck(val, Listeners)
 
     def __delitem__(self, key: EventId):
         del(self.__base[key])
@@ -274,8 +267,7 @@ class EventsListeners(MutableMapping[EventId, Listeners], metaclass = ABCMeta):
         if attr == '__base' and getattr(self, attr, None) != None:
             raise AttributeError('cannot set %s' % attr)
         if attr in ('callcount', 'emitcount'):
-            if not isinstance(val, int):
-                raise TypeError(val, type(val), int)
+            instcheck(val, int)
         super().__setattr__(attr, val)
 
 class EventEmitter:
@@ -288,9 +280,7 @@ class EventEmitter:
 
     @events.setter
     def events(self, value: EventsListeners):
-        if not isinstance(value, EventsListeners):
-            raise TypeError(value, type(value), EventsListeners)
-        self.__events = value
+        self.__events = instcheck(value, EventsListeners)
 
     def on(self, *args, **kw):
         self.events.on(*args, **kw)

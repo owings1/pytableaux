@@ -3,6 +3,7 @@ from lexicals import Argument, Predicates, Sentence, LexWriter
 from models import BaseModel
 from parsers import notations as parser_notns, create_parser, parse_argument, parse, Parser
 from proof.tableaux import Tableau, Branch, Node, Rule
+from proof.rules import ClosureRule
 from utils import get_logic, strtype
 
 from collections.abc import Callable, Iterable, Iterator
@@ -289,7 +290,7 @@ class BaseSuite(AbstractSuite):
             tab.finish()
             assert entry.rule == rule
             assert tab.current_step == 1
-            if rule.is_closure:
+            if isinstance(rule, ClosureRule):
                 assert len(tab.open) == 0
 
         return (rule, tab)

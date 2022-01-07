@@ -27,24 +27,25 @@ __all__ = (
 )
 ##############################################################
 
-ITEM_CACHE_SIZE = 10000
+
 import operator as opr
-from utils import instcheck as _instcheck
+from errors import instcheck as _instcheck
 
 class cons:
     'constants'
     NOARG = object()
     NOGET = object()
     from containers import EMPTY_SET
+    ITEM_CACHE_SIZE = 10000
 
 class std:
     'misc standard/common imports'
 
-    from typing import Annotated, Any, ClassVar, NamedTuple
+    from typing import Annotated, Any, ClassVar, NamedTuple, TypeVar
     from enum import auto, Enum, EnumMeta
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
-    __slots__ = ()
+    __new__ = None
 
 class errors:
     'errors'
@@ -52,7 +53,6 @@ class errors:
     from errors import DuplicateKeyError, DuplicateValueError, \
         ReadOnlyAttributeError, ValueMismatchError
 
-    __slots__ = ()
     __new__ = None
 
 class d:
@@ -84,7 +84,7 @@ class d:
             forigin(self, attr, val)
         return fset
 
-    __slots__ = __new__ = ()
+    __new__ = None
 
 class fict:
     '(f)unction, (i)terable, and (c)ontainer (t)ools'
@@ -110,32 +110,56 @@ class Types:
 
     from utils import \
         ABCMeta,           \
-        BiCoords,          \
         CacheNotationData, \
         FieldItemSequence, \
         IndexType,         \
-        IntTuple,          \
-        SortBiCoords,      \
-        TriCoords
+        IntTuple
 
     from containers import \
         DequeCache,        \
         SequenceSetApi,    \
         SetApi
 
-    class EnumLookupValue(std.NamedTuple):
-        member: std.Enum
-        index: int
-        nextmember: std.Enum | None
+    class EnumEntry(std.NamedTuple):
+        member : Bases.Enum
+        index  : int
+        nextmember: Bases.Enum | None
 
-    EnumMemberLookup = MapProxy[std.Any, EnumLookupValue]
+
+    class BiCoords(std.NamedTuple):
+        index     : int
+        subscript : int
+    
+        class Sorting(std.NamedTuple):
+            subscript : int
+            index     : int
+
+        def sorting(self) -> Types.BiCoords.Sorting:
+            return self.Sorting(self.subscript, self.index)
+
+        first = (0, 0)
+
+    BiCoords.first = BiCoords._make(BiCoords.first)
+
+    class TriCoords(std.NamedTuple):
+        index     : int
+        subscript : int
+        arity     : int
+
+        class Sorting(std.NamedTuple):
+            subscript : int
+            index     : int
+            arity     : int
+
+        def sorting(self) -> Types.TriCoords.Sorting:
+            return self.Sorting(self.subscript, self.index, self.arity)
+
+        first = (0, 0, 1)
+
+    TriCoords.first = TriCoords._make(TriCoords.first)
 
     Spec = tuple
     Ident = tuple[str, tuple]
-
-    ParameterCoords = BiCoords
-    AtomicCoords    = BiCoords
-    PredicateCoords = TriCoords
 
     ParameterSpec   = BiCoords
     ParameterIdent  = tuple[str, BiCoords]
@@ -151,6 +175,10 @@ class Types:
     QuantifiedSpec = tuple[str, BiCoords, Ident]
     OperatedSpec   = tuple[str, tuple[Ident, ...]]
 
+    deferred = {
+        'Lexical', 'PredsItemRef', 'PredsItemSpec', 'QuantifiedItem', 'LexType',
+    }
+
     Lexical        : type[Bases.Lexical]
 
     PredsItemRef:  type[PredicateRef | Predicate]  = PredicateRef
@@ -160,9 +188,7 @@ class Types:
 
     LexType     : type[LexType]
 
-    deferred = {
-        'Lexical', 'PredsItemRef', 'PredsItemSpec', 'QuantifiedItem', 'LexType',
-    }
+
 
     def __new__(cls):
         attrs = dict(cls.__dict__)
@@ -173,22 +199,20 @@ class Types:
             todo.remove(key)
             attrs[key] = value
         class Journal:
-            __slots__ = ()
+            __slots__ = cons.EMPTY_SET
+            __new__ = object.__new__
             def __dir__(self):
                 return list(reader)
             def __setattr__(self, name, value):
                 try: return setitem(name, value)
-                except KeyError: pass
-                raise AttributeError(name)   
+                except KeyError: raise AttributeError(name) from None
             def __getattribute__(self, name) -> type:
                 try: return reader[name]
-                except KeyError: pass
-                raise AttributeError(name)
+                except KeyError: raise AttributeError(name) from None
+
         Journal.__qualname__ = cls.__qualname__
         Journal.__name__ = cls.__name__
-        return object.__new__(Journal)
-
-    __slots__ = ()
+        return Journal()
 
 Types = Types()
 
@@ -224,20 +248,20 @@ class Metas:
         # ----------------------------
         #  Class Instance Variables
         # ----------------------------
-        _lookup : Types.EnumMemberLookup
+        _lookup : Types.MapProxy[std.Any, Types.EnumEntry]#Types.EnumMemberLookup
         _seq    : tuple[Bases.Enum, ...]
 
         # ----------------------
         #  Class Creation
         # ----------------------
-        def __new__(cls, clsname, bases, attrs, **kw):
+        def __new__(cls, clsname, bases, ns, **kw):
 
             # Run MetaFlag namespace init hooks.
-            Metas.Abc.nsinit(attrs, bases, **kw)
+            Metas.Abc.nsinit(ns, bases, **kw)
             # Create class.
-            Class = super().__new__(cls, clsname, bases, attrs, **kw)
+            Class = super().__new__(cls, clsname, bases, ns, **kw)
             # Run MetaFlag clean hook.
-            Metas.Abc.nsclean(Class, attrs, bases, **kw)
+            Metas.Abc.nsclean(Class, ns, bases, **kw)
 
             # Freeze Enum class attributes.
             Class._member_map_ = Types.MapProxy(Class._member_map_)
@@ -277,7 +301,7 @@ class Metas:
                 ))
             ))
             # Builds the member cache entry: (member, i, next-member).
-            value_it = fict.starmap(Types.EnumLookupValue, fict.lzip(
+            value_it = fict.starmap(Types.EnumEntry, fict.lzip(
                 Class, range(len(Class)), Class.seq[1:]
             ))
             # Fill in the member entries for all keys and merge the dict.
@@ -290,10 +314,10 @@ class Metas:
         @d.final
         def _default_keys(member: Bases.Enum):
             'Default member lookup keys'
-            return fict.setm({
+            return fict.setm((
                 member._name_, (member._name_,), member,
                 member._value_, # hash(member),
-            })
+            ))
 
         @classmethod
         @d.final
@@ -303,9 +327,9 @@ class Metas:
             names = cls._hooks & Class.__dict__
             fict.drain(map(fdel, names))
 
-        _hooks = fict.setf({
+        _hooks = fict.setf((
             '_member_keys', '_on_init', '_after_init'
-        })
+        ))
 
         #----------------------
         # Subclass Init Hooks       
@@ -318,9 +342,11 @@ class Metas:
         def _on_init(cls, Class: Metas.Enum):
             '''Init hook after all members have been initialized, before index
             is created. Skips abstract classes.'''
+            pass
 
         def _after_init(cls):
             'Init hook once the class is initialized. Includes abstract classes.'
+            pass
 
         #----------------------
         # Container behavior   
@@ -397,6 +423,13 @@ class Metas:
 
         index = indexof
 
+        def entryof(cls, key) -> Types.EnumEntry:
+            try:
+                return cls._lookup[key]
+            except KeyError:
+                return cls._lookup[cls[key]]
+            except AttributeError:
+                raise KeyError(key)
         # -----------------------
         # Attribute Access
         # -----------------------
@@ -467,7 +500,7 @@ class Metas:
         def _sys(cls) -> LexWriter:
             'The system LexWriter instance for representing.'
             try: return LexWriter()
-            except NameError: raise AttributeError()
+            except NameError: raise AttributeError
 
         @_sys.setter
         def _sys(cls, value: LexWriter):
@@ -534,7 +567,7 @@ class Bases:
     class Lexical:
         'Lexical mixin class for both ``LexicalEnum`` and ``LexicalItem`` classes.'
 
-        def __init__(self): raise TypeError(type(self))
+        def __init__(self): raise TypeError(self)
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -568,7 +601,7 @@ class Bases:
         @staticmethod
         def identitem(item: Bases.Lexical) -> Types.Ident:
             'Build an ``ident`` tuple from the class name and ``spec``.'
-            return (item.__class__.__name__, item.spec)
+            return item.__class__.__name__, item.spec
 
         @staticmethod
         def hashitem(item: Bases.Lexical) -> int:
@@ -645,10 +678,10 @@ class Bases:
 
         __delattr__ = d.raises(AttributeError)
         __setattr__ = d.nosetattr(object, cls = Metas.LexicalItem)
-        __slots__ = ()
+        __slots__ = cons.EMPTY_SET
 
     Types.Lexical = Lexical
-    Metas.LexicalItem.Cache = Types.DequeCache(Lexical, ITEM_CACHE_SIZE)
+    Metas.LexicalItem.Cache = Types.DequeCache(Lexical, cons.ITEM_CACHE_SIZE)
 
     class LexicalEnum(Lexical, Enum):
         'Base Enum implementation of Lexical. For Quantifier and Operator classes.'
@@ -714,13 +747,13 @@ class Bases:
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         def __init__(self, order, label, *_):
-            self.spec = (self.name,)
+            self.spec = self.name,
             self.order, self.label = order, label
             # Prepended with rank in LexType init
-            self.sort_tuple = (self.order,)
+            self.sort_tuple = self.order,
             self.ident = Bases.Lexical.identitem(self)
             self.hash = Bases.Lexical.hashitem(self)
-            self.strings = fict.setf({self.name, self.label})
+            self.strings = fict.setf((self.name, self.label))
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -799,14 +832,14 @@ class Bases:
         subscript: int
 
         #: The reversed coords for sorting.
-        scoords: Types.SortBiCoords
+        scoords: Types.BiCoords.Sorting
 
         @d.lazy.prop
         def sort_tuple(self) -> Types.BiCoords:
             return self.TYPE.rank, *self.scoords
 
         @d.lazy.prop
-        def scoords(self) -> Types.SortBiCoords:
+        def scoords(self) -> Types.BiCoords.Sorting:
             return self.coords.sorting()
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -938,7 +971,7 @@ class Predicate(Bases.CoordsItem):
 
     spec    : Types.TriCoords
     coords  : Types.TriCoords
-    scoords : Types.SortBiCoords
+    scoords : Types.TriCoords.Sorting
     refs    : tuple[Types.PredicateRef, ...]
 
     #: The coords arity.
@@ -952,7 +985,7 @@ class Predicate(Bases.CoordsItem):
 
     @d.lazy.prop
     def bicoords(self) -> Types.BiCoords:
-        return Types.BiCoords(*self.spec[0:2])
+        return Types.BiCoords(self.index, self.subscript)
 
     @d.lazy.prop
     def refs(self) -> tuple[Types.PredicateRef, ...]:
@@ -1632,7 +1665,7 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
     def _before_add(self, pred: Predicate):
         'Implement before_add hook. Check for arity/value conflicts.'
         m, keys = self._lookup, pred.refkeys
-        conflict = fict.setm(filter(None, map(m.get, keys))) - {pred}
+        conflict = fict.setf(filter(None, map(m.get, keys))) - {pred}
         if len(conflict):
             other = next(iter(conflict))
             raise errors.ValueMismatchError(other.coords, pred.coords)
@@ -1650,25 +1683,13 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
     def _after_remove(self, pred: Predicate):
         'Implement after_remove hook. Remove keys from lookup index.'
         m, keys = self._lookup, pred.refkeys
-        conflict = fict.setm(map(m.pop, keys)) - {pred}
+        conflict = fict.setf(map(m.pop, keys)) - {pred}
         if len(conflict):
             raise errors.DuplicateValueError(pred, *conflict)
 
     # -------------------------------
     #  Override qset
     # -------------------------------
-
-    # def insert(self, index, value):
-    #     return super().insert(index, Predicate(value))
-
-    # def __setitem__(self, index, value):
-    #     if isinstance(index, slice):
-    #         value = list(map(Predicate, value))
-    #         for v in value: self._before_add(v)
-    #     else:
-    #         value = Predicate(value)
-    #         self._before_add(value)
-    #     return super().__setitem__(index, value)
 
     def clear(self):
         super().clear()
@@ -1710,7 +1731,6 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
             for pred in cls:
                 setattr(Predicate, pred.name, pred)
             Predicate.System = cls
-            # cls.__qualname__ = 'Predicate.System'
 
         # --------------------------
         # Class init.
@@ -1913,7 +1933,7 @@ class LexWriter(metaclass = Metas.LexWriter):
     @d.final
     @classmethod
     def register(cls, subcls: type[LexWriter]) -> type[LexWriter]:
-        'Class decorator to update available writers.'
+        'Update available writers.'
         if not issubclass(subcls, __class__):
             raise TypeError(subcls, __class__)
         for ltype, meth in subcls._methodmap.items():
@@ -1924,6 +1944,7 @@ class LexWriter(metaclass = Metas.LexWriter):
             except AttributeError:
                 raise TypeError('Missing method', meth, subcls)
         notn = subcls.notation = Notation(subcls.notation)
+        type(cls).register(cls, subcls)
         notn.writers.add(subcls)
         if notn.default_writer is None:
             notn.default_writer = subcls
