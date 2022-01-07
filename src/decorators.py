@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from callables import calls, gets, raiser, Caller#, cchain, preds
-from utils import ABCMeta, MetaFlag, instcheck, subclscheck
+from callables import calls, gets, raiser, Caller, preds#, cchain, preds
+from errors import instcheck
+from utils import ABCMeta, MetaFlag, subclscheck
 
 from collections.abc import Callable, Iterable, Mapping
 from functools import partial, reduce
@@ -17,7 +18,7 @@ from typing import Any, Generic, NamedTuple, ParamSpec, TypeVar, abstractmethod
 
 P = ParamSpec('P')
 T = TypeVar('T')
-
+GenericAlias = type(list[int])
 _WRAPSINSTATTR = '__wraps__'
 _valfilter = partial(filter, gets.key(1))
 _getmixed = gets.mixed(flag=Caller.SAFE)
@@ -47,10 +48,10 @@ class OwnerName(NamedTuple):
     owner: type
     name: str
 
-class NamedMember:
+class NamedMember(Generic[T]):
 
-    def __set_name__(self, owner, name):
-        self._owner_name = OwnerName(owner, name)
+    def __set_name__(self, owner: T, name: str):
+        self._owner_name: tuple[T, str] = OwnerName(owner, name)
         self.__name__ = name
         self.__qualname__ = '%s.%s' % (owner.__name__, name)
 
@@ -62,9 +63,28 @@ class NamedMember:
     __slots__ = '__name__', '__qualname__', '_owner_name'
 
     @property
-    def owner(self):
+    def owner(self) -> T:
         try: return self._owner_name.owner
         except AttributeError: pass
+
+    __class_getitem__ = classmethod(GenericAlias)
+
+class namedf(NamedMember[T]):
+    __slots__ = 'cb', 'args', 'kw'
+    def __init__(self, cb: Callable, *args, **kw):
+        self.cb = cb
+        self.args = args
+        self.kw = kw
+
+    def __set_name__(self, owner: T, name):
+        super().__set_name__(owner, name)
+        func = self.cb(self, *self.args, **self.kw)
+        setattr(owner, name, func)
+
+    def __call__(self):
+        ...
+        # return wraps(method)
+        # return self.cb(*args, **kw)
 
 class rund:
     __slots__ = ()
@@ -318,6 +338,10 @@ class abstract:
             raise NotImplementedError('abstractmethod', method)
         return f
 
+    @staticmethod
+    def isabstract(method):
+        return preds.isabstract_method(method)
+
     __slots__ = ()
 
 class raisen(NamedMember):
@@ -388,6 +412,7 @@ class metad:
 
     class temp(flag, on = F.temp):     __slots__ = ()
     class nsinit(flag, on = F.nsinit): __slots__ = ()
+    class after(flag, on = F.after): __slots__ = ()
 
 
     __slots__ = ()

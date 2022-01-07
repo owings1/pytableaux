@@ -388,3 +388,4 @@ class preds:
     isidentifier = cchain.forall(instanceof[str], str.isidentifier)
     from keyword import iskeyword
     isattrstr = cchain.forall(instanceof[str], str.isidentifier, cchain.reducer(iskeyword, opr.not_))
+    isabstract_method = cchain.reducer(gets.attr('__isabstractmethod__', flag = Flag.Safe), bool)

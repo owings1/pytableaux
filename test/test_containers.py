@@ -6,6 +6,33 @@ from lexicals import *
 
 from containers import *
 
+from collections import deque
+
+class Test_seqf(BaseSuite):
+    def test_add_radd(self):
+        lh = seqf('abc')
+        rh = 'd',
+        r = lh + rh
+        assert list(r) == list('abcd')
+        assert type(r) is seqf
+        r = rh + lh
+        assert list(r) == list('dabc')
+        assert type(r) is tuple
+        rh = ['d']
+        r = lh + rh
+        assert list(r) == list('abcd')
+        assert type(r) is seqf
+        r = rh + lh
+        assert list(r) == list('dabc')
+        assert type(r) is list
+        rh = deque('d')
+        r = lh + rh
+        assert list(r) == list('abcd')
+        assert type(r) is seqf
+        r = rh + lh
+        assert list(r) == list('dabc')
+        assert type(r) is deque
+
 class TestSetList(BaseSuite):
 
     def test_equalities(self):
@@ -160,7 +187,7 @@ class TestLinkSet(BaseSuite):
 
     def test_view(self):
         x = linqset('abcdef')
-        v = SequenceView(x)
+        v = SequenceProxy(x)
         assert len(v) == 6
         assert list(v) == list('abcdef')
         x.append('g')

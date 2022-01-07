@@ -254,6 +254,7 @@ class MetaFlag(enum.Flag):
     blank  = 0
     nsinit = 4
     temp   = 8
+    after  = 16
     nsclean = nsinit | temp
     
 
@@ -294,21 +295,22 @@ class ABCMeta(abc.ABCMeta):
     @staticmethod
     def nsinit(ns: dict, bases, /, **kw):
         mfattr = __class__._metaflag_attr
-        # kit = list(attrs)
-        # for v in (attrs[k] for k in kit):
         for v in tuple(ns.values()):
-            # mf = getattr(v, attrname, MetaFlag.blank)
             if MetaFlag.nsinit in getattr(v, mfattr, MetaFlag.blank):
                 instcheck(v, Callable)(ns, bases, **kw)
 
     @staticmethod
     def nsclean(Class, ns: dict, bases, deleter = delattr, **kw):
         attrname = __class__._metaflag_attr
-        kit = ns.keys()
-        for k, v in ((k,ns[k]) for k in kit):
+        for k, v in tuple(ns.items()):
             mf = getattr(v, attrname, MetaFlag.blank)
-            if mf is not mf.blank and mf in MetaFlag.nsclean:
-                deleter(Class, k)
+            if mf is not mf.blank:
+                if MetaFlag.after in mf:
+                    instcheck(v, Callable)(Class)
+                    deleter(Class, k)
+                elif mf in MetaFlag.nsclean:
+                    deleter(Class, k)
+
     
     @staticmethod
     def basesmap(bases):

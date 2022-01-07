@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from decorators import operd #, metad, wraps #deleg, 
+
+from decorators import abstract, operd, wraps, metad, namedf #deleg, 
 from errors import instcheck, DuplicateValueError, MissingValueError #DuplicateKeyError, 
 from utils import ABCMeta, IndexType, notsubclscheck, \
     wraprepr \
@@ -27,13 +28,13 @@ from callables import preds, calls#, cchain, gets
 __all__ = (
     'Abc', 'Copyable',
     'SetApi', #'MutableSetApi',
-    'setf', 'setm', # SetSeqPair,
+    'setf', 'setm', 'fset',# SetSeqPair,
     'SequenceApi', #'MutableSequenceApi',
-    'SequenceView',
+    'SequenceProxy',
     'seqf',
     'SequenceSetApi', #'MutableSequenceSetApi',
     'qsetf', 'qset', # MutSetSeqPair,
-    'linqset', # MutableLinkSequenceSetApi, LinkSequenceView, # Link
+    'linqset', # MutableLinkSequenceSetApi, # Link
     # MapAttrView
     # DequeCache
 )
@@ -78,31 +79,41 @@ class Copyable(Abc):
             return NotImplemented
         return cls.check_mrodict(subcls.mro(), cls.__subcls_methods)
 
+@wraps(Copyable.copy)
+def _copy_immut(self):
+    return self
+@wraps(Copyable.copy)
+def _copy_fromit(self):
+    return self._from_iterable(self)
 # -------------- Sequence ---------------#
 
 class SequenceApi(bases.Sequence[V], Copyable):
-    "Fusion interface of collections.abc.Sequence and built-in tuple."
+    "Extension of collections.abc.Sequence and built-in tuple."
 
     __slots__ = ()
 
     @overload
-    def __getitem__(self: T, index: slice) -> T:
+    def __getitem__(self: T, s: slice) -> T: ...
+
+    @overload
+    def __getitem__(self, i: int) -> V: ...
+
+    @abstractmethod
+    def __getitem__(self, index):
         raise IndexError
 
     @overload
-    def __getitem__(self, index : int) -> V:
-        raise IndexError
-
-    __getitem__ = abstractmethod(__getitem__)
-
-    def __add__(self:T|SequenceApi, other: Iterable) -> T:
+    def __add__(self:T, other: Iterable) -> T: ...
+    def __add__(self, other):
         if not isinstance(other, Iterable):
             return NotImplemented
         return self._from_iterable(itertools.chain(self, other))
 
     __radd__ = __add__
 
-    def __mul__(self:T|SequenceApi, other: int) -> T:
+    @overload
+    def __mul__(self:T, other: int) -> T: ...
+    def __mul__(self, other):
         if not isinstance(other, int):
             return NotImplemented
         return self._from_iterable(
@@ -142,7 +153,9 @@ class MutableSequenceApi(SequenceApi[V], bases.MutableSequence[V]):
         Must be idempotent. Does not affect deletions.'''
         return value
 
-    def _setslice_prep(self: T, slc: slice, values: Iterable, /) -> tuple[T, T]:
+    @overload
+    def _setslice_prep(self:T, slc: slice, values: Iterable, /) -> tuple[T, T]: ...
+    def _setslice_prep(self, slc: slice, values: Iterable, /):
         olds = self[slc]
         values = self._from_iterable(map(self._new_value, values))
         if abs(slc.step or 1) != 1 and len(olds) != len(values):
@@ -151,84 +164,90 @@ class MutableSequenceApi(SequenceApi[V], bases.MutableSequence[V]):
             )
         return olds, values
 
-    def __imul__(self:T|MutableSequenceApi, other: int) -> T:
+    @overload
+    def __imul__(self:T, other: int) -> T: ...
+    def __imul__(self, other):
         if not isinstance(other, int):
             return NotImplemented
-        for _ in range(other):
-            self.extend(self)
+        self.extend(itertools.chain.from_iterable(
+            itertools.repeat(self, other - 1)
+        ))
         return self
 
-    def copy(self):
-        return self._from_iterable(self)
+    copy = _copy_fromit
 
 MutableSequenceApi.register(list)
 MutableSequenceApi.register(deque)
 
-
-class SequenceView(SequenceApi[V]):
+class SequenceProxy(SequenceApi[V]):
     'Sequence view proxy.'
 
     __slots__ = ()
 
-    def copy(self):
-        return self
+    _proxy_names_ = set()
 
-    _seq_type_: type[SequenceApi] = None
+    @metad.after
+    def _after(cls):
+        cls._proxy_names_ = frozenset(cls._proxy_names_)
+
+    @metad.temp
+    def proxyfn(default = NOARG, *args):
+        def defer(member: namedf[type[SequenceProxy]], default = NOARG):
+            owner, name = member._owner_name
+            owner._proxy_names_.add(name)
+            if default is NOARG:
+                method = getattr(SequenceApi, name, None)
+                if callable(method) and not abstract.isabstract(method):
+                    default = method
+            def f(cls: type[SequenceProxy], *args):
+                proxy_method = cls._get_base_attr(name, default)
+                setattr(cls, name, proxy_method)
+                return proxy_method(*args)
+            return classmethod(wraps(member)(f))
+        return namedf(defer, *args)
+
+    __len__      = proxyfn()
+    __getitem__  = proxyfn()
+    __contains__ = proxyfn()
+    __iter__     = proxyfn()
+    __reversed__ = proxyfn()
+    count        = proxyfn()
+    index        = proxyfn()
+    _from_iterable = proxyfn()
+
+    copy = _copy_immut
+
+    def __repr__(self):
+        return wraprepr(self, list(self))
 
     @classmethod
-    def _from_iterable(cls, it: Iterable):
-        try:
-            return cls._seq_type_._from_iterable(it)
-        except AttributeError:
-            if cls._seq_type_ in (tuple, list):
-                return cls._seq_type_(it)
-            raise TypeError(cls._seq_type_)
+    @abstractmethod
+    def _get_base_attr(cls, name): ...
 
     def __new__(cls, base: SequenceApi):
 
-        if cls is not __class__:
-            raise TypeError
+        instcheck(base, SequenceApi)
+        names = cls._proxy_names_
 
-        class proxy(SequenceView):
+        class SeqProxy(SequenceProxy):
 
             __slots__ = EMPTY_SET
-            _seq_type_ = type(instcheck(base, SequenceApi))
-
-            __len__      = base.__len__
-            __contains__ = base.__contains__
-            __getitem__  = base.__getitem__
-            __iter__     = base.__iter__
-
-            def __repr__(_):
-                return '%s(%s)' % (cls.__name__, base.__repr__())
-
             __new__ = object.__new__
 
-            try:
-                __reversed__ = base.__reversed__
-            except AttributeError:
-                pass
+            @classmethod
+            def _get_base_attr(cls, name, default = NOARG,/):
+                if name in names:
+                    value = getattr(base, name, default)
+                    if value is not NOARG: return value
+                raise AttributeError(name)
 
-            count = base.count
-            index = base.index
-
-        proxy.__name__ = cls.__name__
-        proxy.__qualname__ = '%s.%s' % (
-            proxy._seq_type_.__qualname__, cls.__name__
+        SeqProxy.__qualname__ = '%s.%s' % (
+            type(base).__qualname__, SeqProxy.__name__
         )
-
-        return proxy()
+        return SeqProxy()
 
 class seqf(tuple[V], SequenceApi[V]):
-    # __class_getitem__ = SequenceApi.__class_getitem__
-
-    def copy(self):
-        return self
-    # __len__      = tuple.__len__
-    # __getitem__  = tuple.__getitem__
-    # __contains__ = tuple.__contains__
-    # __iter__     = tuple.__iter__
-
+    'Frozen sequence, fusion of tuple and SequenceApi.'
     # __eq__  = tuple.__eq__
     # __ne__  = tuple.__ne__
 
@@ -239,33 +258,46 @@ class seqf(tuple[V], SequenceApi[V]):
 
     # __hash__ = tuple.__hash__
 
-    # count = tuple.count
-    # index = tuple.index
-
-    # __add__
-    # __mul__
-    # __rmul__
     __add__  = SequenceApi.__add__
-    def __radd__(self, other):
-        otype = type(other)
-        if otype is tuple:
-            # Don't override tuple __add__
-            return other.__add__(self)
-        if issubclass(otype, list):
-            if otype is list:
-                return otype(itertools.chain(other, self))
-            inst = other.copy()
-            inst.extend
-        return super().__radd__(other)
 
-    # __radd__ = SequenceApi.__radd__
+    @overload
+    def __radd__(self, other: seqf[V]) -> seqf[V]: ...
+    @overload
+    def __radd__(self, other: tuple[V, ...]) -> tuple[V, ...]: ...
+    @overload
+    def __radd__(self, other: list[V]) -> list[V]: ...
+    @overload
+    def __radd__(self, other: deque[V]) -> deque[V]: ...
+
+    def __radd__(self, other):
+        if not isinstance(other, Iterable):
+            return NotImplemented
+        # Check concrete type, not subclass.
+        otype = type(other)
+        it = itertools.chain(other, self)
+        # Since we inherit from tuple, Python will prefer our __radd__
+        # to tuple's __add__, which we don't want to override.
+        if otype is tuple or otype is list:
+            return otype(it)
+        if otype is deque:
+            maxlen = other.maxlen
+            if maxlen is not None and len(other) + len(self) > maxlen:
+                # Making a new deque that exceeds maxlen of lhs is not supported.
+                raise TypeError(
+                    "deque maxlen (%d) would be exceeded by "
+                    "new instance (%s)" % (maxlen, len(other) + len(self))
+                )
+            return otype(it, maxlen)
+        return self._from_iterable(it)
+
     __mul__  = SequenceApi.__mul__
     __rmul__ = SequenceApi.__rmul__
 
-    # __class__
+    copy = _copy_immut
 
     def __repr__(self):
         return type(self).__name__ + super().__repr__()#tuple.__repr__(self)
+
 
 EMPTY_SEQ = seqf()
 
@@ -304,7 +336,6 @@ class SetApi(bases.Set[V], Copyable):
     def _from_iterable(cls: type[T], it: Iterable) -> T:
         return cls(it)
 
-
 class MutableSetApi(bases.MutableSet[V], SetApi[V]):
     'Fusion interface of collections.abc.MutableSet and built-in set.'
 
@@ -318,10 +349,10 @@ class MutableSetApi(bases.MutableSet[V], SetApi[V]):
         info = set.symmetric_difference_update
     )
 
-    def copy(self):
-        return self._from_iterable(self)
+    copy = _copy_fromit
 
 class setf(SetApi[V]):
+# class setf(SetApi[V], frozenset[V]):
     'SetApi wrapper around built-in frozenset.'
 
     __slots__ = '_set_',
@@ -341,32 +372,46 @@ class setf(SetApi[V]):
     def __repr__(self):
         return self._set_.__repr__()
 
-    def copy(self):
-        return self
+    copy = _copy_immut
 
+class fset(SetApi[V], frozenset[V]):
+    __slots__ = ()
+    __len__      = frozenset.__len__
+    __contains__ = frozenset.__contains__
+    __iter__     = frozenset[V].__iter__
+    copy  = _copy_immut
 EMPTY_SET = setf()
 
-class setm(MutableSetApi[V]):
+class setm(MutableSetApi[V], set[V]):
     'MutableSetApi wrapper around built-in set.'
+    __slots__ = ()
+    __len__      = set.__len__
+    __contains__ = set.__contains__
+    __iter__     = set[V].__iter__
+    clear   = set.clear
+    add     = set.add
+    discard = set.discard
 
-    __slots__ = '_set_',
 
-    def __init__(self, values: Iterable = None, /):
-        self._set_ = set()
-        if values is not None:
-            self.update(values)
 
-    # copy = MutableSetApi.copy
-    __len__      = setf.__len__
-    __contains__ = setf.__contains__
-    __iter__     = setf[V].__iter__
-    __repr__     = setf.__repr__
+    # __slots__ = '_set_',
 
-    def add(self, value):
-        self._set_.add(value)
+    # def __init__(self, values: Iterable = None, /):
+    #     self._set_ = set()
+    #     if values is not None:
+    #         self.update(values)
 
-    def discard(self, value):
-        self._set_.discard(value)
+    # copy = _copy_fromit
+    # __len__      = setf.__len__
+    # __contains__ = setf.__contains__
+    # __iter__     = setf[V].__iter__
+    # __repr__     = setf.__repr__
+
+    # def add(self, value):
+    #     self._set_.add(value)
+
+    # def discard(self, value):
+    #     self._set_.discard(value)
 
 # ------------- SequenceSet ---------------#
 
@@ -551,8 +596,7 @@ class qsetf(SequenceSetApi[V]):
     def __repr__(self):
         return wraprepr(self, self._setseq_.seq)
 
-    def copy(self):
-        return self
+    copy = _copy_immut
 
     ImplNotes: Annotated[dict, dict(
         implement = {'__len__', '__contains__', '__getitem__'},
@@ -1345,4 +1389,4 @@ class DequeCache(Collection[V], Reversible, Sized, Abc):
         Api.__qualname__ = 'DequeCache.Api'
         return Api()
 
-del(operd)
+del(operd, metad, abstract, namedf, _copy_immut, _copy_fromit)

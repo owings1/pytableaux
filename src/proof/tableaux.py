@@ -19,7 +19,7 @@
 # pytableaux - tableaux module
 from __future__ import annotations
 from callables import preds
-from containers import EMPTY_SET, linqset, qsetf, SequenceView
+from containers import EMPTY_SET, linqset, qsetf, SequenceApi, SequenceProxy
 from .common import FLAG, KEY, Branch, BranchEvent, Node, RuleEvent, TabEvent, Target #, NodeType
 from decorators import abstract
 from errors import DuplicateKeyError, IllegalStateError, MissingValueError,\
@@ -728,7 +728,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     current_step: int
 
     #: Ordered view of the open branches.
-    open: SequenceView[Branch]
+    open: SequenceApi[Branch]
 
     #: The history of rule applications.
     history: MutableSequence[StepEntry]
@@ -865,12 +865,12 @@ class Tableau(Sequence[Branch], EventEmitter):
         return len(self.history) + (FLAG.TRUNK_BUILT in self.__flag)
 
     @property
-    def open(self) -> SequenceView[Branch]:
+    def open(self) -> SequenceProxy[Branch]:
         'View of the open branches.'
         try:
             return self.__openview
         except AttributeError:
-            self.__openview = SequenceView(self.__open)
+            self.__openview = SequenceProxy(self.__open)
         return self.__openview
 
     def build(self) -> Tableau:
