@@ -17,12 +17,13 @@
 # ------------------
 #
 # pytableaux - rule helpers module
+from __future__ import annotations
 from containers import EMPTY_SET, MapAttrView
 from decorators import abstract
 from lexicals import Constant, Sentence
 from models import BaseModel
 from utils import orepr
-from .common import Access, Branch, Node, RuleEvent, TabEvent, Target
+from .common import Access, Branch, Comparer, Filters, Node, RuleEvent, TabEvent, Target
 from .tableaux import Rule, Tableau
 
 
@@ -422,7 +423,7 @@ class FilterHelper(FilterNodeCache):
     rule: Rule
     callcount: int
     __fmap: dict
-    filters: MapAttrView
+    filters: MapAttrView[Comparer]
     __to_discard: set
 
     def __call__(self, node: Node, branch: Branch) -> bool:
@@ -448,8 +449,7 @@ class FilterHelper(FilterNodeCache):
             helper: FilterHelper = rule.helpers[cls]
             helper.gc()
             nodes = helper[branch]
-            targets = list(fiter_targets(rule, nodes, branch))
-            return targets
+            return tuple(fiter_targets(rule, nodes, branch))
         return get_targets_filtered
 
     def filter(self, node: Node, branch: Branch) -> bool:
@@ -485,8 +485,6 @@ class FilterHelper(FilterNodeCache):
                 pass
         self.__to_discard.clear()
 
-
-
     def __init__(self, rule: Rule, attr: str = None, *args, **kw):
         super().__init__(rule, *args, **kw)
         self.rule = rule
@@ -501,7 +499,7 @@ class FilterHelper(FilterNodeCache):
             name, cls = item
             self._add_filter(cls, name)
 
-    def _add_filter(self, cls: type, name: str = None):
+    def _add_filter(self, cls: type[Comparer], name: str = None):
         """
         Instantiate a filter class from the NodeFilters config.
         """
@@ -517,7 +515,7 @@ class FilterHelper(FilterNodeCache):
 
     def _reprdict(self) -> dict:
         return super()._reprdict() | {
-            'filters': '(%s) %s' % (len(self.filters), dict(self.filters)),
+            'filters': '(%s) %s' % (len(self.filters), self.__fmap),
         }
 
 class Delegates:
@@ -571,7 +569,7 @@ class Delegates:
                 """
                 :overrides: Rule
                 """
-                return self.nf.filters.sentence.get(node)
+                return self.nf.filters['sentence'].get(node)
 
         class ExampleNodes(Rule):
             """

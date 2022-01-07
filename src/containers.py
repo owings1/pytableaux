@@ -28,14 +28,14 @@ from callables import preds, calls#, cchain, gets
 __all__ = (
     'Abc', 'Copyable',
     'SetApi', #'MutableSetApi',
-    'setf', 'setm', 'fset',# SetSeqPair,
+    'setf', 'setm', # SetSeqPair,
     'SequenceApi', #'MutableSequenceApi',
     'SequenceProxy',
     'seqf',
     'SequenceSetApi', #'MutableSequenceSetApi',
     'qsetf', 'qset', # MutSetSeqPair,
     'linqset', # MutableLinkSequenceSetApi, # Link
-    # MapAttrView
+    'MapAttrView',
     # DequeCache
 )
 
@@ -79,16 +79,10 @@ class Copyable(Abc):
             return NotImplemented
         return cls.check_mrodict(subcls.mro(), cls.__subcls_methods)
 
-@wraps(Copyable.copy)
-def _copy_immut(self):
-    return self
-@wraps(Copyable.copy)
-def _copy_fromit(self):
-    return self._from_iterable(self)
 # -------------- Sequence ---------------#
 
 class SequenceApi(bases.Sequence[V], Copyable):
-    "Extension of collections.abc.Sequence and built-in tuple."
+    "Extension of collections.abc.Sequence and built-in sequence (tuple)."
 
     __slots__ = ()
 
@@ -133,6 +127,9 @@ class SequenceApi(bases.Sequence[V], Copyable):
             raise IndexError(ErrMsg.IndexRange.value)
         return index
 
+    def copy(self):
+        return self._from_iterable(self)
+
     @classmethod
     def _from_iterable(cls: type[T], it: Iterable) -> T:
         return cls(it)
@@ -174,8 +171,6 @@ class MutableSequenceApi(SequenceApi[V], bases.MutableSequence[V]):
         ))
         return self
 
-    copy = _copy_fromit
-
 MutableSequenceApi.register(list)
 MutableSequenceApi.register(deque)
 
@@ -215,7 +210,8 @@ class SequenceProxy(SequenceApi[V]):
     index        = proxyfn()
     _from_iterable = proxyfn()
 
-    copy = _copy_immut
+    def copy(self):
+        return self
 
     def __repr__(self):
         return wraprepr(self, list(self))
@@ -293,10 +289,8 @@ class seqf(tuple[V], SequenceApi[V]):
     __mul__  = SequenceApi.__mul__
     __rmul__ = SequenceApi.__rmul__
 
-    copy = _copy_immut
-
     def __repr__(self):
-        return type(self).__name__ + super().__repr__()#tuple.__repr__(self)
+        return type(self).__name__ + super().__repr__()
 
 
 EMPTY_SEQ = seqf()
@@ -332,14 +326,26 @@ class SetApi(bases.Set[V], Copyable):
     __sub__ = bases.Set.__sub__
     __xor__ = bases.Set.__xor__
 
+    def copy(self):
+        return self._from_iterable(self)
+
     @classmethod
     def _from_iterable(cls: type[T], it: Iterable) -> T:
         return cls(it)
 
+class setf(SetApi[V], frozenset[V]):
+    'SetApi wrapper around built-in frozenset.'
+    __slots__ = ()
+    __len__      = frozenset.__len__
+    __contains__ = frozenset.__contains__
+    __iter__     = frozenset[V].__iter__
+
+EMPTY_SET = setf()
+
 class MutableSetApi(bases.MutableSet[V], SetApi[V]):
     'Fusion interface of collections.abc.MutableSet and built-in set.'
 
-    __slots__ = EMPTY_SEQ
+    __slots__ = EMPTY_SET
 
     update              = operd.iterself(opr.ior,  info = set.update)
     intersection_update = operd.iterself(opr.iand, info = set.intersection_update)
@@ -349,69 +355,15 @@ class MutableSetApi(bases.MutableSet[V], SetApi[V]):
         info = set.symmetric_difference_update
     )
 
-    copy = _copy_fromit
-
-class setf(SetApi[V]):
-# class setf(SetApi[V], frozenset[V]):
-    'SetApi wrapper around built-in frozenset.'
-
-    __slots__ = '_set_',
-
-    def __init__(self, values: Iterable = None, /):
-        self._set_ = frozenset(EMPTY_SEQ if values is None else values)
-
-    def __len__(self):
-        return len(self._set_)
-
-    def __contains__(self, value):
-        return value in self._set_
-
-    def __iter__(self) -> Iterator[V]:
-        return iter(self._set_)
-
-    def __repr__(self):
-        return self._set_.__repr__()
-
-    copy = _copy_immut
-
-class fset(SetApi[V], frozenset[V]):
-    __slots__ = ()
-    __len__      = frozenset.__len__
-    __contains__ = frozenset.__contains__
-    __iter__     = frozenset[V].__iter__
-    copy  = _copy_immut
-EMPTY_SET = setf()
-
 class setm(MutableSetApi[V], set[V]):
     'MutableSetApi wrapper around built-in set.'
-    __slots__ = ()
+    __slots__ = EMPTY_SET
     __len__      = set.__len__
     __contains__ = set.__contains__
     __iter__     = set[V].__iter__
     clear   = set.clear
     add     = set.add
     discard = set.discard
-
-
-
-    # __slots__ = '_set_',
-
-    # def __init__(self, values: Iterable = None, /):
-    #     self._set_ = set()
-    #     if values is not None:
-    #         self.update(values)
-
-    # copy = _copy_fromit
-    # __len__      = setf.__len__
-    # __contains__ = setf.__contains__
-    # __iter__     = setf[V].__iter__
-    # __repr__     = setf.__repr__
-
-    # def add(self, value):
-    #     self._set_.add(value)
-
-    # def discard(self, value):
-    #     self._set_.discard(value)
 
 # ------------- SequenceSet ---------------#
 
@@ -595,8 +547,6 @@ class qsetf(SequenceSetApi[V]):
 
     def __repr__(self):
         return wraprepr(self, self._setseq_.seq)
-
-    copy = _copy_immut
 
     ImplNotes: Annotated[dict, dict(
         implement = {'__len__', '__contains__', '__getitem__'},
@@ -1278,14 +1228,13 @@ class linqset(MutableLinkSequenceSetApi[V]):
             inst.__last = link
         return inst
 
-class MapAttrView(MappingView[str, V], Mapping[str, V], Copyable):
-    'A Mapping view with attribute access.'
+class MapAttrView(Mapping[str, V], Copyable):
+    'A Mapping with attribute access.'
 
-    # MappingView uses the '_mapping' slot.
-    __slots__ = EMPTY_SET
+    __slots__ = '_mapping',
 
     def __init__(self, base: Mapping[str, V]):
-        self._mapping = instcheck(base, Mapping)
+        self._mapping = base
 
     def __getattr__(self, name: str) -> V:
         try:
@@ -1296,22 +1245,22 @@ class MapAttrView(MappingView[str, V], Mapping[str, V], Copyable):
     def __dir__(self):
         return list(filter(preds.isidentifier, self))
 
-    def copy(self) -> MapAttrView[V]:
+    def copy(self):
         inst = object.__new__(self.__class__)
         inst._mapping = self._mapping
         return inst
+
+    def __len__(self):
+        return len(self._mapping)
 
     def __getitem__(self, key: str) -> V:
         return self._mapping[key]
 
     def __iter__(self) -> Iterator[str]:
-        yield from self._mapping
+        return iter(self._mapping)
 
     def __reversed__(self) -> Iterator[str]:
-        try:
-            return reversed(self._mapping)
-        except TypeError:
-            raise NotImplementedError
+        return reversed(self._mapping)
 
 class DequeCache(Collection[V], Reversible, Sized, Abc):
 
@@ -1389,4 +1338,4 @@ class DequeCache(Collection[V], Reversible, Sized, Abc):
         Api.__qualname__ = 'DequeCache.Api'
         return Api()
 
-del(operd, metad, abstract, namedf, _copy_immut, _copy_fromit)
+del(operd, metad, abstract, namedf, )
