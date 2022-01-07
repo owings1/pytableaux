@@ -18,20 +18,23 @@
 #
 # pytableaux - rule helpers module
 from __future__ import annotations
-from containers import EMPTY_SET, MapAttrView
-from decorators import abstract
+
+from decorators import abstract, final
 from lexicals import Constant, Sentence
 from models import BaseModel
+from tools.mappings import MapAttrView
+from tools.sets import EMPTY_SET
 from utils import orepr
-from .common import Access, Branch, Comparer, Filters, Node, RuleEvent, TabEvent, Target
+
+from .common import Access, Branch, Comparer, Node, RuleEvent, TabEvent, Target
 from .tableaux import Rule, Tableau
 
-
 from copy import copy
-from collections.abc import Callable, Iterable, Iterator, MutableMapping, \
-    ItemsView, KeysView, ValuesView
+from collections.abc import (
+    Callable, Iterable, Iterator, MutableMapping, ItemsView, KeysView, ValuesView
+)
 from itertools import chain
-from typing import TypeVar, final
+from typing import TypeVar
 
 T = TypeVar('T')
 

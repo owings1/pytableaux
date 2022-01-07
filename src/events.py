@@ -1,7 +1,8 @@
-from containers import linqset
 from decorators import metad, raisen
 from errors import instcheck
-from utils import ABCMeta, orepr
+from tools.abcs import Abc
+from tools.linked import linqset
+from utils import orepr
 
 from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, \
     MutableMapping, Sequence, ValuesView
@@ -22,7 +23,7 @@ from typing import TypeAlias
 #     BEFORE_TRUNK_BUILD = 100
 
 EventId: TypeAlias = str | int | Enum
-class Listener(Callable, metaclass = ABCMeta):
+class Listener(Callable, Abc):
 
     cb        : Callable
     once      : bool
@@ -113,7 +114,7 @@ class Listeners(linqset[Listener]):
             callcount = self.callcount,
         )
 
-class EventsListeners(MutableMapping[EventId, Listeners], metaclass = ABCMeta):
+class EventsListeners(MutableMapping[EventId, Listeners], Abc):
 
     emitcount: int
     callcount: int

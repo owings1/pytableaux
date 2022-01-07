@@ -28,7 +28,7 @@ class Meta:
     tags = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
     category_display_order = 10
 
-from containers import qsetf
+from tools.hybrids import qsetf
 from decorators import abstract
 from models import BaseModel
 from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \

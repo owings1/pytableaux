@@ -35,14 +35,16 @@ class cons:
     'constants'
     NOARG = object()
     NOGET = object()
-    from containers import EMPTY_SET
+    from tools.sets import EMPTY_SET
     ITEM_CACHE_SIZE = 10000
 
-class std:
-    'misc standard/common imports'
+    __new__ = None
 
-    from typing import Annotated, Any, ClassVar, NamedTuple, TypeVar
-    from enum import auto, Enum, EnumMeta
+class std:
+    'Various standard/common imports'
+
+    from typing import Annotated, Any, ClassVar, NamedTuple #, TypeVar
+    from enum import auto, Enum, EnumMeta, _EnumDict
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     __new__ = None
@@ -50,18 +52,18 @@ class std:
 class errors:
     'errors'
 
-    from errors import DuplicateKeyError, DuplicateValueError, \
-        ReadOnlyAttributeError, ValueMismatchError
+    from errors import (
+        ReadOnlyAttributeError, ValueMismatchError, ValueCollisionError)
 
     __new__ = None
 
 class d:
     'decorators'
 
-    from decorators import abstract, fixed, lazyget as lazy, metad as meta, \
-        operd as oper, raisen as raises, rund as run, wraps
-
-    from typing import final
+    from decorators import (
+        abstract, final, fixed, lazyget as lazy, metad as meta, operd as oper,
+        raisen as raises, rund as run, wraps
+    )
 
     def nosetattr(basecls, cls = None, changeonly = False,  **kw):
         forigin = basecls.__setattr__
@@ -91,8 +93,9 @@ class fict:
 
     from functools import partial, reduce
     from itertools import chain, repeat, starmap, zip_longest as lzip
-    from containers import setf, setm, qsetf, qset
-    from utils import it_drain as drain#, items_from_keys as dkeys
+    from tools.hybrids import qsetf, qset
+    from tools.sets import setf, setm
+    from utils import it_drain as drain
 
     def flat(): ...
     flat = chain.from_iterable
@@ -108,23 +111,17 @@ class Types:
         DynamicClassAttribute as DynClsAttr, \
         MappingProxyType      as MapProxy
 
-    from utils import \
-        ABCMeta,           \
-        CacheNotationData, \
-        FieldItemSequence, \
-        IndexType,         \
-        IntTuple
+    from tools.abcs import ABCMeta
+    from tools.hybrids import SequenceSetApi
+    from tools.sets import SetApi
+    from tools.mappings import DequeCache
 
-    from containers import \
-        DequeCache,        \
-        SequenceSetApi,    \
-        SetApi
+    from utils import CacheNotationData
 
     class EnumEntry(std.NamedTuple):
         member : Bases.Enum
         index  : int
         nextmember: Bases.Enum | None
-
 
     class BiCoords(std.NamedTuple):
         index     : int
@@ -157,6 +154,10 @@ class Types:
         first = (0, 0, 1)
 
     TriCoords.first = TriCoords._make(TriCoords.first)
+
+    IntTuple = tuple[int, ...]
+    IndexType = int | slice
+    FieldItemSequence = std.Sequence[tuple[int, str]]
 
     Spec = tuple
     Ident = tuple[str, tuple]
@@ -355,7 +356,7 @@ class Metas:
             return cls.get(key, cons.NOGET) is not cons.NOGET
 
         def __getitem__(cls, key):
-            if key.__class__ is cls: return key
+            if type(key) is cls: return key
             try: return cls._lookup[key][0]
             except (AttributeError, KeyError): pass
             return super().__getitem__(key)
@@ -410,16 +411,17 @@ class Metas:
                 if default is cons.NOARG: raise
                 return default
 
-        def indexof(cls, key) -> int:
+        def indexof(cls, member) -> int:
             'Get the sequence index of the member. Raises ValueError if not found.'
             try:
-                return cls._lookup[key][1]
+                try:
+                    return cls._lookup[member][1]
+                except KeyError:
+                    return cls._lookup[cls[member]][1]
+                except AttributeError:
+                    return cls.seq.index(cls[member])
             except KeyError:
-                return cls._lookup[cls[key]][1]
-            except AttributeError:
-                return cls.seq.index(cls[key])
-            except KeyError:
-                raise ValueError(key)
+                raise ValueError(member)
 
         index = indexof
 
@@ -1636,14 +1638,14 @@ Types.LexType = LexType
 class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
     'Predicate store'
 
-    def __init__(self, values: std.Iterable[Types.PredsItemSpec] = None):
-        self._lookup = {}
-        super().__init__(values)
-
     _lookup: dict[Types.PredsItemRef, Predicate]
     __slots__ = '_lookup',
 
-    def get(self, ref: Types.PredsItemRef, default = cons.NOARG) -> Predicate:
+    def __init__(self, values: std.Iterable[Types.PredsItemSpec] = None, /):
+        self._lookup = {}
+        super().__init__(values)
+
+    def get(self, ref: Types.PredsItemRef, default = cons.NOARG, /) -> Predicate:
         """Get a predicate by any reference. Also searches System predicates.
         Raises KeyError when no default specified."""
         try: return self._lookup[ref]
@@ -1657,35 +1659,30 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
     #  qset hooks.
     # -------------------------------
     def _new_value(self, value: Types.PredsItemSpec) -> Predicate:
-        'Implement new_value hook. Return a predicate.'
-        if not isinstance(value, Predicate):
-            return Predicate(value)
-        return value
+        'Implement new_value conversion hook. Ensure the value is a Predicate.'
+        return Predicate(value)
 
     def _before_add(self, pred: Predicate):
         'Implement before_add hook. Check for arity/value conflicts.'
-        m, keys = self._lookup, pred.refkeys
-        conflict = fict.setf(filter(None, map(m.get, keys))) - {pred}
-        if len(conflict):
-            other = next(iter(conflict))
-            raise errors.ValueMismatchError(other.coords, pred.coords)
+        for other in filter(None, map(self._lookup.get, pred.refkeys)):
+            # Is there a distinct predicate that matches any lookup keys,
+            # viz. BiCoords or name, that does not equal pred, e.g. arity
+            # mismatch.
+            if other != pred:
+                raise errors.ValueMismatchError(other.coords, pred.coords)
 
     def _after_add(self, pred: Predicate):
         'Implement after_add hook. Add keys to lookup index.'
-        m, keys = self._lookup, pred.refkeys
-        # ---------- extra check
-        conflict = keys & m
-        if len(conflict):
-            raise errors.DuplicateKeyError(pred, *conflict)
-        # ----------
-        m.update(zip(keys, fict.repeat(pred)))
+        self._lookup |= zip(pred.refkeys, fict.repeat(pred))
 
     def _after_remove(self, pred: Predicate):
         'Implement after_remove hook. Remove keys from lookup index.'
-        m, keys = self._lookup, pred.refkeys
-        conflict = fict.setf(map(m.pop, keys)) - {pred}
-        if len(conflict):
-            raise errors.DuplicateValueError(pred, *conflict)
+        for other in map(self._lookup.pop, pred.refkeys):
+            # Is there a key we are removing that unexpectedly matches
+            # a distinct predicate. This would have to be the result of
+            # a failed removal or addition.
+            if other != pred:
+                raise errors.ValueCollisionError(other.coords, pred.coords)
 
     # -------------------------------
     #  Override qset
@@ -1706,19 +1703,18 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
     # -------------------------
     #  Predicates.System Enum
     # -------------------------
+
     class System(Predicate.System):
         'System Predicates enum container class.'
 
-        # --------------------------
-        # Instance init.
-        # --------------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         def __new__(cls, *spec):
             'Set the Enum value to the predicate instance.'
             return Bases.LexicalItem.__new__(Predicate)
 
-        # --------------------------
-        # Enum meta hooks.
-        # --------------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Enum Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         @classmethod
         def _member_keys(cls, pred: Predicate) -> Types.SetApi[Types.PredsItemRef]:
             'Enum lookup index init hook. Add all predicate keys.'
@@ -1732,19 +1728,18 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
                 setattr(Predicate, pred.name, pred)
             Predicate.System = cls
 
-        # --------------------------
-        # Class init.
-        # --------------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Abc Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         @d.meta.nsinit
-        def expand(attrs, bases, **kw):
+        def expand(ns: std._EnumDict, bases, **kw):
             'Inject members from annotations in Predicate.System class.'
             annots = Metas.Abc.annotated_attrs(Predicate.System)
             members = {
                 name: spec for name, (vtype, spec)
                 in annots.items() if vtype is Predicate
             }
-            attrs |= members
-            attrs._member_names.extend(members.keys())
+            ns |= members
+            ns._member_names += members.keys()
 
 class Argument(std.Sequence[Sentence], metaclass = Metas.Argument):
     'Create an argument from sentence objects.'

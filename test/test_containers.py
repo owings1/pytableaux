@@ -1,10 +1,13 @@
 from .tutils import BaseSuite, skip
 from pytest import raises
 from errors import *
-from events import EventsListeners, Listener, Listeners, EventEmitter
+from events import EventsListeners#, Listener, Listeners, EventEmitter
 from lexicals import *
 
-from containers import *
+from tools.sequences import *
+from tools.sets import *
+from tools.hybrids import *
+from tools.linked import *
 
 from collections import deque
 
@@ -51,6 +54,7 @@ class TestSetList(BaseSuite):
         assert g(1) ^ g(2) == {1, 2}
 
         assert sorted({2, 3, 1, 1, 2}) == [1, 2, 3]
+
     def test_errors(self):
 
         _ = qset

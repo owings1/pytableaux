@@ -1,57 +1,62 @@
 from __future__ import annotations
 
-from callables import calls, gets, raiser, Caller, preds#, cchain, preds
-from errors import instcheck
-from utils import ABCMeta, MetaFlag, subclscheck
+import callables as cal
+import errors as err
+from tools import abcs
 
-from collections.abc import Callable, Iterable, Mapping
-from functools import partial, reduce
-from inspect import signature
+from collections.abc import Callable, Mapping
+import functools
+import inspect
 import operator as opr
-from types import DynamicClassAttribute, FunctionType#, MappingProxyType
-from typing import Any, Generic, NamedTuple, ParamSpec, TypeVar, abstractmethod
-#, subclscheck
+import types
+import typing
 #, Collection, Hashable, Sequence
 #import functools
 # from itertools import chain
 # ClassVar, Generic, Literal, 
 
-P = ParamSpec('P')
-T = TypeVar('T')
-GenericAlias = type(list[int])
+P = typing.ParamSpec('P')
+T = typing.TypeVar('T')
+V = typing.TypeVar('V')
+
 _WRAPSINSTATTR = '__wraps__'
-_valfilter = partial(filter, gets.key(1))
-_getmixed = gets.mixed(flag=Caller.SAFE)
-_checkcallable = calls.func(instcheck, Callable)
-_thru = gets.thru()
-_thru2 = gets.thru(aslice = slice(1, None))
+_valfilter = functools.partial(filter, cal.gets.key(1))
+_getmixed = cal.gets.mixed(flag=cal.Caller.SAFE)
+_checkcallable = cal.calls.func(err.instcheck, Callable)
+_thru = cal.gets.thru()
+_thru2 = cal.gets.thru(aslice = slice(1, None))
 class _nonerr(Exception): __new__ = None
 
 # _LZINSTATTR = '__lazyget__'
 # _new = object.__new__
-# _valisstr = cchain.reducer(gets.key(1), preds.instanceof[str])
-# _mapfilter = partial(filter, preds.instanceof[Mapping])
+# _valisstr = cchain.reducer(gets.key(1), cal.preds.instanceof[str])
+# _mapfilter = functools.partial(filter, cal.preds.instanceof[Mapping])
 # _ = None
 # _FIXVALCODE = (lambda *args, **kw: _).__code__
 # @functools.lru_cache
 # def _fixeddata(val): return dict(_ = val), {'return': type(val)}
 # del(_)
 
-def _copyf(f: FunctionType) -> FunctionType:
-    func = FunctionType(
+def _copyf(f: types.FunctionType) -> types.FunctionType:
+    func = types.FunctionType(
         f.__code__, f.__globals__, f.__name__,
         f.__defaults__, f.__closure__,
     )
     return wraps(f)(func)
 
-class OwnerName(NamedTuple):
+class OwnerName(typing.NamedTuple):
     owner: type
     name: str
 
-class NamedMember(Generic[T]):
+__all__ = (
+    'namedf', 'rund', 'fixed', 'operd', 'deleg', 'wraps', 'abstract',
+    'overload', 'raisen', 'metad', 'lazyget',
+)
 
-    def __set_name__(self, owner: T, name: str):
-        self._owner_name: tuple[T, str] = OwnerName(owner, name)
+class NamedMember(typing.Generic[T]):
+
+    def __set_name__(self, owner: type[T], name: str):
+        self._owner_name: OwnerName[type[T], str] = OwnerName(owner, name)
         self.__name__ = name
         self.__qualname__ = '%s.%s' % (owner.__name__, name)
 
@@ -63,14 +68,16 @@ class NamedMember(Generic[T]):
     __slots__ = '__name__', '__qualname__', '_owner_name'
 
     @property
-    def owner(self) -> T:
+    def owner(self) -> type[T]:
         try: return self._owner_name.owner
         except AttributeError: pass
 
-    __class_getitem__ = classmethod(GenericAlias)
+    __class_getitem__ = classmethod(type(list[int]))
 
 class namedf(NamedMember[T]):
+
     __slots__ = 'cb', 'args', 'kw'
+
     def __init__(self, cb: Callable, *args, **kw):
         self.cb = cb
         self.args = args
@@ -87,9 +94,11 @@ class namedf(NamedMember[T]):
         # return self.cb(*args, **kw)
 
 class rund:
+
     __slots__ = ()
-    def __new__(cls, func: Callable[P, Any], *args, **kw) -> Callable[P, None]:
-        return calls.func(func)(*args, **kw)
+
+    def __new__(cls, func: Callable[P, typing.Any], *args, **kw) -> Callable[P, None]:
+        return cal.calls.func(func)(*args, **kw)
 
 class fixed:
 
@@ -139,8 +148,8 @@ class fixed:
 
         __slots__ = ()
 
-        def __call__(self, method = None) -> DynamicClassAttribute:
-            return DynamicClassAttribute(super().__call__(method), doc = self.doc)
+        def __call__(self, method = None) -> types.DynamicClassAttribute:
+            return types.DynamicClassAttribute(super().__call__(method), doc = self.doc)
 
 class operd:
 
@@ -148,7 +157,7 @@ class operd:
 
     class _base(NamedMember, Callable):
 
-        def __init__(self, oper: Callable, info: Any = None):
+        def __init__(self, oper: Callable, info = None):
             self.oper = oper
             self.info = info
 
@@ -170,7 +179,7 @@ class operd:
 
         def __init__(self,
             oper: Callable,
-            info: Any = None,
+            info: typing.Any = None,
             freturn: Callable = None,
             finit: Callable = None,
         ):
@@ -186,8 +195,8 @@ class operd:
                 (self.oper, self.freturn, self.finit),
             )
             @wraps(info)
-            def freduce(self, *operands: Iterable):
-                return freturn(self, reduce(oper, operands, finit(self)))
+            def freduce(self, *operands):
+                return freturn(self, functools.reduce(oper, operands, finit(self)))
             return freduce
 
         def template(*argdefs, **kwdefs):
@@ -199,7 +208,7 @@ class operd:
 
     class apply(_base):
 
-        def __init__(self, oper: Callable | str, info: Any = None):
+        def __init__(self, oper: Callable | str, info = None):
             oname = oper if isinstance(oper, str) else oper.__name__
             oper = getattr(opr, oname)
             super().__init__(oper, info)
@@ -209,7 +218,7 @@ class operd:
         def __call__(self, info = None):
             info = self._getinfo(info)
             oper = _checkcallable(self.oper)
-            n = len(signature(oper).parameters)
+            n = len(inspect.signature(oper).parameters)
             if n == 1:
                 def fapply(operand): return oper(operand)
             elif n == 2:
@@ -229,8 +238,8 @@ class operd:
                 if errs == (None,): self.errs = (_nonerr,)
                 else: self.errs = errs
                 for ecls in self.errs:
-                    instcheck(ecls, type)
-                    subclscheck(ecls, Exception)
+                    err.instcheck(ecls, type)
+                    err.subclscheck(ecls, Exception)
             else: self.errs = AttributeError, TypeError
 
         __slots__ =  'errs','fcmp',
@@ -332,7 +341,7 @@ class abstract:
 
     def __new__(cls, method: Callable[P, T]) -> Callable[P, T]:
         'Decorator'
-        @abstractmethod
+        @typing.abstractmethod
         @wraps(method)
         def f(*args, **kw):
             raise NotImplementedError('abstractmethod', method)
@@ -340,7 +349,30 @@ class abstract:
 
     @staticmethod
     def isabstract(method):
-        return preds.isabstract_method(method)
+        return cal.preds.isabstract_method(method)
+
+    @staticmethod
+    def impl(method):
+        return typing.abstractmethod(method)
+
+    __slots__ = ()
+
+class overload:
+
+    def __new__(cls, method: Callable[P, T]) -> Callable[P, T]:
+        'Decorator'
+        ret = typing.overload(method)
+        if abstract.isabstract(method):
+            ret = typing.abstractmethod(ret)
+        return ret
+
+    __slots__ = ()
+
+class final:
+
+    def __new__(cls, method):
+        'Decorator'
+        return typing.final(method)
 
     __slots__ = ()
 
@@ -349,7 +381,7 @@ class raisen(NamedMember):
     def __init__(self, ErrorType: type[Exception], msg = None):
         if msg is None: eargs = ()
         else: eargs = (msg,)
-        self.raiser = raiser(ErrorType, eargs)
+        self.raiser = cal.raiser(ErrorType, eargs)
 
     __slots__ = 'raiser',
 
@@ -360,20 +392,20 @@ class raisen(NamedMember):
         super().__set_name__(owner, name)
         r = self.raiser
         if not len(r.eargs):
-            self.raiser = raiser(r.ErrorType, (
+            self.raiser = cal.raiser(r.ErrorType, (
                 "Method '%s' not allowed for %s" % (name, owner),
             ))
             del r
 
 class metad:
 
-    F = Flag = MetaFlag
+    F = Flag = abcs.MetaFlag
 
     class flag:
 
-        F = Flag = MetaFlag
+        F = Flag = abcs.MetaFlag
         _clsflag = F.blank
-        attrname = ABCMeta._metaflag_attr
+        attrname = abcs.ABCMeta._metaflag_attr
         __slots__ = 'value',
 
         def __new__(cls, target: Callable = None, /, *args, **kw):
@@ -381,7 +413,7 @@ class metad:
             inst = object.__new__(cls)
             inst.value = cls._clsflag
             if target is None: return inst
-            instcheck(target, Callable)
+            err.instcheck(target, Callable)
             if len(args) or len(kw): raise TypeError()
             inst.__init__()
             return inst(target)
@@ -414,11 +446,8 @@ class metad:
     class nsinit(flag, on = F.nsinit): __slots__ = ()
     class after(flag, on = F.after): __slots__ = ()
 
-
     __slots__ = ()
 
-
-V = TypeVar('V')
 
 class lazyget(NamedMember):
 
@@ -443,14 +472,14 @@ class lazyget(NamedMember):
         return fget
 
     @staticmethod
-    def prop(method: Callable[[Any], V], attr: str = None) -> property[V]:
+    def prop(method: Callable[[typing.Any], V], attr: str = None) -> property[V]:
         """Return a property with the getter. NB: a setter/deleter should be
         sure to use the correct cache attribute."""
         return property(__class__(attr)(method), doc=method.__doc__)
 
     @staticmethod
-    def dynca(method: Callable[[Any], V], attr: str = None) -> DynamicClassAttribute[V]:
-        return DynamicClassAttribute(__class__(attr)(method), doc=method.__doc__)
+    def dynca(method: Callable[[typing.Any], V], attr: str = None) -> types.DynamicClassAttribute[V]:
+        return types.DynamicClassAttribute(__class__(attr)(method), doc=method.__doc__)
 
     def format(self, name: str) -> str:
         return '_%s' % name

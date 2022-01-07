@@ -1,15 +1,16 @@
 from __future__ import annotations
 from callables import Caller, gets, preds #calls, 
-from containers import EMPTY_SET, qset, setf
 from decorators import abstract, lazyget
 from events import EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
-from utils import ABCMeta, Decorators, drepr, orepr
+from tools.abcs import ABCMeta
+from tools.sets import EMPTY_SET, setf
+from utils import drepr, orepr
 
 from collections.abc import Callable, Iterable, ItemsView, \
     Iterator, KeysView, Mapping, Sequence, ValuesView
-from itertools import chain, islice
+from itertools import islice
 from keyword import iskeyword
 from types import MappingProxyType
 from typing import Any, ClassVar, NamedTuple, TypeVar
@@ -20,13 +21,9 @@ import enum
 # from enum import Enum, auto
 # import typing
 # from copy import copy
-# from utils import strtype, instcheck, subclscheck, RetType, T
+# from utils import RetType, T
 
 import operator as opr
-
-# abstract = Decorators.abstract
-setonce = Decorators.setonce
-
 
 class BranchEvent(enum.Enum):
     AFTER_BRANCH_CLOSE = enum.auto()
@@ -429,8 +426,6 @@ class Branch(Sequence[Node], EventEmitter):
             'w1Rw2'      : {},
         }
 
-        self.__model = None
-
     @property
     def id(self) -> int:
         return id(self)
@@ -453,11 +448,16 @@ class Branch(Sequence[Node], EventEmitter):
 
     @property
     def model(self):
-        return self.__model
+        try: return self.__model
+        except AttributeError: pass
 
     @model.setter
-    @setonce
     def model(self, model):
+        try:
+            self.__model
+        except AttributeError: pass
+        else:
+            raise AttributeError
         self.__model = model
 
     @property
@@ -581,17 +581,13 @@ class Branch(Sequence[Node], EventEmitter):
     add = append
 
     def extend(self, nodes: Iterable[NodeType]) -> Branch:
-        """
-        Add multiple nodes. Returns self.
-        """
+        'Add multiple nodes. Returns self.'
         for node in nodes:
             self.append(node)
         return self
 
     def tick(self, *nodes: Node):
-        """
-        Tick a node for the branch.
-        """
+        'Tick a node for the branch.'
         for node in nodes:
             if not self.is_ticked(node):
                 self.__ticked.add(node)
@@ -600,9 +596,7 @@ class Branch(Sequence[Node], EventEmitter):
         # return self
 
     def close(self) -> Branch:
-        """
-        Close the branch. Returns self.
-        """
+        'Close the branch. Returns self.'
         if not self.closed:
             self.__closed = True
             self.append({'is_flag': True, 'flag': 'closure'})
@@ -610,9 +604,7 @@ class Branch(Sequence[Node], EventEmitter):
         return self
 
     def is_ticked(self, node: Node) -> bool:
-        """
-        Whether the node is ticked relative to the branch.
-        """
+        'Whether the node is ticked relative to the branch.'
         return node in self.__ticked
 
     def copy(self, parent: Branch = None, events: bool = False) -> Branch:
@@ -644,19 +636,16 @@ class Branch(Sequence[Node], EventEmitter):
             }
             for prop in self.__pidx
         }
-        b.__model = self.__model
+        if hasattr(self, '_Branch__model'):
+            b.__model = self.__model
         return b
 
     def constants(self) -> set[Constant]:
-        """
-        Return the set of constants that appear on the branch.
-        """
+        'Return the set of constants that appear on the branch.'
         return self.__constants
 
     def new_constant(self) -> Constant:
-        """
-        Return a new constant that does not appear on the branch.
-        """
+        'Return a new constant that does not appear on the branch.'
         if not self.__constants:
             return Constant.first()
         maxidx = Constant.TYPE.maxi

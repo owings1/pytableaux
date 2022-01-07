@@ -19,14 +19,16 @@
 # pytableaux - lexicals module tests
 # import pytest
 
-from containers import EMPTY_SET
+from errors import *
 from lexicals import Predicates, Variable, Constant, Parameter, Predicate, \
     Atomic, Predicated, Quantified, Operated, Sentence, Operator, Quantifier, \
     LexType, Types
 from parsers import parse
-from errors import *
-from copy import copy, deepcopy
+from tools.sets import EMPTY_SET
+
 from .tutils import *
+
+from copy import copy
 from pytest import raises
 import operator as opr
 from itertools import product

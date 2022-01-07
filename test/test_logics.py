@@ -19,7 +19,8 @@
 # pytableaux - logics test cases
 from pytest import raises
 from errors import *
-from utils import StopWatch, get_logic
+from utils import get_logic
+from tools.timing import StopWatch
 from lexicals import Predicate, Constant, Variable, Operator, Quantifier, \
     Quantifier as Quant, Operator as Oper, \
     Sentence, Atomic, Predicated, Quantified, Operated, \

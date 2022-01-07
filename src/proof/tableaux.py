@@ -19,24 +19,30 @@
 # pytableaux - tableaux module
 from __future__ import annotations
 from callables import preds
-from containers import EMPTY_SET, linqset, qsetf, SequenceApi, SequenceProxy
 from .common import FLAG, KEY, Branch, BranchEvent, Node, RuleEvent, TabEvent, Target #, NodeType
-from decorators import abstract
+from decorators import abstract, final, wraps
 from errors import DuplicateKeyError, IllegalStateError, MissingValueError,\
     TimeoutError, ValueLengthError, instcheck
 from events import EventEmitter
 from lexicals import Argument, Sentence
 from models import BaseModel
-from utils import ABCMeta, Decorators, StopWatch, \
-    LogicRef, get_logic, orepr
+from tools.abcs import Abc, ABCMeta
+from tools.sets import EMPTY_SET
+from tools.sequences import SequenceApi, SequenceProxy, MutableSequenceApi
+from tools.hybrids import qsetf
+from tools.linked import linqset
+from tools.timing import StopWatch
+from utils import get_logic, orepr
 
-from collections.abc import Iterator, Iterable, Mapping, \
-    MutableSequence, Sequence
+from collections.abc import Callable, Iterator, Iterable, Mapping, Sequence
 from inspect import isclass
 from itertools import chain
 import itertools
-from types import MappingProxyType as MapProxy, ModuleType#, SimpleNamespace
-from typing import Any, ClassVar, NamedTuple, abstractmethod, final
+from types import MappingProxyType as MapProxy, ModuleType
+import typing
+from typing import Any, ClassVar, NamedTuple
+
+LogicRef = ModuleType | str
 
 __all__ = 'Rule', 'TableauxSystem', 'Tableau'
 
@@ -187,15 +193,15 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     __slots__ = 'tableau', 'helpers', 'apply_count', 'timers', 'opts', '__dict__'
 
-    @abstractmethod
+    @abstract
     def _get_targets(self, branch: Branch) -> Sequence[Target]:
         raise NotImplementedError
 
-    @abstractmethod
+    @abstract
     def _apply(self, target: Target):
         raise NotImplementedError
 
-    @abstractmethod
+    @abstract
     def example_nodes(self) -> Sequence[Mapping]:
         raise NotImplementedError
 
@@ -346,6 +352,9 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
 
+_P = typing.ParamSpec('_P')
+_R = typing.TypeVar('_R')
+
 class TabRulesSharedData:
 
     __slots__ = 'ruleindex', 'groupindex', 'locked', 'tab', 'root'
@@ -422,7 +431,13 @@ class TabRulesBase:
             raise AttributeError(attr)
         super().__setattr__(attr, val)
     
-    writes = Decorators.checkstate(locked = False)
+    def writes(method: Callable[_P, _R]) -> Callable[..., _R]:
+        @wraps(method)
+        def fcheckstate(self, *args, **kw):
+            if self.locked: raise IllegalStateError('locked')
+            return method(self, *args, **kw)
+        return fcheckstate
+
 
 class RuleGroup(Sequence[Rule], TabRulesBase):
 
@@ -640,7 +655,7 @@ class TabRules(Sequence[Rule], TabRulesBase):
 
 del(TabRulesBase.writes)
 
-class TableauxSystem(metaclass = ABCMeta):
+class TableauxSystem(Abc):
 
     __new__ = None
 
@@ -731,7 +746,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     open: SequenceApi[Branch]
 
     #: The history of rule applications.
-    history: MutableSequence[StepEntry]
+    history: MutableSequenceApi[StepEntry]
 
     #: A tree structure of the tableau. This is generated after the tableau
     #: is finished. If the `build_timeout` was exceeded, the tree is `not`

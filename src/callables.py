@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-from errors import instcheck
-# from utils import AttrFlag, AttrNote, AttrCacheFactory
-from utils import ABCMeta, IndexType, KeyCacheFactory, \
-    orepr, subclscheck
+from errors import instcheck, subclscheck
+from tools.abcs import ABCMeta
+from utils import KeyCacheFactory, orepr
 
 # import abc
+from abc import abstractmethod
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import partial
 # import itertools
 import operator as opr
 from types import MappingProxyType
-from typing import Any, ClassVar, Literal, ParamSpec, TypeAlias, TypeVar, \
-    abstractmethod, final
+from typing import Any, ClassVar, Literal, ParamSpec, TypeAlias, TypeVar, final
 # Annotated Generic
 P = ParamSpec('P')
 K = TypeVar('K')
@@ -45,12 +44,14 @@ SETATTROK = frozenset({
     '__module__', '__name__', '__qualname__',
     '__doc__', '__annotations__',
 })
+
 class objwrap(Callable):
     __slots__ = 'caller', '__dict__'
     def __init__(self, caller: Callable):
         self.caller = caller
     def __call__(self, *a, **kw):
         return self.caller(*a, **kw)
+
 class Caller(Callable, metaclass = ABCMeta):
 
     SAFE: Literal[Flag.Safe] = Flag.Safe
@@ -259,7 +260,7 @@ class Chain(Sequence[Callable], metaclass = ABCMeta):
     def __contains__(self, item: Callable):
         return item in self.funcs
 
-    def __getitem__(self, index: IndexType) -> Callable:
+    def __getitem__(self, index: int|slice) -> Callable:
         return self.funcs[index]
 
 class calls:
@@ -358,9 +359,6 @@ class raiser(Caller):
     eargs: Sequence
     attrhints = dict(ErrorType = Flag.Blank, eargs = Flag.Blank)
     __slots__ = tuple(attrhints)
-
-# methodproxy: AttrCacheFactory[Callable[[str], calls.method]] = \
-#     AttrCacheFactory(partial(calls.func, calls.method))
 
 class cchain:
     __new__ = None

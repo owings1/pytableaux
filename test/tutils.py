@@ -4,7 +4,7 @@ from models import BaseModel
 from parsers import notations as parser_notns, create_parser, parse_argument, parse, Parser
 from proof.tableaux import Tableau, Branch, Node, Rule
 from proof.rules import ClosureRule
-from utils import get_logic, strtype
+from utils import get_logic
 
 from collections.abc import Callable, Iterable, Iterator
 from inspect import isclass, getmembers
@@ -266,7 +266,7 @@ class BaseSuite(AbstractSuite):
         try:
             rule = t.rules.get(rule)
         except ValueError:
-            if isinstance(rule, strtype):
+            if isinstance(rule, str):
                 rule = getattr(t.logic.TabRules, rule)
             t.rules.add(rule)
             rule = t.rules.get(rule)
