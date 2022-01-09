@@ -1,26 +1,18 @@
-from decorators import metad, raisen
+from __future__ import annotations
+
+__all__ = 'EventEmitter', 'EventsListeners',
+
+from decorators import raisr
 from errors import instcheck
-from tools.abcs import Abc
+from tools.abcs import Abc, abcf
 from tools.linked import linqset
 from utils import orepr
 
 from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, \
     MutableMapping, Sequence, ValuesView
-from enum import Enum, unique
+from enum import Enum
 from typing import TypeAlias
 
-
-# @unique
-# class Events(Enum):
-#     # AFTER_APPLY        = 10
-#     AFTER_BRANCH_ADD   = 20
-#     AFTER_BRANCH_CLOSE = 30
-#     AFTER_NODE_ADD     = 40
-#     AFTER_NODE_TICK    = 50
-#     AFTER_RULE_APPLY   = 60
-#     AFTER_TRUNK_BUILD  = 70
-#     # BEFORE_APPLY       = 80
-#     BEFORE_TRUNK_BUILD = 100
 
 EventId: TypeAlias = str | int | Enum
 class Listener(Callable, Abc):
@@ -69,7 +61,7 @@ class Listener(Callable, Abc):
             raise AttributeError('cannot set %s' % attr)
         super().__setattr__(attr, val)
 
-    __delattr__ = raisen(AttributeError)
+    __delattr__ = raisr(AttributeError)
 
 class Listeners(linqset[Listener]):
 
@@ -131,7 +123,7 @@ class EventsListeners(MutableMapping[EventId, Listeners], Abc):
     def delete(self, event: EventId):
         del(self[event])
 
-    @metad.temp
+    @abcf.temp
     def normargs(feventmod: Callable) -> Callable:
         def normalize(self, *args, **kw):
             if not (args or kw) or (args and kw):

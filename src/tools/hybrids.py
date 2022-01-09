@@ -1,41 +1,29 @@
 from __future__ import annotations
-from errors import (
-    MissingValueError, DuplicateValueError,
-    instcheck as _instcheck
-)
-from .sets import setm
-import utils
 
-import enum
-# import itertools
-import typing
+__all__ = 'SequenceSetApi', 'MutableSequenceSetApi', 'qsetf', 'qset'
 
-from .sequences import EMPTY_SEQ
-from .sets import EMPTY_SET
+from typing import TypeVar
+T = TypeVar('T')
+V = TypeVar('V')
+del(TypeVar)
 
-T = typing.TypeVar('T')
-V = typing.TypeVar('V')
+EMPTY = ()
 
-class ErrMsg(enum.Enum):
-    # SliceSize = 'attempt to assign sequence of size %d to slice of size %d'
-    # ExtendedSliceSize = 'attempt to assign sequence of size %d to extended slice of size %d'
-    StepZero = 'step cannot be zero'
-    IndexRange = 'sequence index out of range'
+import errors as err
+from errors import instcheck as _instcheck
+from tools.abcs import abcm
 
 class bases:
-    from collections.abc import Iterable
-    from .sets import SetApi, MutableSetApi
-    from .sequences import SequenceApi, MutableSequenceApi
+    from tools.sets import SetApi, MutableSetApi, setf, setm
+    from tools.sequences import SequenceApi, MutableSequenceApi, seqf
 
-class d:
-    from decorators import (
-        abstract, overload#, metad, namedf, wraps
-    )
+from collections.abc import Iterable
+from typing import SupportsIndex
 
 class SequenceSetApi(bases.SequenceApi[V], bases.SetApi[V]):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'
 
-    __slots__ = EMPTY_SET
+    __slots__ = EMPTY
 
     def count(self, value, /) -> int:
         'Returns 1 if in the set, else 0.'
@@ -44,30 +32,29 @@ class SequenceSetApi(bases.SequenceApi[V], bases.SetApi[V]):
     def index(self, value, start = 0, stop = None, /) -> int:
         'Get the index of the value in the set.'
         if value not in self:
-            raise MissingValueError(value)
+            raise err.MissingValueError(value)
         return super().index(value, start, stop)
 
     def __mul__(self, other):
-        if isinstance(other, int):
-            if other > 1 and len(self) > 0:
-                raise DuplicateValueError(self[0])
+        if isinstance(other, SupportsIndex):
+            if int(other) > 1 and len(self) > 0:
+                raise err.DuplicateValueError(self[0])
         return super().__mul__(other)
 
     __rmul__ = __mul__
 
     # __add__ = operd.apply(opr.or_)
 
-    @d.abstract.impl
+    @abcm.abstract
     def __contains__(self, value):
         'Set-based `contains` implementation.'
         return False
-
 
 class MutableSequenceSetApi(SequenceSetApi[V], bases.MutableSequenceApi[V], bases.MutableSetApi[V]):
     """Mutable sequence set (ordered set) interface.
     Sequence methods such as ``append`` raise ``DuplicateValueError``."""
 
-    __slots__ = EMPTY_SET
+    __slots__ = EMPTY
 
     def _before_add(self, value):
         '''Before add hook. Not guaranteed that the value will be added, and
@@ -88,82 +75,88 @@ class MutableSequenceSetApi(SequenceSetApi[V], bases.MutableSequenceApi[V], base
         # to make sure the _new_value hook is called.
         try:
             self.append(value)
-        except DuplicateValueError:
+        except err.DuplicateValueError:
             pass
 
     def discard(self, value):
         'Remove if value is a member.'
+        # Use contains check instead of try/except for set performance. 
         if value in self:
             self.remove(value)
 
-    @d.abstract
+    @abcm.abstract
     def reverse(self):
         'Reverse in place.'
         # Must re-implement MutableSequence method.
         raise NotImplementedError
 
-    def _setslice_prep(self: T, slc: slice, values: bases.Iterable) -> tuple[T, T]:
+    def _setslice_prep(self: T, slc: slice, values: Iterable) -> tuple[T, T]:
         olds, values = super()._setslice_prep(slc, values)
         for v in values:
             if v in self and v not in olds:
-                raise DuplicateValueError(v)
+                raise err.DuplicateValueError(v)
         return olds, values
 
 class qsetf(SequenceSetApi[V]):
-    'Immutable sequence set implementation with built-in frozenset and tuple.'
+    'Immutable sequence set implementation setf and seqf bases.'
 
-    class _SetSeq_(typing.NamedTuple):
-        set: frozenset
-        seq: tuple
+    _set_type_ = bases.setf
+    _seq_type_ = bases.seqf
 
-    _setseq_: _SetSeq_[V]
-    __slots__ = '_setseq_',
+    _set_: bases.SetApi[V]
+    _seq_: bases.SequenceApi[V]
 
-    def __init__(self, values: bases.Iterable = None, /):
-        seq = EMPTY_SEQ if values is None else tuple(dict.fromkeys(values))
-        self._setseq_ = self._SetSeq_(frozenset(seq), seq)
+    __slots__ = '_set_', '_seq_'
+
+    def __init__(self, values: Iterable = None, /):
+        cls = type(self)
+        if values is None:
+            self._seq_ = cls._seq_type_()
+            self._set_ = cls._set_type_()
+        else:
+            self._seq_ = cls._seq_type_(tuple(dict.fromkeys(values)))
+            self._set_ = cls._set_type_(self._seq_)
 
     def __len__(self):
-        return len(self._setseq_.seq)
+        return len(self._seq_)
 
     def __contains__(self, value):
-        return value in self._setseq_.set
+        return value in self._set_
 
-    @d.overload
+    @abcm.overload
     def __getitem__(self: T, index: slice) -> T: ...
-    @d.overload
+    @abcm.overload
     def __getitem__(self, index: int) -> V: ...
 
     def __getitem__(self, index):
         if isinstance(index, int):
-            return self._setseq_.seq[index]
+            return self._seq_[index]
         _instcheck(index, slice)
-        return self._from_iterable(self._setseq_.seq[index])
+        return self._from_iterable(self._seq_[index])
 
     def __iter__(self):
-        return iter(self._setseq_.seq)
+        return iter(self._seq_)
 
     def __reversed__(self):
-        return reversed(self._setseq_.seq)
+        return reversed(self._seq_)
 
     def __repr__(self):
-        return utils.wraprepr(self, self._setseq_.seq)
-
+        import utils
+        return utils.wraprepr(self, self._seq_)
 
 class qset(MutableSequenceSetApi[V]):
     'MutableSequenceSetApi implementation backed by built-in set and list.'
 
-    class _SetSeq_(typing.NamedTuple):
-        set: setm
-        seq: list
+    _set_: bases.MutableSetApi[V]
+    _seq_: bases.MutableSequenceApi[V]
 
-    _setseq_: _SetSeq_
-    __slots__ = '_setseq_',
+    __slots__ = '_set_', '_seq_'
 
-    def __init__(self, values: bases.Iterable = None, /):
-        self._setseq_ = self._SetSeq_(setm(), list())
+    def __init__(self, values: Iterable = None, /):
+        self._set_ = bases.setm()
+        self._seq_ = list()
         if values is not None:
-            self.update(values)
+            self |= values
 
     __len__      = qsetf.__len__
     __contains__ = qsetf.__contains__
@@ -172,92 +165,95 @@ class qset(MutableSequenceSetApi[V]):
     __reversed__ = qsetf[V].__reversed__
     __repr__     = qsetf.__repr__
 
-    def __delitem__(self, index: int | slice):
+    def __delitem__(self, index: int|slice):
         'Delete by index/slice.'
-        value = self[index]
-        bset, bseq = self._setseq_
         if isinstance(index, int):
-            del bseq[index]
-            bset.remove(value)
+            value = self[index]
+            del self._seq_[index]
+            self._set_.remove(value)
             self._after_remove(value)
             return
-        _instcheck(index, slice)
-        del bseq[index]
-        for v in value:
-            bset.remove(v)
-            self._after_remove(v)
 
-    def __setitem__(self, index: int | slice, value):
+        _instcheck(index, slice)
+        values = self[index]
+        del self._seq_[index]
+        bset = self._set_
+        for value in values:
+            bset.remove(value)
+            self._after_remove(value)
+
+    def __setitem__(self, index: int|slice, value):
         'Set value by index/slice. Raises ``DuplicateValueError``.'
-        bset, bseq = self._setseq_
-        if isinstance(index, slice):
-            olds, values = self._setslice_prep(index, value)
-            bset.difference_update(olds)
+
+        if isinstance(index, int):
+            old = self._seq_[index]
+            value = self._new_value(value)
+            if value in self:
+                if value == old:
+                    return
+                raise err.DuplicateValueError(value)
+            self._set_.remove(old)
+            self._seq_[index] = value
             try:
-                bseq[index] = values
-                try:
-                    for old in olds:
-                        self._after_remove(old)
-                    for v in values:
-                        self._before_add(v)
-                except:
-                    bseq[index] = olds
-                    raise
+                self._after_remove(old)
+                self._before_add(value)
             except:
-                bset.update(olds)
+                self._seq_[index] = old
+                self._set_.add(old)
                 raise
-            bset.update(values)
-            for v in values:
-                self._after_add(v)
+            self._set_.add(value)
+            self._after_add(value)
             return
 
-        _instcheck(index, int)
-        old = bseq[index]
-        value = self._new_value(value)
-        if value in self:
-            if value == old:
-                return
-            raise DuplicateValueError(value)
-        bset.remove(old)
-        bseq[index] = value
+        _instcheck(index, slice)
+
+        olds, values = self._setslice_prep(index, value)
+        self._set_ -= olds
         try:
-            self._after_remove(old)
-            self._before_add(value)
+            self._seq_[index] = values
+            try:
+                for old in olds:
+                    self._after_remove(old)
+                for value in values:
+                    self._before_add(value)
+            except:
+                self._seq_[index] = olds
+                raise
         except:
-            bseq[index] = old
-            bset.add(old)
+            self._set_ |= olds
             raise
-        bset.add(value)
-        self._after_add(value)
+        self._set_ |= values
+        for value in values:
+            self._after_add(value)
 
     def insert(self, index: int, value):
         'Insert a value before an index. Raises ``DuplicateValueError``.'
         value = self._new_value(value)
         if value in self:
-            raise DuplicateValueError(value)
+            raise err.DuplicateValueError(value)
         self._before_add(value)
-        b = self._setseq_
-        b.seq.insert(index, value)
-        b.set.add(value)
+        self._seq_.insert(index, value)
+        self._set_.add(value)
         self._after_add(value)
 
     def reverse(self):
         'Reverse in place.'
-        self._setseq_.seq.reverse()
+        self._seq_.reverse()
 
     def sort(self, /, *, key = None, reverse = False):
         'Sort the list in place.'
-        self._setseq_.seq.sort(key = key, reverse = reverse)
+        self._seq_.sort(key = key, reverse = reverse)
 
     def clear(self):
         'Clear the list and set.'
-        self._setseq_.seq.clear()
-        self._setseq_.set.clear()
+        self._seq_.clear()
+        self._set_.clear()
 
     def copy(self):
         inst = object.__new__(type(self))
-        inst._setseq_ = self._SetSeq_(
-            self._setseq_.set, self._setseq_.seq
-            # self._setseq_.set.copy(), self._setseq_.seq.copy()
-        )
+        inst._set_ = self._set_.copy()
+        inst._seq_ = self._seq_.copy()
         return inst
+
+
+del(abcm)

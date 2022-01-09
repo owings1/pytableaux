@@ -1,42 +1,21 @@
 from __future__ import annotations
 
-__all__ = 'KeyCacheFactory', 'MapAttrView', 'DequeCache',
+__all__ = 'MapAttrView', 'DequeCache',
 
-from tools.abcs import Abc, Copyable
-import decorators as d
-
-import typing
-
-from typing import Any
-KT = typing.TypeVar('KT')
-VT = typing.TypeVar('VT')
-NOARG = object()
-EMPTY = tuple()
+from tools.abcs import Abc, Copyable, abcm
 
 class std:
     from collections import deque
-    from collections.abc import Callable, Collection, Iterator, Mapping
+    from collections.abc import Collection, Iterator, Mapping
     from types import MappingProxyType as MapProxy
-    __new__ = None
+    from typing import TypeVar
 
-class KeyCacheFactory(dict[KT, VT], Abc):
+from typing import Any
+KT = std.TypeVar('KT')
+VT = std.TypeVar('VT')
+NOARG = object()
+EMPTY = tuple()
 
-    __fncreate__: std.Callable[[KT], VT]
-
-    __slots__ = '__fncreate__',
-
-    def __init__(self, fncreate: std.Callable[[KT], VT]):
-        super().__init__()
-        self.__fncreate__ = fncreate
-
-    def __getitem__(self, key: KT) -> VT:
-        try: return super().__getitem__(key)
-        except KeyError:
-            val = self[key] = self.__fncreate__(key)
-            return val
-
-    def __call__(self, key: KT) -> VT:
-        return self[key]
 
 class MapAttrView(std.Mapping[str, VT], Copyable):
     'A Mapping with attribute access.'
@@ -81,19 +60,19 @@ class DequeCache(std.Collection[VT], Abc):
     idx: int
     rev: std.Mapping[Any, VT]
 
-    @d.abstract
+    @abcm.abstract
     def clear(self): ...
 
-    @d.abstract
+    @abcm.abstract
     def __len__(self): ...
 
-    @d.abstract
+    @abcm.abstract
     def __getitem__(self, key) -> VT: ...
 
-    @d.abstract
+    @abcm.abstract
     def __reversed__(self) -> std.Iterator[VT]: ...
 
-    @d.abstract
+    @abcm.abstract
     def __setitem__(self, key, item: VT): ...
 
     def __new__(cls, Vtype: type, maxlen = 10):
@@ -155,4 +134,4 @@ class DequeCache(std.Collection[VT], Abc):
         Api.__qualname__ = 'DequeCache.Api'
         return Api()
 
-del(d)
+del(abcm)

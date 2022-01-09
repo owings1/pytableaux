@@ -26,7 +26,7 @@ from errors import DuplicateKeyError, IllegalStateError, MissingValueError,\
 from events import EventEmitter
 from lexicals import Argument, Sentence
 from models import BaseModel
-from tools.abcs import Abc, ABCMeta
+from tools.abcs import Abc, AbcMeta, abcm
 from tools.sets import EMPTY_SET
 from tools.sequences import SequenceApi, SequenceProxy, MutableSequenceApi
 from tools.hybrids import qsetf
@@ -46,7 +46,7 @@ LogicRef = ModuleType | str
 
 __all__ = 'Rule', 'TableauxSystem', 'Tableau'
 
-class RuleMeta(ABCMeta):
+class RuleMeta(AbcMeta):
 
     def __new__(cls, clsname, bases, ns: dict, **kw):
         helpers_attr = 'Helpers'
@@ -244,14 +244,14 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         'The rule name, default it the class name.'
         return self.__class__.__name__
 
-    @final
+    @abcm.final
     def get_target(self, branch: Branch) -> Target:
         targets = self._get_targets(branch)
         if targets:
             self.__extend_targets(targets)
             return self.__select_best_target(targets)
 
-    @final
+    @abcm.final
     def apply(self, target: Target):
         with self.apply_timer:
             self.emit(RuleEvent.BEFORE_APPLY, target)
@@ -259,7 +259,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             self.apply_count += 1
             self.emit(RuleEvent.AFTER_APPLY, target)
 
-    @final
+    @abcm.final
     def branch(self, parent: Branch = None) -> Branch:
         """Create a new branch on the tableau. Convenience for
         ``self.tableau.branch()``.
@@ -268,7 +268,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         :return: The new branch."""
         return self.tableau.branch(parent)
 
-    @final
+    @abcm.final
     def add_helper(self, cls: type, attr: str = None, **opts) -> RuleHelperInfo:
         'Add a helper.'
         inst = cls(self, **opts)

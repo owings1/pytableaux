@@ -1,4 +1,4 @@
-from decorators import abstract
+from tools.abcs import abcm
 from tools.hybrids import qsetf
 from utils import get_logic
 from lexicals import Operator, Sentence
@@ -29,7 +29,7 @@ class BaseModel:
         # flag to be set externally
         self.is_countermodel = None
 
-    @abstract
+    @abcm.abstract
     def read_branch(self, branch): ...
 
     def value_of(self, sentence: Sentence, **kw):
@@ -44,7 +44,7 @@ class BaseModel:
         elif sentence.is_quantified:
             return self.value_of_quantified(sentence, **kw)
 
-    @abstract
+    @abcm.abstract
     def truth_function(self, operator: Operator, a, b=None): ...
 
     def truth_table_inputs(self, narity):
@@ -53,13 +53,13 @@ class BaseModel:
     def is_sentence_opaque(self, sentence, **kw):
         return False
 
-    @abstract
+    @abcm.abstract
     def value_of_opaque(self, sentence: Sentence, **kw): ...
 
-    @abstract
+    @abcm.abstract
     def value_of_atomic(self, sentence: Sentence, **kw): ...
 
-    @abstract
+    @abcm.abstract
     def value_of_predicated(self, sentence: Sentence, **kw): ...
 
     def value_of_operated(self, sentence: Sentence, **kw):
@@ -74,10 +74,10 @@ class BaseModel:
             )
         raise NotImplementedError
 
-    @abstract
+    @abcm.abstract
     def value_of_quantified(self, sentence: Sentence, **kw): ...
 
-    @abstract
+    @abcm.abstract
     def is_countermodel_to(self, argument) -> bool: ...
 
     def get_data(self) -> dict:

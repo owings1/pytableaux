@@ -23,13 +23,14 @@ __all__ = (
     'Operator', 'Quantifier', 'Parameter', 'Constant', 'Variable', 'Predicate',
     'Sentence', 'Atomic', 'Predicated', 'Quantified', 'Operated',
     'LexType', 'Predicates', 'Argument', 
-    'LexWriter', 'BaseLexWriter', 'PolishLexWriter', 'StandardLexWriter',
+    'Notation', 'LexWriter', 'BaseLexWriter', 'PolishLexWriter', 'StandardLexWriter',
 )
 ##############################################################
 
 
 import operator as opr
 from errors import instcheck as _instcheck
+from typing import overload
 
 class cons:
     'constants'
@@ -43,9 +44,12 @@ class cons:
 class std:
     'Various standard/common imports'
 
-    from typing import Annotated, Any, ClassVar, NamedTuple #, TypeVar
+    from typing import (
+        Annotated, Any, Callable, ClassVar, Iterable, Iterator, Mapping, 
+        NamedTuple, Sequence, SupportsIndex, TypeVar
+        
+    )
     from enum import auto, Enum, EnumMeta, _EnumDict
-    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     __new__ = None
 
@@ -53,7 +57,8 @@ class errors:
     'errors'
 
     from errors import (
-        ReadOnlyAttributeError, ValueMismatchError, ValueCollisionError)
+        ReadOnlyAttributeError, ValueMismatchError, ValueCollisionError
+    )
 
     __new__ = None
 
@@ -61,15 +66,18 @@ class d:
     'decorators'
 
     from decorators import (
-        abstract, final, fixed, lazyget as lazy, metad as meta, operd as oper,
-        raisen as raises, rund as run, wraps
+        fixed, lazyget as lazy, membr, operd as oper,
+        raisr, rund as run, wraps
     )
+
+    def nodelattr():
+        return d.raisr(AttributeError)
 
     def nosetattr(basecls, cls = None, changeonly = False,  **kw):
         forigin = basecls.__setattr__
         def fset(self, attr, val):
             if cls:
-                if cls == True: checkobj = self.__class__
+                if cls == True: checkobj = type(self)
                 else: checkobj = cls
             else:
                 checkobj = self
@@ -88,22 +96,28 @@ class d:
 
     __new__ = None
 
+from tools.abcs import abcm, abcf
+from tools.sets import setf
+
 class fict:
     '(f)unction, (i)terable, and (c)ontainer (t)ools'
 
     from functools import partial, reduce
     from itertools import chain, repeat, starmap, zip_longest as lzip
     from tools.hybrids import qsetf, qset
-    from tools.sets import setf, setm
+    from tools.sets import setm
     from utils import it_drain as drain
 
-    def flat(): ...
     flat = chain.from_iterable
 
+    @overload
     def sorttmap(it: std.Iterable[Bases.Lexical]) -> std.Iterable[Types.IntTuple]: ...
     sorttmap = partial(map, opr.attrgetter('sort_tuple'))
 
     __new__ = None
+
+_T = std.TypeVar('_T')
+_F = std.TypeVar('_F', bound = std.Callable[..., std.Any])
 
 class Types:
 
@@ -111,9 +125,10 @@ class Types:
         DynamicClassAttribute as DynClsAttr, \
         MappingProxyType      as MapProxy
 
-    from tools.abcs import ABCMeta
+    from tools.abcs import AbcMeta
     from tools.hybrids import SequenceSetApi
-    from tools.sets import SetApi
+    from tools.sets import SetApi, MutableSetApi
+    from tools.sequences import SequenceApi
     from tools.mappings import DequeCache
 
     from utils import CacheNotationData
@@ -156,7 +171,7 @@ class Types:
     TriCoords.first = TriCoords._make(TriCoords.first)
 
     IntTuple = tuple[int, ...]
-    IndexType = int | slice
+    IndexType = std.SupportsIndex | slice
     FieldItemSequence = std.Sequence[tuple[int, str]]
 
     Spec = tuple
@@ -188,8 +203,6 @@ class Types:
     QuantifiedItem : type[Quantifier | Variable | Sentence]
 
     LexType     : type[LexType]
-
-
 
     def __new__(cls):
         attrs = dict(cls.__dict__)
@@ -223,38 +236,34 @@ class Metas:
 
     __new__ = None
 
-    class Abc(Types.ABCMeta):
+    class Abc(Types.AbcMeta):
         'General-purpose base Metaclass for all Abc (non-Enum) classes.'
 
-        # ----------------------
-        #  Class Creation
-        # ----------------------
-        @staticmethod
-        def nsclean(Class, attrs: dict, bases, **kw):
-            'MetaFlag cleanup method.'
-            # Force `type` as deleter for cleanup hook.
-            kw = dict(deleter = type.__delattr__) | kw
-            Types.ABCMeta.nsclean(Class, attrs, bases, **kw)
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Creation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        # -----------------------
-        # Attribute Access
-        # -----------------------
+        @staticmethod
+        def nsclean(Class, ns, bases, deleter = type.__delattr__, **kw):
+            'MetaFlag cleanup method.'
+            # Use `type` as deleter for cleanup hook.
+            # kw = dict(deleter = type.__delattr__) | kw
+            Types.AbcMeta.nsclean(Class, ns, bases, deleter = deleter, **kw)
+
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attrbute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         _readonly : bool
-        __delattr__ = d.raises(AttributeError)
+        __delattr__ = d.nodelattr()
         __setattr__ = d.nosetattr(type)
 
     class Enum(std.EnumMeta):
         'General-purpose base Metaclass for all Enum classes.'
 
-        # ----------------------------
-        #  Class Instance Variables
-        # ----------------------------
-        _lookup : Types.MapProxy[std.Any, Types.EnumEntry]#Types.EnumMemberLookup
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
+        _lookup : Types.MapProxy[std.Any, Types.EnumEntry]
         _seq    : tuple[Bases.Enum, ...]
 
-        # ----------------------
-        #  Class Creation
-        # ----------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Creation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         def __new__(cls, clsname, bases, ns, **kw):
 
             # Run MetaFlag namespace init hooks.
@@ -287,7 +296,7 @@ class Metas:
             return Class
 
         @classmethod
-        @d.final
+        @abcm.final
         def _create_index(cls, Class: Metas.Enum) -> Types.MapProxy:
             'Create the member lookup index'
             # Member to key set functions.
@@ -312,7 +321,7 @@ class Metas:
             return Types.MapProxy(merge_it)
 
         @staticmethod
-        @d.final
+        @abcm.final
         def _default_keys(member: Bases.Enum):
             'Default member lookup keys'
             return fict.setm((
@@ -321,20 +330,18 @@ class Metas:
             ))
 
         @classmethod
-        @d.final
+        @abcm.final
         def _clear_hooks(cls, Class: Metas.Enum):
             'Cleanup spent hook methods.'
             fdel = fict.partial(type(cls).__delattr__, Class)
             names = cls._hooks & Class.__dict__
             fict.drain(map(fdel, names))
 
-        _hooks = fict.setf((
+        _hooks = setf((
             '_member_keys', '_on_init', '_after_init'
         ))
 
-        #----------------------
-        # Subclass Init Hooks       
-        #----------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Subclass Init Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         def _member_keys(cls, member: Bases.Enum) -> Types.SetApi:
             'Init hook to get the index lookup keys for a member.'
@@ -349,9 +356,8 @@ class Metas:
             'Init hook once the class is initialized. Includes abstract classes.'
             pass
 
-        #----------------------
-        # Container behavior   
-        #----------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Container Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         def __contains__(cls, key):
             return cls.get(key, cons.NOGET) is not cons.NOGET
 
@@ -388,9 +394,7 @@ class Metas:
             # Override to not double-proxy
             return cls._member_map_
 
-        #--------------------
-        # Member methods   
-        #--------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Member Methods ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         @Types.DynClsAttr
         def names(cls):
@@ -432,13 +436,12 @@ class Metas:
                 return cls._lookup[cls[key]]
             except AttributeError:
                 raise KeyError(key)
-        # -----------------------
-        # Attribute Access
-        # -----------------------
+
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attrbute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         _readonly : bool
 
-        __delattr__ = d.raises(AttributeError)
+        __delattr__ = d.nodelattr()
         __setattr__ = d.nosetattr(std.EnumMeta)
 
     class LexicalItem(Abc):
@@ -524,9 +527,8 @@ class Bases:
     class Enum(std.Enum, metaclass = Metas.Enum):
         'Generic base class for all Enum classes.'
 
-        # -----------------------
-        # Copy Behavior
-        # -----------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Copy Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         def __copy__(self):
             return self
 
@@ -534,10 +536,9 @@ class Bases:
             memo[id(self)] = self
             return self
 
-        # -----------------------
-        # Attribute Access
-        # -----------------------
-        __delattr__ = d.raises(AttributeError)
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attrbute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
+        __delattr__ = d.nodelattr()
         __setattr__ = d.nosetattr(std.Enum, cls = True)
         __slots__   = '_value_', '_name_', '__objclass__'
 
@@ -603,15 +604,15 @@ class Bases:
         @staticmethod
         def identitem(item: Bases.Lexical) -> Types.Ident:
             'Build an ``ident`` tuple from the class name and ``spec``.'
-            return item.__class__.__name__, item.spec
+            return type(item).__name__, item.spec
 
         @staticmethod
         def hashitem(item: Bases.Lexical) -> int:
             'Compute a hash based on class name and ``sort_tuple``.'
-            return hash((item.__class__.__name__, item.sort_tuple))
+            return hash((type(item).__name__, item.sort_tuple))
 
         @staticmethod
-        @d.final
+        @abcm.final
         def orderitems(item: Bases.Lexical, other: Bases.Lexical) -> int:
             '''Pairwise ordering comparison based on type rank and ``sort_tuple``.
             Raises TypeError.'''
@@ -647,10 +648,10 @@ class Bases:
                 if item: yield item
 
         @classmethod
-        @d.abstract
+        @abcm.abstract
         def first(cls): ...
 
-        @d.abstract
+        @abcm.abstract
         def next(self, **kw): ...
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Copy Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -678,7 +679,7 @@ class Bases:
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        __delattr__ = d.raises(AttributeError)
+        __delattr__ = d.nodelattr()
         __setattr__ = d.nosetattr(object, cls = Metas.LexicalItem)
         __slots__ = cons.EMPTY_SET
 
@@ -755,7 +756,7 @@ class Bases:
             self.sort_tuple = self.order,
             self.ident = Bases.Lexical.identitem(self)
             self.hash = Bases.Lexical.hashitem(self)
-            self.strings = fict.setf((self.name, self.label))
+            self.strings = setf((self.name, self.label))
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -797,18 +798,18 @@ class Bases:
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        @d.abstract
+        @abcm.abstract
         def __init__(self): ...
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         __slots__ = '_ident', '_hash'
 
-        __delattr__ = d.raises(AttributeError)
+        __delattr__ = d.nodelattr()
 
         def __setattr__(self, name, value):
             if getattr(self, name, value) is not value:
-                if isinstance(getattr(self.__class__, name, None), property):
+                if isinstance(getattr(type(self), name, None), property):
                     pass
                 else:
                     raise errors.ReadOnlyAttributeError(name, self)
@@ -902,7 +903,7 @@ class Quantifier(Bases.LexicalEnum):
     def __call__(self, *spec: Types.QuantifiedSpec) -> Quantified:
         'Quantify a variable over a sentence.'
         return Quantified(self, *spec)
-    
+
 class Operator(Bases.LexicalEnum):
     'Operator Lexical Enum class.'
 
@@ -1066,24 +1067,24 @@ class Predicate(Bases.CoordsItem):
         Identity  : std.Annotated[Predicate, (-1, 0, 2, 'Identity')]
 
     @Types.DynClsAttr
-    def _value_(self):
+    def _value_(self: Predicate.System) -> Predicate.System:
         try:
             if self.is_system: return self
         except AttributeError: return self
         raise AttributeError('_value_')
 
     @Types.DynClsAttr
-    def _name_(self):
+    def _name_(self: Predicate.System) -> str:
         if self.is_system: return self.name
         raise AttributeError('_name_')
 
     @Types.DynClsAttr
-    def __objclass__(self):
+    def __objclass__(self: Predicate.System) -> type[Predicate.System]:
         if self.is_system: return __class__.System
         raise AttributeError('__objclass__')
 
-    @d.meta.temp
-    def sysset(prop: property):
+    @abcf.temp
+    def sysset(prop: property) -> property:
         name = prop.fget.__name__
         @d.wraps(prop.fget)
         def f(self, value):
@@ -1099,6 +1100,7 @@ class Predicate(Bases.CoordsItem):
 Types.PredsItemSpec |= Predicate
 Types.PredsItemRef  |= Predicate
 
+# Predicate()._value_
 ##############################################################
 
 class Sentence(Bases.LexicalItem):
@@ -1126,13 +1128,13 @@ class Sentence(Bases.LexicalItem):
     #: Whether this is a negated sentence.
     is_negated = d.fixed.prop(False)
     #: Set of predicates, recursive.
-    predicates: frozenset[Predicate] = d.fixed.prop(cons.EMPTY_SET)
+    predicates: setf[Predicate] = d.fixed.prop(cons.EMPTY_SET)
     #: Set of constants, recursive.
-    constants: frozenset[Constant] = d.fixed.prop(cons.EMPTY_SET)
+    constants: setf[Constant] = d.fixed.prop(cons.EMPTY_SET)
     #: Set of variables, recursive.
-    variables: frozenset[Variable] = d.fixed.prop(cons.EMPTY_SET)
+    variables: setf[Variable] = d.fixed.prop(cons.EMPTY_SET)
     #: Set of atomic sentences, recursive.
-    atomics: frozenset[Atomic] = d.fixed.prop(cons.EMPTY_SET)
+    atomics: setf[Atomic] = d.fixed.prop(cons.EMPTY_SET)
     #: Tuple of quantifiers, recursive.
     quantifiers: tuple[Quantifier, ...] = d.fixed.prop(tuple())
     #: Tuple of operators, recursive.
@@ -1181,14 +1183,14 @@ class Atomic(Sentence, Bases.CoordsItem):
     variable_occurs = d.fixed.value(False)
 
     @d.lazy.prop
-    def atomics(self) -> frozenset[Atomic]:
-        return frozenset({self})
+    def atomics(self) -> setf[Atomic]:
+        return setf({self})
 
     __init__ = Bases.CoordsItem.__init__
 
     __slots__ = '_atomics',
 
-class Predicated(Sentence, std.Sequence[Parameter]):
+class Predicated(Sentence, Types.SequenceApi[Parameter]):
     'Predicated sentence.'
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -1205,9 +1207,9 @@ class Predicated(Sentence, std.Sequence[Parameter]):
         return self.predicate.arity
 
     @d.lazy.prop
-    def paramset(self) -> frozenset[Parameter]:
+    def paramset(self) -> setf[Parameter]:
         'The set of parameters.'
-        return frozenset(self.params)
+        return setf(self.params)
 
     quantifier    = d.fixed.prop(None)
     operator      = d.fixed.prop(None)
@@ -1223,16 +1225,16 @@ class Predicated(Sentence, std.Sequence[Parameter]):
         return self.TYPE.rank, *fict.flat(fict.sorttmap((self.predicate, *self.params)))
 
     @d.lazy.prop
-    def predicates(self) -> frozenset[Predicate]:
-        return frozenset({self.predicate})
+    def predicates(self) -> setf[Predicate]:
+        return setf({self.predicate})
 
     @d.lazy.prop
-    def constants(self) -> frozenset[Constant]:
-        return frozenset(p for p in self.paramset if p.is_constant)
+    def constants(self) -> setf[Constant]:
+        return setf(p for p in self.paramset if p.is_constant)
 
     @d.lazy.prop
-    def variables(self) -> frozenset[Variable]:
-        return frozenset(p for p in self.paramset if p.is_variable)
+    def variables(self) -> setf[Variable]:
+        return setf(p for p in self.paramset if p.is_variable)
 
     # --------------------
     #  Sentence methods
@@ -1267,19 +1269,23 @@ class Predicated(Sentence, std.Sequence[Parameter]):
     def next(self, **kw) -> Predicated:
         return Predicated(self.predicate.next(**kw), self.params)
 
-    # -----------------------
-    #  Sequence Behavior
-    # -----------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sequence Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def __iter__(self) -> std.Iterator[Parameter]:
         return iter(self.params)
 
-    def __getitem__(self, index: Types.IndexType) -> Parameter:
+    @overload
+    def __getitem__(self, i: int) -> Parameter: ...
+    @overload
+    def __getitem__(self, s: slice) -> tuple[Parameter, ...]: ...
+
+    def __getitem__(self, index):
         return self.params[index]
 
     def __len__(self):
         return len(self.params)
 
-    def __contains__(self, p: Parameter):
+    def __contains__(self, p):
         return p in self.paramset
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -1290,7 +1296,7 @@ class Predicated(Sentence, std.Sequence[Parameter]):
         '_predicates', '_constants', '_variables'
     )
 
-class Quantified(Sentence, std.Sequence[Types.QuantifiedItem]):
+class Quantified(Sentence, Types.SequenceApi[Types.QuantifiedItem]):
     'Quantified sentence.'
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -1320,19 +1326,19 @@ class Quantified(Sentence, std.Sequence[Types.QuantifiedItem]):
         return self.TYPE.rank, *fict.flat(fict.sorttmap(self))
 
     @property
-    def constants(self) -> frozenset[Sentence]:
+    def constants(self) -> setf[Sentence]:
         return self.sentence.constants
 
     @property
-    def variables(self) -> frozenset[Variable]:
+    def variables(self) -> setf[Variable]:
         return self.sentence.variables
 
     @property
-    def atomics(self) -> frozenset[Atomic]:
+    def atomics(self) -> setf[Atomic]:
         return self.sentence.atomics
 
     @property
-    def predicates(self) -> frozenset[Predicate]:
+    def predicates(self) -> setf[Predicate]:
         return self.sentence.predicates
 
     @property
@@ -1382,9 +1388,8 @@ class Quantified(Sentence, std.Sequence[Types.QuantifiedItem]):
             raise TypeError('%s no longer bound' % v)
         return self.__class__(self.quantifier, v, s)
 
-    # -----------------------
-    #  Sequence Behavior
-    # -----------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sequence Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def __iter__(self) -> std.Iterator[Types.QuantifiedItem]:
         return iter(self.items)
 
@@ -1394,7 +1399,12 @@ class Quantified(Sentence, std.Sequence[Types.QuantifiedItem]):
     def __contains__(self, item: Types.QuantifiedItem):
         return item in self.items
 
-    def __getitem__(self, index: Types.IndexType) -> Types.QuantifiedItem:
+    @overload
+    def __getitem__(self, i: std.SupportsIndex) -> Types.QuantifiedItem: ...
+    @overload
+    def __getitem__(self, s: slice) -> std.Sequence[Types.QuantifiedItem]: ...
+
+    def __getitem__(self, index):
         return self.items[index]
 
     def count(self, item: Types.QuantifiedItem) -> int:
@@ -1410,7 +1420,7 @@ class Quantified(Sentence, std.Sequence[Types.QuantifiedItem]):
         '_spec', '_sort_tuple', '_quantifiers',
     )
 
-class Operated(Sentence, std.Sequence[Sentence]):
+class Operated(Sentence, Types.SequenceApi[Sentence]):
     'Operated sentence.'
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -1462,20 +1472,20 @@ class Operated(Sentence, std.Sequence[Sentence]):
         return self.TYPE.rank, *fict.flat(fict.sorttmap((self.operator, *self)))
 
     @d.lazy.prop
-    def predicates(self) -> frozenset[Predicate]:
-        return frozenset(fict.flat(s.predicates for s in self))
+    def predicates(self) -> setf[Predicate]:
+        return setf(fict.flat(s.predicates for s in self))
 
     @d.lazy.prop
-    def constants(self) -> frozenset[Constant]:
-        return frozenset(fict.flat(s.constants for s in self))
+    def constants(self) -> setf[Constant]:
+        return setf(fict.flat(s.constants for s in self))
 
     @d.lazy.prop
-    def variables(self) -> frozenset[Variable]:
-        return frozenset(fict.flat(s.variables for s in self))
+    def variables(self) -> setf[Variable]:
+        return setf(fict.flat(s.variables for s in self))
 
     @d.lazy.prop
-    def atomics(self) -> frozenset[Atomic]:
-        return frozenset(fict.flat(s.atomics for s in self))
+    def atomics(self) -> setf[Atomic]:
+        return setf(fict.flat(s.atomics for s in self))
 
     @d.lazy.prop
     def quantifiers(self) -> tuple[Quantifier, ...]:
@@ -1518,8 +1528,8 @@ class Operated(Sentence, std.Sequence[Sentence]):
     # -----------------------
     #  Sequence Behavior
     # -----------------------
-    def __iter__(self) -> std.Iterator[Sentence]:
-        return iter(self.operands)
+    # def __iter__(self) -> std.Iterator[Sentence]:
+    #     return iter(self.operands)
 
     def __getitem__(self, index: Types.IndexType) -> Sentence:
         return self.operands[index]
@@ -1569,23 +1579,18 @@ class LexType(Bases.Enum):
     def __call__(self, *args, **kw) -> Bases.Lexical:
         return self.cls(*args, **kw)
 
-    @d.meta.temp
-    def compare(method):
-        oper = getattr(opr, method.__name__)
-        @d.wraps(method)
-        def f(self: LexType, other: LexType):
+    @abcf.temp
+    @d.membr.defer
+    def ordr(member: d.membr[type[LexType]]):
+        oper = getattr(opr, member.name)
+        @d.wraps(oper)
+        def f(self: LexType, other):
             if not isinstance(other, LexType):
                 return NotImplemented
             return oper(self.rank, other.rank)
         return f
-    @compare
-    def __lt__(): pass
-    @compare
-    def __le__(): pass
-    @compare
-    def __gt__(): pass
-    @compare
-    def __ge__(): pass
+
+    __lt__ = __le__ = __gt__ = __ge__ = ordr()
 
     def __eq__(self, other):
         return self is other or (
@@ -1730,10 +1735,10 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Abc Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        @d.meta.nsinit
+        @abcf.nsinit
         def expand(ns: std._EnumDict, bases, **kw):
             'Inject members from annotations in Predicate.System class.'
-            annots = Metas.Abc.annotated_attrs(Predicate.System)
+            annots = abcm.annotated_attrs(Predicate.System)
             members = {
                 name: spec for name, (vtype, spec)
                 in annots.items() if vtype is Predicate
@@ -1741,7 +1746,7 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
             ns |= members
             ns._member_names += members.keys()
 
-class Argument(std.Sequence[Sentence], metaclass = Metas.Argument):
+class Argument(Types.SequenceApi[Sentence], metaclass = Metas.Argument):
     'Create an argument from sentence objects.'
 
     def __init__(self,
@@ -1777,10 +1782,12 @@ class Argument(std.Sequence[Sentence], metaclass = Metas.Argument):
     def __len__(self):
         return len(self.sentences)
 
-    def __iter__(self) -> std.Iterator[Sentence]:
-        return iter(self.sentences)
+    @overload
+    def __getitem__(self, s: slice) -> Types.SequenceApi[Sentence]: ...
+    @overload
+    def __getitem__(self, i: std.SupportsIndex) -> Sentence: ...
 
-    def __getitem__(self, index: Types.IndexType) -> Sentence:
+    def __getitem__(self, index):
         return self.sentences[index]
 
     def _cmp(self, other: Argument) -> int:
@@ -1795,41 +1802,33 @@ class Argument(std.Sequence[Sentence], metaclass = Metas.Argument):
             if a > b: return 1
         return cmp
 
-    @d.meta.temp
-    def compare(method):
-        oper = getattr(opr, method.__name__)
-        @d.wraps(method)
-        def f(self: Argument, other: Argument):
-            if not isinstance(self, other.__class__):
+    @abcf.temp
+    @d.membr.defer
+    def ordr(member: d.membr[type[Argument]]):
+        oper = getattr(opr, member.name)
+        @d.wraps(oper)
+        def f(self: Argument, other):
+            if not isinstance(self, type(other)):
                 return NotImplemented
             return oper(self._cmp(other), 0)
         return f
-    @compare
-    def __lt__(): ...
-    @compare
-    def __le__(): ...
-    @compare
-    def __gt__(): ...
-    @compare
-    def __ge__(): ...
-    @compare
-    def __eq__():
-        """Two arguments are considered equal just when their conclusions are
-        equal, and their premises are equal (and in the same order). The
-        title is not considered in equality."""
+    # Two arguments are considered equal just when their conclusions are
+    # equal, and their premises are equal (and in the same order). The
+    # title is not considered in equality.
+    __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr()
 
     def __hash__(self): return self.hash
 
     def __repr__(self):
         if self.title: desc = repr(self.title)
         else: desc = 'len(%d)' % len(self)
-        return '<%s:%s>' % (self.__class__.__name__, desc)
+        return '<%s:%s>' % (type(self).__name__, desc)
 
     def __setattr__(self, attr, value):
         if hasattr(self, attr): raise AttributeError(attr)
         super().__setattr__(attr, value)
 
-    def __delattr__(self, attr): raise AttributeError(attr)
+    __delattr__ = d.nodelattr
 
 ##############################################################
 #                                                            #
@@ -1842,21 +1841,21 @@ class Notation(Bases.Enum, metaclass = Metas.Notation):
 
     default: std.ClassVar[Notation]
 
-    encodings        : set[str]
+    encodings        : Types.MutableSetApi[str]
     default_encoding : str
-    writers          : set[type[LexWriter]]
+    writers          : Types.MutableSetApi[type[LexWriter]]
     default_writer   : type[LexWriter]
-    rendersets       : set[RenderSet]
+    rendersets       : Types.MutableSetApi[RenderSet]
 
     polish   = (std.auto(), 'ascii')
     standard = (std.auto(), 'unicode')
 
     def __init__(self, num, default_encoding):
-        self.encodings = {default_encoding}
+        self.encodings = fict.setm((default_encoding,))
         self.default_encoding = default_encoding
-        self.writers = set()
+        self.writers = fict.setm()
         self.default_writer = None
-        self.rendersets = set()
+        self.rendersets = fict.setm()
 
     __slots__ = (
         'encodings', 'default_encoding', 'writers',
@@ -1897,7 +1896,7 @@ class LexWriter(metaclass = Metas.LexWriter):
     # --------------------------
     # Instance init.
     # --------------------------
-    @d.abstract
+    @abcm.abstract
     def __init__(self): ...
 
     # --------------------------
@@ -1920,14 +1919,13 @@ class LexWriter(metaclass = Metas.LexWriter):
     # --------------------------
     # Attribute access.
     # --------------------------
-    __slots__ = ()
+    __slots__ = cons.EMPTY_SET
 
     # --------------------------
     # Class init.
     # --------------------------
-    @d.final
     @classmethod
-    def register(cls, subcls: type[LexWriter]) -> type[LexWriter]:
+    def register(cls, subcls: type[LexWriter]):
         'Update available writers.'
         if not issubclass(subcls, __class__):
             raise TypeError(subcls, __class__)
@@ -2024,7 +2022,7 @@ class BaseLexWriter(LexWriter, metaclass = Metas.LexWriter):
     # --------------------------
     #  Default implementations.
     # --------------------------
-    @d.abstract
+    @abcm.abstract
     def _write_operated(self, item: Operated): ...
 
     def _strfor(self, *args, **kw) -> str:
@@ -2097,7 +2095,7 @@ class StandardLexWriter(BaseLexWriter):
         if arity == 1:
             operand = item.operand
             if (oper == Operator.Negation and
-                operand.predicate == Predicates.System.Identity):
+                operand.predicate == Predicate.System.Identity):
                 return self._write_negated_identity(item)
             else:
                 return self._write(oper) + self._write(operand)
@@ -2115,14 +2113,12 @@ class StandardLexWriter(BaseLexWriter):
         params = si.params
         return self._strfor('whitespace', 0).join((
             self._write(params[0]),
-            # self._strfor('whitespace', 0),
             self._strfor((LexType.Predicate, True), (item.operator, si.predicate)),
-            # self._strfor('whitespace', 0),
             self._write(params[1]),
         ))
 
     def _test(self):
-        s1 = Predicates.System.Identity(Constant.gen(2)).negate()
+        s1 = Predicate.System.Identity(Constant.gen(2)).negate()
         s2 = Operator.Conjunction(Atomic.gen(2))
         s3 = s2.disjoin(Atomic.first())
         return super()._test() + list(map(self, [s1, s2, s3]))
@@ -2161,9 +2157,9 @@ def _():
                         Quantifier.Existential : 'S',
                     },
                     (LexType.Predicate, True) : {
-                        Predicates.System.Identity.index  : 'I',
-                        Predicates.System.Existence.index : 'J',
-                        (Operator.Negation, Predicates.System.Identity): NotImplemented,
+                        Predicate.System.Identity.index  : 'I',
+                        Predicate.System.Existence.index : 'J',
+                        (Operator.Negation, Predicate.System.Identity): NotImplemented,
                     },
                     (LexType.Predicate, False) : tuple('FGHO'),
                     'paren_open'     : (NotImplemented,),
@@ -2216,9 +2212,9 @@ def _():
                         Quantifier.Existential : 'X',
                     },
                     (LexType.Predicate, True) : {
-                        Predicates.System.Identity.index  : '=',
-                        Predicates.System.Existence.index : 'E!',
-                        (Operator.Negation, Predicates.System.Identity): '!=',
+                        Predicate.System.Identity.index  : '=',
+                        Predicate.System.Existence.index : 'E!',
+                        (Operator.Negation, Predicate.System.Identity): '!=',
                     },
                     (LexType.Predicate, False) : tuple('FGHO'),
                     'paren_open'      : ('(',),
@@ -2260,9 +2256,9 @@ def _():
                         Quantifier.Existential : '∃' ,
                     },
                     (LexType.Predicate, True) : {
-                        Predicates.System.Identity.index  : '=',
-                        Predicates.System.Existence.index : 'E!',
-                        (Operator.Negation, Predicates.System.Identity): '≠',
+                        Predicate.System.Identity.index  : '=',
+                        Predicate.System.Existence.index : 'E!',
+                        (Operator.Negation, Predicate.System.Identity): '≠',
                     },
                     (LexType.Predicate, False) : tuple('FGHO'),
                     'paren_open'      : ('(',),
@@ -2304,9 +2300,9 @@ def _():
                         Quantifier.Existential : '&exist;'  ,
                     },
                     (LexType.Predicate, True) : {
-                        Predicates.System.Identity.index  : '=',
-                        Predicates.System.Existence.index : 'E!',
-                        (Operator.Negation, Predicates.System.Identity): '&ne;',
+                        Predicate.System.Identity.index  : '=',
+                        Predicate.System.Existence.index : 'E!',
+                        (Operator.Negation, Predicate.System.Identity): '&ne;',
                     },
                     (LexType.Predicate, False) : tuple('FGHO'),
                     'paren_open'      : ('(',),
@@ -2330,5 +2326,4 @@ def _():
     for cls in (Bases.Enum, Bases.LexicalItem, Predicates, Argument, Bases.Lexical):
         cls._readonly = True
 
-del(_)
-
+del(_, overload, abcf)

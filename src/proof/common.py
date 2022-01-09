@@ -4,7 +4,7 @@ from decorators import abstract, lazyget
 from events import EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
-from tools.abcs import ABCMeta
+from tools.abcs import Abc, AbcMeta
 from tools.sets import EMPTY_SET, setf
 from utils import drepr, orepr
 
@@ -61,11 +61,13 @@ class FLAG(enum.Flag):
     TRUNK_BUILT = 32
 
 
-class NodeMeta(ABCMeta):
+class NodeMeta(AbcMeta):
     def __call__(cls, props = {}):
         if isinstance(props, cls):
             return props
         return super().__call__(props)
+
+__all__ = 'Node', 'Branch', 'Target'
 
 class Node(Mapping, metaclass = NodeMeta):
     'A tableau node.'
@@ -262,7 +264,7 @@ class Comparer(Callable[..., bool]):
         try: return lhs.__class__.__qualname__
         except AttributeError: return lhs.__class__.__name__
 
-class Filters(object):
+class Filters:
 
     class Attr(Comparer):
 
@@ -396,7 +398,7 @@ class NodeFilters(Filters):
             return n
 
 
-class Branch(Sequence[Node], EventEmitter):
+class Branch(Sequence[Node], EventEmitter, Abc):
     'Represents a tableau branch.'
 
     def __init__(self, parent: Branch = None, /):
@@ -745,7 +747,7 @@ class Branch(Sequence[Node], EventEmitter):
             closed = self.closed,
         )
 
-class Target(Mapping[str, Any]):
+class Target(Mapping[str, Any], Abc):
 
     __reqd = {'branch'}
     __attrs = __reqd | {

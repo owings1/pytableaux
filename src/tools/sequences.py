@@ -1,64 +1,61 @@
 from __future__ import annotations
-from errors import instcheck as _instcheck
-import utils
 
-import enum
-import itertools
-import typing
+from typing import TypeVar
+T = TypeVar('T')
+V = TypeVar('V')
+del (TypeVar)
 
-class ErrMsg(enum.Enum):
-    ExtendedSliceSize = 'attempt to assign sequence of size %d to extended slice of size %d'
-    IndexRange = 'sequence index out of range'
+NOARG = object()
+EMPTY = ()
 
-class bases:
+from errors import (
+    ExtendedSliceSizeError,
+    instcheck as _instcheck,
+)
+import decorators as d
+from tools.abcs import abcm, abcf
+
+class std:
     from collections import deque
-    from collections.abc import (
-        Iterable, MutableSequence, Sequence
-    )
+    from collections.abc import MutableSequence, Sequence
+class bases:
     from tools.abcs import Copyable
 
-class d:
-    from decorators import (
-        abstract, metad, namedf, overload, wraps
-    )
-
-
-T = typing.TypeVar('T')
-V = typing.TypeVar('V')
-NOARG = object()
+from typing import Iterable, SupportsIndex, overload
+import itertools
 
 __all__ = (
     'SequenceApi', 'MutableSequenceApi', 'SequenceProxy', 'seqf',
 )
 
-class SequenceApi(bases.Sequence[V], bases.Copyable):
+class SequenceApi(std.Sequence[V], bases.Copyable):
     "Extension of collections.abc.Sequence and built-in sequence (tuple)."
 
-    __slots__ = ()
+    __slots__ = EMPTY
 
-    @d.overload
+    @overload
     def __getitem__(self: T, s: slice) -> T: ...
 
-    @d.overload
-    def __getitem__(self, i: int) -> V: ...
+    @overload
+    def __getitem__(self, i: SupportsIndex) -> V: ...
 
-    @d.abstract.impl
+    @abcm.abstract
     def __getitem__(self, index):
         raise IndexError
 
-    @d.overload
-    def __add__(self:T, other: bases.Iterable) -> T: ...
+    @overload
+    def __add__(self:T, other: Iterable) -> T: ...
     def __add__(self, other):
-        if not isinstance(other, bases.Iterable):
+        if not isinstance(other, Iterable):
             return NotImplemented
         return self._from_iterable(itertools.chain(self, other))
 
     __radd__ = __add__
 
-    @d.overload
-    def __mul__(self:T, other: int) -> T: ...
+    @overload
+    def __mul__(self:T, other: SupportsIndex) -> T: ...
     def __mul__(self, other):
-        if not isinstance(other, int):
+        if not isinstance(other, SupportsIndex):
             return NotImplemented
         return self._from_iterable(
             itertools.chain.from_iterable(
@@ -68,30 +65,21 @@ class SequenceApi(bases.Sequence[V], bases.Copyable):
 
     __rmul__ = __mul__
 
-    def _absindex(self, index: int, strict = True, /) -> int:
-        'Normalize to positive/absolute index.'
-        _instcheck(index, int)
-        if index < 0:
-            index = len(self) + index
-        if strict and (index >= len(self) or index < 0):
-            raise IndexError(ErrMsg.IndexRange.value)
-        return index
-
     def copy(self):
         return self._from_iterable(self)
 
     @classmethod
-    def _from_iterable(cls: type[T], it: bases.Iterable) -> T:
+    def _from_iterable(cls: type[T], it: Iterable) -> T:
         return cls(it)
 
 SequenceApi.register(tuple)
 
-class MutableSequenceApi(SequenceApi[V], bases.MutableSequence[V]):
+class MutableSequenceApi(SequenceApi[V], std.MutableSequence[V]):
     'Fusion interface of collections.abc.MutableSequence and built-in list.'
 
-    __slots__ = ()
+    __slots__ = EMPTY
 
-    @d.abstract
+    @abcm.abstract
     def sort(self, /, *, key = None, reverse = False):
         raise NotImplementedError
 
@@ -100,85 +88,90 @@ class MutableSequenceApi(SequenceApi[V], bases.MutableSequence[V]):
         Must be idempotent. Does not affect deletions.'''
         return value
 
-    @d.overload
-    def _setslice_prep(self:T, slc: slice, values: bases.Iterable, /) -> tuple[T, T]: ...
-    def _setslice_prep(self, slc: slice, values: bases.Iterable, /):
+    @overload
+    def _setslice_prep(self:T, slc: slice, values: Iterable, /) -> tuple[T, T]: ...
+    def _setslice_prep(self, slc: slice, values: Iterable, /):
         olds = self[slc]
         values = self._from_iterable(map(self._new_value, values))
         if abs(slc.step or 1) != 1 and len(olds) != len(values):
-            raise ValueError(
-                ErrMsg.ExtendedSliceSize.value % (len(values), len(olds))
-            )
+            raise ExtendedSliceSizeError(values, olds)
         return olds, values
 
-    @d.overload
-    def __imul__(self:T, other: int) -> T: ...
+    @overload
+    def __imul__(self:T, other: SupportsIndex) -> T: ...
     def __imul__(self, other):
-        if not isinstance(other, int):
+        if not isinstance(other, SupportsIndex):
             return NotImplemented
         self.extend(itertools.chain.from_iterable(
-            itertools.repeat(self, other - 1)
+            itertools.repeat(self, int(other) - 1)
         ))
         return self
 
 MutableSequenceApi.register(list)
-MutableSequenceApi.register(bases.deque)
+MutableSequenceApi.register(std.deque)
 
 class SequenceProxy(SequenceApi[V]):
     'Sequence view proxy.'
 
-    __slots__ = ()
+    # Creates a new type for each instance.
+
+    __slots__ = EMPTY
+
+    @abcf.temp
+    @d.membr.defer
+    def pxfn(member: d.membr[type[SequenceProxy]]):
+        # Builds a class method that retrieves the source instance method
+        # and overwrites our class method, in effect a lazy loading.
+        name, cls = member.name, member.owner
+        cls._proxy_names_.add(name)
+        method = getattr(SequenceApi, name, None)
+        if callable(method) and not abcm.isabstract(method):
+            default = method
+        else: default = NOARG
+        @classmethod
+        def f(cls: type[SequenceProxy], *args):
+            proxy_pass = cls._get_base_attr(name, default)
+            setattr(cls, name, proxy_pass)
+            return proxy_pass(*args)
+        return f
 
     _proxy_names_ = set()
 
-    @d.metad.after
-    def _after(cls):
-        cls._proxy_names_ = frozenset(cls._proxy_names_)
+    __len__        = pxfn()
+    __getitem__    = pxfn()
+    __contains__   = pxfn()
+    __iter__       = pxfn()
+    __reversed__   = pxfn()
+    count          = pxfn()
+    index          = pxfn()
+    _from_iterable = pxfn()
 
-    @d.metad.temp
-    def proxyfn(default = NOARG, *args):
-        def defer(member: d.namedf[SequenceProxy], default = NOARG):
-            owner: type[SequenceProxy]
-            owner, name = member._owner_name
-            owner._proxy_names_.add(name)
-            if default is NOARG:
-                method = getattr(SequenceApi, name, None)
-                if callable(method) and not d.abstract.isabstract(method):
-                    default = method
-            def f(cls: type[SequenceProxy], *args):
-                proxy_method = cls._get_base_attr(name, default)
-                setattr(cls, name, proxy_method)
-                return proxy_method(*args)
-            return classmethod(d.wraps(member)(f))
-        return d.namedf(defer, *args)
-
-    __len__      = proxyfn()
-    __getitem__  = proxyfn()
-    __contains__ = proxyfn()
-    __iter__     = proxyfn()
-    __reversed__ = proxyfn()
-    count        = proxyfn()
-    index        = proxyfn()
-    _from_iterable = proxyfn()
+    @abcf.after
+    def _(cls): cls._proxy_names_ = frozenset(cls._proxy_names_)
 
     def copy(self):
+        'Immutable copy, returns self.'
         return self
 
     def __repr__(self):
+        import utils
         return utils.wraprepr(self, list(self))
 
     @classmethod
-    @d.abstract
+    @abcm.abstract
     def _get_base_attr(cls, name): ...
 
-    def __new__(cls, base: SequenceApi):
+    @abcm.final
+    def __init__(self, *_): pass
+
+    def __new__(cls, base: SequenceApi[V]) -> SequenceProxy[V]:
 
         _instcheck(base, SequenceApi)
-        names = cls._proxy_names_
+        names = frozenset(cls._proxy_names_)
 
         class SeqProxy(SequenceProxy):
 
-            __slots__ = ()
+            __slots__ = EMPTY
             __new__ = object.__new__
 
             @classmethod
@@ -195,37 +188,34 @@ class SequenceProxy(SequenceApi[V]):
 
 class seqf(tuple[V], SequenceApi[V]):
     'Frozen sequence, fusion of tuple and SequenceApi.'
-    # __eq__  = tuple.__eq__
-    # __ne__  = tuple.__ne__
-    # __gt__  = tuple.__gt__
-    # __ge__  = tuple.__ge__
-    # __lt__  = tuple.__lt__
-    # __le__  = tuple.__le__
 
-    # __hash__ = tuple.__hash__
+    # NB: tuple implements all equality and ordering methods,
+    # as well as __hash__ method.
 
-    __add__  = SequenceApi.__add__
+    __add__ = SequenceApi.__add__
 
-    @d.overload
+    @overload
     def __radd__(self, other: seqf[V]) -> seqf[V]: ...
-    @d.overload
+    @overload
     def __radd__(self, other: tuple[V, ...]) -> tuple[V, ...]: ...
-    @d.overload
+    @overload
     def __radd__(self, other: list[V]) -> list[V]: ...
-    @d.overload
-    def __radd__(self, other: bases.deque[V]) -> bases.deque[V]: ...
+    @overload
+    def __radd__(self, other: std.deque[V]) -> std.deque[V]: ...
 
     def __radd__(self, other):
-        if not isinstance(other, bases.Iterable):
+        if not isinstance(other, Iterable):
             return NotImplemented
-        # Check concrete type, not subclass.
+        # Check for various concrete types that we can create before
+        # falling back on our type with _from_iterable.
         otype = type(other)
         it = itertools.chain(other, self)
         # Since we inherit from tuple, Python will prefer our __radd__
-        # to tuple's __add__, which we don't want to override.
+        # to tuple's __add__, which we don't want to override when the
+        # left operand is a plain tuple.
         if otype is tuple or otype is list:
             return otype(it)
-        if otype is bases.deque:
+        if otype is std.deque:
             maxlen = other.maxlen
             if maxlen is not None and len(other) + len(self) > maxlen:
                 # Making a new deque that exceeds maxlen of lhs is not supported.
@@ -241,7 +231,3 @@ class seqf(tuple[V], SequenceApi[V]):
 
     def __repr__(self):
         return type(self).__name__ + super().__repr__()
-
-EMPTY_SEQ = seqf()
-
-del(enum, typing)

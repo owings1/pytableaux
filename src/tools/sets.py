@@ -1,81 +1,115 @@
 from __future__ import annotations
-from callables import calls
+
+__all__ = 'SetApi', 'MutableSetApi', 'setf', 'setm', 'EMPTY_SET'
+
+from typing import overload, Iterable, TypeVar
+
+T = TypeVar('T')
+V = TypeVar('V')
+
+EMPTY = ()
+
+class std:
+    from collections.abc import Set, MutableSet
+
+from tools.abcs import abcm, Copyable
+
 from decorators import operd
-from tools.abcs import Copyable
-
-import collections.abc as bases
 import operator as opr
-import typing
 
-__all__ = 'SetApi', 'MutableSetApi', 'setf', 'setm'
-
-T = typing.TypeVar('T')
-V = typing.TypeVar('V')
-
-class SetApi(bases.Set[V], Copyable):
+class SetApi(std.Set[V], Copyable):
     'Fusion interface of collections.abc.Set and built-in frozenset.'
 
-    __slots__ = ()
+    __slots__ = EMPTY
 
-    _opts = dict(freturn = calls.method('_from_iterable'))
+    @overload
+    def __or__(self:T, other) -> T: ...
+    @overload
+    def __and__(self:T, other) -> T: ...
+    @overload
+    def __sub__(self:T, other) -> T: ...
+    @overload
+    def __xor__(self:T, other) -> T: ...
 
-    issubset   = operd.apply(opr.le, info = set.issubset)
-    issuperset = operd.apply(opr.ge, info = set.issuperset)
+    __or__  = std.Set.__or__
+    __and__ = std.Set.__and__
+    __sub__ = std.Set.__sub__
+    __xor__ = std.Set.__xor__
 
-    union        = operd.reduce(opr.or_,  info = set.union,        **_opts)
-    intersection = operd.reduce(opr.and_, info = set.intersection, **_opts)
-    difference   = operd.reduce(opr.sub,  info = set.difference,   **_opts)
+    red = operd.reduce.template(freturn = '_from_iterable')
+    app = operd.apply
 
-    symmetric_difference = operd.apply(opr.xor,
-        info = set.symmetric_difference
-    )
+    @overload
+    def issubset(self, other: Iterable) -> bool: ...
+    @overload
+    def issuperset(self, other: Iterable) -> bool: ...
+    @overload
+    def union(self:T, *others: Iterable) -> T: ...
+    @overload
+    def intersection(self:T, *others: Iterable) -> T: ...
+    @overload
+    def difference(self:T, *others: Iterable) -> T: ...
+    @overload
+    def symmetric_difference(self:T, other: Iterable) -> T: ...
 
-    del(_opts)
+    issubset = app(opr.le, set.issubset)
+    issuperset = app(opr.ge, set.issuperset)
+    union = red(opr.or_, set.union)
+    intersection = red(opr.and_, set.intersection)
+    difference = red(opr.sub, set.difference)
+    symmetric_difference = app(opr.xor, set.symmetric_difference)
 
-    def __or__(self :T|SetApi, other) -> T: ...
-    def __and__(self :T|SetApi, other) -> T: ...
-    def __sub__(self :T|SetApi, other) -> T: ...
-    def __xor__(self :T|SetApi, other) -> T: ...
-    __or__  = bases.Set.__or__
-    __and__ = bases.Set.__and__
-    __sub__ = bases.Set.__sub__
-    __xor__ = bases.Set.__xor__
+    del(red, app)
 
     def copy(self):
         return self._from_iterable(self)
 
     @classmethod
-    def _from_iterable(cls: type[T], it: bases.Iterable) -> T:
+    def _from_iterable(cls: type[T], it: Iterable) -> T:
         return cls(it)
+
+class MutableSetApi(std.MutableSet[V], SetApi[V]):
+    'Fusion interface of collections.abc.MutableSet and built-in set.'
+
+    __slots__ = EMPTY
+
+    rep = operd.repeat
+
+    @overload
+    def update(self, *others: Iterable): ...
+    @overload
+    def intersection_update(self, *others: Iterable): ...
+    @overload
+    def difference_update(self, *others: Iterable): ...
+    @overload
+    def symmetric_difference_update(self, other: Iterable): ...
+
+    update = rep(opr.ior, set.update)
+    intersection_update = rep(opr.iand, set.intersection_update)
+    difference_update = rep(opr.isub, set.difference_update)
+    symmetric_difference_update = operd.apply(opr.ixor,
+        set.symmetric_difference_update
+    )
+
+    del(rep)
 
 class setf(SetApi[V], frozenset[V]):
     'SetApi wrapper around built-in frozenset.'
-    __slots__ = ()
+    __slots__ = EMPTY
     __len__      = frozenset.__len__
     __contains__ = frozenset.__contains__
     __iter__     = frozenset[V].__iter__
 
-EMPTY_SET = setf()
-
-class MutableSetApi(bases.MutableSet[V], SetApi[V]):
-    'Fusion interface of collections.abc.MutableSet and built-in set.'
-
-    __slots__ = EMPTY_SET
-
-    update              = operd.iterself(opr.ior,  info = set.update)
-    intersection_update = operd.iterself(opr.iand, info = set.intersection_update)
-    difference_update   = operd.iterself(opr.isub, info = set.difference_update)
-
-    symmetric_difference_update = operd.apply(opr.ixor,
-        info = set.symmetric_difference_update
-    )
-
 class setm(MutableSetApi[V], set[V]):
     'MutableSetApi wrapper around built-in set.'
-    __slots__ = EMPTY_SET
+    __slots__ = EMPTY
     __len__      = set.__len__
     __contains__ = set.__contains__
     __iter__     = set[V].__iter__
     clear   = set.clear
     add     = set.add
     discard = set.discard
+
+EMPTY_SET = setf()
+
+del(abcm, opr, operd, TypeVar, Copyable, std, EMPTY)

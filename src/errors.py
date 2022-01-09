@@ -39,6 +39,10 @@ class BoundVariableError(ParseError):
 class DuplicateKeyError(KeyError):
     pass
 
+# IndexErrors
+class IndexOutOfRangeError(IndexError):
+    pass
+
 # ValueErrors
 class DuplicateValueError(ValueError):
     pass
@@ -56,6 +60,18 @@ class ValueLengthError(ValueError, ActualExpected):
 class ValueCollisionError(ValueError, ActualExpected):
     fmsg = "'{0}' collides with '{1}'".format
 
+class SliceSizeError(ValueError):
+    pass
+class MismatchSliceSizeError(SliceSizeError, ActualExpected):
+    fmsg = 'attempt to assign sequence of size {0} to slice of size {1}'.format
+    fact = fexp = len
+
+class ExtendedSliceSizeError(SliceSizeError, ActualExpected):
+    fmsg = 'attempt to assign sequence of size {0} to ' \
+            'extended slice of size {1}'.format
+    fact = fexp = len
+
+
 class ConfigError(ValueError):
     pass
 
@@ -69,11 +85,11 @@ class DenotationError(ModelValueError):
 
 
 class TypeInstCheckError(TypeError, ActualExpected):
-    fmsg = "expected type '{1}' but got type '{0}'"
+    fmsg = "expected instance of '{1}' but got type '{0}'"
     fact = type
 
 class TypeClassError(TypeError, ActualExpected):
-    fmsg = "expected type '{1}' but got type '{0}'"
+    fmsg = "expected subclass of '{1}' but got type '{0}'"
 
 def instcheck(obj, classinfo: type[_T]) -> _T:
     if not isinstance(obj, classinfo):

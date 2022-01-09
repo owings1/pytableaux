@@ -215,32 +215,27 @@ def wraprepr(obj, inner, **kw) -> str:
     return cat(obj, wrparens(inner.__repr__(), **kw))
 
 
-def renamefn(fnew: T, forig) -> T:
-    fnew.__qualname__ = forig.__qualname__
-    fnew.__name__ = forig.__name__
-    return fnew
+# from collections.abc import Callable
+# import typing
+# KT = typing.TypeVar('KT')
+# VT = typing.TypeVar('VT')
+# class KeyCacheFactory(dict[KT, VT]):
 
-from collections.abc import Callable
-import typing
-KT = typing.TypeVar('KT')
-VT = typing.TypeVar('VT')
-class KeyCacheFactory(dict[KT, VT]):
+#     def __getitem__(self, key: KT) -> VT:
+#         try: return super().__getitem__(key)
+#         except KeyError:
+#             val = self[key] = self.__fncreate__(key)
+#             return val
 
-    def __getitem__(self, key: KT) -> VT:
-        try: return super().__getitem__(key)
-        except KeyError:
-            val = self[key] = self.__fncreate__(key)
-            return val
+#     def __call__(self, key: KT) -> VT:
+#         return self[key]
 
-    def __call__(self, key: KT) -> VT:
-        return self[key]
+#     __slots__ = '__fncreate__',
+#     __fncreate__: Callable[[KT], VT]
 
-    __slots__ = '__fncreate__',
-    __fncreate__: Callable[[KT], VT]
-
-    def __init__(self, fncreate: Callable[[KT], VT]):
-        super().__init__()
-        self.__fncreate__ = fncreate
+#     def __init__(self, fncreate: Callable[[KT], VT]):
+#         super().__init__()
+#         self.__fncreate__ = fncreate
 
 # import operator as opr
 

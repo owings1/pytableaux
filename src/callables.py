@@ -1,23 +1,22 @@
 from __future__ import annotations
 
 from errors import instcheck, subclscheck
-from tools.abcs import ABCMeta
-from utils import KeyCacheFactory, orepr
+from tools.abcs import Abc, AbcMeta, abcm
+from utils import orepr
 
-# import abc
-from abc import abstractmethod
+# from abc import abstractmethod
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import partial
-# import itertools
 import operator as opr
-from types import MappingProxyType
-from typing import Any, ClassVar, Literal, ParamSpec, TypeAlias, TypeVar, final
-# Annotated Generic
+from typing import Any, ClassVar, Literal, ParamSpec, TypeVar
+
 P = ParamSpec('P')
 K = TypeVar('K')
+V = TypeVar('V')
 T = TypeVar('T')
 
 import enum
+
 @enum.unique
 class Flag(enum.Flag):
 
@@ -36,23 +35,29 @@ class Flag(enum.Flag):
     User   = Safe | Star | Left | Usr1
 
     Copy   = 512
+
 del(enum)
 
-ExceptsParam: TypeAlias = tuple[type[Exception], ...]
-FlagParam: TypeAlias = Flag | Callable[[Flag], Flag]
+ExceptsParam = tuple[type[Exception], ...]
+FlagParam = Flag | Callable[[Flag], Flag]
+
 SETATTROK = frozenset({
     '__module__', '__name__', '__qualname__',
     '__doc__', '__annotations__',
 })
 
-class objwrap(Callable):
+class _objwrap(Callable):
+    'Object wrapper to allow __dict__ attributes'
+
     __slots__ = 'caller', '__dict__'
+
     def __init__(self, caller: Callable):
         self.caller = caller
+
     def __call__(self, *a, **kw):
         return self.caller(*a, **kw)
 
-class Caller(Callable, metaclass = ABCMeta):
+class Caller(Callable, Abc):
 
     SAFE: Literal[Flag.Safe] = Flag.Safe
     LEFT: Literal[Flag.Left] = Flag.Left
@@ -78,7 +83,7 @@ class Caller(Callable, metaclass = ABCMeta):
     excepts  : ExceptsParam
     default  : Any
 
-    @abstractmethod
+    @abcm.abstract
     def _call(self, *args):
         raise NotImplementedError
 
@@ -115,7 +120,7 @@ class Caller(Callable, metaclass = ABCMeta):
             self.bindargs = bindargs
         self.flag = f | f.Init | f.Lock
 
-    @final
+    @abcm.final
     def __call__(self, *args, **kw):
         try: return self._call(*self.getargs(args), **kw)
         except Exception as err:
@@ -191,20 +196,17 @@ class Caller(Callable, metaclass = ABCMeta):
     def __copy__(self):
         return self.copy()
 
-    # @classmethod
-    # def __class_getitem__(cls, key):
-    #     return super().__class_getitem__(key)
-
     def __init_subclass__(subcls: type[Caller], **kw):
         super().__init_subclass__(**kw)
-        cls = __class__
-        subcls.attrhints = MappingProxyType(cls.attrhints | subcls.attrhints)
+        from types import MappingProxyType
+        subcls.attrhints = MappingProxyType(__class__.attrhints | subcls.attrhints)
 
     def asobj(self):
-        return objwrap(self)
+        return _objwrap(self)
 
-ChainItem: TypeAlias = Callable | tuple[Caller, tuple]
-class Chain(Sequence[Callable], metaclass = ABCMeta):
+ChainItem = Callable | tuple[Caller, tuple]
+
+class Chain(Sequence[Callable], Abc):
 
     funcs: list[Callable]
     __slots__ = 'funcs',
@@ -264,28 +266,35 @@ class Chain(Sequence[Callable], metaclass = ABCMeta):
         return self.funcs[index]
 
 class calls:
+
     __new__ = None
 
     class func(Caller):
         'Function wrapper.'
+
         def _call(self, *args, **kw):
             return self.func(*args, **kw)
+
         def __init__(self, func: Callable, *args, **opts):
             self.func = instcheck(func, Callable)
             super().__init__(*args, **opts)
+
         func: Callable
         attrhints = dict(func = Flag.Blank)
         __slots__ = tuple(attrhints)
 
     class method(Caller):
         'Method caller.'
+
         def _call(self, obj, *args, **kw):
             return getattr(obj, self.method)(*args, **kw)
+
         def __init__(self, method: str, *args, **opts):
             if not method.isidentifier():
                 raise TypeError(method)
             self.method = method
             super().__init__(*args, **opts)
+
         method: str
         safe_errs = AttributeError,
         attrhints = dict(method = Flag.Blank)
@@ -295,52 +304,69 @@ class calls:
         return calls.func(func)(*args, **kw)
 
 class gets:
+
     __new__ = None
+
     class attr(Caller):
         'Attribute getter.'
-        def _call(self, obj, name: str): return getattr(obj, name)
+        def _call(self, obj, name: str):
+            return getattr(obj, name)
         safe_errs = AttributeError,
+
     class key(Caller):
         'Subscript getter.'
         def _call(self, obj, key): return obj[key]
         safe_errs = KeyError, IndexError,
+
     class mixed(Caller):
         'Attribute or subscript.'
+
         def _call(self, obj, keyattr):
             if Flag.Usr1 in self.flag:
                 return self.__attrfirst(obj, keyattr)
             try: return obj[keyattr]
             except TypeError: return getattr(obj, keyattr)
+
         def __attrfirst(self, obj, keyattr):
             try: return getattr(obj, keyattr)
-            except AttributeError:
+            except AttributeError as e:
                 try: return obj[keyattr]
-                except TypeError: pass
-                raise
+                except TypeError: raise e from None
+    
         def __init__(self, *args, attrfirst = False, **kw):
             if attrfirst: self.flag |= Flag.Usr1
             super().__init__(*args, **kw)
+
         safe_errs = AttributeError, KeyError, IndexError
+
     class thru(Caller):
         'Passthrough getter.'
         def _call(self, obj, *_): return obj
         cls_flag = Flag.Left
 
 class sets:
+
     __new__ = None
+
     class attr(Caller):
         'Attribute setter.'
-        def _call(self, obj, name: str, val): setattr(obj, name, val)
+    
+        def _call(self, obj, name: str, val):
+            setattr(obj, name, val)
+
         def __init__(self, attr, value = Flag.Blank, **kw):
             if value is Flag.Blank:
                 super().__init__(attr, aorder = (1, 0, 2), **kw)
                 return
             super().__init__(attr, value, aorder = (2, 0, 1), **kw)
+
         safe_errs = AttributeError,
         cls_flag = Flag.Left
 
 class dels:
+
     __new__ = None
+
     class attr(Caller):
         'Attribute deleter.'
         def _call(self, obj, name: str): delattr(obj, name)
@@ -348,19 +374,23 @@ class dels:
 
 class raiser(Caller):
     'Error raiser.'
+
     def _call(self, *args, **kw):
         raise self.ErrorType(*self.eargs, *args[0:1])
+
     def __init__(self,
         ErrorType: type[Exception],
         eargs: Sequence = (), /):
         self.ErrorType = subclscheck(ErrorType, Exception)
         self.eargs = instcheck(eargs, Sequence)
+
     ErrorType: type[Exception]
     eargs: Sequence
     attrhints = dict(ErrorType = Flag.Blank, eargs = Flag.Blank)
     __slots__ = tuple(attrhints)
 
 class cchain:
+
     __new__ = None
 
     def forall(*funcs: Callable[P, bool]) -> Callable[P, bool]:
@@ -375,15 +405,32 @@ class cchain:
     def reducer(*funcs: Callable[P, T]) -> Callable[P, T]:
         return Chain(*funcs).reduce
 
+def predcachetype(pred: Callable[[T, K], bool]) \
+    -> type[dict[K, Callable[[T], bool]]]:
+    'Returns a dict type that generates and caches predicates.'
+    outerfn = calls.func
+    setdefault = dict.setdefault
+    def missing(self, key):
+        return setdefault(self, key, outerfn(pred, key))
+    ns = dict(__missing__ = missing, __slots__ = ())
+    n = pred.__name__
+    clsname = n[0].upper() + n[1:] + 'PartialCache'
+    return AbcMeta(clsname, (dict,), ns)
+
 class preds:
+
     __new__ = None
 
-    instanceof: KeyCacheFactory[type, calls.func] = \
-        KeyCacheFactory(partial(calls.func, isinstance))
-    subclassof: KeyCacheFactory[type, calls.func] = \
-        KeyCacheFactory(partial(calls.func, issubclass))
-
+    instanceof = predcachetype(isinstance)()
+    subclassof = predcachetype(issubclass)()
     isidentifier = cchain.forall(instanceof[str], str.isidentifier)
+
     from keyword import iskeyword
-    isattrstr = cchain.forall(instanceof[str], str.isidentifier, cchain.reducer(iskeyword, opr.not_))
-    isabstract_method = cchain.reducer(gets.attr('__isabstractmethod__', flag = Flag.Safe), bool)
+
+    isattrstr = cchain.forall(
+        instanceof[str],
+        str.isidentifier,
+        cchain.reducer(iskeyword, opr.not_),
+    )
+
+('Chain', 'calls', 'gets', 'sets', 'dels', 'raiser','cchain', 'preds')
