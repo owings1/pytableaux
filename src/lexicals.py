@@ -27,97 +27,81 @@ __all__ = (
 )
 ##############################################################
 
+from decorators import abstract, final, overload, static
+from tools.abcs import abcm, abcf, Abc
+from tools.sequences import SequenceApi, seqf
+from tools.sets import SetApi, MutableSetApi, setf, setm, EMPTY_SET
+from tools.hybrids import qsetf, qset
+
+NOARG = object()
+NOGET = object()
+EMPTY_SEQ = seqf()
 
 import operator as opr
-from errors import instcheck as _instcheck
-from typing import overload
+from errors import (
+    ReadOnlyAttributeError,
+    ValueCollisionError,
+    ValueMismatchError,
+    instcheck as _instcheck,
+)
+from typing import (
+    Callable,
+    Generic,
+    Iterable,
+    Iterator,
+    SupportsIndex,
+    TypeVar,
+)
 
+@static
 class cons:
     'constants'
-    NOARG = object()
-    NOGET = object()
-    from tools.sets import EMPTY_SET
     ITEM_CACHE_SIZE = 10000
 
-    __new__ = None
-
+@static
 class std:
     'Various standard/common imports'
 
     from typing import (
-        Annotated, Any, Callable, ClassVar, Iterable, Iterator, Mapping, 
-        NamedTuple, Sequence, SupportsIndex, TypeVar
+        Annotated, Any, ClassVar, Mapping, 
+        NamedTuple
         
     )
-    from enum import auto, Enum, EnumMeta, _EnumDict
+    from enum import auto, Enum, EnumMeta
 
-    __new__ = None
-
-class errors:
-    'errors'
-
-    from errors import (
-        ReadOnlyAttributeError, ValueMismatchError, ValueCollisionError
-    )
-
-    __new__ = None
-
+_T = TypeVar('_T')
+# _T_co = TypeVar('_T_co', covariant = True)
+En = TypeVar('En', bound = std.Enum)
+# _EM = type[En]|Iterable[En]
+@static
 class d:
     'decorators'
 
     from decorators import (
-        fixed, lazyget as lazy, membr, operd as oper,
-        raisr, rund as run, wraps
+        fixed, lazy, membr, operd,
+        raisr, rund, wraps, NoSetAttr
     )
 
     def nodelattr():
         return d.raisr(AttributeError)
 
-    def nosetattr(basecls, cls = None, changeonly = False,  **kw):
-        forigin = basecls.__setattr__
-        def fset(self, attr, val):
-            if cls:
-                if cls == True: checkobj = type(self)
-                else: checkobj = cls
-            else:
-                checkobj = self
-            try:
-                acheck = checkobj._readonly
-            except AttributeError: pass
-            else:
-                if acheck:
-                    if changeonly:
-                        if getattr(self, attr, val) is not val:
-                            raise AttributeError('%s.%s is immutable' % (self, attr))
-                    else:
-                        raise AttributeError("%s is readonly" % checkobj)
-            forigin(self, attr, val)
-        return fset
+    nosetattr = NoSetAttr()
+    del(NoSetAttr)
 
-    __new__ = None
-
-from tools.abcs import abcm, abcf
-from tools.sets import setf
-
+@static
 class fict:
     '(f)unction, (i)terable, and (c)ontainer (t)ools'
 
     from functools import partial, reduce
     from itertools import chain, repeat, starmap, zip_longest as lzip
-    from tools.hybrids import qsetf, qset
-    from tools.sets import setm
     from utils import it_drain as drain
 
     flat = chain.from_iterable
 
     @overload
-    def sorttmap(it: std.Iterable[Bases.Lexical]) -> std.Iterable[Types.IntTuple]: ...
+    def sorttmap(it: Iterable[Bases.Lexical]) -> Iterable[Types.IntTuple]: ...
     sorttmap = partial(map, opr.attrgetter('sort_tuple'))
 
-    __new__ = None
-
-_T = std.TypeVar('_T')
-_F = std.TypeVar('_F', bound = std.Callable[..., std.Any])
 
 class Types:
 
@@ -125,10 +109,8 @@ class Types:
         DynamicClassAttribute as DynClsAttr, \
         MappingProxyType      as MapProxy
 
-    from tools.abcs import AbcMeta
+    from tools.abcs import AbcMeta, EnumDictType
     from tools.hybrids import SequenceSetApi
-    from tools.sets import SetApi, MutableSetApi
-    from tools.sequences import SequenceApi
     from tools.mappings import DequeCache
 
     from utils import CacheNotationData
@@ -171,8 +153,7 @@ class Types:
     TriCoords.first = TriCoords._make(TriCoords.first)
 
     IntTuple = tuple[int, ...]
-    IndexType = std.SupportsIndex | slice
-    FieldItemSequence = std.Sequence[tuple[int, str]]
+    IndexType = SupportsIndex | slice
 
     Spec = tuple
     Ident = tuple[str, tuple]
@@ -213,7 +194,7 @@ class Types:
             todo.remove(key)
             attrs[key] = value
         class Journal:
-            __slots__ = cons.EMPTY_SET
+            __slots__ = EMPTY_SET
             __new__ = object.__new__
             def __dir__(self):
                 return list(reader)
@@ -232,9 +213,8 @@ Types = Types()
 
 ##############################################################
 
+@static
 class Metas:
-
-    __new__ = None
 
     class Abc(Types.AbcMeta):
         'General-purpose base Metaclass for all Abc (non-Enum) classes.'
@@ -243,9 +223,7 @@ class Metas:
 
         @staticmethod
         def nsclean(Class, ns, bases, deleter = type.__delattr__, **kw):
-            'MetaFlag cleanup method.'
             # Use `type` as deleter for cleanup hook.
-            # kw = dict(deleter = type.__delattr__) | kw
             Types.AbcMeta.nsclean(Class, ns, bases, deleter = deleter, **kw)
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attrbute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -260,7 +238,8 @@ class Metas:
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         _lookup : Types.MapProxy[std.Any, Types.EnumEntry]
-        _seq    : tuple[Bases.Enum, ...]
+        # _seq    : seqf[Bases.Enum]
+        _seq    : seqf[Bases.Enum]
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Creation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -283,7 +262,7 @@ class Metas:
                 return Class
 
             # Store the fixed member sequence.
-            Class._seq = tuple(map(Class._member_map_.get, Class.names))
+            Class._seq = seqf(map(Class._member_map_.get, Class.names))
             # Init hook to process members before index is created.
             Class._on_init(Class)
             # Create index.
@@ -297,15 +276,12 @@ class Metas:
 
         @classmethod
         @abcm.final
-        def _create_index(cls, Class: Metas.Enum) -> Types.MapProxy:
+        def _create_index(cls, Class: type[Bases.Enum]) -> Types.MapProxy[std.Any, Types.EnumEntry]:
             'Create the member lookup index'
             # Member to key set functions.
-            keys_funcs = (
-                cls._default_keys,
-                Class._member_keys,
-            )
+            keys_funcs = cls._default_keys, Class._member_keys
             # Merges keys per member from all key_funcs.
-            keys_it = map(fict.setm, map(
+            keys_it = map(setm, map(
                 fict.flat, zip(*(
                     map(f, Class) for f in keys_funcs
                 ))
@@ -321,21 +297,20 @@ class Metas:
             return Types.MapProxy(merge_it)
 
         @staticmethod
-        @abcm.final
+        @final
         def _default_keys(member: Bases.Enum):
             'Default member lookup keys'
-            return fict.setm((
+            return setm((
                 member._name_, (member._name_,), member,
                 member._value_, # hash(member),
             ))
 
         @classmethod
-        @abcm.final
-        def _clear_hooks(cls, Class: Metas.Enum):
+        @final
+        def _clear_hooks(cls, Class: type[Bases.Enum]):
             'Cleanup spent hook methods.'
             fdel = fict.partial(type(cls).__delattr__, Class)
-            names = cls._hooks & Class.__dict__
-            fict.drain(map(fdel, names))
+            fict.drain(map(fdel, cls._hooks & Class.__dict__))
 
         _hooks = setf((
             '_member_keys', '_on_init', '_after_init'
@@ -343,11 +318,11 @@ class Metas:
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Subclass Init Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        def _member_keys(cls, member: Bases.Enum) -> Types.SetApi:
+        def _member_keys(cls, member: Bases.Enum) -> SetApi:
             'Init hook to get the index lookup keys for a member.'
-            return cons.EMPTY_SET
+            return EMPTY_SET
 
-        def _on_init(cls, Class: Metas.Enum):
+        def _on_init(cls, Class: type[Bases.Enum]):
             '''Init hook after all members have been initialized, before index
             is created. Skips abstract classes.'''
             pass
@@ -359,8 +334,10 @@ class Metas:
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Container Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         def __contains__(cls, key):
-            return cls.get(key, cons.NOGET) is not cons.NOGET
+            return cls.get(key, NOGET) is not NOGET
 
+        @overload
+        def __getitem__(cls: type[En], key) -> En: ...
         def __getitem__(cls, key):
             if type(key) is cls: return key
             try: return cls._lookup[key][0]
@@ -373,14 +350,17 @@ class Metas:
                 try: return cls.indexof
                 except AttributeError: pass
             return super().__getattr__(name)
-
-        def __iter__(cls) -> std.Iterator[Bases.Enum]:
+        @overload
+        def __iter__(cls: type[En]) -> Iterator[En]:...
+        def __iter__(cls):
             return iter(cls.seq)
 
-        def __reversed__(cls) -> std.Iterator[Bases.Enum]:
+        @overload
+        def __reversed__(cls: type[En]) -> Iterator[En]: ...
+        def __reversed__(cls):
             return reversed(cls.seq)
 
-        def __call__(cls, value, *args, **kw) -> Bases.Enum:
+        def __call__(cls: type[En], value, *args, **kw) -> En:
             if not args:
                 try: return cls[value]
                 except KeyError: pass
@@ -390,7 +370,7 @@ class Metas:
             return list(cls.names)
 
         @property
-        def __members__(cls):
+        def __members__(cls: type[En]) -> dict[str, En]:
             # Override to not double-proxy
             return cls._member_map_
 
@@ -402,20 +382,20 @@ class Metas:
             return cls._member_names_
 
         @Types.DynClsAttr
-        def seq(cls):
+        def seq(cls: type[En]) -> SequenceApi[En]:
             'The sequence of member objects.'
             try: return cls._seq
             except AttributeError: return ()
 
-        def get(cls, key, default = cons.NOARG) -> Bases.Enum:
+        def get(cls: type[En], key, default = NOARG) -> En:
             '''Get a member by an indexed reference key. Raises KeyError if not
             found and no default specified.'''
             try: return cls[key]
             except KeyError:
-                if default is cons.NOARG: raise
+                if default is NOARG: raise
                 return default
 
-        def indexof(cls, member) -> int:
+        def indexof(cls: type[En], member: En) -> int:
             'Get the sequence index of the member. Raises ValueError if not found.'
             try:
                 try:
@@ -449,7 +429,7 @@ class Metas:
 
         Cache: std.ClassVar[Types.DequeCache]
 
-        def __call__(cls, *spec) -> Bases.LexicalItem:
+        def __call__(cls: _T|Bases.LexicalItem, *spec) -> _T|Bases.LexicalItem:
             if len(spec) == 1:
                 if isinstance(spec[0], cls):
                     # Passthrough
@@ -520,9 +500,8 @@ class Metas:
         def default(cls: type[Notation]) -> Notation:
             return cls.polish
 
+@static
 class Bases:
-
-    __new__ = None
 
     class Enum(std.Enum, metaclass = Metas.Enum):
         'Generic base class for all Enum classes.'
@@ -542,18 +521,24 @@ class Bases:
         __setattr__ = d.nosetattr(std.Enum, cls = True)
         __slots__   = '_value_', '_name_', '__objclass__'
 
-        #----------------------
-        # Metaclass Hooks       
-        #----------------------
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Meta Class Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
         # Propagate class hooks up to metaclass, so they can be implemented
         # in either the meta or concrete classes.
+
+        @overload
         @classmethod
-        def _on_init(cls: Metas.Enum, Class):
+        def _on_init(cls: type[Bases.Enum], subcls: type[Bases.Enum]): ...
+        # @overload
+        # @classmethod
+        # def _on_init(cls: Metas.Enum, subcls: type[Bases.Enum]): ...
+        @classmethod
+        def _on_init(cls, subcls):
             'Propagate hook up to metaclass.'
-            type(cls)._on_init(cls, Class)
+            type(cls)._on_init(cls, subcls)
 
         @classmethod
-        def _member_keys(cls: Metas.Enum, member: Bases.Enum) -> Types.SetApi:
+        def _member_keys(cls: Metas.Enum, member: Bases.Enum) -> SetApi:
             'Propagate hook up to metaclass.'
             return type(cls)._member_keys(cls, member)
 
@@ -563,7 +548,7 @@ class Bases:
             type(cls)._after_init(cls)
 
         def __repr__(self):
-            name, fmt = self.__class__.__name__, '<%s.%s>'
+            name, fmt = type(self).__name__, '<%s.%s>'
             try: return fmt % (name, self.name)
             except AttributeError: return '<%s ?ERR?>' % name
 
@@ -601,18 +586,18 @@ class Bases:
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Comparison ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        @staticmethod
+        @static
         def identitem(item: Bases.Lexical) -> Types.Ident:
             'Build an ``ident`` tuple from the class name and ``spec``.'
             return type(item).__name__, item.spec
 
-        @staticmethod
+        @static
         def hashitem(item: Bases.Lexical) -> int:
             'Compute a hash based on class name and ``sort_tuple``.'
             return hash((type(item).__name__, item.sort_tuple))
 
-        @staticmethod
-        @abcm.final
+        @static
+        @final
         def orderitems(item: Bases.Lexical, other: Bases.Lexical) -> int:
             '''Pairwise ordering comparison based on type rank and ``sort_tuple``.
             Raises TypeError.'''
@@ -626,20 +611,22 @@ class Bases:
                 if cmp: return cmp
             return len(a) - len(b)
 
-        __lt__ = d.oper.order(opr.lt)(orderitems)
-        __le__ = d.oper.order(opr.le)(orderitems)
-        __gt__ = d.oper.order(opr.gt)(orderitems)
-        __ge__ = d.oper.order(opr.ge)(orderitems)
-        __eq__ = d.oper.order(opr.eq)(orderitems)
+        __lt__ = d.operd.order(opr.lt)(orderitems)
+        __le__ = d.operd.order(opr.le)(orderitems)
+        __gt__ = d.operd.order(opr.gt)(orderitems)
+        __ge__ = d.operd.order(opr.ge)(orderitems)
+        __eq__ = d.operd.order(opr.eq)(orderitems)
 
         def __hash__(self):
             return self.hash
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
+        @overload
         @classmethod
-        def gen(cls, n: int, first: Bases.Lexical = None, **opts) \
-            -> std.Iterator[Bases.Lexical]:
+        def gen(cls: type[_T], n: int, first: _T|None = None, **opts) -> Iterator[_T]: ...
+        @classmethod
+        def gen(cls, n: int, first = None, **opts):
             'Generate items.'
             if first is not None:
                 _instcheck(first, cls)
@@ -648,11 +635,11 @@ class Bases:
                 if item: yield item
 
         @classmethod
-        @abcm.abstract
-        def first(cls): ...
+        @abstract
+        def first(cls: type[_T]) -> _T: ...
 
-        @abcm.abstract
-        def next(self, **kw): ...
+        @abstract
+        def next(self: _T, **kw) -> _T: ...
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Copy Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -681,7 +668,7 @@ class Bases:
 
         __delattr__ = d.nodelattr()
         __setattr__ = d.nosetattr(object, cls = Metas.LexicalItem)
-        __slots__ = cons.EMPTY_SET
+        __slots__ = EMPTY_SET
 
     Types.Lexical = Lexical
     Metas.LexicalItem.Cache = Types.DequeCache(Lexical, cons.ITEM_CACHE_SIZE)
@@ -707,7 +694,7 @@ class Bases:
         #: A number to signify order independenct of source or other constraints.
         order: int
         #: Name, label, or other strings unique to a member.
-        strings: Types.SetApi[str]
+        strings: SetApi[str]
 
         @Types.DynClsAttr
         def index(self) -> int:
@@ -729,12 +716,12 @@ class Bases:
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         @classmethod
-        def first(cls) -> Bases.LexicalEnum:
+        def first(cls):
             'Return the first instance of this type.'
             return cls.seq[0]
 
-        def next(self, loop = False) -> Bases.LexicalEnum:
-            seq = self.__class__.seq
+        def next(self, loop = False):
+            seq = type(self).seq
             i = self.index + 1
             if i == len(seq):
                 if not loop: raise StopIteration
@@ -768,23 +755,23 @@ class Bases:
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Enum Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         @classmethod
-        def _member_keys(cls, member: Bases.LexicalEnum) -> Types.SetApi:
+        def _member_keys(cls, member: Bases.LexicalEnum) -> SetApi:
             'Enum init hook. Index keys for Enum members lookups.'
             return super()._member_keys(member) | {member.label, member.value}
 
         @classmethod
-        def _on_init(cls, Class: type[Bases.LexicalEnum]):
+        def _on_init(cls, subcls: type[Bases.LexicalEnum]):
             'Enum init hook. Store the sequence index of each member.'
-            super()._on_init(Class)
-            for i, member in enumerate(Class): member._index = i
+            super()._on_init(subcls)
+            for i, member in enumerate(subcls.seq): member._index = i
 
     class LexicalItem(Lexical, metaclass = Metas.LexicalItem):
         'Base Lexical Item class.'
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        ident: Types.Ident = d.lazy.prop(Types.Lexical.identitem, '_ident')
-        hash: int = d.lazy.prop(Types.Lexical.hashitem, '_hash')
+        ident = d.lazy.prop(None, Types.Lexical.identitem)
+        hash = d.lazy.prop(None, Types.Lexical.hashitem)
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Other Behaviors ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -794,11 +781,11 @@ class Bases:
             except NameError:
                 try: return str(self.ident)
                 except AttributeError as e:
-                    return '%s(%s)' % (self.__class__.__name__, e)
+                    return '%s(%s)' % (type(self).__name__, e)
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        @abcm.abstract
+        @abstract
         def __init__(self): ...
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -812,15 +799,14 @@ class Bases:
                 if isinstance(getattr(type(self), name, None), property):
                     pass
                 else:
-                    raise errors.ReadOnlyAttributeError(name, self)
+                    raise ReadOnlyAttributeError(name, self)
             super().__setattr__(name, value)
 
     class CoordsItem(LexicalItem):
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        Coords: std.ClassVar[type[Types.BiCoords]] = Types.BiCoords
-        _fieldsenumerated: std.ClassVar[Types.FieldItemSequence]
+        Coords = Types.BiCoords
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -834,7 +820,7 @@ class Bases:
         #: The coords subscript.
         subscript: int
 
-        #: The reversed coords for sorting.
+        #: The reversed coords (subscript, index) for sorting.
         scoords: Types.BiCoords.Sorting
 
         @d.lazy.prop
@@ -847,34 +833,43 @@ class Bases:
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
+        @overload
         @classmethod
-        def first(cls) -> Bases.CoordsItem:
+        def first(cls: type[_T]) -> _T: ...
+        @classmethod
+        def first(cls):
             'Return the first instance of this type.'
             return cls(cls.Coords.first)
 
-        def next(self, **kw) -> Bases.CoordsItem:
+        @overload
+        def next(self: _T, **kw) -> _T: ...
+        def next(self, **kw):
+            cls = type(self)
             idx, sub, *cargs = self.coords
-            if idx < self.TYPE.maxi:
+            if idx < cls.TYPE.maxi:
                 idx += 1
             else:
                 idx = 0
                 sub += 1
-            coords = self.Coords(idx, sub, *cargs)
-            return self.__class__(coords)
+            return cls(idx, sub, *cargs)
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        def __init__(self, *coords: Types.IntTuple):
-            if len(coords) == 1: coords, = coords
-            self.coords = self.spec = self.Coords(*coords)
-            for val in self.coords: _instcheck(val, int)
-            for i, f in self._fieldsenumerated:
-                setattr(self, f, coords[i])
+        @overload
+        def __init__(self, *coords: int):...
+        @overload
+        def __init__(self, coords: Iterable[int]):...
+        def __init__(self, *coords):
+            self.coords = self.spec = coords = self.Coords._make(
+                coords[0] if len(coords) == 1 else coords
+            )
+            for field, value in zip(coords._fields, coords):
+                setattr(self, field, _instcheck(value, int))
             try:
-                if self.index > self.TYPE.maxi:
-                    raise ValueError('%d > %d' % (self.index, self.TYPE.maxi))
-                if self.subscript < 0:
-                    raise ValueError('%d < %d' % (self.subscript, 0))
+                if coords.index > self.TYPE.maxi:
+                    raise ValueError('%d > %d' % (coords.index, self.TYPE.maxi))
+                if coords.subscript < 0:
+                    raise ValueError('%d < %d' % (coords.subscript, 0))
             except AttributeError:
                 raise TypeError(self) from None
 
@@ -883,13 +878,6 @@ class Bases:
         __slots__ = (
             'spec', 'coords', 'index', 'subscript', '_sort_tuple', '_scoords',
         )
-
-        # --------------------------
-        # Class init.
-        # --------------------------
-        def __init_subclass__(subcls: type[Bases.CoordsItem], **kw):
-            super().__init_subclass__(**kw)
-            subcls._fieldsenumerated = tuple(enumerate(subcls.Coords._fields))
 
 ##############################################################
 ##############################################################
@@ -968,14 +956,14 @@ class Predicate(Bases.CoordsItem):
     """
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-    Coords: std.ClassVar[type[Types.TriCoords]] = Types.TriCoords
+    Coords = Types.TriCoords
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     spec    : Types.TriCoords
     coords  : Types.TriCoords
     scoords : Types.TriCoords.Sorting
-    refs    : tuple[Types.PredicateRef, ...]
+    refs    : seqf[Types.PredicateRef]
 
     #: The coords arity.
     arity: int
@@ -991,7 +979,7 @@ class Predicate(Bases.CoordsItem):
         return Types.BiCoords(self.index, self.subscript)
 
     @d.lazy.prop
-    def refs(self) -> tuple[Types.PredicateRef, ...]:
+    def refs(self) -> seqf[Types.PredicateRef]:
         """
         The coords and other attributes, each of which uniquely identify this
         instance among other predicates. These are used to create hash indexes
@@ -1005,12 +993,12 @@ class Predicate(Bases.CoordsItem):
         - `name` - For system predicates, e.g. `Identity`, but is legacy for
            user predicates.
         """
-        return tuple({self.spec, self.ident, self.bicoords, self.name})
+        return seqf({self.spec, self.ident, self.bicoords, self.name})
 
     @d.lazy.prop
-    def refkeys(self) -> fict.qsetf[Types.PredicateRef | Predicate]:
+    def refkeys(self) -> qsetf[Types.PredicateRef | Predicate]:
         'The ``refs`` plus the predicate object.'
-        return fict.qsetf({*self.refs, self})
+        return qsetf({*self.refs, self})
 
     # -----------------------
     # Behaviors
@@ -1024,10 +1012,10 @@ class Predicate(Bases.CoordsItem):
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-    def next(self, **kw) -> Predicate:
+    def next(self, **kw):
         arity = self.arity
         if self.is_system:
-            pred: Predicate
+            # pred: Predicate
             for pred in self.System:
                 if pred > self and pred.arity == arity:
                     return pred
@@ -1035,10 +1023,14 @@ class Predicate(Bases.CoordsItem):
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-    def __init__(self, *spec: Types.PredicatedSpec):
+    @overload
+    def __init__(self, spec: Types.PredicateSpec):...
+    @overload
+    def __init__(self, index: int, subscipt: int, arity: int, name: str|None = None,/):...
+    def __init__(self, *spec):
         if len(spec) == 1:
             if isinstance(spec[0], tuple):
-                spec, = spec
+                spec = spec[0]
         if len(spec) not in (3, 4):
             raise TypeError('need 3 or 4 elements, got %s' % len(spec))
         super().__init__(*spec[0:3])
@@ -1084,7 +1076,7 @@ class Predicate(Bases.CoordsItem):
         raise AttributeError('__objclass__')
 
     @abcf.temp
-    def sysset(prop: property) -> property:
+    def sysset(prop: _T) -> _T:
         name = prop.fget.__name__
         @d.wraps(prop.fget)
         def f(self, value):
@@ -1100,12 +1092,11 @@ class Predicate(Bases.CoordsItem):
 Types.PredsItemSpec |= Predicate
 Types.PredsItemRef  |= Predicate
 
-# Predicate()._value_
 ##############################################################
 
 class Sentence(Bases.LexicalItem):
 
-    __slots__ = ()
+    __slots__ = EMPTY_SET
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -1128,17 +1119,17 @@ class Sentence(Bases.LexicalItem):
     #: Whether this is a negated sentence.
     is_negated = d.fixed.prop(False)
     #: Set of predicates, recursive.
-    predicates: setf[Predicate] = d.fixed.prop(cons.EMPTY_SET)
+    predicates: setf[Predicate] = d.fixed.prop(EMPTY_SET)
     #: Set of constants, recursive.
-    constants: setf[Constant] = d.fixed.prop(cons.EMPTY_SET)
+    constants: setf[Constant] = d.fixed.prop(EMPTY_SET)
     #: Set of variables, recursive.
-    variables: setf[Variable] = d.fixed.prop(cons.EMPTY_SET)
+    variables: setf[Variable] = d.fixed.prop(EMPTY_SET)
     #: Set of atomic sentences, recursive.
-    atomics: setf[Atomic] = d.fixed.prop(cons.EMPTY_SET)
+    atomics: setf[Atomic] = d.fixed.prop(EMPTY_SET)
     #: Tuple of quantifiers, recursive.
-    quantifiers: tuple[Quantifier, ...] = d.fixed.prop(tuple())
+    quantifiers: seqf[Quantifier] = d.fixed.prop(EMPTY_SEQ)
     #: Tuple of operators, recursive.
-    operators: tuple[Operator, ...] = d.fixed.prop(tuple())
+    operators: seqf[Operator] = d.fixed.prop(EMPTY_SEQ)
 
     def substitute(self, pnew: Parameter, pold: Parameter) -> Sentence:
         """Return the recursive substitution of ``pnew`` for all occurrences
@@ -1171,6 +1162,7 @@ class Sentence(Bases.LexicalItem):
         return v in self.variables
 
 Types.QuantifiedItem = Quantifier | Variable | Sentence
+S = TypeVar('S', bound = Sentence)
 
 class Atomic(Sentence, Bases.CoordsItem):
 
@@ -1186,11 +1178,9 @@ class Atomic(Sentence, Bases.CoordsItem):
     def atomics(self) -> setf[Atomic]:
         return setf({self})
 
-    __init__ = Bases.CoordsItem.__init__
-
     __slots__ = '_atomics',
 
-class Predicated(Sentence, Types.SequenceApi[Parameter]):
+class Predicated(Sentence, SequenceApi[Parameter]):
     'Predicated sentence.'
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -1199,7 +1189,7 @@ class Predicated(Sentence, Types.SequenceApi[Parameter]):
     predicate: Predicate
 
     #: The parameters
-    params: tuple[Parameter, ...]
+    params: seqf[Parameter]
 
     @property
     def arity(self) -> int:
@@ -1236,33 +1226,37 @@ class Predicated(Sentence, Types.SequenceApi[Parameter]):
     def variables(self) -> setf[Variable]:
         return setf(p for p in self.paramset if p.is_variable)
 
-    # --------------------
-    #  Sentence methods
-    # --------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sentence Methods ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def substitute(self, pnew: Parameter, pold: Parameter) -> Predicated:
-        if pnew == pold or pold not in self: return self
+        if pnew == pold or pold not in self.paramset: return self
         return Predicated(self.predicate, tuple(
-            (pnew if p == pold else p for p in self)
+            (pnew if p == pold else p for p in self.params)
         ))
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-    def __init__(self, pred, params: std.Iterable[Parameter] | Parameter):
-        if isinstance(pred, str):
-            self.predicate = Predicate.System(pred)
-        else:
-            self.predicate = Predicate(pred)
-        if isinstance(params, Parameter):
-            self.params = params,
-        else:
-            self.params = tuple(map(Parameter, params))
+    def __init__(self, pred, params: Iterable[Parameter] | Parameter):
+        # if isinstance(pred, str):
+        #     self.predicate = Predicate.System(pred)
+        # else:
+        #     self.predicate = Predicate(pred)
+        self.predicate = Predicate(pred)
+        self.params = seqf(
+            (params,) if isinstance(params, Parameter)
+            else map(Parameter, params)
+        )
+        # if isinstance(params, Parameter):
+        #     self.params = params,
+        # else:
+        #     self.params = tuple(map(Parameter, params))
         if len(self) != self.predicate.arity:
             raise TypeError(self.predicate, len(self), self.arity)
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     @classmethod
-    def first(cls, pred: Predicate = None,/) -> Predicated:
+    def first(cls, pred: Predicate|None = None,/) -> Predicated:
         if pred is None: pred = Predicate.first()
         return cls(pred, tuple(fict.repeat(Constant.first(), pred.arity)))
 
@@ -1271,15 +1265,7 @@ class Predicated(Sentence, Types.SequenceApi[Parameter]):
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sequence Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-    def __iter__(self) -> std.Iterator[Parameter]:
-        return iter(self.params)
-
-    @overload
-    def __getitem__(self, i: int) -> Parameter: ...
-    @overload
-    def __getitem__(self, s: slice) -> tuple[Parameter, ...]: ...
-
-    def __getitem__(self, index):
+    def __getitem__(self, index: Types.IndexType):
         return self.params[index]
 
     def __len__(self):
@@ -1296,7 +1282,7 @@ class Predicated(Sentence, Types.SequenceApi[Parameter]):
         '_predicates', '_constants', '_variables'
     )
 
-class Quantified(Sentence, Types.SequenceApi[Types.QuantifiedItem]):
+class Quantified(Sentence, SequenceApi[Types.QuantifiedItem]):
     'Quantified sentence.'
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -1312,6 +1298,7 @@ class Quantified(Sentence, Types.SequenceApi[Types.QuantifiedItem]):
 
     #: The items sequence: Quantifer, Variable, Sentence.
     items: tuple[Quantifier, Variable, Sentence]
+    # items: tuple[Types.QuantifiedItem]
 
     predicate     = d.fixed.prop(None)
     operator      = d.fixed.prop(None)
@@ -1342,19 +1329,18 @@ class Quantified(Sentence, Types.SequenceApi[Types.QuantifiedItem]):
         return self.sentence.predicates
 
     @property
-    def operators(self) -> tuple[Operator, ...]:
+    def operators(self) -> seqf[Operator]:
         return self.sentence.operators
 
     @d.lazy.prop
-    def quantifiers(self) -> tuple[Quantifier, ...]:
-        return self.quantifier, *self.sentence.quantifiers
+    def quantifiers(self) -> seqf[Quantifier]:
+        return seqf((self.quantifier, *self.sentence.quantifiers))
 
-    # --------------------
-    #  Sentence methods
-    # --------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sentence Methods ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def substitute(self, pnew: Parameter, pold: Parameter) -> Quantified:
         if pnew == pold: return self
-        return self.__class__(
+        return type(self)(
             self.quantifier, self.variable, self.sentence.substitute(pnew, pold)
         )
 
@@ -1376,42 +1362,32 @@ class Quantified(Sentence, Types.SequenceApi[Types.QuantifiedItem]):
 
     @classmethod
     def first(cls, q: Quantifier = Quantifier.seq[0],/) -> Quantified:
-        pred: Predicate = Predicate.first()
-        return cls(q, Variable.first(), pred(
-            (Variable.first(), *Constant.gen(pred.arity - 1))
+        pred = Predicate.first()
+        v = Variable.first()
+        return cls(q, v, pred(
+            (v, *Constant.gen(pred.arity - 1))
         ))
 
     def next(self, **kw) -> Quantified:
-        s: Sentence = self.sentence.next(**kw)
+        s = self.sentence.next(**kw)
         v = self.variable
         if v not in s.variables:
             raise TypeError('%s no longer bound' % v)
-        return self.__class__(self.quantifier, v, s)
+        return Quantified(self.quantifier, v, s)
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sequence Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
-
-    def __iter__(self) -> std.Iterator[Types.QuantifiedItem]:
-        return iter(self.items)
 
     def __len__(self):
         return len(self.items)
 
-    def __contains__(self, item: Types.QuantifiedItem):
+    def __contains__(self, item):
         return item in self.items
 
-    @overload
-    def __getitem__(self, i: std.SupportsIndex) -> Types.QuantifiedItem: ...
-    @overload
-    def __getitem__(self, s: slice) -> std.Sequence[Types.QuantifiedItem]: ...
-
-    def __getitem__(self, index):
+    def __getitem__(self, index: Types.IndexType):
         return self.items[index]
 
-    def count(self, item: Types.QuantifiedItem) -> int:
-        return int(item in self)
-
-    def index(self, item: Types.QuantifiedItem) -> int:
-        return self.items.index(item)
+    def count(self, item) -> int:
+        return int(item in self.items)
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -1420,7 +1396,7 @@ class Quantified(Sentence, Types.SequenceApi[Types.QuantifiedItem]):
         '_spec', '_sort_tuple', '_quantifiers',
     )
 
-class Operated(Sentence, Types.SequenceApi[Sentence]):
+class Operated(Sentence, SequenceApi[Sentence]):
     'Operated sentence.'
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -1430,6 +1406,8 @@ class Operated(Sentence, Types.SequenceApi[Sentence]):
 
     #: The operands.
     operands: tuple[Sentence, ...]
+
+    is_operated = d.fixed.prop(True)
 
     @property
     def arity(self) -> int:
@@ -1457,7 +1435,6 @@ class Operated(Sentence, Types.SequenceApi[Sentence]):
 
     predicate   = d.fixed.prop(None)
     quantifier  = d.fixed.prop(None)
-    is_operated = d.fixed.prop(True)
 
     @d.lazy.prop
     def is_literal(self) -> bool:
@@ -1493,30 +1470,29 @@ class Operated(Sentence, Types.SequenceApi[Sentence]):
 
     @d.lazy.prop
     def operators(self) -> tuple[Operator, ...]:
-        return self.operator, *fict.flat(s.operators for s in self)
+        return seqf((self.operator, *fict.flat(s.operators for s in self)))
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     @classmethod
     def first(cls, oper: Operator = Operator.seq[0],/) -> Operated:
-        return cls(oper, tuple(Atomic.gen(Operator(oper).arity)))
+        return cls(oper, Atomic.gen(Operator(oper).arity))
 
     def next(self, **kw) -> Operated:
-        operands = list(self)
-        operands[-1] = operands[-1].next(**kw)
-        return self.__class__(self.operator, tuple(operands))
+        return Operated(self.operator,
+            (*self.operands[0:-1], self.operands[-1].next(**kw))
+        )
 
-    # --------------------
-    #  Sentence methods
-    # --------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sentence Methods. ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def substitute(self, pnew: Parameter, pold: Parameter) -> Operated:
         if pnew == pold: return self
         operands = (s.substitute(pnew, pold) for s in self)
-        return self.__class__(self.operator, tuple(operands))
+        return Operated(self.operator, tuple(operands))
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-    def __init__(self, oper: Operator, operands: std.Iterable[Sentence] | Sentence):
+    def __init__(self, oper: Operator, operands: Iterable[Sentence] | Sentence):
         if isinstance(operands, Sentence):
             self.operands = operands,
         else:
@@ -1525,11 +1501,7 @@ class Operated(Sentence, Types.SequenceApi[Sentence]):
         if len(self.operands) != self.operator.arity:
             raise TypeError(self.operator, len(self.operands), self.operator.arity)
 
-    # -----------------------
-    #  Sequence Behavior
-    # -----------------------
-    # def __iter__(self) -> std.Iterator[Sentence]:
-    #     return iter(self.operands)
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sequence Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     def __getitem__(self, index: Types.IndexType) -> Sentence:
         return self.operands[index]
@@ -1547,6 +1519,7 @@ class Operated(Sentence, Types.SequenceApi[Sentence]):
         '_predicates', '_constants', '_variables', '_atomics', '_quantifiers',
         '_operators',
     )
+
 
 ##############################################################
 ##############################################################
@@ -1604,7 +1577,7 @@ class LexType(Bases.Enum):
         super().__init__()
         self.rank, self.cls, self.generic, self.maxi = value
         self.role = self.generic.__name__
-        self.hash = hash(self.__class__.__name__) + self.rank
+        self.hash = hash(type(self).__name__) + self.rank
         self.cls.TYPE = self
 
     def __repr__(self):
@@ -1626,38 +1599,37 @@ class LexType(Bases.Enum):
     def _after_init(cls):
         'Build classes list, expand sort_tuple.'
         super()._after_init()
-        cls.classes = fict.qsetf((m.cls for m in cls))
+        cls.classes = qsetf((m.cls for m in cls.seq))
         for inst in fict.chain[Bases.LexicalEnum](Operator, Quantifier):
             inst.sort_tuple = inst.TYPE.rank, *inst.sort_tuple
 
     @classmethod
-    def _member_keys(cls, member: LexType) -> Types.SetApi:
+    def _member_keys(cls, member: LexType) -> SetApi:
         'Enum lookup index init hook.'
         return super()._member_keys(member) | {member.cls}
 
-Types.LexType = LexType
 
 ##############################################################
 ##############################################################
 
-class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
+class Predicates(qset[Predicate], metaclass = Metas.Abc):
     'Predicate store'
 
     _lookup: dict[Types.PredsItemRef, Predicate]
     __slots__ = '_lookup',
 
-    def __init__(self, values: std.Iterable[Types.PredsItemSpec] = None, /):
+    def __init__(self, values: Iterable[Types.PredsItemSpec] = None, /):
         self._lookup = {}
         super().__init__(values)
 
-    def get(self, ref: Types.PredsItemRef, default = cons.NOARG, /) -> Predicate:
+    def get(self, ref: Types.PredsItemRef, default = NOARG, /) -> Predicate:
         """Get a predicate by any reference. Also searches System predicates.
         Raises KeyError when no default specified."""
         try: return self._lookup[ref]
         except KeyError:
             try: return self.System[ref]
             except KeyError: pass
-            if default is cons.NOARG: raise
+            if default is NOARG: raise
             return default
 
     # -------------------------------
@@ -1674,7 +1646,7 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
             # viz. BiCoords or name, that does not equal pred, e.g. arity
             # mismatch.
             if other != pred:
-                raise errors.ValueMismatchError(other.coords, pred.coords)
+                raise ValueMismatchError(other.coords, pred.coords)
 
     def _after_add(self, pred: Predicate):
         'Implement after_add hook. Add keys to lookup index.'
@@ -1687,7 +1659,7 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
             # a distinct predicate. This would have to be the result of
             # a failed removal or addition.
             if other != pred:
-                raise errors.ValueCollisionError(other.coords, pred.coords)
+                raise ValueCollisionError(other.coords, pred.coords)
 
     # -------------------------------
     #  Override qset
@@ -1721,7 +1693,7 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Enum Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         @classmethod
-        def _member_keys(cls, pred: Predicate) -> Types.SetApi[Types.PredsItemRef]:
+        def _member_keys(cls, pred: Predicate) -> SetApi[Types.PredsItemRef]:
             'Enum lookup index init hook. Add all predicate keys.'
             return super()._member_keys(pred) | pred.refkeys
 
@@ -1729,14 +1701,14 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
         def _after_init(cls):
             'Enum after init hook. Set Predicate class attributes.'
             super()._after_init()
-            for pred in cls:
+            for pred in cls.seq:
                 setattr(Predicate, pred.name, pred)
             Predicate.System = cls
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Abc Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         @abcf.nsinit
-        def expand(ns: std._EnumDict, bases, **kw):
+        def expand(ns: Types.EnumDictType, bases, **kw):
             'Inject members from annotations in Predicate.System class.'
             annots = abcm.annotated_attrs(Predicate.System)
             members = {
@@ -1746,49 +1718,60 @@ class Predicates(fict.qset[Predicate], metaclass = Metas.Abc):
             ns |= members
             ns._member_names += members.keys()
 
-class Argument(Types.SequenceApi[Sentence], metaclass = Metas.Argument):
+class Argument(SequenceApi[Sentence], metaclass = Metas.Argument):
     'Create an argument from sentence objects.'
 
     def __init__(self,
         conclusion: Sentence,
-        premises: std.Iterable[Sentence] = tuple(),
+        premises: Iterable[Sentence] = None,
         title: str = None
     ):
-        if premises is None:
-            self.sentences = (Sentence(conclusion),)
-        else:
-            self.sentences = tuple(map(Sentence, (conclusion, *premises)))
+        self.sentences = seqf(
+            (Sentence(conclusion),) if premises is None
+            else map(Sentence, (conclusion, *premises))
+        )
+        # if premises is None:
+        #     self.sentences = (Sentence(conclusion),)
+        # else:
+        #     self.sentences = tuple(map(Sentence, (conclusion, *premises)))
         if title is not None:
             _instcheck(title, str)
         self.title = title
 
     __slots__ = 'sentences', 'title', '_hash'
 
+    sentences: SequenceApi[Sentence]
+
     @property
     def conclusion(self) -> Sentence:
         return self.sentences[0]
 
     @property
-    def premises(self) -> tuple[Sentence, ...]:
+    def premises(self) -> SequenceApi[Sentence]:
         return self.sentences[1:]
 
     @d.lazy.prop
     def hash(self) -> int:
         return hash(tuple(self))
 
-    # -----------------------
-    #  Sequence Behavior
-    # -----------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sequence Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def __len__(self):
         return len(self.sentences)
 
     @overload
-    def __getitem__(self, s: slice) -> Types.SequenceApi[Sentence]: ...
+    def __getitem__(self, s: slice) -> SequenceApi[Sentence]: ...
     @overload
-    def __getitem__(self, i: std.SupportsIndex) -> Sentence: ...
+    def __getitem__(self, i: SupportsIndex) -> Sentence: ...
 
     def __getitem__(self, index):
         return self.sentences[index]
+
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Equality & Ordering ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
+    # Two arguments are considered equal just when their conclusions are
+    # equal, and their premises are equal (and in the same order). The
+    # title is not considered in equality.
 
     def _cmp(self, other: Argument) -> int:
         if self is other: return 0
@@ -1812,9 +1795,7 @@ class Argument(Types.SequenceApi[Sentence], metaclass = Metas.Argument):
                 return NotImplemented
             return oper(self._cmp(other), 0)
         return f
-    # Two arguments are considered equal just when their conclusions are
-    # equal, and their premises are equal (and in the same order). The
-    # title is not considered in equality.
+
     __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr()
 
     def __hash__(self): return self.hash
@@ -1825,7 +1806,8 @@ class Argument(Types.SequenceApi[Sentence], metaclass = Metas.Argument):
         return '<%s:%s>' % (type(self).__name__, desc)
 
     def __setattr__(self, attr, value):
-        if hasattr(self, attr): raise AttributeError(attr)
+        if hasattr(self, attr):
+            raise AttributeError(attr)
         super().__setattr__(attr, value)
 
     __delattr__ = d.nodelattr
@@ -1841,21 +1823,21 @@ class Notation(Bases.Enum, metaclass = Metas.Notation):
 
     default: std.ClassVar[Notation]
 
-    encodings        : Types.MutableSetApi[str]
+    encodings        : setm[str]
     default_encoding : str
-    writers          : Types.MutableSetApi[type[LexWriter]]
+    writers          : setm[type[LexWriter]]
     default_writer   : type[LexWriter]
-    rendersets       : Types.MutableSetApi[RenderSet]
+    rendersets       : setm[RenderSet]
 
-    polish   = (std.auto(), 'ascii')
-    standard = (std.auto(), 'unicode')
+    polish   = std.auto(), 'ascii'
+    standard = std.auto(), 'unicode'
 
     def __init__(self, num, default_encoding):
-        self.encodings = fict.setm((default_encoding,))
+        self.encodings = setm((default_encoding,))
         self.default_encoding = default_encoding
-        self.writers = fict.setm()
+        self.writers = setm()
         self.default_writer = None
-        self.rendersets = fict.setm()
+        self.rendersets = setm()
 
     __slots__ = (
         'encodings', 'default_encoding', 'writers',
@@ -1868,40 +1850,37 @@ class LexWriter(metaclass = Metas.LexWriter):
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     notation: Notation
-    _methodmap: std.Mapping[LexType, str] = Types.MapProxy({
-        ltype: NotImplemented for ltype in LexType
-    })
+    _methodmap = Types.MapProxy[LexType, str](dict(
+        zip(LexType, fict.repeat(NotImplemented))
+    ))
     _sys: std.ClassVar[LexWriter]
 
-    # --------------------------
-    # Instance Variables.
-    # --------------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     encoding: str
 
-    # --------------------------
-    # Public API.
-    # --------------------------
-    def __call__(self, item: Bases.Lexical) -> str:
-        return self.write(item)
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Exteneral API ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     def write(self, item: Bases.Lexical) -> str:
         'Write a lexical item.'
         return self._write(item)
+    @overload
+    def __call__(self, item: Bases.Lexical) -> str:
+        return self.write(item)
+    __call__ = write
 
     @classmethod
     def canwrite(cls, item) -> bool:
         try: return item.TYPE in cls._methodmap
         except AttributeError: return False
 
-    # --------------------------
-    # Instance init.
-    # --------------------------
-    @abcm.abstract
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init. ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
+    @abstract
     def __init__(self): ...
 
-    # --------------------------
-    # Internal API.
-    # --------------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Internal API ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def _write(self, item: Bases.Lexical) -> str:
         'Wrapped internal write method.'
         try:
@@ -1916,14 +1895,12 @@ class LexWriter(metaclass = Metas.LexWriter):
         'Smoke test. Returns a rendered list of each lex type.'
         return list(map(self, (t.cls.first() for t in LexType)))
 
-    # --------------------------
-    # Attribute access.
-    # --------------------------
-    __slots__ = cons.EMPTY_SET
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-    # --------------------------
-    # Class init.
-    # --------------------------
+    __slots__ = EMPTY_SET
+
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Init. ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     @classmethod
     def register(cls, subcls: type[LexWriter]):
         'Update available writers.'
@@ -1947,7 +1924,7 @@ class LexWriter(metaclass = Metas.LexWriter):
         'Subclass init hook. Merge and freeze method map from mro.'
         super().__init_subclass__(**kw)
         cls = __class__
-        methmap: dict = cls.merge_mroattr(subcls, '_methodmap', supcls = cls)
+        methmap: dict = abcm.merge_mroattr(subcls, '_methodmap', supcls = cls)
         subcls._methodmap = Types.MapProxy(methmap)
 
 class RenderSet(Types.CacheNotationData):
@@ -1959,7 +1936,7 @@ class RenderSet(Types.CacheNotationData):
         self.name: str = data['name']
         self.notation = Notation(data['notation'])
         self.encoding: str = data['encoding']
-        self.renders: std.Mapping[std.Any, std.Callable] = data.get('renders', {})
+        self.renders: std.Mapping[std.Any, Callable] = data.get('renders', {})
         self.formats: std.Mapping[std.Any, str] = data.get('formats', {})
         self.strings: std.Mapping[std.Any, str] = data.get('strings', {})
         self.data = data
@@ -1991,9 +1968,8 @@ class BaseLexWriter(LexWriter, metaclass = Metas.LexWriter):
         LexType.Operated   : '_write_operated',
     }
 
-    # --------------------------
-    #  Instance Variables
-    # --------------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     opts: dict
     renderset: RenderSet
 
@@ -2001,9 +1977,8 @@ class BaseLexWriter(LexWriter, metaclass = Metas.LexWriter):
     def encoding(self) -> str:
         return self.renderset.encoding
 
-    # --------------------------
-    #  Instance init.
-    # --------------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init. ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     def __init__(self, enc = None, renderset: RenderSet = None, **opts):
         notation = self.notation
         if renderset is None:
@@ -2014,9 +1989,8 @@ class BaseLexWriter(LexWriter, metaclass = Metas.LexWriter):
         self.opts = self.defaults | opts
         self.renderset = renderset
 
-    # --------------------------
-    #  Attribute access.
-    # --------------------------
+    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
     __slots__ = 'opts', 'renderset'
 
     # --------------------------
@@ -2077,7 +2051,7 @@ class StandardLexWriter(BaseLexWriter):
         # Infix notation for predicates of arity > 1
         pred = item.predicate
         # For Identity, add spaces (a = b instead of a=b)
-        if pred == Predicates.System.Identity:
+        if pred == Predicate.System.Identity:
             ws = self._strfor('whitespace', 0)
         else:
             ws = ''
@@ -2123,7 +2097,7 @@ class StandardLexWriter(BaseLexWriter):
         s3 = s2.disjoin(Atomic.first())
         return super()._test() + list(map(self, [s1, s2, s3]))
 
-@d.run
+@d.rund
 def _():
     
     from copy import deepcopy
@@ -2321,9 +2295,9 @@ def _():
 
 ##############################################################
 
-@d.run
+@d.rund
 def _():
     for cls in (Bases.Enum, Bases.LexicalItem, Predicates, Argument, Bases.Lexical):
         cls._readonly = True
 
-del(_, overload, abcf)
+del(_, abstract, overload, abcf, d)

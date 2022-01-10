@@ -13,6 +13,7 @@ from errors import (
     instcheck as _instcheck,
 )
 import decorators as d
+from decorators import abstract, final, overload
 from tools.abcs import abcm, abcf
 
 class std:
@@ -21,7 +22,7 @@ class std:
 class bases:
     from tools.abcs import Copyable
 
-from typing import Iterable, SupportsIndex, overload
+from typing import Iterable, SupportsIndex
 import itertools
 
 __all__ = (
@@ -33,27 +34,41 @@ class SequenceApi(std.Sequence[V], bases.Copyable):
 
     __slots__ = EMPTY
 
+    # Pure sequences
+    # @overload
+    # @classmethod
+    # def _from_iterable(cls: type[T], it: Iterable[V]) -> T|SequenceApi[V]: ...
+    # @overload
+    # def __getitem__(self: T, s: slice) -> T: ...
+    # @overload
+    # def __add__(self:T, other: Iterable) -> T: ...
+    # @overload
+    # def __mul__(self:T, other: SupportsIndex) -> T: ...
+
+    # Impure sequences
     @overload
-    def __getitem__(self: T, s: slice) -> T: ...
+    @classmethod
+    def _from_iterable(cls, it: Iterable[V]) -> SequenceApi[V]: ...
+    @overload
+    def __getitem__(self, s: slice) -> SequenceApi[V]: ...
+    @overload
+    def __add__(self, other: Iterable) -> SequenceApi[V]: ...
+    @overload
+    def __mul__(self, other: SupportsIndex) -> SequenceApi[V]: ...
+
 
     @overload
     def __getitem__(self, i: SupportsIndex) -> V: ...
 
-    @abcm.abstract
+    @abstract
     def __getitem__(self, index):
         raise IndexError
 
-    @overload
-    def __add__(self:T, other: Iterable) -> T: ...
     def __add__(self, other):
         if not isinstance(other, Iterable):
             return NotImplemented
         return self._from_iterable(itertools.chain(self, other))
 
-    __radd__ = __add__
-
-    @overload
-    def __mul__(self:T, other: SupportsIndex) -> T: ...
     def __mul__(self, other):
         if not isinstance(other, SupportsIndex):
             return NotImplemented
@@ -63,13 +78,14 @@ class SequenceApi(std.Sequence[V], bases.Copyable):
             )
         )
 
+    __radd__ = __add__
     __rmul__ = __mul__
 
     def copy(self):
         return self._from_iterable(self)
 
     @classmethod
-    def _from_iterable(cls: type[T], it: Iterable) -> T:
+    def _from_iterable(cls, it: Iterable):
         return cls(it)
 
 SequenceApi.register(tuple)
@@ -158,10 +174,10 @@ class SequenceProxy(SequenceApi[V]):
         return utils.wraprepr(self, list(self))
 
     @classmethod
-    @abcm.abstract
+    @abstract
     def _get_base_attr(cls, name): ...
 
-    @abcm.final
+    @final
     def __init__(self, *_): pass
 
     def __new__(cls, base: SequenceApi[V]) -> SequenceProxy[V]:
@@ -186,7 +202,7 @@ class SequenceProxy(SequenceApi[V]):
         )
         return SeqProxy()
 
-class seqf(tuple[V], SequenceApi[V]):
+class seqf(tuple[V, ...], SequenceApi[V]):
     'Frozen sequence, fusion of tuple and SequenceApi.'
 
     # NB: tuple implements all equality and ordering methods,
@@ -231,3 +247,5 @@ class seqf(tuple[V], SequenceApi[V]):
 
     def __repr__(self):
         return type(self).__name__ + super().__repr__()
+
+del(abstract, final, overload)

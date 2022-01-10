@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 __all__ = (
+    'overload', 'abstract', 'final', 'static',
     'membr', 'rund', 'fixed', 'operd', 'wraps',
-    'raisr', 'lazyget',
+    'raisr', 'lazy', 'NoSetAttr',
 )
 
-from errors import (
-    instcheck as _instcheck,
-    subclscheck as _subclscheck
-)
-from tools.abcs import Abc, abcm
+from tools.abcs import Abc, abcm, abcf
 
 from typing import (
     overload,
@@ -17,10 +14,9 @@ from typing import (
 )
 
 import functools
-import inspect
 import keyword
+import operator as opr
 import types
-import typing
 
 P = ParamSpec('P')
 R = TypeVar('R')
@@ -28,31 +24,45 @@ T = TypeVar('T')
 O = TypeVar('O')
 V = TypeVar('V')
 F = TypeVar('F', bound = Callable[..., Any])
+F2 = TypeVar('F2', bound = Callable[..., Any])
 F_get = TypeVar('F_get', bound = Callable[[Any], Any])
 
 _EMPTY = ()
 
 class _nonerr(Exception): __new__ = None
-
+from errors import (
+    instcheck as _instcheck,
+    subclscheck as _subclscheck
+)
+from inspect import (
+    isclass as _iscls,
+    signature as _sig,
+)
 def _geti1(obj): return obj[1]
 
 _valfilter = functools.partial(filter, _geti1)
 
 def _getmixed(obj, k):
-    try:
-        return obj[k]
+    try: return obj[k]
     except TypeError:
         return getattr(obj, k, None)
 
-def _thru(obj, *_): return obj
+def _thru(obj, *_):
+    return obj
 
-def _thru2(_x, obj, *_): return obj
+def _thru2(_x, obj, *_):
+    return obj
 
-def _methcaller(name: str):
+def _attrstrcheck(name):
+    _instcheck(name, str)
     if keyword.iskeyword(name):
         raise TypeError('%s is a keyword' % name)
     if not name.isidentifier():
         raise TypeError('%s is not an identifier' % name)
+    return name
+
+def _methcaller(name: str):
+    name = _attrstrcheck(name)
     def f(obj, *args, **kw):
         return getattr(obj, name)(*args, **kw)
     f.__name__ = name
@@ -76,37 +86,73 @@ def _copyf(f: types.FunctionType) -> types.FunctionType:
 @overload
 def abstract(f: F) -> F: ...
 abstract = abcm.abstract
+
 @overload
 def final(f: T) -> T: ...
 final = abcm.final
 
-class OwnerName(NamedTuple):
-    owner: type
-    name: str
+@overload
+def static(f: T) -> T: ...
+static = abcm.static
+
+def rund(func):
+    'Call the function immediately, and return the value.'
+    return func()
 
 class _member(Generic[T]):
 
     def __set_name__(self, owner: T, name):
-        self._owner_name = OwnerName(owner, name)
-        self.__name__ = name
-        self.__qualname__ = '%s.%s' % (owner.__name__, name)
+        self.owner = owner
+        self.name = name
+        for hook in self._sethooks:
+            hook(self, owner, name)
+
+    __slots__ = '__name__', '__qualname__', '__owner'
+
+    @property
+    def owner(self) -> T:
+        try: return self.__owner
+        except AttributeError: pass
+
+    @property
+    def name(self) -> str:
+        try: return self.__name__
+        except AttributeError: pass
+        return type(self).__name__
+
+    @owner.setter
+    def owner(self, value):
+        self.__owner = _instcheck(value, type)
+        try: self._update_qualname()
+        except AttributeError: pass
+
+    @name.setter
+    def name(self, value):
+        self.__name__ = _attrstrcheck(value)
+        try: self._update_qualname()
+        except AttributeError: pass
+
+    def _update_qualname(self):
+        self.__qualname__ = '%s.%s' % (self.owner.__name__, self.name)
 
     def __repr__(self):
         if not hasattr(self, '__qualname__') or not callable(self):
             return object.__repr__(self)
         return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
+    _sethooks = _EMPTY
 
-    __slots__ = '__name__', '__qualname__', '_owner_name'
+    def __init_subclass__(subcls, **kw):
+        super().__init_subclass__(**kw)
+        hooks = dict.fromkeys(abcm.merge_mroattr(subcls, '_sethooks',
+            oper = opr.add, supcls = __class__
+        ))
+        hook = getattr(subcls, 'sethook', None)
+        if hook:
+            hooks[hook] = None
+            delattr(subcls, 'sethook')
+        subcls._sethooks = tuple(hooks)
 
-    @property
-    def owner(self) -> T:
-        try: return self._owner_name.owner
-        except AttributeError: pass
-
-    @property
-    def name(self) -> str:
-        return self.__name__
-    __class_getitem__ = classmethod(type(list[int]))
+    # __class_getitem__ = classmethod(type(list[int]))
 
 class _twofer(Abc, Generic[F]):
 
@@ -123,6 +169,7 @@ class _twofer(Abc, Generic[F]):
         instance. Otherwise create normally.'''
         inst = object.__new__(cls)
         if len(a) or len(kw) or not isinstance(arg, Callable):
+            inst._init(arg, *a, **kw)
             return inst
         if isinstance(inst._blankinit, Callable): 
             inst._blankinit()
@@ -132,12 +179,13 @@ class _twofer(Abc, Generic[F]):
     @overload
     def __call__(self, func: F) -> F: ...
 
-    def _blankinit(self):
-        self.__init__()
+    @abstract
+    def _init(self, arg = None, /, *a, **kw): ...
 
-def rund(func):
-    'Call the function immediately, and return the value.'
-    return func()
+    def _blankinit(self):
+        self._init()
+
+
 
 class membr(_member[T]):
 
@@ -148,8 +196,7 @@ class membr(_member[T]):
     def __init__(self, cb: Callable, *args, **kw):
         self.cbak = cb, args, kw
 
-    def __set_name__(self, owner: T, name):
-        super().__set_name__(owner, name)
+    def sethook(self, owner, name):
         setattr(owner, name, wraps(self)(self()))
 
     def __call__(self):
@@ -183,8 +230,7 @@ class fixed:
         def __call__(self, method: Callable[..., T] = None) -> Callable[..., T]:
             return wraps(method)(self._getf())
 
-        def __set_name__(self, owner, name):
-            super().__set_name__(owner, name)
+        def sethook(self, owner, name):
             func = self()
             owner.__annotations__.setdefault(name, self.annot['return'])
             setattr(owner, name, func)
@@ -200,7 +246,6 @@ class fixed:
                     __doc__ = self.doc,
                 )).write(func)
             return func
-
 
     class prop(value):
 
@@ -228,12 +273,10 @@ class operd:
             self.oper = oper
             self.info = info
 
-        def __set_name__(self, owner, name):
-            super().__set_name__(owner, name)
+        def sethook(self, owner, name):
             if self.info is None:
                 self.info = self
-            f = self()
-            setattr(owner, name, f)
+            setattr(owner, name, self())
 
         def _getinfo(self, info = None):
             if info is None:
@@ -295,13 +338,12 @@ class operd:
 
     class apply(_base):
 
-
         __slots__ = _EMPTY
 
         def __call__(self, info = None):
             info = self._getinfo(info)
             oper = _checkcallable(self.oper)
-            n = len(inspect.signature(oper).parameters)
+            n = len(_sig(oper).parameters)
             if n == 1:
                 def fapply(operand): return oper(operand)
             elif n == 2:
@@ -315,6 +357,8 @@ class operd:
         default, except (AttributeError, TypeError), and return
         ``NotImplemented``.'''
 
+        __slots__ =  'errs','fcmp',
+
         def __init__(self, oper: Callable, /, *errs, info = None):
             super().__init__(oper, info)
             if errs:
@@ -326,10 +370,8 @@ class operd:
             else:
                 self.errs = AttributeError, TypeError
 
-        __slots__ =  'errs','fcmp',
-
         def __call__(self, fcmp: Callable):
-            info = self._getinfo(fcmp)
+            # info = self._getinfo(fcmp)
             oper, fcmp = map(_checkcallable, (self.oper, fcmp))
             errs = self.errs
             @wraps(oper)
@@ -365,7 +407,6 @@ class operd:
             return f
 
     repeat = _repeat
-    
 
 class wraps(_member):
 
@@ -376,7 +417,6 @@ class wraps(_member):
         self._adds = {}
         self._initial = self.read(fin)
 
-    # def __call__(self, fout: Callable[..., Any]) -> Callable[[T], T]:
     def __call__(self, fout: F) -> F:
         'Decorate function. Receives the wrapper function and updates its attributes.'
         self.update(self.read(fout))
@@ -435,8 +475,7 @@ class raisr(_member):
     def __call__(self, *args, **kw):
         raise self.errtype(*self.eargs, *args[0:1], **self.ekw)
 
-    def __set_name__(self, owner, name):
-        super().__set_name__(owner, name)
+    def sethook(self, owner, name):
         eargs = self.eargs
         errtype = self.errtype
         ekw = self.ekw
@@ -446,40 +485,156 @@ class raisr(_member):
         f.__doc__ = 'Raises %s' % errtype.__name__
         setattr(owner, name, f)
 
-class lazyget(_twofer[F_get]):
+class lazy:
 
-    __slots__ = 'key',
+    # class get(_twofer[F], _member):
+    class get(_twofer[F], _member):
 
-    def __init__(self, key = None, /):
-        if key is not None:
-            _instcheck(key, str)
-        self.key = key
+        __slots__ = 'key', 'method'
 
-    def __call__(self, method: F_get) -> F_get:
-        key = self.key or self.format(method.__name__)
-        @wraps(method)
-        def fget(self):
-            try: return getattr(self, key)
-            except AttributeError: pass
-            value = method(self)
-            setattr(self, key, value)
-            return value
-        return fget
+        @overload
+        def __new__(cls, method: F) -> F: ...
+        @overload
+        def __new__(cls, key: str|None, method: F) -> F: ...
+        @overload
+        def __new__(cls, key: str|None) -> lazy.get: ...
+        @overload
+        def __new__(cls) -> lazy.get: ...
+        __new__ = _twofer.__new__
 
-    @staticmethod
-    def prop(method: Callable[[O], V], key: str = None) -> prop[O, V]:
+        def __call__(self, method: F) -> F:
+            key = self.key or self.format(method.__name__)
+            @wraps(method)
+            def fget(self):
+                try: return getattr(self, key)
+                except AttributeError: pass
+                value = method(self)
+                setattr(self, key, value)
+                return value
+            return fget
+
+        def _init(self, key = None, method = None, /):
+            if key is not None:
+                _instcheck(key, str)
+            self.key = key
+            if method is not None:
+                _instcheck(method, Callable)
+            self.method = method
+
+        def _blankinit(self):
+            self.method = self.key = None
+
+        def sethook(self, owner, name):
+            if self.key is None:
+                self.key = self.format(name)
+            setattr(owner, name, self(self.method))
+
+        def format(self, name: str) -> str:
+            return '_%s' % name
+
+    class prop(get[type[O]]):#, Generic[T]):
         """Return a property with the getter. NB: a setter/deleter should be
-        sure to use the correct cache attribute."""
-        return property(lazyget(key)(method), doc = method.__doc__)
+        sure to use the correct attribute."""
 
-    @staticmethod
-    def dynca(method: Callable[[O], V], key: str = None) -> prop[O, V]:
-        return types.DynamicClassAttribute(
-            lazyget(key)(method), doc = method.__doc__
-        )
+        __slots__ = _EMPTY
 
-    def format(self, name: str) -> str:
-        return '_%s' % name
+        @overload
+        def __new__(cls, func: Callable[[O], V]) -> prop[O, V]: ...
+        __new__ = _twofer.__new__
+
+        def __call__(self, method: Callable[[O], V]) -> prop[O, V]:
+            return property(super().__call__(method), doc = method.__doc__)
+
+    class dynca(prop[O]):
+        """Return a DynamicClassAttribute with the getter. NB: a setter/deleter
+        should be sure to use the correct attribute."""
+
+        __slots__ = _EMPTY
+
+        # @overload
+        # def __new__(cls, func: Callable[[O], V]) -> prop[O, V]: ...
+        # __new__ = _twofer.__new__
+
+        def __call__(self, method: Callable[[O], V]) -> prop[O, V]:
+            return types.DynamicClassAttribute(
+                lazy.get.__call__(self, method), doc = method.__doc__
+            )
+
+    def __new__(cls, *args, **kw):
+        return cls.get(*args, **kw)
+
+    # __init__ = None
+    __slots__ = _EMPTY
+
+class NoSetAttr:
+    'Lame thing that does a lame thing.'
+
+    # __slots__ = '__roattr', 'efmt_fixed', 'efmt_change'
+
+    def __init__(self, roattr = '_readonly',):
+        self.__roattr = roattr
+        self.efmt_fixed = '%s (readonly)'.__mod__
+        self.efmt_change = '%s (immutable)'.__mod__
+
+    def __call__(self, basecls, cls = None, changeonly = False):
+        ok = basecls.__setattr__
+        if cls == True:
+            check = self.clschecker
+        elif cls:
+            check = self.fixedchecker(cls)
+        else:
+            check = self.selfchecker
+        if changeonly:
+            fail = self.changeraiser
+        else:
+            fail = self.fixedraiser
+        @wraps(ok)
+        def f(self, name, value):
+            if check(self):
+                fail(self, name, value)
+            ok(self, name, value)
+        return f
+
+    def fixedchecker(self, obj):
+        roattr = self.roattr
+        def check(self):
+            return getattr(obj, roattr, False)
+        return check
+
+    def callchecker(self, fget):
+        roattr = self.roattr
+        def check(self):
+            return getattr(fget(self), roattr, False)
+        return check
+
+    @lazy.prop
+    def clschecker(self):
+        return self.callchecker(type)
+
+    @lazy.prop
+    def selfchecker(self):
+        roattr = self.roattr
+        def check(self):
+            return getattr(self, roattr, False)
+        return check
+
+    @lazy.prop
+    def fixedraiser(self):
+        efmt = self.efmt_fixed
+        def fail(self, name, value):
+            raise AttributeError(efmt(name))
+        return fail
+
+    @lazy.prop
+    def changeraiser(self):
+        efmt = self.efmt_change
+        def fail(self, name, value):
+            raise AttributeError(efmt(name))
+        return fail
+
+    @property
+    def roattr(self):
+        return self.__roattr
 
 
 class prop(property, Generic[O, V]):

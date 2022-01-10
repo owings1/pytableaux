@@ -23,27 +23,28 @@ def test_get_logic_none_bad_argument():
 
 class TestModel(object):
 
-    def test_not_impl_various(self):
-        model = BaseModel()
-        with raises(NotImplementedError):
-            model.read_branch(None)
-        with raises(NotImplementedError):
-            model.truth_function(None, None)
-        with raises(NotImplementedError):
-            model.value_of_opaque(None)
-        with raises(NotImplementedError):
-            model.value_of_predicated(None)
-        with raises(NotImplementedError):
-            s = Atomic(0, 0).negate()
-            model.value_of_operated(s)
-        with raises(NotImplementedError):
-            model.value_of_quantified(None)
-        with raises(NotImplementedError):
-            model.is_countermodel_to(None)
-        with raises(NotImplementedError):
-            model.value_of_atomic(None)
+    def test_abstract(self):
+        with raises(TypeError):
+            BaseModel()
+        # with raises(NotImplementedError):
+        #     model.read_branch(None)
+        # with raises(NotImplementedError):
+        #     model.truth_function(None, None)
+        # with raises(NotImplementedError):
+        #     model.value_of_opaque(None)
+        # with raises(NotImplementedError):
+        #     model.value_of_predicated(None)
+        # with raises(NotImplementedError):
+        #     s = Atomic(0, 0).negate()
+        #     model.value_of_operated(s)
+        # with raises(NotImplementedError):
+        #     model.value_of_quantified(None)
+        # with raises(NotImplementedError):
+        #     model.is_countermodel_to(None)
+        # with raises(NotImplementedError):
+        #     model.value_of_atomic(None)
 
-    def test_get_data_empty(self):
-        model = BaseModel()
-        res = model.get_data()
-        assert len(res) == 0
+    # def test_get_data_empty(self):
+    #     model = BaseModel()
+    #     res = model.get_data()
+    #     assert len(res) == 0

@@ -8,6 +8,7 @@ del(TypeVar)
 NOARG = object()
 EMPTY = ()
 
+from decorators import abstract, final, overload
 from errors import (
     DuplicateValueError,
     MissingValueError,
@@ -15,7 +16,6 @@ from errors import (
     MismatchSliceSizeError,
     instcheck as _instcheck,
 )
-from tools.abcs import abcm
 
 class bases:
     from tools.abcs import Abc, Copyable
@@ -134,7 +134,7 @@ class LinkIter(Iterator[Link[V]], bases.Abc):
     def __iter__(self):
         return self
 
-    @abcm.final
+    @final
     def advance(self):
         if not self._count:
             self._cur = None
@@ -180,12 +180,12 @@ class LinkSequenceApi(bases.SequenceApi[V]):
     __slots__ = EMPTY
 
     @property
-    @abcm.abstract
+    @abstract
     def _link_first_(self) -> Link[V]:
         return None
 
     @property
-    @abcm.abstract
+    @abstract
     def _link_last_(self) -> Link[V]:
         return None
 
@@ -195,9 +195,9 @@ class LinkSequenceApi(bases.SequenceApi[V]):
     def __reversed__(self):
         return LinkValueIter(self._link_last_, -1)
 
-    @abcm.overload
+    @overload
     def __getitem__(self, index: SupportsIndex) -> V:...
-    @abcm.overload
+    @overload
     def __getitem__(self:T, index: slice) -> T: ...
 
     def __getitem__(self, index):
@@ -278,22 +278,22 @@ class MutableLinkSequenceSetApi(MutableLinkSequenceApi[V], bases.MutableSequence
 
     _new_link = HashLink
 
-    @abcm.abstract
+    @abstract
     def _link_of(self, value) -> Link:
         'Get a link entry by value. Implementations must raise ``MissingValueError``.'
         raise NotImplementedError
 
-    @abcm.abstract
+    @abstract
     def _seed(self, link: Link, /):
         'Add the link as the intial (only) member.'
         raise NotImplementedError
 
-    @abcm.abstract
+    @abstract
     def _wedge(self, rel: LinkRel, neighbor: Link, link: Link, /):
         'Add the new link and wedge it next to neighbor.'
         raise NotImplementedError
 
-    @abcm.abstract
+    @abstract
     def _unlink(self, link: Link):
         'Remove a link entry. Implementations must not alter the link attributes.'
         raise NotImplementedError
@@ -549,3 +549,5 @@ class linqset(MutableLinkSequenceSetApi[V]):
                 links[link.value] = link.copy()
             inst.__last = link
         return inst
+
+del(abstract, final, overload)

@@ -1,23 +1,152 @@
 from __future__ import annotations
 
-__all__ = 'MapAttrView', 'DequeCache',
+__all__ = (
+    'MappingApi', 'MutableMappingApi', 'MapAttrView', 'DequeCache',
+    'dmap',
+)
 
-from tools.abcs import Abc, Copyable, abcm
+from tools.abcs import Abc, Copyable, abcm, abcf
+from decorators import abstract, static, final, overload, wraps
 
+
+@static
 class std:
     from collections import deque
-    from collections.abc import Collection, Iterator, Mapping
+    from collections.abc import Collection, Iterator, Mapping, MutableMapping
     from types import MappingProxyType as MapProxy
-    from typing import TypeVar
+    from typing import Callable, TypeVar
 
 from typing import Any
 KT = std.TypeVar('KT')
 VT = std.TypeVar('VT')
+MT = std.TypeVar('MT', bound = std.Mapping)
+MMT = std.TypeVar('MMT', bound = std.MutableMapping)
+FT = std.TypeVar('FT', bound = std.Callable[..., Any])
 NOARG = object()
 EMPTY = tuple()
 
+import itertools
+import operator as opr
 
-class MapAttrView(std.Mapping[str, VT], Copyable):
+from typing import Iterable
+
+class MappingApi(std.Mapping[KT, VT], Copyable):
+    __slots__ = EMPTY
+
+    @abcf.temp
+    def oper(getiter: FT) -> FT:
+        if getiter.__name__.startswith('__r'):
+            method = '_rfrom_itemiterable'
+        else:
+            method = '_from_itemiterable'
+        @wraps(getiter)
+        def f(self, other: std.Mapping) -> MappingApi[KT, VT]:
+            if not isinstance(other, std.Mapping):
+                return NotImplemented
+            return getattr(self, method)(getiter(self, other))
+        return f
+
+    @oper
+    def __or__(self, other: std.Mapping) -> MappingApi[KT, VT]:
+        return itertools.chain(
+            ((k, self[k]) for k in self),
+            ((k, other[k]) for k in other),
+        )
+
+    @oper
+    def __ror__(self, other: std.Mapping) -> MappingApi[KT, VT]:
+        return itertools.chain(
+            ((k, other[k]) for k in other),
+            ((k, self[k]) for k in self),
+        )
+
+    @oper
+    def __and__(self, other):
+        return ((k, self[k]) for k in self if k in other)
+
+    @oper
+    def __rand__(self, other):
+        return ((k, other[k]) for k in other if k in self)
+
+    @oper
+    def __sub__(self, other):
+        return ((k, self[k]) for k in self if k not in other)
+
+    @oper
+    def __rsub__(self, other):
+        return ((k, other[k]) for k in other if k not in self)
+
+    @oper
+    def __xor__(self, other):
+        return itertools.chain(
+            ((k, self[k]) for k in self if k not in other),
+            ((k, other[k]) for k in other if k not in self)
+        )
+
+    @oper
+    def __rxor__(self, other):
+        return itertools.chain(
+            ((k, other[k]) for k in other if k not in self),
+            ((k, self[k]) for k in self if k not in other),
+        )
+
+    def copy(self):
+        return self._from_itemiterable(self.items())
+
+    @classmethod
+    def _from_itemiterable(cls, it: Iterable[tuple[KT, VT]]) -> MappingApi[KT, VT]:
+        return cls(it)
+
+    @classmethod
+    def _rfrom_itemiterable(cls, it: Iterable[tuple[KT, VT]]) -> MappingApi[KT, VT]:
+        return cls(it)
+
+
+class MutableMappingApi(MappingApi[KT, VT], std.MutableMapping[KT, VT], Copyable):
+    __slots__ = EMPTY
+
+    @abcf.temp
+    def ioper(apply: FT) -> FT:
+        @wraps(apply)
+        def f(self: MMT, other: std.Mapping) -> MMT:
+            if not isinstance(other, std.Mapping):
+                return NotImplemented
+            apply(self, other)
+            return self
+        return f
+
+    @ioper
+    def __ior__(self, other):
+        for k in other:
+            self[k] = other[k]
+
+    @ioper
+    def __iand__(self, other):
+        for k in other:
+            if k not in self:
+                del(self[k])
+    @ioper
+    def __isub__(self, other):
+        for k in other:
+            if k in self:
+                del(self[k])
+    @ioper
+    def __ixor__(self, other):
+        for k in other:
+            if k in self:
+                del(self[k])
+        for k in self:
+            if k in other:
+                del(self[k])
+
+class dmap(dict, MutableMappingApi[KT, VT]):
+    pass
+    __slots__ = EMPTY
+    # copy = MutableMappingApi.copy
+    __or__ = MutableMappingApi.__or__
+    __ror__ = MutableMappingApi.__ror__
+
+class MapAttrView(MappingApi[str, VT], Copyable):
     'A Mapping with attribute access.'
 
     __slots__ = '_mapping',
@@ -60,19 +189,19 @@ class DequeCache(std.Collection[VT], Abc):
     idx: int
     rev: std.Mapping[Any, VT]
 
-    @abcm.abstract
+    @abstract
     def clear(self): ...
 
-    @abcm.abstract
+    @abstract
     def __len__(self): ...
 
-    @abcm.abstract
+    @abstract
     def __getitem__(self, key) -> VT: ...
 
-    @abcm.abstract
+    @abstract
     def __reversed__(self) -> std.Iterator[VT]: ...
 
-    @abcm.abstract
+    @abstract
     def __setitem__(self, key, item: VT): ...
 
     def __new__(cls, Vtype: type, maxlen = 10):
@@ -134,4 +263,4 @@ class DequeCache(std.Collection[VT], Abc):
         Api.__qualname__ = 'DequeCache.Api'
         return Api()
 
-del(abcm)
+del(abcm, abstract, static, final, overload, wraps)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 __all__ = 'SetApi', 'MutableSetApi', 'setf', 'setm', 'EMPTY_SET'
 
-from typing import overload, Iterable, TypeVar
+from typing import Iterable, TypeVar
 
 T = TypeVar('T')
 V = TypeVar('V')
@@ -14,7 +14,7 @@ class std:
 
 from tools.abcs import abcm, Copyable
 
-from decorators import operd
+from decorators import abstract, final, overload, operd
 import operator as opr
 
 class SetApi(std.Set[V], Copyable):
@@ -113,3 +113,5 @@ class setm(MutableSetApi[V], set[V]):
 EMPTY_SET = setf()
 
 del(abcm, opr, operd, TypeVar, Copyable, std, EMPTY)
+
+del(abstract, final, overload)

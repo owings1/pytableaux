@@ -9,9 +9,10 @@ del(TypeVar)
 
 EMPTY = ()
 
+from decorators import abstract, overload
 import errors as err
 from errors import instcheck as _instcheck
-from tools.abcs import abcm
+# from tools.abcs import abcm
 
 class bases:
     from tools.sets import SetApi, MutableSetApi, setf, setm
@@ -45,7 +46,7 @@ class SequenceSetApi(bases.SequenceApi[V], bases.SetApi[V]):
 
     # __add__ = operd.apply(opr.or_)
 
-    @abcm.abstract
+    @abstract
     def __contains__(self, value):
         'Set-based `contains` implementation.'
         return False
@@ -84,7 +85,7 @@ class MutableSequenceSetApi(SequenceSetApi[V], bases.MutableSequenceApi[V], base
         if value in self:
             self.remove(value)
 
-    @abcm.abstract
+    @abstract
     def reverse(self):
         'Reverse in place.'
         # Must re-implement MutableSequence method.
@@ -123,9 +124,9 @@ class qsetf(SequenceSetApi[V]):
     def __contains__(self, value):
         return value in self._set_
 
-    @abcm.overload
+    @overload
     def __getitem__(self: T, index: slice) -> T: ...
-    @abcm.overload
+    @overload
     def __getitem__(self, index: int) -> V: ...
 
     def __getitem__(self, index):
@@ -256,4 +257,4 @@ class qset(MutableSequenceSetApi[V]):
         return inst
 
 
-del(abcm)
+del(abstract, overload)

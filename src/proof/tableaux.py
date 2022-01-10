@@ -20,7 +20,7 @@
 from __future__ import annotations
 from callables import preds
 from .common import FLAG, KEY, Branch, BranchEvent, Node, RuleEvent, TabEvent, Target #, NodeType
-from decorators import abstract, final, wraps
+from decorators import abstract, final, overload, static, wraps
 from errors import DuplicateKeyError, IllegalStateError, MissingValueError,\
     TimeoutError, ValueLengthError, instcheck
 from events import EventEmitter
@@ -40,7 +40,7 @@ from itertools import chain
 import itertools
 from types import MappingProxyType as MapProxy, ModuleType
 import typing
-from typing import Any, ClassVar, NamedTuple
+from typing import Any, ClassVar, NamedTuple, SupportsIndex
 
 LogicRef = ModuleType | str
 
@@ -244,14 +244,14 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         'The rule name, default it the class name.'
         return self.__class__.__name__
 
-    @abcm.final
+    @final
     def get_target(self, branch: Branch) -> Target:
         targets = self._get_targets(branch)
         if targets:
             self.__extend_targets(targets)
             return self.__select_best_target(targets)
 
-    @abcm.final
+    @final
     def apply(self, target: Target):
         with self.apply_timer:
             self.emit(RuleEvent.BEFORE_APPLY, target)
@@ -259,7 +259,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             self.apply_count += 1
             self.emit(RuleEvent.AFTER_APPLY, target)
 
-    @abcm.final
+    @final
     def branch(self, parent: Branch = None) -> Branch:
         """Create a new branch on the tableau. Convenience for
         ``self.tableau.branch()``.
@@ -268,7 +268,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         :return: The new branch."""
         return self.tableau.branch(parent)
 
-    @abcm.final
+    @final
     def add_helper(self, cls: type, attr: str = None, **opts) -> RuleHelperInfo:
         'Add a helper.'
         inst = cls(self, **opts)
@@ -655,13 +655,14 @@ class TabRules(Sequence[Rule], TabRulesBase):
 
 del(TabRulesBase.writes)
 
+@static
 class TableauxSystem(Abc):
 
-    __new__ = None
 
     @classmethod
     @abstract
-    def build_trunk(cls, tableau: Tableau, argument: Argument): ...
+    def build_trunk(cls, tableau: Tableau, argument: Argument):
+        raise NotImplementedError
 
     @classmethod
     def branching_complexity(cls, node: Node) -> int:
@@ -790,10 +791,6 @@ class Tableau(Sequence[Branch], EventEmitter):
         # self.__openview = None
 
         # Private
-        # self.__build_timer      = StopWatch()
-        # self.__models_timer     = StopWatch()
-        # self.__tree_timer       = StopWatch()
-        # self.__trunk_build_timer = StopWatch()
         self.__branching_complexities: dict[Node, int] = {}
 
         # Init
@@ -1087,7 +1084,12 @@ class Tableau(Sequence[Branch], EventEmitter):
             return stat
         raise ValueError('Too many keys to lookup')
 
-    def __getitem__(self, index: int|slice) -> Branch:
+    @overload
+    def __getitem__(self, s: slice) -> list[Branch]: ...
+    @overload
+    def __getitem__(self, i: SupportsIndex) -> Branch: ...
+
+    def __getitem__(self, index):
         return self.__branch_list[index]
 
     def __len__(self):
@@ -1098,6 +1100,9 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     def __iter__(self) -> Iterator[Branch]:
         return iter(self.__branch_list)
+
+    def __reversed__(self) -> Iterator[Branch]:
+        return reversed(self.__branch_list)
 
     def __contains__(self, branch: Branch):
         return branch in self.__branchstat

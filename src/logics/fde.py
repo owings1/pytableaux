@@ -28,6 +28,7 @@ class Meta:
     tags = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
     category_display_order = 10
 
+from tools.sets import setf
 from tools.hybrids import qsetf
 from decorators import abstract
 from models import BaseModel
@@ -61,7 +62,7 @@ class Model(BaseModel):
     #: :type: set
     #: :value: {T, B}
     #: :meta hide-value:
-    designated_values = frozenset({'B', 'T'})
+    designated_values = setf({'B', 'T'})
 
     unassigned_value = 'N'
 
@@ -328,7 +329,7 @@ class Model(BaseModel):
         elif s.is_predicated:
             self.set_predicated_value(s, value)
         else:
-            raise NotImplementedError
+            raise NotImplementedError()
 
     def set_opaque_value(self, s: Sentence, value):
         if value not in self.truth_values:

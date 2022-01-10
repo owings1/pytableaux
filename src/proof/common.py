@@ -1,11 +1,15 @@
 from __future__ import annotations
-from callables import Caller, gets, preds #calls, 
-from decorators import abstract, lazyget
+
+__all__ = 'Node', 'Branch', 'Target'
+
+from callables import Caller, gets, preds
+from decorators import abstract, static, final, lazy
 from events import EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
 from tools.abcs import Abc, AbcMeta
 from tools.sets import EMPTY_SET, setf
+from tools.mappings import MutableMappingApi, dmap
 from utils import drepr, orepr
 
 from collections.abc import Callable, Iterable, ItemsView, \
@@ -67,7 +71,6 @@ class NodeMeta(AbcMeta):
             return props
         return super().__call__(props)
 
-__all__ = 'Node', 'Branch', 'Target'
 
 class Node(Mapping, metaclass = NodeMeta):
     'A tableau node.'
@@ -90,15 +93,15 @@ class Node(Mapping, metaclass = NodeMeta):
     def is_closure(self) -> bool:
         return self.get('flag') == 'closure'
 
-    @lazyget.prop
+    @lazy.prop
     def is_modal(self) -> bool:
         return self.has_any('world', 'world1', 'world2', 'worlds')
 
-    @lazyget.prop
+    @lazy.prop
     def is_access(self) -> bool:
         return self.has('world1', 'world2')
 
-    @lazyget.prop
+    @lazy.prop
     def worlds(self) -> setf[int]:
         """
         Return the set of worlds referenced in the node properties. This combines
@@ -264,6 +267,7 @@ class Comparer(Callable[..., bool]):
         try: return lhs.__class__.__qualname__
         except AttributeError: return lhs.__class__.__name__
 
+@static
 class Filters:
 
     class Attr(Comparer):
@@ -364,6 +368,7 @@ class Filters:
         def __call__(self, rhs):
             return bool(self.lhs(self.rget(rhs)))
 
+@static
 class NodeFilters(Filters):
 
     class Sentence(Filters.Sentence):
@@ -747,7 +752,7 @@ class Branch(Sequence[Node], EventEmitter, Abc):
             closed = self.closed,
         )
 
-class Target(Mapping[str, Any], Abc):
+class Target(dmap[str, Any]):
 
     __reqd = {'branch'}
     __attrs = __reqd | {
@@ -797,41 +802,48 @@ class Target(Mapping[str, Any], Abc):
 
     @property
     def type(self) -> str:
-        if 'nodes' in self.__data:
+        if 'nodes' in self:
+        # if 'nodes' in self.__data:
             return 'Nodes'
-        if 'node' in self.__data:
+        if 'node' in self:
+        # if 'node' in self.__data:
             return 'Node'
         return 'Branch'
 
-    def get(self, key, default = None):
-        try:
-            return self[key]
-        except KeyError:
-            return default
+    # def get(self, key, default = None):
+    #     try:
+    #         return self[key]
+    #     except KeyError:
+    #         return default
 
-    def update(self, _obj = None, **kw):
-        if _obj != None:
-            for k in _obj:
-                self[k] = _obj[k]
-        for k in kw:
-            self[k] = kw[k]
+    # def update(self, _obj = None, /, **kw):
+    #     if _obj != None:
+    #         for k in _obj:
+    #             self[k] = _obj[k]
+    #     for k in kw:
+    #         self[k] = kw[k]
 
-    def items(self) -> ItemsView[str, Any]:
-        return self.__data.items()
+    # def items(self) -> ItemsView[str, Any]:
+    #     return self.__data.items()
 
-    def keys(self) -> KeysView[str]:
-        return self.__data.keys()
+    # def keys(self) -> KeysView[str]:
+    #     return self.__data.keys()
 
-    def values(self) -> ValuesView:
-        return self.__data.values()
+    # def values(self) -> ValuesView:
+    #     return self.__data.values()
 
     def copy(self):
-        return self.__class__(self.__data)
+        cls = type(self)
+        inst = cls.__new__(cls)
+        inst.__dict__ |= self.__dict__
+        dict.update(inst, self)
+        return inst
+        # return type(self).__class__(self.__data)
 
     def __init__(self, obj, **context):
-        self.__data = {}
-        if isinstance(obj, self.__class__):
-            raise TypeError(self.__class__)
+        # self.__data = {}
+        if isinstance(obj, type(self)):
+            raise TypeError(obj)
         if not obj:
             raise TypeError('Cannot create a Target from a falsy object: %s' % type(obj))
         if not isinstance(obj, (bool, dict)):
@@ -840,37 +852,46 @@ class Target(Mapping[str, Any], Abc):
             self.update(obj)
         self.update(context)
         for attr in self.__reqd:
-            if attr not in self.__data:
-                raise TypeError("Missing required keys: %s" % self.__reqd.difference(self.__data))
+            if attr not in self:
+            # if attr not in self.__data:
+                raise TypeError("Missing required keys: %s" % self.__reqd.difference(self))
+                # raise TypeError("Missing required keys: %s" % self.__reqd.difference(self.__data))
 
-    def __copy__(self):
-        return self.copy()
+    # def __copy__(self):
+    #     return self.copy()
 
-    def __len__(self):
-        return len(self.__data)
+    # def __len__(self):
+    #     return len(self.__data)
 
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.__data)
+    # def __iter__(self) -> Iterator[str]:
+    #     return iter(self.__data)
 
-    def __getitem__(self, key: str):
-        return self.__data[key]
+    # def __getitem__(self, key: str):
+    #     return self.__data[key]
 
     def __setitem__(self, key: str, val):
         if not isinstance(key, str):
             raise TypeError(key)
         if not key.isidentifier() or iskeyword(key):
             raise ValueError('Invalid target key: %s' % key)
-        if self.__data.get(key, val) != val:
-            raise ValueError("Value conflict %s: %s (was: %s)" % (key, val, self.__data[key]))
-        self.__data[key] = val
+        # if self.__data.get(key, val) != val:
+            # raise ValueError("Value conflict %s: %s (was: %s)" % (key, val, self.__data[key]))
+        if self.get(key, val) != val:
+            raise ValueError("Value conflict %s: %s (was: %s)" % (key, val, self[key]))
+        super().__setitem__(key, val)
+        # self.__data[key] = val
 
-    def __contains__(self, key: str):
-        return key in self.__data
+    def __delitem__(self, key: str):
+        raise TypeError
+
+    # def __contains__(self, key: str):
+    #     return key in self.__data
 
     def __getattr__(self, name):
         if name in self.__attrs:
             try:
-                return self.__data[name]
+                return self[name]
+                # return self.__data[name]
             except:
                 pass
         raise AttributeError(name)
@@ -889,11 +910,12 @@ class Target(Mapping[str, Any], Abc):
     def __dir__(self):
         return [
             attr for attr in self.__attrs
-            if self.__data.get(attr, None) != None
+            if self.get(attr, None) != None
         ]
 
     def __repr__(self):
-        bid = self.__data['branch'].id if 'branch' in self.__data else '?'
+        # bid = self.__data['branch'].id if 'branch' in self.__data else '?'
+        bid = self['branch'].id if 'branch' in self else '?'
         items = (
             ('branch', bid),
             ('type', self.type), *islice((
