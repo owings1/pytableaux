@@ -1,34 +1,96 @@
-# Keep this module sparse on dependencies.
+# Allowed local imports:
+#
+#  - errors
+#  - utils
 from __future__ import annotations
-from errors import instcheck as _instcheck
-import typing
-
-EMPTY = ()
-NOARG = object()
 
 __all__ = 'AbcMeta', 'abcm', 'Abc', 'Copyable', 'abcf',
 
-class std:
-    'Various standard/common imports'
-    import abc
-    from collections.abc import Sequence
+from errors import (
+    instcheck as _instcheck
+)
 
-import functools
-import itertools
-import operator as opr
-from typing import Iterator, SupportsIndex
-from collections.abc import Callable#, Iterable
-# P = typing.ParamSpec('P')
-T = typing.TypeVar('T')
-F = typing.TypeVar('F', bound = Callable[..., typing.Any])
+from typing import (
 
-import enum
+    # importable exports
+    final, overload,
+
+    # Annotations
+    Any, Callable, Iterable, Iterator, Sequence, SupportsIndex,
+
+    # Util references
+    get_type_hints as _get_type_hints,
+    get_args as _get_args,
+    get_origin as _get_origin,
+    Annotated as _Annotated,
+
+    # deletable references
+    ParamSpec, TypeVar,
+)
+import \
+    functools, \
+    itertools, \
+    operator as opr
+
+# Bases (deletable)
+import \
+    abc as _abc, \
+    enum as _enum
+
+_EMPTY = () # deletable
+_NOARG = object()
+
+# Type vars, importable
+P = ParamSpec('P')
+T = TypeVar('T')
+F = TypeVar('F', bound = Callable[..., Any])
+TT = TypeVar('TT', bound = type)
+
+# Global decorators. Re-exported by decorators module.
+@overload
+def abstract(func: F) -> F: ...
+abstract = _abc.abstractmethod
+
+@overload
+def static(cls: TT) -> TT: ...
+@overload
+def static(func: F) -> staticmethod[F]: ...
+def static(cls):
+    'Static class decorator wrapper around staticmethod'
+    if not isinstance(cls, type):
+        if isinstance(cls, (classmethod, staticmethod)):
+            return cls
+        _instcheck(cls, Callable)
+        return staticmethod(cls)
+    abcf.static(cls)
+    d = cls.__dict__
+    for name, member in d.items():
+        if not callable(member) or isinstance(member, type):
+            continue
+        setattr(cls, name, staticmethod(member))
+    if '__new__' not in d:
+        if '__call__' in d:
+            # If the class directly defines a __call__ method,
+            # use it for __new__.
+            # call = cls.__call__
+            def fnew(cls, *args, **kw):
+                return cls.__call__(*args, **kw)
+        else:
+            def fnew(cls): return cls
+        cls.__new__ = fnew
+    if '__init__' not in d:
+        def finit(self): raise TypeError
+        cls.__init__ = finit
+    return cls
+
+
+static
 
 # The method attribute name for storing metaf.
 _abc_flag_attr = '_abc_flag'
 
-@enum.unique
-class abcf(enum.Flag):
+@_enum.unique
+class abcf(_enum.Flag):
     'Enum flag for AbcMeta functionality.'
 
     blank  = 0
@@ -54,16 +116,15 @@ class abcf(enum.Flag):
 
 abcf.get.__defaults__ = abcf.blank, 
 
-class EnumDictType(enum._EnumDict):
-    'Stub type for reference.'
+class EnumDictType(_enum._EnumDict):
+    'Stub type for annotation reference.'
     _member_names: list[str]
-    _last_values : list[typing.Any]
+    _last_values : list[Any]
     _ignore      : list[str]
     _auto_called : bool
     _cls_name    : str
-del(enum)
 
-class AbcMeta(std.abc.ABCMeta):
+class AbcMeta(_abc.ABCMeta):
     'General purpose metaclass and utility methods.'
 
     def __new__(cls, clsname, bases, ns: dict, /, **kw):
@@ -92,7 +153,7 @@ class AbcMeta(std.abc.ABCMeta):
                 deleter(Class, name)
 
     @staticmethod
-    def check_mrodict(mro: std.Sequence[type], *names: std.Sequence[str]):
+    def check_mrodict(mro: Sequence[type], *names: str):
         'Check whether methods are implemented for dynamic subclassing.'
         if len(names) and not len(mro):
             return NotImplemented
@@ -105,15 +166,11 @@ class AbcMeta(std.abc.ABCMeta):
         return True
 
 class abcm:
-    '''Util functions and decorators. Can also be used by meta classes that
+    '''Util functions. Can also be used by meta classes that
     cannot inherit from AbcMeta, like EnumMeta.'''
 
-    from typing import final, overload
-    from abc import abstractmethod as abstract
-
-    # @staticmethod
-    # def final(f: T) -> T:
-    #     return abcf.final(f)
+    # from typing import final, overload
+    # from abc import abstractmethod as abstract
 
     @staticmethod
     def isabstract(obj):
@@ -122,28 +179,28 @@ class abcm:
     @staticmethod
     def annotated_attrs(obj):
         'Evaluate annotions of type Annotated.'
-        annot = typing.get_type_hints(obj, include_extras = True)
+        annot = _get_type_hints(obj, include_extras = True)
         return {
-            k: typing.get_args(v) for k,v in annot.items()
-            if typing.get_origin(v) is typing.Annotated
+            k: _get_args(v) for k,v in annot.items()
+            if _get_origin(v) is _Annotated
         }
 
     @staticmethod
-    def merge_mroattr(subcls: type, attr: str, /,
-        oper = opr.or_, default = NOARG, **kw
-    ):
+    def merge_mroattr(subcls: type, name: str, /,
+        oper = opr.or_, default: T = _NOARG, **kw
+    ) -> T:
         it = abcm.mroiter(subcls, **kw)
-        if default is NOARG:
-            it = (getattr(c, attr) for c in it)
+        if default is _NOARG:
+            it = (getattr(c, name) for c in it)
         else:
-            it = (getattr(c, attr, default) for c in it)
+            it = (getattr(c, name, default) for c in it)
         return functools.reduce(oper, it)
 
     @staticmethod
     def mroiter(subcls: type[T], /,
         supcls: type|tuple[type, ...] = None, *,
         rev = True, start: SupportsIndex = 0
-    ) -> Iterator[type[T]]:
+    ) -> Iterable[type[T]]:
         it = subcls.mro()
         if rev:
             it = reversed(it)
@@ -153,52 +210,13 @@ class abcm:
             it = itertools.islice(it, start)
         return it
 
-    @staticmethod
-    def static(obj: T) -> T:
-        if not isinstance(obj, type):
-            if isinstance(obj, (classmethod, staticmethod)):
-                return obj
-            _instcheck(obj, Callable)
-            return staticmethod(obj)
-        abcf.static(obj)
-        d = obj.__dict__
-        for name, member in d.items():
-            if not callable(member) or isinstance(member, type):
-                continue
-            setattr(obj, name, staticmethod(member))
-        if '__new__' not in d:
-            if '__call__' in d:
-                call = obj.__call__
-                def fnew(cls, *args, **kw): return call(*args, **kw)
-            else:
-                def fnew(cls): return cls
-            obj.__new__ = fnew
-        if '__init__' not in d:
-            def finit(self): raise TypeError
-            obj.__init__ = finit
-        return obj
-
-
-# Alias for convenience import
-from typing import overload
-@overload
-def abstract(func: F) -> F: ...
-abstract = abcm.abstract
-
-@overload
-def static(obj: T) -> T: ...
-static = abcm.static
-
-
-
-
 class Abc(metaclass = AbcMeta):
     'Convenience for using AbcMeta as metaclass.'
-    __slots__ = EMPTY
+    __slots__ = _EMPTY
 
 class Copyable(Abc):
 
-    __slots__ = EMPTY
+    __slots__ = _EMPTY
 
     @abstract
     def copy(self: T) -> T:
@@ -217,3 +235,5 @@ class Copyable(Abc):
         if cls is not __class__:
             return NotImplemented
         return cls.check_mrodict(subcls.mro(), '__copy__', 'copy', '__deepcopy__')
+
+del(_abc, _enum, _EMPTY, TypeVar, ParamSpec)

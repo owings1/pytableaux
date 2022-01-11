@@ -28,7 +28,7 @@ __all__ = (
 ##############################################################
 
 from decorators import abstract, final, overload, static
-from tools.abcs import abcm, abcf, Abc
+from tools.abcs import abcm, abcf
 from tools.sequences import SequenceApi, seqf
 from tools.sets import SetApi, MutableSetApi, setf, setm, EMPTY_SET
 from tools.hybrids import qsetf, qset
@@ -39,9 +39,7 @@ EMPTY_SEQ = seqf()
 
 import operator as opr
 from errors import (
-    ReadOnlyAttributeError,
-    ValueCollisionError,
-    ValueMismatchError,
+    Emsg,
     instcheck as _instcheck,
 )
 from typing import (
@@ -275,7 +273,7 @@ class Metas:
             return Class
 
         @classmethod
-        @abcm.final
+        @final
         def _create_index(cls, Class: type[Bases.Enum]) -> Types.MapProxy[std.Any, Types.EnumEntry]:
             'Create the member lookup index'
             # Member to key set functions.
@@ -799,7 +797,7 @@ class Bases:
                 if isinstance(getattr(type(self), name, None), property):
                     pass
                 else:
-                    raise ReadOnlyAttributeError(name, self)
+                    raise Emsg.ReadOnlyAttr(name)
             super().__setattr__(name, value)
 
     class CoordsItem(LexicalItem):
@@ -1646,7 +1644,7 @@ class Predicates(qset[Predicate], metaclass = Metas.Abc):
             # viz. BiCoords or name, that does not equal pred, e.g. arity
             # mismatch.
             if other != pred:
-                raise ValueMismatchError(other.coords, pred.coords)
+                raise Emsg.ValueConflict(other.coords, pred.coords)
 
     def _after_add(self, pred: Predicate):
         'Implement after_add hook. Add keys to lookup index.'
@@ -1659,7 +1657,7 @@ class Predicates(qset[Predicate], metaclass = Metas.Abc):
             # a distinct predicate. This would have to be the result of
             # a failed removal or addition.
             if other != pred:
-                raise ValueCollisionError(other.coords, pred.coords)
+                raise Emsg.ValueConflict(other.coords, pred.coords)
 
     # -------------------------------
     #  Override qset
@@ -1996,7 +1994,7 @@ class BaseLexWriter(LexWriter, metaclass = Metas.LexWriter):
     # --------------------------
     #  Default implementations.
     # --------------------------
-    @abcm.abstract
+    @abstract
     def _write_operated(self, item: Operated): ...
 
     def _strfor(self, *args, **kw) -> str:

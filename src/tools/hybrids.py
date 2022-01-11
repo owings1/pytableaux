@@ -12,7 +12,6 @@ EMPTY = ()
 from decorators import abstract, overload
 import errors as err
 from errors import instcheck as _instcheck
-# from tools.abcs import abcm
 
 class bases:
     from tools.sets import SetApi, MutableSetApi, setf, setm

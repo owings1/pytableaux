@@ -315,10 +315,6 @@ class Test_FDE(BaseSuite):
             s1 = self.p('Aab')
             model = self.m()
             with raises(NotImplementedError):
-                model.set_literal_value(s1, 'T')
-            with raises(NotImplementedError):
-                model.value_of_quantified(s1)
-            with raises(NotImplementedError):
                 model.truth_function('Foomunction', 'F')
 
         def test_model_value_of_atomic_unassigned(self):
@@ -361,6 +357,13 @@ class Test_FDE(BaseSuite):
             model.set_predicated_value(s3, 'F')
             with raises(ModelValueError):
                 model.set_predicated_value(s3, 'N')
+
+        def test_error_various(self):
+            s = self.p('Aab')
+            with raises(NotImplementedError):
+                self.m().set_literal_value(s, 'T')
+            with raises(TypeError):
+                self.m().value_of_quantified(s)
 
         def test_model_read_branch_with_negated_opaque_then_faithful(self):
             arg = parse_argument('a', premises=['NLa', 'b'])

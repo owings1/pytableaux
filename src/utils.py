@@ -19,6 +19,8 @@
 # pytableaux - utils module
 from __future__ import annotations
 
+# Only local import allowed is errors
+
 # from errors import DuplicateKeyError# , IllegalStateError
 
 from builtins import ModuleNotFoundError

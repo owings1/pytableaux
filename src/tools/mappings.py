@@ -5,7 +5,7 @@ __all__ = (
     'dmap',
 )
 
-from tools.abcs import Abc, Copyable, abcm, abcf
+from tools.abcs import Abc, Copyable, abcf
 from decorators import abstract, static, final, overload, wraps
 
 
@@ -263,4 +263,4 @@ class DequeCache(std.Collection[VT], Abc):
         Api.__qualname__ = 'DequeCache.Api'
         return Api()
 
-del(abcm, abstract, static, final, overload, wraps)
+del(abstract, static, final, overload, wraps)

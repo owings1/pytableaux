@@ -10,10 +10,9 @@ EMPTY = ()
 
 from decorators import abstract, final, overload
 from errors import (
+    Emsg,
     DuplicateValueError,
     MissingValueError,
-    IndexOutOfRangeError,
-    MismatchSliceSizeError,
     instcheck as _instcheck,
 )
 
@@ -40,7 +39,7 @@ def _absindex(seqlen, index: SupportsIndex, strict = True, /) -> int:
     if index < 0:
         index = seqlen + index
     if strict and (index >= seqlen or index < 0):
-        raise IndexOutOfRangeError(index)
+        raise Emsg.IndexOutOfRange(index)
     return index
 
 class Link(Generic[V], bases.Copyable):
@@ -246,7 +245,7 @@ class MutableLinkSequenceApi(LinkSequenceApi[V], bases.MutableSequenceApi[V]):
     __slots__  = EMPTY
 
     _new_link = Link
-    # @abstractmethod
+    # @abstract
     # def __setitem__(self, index: int|slice, value):
     #     ...
 
@@ -332,7 +331,7 @@ class MutableLinkSequenceSetApi(MutableLinkSequenceApi[V], bases.MutableSequence
         if isinstance(index, slice):
             olds, values = self._setslice_prep(index, value)
             if len(olds) != len(values):
-                raise MismatchSliceSizeError(values, olds)
+                raise Emsg.MismatchSliceSize(value, olds)
             it = LinkIter.from_slice(self, index)
             for link, v in zip(it, values):
                 if v in self:

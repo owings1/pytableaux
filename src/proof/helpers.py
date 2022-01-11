@@ -19,9 +19,9 @@
 # pytableaux - rule helpers module
 from __future__ import annotations
 
+from decorators import abstract, final, static
 from lexicals import Constant, Sentence
 from models import BaseModel
-from tools.abcs import abcm, abcf
 from tools.mappings import MapAttrView
 from tools.sets import EMPTY_SET
 from utils import orepr
@@ -206,13 +206,13 @@ class FilterNodeCache(BranchCache):
         })
         return inst
 
-    @abcm.abstract
+    @abstract
     def __call__(self, *args, **kw): ...
 
     def __getitem__(self, branch: Branch) -> set[Node]:
         return super().__getitem__(branch)
 
-@abcm.final
+@final
 class AppliedQuitFlag(BranchCache):
     """
     Track the application of a flag node by the rule for each branch. A branch
@@ -231,7 +231,7 @@ class AppliedQuitFlag(BranchCache):
     def __call__(self, target: Target):
         self[target.branch] = bool(target.get('flag'))
 
-@abcm.final
+@final
 class AppliedSentenceCounter(BranchCache):
     """
     Count the times the rule has applied for a sentence per branch. This tracks
@@ -258,7 +258,7 @@ class AppliedSentenceCounter(BranchCache):
     def __getitem__(self, branch: Branch) -> dict[Sentence, int]:
         return super().__getitem__(branch)
 
-@abcm.final
+@final
 class AppliedNodeCount(BranchCache):
 
     _valuetype = dict
@@ -289,7 +289,7 @@ class AppliedNodeCount(BranchCache):
     def __getitem__(self, branch: Branch) -> dict[Node, int]:
         return super().__getitem__(branch)
 
-@abcm.final
+@final
 class AppliedNodesWorlds(BranchCache):
     """
     Track the nodes applied to by the rule for each world on the branch. The
@@ -314,7 +314,7 @@ class AppliedNodesWorlds(BranchCache):
     def __getitem__(self, branch: Branch) -> set[tuple[Node, int]]:
         return super().__getitem__(branch)
 
-@abcm.final
+@final
 class UnserialWorldsTracker(BranchCache):
     """
     Track the unserial worlds on the branch.
@@ -339,7 +339,7 @@ class UnserialWorldsTracker(BranchCache):
     def __getitem__(self, branch: Branch) -> set[int]:
         return super().__getitem__(branch)
 
-@abcm.final
+@final
 class VisibleWorldsIndex(BranchDictCache):
     """
     Index the visible worlds for each world on the branch.
@@ -401,7 +401,7 @@ class VisibleWorldsIndex(BranchDictCache):
     def __getitem__(self, branch: Branch) -> dict[int, set[int]]:
         return super().__getitem__(branch)
 
-@abcm.final
+@final
 class PredicatedNodesTracker(FilterNodeCache):
     """
     Track all predicated nodes on the branch.
@@ -412,7 +412,7 @@ class PredicatedNodesTracker(FilterNodeCache):
         s: Sentence = node.get('sentence')
         return s != None and s.is_predicated
 
-@abcm.final
+@final
 class FilterHelper(FilterNodeCache):
     """
     Set configurable and chainable filters in ``NodeFilters``

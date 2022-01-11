@@ -4,6 +4,7 @@ __all__ = 'Node', 'Branch', 'Target'
 
 from callables import Caller, gets, preds
 from decorators import abstract, static, final, lazy
+from errors import instcheck as _instcheck
 from events import EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
@@ -802,35 +803,9 @@ class Target(dmap[str, Any]):
 
     @property
     def type(self) -> str:
-        if 'nodes' in self:
-        # if 'nodes' in self.__data:
-            return 'Nodes'
-        if 'node' in self:
-        # if 'node' in self.__data:
-            return 'Node'
+        if 'nodes' in self: return 'Nodes'
+        if 'node' in self: return 'Node'
         return 'Branch'
-
-    # def get(self, key, default = None):
-    #     try:
-    #         return self[key]
-    #     except KeyError:
-    #         return default
-
-    # def update(self, _obj = None, /, **kw):
-    #     if _obj != None:
-    #         for k in _obj:
-    #             self[k] = _obj[k]
-    #     for k in kw:
-    #         self[k] = kw[k]
-
-    # def items(self) -> ItemsView[str, Any]:
-    #     return self.__data.items()
-
-    # def keys(self) -> KeysView[str]:
-    #     return self.__data.keys()
-
-    # def values(self) -> ValuesView:
-    #     return self.__data.values()
 
     def copy(self):
         cls = type(self)
@@ -838,62 +813,36 @@ class Target(dmap[str, Any]):
         inst.__dict__ |= self.__dict__
         dict.update(inst, self)
         return inst
-        # return type(self).__class__(self.__data)
 
     def __init__(self, obj, **context):
-        # self.__data = {}
-        if isinstance(obj, type(self)):
+        if isinstance(obj, __class__):
             raise TypeError(obj)
         if not obj:
-            raise TypeError('Cannot create a Target from a falsy object: %s' % type(obj))
+            raise ValueError('Cannot create a Target from a falsy object: %s' % type(obj))
         if not isinstance(obj, (bool, dict)):
-            raise TypeError(('Cannot create a Target from a %s' % type(obj)))
+            raise TypeError('Cannot create a Target from a %s' % type(obj))
         if obj != True:
             self.update(obj)
         self.update(context)
         for attr in self.__reqd:
             if attr not in self:
-            # if attr not in self.__data:
                 raise TypeError("Missing required keys: %s" % self.__reqd.difference(self))
-                # raise TypeError("Missing required keys: %s" % self.__reqd.difference(self.__data))
-
-    # def __copy__(self):
-    #     return self.copy()
-
-    # def __len__(self):
-    #     return len(self.__data)
-
-    # def __iter__(self) -> Iterator[str]:
-    #     return iter(self.__data)
-
-    # def __getitem__(self, key: str):
-    #     return self.__data[key]
 
     def __setitem__(self, key: str, val):
-        if not isinstance(key, str):
-            raise TypeError(key)
-        if not key.isidentifier() or iskeyword(key):
-            raise ValueError('Invalid target key: %s' % key)
-        # if self.__data.get(key, val) != val:
-            # raise ValueError("Value conflict %s: %s (was: %s)" % (key, val, self.__data[key]))
+        if not preds.isattrstr(key):
+            _instcheck(key, str)
+            raise KeyError('Invalid target key: %s' % key)
         if self.get(key, val) != val:
             raise ValueError("Value conflict %s: %s (was: %s)" % (key, val, self[key]))
         super().__setitem__(key, val)
-        # self.__data[key] = val
 
-    def __delitem__(self, key: str):
+    def __delitem__(self, key):
         raise TypeError
-
-    # def __contains__(self, key: str):
-    #     return key in self.__data
 
     def __getattr__(self, name):
         if name in self.__attrs:
-            try:
-                return self[name]
-                # return self.__data[name]
-            except:
-                pass
+            try: return self[name]
+            except: pass
         raise AttributeError(name)
 
     def __setattr__(self, name, val):
@@ -915,16 +864,14 @@ class Target(dmap[str, Any]):
 
     def __repr__(self):
         # bid = self.__data['branch'].id if 'branch' in self.__data else '?'
-        bid = self['branch'].id if 'branch' in self else '?'
-        items = (
-            ('branch', bid),
+        return orepr(self, dict((
+            ('branch', self['branch'].id if 'branch' in self else '?'),
             ('type', self.type), *islice((
-                (attr, self[attr].__class__ if attr == 'rule' else self[attr])
+                (attr, type(self[attr]) if attr == 'rule' else self[attr])
                 for attr in
                 ('rule', 'sentence', 'designated', 'world', 'worlds')
                 if attr in self
             ), 3)
-        )
-        return orepr(self, dict(items))
+        )))
 
 del(EventEmitter)

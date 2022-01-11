@@ -1,46 +1,79 @@
+# Allowed local imports:
+#
+#  - errors
+#  - utils
+#  - tools.abcs
+
 from __future__ import annotations
 
 __all__ = (
+    # alias decorators
     'overload', 'abstract', 'final', 'static',
-    'membr', 'rund', 'fixed', 'operd', 'wraps',
+    # functions
+    'rund',
+    # class-based decorators
+    'membr', 'fixed', 'operd', 'wraps',
     'raisr', 'lazy', 'NoSetAttr',
 )
 
-from tools.abcs import Abc, abcm, abcf
-
-from typing import (
-    overload,
-    Any, Callable, Generic, NamedTuple, Mapping, ParamSpec, TypeVar
-)
-
-import functools
-import keyword
-import operator as opr
-import types
-
-P = ParamSpec('P')
-R = TypeVar('R')
-T = TypeVar('T')
-O = TypeVar('O')
-V = TypeVar('V')
-F = TypeVar('F', bound = Callable[..., Any])
-F2 = TypeVar('F2', bound = Callable[..., Any])
-F_get = TypeVar('F_get', bound = Callable[[Any], Any])
-
-_EMPTY = ()
-
-class _nonerr(Exception): __new__ = None
 from errors import (
     instcheck as _instcheck,
     subclscheck as _subclscheck
 )
+
+from tools.abcs import (
+    # alias decorators
+    abstract,
+    final,
+    overload,
+    static,
+    # type vars
+    F, TT, T, P,
+    # utils
+    abcm,
+    # bases (deletable)
+    Abc,
+)
 from inspect import (
-    isclass as _iscls,
     signature as _sig,
 )
-def _geti1(obj): return obj[1]
+from keyword import (
+    iskeyword as _iskeyword
+)
+from functools import (
+    reduce as _ftreduce,
+    partial as _ftpartial,
+)
+import operator as opr
 
-_valfilter = functools.partial(filter, _geti1)
+from typing import (
+    # Annotations
+    Any, Callable, Generic, Mapping,
+    # deletable references
+    TypeVar,
+)
+from types import (
+    # Annotations
+    DynamicClassAttribute, FunctionType,
+)
+_EMPTY = () # deletable
+
+# T = TypeVar('T')
+# P = ParamSpec('P')
+# F = TypeVar('F', bound = Callable[..., Any])
+# TT = TypeVar('TT', bound = type)
+
+R = TypeVar('R')
+O = TypeVar('O')
+V = TypeVar('V')
+F2 = TypeVar('F2', bound = Callable[..., Any])
+F_get = TypeVar('F_get', bound = Callable[[Any], Any])
+
+
+class _nonerr(Exception): __new__ = None
+
+# def _geti1(obj): return obj[1]
+_valfilter = _ftpartial(filter, opr.itemgetter(1))
 
 def _getmixed(obj, k):
     try: return obj[k]
@@ -53,9 +86,9 @@ def _thru(obj, *_):
 def _thru2(_x, obj, *_):
     return obj
 
-def _attrstrcheck(name):
+def _attrstrcheck(name: str):
     _instcheck(name, str)
-    if keyword.iskeyword(name):
+    if _iskeyword(name):
         raise TypeError('%s is a keyword' % name)
     if not name.isidentifier():
         raise TypeError('%s is not an identifier' % name)
@@ -76,24 +109,12 @@ def _checkcallable2(obj):
         return _methcaller(obj)
     return _checkcallable(obj)
 
-def _copyf(f: types.FunctionType) -> types.FunctionType:
-    func = types.FunctionType(
+def _copyf(f: FunctionType) -> FunctionType:
+    func = FunctionType(
         f.__code__, f.__globals__, f.__name__,
         f.__defaults__, f.__closure__,
     )
     return wraps(f)(func)
-
-@overload
-def abstract(f: F) -> F: ...
-abstract = abcm.abstract
-
-@overload
-def final(f: T) -> T: ...
-final = abcm.final
-
-@overload
-def static(f: T) -> T: ...
-static = abcm.static
 
 def rund(func):
     'Call the function immediately, and return the value.'
@@ -101,13 +122,13 @@ def rund(func):
 
 class _member(Generic[T]):
 
+    __slots__ = '__name__', '__qualname__', '__owner'
+
     def __set_name__(self, owner: T, name):
         self.owner = owner
         self.name = name
         for hook in self._sethooks:
             hook(self, owner, name)
-
-    __slots__ = '__name__', '__qualname__', '__owner'
 
     @property
     def owner(self) -> T:
@@ -185,8 +206,6 @@ class _twofer(Abc, Generic[F]):
     def _blankinit(self):
         self._init()
 
-
-
 class membr(_member[T]):
 
     __slots__ = 'cbak',
@@ -211,9 +230,8 @@ class membr(_member[T]):
             return cls(fd, *args, **kw)
         return f
 
+@static
 class fixed:
-
-    __new__ = None
 
     class value(_member):
 
@@ -258,12 +276,10 @@ class fixed:
 
         __slots__ = _EMPTY
 
-        def __call__(self, method = None) -> types.DynamicClassAttribute:
-            return types.DynamicClassAttribute(super().__call__(method), doc = self.doc)
-
+        def __call__(self, method = None) -> DynamicClassAttribute:
+            return DynamicClassAttribute(super().__call__(method), doc = self.doc)
+@static
 class operd:
-
-    __new__ = None
 
     class _base(_member, Callable):
 
@@ -285,6 +301,22 @@ class operd:
                 else:
                     info = self.info
             return info
+
+    class apply(_base):
+
+        __slots__ = _EMPTY
+
+        def __call__(self, info = None):
+            info = self._getinfo(info)
+            oper = _checkcallable(self.oper)
+            n = len(_sig(oper).parameters)
+            if n == 1:
+                def fapply(operand): return oper(operand)
+            elif n == 2:
+                def fapply(lhs, rhs): return oper(lhs, rhs)
+            else:
+                def fapply(*args): return oper(*args)
+            return wraps(info)(fapply)
 
     class reduce(_base):
         '''Create a reducing method using functools.reduce to apply
@@ -320,10 +352,9 @@ class operd:
             oper, freturn, finit = map(_checkcallable,
                 (self.oper, self.freturn, self.finit),
             )
-            reducer = functools.reduce
             @wraps(info)
             def freduce(self, *operands):
-                return freturn(self, reducer(oper, operands, finit(self)))
+                return freturn(self, _ftreduce(oper, operands, finit(self)))
             return freduce
 
         def template(*argdefs, **kwdefs) -> type[operd.reduce]:
@@ -331,26 +362,10 @@ class operd:
             class templated(__class__):
                 _argdefs = argdefs
                 _kwdefs = kwdefs
-                __slots__ = _EMPTY
+                __slots__ = ()
                 def __init__(self, *args, **kw):
                     super().__init__(*(argdefs + args), **(kwdefs | kw))
             return templated
-
-    class apply(_base):
-
-        __slots__ = _EMPTY
-
-        def __call__(self, info = None):
-            info = self._getinfo(info)
-            oper = _checkcallable(self.oper)
-            n = len(_sig(oper).parameters)
-            if n == 1:
-                def fapply(operand): return oper(operand)
-            elif n == 2:
-                def fapply(lhs, rhs): return oper(lhs, rhs)
-            else:
-                def fapply(*args): return oper(*args)
-            return wraps(info)(fapply)
 
     class order(_base):
         '''Wrap an ordering func with oper like: ``oper(func(a, b), 0)``. By
@@ -487,6 +502,11 @@ class raisr(_member):
 
 class lazy:
 
+    __slots__ = _EMPTY
+
+    def __new__(cls, *args, **kw):
+        return cls.get(*args, **kw)
+
     # class get(_twofer[F], _member):
     class get(_twofer[F], _member):
 
@@ -539,10 +559,10 @@ class lazy:
         __slots__ = _EMPTY
 
         @overload
-        def __new__(cls, func: Callable[[O], V]) -> prop[O, V]: ...
+        def __new__(cls, func: Callable[[O], V]) -> _property[O, V]: ...
         __new__ = _twofer.__new__
 
-        def __call__(self, method: Callable[[O], V]) -> prop[O, V]:
+        def __call__(self, method: Callable[[O], V]) -> _property[O, V]:
             return property(super().__call__(method), doc = method.__doc__)
 
     class dynca(prop[O]):
@@ -555,26 +575,21 @@ class lazy:
         # def __new__(cls, func: Callable[[O], V]) -> prop[O, V]: ...
         # __new__ = _twofer.__new__
 
-        def __call__(self, method: Callable[[O], V]) -> prop[O, V]:
-            return types.DynamicClassAttribute(
+        def __call__(self, method: Callable[[O], V]) -> _property[O, V]:
+            return DynamicClassAttribute(
                 lazy.get.__call__(self, method), doc = method.__doc__
             )
-
-    def __new__(cls, *args, **kw):
-        return cls.get(*args, **kw)
-
-    # __init__ = None
-    __slots__ = _EMPTY
 
 class NoSetAttr:
     'Lame thing that does a lame thing.'
 
     # __slots__ = '__roattr', 'efmt_fixed', 'efmt_change'
 
+    efmt_fixed = '%s (readonly)'.__mod__
+    efmt_change = '%s (immutable)'.__mod__
+
     def __init__(self, roattr = '_readonly',):
         self.__roattr = roattr
-        self.efmt_fixed = '%s (readonly)'.__mod__
-        self.efmt_change = '%s (immutable)'.__mod__
 
     def __call__(self, basecls, cls = None, changeonly = False):
         ok = basecls.__setattr__
@@ -603,8 +618,8 @@ class NoSetAttr:
 
     def callchecker(self, fget):
         roattr = self.roattr
-        def check(self):
-            return getattr(fget(self), roattr, False)
+        def check(obj):
+            return getattr(fget(obj), roattr, False)
         return check
 
     @lazy.prop
@@ -614,21 +629,21 @@ class NoSetAttr:
     @lazy.prop
     def selfchecker(self):
         roattr = self.roattr
-        def check(self):
-            return getattr(self, roattr, False)
+        def check(obj):
+            return getattr(obj, roattr, False)
         return check
 
     @lazy.prop
     def fixedraiser(self):
         efmt = self.efmt_fixed
-        def fail(self, name, value):
+        def fail(obj, name, value):
             raise AttributeError(efmt(name))
         return fail
 
     @lazy.prop
     def changeraiser(self):
         efmt = self.efmt_change
-        def fail(self, name, value):
+        def fail(obj, name, value):
             raise AttributeError(efmt(name))
         return fail
 
@@ -636,8 +651,10 @@ class NoSetAttr:
     def roattr(self):
         return self.__roattr
 
+del(Abc, TypeVar, _EMPTY)
+# ------------------------------
 
-class prop(property, Generic[O, V]):
+class _property(property, Generic[O, V]):
     fget: Callable[[O], Any] | None
     fset: Callable[[O, Any], None] | None
     fdel: Callable[[O], None] | None

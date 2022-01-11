@@ -9,7 +9,7 @@ NOARG = object()
 EMPTY = ()
 
 from errors import (
-    ExtendedSliceSizeError,
+    Emsg,
     instcheck as _instcheck,
 )
 import decorators as d
@@ -95,7 +95,7 @@ class MutableSequenceApi(SequenceApi[V], std.MutableSequence[V]):
 
     __slots__ = EMPTY
 
-    @abcm.abstract
+    @abstract
     def sort(self, /, *, key = None, reverse = False):
         raise NotImplementedError
 
@@ -110,7 +110,7 @@ class MutableSequenceApi(SequenceApi[V], std.MutableSequence[V]):
         olds = self[slc]
         values = self._from_iterable(map(self._new_value, values))
         if abs(slc.step or 1) != 1 and len(olds) != len(values):
-            raise ExtendedSliceSizeError(values, olds)
+            raise Emsg.MismatchExtSliceSize(values, olds)
         return olds, values
 
     @overload
@@ -248,4 +248,4 @@ class seqf(tuple[V, ...], SequenceApi[V]):
     def __repr__(self):
         return type(self).__name__ + super().__repr__()
 
-del(abstract, final, overload)
+del(abcm, abstract, final, overload)

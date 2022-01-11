@@ -1,19 +1,19 @@
 from __future__ import annotations
 
+from decorators import abstract, final, overload, static
 from errors import instcheck, subclscheck
-from tools.abcs import Abc, AbcMeta, abcm
+from tools.abcs import Abc, AbcMeta, P, T
 from utils import orepr
 
-# from abc import abstractmethod
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import partial
 import operator as opr
 from typing import Any, ClassVar, Literal, ParamSpec, TypeVar
 
-P = ParamSpec('P')
+# P = ParamSpec('P')
 K = TypeVar('K')
 V = TypeVar('V')
-T = TypeVar('T')
+# T = TypeVar('T')
 
 import enum
 
@@ -83,7 +83,7 @@ class Caller(Callable, Abc):
     excepts  : ExceptsParam
     default  : Any
 
-    @abcm.abstract
+    @abstract
     def _call(self, *args):
         raise NotImplementedError
 
@@ -120,7 +120,7 @@ class Caller(Callable, Abc):
             self.bindargs = bindargs
         self.flag = f | f.Init | f.Lock
 
-    @abcm.final
+    @final
     def __call__(self, *args, **kw):
         try: return self._call(*self.getargs(args), **kw)
         except Exception as err:
@@ -265,9 +265,8 @@ class Chain(Sequence[Callable], Abc):
     def __getitem__(self, index: int|slice) -> Callable:
         return self.funcs[index]
 
+@static
 class calls:
-
-    __new__ = None
 
     class func(Caller):
         'Function wrapper.'
@@ -300,12 +299,11 @@ class calls:
         attrhints = dict(method = Flag.Blank)
         __slots__ = tuple(attrhints)
 
-    def now(func, *args, **kw):
-        return calls.func(func)(*args, **kw)
+    def now(func: Callable[P, T], *args: P.args, **kw: P.kwargs) -> T:
+        return func(*args, **kw)
 
+@static
 class gets:
-
-    __new__ = None
 
     class attr(Caller):
         'Attribute getter.'
@@ -344,9 +342,8 @@ class gets:
         def _call(self, obj, *_): return obj
         cls_flag = Flag.Left
 
+@static
 class sets:
-
-    __new__ = None
 
     class attr(Caller):
         'Attribute setter.'
@@ -363,9 +360,8 @@ class sets:
         safe_errs = AttributeError,
         cls_flag = Flag.Left
 
+@static
 class dels:
-
-    __new__ = None
 
     class attr(Caller):
         'Attribute deleter.'
@@ -389,9 +385,8 @@ class raiser(Caller):
     attrhints = dict(ErrorType = Flag.Blank, eargs = Flag.Blank)
     __slots__ = tuple(attrhints)
 
+@static
 class cchain:
-
-    __new__ = None
 
     def forall(*funcs: Callable[P, bool]) -> Callable[P, bool]:
         return Chain(*funcs).for_caller(all)
@@ -412,18 +407,23 @@ def predcachetype(pred: Callable[[T, K], bool]) \
     setdefault = dict.setdefault
     def missing(self, key):
         return setdefault(self, key, outerfn(pred, key))
-    ns = dict(__missing__ = missing, __slots__ = ())
     n = pred.__name__
     clsname = n[0].upper() + n[1:] + 'PartialCache'
-    return AbcMeta(clsname, (dict,), ns)
+    return AbcMeta(
+        clsname,
+        (dict,),
+        dict(__missing__ = missing, __slots__ = ()),
+    )
 
+@static
 class preds:
-
-    __new__ = None
 
     instanceof = predcachetype(isinstance)()
     subclassof = predcachetype(issubclass)()
+
     isidentifier = cchain.forall(instanceof[str], str.isidentifier)
+    isnone = calls.func(opr.is_, None)
+    notnone = calls.func(opr.is_not, None)
 
     from keyword import iskeyword
 

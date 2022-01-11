@@ -21,8 +21,8 @@ from __future__ import annotations
 from callables import preds
 from .common import FLAG, KEY, Branch, BranchEvent, Node, RuleEvent, TabEvent, Target #, NodeType
 from decorators import abstract, final, overload, static, wraps
-from errors import DuplicateKeyError, IllegalStateError, MissingValueError,\
-    TimeoutError, ValueLengthError, instcheck
+from errors import Emsg, DuplicateKeyError, IllegalStateError, MissingValueError,\
+    TimeoutError, instcheck
 from events import EventEmitter
 from lexicals import Argument, Sentence
 from models import BaseModel
@@ -64,7 +64,7 @@ class RuleMeta(AbcMeta):
         for item in raw:
             if isinstance(item, type): item = None, item
             instcheck(item, tuple)
-            if len(item) != 2: raise ValueLengthError(item, 2)
+            if len(item) != 2: raise Emsg.WrongLength(item, 2)
             name, Helper = item
             instcheck(Helper, type)
             if name is None: name = getattr(Helper, '_attr', None)
@@ -242,7 +242,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     @property
     def name(self) -> str:
         'The rule name, default it the class name.'
-        return self.__class__.__name__
+        return type(self).__name__
 
     @final
     def get_target(self, branch: Branch) -> Target:
@@ -610,7 +610,7 @@ class TabRules(Sequence[Rule], TabRulesBase):
             return idx[ref.__class__.__name__]
         if len(default):
             return default[0]
-        raise MissingValueError(ref)
+        raise Emsg.MissingValue(ref)
 
     def __init__(self, tableau: Tableau):
         common = TabRulesSharedData(tableau, self)

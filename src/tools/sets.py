@@ -12,7 +12,7 @@ EMPTY = ()
 class std:
     from collections.abc import Set, MutableSet
 
-from tools.abcs import abcm, Copyable
+from tools.abcs import Copyable
 
 from decorators import abstract, final, overload, operd
 import operator as opr
@@ -112,6 +112,6 @@ class setm(MutableSetApi[V], set[V]):
 
 EMPTY_SET = setf()
 
-del(abcm, opr, operd, TypeVar, Copyable, std, EMPTY)
+del(opr, operd, TypeVar, Copyable, std, EMPTY)
 
 del(abstract, final, overload)
