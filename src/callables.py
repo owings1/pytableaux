@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from decorators import abstract, final, overload, static
 from errors import instcheck, subclscheck
-from tools.abcs import Abc, AbcMeta, P, T
+from tools.abcs import Abc, AbcMeta, P, T, F
 from utils import orepr
 
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import partial
 import operator as opr
-from typing import Any, ClassVar, Literal, ParamSpec, TypeVar
+from typing import Any, Literal, ParamSpec, Sequence, TypeVar
 
 # P = ParamSpec('P')
 K = TypeVar('K')
 V = TypeVar('V')
+R = TypeVar('R')
 # T = TypeVar('T')
 
 import enum
@@ -57,15 +58,15 @@ class _objwrap(Callable):
     def __call__(self, *a, **kw):
         return self.caller(*a, **kw)
 
-class Caller(Callable, Abc):
+class Caller(Callable[P, T], Abc):
 
     SAFE: Literal[Flag.Safe] = Flag.Safe
     LEFT: Literal[Flag.Left] = Flag.Left
     STAR: Literal[Flag.Star] = Flag.Star
 
-    cls_flag     : ClassVar[Flag] = Flag.Blank
-    safe_errs    : ClassVar[ExceptsParam]
-    safe_default : ClassVar[Any] = None
+    cls_flag     = Flag.Blank
+    safe_errs    : ExceptsParam
+    safe_default : Any = None
 
     attrhints: Mapping[str, Flag] = dict(
         flag     = Flag.Blank,
@@ -84,10 +85,10 @@ class Caller(Callable, Abc):
     default  : Any
 
     @abstract
-    def _call(self, *args):
+    def _call(self, *args) -> T:
         raise NotImplementedError
 
-    def __new__(cls, *args, **kw) -> Caller:
+    def __new__(cls, *args, **kw):
         inst = object.__new__(cls)
         inst.flag = Flag.Blank | cls.cls_flag
         return inst
@@ -121,14 +122,14 @@ class Caller(Callable, Abc):
         self.flag = f | f.Init | f.Lock
 
     @final
-    def __call__(self, *args, **kw):
+    def __call__(self, *args: Any, **kw) -> T:
         try: return self._call(*self.getargs(args), **kw)
         except Exception as err:
             if Flag.Safe in self.flag and isinstance(err, self.excepts):
                 return self.default
             raise
 
-    def getargs(self, args: tuple) -> Iterable:
+    def getargs(self, args: Sequence) -> Sequence:
         f = self.flag
         if f.Star in f: args, = args
         if f.Sliced in f: args = args[self.aslice]
@@ -138,18 +139,18 @@ class Caller(Callable, Abc):
         if f.Order in f: args = [args[n] for n in self.aorder]
         return args
 
-    def attrnames(self) -> list[str]:
+    def attrnames(self):
         f = self.flag
         hints = self.attrhints
         return list(a for a in hints if hints[a] in f)
 
-    def attritems(self) -> list[tuple[str, Any]]:
+    def attritems(self):
         return list((a, getattr(self, a)) for a in self.attrnames())
 
-    def attrs(self) -> dict[str, Any]:
+    def attrs(self):
         return dict(self.attritems())
 
-    def copy(self) -> Caller:
+    def copy(self):
         cls = self.__class__
         inst = object.__new__(cls)
         for item in self.attrs().items():
@@ -171,14 +172,14 @@ class Caller(Callable, Abc):
         try: f = self.flag
         except: raise AttributeError(attr)
         if f.Init not in f:
-            cls = self.__class__
+            cls = type(self)
             if attr == 'safe_errs':
                 raise TypeError("'excepts' required for %s with %s" % (cls, f.Safe))
         raise AttributeError(attr)
 
     def __eq__(self, other):
         if self is other: return True
-        if not isinstance(other, self.__class__):
+        if not isinstance(other, type(self)):
             return NotImplemented
         try:
             a, b = self.attritems(), other.attritems()
@@ -204,66 +205,6 @@ class Caller(Callable, Abc):
     def asobj(self):
         return _objwrap(self)
 
-ChainItem = Callable | tuple[Caller, tuple]
-
-class Chain(Sequence[Callable], Abc):
-
-    funcs: list[Callable]
-    __slots__ = 'funcs',
-
-    def __init__(self, *items: ChainItem):
-        self.funcs = list()
-        if items: self.extend(items)
-
-    def append(self, item: ChainItem):
-        self.funcs.append(self._genitem_(item))
-
-    def extend(self, items: Iterable[ChainItem]):
-        self.funcs.extend(map(self._genitem_, items))
-
-    def reverse(self):
-        self.funcs.reverse()
-
-    def clear(self):
-        self.funcs.clear()
-
-    def bound_iterator(self, *args:P.args, **kw:P.kwargs) -> Iterator[T]:
-        return (f(*args, **kw) for f in self)
-
-    def recur_iterator(self, *args, **kw) -> Iterator:
-        it = iter(self)
-        val = next(it)(*args, **kw)
-        yield val
-        for func in it:
-            val = func(val)
-            yield val
-
-    def for_caller(self, caller: Callable[[Iterator[P]], T]) -> Callable[P, T]:
-        def consume(*args: P.args, **kw: P.kwargs) -> T:
-            return caller(self.bound_iterator(*args, **kw))
-        return consume
-
-    def reduce(self, *args, **kw):
-        for val in self.recur_iterator(*args, **kw): pass
-        return val
-
-    @classmethod
-    def _genitem_(cls, item: ChainItem) -> Callable:
-        if callable(item): return item
-        gcls, *args = item
-        return subclscheck(gcls, Caller)(*args)
-
-    def __len__(self):
-        return len(self.funcs)
-
-    def __iter__(self) -> Iterator[Callable]:
-        yield from self.funcs
-
-    def __contains__(self, item: Callable):
-        return item in self.funcs
-
-    def __getitem__(self, index: int|slice) -> Callable:
-        return self.funcs[index]
 
 @static
 class calls:
@@ -337,9 +278,10 @@ class gets:
 
         safe_errs = AttributeError, KeyError, IndexError
 
-    class thru(Caller):
+    class thru(Caller[..., T]):
         'Passthrough getter.'
-        def _call(self, obj, *_): return obj
+        def _call(self, obj: Any, *_) -> T:
+            return obj
         cls_flag = Flag.Left
 
 @static
@@ -385,20 +327,37 @@ class raiser(Caller):
     attrhints = dict(ErrorType = Flag.Blank, eargs = Flag.Blank)
     __slots__ = tuple(attrhints)
 
+
+@static
+class funciter:
+    def reduce(funcs: Iterable[F], *args, **kw) -> Any:
+        it = iter(funcs)
+        try: value = next(it)(*args, **kw)
+        except StopIteration:
+            raise TypeError('reduce() of empty iterable') from None
+        for f in funcs: value = f(value)
+        return value
+
+    def consume(funcs: Iterable[Callable[P, T]], consumer: Callable[[Iterable[P]], T], *args, **kw) -> T:
+        return consumer(f(*args, **kw) for f in funcs)
+
+    def filter(funcs: Iterable[Callable[P, T]], consumer: Callable[[Iterable[P]], T], *args, **kw) -> Iterator[T]:
+        return filter(consumer(f(*args, **kw) for f in funcs))
+
 @static
 class cchain:
 
     def forall(*funcs: Callable[P, bool]) -> Callable[P, bool]:
-        return Chain(*funcs).for_caller(all)
+        return partial(funciter.consume, funcs, all)
 
     def forany(*funcs: Callable[P, bool]) -> Callable[P, bool]:
-        return Chain(*funcs).for_caller(any)
+        return partial(funciter.consume, funcs, any)
 
-    def asfilter(*funcs: Callable[P, bool]) -> Callable[[Iterable[P]], filter]:
-        return partial(filter, cchain.forall(*funcs))
+    def asfilter(*funcs: Callable[[T], bool]) -> Callable[[Iterable[T]], Iterator[T]]:
+        return partial(funciter.filter, funcs, all)
 
     def reducer(*funcs: Callable[P, T]) -> Callable[P, T]:
-        return Chain(*funcs).reduce
+        return partial(funciter.reduce, funcs)
 
 def predcachetype(pred: Callable[[T, K], bool]) \
     -> type[dict[K, Callable[[T], bool]]]:
@@ -422,8 +381,8 @@ class preds:
     subclassof = predcachetype(issubclass)()
 
     isidentifier = cchain.forall(instanceof[str], str.isidentifier)
-    isnone = calls.func(opr.is_, None)
-    notnone = calls.func(opr.is_not, None)
+    isnone = partial(opr.is_, None)
+    notnone = partial(opr.is_not, None)
 
     from keyword import iskeyword
 
@@ -433,4 +392,8 @@ class preds:
         cchain.reducer(iskeyword, opr.not_),
     )
 
+    def true(_): return True
+    def false(_): return False
+
 ('Chain', 'calls', 'gets', 'sets', 'dels', 'raiser','cchain', 'preds')
+

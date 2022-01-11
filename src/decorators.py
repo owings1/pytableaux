@@ -233,19 +233,19 @@ class membr(_member[T]):
 @static
 class fixed:
 
-    class value(_member):
+    class value(_member, Generic[V]):
 
         __slots__ = 'value', 'doc', 'annot'
 
-        def __init__(self, value, doc = None):
-            self.value: T = value
+        def __init__(self, value: V, doc = None):
+            self.value = value
             self.doc = doc
             # TODO: globals for annotation type search order
             vtype = type(value)
             tname = 'None' if value is None else vtype.__name__
             self.annot = {'return': tname}
 
-        def __call__(self, method: Callable[..., T] = None) -> Callable[..., T]:
+        def __call__(self, method: Callable[[O], V] = None) -> Callable[[O], V]:
             return wraps(method)(self._getf())
 
         def sethook(self, owner, name):
@@ -265,19 +265,20 @@ class fixed:
                 )).write(func)
             return func
 
-    class prop(value):
+    class prop(value[V]):
 
         __slots__ = _EMPTY
 
-        def __call__(self, method: Callable[[O], V] = None) -> prop[O, V]:
+        def __call__(self, method: Callable[[O], V] = None) -> _property[O, V]:
             return property(super().__call__(method), doc = self.doc)
 
     class dynca(value):
 
         __slots__ = _EMPTY
 
-        def __call__(self, method = None) -> DynamicClassAttribute:
+        def __call__(self, method = None) ->_property[O, V]:
             return DynamicClassAttribute(super().__call__(method), doc = self.doc)
+
 @static
 class operd:
 

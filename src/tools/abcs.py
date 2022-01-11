@@ -225,10 +225,10 @@ class Copyable(Abc):
     def __copy__(self):
         return self.copy()
 
-    def __deepcopy__(self, memo):
-        inst = self.copy()
-        memo[id(self)] = inst
-        return inst
+    # def __deepcopy__(self, memo):
+    #     inst = self.copy()
+    #     memo[id(self)] = inst
+    #     return inst
 
     @classmethod
     def __subclasshook__(cls, subcls: type):

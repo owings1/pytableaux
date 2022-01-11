@@ -1,35 +1,37 @@
 from __future__ import annotations
 
-from typing import TypeVar
-T = TypeVar('T')
-V = TypeVar('V')
-del (TypeVar)
+__all__ = (
+    'SequenceApi', 'MutableSequenceApi', 'SequenceProxy', 'seqf', 'seqm',
+    'seqdeq',
+)
 
 NOARG = object()
 EMPTY = ()
 
 from errors import (
     Emsg,
-    instcheck as _instcheck,
+    instcheck,
+    subclscheck,
 )
 import decorators as d
 from decorators import abstract, final, overload
-from tools.abcs import abcm, abcf
+from tools.abcs import abcm, abcf, T, P, F
 
 class std:
     from collections import deque
-    from collections.abc import MutableSequence, Sequence
 class bases:
+    from collections import deque
     from tools.abcs import Copyable
 
-from typing import Iterable, SupportsIndex
+from typing import (
+    Callable, Iterable, Iterator, MutableSequence, Sequence, SupportsIndex,
+    TypeVar,
+)
+V = TypeVar('V')
 import itertools
 
-__all__ = (
-    'SequenceApi', 'MutableSequenceApi', 'SequenceProxy', 'seqf',
-)
 
-class SequenceApi(std.Sequence[V], bases.Copyable):
+class SequenceApi(Sequence[V], bases.Copyable):
     "Extension of collections.abc.Sequence and built-in sequence (tuple)."
 
     __slots__ = EMPTY
@@ -90,7 +92,7 @@ class SequenceApi(std.Sequence[V], bases.Copyable):
 
 SequenceApi.register(tuple)
 
-class MutableSequenceApi(SequenceApi[V], std.MutableSequence[V]):
+class MutableSequenceApi(SequenceApi[V], MutableSequence[V]):
     'Fusion interface of collections.abc.MutableSequence and built-in list.'
 
     __slots__ = EMPTY
@@ -124,7 +126,7 @@ class MutableSequenceApi(SequenceApi[V], std.MutableSequence[V]):
         return self
 
 MutableSequenceApi.register(list)
-MutableSequenceApi.register(std.deque)
+MutableSequenceApi.register(bases.deque)
 
 class SequenceProxy(SequenceApi[V]):
     'Sequence view proxy.'
@@ -182,7 +184,7 @@ class SequenceProxy(SequenceApi[V]):
 
     def __new__(cls, base: SequenceApi[V]) -> SequenceProxy[V]:
 
-        _instcheck(base, SequenceApi)
+        instcheck(base, SequenceApi)
         names = frozenset(cls._proxy_names_)
 
         class SeqProxy(SequenceProxy):
@@ -208,6 +210,7 @@ class seqf(tuple[V, ...], SequenceApi[V]):
     # NB: tuple implements all equality and ordering methods,
     # as well as __hash__ method.
 
+    __slots__ = EMPTY
     __add__ = SequenceApi.__add__
 
     @overload
@@ -217,7 +220,7 @@ class seqf(tuple[V, ...], SequenceApi[V]):
     @overload
     def __radd__(self, other: list[V]) -> list[V]: ...
     @overload
-    def __radd__(self, other: std.deque[V]) -> std.deque[V]: ...
+    def __radd__(self, other: bases.deque[V]) -> bases.deque[V]: ...
 
     def __radd__(self, other):
         if not isinstance(other, Iterable):
@@ -231,7 +234,7 @@ class seqf(tuple[V, ...], SequenceApi[V]):
         # left operand is a plain tuple.
         if otype is tuple or otype is list:
             return otype(it)
-        if otype is std.deque:
+        if otype is bases.deque:
             maxlen = other.maxlen
             if maxlen is not None and len(other) + len(self) > maxlen:
                 # Making a new deque that exceeds maxlen of lhs is not supported.
@@ -248,4 +251,43 @@ class seqf(tuple[V, ...], SequenceApi[V]):
     def __repr__(self):
         return type(self).__name__ + super().__repr__()
 
-del(abcm, abstract, final, overload)
+class seqm(MutableSequenceApi[V], list[V]):
+    __slots__ = EMPTY
+    insert = list.insert
+
+class seqdeq(bases.deque[V], MutableSequenceApi[V]):
+    __slots__ = EMPTY
+
+    __imul__ = MutableSequenceApi.__imul__
+    __mul__  = MutableSequenceApi.__mul__
+    __rmul__ = MutableSequenceApi.__rmul__
+    __add__  = MutableSequenceApi.__add__
+    __radd__ = MutableSequenceApi.__radd__
+    copy     = MutableSequenceApi.copy
+    __copy__ = MutableSequenceApi.__copy__
+
+    def __init__(self, values: Iterable = None, /, maxlen: int|None = None):
+        super().__init__(map(self._new_value, values), maxlen)
+
+    def insert(self, index: int, value):
+        super().insert(index, self._new_value(value))
+
+    def append(self, value):
+        super().append(self._new_value(value))
+
+    def appendleft(self, value):
+        super().appendleft(self._new_value(value))
+
+    def extend(self, values):
+        super().extend(map(self._new_value, values))
+
+    def extendleft(self, values):
+        super().extend(map(self._new_value, values))
+
+    def __setitem__(self, index: SupportsIndex, value):
+        instcheck(index, SupportsIndex)
+        super().__setitem__(index, self._new_value(value))
+
+
+
+del(abcm, abstract, final, overload, TypeVar)

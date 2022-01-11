@@ -72,7 +72,7 @@ class TestTableau(BaseSuite):
             def applies_to_branch(self, branch):
                 return True
             def check_for_target(self, node, branch):
-                return True
+                return {'node': node}
             def node_will_close_branch(self, node, branch):
                 return True
             def example_nodes(self): return tuple()

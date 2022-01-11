@@ -19,6 +19,7 @@
 #
 # pytableaux - tableaux rules module
 # from lexicals import Atomic, Quantified, Operated
+from decorators import abstract
 from .common import Branch, Node, Target
 from .tableaux import Rule
 from .helpers import NodeTargetCheckHelper
@@ -29,7 +30,7 @@ class ClosureRule(Rule):
     closed. Sub-classes should implement the ``applies_to_branch()`` method.
     """
 
-    Helpers = (NodeTargetCheckHelper,)
+    Helpers = NodeTargetCheckHelper,
     ntch: NodeTargetCheckHelper
 
     _defaults = {'is_rank_optim': False}
@@ -39,23 +40,19 @@ class ClosureRule(Rule):
     #     return True
 
     def _get_targets(self, branch: Branch):
-        """
-        :implements: Rule
-        """
         target = self.applies_to_branch(branch)
         if target:
-            return (Target.create(target, branch = branch),)
+            if target is True:
+                target = {}
+            target['branch'] = branch
+            return Target.create(target),
+            # return (Target.create(target, branch = branch),)
 
     def _apply(self, target: Target):
-        """
-        :implements: Rule
-        """
         target.branch.close()
 
+    @abstract
     def applies_to_branch(self, branch: Branch):
-        """
-        :meta abstract:
-        """
         raise NotImplementedError
 
     def nodes_will_close_branch(self, nodes, branch):
@@ -70,11 +67,14 @@ class ClosureRule(Rule):
         for node in nodes:
             if self.node_will_close_branch(node, branch):
                 return True
+        return False
 
+    @abstract
     def node_will_close_branch(self, node, branch):
         raise NotImplementedError
 
     # NodeTargetCheckHelper implementation
 
+    @abstract
     def check_for_target(self, node, branch):
         raise NotImplementedError

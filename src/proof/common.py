@@ -3,22 +3,22 @@ from __future__ import annotations
 __all__ = 'Node', 'Branch', 'Target'
 
 from callables import Caller, gets, preds
-from decorators import abstract, static, final, lazy
-from errors import instcheck as _instcheck
+from decorators import abstract, overload, static, final, lazy
+from errors import instcheck as _instcheck, Emsg
 from events import EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
 from tools.abcs import Abc, AbcMeta
 from tools.sets import EMPTY_SET, setf
-from tools.mappings import MutableMappingApi, dmap
+from tools.mappings import MutableMappingApi, dmap, mapf
 from utils import drepr, orepr
 
-from collections.abc import Callable, Iterable, ItemsView, \
-    Iterator, KeysView, Mapping, Sequence, ValuesView
+from collections.abc import ItemsView, \
+    Iterator, KeysView, Sequence, ValuesView
 from itertools import islice
 from keyword import iskeyword
 from types import MappingProxyType
-from typing import Any, ClassVar, NamedTuple, TypeVar
+from typing import Any, Callable, Iterable, ClassVar, Mapping, NamedTuple, TypeVar
 import enum
 # from collections import defaultdict, deque
 # from inspect import getmembers, isclass
@@ -79,12 +79,15 @@ class Node(Mapping, metaclass = NodeMeta):
     __slots__ = 'props', 'step', 'ticked', '_is_access', '_is_modal', '_worlds'
     defaults = MappingProxyType({'world': None, 'designated': None})
 
-    def __init__(self, props = {}):
+    def __init__(self, props: Mapping = None):
         #: A dictionary of properties for the node.
         # p = dict(self.defaults)
-        p = {}
-        p.update(props)
-        self.props = MappingProxyType(p)
+        self.props = mapf(
+            props if props is not None else {}
+        )
+        # p = {}
+        # p.update(props)
+        # self.props = MappingProxyType(p)
 
     @property
     def id(self) -> int:
@@ -753,6 +756,9 @@ class Branch(Sequence[Node], EventEmitter, Abc):
             closed = self.closed,
         )
 
+
+class TargetMeta(AbcMeta):
+    ...
 class Target(dmap[str, Any]):
 
     __reqd = {'branch'}
@@ -814,16 +820,20 @@ class Target(dmap[str, Any]):
         dict.update(inst, self)
         return inst
 
-    def __init__(self, obj, **context):
+    def __init__(self, obj = None, /, **context):
         if isinstance(obj, __class__):
+            raise TypeError(obj)
+        if isinstance(obj, bool):
             raise TypeError(obj)
         if not obj:
             raise ValueError('Cannot create a Target from a falsy object: %s' % type(obj))
         if not isinstance(obj, (bool, dict)):
             raise TypeError('Cannot create a Target from a %s' % type(obj))
-        if obj != True:
-            self.update(obj)
-        self.update(context)
+        # if obj != True:
+        #     self.update(obj)
+        if obj is not None:
+            self |= obj
+        self |= context
         for attr in self.__reqd:
             if attr not in self:
                 raise TypeError("Missing required keys: %s" % self.__reqd.difference(self))
@@ -833,7 +843,7 @@ class Target(dmap[str, Any]):
             _instcheck(key, str)
             raise KeyError('Invalid target key: %s' % key)
         if self.get(key, val) != val:
-            raise ValueError("Value conflict %s: %s (was: %s)" % (key, val, self[key]))
+            raise Emsg.ValueConflict(val, self[key], key)
         super().__setitem__(key, val)
 
     def __delitem__(self, key):
