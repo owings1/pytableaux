@@ -19,11 +19,11 @@
 # pytableaux - parsers module
 from errors import ParseError, BoundVariableError, UnboundVariableError, \
     IllegalStateError
-from decorators import abstract
+from tools.abcs import Abc
+from tools.decorators import abstract
 from lexicals import Predicate, Parameter, Constant, Variable, \
     Operator as Oper, Quantifier, Sentence, Atomic, Predicated, \
     Quantified, Operated, LexType, Predicates, Argument, Types
-from tools.abcs import Abc
 from utils import CacheNotationData, cat
 
 from collections.abc import Iterable, Mapping

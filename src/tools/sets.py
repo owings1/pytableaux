@@ -14,7 +14,7 @@ class std:
 
 from tools.abcs import Copyable
 
-from decorators import abstract, final, overload, operd
+from tools.decorators import abstract, final, overload, operd
 import operator as opr
 
 class SetApi(std.Set[V], Copyable):

@@ -1,6 +1,6 @@
-from decorators import abstract
 from errors import instcheck, Emsg
 from tools.abcs import Abc
+from tools.decorators import abstract
 from tools.hybrids import qsetf
 from tools.sets import setf
 from utils import get_logic

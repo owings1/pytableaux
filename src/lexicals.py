@@ -27,8 +27,8 @@ __all__ = (
 )
 ##############################################################
 
-from decorators import abstract, final, overload, static
 from tools.abcs import abcm, abcf, T
+from tools.decorators import abstract, final, overload, static
 from tools.sequences import SequenceApi, seqf
 from tools.sets import SetApi, MutableSetApi, setf, setm, EMPTY_SET
 from tools.hybrids import qsetf, qset
@@ -74,7 +74,7 @@ En = TypeVar('En', bound = std.Enum)
 class d:
     'decorators'
 
-    from decorators import (
+    from tools.decorators import (
         fixed, lazy, membr, operd,
         raisr, rund, wraps, NoSetAttr
     )

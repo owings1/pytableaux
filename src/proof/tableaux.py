@@ -23,7 +23,7 @@ __all__ = 'Rule', 'TableauxSystem', 'Tableau'
 
 from callables import preds
 from .common import FLAG, KEY, Branch, BranchEvent, Node, RuleEvent, TabEvent, Target
-from decorators import abstract, final, overload, static, wraps
+from tools.decorators import abstract, final, overload, static, wraps
 from errors import (
     Emsg, DuplicateKeyError, IllegalStateError, MissingValueError,
     TimeoutError, instcheck

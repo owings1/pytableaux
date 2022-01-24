@@ -2,9 +2,9 @@ from __future__ import annotations
 
 __all__ = 'EventEmitter', 'EventsListeners',
 
-from decorators import raisr
 from errors import instcheck
 from tools.abcs import Abc, abcf
+from tools.decorators import raisr
 from tools.linked import linqset
 from utils import orepr
 

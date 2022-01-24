@@ -28,7 +28,7 @@ from tools.abcs import (
     overload,
     static,
     # type vars
-    F, TT, T, P, Self,
+    F, T, P, Self,
     # utils
     abcm,
     # bases
@@ -58,7 +58,7 @@ from types import (
     # FunctionType,
 )
 EMPTY = ()
-_NOARG = object()
+# _NOARG = object()
 
 # R = TypeVar('R')
 O = TypeVar('O')

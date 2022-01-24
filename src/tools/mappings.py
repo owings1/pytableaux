@@ -13,7 +13,7 @@ __all__ = (
 
 from tools.abcs import Abc, Copyable, abcf, F, T, P, RT
 from callables import preds, gets
-from decorators import abstract, static, final, overload, fixed, membr, wraps
+from tools.decorators import abstract, static, final, overload, fixed, membr, wraps
 from errors import Emsg, instcheck
 
 from typing import (

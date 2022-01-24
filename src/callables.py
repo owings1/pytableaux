@@ -5,9 +5,9 @@ __all__ = (
     'cchain', 'preds',
 )
 
-from decorators import abstract, final, overload, static
 from errors import instcheck, subclscheck
 from tools.abcs import Abc, AbcMeta, P, T, F
+from tools.decorators import abstract, final, overload, static
 from utils import orepr
 
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence

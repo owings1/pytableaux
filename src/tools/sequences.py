@@ -13,8 +13,8 @@ from errors import (
     instcheck,
     subclscheck,
 )
-import decorators as d
-from decorators import abstract, final, overload
+import tools.decorators as d
+from tools.decorators import abstract, final, overload
 from tools.abcs import abcm, abcf, T, P, F
 
 class bases:

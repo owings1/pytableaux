@@ -8,7 +8,7 @@ del(TypeVar)
 NOARG = object()
 EMPTY = ()
 
-from decorators import abstract, final, overload
+from tools.decorators import abstract, final, overload
 from errors import (
     Emsg,
     DuplicateValueError,

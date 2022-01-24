@@ -9,7 +9,7 @@ del(TypeVar)
 
 EMPTY = ()
 
-from decorators import abstract, overload
+from tools.decorators import abstract, overload
 import errors as err
 from errors import instcheck as _instcheck
 

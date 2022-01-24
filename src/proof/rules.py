@@ -19,7 +19,7 @@
 #
 # pytableaux - tableaux rules module
 # from lexicals import Atomic, Quantified, Operated
-from decorators import abstract
+from tools.decorators import abstract
 from .common import Branch, Node, Target
 from .tableaux import Rule
 from .helpers import NodeTargetCheckHelper

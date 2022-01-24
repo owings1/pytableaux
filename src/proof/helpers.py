@@ -19,7 +19,7 @@
 # pytableaux - rule helpers module
 from __future__ import annotations
 
-from decorators import abstract, final, static
+from tools.decorators import abstract, final, static
 from lexicals import Constant, Sentence
 from models import BaseModel
 from tools.abcs import T
