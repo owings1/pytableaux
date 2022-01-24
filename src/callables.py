@@ -150,10 +150,10 @@ class Caller(Callable[P, T], Abc):
     def attrnames(self):
         f = self.flag
         hints = self.attrhints
-        return list(a for a in hints if hints[a] in f)
+        return tuple(a for a in hints if hints[a] in f)
 
     def attritems(self):
-        return list((a, getattr(self, a)) for a in self.attrnames())
+        return tuple((a, getattr(self, a)) for a in self.attrnames())
 
     def attrs(self):
         return dict(self.attritems())
@@ -190,12 +190,16 @@ class Caller(Callable[P, T], Abc):
         if not isinstance(other, type(self)):
             return NotImplemented
         try:
-            return all(
-                opr.eq(*items) for items in
-                zip(self.attritems(), other.attritems(), strict = True)
-            )
+            return self.attritems() == other.attritems()
+            # return all(
+            #     opr.eq(*items) for items in
+            #     zip(self.attritems(), other.attritems(), strict = True)
+            # )
         except ValueError:
             return False
+
+    def __hash__(self):
+        return hash(type(self)) + hash(self.attritems())
 
     def __dir__(self):
         return list(self.attrnames())

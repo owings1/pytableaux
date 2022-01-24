@@ -22,6 +22,7 @@ from __future__ import annotations
 from decorators import abstract, final, static
 from lexicals import Constant, Sentence
 from models import BaseModel
+from tools.abcs import T
 from tools.mappings import MapAttrCover, dmap
 from tools.sets import EMPTY_SET
 from utils import orepr
@@ -30,13 +31,8 @@ from .common import Access, Branch, Comparer, Node, RuleEvent, TabEvent, Target
 from .tableaux import Rule, Tableau
 
 from copy import copy
-from collections.abc import (
-    Callable, Iterable, Iterator, MutableMapping, ItemsView, KeysView, ValuesView
-)
 from itertools import chain
-from typing import TypeVar
-
-T = TypeVar('T')
+from typing import Callable, Iterable, Iterator
 
 class AdzHelper:
 
@@ -576,6 +572,8 @@ class NodeTargetCheckHelper:
 
     NB: The rule must implement ``check_for_target(self, node, branch)``.
     """
+    __slots__ = 'rule', 'targets'
+
     _attr = 'ntch'
     def __init__(self, rule: Rule, *args, **kw):
         self.rule = rule
@@ -614,6 +612,8 @@ class MaxConstantsTracker:
     Project the maximum number of constants per world required for a branch
     by examining the branches after the trunk is built.
     """
+    __slots__ = 'rule', 'branch_max_constants', 'world_constants'
+
     _attr = 'maxc'
 
     def __init__(self, rule: Rule, *args, **kw):
@@ -743,7 +743,7 @@ class MaxConstantsTracker:
         s: Sentence = node.get('sentence')
         return len(s.quantifiers) if s else 0
 
-class AppliedNodeConstants(object):
+class AppliedNodeConstants:
     """
     Track the applied and unapplied constants per branch for each potential node.
     The rule's target should have `branch`, `node` and `constant` properties.
@@ -751,6 +751,8 @@ class AppliedNodeConstants(object):
     Only nodes that are applicable according to the rule's ``NodeFilter`` helper.
     method are tracked.
     """
+    __slots__ = 'rule', 'node_states', 'consts'
+
     _attr = 'apcs'
 
     def __init__(self, rule, *args, **kw):
@@ -818,11 +820,12 @@ class AppliedNodeConstants(object):
         # TODO: remove cross-helper affinity
         return self.rule.nf(node, branch)
 
-class MaxWorldsTracker(object):
+class MaxWorldsTracker:
     """
     Project the maximum number of worlds required for a branch by examining the
     branches after the trunk is built.
     """
+    __slots__ = 'rule', 'branch_max_worlds', 'modal_complexities'
     _attr = 'maxw'
 
     modal_operators = set(BaseModel.modal_operators)
@@ -889,7 +892,7 @@ class MaxWorldsTracker(object):
 
     # Private util
 
-    def __compute_max_worlds(self, branch):
+    def __compute_max_worlds(self, branch: Branch):
         # Project the maximum number of worlds for a branch (origin) as
         # the number of worlds already on the branch + the number of modal
         # operators + 1.

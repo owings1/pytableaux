@@ -36,7 +36,7 @@ from tools.sets import EMPTY_SET
 from tools.sequences import (
     MutableSequenceApi, SequenceApi, SequenceProxy, DeqSeq,
 )
-from tools.mappings import MapCover
+from tools.mappings import MapCover, dmap
 from tools.hybrids import qsetf
 from tools.linked import linqset
 from tools.timing import StopWatch
@@ -213,10 +213,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         raise NotImplementedError
 
     def sentence(self, node: Node) -> Sentence:
-        """Get the sentence for the node, or ``None``.
-
-        :param tableaux.Node node:
-        :rtype: lexicals.Sentence"""
+        """Get the sentence for the node, or ``None``."""
         return node.get('sentence')
 
     # Scoring

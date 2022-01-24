@@ -150,7 +150,7 @@ class Node(MapCover):
             return self.defaults[key]
 
     @classmethod
-    def _oper_res_type(cls, rhs_type):
+    def _oper_res_type(cls, other_type):
         return dmap
 
     def __repr__(self):

@@ -6,12 +6,13 @@ __all__ = (
     'MapCover',
     'MapAttrCover',
     'dmap',
+    'defaultdmap',
     'ItemsIterator',
     'DequeCache',
 )
 
 from tools.abcs import Abc, Copyable, abcf, F, T, P, RT
-from callables import preds
+from callables import preds, gets
 from decorators import abstract, static, final, overload, fixed, membr, wraps
 from errors import Emsg, instcheck
 
@@ -23,7 +24,7 @@ from typing import (
 from _collections_abc import (
     Collection, Iterator, Mapping, MutableMapping, Set
 )
-from collections import deque
+from collections import defaultdict, deque
 from types import MappingProxyType as MapProxy
 
 KT = TypeVar('KT')
@@ -33,6 +34,7 @@ MT = TypeVar('MT', bound = Mapping)
 EMPTY = ()
 FCACHE_MAXMISS = 3
 FNOTIMPL = fixed.value(NotImplemented)()
+FTHRU = gets.thru()
 
 from itertools import (
     chain,
@@ -52,8 +54,8 @@ class FuncResolvers(dict[tuple[Callable, Callable], Callable]):
         while len(self) > FCACHE_MAXMISS and len(self) > 0:
             self.pop(next(iter(self)))
         res_create, get_res_iter = pair
-        def cached_resolver(lhs, rhs):
-            return res_create(get_res_iter(lhs, rhs))
+        def cached_resolver(obj, other):
+            return res_create(get_res_iter(obj, other))
         cached_resolver.__qualname__ = cached_resolver.__name__
         return self.setdefault(pair, cached_resolver)
 
@@ -61,64 +63,69 @@ class FuncCache(dict[type, Callable]):
 
     __slots__ = 'get_res_iter', 'get_res_type',
 
-    def __init__(self, lhs_type: type[MappingApi], oper_name: str, /):
-        self.get_res_iter = getattr(lhs_type, '_iter' + oper_name)
+    def __init__(self, obj_type: type[MappingApi], oper_name: str, /):
+        self.get_res_iter = getattr(obj_type, oper_name + 'op__')
         if oper_name.startswith('__r'):
-            self.get_res_type = lhs_type._roper_res_type
+            self.get_res_type = obj_type._roper_res_type
         else:
-            self.get_res_type = lhs_type._oper_res_type
+            self.get_res_type = obj_type._oper_res_type
 
-    def __missing__(self, rhs_type):
+    def __missing__(self, other_type):
         while len(self) > FCACHE_MAXMISS and len(self) > 0:
             self.pop(next(iter(self)))
-        return self.setdefault(rhs_type, self.resolve)
+        return self.setdefault(other_type, self.resolve)
 
-    def resolve(self, lhs, rhs, /):
-        rhs_type = type(rhs)
-        if not issubclass(rhs_type, Iterable):
-            return self.reject(rhs_type)
-        res_type = self.get_res_type(rhs_type)
+    def resolve(self, obj, other, /):
+        other_type = type(other)
+        if not issubclass(other_type, Iterable):
+            return self.reject(other_type)
+        res_type = self.get_res_type(other_type)
         if res_type is NotImplemented:
-            return self.reject(rhs_type)
+            return self.reject(other_type)
         get_res_iter = self.get_res_iter
-        it = get_res_iter(lhs, rhs)
-        if isinstance(it, Mapping):
+        it = get_res_iter(obj, other)
+        if (
+            it is not self and it is not other and
+            isinstance(res_type, type) and isinstance(it, res_type)
+        ):
+            res_create = FTHRU
+        elif isinstance(it, Mapping):
             res_create = getattr(res_type, '_from_mapping', res_type)
         elif isinstance(it, Iterable):
             res_create = getattr(res_type, '_from_iterable', res_type)
         elif it is NotImplemented:
-            return self.reject(rhs_type)
+            return self.reject(other_type)
         else:
             raise Emsg.InstCheck(it, Iterable)
         res = res_create(it)
-        self[rhs_type] = RESOLV_CACHE[res_create, get_res_iter]
+        self[other_type] = RESOLV_CACHE[res_create, get_res_iter]
         return res
 
-    def reject(self, rhs_type):
-        self[rhs_type] = FNOTIMPL
+    def reject(self, other_type):
+        self[other_type] = FNOTIMPL
         return NotImplemented
 
 class TypeFuncsCache(dict[str, FuncCache]):
 
-    __slots__ = 'lhs_type',
+    __slots__ = 'obj_type',
 
-    def __init__(self, lhs_type: type[MappingApi]):
-        self.lhs_type = lhs_type
+    def __init__(self, obj_type: type[MappingApi]):
+        self.obj_type = obj_type
 
     def __missing__(self, oper_name: str, FuncCache = FuncCache):
-        return self.setdefault(oper_name, FuncCache(self.lhs_type, oper_name))
+        return self.setdefault(oper_name, FuncCache(self.obj_type, oper_name))
 
 class OperFuncsCache(dict[type[Mapping], TypeFuncsCache]):
 
     __slots__ = EMPTY
 
-    def __missing__(self, lhs_type, TypeFuncsCache = TypeFuncsCache):
+    def __missing__(self, obj_type, TypeFuncsCache = TypeFuncsCache):
         while len(self) > FCACHE_MAXMISS and len(self) > 0:
             self.pop(next(iter(self)))
-        return self.setdefault(lhs_type, TypeFuncsCache(lhs_type))
+        return self.setdefault(obj_type, TypeFuncsCache(obj_type))
 
 RESOLV_CACHE = FuncResolvers()
-OPER_FCACHE = OperFuncsCache()
+FCACHE_OP = OperFuncsCache()
 
 class MappingApi(Mapping[KT, VT], Copyable):
 
@@ -130,40 +137,40 @@ class MappingApi(Mapping[KT, VT], Copyable):
         oper_name = member.name
         @wraps(member)
         def f(self, other):
-            return OPER_FCACHE[type(self)][oper_name][type(other)](self, other)
+            return FCACHE_OP[type(self)][oper_name][type(other)](self, other)
         return f
 
     __or__ = __ror__ = __and__ = __rand__ = __sub__ = __rsub__ = __rxor__ = oper()
 
-    def _iter__or__(self, other):
+    def __or__op__(self, other):
         return chain(ItemsIterator(self), ItemsIterator(other))
 
-    def _iter__ror__(self, other):
+    def __ror__op__(self, other):
         if isinstance(other, Set):
             return chain(other, self)
         return chain(ItemsIterator(other), ItemsIterator(self))
 
-    def _iter__and__(self, other):
+    def __and__op__(self, other):
         if not isinstance(other, Set):
             return NotImplemented
         return ItemsIterator(self, kpred = other.__contains__)
 
-    def _iter__rand__(self, other):
+    def __rand__op__(self, other):
         if not isinstance(other, Set):
             return NotImplemented
         return filter(self.__contains__, other)
 
-    def _iter__sub__(self, other):
+    def __sub__op__(self, other):
         if not isinstance(other, Set):
             return NotImplemented
         return ItemsIterator(self, kpred = other.__contains__, koper = not_)
 
-    def _iter__rsub__(self, other):
+    def __rsub__op__(self, other):
         if not isinstance(other, Set):
             return NotImplemented
         return filterfalse(other, self.__contains__)
 
-    def _iter__rxor__(self, other):
+    def __rxor__op__(self, other):
         if not isinstance(other, Set):
             return NotImplemented
         return chain(
@@ -175,22 +182,30 @@ class MappingApi(Mapping[KT, VT], Copyable):
         return self._from_mapping(self)
 
     @classmethod
-    def _from_mapping(cls: type[MT], it: Mapping) -> MT:
-        return cls(it)
+    def _from_mapping(cls: type[MT], mapping: Mapping) -> MT:
+        'Construct a new instance from a mapping.'
+        return cls(mapping)
 
     @classmethod
     def _from_iterable(cls: type[MT], it: Iterable[tuple[Any, Any]]) -> MT:
+        'Construct a new instance from an iterable of item tuples.'
         return NotImplemented
 
     @classmethod
-    def _oper_res_type(cls, rhs_type: type[Iterable]):
+    def _oper_res_type(cls, other_type: type[Iterable]):
+        '''Return the type (or callable) to construct a new instance from the result
+        of an arithmetic operator expression for objects of type cls on the left hand
+        side, and of other_type on the right hand side.'''
         return cls
 
     @classmethod
-    def _roper_res_type(cls, rhs_type: type[Iterable]):
-        if issubclass(rhs_type, Set):
-            return rhs_type
-        return cls._oper_res_type(rhs_type)
+    def _roper_res_type(cls, other_type: type[Iterable]):
+        '''Return the type (or callable) to construct a new instance from the result
+        of an arithmetic operator expression for objects of type cls on the right hand
+        side, and of other_type on the left hand side.'''
+        if issubclass(other_type, Set):
+            return other_type
+        return cls._oper_res_type(other_type)
 
 class MapGetAttr(MappingApi[Any, VT]):
     'A Mapping with attribute access.'
@@ -237,9 +252,24 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
 
     __slots__ = EMPTY
 
+    def __or__op__(self, other):
+        if self._oper_res_type(type(other)) is type(self):
+            inst = self.copy()
+            inst.update(other)
+            return inst
+        return super().__or__op__(other)
+
+    def __ror__op__(self, other):
+        if self._roper_res_type(type(other)) is type(self):
+            inst = self.copy()
+            inst.update(other)
+            return inst
+        return super().__ror__op__(other)
+
     def __ior__(self, other):
-        for _ in starmap(self.__setitem__, ItemsIterator(other)):
-            pass
+        if not isinstance(other, Iterable):
+            return NotImplemented
+        self.update(other)
         return self
 
     def __iand__(self, other):
@@ -261,7 +291,7 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
     @classmethod
     def _from_iterable(cls, it):
         inst = cls.__new__(cls)
-        for _ in starmap(inst.__setitem__, it): pass
+        inst.update(it)
         return inst
 
 class dmap(dict, MutableMappingApi[KT, VT]):
@@ -276,6 +306,31 @@ class dmap(dict, MutableMappingApi[KT, VT]):
     @classmethod
     def _from_iterable(cls, it):
         return cls(it)
+
+class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
+    'Mutable mapping api from defaultdict.'
+
+    __slots__ = EMPTY
+
+    copy    = MutableMappingApi.copy
+    __or__  = MutableMappingApi.__or__
+    __ror__ = MutableMappingApi.__ror__
+
+    @classmethod
+    def _from_mapping(cls, mapping):
+        if isinstance(mapping, cls):
+            return cls(mapping.default_factory, mapping)
+        return cls(None, mapping)
+
+    @classmethod
+    def _from_iterable(cls, it):
+        return cls(None, it)
+
+    @classmethod
+    def _roper_res_type(cls, other_type):
+        if issubclass(other_type, Mapping):
+            return dmap
+        return super()._roper_res_type(other_type)
 
 class DequeCache(Collection[VT], Abc):
 
