@@ -27,7 +27,7 @@ from lexicals import Argument, Predicate, Predicates, LexWriter, RenderSet, \
 from parsers import create_parser, notations as parser_notations
 from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
-from utils import get_logic, isstr
+from tools.misc import get_logic, isstr
 
 
 import cherrypy as server

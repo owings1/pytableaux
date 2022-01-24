@@ -1,10 +1,10 @@
-import examples, lexicals, utils
+import examples, lexicals, tools.misc as misc
 from lexicals import Argument, Predicates, Sentence, LexWriter
 from models import BaseModel
 from parsers import notations as parser_notns, create_parser, parse_argument, parse, Parser
 from proof.tableaux import Tableau, Branch, Node, Rule
 from proof.rules import ClosureRule
-from utils import get_logic
+from tools.misc import get_logic
 
 from collections.abc import Callable, Iterable, Iterator
 from inspect import isclass, getmembers
@@ -305,7 +305,7 @@ class BaseSuite(AbstractSuite):
     def Model(self) -> type[BaseModel]:
         return self.logic.Model
 
-utils.drepr.lw = LexWriter._sys = BaseSuite.lw
+misc.drepr.lw = LexWriter._sys = BaseSuite.lw
 # if utils._testlw is None:
 #     lexicals._syslw = utils._testlw = BaseSuite.lw
     

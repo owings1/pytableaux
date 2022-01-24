@@ -24,7 +24,7 @@ from tools.decorators import abstract
 from lexicals import Predicate, Parameter, Constant, Variable, \
     Operator as Oper, Quantifier, Sentence, Atomic, Predicated, \
     Quantified, Operated, LexType, Predicates, Argument, Types
-from utils import CacheNotationData, cat
+from tools.misc import CacheNotationData, cat
 
 from collections.abc import Iterable, Mapping
 from types import MappingProxyType as MapProxy

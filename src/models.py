@@ -3,7 +3,7 @@ from tools.abcs import Abc
 from tools.decorators import abstract
 from tools.hybrids import qsetf
 from tools.sets import setf
-from utils import get_logic
+from tools.misc import get_logic
 from lexicals import (
     Operator,
     Sentence, Atomic, Predicated, Operated, Quantified,

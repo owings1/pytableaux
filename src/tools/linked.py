@@ -80,8 +80,8 @@ class Link(Generic[V], bases.Copyable):
         return inst
 
     def __repr__(self):
-        import utils
-        return utils.wraprepr(self, self.value)
+        import tools.misc as misc
+        return misc.wraprepr(self, self.value)
 
 class HashLink(Link[V]):
 
@@ -237,8 +237,8 @@ class LinkSequenceApi(bases.SequenceApi[V]):
         return next(it)
 
     def __repr__(self):
-        import utils
-        return utils.wraprepr(self, list(self))
+        import tools.misc as misc
+        return misc.wraprepr(self, list(self))
 
 class MutableLinkSequenceApi(LinkSequenceApi[V], bases.MutableSequenceApi[V]):
     'Linked sequence write interface.'

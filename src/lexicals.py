@@ -91,7 +91,7 @@ class fict:
 
     from functools import partial, reduce
     from itertools import chain, repeat, starmap, zip_longest as lzip
-    from utils import it_drain as drain
+    from tools.misc import it_drain as drain
 
     flat = chain.from_iterable
 
@@ -110,7 +110,7 @@ class Types:
     from tools.hybrids import SequenceSetApi
     from tools.mappings import DequeCache
 
-    from utils import CacheNotationData
+    from tools.misc import CacheNotationData
 
     class EnumEntry(std.NamedTuple):
         member : Bases.Enum

@@ -13,7 +13,7 @@ from tools.sets import EMPTY_SET, setf
 from tools.sequences import SequenceApi
 from tools.mappings import dmap, MapCover
 # from types import MappingProxyType as MapProxy
-from utils import orepr
+from tools.misc import orepr
 
 from itertools import chain, islice
 from typing import (

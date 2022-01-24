@@ -40,7 +40,7 @@ from tools.mappings import MapCover, dmap
 from tools.hybrids import qsetf
 from tools.linked import linqset
 from tools.timing import StopWatch
-from utils import get_logic, orepr
+from tools.misc import get_logic, orepr
 
 from itertools import chain
 import itertools

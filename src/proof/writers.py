@@ -1,5 +1,5 @@
 from lexicals import LexWriter, Notation
-from utils import cat
+from tools.misc import cat
 from proof.tableaux import KEY, FLAG
 from os import path
 from copy import deepcopy

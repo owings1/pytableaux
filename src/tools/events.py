@@ -6,7 +6,7 @@ from errors import instcheck
 from tools.abcs import Abc, abcf
 from tools.decorators import raisr
 from tools.linked import linqset
-from utils import orepr
+from tools.misc import orepr
 
 from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, \
     MutableMapping, Sequence, ValuesView

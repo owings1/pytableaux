@@ -8,7 +8,7 @@ __all__ = (
 from errors import instcheck, subclscheck
 from tools.abcs import Abc, AbcMeta, P, T, F
 from tools.decorators import abstract, final, overload, static
-from utils import orepr
+from tools.misc import orepr
 
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import partial

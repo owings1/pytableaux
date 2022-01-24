@@ -6,7 +6,7 @@ from proof.rules import ClosureRule
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
 from proof.common import Filters, Branch, Node, NodeFilters, TabEvent
 from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
-from utils import get_logic
+from tools.misc import get_logic
 import examples
 from types import ModuleType, MappingProxyType
 import time

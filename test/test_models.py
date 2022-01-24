@@ -1,6 +1,6 @@
 from models import BaseModel, truth_table, truth_tables
 from lexicals import Atomic, Operator
-from utils import get_logic
+from tools.misc import get_logic
 from errors import *
 from pytest import raises
 def test_truth_table_cpl_negation():

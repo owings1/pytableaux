@@ -25,7 +25,7 @@ from models import BaseModel
 from tools.abcs import T
 from tools.mappings import MapAttrCover, dmap
 from tools.sets import EMPTY_SET
-from utils import orepr
+from tools.misc import orepr
 
 from .common import Access, Branch, Comparer, Node, RuleEvent, TabEvent, Target
 from .tableaux import Rule, Tableau

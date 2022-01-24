@@ -170,8 +170,8 @@ class SequenceProxy(SequenceApi[V]):
         return self
 
     def __repr__(self):
-        import utils
-        return utils.wraprepr(self, list(self))
+        import tools.misc as misc
+        return misc.wraprepr(self, list(self))
 
     @classmethod
     @abstract

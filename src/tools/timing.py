@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import errors as err
-import utils
+import tools.misc as misc
 from time import time as _time
 
 def _nowms() -> int:
@@ -63,7 +63,7 @@ class StopWatch:
         return self._running
 
     def __repr__(self):
-        return utils.wraprepr(self, self.elapsed)
+        return misc.wraprepr(self, self.elapsed)
 
     def __float__(self):
         return float(self.elapsed)

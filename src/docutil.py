@@ -31,7 +31,7 @@ from docutils import nodes
 from docutils.parsers.rst import Directive, directives, roles
 
 logger = logging.getLogger(__name__)
-from utils import cat, isstr, get_logic
+from tools.misc import cat, isstr, get_logic
 import examples
 from lexicals import \
     Constant, Variable, RenderSet, Predicates, Operator, LexWriter

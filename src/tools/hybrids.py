@@ -141,8 +141,8 @@ class qsetf(SequenceSetApi[V]):
         return reversed(self._seq_)
 
     def __repr__(self):
-        import utils
-        return utils.wraprepr(self, self._seq_)
+        import tools.misc as misc
+        return misc.wraprepr(self, self._seq_)
 
 class qset(MutableSequenceSetApi[V]):
     'MutableSequenceSetApi implementation backed by built-in set and list.'

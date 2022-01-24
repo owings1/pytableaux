@@ -17,7 +17,7 @@
 # ------------------
 #
 # pytableaux - Web App Configuration
-from utils import get_logic
+from tools.misc import get_logic
 from parsers import create_parser, notations as parser_notations, CharTable
 from lexicals import LexWriter
 import examples
