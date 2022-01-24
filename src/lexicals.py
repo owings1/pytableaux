@@ -28,7 +28,7 @@ __all__ = (
 ##############################################################
 
 from decorators import abstract, final, overload, static
-from tools.abcs import abcm, abcf
+from tools.abcs import abcm, abcf, T
 from tools.sequences import SequenceApi, seqf
 from tools.sets import SetApi, MutableSetApi, setf, setm, EMPTY_SET
 from tools.hybrids import qsetf, qset
@@ -49,6 +49,7 @@ from typing import (
     Iterator,
     SupportsIndex,
     TypeVar,
+    Any,
 )
 
 @static
@@ -67,8 +68,6 @@ class std:
     )
     from enum import auto, Enum, EnumMeta
 
-_T = TypeVar('_T')
-# _T_co = TypeVar('_T_co', covariant = True)
 En = TypeVar('En', bound = std.Enum)
 # _EM = type[En]|Iterable[En]
 @static
@@ -235,8 +234,7 @@ class Metas:
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        _lookup : Types.MapProxy[std.Any, Types.EnumEntry]
-        # _seq    : seqf[Bases.Enum]
+        _lookup : Types.MapProxy[Any, Types.EnumEntry]
         _seq    : seqf[Bases.Enum]
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Creation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -274,7 +272,7 @@ class Metas:
 
         @classmethod
         @final
-        def _create_index(cls, Class: type[Bases.Enum]) -> Types.MapProxy[std.Any, Types.EnumEntry]:
+        def _create_index(cls, Class: type[Bases.Enum]) -> Types.MapProxy[Any, Types.EnumEntry]:
             'Create the member lookup index'
             # Member to key set functions.
             keys_funcs = cls._default_keys, Class._member_keys
@@ -427,7 +425,7 @@ class Metas:
 
         Cache: std.ClassVar[Types.DequeCache]
 
-        def __call__(cls: _T|Bases.LexicalItem, *spec) -> _T|Bases.LexicalItem:
+        def __call__(cls: T|Bases.LexicalItem, *spec) -> T|Bases.LexicalItem:
             if len(spec) == 1:
                 if isinstance(spec[0], cls):
                     # Passthrough
@@ -622,7 +620,7 @@ class Bases:
 
         @overload
         @classmethod
-        def gen(cls: type[_T], n: int, first: _T|None = None, **opts) -> Iterator[_T]: ...
+        def gen(cls: type[T], n: int, first: T|None = None, **opts) -> Iterator[T]: ...
         @classmethod
         def gen(cls, n: int, first = None, **opts):
             'Generate items.'
@@ -634,10 +632,10 @@ class Bases:
 
         @classmethod
         @abstract
-        def first(cls: type[_T]) -> _T: ...
+        def first(cls: type[T]) -> T: ...
 
         @abstract
-        def next(self: _T, **kw) -> _T: ...
+        def next(self: T, **kw) -> T: ...
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Copy Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -833,14 +831,14 @@ class Bases:
 
         @overload
         @classmethod
-        def first(cls: type[_T]) -> _T: ...
+        def first(cls: type[T]) -> T: ...
         @classmethod
         def first(cls):
             'Return the first instance of this type.'
             return cls(cls.Coords.first)
 
         @overload
-        def next(self: _T, **kw) -> _T: ...
+        def next(self: T, **kw) -> T: ...
         def next(self, **kw):
             cls = type(self)
             idx, sub, *cargs = self.coords
@@ -1074,7 +1072,7 @@ class Predicate(Bases.CoordsItem):
         raise AttributeError('__objclass__')
 
     @abcf.temp
-    def sysset(prop: _T) -> _T:
+    def sysset(prop: T) -> T:
         name = prop.fget.__name__
         @d.wraps(prop.fget)
         def f(self, value):
@@ -1934,14 +1932,14 @@ class RenderSet(Types.CacheNotationData):
         self.name: str = data['name']
         self.notation = Notation(data['notation'])
         self.encoding: str = data['encoding']
-        self.renders: std.Mapping[std.Any, Callable] = data.get('renders', {})
-        self.formats: std.Mapping[std.Any, str] = data.get('formats', {})
-        self.strings: std.Mapping[std.Any, str] = data.get('strings', {})
+        self.renders: std.Mapping[Any, Callable[..., str]] = data.get('renders', {})
+        self.formats: std.Mapping[Any, str] = data.get('formats', {})
+        self.strings: std.Mapping[Any, str] = data.get('strings', {})
         self.data = data
         self.notation.encodings.add(self.encoding)
         self.notation.rendersets.add(self)
 
-    def strfor(self, ctype, value) -> str:
+    def strfor(self, ctype, value):
         if ctype in self.renders:
             return self.renders[ctype](value)
         if ctype in self.formats:
@@ -1997,31 +1995,31 @@ class BaseLexWriter(LexWriter, metaclass = Metas.LexWriter):
     @abstract
     def _write_operated(self, item: Operated): ...
 
-    def _strfor(self, *args, **kw) -> str:
+    def _strfor(self, *args, **kw):
         return self.renderset.strfor(*args, **kw)
 
     def _write_plain(self, item: Bases.Lexical):
         return self._strfor(item.TYPE, item)
 
-    def _write_coordsitem(self, item: Bases.CoordsItem) -> str:
+    def _write_coordsitem(self, item: Bases.CoordsItem):
         return ''.join((
             self._strfor(item.TYPE, item.index),
             self._write_subscript(item.subscript),
         ))
 
-    def _write_predicate(self, item: Predicate) -> str:
+    def _write_predicate(self, item: Predicate):
         return ''.join((
             self._strfor((LexType.Predicate, item.is_system), item.index),
             self._write_subscript(item.subscript),
         ))
 
-    def _write_quantified(self, item: Quantified) -> str:
+    def _write_quantified(self, item: Quantified):
         return ''.join(map(self._write, item.items))
 
-    def _write_predicated(self, item: Predicated) -> str:
+    def _write_predicated(self, item: Predicated):
         return ''.join(map(self._write, (item.predicate, *item)))
 
-    def _write_subscript(self, s: int) -> str:
+    def _write_subscript(self, s: int):
         if s == 0: return ''
         return self._strfor('subscript', s)
 
@@ -2038,7 +2036,7 @@ class StandardLexWriter(BaseLexWriter):
     notation = Notation.standard
     defaults = {'drop_parens': True}
 
-    def write(self, item: Bases.Lexical) -> str:
+    def write(self, item: Bases.Lexical):
         if self.opts['drop_parens'] and isinstance(item, Operated):
             return self._write_operated(item, drop_parens = True)
         return super().write(item)

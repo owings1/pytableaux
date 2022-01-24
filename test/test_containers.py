@@ -4,8 +4,9 @@ from errors import *
 from events import EventsListeners#, Listener, Listeners, EventEmitter
 from lexicals import *
 
-from tools.sequences import *
 from tools.sets import *
+from tools.sequences import *
+from tools.mappings import *
 from tools.hybrids import *
 from tools.linked import *
 

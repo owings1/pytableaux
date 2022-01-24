@@ -22,7 +22,7 @@ from __future__ import annotations
 from decorators import abstract, final, static
 from lexicals import Constant, Sentence
 from models import BaseModel
-from tools.mappings import MapAttrView
+from tools.mappings import MapAttrCover, dmap
 from tools.sets import EMPTY_SET
 from utils import orepr
 
@@ -75,7 +75,7 @@ class AdzHelper:
                     break
         return float(close_count / min(1, len(target['adds'])))
 
-class BranchCache(MutableMapping[Branch, T]):
+class BranchCache(dmap[Branch, T]):
 
     _valuetype = bool
 
@@ -88,42 +88,9 @@ class BranchCache(MutableMapping[Branch, T]):
     def __init__(self, *args, **kw):
         pass
 
-    def get(self, branch: Branch, *args):
-        return self.__cache.get(branch, *args)
-
-    def keys(self) -> KeysView[Branch]:
-        return self.__cache.keys()
-
-    def values(self) -> ValuesView[T]:
-        return self.__cache.values()
-
-    def items(self) -> ItemsView[Branch, T]:
-        return self.__cache.items()
-
-    def __getitem__(self, branch: Branch) -> T:
-        return self.__cache[branch]
-
-    def __setitem__(self, branch: Branch, value: T):
-        self.__cache[branch] = value
-
-    def __delitem__(self, branch: Branch):
-        del(self.__cache[branch])
-
-    def __contains__(self, branch: Branch):
-        return branch in self.__cache
-
-    def __len__(self):
-        return len(self.__cache)
-
-    def __iter__(self) -> Iterator[Branch]:
-        return iter(self.__cache)
-
-    def __reversed__(self) -> Iterator[Branch]:
-        return reversed(self.__cache)
-
     def __new__(cls, rule: Rule, *args):
         inst = super().__new__(cls)
-        inst.__cache = {}
+        # inst.__cache = {}
         inst.rule = rule
         inst.tab = rule.tableau
         def after_branch_add(branch: Branch):
@@ -426,7 +393,7 @@ class FilterHelper(FilterNodeCache):
     rule: Rule
     callcount: int
     __fmap: dict
-    filters: MapAttrView[Comparer]
+    filters: MapAttrCover[Comparer]
     __to_discard: set
 
     def __call__(self, node: Node, branch: Branch) -> bool:
@@ -493,7 +460,7 @@ class FilterHelper(FilterNodeCache):
         self.rule = rule
         self.callcount = 0
         self.__fmap = {}#OrderedDict()
-        self.filters = MapAttrView(self.__fmap)
+        self.filters = MapAttrCover(self.__fmap)
         self.__to_discard = set()
         rawvalue = getattr(rule, self.__class__.clsattr_node, EMPTY_SET)
         for item in rawvalue:

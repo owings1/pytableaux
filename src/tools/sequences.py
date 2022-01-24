@@ -2,7 +2,7 @@ from __future__ import annotations
 
 __all__ = (
     'SequenceApi', 'MutableSequenceApi', 'SequenceProxy', 'seqf', 'seqm',
-    'seqdeq',
+    'DeqSeq', 'HookedDeqSeq',
 )
 
 NOARG = object()
@@ -17,8 +17,6 @@ import decorators as d
 from decorators import abstract, final, overload
 from tools.abcs import abcm, abcf, T, P, F
 
-class std:
-    from collections import deque
 class bases:
     from collections import deque
     from tools.abcs import Copyable
@@ -255,7 +253,7 @@ class seqm(MutableSequenceApi[V], list[V]):
     __slots__ = EMPTY
     insert = list.insert
 
-class seqdeq(bases.deque[V], MutableSequenceApi[V]):
+class DeqSeq(bases.deque[V], MutableSequenceApi[V]):
     __slots__ = EMPTY
 
     __imul__ = MutableSequenceApi.__imul__
@@ -266,6 +264,8 @@ class seqdeq(bases.deque[V], MutableSequenceApi[V]):
     copy     = MutableSequenceApi.copy
     __copy__ = MutableSequenceApi.__copy__
 
+class HookedDeqSeq(DeqSeq[V]):
+    __slots__ = EMPTY
     def __init__(self, values: Iterable = None, /, maxlen: int|None = None):
         super().__init__(map(self._new_value, values), maxlen)
 

@@ -4,32 +4,25 @@ __all__ = 'Node', 'Branch', 'Target'
 
 from callables import Caller, gets, preds
 from decorators import abstract, overload, static, final, lazy
-from errors import instcheck as _instcheck, Emsg
+from errors import instcheck as instcheck, Emsg
 from events import EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
-from tools.abcs import Abc, AbcMeta
+from tools.abcs import Abc
 from tools.sets import EMPTY_SET, setf
-from tools.mappings import MutableMappingApi, dmap, mapf
+from tools.sequences import SequenceApi
+from tools.mappings import MappingApi, dmap, MapCover
 from utils import drepr, orepr
 
 from collections.abc import ItemsView, \
     Iterator, KeysView, Sequence, ValuesView
 from itertools import islice
-from keyword import iskeyword
-from types import MappingProxyType
-from typing import Any, Callable, Iterable, ClassVar, Mapping, NamedTuple, TypeVar
+from typing import Any, Callable, Iterable, Iterator, ClassVar, Mapping, NamedTuple, TypeVar
 import enum
-# from collections import defaultdict, deque
-# from inspect import getmembers, isclass
-# from typing import Annotated, Final, Union, final
-# from enum import Enum, auto
-# import typing
-# from copy import copy
-# from utils import RetType, T
 
 import operator as opr
 
+EMPTY = ()
 class BranchEvent(enum.Enum):
     AFTER_BRANCH_CLOSE = enum.auto()
     AFTER_NODE_ADD     = enum.auto()
@@ -66,28 +59,21 @@ class FLAG(enum.Flag):
     TRUNK_BUILT = 32
 
 
-class NodeMeta(AbcMeta):
-    def __call__(cls, props = {}):
-        if isinstance(props, cls):
-            return props
-        return super().__call__(props)
-
-
-class Node(Mapping, metaclass = NodeMeta):
+class Node(MappingApi):
     'A tableau node.'
 
     __slots__ = 'props', 'step', 'ticked', '_is_access', '_is_modal', '_worlds'
-    defaults = MappingProxyType({'world': None, 'designated': None})
+    defaults = MapCover({'world': None, 'designated': None})
 
-    def __init__(self, props: Mapping = None):
-        #: A dictionary of properties for the node.
-        # p = dict(self.defaults)
-        self.props = mapf(
-            props if props is not None else {}
+    def __new__(cls, arg = None, /, **kw):
+        if not len(kw) and isinstance(arg, cls):
+            return arg
+        return super().__new__(cls)
+
+    def __init__(self, props: Mapping = None, /):
+        self.props = MapCover(
+            dmap(props) if props is not None else dmap()
         )
-        # p = {}
-        # p.update(props)
-        # self.props = MappingProxyType(p)
 
     @property
     def id(self) -> int:
@@ -185,25 +171,9 @@ class Node(Mapping, metaclass = NodeMeta):
     def __copy__(self):
         return self.__class__(self.props)
 
-    def __or__(self, other) -> Mapping:
-        # self | other
-        if isinstance(other, self.__class__):
-            return self.props | other.props
-        if isinstance(other, self.props.__class__):
-            return self.props | other
-        if isinstance(other, dict):
-            return dict(self.props) | other
-        return NotImplemented
-
-    def __ror__(self, other) -> Mapping:
-        # other | self
-        if isinstance(other, self.__class__):
-            return other.props | self.props
-        if isinstance(other, self.props.__class__):
-            return other | self.props
-        if isinstance(other, dict):
-            return other | dict(self.props)
-        return NotImplemented
+    @classmethod
+    def _oper_res_type(cls, othercls):
+        return dmap
 
     def __repr__(self):
         return orepr(self,
@@ -221,8 +191,6 @@ class Node(Mapping, metaclass = NodeMeta):
     def __delattr__(self, attr):
         raise AttributeError('Node is readonly')
 
-NodeType = Node|Mapping
-
 class Access(NamedTuple):
 
     w1: int
@@ -237,7 +205,7 @@ class Access(NamedTuple):
         return self.w2
 
     @classmethod
-    def fornode(cls, node: NodeType) -> tuple[int, int]:
+    def fornode(cls, node: Mapping) -> tuple[int, int]:
         return cls(node['world1'], node['world2'])
 
     def todict(self) -> dict[str, int]:
@@ -407,7 +375,7 @@ class NodeFilters(Filters):
             return n
 
 
-class Branch(Sequence[Node], EventEmitter, Abc):
+class Branch(SequenceApi[Node], EventEmitter, Abc):
     'Represents a tableau branch.'
 
     def __init__(self, parent: Branch = None, /):
@@ -491,7 +459,7 @@ class Branch(Sequence[Node], EventEmitter, Abc):
         """
         return self.__nextworld
 
-    def has(self, props: NodeType, ticked: bool = None) -> bool:
+    def has(self, props: Mapping, ticked: bool = None) -> bool:
         """
         Check whether there is a node on the branch that matches the given properties,
         optionally filtered by ticked status.
@@ -508,7 +476,7 @@ class Branch(Sequence[Node], EventEmitter, Abc):
     #     """
     #     return (w1, w2) in self.__pidx['w1Rw2']
 
-    def has_any(self, props_list: Iterable[NodeType], ticked: bool = None) -> bool:
+    def has_any(self, props_list: Iterable[Mapping], ticked: bool = None) -> bool:
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``True``
         when the first match is found.
@@ -518,7 +486,7 @@ class Branch(Sequence[Node], EventEmitter, Abc):
                 return True
         return False
 
-    def has_all(self, props_list: Iterable[NodeType], ticked: bool = None) -> bool:
+    def has_all(self, props_list: Iterable[Mapping], ticked: bool = None) -> bool:
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``False``
         when the first non-match is found.
@@ -528,7 +496,7 @@ class Branch(Sequence[Node], EventEmitter, Abc):
                 return False
         return True
 
-    def find(self, props: NodeType, ticked: bool = None) -> Node:
+    def find(self, props: Mapping, ticked: bool = None) -> Node:
         """
         Find the first node on the branch that matches the given properties, optionally
         filtered by ticked status. Returns ``None`` if not found.
@@ -538,14 +506,14 @@ class Branch(Sequence[Node], EventEmitter, Abc):
             return results[0]
         return None
 
-    def find_all(self, props: NodeType, ticked: bool = None) -> list[Node]:
+    def find_all(self, props: Mapping, ticked: bool = None) -> list[Node]:
         """
         Find all the nodes on the branch that match the given properties, optionally
         filtered by ticked status. Returns a list.
         """
         return self.search_nodes(props, ticked = ticked)
 
-    def search_nodes(self, props: NodeType, ticked: bool = None, limit: int = None) -> list[Node]:
+    def search_nodes(self, props: Mapping, ticked: bool = None, limit: int = None) -> list[Node]:
         """
         Find all the nodes on the branch that match the given properties, optionally
         filtered by ticked status, up to the limit, if given. Returns a list.
@@ -563,7 +531,7 @@ class Branch(Sequence[Node], EventEmitter, Abc):
                 results.append(node)
         return results
 
-    def append(self, node: NodeType) -> Branch:
+    def append(self, node: Mapping) -> Branch:
         """
         Append a node (Node object or dict of props). Returns self.
         """
@@ -591,7 +559,7 @@ class Branch(Sequence[Node], EventEmitter, Abc):
 
     add = append
 
-    def extend(self, nodes: Iterable[NodeType]) -> Branch:
+    def extend(self, nodes: Iterable[Mapping]) -> Branch:
         'Add multiple nodes. Returns self.'
         for node in nodes:
             self.append(node)
@@ -756,33 +724,30 @@ class Branch(Sequence[Node], EventEmitter, Abc):
             closed = self.closed,
         )
 
+    @classmethod
+    def _from_iterable(cls, nodes):
+        b = cls()
+        b.extend(nodes)
+        return b
 
-class TargetMeta(AbcMeta):
-    ...
 class Target(dmap[str, Any]):
 
-    __reqd = {'branch'}
-    __attrs = __reqd | {
-        'rule', 'node', 'nodes', 'world', 'world1', 'world2',
+    __attrs =  {
+        'branch', 'rule', 'node', 'nodes', 'world', 'world1', 'world2',
         'sentence', 'designated', 'flag'
     }
 
     branch: Branch
     node: Node
 
-    @classmethod
-    def create(cls, obj, **context):
-        """
-        Always returns a Target object.
-        :param obj: True, Target, dict.
-        """
+    def __new__(cls, obj = None, /, **context):
         if isinstance(obj, cls):
             obj.update(context)
             return obj
-        return cls(obj, **context)
+        return super().__new__(cls)
 
     @classmethod
-    def list(cls, objs, **context) -> list:
+    def list(cls, objs, **context) -> Sequence[Target]:
         """
         Normalize to a list, possibly empty, of Target objects.
         
@@ -795,17 +760,11 @@ class Target(dmap[str, Any]):
             - tuple, list, or iterator.
         """
         # Falsy
-        if not objs:
-            return []
-        if isinstance(objs, (cls, dict, bool)):
-            # Cast to list
-            objs = [objs,]
-        elif not (
-            isinstance(objs, (tuple, list)) or
-            callable(getattr(objs, '__next__', None))
-        ):
-            raise TypeError('Cannot create Target from %s object' % type(objs))
-        return [cls.create(obj, **context) for obj in objs]
+        if not objs: return EMPTY
+        if isinstance(objs, Mapping):
+            return cls(objs, **context),
+        instcheck(objs, (Sequence, Iterator))
+        return *(cls(obj, **context) for obj in objs),
 
     @property
     def type(self) -> str:
@@ -820,27 +779,17 @@ class Target(dmap[str, Any]):
         dict.update(inst, self)
         return inst
 
-    def __init__(self, obj = None, /, **context):
-        if isinstance(obj, __class__):
-            raise TypeError(obj)
-        if isinstance(obj, bool):
-            raise TypeError(obj)
+    def __init__(self, obj, /, **context):
         if not obj:
             raise ValueError('Cannot create a Target from a falsy object: %s' % type(obj))
-        if not isinstance(obj, (bool, dict)):
-            raise TypeError('Cannot create a Target from a %s' % type(obj))
-        # if obj != True:
-        #     self.update(obj)
-        if obj is not None:
-            self |= obj
-        self |= context
-        for attr in self.__reqd:
-            if attr not in self:
-                raise TypeError("Missing required keys: %s" % self.__reqd.difference(self))
+        self.update(obj)
+        self.update(context)
+        if 'branch' not in self:
+            raise TypeError("Missing required key: %s" % 'branch')
 
     def __setitem__(self, key: str, val):
         if not preds.isattrstr(key):
-            _instcheck(key, str)
+            instcheck(key, str)
             raise KeyError('Invalid target key: %s' % key)
         if self.get(key, val) != val:
             raise Emsg.ValueConflict(val, self[key], key)

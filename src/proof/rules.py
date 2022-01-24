@@ -45,8 +45,7 @@ class ClosureRule(Rule):
             if target is True:
                 target = {}
             target['branch'] = branch
-            return Target.create(target),
-            # return (Target.create(target, branch = branch),)
+            return Target(target),
 
     def _apply(self, target: Target):
         target.branch.close()

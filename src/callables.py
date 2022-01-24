@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+__all__ = (
+    'Caller', 'calls', 'gets', 'sets', 'dels', 'raiser',
+    'cchain', 'preds',
+)
+
 from decorators import abstract, final, overload, static
 from errors import instcheck, subclscheck
 from tools.abcs import Abc, AbcMeta, P, T, F
@@ -8,7 +13,10 @@ from utils import orepr
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import partial
 import operator as opr
-from typing import Any, Literal, ParamSpec, Sequence, TypeVar
+from typing import (
+    Any, Callable, Iterable, Iterator, Literal, Mapping, Sequence,
+    ParamSpec, TypeVar
+)
 
 # P = ParamSpec('P')
 K = TypeVar('K')
@@ -182,9 +190,10 @@ class Caller(Callable[P, T], Abc):
         if not isinstance(other, type(self)):
             return NotImplemented
         try:
-            a, b = self.attritems(), other.attritems()
-            itemszip = zip(a, b, strict = True)
-            return all(opr.eq(*items) for items in itemszip)
+            return all(
+                opr.eq(*items) for items in
+                zip(self.attritems(), other.attritems(), strict = True)
+            )
         except ValueError:
             return False
 
@@ -204,7 +213,6 @@ class Caller(Callable[P, T], Abc):
 
     def asobj(self):
         return _objwrap(self)
-
 
 @static
 class calls:
@@ -327,7 +335,6 @@ class raiser(Caller):
     attrhints = dict(ErrorType = Flag.Blank, eargs = Flag.Blank)
     __slots__ = tuple(attrhints)
 
-
 @static
 class funciter:
     def reduce(funcs: Iterable[F], *args, **kw) -> Any:
@@ -394,6 +401,4 @@ class preds:
 
     def true(_): return True
     def false(_): return False
-
-('Chain', 'calls', 'gets', 'sets', 'dels', 'raiser','cchain', 'preds')
 

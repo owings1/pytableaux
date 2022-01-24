@@ -1,295 +1,283 @@
 from __future__ import annotations
 
 __all__ = (
-    'MappingApi', 'MutableMappingApi', 'MapAttrView', 'DequeCache',
-    'dmap', 'mapf', 'miter',
+    'MappingApi',
+    'MutableMappingApi',
+    'MapCover',
+    'MapAttrCover',
+    'dmap',
+    'ItemsIterator',
+    'DequeCache',
 )
 
-from tools.abcs import Abc, Copyable, abcf, F, T
-from decorators import abstract, static, final, overload, fixed, wraps
-from errors import instcheck
+from tools.abcs import Abc, Copyable, abcf, F, T, P, RT
+from callables import preds
+from decorators import abstract, static, final, overload, fixed, membr, wraps
+from errors import Emsg, instcheck
 
 from typing import (
-    Callable, Iterable, Iterator, Mapping, MutableMapping,
-    Any, TypeVar,
+    Any, Callable, Iterable,
+    #  Literal, Sequence,
+    TypeVar,
 )
-
-@static
-class std:
-    from collections import deque
-    from collections.abc import Collection
-    from types import MappingProxyType as MapProxy
+from _collections_abc import (
+    Collection, Iterator, Mapping, MutableMapping, Set
+)
+from collections import deque
+from types import MappingProxyType as MapProxy
 
 KT = TypeVar('KT')
 VT = TypeVar('VT')
 MT = TypeVar('MT', bound = Mapping)
-KV = TypeVar('KV', bound = tuple[Any, Any])
-Itemable = TypeVar('Itemable', Mapping, Iterable)
-# MMT = TypeVar('MMT', bound = MutableMapping)
-# FT = TypeVar('FT', bound = Callable[..., Any])
-_NOARG = object()
-EMPTY = tuple()
+
+EMPTY = ()
+FCACHE_MAXMISS = 3
+FNOTIMPL = fixed.value(NotImplemented)()
 
 from itertools import (
-    chain as _chain,
+    chain,
+    filterfalse,
+    starmap,
 )
-import operator as opr
 from operator import (
     not_,
     truth
 )
 
+class FuncResolvers(dict[tuple[Callable, Callable], Callable]):
 
-def _true(_): return True
+    __slots__ = EMPTY
 
-class miter(Iterator[tuple[KT, VT]]):
+    def __missing__(self, pair):
+        while len(self) > FCACHE_MAXMISS and len(self) > 0:
+            self.pop(next(iter(self)))
+        res_create, get_res_iter = pair
+        def cached_resolver(lhs, rhs):
+            return res_create(get_res_iter(lhs, rhs))
+        cached_resolver.__qualname__ = cached_resolver.__name__
+        return self.setdefault(pair, cached_resolver)
 
-    __slots__ = '_gen_', '__next__'
+class FuncCache(dict[type, Callable]):
 
-    @overload
-    def __init__(self, keys: Iterable[KT], /, vget: Callable[[KT], VT], **kw): ...
-    @overload
-    def __init__(self, mapping: Mapping[KT, VT], /, **kw):...
-    @overload
-    def __init__(self, items: Iterable[tuple[KT, VT]], /, **kw): ...
-    def __init__(self, obj, /, *, 
-        vget: Callable[[KT], VT] = None,
-        kpred: Callable[[Any], Any] = _true,
-        vpred: Callable[[Any], Any] = _true,
-        koper: Callable[[Any], Any] = truth,
-        voper: Callable[[Any], Any] = truth,
-    ):
-        if vget is None:
-            if hasattr(obj, 'keys'):
-                it = self._gen1(obj.keys, obj.__getitem__, kpred, vpred, koper, voper)
-            else:
-                it = self._gen2(obj, kpred, vpred, koper, voper)
+    __slots__ = 'get_res_iter', 'get_res_type',
+
+    def __init__(self, lhs_type: type[MappingApi], oper_name: str, /):
+        self.get_res_iter = getattr(lhs_type, '_iter' + oper_name)
+        if oper_name.startswith('__r'):
+            self.get_res_type = lhs_type._roper_res_type
         else:
-            it = self._gen1(obj.__iter__, vget, kpred, vpred, koper, voper)
-        self.__next__ = it.__next__
+            self.get_res_type = lhs_type._oper_res_type
 
-    def __iter__(self):
-        return self
+    def __missing__(self, rhs_type):
+        while len(self) > FCACHE_MAXMISS and len(self) > 0:
+            self.pop(next(iter(self)))
+        return self.setdefault(rhs_type, self.resolve)
 
-    @overload
-    def __next__(self) -> tuple[KT, VT]:...
-    del(__next__)
+    def resolve(self, lhs, rhs, /):
+        rhs_type = type(rhs)
+        if not issubclass(rhs_type, Iterable):
+            return self.reject(rhs_type)
+        res_type = self.get_res_type(rhs_type)
+        if res_type is NotImplemented:
+            return self.reject(rhs_type)
+        get_res_iter = self.get_res_iter
+        it = get_res_iter(lhs, rhs)
+        if isinstance(it, Mapping):
+            res_create = getattr(res_type, '_from_mapping', res_type)
+        elif isinstance(it, Iterable):
+            res_create = getattr(res_type, '_from_iterable', res_type)
+        elif it is NotImplemented:
+            return self.reject(rhs_type)
+        else:
+            raise Emsg.InstCheck(it, Iterable)
+        res = res_create(it)
+        self[rhs_type] = RESOLV_CACHE[res_create, get_res_iter]
+        return res
 
-    @static
-    def _gen1(getkeys, vget, kpred, vpred, koper, voper):
-        for k in getkeys():
-            if koper(kpred(k)):
-                v = vget(k)
-                if voper(vpred(v)):
-                    yield k, v
+    def reject(self, rhs_type):
+        self[rhs_type] = FNOTIMPL
+        return NotImplemented
 
-    @static
-    def _gen2(items, kpred, vpred, koper, voper):
-        for k, v in items:
-            if koper(kpred(k)) and voper(vpred(v)):
-                yield k, v
+class TypeFuncsCache(dict[str, FuncCache]):
+
+    __slots__ = 'lhs_type',
+
+    def __init__(self, lhs_type: type[MappingApi]):
+        self.lhs_type = lhs_type
+
+    def __missing__(self, oper_name: str, FuncCache = FuncCache):
+        return self.setdefault(oper_name, FuncCache(self.lhs_type, oper_name))
+
+class OperFuncsCache(dict[type[Mapping], TypeFuncsCache]):
+
+    __slots__ = EMPTY
+
+    def __missing__(self, lhs_type, TypeFuncsCache = TypeFuncsCache):
+        while len(self) > FCACHE_MAXMISS and len(self) > 0:
+            self.pop(next(iter(self)))
+        return self.setdefault(lhs_type, TypeFuncsCache(lhs_type))
+
+RESOLV_CACHE = FuncResolvers()
+OPER_FCACHE = OperFuncsCache()
 
 class MappingApi(Mapping[KT, VT], Copyable):
 
     __slots__ = EMPTY
 
     @abcf.temp
-    def oper(getiter: Callable[..., Iterable]) -> Callable[[MT, Mapping], MT]:
-        if getiter.__name__.startswith('__r'):
-            fromiter = '_rfrom_iterable'
-        else:
-            fromiter = '_from_iterable'
-        @wraps(getiter)
+    @membr.defer
+    def oper(member: membr):
+        oper_name = member.name
+        @wraps(member)
         def f(self, other):
-            if not isinstance(other, Mapping):
-                return NotImplemented
-            return getattr(self, fromiter)(getiter(self, other))
+            return OPER_FCACHE[type(self)][oper_name][type(other)](self, other)
         return f
 
-    @oper
-    def __or__(self, other):
-        return _chain(miter(self), miter(other))
+    __or__ = __ror__ = __and__ = __rand__ = __sub__ = __rsub__ = __rxor__ = oper()
 
-    @oper
-    def __ror__(self, other):
-        return _chain(miter(other), miter(self))
+    def _iter__or__(self, other):
+        return chain(ItemsIterator(self), ItemsIterator(other))
 
-    @oper
-    def __and__(self, other):
-        return miter(self, kpred = other.__contains__)
+    def _iter__ror__(self, other):
+        if isinstance(other, Set):
+            return chain(other, self)
+        return chain(ItemsIterator(other), ItemsIterator(self))
 
-    @oper
-    def __rand__(self, other):
-        return miter(other, kpred = self.__contains__)
+    def _iter__and__(self, other):
+        if not isinstance(other, Set):
+            return NotImplemented
+        return ItemsIterator(self, kpred = other.__contains__)
 
-    @oper
-    def __sub__(self, other):
-        return miter(self, kpred = other.__contains__, koper = not_)
+    def _iter__rand__(self, other):
+        if not isinstance(other, Set):
+            return NotImplemented
+        return filter(self.__contains__, other)
 
-    @oper
-    def __rsub__(self, other):
-        return miter(other, kpred = self.__contains__, koper = not_)
+    def _iter__sub__(self, other):
+        if not isinstance(other, Set):
+            return NotImplemented
+        return ItemsIterator(self, kpred = other.__contains__, koper = not_)
 
-    @oper
-    def __xor__(self, other):
-        return _chain(
-            miter(self, kpred = other.__contains__, koper = not_),
-            miter(other, self.__contains__, koper = not_),
-        )
+    def _iter__rsub__(self, other):
+        if not isinstance(other, Set):
+            return NotImplemented
+        return filterfalse(other, self.__contains__)
 
-    @oper
-    def __rxor__(self, other):
-        return _chain(
-            miter(other, kpred = self.__contains__, koper = not_),
-            miter(self, kpred = other.__contains__, koper = not_),
+    def _iter__rxor__(self, other):
+        if not isinstance(other, Set):
+            return NotImplemented
+        return chain(
+            filterfalse(self.__contains__, other),
+            filterfalse(other.__contains__, self),
         )
 
     def copy(self):
-        return self._from_iterable(miter(self))
+        return self._from_mapping(self)
 
     @classmethod
-    def _from_iterable(cls: type[MT], it: Iterable) -> MT:
+    def _from_mapping(cls: type[MT], it: Mapping) -> MT:
         return cls(it)
 
-    _rfrom_iterable = _from_iterable
-
-class mapf(MappingApi[KT, VT]):
-    'Fixed mapping.'
-    __slots__ = '_'
-    _: Mapping[KT, VT]
-    _mapping_basecls = std.MapProxy
+    @classmethod
+    def _from_iterable(cls: type[MT], it: Iterable[tuple[Any, Any]]) -> MT:
+        return NotImplemented
 
     @classmethod
-    def ref(cls: type[MT], mapping: Mapping) -> MT:
-        'Create a reference-only object to a mapping.'
-        instcheck(mapping, Mapping)
-        inst = cls.__new__(cls)
-        inst._ = mapping
-        return inst
+    def _oper_res_type(cls, rhs_type: type[Iterable]):
+        return cls
 
-    @overload
-    def __init__(self, mapping: Mapping): ...
-    @overload
-    def __init__(self, items: Iterable): ...
-    @overload
-    def __init__(self, **kwargs): ...
+    @classmethod
+    def _roper_res_type(cls, rhs_type: type[Iterable]):
+        if issubclass(rhs_type, Set):
+            return rhs_type
+        return cls._oper_res_type(rhs_type)
 
-    def __init__(self, obj = None, /, **kw):
-        if obj is not None:
-            kw.update(obj)
-        self._ = self._mapping_basecls(kw)
+class MapGetAttr(MappingApi[Any, VT]):
+    'A Mapping with attribute access.'
+
+    __slots__ = EMPTY
+
+    def __getattr__(self, name: str) -> VT:
+        if name in self:
+            return self[name]
+        return super().__getattr__(name)
+
+    def __dir__(self):
+        return list(filter(preds.isattrstr, self))
+
+class MapCover(MappingApi[KT, VT]):
+    'Mapping reference.'
+
+    __slots__ = '__m',
+    __m: Mapping[KT, VT]
+
+    def __init__(self, mapping):
+        self.__m = instcheck(mapping, Mapping)
 
     def __len__(self):
-        return len(self._)
-
+        return len(self.__m)
     def __iter__(self):
-        return iter(self._)
-
-    def __reversed__(self) -> reversed[KT]:
-        return reversed(self._)
-
+        return iter(self.__m)
+    def __reversed__(self) -> Iterator[KT]:
+        return reversed(self.__m)
     def __getitem__(self, key):
-        return self._[key]
-
+        return self.__m[key]
     def __repr__(self):
         return repr(dict(self))
 
-    # .... protect _
+    @classmethod
+    def _from_iterable(cls, it):
+        return cls(dict(it))
 
-    def __setattr__(self, name, value):
-        if name == '_' and hasattr(self, name):
-            raise AttributeError(name)
-        super().__setattr__(name, value)
-
-    def __delattr__(self, name):
-        if name == '_':
-            raise AttributeError(name)
-        super().__delattr__(name)
-
-    def __dir__(self):
-        return [n for n in super().__dir__() if n != '_']
+class MapAttrCover(MapCover[KT, VT], MapGetAttr[VT]):
+    'MapCover + MapGetAttr'
+    __slots__ = EMPTY
 
 class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
 
     __slots__ = EMPTY
 
-    @abcf.temp
-    def ioper(apply: Callable[[T], Any]) -> Callable[[T, Mapping], T]:
-        @wraps(apply)
-        def f(self, other):
-            if not isinstance(other, Mapping):
-                return NotImplemented
-            apply(self, other)
-            return self
-        return f
-
-    @ioper
     def __ior__(self, other):
-        for k in other:
-            self[k] = other[k]
+        for _ in starmap(self.__setitem__, ItemsIterator(other)):
+            pass
+        return self
 
-    @ioper
     def __iand__(self, other):
-        for k in other:
-            if k not in self:
-                del(self[k])
-    @ioper
+        if not isinstance(other, Set):
+            return NotImplemented
+        for _ in map(self.__delitem__,
+            tuple(filterfalse(other.__contains__, self))
+        ): pass
+        return self
+
     def __isub__(self, other):
-        for k in other:
-            if k in self:
-                del(self[k])
-    @ioper
-    def __ixor__(self, other):
-        for k in other:
-            if k in self:
-                del(self[k])
-        for k in self:
-            if k in other:
-                del(self[k])
+        if not isinstance(other, Set):
+            return NotImplemented
+        for _ in map(self.__delitem__,
+            tuple(filter(self.__contains__, other))
+        ): pass
+        return self
 
-class dmap(dict, MutableMappingApi[KT, VT]):
-    pass
-    __slots__ = EMPTY
-    copy = MutableMappingApi.copy
-    __or__ = MutableMappingApi.__or__
-    __ror__ = MutableMappingApi.__ror__
-
-class MapAttrView(MappingApi[str, VT], Copyable):
-    'A Mapping with attribute access.'
-
-    __slots__ = '_mapping',
-
-    def __init__(self, base: Mapping[str, VT]):
-        self._mapping = base
-
-    def __getattr__(self, name: str) -> VT:
-        try:
-            return self._mapping[name]
-        except KeyError:
-            raise AttributeError(name)
-
-    def __dir__(self):
-        from callables import preds
-        return list(filter(preds.isidentifier, self))
-
-    def copy(self):
-        inst = object.__new__(self.__class__)
-        inst._mapping = self._mapping
+    @classmethod
+    def _from_iterable(cls, it):
+        inst = cls.__new__(cls)
+        for _ in starmap(inst.__setitem__, it): pass
         return inst
 
-    def __len__(self):
-        return len(self._mapping)
+class dmap(dict, MutableMappingApi[KT, VT]):
+    'Mutable mapping api from dict.'
 
-    def __getitem__(self, key: str) -> VT:
-        return self._mapping[key]
+    __slots__ = EMPTY
 
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._mapping)
+    copy    = MutableMappingApi.copy
+    __or__  = MutableMappingApi.__or__
+    __ror__ = MutableMappingApi.__ror__
 
-    def __reversed__(self) -> Iterator[str]:
-        return reversed(self._mapping)
+    @classmethod
+    def _from_iterable(cls, it):
+        return cls(it)
 
-class DequeCache(std.Collection[VT], Abc):
+class DequeCache(Collection[VT], Abc):
 
     __slots__ = EMPTY
 
@@ -319,12 +307,12 @@ class DequeCache(std.Collection[VT], Abc):
         instcheck(Vtype, type)
 
         idx      : dict[Any, VT] = {}
-        idxproxy : Mapping[Any, VT] = std.MapProxy(idx)
+        idxproxy : Mapping[Any, VT] = MapProxy(idx)
 
         rev      : dict[VT, set] = {}
-        revproxy : Mapping[VT, set] = std.MapProxy(rev)
+        revproxy : Mapping[VT, set] = MapProxy(rev)
 
-        deck     : std.deque[VT] = std.deque(maxlen = maxlen)
+        deck     : deque[VT] = deque(maxlen = maxlen)
 
         class Api(DequeCache[VT]):
 
@@ -371,7 +359,63 @@ class DequeCache(std.Collection[VT], Abc):
         Api.__qualname__ = 'DequeCache.Api'
         return Api()
 
-del(abstract, static, final, overload, wraps)
+class ItemsIterator(Iterator[tuple[KT, VT]]):
+    'Mapping items iterator.'
+
+    __slots__ = '_gen_',
+
+    def __new__(cls, obj, /, *args, **kw):
+        if type(obj) is cls and not len(args) and not len(kw):
+            return obj
+        return super().__new__(cls)
+
+    def __init__(self,
+        obj: Mapping[KT, VT]|Iterable[tuple[KT, VT]]|Iterable[KT],
+        /, *, 
+        vget: Callable[[KT], VT]|None = None,
+        kpred: F = preds.true,
+        vpred: F = preds.true,
+        koper: F = truth,
+        voper: F = truth,
+    ):
+        if vget is None:
+            if hasattr(obj, 'keys'):
+                self._gen_ = self._gen1(
+                    obj.keys, obj.__getitem__, kpred, vpred, koper, voper
+                )
+            else:
+                self._gen_ = self._gen2(
+                    obj, kpred, vpred, koper, voper
+                )
+        else:
+            self._gen_ = self._gen1(
+                obj.__iter__, vget, kpred, vpred, koper, voper
+            )
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> tuple[KT, VT]:
+        return self._gen_.__next__()
+
+    @static
+    def _gen1(getkeys, vget, kpred, vpred, koper, voper):
+        for k in getkeys():
+            if koper(kpred(k)):
+                v = vget(k)
+                if voper(vpred(v)):
+                    yield k, v
+
+    @static
+    def _gen2(items, kpred, vpred, koper, voper):
+        for k, v in items:
+            if koper(kpred(k)) and voper(vpred(v)):
+                yield k, v
+
+del(
+    abstract, static, final, overload, fixed, membr, wraps,
+    FuncResolvers, FuncCache, TypeFuncsCache, OperFuncsCache,
+)
 
 
 def _gen(n = 5, *a):

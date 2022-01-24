@@ -18,33 +18,40 @@
 #
 # pytableaux - tableaux module
 from __future__ import annotations
+
+__all__ = 'Rule', 'TableauxSystem', 'Tableau'
+
 from callables import preds
-from .common import FLAG, KEY, Branch, BranchEvent, Node, RuleEvent, TabEvent, Target #, NodeType
+from .common import FLAG, KEY, Branch, BranchEvent, Node, RuleEvent, TabEvent, Target
 from decorators import abstract, final, overload, static, wraps
-from errors import Emsg, DuplicateKeyError, IllegalStateError, MissingValueError,\
+from errors import (
+    Emsg, DuplicateKeyError, IllegalStateError, MissingValueError,
     TimeoutError, instcheck
+)
 from events import EventEmitter
 from lexicals import Argument, Sentence
 from models import BaseModel
-from tools.abcs import Abc, AbcMeta, abcm
+from tools.abcs import Abc, AbcMeta, abcm, P, T
 from tools.sets import EMPTY_SET
-from tools.sequences import SequenceApi, SequenceProxy, MutableSequenceApi
+from tools.sequences import (
+    MutableSequenceApi, SequenceApi, SequenceProxy, DeqSeq,
+)
+from tools.mappings import MapCover
 from tools.hybrids import qsetf
 from tools.linked import linqset
 from tools.timing import StopWatch
 from utils import get_logic, orepr
 
-from collections.abc import Callable, Iterator, Iterable, Mapping, Sequence
-from inspect import isclass
 from itertools import chain
 import itertools
-from types import MappingProxyType as MapProxy, ModuleType
-import typing
-from typing import Any, ClassVar, NamedTuple, SupportsIndex
+from types import ModuleType
+from typing import (
+    Callable, Iterator, Iterable, Mapping, Sequence,
+    Any, ClassVar, NamedTuple, SupportsIndex
+)
 
 LogicRef = ModuleType | str
 
-__all__ = 'Rule', 'TableauxSystem', 'Tableau'
 
 class RuleMeta(AbcMeta):
 
@@ -131,7 +138,7 @@ class NodeStat(dict[KEY, FLAG|int|None]):
 
     __slots__ = EMPTY_SET
 
-    _defaults = MapProxy({
+    _defaults = MapCover({
         KEY.FLAGS       : FLAG.NONE,
         KEY.STEP_ADDED  : FLAG.NONE,
         KEY.STEP_TICKED : None,
@@ -144,7 +151,7 @@ class BranchStat(dict[KEY, FLAG|int|Branch|dict[Node, NodeStat]|None]):
 
     __slots__ = EMPTY_SET
 
-    _defaults = MapProxy({
+    _defaults = MapCover({
         KEY.FLAGS       : FLAG.NONE,
         KEY.STEP_ADDED  : FLAG.NONE,
         KEY.STEP_CLOSED : FLAG.NONE,
@@ -314,8 +321,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         :param Sequence[Target] targets: The list of targets.
         :param common.Branch branch: The branch.
         """
-        if not isinstance(targets, Sequence):
-            raise TypeError(targets)
+        instcheck(targets, Sequence)
         if self.opts['is_rank_optim']:
             scores = tuple(map(self.score_candidate, targets))
         else:
@@ -352,8 +358,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
 
-_P = typing.ParamSpec('_P')
-_R = typing.TypeVar('_R')
 
 class TabRulesSharedData:
 
@@ -362,8 +366,8 @@ class TabRulesSharedData:
     def lock(self, *_):
         if self.locked:
             raise ValueError('already locked')
-        self.ruleindex = MapProxy(self.ruleindex)
-        self.groupindex = MapProxy(self.groupindex)
+        self.ruleindex = MapCover(self.ruleindex)
+        self.groupindex = MapCover(self.groupindex)
         self.locked = True
 
     def __init__(self, tableau: Tableau, root):
@@ -382,8 +386,8 @@ class TabRulesSharedData:
             raise AttributeError('locked (%s)' % attr)
         if hasattr(self, 'root') and attr != 'locked':
             if attr in ('ruleindex', 'groupindex') and (
-                isinstance(val, MapProxy) and
-                not isinstance(getattr(self, attr), MapProxy)
+                isinstance(val, MapCover) and
+                not isinstance(getattr(self, attr), MapCover)
             ):
                 pass
             else:
@@ -431,7 +435,7 @@ class TabRulesBase:
             raise AttributeError(attr)
         super().__setattr__(attr, val)
     
-    def writes(method: Callable[_P, _R]) -> Callable[..., _R]:
+    def writes(method: Callable[P, T]) -> Callable[..., T]:
         @wraps(method)
         def fcheckstate(self, *args, **kw):
             if self.locked: raise IllegalStateError('locked')
@@ -604,7 +608,7 @@ class TabRules(Sequence[Rule], TabRulesBase):
         idx = self._ruleindex
         if ref in idx:
             return idx[ref]
-        if isclass(ref) and ref.__name__ in idx:
+        if isinstance(ref, type) and ref.__name__ in idx:
             return idx[ref.__name__]
         if ref.__class__.__name__ in idx:
             return idx[ref.__class__.__name__]
@@ -747,7 +751,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     open: SequenceApi[Branch]
 
     #: The history of rule applications.
-    history: MutableSequenceApi[StepEntry]
+    history: DeqSeq[StepEntry]
 
     #: A tree structure of the tableau. This is generated after the tableau
     #: is finished. If the `build_timeout` was exceeded, the tree is `not`
@@ -756,7 +760,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     stats: dict
     models: set[BaseModel]
 
-    _defaults = MapProxy(dict(
+    _defaults = MapCover(dict(
         is_group_optim  = True,
         is_build_models = False,
         build_timeout   = None,
@@ -767,14 +771,14 @@ class Tableau(Sequence[Branch], EventEmitter):
 
         # Events init
         super().__init__(*TabEvent)
-        self.__branch_listeners = MapProxy({
+        self.__branch_listeners = MapCover({
             BranchEvent.AFTER_BRANCH_CLOSE : self.__after_branch_close,
             BranchEvent.AFTER_NODE_ADD     : self.__after_node_add,
             BranchEvent.AFTER_NODE_TICK    : self.__after_node_tick,
         })
 
         # Exposed attributes
-        self.history = []
+        self.history = DeqSeq()
         self.opts = self._defaults | opts
         self.timers = TabTimers.create()
         # Deferred init.
@@ -1085,7 +1089,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         raise ValueError('Too many keys to lookup')
 
     @overload
-    def __getitem__(self, s: slice) -> list[Branch]: ...
+    def __getitem__(self, s: slice) -> Sequence[Branch]: ...
     @overload
     def __getitem__(self, i: SupportsIndex) -> Branch: ...
 
@@ -1414,7 +1418,7 @@ def make_tree_structure(tab: Tableau, branches: Sequence[Branch], node_depth=0, 
                 s['has_open'] = True
             if s['has_open'] and s['has_closed']:
                 break
-        distinct_nodes = []
+        distinct_nodes = DeqSeq()
         distinct_nodeset = set()
         for branch in relevant:
             node = branch[node_depth]

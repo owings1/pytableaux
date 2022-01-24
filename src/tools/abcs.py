@@ -16,13 +16,12 @@ from typing import (
     final, overload,
 
     # Annotations
-    Any, Callable, Iterable, Iterator, Sequence, SupportsIndex,
+    Any, Annotated, Callable, Iterable, Mapping, Sequence, SupportsIndex,
 
     # Util references
     get_type_hints as _get_type_hints,
     get_args as _get_args,
     get_origin as _get_origin,
-    Annotated as _Annotated,
 
     # deletable references
     ParamSpec, TypeVar,
@@ -37,24 +36,31 @@ import \
     abc as _abc, \
     enum as _enum
 
-_EMPTY = () # deletable
+_EMPTY = ()
 _NOARG = object()
+_ABCF_ATTR = '_abc_flag'
 
-# Type vars, importable
+# Type vars
 P = ParamSpec('P')
 T = TypeVar('T')
+RT = TypeVar('RT')
 F = TypeVar('F', bound = Callable[..., Any])
 TT = TypeVar('TT', bound = type)
+Self = TypeVar("Self")
 
 # Global decorators. Re-exported by decorators module.
 @overload
 def abstract(func: F) -> F: ...
 abstract = _abc.abstractmethod
 
+# from builtins import staticmethod as static
+
 @overload
 def static(cls: TT) -> TT: ...
+# @overload
+# def static(func: F) -> F: ...
 @overload
-def static(func: F) -> staticmethod[F]: ...
+def static(meth: Callable[..., T]) -> staticmethod[T]: ...
 def static(cls):
     'Static class decorator wrapper around staticmethod'
     if not isinstance(cls, type):
@@ -72,7 +78,6 @@ def static(cls):
         if '__call__' in d:
             # If the class directly defines a __call__ method,
             # use it for __new__.
-            # call = cls.__call__
             def fnew(cls, *args, **kw):
                 return cls.__call__(*args, **kw)
         else:
@@ -82,12 +87,6 @@ def static(cls):
         def finit(self): raise TypeError
         cls.__init__ = finit
     return cls
-
-
-static
-
-# The method attribute name for storing metaf.
-_abc_flag_attr = '_abc_flag'
 
 @_enum.unique
 class abcf(_enum.Flag):
@@ -102,30 +101,20 @@ class abcf(_enum.Flag):
     nsclean = nsinit | temp | after
 
     def __call__(self, obj: F) -> F:
-        "Add the flag to the obj's _metaflag attribute. Return obj."
-        return self.set(obj, self | self.get(obj, self.blank))
+        "Add the flag to obj's meta flag. Return obj."
+        return self.set(obj, self | self.get(obj))
 
-    @staticmethod
-    def get(obj, default: abcf.blank = 'abcf.blank') -> abcf:
-        return getattr(obj, _abc_flag_attr, default)
+    @classmethod
+    def get(cls, obj, default: abcf|int = blank) -> abcf:
+        return getattr(obj, _ABCF_ATTR, cls(default))
 
     @classmethod
     def set(cls, obj: F, value: abcf) -> F:
-        setattr(obj, _abc_flag_attr, cls(value))
+        setattr(obj, _ABCF_ATTR, cls(value))
         return obj
 
-abcf.get.__defaults__ = abcf.blank, 
-
-class EnumDictType(_enum._EnumDict):
-    'Stub type for annotation reference.'
-    _member_names: list[str]
-    _last_values : list[Any]
-    _ignore      : list[str]
-    _auto_called : bool
-    _cls_name    : str
-
 class AbcMeta(_abc.ABCMeta):
-    'General purpose metaclass and utility methods.'
+    'Abc Meta class with before/after hooks.'
 
     def __new__(cls, clsname, bases, ns: dict, /, **kw):
         cls.nsinit(ns, bases, **kw)
@@ -134,7 +123,7 @@ class AbcMeta(_abc.ABCMeta):
         return Class
 
     @staticmethod
-    def nsinit(ns: dict, bases, /, **kw):
+    def nsinit(ns: Mapping, bases, /, **kw):
         'Before class create.'
         # iterate over copy since hooks may modify ns.
         for member in tuple(ns.values()):
@@ -143,7 +132,9 @@ class AbcMeta(_abc.ABCMeta):
                 member(ns, bases, **kw)
 
     @staticmethod
-    def nsclean(Class, ns: dict, bases, /, deleter = delattr, **kw):
+    def nsclean(Class, ns: Mapping, bases, /,
+        deleter: Callable[[type, str], None] = delattr, **kw
+    ):
         'After class create.'
         for name, member in ns.items():
             mf = abcf.get(member)
@@ -151,19 +142,6 @@ class AbcMeta(_abc.ABCMeta):
                 if mf.after in mf:
                     member(Class)
                 deleter(Class, name)
-
-    @staticmethod
-    def check_mrodict(mro: Sequence[type], *names: str):
-        'Check whether methods are implemented for dynamic subclassing.'
-        if len(names) and not len(mro):
-            return NotImplemented
-        for name in names:
-            for base in mro:
-                if name in base.__dict__:
-                    if base.__dict__[name] is None:
-                        return NotImplemented
-                    break
-        return True
 
 class abcm:
     '''Util functions. Can also be used by meta classes that
@@ -182,8 +160,21 @@ class abcm:
         annot = _get_type_hints(obj, include_extras = True)
         return {
             k: _get_args(v) for k,v in annot.items()
-            if _get_origin(v) is _Annotated
+            if _get_origin(v) is Annotated
         }
+
+    @staticmethod
+    def check_mrodict(mro: Sequence[type], *names: str):
+        'Check whether methods are implemented for dynamic subclassing.'
+        if len(names) and not len(mro):
+            return NotImplemented
+        for name in names:
+            for base in mro:
+                if name in base.__dict__:
+                    if base.__dict__[name] is None:
+                        return NotImplemented
+                    break
+        return True
 
     @staticmethod
     def merge_mroattr(subcls: type, name: str, /,
@@ -198,7 +189,7 @@ class abcm:
 
     @staticmethod
     def mroiter(subcls: type[T], /,
-        supcls: type|tuple[type, ...] = None, *,
+        supcls: type|tuple[type, ...]|None = None, *,
         rev = True, start: SupportsIndex = 0
     ) -> Iterable[type[T]]:
         it = subcls.mro()
@@ -214,6 +205,14 @@ class Abc(metaclass = AbcMeta):
     'Convenience for using AbcMeta as metaclass.'
     __slots__ = _EMPTY
 
+class EnumDictType(_enum._EnumDict):
+    'Stub type for annotation reference.'
+    _member_names: list[str]
+    _last_values : list[Any]
+    _ignore      : list[str]
+    _auto_called : bool
+    _cls_name    : str
+
 class Copyable(Abc):
 
     __slots__ = _EMPTY
@@ -225,15 +224,10 @@ class Copyable(Abc):
     def __copy__(self):
         return self.copy()
 
-    # def __deepcopy__(self, memo):
-    #     inst = self.copy()
-    #     memo[id(self)] = inst
-    #     return inst
-
     @classmethod
     def __subclasshook__(cls, subcls: type):
         if cls is not __class__:
             return NotImplemented
-        return cls.check_mrodict(subcls.mro(), '__copy__', 'copy', '__deepcopy__')
+        return abcm.check_mrodict(subcls.mro(), '__copy__', 'copy', '__deepcopy__')
 
-del(_abc, _enum, _EMPTY, TypeVar, ParamSpec)
+del(_abc, _enum, TypeVar, ParamSpec)

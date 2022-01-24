@@ -28,10 +28,10 @@ from tools.abcs import (
     overload,
     static,
     # type vars
-    F, TT, T, P,
+    F, TT, T, P, Self,
     # utils
     abcm,
-    # bases (deletable)
+    # bases
     Abc,
 )
 from inspect import (
@@ -43,42 +43,40 @@ from keyword import (
 from functools import (
     reduce as _ftreduce,
     partial as _ftpartial,
+    WRAPPER_ASSIGNMENTS,
 )
 import operator as opr
 
 from typing import (
     # Annotations
     Any, Callable, Generic, Mapping,
-    # deletable references
     TypeVar,
 )
 from types import (
     # Annotations
-    DynamicClassAttribute, FunctionType,
+    DynamicClassAttribute,
+    # FunctionType,
 )
-_EMPTY = () # deletable
+EMPTY = ()
+_NOARG = object()
 
-# T = TypeVar('T')
-# P = ParamSpec('P')
-# F = TypeVar('F', bound = Callable[..., Any])
-# TT = TypeVar('TT', bound = type)
-
-R = TypeVar('R')
+# R = TypeVar('R')
 O = TypeVar('O')
 V = TypeVar('V')
-F2 = TypeVar('F2', bound = Callable[..., Any])
-F_get = TypeVar('F_get', bound = Callable[[Any], Any])
+# F2 = TypeVar('F2', bound = Callable[..., Any])
+# F_get = TypeVar('F_get', bound = Callable[[Any], Any])
 
 
 class _nonerr(Exception): __new__ = None
 
-# def _geti1(obj): return obj[1]
 _valfilter = _ftpartial(filter, opr.itemgetter(1))
 
-def _getmixed(obj, k):
+def _getmixed(obj, k, default = None):
     try: return obj[k]
     except TypeError:
-        return getattr(obj, k, None)
+        return getattr(obj, k, default)
+    except KeyError:
+        return default
 
 def _thru(obj, *_):
     return obj
@@ -109,14 +107,14 @@ def _checkcallable2(obj):
         return _methcaller(obj)
     return _checkcallable(obj)
 
-def _copyf(f: FunctionType) -> FunctionType:
-    func = FunctionType(
-        f.__code__, f.__globals__, f.__name__,
-        f.__defaults__, f.__closure__,
-    )
-    return wraps(f)(func)
+# def _copyf(f: FunctionType) -> FunctionType:
+#     func = FunctionType(
+#         f.__code__, f.__globals__, f.__name__,
+#         f.__defaults__, f.__closure__,
+#     )
+#     return wraps(f)(func)
 
-def rund(func):
+def rund(func: Callable[[], T]) -> T:
     'Call the function immediately, and return the value.'
     return func()
 
@@ -160,7 +158,7 @@ class _member(Generic[T]):
         if not hasattr(self, '__qualname__') or not callable(self):
             return object.__repr__(self)
         return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
-    _sethooks = _EMPTY
+    _sethooks = EMPTY
 
     def __init_subclass__(subcls, **kw):
         super().__init_subclass__(**kw)
@@ -173,11 +171,10 @@ class _member(Generic[T]):
             delattr(subcls, 'sethook')
         subcls._sethooks = tuple(hooks)
 
-    # __class_getitem__ = classmethod(type(list[int]))
 
 class _twofer(Abc, Generic[F]):
 
-    __slots__ = _EMPTY
+    __slots__ = EMPTY
 
     @overload
     def __new__(cls, func: F) -> F: ...
@@ -233,51 +230,63 @@ class membr(_member[T]):
 @static
 class fixed:
 
-    class value(_member, Generic[V]):
+    # class value(_member, Generic[V]):
+    class value(_member):
 
         __slots__ = 'value', 'doc', 'annot'
 
-        def __init__(self, value: V, doc = None):
+        @overload
+        def __new__(cls, value: T, /, *args, **kw) -> Callable[..., T]: ...
+        def __new__(cls, *args, **kw):
+            inst = super().__new__(cls)
+            inst._init(*args, **kw)
+            return inst
+
+        def _init(self, value, /, doc = None):
             self.value = value
             self.doc = doc
-            # TODO: globals for annotation type search order
-            vtype = type(value)
-            tname = 'None' if value is None else vtype.__name__
-            self.annot = {'return': tname}
+            # TODO: eval'able annotations
+            self.annot = {
+                'return': 'None' if value is None else type(value).__name__
+            }
 
-        def __call__(self, method: Callable[[O], V] = None) -> Callable[[O], V]:
-            return wraps(method)(self._getf())
-
-        def sethook(self, owner, name):
-            func = self()
-            owner.__annotations__.setdefault(name, self.annot['return'])
-            setattr(owner, name, func)
-
-        def _getf(self):
+        def __call__(self, info = None):
             value = self.value
+            wrapper = wraps(info)
+            wrapper.update(
+                __doc__ = self.doc,
+                __annotations__ = self.annot,
+            )
             def func(*args, **kw):
                 return value
-            if self.owner is not None:
-                wraps(None).update(self).update(dict(
-                    __module__ = self.owner.__module__,
-                    __annotations__ = self.annot,
-                    __doc__ = self.doc,
-                )).write(func)
-            return func
+            return wrapper(func)
 
-    class prop(value[V]):
+        def sethook(self, owner, name):
+            func = self(self)
+            # func.__module__ = owner.__module__
+            setattr(owner, name, func)
 
-        __slots__ = _EMPTY
+    # class prop(value[V]):
+    class prop(value):
 
-        def __call__(self, method: Callable[[O], V] = None) -> _property[O, V]:
-            return property(super().__call__(method), doc = self.doc)
+        __slots__ = EMPTY
 
-    class dynca(value):
+        @overload
+        def __new__(cls, value: T) -> _property[Self, T]: ...
+        def __new__(cls, *args, **kw):
+            return super().__new__(cls, *args, **kw)
 
-        __slots__ = _EMPTY
+        def __call__(self, info = None):
+            return property(super().__call__(info), doc = self.doc)
 
-        def __call__(self, method = None) ->_property[O, V]:
-            return DynamicClassAttribute(super().__call__(method), doc = self.doc)
+    class dynca(prop):
+
+        __slots__ = EMPTY
+
+        def __call__(self, info = None):
+            return DynamicClassAttribute(
+                super(fixed.prop, self).__call__(info), doc = self.doc
+            )
 
 @static
 class operd:
@@ -305,7 +314,7 @@ class operd:
 
     class apply(_base):
 
-        __slots__ = _EMPTY
+        __slots__ = EMPTY
 
         def __call__(self, info = None):
             info = self._getinfo(info)
@@ -373,7 +382,7 @@ class operd:
         default, except (AttributeError, TypeError), and return
         ``NotImplemented``.'''
 
-        __slots__ =  'errs','fcmp',
+        __slots__ = 'errs', 'fcmp'
 
         def __init__(self, oper: Callable, /, *errs, info = None):
             super().__init__(oper, info)
@@ -412,7 +421,7 @@ class operd:
 
     class _repeat(_base):
 
-        __slots__ = _EMPTY
+        __slots__ = EMPTY
 
         def __call__(self, info = None):
             info = self._getinfo(info)
@@ -435,26 +444,34 @@ class wraps(_member):
 
     def __call__(self, fout: F) -> F:
         'Decorate function. Receives the wrapper function and updates its attributes.'
-        self.update(self.read(fout))
+        # self.update(self.read(fout))
+        self.update(fout)
         if isinstance(fout, (classmethod, staticmethod)):
             self.write(fout.__func__)
         else:
             self.write(fout)
         return fout
 
-    @classmethod
-    def read(cls, obj):
-        it = _valfilter((k, _getmixed(obj, k)) for k in cls.attrs)
-        return dict(it)
+    @static
+    def read(data):
+        return dict(
+            _valfilter((k, _getmixed(data, k)) for k in WRAPPER_ASSIGNMENTS)
+        )
 
-    def update(self, data: Mapping) -> wraps:
-        if not isinstance(data, Mapping):
-            data = self.read(data)
+    def update(self, data = None, /, **kw) -> wraps:
+        # if data is None:
+        #     data = {}
+        # elif not isinstance(data, Mapping):
+        #     data = self.read(data)
+        # data.update(kw)
+        data = self.read(data) | self.read(kw)
         adds = self._adds
         initial = self._initial
-        for attr, val in _valfilter((k, data.get(k)) for k in self.attrs):
-            if attr in ('__doc__', '__annotations__'):
-                if initial.get(attr): continue
+        skip = {'__doc__', '__annotations__'}
+        for attr, val in _valfilter((k, data.get(k)) for k in WRAPPER_ASSIGNMENTS):
+            if attr in skip:
+                if initial.get(attr):
+                    continue
             adds[attr] = val
         return self
 
@@ -462,7 +479,7 @@ class wraps(_member):
         adds = self._adds
         initial = self._initial
         return dict(
-            _valfilter((k, initial.get(k, adds.get(k))) for k in self.attrs)
+            _valfilter((k, initial.get(k, adds.get(k))) for k in WRAPPER_ASSIGNMENTS)
         )
 
     def write(self, obj: F) -> F:
@@ -471,10 +488,7 @@ class wraps(_member):
         # setattr(obj, '__wraps__', self)
         return obj
 
-    attrs = frozenset((
-        '__module__', '__name__', '__qualname__',
-        '__doc__', '__annotations__'
-    ))
+    # attrs = frozenset(WRAPPER_ASSIGNMENTS)
 
 class raisr(_member):
     '''Creates an object that raises the exception when called. When
@@ -503,12 +517,11 @@ class raisr(_member):
 
 class lazy:
 
-    __slots__ = _EMPTY
+    __slots__ = EMPTY
 
     def __new__(cls, *args, **kw):
         return cls.get(*args, **kw)
 
-    # class get(_twofer[F], _member):
     class get(_twofer[F], _member):
 
         __slots__ = 'key', 'method'
@@ -557,7 +570,7 @@ class lazy:
         """Return a property with the getter. NB: a setter/deleter should be
         sure to use the correct attribute."""
 
-        __slots__ = _EMPTY
+        __slots__ = EMPTY
 
         @overload
         def __new__(cls, func: Callable[[O], V]) -> _property[O, V]: ...
@@ -570,7 +583,7 @@ class lazy:
         """Return a DynamicClassAttribute with the getter. NB: a setter/deleter
         should be sure to use the correct attribute."""
 
-        __slots__ = _EMPTY
+        __slots__ = EMPTY
 
         # @overload
         # def __new__(cls, func: Callable[[O], V]) -> prop[O, V]: ...
@@ -589,7 +602,7 @@ class NoSetAttr:
     efmt_fixed = '%s (readonly)'.__mod__
     efmt_change = '%s (immutable)'.__mod__
 
-    def __init__(self, roattr = '_readonly',):
+    def __init__(self, roattr = '_readonly', /):
         self.__roattr = roattr
 
     def __call__(self, basecls, cls = None, changeonly = False):
@@ -652,9 +665,10 @@ class NoSetAttr:
     def roattr(self):
         return self.__roattr
 
-del(Abc, TypeVar, _EMPTY)
+del(Abc, TypeVar, EMPTY)
 # ------------------------------
 
+# Stub adapted from typing module with added annotations.
 class _property(property, Generic[O, V]):
     fget: Callable[[O], Any] | None
     fset: Callable[[O, Any], None] | None
@@ -668,9 +682,9 @@ class _property(property, Generic[O, V]):
         doc: str | None = ...,
     ) -> None: ...
     __init__ = NotImplemented
-    def getter(self, __fget: Callable[[O], V]) -> prop[O, V]: ...
-    def setter(self, __fset: Callable[[O, Any], None]) -> prop[O, V]: ...
-    def deleter(self, __fdel: Callable[[O], None]) -> prop[O, V]: ...
+    def getter(self, __fget: Callable[[O], V]) -> _property[O, V]: ...
+    def setter(self, __fset: Callable[[O, Any], None]) -> _property[O, V]: ...
+    def deleter(self, __fdel: Callable[[O], None]) -> _property[O, V]: ...
     def __get__(self, __obj: O, __type: type | None = ...) -> V: ...
     def __set__(self, __obj: O, __value: Any) -> None: ...
     def __delete__(self, __obj: O) -> None: ...
