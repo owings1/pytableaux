@@ -1,5 +1,5 @@
 
-from callables import calls, gets
+from tools.callables import calls, gets
 from errors import *
 from proof.tableaux import Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG
 from proof.rules import ClosureRule

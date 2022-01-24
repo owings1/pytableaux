@@ -2,7 +2,7 @@ from __future__ import annotations
 
 __all__ = 'Node', 'Branch', 'Target'
 
-from callables import Caller, gets, preds
+from tools.callables import Caller, gets, preds
 from tools.decorators import abstract, overload, static, final, lazy
 from errors import instcheck as instcheck, Emsg
 from events import EventEmitter
