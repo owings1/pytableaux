@@ -918,7 +918,7 @@ class EllipsisExampleHelper(object):
         self.isclosure = isinstance(rule, ClosureRule)
         if self.isclosure:#rule.is_closure:
             self.closenodes = list(
-                n if isinstance(n, dict) else n.props
+                dict(n)
                 for n in reversed(rule.example_nodes())
             )
         self.istrunk = False

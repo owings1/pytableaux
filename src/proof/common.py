@@ -8,16 +8,18 @@ from errors import instcheck as instcheck, Emsg
 from events import EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
-from tools.abcs import Abc
+# from tools.abcs import Abc
 from tools.sets import EMPTY_SET, setf
 from tools.sequences import SequenceApi
-from tools.mappings import MappingApi, dmap, MapCover
-from utils import drepr, orepr
+from tools.mappings import dmap, MapCover
+# from types import MappingProxyType as MapProxy
+from utils import orepr
 
-from collections.abc import ItemsView, \
-    Iterator, KeysView, Sequence, ValuesView
-from itertools import islice
-from typing import Any, Callable, Iterable, Iterator, ClassVar, Mapping, NamedTuple, TypeVar
+from itertools import chain, islice
+from typing import (
+    Any, Callable, Iterable, Iterator, ClassVar, Mapping, NamedTuple, Sequence,
+    TypeVar
+)
 import enum
 
 import operator as opr
@@ -59,25 +61,28 @@ class FLAG(enum.Flag):
     TRUNK_BUILT = 32
 
 
-class Node(MappingApi):
+class Node(MapCover):
     'A tableau node.'
 
-    __slots__ = 'props', 'step', 'ticked', '_is_access', '_is_modal', '_worlds'
+    __slots__ = 'step', 'ticked', 'id', '_is_access', '_is_modal', '_worlds',
+
     defaults = MapCover({'world': None, 'designated': None})
 
-    def __new__(cls, arg = None, /, **kw):
-        if not len(kw) and isinstance(arg, cls):
+    def __new__(cls, arg = None, /):
+        if isinstance(arg, cls):
             return arg
         return super().__new__(cls)
 
     def __init__(self, props: Mapping = None, /):
-        self.props = MapCover(
-            dmap(props) if props is not None else dmap()
-        )
+        super().__init__(dmap(props or EMPTY_SET))
+        self.id = id(self)
 
-    @property
-    def id(self) -> int:
-        return id(self)
+    def copy(self):
+        cls = type(self)
+        inst = super().__new__(cls)
+        inst.id = id(inst)
+        inst._MapCover__m = self._MapCover__m
+        return inst
 
     @property
     def is_closure(self) -> bool:
@@ -92,17 +97,17 @@ class Node(MappingApi):
         return self.has('world1', 'world2')
 
     @lazy.prop
-    def worlds(self) -> setf[int]:
+    def worlds(self, filtpred = preds.instanceof[int]) -> setf[int]:
         """
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
         """
-        return setf(filter(preds.instanceof[int],
-            self.get('worlds', EMPTY_SET) |
-            {self[k] for k in ('world', 'world1', 'world2') if self.has(k)}
+        return setf(filter(filtpred,
+            chain(self.get('worlds', EMPTY_SET),
+            map(self.get, ('world', 'world1', 'world2'))),
         ))
 
-    def has(self, *names: str) -> bool:
+    def has(self, *names: str):
         """
         Whether the node has a non-``None`` property of all the given names.
         """
@@ -111,7 +116,7 @@ class Node(MappingApi):
                 return False
         return True
 
-    def has_any(self, *names: str) -> bool:
+    def has_any(self, *names: str):
         """
         Whether the node has a non-``None`` property of any of the given names.
         """
@@ -120,7 +125,7 @@ class Node(MappingApi):
                 return True
         return False
 
-    def has_props(self, props: Mapping) -> bool:
+    def has_props(self, props: Mapping):
         """
         Whether the node properties match all those give in ``props``.
         """
@@ -129,66 +134,37 @@ class Node(MappingApi):
                 return False
         return True
 
-    def get(self, name, default = None):
-        try:
-            return self[name]
-        except KeyError:
-            return default
-
-    def keys(self) -> KeysView:
-        return self.props.keys()
-
-    def items(self) -> ItemsView:
-        return self.props.items()
-
-    def values(self) -> ValuesView:
-        return self.props.values()
-
     def __eq__(self, other):
         return self is other
 
     def __hash__(self):
         return hash(self.id)
 
-    def __len__(self):
-        return len(self.props)
-
     def __bool__(self):
         return True
 
     def __getitem__(self, key):
         try:
-            return self.props[key]
+            return super().__getitem__(key)
         except KeyError:
             return self.defaults[key]
 
-    def __contains__(self, key):
-        return key in self.props
-
-    def __iter__(self):
-        return iter(self.props)
-
-    def __copy__(self):
-        return self.__class__(self.props)
-
     @classmethod
-    def _oper_res_type(cls, othercls):
+    def _oper_res_type(cls, rhs_type):
         return dmap
 
     def __repr__(self):
         return orepr(self,
             id = self.id,
-            props = drepr({
-                k: v for k,v in self.props.items() if v != None
-            }, limit = 4, paren = False, j = ',')
+            props = dict(self)
         )
 
-    def __setattr__(self, attr, val):
-        if hasattr(self, attr) and getattr(self, attr) != val:
-            raise AttributeError('Node.%s is readonly' % attr)
-        super().__setattr__(attr, val)
+    def __setattr__(self, name, val):
+        if getattr(self, name, val) != val:
+            raise AttributeError('Node.%s is readonly' % name)
+        super().__setattr__(name, val)
 
-    def __delattr__(self, attr):
+    def __delattr__(self, name):
         raise AttributeError('Node is readonly')
 
 class Access(NamedTuple):
@@ -222,27 +198,26 @@ RHS = TypeVar('RHS')
 
 class Comparer(Callable[..., bool]):
 
-    __slots__ = '__lhs', '__dict__'
-
-    @property
-    def lhs(self): return self.__lhs
+    __slots__ = 'lhs', 
 
     def __init__(self, lhs):
-        self.__lhs = lhs
+        self.lhs = lhs
 
     def __repr__(self):
-        me = self.__class__.__qualname__
+        me = type(self).__qualname__
         them = self._lhsrepr(self.lhs)
         return orepr(me, lhs = them)
 
     def _lhsrepr(self, lhs) -> str:
-        try: return lhs.__class__.__qualname__
-        except AttributeError: return lhs.__class__.__name__
+        try: return type(lhs).__qualname__
+        except AttributeError: return type(lhs).__name__
 
 @static
 class Filters:
 
     class Attr(Comparer):
+
+        __slots__ = EMPTY
 
         #: LHS attr -> RHS attr mapping.
         attrmap: dict[str, str] = {}
@@ -253,11 +228,7 @@ class Filters:
         #: Comparison
         fcmp: ClassVar[Callable[[Any, Any], bool]] = opr.eq
 
-        def __init__(self, lhs: LHS, **attrmap):
-            super().__init__(lhs)
-            self.attrmap = self.attrmap | attrmap
-
-        def __call__(self, rhs: RHS) -> bool:
+        def __call__(self, rhs: RHS):
             for lattr, rattr in self.attrmap.items():
                 val = self.lget(self.lhs, lattr)
                 if val is not None and val != self.rget(rhs, rattr):
@@ -278,29 +249,17 @@ class Filters:
 
     class Sentence(Comparer):
 
-        rget: Callable[[RHS], lexicals.Sentence] = gets.thru()
+        __slots__ = 'negated', 'applies'
 
-        @property
-        def negated(self) -> bool:
-            if self.__negated is not None:
-                return self.__negated
-            return getattr(self.lhs, 'negated', None)
+        rget: Callable[[RHS], Sentence] = gets.thru()
 
-        @negated.setter
-        def negated(self, val):
-            self.__negated = val
-
-        @property
-        def applies(self) -> bool:
-            return self.__applies
-
-        def get(self, rhs: RHS) -> lexicals.Sentence:
+        def get(self, rhs: RHS) -> Sentence:
             s = self.rget(rhs)
             if s:
                 if not self.negated: return s
                 if s.is_negated: return s.operand
 
-        def example(self) -> lexicals.Sentence:
+        def example(self) -> Sentence:
             if not self.applies:
                 return
             lhs = self.lhs
@@ -314,10 +273,11 @@ class Filters:
 
         def __init__(self, lhs: LHS, negated = None):
             super().__init__(lhs)
-            self.__negated = None
-            self.__applies = any((lhs.operator, lhs.quantifier, lhs.predicate))
-            if negated is not None:
+            if negated is None:
+                self.negated = getattr(lhs, 'negated', None)
+            else:
                 self.negated = negated
+            self.applies = any((lhs.operator, lhs.quantifier, lhs.predicate))
 
         def __call__(self, rhs: RHS) -> bool:
             if not self.applies: return True
@@ -335,6 +295,8 @@ class Filters:
 
     class ItemValue(Comparer):
 
+        __slots__ = EMPTY
+
         lhs: Callable[[Any], bool]
         rget: opr.itemgetter(1)
         def __call__(self, rhs):
@@ -345,9 +307,11 @@ class NodeFilters(Filters):
 
     class Sentence(Filters.Sentence):
 
-        rget: Callable[[Node], lexicals.Sentence] = gets.key('sentence', flag = Caller.SAFE)
+        __slots__ = EMPTY
 
-        def example_node(self) -> dict:
+        rget: Callable[[Node], Sentence] = gets.key('sentence', flag = Caller.SAFE)
+
+        def example_node(self):
             n = {}
             s = self.example()
             if s: n['sentence'] = s
@@ -355,17 +319,21 @@ class NodeFilters(Filters):
 
     class Designation(Filters.Attr):
 
+        __slots__ = EMPTY
+
         attrmap = {'designation': 'designated'}
         rget: Callable[[Node], bool] = gets.key()
 
-        def example_node(self) -> dict:
+        def example_node(self):
             return self.example()
 
     class Modal(Filters.Attr):
 
+        __slots__ = EMPTY
+
         attrmap = {'modal': 'is_modal', 'access': 'is_access'}
 
-        def example_node(self) -> dict:
+        def example_node(self):
             n = {}
             attrs = self.example()
             if attrs.get('is_access'):
@@ -375,7 +343,7 @@ class NodeFilters(Filters):
             return n
 
 
-class Branch(SequenceApi[Node], EventEmitter, Abc):
+class Branch(SequenceApi[Node], EventEmitter):
     'Represents a tableau branch.'
 
     def __init__(self, parent: Branch = None, /):

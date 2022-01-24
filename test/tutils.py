@@ -317,7 +317,7 @@ def tp(tab):
         ])
     )
 def tabtup(tab):
-    return tuple(tuple(dict(n.props) for n in b) for b in tab)
+    return tuple(tuple(dict(n) for n in b) for b in tab)
 
 def tabeq(t1, t2):
     return tabtup(t1) == tabtup(t2)

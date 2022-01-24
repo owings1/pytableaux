@@ -266,11 +266,11 @@ class TestBranch(object):
 
     def test_for_in_iter_nodes(self):
         b, nn = self.case1()
-        npp = tuple(n.props for n in nn)
+        npp = tuple(dict(n) for n in nn)
         assert tuple(n for n in iter(b)) == nn
         assert tuple(n for n in b) == nn
-        assert tuple(n.props for n in iter(b)) == npp
-        assert tuple(n.props for n in b) == npp
+        assert tuple(dict(n) for n in iter(b)) == npp
+        assert tuple(dict(n) for n in b) == npp
 
     def test_subscript_1(self):
         b, nn = self.case1(n=5)
@@ -331,7 +331,7 @@ class TestNode(object):
             exp.items()
         ]:
             n = Node(inp)
-            assert dict(n.props) == exp
+            assert dict(n) == exp
 
     def test_or_ror_operators(self):
         pa = dict(Node.defaults)
@@ -342,13 +342,13 @@ class TestNode(object):
         exp2 = pb | pa
         n1, n2 = (Node(n) for n in (pa, pb))
         assert n1 | n2 == exp1
-        assert n1 | n2.props == exp1
-        assert n1.props | n2 == exp1
-        assert n1.props | n2.props == exp1
+        assert n1 | dict(n2) == exp1
+        assert dict(n1) | n2 == exp1
+        assert dict(n1) | dict(n2) == exp1
         assert n2 | n1 == exp2
-        assert n2 | n1.props == exp2
-        assert n2.props | n1 == exp2
-        assert n2.props | n1.props == exp2
+        assert n2 | dict(n1) == exp2
+        assert dict(n2) | n1 == exp2
+        assert dict(n2) | dict(n1) == exp2
         
 class TestRule(BaseSuite):
 
@@ -370,14 +370,18 @@ class TestFilters(BaseSuite):
     def test_AttrFilter_node_is_modal(self):
         class Lhs(object):
             testname = True
-        f = Filters.Attr(Lhs(), testname = 'is_modal')
+        class AttrFilt(Filters.Attr):
+            attrmap = {'testname': 'is_modal'}
+        f = AttrFilt(Lhs())
         assert f(Node({'world1': 0}))
         assert not f(Node({'foo': 'bar'}))
 
     def test_AttrFilter_key_node_designated(self):
         class Lhs(object):
             testname = True
-        f = Filters.Attr(Lhs(), testname = 'designated')
+        class AttrFilt(Filters.Attr):
+            attrmap = {'testname': 'designated'}
+        f = AttrFilt(Lhs())
         f.rget = gets.key()
         assert f(Node({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
