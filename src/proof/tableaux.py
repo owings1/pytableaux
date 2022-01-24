@@ -27,7 +27,7 @@ from errors import (
     Emsg, DuplicateKeyError, IllegalStateError, MissingValueError,
     TimeoutError, instcheck
 )
-from events import EventEmitter
+from tools.events import EventEmitter
 from .common import FLAG, KEY, Branch, BranchEvent, Node, RuleEvent, TabEvent, Target
 from lexicals import Argument, Sentence
 from models import BaseModel

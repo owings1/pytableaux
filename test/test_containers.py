@@ -1,7 +1,7 @@
 from .tutils import BaseSuite, skip
 from pytest import raises
 from errors import *
-from events import EventsListeners#, Listener, Listeners, EventEmitter
+from tools.events import EventsListeners#, Listener, Listeners, EventEmitter
 from lexicals import *
 
 from tools.sets import *

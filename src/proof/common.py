@@ -5,7 +5,7 @@ __all__ = 'Node', 'Branch', 'Target'
 from tools.callables import Caller, gets, preds
 from tools.decorators import abstract, overload, static, final, lazy
 from errors import instcheck as instcheck, Emsg
-from events import EventEmitter
+from tools.events import EventEmitter
 import lexicals
 from lexicals import Constant, Sentence, Operated, Quantified
 # from tools.abcs import Abc
