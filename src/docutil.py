@@ -40,7 +40,7 @@ from proof.tableaux import Tableau, TableauxSystem as TabSys, Rule
 from proof.writers import create_tabwriter
 from proof.rules import ClosureRule
 from proof.helpers import EllipsisExampleHelper
-from models import truth_table
+from models import BaseModel
 
 defaults = {
     'html_theme'       : 'default',
@@ -486,11 +486,11 @@ class Helper(object):
         """
         Returns rendered truth table HTML for a single operator.
         """
-        lgc = get_logic(lgc)
+        model : BaseModel = get_logic(lgc).Model()
         oper = Operator[oper]
-        table = truth_table(lgc, oper, reverse = self.opts['truth_tables_rev'])
+        table = model.truth_table(oper, reverse = self.opts['truth_tables_rev'])
         return truth_table_template.render({
-            'num_values' : len(lgc.Model.truth_values),
+            'num_values' : len(model.truth_values),
             'table'      : table,
             'operator'   : oper,
             'lw'         : self.lw,

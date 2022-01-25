@@ -7,14 +7,22 @@ from tools.abcs import Abc
 from tools.decorators import abstract
 from tools.hybrids import qsetf
 from tools.sets import setf
-from tools.misc import get_logic
 from lexicals import (
     Operator,
     Sentence, Atomic, Predicated, Operated, Quantified,
     Argument
 )
 
-import itertools
+from itertools import (
+    product,
+    repeat,
+    # starmap,
+)
+from typing import (
+    Any, Mapping
+)
+
+ModelValue = Any
 
 class BaseModel(Abc):
 
@@ -39,7 +47,6 @@ class BaseModel(Abc):
     # flag set by tableau
     is_countermodel = None
 
-
     @property
     def id(self):
         return id(self)
@@ -47,7 +54,7 @@ class BaseModel(Abc):
     @abstract
     def read_branch(self, branch): ...
 
-    def value_of(self, s: Sentence, /, **kw):
+    def value_of(self, s: Sentence, /, **kw) -> ModelValue:
         if self.is_sentence_opaque(s):
             return self.value_of_opaque(s, **kw)
         stype = type(s)
@@ -63,7 +70,7 @@ class BaseModel(Abc):
         raise NotImplementedError
 
     @abstract
-    def truth_function(self, oper: Operator, *values):
+    def truth_function(self, oper: Operator, *values) -> ModelValue:
         # TODO: accept single iterable
         if oper not in self.truth_functional_operators:
             raise TypeError(oper)
@@ -72,34 +79,34 @@ class BaseModel(Abc):
         raise NotImplementedError
 
     def truth_table_inputs(self, arity: int):
-        return tuple(itertools.product(
-            *itertools.repeat(self.truth_values, arity)
+        return tuple(product(
+            *repeat(self.truth_values, arity)
         ))
 
     def is_sentence_opaque(self, s: Sentence, /, **kw):
         return False
 
     @abstract
-    def value_of_opaque(self, s: Sentence, /, **kw):
+    def value_of_opaque(self, s: Sentence, /, **kw) -> ModelValue:
         instcheck(s, Sentence)
         raise NotImplementedError
 
     @abstract
-    def value_of_atomic(self, s: Atomic, /, **kw):
+    def value_of_atomic(self, s: Atomic, /, **kw) -> ModelValue:
         instcheck(s, Atomic)
         raise NotImplementedError
 
     @abstract
-    def value_of_predicated(self, s: Predicated, /, **kw):
+    def value_of_predicated(self, s: Predicated, /, **kw) -> ModelValue:
         instcheck(s, Predicated)
         raise NotImplementedError
 
     @abstract
-    def value_of_quantified(self, s: Quantified, /, **kw):
+    def value_of_quantified(self, s: Quantified, /, **kw) -> ModelValue:
         instcheck(s, Quantified)
         raise NotImplementedError
 
-    def value_of_operated(self, s: Operated, /, **kw):
+    def value_of_operated(self, s: Operated, /, **kw) -> ModelValue:
         return self.truth_function(
             s.operator,
             *(
@@ -114,25 +121,22 @@ class BaseModel(Abc):
         raise NotImplementedError
 
     @abstract
-    def get_data(self) -> dict:
+    def get_data(self) -> Mapping:
         return {}
 
+    def truth_table(self, oper: Operator, / , reverse=False):
+        oper = Operator(oper)
+        inputs = self.truth_table_inputs(oper.arity)
+        if reverse:
+            inputs = tuple(reversed(inputs))
+        outputs = [
+            self.truth_function(oper, *values)
+            for values in inputs
+        ]
+        return {'inputs': inputs, 'outputs': outputs}
 
-def truth_table(logic, oper: Operator, / , reverse=False):
-    oper = Operator(oper)
-    model = get_logic(logic).Model()
-    inputs = model.truth_table_inputs(oper.arity)
-    if reverse:
-        inputs = tuple(reversed(inputs))
-    outputs = [
-        model.truth_function(oper, *values)
-        for values in inputs
-    ]
-    return {'inputs': inputs, 'outputs': outputs}
-
-def truth_tables(logic, **kw):
-    model = get_logic(logic).Model()
-    return {
-        oper: truth_table(logic, oper, **kw)
-        for oper in model.truth_functional_operators
-    }
+    def truth_tables(self, **kw):
+        return {
+            oper: self.truth_table(oper, **kw)
+            for oper in self.truth_functional_operators
+        }

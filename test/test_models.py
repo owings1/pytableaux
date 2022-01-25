@@ -1,17 +1,19 @@
-from models import BaseModel, truth_table, truth_tables
+from models import BaseModel
 from lexicals import Atomic, Operator
 from tools.misc import get_logic
 from errors import *
 from pytest import raises
 def test_truth_table_cpl_negation():
-    tbl = truth_table('cpl', Operator.Negation)
+    m: BaseModel = get_logic('cpl').Model()
+    tbl = m.truth_table(Operator.Negation)
     assert len(tbl['inputs']) == 2
     assert len(tbl['outputs']) == 2
     assert tbl['inputs'][0][0] == 'F'
     assert tbl['outputs'][0] == 'T'
 
 def test_truth_tables_cpl():
-    tbls = truth_tables('cpl')
+    m: BaseModel = get_logic('cpl').Model()
+    tbls = m.truth_tables()
     assert tbls[Operator.Negation]['outputs'][0] == 'T'
 
 def test_get_logic_cpl_case_insensitive():

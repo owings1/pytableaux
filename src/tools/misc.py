@@ -19,14 +19,16 @@
 # pytableaux - misc utils module
 from __future__ import annotations
 
+__all__ = 'get_logic',
+
 # Only local import allowed is errors
-from errors import DuplicateKeyError
+from errors import DuplicateKeyError, instcheck
 
 from builtins import ModuleNotFoundError
 from importlib import import_module
 from itertools import islice
 from types import ModuleType
-from typing import Mapping
+from typing import Iterable, Mapping
 
 def get_module(ref, package: str = None) -> ModuleType:
 
@@ -106,7 +108,7 @@ def cat(*args: str) -> str:
 
 def errstr(err) -> str:
     if isinstance(err, Exception):
-        return '%s: %s' % (err.__class__.__name__, err)
+        return '%s: %s' % (type(err).__name__, err)
     return str(err)
 
 def wrparens(*args: str, parens='()') -> str:
@@ -141,8 +143,8 @@ def orepr(obj, _d: dict = None, _ = None, **kw) -> str:
     if isinstance(obj, str):
         oname = obj
     else:
-        try: oname = obj.__class__.__qualname__
-        except AttributeError: oname = obj.__class__.__name__
+        try: oname = type(obj).__qualname__
+        except AttributeError: oname = type(obj).__name__
     if _ is not None: oname = cat(oname, '.', valrepr(_))
     try:
         if callable(d): d = d()
@@ -155,9 +157,8 @@ def orepr(obj, _d: dict = None, _ = None, **kw) -> str:
 
 def wraprepr(obj, inner, **kw) -> str:
     if not isinstance(obj, str):
-        obj = obj.__class__.__name__
+        obj = type(obj).__name__
     return cat(obj, wrparens(inner.__repr__(), **kw))
-
 
 class CacheNotationData:
 
@@ -166,10 +167,8 @@ class CacheNotationData:
     @classmethod
     def load(cls, notn, name: str, data: Mapping):
         idx = cls.__getidx(notn)
-        if not isinstance(name, str):
-            raise TypeError(name, type(name), str)
-        if not isinstance(data, Mapping):
-            raise TypeError(name, type(data), Mapping)
+        instcheck(name, str)
+        instcheck(data, Mapping)
         if name in idx:
             raise DuplicateKeyError(notn, name, cls)
         idx[name] = cls(data)
@@ -195,9 +194,9 @@ class CacheNotationData:
             raise ValueError("Invalid notation '%s'" % notn)
 
     @classmethod
-    def _initcache(cls, notns, builtin):
+    def _initcache(cls, notns: Iterable, builtin):
         a_ = '_initcache'
-        if cls == __class__:
+        if cls is __class__:
             raise TypeError("Cannot invoke '%s' on %s" % (cls, a_))
         if hasattr(cls, '__builtin'):
             raise AttributeError("%s has no attribute '%s'" % (cls, a_))

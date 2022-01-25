@@ -28,7 +28,7 @@ from lexicals import Predicate, Constant, Variable, Operator, Quantifier, \
 from proof.tableaux import Tableau, Rule
 from proof.common import Branch, Node
 from parsers import parse, parse_argument
-from models import truth_table
+from models import BaseModel
 from .tutils import BaseSuite, larg, using, skip
 from enum import Enum
 import examples
@@ -607,7 +607,7 @@ class TestK3W(BaseSuite):
     class Test_Models(BaseSuite):
 
         def test_truth_table_conjunction(self):
-            tbl = truth_table(self.logic, 'Conjunction')
+            tbl = self.m().truth_table(Oper.Conjunction)
             assert tbl['outputs'][0] == 'F'
             assert tbl['outputs'][3] == 'N'
             assert tbl['outputs'][8] == 'T'
@@ -663,19 +663,19 @@ class TestK3WQ(BaseSuite):
 class TestB3E(BaseSuite):
 
     def test_truth_table_assertion(self):
-        tbl = truth_table(self.logic, 'Assertion')
+        tbl = self.m().truth_table('Assertion')
         assert tbl['outputs'][0] == 'F'
         assert tbl['outputs'][1] == 'F'
         assert tbl['outputs'][2] == 'T'
 
     def test_truth_table_conditional(self):
-        tbl = truth_table(self.logic, 'Conditional')
+        tbl = self.m().truth_table('Conditional')
         assert tbl['outputs'][3] == 'T'
         assert tbl['outputs'][4] == 'T'
         assert tbl['outputs'][7] == 'F'
 
     def test_truth_table_biconditional(self):
-        tbl = truth_table(self.logic, 'Biconditional')
+        tbl = self.m().truth_table('Biconditional')
         assert tbl['outputs'][2] == 'F'
         assert tbl['outputs'][4] == 'T'
         assert tbl['outputs'][7] == 'F'
@@ -751,7 +751,7 @@ class TestL3(BaseSuite):
         self.invalid_tab('AUabNUab')
 
     def test_truth_table_conditional(self):
-        tbl = truth_table(self.logic, 'Conditional')
+        tbl = self.m().truth_table('Conditional')
         assert tbl['outputs'][3] == 'N'
         assert tbl['outputs'][4] == 'T'
         assert tbl['outputs'][6] == 'F'
@@ -861,7 +861,7 @@ class TestLP(BaseSuite):
 class TestRM3(BaseSuite):
 
     def test_truth_table_conditional(self):
-        tbl = truth_table(self.logic, 'Conditional')
+        tbl = self.m().truth_table('Conditional')
         assert tbl['outputs'][0] == 'T'
         assert tbl['outputs'][1] == 'T'
         assert tbl['outputs'][2] == 'T'
@@ -935,49 +935,49 @@ class TestRM3(BaseSuite):
 class TestGO(BaseSuite):
 
     def test_truth_table_assertion(self):
-        tbl = truth_table(self.logic, 'Assertion')
+        tbl = self.m().truth_table('Assertion')
         assert tbl['outputs'][0] == 'F'
         assert tbl['outputs'][1] == 'F'
         assert tbl['outputs'][2] == 'T'
 
     def test_truth_table_negation(self):
-        tbl = truth_table(self.logic, 'Negation')
+        tbl = self.m().truth_table('Negation')
         assert tbl['outputs'][0] == 'T'
         assert tbl['outputs'][1] == 'N'
         assert tbl['outputs'][2] == 'F'
 
     def test_truth_table_disjunction(self):
-        tbl = truth_table(self.logic, 'Disjunction')
+        tbl = self.m().truth_table('Disjunction')
         assert tbl['outputs'][0] == 'F'
         assert tbl['outputs'][1] == 'F'
         assert tbl['outputs'][2] == 'T'
 
     def test_truth_table_conjunction(self):
-        tbl = truth_table(self.logic, 'Conjunction')
+        tbl = self.m().truth_table('Conjunction')
         assert tbl['outputs'][0] == 'F'
         assert tbl['outputs'][1] == 'F'
         assert tbl['outputs'][8] == 'T'
 
     def test_truth_table_mat_cond(self):
-        tbl = truth_table(self.logic, 'Material Conditional')
+        tbl = self.m().truth_table('Material Conditional')
         assert tbl['outputs'][0] == 'T'
         assert tbl['outputs'][1] == 'T'
         assert tbl['outputs'][4] == 'F'
 
     def test_truth_table_mat_bicond(self):
-        tbl = truth_table(self.logic, 'Material Biconditional')
+        tbl = self.m().truth_table('Material Biconditional')
         assert tbl['outputs'][0] == 'T'
         assert tbl['outputs'][1] == 'F'
         assert tbl['outputs'][4] == 'F'
 
     def test_truth_table_cond(self):
-        tbl = truth_table(self.logic, 'Conditional')
+        tbl = self.m().truth_table('Conditional')
         assert tbl['outputs'][0] == 'T'
         assert tbl['outputs'][3] == 'F'
         assert tbl['outputs'][4] == 'T'
 
     def test_truth_table_bicond(self):
-        tbl = truth_table(self.logic, 'Biconditional')
+        tbl = self.m().truth_table('Biconditional')
         assert tbl['outputs'][0] == 'T'
         assert tbl['outputs'][4] == 'T'
         assert tbl['outputs'][7] == 'F'
