@@ -17,26 +17,32 @@
 #
 # ------------------
 # pytableaux - parsers module
-from errors import ParseError, BoundVariableError, UnboundVariableError, \
-    IllegalStateError
+from __future__ import annotations
+from errors import (
+    ParseError,
+    BoundVariableError,
+    UnboundVariableError,
+    IllegalStateError,
+)
 from tools.abcs import Abc
 from tools.decorators import abstract
-from lexicals import Predicate, Parameter, Constant, Variable, \
-    Operator as Oper, Quantifier, Sentence, Atomic, Predicated, \
-    Quantified, Operated, LexType, Predicates, Argument, Types
 from tools.misc import CacheNotationData, cat
+from lexicals import (
+    Predicate, Parameter, Constant, Variable, Operator as Oper, Quantifier,
+    Sentence, Atomic, Predicated, Quantified, Operated,
+    LexType, Predicates, Argument, Notation, Parser, Types
+)
 
-from collections.abc import Iterable, Mapping
 from types import MappingProxyType as MapProxy
-from typing import Union
+from typing import Iterable, Mapping
 
 parser_classes = {
     # Values populated after class declarations below.
-    'polish'   : None,
-    'standard' : None,
+    Notation.polish   : None,
+    Notation.standard : None,
 }
-notations = tuple(sorted(parser_classes.keys()))
-default_notation = notations[notations.index('polish')]
+notations = tuple(parser_classes.keys())
+default_notation = notations[notations.index(Notation.polish)]
 
 class CharTable(CacheNotationData):
 
@@ -47,7 +53,7 @@ class CharTable(CacheNotationData):
         # copy table
         self._table = MapProxy(data)#{key: tuple(value) for key, value in itms}
         # flipped table 
-        self._reverse = MapProxy(dict(reversed(item) for item in itms))
+        self._reverse = MapProxy(dict(map(reversed, itms)))
         # list of types
         self._types = tuple(sorted(set(item[0] for item in vals)))
         # tuple of unique values for type
@@ -84,7 +90,7 @@ class CharTable(CacheNotationData):
         """
         return self._table[char]
 
-    def value(self, char) -> Union[int, Types.Lexical]:
+    def value(self, char):
         """
         :param str char: The character symbol.
         :return: Table item value, e.g. ``1`` or ``Operator.Negation``.
@@ -107,35 +113,6 @@ class CharTable(CacheNotationData):
     def table(self):
         return self._table
 
-class Parser(Abc):
-
-    @abstract
-    def parse(self, input: str) -> Sentence:
-        """
-        Parse a sentence from an input string.
-
-        :param input: The input string.
-        :return: The parsed sentence.
-        :raises errors.ParseError:
-        :raises TypeError:
-        """
-
-    def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
-        """
-        Parse the input strings and create an argument.
-
-        :param str conclusion: The argument's conclusion.
-        :param list(str) premises: List of premise strings, if any.
-        :return: The argument.
-        :raises errors.ParseError:
-        :raises TypeError:
-        """
-        return Argument(
-            self.parse(conclusion),
-            premises and tuple(self.parse(p) for p in premises),
-            title = title,
-        )
-
 def parse(input: str, *args, **opts) -> Sentence:
     """
     Parse a string and return a sentence.
@@ -152,7 +129,7 @@ def parse_argument(conclusion, premises = None, title: str = None, **opts) -> Ar
     """
     return create_parser(**opts).argument(conclusion, premises, title = title)
 
-def create_parser(notn: str = None, vocab: Predicates = None, table: CharTable = None, **opts) -> Parser:
+def create_parser(notn: Notation = None, vocab: Predicates = None, table: CharTable = None, **opts) -> Parser:
     """
     Create a sentence parser with the given spec. This is
     useful if you parsing many sentences with the same notation
@@ -165,20 +142,22 @@ def create_parser(notn: str = None, vocab: Predicates = None, table: CharTable =
     :raises ValueError: on invalid notation, or table.
     :raises TypeError: on invalid argument types.
     """
-    if isinstance(notn, Predicates) or isinstance(vocab, str):
+    if isinstance(notn, Predicates) or isinstance(vocab, (Notation, str)):
         # Accept inverted args for backwards compatibility.
         notn, vocab = (vocab, notn)
     if vocab is None:
         vocab = Predicates.System
     if notn is None:
-        notn = default_notation
-    elif notn not in parser_classes:
-        raise ValueError('Invalid notation: %s' % notn)
+        notn = Notation.default
+    else:
+        notn = Notation(notn)
+    # elif notn not in parser_classes:
+    #     raise ValueError('Invalid notation: %s' % notn)
     if table is None:
         table = 'default'
     if isinstance(table, str):
         table = CharTable.fetch(notn, table)
-    return parser_classes[notn](table, vocab, **opts)
+    return notn.parser(table, vocab, **opts)
 
 # create_parser._EmptyPreds = None
     
@@ -209,11 +188,11 @@ class BaseParser(Parser):
         self.opts = opts
         self.__state = self.__State(self)
 
-    def parse(self, input):
+    def parse(self, input: str):
         if isinstance(input, Sentence):
             return input
         with self.__state:
-            self.s = list(input)
+            self.s = tuple(input)
             self.pos = 0
             self._chomp()
             if not self._has_current():
@@ -280,8 +259,7 @@ class BaseParser(Parser):
         :meta private:
         """
         pred = self._read_predicate()
-        params = self._read_params(pred.arity)
-        return Predicated(pred, params)
+        return Predicated(pred, self._read_params(pred.arity))
 
     def _read_quantified_sentence(self) -> Quantified:
         """
@@ -292,7 +270,7 @@ class BaseParser(Parser):
         :meta private:
         """
         self._assert_current_is('quantifier')
-        _, quantifier = self.table.item(self._current())
+        quantifier = self.table.value(self._current())
         self._advance()
         v = self._read_variable()
         if v in self.bound_vars:
@@ -326,7 +304,7 @@ class BaseParser(Parser):
         cpos = self.pos
         ctype = self._typeof(pchar)
         if ctype == 'system_predicate':
-            _, pred = self.table.item(pchar)
+            pred = self.table.value(pchar)
             self._advance()
             return pred
         try:
@@ -430,7 +408,7 @@ class BaseParser(Parser):
             ctype = self._typeof(self._current())
         else:
             self._assert_current_is(ctype)
-        _, index = self.table.item(self._current())
+        index = self.table.value(self._current())
         self._advance()
         subscript = self._read_subscript()
         return Types.BiCoords(index, subscript)
@@ -484,7 +462,7 @@ class BaseParser(Parser):
         # check whether there is a current character, or return ``False``` if after last.
         return self._has_next(0)
 
-    def _next(self, n = 1) -> Union[str, None]:
+    def _next(self, n = 1):
         # Get the nth character after the current, of ``None``` if ``n``` is after last.
         if self._has_next(n):
             return self.s[self.pos+n]
@@ -535,13 +513,15 @@ class PolishParser(BaseParser):
     def _read(self):
         ctype = self._assert_current()
         if ctype == 'operator':
-            _, operator = self.table.item(self._current())
+            operator = self.table.value(self._current())
             self._advance()
             operands = tuple(self._read() for _ in range(operator.arity))
             s = Operated(operator, operands)
         else:
             s = super()._read()
         return s
+
+Notation.polish.parser = PolishParser
 
 class StandardParser(BaseParser):
 
@@ -628,7 +608,7 @@ class StandardParser(BaseParser):
             elif ptype == 'paren_open':
                 depth += 1
             elif ptype == 'operator':
-                _, peek_operator = self.table.item(peek)
+                peek_operator = self.table.value(peek)
                 if peek_operator.arity == 2 and depth == 1:
                     if operator != None:
                         raise ParseError(
@@ -670,13 +650,15 @@ class StandardParser(BaseParser):
         self._advance()
         return Operated(operator, (lhs, rhs))
 
+Notation.standard.parser = StandardParser
+
 parser_classes.update({
-    'polish'   : PolishParser,
-    'standard' : StandardParser,
+    Notation.polish   : PolishParser,
+    Notation.standard : StandardParser,
 })
 
 CharTable._initcache(notations, {
-    'standard': {
+    Notation.standard: {
         'default': {
             'A' : ('atomic', 0),
             'B' : ('atomic', 1),
@@ -724,7 +706,7 @@ CharTable._initcache(notations, {
             '9' : ('digit', 9),
         }
     },
-    'polish': {
+    Notation.polish: {
         'default': {
             'a' : ('atomic', 0),
             'b' : ('atomic', 1),

@@ -31,7 +31,7 @@ from docutils import nodes
 from docutils.parsers.rst import Directive, directives, roles
 
 logger = logging.getLogger(__name__)
-from tools.misc import cat, isstr, get_logic
+from tools.misc import cat, get_logic
 import examples
 from lexicals import \
     Constant, Variable, RenderSet, Predicates, Operator, LexWriter
@@ -292,7 +292,7 @@ class Helper(object):
         if event not in self._listeners:
             self._listeners[event] = []
         for func in [
-            getattr(self, method) if isstr(method) else method
+            getattr(self, method) if isinstance(method, str) else method
             for method in methods
         ]:
             self._listeners[event].append(func)
@@ -376,7 +376,7 @@ class Helper(object):
                     if not matches:
                         raise BadExpressionError(line)
                     match = matches[0]
-                    if isstr(match):
+                    if isinstance(match, str):
                         # Corner case of one capture group
                         match = (match,)
                     rpl[i] = func(*match)

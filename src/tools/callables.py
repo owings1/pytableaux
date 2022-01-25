@@ -6,23 +6,16 @@ __all__ = (
 )
 
 from errors import instcheck, subclscheck
-from tools.abcs import Abc, AbcMeta, P, T, F
-from tools.decorators import abstract, final, overload, static
+from tools.abcs import AbcMeta, Copyable, P, T, KT, RT, F
+from tools.decorators import abstract, final, static
 from tools.misc import orepr
 
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import partial
 import operator as opr
+from types import MappingProxyType as MapProxy
 from typing import (
-    Any, Callable, Iterable, Iterator, Literal, Mapping, Sequence,
-    ParamSpec, TypeVar
+    Any, Callable, Iterable, Literal, Mapping, Sequence,
 )
-
-# P = ParamSpec('P')
-K = TypeVar('K')
-V = TypeVar('V')
-R = TypeVar('R')
-# T = TypeVar('T')
 
 import enum
 
@@ -50,6 +43,7 @@ del(enum)
 ExceptsParam = tuple[type[Exception], ...]
 FlagParam = Flag | Callable[[Flag], Flag]
 
+EMPTY = ()
 SETATTROK = frozenset({
     '__module__', '__name__', '__qualname__',
     '__doc__', '__annotations__',
@@ -66,7 +60,7 @@ class _objwrap(Callable):
     def __call__(self, *a, **kw):
         return self.caller(*a, **kw)
 
-class Caller(Callable[P, T], Abc):
+class Caller(Callable[P, RT], Copyable):
 
     SAFE: Literal[Flag.Safe] = Flag.Safe
     LEFT: Literal[Flag.Left] = Flag.Left
@@ -93,11 +87,11 @@ class Caller(Callable[P, T], Abc):
     default  : Any
 
     @abstract
-    def _call(self, *args) -> T:
+    def _call(self, *args) -> RT:
         raise NotImplementedError
 
     def __new__(cls, *args, **kw):
-        inst = object.__new__(cls)
+        inst = super().__new__(cls)
         inst.flag = Flag.Blank | cls.cls_flag
         return inst
 
@@ -130,7 +124,7 @@ class Caller(Callable[P, T], Abc):
         self.flag = f | f.Init | f.Lock
 
     @final
-    def __call__(self, *args: Any, **kw) -> T:
+    def __call__(self, *args: Any, **kw) -> RT:
         try: return self._call(*self.getargs(args), **kw)
         except Exception as err:
             if Flag.Safe in self.flag and isinstance(err, self.excepts):
@@ -144,7 +138,8 @@ class Caller(Callable[P, T], Abc):
         if f.Bound in f:
             if f.Left in f: args = self.bindargs + args
             else: args = args + self.bindargs
-        if f.Order in f: args = [args[n] for n in self.aorder]
+        if f.Order in f:
+            args = tuple(map(args.__getitem__, self.aorder))
         return args
 
     def attrnames(self):
@@ -189,14 +184,7 @@ class Caller(Callable[P, T], Abc):
         if self is other: return True
         if not isinstance(other, type(self)):
             return NotImplemented
-        try:
-            return self.attritems() == other.attritems()
-            # return all(
-            #     opr.eq(*items) for items in
-            #     zip(self.attritems(), other.attritems(), strict = True)
-            # )
-        except ValueError:
-            return False
+        return self.attritems() == other.attritems()
 
     def __hash__(self):
         return hash(type(self)) + hash(self.attritems())
@@ -207,13 +195,9 @@ class Caller(Callable[P, T], Abc):
     def __repr__(self):
         return orepr(self, self.attrs)
 
-    def __copy__(self):
-        return self.copy()
-
     def __init_subclass__(subcls: type[Caller], **kw):
         super().__init_subclass__(**kw)
-        from types import MappingProxyType
-        subcls.attrhints = MappingProxyType(__class__.attrhints | subcls.attrhints)
+        subcls.attrhints = MapProxy(__class__.attrhints | subcls.attrhints)
 
     def asobj(self):
         return _objwrap(self)
@@ -252,7 +236,7 @@ class calls:
         attrhints = dict(method = Flag.Blank)
         __slots__ = tuple(attrhints)
 
-    def now(func: Callable[P, T], *args: P.args, **kw: P.kwargs) -> T:
+    def now(func: Callable[P, RT], *args: P.args, **kw: P.kwargs) -> RT:
         return func(*args, **kw)
 
 @static
@@ -263,11 +247,13 @@ class gets:
         def _call(self, obj, name: str):
             return getattr(obj, name)
         safe_errs = AttributeError,
+        __slots__ = EMPTY
 
     class key(Caller):
         'Subscript getter.'
         def _call(self, obj, key): return obj[key]
         safe_errs = KeyError, IndexError,
+        __slots__ = EMPTY
 
     class mixed(Caller):
         'Attribute or subscript.'
@@ -289,12 +275,14 @@ class gets:
             super().__init__(*args, **kw)
 
         safe_errs = AttributeError, KeyError, IndexError
+        __slots__ = EMPTY
 
-    class thru(Caller[..., T]):
+    class thru(Caller):
         'Passthrough getter.'
-        def _call(self, obj: Any, *_) -> T:
+        def _call(self, obj: T, *_) -> T:
             return obj
         cls_flag = Flag.Left
+        __slots__ = EMPTY
 
 @static
 class sets:
@@ -313,6 +301,7 @@ class sets:
 
         safe_errs = AttributeError,
         cls_flag = Flag.Left
+        __slots__ = EMPTY
 
 @static
 class dels:
@@ -321,6 +310,7 @@ class dels:
         'Attribute deleter.'
         def _call(self, obj, name: str): delattr(obj, name)
         safe_errs = AttributeError,
+        __slots__ = EMPTY
 
 class raiser(Caller):
     'Error raiser.'
@@ -341,6 +331,7 @@ class raiser(Caller):
 
 @static
 class funciter:
+
     def reduce(funcs: Iterable[F], *args, **kw) -> Any:
         it = iter(funcs)
         try: value = next(it)(*args, **kw)
@@ -352,9 +343,6 @@ class funciter:
     def consume(funcs: Iterable[Callable[P, T]], consumer: Callable[[Iterable[P]], T], *args, **kw) -> T:
         return consumer(f(*args, **kw) for f in funcs)
 
-    def filter(funcs: Iterable[Callable[P, T]], consumer: Callable[[Iterable[P]], T], *args, **kw) -> Iterator[T]:
-        return filter(consumer(f(*args, **kw) for f in funcs))
-
 @static
 class cchain:
 
@@ -364,25 +352,22 @@ class cchain:
     def forany(*funcs: Callable[P, bool]) -> Callable[P, bool]:
         return partial(funciter.consume, funcs, any)
 
-    def asfilter(*funcs: Callable[[T], bool]) -> Callable[[Iterable[T]], Iterator[T]]:
-        return partial(funciter.filter, funcs, all)
-
     def reducer(*funcs: Callable[P, T]) -> Callable[P, T]:
         return partial(funciter.reduce, funcs)
 
-def predcachetype(pred: Callable[[T, K], bool]) \
-    -> type[dict[K, Callable[[T], bool]]]:
+def predcachetype(
+    pred: Callable[[T, KT], bool],
+    outerfn: Callable = calls.func,
+    /,
+) -> type[dict[KT, Callable[[T], bool]]]:
     'Returns a dict type that generates and caches predicates.'
-    outerfn = calls.func
-    setdefault = dict.setdefault
-    def missing(self, key):
+    def missing(self, key, setdefault = dict.setdefault):
         return setdefault(self, key, outerfn(pred, key))
     n = pred.__name__
-    clsname = n[0].upper() + n[1:] + 'PartialCache'
     return AbcMeta(
-        clsname,
+        n[0].upper() + n[1:] + 'PartialCache',
         (dict,),
-        dict(__missing__ = missing, __slots__ = ()),
+        dict(__missing__ = missing, __slots__ = EMPTY),
     )
 
 @static
@@ -406,3 +391,5 @@ class preds:
     def true(_): return True
     def false(_): return False
 
+
+del(abstract, final, static, predcachetype, opr)

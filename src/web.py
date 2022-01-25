@@ -24,10 +24,10 @@ from fixed import issues_href, source_href, version
 import lexicals
 from lexicals import Argument, Predicate, Predicates, LexWriter, RenderSet, \
     Operator, Quantifier, Notation
-from parsers import create_parser, notations as parser_notations
+from parsers import create_parser
 from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
-from tools.misc import get_logic, isstr
+from tools.misc import get_logic
 
 
 import cherrypy as server
@@ -155,7 +155,6 @@ base_view_data = {
     'logic_categories'    : logic_categories,
     'logic_modules'       : available['logics'],
     'logics'              : modules['logics'],
-    # 'parser_names'        : parser_notations,
     'parser_tables'       : parser_tables,
     'operators_list'      : list(Operator),
     'quantifiers'         : list(Quantifier),
@@ -191,7 +190,7 @@ def fix_form_data(form_data):
     if len(form_data):
         for param in form_data:
             if param.endswith('[]'):
-                if isstr(form_data[param]):
+                if isinstance(form_data[param], str):
                     form_data[param] = [form_data[param]]
     return form_data
 
@@ -497,7 +496,7 @@ class App(object):
             body['input'] = ''
 
         errors = dict()
-        if body['notation'] not in parser_notations:
+        if body['notation'] not in Notation:
             errors['Notation'] = 'Invalid notation'
 
         try:
@@ -741,7 +740,7 @@ class App(object):
         errors = dict()
 
         try:
-            if adata['notation'] not in parser_notations:
+            if adata['notation'] not in Notation:
                 raise ValueError('Invalid parser notation')
         except Exception as e:
             errors['Notation'] = str(e)

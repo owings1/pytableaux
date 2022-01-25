@@ -1,14 +1,14 @@
 from .tutils import BaseSuite, skip
 from pytest import raises
 from errors import *
-from tools.events import EventsListeners#, Listener, Listeners, EventEmitter
 from lexicals import *
 
-from tools.sets import *
-from tools.sequences import *
-from tools.mappings import *
+from tools.events import EventsListeners
 from tools.hybrids import *
 from tools.linked import *
+from tools.mappings import *
+from tools.sequences import *
+from tools.sets import *
 
 from collections import deque
 
@@ -75,7 +75,7 @@ class TestListeners(BaseSuite):
         assert cb in e['test']
         e.emit('test')
         assert len(e['test']) == 0
-    @skip
+
     def test_off(self):
         def cb(): pass
         e = EventsListeners()

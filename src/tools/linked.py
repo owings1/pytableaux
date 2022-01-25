@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from typing import TypeVar
-T = TypeVar('T')
-V = TypeVar('V')
-del(TypeVar)
+__all__ = (
+    'LinkSequenceApi',
+    'MutableLinkSequenceApi',
+    'MutableLinkSequenceSetApi',
+    'linqset',
+)
 
-NOARG = object()
-EMPTY = ()
-
-from tools.decorators import abstract, final, overload
 from errors import (
     Emsg,
     DuplicateValueError,
     MissingValueError,
     instcheck as _instcheck,
 )
+from tools.abcs import T, VT
+from tools.decorators import abstract, final, overload
 
 class bases:
     from tools.abcs import Abc, Copyable
@@ -24,6 +24,8 @@ class bases:
 from collections.abc import Iterable, Iterator
 from typing import Generic, SupportsIndex
 
+NOARG = object()
+EMPTY = ()
 
 import enum
 class LinkRel(enum.IntEnum):
@@ -42,12 +44,12 @@ def _absindex(seqlen, index: SupportsIndex, strict = True, /) -> int:
         raise Emsg.IndexOutOfRange(index)
     return index
 
-class Link(Generic[V], bases.Copyable):
+class Link(Generic[VT], bases.Copyable):
     'Link value container.'
 
-    value: V
-    prev: Link[V]
-    next: Link[V]
+    value: VT
+    prev: Link[VT]
+    next: Link[VT]
 
     __slots__ = 'prev', 'next', 'value'
 
@@ -60,7 +62,7 @@ class Link(Generic[V], bases.Copyable):
         self.prev = prev
         self.next = nxt
 
-    def __getitem__(self, rel: int) -> Link[V] | None:
+    def __getitem__(self, rel: int) -> Link[VT] | None:
         'Get previous, self, or next with -1, 0, 1, or ``LinkRel`` enum.'
         return getattr(self, LinkRel(rel).name)
 
@@ -73,7 +75,8 @@ class Link(Generic[V], bases.Copyable):
         self.prev, self.next = self.next, self.prev
 
     def copy(self, value = NOARG):
-        inst: Link = object.__new__(type(self))
+        cls = type(self)
+        inst = cls.__new__(cls)
         inst.value = self.value if value is NOARG else value
         inst.prev = self.prev
         inst.next = self.next
@@ -83,7 +86,7 @@ class Link(Generic[V], bases.Copyable):
         import tools.misc as misc
         return misc.wraprepr(self, self.value)
 
-class HashLink(Link[V]):
+class HashLink(Link[VT]):
 
     __slots__ = EMPTY
 
@@ -97,7 +100,7 @@ class HashLink(Link[V]):
     def __hash__(self):
         return hash(self.value)
 
-class LinkIter(Iterator[Link[V]], bases.Abc):
+class LinkIter(Iterator[Link[VT]], bases.Abc):
     'Linked sequence iterator.'
 
     _start: Link
@@ -120,10 +123,10 @@ class LinkIter(Iterator[Link[V]], bases.Abc):
 
     @classmethod
     def from_slice(
-        cls: type[LinkIter[V]],
-        seq: LinkSequenceApi[V],
+        cls: type[LinkIter[VT]],
+        seq: LinkSequenceApi[VT],
         slc: slice,
-    /) -> LinkIter[V]:
+    /) -> LinkIter[VT]:
         istart, stop, step = slc.indices(len(seq))
         count = (stop - istart) / step
         if count % 1: count += 1 # ceil
@@ -150,52 +153,52 @@ class LinkIter(Iterator[Link[V]], bases.Abc):
             raise StopIteration
         self._count -= 1
 
-    def __next__(self) -> Link[V]:
+    def __next__(self) -> Link[VT]:
         self.advance()
         return self._cur
 
-class LinkValueIter(LinkIter[V]):
+class LinkValueIter(LinkIter[VT]):
     'Linked sequence iterator over values.'
 
     __slots__ = EMPTY
 
     @classmethod
     def from_slice(
-        cls: type[LinkValueIter[V]],
-        seq: LinkSequenceApi[V],
+        cls: type[LinkValueIter[VT]],
+        seq: LinkSequenceApi[VT],
         slc: slice,
-    /) -> LinkValueIter[V]: ...
+    /) -> LinkValueIter[VT]: ...
     from_slice = LinkIter.from_slice
 
-    def __next__(self) -> V:
+    def __next__(self) -> VT:
         self.advance()
         return self._cur.value
 
 # ----------- LinkSequence ------------------ #
 
-class LinkSequenceApi(bases.SequenceApi[V]):
+class LinkSequenceApi(bases.SequenceApi[VT]):
     'Linked sequence read interface.'
 
     __slots__ = EMPTY
 
     @property
     @abstract
-    def _link_first_(self) -> Link[V]:
+    def _link_first_(self) -> Link[VT]:
         return None
 
     @property
     @abstract
-    def _link_last_(self) -> Link[V]:
+    def _link_last_(self) -> Link[VT]:
         return None
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[VT]:
         return LinkValueIter(self._link_first_, 1)
 
-    def __reversed__(self):
+    def __reversed__(self) -> Iterator[VT]:
         return LinkValueIter(self._link_last_, -1)
 
     @overload
-    def __getitem__(self, index: SupportsIndex) -> V:...
+    def __getitem__(self, index: SupportsIndex) -> VT:...
     @overload
     def __getitem__(self:T, index: slice) -> T: ...
 
@@ -240,7 +243,7 @@ class LinkSequenceApi(bases.SequenceApi[V]):
         import tools.misc as misc
         return misc.wraprepr(self, list(self))
 
-class MutableLinkSequenceApi(LinkSequenceApi[V], bases.MutableSequenceApi[V]):
+class MutableLinkSequenceApi(LinkSequenceApi[VT], bases.MutableSequenceApi[VT]):
     'Linked sequence write interface.'
     __slots__  = EMPTY
 
@@ -249,7 +252,8 @@ class MutableLinkSequenceApi(LinkSequenceApi[V], bases.MutableSequenceApi[V]):
     # def __setitem__(self, index: int|slice, value):
     #     ...
 
-class linkseq(MutableLinkSequenceApi[V]):
+class linkseq(MutableLinkSequenceApi[VT]):
+    # TODO
     # __first : Link
     # __last  : Link
 
@@ -270,7 +274,7 @@ class linkseq(MutableLinkSequenceApi[V]):
 
 # ----------- LinkSequenceSet ------------------ #
 
-class MutableLinkSequenceSetApi(MutableLinkSequenceApi[V], bases.MutableSequenceSetApi[V]):
+class MutableLinkSequenceSetApi(MutableLinkSequenceApi[VT], bases.MutableSequenceSetApi[VT]):
     'Linked sequence set read/write interface.'
 
     __slots__ = EMPTY
@@ -420,16 +424,16 @@ class MutableLinkSequenceSetApi(MutableLinkSequenceApi[V], bases.MutableSequence
         self._wedge(rel, neighbor, self._new_link(value))
         self._after_add(value)
 
-    def iter_from_value(self, value, /, reverse = False) -> Iterator[V]:
+    def iter_from_value(self, value, /, reverse = False) -> Iterator[VT]:
         'Return an iterator starting from ``value``.'
         return LinkValueIter(self._link_of(value), -1 if reverse else 1)
 
-class linqset(MutableLinkSequenceSetApi[V]):
+class linqset(MutableLinkSequenceSetApi[VT]):
     'MutableLinkSequenceSetApi implementation.'
 
-    __first : HashLink[V]
-    __last  : HashLink[V]
-    __links : dict[V, HashLink[V]]
+    __first : HashLink[VT]
+    __last  : HashLink[VT]
+    __links : dict[VT, HashLink[VT]]
 
     __slots__ = '__first', '__last', '__links'
 
@@ -441,20 +445,20 @@ class linqset(MutableLinkSequenceSetApi[V]):
             self.update(values)
 
     @property
-    def _link_first_(self) -> HashLink[V]:
+    def _link_first_(self) -> HashLink[VT]:
         return self.__first
 
     @property
-    def _link_last_(self) -> HashLink[V]:
+    def _link_last_(self) -> HashLink[VT]:
         return self.__last
 
     def __len__(self):
         return len(self.__links)
 
-    def __contains__(self, value: V):
+    def __contains__(self, value: VT):
         return value in self.__links
 
-    def _link_of(self, value: V) -> HashLink[V]:
+    def _link_of(self, value: VT) -> HashLink[VT]:
         if value in self.__links:
             return self.__links[value]
         raise MissingValueError(value)
@@ -535,7 +539,8 @@ class linqset(MutableLinkSequenceSetApi[V]):
         self.__last = None
 
     def copy(self):
-        inst = object.__new__(type(self))
+        cls = type(self)
+        inst = cls.__new__(cls)
         inst.__links = links = type(self.__links)()
         it = LinkIter(self.__first)
         try:
@@ -549,4 +554,4 @@ class linqset(MutableLinkSequenceSetApi[V]):
             inst.__last = link
         return inst
 
-del(abstract, final, overload)
+del(abstract, final, overload, bases)

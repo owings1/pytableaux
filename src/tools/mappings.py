@@ -11,40 +11,31 @@ __all__ = (
     'DequeCache',
 )
 
-from tools.abcs import Abc, Copyable, abcf, F, T, P, RT
-from tools.callables import preds, gets
-from tools.decorators import abstract, static, final, overload, fixed, membr, wraps
 from errors import Emsg, instcheck
-
-from typing import (
-    Any, Callable, Iterable,
-    #  Literal, Sequence,
-    TypeVar,
+from tools.abcs import Abc, Copyable, abcf, F, KT, VT #, T, P, RT
+from tools.callables import preds, gets
+from tools.decorators import (
+    abstract, static, final, overload,
+    fixed, membr, wraps,
 )
-from _collections_abc import (
+
+from collections.abc import (
     Collection, Iterator, Mapping, MutableMapping, Set
 )
 from collections import defaultdict, deque
+from itertools import chain, filterfalse
+from operator import not_, truth
 from types import MappingProxyType as MapProxy
+from typing import (
+    Any, Callable, Iterable, TypeVar,
+)
 
-KT = TypeVar('KT')
-VT = TypeVar('VT')
 MT = TypeVar('MT', bound = Mapping)
 
 EMPTY = ()
-FCACHE_MAXMISS = 3
+FCACHE_MAXMISS = 50
 FNOTIMPL = fixed.value(NotImplemented)()
 FTHRU = gets.thru()
-
-from itertools import (
-    chain,
-    filterfalse,
-    starmap,
-)
-from operator import (
-    not_,
-    truth
-)
 
 class FuncResolvers(dict[tuple[Callable, Callable], Callable]):
 
@@ -294,7 +285,7 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
         inst.update(it)
         return inst
 
-class dmap(dict, MutableMappingApi[KT, VT]):
+class dmap(dict[KT, VT], MutableMappingApi[KT, VT]):
     'Mutable mapping api from dict.'
 
     __slots__ = EMPTY
@@ -303,9 +294,9 @@ class dmap(dict, MutableMappingApi[KT, VT]):
     __or__  = MutableMappingApi.__or__
     __ror__ = MutableMappingApi.__ror__
 
-    @classmethod
-    def _from_iterable(cls, it):
-        return cls(it)
+    # @classmethod
+    # def _from_iterable(cls, it):
+    #     return cls(it)
 
 class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
     'Mutable mapping api from defaultdict.'
@@ -318,13 +309,17 @@ class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
 
     @classmethod
     def _from_mapping(cls, mapping):
-        if isinstance(mapping, cls):
+        if isinstance(mapping, defaultdmap):
             return cls(mapping.default_factory, mapping)
-        return cls(None, mapping)
+        inst = cls(None)
+        inst.update(mapping)
+        return inst
 
     @classmethod
     def _from_iterable(cls, it):
-        return cls(None, it)
+        inst = cls(None)
+        inst.update(it)
+        return inst
 
     @classmethod
     def _roper_res_type(cls, other_type):

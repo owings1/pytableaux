@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import errors as err
-import tools.misc as misc
+__all__ = 'StopWatch',
+
+from errors import IllegalStateError
 from time import time as _time
 
 def _nowms() -> int:
@@ -24,7 +25,7 @@ class StopWatch:
     def start(self):
         'Start the StopWatch. Raises IllegalStateError if already started.'
         if self._running:
-            raise err.IllegalStateError('StopWatch already started.')
+            raise IllegalStateError('StopWatch already started.')
         self.count += 1
         self._running = True
         self._start_time = _nowms()
@@ -32,7 +33,7 @@ class StopWatch:
     def stop(self):
         'Stop the StopWatch. Raises IllegalStateError if already stopped.'
         if not self._running:
-            raise err.IllegalStateError('StopWatch already stopped.')
+            raise IllegalStateError('StopWatch already stopped.')
         self._running = False
         self._accum += _nowms() - self._start_time
 
@@ -63,7 +64,8 @@ class StopWatch:
         return self._running
 
     def __repr__(self):
-        return misc.wraprepr(self, self.elapsed)
+        from tools.misc import wraprepr
+        return wraprepr(self, self.elapsed)
 
     def __float__(self):
         return float(self.elapsed)
@@ -82,8 +84,3 @@ class StopWatch:
     def __exit__(self, type, value, traceback):
         if self._running:
             self.stop()
-
-    # @staticmethod
-    # def _nowms() -> int:
-    #     'Current time in milliseconds'
-    #     return int(round(_time() * 1000))

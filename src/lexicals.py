@@ -27,7 +27,7 @@ __all__ = (
 )
 ##############################################################
 
-from tools.abcs import abcm, abcf, T
+from tools.abcs import abcm, abcf, T, T_co
 from tools.decorators import abstract, final, overload, static
 from tools.sequences import SequenceApi, seqf
 from tools.sets import SetApi, MutableSetApi, setf, setm, EMPTY_SET
@@ -91,7 +91,6 @@ class fict:
 
     from functools import partial, reduce
     from itertools import chain, repeat, starmap, zip_longest as lzip
-    from tools.misc import it_drain as drain
 
     flat = chain.from_iterable
 
@@ -306,7 +305,7 @@ class Metas:
         def _clear_hooks(cls, Class: type[Bases.Enum]):
             'Cleanup spent hook methods.'
             fdel = fict.partial(type(cls).__delattr__, Class)
-            fict.drain(map(fdel, cls._hooks & Class.__dict__))
+            for _ in map(fdel, cls._hooks & Class.__dict__): pass
 
         _hooks = setf((
             '_member_keys', '_on_init', '_after_init'
@@ -346,9 +345,10 @@ class Metas:
                 try: return cls.indexof
                 except AttributeError: pass
             return super().__getattr__(name)
-        @overload
-        def __iter__(cls: type[En]) -> Iterator[En]:...
-        def __iter__(cls):
+        # @overload
+        # def __iter__(cls: type[En]) -> Iterator[En]: ...
+        # def __iter__(cls):
+        def __iter__(cls: type[En]) -> Iterator[En]:
             return iter(cls.seq)
 
         @overload
@@ -498,6 +498,9 @@ class Metas:
 
 @static
 class Bases:
+
+    class Abc(metaclass = Metas.Abc):
+        pass
 
     class Enum(std.Enum, metaclass = Metas.Enum):
         'Generic base class for all Enum classes.'
@@ -914,6 +917,8 @@ class Operator(Bases.LexicalEnum):
 
     __slots__ = 'arity',
 
+for value in Operator:
+    value
 ##############################################################
 
 class Parameter(Bases.CoordsItem):
@@ -1608,7 +1613,7 @@ class LexType(Bases.Enum):
 ##############################################################
 ##############################################################
 
-class Predicates(qset[Predicate], metaclass = Metas.Abc):
+class Predicates(qset[Predicate], Bases.Abc):
     'Predicate store'
 
     _lookup: dict[Types.PredsItemRef, Predicate]
@@ -1824,6 +1829,7 @@ class Notation(Bases.Enum, metaclass = Metas.Notation):
     writers          : setm[type[LexWriter]]
     default_writer   : type[LexWriter]
     rendersets       : setm[RenderSet]
+    parser           : type[Parser]
 
     polish   = std.auto(), 'ascii'
     standard = std.auto(), 'unicode'
@@ -1837,8 +1843,14 @@ class Notation(Bases.Enum, metaclass = Metas.Notation):
 
     __slots__ = (
         'encodings', 'default_encoding', 'writers',
-        'default_writer', 'rendersets',
+        'default_writer', 'rendersets', 'parser',
     )
+
+    def __setattr__(self, name, value):
+        if name == 'parser' and not hasattr(self, name):
+            std.Enum.__setattr__(self, name, value)
+            return
+        super().__setattr__(name, value)
 
 class LexWriter(metaclass = Metas.LexWriter):
     'LexWriter Api and Coordinator class.'
@@ -2092,6 +2104,38 @@ class StandardLexWriter(BaseLexWriter):
         s2 = Operator.Conjunction(Atomic.gen(2))
         s3 = s2.disjoin(Atomic.first())
         return super()._test() + list(map(self, [s1, s2, s3]))
+
+class Parser(Bases.Abc):
+
+    @abstract
+    def parse(self, input: str) -> Sentence:
+        """
+        Parse a sentence from an input string.
+
+        :param input: The input string.
+        :return: The parsed sentence.
+        :raises errors.ParseError:
+        :raises TypeError:
+        """
+
+    def __call__(self, input: str):
+        return self.parse(input)
+
+    def argument(self, conclusion: str, premises: Iterable[str] = None, title: str|None = None) -> Argument:
+        """
+        Parse the input strings and create an argument.
+
+        :param str conclusion: The argument's conclusion.
+        :param list(str) premises: List of premise strings, if any.
+        :return: The argument.
+        :raises errors.ParseError:
+        :raises TypeError:
+        """
+        return Argument(
+            self.parse(conclusion),
+            premises and tuple(map(self.parse, premises)),
+            title = title,
+        )
 
 @d.rund
 def _():

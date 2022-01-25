@@ -16,63 +16,17 @@
 #
 # ------------------
 #
-# pytableaux - utils module
+# pytableaux - misc utils module
 from __future__ import annotations
 
 # Only local import allowed is errors
-
-# from errors import DuplicateKeyError# , IllegalStateError
+from errors import DuplicateKeyError
 
 from builtins import ModuleNotFoundError
-# from collections.abc import Mapping#, Sequence
 from importlib import import_module
-import itertools
+from itertools import islice
 from types import ModuleType
-# import typing
-# from typing import TypeAlias
-
-# import abc
-# from collections import deque #, namedtuple
-    #  Collection, Hashable, ItemsView, ,\
-    # , KeysView, , MutableSet, Sequence, ValuesView
-# from copy import copy
-# import enum
-# from functools import reduce
-# from functools import partial
-# from pprint import pp
-# from time import time
-# from inspect import isclass
-
-# Constants
-# NOARG = object()
-# EmptySet = frozenset()
-# from types import MappingProxyType
-# CmpFnOper = MappingProxyType({
-#     '__lt__': '<',
-#     '__le__': '<=',
-#     '__gt__': '>',
-#     '__ge__': '>=',
-#     '__eq__': '==',
-#     '__ne__': '!=',
-#     '__or__': '|',
-#     '__ror__': '|',
-#     '__contains__': 'in',
-# })
-
-
-# strtype = str
-# LogicRef = ModuleType | str
-# IndexType: TypeAlias = int | slice
-# IntTuple: TypeAlias = tuple[int, ...]
-# enumerated field (0, 'name') etc.
-# FieldSeqItem: TypeAlias = tuple[int, str]
-# FieldItemSequence: TypeAlias = Sequence[FieldSeqItem]
-
-# T = TypeVar('T')
-
-# P = ParamSpec('P')
-# RetType = TypeVar('RetType')
-
+from typing import Mapping
 
 def get_module(ref, package: str = None) -> ModuleType:
 
@@ -146,18 +100,6 @@ def get_logic(ref) -> ModuleType:
     """
     return get_module(ref, package = 'logics')
 
-
-def it_drain(it):
-    try:
-        while True: next(it)
-    except StopIteration: pass
-
-def isstr(obj) -> bool:
-    return isinstance(obj, str)
-
-def ispow2(n):
-    return n != 0 and n & (n-1) == 0
-
 def cat(*args: str) -> str:
     'Concat all argument strings'
     return ''.join(args)
@@ -175,7 +117,7 @@ def drepr(d: dict, limit = 10, j: str = ', ', vj = '=', paren = True) -> str:
     lw = drepr.lw
     pairs = (
         cat(str(k), vj, valrepr(v, lw = lw))
-        for k,v in itertools.islice(d.items(), limit)
+        for k,v in islice(d.items(), limit)
     )
     istr = j.join(pairs)
     if paren:
@@ -217,90 +159,6 @@ def wraprepr(obj, inner, **kw) -> str:
     return cat(obj, wrparens(inner.__repr__(), **kw))
 
 
-# from collections.abc import Callable
-# import typing
-# KT = typing.TypeVar('KT')
-# VT = typing.TypeVar('VT')
-# class KeyCacheFactory(dict[KT, VT]):
-
-#     def __getitem__(self, key: KT) -> VT:
-#         try: return super().__getitem__(key)
-#         except KeyError:
-#             val = self[key] = self.__fncreate__(key)
-#             return val
-
-#     def __call__(self, key: KT) -> VT:
-#         return self[key]
-
-#     __slots__ = '__fncreate__',
-#     __fncreate__: Callable[[KT], VT]
-
-#     def __init__(self, fncreate: Callable[[KT], VT]):
-#         super().__init__()
-#         self.__fncreate__ = fncreate
-
-# import operator as opr
-
-# def items_from_keys(keys: Iterable[KT], d: dict[KT, VT]) -> Iterator[tuple[KT, VT]]:
-#     'Return an iterator of items in ``d`` of keys from ``keys``'
-#     return zip(
-#         keys,
-#         itertools.starmap(
-#             opr.getitem,
-#             zip(itertools.repeat(d), keys)
-#         )
-#     )
-
-# methodproxy: AttrCacheFactory[Callable[[str], calls.method]] = \
-#     AttrCacheFactory(partial(calls.func, calls.method))
-
-# _ga = object.__getattribute__
-
-# class AttrCacheFactory(Generic[T]):
-
-#     def __getattribute__(self, name: str) -> T:
-#         if name.startswith('__'): return _ga(self, name)
-#         cache: dict = _ga(self, '__cache__')
-#         return cache[name]
-
-#     __slots__ = '__cache__',
-#     __cache__: KeyCacheFactory[str, T]
-
-#     def __init__(self, fncreate: Callable[[str], T]):
-#         self.__cache__ = KeyCacheFactory(fncreate)
-
-#     def __dir__(self):
-#         return list(self.__cache__.keys())
-
-# class Decorators(object):
-
-#     __new__ = None
-
-
-#     # def setonce(method: Callable[..., RetType]) -> Callable[..., RetType]:
-#     #     name, key = __class__._privkey(method)
-#     #     def fset(self, val):
-#     #         if hasattr(self, key): raise AttributeError(name)
-#     #         setattr(self, key, method(self, val))
-#     #     return fset
-
-#     def checkstate(**attrs: dict) -> Callable:
-#         def fcheckwrap(method: Callable[..., RetType]) -> Callable[..., RetType]:
-#             def fcheckstate(self, *args, **kw):
-#                 for attr, val in attrs.items():
-#                     if getattr(self, attr) != val:
-#                         raise IllegalStateError(attr)
-#                 return method(self, *args, **kw)
-#             return renamefn(fcheckstate, method)
-#         return fcheckwrap
-
-#     @staticmethod
-#     def _privkey(method) -> tuple[str]:
-#         name = method.__name__
-#         key = cat('_', __name__, '__lazy_', name)
-#         return (name, key)
-
-from collections.abc import Mapping
 class CacheNotationData:
 
     default_fetch_name = 'default'
@@ -313,7 +171,6 @@ class CacheNotationData:
         if not isinstance(data, Mapping):
             raise TypeError(name, type(data), Mapping)
         if name in idx:
-            from errors import DuplicateKeyError
             raise DuplicateKeyError(notn, name, cls)
         idx[name] = cls(data)
         return idx[name]
@@ -347,4 +204,3 @@ class CacheNotationData:
         builtin = cls.__builtin = dict(builtin)
         notns = set(notns).union(builtin)
         cls.__instances = {notn: {} for notn in notns}
-

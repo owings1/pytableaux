@@ -2,22 +2,16 @@ from __future__ import annotations
 
 __all__ = 'SetApi', 'MutableSetApi', 'setf', 'setm', 'EMPTY_SET'
 
-from typing import Iterable, TypeVar
+from tools.abcs import Copyable, T, VT
+from tools.decorators import abstract, final, overload, operd
 
-T = TypeVar('T')
-V = TypeVar('V')
+from collections.abc import Set, MutableSet
+import operator as opr
+from typing import Iterable
 
 EMPTY = ()
 
-class std:
-    from collections.abc import Set, MutableSet
-
-from tools.abcs import Copyable
-
-from tools.decorators import abstract, final, overload, operd
-import operator as opr
-
-class SetApi(std.Set[V], Copyable):
+class SetApi(Set[VT], Copyable):
     'Fusion interface of collections.abc.Set and built-in frozenset.'
 
     __slots__ = EMPTY
@@ -31,10 +25,10 @@ class SetApi(std.Set[V], Copyable):
     @overload
     def __xor__(self:T, other) -> T: ...
 
-    __or__  = std.Set.__or__
-    __and__ = std.Set.__and__
-    __sub__ = std.Set.__sub__
-    __xor__ = std.Set.__xor__
+    __or__  = Set.__or__
+    __and__ = Set.__and__
+    __sub__ = Set.__sub__
+    __xor__ = Set.__xor__
 
     red = operd.reduce.template(freturn = '_from_iterable')
     app = operd.apply
@@ -68,7 +62,7 @@ class SetApi(std.Set[V], Copyable):
     def _from_iterable(cls: type[T], it: Iterable) -> T:
         return cls(it)
 
-class MutableSetApi(std.MutableSet[V], SetApi[V]):
+class MutableSetApi(MutableSet[VT], SetApi[VT]):
     'Fusion interface of collections.abc.MutableSet and built-in set.'
 
     __slots__ = EMPTY
@@ -93,25 +87,25 @@ class MutableSetApi(std.MutableSet[V], SetApi[V]):
 
     del(rep)
 
-class setf(SetApi[V], frozenset[V]):
+class setf(SetApi[VT], frozenset[VT]):
     'SetApi wrapper around built-in frozenset.'
     __slots__ = EMPTY
     __len__      = frozenset.__len__
     __contains__ = frozenset.__contains__
-    __iter__     = frozenset[V].__iter__
+    __iter__     = frozenset[VT].__iter__
 
-class setm(MutableSetApi[V], set[V]):
+class setm(MutableSetApi[VT], set[VT]):
     'MutableSetApi wrapper around built-in set.'
     __slots__ = EMPTY
     __len__      = set.__len__
     __contains__ = set.__contains__
-    __iter__     = set[V].__iter__
+    __iter__     = set[VT].__iter__
     clear   = set.clear
     add     = set.add
     discard = set.discard
 
 EMPTY_SET = setf()
 
-del(opr, operd, TypeVar, Copyable, std, EMPTY)
+del(opr, operd, Copyable, Set, MutableSet, EMPTY)
 
 del(abstract, final, overload)

@@ -1,35 +1,32 @@
 from __future__ import annotations
 
 __all__ = (
-    'SequenceApi', 'MutableSequenceApi', 'SequenceProxy', 'seqf', 'seqm',
-    'DeqSeq', 'HookedDeqSeq',
+    'SequenceApi',
+    'MutableSequenceApi',
+    'SequenceProxy',
+    'seqf',
+    'seqm',
+    'DeqSeq',
+    'HookedDeqSeq',
 )
-
-NOARG = object()
-EMPTY = ()
 
 from errors import (
     Emsg,
     instcheck,
-    subclscheck,
 )
-import tools.decorators as d
-from tools.decorators import abstract, final, overload
-from tools.abcs import abcm, abcf, T, P, F
+from tools.abcs import Copyable, abcm, abcf, T, VT
+from tools.decorators import abstract, final, overload, membr
 
-class bases:
-    from collections import deque
-    from tools.abcs import Copyable
-
+from collections import deque
+from itertools import chain, repeat
 from typing import (
-    Callable, Iterable, Iterator, MutableSequence, Sequence, SupportsIndex,
-    TypeVar,
+    Iterable, MutableSequence, Sequence, SupportsIndex,
 )
-V = TypeVar('V')
-import itertools
 
+EMPTY = ()
+NOARG = object()
 
-class SequenceApi(Sequence[V], bases.Copyable):
+class SequenceApi(Sequence[VT], Copyable):
     "Extension of collections.abc.Sequence and built-in sequence (tuple)."
 
     __slots__ = EMPTY
@@ -37,7 +34,7 @@ class SequenceApi(Sequence[V], bases.Copyable):
     # Pure sequences
     # @overload
     # @classmethod
-    # def _from_iterable(cls: type[T], it: Iterable[V]) -> T|SequenceApi[V]: ...
+    # def _from_iterable(cls: type[T], it: Iterable[VT]) -> T|SequenceApi[VT]: ...
     # @overload
     # def __getitem__(self: T, s: slice) -> T: ...
     # @overload
@@ -48,17 +45,17 @@ class SequenceApi(Sequence[V], bases.Copyable):
     # Impure sequences
     @overload
     @classmethod
-    def _from_iterable(cls, it: Iterable[V]) -> SequenceApi[V]: ...
+    def _from_iterable(cls, it: Iterable[VT]) -> SequenceApi[VT]: ...
     @overload
-    def __getitem__(self, s: slice) -> SequenceApi[V]: ...
+    def __getitem__(self, s: slice) -> SequenceApi[VT]: ...
     @overload
-    def __add__(self, other: Iterable) -> SequenceApi[V]: ...
+    def __add__(self, other: Iterable) -> SequenceApi[VT]: ...
     @overload
-    def __mul__(self, other: SupportsIndex) -> SequenceApi[V]: ...
+    def __mul__(self, other: SupportsIndex) -> SequenceApi[VT]: ...
 
 
     @overload
-    def __getitem__(self, i: SupportsIndex) -> V: ...
+    def __getitem__(self, i: SupportsIndex) -> VT: ...
 
     @abstract
     def __getitem__(self, index):
@@ -67,16 +64,12 @@ class SequenceApi(Sequence[V], bases.Copyable):
     def __add__(self, other):
         if not isinstance(other, Iterable):
             return NotImplemented
-        return self._from_iterable(itertools.chain(self, other))
+        return self._from_iterable(chain(self, other))
 
     def __mul__(self, other):
         if not isinstance(other, SupportsIndex):
             return NotImplemented
-        return self._from_iterable(
-            itertools.chain.from_iterable(
-                itertools.repeat(self, other)
-            )
-        )
+        return self._from_iterable(chain.from_iterable(repeat(self, other)))
 
     __radd__ = __add__
     __rmul__ = __mul__
@@ -90,7 +83,7 @@ class SequenceApi(Sequence[V], bases.Copyable):
 
 SequenceApi.register(tuple)
 
-class MutableSequenceApi(SequenceApi[V], MutableSequence[V]):
+class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
     'Fusion interface of collections.abc.MutableSequence and built-in list.'
 
     __slots__ = EMPTY
@@ -118,15 +111,13 @@ class MutableSequenceApi(SequenceApi[V], MutableSequence[V]):
     def __imul__(self, other):
         if not isinstance(other, SupportsIndex):
             return NotImplemented
-        self.extend(itertools.chain.from_iterable(
-            itertools.repeat(self, int(other) - 1)
-        ))
+        self.extend(chain.from_iterable(repeat(self, int(other) - 1)))
         return self
 
 MutableSequenceApi.register(list)
-MutableSequenceApi.register(bases.deque)
+MutableSequenceApi.register(deque)
 
-class SequenceProxy(SequenceApi[V]):
+class SequenceProxy(SequenceApi[VT]):
     'Sequence view proxy.'
 
     # Creates a new type for each instance.
@@ -134,8 +125,8 @@ class SequenceProxy(SequenceApi[V]):
     __slots__ = EMPTY
 
     @abcf.temp
-    @d.membr.defer
-    def pxfn(member: d.membr[type[SequenceProxy]]):
+    @membr.defer
+    def pxfn(member: membr[type[SequenceProxy]]):
         # Builds a class method that retrieves the source instance method
         # and overwrites our class method, in effect a lazy loading.
         name, cls = member.name, member.owner
@@ -170,8 +161,8 @@ class SequenceProxy(SequenceApi[V]):
         return self
 
     def __repr__(self):
-        import tools.misc as misc
-        return misc.wraprepr(self, list(self))
+        from tools.misc import wraprepr
+        return wraprepr(self, list(self))
 
     @classmethod
     @abstract
@@ -180,7 +171,7 @@ class SequenceProxy(SequenceApi[V]):
     @final
     def __init__(self, *_): pass
 
-    def __new__(cls, base: SequenceApi[V]) -> SequenceProxy[V]:
+    def __new__(cls, base: SequenceApi[VT]) -> SequenceProxy[VT]:
 
         instcheck(base, SequenceApi)
         names = frozenset(cls._proxy_names_)
@@ -202,7 +193,7 @@ class SequenceProxy(SequenceApi[V]):
         )
         return SeqProxy()
 
-class seqf(tuple[V, ...], SequenceApi[V]):
+class seqf(tuple[VT, ...], SequenceApi[VT]):
     'Frozen sequence, fusion of tuple and SequenceApi.'
 
     # NB: tuple implements all equality and ordering methods,
@@ -212,13 +203,13 @@ class seqf(tuple[V, ...], SequenceApi[V]):
     __add__ = SequenceApi.__add__
 
     @overload
-    def __radd__(self, other: seqf[V]) -> seqf[V]: ...
+    def __radd__(self, other: seqf[VT]) -> seqf[VT]: ...
     @overload
-    def __radd__(self, other: tuple[V, ...]) -> tuple[V, ...]: ...
+    def __radd__(self, other: tuple[VT, ...]) -> tuple[VT, ...]: ...
     @overload
-    def __radd__(self, other: list[V]) -> list[V]: ...
+    def __radd__(self, other: list[VT]) -> list[VT]: ...
     @overload
-    def __radd__(self, other: bases.deque[V]) -> bases.deque[V]: ...
+    def __radd__(self, other: deque[VT]) -> deque[VT]: ...
 
     def __radd__(self, other):
         if not isinstance(other, Iterable):
@@ -226,13 +217,13 @@ class seqf(tuple[V, ...], SequenceApi[V]):
         # Check for various concrete types that we can create before
         # falling back on our type with _from_iterable.
         otype = type(other)
-        it = itertools.chain(other, self)
+        it = chain(other, self)
         # Since we inherit from tuple, Python will prefer our __radd__
         # to tuple's __add__, which we don't want to override when the
         # left operand is a plain tuple.
         if otype is tuple or otype is list:
             return otype(it)
-        if otype is bases.deque:
+        if otype is deque:
             maxlen = other.maxlen
             if maxlen is not None and len(other) + len(self) > maxlen:
                 # Making a new deque that exceeds maxlen of lhs is not supported.
@@ -249,11 +240,14 @@ class seqf(tuple[V, ...], SequenceApi[V]):
     def __repr__(self):
         return type(self).__name__ + super().__repr__()
 
-class seqm(MutableSequenceApi[V], list[V]):
+class seqm(MutableSequenceApi[VT], list[VT]):
+
     __slots__ = EMPTY
+
     insert = list.insert
 
-class DeqSeq(bases.deque[V], MutableSequenceApi[V]):
+class DeqSeq(deque[VT], MutableSequenceApi[VT]):
+
     __slots__ = EMPTY
 
     __imul__ = MutableSequenceApi.__imul__
@@ -264,8 +258,10 @@ class DeqSeq(bases.deque[V], MutableSequenceApi[V]):
     copy     = MutableSequenceApi.copy
     __copy__ = MutableSequenceApi.__copy__
 
-class HookedDeqSeq(DeqSeq[V]):
+class HookedDeqSeq(DeqSeq[VT]):
+
     __slots__ = EMPTY
+
     def __init__(self, values: Iterable = None, /, maxlen: int|None = None):
         super().__init__(map(self._new_value, values), maxlen)
 
@@ -290,4 +286,4 @@ class HookedDeqSeq(DeqSeq[V]):
 
 
 
-del(abcm, abstract, final, overload, TypeVar)
+del(Copyable, abcf, abcm, abstract, final, overload, membr)

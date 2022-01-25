@@ -1,9 +1,8 @@
 # Allowed local imports:
 #
 #  - errors
-#  - utils
 #  - tools.abcs
-
+#  - tools.misc
 from __future__ import annotations
 
 __all__ = (
@@ -53,21 +52,12 @@ from typing import (
     TypeVar,
 )
 from types import (
-    # Annotations
     DynamicClassAttribute,
-    # FunctionType,
 )
 EMPTY = ()
-# _NOARG = object()
 
-# R = TypeVar('R')
-O = TypeVar('O')
-V = TypeVar('V')
-# F2 = TypeVar('F2', bound = Callable[..., Any])
-# F_get = TypeVar('F_get', bound = Callable[[Any], Any])
-
-
-class _nonerr(Exception): __new__ = None
+@final
+class NonError(Exception): __new__ = None
 
 _valfilter = _ftpartial(filter, opr.itemgetter(1))
 
@@ -114,11 +104,7 @@ def _checkcallable2(obj):
 #     )
 #     return wraps(f)(func)
 
-def rund(func: Callable[[], T]) -> T:
-    'Call the function immediately, and return the value.'
-    return func()
-
-class _member(Generic[T]):
+class Member(Generic[T]):
 
     __slots__ = '__name__', '__qualname__', '__owner'
 
@@ -171,8 +157,7 @@ class _member(Generic[T]):
             delattr(subcls, 'sethook')
         subcls._sethooks = tuple(hooks)
 
-
-class _twofer(Abc, Generic[F]):
+class Twofer(Abc, Generic[F]):
 
     __slots__ = EMPTY
 
@@ -203,7 +188,13 @@ class _twofer(Abc, Generic[F]):
     def _blankinit(self):
         self._init()
 
-class membr(_member[T]):
+### ------------------------------ ###
+
+def rund(func: Callable[[], T]) -> T:
+    'Call the function immediately, and return the value.'
+    return func()
+
+class membr(Member[T]):
 
     __slots__ = 'cbak',
 
@@ -230,8 +221,7 @@ class membr(_member[T]):
 @static
 class fixed:
 
-    # class value(_member, Generic[V]):
-    class value(_member):
+    class value(Member):
 
         __slots__ = 'value', 'doc', 'annot'
 
@@ -266,7 +256,6 @@ class fixed:
             # func.__module__ = owner.__module__
             setattr(owner, name, func)
 
-    # class prop(value[V]):
     class prop(value):
 
         __slots__ = EMPTY
@@ -291,7 +280,7 @@ class fixed:
 @static
 class operd:
 
-    class _base(_member, Callable):
+    class Base(Member, Callable):
 
         __slots__ = 'oper', 'info'
 
@@ -312,7 +301,7 @@ class operd:
                     info = self.info
             return info
 
-    class apply(_base):
+    class apply(Base):
 
         __slots__ = EMPTY
 
@@ -328,7 +317,7 @@ class operd:
                 def fapply(*args): return oper(*args)
             return wraps(info)(fapply)
 
-    class reduce(_base):
+    class reduce(Base):
         '''Create a reducing method using functools.reduce to apply
         a single operator/function to an arbitrarily number of arguments.
 
@@ -377,7 +366,7 @@ class operd:
                     super().__init__(*(argdefs + args), **(kwdefs | kw))
             return templated
 
-    class order(_base):
+    class order(Base):
         '''Wrap an ordering func with oper like: ``oper(func(a, b), 0)``. By
         default, except (AttributeError, TypeError), and return
         ``NotImplemented``.'''
@@ -387,7 +376,7 @@ class operd:
         def __init__(self, oper: Callable, /, *errs, info = None):
             super().__init__(oper, info)
             if errs:
-                if errs == (None,): self.errs = _nonerr,
+                if errs == (None,): self.errs = NonError,
                 else: self.errs = errs
                 for ecls in self.errs:
                     _instcheck(ecls, type)
@@ -419,7 +408,7 @@ class operd:
     @staticmethod
     def repeat(oper: F) -> F: ...
 
-    class _repeat(_base):
+    class _repeat(Base):
 
         __slots__ = EMPTY
 
@@ -432,8 +421,9 @@ class operd:
             return f
 
     repeat = _repeat
+    del(_repeat)
 
-class wraps(_member):
+class wraps(Member):
 
     __slots__ = '_initial', '_adds'
 
@@ -444,7 +434,6 @@ class wraps(_member):
 
     def __call__(self, fout: F) -> F:
         'Decorate function. Receives the wrapper function and updates its attributes.'
-        # self.update(self.read(fout))
         self.update(fout)
         if isinstance(fout, (classmethod, staticmethod)):
             self.write(fout.__func__)
@@ -459,11 +448,6 @@ class wraps(_member):
         )
 
     def update(self, data = None, /, **kw) -> wraps:
-        # if data is None:
-        #     data = {}
-        # elif not isinstance(data, Mapping):
-        #     data = self.read(data)
-        # data.update(kw)
         data = self.read(data) | self.read(kw)
         adds = self._adds
         initial = self._initial
@@ -488,9 +472,7 @@ class wraps(_member):
         # setattr(obj, '__wraps__', self)
         return obj
 
-    # attrs = frozenset(WRAPPER_ASSIGNMENTS)
-
-class raisr(_member):
+class raisr(Member):
     '''Creates an object that raises the exception when called. When
     __set_name__ is called, creates a new function. Not to be used
     as a decorator.'''
@@ -522,7 +504,7 @@ class lazy:
     def __new__(cls, *args, **kw):
         return cls.get(*args, **kw)
 
-    class get(_twofer[F], _member):
+    class get(Twofer[F], Member):
 
         __slots__ = 'key', 'method'
 
@@ -534,7 +516,7 @@ class lazy:
         def __new__(cls, key: str|None) -> lazy.get: ...
         @overload
         def __new__(cls) -> lazy.get: ...
-        __new__ = _twofer.__new__
+        __new__ = Twofer.__new__
 
         def __call__(self, method: F) -> F:
             key = self.key or self.format(method.__name__)
@@ -566,30 +548,26 @@ class lazy:
         def format(self, name: str) -> str:
             return '_%s' % name
 
-    class prop(get[type[O]]):#, Generic[T]):
+    class prop(get[type[Self]]):
         """Return a property with the getter. NB: a setter/deleter should be
         sure to use the correct attribute."""
 
         __slots__ = EMPTY
 
         @overload
-        def __new__(cls, func: Callable[[O], V]) -> _property[O, V]: ...
-        __new__ = _twofer.__new__
+        def __new__(cls, func: Callable[[Self], T]) -> _property[Self, T]: ...
+        __new__ = Twofer.__new__
 
-        def __call__(self, method: Callable[[O], V]) -> _property[O, V]:
+        def __call__(self, method: Callable[[Self], T]) -> _property[Self, T]:
             return property(super().__call__(method), doc = method.__doc__)
 
-    class dynca(prop[O]):
+    class dynca(prop[Self]):
         """Return a DynamicClassAttribute with the getter. NB: a setter/deleter
         should be sure to use the correct attribute."""
 
         __slots__ = EMPTY
 
-        # @overload
-        # def __new__(cls, func: Callable[[O], V]) -> prop[O, V]: ...
-        # __new__ = _twofer.__new__
-
-        def __call__(self, method: Callable[[O], V]) -> _property[O, V]:
+        def __call__(self, method: Callable[[Self], T]) -> _property[Self, T]:
             return DynamicClassAttribute(
                 lazy.get.__call__(self, method), doc = method.__doc__
             )
@@ -669,22 +647,22 @@ del(Abc, TypeVar, EMPTY)
 # ------------------------------
 
 # Stub adapted from typing module with added annotations.
-class _property(property, Generic[O, V]):
-    fget: Callable[[O], Any] | None
-    fset: Callable[[O, Any], None] | None
-    fdel: Callable[[O], None] | None
+class _property(property, Generic[Self, T]):
+    fget: Callable[[Self], Any] | None
+    fset: Callable[[Self, Any], None] | None
+    fdel: Callable[[Self], None] | None
     @overload
     def __init__(
         self,
-        fget: Callable[[O], V] | None = ...,
-        fset: Callable[[O, Any], None] | None = ...,
-        fdel: Callable[[O], None] | None = ...,
+        fget: Callable[[Self], T] | None = ...,
+        fset: Callable[[Self, Any], None] | None = ...,
+        fdel: Callable[[Self], None] | None = ...,
         doc: str | None = ...,
     ) -> None: ...
     __init__ = NotImplemented
-    def getter(self, __fget: Callable[[O], V]) -> _property[O, V]: ...
-    def setter(self, __fset: Callable[[O, Any], None]) -> _property[O, V]: ...
-    def deleter(self, __fdel: Callable[[O], None]) -> _property[O, V]: ...
-    def __get__(self, __obj: O, __type: type | None = ...) -> V: ...
-    def __set__(self, __obj: O, __value: Any) -> None: ...
-    def __delete__(self, __obj: O) -> None: ...
+    def getter(self, __fget: Callable[[Self], T]) -> _property[Self, T]: ...
+    def setter(self, __fset: Callable[[Self, Any], None]) -> _property[Self, T]: ...
+    def deleter(self, __fdel: Callable[[Self], None]) -> _property[Self, T]: ...
+    def __get__(self, __obj: Self, __type: type | None = ...) -> T: ...
+    def __set__(self, __obj: Self, __value: Any) -> None: ...
+    def __delete__(self, __obj: Self) -> None: ...

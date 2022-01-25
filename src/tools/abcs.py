@@ -1,7 +1,7 @@
 # Allowed local imports:
 #
 #  - errors
-#  - utils
+#  - tools.misc
 from __future__ import annotations
 
 __all__ = 'AbcMeta', 'abcm', 'Abc', 'Copyable', 'abcf',
@@ -43,10 +43,14 @@ _ABCF_ATTR = '_abc_flag'
 # Type vars
 P = ParamSpec('P')
 T = TypeVar('T')
+KT = TypeVar('KT')
+VT = TypeVar('VT')
 RT = TypeVar('RT')
+T_co = TypeVar('T_co', covariant = True)
+T_contra = TypeVar('T_contra', contravariant = True)
 F = TypeVar('F', bound = Callable[..., Any])
 TT = TypeVar('TT', bound = type)
-Self = TypeVar("Self")
+Self = TypeVar('Self')
 
 # Global decorators. Re-exported by decorators module.
 @overload

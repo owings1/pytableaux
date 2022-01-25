@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+__all__ = 'BaseModel', 
+
 from errors import instcheck, Emsg
 from tools.abcs import Abc
 from tools.decorators import abstract
