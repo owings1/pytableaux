@@ -29,15 +29,15 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 70
 
-from lexicals import Operator as Oper, Sentence, Operated
+from lexicals import Operator as Oper, Sentence, Quantified, Operated
 from proof.common import Node
 from . import fde as FDE, k3 as K3
 from .fde import sd
 
 class Model(K3.Model):
 
-    def is_sentence_opaque(self, s: Sentence) -> bool:
-        return s.is_quantified or super().is_sentence_opaque(s)
+    def is_sentence_opaque(self, s: Sentence):
+        return isinstance(s, Quantified) or super().is_sentence_opaque(s)
 
     def truth_function(self, oper: Oper, a, b = None):
         if oper == Oper.Disjunction:

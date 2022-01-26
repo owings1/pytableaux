@@ -44,6 +44,8 @@ from proof.helpers import AppliedNodesWorlds, AppliedSentenceCounter, \
 
 from errors import DenotationError, ModelValueError
 
+import operator as opr
+
 from . import fde as FDE
 
 Identity: Predicate  = Predicates.System.Identity
@@ -313,16 +315,11 @@ class Model(BaseModel):
         identicals.discard(c)
         return identicals
 
-    def is_sentence_literal(self, s: Sentence):
-        if s.is_negated and self.is_sentence_opaque(s.operand):
-            return True
-        return s.is_literal
-
     def set_literal_value(self, s: Sentence, value, **kw):
         cls = s.TYPE.cls
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value, **kw)
-        elif s.is_negated:
+        elif cls is Operated and s.operator is Oper.Negation:
             negval = self.truth_function(s.operator, value)
             self.set_literal_value(s.operand, negval, **kw)
         elif cls is Atomic:
@@ -465,6 +462,7 @@ class Model(BaseModel):
         return self.fde.truth_function(operator, a, b)
 
 class Denotum(object):
+    __slots__ = EMPTY_SET
     # WIP - Generating "objects" like k-constants for a domain, dentation, and
     #       predicate "property" extensions.
     #
@@ -778,11 +776,14 @@ class TabRules(object):
         # rule implementation
 
         def node_will_close_branch(self, node: Node, _) -> bool:
-            s: Operated = node.get('sentence')
-            if s:
-                if s.is_negated and s.negatum.predicate == Identity:
-                    a, b = s.negatum
-                    return a == b
+            s = node.get('sentence')
+            return (
+                isinstance(s, Operated) and
+                s.operator is Oper.Negation and
+                isinstance(s.operand, Predicated) and
+                s.operand.predicate == Identity and
+                opr.eq(*s.operand.params)
+            )
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
@@ -809,12 +810,16 @@ class TabRules(object):
 
         # rule implementation
 
-        def node_will_close_branch(self, node: Node, _) -> bool:
-            s: Operated = node.get('sentence')
-            if s:
-                return s.is_negated and s.negatum.predicate == Existence
+        def node_will_close_branch(self, node: Node, _):
+            s = node.get('sentence')
+            return (
+                isinstance(s, Operated) and
+                s.operator is Oper.Negation and
+                isinstance(s.operand, Predicated) and
+                s.operand.predicate == Existence
+            )
 
-        def applies_to_branch(self, branch):
+        def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
             return self.ntch.cached_target(branch)
 

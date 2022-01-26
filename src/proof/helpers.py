@@ -40,15 +40,14 @@ from errors import (
     instcheck,
     Emsg,
 )
+from tools.abcs import Abc, abcf, T, T1, T2, KT, VT
 from tools.decorators import abstract, final, overload, static
-from lexicals import Constant, Sentence, Predicated
-from models import BaseModel
-from tools.abcs import T, T1, T2, KT, VT
 from tools.mappings import MapAttrCover, dmap
 from tools.sets import EMPTY_SET, setm
-from tools.misc import orepr
 
-from .common import (
+from lexicals import Constant, Sentence, Predicated
+from models import BaseModel
+from proof.common import (
     Access,
     Branch,
     Comparer,
@@ -58,7 +57,7 @@ from .common import (
     TabEvent,
     Target,
 )
-from .tableaux import Rule, Tableau
+from proof.tableaux import Rule, Tableau
 
 from copy import copy
 from itertools import chain
@@ -103,7 +102,7 @@ class AdzHelper:
 
 class BranchCache(dmap[Branch, T]):
 
-    _valuetype = bool
+    _valuetype: type[T] = bool
 
     rule: Rule
     tab: Tableau
@@ -131,6 +130,7 @@ class BranchCache(dmap[Branch, T]):
         return hash(id(self))
 
     def __repr__(self):
+        from tools.misc import orepr
         return orepr(self, self._reprdict())
 
     def _reprdict(self):
@@ -140,7 +140,7 @@ class BranchDictCache(BranchCache[dmap[KT, VT]]):
     """
     Copies each value.
     """
-    _valuetype: type[dmap[KT, VT]] = dmap
+    _valuetype = dmap
 
     __slots__ = EMPTY_SET
 
@@ -155,27 +155,15 @@ class BranchDictCache(BranchCache[dmap[KT, VT]]):
 
 class FilterNodeCache(BranchCache[set[Node]]):
 
-    _valuetype: type[set[Node]] = set
+    _valuetype = set
     
-    # Induced Rule Properties
+    __slots__ = 'ignore_ticked',
 
-    __ignore_ticked: bool|None
-
-    __slots__ = '__ignore_ticked',
-
-    @property
-    def ignore_ticked(self):
-        if self.__ignore_ticked is not None:
-            return self.__ignore_ticked
-        return getattr(self.rule, 'ignore_ticked', None)
-
-    @ignore_ticked.setter
-    def ignore_ticked(self, val):
-        self.__ignore_ticked = val
+    ignore_ticked: bool|None
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.__ignore_ticked = None
+        self.ignore_ticked = getattr(self.rule, 'ignore_ticked', None)
         self.tab.on({
             TabEvent.AFTER_NODE_ADD: self.__after_node_add,
             TabEvent.AFTER_NODE_TICK: self.__after_node_tick,
@@ -217,7 +205,7 @@ class AppliedSentenceCounter(BranchCache[dmap[Sentence, int]]):
     the `sentence` property of the rule's target. The target should also include
     the `branch` key.
     """
-    _valuetype: type[dmap[Sentence, int]] = dmap
+    _valuetype = dmap
     _attr = 'apsc'
 
     __slots__ = EMPTY_SET
@@ -236,7 +224,7 @@ class AppliedSentenceCounter(BranchCache[dmap[Sentence, int]]):
 @final
 class AppliedNodeCount(BranchCache[dmap[Node, int]]):
 
-    _valuetype: type[dmap[Node, int]] = dmap
+    _valuetype = dmap
     _attr = 'apnc'
 
     __slots__ = EMPTY_SET
@@ -267,7 +255,7 @@ class AppliedNodesWorlds(BranchCache[setm[tuple[Node, int]]]):
     target must have `node`, and `world` attributes. The values of the cache
     are ``(node, world)`` pairs.
     """
-    _valuetype: type[setm[tuple[Node, int]]] = setm
+    _valuetype = setm
     _attr = 'apnw'
 
     __slots__ = EMPTY_SET
@@ -286,7 +274,7 @@ class UnserialWorldsTracker(BranchCache[setm[int]]):
     """
     Track the unserial worlds on the branch.
     """
-    _valuetype: type[setm[int]] = setm
+    _valuetype = setm
     _attr = 'ust'
 
     __slots__ = EMPTY_SET
@@ -311,7 +299,7 @@ class VisibleWorldsIndex(BranchDictCache[int, setm[int]]):
 
     class Nodes(BranchCache[dmap[Access, Node]]):
 
-        _valuetype: type[dmap[Access, Node]] = dmap
+        _valuetype = dmap
 
         __slots__ = EMPTY_SET
 
@@ -383,7 +371,6 @@ class FilterHelper(FilterNodeCache):
 
     __fmap: dmap[str, NodeFilter]
     __to_discard: setm[tuple[Branch, Node]]
-
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -469,11 +456,13 @@ class FilterHelper(FilterNodeCache):
             return tuple(fiter_targets(rule, nodes, branch))
         return get_targets_filtered
 
-class Delegates:
+@static
+class Delegates(Abc):
     """
     Mixin Rule classes to delegate to helper methods.
     """
 
+    @static
     class AdzHelper:
 
         class Apply(Rule):
@@ -482,6 +471,8 @@ class Delegates:
             """
             Helpers = AdzHelper,
             adz: AdzHelper
+
+            __slots__ = EMPTY_SET
 
             #: Whether the target node should be ticked after application.
             ticking: bool = True
@@ -496,9 +487,12 @@ class Delegates:
             Helpers = AdzHelper,
             adz: AdzHelper
 
+            __slots__ = EMPTY_SET
+
             def score_candidate(self, target: Target):
                 return self.adz.closure_score(target)
 
+    @static
     class FilterHelper:
 
         class Sentence(Rule):
@@ -507,6 +501,8 @@ class Delegates:
             """
             Helpers = FilterHelper,
             nf: FilterHelper
+
+            __slots__ = EMPTY_SET
 
             def sentence(self, node: Node) -> Sentence:
                 return self.nf.filters['sentence'].get(node)
@@ -518,21 +514,23 @@ class Delegates:
             Helpers = FilterHelper,
             nf: FilterHelper
 
+            __slots__ = EMPTY_SET
+
             def example_nodes(self):
                 return self.nf.example_node(),
 
-def populate_delegates():
-    from inspect import getmembers, isclass
-    modclasses = {
-        clsname: cls for clsname, cls in globals().items()
-        if isclass(cls) and cls.__module__ == __name__
-    }
-    for helpername, delegates in getmembers(Delegates, isclass)[0:-1]:
-        helpercls = modclasses[helpername]
-        for name, cls in getmembers(delegates, isclass)[0:-1]:
-            setattr(helpercls, name, cls)
-populate_delegates()
-del(populate_delegates)
+    @abcf.after
+    def populate(cls):
+        from inspect import getmembers, isclass
+        modclasses = {
+            clsname: c for clsname, c in globals().items()
+            if isclass(c) and c.__module__ == cls.__module__
+        }
+        for helpername, delegates in getmembers(cls, isclass)[0:-1]:
+            helpercls = modclasses[helpername]
+            for name, c in getmembers(delegates, isclass)[0:-1]:
+                setattr(helpercls, name, c)
+
 
 class NodeTargetCheckHelper:
     """
@@ -628,7 +626,7 @@ class MaxConstantsTracker:
         :param int world:
         :rtype: bool
         """
-        if world == None:
+        if world is None:
             world = 0
         max_constants = self.get_max_constants(branch)
         world_constants = self.get_branch_constants_at_world(branch, world)
@@ -643,7 +641,7 @@ class MaxConstantsTracker:
         :param int world:
         :rtype: bool
         """
-        if world == None:
+        if world is None:
             world = 0
         max_constants = self.get_max_constants(branch)
         world_constants = self.get_branch_constants_at_world(branch, world)
@@ -690,7 +688,7 @@ class MaxConstantsTracker:
         s: Sentence = node.get('sentence')
         if s:
             world = node.get('world')
-            if world == None:
+            if world is None:
                 world = 0
             if world not in self.world_constants[branch]:
                 self.world_constants[branch][world] = set()
@@ -731,14 +729,14 @@ class AppliedNodeConstants:
         self.node_states = {}
         self.consts = {}
 
-    def get_applied(self, node, branch):
+    def get_applied(self, node: Node, branch: Branch):
         """
         Return the set of constants that have been applied to the node for the
         branch.
         """
         return self.node_states[branch][node]['applied']
 
-    def get_unapplied(self, node, branch):
+    def get_unapplied(self, node: Node, branch: Branch):
         """
         Return the set of constants that have not been applied to the node for
         the branch.
@@ -747,9 +745,9 @@ class AppliedNodeConstants:
 
     # helper implementation
 
-    def after_branch_add(self, branch):
+    def after_branch_add(self, branch: Branch):
         parent = branch.parent
-        if parent != None and parent in self.node_states:
+        if parent is not None and parent in self.node_states:
             self.consts[branch] = set(self.consts[parent])
             self.node_states[branch] = {
                 node : {
@@ -762,7 +760,7 @@ class AppliedNodeConstants:
             self.node_states[branch] = dict()
             self.consts[branch] = set()
 
-    def after_node_add(self, node, branch):
+    def after_node_add(self, node: Node, branch: Branch):
         if self.__should_track_node(node, branch):
             if node not in self.node_states[branch]:
                 # By tracking per node, we are tracking per world, a fortiori.
@@ -809,7 +807,7 @@ class MaxWorldsTracker:
         # Cache the modal complexities
         self.modal_complexities = {}
 
-    def get_max_worlds(self, branch):
+    def get_max_worlds(self, branch: Branch):
         """
         Get the maximum worlds projected for the branch.
         """
@@ -817,7 +815,7 @@ class MaxWorldsTracker:
         if origin.id in self.branch_max_worlds:
             return self.branch_max_worlds[origin.id]
 
-    def max_worlds_reached(self, branch):
+    def max_worlds_reached(self, branch: Branch):
         """
         Whether we have already reached or exceeded the max number of worlds
         projected for the branch (origin).
@@ -825,7 +823,7 @@ class MaxWorldsTracker:
         max_worlds = self.get_max_worlds(branch)
         return max_worlds != None and branch.world_count >= max_worlds
 
-    def max_worlds_exceeded(self, branch):
+    def max_worlds_exceeded(self, branch: Branch):
         """
         Whether we have exceeded the max number of worlds projected for the
         branch (origin).
@@ -833,7 +831,7 @@ class MaxWorldsTracker:
         max_worlds = self.get_max_worlds(branch)
         return max_worlds != None and branch.world_count > max_worlds
 
-    def modal_complexity(self, sentence):
+    def modal_complexity(self, sentence: Sentence):
         """
         Compute and cache the modal complexity of a sentence by counting its
         modal operators.
@@ -844,7 +842,7 @@ class MaxWorldsTracker:
             ])
         return self.modal_complexities[sentence]
 
-    def quit_flag(self, branch):
+    def quit_flag(self, branch: Branch):
         """
         Generate a quit flag node for the branch.
         """
@@ -853,7 +851,7 @@ class MaxWorldsTracker:
 
     # Helper implementation
 
-    def after_trunk_build(self, tableau):
+    def after_trunk_build(self, tableau: Tableau):
         for branch in tableau:
             origin = branch.origin
             # In most cases, we will have only one origin branch.
@@ -873,7 +871,7 @@ class MaxWorldsTracker:
         ])
         return branch.world_count + node_needed_worlds + 1
 
-    def __compute_needed_worlds_for_node(self, node, branch):
+    def __compute_needed_worlds_for_node(self, node: Node, branch: Branch):
         # we only care about unticked nodes, since ticked nodes will have
         # already created any worlds.
         if not branch.is_ticked(node) and node.has('sentence'):
@@ -935,7 +933,7 @@ class EllipsisExampleHelper(object):
         else:
             self.__addnode(target.branch)
 
-    def __addnode(self, branch):
+    def __addnode(self, branch: Branch):
         self.applied.add(branch)
         branch.add(self.mynode)
 
@@ -951,3 +949,4 @@ def _targets_from_nodes_iter(fget_node_targets: Callable) -> Callable:
         return chain.from_iterable(filter(bool, results))
     return targets_iter
 
+del(abstract, final, overload, static)

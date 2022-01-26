@@ -873,15 +873,25 @@ class Parameter(Bases.CoordsItem):
     is_constant: bool
     is_variable: bool
 
+    __slots__ = EMPTY_SET
+
 class Constant(Parameter):
 
-    is_constant = d.fixed.prop(True)
-    is_variable = d.fixed.prop(False)
+    __slots__ = 'is_constant', 'is_variable'
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.is_constant = True
+        self.is_variable = False
 
 class Variable(Parameter):
 
-    is_constant = d.fixed.prop(False)
-    is_variable = d.fixed.prop(True)
+    __slots__ = 'is_constant', 'is_variable'
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.is_constant = False
+        self.is_variable = True
 
 class Predicate(Bases.CoordsItem):
     """
@@ -1052,20 +1062,6 @@ class Sentence(Bases.LexicalItem):
     quantifier : Quantifier | None
     operator   : Operator   | None
 
-    # #: Whether this is an atomic sentence.
-    # is_atomic = d.fixed.prop(False)
-    #: Whether this is a predicated sentence.
-    is_predicated = d.fixed.prop(False)
-    #: Whether this is a quantified sentence.
-    is_quantified = d.fixed.prop(False)
-    # #: Whether this is an operated sentence.
-    # is_operated = d.fixed.prop(False)
-    #: Whether this is a literal sentence. Here a literal is either a
-    #: predicated sentence, the negation of a predicated sentence,
-    #: an atomic sentence, or the negation of an atomic sentence.
-    is_literal = d.fixed.prop(False)
-    #: Whether this is a negated sentence.
-    is_negated = d.fixed.prop(False)
     #: Set of predicates, recursive.
     predicates: setf[Predicate] = d.fixed.prop(EMPTY_SET)
     #: Set of constants, recursive.
@@ -1091,7 +1087,9 @@ class Sentence(Bases.LexicalItem):
     def negative(self) -> Sentence:
         """Either negate this sentence, or, if this is already a negated
         sentence return its negatum, i.e., "un-negate" the sentence."""
-        return self[0] if self.is_negated else self.negate()
+        if isinstance(self, Operated) and self.operator is Operator.Negation:
+            return self.operand
+        return self.negate()
 
     def asserted(self) -> Operated:
         'Apply assertion operator to the sentence.'
@@ -1118,8 +1116,6 @@ class Atomic(Sentence, Bases.CoordsItem):
     quantifier = d.fixed.prop(None)
     operator   = d.fixed.prop(None)
 
-    # is_atomic  = d.fixed.prop(True)
-    is_literal = d.fixed.prop(True)
     variable_occurs = d.fixed.value(False)
 
     @d.lazy.prop
@@ -1151,8 +1147,6 @@ class Predicated(Sentence, SequenceApi[Parameter]):
 
     quantifier    = d.fixed.prop(None)
     operator      = d.fixed.prop(None)
-    is_predicated = d.fixed.prop(True)
-    is_literal    = d.fixed.prop(True)
 
     @d.lazy.prop
     def spec(self) -> Types.PredicatedSpec:
@@ -1238,11 +1232,9 @@ class Quantified(Sentence, SequenceApi[Types.QuantifiedItem]):
 
     #: The items sequence: Quantifer, Variable, Sentence.
     items: tuple[Quantifier, Variable, Sentence]
-    # items: tuple[Types.QuantifiedItem]
 
     predicate     = d.fixed.prop(None)
     operator      = d.fixed.prop(None)
-    is_quantified = d.fixed.prop(True)
 
     @d.lazy.prop
     def spec(self) -> Types.QuantifiedSpec:
@@ -1347,8 +1339,6 @@ class Operated(Sentence, SequenceApi[Sentence]):
     #: The operands.
     operands: tuple[Sentence, ...]
 
-    # is_operated = d.fixed.prop(True)
-
     @property
     def arity(self) -> int:
         'The arity of the operator.'
@@ -1365,20 +1355,9 @@ class Operated(Sentence, SequenceApi[Sentence]):
     def operand(self) -> Sentence | None:
         'The operand if only one, else None.'
         return self.operands[0] if len(self.operands) == 1 else None
-    @property
-    def negatum(self) -> Sentence | None:
-        'The operand if is negated, else None.'
-        return self.operands[0] if self.is_negated else None
-    @property
-    def is_negated(self) -> bool:
-        return self.operator == Operator.Negation
 
-    predicate   = d.fixed.prop(None)
-    quantifier  = d.fixed.prop(None)
-
-    @d.lazy.prop
-    def is_literal(self) -> bool:
-        return self.is_negated and self.operands[0].TYPE in (Atomic, Predicated)
+    predicate  = d.fixed.prop(None)
+    quantifier = d.fixed.prop(None)
 
     @d.lazy.prop
     def spec(self) -> Types.OperatedSpec:
@@ -1455,7 +1434,7 @@ class Operated(Sentence, SequenceApi[Sentence]):
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     __slots__ = (
-        'operator', 'operands', '_is_literal', '_spec', '_sort_tuple',
+        'operator', 'operands', '_spec', '_sort_tuple',
         '_predicates', '_constants', '_variables', '_atomics', '_quantifiers',
         '_operators',
     )

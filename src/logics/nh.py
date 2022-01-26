@@ -29,13 +29,13 @@ class Meta(object):
     tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
     category_display_order = 110
 
-from lexicals import Operator as Oper, Sentence, Operated
+from lexicals import Operator as Oper, Sentence, Quantified, Operated
 from . import fde as FDE, lp as LP, mh as MH
 
 class Model(LP.Model):
 
     def is_sentence_opaque(self, s: Sentence):
-        return s.is_quantified or super().is_sentence_opaque(s)
+        return isinstance(s, Quantified) or super().is_sentence_opaque(s)
 
     def truth_function(self, oper: Oper, a, b = None):
         if oper == Oper.Conjunction:

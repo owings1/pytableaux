@@ -100,7 +100,7 @@ class Test_FDE(BaseSuite):
 
                 n = rtnd[1].history[0].target.node
                 s: Operated = n['sentence']
-                assert (s.operator, s.negatum.operator, n['designated']) \
+                assert (s.operator, s.operand.operator, n['designated']) \
                     == (Oper.Negation, Oper.Conjunction, True)
 
             @larg(Oper.Disjunction)

@@ -241,10 +241,6 @@ class TestSentence(BaseSuite):
             assert s.quantifier == None
             assert s.predicate == None
             assert s.TYPE is LexType.Atomic
-            assert s.is_predicated == False
-            assert s.is_quantified == False
-            assert s.is_literal == True
-            assert s.is_negated == False
             assert s.constants == EMPTY_SET
             assert s.variables == EMPTY_SET
             assert s.predicates == EMPTY_SET
@@ -281,10 +277,6 @@ class TestSentence(BaseSuite):
             assert s.quantifier == None
             assert s.predicate == Predicate((0, 0, 1))
             assert s.TYPE is LexType.Predicated
-            assert s.is_predicated == True
-            assert s.is_quantified == False
-            assert s.is_literal == True
-            assert s.is_negated == False
             assert s.constants == {a}
             assert s.variables == EMPTY_SET
             assert s.predicates == {F}
@@ -298,7 +290,7 @@ class TestSentence(BaseSuite):
             assert s.conjoin(B) == self.p('KFmb')
             assert s.variable_occurs(x) == False
             s = Predicated(F, (x,))
-            assert s.is_predicated == True
+            assert s.TYPE is LexType.Predicated
             assert s.substitute(a, x) == F((a,))
             assert s.variables == {x}
             assert s.variable_occurs(x) == True

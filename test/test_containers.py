@@ -4,7 +4,6 @@ from pytest import raises
 
 from errors import *
 from lexicals import *
-from parsers import CharTable
 
 from tools.abcs import *
 from tools.events import EventsListeners
@@ -16,7 +15,7 @@ from tools.sets import *
 
 from tools.abcs import T
 # load subclasses
-import proof.helpers, proof.common, proof.tableaux
+import parsers, proof.helpers, proof.common, proof.tableaux
 
 from collections import deque
 
@@ -110,7 +109,8 @@ class TestLinkSet(BaseSuite):
         assert list(reversed(x)) == list(reversed(range(10)))
         assert list(x.iter_from_value(6)) == [6,7,8,9]
         assert list(x.iter_from_value(6, reverse=True)) == [6,5,4,3,2,1,0]
-        with raises(ValueError): next(x.iter_from_value(11))
+        with raises(ValueError):
+            next(x.iter_from_value(11))
 
     def test_getitem(self):
         x = linqset(range(0,8,2))
@@ -224,12 +224,18 @@ class TestLinkSet(BaseSuite):
         assert list(x) == list('abcdef')
 
 class TestMappingApi(BaseSuite):
-    @skip
+
+    # @skip
     def test_subclasses(self):
         # compatibility for CharTable
         exp = dict(a = (1, 2))
         classes = subclasses(MappingApi)
         for cls in classes:
-            # print(cls)
+            inst = cls._from_iterable(exp.items())
+            if inst is not NotImplemented:
+                assert dict(inst) == exp
             inst = cls._from_mapping(exp)
             assert dict(inst) == exp
+            inst = inst.copy()
+            assert dict(inst) == exp
+

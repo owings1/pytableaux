@@ -26,7 +26,7 @@ class Meta(object):
     tags = ['bivalent', 'non-modal', 'first-order']
     category_display_order = 2
 
-from lexicals import Sentence
+from lexicals import Sentence, Quantified
 from . import k as K, cpl as CPL
 from itertools import chain
 
@@ -35,13 +35,13 @@ class Model(CPL.Model):
     A CFOL Model is just like :ref:`CPL model <cpl-model>` but with quantification.
     """
 
-    def is_sentence_opaque(self, sentence: Sentence) -> bool:
+    def is_sentence_opaque(self, s: Sentence):
         """
         A sentence is opaque if its operator is either Necessity or Possibility.
         """
-        if sentence.is_quantified:
+        if isinstance(s, Quantified):
             return False
-        return super().is_sentence_opaque(sentence)
+        return super().is_sentence_opaque(s)
 
 class TableauxSystem(CPL.TableauxSystem):
     """

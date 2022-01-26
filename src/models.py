@@ -86,6 +86,16 @@ class BaseModel(Abc):
     def is_sentence_opaque(self, s: Sentence, /, **kw):
         return False
 
+    def is_sentence_literal(self, s: Sentence) -> bool:
+        return isinstance(s, (Atomic, Predicated)) or (
+            isinstance(s, Operated) and
+            s.operator is Operator.Negation and
+            (
+                isinstance(s.operand, (Atomic, Predicated)) or
+                self.is_sentence_opaque(s.operand)
+            )
+        )
+
     @abstract
     def value_of_opaque(self, s: Sentence, /, **kw) -> ModelValue:
         instcheck(s, Sentence)

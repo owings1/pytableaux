@@ -68,7 +68,6 @@ class TestStandard:
 
     def test_parse_negated(self):
         s = std('~A')
-        assert s.is_literal
         assert s.operator == 'Negation'
 
     def test_parse_conjunction_parens(self):
@@ -82,7 +81,7 @@ class TestStandard:
     def test_complex_quantified_1(self):
         s = std('((A & B) V XxXy(=xy > !a))')
         assert s.operator == 'Disjunction'
-        assert s.rhs.is_quantified
+        assert s.rhs.TYPE is LexType.Quantified
 
     def test_complex_quantified_1_equivalence(self):
         s1 = std('((A&B0)VXxXy(=xy>!a))')
@@ -134,7 +133,6 @@ class TestPolish(object):
 
     def test_parse_negated(self):
         s = pol('Na')
-        assert s.is_literal
         assert s.operator == 'Negation'
 
     def test_unexpected_constant_error(self):

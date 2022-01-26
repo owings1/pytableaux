@@ -11,7 +11,7 @@ from tools.linked import linqset
 from tools.mappings import dmap, MapCover
 from tools.sequences import SequenceApi
 from tools.sets import EMPTY_SET, setf
-from lexicals import Constant, Sentence, Operated, Quantified
+from lexicals import Operator, Constant, Sentence, Operated, Quantified
 # from tools.abcs import Abc
 # from types import MappingProxyType as MapProxy
 
@@ -272,7 +272,8 @@ class Filters:
             s = self.rget(rhs)
             if s:
                 if not self.negated: return s
-                if s.is_negated: return s.operand
+                if isinstance(s, Operated) and s.operator is Operator.Negation:
+                    return s.operand
 
         def example(self) -> Sentence:
             if not self.applies:

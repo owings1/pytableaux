@@ -26,7 +26,7 @@ class Meta(object):
     tags = ['bivalent', 'non-modal']
     category_display_order = 1
 
-from lexicals import Sentence, Argument
+from lexicals import Sentence, Quantified, Argument
 from proof.common import Branch, Node
 from proof.tableaux import Tableau
 from . import k as K
@@ -37,16 +37,16 @@ class Model(K.Model):
     A CPL Model is just a :ref:`K model <k-model>` with a single :ref:`frame <k-frame>`.
     """
 
-    def is_sentence_opaque(self, sentence: Sentence) -> bool:
+    def is_sentence_opaque(self, s: Sentence):
         """
         A sentence is opaque if it is a quantified sentence, or its operator is
         either Necessity or Possibility.
         """
-        if sentence.is_quantified:
+        if isinstance(s, Quantified):
             return True
-        if sentence.operator in self.modal_operators:
+        if s.operator in self.modal_operators:
             return True
-        return super().is_sentence_opaque(sentence)
+        return super().is_sentence_opaque(s)
 
     def get_data(self) -> dict:
         data = self.world_frame(0).get_data()['value']

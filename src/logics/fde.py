@@ -250,7 +250,7 @@ class Model(BaseModel):
             if is_literal or is_opaque:
                 if s.operator == Oper.Negation:
                     # If the sentence is negated, set the value of the negatum
-                    s = s.negatum
+                    s = s.operand
                     if node['designated']:
                         if branch.has({'sentence': s, 'designated': True}):
                             # If the node is designated, and the negatum is
@@ -309,10 +309,15 @@ class Model(BaseModel):
             if s not in self.atomics:
                 self.set_literal_value(s, self.unassigned_value)
 
-    def is_sentence_literal(self, s: Sentence) -> bool:
-        if s.is_negated and self.is_sentence_opaque(s.negatum):
-            return True
-        return s.is_literal
+    # def is_sentence_literal(self, s: Sentence) -> bool:
+    #     return isinstance(s, (Atomic, Predicated)) or (
+    #         isinstance(s, Operated) and
+    #         s.operator is Oper.Negation and
+    #         (
+    #             isinstance(s.operand, (Atomic, Predicated)) or
+    #             self.is_sentence_opaque(s.operand)
+    #         )
+    #     )
 
     def set_literal_value(self, s: Sentence, value):
         if value not in self.truth_values:
@@ -320,9 +325,9 @@ class Model(BaseModel):
         cls = s.TYPE.cls
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value)
-        elif s.is_negated:
+        elif cls is Operated and s.operator is Oper.Negation:
             self.set_literal_value(
-                s.negatum,
+                s.operand,
                 self.truth_function(s.operator, value)
             )
         elif cls is Atomic:
