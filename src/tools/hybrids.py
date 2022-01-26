@@ -4,6 +4,7 @@ __all__ = 'SequenceSetApi', 'MutableSequenceSetApi', 'qsetf', 'qset'
 
 from errors import (
     instcheck as _instcheck,
+    subclscheck,
     DuplicateValueError,
     MissingValueError,
 )
@@ -12,7 +13,7 @@ from tools.decorators import abstract, overload
 from tools.sequences import SequenceApi, MutableSequenceApi, seqf
 from tools.sets import SetApi, MutableSetApi, setf, setm
 
-from typing import Iterable, SupportsIndex
+from typing import Iterable, MutableSequence, SupportsIndex
 
 EMPTY = ()
 
@@ -135,8 +136,10 @@ class qsetf(SequenceSetApi[VT]):
         return reversed(self._seq_)
 
     def __repr__(self):
-        from tools.misc import wraprepr
-        return wraprepr(self, self._seq_)
+        return '%s({%s})' % (
+            type(self).__name__,
+            list(self._seq_).__repr__()[1:-1]
+        )
 
 class qset(MutableSequenceSetApi[VT]):
     'MutableSequenceSetApi implementation backed by built-in set and list.'
@@ -146,9 +149,9 @@ class qset(MutableSequenceSetApi[VT]):
 
     __slots__ = '_set_', '_seq_'
 
-    def __init__(self, values: Iterable = None, /):
+    def __init__(self, values: Iterable = None, /, qtype: type[MutableSequenceApi] = list):
         self._set_ = setm()
-        self._seq_ = list()
+        self._seq_ = subclscheck(qtype, MutableSequenceApi)()#list()
         if values is not None:
             self |= values
 
@@ -249,6 +252,5 @@ class qset(MutableSequenceSetApi[VT]):
         inst._set_ = self._set_.copy()
         inst._seq_ = self._seq_.copy()
         return inst
-
 
 del(abstract, overload)

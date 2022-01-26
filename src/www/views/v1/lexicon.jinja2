@@ -18,7 +18,7 @@
             <div class="lexicon hidden notation-{{ notn|e }}">
                 <span class="label">Atomics</span>
                 <ul class="item-symbols">
-                    {% for char in table.chars('atomic') -%}
+                    {% for char in table.chars['atomic'] -%}
                         <li>{{ char|e }}</li>
                     {% endfor %}
                 </ul>
@@ -45,13 +45,13 @@
             <div class="lexicon hidden notation-{{ notn|e }}">
                 <span class="label">Constants</span>
                 <ul class="item-symbols">
-                    {% for char in table.chars('constant') -%}
+                    {% for char in table.chars['constant'] -%}
                         <li>{{ char|e }}</li>
                     {% endfor %}
                 </ul>
                 <span class="label">Variables</span>
                 <ul class="item-symbols">
-                    {% for char in table.chars('variable') -%}
+                    {% for char in table.chars['variable'] -%}
                         <li>{{ char|e }}</li>
                     {% endfor %}
                 </ul>

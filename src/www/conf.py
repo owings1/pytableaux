@@ -171,17 +171,14 @@ def __populate_info():
         example_arguments[arg.title] = {}
     for notn in parser_notations:
         # Build rendered example arguments
-        lw = LexWriter(notn=notn, enc='ascii')
+        lw = LexWriter(notn, enc='ascii')
         for arg in exargs:
             example_arguments[arg.title][notn.name] = {
-            # example_arguments[arg.title][notn] = {
                 'premises': tuple(lw.write(s) for s in arg.premises),
                 'conclusion': lw.write(arg.conclusion),
             }
         parser_tables[notn.name] = table = CharTable.fetch(notn)
-        nups[notn.name] = table.chars('user_predicate')
-        # parser_tables[notn] = table = CharTable.fetch(notn)
-        # nups[notn] = table.chars('user_predicate')
+        nups[notn.name] = table.chars['user_predicate']
 
     for name in modules['logics']:
         lgc = modules['logics'][name]

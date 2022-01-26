@@ -31,18 +31,6 @@ class SequenceApi(Sequence[VT], Copyable):
 
     __slots__ = EMPTY
 
-    # Pure sequences
-    # @overload
-    # @classmethod
-    # def _from_iterable(cls: type[T], it: Iterable[VT]) -> T|SequenceApi[VT]: ...
-    # @overload
-    # def __getitem__(self: T, s: slice) -> T: ...
-    # @overload
-    # def __add__(self:T, other: Iterable) -> T: ...
-    # @overload
-    # def __mul__(self:T, other: SupportsIndex) -> T: ...
-
-    # Impure sequences
     @overload
     @classmethod
     def _from_iterable(cls, it: Iterable[VT]) -> SequenceApi[VT]: ...

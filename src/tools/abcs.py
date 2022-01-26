@@ -10,13 +10,20 @@ from errors import (
     instcheck as _instcheck
 )
 
+from collections.abc import Set as _Set
 from typing import (
 
     # importable exports
     final, overload,
 
     # Annotations
-    Any, Annotated, Callable, Iterable, Mapping, Sequence, SupportsIndex,
+    Any,
+    Annotated,
+    Callable,
+    Iterable,
+    Mapping,
+    Sequence,
+    SupportsIndex,
 
     # Util references
     get_type_hints as _get_type_hints,
@@ -24,7 +31,8 @@ from typing import (
     get_origin as _get_origin,
 
     # deletable references
-    ParamSpec, TypeVar,
+    ParamSpec,
+    TypeVar,
 )
 import \
     functools, \
@@ -41,8 +49,9 @@ _NOARG = object()
 _ABCF_ATTR = '_abc_flag'
 
 # Type vars
-P = ParamSpec('P')
 T = TypeVar('T')
+T1 = TypeVar('T1')
+T2 = TypeVar('T2')
 KT = TypeVar('KT')
 VT = TypeVar('VT')
 RT = TypeVar('RT')
@@ -51,6 +60,7 @@ T_contra = TypeVar('T_contra', contravariant = True)
 F = TypeVar('F', bound = Callable[..., Any])
 TT = TypeVar('TT', bound = type)
 Self = TypeVar('Self')
+P = ParamSpec('P')
 
 # Global decorators. Re-exported by decorators module.
 @overload
@@ -61,8 +71,6 @@ abstract = _abc.abstractmethod
 
 @overload
 def static(cls: TT) -> TT: ...
-# @overload
-# def static(func: F) -> F: ...
 @overload
 def static(meth: Callable[..., T]) -> staticmethod[T]: ...
 def static(cls):
@@ -97,68 +105,67 @@ class abcf(_enum.Flag):
     'Enum flag for AbcMeta functionality.'
 
     blank  = 0
-    nsinit = 4
+    before = 2
     temp   = 8
     after  = 16
-    final  = 32
-    static = 64
-    nsclean = nsinit | temp | after
+    static = 32
+    # immut  = 64
+    # protect = 128
+    # locked = 256
+
+    _cleanable = before | temp | after
+    # _protectable = immut | protect | locked
 
     def __call__(self, obj: F) -> F:
         "Add the flag to obj's meta flag. Return obj."
         return self.set(obj, self | self.get(obj))
 
     @classmethod
-    def get(cls, obj, default: abcf|int = blank) -> abcf:
+    def get(cls, obj, default: abcf|int = blank, /) -> abcf:
         return getattr(obj, _ABCF_ATTR, cls(default))
 
     @classmethod
-    def set(cls, obj: F, value: abcf) -> F:
+    def set(cls, obj: F, value: abcf, /) -> F:
         setattr(obj, _ABCF_ATTR, cls(value))
         return obj
 
-class AbcMeta(_abc.ABCMeta):
-    'Abc Meta class with before/after hooks.'
-
-    def __new__(cls, clsname, bases, ns: dict, /, **kw):
-        cls.nsinit(ns, bases, **kw)
-        Class = super().__new__(cls, clsname, bases, ns, **kw)
-        cls.nsclean(Class, ns, bases, **kw)
-        return Class
-
-    @staticmethod
-    def nsinit(ns: Mapping, bases, /, **kw):
-        'Before class create.'
-        # iterate over copy since hooks may modify ns.
-        for member in tuple(ns.values()):
-            mf = abcf.get(member)
-            if mf.nsinit in mf:
-                member(ns, bases, **kw)
-
-    @staticmethod
-    def nsclean(Class, ns: Mapping, bases, /,
-        deleter: Callable[[type, str], None] = delattr, **kw
-    ):
-        'After class create.'
-        for name, member in ns.items():
-            mf = abcf.get(member)
-            if mf is not mf.blank and mf in mf.nsclean:
-                if mf.after in mf:
-                    member(Class)
-                deleter(Class, name)
-
+@static
 class abcm:
     '''Util functions. Can also be used by meta classes that
     cannot inherit from AbcMeta, like EnumMeta.'''
 
-    # from typing import final, overload
-    # from abc import abstractmethod as abstract
+    def nsinit(ns: dict, bases, /, flag: abcf = abcf.blank, **kw):
+        # iterate over copy since hooks may modify ns.
+        for member in tuple(ns.values()):
+            mf = abcf.get(member)
+            if mf.before in mf:
+                member(ns, bases, **kw)
+        slots = ns.get('__slots__')
+        if slots and isinstance(slots, Iterable) and not isinstance(slots, _Set):
+            ns['__slots__'] = frozenset(slots)
 
-    @staticmethod
+    def clsafter(Class: type, ns: Mapping, bases, /, deleter = type.__delattr__):
+        abcf.blank(Class)
+        for name, member in ns.items():
+            mf = abcf.get(member)
+            if mf is not mf.blank and mf in mf._cleanable:
+                if mf.after in mf:
+                    member(Class)
+                deleter(Class, name)
+
+    # def prot_delattr_obj(obj, name):
+    #     raise AttributeError(name)
+
+    # def prot_setattr_obj(obj, name, value, *, prot_names = None):
+    #     if prot_names is not None:
+    #         if name not in prot_names or not hasattr(obj, name):
+    #             print(type(obj))
+    #             return super(type(obj), obj).__setattr__(name, value)
+    #     raise AttributeError(name)
+
     def isabstract(obj):
         return bool(getattr(obj, '__isabstractmethod__', False))
 
-    @staticmethod
     def annotated_attrs(obj):
         'Evaluate annotions of type Annotated.'
         annot = _get_type_hints(obj, include_extras = True)
@@ -167,7 +174,6 @@ class abcm:
             if _get_origin(v) is Annotated
         }
 
-    @staticmethod
     def check_mrodict(mro: Sequence[type], *names: str):
         'Check whether methods are implemented for dynamic subclassing.'
         if len(names) and not len(mro):
@@ -180,7 +186,6 @@ class abcm:
                     break
         return True
 
-    @staticmethod
     def merge_mroattr(subcls: type, name: str, /,
         oper = opr.or_, default: T = _NOARG, **kw
     ) -> T:
@@ -191,7 +196,6 @@ class abcm:
             it = (getattr(c, name, default) for c in it)
         return functools.reduce(oper, it)
 
-    @staticmethod
     def mroiter(subcls: type[T], /,
         supcls: type|tuple[type, ...]|None = None, *,
         rev = True, start: SupportsIndex = 0
@@ -204,6 +208,30 @@ class abcm:
         if start != 0:
             it = itertools.islice(it, start)
         return it
+
+class AbcMeta(_abc.ABCMeta):
+    'Abc Meta class with before/after hooks.'
+
+    def __new__(cls, clsname, bases, ns: dict, /, **kw):
+        abcm.nsinit(ns, bases, **kw)
+        Class = super().__new__(cls, clsname, bases, ns, **kw)
+        abcm.clsafter(Class, ns, bases, **kw)
+        return Class
+
+    # def __delattr__(cls, name):
+    #     print('__delattr__', cls.__qualname__, name)
+    #     cf = abcf.get(cls)
+    #     if cf is not cf.blank and cf in cf._protectable:
+    #         raise AttributeError(name)
+    #     super().__delattr__(name)
+
+    # def __setattr__(cls, name, value):
+    #     print('__setattr__', cls.__qualname__, name)
+    #     cf = abcf.get(cls)
+    #     if cf is not cf.blank and cf in cf._protectable:
+    #         if cf.locked in cf or (cf.immut in cf and hasattr(cls, name)):
+    #             raise AttributeError(name)
+    #     super().__setattr__(name, value)
 
 class Abc(metaclass = AbcMeta):
     'Convenience for using AbcMeta as metaclass.'

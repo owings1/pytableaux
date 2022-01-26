@@ -2,27 +2,34 @@ from __future__ import annotations
 
 __all__ = 'Node', 'Branch', 'Target'
 
+from errors import instcheck as instcheck, Emsg
 from tools.callables import Caller, gets, preds
 from tools.decorators import abstract, overload, static, final, lazy
-from errors import instcheck as instcheck, Emsg
 from tools.events import EventEmitter
-import lexicals
+from tools.linked import linqset
+from tools.mappings import dmap, MapCover
+from tools.sequences import SequenceApi
+from tools.sets import EMPTY_SET, setf
 from lexicals import Constant, Sentence, Operated, Quantified
 # from tools.abcs import Abc
-from tools.sets import EMPTY_SET, setf
-from tools.sequences import SequenceApi
-from tools.mappings import dmap, MapCover
 # from types import MappingProxyType as MapProxy
-from tools.misc import orepr
 
-from itertools import chain, islice
-from typing import (
-    Any, Callable, Iterable, Iterator, ClassVar, Mapping, NamedTuple, Sequence,
-    TypeVar
-)
 import enum
-
+from itertools import chain, islice
 import operator as opr
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    Iterable,
+    Iterator,
+    Mapping,
+    NamedTuple,
+    Sequence,
+    TypeVar,
+)
+
 
 EMPTY = ()
 class BranchEvent(enum.Enum):
@@ -154,10 +161,8 @@ class Node(MapCover):
         return dmap
 
     def __repr__(self):
-        return orepr(self,
-            id = self.id,
-            props = dict(self)
-        )
+        from tools.misc import orepr
+        return orepr(self, id = self.id, props = dict(self))
 
     def __setattr__(self, name, val):
         if getattr(self, name, val) != val:
@@ -196,14 +201,15 @@ class Access(NamedTuple):
 LHS = TypeVar('LHS')
 RHS = TypeVar('RHS')
 
-class Comparer(Callable[..., bool]):
+class Comparer(Generic[LHS, RHS], Callable[[RHS], bool]):
 
     __slots__ = 'lhs', 
 
-    def __init__(self, lhs):
+    def __init__(self, lhs: LHS):
         self.lhs = lhs
 
     def __repr__(self):
+        from tools.misc import orepr
         me = type(self).__qualname__
         them = self._lhsrepr(self.lhs)
         return orepr(me, lhs = them)
@@ -250,6 +256,8 @@ class Filters:
     class Sentence(Comparer):
 
         __slots__ = 'negated', 'applies'
+        negated: bool|None
+        
 
         rget: Callable[[RHS], Sentence] = gets.thru()
 
@@ -342,7 +350,6 @@ class NodeFilters(Filters):
                 n['world'] = 0
             return n
 
-
 class Branch(SequenceApi[Node], EventEmitter):
     'Represents a tableau branch.'
 
@@ -434,16 +441,6 @@ class Branch(SequenceApi[Node], EventEmitter):
         """
         return self.find(props, ticked = ticked) != None
 
-    # def has_access(self, w1: int, w2: int) -> bool:
-    #     """
-    #     Check whether a tuple of the given worlds is on the branch.
-
-    #     This is a performant way to check typical "access" nodes on the
-    #     branch with `world1` and `world2` properties. For more advanced
-    #     searches, use the ``has()`` method.
-    #     """
-    #     return (w1, w2) in self.__pidx['w1Rw2']
-
     def has_any(self, props_list: Iterable[Mapping], ticked: bool = None) -> bool:
         """
         Check a list of property dictionaries against the ``has()`` method. Return ``True``
@@ -499,7 +496,7 @@ class Branch(SequenceApi[Node], EventEmitter):
                 results.append(node)
         return results
 
-    def append(self, node: Mapping) -> Branch:
+    def append(self, node: Mapping):
         """
         Append a node (Node object or dict of props). Returns self.
         """
@@ -527,7 +524,7 @@ class Branch(SequenceApi[Node], EventEmitter):
 
     add = append
 
-    def extend(self, nodes: Iterable[Mapping]) -> Branch:
+    def extend(self, nodes: Iterable[Mapping]):
         'Add multiple nodes. Returns self.'
         for node in nodes:
             self.append(node)
@@ -542,7 +539,7 @@ class Branch(SequenceApi[Node], EventEmitter):
                 self.emit(BranchEvent.AFTER_NODE_TICK, node, self)
         # return self
 
-    def close(self) -> Branch:
+    def close(self):
         'Close the branch. Returns self.'
         if not self.closed:
             self.__closed = True
@@ -560,7 +557,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         Parent is not copied, but can be explicitly set.
         """
         # branch = self.__class__(parent = parent)
-        cls = self.__class__
+        cls = type(self)
         b = cls.__new__(cls)
         b.__init_parent(parent)
 
@@ -587,11 +584,11 @@ class Branch(SequenceApi[Node], EventEmitter):
             b.__model = self.__model
         return b
 
-    def constants(self) -> set[Constant]:
+    def constants(self):
         'Return the set of constants that appear on the branch.'
         return self.__constants
 
-    def new_constant(self) -> Constant:
+    def new_constant(self):
         'Return a new constant that does not appear on the branch.'
         if not self.__constants:
             return Constant.first()
@@ -679,12 +676,11 @@ class Branch(SequenceApi[Node], EventEmitter):
     def __bool__(self):
         return True
 
-    __copy__ = copy
-
     def __contains__(self, node: Node):
         return node in self.__nodeset
 
     def __repr__(self):
+        from tools.misc import orepr
         return orepr(self, 
             id     = self.id,
             nodes  = len(self),
@@ -699,6 +695,8 @@ class Branch(SequenceApi[Node], EventEmitter):
         return b
 
 class Target(dmap[str, Any]):
+
+    __slots__ = EMPTY
 
     __attrs =  {
         'branch', 'rule', 'node', 'nodes', 'world', 'world1', 'world2',
@@ -735,7 +733,7 @@ class Target(dmap[str, Any]):
         return *(cls(obj, **context) for obj in objs),
 
     @property
-    def type(self) -> str:
+    def type(self):
         if 'nodes' in self: return 'Nodes'
         if 'node' in self: return 'Node'
         return 'Branch'
@@ -791,6 +789,7 @@ class Target(dmap[str, Any]):
 
     def __repr__(self):
         # bid = self.__data['branch'].id if 'branch' in self.__data else '?'
+        from tools.misc import orepr
         return orepr(self, dict((
             ('branch', self['branch'].id if 'branch' in self else '?'),
             ('type', self.type), *islice((
@@ -801,4 +800,4 @@ class Target(dmap[str, Any]):
             ), 3)
         )))
 
-del(EventEmitter)
+del(EventEmitter, enum, lazy)

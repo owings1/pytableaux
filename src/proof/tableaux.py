@@ -607,8 +607,8 @@ class TabRules(Sequence[Rule], TabRulesBase):
             return idx[ref]
         if isinstance(ref, type) and ref.__name__ in idx:
             return idx[ref.__name__]
-        if ref.__class__.__name__ in idx:
-            return idx[ref.__class__.__name__]
+        if type(ref).__name__ in idx:
+            return idx[type(ref).__name__]
         if len(default):
             return default[0]
         raise Emsg.MissingValue(ref)
@@ -658,7 +658,6 @@ del(TabRulesBase.writes)
 
 @static
 class TableauxSystem(Abc):
-
 
     @classmethod
     @abstract
@@ -764,6 +763,8 @@ class Tableau(Sequence[Branch], EventEmitter):
         max_steps       = None,
     ))
 
+    __openview: SequenceProxy[Branch]
+
     def __init__(self, logic: LogicRef = None, argument: Argument = None, /, **opts):
 
         # Events init
@@ -805,7 +806,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         return id(self)
 
     @property
-    def logic(self) -> ModuleType:
+    def logic(self):
         return self.__logic
 
     @logic.setter
@@ -819,11 +820,11 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.__build_trunk()
 
     @property
-    def rules(self) -> TabRules:
+    def rules(self):
         return self.__rules
 
     @property
-    def flag(self) -> FLAG:
+    def flag(self):
         return self.__flag
 
     @property
@@ -833,7 +834,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         return self.logic.TableauxSystem
 
     @property
-    def argument(self) -> Argument:
+    def argument(self):
         return self.__argument
 
     @argument.setter
@@ -846,23 +847,23 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.__build_trunk()
 
     @property
-    def finished(self) -> bool:
+    def finished(self):
         return FLAG.FINISHED in self.__flag
 
     @property
-    def completed(self) -> bool:
+    def completed(self):
         return FLAG.FINISHED in self.__flag and FLAG.PREMATURE not in self.__flag
 
     @property
-    def premature(self) -> bool:
+    def premature(self):
         return FLAG.FINISHED in self.__flag and FLAG.PREMATURE in self.__flag
 
     @property
-    def trunk_built(self) -> bool:
+    def trunk_built(self):
         return FLAG.TRUNK_BUILT in self.__flag
 
     @property
-    def valid(self) -> bool:
+    def valid(self):
         if not self.completed or self.argument is None:
             return None
         return len(self.open) == 0
@@ -878,7 +879,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         return len(self.history) + (FLAG.TRUNK_BUILT in self.__flag)
 
     @property
-    def open(self) -> SequenceProxy[Branch]:
+    def open(self):
         'View of the open branches.'
         try:
             return self.__openview
@@ -886,7 +887,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.__openview = SequenceProxy(self.__open)
         return self.__openview
 
-    def build(self) -> Tableau:
+    def build(self):
         'Build the tableau. Returns self.'
         with self.timers.build:
             while not self.finished:
@@ -895,7 +896,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.finish()
         return self
 
-    def next_step(self) -> RuleTarget:
+    def next_step(self):
         """
         Choose the next rule step to perform. Returns the (rule, target)
         pair, or ``None``if no rule can be applied.
@@ -907,7 +908,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             if res:
                 return res
 
-    def step(self) -> StepEntry|None|bool:
+    def step(self):
         """
         Find, execute, and return the next rule application. If no rule can
         be applied, the ``finish()`` method is called, and ``None`` is returned.
@@ -939,7 +940,7 @@ class Tableau(Sequence[Branch], EventEmitter):
                 self.finish()
         return stepentry
 
-    def branch(self, parent: Branch = None) -> Branch:
+    def branch(self, parent: Branch = None):
         """
         Create a new branch on the tableau, as a copy of ``parent``, if given.
         This calls the ``after_branch_add()`` callback on all the rules of the
@@ -947,7 +948,6 @@ class Tableau(Sequence[Branch], EventEmitter):
 
         :param Branch parent: The parent branch, if any.
         :return: The new branch.
-        :rtype: Branch
         """
         if parent is None:
             branch = Branch()
@@ -956,13 +956,12 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.add(branch)
         return branch
 
-    def add(self, branch: Branch) -> Tableau:
+    def add(self, branch: Branch):
         """
         Add a new branch to the tableau. Returns self.
 
         :param Branch branch: The branch to add.
         :return: self
-        :rtype: Tableau
         """
         index = len(self)
         if not branch.closed:
@@ -986,14 +985,13 @@ class Tableau(Sequence[Branch], EventEmitter):
         branch.on(self.__branch_listeners)
         return self
 
-    def __build_trunk(self) -> Tableau:
+    def __build_trunk(self):
         """
         Build the trunk of the tableau. Delegates to the ``build_trunk()`` method
         of ``TableauxSystem``. This is called automatically when the
         tableau has non-empty ``argument`` and ``logic`` properties. Returns self.
 
         :return: self
-        :rtype: Tableau
         :raises errors.IllegalStateError: if the trunk is already built.
         """
         self.__check_trunk_not_built()
@@ -1004,7 +1002,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.emit(TabEvent.AFTER_TRUNK_BUILD, self)
         return self
 
-    def finish(self) -> Tableau:
+    def finish(self):
         """
         Mark the tableau as finished, and perform post-build tasks, including
         populating the ``tree``, ``stats``, and ``models`` properties.
@@ -1015,7 +1013,6 @@ class Tableau(Sequence[Branch], EventEmitter):
         finished, it will be a no-op.
 
         :return: self
-        :rtype: Tableau
         """
         if FLAG.FINISHED in self.__flag:
             return self
@@ -1032,14 +1029,13 @@ class Tableau(Sequence[Branch], EventEmitter):
         self.stats = self.__compute_stats()
         return self
 
-    def branching_complexity(self, node: Node) -> int:
+    def branching_complexity(self, node: Node):
         """
         Caching method for the logic's ``TableauxSystem.branching_complexity()``
         method. If the tableau has no logic, then ``0`` is returned.
 
         :param Node node: The node to evaluate.
         :return: The branching complexity.
-        :rtype: int
         """
         # TODO: Consider potential optimization using hash equivalence for nodes,
         #       to avoid redundant calculations. Perhaps the TableauxSystem should
@@ -1245,7 +1241,7 @@ class Tableau(Sequence[Branch], EventEmitter):
                 })
                 return res
 
-    def __compute_stats(self) -> dict:
+    def __compute_stats(self):
         """
         Compute the stats property after the tableau is finished.
         """
@@ -1280,7 +1276,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             ],
         }
 
-    def __compute_rule_stats(self, rule: Rule) -> dict:
+    def __compute_rule_stats(self, rule: Rule):
         """
         Compute the stats for a rule after the tableau is finished.
         """
@@ -1328,7 +1324,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         if FLAG.TRUNK_BUILT in self.__flag or len(self.history) > 0:
             raise IllegalStateError("Tableau is already started.")
 
-    def __result_word(self) -> str:
+    def __result_word(self):
         if self.valid:
             return 'Valid'
         if self.invalid:

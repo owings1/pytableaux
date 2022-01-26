@@ -19,7 +19,7 @@
 #
 # pytableaux - documentation utility functions
 
-import codecs, inspect, os, re, traceback
+import inspect, os, re, traceback
 from jinja2 import Environment, FileSystemLoader
 from html import escape as htmlesc, unescape as htmlun
 from os.path import abspath, join as pjoin, basename as bname
@@ -28,7 +28,8 @@ from copy import deepcopy
 
 from sphinx.util import logging
 from docutils import nodes
-from docutils.parsers.rst import Directive, directives, roles
+# from docutils.parsers.rst import Directive, roles
+import docutils.parsers.rst.directives as directives
 
 logger = logging.getLogger(__name__)
 from tools.misc import cat, get_logic
