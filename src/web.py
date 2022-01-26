@@ -18,8 +18,11 @@
 #
 # pytableaux - Web Application
 
-import examples, fixed
 from errors import TimeoutError
+from tools.decorators import static
+from tools.misc import errstr, get_logic
+
+import examples, fixed
 from fixed import issues_href, source_href, version
 import lexicals
 from lexicals import Argument, Predicate, Predicates, LexWriter, RenderSet, \
@@ -27,7 +30,6 @@ from lexicals import Argument, Predicate, Predicates, LexWriter, RenderSet, \
 from parsers import create_parser
 from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
-from tools.misc import errstr, get_logic
 
 
 import cherrypy as server
@@ -43,7 +45,7 @@ from email.mime.multipart import MIMEMultipart
 from www.mailroom import Mailroom
 
 from www.conf import available, consts, cp_global_config, jenv, \
-    logger, logic_categories, metrics, modules, example_arguments, \
+    logger, logic_categories, Metric, modules, example_arguments, \
     nups, opts, re_email, parser_tables
 
 mailroom = Mailroom(opts)
@@ -54,8 +56,8 @@ mailroom = Mailroom(opts)
 
 class AppDispatcher(Dispatcher):
     def __call__(self, path_info):
-        metrics['app_requests_count'].labels(opts['app_name'], path_info).inc()
-        return Dispatcher.__call__(self, path_info.split('?')[0])
+        Metric.app_requests_count(path_info).inc()
+        return super().__call__(path_info.split('?')[0])
 
 cp_config = {
     '/' : {
@@ -602,7 +604,7 @@ class App(object):
 
         errors = dict()
         try:
-            selected_logic = get_logic(body['logic'])
+            logic = get_logic(body['logic'])
         except Exception as err:
             errors['Logic'] = errstr(err)
         try:
@@ -645,9 +647,7 @@ class App(object):
 
         proof_start_time = time.time()
 
-        metrics['proofs_inprogress_count'].labels(
-            opts['app_name'], selected_logic.name
-        ).inc()
+        Metric.proofs_inprogress_count(logic.name).inc()
 
         proof_opts = {
             'is_rank_optim'  : body['rank_optimizations'],
@@ -657,45 +657,21 @@ class App(object):
             'max_steps'      : body['max_steps'],
         }
 
-        proof = Tableau(selected_logic, arg, **proof_opts)
+        proof = Tableau(logic, arg, **proof_opts)
 
         try:
-
             proof.build()
-
-        except:
-
-            metrics['proofs_inprogress_count'].labels(
-                opts['app_name'], selected_logic.name
-            ).dec()
-
+            Metric.proofs_completed_count(logic.name, proof.stats['result'])
+        finally:
             proof_time = time.time() - proof_start_time
-
-            metrics['proofs_execution_time'].labels(
-                opts['app_name'], selected_logic.name
-            ).observe(proof_time)
-
-            raise
-
-        proof_time = time.time() - proof_start_time
-
-        metrics['proofs_inprogress_count'].labels(
-            opts['app_name'], selected_logic.name
-        ).dec()
-
-        metrics['proofs_execution_time'].labels(
-            opts['app_name'], selected_logic.name
-        ).observe(proof_time)
-
-        metrics['proofs_completed_count'].labels(
-            opts['app_name'], selected_logic.name, proof.stats['result']
-        ).inc()
+            Metric.proofs_inprogress_count(logic.name).dec()
+            Metric.proofs_execution_time(logic.name).observe(proof_time)
 
         # actually we return a tuple (resp, tableau, lw) because the
         # web ui needs the tableau object to write the controls.
         return ({
             'tableau': {
-                'logic' : selected_logic.name,
+                'logic' : logic.name,
                 'argument': {
                     'premises'   : [
                         lw.write(premise)

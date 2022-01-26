@@ -31,7 +31,7 @@ __all__ = (
 from tools.abcs import abcm, abcf, T
 from tools.decorators import abstract, final, overload, static
 from tools.hybrids import qsetf, qset
-from tools.mappings import dmap
+from tools.mappings import dmap, MapCover
 from tools.sequences import SequenceApi, seqf
 from tools.sets import setf, setm, EMPTY_SET
 
@@ -95,13 +95,13 @@ class fict:
 @static
 class Types:
 
-    from types import \
-        DynamicClassAttribute as DynClsAttr, \
-        MappingProxyType      as MapProxy
+    from types import (
+        DynamicClassAttribute as DynClsAttr,
+        MappingProxyType      as MapProxy,
+    )
 
     from tools.abcs import AbcMeta, EnumDictType
     from tools.mappings import DequeCache as ItemCache
-    from tools.misc import CacheNotationData
 
     class EnumEntry(NamedTuple):
         member : Bases.Enum
@@ -309,11 +309,11 @@ class Metas:
         def __reversed__(cls: type[EnT]) -> Iterator[EnT]:
             return reversed(cls.seq)
 
-        def __call__(cls: type[EnT], value, *args, **kw) -> EnT:
+        def __call__(cls: type[EnT], value, *args) -> EnT:
             if not args:
                 try: return cls[value]
                 except KeyError: pass
-            return super().__call__(value, *args, **kw)
+            return super().__call__(value, *args)
 
         def __dir__(cls):
             return list(cls.names)
@@ -825,6 +825,43 @@ class Bases:
             'spec', 'coords', 'index', 'subscript', '_sort_tuple', '_scoords',
         )
 
+    class CacheNotationData(Abc):
+
+        default_fetch_name = 'default'
+        _instances: dict[Notation, dict[str, CnT]]
+
+        @classmethod
+        def load(cls: type[CnT], notn: Notation, name: str, data: Mapping) -> CnT:
+            _instcheck(name, str)
+            idx = cls._instances[notn]
+            if name in idx:
+                raise Emsg.DuplicateKey((notn, name))
+            return idx.setdefault(name, cls(data))
+
+        @classmethod
+        def fetch(cls, notn, name: str = None):
+            if name is None:
+                name = cls.default_fetch_name
+            try:
+                return cls._instances[notn][name]
+            except KeyError:
+                pass
+            return cls.load(notn, name, cls._builtin[notn][name])
+
+        @classmethod
+        def available(cls, notn):
+            return sorted(set(cls._instances[notn]).union(cls._builtin[notn]))
+
+        @classmethod
+        def _initcache(cls, notns: Iterable, builtin):
+            a_ = '_initcache'
+            if cls is __class__ or hasattr(cls, '_builtin'):
+                raise TypeError("Cannot invoke '%s' on %s" % (a_, cls))
+            cls._builtin = builtin = MapCover(dict(builtin))
+            notns = set(notns).union(builtin)
+            cls._instances = {notn: {} for notn in notns}
+
+CnT = TypeVar('CnT', bound = Bases.CacheNotationData)
 EnT = TypeVar('EnT', bound = Bases.Enum)
 
 ##############################################################
@@ -1855,7 +1892,7 @@ class LexWriter(metaclass = Metas.LexWriter):
             abcm.merge_mroattr(subcls, '_methodmap', supcls = __class__)
         )
 
-class RenderSet(Types.CacheNotationData):
+class RenderSet(Bases.CacheNotationData):
 
     default_fetch_name = 'ascii'
 

@@ -33,10 +33,11 @@ from tools.callables import gets
 from tools.decorators import abstract, raisr
 from tools.hybrids import qset
 from tools.mappings import ItemsIterator, MapCover, dmap
-from tools.misc import CacheNotationData, cat
+from tools.misc import cat
 from tools.sequences import seqf
 from tools.sets import setf, EMPTY_SET
 from lexicals import (
+    Bases as _Bases,
     Operator as Oper, Quantifier,
     Predicate, Parameter, Constant, Variable,
     Sentence, Atomic, Predicated, Quantified, Operated,
@@ -53,7 +54,7 @@ notations = Notation.seq
 
 CType = Any
 
-class CharTable(MapCover[str, tuple[CType, int|Types.Lexical]], CacheNotationData):
+class CharTable(MapCover[str, tuple[CType, int|Types.Lexical]], _Bases.CacheNotationData):
 
     default_fetch_name = 'default'
 

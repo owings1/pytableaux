@@ -17,11 +17,14 @@
 # ------------------
 #
 # pytableaux - Web App Configuration
+from tools.abcs import T
+from tools.decorators import static, overload
 from tools.misc import get_logic
-from parsers import create_parser, notations as parser_notations, CharTable
-from lexicals import LexType, LexWriter
+from parsers import CharTable
+from lexicals import LexType, Notation, LexWriter
 import examples
-import importlib, logging, os, os.path
+
+import enum, importlib, logging, os, os.path
 import prometheus_client as prom
 from jinja2 import Environment, FileSystemLoader
 
@@ -169,7 +172,7 @@ def __populate_info():
     exargs = examples.arguments()
     for arg in exargs:
         example_arguments[arg.title] = {}
-    for notn in parser_notations:
+    for notn in Notation:
         # Build rendered example arguments
         lw = LexWriter(notn, enc='ascii')
         for arg in exargs:
@@ -263,28 +266,60 @@ else:
 
 ## Prometheus Metrics
 
-metrics = {
-    'app_requests_count' : prom.Counter(
+class Metric(enum.Enum):
+
+    value: prom.metrics.MetricWrapperBase
+
+    app_requests_count = prom.Counter(
         'app_requests_count',
         'total app http requests',
         ['app_name', 'endpoint'],
-    ),
-    'proofs_completed_count' : prom.Counter(
+    )
+    proofs_completed_count = prom.Counter(
         'proofs_completed_count',
         'total proofs completed',
         ['app_name', 'logic', 'result'],
-    ),
-    'proofs_inprogress_count' : prom.Gauge(
+    )
+    proofs_inprogress_count = prom.Gauge(
         'proofs_inprogress_count',
         'total proofs in progress',
         ['app_name', 'logic'],
-    ),
-    'proofs_execution_time' : prom.Summary(
+    )
+    proofs_execution_time = prom.Summary(
         'proofs_execution_time',
         'total proof execution time',
         ['app_name', 'logic'],
     )
-}
+
+    def __call__(self, *labels: str) -> prom.metrics.MetricWrapperBase:
+        return self.value.labels(opts['app_name'], *labels)
+
+    @staticmethod
+    def start_server():
+        prom.start_http_server(opts['metrics_port'])
+
+# metrics: dict[str, prom.metrics.MetricWrapperBase] = {
+#     'app_requests_count' : prom.Counter(
+#         'app_requests_count',
+#         'total app http requests',
+#         ['app_name', 'endpoint'],
+#     ),
+#     'proofs_completed_count' : prom.Counter(
+#         'proofs_completed_count',
+#         'total proofs completed',
+#         ['app_name', 'logic', 'result'],
+#     ),
+#     'proofs_inprogress_count' : prom.Gauge(
+#         'proofs_inprogress_count',
+#         'total proofs in progress',
+#         ['app_name', 'logic'],
+#     ),
+#     'proofs_execution_time' : prom.Summary(
+#         'proofs_execution_time',
+#         'total proof execution time',
+#         ['app_name', 'logic'],
+#     )
+# }
 
 # Util
 

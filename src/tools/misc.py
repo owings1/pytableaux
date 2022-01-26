@@ -22,7 +22,7 @@ from __future__ import annotations
 __all__ = 'get_logic',
 
 # Only local import allowed is errors
-from errors import DuplicateKeyError, instcheck
+# from errors import DuplicateKeyError, instcheck
 
 from builtins import ModuleNotFoundError
 from importlib import import_module
@@ -160,46 +160,3 @@ def wraprepr(obj, inner, **kw) -> str:
         obj = type(obj).__name__
     return cat(obj, wrparens(inner.__repr__(), **kw))
 
-class CacheNotationData:
-
-    default_fetch_name = 'default'
-
-    @classmethod
-    def load(cls, notn, name: str, data: Mapping):
-        idx = cls.__getidx(notn)
-        instcheck(name, str)
-        instcheck(data, Mapping)
-        if name in idx:
-            raise DuplicateKeyError(notn, name, cls)
-        idx[name] = cls(data)
-        return idx[name]
-
-    @classmethod
-    def fetch(cls, notn, name = None):
-        if name == None:
-            name = cls.default_fetch_name
-        idx = cls.__getidx(notn)
-        builtin = cls.__builtin[notn]
-        return idx.get(name) or cls.load(notn, name, builtin[name])
-
-    @classmethod
-    def available(cls, notn):
-        return sorted(set(cls.__getidx(notn)).union(cls.__builtin[notn]))
-
-    @classmethod
-    def __getidx(cls, notn):
-        try:
-            return cls.__instances[notn]
-        except KeyError:
-            raise ValueError("Invalid notation '%s'" % notn)
-
-    @classmethod
-    def _initcache(cls, notns: Iterable, builtin):
-        a_ = '_initcache'
-        if cls is __class__:
-            raise TypeError("Cannot invoke '%s' on %s" % (cls, a_))
-        if hasattr(cls, '__builtin'):
-            raise AttributeError("%s has no attribute '%s'" % (cls, a_))
-        builtin = cls.__builtin = dict(builtin)
-        notns = set(notns).union(builtin)
-        cls.__instances = {notn: {} for notn in notns}
