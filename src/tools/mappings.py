@@ -9,6 +9,8 @@ __all__ = (
     'defaultdmap',
     'ItemsIterator',
     'DequeCache',
+    'KeyGetAttr',
+    'KeySetAttr',
 )
 
 from errors import Emsg, instcheck
@@ -115,9 +117,6 @@ class OperFuncsCache(dict[type[Mapping], TypeFuncsCache]):
             self.pop(next(iter(self)))
         return self.setdefault(obj_type, TypeFuncsCache(obj_type))
 
-RESOLV_CACHE = FuncResolvers()
-FCACHE_OP = OperFuncsCache()
-
 class MappingApi(Mapping[KT, VT], Copyable):
 
     __slots__ = EMPTY
@@ -198,14 +197,16 @@ class MappingApi(Mapping[KT, VT], Copyable):
             return other_type
         return cls._oper_res_type(other_type)
 
-class MapGetAttr(MappingApi[Any, VT]):
-    'A Mapping with attribute access.'
+class KeyGetAttr(MappingApi[Any, VT]):
+    'Mixin class for attribute key access.'
 
     __slots__ = EMPTY
 
-    def __getattr__(self, name: str) -> VT:
-        if name in self:
+    def __getattr__(self, name) -> VT:
+        try:
             return self[name]
+        except KeyError:
+            pass
         return super().__getattr__(name)
 
     def __dir__(self):
@@ -233,10 +234,10 @@ class MapCover(MappingApi[KT, VT]):
 
     @classmethod
     def _from_iterable(cls, it):
-        return cls(dict(it))
+        return cls._from_mapping(dict(it))
 
-class MapAttrCover(MapCover[KT, VT], MapGetAttr[VT]):
-    'MapCover + MapGetAttr'
+class MapAttrCover(MapCover[KT, VT], KeyGetAttr[VT]):
+    'MapCover + KeyGetAttr'
     __slots__ = EMPTY
 
 class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
@@ -285,6 +286,8 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
         inst.update(it)
         return inst
 
+    _from_mapping = _from_iterable
+
 class dmap(dict[KT, VT], MutableMappingApi[KT, VT]):
     'Mutable mapping api from dict.'
 
@@ -293,10 +296,6 @@ class dmap(dict[KT, VT], MutableMappingApi[KT, VT]):
     copy    = MutableMappingApi.copy
     __or__  = MutableMappingApi.__or__
     __ror__ = MutableMappingApi.__ror__
-
-    # @classmethod
-    # def _from_iterable(cls, it):
-    #     return cls(it)
 
 class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
     'Mutable mapping api from defaultdict.'
@@ -308,17 +307,17 @@ class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
     __ror__ = MutableMappingApi.__ror__
 
     @classmethod
-    def _from_mapping(cls, mapping):
-        if isinstance(mapping, defaultdmap):
-            return cls(mapping.default_factory, mapping)
-        inst = cls(None)
-        inst.update(mapping)
-        return inst
-
-    @classmethod
     def _from_iterable(cls, it):
         inst = cls(None)
         inst.update(it)
+        return inst
+
+    @classmethod
+    def _from_mapping(cls, mapping):
+        if isinstance(mapping, defaultdict):
+            return cls(mapping.default_factory, mapping)
+        inst = cls(None)
+        inst.update(mapping)
         return inst
 
     @classmethod
@@ -326,6 +325,18 @@ class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
         if issubclass(other_type, Mapping):
             return dmap
         return super()._roper_res_type(other_type)
+
+class KeySetAttr(Abc):
+
+    __slots__ = EMPTY
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        if preds.isattrstr(key) and self._keyattr_ok(key, value):
+            setattr(self, key, value)
+
+    def _keyattr_ok(self, name, value):
+        return True
 
 class DequeCache(Collection[VT], Abc):
 
@@ -461,6 +472,10 @@ class ItemsIterator(Iterator[tuple[KT, VT]]):
         for k, v in items:
             if koper(kpred(k)) and voper(vpred(v)):
                 yield k, v
+
+
+RESOLV_CACHE = FuncResolvers()
+FCACHE_OP = OperFuncsCache()
 
 del(
     abstract, static, final, overload, fixed, membr, wraps,

@@ -1052,14 +1052,14 @@ class Sentence(Bases.LexicalItem):
     quantifier : Quantifier | None
     operator   : Operator   | None
 
-    #: Whether this is an atomic sentence.
-    is_atomic = d.fixed.prop(False)
+    # #: Whether this is an atomic sentence.
+    # is_atomic = d.fixed.prop(False)
     #: Whether this is a predicated sentence.
     is_predicated = d.fixed.prop(False)
     #: Whether this is a quantified sentence.
     is_quantified = d.fixed.prop(False)
-    #: Whether this is an operated sentence.
-    is_operated = d.fixed.prop(False)
+    # #: Whether this is an operated sentence.
+    # is_operated = d.fixed.prop(False)
     #: Whether this is a literal sentence. Here a literal is either a
     #: predicated sentence, the negation of a predicated sentence,
     #: an atomic sentence, or the negation of an atomic sentence.
@@ -1118,7 +1118,7 @@ class Atomic(Sentence, Bases.CoordsItem):
     quantifier = d.fixed.prop(None)
     operator   = d.fixed.prop(None)
 
-    is_atomic  = d.fixed.prop(True)
+    # is_atomic  = d.fixed.prop(True)
     is_literal = d.fixed.prop(True)
     variable_occurs = d.fixed.value(False)
 
@@ -1347,7 +1347,7 @@ class Operated(Sentence, SequenceApi[Sentence]):
     #: The operands.
     operands: tuple[Sentence, ...]
 
-    is_operated = d.fixed.prop(True)
+    # is_operated = d.fixed.prop(True)
 
     @property
     def arity(self) -> int:
@@ -1494,7 +1494,7 @@ class LexType(Bases.Enum):
 
     @abcf.temp
     @d.membr.defer
-    def ordr(member: d.membr[type[LexType]]):
+    def ordr(member: d.membr):
         oper = getattr(opr, member.name)
         @d.wraps(oper)
         def f(self: LexType, other):
@@ -1506,7 +1506,8 @@ class LexType(Bases.Enum):
     __lt__ = __le__ = __gt__ = __ge__ = ordr()
 
     def __eq__(self, other):
-        return self is other or (
+        return (
+            self is other or
             self.cls is other or
             self is LexType.get(other, None)
         )
@@ -1755,6 +1756,12 @@ class Argument(SequenceApi[Sentence], metaclass = Metas.Argument):
 #                                                            #
 ##############################################################
 
+class Marking(Bases.Enum):
+    paren_open  = std.auto()
+    paren_close = std.auto()
+    whitespace  = std.auto()
+    digit       = std.auto()
+
 class Notation(Bases.Enum, metaclass = Metas.Notation):
     'Notation (polish/standard) enum class.'
 
@@ -1994,7 +2001,7 @@ class StandardLexWriter(BaseLexWriter):
         pred = item.predicate
         # For Identity, add spaces (a = b instead of a=b)
         if pred == Predicate.System.Identity:
-            ws = self._strfor('whitespace', 0)
+            ws = self._strfor(Marking.whitespace, 0)
         else:
             ws = ''
         return ''.join((
@@ -2018,16 +2025,16 @@ class StandardLexWriter(BaseLexWriter):
         elif arity == 2:
             lhs, rhs = item
             return ''.join((
-                self._strfor('paren_open', 0) if not drop_parens else '',
-                self._strfor('whitespace', 0).join(map(self._write, (lhs, oper, rhs))),
-                self._strfor('paren_close', 0) if not drop_parens else '',
+                self._strfor(Marking.paren_open, 0) if not drop_parens else '',
+                self._strfor(Marking.whitespace, 0).join(map(self._write, (lhs, oper, rhs))),
+                self._strfor(Marking.paren_close, 0) if not drop_parens else '',
             ))
         raise NotImplementedError('arity %s' % arity)
 
     def _write_negated_identity(self, item: Operated):
         si: Predicated = item.operand
         params = si.params
-        return self._strfor('whitespace', 0).join((
+        return self._strfor(Marking.whitespace, 0).join((
             self._write(params[0]),
             self._strfor((LexType.Predicate, True), (item.operator, si.predicate)),
             self._write(params[1]),
@@ -2075,7 +2082,6 @@ class Parser(Bases.Abc):
 @d.rund
 def _():
 
-    from copy import deepcopy
     data = {
         'polish': {
             'ascii': {
@@ -2111,9 +2117,9 @@ def _():
                         (Operator.Negation, Predicate.System.Identity): NotImplemented,
                     },
                     (LexType.Predicate, False) : tuple('FGHO'),
-                    'paren_open'     : (NotImplemented,),
-                    'paren_close'    : (NotImplemented,),
-                    'whitespace'     : (' ',),
+                    Marking.paren_open  : (NotImplemented,),
+                    Marking.paren_close : (NotImplemented,),
+                    Marking.whitespace  : (' ',),
                     'meta': {
                         'conseq': '|-',
                         'non-conseq': '|/-',
@@ -2123,7 +2129,7 @@ def _():
         }
     }
 
-    data['polish']['html'] = deepcopy(data['polish']['ascii']) | {
+    data['polish']['html'] = data['polish']['ascii'] | {
         'name'     : 'polish.html',
         'encoding' : 'html',
         'formats'  : {'subscript': '<sub>{0}</sub>'},
@@ -2166,9 +2172,9 @@ def _():
                         (Operator.Negation, Predicate.System.Identity): '!=',
                     },
                     (LexType.Predicate, False) : tuple('FGHO'),
-                    'paren_open'      : ('(',),
-                    'paren_close'     : (')',),
-                    'whitespace'      : (' ',),
+                    Marking.paren_open      : ('(',),
+                    Marking.paren_close     : (')',),
+                    Marking.whitespace      : (' ',),
                     'meta': {
                         'conseq': '|-',
                         'non-conseq': '|/-'
@@ -2210,9 +2216,9 @@ def _():
                         (Operator.Negation, Predicate.System.Identity): '≠',
                     },
                     (LexType.Predicate, False) : tuple('FGHO'),
-                    'paren_open'      : ('(',),
-                    'paren_close'     : (')',),
-                    'whitespace'      : (' ',),
+                    Marking.paren_open  : ('(',),
+                    Marking.paren_close : (')',),
+                    Marking.whitespace  : (' ',),
                     'meta': {
                         'conseq': '⊢',
                         'nonconseq': '⊬',
@@ -2254,9 +2260,9 @@ def _():
                         (Operator.Negation, Predicate.System.Identity): '&ne;',
                     },
                     (LexType.Predicate, False) : tuple('FGHO'),
-                    'paren_open'      : ('(',),
-                    'paren_close'     : (')',),
-                    'whitespace'      : (' ',),
+                    Marking.paren_open   : ('(',),
+                    Marking.paren_close  : (')',),
+                    Marking.whitespace   : (' ',),
                     'meta': {
                         'conseq': '⊢',
                         'nonconseq': '⊬',

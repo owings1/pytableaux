@@ -19,7 +19,7 @@
 # pytableaux - Web App Configuration
 from tools.misc import get_logic
 from parsers import create_parser, notations as parser_notations, CharTable
-from lexicals import LexWriter
+from lexicals import LexType, LexWriter
 import examples
 import importlib, logging, os, os.path
 import prometheus_client as prom
@@ -178,7 +178,7 @@ def __populate_info():
                 'conclusion': lw.write(arg.conclusion),
             }
         parser_tables[notn.name] = table = CharTable.fetch(notn)
-        nups[notn.name] = table.chars['user_predicate']
+        nups[notn.name] = table.chars[LexType.Predicate]
 
     for name in modules['logics']:
         lgc = modules['logics'][name]

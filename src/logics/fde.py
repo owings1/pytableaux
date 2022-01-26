@@ -317,6 +317,7 @@ class Model(BaseModel):
     def set_literal_value(self, s: Sentence, value):
         if value not in self.truth_values:
             self._raise_value('UnknownForSentence', value, s)
+        cls = s.TYPE.cls
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value)
         elif s.is_negated:
@@ -324,9 +325,9 @@ class Model(BaseModel):
                 s.negatum,
                 self.truth_function(s.operator, value)
             )
-        elif s.is_atomic:
+        elif cls is Atomic:
             self.set_atomic_value(s, value)
-        elif s.is_predicated:
+        elif cls is Predicated:
             self.set_predicated_value(s, value)
         else:
             raise NotImplementedError()

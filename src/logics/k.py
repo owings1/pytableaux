@@ -319,14 +319,15 @@ class Model(BaseModel):
         return s.is_literal
 
     def set_literal_value(self, s: Sentence, value, **kw):
+        cls = s.TYPE.cls
         if self.is_sentence_opaque(s):
             self.set_opaque_value(s, value, **kw)
         elif s.is_negated:
             negval = self.truth_function(s.operator, value)
             self.set_literal_value(s.operand, negval, **kw)
-        elif s.is_atomic:
+        elif cls is Atomic:
             self.set_atomic_value(s, value, **kw)
-        elif s.is_predicated:
+        elif cls is Predicated:
             self.set_predicated_value(s, value, **kw)
         else:
             raise NotImplementedError

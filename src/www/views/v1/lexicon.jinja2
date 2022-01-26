@@ -18,21 +18,21 @@
             <div class="lexicon hidden notation-{{ notn|e }}">
                 <span class="label">Atomics</span>
                 <ul class="item-symbols">
-                    {% for char in table.chars['atomic'] -%}
+                    {% for char in table.chars[LexType.Atomic] -%}
                         <li>{{ char|e }}</li>
                     {% endfor %}
                 </ul>
                 <span class="label">Operators</span>
                 <dl class="operator-symbols">
-                    {% for operator in operators_list -%}
-                        <dt>{{ table.char('operator', operator)|e }}</dt>
+                    {% for operator in lexicals.Operator -%}
+                        <dt>{{ table.char(LexType.Operator, operator)|e }}</dt>
                         <dd>{{ operator|e }}</dd>
                     {% endfor %}
                 </dl>
                 <span class="label">Quantifiers</span>
                 <dl class="operator-symbols">
-                    {% for quantifier in quantifiers -%}
-                        <dt>{{ table.char('quantifier', quantifier)|e }}</dt>
+                    {% for quantifier in lexicals.Quantifier -%}
+                        <dt>{{ table.char(LexType.Quantifier, quantifier)|e }}</dt>
                         <dd>{{ quantifier|e }}</dd>
                     {% endfor %}
                 </dl>
@@ -45,13 +45,13 @@
             <div class="lexicon hidden notation-{{ notn|e }}">
                 <span class="label">Constants</span>
                 <ul class="item-symbols">
-                    {% for char in table.chars['constant'] -%}
+                    {% for char in table.chars[LexType.Constant] -%}
                         <li>{{ char|e }}</li>
                     {% endfor %}
                 </ul>
                 <span class="label">Variables</span>
                 <ul class="item-symbols">
-                    {% for char in table.chars['variable'] -%}
+                    {% for char in table.chars[LexType.Variable] -%}
                         <li>{{ char|e }}</li>
                     {% endfor %}
                 </ul>
@@ -69,11 +69,12 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for pred in lexicals.Predicates.System -%}
+                    {%- set PredSys = lexicals.Predicate.System -%}
+                    {% for pred in PredSys -%}
                         <tr class="systemPredicate">
                             <td>
                                 {% for notn, table in parser_tables.items() %}
-                                    {%- set symbol = table.char('system_predicate', pred) -%}
+                                    {%- set symbol = table.char(PredSys, pred) -%}
                                     {%- set subscript = pred.subscript -%}
                                     <span class="predicateSymbol notation-{{ notn|e }} hidden">
                                         {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript|e }}</span>{% endif -%}
@@ -90,7 +91,7 @@
                         {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
                         {%- call helper.predicate_row(index, subscript, name, arity) %}
                             {% for notn, table in parser_tables.items() -%}
-                                {{- helper.predicate_symbol(notn, table.char('user_predicate', index), subscript) }}
+                                {{- helper.predicate_symbol(notn, table.char(LexType.Predicate, index), subscript) }}
                             {% endfor -%}
                         {%- endcall -%}
                     {%- endfor %}

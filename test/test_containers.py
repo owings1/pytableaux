@@ -1,8 +1,12 @@
 from .tutils import BaseSuite, skip
+from itertools import filterfalse
 from pytest import raises
+
 from errors import *
 from lexicals import *
+from parsers import CharTable
 
+from tools.abcs import *
 from tools.events import EventsListeners
 from tools.hybrids import *
 from tools.linked import *
@@ -10,7 +14,21 @@ from tools.mappings import *
 from tools.sequences import *
 from tools.sets import *
 
+from tools.abcs import T
+# load subclasses
+import proof.helpers, proof.common, proof.tableaux
+
 from collections import deque
+
+def subclasses(supcls: type[T]) -> qset[type[T]]:
+    classes = qset()
+    todo = deque((supcls,))
+    while len(todo):
+        for child in filterfalse(classes.__contains__, todo.pop().__subclasses__()):
+            todo.append(child)
+            if not abcm.isabstract(child):
+                classes.append(child)
+    return classes
 
 class Test_seqf(BaseSuite):
     def test_add_radd(self):
@@ -204,3 +222,14 @@ class TestLinkSet(BaseSuite):
         x = linqset('fedcba')
         x.sort()
         assert list(x) == list('abcdef')
+
+class TestMappingApi(BaseSuite):
+    @skip
+    def test_subclasses(self):
+        # compatibility for CharTable
+        exp = dict(a = (1, 2))
+        classes = subclasses(MappingApi)
+        for cls in classes:
+            # print(cls)
+            inst = cls._from_mapping(exp)
+            assert dict(inst) == exp

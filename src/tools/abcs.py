@@ -134,7 +134,7 @@ class abcm:
     '''Util functions. Can also be used by meta classes that
     cannot inherit from AbcMeta, like EnumMeta.'''
 
-    def nsinit(ns: dict, bases, /, flag: abcf = abcf.blank, **kw):
+    def nsinit(ns: dict, bases, /, **kw):
         # iterate over copy since hooks may modify ns.
         for member in tuple(ns.values()):
             mf = abcf.get(member)
@@ -164,6 +164,8 @@ class abcm:
     #     raise AttributeError(name)
 
     def isabstract(obj):
+        if isinstance(obj, type):
+            return bool(len(getattr(obj, '__abstractmethods__', _EMPTY)))
         return bool(getattr(obj, '__isabstractmethod__', False))
 
     def annotated_attrs(obj):

@@ -3,6 +3,7 @@ from __future__ import annotations
 __all__ = 'Node', 'Branch', 'Target'
 
 from errors import instcheck as instcheck, Emsg
+from tools.abcs import Abc
 from tools.callables import Caller, gets, preds
 from tools.decorators import abstract, overload, static, final, lazy
 from tools.events import EventEmitter
@@ -198,10 +199,12 @@ class Access(NamedTuple):
     def reverse(self) -> tuple[int, int]:
         return Access(self[1], self[0])
 
+# TODO: fix generic types on Comparer, Filters
+
 LHS = TypeVar('LHS')
 RHS = TypeVar('RHS')
 
-class Comparer(Generic[LHS, RHS], Callable[[RHS], bool]):
+class Comparer(Generic[LHS, RHS], Abc):
 
     __slots__ = 'lhs', 
 
@@ -218,10 +221,15 @@ class Comparer(Generic[LHS, RHS], Callable[[RHS], bool]):
         try: return type(lhs).__qualname__
         except AttributeError: return type(lhs).__name__
 
+    @abstract
+    def __call__(self, rhs: RHS) -> bool: ...
+    @abstract
+    def example(self) -> RHS: ...
+
 @static
 class Filters:
 
-    class Attr(Comparer):
+    class Attr(Comparer[LHS, RHS]):
 
         __slots__ = EMPTY
 
@@ -253,11 +261,10 @@ class Filters:
                     props[rattr] = val
             return props
 
-    class Sentence(Comparer):
+    class Sentence(Comparer[LHS, RHS]):
 
         __slots__ = 'negated', 'applies'
         negated: bool|None
-        
 
         rget: Callable[[RHS], Sentence] = gets.thru()
 
@@ -301,7 +308,7 @@ class Filters:
                     return False
             return True
 
-    class ItemValue(Comparer):
+    class ItemValue(Comparer[LHS, RHS]):
 
         __slots__ = EMPTY
 
@@ -310,10 +317,15 @@ class Filters:
         def __call__(self, rhs):
             return bool(self.lhs(self.rget(rhs)))
 
+class NodeFilter(Comparer[LHS, RHS]):
+
+    @abstract
+    def example_node(self) -> dict: ...
+
 @static
 class NodeFilters(Filters):
 
-    class Sentence(Filters.Sentence):
+    class Sentence(Filters.Sentence, NodeFilter):
 
         __slots__ = EMPTY
 
@@ -325,7 +337,7 @@ class NodeFilters(Filters):
             if s: n['sentence'] = s
             return n
 
-    class Designation(Filters.Attr):
+    class Designation(Filters.Attr, NodeFilter):
 
         __slots__ = EMPTY
 
@@ -335,7 +347,7 @@ class NodeFilters(Filters):
         def example_node(self):
             return self.example()
 
-    class Modal(Filters.Attr):
+    class Modal(Filters.Attr, NodeFilter):
 
         __slots__ = EMPTY
 
@@ -741,7 +753,7 @@ class Target(dmap[str, Any]):
     def copy(self):
         cls = type(self)
         inst = cls.__new__(cls)
-        inst.__dict__ |= self.__dict__
+        # inst.__dict__ |= self.__dict__
         dict.update(inst, self)
         return inst
 

@@ -40,7 +40,7 @@ from lexicals import (
     Operator as Oper, Quantifier,
     Predicate, Parameter, Constant, Variable,
     Sentence, Atomic, Predicated, Quantified, Operated,
-    LexType, Predicates, Argument, Notation, Parser, Types
+    LexType, Predicates, Argument, Marking, Notation, Parser, Types
 )
 
 from collections.abc import Set
@@ -70,7 +70,7 @@ class CharTable(MapCover[str, tuple[CType, int|Types.Lexical]], CacheNotationDat
 
         # list of types
         ctypes: qset[CType] = qset(map(_getkey0, vals))
-        ctypes.sort()
+        # ctypes.sort()
 
         tvals: dmap[CType, qset[int|Types.Lexical]] = dmap()
         for ctype in ctypes:
@@ -156,7 +156,7 @@ def create_parser(notn: Notation = None, vocab: Predicates = None, table: CharTa
     else:
         notn = Notation(notn)
     if table is None:
-        table = 'default'
+        table = CharTable.default_fetch_name
     if isinstance(table, str):
         table = CharTable.fetch(notn, table)
     return notn.Parser(table, vocab, **opts)
@@ -192,7 +192,13 @@ class ParseContext:
             return self.input[self.pos]
         except IndexError:
             return None
-        # return self.next(0)
+
+    def next(self, n: int = 1):
+        'Get the nth character after the current, or ``None``.'
+        try:
+            return self.input[self.pos + n]
+        except IndexError:
+            return None
 
     def assert_current(self):
         """
@@ -225,20 +231,13 @@ class ParseContext:
         if len(self.input) > self.pos:
             raise ParseError(self._unexp_msg())
 
-    def has_next(self, n: int = 1) -> bool:
+    def has_next(self, n: int = 1):
         'Whether there are n-many characters after the current.'
         return len(self.input) > self.pos + n
 
     def has_current(self):
         'Whether there is a current character.'
         return len(self.input) > self.pos
-
-    def next(self, n: int = 1):
-        'Get the nth character after the current, or ``None``.'
-        try:
-            return self.input[self.pos + n]
-        except IndexError:
-            return None
 
     def advance(self, n: int = 1):
         'Advance the current pointer n-many characters, and then eat whitespace.'
@@ -249,7 +248,7 @@ class ParseContext:
     def chomp(self):
         'Proceeed through whitepsace.'
         try:
-            while self.type(self.input[self.pos]) == 'whitespace':
+            while self.type(self.input[self.pos]) is Marking.whitespace:
                 self.pos += 1
         except IndexError:
             pass
@@ -264,13 +263,13 @@ class ParseContext:
             pfx = 'Unexpected %s symbol' % ctype
         msg = "%s '%s' at position %d." % (pfx, char, self.pos)
         if len(exp):
-            msg += ' Expected %s.' % ', '.join(exp)
+            msg += ' Expected %s.' % ', '.join(map(str, exp))
         return msg
 
 
-_BASE_CTYPES = setf({'user_predicate', 'system_predicate', 'quantifier', 'atomic'})
-_PARAM_CTYPES = setf({'constant', 'variable'})
-_PRED_CTYPES = setf({'user_predicate', 'system_predicate'})
+_PRED_CTYPES = setf({LexType.Predicate, Predicate.System})
+_BASE_CTYPES = _PRED_CTYPES | {LexType.Quantifier, LexType.Atomic}
+_PARAM_CTYPES = setf({LexType.Constant, LexType.Variable})
 
 class BaseParser(Parser):
 
@@ -307,9 +306,9 @@ class BaseParser(Parser):
         :meta private:
         """
         ctype = context.assert_current_in(_BASE_CTYPES)
-        if ctype == 'atomic':
+        if ctype is LexType.Atomic:
             return self._read_atomic(context)
-        if ctype == 'quantifier':
+        if ctype is LexType.Quantifier:
             return self._read_quantified(context)
         return self._read_predicated(context)
 
@@ -324,12 +323,11 @@ class BaseParser(Parser):
 
     def _read_quantified(self, context: ParseContext):
         'Read a quantified sentence.'
-        context.assert_current_is('quantifier')
         q = self.table.value(context.current())
         context.advance()
         v = self._read_variable(context)
         if v in context.bound_vars:
-            vchr = self.table.char('variable', v.index)
+            vchr = self.table.char(LexType.Variable, v.index)
             raise BoundVariableError(
                 "Cannot rebind variable '{0}' ({1}) at position {2}.".format(
                     vchr, v.subscript, context.pos
@@ -338,7 +336,7 @@ class BaseParser(Parser):
         context.bound_vars.add(v)
         s = self._read(context)
         if v not in s.variables:
-            vchr = self.table.char('variable', v.index)
+            vchr = self.table.reversed[LexType.Variable, v.index]
             raise BoundVariableError(
                 "Unused bound variable '{0}' ({1}) at position {2}.".format(
                     vchr, v.subscript, context.pos
@@ -352,7 +350,7 @@ class BaseParser(Parser):
         pchar = context.current()
         cpos = context.pos
         ctype = self.table.type(pchar)
-        if ctype == 'system_predicate':
+        if ctype is Predicate.System:
             pred: Predicate = self.table.value(pchar)
             context.advance()
             return pred
@@ -370,12 +368,12 @@ class BaseParser(Parser):
     def _read_parameter(self, context: ParseContext) -> Parameter:
         'Read a single parameter (constant or variable)'
         ctype = context.assert_current_in(_PARAM_CTYPES)
-        if ctype == 'constant':
+        if ctype is LexType.Constant:
             return self._read_constant(context)
         cpos = context.pos
         v = self._read_variable(context)
         if v not in context.bound_vars:
-            vchr = self.table.char('variable', v.index)
+            vchr = self.table.reversed[LexType.Variable, v.index]
             raise UnboundVariableError(
                 "Unbound variable '%s_%d' at position %d." % (
                     vchr, v.subscript, cpos
@@ -399,7 +397,7 @@ class BaseParser(Parser):
         returned."""
         # TODO: use better list, e.g. linked.
         digits = []
-        while context.current() and self.table.type(context.current()) == 'digit':
+        while context.current() and self.table.type(context.current()) == Marking.digit:
             digits.append(context.current())
             context.advance()
         if not len(digits):
@@ -429,11 +427,13 @@ class PolishParser(BaseParser):
 
     def _read(self, context: ParseContext):
         ctype = context.assert_current()
-        if ctype == 'operator':
-            operator = self.table.value(context.current())
+        if ctype is LexType.Operator:
+            oper: Oper = self.table.value(context.current())
             context.advance()
-            operands = tuple(self._read(context) for _ in range(operator.arity))
-            s = Operated(operator, operands)
+            s = Operated(
+                oper,
+                tuple(self._read(context) for _ in range(oper.arity))
+            )
         else:
             s = super()._read(context)
         return s
@@ -452,9 +452,9 @@ class StandardParser(BaseParser):
         except ParseError:
             try:
                 return super().parse(''.join((
-                    self.table.char('paren_open', 0),
+                    self.table.reversed[Marking.paren_open, 0],
                     input,
-                    self.table.char('paren_close', 0)
+                    self.table.reversed[Marking.paren_close, 0]
                 )))
             except ParseError:
                 pass
@@ -462,11 +462,11 @@ class StandardParser(BaseParser):
 
     def _read(self, context: ParseContext):
         ctype = context.assert_current()
-        if ctype == 'operator':
+        if ctype is LexType.Operator:
             return self.__read_operated(context)
-        if ctype == 'paren_open':
+        if ctype is Marking.paren_open:
             return self.__read_from_paren_open(context)
-        if ctype == 'variable' or ctype == 'constant':
+        if ctype is LexType.Constant:
             return self.__read_infix_predicated(context)
         return super()._read(context)
 
@@ -505,30 +505,29 @@ class StandardParser(BaseParser):
         while depth:
             if not context.has_next(length):
                 raise ParseError(
-                    'Unterminated open parenthesis at position {0}.'.format(context.pos)
+                    'Unterminated open paren at position %d.' % context.pos
                 )
             peek = context.next(length)
             ptype = self.table.type(peek)
-            if ptype == 'paren_close':
+            if ptype is Marking.paren_close:
                 depth -= 1
-            elif ptype == 'paren_open':
+            elif ptype is Marking.paren_open:
                 depth += 1
-            elif ptype == 'operator':
+            elif ptype is LexType.Operator:
                 peek_oper: Oper = self.table.value(peek)
                 if peek_oper.arity == 2 and depth == 1:
                     if oper is not None:
-                        raise ParseError(
-                            'Unexpected binary operator symbol at position {0}.'.format(context.pos + length)
-                        )
+                        msg = 'Unexpected binary operator symbol at position %d.' % (
+                            context.pos + length
+                        ) 
+                        raise ParseError(msg)
                     oper_pos = context.pos + length
                     oper = peek_oper
             length += 1
         if oper is None:
             raise ParseError(
-                'Parenthetical expression is missing binary operator at position {0}.'.format(context.pos)
+                'Paren expression missing binary operator at position {0}.'.format(context.pos)
             )
-        #if length == 2: #if length == 1:
-        #    raise logic.Parser.ParseError('Empty parenthetical expression at position {0}.'.format(self.pos))
         # now we can divide the string into lhs and rhs
         lhs_start = context.pos + 1
         # move past the open paren
@@ -551,7 +550,7 @@ class StandardParser(BaseParser):
         rhs = self._read(context)
         context.chomp()
         # now we should have a close paren
-        context.assert_current_is('paren_close')
+        context.assert_current_is(Marking.paren_close)
         # move past the close paren
         context.advance()
         return Operated(oper, (lhs, rhs))
@@ -561,96 +560,96 @@ Notation.standard.Parser = StandardParser
 CharTable._initcache(Notation, {
     Notation.standard: {
         'default': {
-            'A' : ('atomic', 0),
-            'B' : ('atomic', 1),
-            'C' : ('atomic', 2),
-            'D' : ('atomic', 3),
-            'E' : ('atomic', 4),
-            '*' : ('operator', Oper.Assertion),
-            '~' : ('operator', Oper.Negation),
-            '&' : ('operator', Oper.Conjunction),
-            'V' : ('operator', Oper.Disjunction),
-            '>' : ('operator', Oper.MaterialConditional),
-            '<' : ('operator', Oper.MaterialBiconditional),
-            '$' : ('operator', Oper.Conditional),
-            '%' : ('operator', Oper.Biconditional),
-            'P' : ('operator', Oper.Possibility),
-            'N' : ('operator', Oper.Necessity),
-            'x' : ('variable', 0),
-            'y' : ('variable', 1),
-            'z' : ('variable', 2),
-            'v' : ('variable', 3),
-            'a' : ('constant', 0),
-            'b' : ('constant', 1),
-            'c' : ('constant', 2),
-            'd' : ('constant', 3),
-            '=' : ('system_predicate', Predicates.System.Identity),
-            '!' : ('system_predicate', Predicates.System.Existence),
-            'F' : ('user_predicate', 0),
-            'G' : ('user_predicate', 1),
-            'H' : ('user_predicate', 2),
-            'O' : ('user_predicate', 3),
-            'L' : ('quantifier', Quantifier.Universal),
-            'X' : ('quantifier', Quantifier.Existential),
-            '(' : ('paren_open', 0),
-            ')' : ('paren_close', 0),
-            ' ' : ('whitespace', 0),
-            '0' : ('digit', 0),
-            '1' : ('digit', 1),
-            '2' : ('digit', 2),
-            '3' : ('digit', 3),
-            '4' : ('digit', 4),
-            '5' : ('digit', 5),
-            '6' : ('digit', 6),
-            '7' : ('digit', 7),
-            '8' : ('digit', 8),
-            '9' : ('digit', 9),
+            'A' : (LexType.Atomic, 0),
+            'B' : (LexType.Atomic, 1),
+            'C' : (LexType.Atomic, 2),
+            'D' : (LexType.Atomic, 3),
+            'E' : (LexType.Atomic, 4),
+            '*' : (LexType.Operator, Oper.Assertion),
+            '~' : (LexType.Operator, Oper.Negation),
+            '&' : (LexType.Operator, Oper.Conjunction),
+            'V' : (LexType.Operator, Oper.Disjunction),
+            '>' : (LexType.Operator, Oper.MaterialConditional),
+            '<' : (LexType.Operator, Oper.MaterialBiconditional),
+            '$' : (LexType.Operator, Oper.Conditional),
+            '%' : (LexType.Operator, Oper.Biconditional),
+            'P' : (LexType.Operator, Oper.Possibility),
+            'N' : (LexType.Operator, Oper.Necessity),
+            'x' : (LexType.Variable, 0),
+            'y' : (LexType.Variable, 1),
+            'z' : (LexType.Variable, 2),
+            'v' : (LexType.Variable, 3),
+            'a' : (LexType.Constant, 0),
+            'b' : (LexType.Constant, 1),
+            'c' : (LexType.Constant, 2),
+            'd' : (LexType.Constant, 3),
+            '=' : (Predicate.System, Predicate.System.Identity),
+            '!' : (Predicate.System, Predicate.System.Existence),
+            'F' : (LexType.Predicate, 0),
+            'G' : (LexType.Predicate, 1),
+            'H' : (LexType.Predicate, 2),
+            'O' : (LexType.Predicate, 3),
+            'L' : (LexType.Quantifier, Quantifier.Universal),
+            'X' : (LexType.Quantifier, Quantifier.Existential),
+            '(' : (Marking.paren_open, 0),
+            ')' : (Marking.paren_close, 0),
+            ' ' : (Marking.whitespace, 0),
+            '0' : (Marking.digit, 0),
+            '1' : (Marking.digit, 1),
+            '2' : (Marking.digit, 2),
+            '3' : (Marking.digit, 3),
+            '4' : (Marking.digit, 4),
+            '5' : (Marking.digit, 5),
+            '6' : (Marking.digit, 6),
+            '7' : (Marking.digit, 7),
+            '8' : (Marking.digit, 8),
+            '9' : (Marking.digit, 9),
         }
     },
     Notation.polish: {
         'default': {
-            'a' : ('atomic', 0),
-            'b' : ('atomic', 1),
-            'c' : ('atomic', 2),
-            'd' : ('atomic', 3),
-            'e' : ('atomic', 4),
-            'T' : ('operator', Oper.Assertion),
-            'N' : ('operator', Oper.Negation),
-            'K' : ('operator', Oper.Conjunction),
-            'A' : ('operator', Oper.Disjunction),
-            'C' : ('operator', Oper.MaterialConditional),
-            'E' : ('operator', Oper.MaterialBiconditional),
-            'U' : ('operator', Oper.Conditional),
-            'B' : ('operator', Oper.Biconditional),
-            'M' : ('operator', Oper.Possibility),
-            'L' : ('operator', Oper.Necessity),
-            'x' : ('variable', 0),
-            'y' : ('variable', 1),
-            'z' : ('variable', 2),
-            'v' : ('variable', 3),
-            'm' : ('constant', 0),
-            'n' : ('constant', 1),
-            'o' : ('constant', 2),
-            's' : ('constant', 3),
-            'I' : ('system_predicate', Predicates.System.Identity),
-            'J' : ('system_predicate', Predicates.System.Existence),
-            'F' : ('user_predicate', 0),
-            'G' : ('user_predicate', 1),
-            'H' : ('user_predicate', 2),
-            'O' : ('user_predicate', 3),
-            'V' : ('quantifier', Quantifier.Universal),
-            'S' : ('quantifier', Quantifier.Existential),
-            ' ' : ('whitespace', 0),
-            '0' : ('digit', 0),
-            '1' : ('digit', 1),
-            '2' : ('digit', 2),
-            '3' : ('digit', 3),
-            '4' : ('digit', 4),
-            '5' : ('digit', 5),
-            '6' : ('digit', 6),
-            '7' : ('digit', 7),
-            '8' : ('digit', 8),
-            '9' : ('digit', 9),
+            'a' : (LexType.Atomic, 0),
+            'b' : (LexType.Atomic, 1),
+            'c' : (LexType.Atomic, 2),
+            'd' : (LexType.Atomic, 3),
+            'e' : (LexType.Atomic, 4),
+            'T' : (LexType.Operator, Oper.Assertion),
+            'N' : (LexType.Operator, Oper.Negation),
+            'K' : (LexType.Operator, Oper.Conjunction),
+            'A' : (LexType.Operator, Oper.Disjunction),
+            'C' : (LexType.Operator, Oper.MaterialConditional),
+            'E' : (LexType.Operator, Oper.MaterialBiconditional),
+            'U' : (LexType.Operator, Oper.Conditional),
+            'B' : (LexType.Operator, Oper.Biconditional),
+            'M' : (LexType.Operator, Oper.Possibility),
+            'L' : (LexType.Operator, Oper.Necessity),
+            'x' : (LexType.Variable, 0),
+            'y' : (LexType.Variable, 1),
+            'z' : (LexType.Variable, 2),
+            'v' : (LexType.Variable, 3),
+            'm' : (LexType.Constant, 0),
+            'n' : (LexType.Constant, 1),
+            'o' : (LexType.Constant, 2),
+            's' : (LexType.Constant, 3),
+            'I' : (Predicate.System, Predicate.System.Identity),
+            'J' : (Predicate.System, Predicate.System.Existence),
+            'F' : (LexType.Predicate, 0),
+            'G' : (LexType.Predicate, 1),
+            'H' : (LexType.Predicate, 2),
+            'O' : (LexType.Predicate, 3),
+            'V' : (LexType.Quantifier, Quantifier.Universal),
+            'S' : (LexType.Quantifier, Quantifier.Existential),
+            ' ' : (Marking.whitespace, 0),
+            '0' : (Marking.digit, 0),
+            '1' : (Marking.digit, 1),
+            '2' : (Marking.digit, 2),
+            '3' : (Marking.digit, 3),
+            '4' : (Marking.digit, 4),
+            '5' : (Marking.digit, 5),
+            '6' : (Marking.digit, 6),
+            '7' : (Marking.digit, 7),
+            '8' : (Marking.digit, 8),
+            '9' : (Marking.digit, 9),
         },
     }
 })

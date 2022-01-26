@@ -23,11 +23,11 @@ from errors import TimeoutError
 from fixed import issues_href, source_href, version
 import lexicals
 from lexicals import Argument, Predicate, Predicates, LexWriter, RenderSet, \
-    Operator, Quantifier, Notation
+    Operator, Quantifier, Notation, LexType
 from parsers import create_parser
 from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
-from tools.misc import get_logic
+from tools.misc import errstr, get_logic
 
 
 import cherrypy as server
@@ -159,6 +159,7 @@ base_view_data = {
     'operators_list'      : list(Operator),
     'quantifiers'         : list(Quantifier),
     'lexicals'            : lexicals,
+    'LexType'             : LexType,
     'source_href'         : source_href,
     'tabwriter_formats'   : tabwriter_formats,
     'version'             : version,
@@ -222,11 +223,6 @@ def validate_feedback_form(form_data):
 def get_remote_ip(req):
     # TODO: use proxy forward header
     return req.remote.ip
-
-def errstr(err):
-    if isinstance(err, Exception):
-        return '{0}: {1}'.format(err.__class__.__name__, str(err))
-    return str(err)
 
 class RequestDataError(Exception):
     def __init__(self, errors):

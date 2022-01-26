@@ -77,6 +77,8 @@ class Emsg(enum.Enum):
     DuplicateValue = DuplicateValueError,
     MissingValue = MissingValueError,
 
+    DuplicateKey = DuplicateKeyError,
+
     def __init__(self, cls, msg: str = None, fns = None):
         if isinstance(cls, tuple):
             cls = type(cls[0], cls[1:], {})

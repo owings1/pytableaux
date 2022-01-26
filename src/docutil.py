@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 from tools.misc import cat, get_logic
 import examples
 from lexicals import \
-    Constant, Variable, RenderSet, Predicates, Operator, LexWriter
+    Constant, Variable, RenderSet, Predicate, Predicates, Operator, LexType, LexWriter
 from parsers import create_parser, parse_argument, CharTable
 from proof.tableaux import Tableau, TableauxSystem as TabSys, Rule
 from proof.writers import create_tabwriter
@@ -247,7 +247,7 @@ class Helper(object):
         Build the csv table for the operators reference table.
         """
         sympol, symstd = (
-            {o: table.char('operator', o) for o in Operator}
+            {o: table.char(LexType.Operator, o) for o in Operator}
             for table in (
                 CharTable.fetch('polish'),
                 CharTable.fetch('standard'),
@@ -543,25 +543,25 @@ class Helper(object):
                 char, sub = m.groups()
                 sub = int(sub) if len(sub) else 0
                 ctype = table.type(char)
-                if ctype in ('operator', 'quantifier'):
+                if ctype in (LexType.Operator, LexType.Quantifier):
                     what, item = table.item(char)
-                elif ctype in ('constant', 'variable'):
+                elif ctype in (LexType.Constant, LexType.Variable):
                     what, idx = table.item(char)
-                    if ctype == 'constant':
+                    if ctype is LexType.Constant:
                         item = Constant(idx, sub)
                         classes.append('constant')
                     else:
                         item = Variable(idx, sub)
                         classes.append('variable')
-                elif ctype == 'user_predicate':
+                elif ctype is LexType.Predicate:
                     what = 'predicate'
                     _, idx = table.item(char)
                     item = self.opts['vocabulary'].get((idx, sub))
                     classes.append('user_predicate')
-                elif ctype == 'system_predicate':
+                elif ctype is Predicate.System:
                     what = 'predicate'
-                    _, name = table.item(char)
-                    item = Predicates.System[name]
+                    _, item = table.item(char)
+                    item = Predicate.System(item)
                     classes.extend(('system_predicate', item.name))
         if not what:
             what = 'sentence'

@@ -17,42 +17,41 @@
 # ------------------
 #
 # pytableaux - parsers test cases
-import pytest
 from pytest import raises
-from errors import *
-import examples
+from errors import ParseError
+from lexicals import Predicate, LexType, Predicates
 from parsers import create_parser, parse, parse_argument as argument
 
-voc = examples.preds
-std = create_parser(notn='standard', vocab=voc)
-pol = create_parser(notn='polish', vocab=voc)
+preds = Predicates(Predicate.gen(3))
+std = create_parser('standard', preds)
+pol = create_parser('polish', preds)
 
 def test_parse_standard():
     s = parse('A & B', notn='standard')
-    assert s.is_operated
+    assert s.TYPE is LexType.Operated
     assert s.operator == 'Conjunction'
 
 def test_parse_polish():
     s = parse('Kab', notn='polish')
-    assert s.is_operated
+    assert s.TYPE is LexType.Operated
     assert s.operator == 'Conjunction'
 
 def test_argument_no_prems_1_std_untitled():
     a = argument(conclusion='A', notn='standard')
     assert len(a.premises) == 0
-    assert a.conclusion.is_atomic
+    assert a.conclusion.TYPE is LexType.Atomic
 
 def test_argument_prems_preparsed_titled():
     premises = (parse('Aab'), parse('Nb'))
     conclusion = parse('a')
-    a = argument(conclusion=conclusion, premises=premises, title='TestArgument')
+    a = argument(conclusion, premises, title='TestArgument')
     assert len(a.premises) == 2
     assert a.title == 'TestArgument'
 
 def test_argument_parse_prems_preparsed_conclusion():
     premises = ('Aab', 'Nb')
     conclusion = parse('a')
-    a = argument(conclusion=conclusion, premises=premises, notn='polish')
+    a = argument(conclusion, premises, notn='polish')
     assert len(a.premises) == 2
     assert a.conclusion == conclusion
 
@@ -61,87 +60,87 @@ def test_argument_repr_coverage():
     res = a.__repr__()
     assert '(0, 0)' in res or 'TestArg' in res
 
-class TestStandard(object):
+class TestStandard:
 
     def test_parse_atomic(self):
-        s = std.parse('A')
-        assert s.is_atomic
+        s = std('A')
+        assert s.TYPE is LexType.Atomic
 
     def test_parse_negated(self):
-        s = std.parse('~A')
+        s = std('~A')
         assert s.is_literal
         assert s.operator == 'Negation'
 
     def test_parse_conjunction_parens(self):
-        s = std.parse('(A & B)')
+        s = std('(A & B)')
         assert s.operator == 'Conjunction'
 
     def test_parse_conjunction_no_parens(self):
-        s = std.parse('A & B')
+        s = std('A & B')
         assert s.operator == 'Conjunction'
 
-    def test_fail_missing_close_paren(self):
-        with raises(ParseError):
-            std.parse('(A & B')
-
     def test_complex_quantified_1(self):
-        s = std.parse('((A & B) V XxXy(=xy > !a))')
+        s = std('((A & B) V XxXy(=xy > !a))')
         assert s.operator == 'Disjunction'
         assert s.rhs.is_quantified
 
     def test_complex_quantified_1_equivalence(self):
-        s1 = std.parse('((A&B0)VXxXy(=xy>!a))')
-        s2 = std.parse('((A & B) V XxXy(=xy > !a))')
+        s1 = std('((A&B0)VXxXy(=xy>!a))')
+        s2 = std('((A & B) V XxXy(=xy > !a))')
         assert s1 == s2
         assert s1.lhs.rhs.subscript == 0
 
     def test_complex_modal_1(self):
-        s = std.parse('(PXx!x V N=ab)')
+        s = std('(PXx!x V N=ab)')
+        assert s.TYPE is LexType.Operated
         assert s.lhs.operator == 'Possibility'
 
     def test_infix_pred(self):
-        s = std.parse('a=b')
+        s = std('a=b')
         assert s.predicate.name == 'Identity'
+
+    def test_fail_missing_close_paren(self):
+        with raises(ParseError):
+            std('(A & B')
 
     def test_binary_prefix_error(self):
         with raises(ParseError):
-            std.parse('&AB')
+            std('&AB')
 
     def test_unary_infix_pred_error(self):
         with raises(ParseError):
-            std.parse('aF')
+            std('aF')
 
     def test_undefined_pred_error(self):
         with raises(ParseError):
-            std.parse('F1ab')
+            std('F1ab')
 
     def test_unbound_var_error(self):
         with raises(ParseError):
-            std.parse('Fx')
+            std('Fx')
 
     def test_rebind_var_error(self):
         with raises(ParseError):
-            std.parse('LxLxFx')
+            std('LxLxFx')
 
     def test_unused_var_error(self):
         with raises(ParseError):
-            std.parse('LxFa')
+            std('LxFa')
 
 class TestPolish(object):
 
     def test_parse_atomic(self):
-        s = pol.parse('a')
-        assert s.is_atomic
+        assert pol('a').TYPE is LexType.Atomic
 
     def test_parse_negated(self):
-        s = pol.parse('Na')
+        s = pol('Na')
         assert s.is_literal
         assert s.operator == 'Negation'
 
     def test_unexpected_constant_error(self):
         with raises(ParseError):
-            pol.parse('m')
+            pol('m')
 
     def test_empty_error(self):
         with raises(ParseError):
-            pol.parse('')
+            pol('')

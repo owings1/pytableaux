@@ -46,7 +46,6 @@ Pred, Preds = Predicate, Predicates
 Sys = Predicate.System
 
 
-# @skip
 class TestParameter(BaseSuite):
 
     class TestAbstract(BaseSuite):
@@ -77,7 +76,6 @@ class TestParameter(BaseSuite):
             with raises(ValueError):
                 Variable(Variable.TYPE.maxi + 1, 0)
 
-# @skip
 class TestPredicate(BaseSuite):
 
     def test_errors(self):
@@ -108,7 +106,6 @@ class TestPredicate(BaseSuite):
         assert p.__objclass__ is Sys
         assert p.is_system
 
-# @skip
 class TestPredicates(BaseSuite):
 
     def test_errors(self):
@@ -243,10 +240,9 @@ class TestSentence(BaseSuite):
             assert s.operator == None
             assert s.quantifier == None
             assert s.predicate == None
-            assert s.is_atomic == True
+            assert s.TYPE is LexType.Atomic
             assert s.is_predicated == False
             assert s.is_quantified == False
-            assert s.is_operated == False
             assert s.is_literal == True
             assert s.is_negated == False
             assert s.constants == EMPTY_SET
@@ -284,10 +280,9 @@ class TestSentence(BaseSuite):
             assert s.operator == None
             assert s.quantifier == None
             assert s.predicate == Predicate((0, 0, 1))
-            assert s.is_atomic == False
+            assert s.TYPE is LexType.Predicated
             assert s.is_predicated == True
             assert s.is_quantified == False
-            assert s.is_operated == False
             assert s.is_literal == True
             assert s.is_negated == False
             assert s.constants == {a}
