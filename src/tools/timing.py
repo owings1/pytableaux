@@ -58,6 +58,9 @@ class StopWatch:
         except ZeroDivisionError:
             return 0
 
+    def elapsed_secs(self):
+        return self.elapsed // 1000
+
     @property
     def running(self) -> bool:
         'Whether the StopWatch is running.'

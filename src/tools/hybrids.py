@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = 'SequenceSetApi', 'MutableSequenceSetApi', 'qsetf', 'qset'
 
 from errors import (
-    instcheck as _instcheck,
+    instcheck,
     subclscheck,
     DuplicateValueError,
     MissingValueError,
@@ -11,16 +11,14 @@ from errors import (
 from tools.abcs import T, VT
 from tools.decorators import abstract, overload
 from tools.sequences import SequenceApi, MutableSequenceApi, seqf
-from tools.sets import SetApi, MutableSetApi, setf, setm
+from tools.sets import SetApi, MutableSetApi, setf, setm, EMPTY_SET
 
 from typing import Iterable, MutableSequence, SupportsIndex
-
-EMPTY = ()
 
 class SequenceSetApi(SequenceApi[VT], SetApi[VT]):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'
 
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
 
     def count(self, value, /) -> int:
         'Returns 1 if in the set, else 0.'
@@ -49,7 +47,7 @@ class MutableSequenceSetApi(SequenceSetApi[VT], MutableSequenceApi[VT], MutableS
     """Mutable sequence set (ordered set) interface.
     Sequence methods such as ``append`` raise ``DuplicateValueError``."""
 
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
 
     def _before_add(self, value):
         '''Before add hook. Not guaranteed that the value will be added, and
@@ -126,7 +124,7 @@ class qsetf(SequenceSetApi[VT]):
     def __getitem__(self, index):
         if isinstance(index, SupportsIndex):
             return self._seq_[index]
-        _instcheck(index, slice)
+        instcheck(index, slice)
         return self._from_iterable(self._seq_[index])
 
     def __iter__(self):
@@ -149,9 +147,9 @@ class qset(MutableSequenceSetApi[VT]):
 
     __slots__ = '_set_', '_seq_'
 
-    def __init__(self, values: Iterable = None, /, qtype: type[MutableSequenceApi] = list):
+    def __init__(self, values: Iterable = None, /, qtype: type[MutableSequence] = list):
         self._set_ = setm()
-        self._seq_ = subclscheck(qtype, MutableSequenceApi)()#list()
+        self._seq_ = subclscheck(qtype, MutableSequence)()#list()
         if values is not None:
             self |= values
 
@@ -171,7 +169,7 @@ class qset(MutableSequenceSetApi[VT]):
             self._after_remove(value)
             return
 
-        _instcheck(index, slice)
+        instcheck(index, slice)
         values = self[index]
         del self._seq_[index]
         bset = self._set_
@@ -202,7 +200,7 @@ class qset(MutableSequenceSetApi[VT]):
             self._after_add(value)
             return
 
-        _instcheck(index, slice)
+        instcheck(index, slice)
 
         olds, values = self._setslice_prep(index, value)
         self._set_ -= olds

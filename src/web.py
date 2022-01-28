@@ -18,100 +18,50 @@
 #
 # pytableaux - Web Application
 
-from errors import TimeoutError
+from errors import TimeoutError, errstr
 from tools.decorators import static
-from tools.misc import errstr, get_logic
+from tools.mappings import MapCover, dmap
+from tools.misc import get_logic
+from tools.timing import StopWatch
 
 import examples, fixed
 from fixed import issues_href, source_href, version
 import lexicals
-from lexicals import Argument, Predicate, Predicates, LexWriter, RenderSet, \
+from lexicals import Argument, Predicate, Predicates, \
     Operator, Quantifier, Notation, LexType
 from parsers import create_parser
 from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
 
+from www.mailroom import Mailroom
+from www.conf import (
+    available, cp_global_config, cp_config, jenv,
+    logger, logic_categories, Metric, modules, example_arguments,
+    nups, parser_tables, lexwriter_encodings, lexwriters,
+    opts, re_email,
+)
 
 import cherrypy as server
+from datetime import datetime
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from jinja2 import Template
 from functools import partial
 import json, re, time, traceback
 import operator as opr
 import prometheus_client as prom
+from types import MappingProxyType as MapProxy
+from typing import Any, Mapping
 
-from cherrypy._cpdispatch import Dispatcher
-from datetime import datetime
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from www.mailroom import Mailroom
 
-from www.conf import available, consts, cp_global_config, jenv, \
-    logger, logic_categories, Metric, modules, example_arguments, \
-    nups, opts, re_email, parser_tables
+EMPTY_MAP = MapCover(MapProxy({}))
 
 mailroom = Mailroom(opts)
-
-##############################
-## Cherrypy Server Config   ##
-##############################
-
-class AppDispatcher(Dispatcher):
-    def __call__(self, path_info):
-        Metric.app_requests_count(path_info).inc()
-        return super().__call__(path_info.split('?')[0])
-
-cp_config = {
-    '/' : {
-        'request.dispatch': AppDispatcher(),
-    },
-    '/static' : {
-        'tools.staticdir.on'  : True,
-        'tools.staticdir.dir' : consts['static_dir'],
-    },
-    '/doc': {
-        'tools.staticdir.on'    : True,
-        'tools.staticdir.dir'   : consts['static_dir_doc'],
-        'tools.staticdir.index' : consts['index_filename'],
-    },
-    '/favicon.ico': {
-        'tools.staticfile.on': True,
-        'tools.staticfile.filename': consts['favicon_file'],
-    },
-    '/robots.txt': {
-        'tools.staticfile.on': True,
-        'tools.staticfile.filename': consts['robotstxt_file'],
-    },
-}
-
-#####################
-## Static Data     ##
-#####################
-# For notn, only include those common to all, until UI suports
-# notn-specific choice.
-lexwriter_encodings = {
-    notn.name: RenderSet.available(notn.name)
-    for notn in Notation
-}
-_enc = set(enc for encs in lexwriter_encodings.values() for enc in encs)
-for notn in Notation:
-    _enc = _enc.intersection(RenderSet.available(notn.name))
-lexwriter_encodings_common = sorted(_enc)
-del(_enc)
-
-########################
-## Static LexWriters  ##
-########################
-lexwriters = {
-    notn.name: {
-        enc: LexWriter(notn, enc=enc)
-        for enc in RenderSet.available(notn.name)
-    }
-    for notn in Notation 
-}
 
 #####################
 ## Form Defaults   ##
 #####################
-form_defaults = {
+form_defaults = MapCover({
     'input_notation'  : 'standard',
     'format'          : 'html',
     'output_notation' : 'standard',
@@ -123,24 +73,24 @@ form_defaults = {
     'options.models': True,
     'options.rank_optimizations': True,
 
-}
+})
 
 ###############
 ## JS Data   ##
 ###############
-base_browser_data = {
+base_browser_data = MapCover({
     'example_predicates'    : tuple(p.spec for p in examples.preds),
     # nups: "notation-user-predicate-symbols"
     'nups'                  : nups,
     'num_predicate_symbols' : Predicate.TYPE.maxi + 1,
     'example_arguments'     : example_arguments,
     'is_debug'              : opts['is_debug'],
-}
+})
 
 #################
 ## View Data   ##
 #################
-base_view_data = {
+base_view_data = MapCover({
     'app_name'            : opts['app_name'],
     'copyright'           : fixed.copyright,
     'example_args_list'   : examples.titles,
@@ -151,28 +101,29 @@ base_view_data = {
     'is_feedback'         : opts['feedback_enabled'],
     'is_google_analytics' : bool(opts['google_analytics_id']),
     'issues_href'         : issues_href,
-    'lexwriter_notations' : Notation.names,
-    'lexwriter_encodings' : lexwriter_encodings_common,
+    # 'lexwriter_notations' : Notation.names,
+    'lexwriter_encodings' : lexwriter_encodings,
     'lwstdhtm'            : lexwriters['standard']['html'],
     'logic_categories'    : logic_categories,
     'logic_modules'       : available['logics'],
     'logics'              : modules['logics'],
     'parser_tables'       : parser_tables,
-    'operators_list'      : list(Operator),
-    'quantifiers'         : list(Quantifier),
+    'operators_list'      : Operator.seq,
+    'quantifiers'         : Quantifier.seq,
     'lexicals'            : lexicals,
     'LexType'             : LexType,
+    'Notation'            : Notation,
     'source_href'         : source_href,
     'tabwriter_formats'   : tabwriter_formats,
     'version'             : version,
     'view_version'        : 'v2',
-}
+})
 
 ###################
 ## Templates     ##
 ###################
 
-template_cache = dict()
+template_cache: dict[str, Template] = dict()
 
 def get_template(view):
     if '.' not in view:
@@ -184,51 +135,6 @@ def get_template(view):
 def render(view, data = {}):
     return get_template(view).render(data)
 
-#####################
-## Miscellaneous   ##
-#####################
-
-def fix_form_data(form_data):
-    form_data = dict(form_data)
-    if len(form_data):
-        for param in form_data:
-            if param.endswith('[]'):
-                if isinstance(form_data[param], str):
-                    form_data[param] = [form_data[param]]
-    return form_data
-
-def debug_result(result):
-    if result:
-        result = dict(result)
-        if 'tableau' in result and 'body' in result['tableau']:
-            if len(result['tableau']['body']) > 255:
-                result['tableau'] = dict(result['tableau'])
-                result['tableau']['body'] = '{0}...'.format(
-                    result['tableau']['body'][0:255]
-                )
-    return result
-
-def is_valid_email(value):
-    return re.fullmatch(re_email, value)
-
-def validate_feedback_form(form_data):
-    errors = dict()
-    if not is_valid_email(form_data['email']):
-        errors['Email'] = 'Invalid email address'
-    if not len(form_data['name']):
-        errors['Name'] = 'Please enter your name'
-    if not len(form_data['message']):
-        errors['Message'] = 'Please enter a message'
-    if errors:
-        raise RequestDataError(errors)
-
-def get_remote_ip(req):
-    # TODO: use proxy forward header
-    return req.remote.ip
-
-class RequestDataError(Exception):
-    def __init__(self, errors):
-        self.errors = errors
 
 ###################
 ## Webapp        ##
@@ -416,7 +322,7 @@ class App(object):
                 if action == 'parse':
                     result = self.api_parse(req.json)
                 elif action == 'prove':
-                    result, _t, _lw = self.api_prove(req.json)
+                    result, *_ = self.api_prove(req.json)
                 if result:
                     return {
                         'status'  : 200,
@@ -501,12 +407,13 @@ class App(object):
             preds = self.parse_predicates_data(body['predicates'])
         except RequestDataError as err:
             errors.update(err.errors)
-            preds = Predicates()
+            preds = None
+            # preds = Predicates()
 
         if len(errors) == 0:
             parser = create_parser(body['notation'], preds)
             try:
-                sentence = parser.parse(body['input'])
+                sentence = parser(body['input'])
             except Exception as err:
                 errors['Sentence'] = errstr(err)
 
@@ -524,7 +431,7 @@ class App(object):
             },
         }
 
-    def api_prove(self, body):
+    def api_prove(self, body: Mapping):
         """
         Example request body::
 
@@ -580,35 +487,47 @@ class App(object):
                 },
             }
         """
-
-        body = dict(body)
-
-        # defaults
-        body['argument'] = body.get('argument', {})
-        body['output'] = body.get('output', {})
-        odata = body['output']
-        odata['notation'] = odata.get('notation', 'standard')
-        odata['format'] = odata.get('format', 'html')
-        if 'symbol_enc' not in odata:
-            if odata['format'] == 'html':
-                odata['symbol_enc'] = 'html'
-            else:
-                odata['symbol_enc'] = 'ascii'
-        odata['options'] = odata.get('options', {})
-        body['build_models'] = bool(body.get('build_models'))
-        body['max_steps'] = body.get('max_steps', None)
-        body['rank_optimizations'] = body.get('rank_optimizations', True)
-        body['group_optimizations'] = body.get('group_optimizations', True)
-
-        odata['options']['debug'] = opts['is_debug']
-
         errors = dict()
+
+        body = dmap(
+            output = {},
+            argument = EMPTY_MAP,
+            build_models = False,
+            max_steps = None,
+            rank_optimizations = True,
+            group_optimizations = True,
+        ) | body
+        odata: dmap
+        odata = body['output'] = dmap(
+            options = {},
+            notation = 'standard',
+            format = 'html',
+        ) | body['output']
+        odata.setdefault('symbol_enc',
+            'html' if odata['format'] == 'html'
+            else 'ascii'
+        )
+        odata['options']['debug'] = opts['is_debug']
+        if body['max_steps'] is not None:
+            try:
+                body['max_steps'] = int(body['max_steps'])
+            except Exception as err:
+                errors['Max steps'] = errstr(err)
+                body['max_steps'] = None
+        proof_opts = dmap(
+            is_rank_optim   = bool(body['rank_optimizations']),
+            is_group_optim  = bool(body['group_optimizations']),
+            is_build_models = bool(body['build_models']),
+            max_steps       = body['max_steps'],
+            build_timeout   = opts['maxtimeout'],
+        )
+
         try:
             logic = get_logic(body['logic'])
         except Exception as err:
             errors['Logic'] = errstr(err)
         try:
-            arg, v = self.parse_argument_data(body['argument'])
+            arg, _ = self.parse_argument_data(body['argument'])
         except RequestDataError as err:
             errors.update(err.errors)
         try:
@@ -616,7 +535,7 @@ class App(object):
             try:
                 lw = lwmap[odata['symbol_enc']]
             except KeyError as err:
-                errors['Symbol Encoding'] = 'Unsupported encoding: {0}'.format(str(odata['symbol_enc']))
+                errors['Symbol Encoding'] = 'Unsupported encoding: %s' % odata['symbol_enc']
             except Exception as err:
                 if opts['is_debug']:
                     traceback.print_exc()
@@ -629,43 +548,28 @@ class App(object):
             tabwriter = create_tabwriter(
                 notn=odata['notation'],
                 format=odata['format'],
-                # lw=lw,
+                lw=lw,
                 enc=odata['symbol_enc'],
                 **odata['options'],
             )
         except Exception as err:
             errors['Output format'] = errstr(err)
 
-        if body['max_steps'] != None:
-            try:
-                body['max_steps'] = int(body['max_steps'])
-            except Exception as err:
-                errors['Max steps'] = errstr(err)
-
         if errors:
             raise RequestDataError(errors)
 
-        proof_start_time = time.time()
+        with StopWatch() as timer:
+            # proof_start_time = time.time()
+            Metric.proofs_inprogress_count(logic.name).inc()
+            proof = Tableau(logic, arg, **proof_opts)
 
-        Metric.proofs_inprogress_count(logic.name).inc()
-
-        proof_opts = {
-            'is_rank_optim'  : body['rank_optimizations'],
-            'is_group_optim' : body['group_optimizations'],
-            'build_timeout'  : opts['maxtimeout'],
-            'is_build_models': body['build_models'],
-            'max_steps'      : body['max_steps'],
-        }
-
-        proof = Tableau(logic, arg, **proof_opts)
-
-        try:
-            proof.build()
-            Metric.proofs_completed_count(logic.name, proof.stats['result'])
-        finally:
-            proof_time = time.time() - proof_start_time
-            Metric.proofs_inprogress_count(logic.name).dec()
-            Metric.proofs_execution_time(logic.name).observe(proof_time)
+            try:
+                proof.build()
+                Metric.proofs_completed_count(logic.name, proof.stats['result'])
+            finally:
+                # proof_time = time.time() - proof_start_time
+                Metric.proofs_inprogress_count(logic.name).dec()
+                Metric.proofs_execution_time(logic.name).observe(timer.elapsed_secs())
 
         # actually we return a tuple (resp, tableau, lw) because the
         # web ui needs the tableau object to write the controls.
@@ -673,11 +577,8 @@ class App(object):
             'tableau': {
                 'logic' : logic.name,
                 'argument': {
-                    'premises'   : [
-                        lw.write(premise)
-                        for premise in arg.premises
-                    ],
-                    'conclusion' : lw.write(arg.conclusion),
+                    'premises'   : tuple(map(lw, arg.premises)),
+                    'conclusion' : lw(arg.conclusion),
                 },
                 'valid'  : proof.valid,
                 'header' : tabwriter.document_header(),
@@ -695,7 +596,7 @@ class App(object):
             }
         }, proof, lw)
 
-    def parse_argument_data(self, adata):
+    def parse_argument_data(self, adata) -> tuple[Argument, Predicates]:
 
         adata = dict(adata)
 
@@ -707,7 +608,7 @@ class App(object):
         if 'premises' not in adata:
             adata['premises'] = list()
 
-        preds = Predicates()
+        preds = None
 
         errors = dict()
 
@@ -753,13 +654,61 @@ class App(object):
                     keys = fields
                 else:
                     keys = range(len(fields))
-                coords = Coords(*map(partial(opr.getitem, pdata), keys))
+                coords = Coords(*map(pdata.__getitem__, keys))
                 preds.add(coords)
             except Exception as e:
                 errors['Predicate {0}'.format(str(i))] = errstr(e)
         if errors:
             raise RequestDataError(errors)
         return preds
+
+
+#####################
+## Miscellaneous   ##
+#####################
+
+def fix_form_data(form_data: Mapping[str, Any]):
+    form_data = dict(form_data)
+    if len(form_data):
+        for param in form_data:
+            if param.endswith('[]'):
+                if isinstance(form_data[param], str):
+                    form_data[param] = [form_data[param]]
+    return form_data
+
+def debug_result(result):
+    if result is None:
+        return None
+    result = dict(result)
+    if 'tableau' in result and 'body' in result['tableau']:
+        if len(result['tableau']['body']) > 255:
+            result['tableau'] = dict(result['tableau'])
+            result['tableau']['body'] = '{0}...'.format(
+                result['tableau']['body'][0:255]
+            )
+    return result
+
+def is_valid_email(value):
+    return re.fullmatch(re_email, value)
+
+def validate_feedback_form(form_data):
+    errors = dict()
+    if not is_valid_email(form_data['email']):
+        errors['Email'] = 'Invalid email address'
+    if not len(form_data['name']):
+        errors['Name'] = 'Please enter your name'
+    if not len(form_data['message']):
+        errors['Message'] = 'Please enter a message'
+    if errors:
+        raise RequestDataError(errors)
+
+def get_remote_ip(req):
+    # TODO: use proxy forward header
+    return req.remote.ip
+
+class RequestDataError(Exception):
+    def __init__(self, errors):
+        self.errors = errors
 
 #############
 ## Main    ##

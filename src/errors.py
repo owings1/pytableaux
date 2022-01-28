@@ -117,5 +117,9 @@ def notsubclscheck(cls: type, typeinfo):
         raise Emsg.NotSubclsCheck(cls, typeinfo)
     return cls
 
+def errstr(err) -> str:
+    if isinstance(err, Exception):
+        return '%s: %s' % (type(err).__name__, err)
+    return str(err)
 
 del(enum)

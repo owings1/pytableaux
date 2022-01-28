@@ -548,6 +548,9 @@ class lazy:
         def format(self, name: str) -> str:
             return '_%s' % name
 
+    class attr(get[F]):
+        __slots__ = 'name', 'method'
+
     class prop(get[type[Self]]):
         """Return a property with the getter. NB: a setter/deleter should be
         sure to use the correct attribute."""

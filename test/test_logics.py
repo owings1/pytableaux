@@ -56,8 +56,8 @@ Designated = des = Designation.Designated
 Undesignated = undes = Designation.Undesignated
 Negated = 'Negated'
 
-A: Atomic = Atomic.first()
-Fa: Predicated = Predicated.first()
+A = Atomic.first()
+Fa = Predicated.first()
 
 @using(logic = 'FDE')
 class Test_FDE(BaseSuite):
@@ -100,7 +100,7 @@ class Test_FDE(BaseSuite):
 
                 n = rtnd[1].history[0].target.node
                 s: Operated = n['sentence']
-                assert (s.operator, s.operand.operator, n['designated']) \
+                assert (s.operator, s.lhs.operator, n['designated']) \
                     == (Oper.Negation, Oper.Conjunction, True)
 
             @larg(Oper.Disjunction)
@@ -1748,8 +1748,6 @@ class Test_K(BaseSuite):
                     model.set_literal_value(s1, 'T')
                 with raises(NotImplementedError):
                     model.value_of_modal(s1)
-                with raises(NotImplementedError):
-                    model.value_of_quantified(s1)
 
             def test_value_error_various(self):
                 s1, s2 = self.pp('a', 'Fm')

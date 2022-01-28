@@ -13,11 +13,11 @@
 <div class="input select">
     <label for="output_notation">Notation</label>
     <select id="output_notation" name="output_notation">
-        {% for notn in lexwriter_notations -%}
+        {% for notn in Notation -%}
             <option value="{{ notn }}" {{- 
-                helper.select_opt(form_data, 'output_notation', notn, form_defaults) 
+                helper.select_opt(form_data, 'output_notation', notn.name, form_defaults) 
             }}>
-                {{- notn|e -}}
+                {{- notn.name|e -}}
             </option>
         {% endfor %}
     </select>

@@ -112,7 +112,7 @@ class TabRules(object):
             s: Operated = self.sentence(node)
             return {
                 # Keep designation fixed to False for inheritance below
-                'adds': (({'sentence': s.operand, 'designated': False},),),
+                'adds': (({'sentence': s.lhs, 'designated': False},),),
             }
 
     class AssertionUndesignated(AssertionNegatedDesignated):
@@ -135,7 +135,7 @@ class TabRules(object):
             s: Operated = self.sentence(node)
             d = self.designation
             return {
-                'adds': (({'sentence': s.operand, 'designated': not d},),),
+                'adds': (({'sentence': s.lhs, 'designated': not d},),),
             }
 
     class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):

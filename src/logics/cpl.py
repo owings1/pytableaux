@@ -26,7 +26,7 @@ class Meta(object):
     tags = ['bivalent', 'non-modal']
     category_display_order = 1
 
-from lexicals import Sentence, Quantified, Argument
+from lexicals import Sentence, Quantified, Operated, Argument
 from proof.common import Branch, Node
 from proof.tableaux import Tableau
 from . import k as K
@@ -42,9 +42,10 @@ class Model(K.Model):
         A sentence is opaque if it is a quantified sentence, or its operator is
         either Necessity or Possibility.
         """
-        if isinstance(s, Quantified):
+        stype = type(s)
+        if stype is Quantified:
             return True
-        if s.operator in self.modal_operators:
+        if stype is Operated and s.operator in self.modal_operators:
             return True
         return super().is_sentence_opaque(s)
 

@@ -34,7 +34,7 @@ from tools.hybrids import qsetf
 from models import BaseModel
 from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
     Sentence, Atomic, Predicated, Quantified, Operated, Argument
-from proof.tableaux import TableauxSystem as BaseSystem, Rule
+from proof.tableaux import Tableau, TableauxSystem as BaseSystem, Rule
 from proof.rules import ClosureRule
 from proof.common import Branch, Node, NodeFilters, Target
 from proof.helpers import AdzHelper, AppliedNodeConstants, AppliedNodeCount, \
@@ -46,9 +46,7 @@ Identity:  Predicate = Predicate.System.Identity
 Existence: Predicate = Predicate.System.Existence
 
 class Model(BaseModel):
-    """
-    An FDE model 
-    """
+    'An FDE Model.'
 
     #: The set of admissible values for sentences.
     #:
@@ -112,7 +110,7 @@ class Model(BaseModel):
         #: Track set of predicates for performance.
         self.predicates: set[Predicate] = set()
 
-    def value_of_predicated(self, s: Predicated, **kw):
+    def value_of_predicated(self, s: Predicated, /, **kw):
         params = s.params
         pred = s.predicate
         extension = self.get_extension(pred)
@@ -125,7 +123,7 @@ class Model(BaseModel):
             return 'F'
         return 'N'
 
-    def value_of_existential(self, s: Quantified, **kw):
+    def value_of_existential(self, s: Quantified, /, **kw):
         """
         The value of an existential sentence is the maximum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
@@ -134,7 +132,7 @@ class Model(BaseModel):
         values = {self.value_of(s.unquantify(c), **kw) for c in self.constants}
         return self.cvals[max({self.nvals[value] for value in values})]
 
-    def value_of_universal(self, s: Quantified, **kw):
+    def value_of_universal(self, s: Quantified, /, **kw):
         """
         The value of an universal sentence is the minimum value of the sentences that
         result from replacing each constant for the quantified variable. The ordering of
@@ -148,7 +146,10 @@ class Model(BaseModel):
         A sentence is opaque if its operator is Necessity or Possibility, or if it is
         a negated sentence whose negatum has the operator Necessity or Possibility.
         """
-        return s.operator in self.modal_operators or super().is_sentence_opaque(s)
+        return (
+            type(s) is Operated and
+            s.operator in self.modal_operators
+         ) or super().is_sentence_opaque(s)
 
     def is_countermodel_to(self, argument: Argument) -> bool:
         """
@@ -248,9 +249,9 @@ class Model(BaseModel):
             is_literal = self.is_sentence_literal(s)
             is_opaque = self.is_sentence_opaque(s)
             if is_literal or is_opaque:
-                if s.operator == Oper.Negation:
+                if type(s) is Operated and s.operator == Oper.Negation:
                     # If the sentence is negated, set the value of the negatum
-                    s = s.operand
+                    s = s.lhs
                     if node['designated']:
                         if branch.has({'sentence': s, 'designated': True}):
                             # If the node is designated, and the negatum is
@@ -309,16 +310,6 @@ class Model(BaseModel):
             if s not in self.atomics:
                 self.set_literal_value(s, self.unassigned_value)
 
-    # def is_sentence_literal(self, s: Sentence) -> bool:
-    #     return isinstance(s, (Atomic, Predicated)) or (
-    #         isinstance(s, Operated) and
-    #         s.operator is Oper.Negation and
-    #         (
-    #             isinstance(s.operand, (Atomic, Predicated)) or
-    #             self.is_sentence_opaque(s.operand)
-    #         )
-    #     )
-
     def set_literal_value(self, s: Sentence, value):
         if value not in self.truth_values:
             self._raise_value('UnknownForSentence', value, s)
@@ -327,7 +318,7 @@ class Model(BaseModel):
             self.set_opaque_value(s, value)
         elif cls is Operated and s.operator is Oper.Negation:
             self.set_literal_value(
-                s.operand,
+                s.lhs,
                 self.truth_function(s.operator, value)
             )
         elif cls is Atomic:
@@ -404,7 +395,10 @@ class Model(BaseModel):
         return self.opaques.get(s, self.unassigned_value)
 
     def value_of_quantified(self, s: Quantified, **kw):
-        q = s.quantifier
+        try:
+            q = s.quantifier
+        except AttributeError:
+            raise TypeError
         if q == Quantifier.Existential:
             return self.value_of_existential(s, **kw)
         elif q == Quantifier.Universal:
@@ -512,7 +506,7 @@ class TableauxSystem(BaseSystem):
     }
 
     @classmethod
-    def build_trunk(cls, tableau, argument):
+    def build_trunk(cls, tableau: Tableau, argument: Argument):
         """
         To build the trunk for an argument, add a designated node for each premise, and
         an undesignated node for the conclusion.
@@ -523,7 +517,7 @@ class TableauxSystem(BaseSystem):
         branch.add({'sentence' : argument.conclusion, 'designated': False, 'world': None})
 
     @classmethod
-    def branching_complexity(cls, node):
+    def branching_complexity(cls, node: Node):
         sentence = node.get('sentence')
         if not sentence:
             return 0
@@ -739,7 +733,7 @@ class TabRules(object):
             d = self.designation
             return {
                 # keep designation neutral for inheritance below
-                'adds': (({'sentence': s.operand, 'designated': d},),),
+                'adds': (({'sentence': s.lhs, 'designated': d},),),
             }
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
@@ -764,7 +758,7 @@ class TabRules(object):
             d = self.designation
             return {
                 # keep designation neutral for inheritance below
-                'adds': (({'sentence': s.operand, 'designated': d},),),
+                'adds': (({'sentence': s.lhs, 'designated': d},),),
             }
 
     class AssertionUndesignated(AssertionDesignated):
@@ -789,7 +783,7 @@ class TabRules(object):
             d = self.designation
             return {
                 # keep designation neutral for inheritance below
-                'adds': (({'sentence': s.operand.negate(), 'designated': d},),),
+                'adds': (({'sentence': s.lhs.negate(), 'designated': d},),),
             }
 
     class AssertionNegatedUndesignated(AssertionNegatedDesignated):

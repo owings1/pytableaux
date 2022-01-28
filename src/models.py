@@ -91,8 +91,8 @@ class BaseModel(Abc):
             isinstance(s, Operated) and
             s.operator is Operator.Negation and
             (
-                isinstance(s.operand, (Atomic, Predicated)) or
-                self.is_sentence_opaque(s.operand)
+                isinstance(s.lhs, (Atomic, Predicated)) or
+                self.is_sentence_opaque(s.lhs)
             )
         )
 

@@ -146,7 +146,7 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
-            si = s.operand
+            si = s.lhs
             d = self.designation
             return {
                 'adds': (
@@ -171,7 +171,7 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s: Operated = self.sentence(node)
-            si = s.operand
+            si = s.lhs
             d = self.designation
             return {
                 'adds': (

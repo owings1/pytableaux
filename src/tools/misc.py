@@ -28,7 +28,7 @@ from builtins import ModuleNotFoundError
 from importlib import import_module
 from itertools import islice
 from types import ModuleType
-from typing import Iterable, Mapping
+# from typing import Iterable, Mapping
 
 def get_module(ref, package: str = None) -> ModuleType:
 
@@ -66,7 +66,7 @@ def get_module(ref, package: str = None) -> ModuleType:
     if not isinstance(ref, str):
         raise TypeError("ref must be string or module, or have __module__ attribute")
 
-    ref: str = ref.lower()
+    ref = ref.lower()
     if _checkref(ref):
         return ret['mod']
     if package is None:
@@ -105,11 +105,6 @@ def get_logic(ref) -> ModuleType:
 def cat(*args: str) -> str:
     'Concat all argument strings'
     return ''.join(args)
-
-def errstr(err) -> str:
-    if isinstance(err, Exception):
-        return '%s: %s' % (type(err).__name__, err)
-    return str(err)
 
 def wrparens(*args: str, parens='()') -> str:
     'Concat all argument strings and wrap in parentheses'
@@ -153,6 +148,7 @@ def orepr(obj, _d: dict = None, _ = None, **kw) -> str:
             return '<%s %s>' % (oname, dstr)
         return '<%s>' % oname
     except Exception as e:
+        from errors import errstr
         return '<%s !ERR: %s !>' % (oname, errstr(e))
 
 def wraprepr(obj, inner, **kw) -> str:

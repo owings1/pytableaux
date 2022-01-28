@@ -11,7 +11,7 @@ from tools.linked import linqset
 from tools.mappings import dmap, MapCover
 from tools.sequences import SequenceApi
 from tools.sets import EMPTY_SET, setf
-from lexicals import Operator, Constant, Sentence, Operated, Quantified
+from lexicals import Operator, Constant, Sentence, Predicated, Operated, Quantified
 # from tools.abcs import Abc
 # from types import MappingProxyType as MapProxy
 
@@ -273,7 +273,7 @@ class Filters:
             if s:
                 if not self.negated: return s
                 if isinstance(s, Operated) and s.operator is Operator.Negation:
-                    return s.operand
+                    return s.lhs
 
         def example(self) -> Sentence:
             if not self.applies:
@@ -300,13 +300,22 @@ class Filters:
             s = self.get(rhs)
             if not s: return False
             lhs = self.lhs
-            if lhs.operator and lhs.operator != s.operator:
-                return False
-            if lhs.quantifier and lhs.quantifier != s.quantifier:
-                return False
-            if lhs.predicate:
-                if not s.predicate or lhs.predicate != s.predicate:
+            if lhs.operator:
+                if type(s) is not Operated or lhs.operator != s.operator:
                     return False
+            if lhs.quantifier:
+                if type(s) is not Quantified or lhs.quantifier != s.quantifier:
+                    return False
+            if lhs.predicate:
+                if type(s) is not Predicated or lhs.predicate != s.predicate:
+                    return False
+            # if lhs.operator and lhs.operator != s.operator:
+            #     return False
+            # if lhs.quantifier and lhs.quantifier != s.quantifier:
+            #     return False
+            # if lhs.predicate:
+            #     if not s.predicate or lhs.predicate != s.predicate:
+            #         return False
             return True
 
     class ItemValue(Comparer[LHS, RHS]):

@@ -33,7 +33,7 @@ from pytest import raises
 import operator as opr
 from itertools import product
 
-Firsts: dict[type[Types.Lexical], Types.Lexical] = dict(
+Firsts = dict(
     (cls, cls.first()) for cls in LexType.classes
 )
 
@@ -42,9 +42,7 @@ a, b, c = Constant.gen(3)
 x, y, z = Variable.gen(3)
 A, B, C = Atomic.gen(3)
 
-Pred, Preds = Predicate, Predicates
-Sys = Predicate.System
-
+Pred, Preds, Sys = Predicate, Predicates, Predicate.System
 
 class TestParameter(BaseSuite):
 
@@ -222,13 +220,11 @@ class TestPredicates(BaseSuite):
 
 class TestSentence(BaseSuite):
 
-    # @skip
     class TestAbstract(BaseSuite):
         def test_base_cannot_construct(self):
             with raises(TypeError):
                 Sentence()
 
-    # @skip
     class TestAtomic(BaseSuite):
 
         def test_errors(self):
@@ -236,10 +232,7 @@ class TestSentence(BaseSuite):
                 Atomic(Atomic.TYPE.maxi + 1, 0)
 
         def test_setence_impl(self):
-            s: Atomic = A
-            assert s.operator == None
-            assert s.quantifier == None
-            assert s.predicate == None
+            s = A
             assert s.TYPE is LexType.Atomic
             assert s.constants == EMPTY_SET
             assert s.variables == EMPTY_SET
@@ -255,7 +248,7 @@ class TestSentence(BaseSuite):
             assert s.variable_occurs(x) == False
 
         def test_next(self):
-            s: Atomic = A.next()
+            s = A.next()
             assert s.index == 1
             assert s.subscript == 0
             s =  Atomic(Atomic.TYPE.maxi, 0).next()
@@ -264,7 +257,6 @@ class TestSentence(BaseSuite):
 
     class TestPredicated(BaseSuite):
 
-        # @skip
         def test_errors(self):
             with raises(ValueError):
                 Predicated('MyPredicate', (a, b))
@@ -273,8 +265,6 @@ class TestSentence(BaseSuite):
 
         def test_setence_impl(self):
             s = Predicated(F,(a,))
-            assert s.operator == None
-            assert s.quantifier == None
             assert s.predicate == Predicate((0, 0, 1))
             assert s.TYPE is LexType.Predicated
             assert s.constants == {a}
@@ -295,7 +285,6 @@ class TestSentence(BaseSuite):
             assert s.variables == {x}
             assert s.variable_occurs(x) == True
 
-        @skip
         def test_atomic_less_than_predicated(self):
             s2 = Predicated.first()
             assert A < s2
@@ -303,7 +292,6 @@ class TestSentence(BaseSuite):
             assert s2 > A
             assert s2 >= A
 
-        @skip
         def test_sorting_predicated_sentences(self):
             # Lexical items should be sortable for models.
             ss = list(map(Predicate.first(), Constant.gen(2)))
@@ -313,13 +301,11 @@ class TestSentence(BaseSuite):
             res = sorted(ss)
             assert res == [s1, s2]
 
-        @skip
         def test_predicated_substitute_a_for_x_identity(self):
             s = Predicated('Identity', (x, b))
             res = s.substitute(a, x)
             assert res.params == (a, b)
 
-    # @skip
     class TestQuantified(BaseSuite):
 
         def test_quantified_substitute_inner_quantified(self):
@@ -346,7 +332,6 @@ class TestSentence(BaseSuite):
             s3 = parse('MVyFmy', vocab=vocab)
             assert s2 == s3
 
-    # @skip
     class TestOperated(BaseSuite):
 
         def test_errors(self):
@@ -359,11 +344,10 @@ class TestSentence(BaseSuite):
             s = parse('KAMVxJxNbTNNImn')
             ops = s.operators
             assert len(ops) == 7
-            assert ','.join(str(o) for o in ops) == (
+            assert ','.join(map(str, ops)) == (
                 'Conjunction,Disjunction,Possibility,Negation,Assertion,Negation,Negation'
             )
 
-# @skip
 class TestGenericApi(BaseSuite):
 
     def test_first_next(self):
@@ -397,7 +381,7 @@ class TestGenericApi(BaseSuite):
             assert itm.sort_tuple[0] == cls.TYPE.rank
             for i in itm.sort_tuple:
                 assert type(i) is int
-# @skip
+
 class TestCrossCompare(BaseSuite):
 
     class TestCrossSorting(BaseSuite):
@@ -449,7 +433,6 @@ class TestCrossCompare(BaseSuite):
                 # assert meth(itm) == 0
                 # assert oper(itm, itm) == 0
 
-# @skip
 class TestArgument(BaseSuite):
 
     class TestSorting(BaseSuite):
@@ -475,7 +458,6 @@ class TestArgument(BaseSuite):
                 assert a1 != a2
                 a1 = a2
 
-# @skip
 class TestClasses(BaseSuite):
     def test_readonly(self):
         with raises(AttributeError):
@@ -488,4 +470,3 @@ class TestClasses(BaseSuite):
             s = Atomic.first()
             s.index = 2
         A.index = A.index
-

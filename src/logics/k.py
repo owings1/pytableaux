@@ -151,7 +151,7 @@ class Model(BaseModel):
         some :m:`w'` such that :m:`<w, w'>` in the access relation.
         """
         for w2 in self.visibles(world):
-            if self.value_of(s.operand, world=w2, **kw) == 'T':
+            if self.value_of(s.lhs, world=w2, **kw) == 'T':
                 return 'T'
         return 'F'
 
@@ -161,7 +161,7 @@ class Model(BaseModel):
         each :m:`w'` such that :m:`<w, w'>` is in the access relation.
         """
         for w2 in self.visibles(world):
-            if self.value_of(s.operand, world=w2, **kw) == 'F':
+            if self.value_of(s.lhs, world=w2, **kw) == 'F':
                 return 'F'
         return 'T'
 
@@ -321,7 +321,7 @@ class Model(BaseModel):
             self.set_opaque_value(s, value, **kw)
         elif cls is Operated and s.operator is Oper.Negation:
             negval = self.truth_function(s.operator, value)
-            self.set_literal_value(s.operand, negval, **kw)
+            self.set_literal_value(s.lhs, negval, **kw)
         elif cls is Atomic:
             self.set_atomic_value(s, value, **kw)
         elif cls is Predicated:
@@ -780,9 +780,9 @@ class TabRules(object):
             return (
                 isinstance(s, Operated) and
                 s.operator is Oper.Negation and
-                isinstance(s.operand, Predicated) and
-                s.operand.predicate == Identity and
-                opr.eq(*s.operand.params)
+                isinstance(s.lhs, Predicated) and
+                s.lhs.predicate == Identity and
+                opr.eq(*s.lhs.params)
             )
 
         def applies_to_branch(self, branch: Branch):
@@ -815,8 +815,8 @@ class TabRules(object):
             return (
                 isinstance(s, Operated) and
                 s.operator is Oper.Negation and
-                isinstance(s.operand, Predicated) and
-                s.operand.predicate == Existence
+                isinstance(s.lhs, Predicated) and
+                s.lhs.predicate == Existence
             )
 
         def applies_to_branch(self, branch: Branch):
@@ -841,7 +841,7 @@ class TabRules(object):
             s: Operated = self.sentence(node)
             w = node.get('world')
             return {
-                'adds': (({'sentence': s.operand, 'world': w},),),
+                'adds': (({'sentence': s.lhs, 'world': w},),),
             }
 
     class Assertion(DefaultNodeRule):
@@ -856,7 +856,7 @@ class TabRules(object):
             s: Operated = self.sentence(node)
             w = node.get('world')
             return {
-                'adds': (({'sentence': s.operand, 'world': w},),),
+                'adds': (({'sentence': s.lhs, 'world': w},),),
             }
 
     class AssertionNegated(DefaultNodeRule):
@@ -873,7 +873,7 @@ class TabRules(object):
             s: Operated = self.sentence(node)
             w = node.get('world')
             return {
-                'adds': (({'sentence': s.operand.negate(), 'world': w},),),
+                'adds': (({'sentence': s.lhs.negate(), 'world': w},),),
             }
 
     class Conjunction(DefaultNodeRule):
@@ -1200,7 +1200,7 @@ class TabRules(object):
                 }
 
             s: Operated = self.sentence(node)
-            si = s.operand
+            si = s.lhs
             w1 = node['world']
             w2 = branch.next_world
 
@@ -1223,7 +1223,7 @@ class TabRules(object):
             # override
             branch = target.branch
             s: Operated = self.sentence(target.node)
-            si = s.operand
+            si = s.lhs
             # Don't bother checking for closure since we will always have a new world
             track_count = self.apsc[branch].get(si, 0)
             if track_count == 0:
@@ -1234,7 +1234,7 @@ class TabRules(object):
             if target['candidate_score'] > 0:
                 return 1
             s: Operated = self.sentence(target.node)
-            si = s.operand
+            si = s.lhs
             return -1 * self.apsc[target.branch].get(si, 0)
 
     class PossibilityNegated(DefaultNodeRule):
@@ -1250,7 +1250,7 @@ class TabRules(object):
 
         def _get_node_targets(self, node: Node, _):
             s: Operated = self.sentence(node)
-            sm = self.convert_to((s.operand.negate(),))
+            sm = self.convert_to((s.lhs.negate(),))
             w = node['world']
             return {
                 'adds': (({'sentence': sm, 'world': w},),),
@@ -1299,7 +1299,7 @@ class TabRules(object):
                 targets = []
 
                 s: Operated = self.sentence(node)
-                si = s.operand
+                si = s.lhs
                 w1 = node['world']
 
                 for w2 in self.visw[branch].get(w1, EMPTY_SET):

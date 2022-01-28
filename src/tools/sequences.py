@@ -272,6 +272,6 @@ class HookedDeqSeq(DeqSeq[VT]):
         instcheck(index, SupportsIndex)
         super().__setitem__(index, self._new_value(value))
 
-
+EMPTY_SEQ = seqf()
 
 del(Copyable, abcf, abcm, abstract, final, overload, membr)

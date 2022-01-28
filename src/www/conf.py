@@ -18,14 +18,15 @@
 #
 # pytableaux - Web App Configuration
 from tools.abcs import T
-from tools.decorators import static, overload
+from tools.decorators import static, overload, rund
 from tools.misc import get_logic
 from parsers import CharTable
-from lexicals import LexType, Notation, LexWriter
+from lexicals import LexType, Notation, LexWriter, RenderSet
 import examples
 
 import enum, importlib, logging, os, os.path
 import prometheus_client as prom
+from cherrypy._cpdispatch import Dispatcher
 from jinja2 import Environment, FileSystemLoader
 
 ## Option definitions
@@ -160,7 +161,8 @@ nups = dict()
 
 parser_tables = {}
 example_arguments = {}
-def __populate_info():
+@rund
+def _():
     
     for package in available:
         modules[package] = {}
@@ -195,13 +197,12 @@ def __populate_info():
     for category in logic_categories.keys():
         logic_categories[category].sort(key = get_category_order)
 
-__populate_info()
 
 ## Logging
 
-logger = logging.Logger('APP')
+# logger = logging.Logger('APP')
 
-def init_logger(logger):
+def init_logger(logger: logging.Logger):
     ch = logging.StreamHandler()
     formatter = logging.Formatter(
         # Similar to cherrypy's format for consistency.
@@ -210,8 +211,9 @@ def init_logger(logger):
     )
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+    return logger
 
-init_logger(logger)
+logger = init_logger(logging.Logger('APP'))
 
 ## Options
 
@@ -298,29 +300,6 @@ class Metric(enum.Enum):
     def start_server():
         prom.start_http_server(opts['metrics_port'])
 
-# metrics: dict[str, prom.metrics.MetricWrapperBase] = {
-#     'app_requests_count' : prom.Counter(
-#         'app_requests_count',
-#         'total app http requests',
-#         ['app_name', 'endpoint'],
-#     ),
-#     'proofs_completed_count' : prom.Counter(
-#         'proofs_completed_count',
-#         'total proofs completed',
-#         ['app_name', 'logic', 'result'],
-#     ),
-#     'proofs_inprogress_count' : prom.Gauge(
-#         'proofs_inprogress_count',
-#         'total proofs in progress',
-#         ['app_name', 'logic'],
-#     ),
-#     'proofs_execution_time' : prom.Summary(
-#         'proofs_execution_time',
-#         'total proof execution time',
-#         ['app_name', 'logic'],
-#     )
-# }
-
 # Util
 
 re_email = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -353,3 +332,61 @@ consts = {
 # Jinja2
 
 jenv = Environment(loader = FileSystemLoader(consts['view_path']))
+
+##############################
+## Cherrypy Server Config   ##
+##############################
+
+class AppDispatcher(Dispatcher):
+    def __call__(self, path_info):
+        Metric.app_requests_count(path_info).inc()
+        return super().__call__(path_info.split('?')[0])
+
+cp_config = {
+    '/' : {
+        'request.dispatch': AppDispatcher(),
+    },
+    '/static' : {
+        'tools.staticdir.on'  : True,
+        'tools.staticdir.dir' : consts['static_dir'],
+    },
+    '/doc': {
+        'tools.staticdir.on'    : True,
+        'tools.staticdir.dir'   : consts['static_dir_doc'],
+        'tools.staticdir.index' : consts['index_filename'],
+    },
+    '/favicon.ico': {
+        'tools.staticfile.on': True,
+        'tools.staticfile.filename': consts['favicon_file'],
+    },
+    '/robots.txt': {
+        'tools.staticfile.on': True,
+        'tools.staticfile.filename': consts['robotstxt_file'],
+    },
+}
+
+#####################
+## Static Data     ##
+#####################
+# For notn, only include those common to all, until UI suports
+# notn-specific choice.
+_encs_map = {
+    notn.name: RenderSet.available(notn)
+    for notn in Notation
+}
+_enc = set(enc for encs in _encs_map.values() for enc in encs)
+for notn in Notation:
+    _enc = _enc.intersection(RenderSet.available(notn))
+lexwriter_encodings = sorted(_enc)
+del(_enc, _encs_map)
+
+########################
+## Static LexWriters  ##
+########################
+lexwriters = {
+    notn.name: {
+        enc: LexWriter(notn, enc=enc)
+        for enc in RenderSet.available(notn)
+    }
+    for notn in Notation 
+}
