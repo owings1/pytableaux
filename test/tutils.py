@@ -1,21 +1,43 @@
-import examples, lexicals, tools.misc as misc
-from lexicals import Argument, Predicates, Sentence, LexWriter
+from __future__ import annotations
+
+__all__ = (
+    'BaseSuite',
+    'larg',
+    'using',
+    'skip',
+)
+from tools.abcs import abcm, F, TT, T, VT
+from tools.decorators import overload
+from tools.hybrids import qset
+from tools.misc import drepr, get_logic
+from lexicals import (
+    Argument, Predicates, Sentence, LexWriter, Notation
+)
 from models import BaseModel
-from parsers import notations as parser_notns, create_parser, parse_argument, parse, Parser
-from proof.tableaux import Tableau, Branch, Node, Rule
+from parsers import create_parser, parse_argument, Parser
+import examples
+from proof.common import Branch, Node
 from proof.rules import ClosureRule
-from tools.misc import get_logic
+from proof.tableaux import Tableau, Rule
 
-from collections.abc import Callable, Iterable, Iterator
 from inspect import isclass, getmembers
-from itertools import chain
+from itertools import chain, filterfalse
+import sys
+from typing import (
+    Callable,
+    Collection,
+    Iterable,
+    Iterator,
+    Mapping,
+    NamedTuple,
+    Sequence,
+)
 
-from enum import Enum
 def _setattrs(obj, **attrs):
     if isclass(obj):
         cls = obj
     else:
-        cls = obj.__class__
+        cls = type(obj)
     dyn = getattr(cls, '_dynattrs', set())
     for attr, val in attrs.items():
         if attr in dyn:
@@ -23,8 +45,8 @@ def _setattrs(obj, **attrs):
         else:
             setattr(obj, attr, val)
 
-def using(**attrs) -> Callable:
-    def wrapper(func):
+def using(**attrs) -> Callable[[F], F]:
+    def wrapper(func: F) -> F:
         if isclass(func):
             _setattrs(func, **attrs)
             return func
@@ -47,7 +69,8 @@ def using(**attrs) -> Callable:
         return wrapped
     return wrapper
 
-def dynattrs(*names) -> Callable:
+
+def dynattrs(*names) -> Callable[[TT], TT]:
     def wrapper(cls):
         assert isclass(cls)
         cls._dynattrs = getattr(cls, '_dynattrs', tuple()) + names
@@ -57,28 +80,43 @@ def dynattrs(*names) -> Callable:
         return cls
     return wrapper
 
-def larg(*largs) -> Callable:
-    def decor(what):
-        if isclass(what): raise TypeError()
+def larg(*largs) -> Callable[[F], F]:
+    def decor(what: F) -> F:
+        if isclass(what): raise TypeError
         def operwrap(self, *args, **kw):
             what(self, *largs, *args, **kw)
         return operwrap
     return decor
 
-def loopgen(n, col):
+def loopgen(c: Collection[T], n: int = None):
+    if not len(c) and (n is None or n > 0):
+        raise TypeError('empty collection')
+    it = iter(c)
     i = 0
-    for x in range(n):
-        if i == len(col): i = 0
-        yield col[i]
-        i += 1
+    while n is None or n > i:
+        try:
+            yield next(it)
+        except StopIteration:
+            it = iter(c)
+            continue
+        if n is not None:
+            i += 1
 
-def skip(what) -> Callable:
+SKIPPED = []
+
+@overload
+def skip(cls: TT) -> TT: ...
+
+@overload
+def skip(func: F) -> F: ...
+
+def skip(what):
+    def skipped(*_, **__):
+        SKIPPED.append(what)
     if isclass(what):
-        class Skipped(object):
-            pass
+        class Skipped:
+            test_skipped = skipped
         return Skipped
-    def skipped(*args, **kw):
-        pass
     return skipped
 
 def clsmbrsrecurse(cls) -> Iterator[type]:
@@ -90,18 +128,37 @@ def clsmbrsrecurse(cls) -> Iterator[type]:
         clsmbrsrecurse(c) for c in mine
     ))
 
+def get_subclasses(supcls: type[T]) -> qset[type[T]]:
+    'Get all (non-abstract) subclasses recusively.'
+    classes = qset()
+    todo = [supcls]
+    while len(todo):
+        for child in filterfalse(classes.__contains__, todo.pop().__subclasses__()):
+            todo.append(child)
+            if not abcm.isabstract(child):
+                classes.append(child)
+    return classes
 
-class AbstractSuite(object):
-    pass
+class RuleTab(NamedTuple):
+    rule: Rule
+    tab: Tableau
+
+class TabBranch(NamedTuple):
+    tab: Tableau
+    branch: Branch
+
+class ArgModels(NamedTuple):
+    arg: Argument
+    models: list[BaseModel]
 
 @dynattrs('logic')
-class BaseSuite(AbstractSuite):
+class BaseSuite:
 
     vocab = examples.preds
-    notn = 'polish'
+    notn = Notation.polish
     logic = get_logic('CFOL')
     fix_ss = ('Kab', 'a', 'b', 'Na', 'NNb', 'NKNab')
-    lw = LexWriter(notn='standard')
+    lw = LexWriter(Notation.standard)
 
     @classmethod
     def dynamic(cls, attr, val):
@@ -114,11 +171,11 @@ class BaseSuite(AbstractSuite):
     def set_logic(self, logic):
         self.logic = get_logic(logic)
 
-    def crparser(self, *args, **kw) -> Parser:
+    def crparser(self, *args, **kw):
         for val in args:
             if isinstance(val, Predicates):
                 key = 'vocab'
-            elif val in parser_notns:
+            elif val in Notation:
                 key = 'notn'
             else:
                 raise ValueError('Unrecognized positional argument {}'.format(val))
@@ -131,32 +188,24 @@ class BaseSuite(AbstractSuite):
             kw['notn'] = self.notn
         return create_parser(**kw)
 
-    def p(self, s, *args, **kw) -> Sentence:
+    def p(self, s, *args, **kw):
         return self.crparser(*args, **kw).parse(s)
 
-    def pp(self, *sargs, **kw) -> list[Sentence]:
+    def pp(self, *sargs, **kw):
         args = []
         sens = []
         for val in sargs:
-            if isinstance(val, Predicates) or val in parser_notns:
+            if isinstance(val, Predicates) or val in Notation:
                 args.append(val)
             else:
                 sens.append(val)
-        p = self.crparser(*args, **kw)
-        return list(p.parse(s) for s in sens)
+        return list(map(self.crparser(*args, **kw), sens))
 
     def sgen(self, n, ss = None, **kw):
-        if ss == None: ss = self.fix_ss
-        p = self.crparser(**kw)
-        for s in loopgen(n, ss):
-            yield p.parse(s)
-
-    def _gennode(self, i, s, **kw):
-        return {'sentence': s}
+        yield from map(self.crparser(**kw), loopgen(ss or self.fix_ss, n))
 
     def ngen(self, n, **kw):
-        for i, s in enumerate(self.sgen(n, **kw)):
-            yield Node(self._gennode(i, s, **kw))
+        yield from map(Node, ({'sentence': s} for s in self.sgen(n, **kw)))
 
     def parg(self, conc, *prems, **kw) -> Argument:
         if isinstance(conc, Argument):
@@ -165,27 +214,22 @@ class BaseSuite(AbstractSuite):
             return examples.argument(conc)
         except (KeyError, TypeError):
             pass
-        if 'notn' not in kw:
-            kw['notn'] = self.notn
+        kw.setdefault('notn', self.notn)
         premises = []
         for prem in prems:
-            if isinstance(prem, (list, tuple)):
-                premises.extend(prem)
-            elif isinstance(prem, Predicates):
+            if isinstance(prem, Predicates):
                 if 'vocab' in kw:
                     raise KeyError('duplicate: vocab')
                 kw['vocab'] = prem
+            elif isinstance(prem, Iterable) and not isinstance(prem, (str, Sentence)):
+                premises.extend(prem)
             else:
                 premises.append(prem)
-        if 'vocab' not in kw:
-            kw['vocab'] = self.vocab
+        kw.setdefault('vocab', self.vocab)
         return parse_argument(conc, premises, **kw)
 
-    def tab(self, *args, **kw) -> Tableau:
-        is_build = kw.pop('is_build', None)# if 'is_build' in kw else None
-        if 'is_build_models' not in kw:
-            kw['is_build_models'] = True
-        nn = kw.pop('nn', None)# if 'nn' in kw else None
+    def tab(self, *args, is_build = None, nn = None, ss = None, **kw) -> Tableau:
+        kw.setdefault('is_build_models', True)
         val = args[0] if len(args) == 1 else None
         if val in examples.args:
             arg = examples.argument(val)
@@ -195,13 +239,12 @@ class BaseSuite(AbstractSuite):
             arg = self.parg(*args, **kw)
         else:
             arg = None
-        if arg and is_build == None:
+        if arg and is_build is None:
             is_build = True
         tab = Tableau(self.logic, arg, **kw)
         if nn:
             if isinstance(nn, int):
-                nn = self.ngen(nn, **kw)
-                kw.pop('ss', None)
+                nn = self.ngen(nn, ss = ss, **kw)
             b = tab[0] if len(tab) else tab.branch()
             b.extend(nn)
         if is_build:
@@ -209,58 +252,42 @@ class BaseSuite(AbstractSuite):
         self.t = tab
         return tab
 
-    def valid_tab(self, *args, **kw) -> Tableau:
+    def valid_tab(self, *args, **kw):
         tab = self.tab(*args, **kw)
         assert tab.valid
         return tab
 
-    def invalid_tab(self, *args, **kw) -> Tableau:
+    def invalid_tab(self, *args, **kw):
         tab = self.tab(*args, **kw)
         assert tab.invalid
         return tab
 
-    def b(self, *nn) -> Branch:
-        b = Branch()
-        b.extend(nn)
-        return b
-
-    def tabb(self, *args, **kw) -> tuple[Tableau, Branch]:
-        if args and isinstance(args[0], (dict, Node, list, tuple)):
-            nn, *args = args
-            if isinstance(nn, (dict, Node)):
-                nn = (nn,)
-        else:
-            nn = tuple()
-        b = self.b(*nn)
-            # if isinstance(arg, dict):
-            #     arg = (arg,)
-            # try:
-            #     b.extend(arg)
-            # except TypeError:
-            #     print (arg)
-            #     print (args)
-            #     raise
-        tab = self.tab(*args, **kw)
-        tab.add(b)
-        return (tab, b)
+    def tabb(self, nn = None, *args, **kw):
+        tab = self.tab(*args, nn=nn, **kw)
+        if not len(tab):
+            tab.branch()
+        return TabBranch(tab, tab[0])
 
     def acmm(self, *args, **kw) -> tuple[Argument, list[BaseModel]]:
+        'Return argument, models.'
         kw['is_build_models'] = True
         tab = self.invalid_tab(*args, **kw)
         arg, models = tab.argument, list(tab.models)
         assert bool(models)
         for m in models:
             assert m.is_countermodel_to(arg)
-        return (arg, models)
+        return ArgModels(arg, models)
 
-    def cmm(self, *args, **kw) -> list[BaseModel]:
+    def cmm(self, *args, **kw):
+        'Return list of models.'
         return self.acmm(*args, **kw)[1]
 
-    # return one model
-    def cm(self, *args, **kw) -> BaseModel:
+    def cm(self, *args, **kw):
+        'Return one model.'
         return self.acmm(*args, **kw)[1][0]
 
-    def rule_tab(self, rule, bare = False, **kw) -> tuple[Rule, Tableau]:
+    def rule_tab(self, rule, bare = False, **kw):
+        'Return (rule, tab) pair.'
         manual = False
         t = self.tab()
         try:
@@ -271,17 +298,17 @@ class BaseSuite(AbstractSuite):
             t.rules.add(rule)
             rule = t.rules.get(rule)
             manual = True
-        cls = rule.__class__
+        cls = type(rule)
         tab = self.tab(**kw)
         if bare or manual:
             if bare:
                 tab.rules.clear()
             tab.rules.add(cls)
         rule = tab.rules.get(cls)
-        return (rule, tab)
+        return RuleTab(rule, tab)
 
-    def rule_eg(self, rule, step = True, **kw) -> tuple[Rule, Tableau]:
-        rule, tab = self.rule_tab(rule, **kw)
+    def rule_eg(self, rule, step = True, **kw):
+        rule, tab = rt = self.rule_tab(rule, **kw)
         tab.branch().extend(rule.example_nodes())
         assert len(tab) == 1
         assert len(tab.open) == 1
@@ -289,14 +316,13 @@ class BaseSuite(AbstractSuite):
             entry = tab.step()
             tab.finish()
             assert entry.rule == rule
-            assert tab.current_step == 1
+            assert len(tab.history) == 1
             if isinstance(rule, ClosureRule):
                 assert len(tab.open) == 0
+        return rt
 
-        return (rule, tab)
-
-    def m(self, b: Branch = None) -> BaseModel:
-        m: BaseModel = self.Model()
+    def m(self, b: Branch = None):
+        m = self.Model()
         if b:
             m.read_branch(b)
         return m
@@ -305,28 +331,4 @@ class BaseSuite(AbstractSuite):
     def Model(self) -> type[BaseModel]:
         return self.logic.Model
 
-misc.drepr.lw = LexWriter._sys = BaseSuite.lw
-# if utils._testlw is None:
-#     lexicals._syslw = utils._testlw = BaseSuite.lw
-    
-def tp(tab):
-    print(
-        '\n\n'.join([
-            '\n'.join(['b%d' % i] + ['  %s' % n for n in b])
-            for i, b in enumerate(tab)
-        ])
-    )
-def tabtup(tab):
-    return tuple(tuple(dict(n) for n in b) for b in tab)
-
-def tabeq(t1, t2):
-    return tabtup(t1) == tabtup(t2)
-
-def titer(tab):
-    return  chain.from_iterable(iter(b) for b in tab)
-    nn = titer(tab)
-
-    # print the sentences
-    ss = filter(bool, (n.get('sentence') for n in nn))
-    pr = (lw.write(s) for s in ss)
-    print('\n'.join(list(pr)))
+drepr.lw = LexWriter._sys = BaseSuite.lw

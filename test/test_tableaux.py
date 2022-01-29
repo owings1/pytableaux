@@ -11,7 +11,7 @@ import examples
 from types import ModuleType, MappingProxyType
 import time
 from pytest import raises
-from .tutils import BaseSuite, using, skip, larg, tabtup, tabeq
+from .tutils import BaseSuite, using, skip
 
 class TestTableauxSystem(object):
 
@@ -38,11 +38,6 @@ class TestTableau(BaseSuite):
 
     def test_step_returns_false_when_finished(self):
         assert Tableau().finish().step() == False
-
-    # def test_build_trunk_already_built_error(self):
-    #     tab = self.tab('Addition')
-    #     with raises(IllegalStateError):
-    #         tab.build_trunk()
 
     def test_repr_contains_finished(self):
         tab = self.tab('Addition')
@@ -194,7 +189,7 @@ class TestBranch(object):
 
         proof = Tableau()
         proof.rules.add(MyRule)
-        rule = proof.rules.MyRule
+        rule = proof.rules.get(MyRule)
         proof.branch().add({'world1': 7})
 
         assert rule.should_be

@@ -20,13 +20,15 @@
 # import pytest
 
 from errors import *
-from lexicals import Predicates, Variable, Constant, Parameter, Predicate, \
-    Atomic, Predicated, Quantified, Operated, Sentence, Operator, Quantifier, \
-    LexType, Types
+from lexicals import *
+from lexicals import Types
 from parsers import parse
 from tools.sets import EMPTY_SET
 
-from .tutils import *
+try:
+    from test.tutils import BaseSuite, skip
+except ModuleNotFoundError:
+    from tutils import BaseSuite, skip
 
 from copy import copy
 from pytest import raises
@@ -43,6 +45,7 @@ x, y, z = Variable.gen(3)
 A, B, C = Atomic.gen(3)
 
 Pred, Preds, Sys = Predicate, Predicates, Predicate.System
+
 
 class TestParameter(BaseSuite):
 

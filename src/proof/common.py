@@ -4,24 +4,26 @@ __all__ = 'Node', 'Branch', 'Target'
 
 from errors import instcheck as instcheck, Emsg
 from tools.abcs import Abc
-from tools.callables import Caller, gets, preds
-from tools.decorators import abstract, overload, static, final, lazy
+from tools.callables import Caller, gets, preds, cchain
+from tools.decorators import (
+    abstract, overload, static, final,
+    lazy, raisr
+)
 from tools.events import EventEmitter
 from tools.linked import linqset
-from tools.mappings import dmap, MapCover
+from tools.mappings import dmap, MapCover, ItemsIterator
 from tools.sequences import SequenceApi
 from tools.sets import EMPTY_SET, setf
 from lexicals import Operator, Constant, Sentence, Predicated, Operated, Quantified
-# from tools.abcs import Abc
-# from types import MappingProxyType as MapProxy
+
 
 import enum
-from itertools import chain, islice
+from collections.abc import Set
+from itertools import chain
 import operator as opr
 from typing import (
     Any,
     Callable,
-    ClassVar,
     Generic,
     Iterable,
     Iterator,
@@ -33,6 +35,7 @@ from typing import (
 
 
 EMPTY = ()
+
 class BranchEvent(enum.Enum):
     AFTER_BRANCH_CLOSE = enum.auto()
     AFTER_NODE_ADD     = enum.auto()
@@ -191,7 +194,7 @@ class Access(NamedTuple):
         return cls(node['world1'], node['world2'])
 
     def todict(self) -> dict[str, int]:
-        return {'world1': self[0], 'world2': self[1]}
+        return dict(world1 = self[0], world2 = self[1])
 
     def tonode(self) -> Node:
         return Node(Access.todict(self))
@@ -231,16 +234,16 @@ class Filters:
 
     class Attr(Comparer[LHS, RHS]):
 
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
         #: LHS attr -> RHS attr mapping.
         attrmap: dict[str, str] = {}
 
         #: Attribute getters
-        lget: ClassVar[Callable[[LHS, str], Any]] = gets.attr(flag = Caller.SAFE)
-        rget: ClassVar[Callable[[RHS, str], Any]] = gets.attr()
+        lget: Callable[[LHS, str], Any] = gets.attr(flag = Caller.SAFE)
+        rget: Callable[[RHS, str], Any] = gets.attr()
         #: Comparison
-        fcmp: ClassVar[Callable[[Any, Any], bool]] = opr.eq
+        fcmp: Callable[[Any, Any], bool] = opr.eq
 
         def __call__(self, rhs: RHS):
             for lattr, rattr in self.attrmap.items():
@@ -309,18 +312,11 @@ class Filters:
             if lhs.predicate:
                 if type(s) is not Predicated or lhs.predicate != s.predicate:
                     return False
-            # if lhs.operator and lhs.operator != s.operator:
-            #     return False
-            # if lhs.quantifier and lhs.quantifier != s.quantifier:
-            #     return False
-            # if lhs.predicate:
-            #     if not s.predicate or lhs.predicate != s.predicate:
-            #         return False
             return True
 
     class ItemValue(Comparer[LHS, RHS]):
 
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
         lhs: Callable[[Any], bool]
         rget: opr.itemgetter(1)
@@ -337,7 +333,7 @@ class NodeFilters(Filters):
 
     class Sentence(Filters.Sentence, NodeFilter):
 
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
         rget: Callable[[Node], Sentence] = gets.key('sentence', flag = Caller.SAFE)
 
@@ -349,19 +345,20 @@ class NodeFilters(Filters):
 
     class Designation(Filters.Attr, NodeFilter):
 
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
-        attrmap = {'designation': 'designated'}
+        attrmap = dict(designation = 'designated')
         rget: Callable[[Node], bool] = gets.key()
 
-        def example_node(self):
-            return self.example()
+        example_node = Filters.Attr.example
+        # def example_node(self):
+        #     return self.example()
 
     class Modal(Filters.Attr, NodeFilter):
 
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
-        attrmap = {'modal': 'is_modal', 'access': 'is_access'}
+        attrmap = dict(modal = 'is_modal', access = 'is_access')
 
         def example_node(self):
             n = {}
@@ -393,14 +390,14 @@ class Branch(SequenceApi[Node], EventEmitter):
         self.__nextworld : int = 0
         self.__constants : set[Constant] = set()
         self.__nextconst : Constant = Constant.first()
-        self.__pidx      : dict[str, dict[Any, set[Node]]]= {
-            'sentence'   : {},
-            'designated' : {},
-            'world'      : {},
-            'world1'     : {},
-            'world2'     : {},
-            'w1Rw2'      : {},
-        }
+        self.__pidx      : dict[str, dict[Any, set[Node]]]= dict(
+            sentence   = {},
+            designated = {},
+            world      = {},
+            world1     = {},
+            world2     = {},
+            w1Rw2      = {},
+        )
 
     @property
     def id(self) -> int:
@@ -718,41 +715,30 @@ class Branch(SequenceApi[Node], EventEmitter):
 
 class Target(dmap[str, Any]):
 
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
 
     __attrs =  {
         'branch', 'rule', 'node', 'nodes', 'world', 'world1', 'world2',
         'sentence', 'designated', 'flag'
     }
 
-    branch: Branch
-    node: Node
+    branch : Branch
+    rule   : object
+    node   : Node
+    nodes  : Set[Node]
+    world  : int
+    world1 : int
+    world2 : int
+    flag   : str
+    sentence   : Sentence
+    designated : bool
 
-    def __new__(cls, obj = None, /, **context):
-        if isinstance(obj, cls):
-            obj.update(context)
-            return obj
-        return super().__new__(cls)
-
-    @classmethod
-    def list(cls, objs, **context) -> Sequence[Target]:
-        """
-        Normalize to a list, possibly empty, of Target objects.
-        
-        If the parameter qualifies as a single target type, it is cast to a
-        list before ``create()`` is called.
-        
-        Acceptable types for ``objs`` param:
-            - a single falsy object, in which case an empty list is returned
-            - a single target (dict, Target object, or True)
-            - tuple, list, or iterator.
-        """
-        # Falsy
-        if not objs: return EMPTY
-        if isinstance(objs, Mapping):
-            return cls(objs, **context),
-        instcheck(objs, (Sequence, Iterator))
-        return *(cls(obj, **context) for obj in objs),
+    # def __new__(cls, obj = None, /, **context):
+    #     if isinstance(obj, cls):
+    #         raise TypeError
+    #         obj.update(context)
+    #         return obj
+    #     return super().__new__(cls)
 
     @property
     def type(self):
@@ -760,20 +746,17 @@ class Target(dmap[str, Any]):
         if 'node' in self: return 'Node'
         return 'Branch'
 
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        if 'branch' not in self:
+            raise Emsg.MissingValue('branch')
+
     def copy(self):
         cls = type(self)
         inst = cls.__new__(cls)
-        # inst.__dict__ |= self.__dict__
+        # skip checks
         dict.update(inst, self)
         return inst
-
-    def __init__(self, obj, /, **context):
-        if not obj:
-            raise ValueError('Cannot create a Target from a falsy object: %s' % type(obj))
-        self.update(obj)
-        self.update(context)
-        if 'branch' not in self:
-            raise TypeError("Missing required key: %s" % 'branch')
 
     def __setitem__(self, key: str, val):
         if not preds.isattrstr(key):
@@ -783,8 +766,8 @@ class Target(dmap[str, Any]):
             raise Emsg.ValueConflict(val, self[key], key)
         super().__setitem__(key, val)
 
-    def __delitem__(self, key):
-        raise TypeError
+    __delitem__ = raisr(TypeError)
+    __delattr__ = raisr(AttributeError)
 
     def __getattr__(self, name):
         if name in self.__attrs:
@@ -795,8 +778,6 @@ class Target(dmap[str, Any]):
     def __setattr__(self, name, val):
         if name in self.__attrs:
             self[name] = val
-        elif not hasattr(self, name) or name in self.__dict__:
-            self.__dict__[name] = val
         else:
             raise AttributeError(name)
 
@@ -804,22 +785,16 @@ class Target(dmap[str, Any]):
         return True
 
     def __dir__(self):
-        return [
-            attr for attr in self.__attrs
-            if self.get(attr, None) != None
-        ]
+        return list(cchain.reduce_filter(self.__attrs, self.get, preds.notnone))
+        # return list(filter(cchain.reducer(self.get, preds.notnone), self.__attrs))
+        # return list(filter(self.__contains__, self.__attrs))
 
     def __repr__(self):
-        # bid = self.__data['branch'].id if 'branch' in self.__data else '?'
         from tools.misc import orepr
-        return orepr(self, dict((
-            ('branch', self['branch'].id if 'branch' in self else '?'),
-            ('type', self.type), *islice((
-                (attr, type(self[attr]) if attr == 'rule' else self[attr])
-                for attr in
-                ('rule', 'sentence', 'designated', 'world', 'worlds')
-                if attr in self
-            ), 3)
-        )))
+        return orepr(self, dict(
+            ItemsIterator(self.__attrs, vget = self.__getitem__,
+                kpred = cchain.reducer(self.get, preds.notnone)
+            )
+        ))
 
 del(EventEmitter, enum, lazy)

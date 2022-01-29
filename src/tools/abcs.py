@@ -4,7 +4,20 @@
 #  - tools.misc
 from __future__ import annotations
 
-__all__ = 'AbcMeta', 'AbcEnumMeta', 'AbcEnum', 'abcm', 'Abc', 'Copyable', 'abcf',
+__all__ = (
+    'AbcMeta',
+    'AbcEnumMeta',
+    'AbcEnum',
+    'abcf',
+    'abcm',
+    'Abc',
+    'Copyable',
+    'final',
+    'overload',
+    'abstract',
+    'static',
+    'MapProxy',
+)
 
 from errors import (
     instcheck as _instcheck
@@ -67,11 +80,7 @@ _ABCF_ATTR = '_abc_flag'
 
 def _thru(obj: T): return obj
 
-class MapProxy:
-    def __new__(cls, mapping:Mapping[KT, VT]):
-        if isinstance(mapping, _MapProxy):
-            return mapping
-        return _MapProxy(mapping)
+
 
 # Global decorators. Re-exported by decorators module.
 
@@ -459,6 +468,35 @@ class AbcEnumMeta(_enum.EnumMeta):
         except AttributeError:
             raise KeyError(key)
 
+
+# Type vars
+T  = TypeVar('T')
+T1 = TypeVar('T1')
+T2 = TypeVar('T2')
+KT = TypeVar('KT')
+VT = TypeVar('VT')
+RT = TypeVar('RT')
+Self = TypeVar('Self')
+
+T_co = TypeVar('T_co', covariant = True)
+T_contra = TypeVar('T_contra', contravariant = True)
+
+F   = TypeVar('F', bound = Callable[..., Any])
+TT  = TypeVar('TT', bound = type)
+
+P = ParamSpec('P')
+
+class MapProxy(Mapping[KT, VT]):
+    def __new__(cls, mapping:Mapping[KT, VT]|Iterable[tuple[KT, VT]] = None):
+        if mapping is None:
+            return _EMPTY_MAP
+        if isinstance(mapping, _MapProxy):
+            return mapping
+        if not isinstance(mapping, Mapping):
+            mapping = dict(mapping)
+        return _MapProxy(mapping)
+_EMPTY_MAP = MapProxy({})
+
 class Abc(metaclass = AbcMeta):
     'Convenience for using AbcMeta as metaclass.'
     __slots__ = _EMPTY
@@ -500,6 +538,8 @@ class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta):
         try: return '<%s.%s>' % (name, self.name)
         except AttributeError: return '<%s ?ERR?>' % name
 
+EnT = TypeVar('EnT', bound = AbcEnum)
+
 class Copyable(Abc):
 
     __slots__ = _EMPTY
@@ -516,23 +556,5 @@ class Copyable(Abc):
         if cls is not __class__:
             return NotImplemented
         return abcm.check_mrodict(subcls.mro(), '__copy__', 'copy', '__deepcopy__')
-
-# Type vars
-T  = TypeVar('T')
-T1 = TypeVar('T1')
-T2 = TypeVar('T2')
-KT = TypeVar('KT')
-VT = TypeVar('VT')
-RT = TypeVar('RT')
-Self = TypeVar('Self')
-
-T_co = TypeVar('T_co', covariant = True)
-T_contra = TypeVar('T_contra', contravariant = True)
-
-F   = TypeVar('F', bound = Callable[..., Any])
-TT  = TypeVar('TT', bound = type)
-EnT = TypeVar('EnT', bound = AbcEnum)
-
-P = ParamSpec('P')
 
 del(_abc, _enum, TypeVar, ParamSpec)

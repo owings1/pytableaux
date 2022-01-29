@@ -40,10 +40,10 @@ from errors import (
     instcheck,
     Emsg,
 )
-from tools.abcs import Abc, abcf, T, T1, T2, KT, VT
+from tools.abcs import Abc, abcf, T, T1, T2, KT, VT, P, Self
 from tools.decorators import abstract, final, overload, static
 from tools.mappings import MapAttrCover, dmap
-from tools.sets import EMPTY_SET, setm
+from tools.sets import EMPTY_SET, setm, setf
 
 from lexicals import Constant, Sentence, Predicated
 from models import BaseModel
@@ -60,20 +60,29 @@ from proof.common import (
 from proof.tableaux import Rule, Tableau
 
 from copy import copy
+from functools import partial
 from itertools import chain
-from typing import Callable, Iterable, Iterator
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+    TypeVar,
+)
 
 class AdzHelper:
 
     _attr = 'adz'
-    __slots__ = 'rule', 'tableau'
+    __slots__ = 'rule', # 'tableau'
 
     def __init__(self, rule: Rule, *args, **kw):
         self.rule: Rule = rule
-        self.tableau: Tableau = rule.tableau
+        # self.tableau: Tableau = rule.tableau
 
     def _apply(self, target: Target):
-        branch: Branch = target.branch
+        branch = target.branch
         adds = target['adds']
         for i, nodes in enumerate(adds):
             if i == 0:
@@ -88,7 +97,8 @@ class AdzHelper:
 
     def closure_score(self, target: Target) -> float:
         try:
-            rules = self.tableau.rules.closure
+            # TODO: Cache closure rules, error if none.
+            rules = self.rule.tableau.rules.closure
         except AttributeError:
             rules = EMPTY_SET
         close_count = 0
@@ -107,12 +117,11 @@ class BranchCache(dmap[Branch, T]):
     rule: Rule
     tab: Tableau
 
-    __slots__ = 'rule', 'tab',
+    __slots__ = 'rule',
 
     def __init__(self, rule: Rule):
         self.rule = rule
-        self.tab = rule.tableau
-        self.tab.on({
+        rule.tableau.on({
             TabEvent.AFTER_BRANCH_ADD  : self.__after_branch_add,
             TabEvent.AFTER_BRANCH_CLOSE: self.__after_branch_close,
         })
@@ -126,6 +135,7 @@ class BranchCache(dmap[Branch, T]):
     def __after_branch_close(self, branch: Branch):
         del(self[branch])
 
+    # ??
     def __hash__(self):
         return hash(id(self))
 
@@ -136,17 +146,37 @@ class BranchCache(dmap[Branch, T]):
     def _reprdict(self):
         return {'branches': len(self)}
 
+    def copy(self, /, *, events = False):
+        cls = type(self)
+        if events:
+            inst = cls(self.rule)
+        else:
+            inst = cls.__new__(cls)
+            inst.rule = self.rule
+        inst.update(self)
+        return inst
+
+    @classmethod
+    def _from_mapping(cls, mapping):
+        if not isinstance(mapping, BranchCache):
+            return NotImplemented
+        return mapping.copy()
+
+    @classmethod
+    def _from_iterable(cls, it):
+        return NotImplemented
+
+
 class BranchDictCache(BranchCache[dmap[KT, VT]]):
-    """
-    Copies each value.
-    """
+    'Copies each value.'
+
     _valuetype = dmap
 
     __slots__ = EMPTY_SET
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.tab.on(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
+        self.rule.tableau.on(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
 
     def __after_branch_add(self, branch: Branch):
         if branch.parent:
@@ -164,7 +194,7 @@ class FilterNodeCache(BranchCache[set[Node]]):
     def __init__(self, *args):
         super().__init__(*args)
         self.ignore_ticked = getattr(self.rule, 'ignore_ticked', None)
-        self.tab.on({
+        self.rule.tableau.on({
             TabEvent.AFTER_NODE_ADD: self.__after_node_add,
             TabEvent.AFTER_NODE_TICK: self.__after_node_tick,
         })
@@ -179,6 +209,14 @@ class FilterNodeCache(BranchCache[set[Node]]):
 
     @abstract
     def __call__(self, node: Node, branch: Branch): ...
+
+    def copy(self: FncT, *args, **kw) -> FncT:
+        inst: FncT = super().copy(*args, **kw)
+        inst.ignore_ticked = self.ignore_ticked
+        return inst
+
+# BrcT = TypeVar('BrcT', bound = BranchCache)
+FncT = TypeVar('FncT', bound = FilterNodeCache)
 
 @final
 class AppliedQuitFlag(BranchCache[bool]):
@@ -281,7 +319,7 @@ class UnserialWorldsTracker(BranchCache[setm[int]]):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.tab.on(TabEvent.AFTER_NODE_ADD, self)
+        self.rule.tableau.on(TabEvent.AFTER_NODE_ADD, self)
 
     def __call__(self, node: Node, branch: Branch):
         for w in node.worlds:
@@ -311,7 +349,15 @@ class VisibleWorldsIndex(BranchDictCache[int, setm[int]]):
     def __init__(self, *args):
         super().__init__(*args)
         self.nodes = self.Nodes(*args)
-        self.tab.on(TabEvent.AFTER_NODE_ADD, self)
+        self.rule.tableau.on(TabEvent.AFTER_NODE_ADD, self)
+
+    def copy(self, *args, **kw):
+        inst = super().copy(*args, **kw)
+        if hasattr(inst, 'nodes'):
+            inst.nodes.update(self.nodes)
+        else:
+            inst.nodes = self.nodes.copy(*args, **kw)
+        return inst
 
     def has(self, branch: Branch, access: Access) -> bool:
         """
@@ -320,7 +366,6 @@ class VisibleWorldsIndex(BranchDictCache[int, setm[int]]):
         :param Branch branch:
         :param int w1:
         :param int w2:
-        :rtype: bool
         """
         return access[1] in self[branch].get(access[0], EMPTY_SET)
 
@@ -385,14 +430,27 @@ class FilterHelper(FilterNodeCache):
                 name, cls = item
                 self._add_filter(cls, name)
 
+    def copy(self, *args, **kw):
+        inst = super().copy(*args, **kw)
+        try:
+            inst.__to_discard.update(self.__to_discard)
+        except AttributeError:
+            inst.__to_discard = self.__to_discard.copy()
+            inst.__fmap = self.__fmap.copy()
+            inst.filters = MapAttrCover(self.__fmap)
+        inst.callcount = self.callcount
+        return inst
 
     def filter(self, node: Node, branch: Branch):
         self.callcount += 1
         if self.ignore_ticked and branch.is_ticked(node):
             return False
-        for filt in self.__fmap.values():
-            if not filt(node):
+        for name in self.filters:
+            if not self.filters[name](node):
                 return False
+        # for filt in self.__fmap.values():
+        #     if not filt(node):
+        #         return False
         return True
 
     __call__ = filter
@@ -437,19 +495,20 @@ class FilterHelper(FilterNodeCache):
         }
 
     @classmethod
-    def node_targets(cls, fget_node_targets: Callable) -> Callable:
+    def node_targets(cls,
+        fget_node_targets: Callable[[Rule, Iterable[Node], Branch], Any],
+    ) -> Callable[[Rule, Branch], Sequence[Target]]:
         """
         Method decorator to only iterate through nodes matching the
         configured FilterHelper filters.
 
         The rule may return a falsy value for no targets, a single
-        target (True, non-empty dict, Target), an iterator or an
-        iterable.
+        target (non-empty Mapping), an Iterator or a Sequence.
         
         Returns a flat list of targets.
         """
         fiter_targets = _targets_from_nodes_iter(fget_node_targets)
-        def get_targets_filtered(rule: Rule, branch: Branch) -> list:
+        def get_targets_filtered(rule: Rule, branch: Branch):
             helper: FilterHelper = rule.helpers[cls]
             helper.gc()
             nodes = helper[branch]
@@ -458,17 +517,14 @@ class FilterHelper(FilterNodeCache):
 
 @static
 class Delegates(Abc):
-    """
-    Mixin Rule classes to delegate to helper methods.
-    """
+    'Mixin Rule classes to delegate to helper methods.'
 
     @static
     class AdzHelper:
 
         class Apply(Rule):
-            """
-            Delegates ``_apply()`` to ``AdzHelper._apply()``.
-            """
+            'Delegates ``_apply()`` to ``AdzHelper._apply()``.'
+
             Helpers = AdzHelper,
             adz: AdzHelper
 
@@ -624,7 +680,6 @@ class MaxConstantsTracker:
 
         :param tableaux.Branch branch:
         :param int world:
-        :rtype: bool
         """
         if world is None:
             world = 0
@@ -639,7 +694,6 @@ class MaxConstantsTracker:
 
         :param tableaux.Branch branch:
         :param int world:
-        :rtype: bool
         """
         if world is None:
             world = 0
@@ -724,7 +778,7 @@ class AppliedNodeConstants:
 
     _attr = 'apcs'
 
-    def __init__(self, rule, *args, **kw):
+    def __init__(self, rule):
         self.rule = rule
         self.node_states = {}
         self.consts = {}
@@ -797,7 +851,7 @@ class MaxWorldsTracker:
     __slots__ = 'rule', 'branch_max_worlds', 'modal_complexities'
     _attr = 'maxw'
 
-    modal_operators = set(BaseModel.modal_operators)
+    modal_operators = setf(BaseModel.modal_operators)
 
     def __init__(self, rule, *args, **kw):
         self.rule = rule
@@ -878,7 +932,7 @@ class MaxWorldsTracker:
             return self.modal_complexity(node['sentence'])
         return 0
 
-class EllipsisExampleHelper(object):
+class EllipsisExampleHelper:
     # TODO: fix for closure rules
     mynode = {'ellipsis': True}
     closenodes = []
@@ -937,16 +991,24 @@ class EllipsisExampleHelper(object):
         self.applied.add(branch)
         branch.add(self.mynode)
 
-def _targets_from_nodes_iter(fget_node_targets: Callable) -> Callable:
-    def targets_iter(rule, nodes: Iterable[Node], branch: Branch) -> Iterable[Target]:
-        results = (
-            Target.list(
-                fget_node_targets(rule, node, branch),
-                rule = rule, branch = branch, node = node
-            )
-            for node in nodes
-        )
-        return chain.from_iterable(filter(bool, results))
+def _targets_from_nodes_iter(fget_node_targets: Callable[P, Any]) -> Callable[P, Iterator[Target]]:
+    def targets_iter(rule: Rule, nodes: Iterable[Node], branch: Branch):
+        for node in nodes:
+            results = fget_node_targets(rule, node, branch)
+            if not results:
+                # Filter anything falsy.
+                continue
+            if isinstance(results, Mapping):
+                # Single target result.
+                yield Target(results, rule = rule, branch = branch, node = node)
+                continue
+            instcheck(results, (Sequence, Iterator))
+            # Multiple targets result.
+            for res in filter(bool, results):
+                assert isinstance(res, Mapping)
+                # Filter anything falsy.
+                yield Target(res, rule = rule, branch = branch, node = node)
+
     return targets_iter
 
 del(abstract, final, overload, static)

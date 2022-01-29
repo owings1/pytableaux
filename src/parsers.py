@@ -28,7 +28,7 @@ from errors import (
     UnboundVariableError,
     IllegalStateError,
 )
-# from tools.abcs import Abc, abcf
+from tools.abcs import MapProxy
 from tools.callables import gets
 from tools.decorators import abstract, raisr
 from tools.hybrids import qset
@@ -45,14 +45,13 @@ from lexicals import (
 )
 
 from collections.abc import Set
-from types import MappingProxyType as MapProxy
 from typing import Any, Iterable, Mapping
 
 _getkey0 = gets.key(0)
 
 notations = Notation.seq
 
-CType = Any
+CType = LexType|Marking|type[Predicate.System]
 
 class CharTable(MapCover[str, tuple[CType, int|Types.Lexical]], _Bases.CacheNotationData):
 
@@ -63,7 +62,7 @@ class CharTable(MapCover[str, tuple[CType, int|Types.Lexical]], _Bases.CacheNota
     reversed: Mapping[tuple[CType, int|Types.Lexical], str]
     chars: Mapping[CType, seqf[str]]
 
-    def __init__(self, data: Mapping):
+    def __init__(self, data: Mapping[str, tuple[CType, int|Types.Lexical]]):
 
         super().__init__(MapProxy(data))
 
@@ -71,7 +70,6 @@ class CharTable(MapCover[str, tuple[CType, int|Types.Lexical]], _Bases.CacheNota
 
         # list of types
         ctypes: qset[CType] = qset(map(_getkey0, vals))
-        # ctypes.sort()
 
         tvals: dmap[CType, qset[int|Types.Lexical]] = dmap()
         for ctype in ctypes:

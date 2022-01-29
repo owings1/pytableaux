@@ -1,4 +1,4 @@
-from .tutils import BaseSuite, skip
+from .tutils import BaseSuite, get_subclasses, skip
 from itertools import filterfalse
 from pytest import raises
 
@@ -6,7 +6,7 @@ from errors import *
 from lexicals import *
 
 from tools.abcs import *
-from tools.events import EventsListeners
+from tools.events import EventsListeners, Listeners
 from tools.hybrids import *
 from tools.linked import *
 from tools.mappings import *
@@ -14,14 +14,13 @@ from tools.sequences import *
 from tools.sets import *
 
 from tools.abcs import T
-# load subclasses
-import parsers, proof.helpers, proof.common, proof.tableaux
+
 
 from collections import deque
 
 def subclasses(supcls: type[T]) -> qset[type[T]]:
     classes = qset()
-    todo = deque((supcls,))
+    todo = [supcls]
     while len(todo):
         for child in filterfalse(classes.__contains__, todo.pop().__subclasses__()):
             todo.append(child)
@@ -209,6 +208,7 @@ class TestLinkSet(BaseSuite):
         assert list(x) == list('abcdefg')
 
     def test_view(self):
+        from tools.sequences import SequenceProxy
         x = linqset('abcdef')
         v = SequenceProxy(x)
         assert len(v) == 6
@@ -225,17 +225,58 @@ class TestLinkSet(BaseSuite):
 
 class TestMappingApi(BaseSuite):
 
-    # @skip
     def test_subclasses(self):
-        # compatibility for CharTable
-        exp = dict(a = (1, 2))
-        classes = subclasses(MappingApi)
+        # Ensure modules are loaded
+        from parsers import CharTable
+        from proof.common import Target
+        from proof.helpers import BranchCache
+        from proof.tableaux import TreeStruct
+
+        rule = self.rule_tab('Conjunction').rule
+
+        def clean(*dd):
+            dd = tuple(map(dict, dd))
+            for d in dd:
+                # TreeStruct
+                d.pop('id', None)
+            return dd
+
+        classes = get_subclasses(MappingApi) | (
+            # Make sure these are tested, for good measure.
+            BranchCache,
+            CharTable,
+            EventsListeners,
+            Target,
+            TreeStruct,
+        )
+
         for cls in classes:
+
+            if cls is EventsListeners:
+                # EventsListeners expects Listeners value type.
+                exp = dict(test = Listeners('test'))
+            elif issubclass(cls, BranchCache):
+                # BranchCache classes want BranchCache instances.
+                exp = BranchCache(rule)
+            elif cls is TreeStruct:
+                # TreeStruct has defaults.
+                exp = dict(TreeStruct())
+            else:
+                # CharTable neeed [str, item] structure.
+                # Target requires branch key.
+                exp = dict(branch = (..., ...),)
+
             inst = cls._from_iterable(exp.items())
             if inst is not NotImplemented:
-                assert dict(inst) == exp
+                a, b = clean(inst, exp)
+                assert a == b
+
             inst = cls._from_mapping(exp)
-            assert dict(inst) == exp
+            assert inst is not NotImplemented
+            a, b = clean(inst, exp)
+            assert a == b
+
             inst = inst.copy()
-            assert dict(inst) == exp
+            a, b = clean(inst, exp)
+            assert a == b
 

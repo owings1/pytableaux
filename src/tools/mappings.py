@@ -15,7 +15,7 @@ __all__ = (
 )
 
 from errors import Emsg, instcheck
-from tools.abcs import Abc, Copyable, abcf, F, KT, VT #, T, P, RT
+from tools.abcs import Abc, Copyable, MapProxy, abcf, F, KT, VT #, T, P, RT
 from tools.callables import preds, gets
 from tools.decorators import (
     abstract, static, final, overload,
@@ -28,7 +28,6 @@ from collections.abc import (
 from collections import defaultdict, deque
 from itertools import chain, filterfalse
 from operator import not_, truth
-from types import MappingProxyType as MapProxy
 from typing import (
     Any, Callable, Iterable, TypeVar,
 )
@@ -201,6 +200,8 @@ class MappingApi(Mapping[KT, VT], Copyable):
 class KeyGetAttr(MappingApi[Any, VT]):
     'Mixin class for attribute key access.'
 
+    # TODO: this is slow
+
     __slots__ = EMPTY
 
     def __getattr__(self, name) -> VT:
@@ -219,7 +220,7 @@ class MapCover(MappingApi[KT, VT]):
     __slots__ = '__m',
     __m: Mapping[KT, VT]
 
-    def __init__(self, mapping):
+    def __init__(self, mapping: Mapping[KT, VT]):
         self.__m = instcheck(mapping, Mapping)
 
     def __len__(self):
@@ -240,6 +241,7 @@ class MapCover(MappingApi[KT, VT]):
 class MapAttrCover(MapCover[KT, VT], KeyGetAttr[VT]):
     'MapCover + KeyGetAttr'
     __slots__ = EMPTY
+    # TODO: this is slow
 
 class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
 
@@ -281,13 +283,19 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
         ): pass
         return self
 
+    # @classmethod
+    # def _from_mapping(cls, mapping):
+    #     return
+    #     inst = cls()
+    #     inst.update(mapping)
+    #     return inst
+
     @classmethod
     def _from_iterable(cls, it):
-        inst = cls.__new__(cls)
-        inst.update(it)
-        return inst
-
-    _from_mapping = _from_iterable
+        return cls(it)
+        # inst = cls()
+        # inst.update(it)
+        # return inst
 
 class dmap(dict[KT, VT], MutableMappingApi[KT, VT]):
     'Mutable mapping api from dict.'
@@ -308,18 +316,14 @@ class defaultdmap(defaultdict[KT, VT], MutableMappingApi[KT, VT]):
     __ror__ = MutableMappingApi.__ror__
 
     @classmethod
-    def _from_iterable(cls, it):
-        inst = cls(None)
-        inst.update(it)
-        return inst
-
-    @classmethod
     def _from_mapping(cls, mapping):
         if isinstance(mapping, defaultdict):
             return cls(mapping.default_factory, mapping)
-        inst = cls(None)
-        inst.update(mapping)
-        return inst
+        return cls(None, mapping)
+
+    @classmethod
+    def _from_iterable(cls, it):
+        return cls(None, it)
 
     @classmethod
     def _roper_res_type(cls, other_type):
@@ -341,12 +345,22 @@ class KeySetAttr(Abc):
         if self._keyattr_ok(name):
             super().__setitem__(name, value)
 
+    def __delitem__(self, key):
+        super().__delitem__(key)
+        if preds.isattrstr(key) and self._keyattr_ok(key):
+            super().__delattr__(key)
+
+    def __delattr__(self, name):
+        super().__delattr__(name)
+        if self._keyattr_ok(name) and name in self:
+            super().__delitem__(name)
+
     @classmethod
     def _keyattr_ok(cls, name):
         return not hasattr(cls, name)
 
 class dmapattr(KeySetAttr, dmap[KT, VT]):
-    pass
+    __slots__ = EMPTY
 
 class DequeCache(Collection[VT], Abc):
 

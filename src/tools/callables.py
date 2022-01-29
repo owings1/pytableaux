@@ -6,15 +6,29 @@ __all__ = (
 )
 
 from errors import instcheck, subclscheck
-from tools.abcs import AbcMeta, Copyable, P, T, KT, RT, F
+from tools.abcs import (
+    AbcMeta,
+    Copyable,
+    MapProxy,
+    P, T, KT, RT, F,
+)
 from tools.decorators import abstract, final, static
 from tools.misc import orepr
+from tools.sets import EMPTY_SET, setf
 
 from functools import partial
+from itertools import (
+    filterfalse,
+)
 import operator as opr
-from types import MappingProxyType as MapProxy
 from typing import (
-    Any, Callable, Iterable, Literal, Mapping, Sequence,
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
 )
 
 import enum
@@ -44,6 +58,7 @@ ExceptsParam = tuple[type[Exception], ...]
 FlagParam = Flag | Callable[[Flag], Flag]
 
 EMPTY = ()
+NOARG = object()
 SETATTROK = frozenset({
     '__module__', '__name__', '__qualname__',
     '__doc__', '__annotations__',
@@ -78,7 +93,7 @@ class Caller(Callable[P, RT], Copyable):
         excepts  = Flag.Safe,
         default  = Flag.Safe,
     )
-    __slots__ = tuple(attrhints)
+    __slots__ = setf(attrhints)
 
     flag     : Flag
     bindargs : tuple
@@ -206,7 +221,7 @@ class Caller(Callable[P, RT], Copyable):
 class calls:
 
     class func(Caller):
-        'Function wrapper.'
+        'Function caller. Like functools.partial, but binds to the right.'
 
         def _call(self, *args, **kw):
             return self.func(*args, **kw)
@@ -234,7 +249,7 @@ class calls:
         method: str
         safe_errs = AttributeError,
         attrhints = dict(method = Flag.Blank)
-        __slots__ = tuple(attrhints)
+        __slots__ = setf(attrhints)
 
     def now(func: Callable[P, RT], *args: P.args, **kw: P.kwargs) -> RT:
         return func(*args, **kw)
@@ -247,13 +262,13 @@ class gets:
         def _call(self, obj, name: str):
             return getattr(obj, name)
         safe_errs = AttributeError,
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
     class key(Caller):
         'Subscript getter.'
         def _call(self, obj, key): return obj[key]
         safe_errs = KeyError, IndexError,
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
     class mixed(Caller):
         'Attribute or subscript.'
@@ -275,14 +290,14 @@ class gets:
             super().__init__(*args, **kw)
 
         safe_errs = AttributeError, KeyError, IndexError
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
     class thru(Caller):
-        'Passthrough getter.'
+        'Passthrough getter of the first argument.'
         def _call(self, obj: T, *_) -> T:
             return obj
         cls_flag = Flag.Left
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
 @static
 class sets:
@@ -301,7 +316,7 @@ class sets:
 
         safe_errs = AttributeError,
         cls_flag = Flag.Left
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
 @static
 class dels:
@@ -310,7 +325,7 @@ class dels:
         'Attribute deleter.'
         def _call(self, obj, name: str): delattr(obj, name)
         safe_errs = AttributeError,
-        __slots__ = EMPTY
+        __slots__ = EMPTY_SET
 
 class raiser(Caller):
     'Error raiser.'
@@ -320,45 +335,66 @@ class raiser(Caller):
 
     def __init__(self,
         ErrorType: type[Exception],
-        eargs: Sequence = (), /):
+        eargs: Sequence = EMPTY, /
+    ):
         self.ErrorType = subclscheck(ErrorType, Exception)
         self.eargs = instcheck(eargs, Sequence)
 
     ErrorType: type[Exception]
     eargs: Sequence
     attrhints = dict(ErrorType = Flag.Blank, eargs = Flag.Blank)
-    __slots__ = tuple(attrhints)
+    __slots__ = setf(attrhints)
 
 @static
 class funciter:
 
-    def reduce(funcs: Iterable[F], *args, **kw) -> Any:
+    def reduce(funcs: Iterable[F], /, *args, **kw) -> Any:
         it = iter(funcs)
-        try: value = next(it)(*args, **kw)
+        try:
+            value = next(it)(*args, **kw)
         except StopIteration:
             raise TypeError('reduce() of empty iterable') from None
-        for f in funcs: value = f(value)
+        for f in it:
+            value = f(value)
         return value
 
-    def consume(funcs: Iterable[Callable[P, T]], consumer: Callable[[Iterable[P]], T], *args, **kw) -> T:
+    def consume(
+        funcs: Iterable[Callable[P, T]],
+        consumer: Callable[[Iterable[P]], T],
+        /, *args, **kw
+    ) -> T:
         return consumer(f(*args, **kw) for f in funcs)
 
 @static
 class cchain:
 
     def forall(*funcs: Callable[P, bool]) -> Callable[P, bool]:
+        'Return a reusable predicate (conjunct).'
         return partial(funciter.consume, funcs, all)
 
     def forany(*funcs: Callable[P, bool]) -> Callable[P, bool]:
+        'Return a reusable predicate (disjuncts).'
         return partial(funciter.consume, funcs, any)
 
-    def reducer(*funcs: Callable[P, T]) -> Callable[P, T]:
+    def reducer(*funcs: F) -> F:
+        'Return a reusable reducer.'
+        if not len(funcs):
+            raise TypeError('must pass at least one argument.')
         return partial(funciter.reduce, funcs)
+
+    def reduce_filter(it: Iterable[T], finit: F, /, *preds: F) -> Iterator[T]:
+        'Filter immediate. NB: First argument is the iterable to filter.'
+        return filter(cchain.reducer(finit, *preds), it)
+
+    def reduce_filterfalse(it: Iterable[T], finit: F, /, *preds: F) -> Iterator[T]:
+        'Filter immediate. NB: First argument is the iterable to filter.'
+        return filterfalse(cchain.reducer(finit, *preds), it)
 
 def predcachetype(
     pred: Callable[[T, KT], bool],
     outerfn: Callable = calls.func,
     /,
+    bases: tuple[type, ...] = (dict,),
 ) -> type[dict[KT, Callable[[T], bool]]]:
     'Returns a dict type that generates and caches predicates.'
     def missing(self, key, setdefault = dict.setdefault):
@@ -366,30 +402,43 @@ def predcachetype(
     n = pred.__name__
     return AbcMeta(
         n[0].upper() + n[1:] + 'PartialCache',
-        (dict,),
-        dict(__missing__ = missing, __slots__ = EMPTY),
+        bases,
+        dict(__missing__ = missing, __slots__ = EMPTY_SET),
     )
 
 @static
 class preds:
 
+    #: Negate a predicate.
+    neg: Callable[[F], Callable[..., bool]] = calls.func(cchain.reducer, opr.not_)
+
+    #: Predicate factory dict, e.g. instanceof[str]
     instanceof = predcachetype(isinstance)()
+    #: Predicate factory dict, e.g. subclassof[Collection]
     subclassof = predcachetype(issubclass)()
 
-    isidentifier = cchain.forall(instanceof[str], str.isidentifier)
-    isnone = partial(opr.is_, None)
-    notnone = partial(opr.is_not, None)
 
     from keyword import iskeyword
 
-    isattrstr = cchain.forall(
-        instanceof[str],
-        str.isidentifier,
-        cchain.reducer(iskeyword, opr.not_),
-    )
+    #: Whether an object is a valid attribute identifier.
+    isidentifier = cchain.forall(instanceof[str], str.isidentifier)
 
-    def true(_): return True
-    def false(_): return False
+    #: Whether an object is a valid, unreserved (non-keyword) attribute name.
+    isattrstr = cchain.forall(instanceof[str], str.isidentifier, neg(iskeyword))
+
+    #: Whether the argument is literal None.
+    isnone = partial(opr.is_, None)
+
+    #: Whether the argument is not literal None.
+    notnone = partial(opr.is_not, None)
+
+    def true(_):
+        'Always returns True.'
+        return True
+
+    def false(_):
+        'Always returns False.'
+        return False
 
 
 del(abstract, final, static, predcachetype, opr)

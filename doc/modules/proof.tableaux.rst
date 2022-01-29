@@ -12,8 +12,6 @@ Tableaux Module
 
         .. autoattribute:: completed
 
-        .. autoattribute:: current_step
-
         .. autoattribute:: finished
 
         .. autoattribute:: history
@@ -31,8 +29,6 @@ Tableaux Module
         .. autoattribute:: open
 
         .. autoattribute:: tree
-
-        .. autoattribute:: trunk_built
 
         .. autoattribute:: valid
 

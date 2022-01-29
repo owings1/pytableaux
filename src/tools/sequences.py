@@ -3,10 +3,10 @@ from __future__ import annotations
 __all__ = (
     'SequenceApi',
     'MutableSequenceApi',
-    'SequenceProxy',
+    'SequenceCover',
     'seqf',
     'seqm',
-    'DeqSeq',
+    'deqseq',
     'HookedDeqSeq',
 )
 
@@ -20,7 +20,11 @@ from tools.decorators import abstract, final, overload, membr
 from collections import deque
 from itertools import chain, repeat
 from typing import (
-    Iterable, MutableSequence, Sequence, SupportsIndex,
+    Iterable,
+    MutableSequence,
+    Sequence,
+    SupportsIndex,
+    TypeVar,
 )
 
 EMPTY = ()
@@ -32,15 +36,7 @@ class SequenceApi(Sequence[VT], Copyable):
     __slots__ = EMPTY
 
     @overload
-    @classmethod
-    def _from_iterable(cls, it: Iterable[VT]) -> SequenceApi[VT]: ...
-    @overload
-    def __getitem__(self, s: slice) -> SequenceApi[VT]: ...
-    @overload
-    def __add__(self, other: Iterable) -> SequenceApi[VT]: ...
-    @overload
-    def __mul__(self, other: SupportsIndex) -> SequenceApi[VT]: ...
-
+    def __getitem__(self: SeqApiT, s: slice) -> SeqApiT: ...
 
     @overload
     def __getitem__(self, i: SupportsIndex) -> VT: ...
@@ -49,12 +45,12 @@ class SequenceApi(Sequence[VT], Copyable):
     def __getitem__(self, index):
         raise IndexError
 
-    def __add__(self, other):
+    def __add__(self: SeqApiT, other: Iterable) -> SeqApiT:
         if not isinstance(other, Iterable):
             return NotImplemented
         return self._from_iterable(chain(self, other))
 
-    def __mul__(self, other):
+    def __mul__(self: SeqApiT, other: SupportsIndex) -> SeqApiT:
         if not isinstance(other, SupportsIndex):
             return NotImplemented
         return self._from_iterable(chain.from_iterable(repeat(self, other)))
@@ -69,7 +65,7 @@ class SequenceApi(Sequence[VT], Copyable):
     def _from_iterable(cls, it: Iterable):
         return cls(it)
 
-SequenceApi.register(tuple)
+
 
 class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
     'Fusion interface of collections.abc.MutableSequence and built-in list.'
@@ -85,25 +81,60 @@ class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
         Must be idempotent. Does not affect deletions.'''
         return value
 
-    @overload
-    def _setslice_prep(self:T, slc: slice, values: Iterable, /) -> tuple[T, T]: ...
-    def _setslice_prep(self, slc: slice, values: Iterable, /):
+    def _setslice_prep(self: MutSeqApiT, slc: slice, values: Iterable, /) -> tuple[MutSeqApiT, MutSeqApiT]:
         olds = self[slc]
         values = self._from_iterable(map(self._new_value, values))
         if abs(slc.step or 1) != 1 and len(olds) != len(values):
             raise Emsg.MismatchExtSliceSize(values, olds)
         return olds, values
 
-    @overload
-    def __imul__(self:T, other: SupportsIndex) -> T: ...
     def __imul__(self, other):
         if not isinstance(other, SupportsIndex):
             return NotImplemented
         self.extend(chain.from_iterable(repeat(self, int(other) - 1)))
         return self
 
-MutableSequenceApi.register(list)
-MutableSequenceApi.register(deque)
+class SequenceCover(SequenceApi[VT]):
+
+    __slots__ = '__seq',
+
+    def __init__(self, sequence: Sequence[VT]):
+        self.__seq = sequence
+
+    def __len__(self):
+        return len(self.__seq)
+
+    def __getitem__(self, index):
+        return self.__seq[index]
+
+    def __contains__(self, value):
+        return value in self.__seq
+
+    def __iter__(self):
+        return iter(self.__seq)
+
+    def __reversed__(self):
+        return reversed(self.__seq)
+
+    def count(self, value):
+        return self.__seq.count(value)
+
+    def index(self, *args):
+        return self.__seq.index(*args)
+
+    def copy(self):
+        'Immutable copy, returns self.'
+        return self
+
+    def __repr__(self):
+        from tools.misc import wraprepr
+        return wraprepr(self, list(self))  
+
+    @classmethod
+    def _from_iterable(cls, it):
+        if isinstance(it, Sequence):
+            return cls(it)
+        return cls(tuple(it))
 
 class SequenceProxy(SequenceApi[VT]):
     'Sequence view proxy.'
@@ -116,7 +147,7 @@ class SequenceProxy(SequenceApi[VT]):
     @membr.defer
     def pxfn(member: membr[type[SequenceProxy]]):
         # Builds a class method that retrieves the source instance method
-        # and overwrites our class method, in effect a lazy loading.
+        # and overwrites our class method, in effect a lazy loading of methods.
         name, cls = member.name, member.owner
         cls._proxy_names_.add(name)
         method = getattr(SequenceApi, name, None)
@@ -228,13 +259,33 @@ class seqf(tuple[VT, ...], SequenceApi[VT]):
     def __repr__(self):
         return type(self).__name__ + super().__repr__()
 
-class seqm(MutableSequenceApi[VT], list[VT]):
+# class seqm(MutableSequenceApi[VT], list[VT]):
+class seqm(list[VT], MutableSequenceApi[VT]):
 
     __slots__ = EMPTY
 
-    insert = list.insert
+    # insert = list.insert
 
-class DeqSeq(deque[VT], MutableSequenceApi[VT]):
+    __imul__ = MutableSequenceApi.__imul__
+    __mul__  = MutableSequenceApi.__mul__
+    __rmul__ = MutableSequenceApi.__rmul__
+    __add__  = MutableSequenceApi.__add__
+    __radd__ = MutableSequenceApi.__radd__
+    copy     = MutableSequenceApi.copy
+    __copy__ = MutableSequenceApi.__copy__
+
+    @overload
+    def __getitem__(self: SeqApiT, s: slice) -> SeqApiT: ...
+
+    @overload
+    def __getitem__(self, i: SupportsIndex) -> VT: ...
+
+    def __getitem__(self, i):
+        if isinstance(i, slice):
+            return self._from_iterable(super().__getitem__(i))
+        return super().__getitem__(i)
+
+class deqseq(deque[VT], MutableSequenceApi[VT]):
 
     __slots__ = EMPTY
 
@@ -246,12 +297,26 @@ class DeqSeq(deque[VT], MutableSequenceApi[VT]):
     copy     = MutableSequenceApi.copy
     __copy__ = MutableSequenceApi.__copy__
 
-class HookedDeqSeq(DeqSeq[VT]):
+    def sort(self, /, *, key = None, reverse = False):
+        values = sorted(self, key = key, reverse = reverse)
+        self.clear()
+        self.extend(values)
+
+    @classmethod
+    def _from_iterable(cls, it: Iterable[VT]):
+        if isinstance(it, deque):
+            return cls(it, maxlen = it.maxlen)
+        return cls(it)
+
+class HookedDeqSeq(deqseq[VT]):
 
     __slots__ = EMPTY
 
     def __init__(self, values: Iterable = None, /, maxlen: int|None = None):
-        super().__init__(map(self._new_value, values), maxlen)
+        if values is None:
+            super().__init__(maxlen = maxlen)
+        else:
+            super().__init__(map(self._new_value, values), maxlen)
 
     def insert(self, index: int, value):
         super().insert(index, self._new_value(value))
@@ -266,12 +331,21 @@ class HookedDeqSeq(DeqSeq[VT]):
         super().extend(map(self._new_value, values))
 
     def extendleft(self, values):
-        super().extend(map(self._new_value, values))
+        super().extendleft(map(self._new_value, values))
 
     def __setitem__(self, index: SupportsIndex, value):
         instcheck(index, SupportsIndex)
         super().__setitem__(index, self._new_value(value))
 
+
 EMPTY_SEQ = seqf()
+
+SeqApiT = TypeVar('SeqApiT', bound = SequenceApi)
+MutSeqApiT = TypeVar('MutSeqApiT', bound = MutableSequenceApi)
+
+SequenceApi.register(tuple)
+MutableSequenceApi.register(list)
+# MutableSequenceApi.register(deque)
+
 
 del(Copyable, abcf, abcm, abstract, final, overload, membr)

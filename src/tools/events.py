@@ -6,9 +6,10 @@ from errors import instcheck
 from tools.abcs import Abc, Copyable, abcf, F
 from tools.decorators import raisr, wraps
 from tools.linked import linqset
-from tools.mappings import dmap
+from tools.mappings import dmap, ItemsIterator
 
 from enum import Enum
+from itertools import chain
 from typing import Callable, Mapping, Sequence
 
 EventId = str | int | Enum
@@ -183,7 +184,16 @@ class EventsListeners(dmap[EventId, Listeners]):
         return inst
 
     def __setitem__(self, key, value):
+        # Override for type check
         super().__setitem__(key, instcheck(value, Listeners))
+
+    def update(self, it = None, /, **kw):
+        # Override for type check
+        if it is not None:
+            it = ItemsIterator(it)
+        if len(kw):
+            it = chain(it, ItemsIterator(kw))
+        for k, v in it: self[k] = v
 
     def __repr__(self):
         from tools.misc import orepr
@@ -193,5 +203,17 @@ class EventsListeners(dmap[EventId, Listeners]):
             emitcount = self.emitcount,
             callcount = self.callcount,
         )
+
+    @classmethod
+    def _from_mapping(cls, mapping):
+        inst = cls()
+        inst.update(mapping)
+        return inst
+
+    @classmethod
+    def _from_iterable(cls, it):
+        inst = cls()
+        inst.update(it)
+        return inst
 
 del(Abc, Copyable, dmap, linqset, abcf, raisr, wraps)
