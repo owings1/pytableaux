@@ -18,7 +18,9 @@
 # ------------------
 # pytableaux - lexicals module
 from __future__ import annotations
-__docformat__ = 'reStructuredText'
+
+# __docformat__ = 'reStructuredText'
+
 __all__ = (
     'Operator', 'Quantifier',
     'Parameter', 'Constant', 'Variable', 'Predicate',
@@ -489,14 +491,16 @@ class Bases:
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        @abcf.after
-        def lazymap(cls):
-            cls._lazymap_ = dict(
-                ident = cls.identitem,
-                hash = cls.hashitem,
-            )
 
-        __slots__ = 'ident', 'hash'
+        @lazy.prop
+        def ident(self):
+            return self.identitem(self)
+
+        @lazy.prop
+        def hash(self):
+            return self.hashitem(self)
+
+        __slots__ = '_ident', '_hash',
         __delattr__ = raisr(AttributeError)
 
         def __setattr__(self, name, value):
@@ -527,17 +531,11 @@ class Bases:
         #: The coords subscript.
         subscript: int
 
-        __slots__ = (
-            'spec', 'coords', 'index', 'subscript', 'sort_tuple',
-        )
+        __slots__ = 'spec', 'coords', 'index', 'subscript', '_sort_tuple',
  
-        @abcf.after
-        def lazymap(cls):
-            def sort_tuple(self: Bases.CoordsItem):
-                return self.TYPE.rank, *self.coords.sorting()
-            cls._lazymap_ = dict(
-                sort_tuple = sort_tuple
-            )
+        @lazy.prop
+        def sort_tuple(self: Bases.CoordsItem):
+            return self.TYPE.rank, *self.coords.sorting()
             
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -673,20 +671,19 @@ class Constant(Parameter):
 
     __slots__ = 'is_constant', 'is_variable'
 
-    _lazymap_ = dict(
-        is_constant = fixed.value(True)(),
-        is_variable = fixed.value(False)(),
-    )
-
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.is_constant = True
+        self.is_variable = False
 @final
 class Variable(Parameter):
 
     __slots__ = Constant.__slots__
 
-    _lazymap_ = dict(
-        is_constant = fixed.value(False)(),
-        is_variable = fixed.value(True)(),
-    )
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.is_constant = False
+        self.is_variable = True
 
 @final
 class Predicate(Bases.CoordsItem):
@@ -736,21 +733,15 @@ class Predicate(Bases.CoordsItem):
     #: The ``refs`` plus the predicate object.
     refkeys: qsetf[Types.PredicateRef | Predicate]
 
-    __slots__ = 'arity', 'is_system', 'name', 'bicoords', 'refs', 'refkeys'
+    __slots__ = 'arity', 'is_system', 'name', 'bicoords', '_refs', '_refkeys'
 
-    @abcf.after
-    def lazymap(cls):
+    @lazy.prop
+    def refs(self: Predicate):
+        return seqf({self.spec, self.ident, self.bicoords, self.name})
 
-        def bicoords(self: Predicate):
-            return Types.BiCoords(self.index, self.subscript)
-
-        def refs(self: Predicate):
-            return seqf({self.spec, self.ident, self.bicoords, self.name})
-
-        def refkeys(self: Predicate):
-            return qsetf({*self.refs, self})
-
-        cls._lazymap_ = dmap(locals()) - {'cls'}
+    @lazy.prop
+    def refkeys(self: Predicate):
+        return qsetf({*self.refs, self})
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Behaviors ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -798,6 +789,7 @@ class Predicate(Bases.CoordsItem):
             if len(self.System) and name in self.System:
                 raise ValueError('System predicate: %s' % name)
             instcheck(name, (tuple, str))
+        self.bicoords = Types.BiCoords(self.index, self.subscript)
 
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ System Enum ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -898,23 +890,17 @@ Types.QuantifiedItem = Quantifier | Variable | Sentence
 @final
 class Atomic(Bases.CoordsItem, Sentence):
 
-    @abcf.after
-    def lazymap(cls):
-        def atomics(self):
-            return setf({self})
-        cls._lazymap_ = dmap(locals()) - {'cls'} | dict(
-            predicates  = fixed.value(EMPTY_SET)(),
-            constants   = fixed.value(EMPTY_SET)(),
-            variables   = fixed.value(EMPTY_SET)(),
-            quantifiers = fixed.value(EMPTY_SEQ)(),
-            operators   = fixed.value(EMPTY_SEQ)(),
-        )
-
     __slots__ = (
         'predicates', 'constants', 'variables',
         'quantifiers', 'operators',
         'atomics',
     )
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.predicates = self.constants = self.variables = EMPTY_SET
+        self.quantifiers = self.operators = EMPTY_SEQ
+        self.atomics = setf((self,))
 
     variable_occurs = fixed.value(False)
 
@@ -936,39 +922,35 @@ class Predicated(Sentence, SequenceApi[Parameter]):
     #: The set of parameters.
     paramset: setf[Parameter]
 
-    __slots__ = Atomic.__slots__ | {
-        'spec', 'sort_tuple',
-        'predicate', 'params', 'paramset',  
-    }
+    __slots__ = setf({
+        '_spec', '_sort_tuple',
+        'predicate', 'params', 'paramset',
+        'quantifiers', 'operators', 'atomics',
+        '_constants', '_variables', '_predicates',
+    })
 
-    @abcf.after
-    def lazymap(cls):
+    @lazy.prop
+    def spec(self):
+        return self.predicate.spec, tuple(p.ident for p in self.params)
 
-        def paramset(self: Predicated):
-            return setf(self.params)
-
-        def spec(self: Predicated):
-            return self.predicate.spec, tuple(p.ident for p in self.params)
-
-        def sort_tuple(self: Predicated):
-            return self.TYPE.rank, *chain.from_iterable(
-                sorttmap((self.predicate, *self.params))
-            )
-
-        def predicates(self: Predicated):
-            return setf({self.predicate})
-
-        def constants(self: Predicated) -> setf[Constant]:
-            return setf(p for p in self.paramset if p.is_constant)
-
-        def variables(self: Predicated) -> setf[Variable]:
-            return setf(p for p in self.paramset if p.is_variable)
-
-        cls._lazymap_ = dmap(locals()) - {'cls'} | dmap(
-            quantifiers = fixed.value(EMPTY_SEQ)(),
-            operators   = fixed.value(EMPTY_SEQ)(),
-            atomics     = fixed.value(EMPTY_SET)(),
+    @lazy.prop
+    def sort_tuple(self: Predicated):
+        return self.TYPE.rank, *chain.from_iterable(
+            sorttmap((self.predicate, *self.params))
         )
+
+    @lazy.prop
+    def predicates(self: Predicated):
+        return setf({self.predicate})
+
+    @lazy.prop
+    def constants(self: Predicated) -> setf[Constant]:
+        return setf(p for p in self.paramset if p.is_constant)
+
+    @lazy.prop
+    def variables(self: Predicated) -> setf[Variable]:
+        return setf(p for p in self.paramset if p.is_variable)
+
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sentence Methods ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -988,6 +970,10 @@ class Predicated(Sentence, SequenceApi[Parameter]):
         )
         if len(self) != self.predicate.arity:
             raise TypeError(self.predicate, len(self), self.predicate.arity)
+
+        self.paramset = setf(self.params)
+        self.operators = self.quantifiers = EMPTY_SEQ
+        self.atomics = EMPTY_SET
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -1010,6 +996,15 @@ class Predicated(Sentence, SequenceApi[Parameter]):
     def __contains__(self, p):
         return p in self.paramset
 
+    @classmethod
+    def _from_iterable(cls, it):
+        try:
+            pred = it.predicate
+        except AttributeError:
+            raise TypeError
+        else:
+            return cls(pred, it)
+
 @final
 class Quantified(Sentence, SequenceApi[Types.QuantifiedItem]):
     'Quantified sentence.'
@@ -1031,39 +1026,37 @@ class Quantified(Sentence, SequenceApi[Types.QuantifiedItem]):
     #: The items sequence: Quantifer, Variable, Sentence.
     items: tuple[Quantifier, Variable, Sentence]
 
-    __slots__ =  Atomic.__slots__ | {
-        'spec', 'sort_tuple',
+    __slots__ =  setf((
+        'spec', '_sort_tuple',
         'quantifier', 'variable', 'sentence', 'items',
-    }
+        '_quantifiers'
+    ))
+    @lazy.prop
+    def sort_tuple(self: Quantified) -> Types.IntTuple:
+        return self.TYPE.rank, *chain.from_iterable(sorttmap(self))
+    @property
+    def constants(self: Quantified):
+        return self.sentence.constants
 
-    @abcf.after
-    def lazymap(cls):
+    @property
+    def variables(self: Quantified):
+        return self.sentence.variables
 
-        def spec(self: Quantified) -> Types.QuantifiedSpec:
-            return *self.quantifier.spec, self.variable.spec, self.sentence.ident
+    @property
+    def atomics(self: Quantified):
+        return self.sentence.atomics
 
-        def sort_tuple(self: Quantified) -> Types.IntTuple:
-            return self.TYPE.rank, *chain.from_iterable(sorttmap(self))
+    @property
+    def predicates(self: Quantified):
+        return self.sentence.predicates
 
-        def constants(self: Quantified):
-            return self.sentence.constants
+    @property
+    def operators(self: Quantified):
+        return self.sentence.operators
 
-        def variables(self: Quantified):
-            return self.sentence.variables
-
-        def atomics(self: Quantified):
-            return self.sentence.atomics
-
-        def predicates(self: Quantified):
-            return self.sentence.predicates
-
-        def operators(self: Quantified):
-            return self.sentence.operators
-
-        def quantifiers(self: Quantified):
-            return seqf((self.quantifier, *self.sentence.quantifiers))
-
-        cls._lazymap_ = dmap(locals()) - {'cls'}
+    @lazy.prop
+    def quantifiers(self: Quantified):
+        return seqf((self.quantifier, *self.sentence.quantifiers))
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sentence Methods ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -1086,6 +1079,7 @@ class Quantified(Sentence, SequenceApi[Types.QuantifiedItem]):
         self.quantifier, self.variable, self.sentence = self.items = (
             Quantifier(q), Variable(v), Sentence(s)
         )
+        self.spec = *self.quantifier.spec, self.variable.spec, self.sentence.ident
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -1118,6 +1112,10 @@ class Quantified(Sentence, SequenceApi[Types.QuantifiedItem]):
     def count(self, item) -> int:
         return int(item in self.items)
 
+    @classmethod
+    def _from_iterable(cls, it):
+        return cls(*it)
+
 @final
 class Operated(Sentence, SequenceApi[Sentence]):
     'Operated sentence.'
@@ -1137,45 +1135,50 @@ class Operated(Sentence, SequenceApi[Sentence]):
     #: The last (right-most) operand.
     rhs: Sentence
 
-    __slots__ =  Atomic.__slots__ | {
-        'spec', 'sort_tuple',
+    __slots__ =  setf((
+        '_spec', '_sort_tuple',
         'operator', 'operands', 'lhs', 'rhs',
-    }
+        '_predicates', '_constants', '_variables', '_quantifiers',
+        '_operators', '_atomics',
+    ))
 
-    @abcf.after
-    def lazymap(cls):
+    @lazy.prop
+    def spec(self: Operated) -> Types.OperatedSpec:
+        return *self.operator.spec, tuple(s.ident for s in self)
 
-        def spec(self: Operated) -> Types.OperatedSpec:
-            return *self.operator.spec, tuple(s.ident for s in self)
+    @lazy.prop
+    def sort_tuple(self: Operated) -> Types.IntTuple:
+        return self.TYPE.rank, *chain.from_iterable(
+            sorttmap((self.operator, *self))
+        )
 
-        def sort_tuple(self: Operated) -> Types.IntTuple:
-            return self.TYPE.rank, *chain.from_iterable(
-                sorttmap((self.operator, *self))
-            )
+    @lazy.prop
+    def predicates(self: Operated):
+        return setf(chain.from_iterable(s.predicates for s in self))
 
-        def predicates(self: Operated):
-            return setf(chain.from_iterable(s.predicates for s in self))
+    @lazy.prop
+    def constants(self: Operated):
+        return setf(chain.from_iterable(s.constants for s in self))
 
-        def constants(self: Operated):
-            return setf(chain.from_iterable(s.constants for s in self))
+    @lazy.prop
+    def variables(self: Operated):
+        return setf(chain.from_iterable(s.variables for s in self))
 
-        def variables(self: Operated):
-            return setf(chain.from_iterable(s.variables for s in self))
+    @lazy.prop
+    def quantifiers(self: Operated):
+        return *chain.from_iterable(s.quantifiers for s in self),
 
-        def quantifiers(self: Operated):
-            return *chain.from_iterable(s.quantifiers for s in self),
+    @lazy.prop
+    def operators(self: Operated):
+        return seqf(
+            (self.operator, *chain.from_iterable(
+                s.operators for s in self
+            ))
+        )
 
-        def operators(self: Operated):
-            return seqf(
-                (self.operator, *chain.from_iterable(
-                    s.operators for s in self
-                ))
-            )
-
-        def atomics(self: Operated):
-            return setf(chain.from_iterable(s.atomics for s in self))
-
-        cls._lazymap_ = dmap(locals()) - {'cls'}
+    @lazy.prop
+    def atomics(self: Operated):
+        return setf(chain.from_iterable(s.atomics for s in self))
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -1921,6 +1924,10 @@ def _():
         ),
     )
 
+    def unisub(sub):
+        # ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'],
+        return ''.join(chr(0x2080 + int(d)) for d in str(sub))
+
     data.update({
         Notation.standard: {
             'ascii': {
@@ -1970,8 +1977,7 @@ def _():
                 'notation': Notation.standard,
                 'encoding': 'utf8',
                 'renders': {
-                    # ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'],
-                    'subscript': lambda sub: ''.join(chr(0x2080 + int(d)) for d in str(sub))
+                    'subscript': unisub
                 },
                 'strings': {
                     LexType.Atomic   : tuple('ABCDE'),

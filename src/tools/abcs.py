@@ -462,7 +462,7 @@ class AbcEnumMeta(_enum.EnumMeta):
 class Abc(metaclass = AbcMeta):
     'Convenience for using AbcMeta as metaclass.'
     __slots__ = _EMPTY
-    __getattr__ = abcm.lazy_getattr
+    # __getattr__ = abcm.lazy_getattr
 
 class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta):
 

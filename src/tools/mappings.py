@@ -7,6 +7,7 @@ __all__ = (
     'MapAttrCover',
     'dmap',
     'defaultdmap',
+    'dmapattr',
     'ItemsIterator',
     'DequeCache',
     'KeyGetAttr',
@@ -332,11 +333,20 @@ class KeySetAttr(Abc):
 
     def __setitem__(self, key, value):
         super().__setitem__(key, value)
-        if preds.isattrstr(key) and self._keyattr_ok(key, value):
-            setattr(self, key, value)
+        if preds.isattrstr(key) and self._keyattr_ok(key):
+            super().__setattr__(key, value)
 
-    def _keyattr_ok(self, name, value):
-        return True
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        if self._keyattr_ok(name):
+            super().__setitem__(name, value)
+
+    @classmethod
+    def _keyattr_ok(cls, name):
+        return not hasattr(cls, name)
+
+class dmapattr(KeySetAttr, dmap[KT, VT]):
+    pass
 
 class DequeCache(Collection[VT], Abc):
 

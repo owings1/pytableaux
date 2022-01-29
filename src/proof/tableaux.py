@@ -21,33 +21,57 @@ from __future__ import annotations
 
 __all__ = 'Rule', 'TableauxSystem', 'Tableau'
 
+from errors import (
+    Emsg,
+    DuplicateKeyError,
+    IllegalStateError,
+    MissingValueError,
+    TimeoutError,
+    instcheck
+)
+from tools.abcs import Abc, AbcMeta, P, T
 from tools.callables import preds
 from tools.decorators import abstract, final, overload, static, wraps
-from errors import (
-    Emsg, DuplicateKeyError, IllegalStateError, MissingValueError,
-    TimeoutError, instcheck
-)
 from tools.events import EventEmitter
-from .common import FLAG, KEY, Branch, BranchEvent, Node, RuleEvent, TabEvent, Target
+from tools.hybrids import qsetf, qset
+from tools.linked import linqset
+from tools.mappings import MapCover, dmap, dmapattr
+from tools.misc import get_logic, orepr
+from tools.sequences import (
+    DeqSeq,
+    SequenceApi,
+    SequenceProxy,
+)
+from tools.sets import EMPTY_SET
+from tools.timing import StopWatch
+
 from lexicals import Argument, Sentence
 from models import BaseModel
-from tools.abcs import Abc, AbcMeta, abcm, P, T
-from tools.sets import EMPTY_SET
-from tools.sequences import (
-    MutableSequenceApi, SequenceApi, SequenceProxy, DeqSeq,
-)
-from tools.mappings import MapCover, dmap
-from tools.hybrids import qsetf
-from tools.linked import linqset
-from tools.timing import StopWatch
-from tools.misc import get_logic, orepr
 
+from proof.common import (
+    FLAG,
+    KEY,
+    Branch,
+    BranchEvent,
+    Node,
+    RuleEvent,
+    TabEvent,
+    Target,
+)
+
+from collections import deque
 from itertools import chain
-import itertools
 from types import ModuleType
 from typing import (
-    Callable, Iterator, Iterable, Mapping, Sequence,
-    Any, ClassVar, NamedTuple, SupportsIndex
+    Any,
+    Callable,
+    ClassVar,
+    Iterable,
+    Iterator,
+    Mapping,
+    NamedTuple,
+    Sequence,
+    SupportsIndex,
 )
 
 LogicRef = ModuleType | str
@@ -102,7 +126,7 @@ class RuleMeta(AbcMeta):
 
     @staticmethod
     def _set_helper_attrs(Class: type, attrs: dict, clsattr: str):
-        filt = filter(bool, itertools.chain(
+        filt = filter(bool, chain(
             * (
                 c.__dict__.get(clsattr, EMPTY_SET)
                 for c in reversed(Class.mro()[1:])
@@ -231,7 +255,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
         self.search_timer = StopWatch()
         self.apply_timer = StopWatch()
-        self.timers = dict[str, StopWatch]()
+        self.timers: dict[str, StopWatch] = {}
         if self.Timers:
             self.timers |= ((name, StopWatch()) for name in self.Timers)
 
@@ -319,31 +343,32 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         :param common.Branch branch: The branch.
         """
         instcheck(targets, Sequence)
-        if self.opts['is_rank_optim']:
+        isrankoptim = self.opts['is_rank_optim']
+        if isrankoptim:
             scores = tuple(map(self.score_candidate, targets))
         else:
             scores = 0,
         max_score = max(scores)
         min_score = min(scores)
         for score, target in zip(scores, targets):
-            target.update({
-                'rule'            : self,
-                'total_candidates': len(targets),
-            })
-            if self.opts['is_rank_optim']:
-                target.update({
-                    'is_rank_optim'       : True,
-                    'candidate_score'     : score,
-                    'min_candidate_score' : min_score,
-                    'max_candidate_score' : max_score,
-                })
+            target.update(
+                rule             = self,
+                total_candidates = len(targets),
+            )
+            if isrankoptim:
+                target.update(
+                    is_rank_optim       = True,
+                    candidate_score     = score,
+                    min_candidate_score = min_score,
+                    max_candidate_score = max_score,
+                )
             else:
-                target.update({
-                    'is_rank_optim'       : False,
-                    'candidate_score'     : None,
-                    'min_candidate_score' : None,
-                    'max_candidate_score' : None,
-                })
+                target.update(
+                    is_rank_optim       = False,
+                    candidate_score     = None,
+                    min_candidate_score = None,
+                    max_candidate_score = None,
+                )
 
     def __select_best_target(self, targets: Iterable[Target]) -> Target:
         """
@@ -367,12 +392,12 @@ class TabRulesSharedData:
         self.groupindex = MapCover(self.groupindex)
         self.locked = True
 
-    def __init__(self, tableau: Tableau, root):
+    def __init__(self, tableau: Tableau, root: TabRules):
         self.ruleindex = {}
         self.groupindex = {}
         self.locked = False
-        self.tab: Tableau = tableau
-        self.root: TabRules = root
+        self.tab = tableau
+        self.root = root
         tableau.once(TabEvent.AFTER_BRANCH_ADD, self.lock)
 
     def __delattr__(self, name):
@@ -752,7 +777,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     #: A tree structure of the tableau. This is generated after the tableau
     #: is finished. If the `build_timeout` was exceeded, the tree is `not`
     #: built.
-    tree: dict
+    tree: TreeStruct
     stats: dict
     models: set[BaseModel]
 
@@ -1025,7 +1050,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             # respect the timeout. In case of `max_steps` excess, however, we
             # `do` build the tree.
             with self.timers.tree:
-                self.tree = make_tree_structure(self, list(self))
+                self.tree = self._build_tree(self)
         self.stats = self.__compute_stats()
         return self
 
@@ -1105,14 +1130,14 @@ class Tableau(Sequence[Branch], EventEmitter):
         return branch in self.__branchstat
 
     def __repr__(self):
-        return orepr(self, {
-            'id'   : self.id,
-            'logic': (self.logic and self.logic.name),
-            'len'  : len(self),
-            'open' : len(self.open),
-            'step' : self.current_step,
-            'finished' : self.finished,
-        } | {
+        return orepr(self, dict(
+            id    = self.id,
+            logic = (self.logic and self.logic.name),
+            len   = len(self),
+            open  = len(self.open),
+            step  = self.current_step,
+            finished = self.finished,
+         ) | {
             key: value
             for key, value in {
                 prop: getattr(self, prop)
@@ -1197,12 +1222,12 @@ class Tableau(Sequence[Branch], EventEmitter):
             if target:
                 ruletarget = RuleTarget(rule, target)
                 if not is_group_optim:
-                    target.update({
-                        'group_score'         : None,
-                        'total_group_targets' : 1,
-                        'min_group_score'     : None,
-                        'is_group_optim'      : False,
-                    })
+                    target.update(
+                        group_score         = None,
+                        total_group_targets = 1,
+                        min_group_score     = None,
+                        is_group_optim      = False,
+                    )
                     return ruletarget
                 results.append(ruletarget)
         if results:
@@ -1233,12 +1258,12 @@ class Tableau(Sequence[Branch], EventEmitter):
         min_group_score = min(group_scores)
         for group_score, res in zip(group_scores, results):
             if group_score == max_group_score:
-                res.target.update({
-                    'group_score'         : max_group_score,
-                    'total_group_targets' : len(results),
-                    'min_group_score'     : min_group_score,
-                    'is_group_optim'      : True,
-                })
+                res.target.update(
+                    group_score         = max_group_score,
+                    total_group_targets = len(results),
+                    min_group_score     = min_group_score,
+                    is_group_optim      = True,
+                )
                 return res
 
     def __compute_stats(self):
@@ -1246,57 +1271,54 @@ class Tableau(Sequence[Branch], EventEmitter):
         Compute the stats property after the tableau is finished.
         """
         try:
-            distinct_nodes = self.tree['distinct_nodes']
+            distinct_nodes = self.tree.root.distinct_nodes
         except AttributeError:
-            distinct_nodes = None# if self.tree else None
+            distinct_nodes = None
         timers = self.timers
-        return {
-            'id'                : self.id,
-            'result'            : self.__result_word(),
-            'branches'          : len(self),
-            'open_branches'     : len(self.open),
-            'closed_branches'   : len(self) - len(self.open),
-            'rules_applied'     : len(self.history),
-            'distinct_nodes'    : distinct_nodes,
-            'rules_duration_ms' : sum(
+        return dict(
+            id                = self.id,
+            result            = self.__result_word(),
+            branches          = len(self),
+            open_branches     = len(self.open),
+            closed_branches   = len(self) - len(self.open),
+            rules_applied     = len(self.history),
+            distinct_nodes    = distinct_nodes,
+            rules_duration_ms = sum(
                 step.duration_ms
                 for step in self.history
             ),
-            'build_duration_ms' : timers.build.elapsed,
-            'trunk_duration_ms' : timers.trunk.elapsed,
-            'tree_duration_ms'  : timers.tree.elapsed,
-            'models_duration_ms': timers.models.elapsed,
-            'rules_time_ms'     : sum(
+            build_duration_ms = timers.build.elapsed,
+            trunk_duration_ms = timers.trunk.elapsed,
+            tree_duration_ms  = timers.tree.elapsed,
+            models_duration_ms= timers.models.elapsed,
+            rules_time_ms     = sum(
                 sum((rule.search_timer.elapsed, rule.apply_timer.elapsed))
                 for rule in self.rules
             ),
-            'rules' : [
-                self.__compute_rule_stats(rule)
-                for rule in self.rules
-            ],
-        }
+            rules = tuple(map(self.__compute_rule_stats, self.rules)),
+        )
 
     def __compute_rule_stats(self, rule: Rule):
         """
         Compute the stats for a rule after the tableau is finished.
         """
-        return {
-            'name'            : rule.name,
-            'queries'         : rule.search_timer.count,
-            'search_time_ms'  : rule.search_timer.elapsed,
-            'search_time_avg' : rule.search_timer.elapsed_avg,
-            'apply_count'     : rule.apply_count,
-            'apply_time_ms'   : rule.apply_timer.elapsed,
-            'apply_time_avg'  : rule.apply_timer.elapsed_avg,
-            'timers'          : {
-                name : {
-                    'duration_ms'   : timer.elapsed,
-                    'duration_avg'  : timer.elapsed_avg,
-                    'count' : timer.count,
-                }
+        return dict(
+            name            = rule.name,
+            queries         = rule.search_timer.count,
+            search_time_ms  = rule.search_timer.elapsed,
+            search_time_avg = rule.search_timer.elapsed_avg,
+            apply_count     = rule.apply_count,
+            apply_time_ms   = rule.apply_timer.elapsed,
+            apply_time_avg  = rule.apply_timer.elapsed_avg,
+            timers          = {
+                name : dict(
+                    duration_ms   = timer.elapsed,
+                    duration_avg  = timer.elapsed_avg,
+                    count = timer.count,
+                )
                 for name, timer in rule.timers.items()
             },
-        }
+        )
 
     def __check_timeout(self):
         timeout = self.opts.get('build_timeout')
@@ -1347,141 +1369,245 @@ class Tableau(Sequence[Branch], EventEmitter):
             branch.model = model
             self.models.add(model)
 
-def make_tree_structure(tab: Tableau, branches: Sequence[Branch], node_depth=0, track=None):
-    is_root = track is None
-    if track is None:
-        track = {
-            'pos'            : 0,
-            'depth'          : 0,
-            'distinct_nodes' : 0,
-        }
-    track['pos'] += 1
-    s = {
-        # the nodes on this structure.
-        'nodes'                 : [],
+    def _build_tree(self, branches: Sequence[Branch], node_depth=0, track=None):
+        is_root = track is None
+        if is_root:
+            track = {
+                'pos'            : 0,
+                'depth'          : 0,
+                'distinct_nodes' : 0,
+                'root'           : None,
+            }
+        track['pos'] += 1
+        s = TreeStruct(track)
+        while True:
+            relevant = tuple(b for b in branches if len(b) > node_depth)
+            for b in relevant:
+                if FLAG.CLOSED in self.stat(b, KEY.FLAGS):
+                    s.has_closed = True
+                else:
+                    s.has_open = True
+                if s.has_open and s.has_closed:
+                    break
+            distinct_nodes = qset((b[node_depth] for b in relevant), qtype = deque)
+            if len(distinct_nodes) == 1:
+                node = relevant[0][node_depth]
+                step_added = self.stat(relevant[0], node, KEY.STEP_ADDED)
+                s.nodes.append(node)
+                if s.step is None or step_added < s.step:
+                    s.step = step_added
+                node_depth += 1
+                continue
+            break
+        track['distinct_nodes'] += len(s.nodes)
+        if len(branches) == 1:
+            self._build_tree_leaf(s, branches[0], track)
+        else:
+            self._build_tree_branches(s, branches, distinct_nodes, node_depth, track)
+        s.structure_node_count = s.descendant_node_count + len(s.nodes)
+        track['pos'] += 1
+        s.right = track['pos']
+        if is_root:
+            s.distinct_nodes = track['distinct_nodes']
+        return s
+
+    def _build_tree_leaf(self, s: TreeStruct, branch: Branch, track: dict, /):
+        stat = self.stat(branch)
+        flags = stat[KEY.FLAGS]
+        s.closed = FLAG.CLOSED in flags
+        s.open = not branch.closed
+        if s.closed:
+            s.closed_step = stat[KEY.STEP_CLOSED]
+            s.has_closed = True
+        else:
+            s.has_open = True
+        s.width = 1
+        s.leaf = True
+        s.branch_id = branch.id
+        if branch.model is not None:
+            s.model_id = branch.model.id
+        if track['depth'] == 0:
+            s.is_only_branch = True
+
+    def _build_tree_branches(self,
+        s: TreeStruct,
+        branches: Sequence[Branch],
+        distinct_nodes: Sequence[Node],
+        node_depth: int,
+        track: dict, /
+    ):
+            inbetween_widths = 0
+            track['depth'] += 1
+            first_width = 0
+            last_width = 0
+            for i, node in enumerate(distinct_nodes):
+
+                child_branches = [
+                    branch for branch in branches
+                    if branch[node_depth] == node
+                ]
+
+                # recurse
+                child = self._build_tree(child_branches, node_depth, track)
+
+                s.descendant_node_count = len(child.nodes) + child.descendant_node_count
+                s.width += child.width
+                s.children.append(child)
+                if i == 0:
+                    s.branch_step = child.step
+                    first_width = float(child.width) / 2
+                elif i == len(distinct_nodes) - 1:
+                    last_width = float(child.width) / 2
+                else:
+                    inbetween_widths += child.width
+                s.branch_step = min(s.branch_step, child.step)
+            if s.width > 0:
+                s.balanced_line_width = float(first_width + last_width + inbetween_widths) / s.width
+                s.balanced_line_margin = first_width / s.width
+            else:
+                s.balanced_line_width = 0
+                s.balanced_line_margin = 0
+            track['depth'] -= 1
+
+class TreeStruct(dmapattr):
+    root: TreeStruct
+    def __init__(self, track, *args, **kw):
+        super().__init__(*args, **kw)
+        if track['root'] is None:
+            track['root'] = self
+        self.root = track['root']
+        self.id = id(self)
+        #: the nodes on this structure.
+        self.nodes                 = deque()
         # this child structures.
-        'children'              : [],
+        self.children              = deque()
         # whether this is a terminal (childless) structure.
-        'leaf'                  : False,
+        self.leaf                  = False
         # whether this is a terminal structure that is closed.
-        'closed'                : False,
+        self.closed                = False
         # whether this is a terminal structure that is open.
-        'open'                  : False,
+        self.open                  = False
         # the pre-ordered tree left value.
-        'left'                  : track['pos'],
+        self.left                  = track['pos']
         # the pre-ordered tree right value.
-        'right'                 : None,
+        self.right                 = None
         # the total node count of all descendants.
-        'descendant_node_count' : 0,
+        self.descendant_node_count = 0
         # the node count plus descendant node count.
-        'structure_node_count'  : 0,
+        self.structure_node_count  = 0
         # the depth of this structure (ancestor structure count).
-        'depth'                 : track['depth'],
+        self.depth                 = track['depth']
         # whether this structure or a descendant is open.
-        'has_open'              : False,
+        self.has_open              = False
         # whether this structure or a descendant is closed.
-        'has_closed'            : False,
+        self.has_closed            = False
         # if closed, the step number at which it closed.
-        'closed_step'           : None,
+        self.closed_step           = None
         # the step number at which this structure first appears.
-        'step'                  : None,
+        self.step                  = None
         # the number of descendant terminal structures, or 1.
-        'width'                 : 0,
+        self.width                 = 0
         # 0.5x the width of the first child structure, plus 0.5x the
         # width of the last child structure (if distinct from the first),
         # plus the sum of the widths of the other (distinct) children.
-        'balanced_line_width'   : None,
+        self.balanced_line_width   = None
         # 0.5x the width of the first child structure divided by the
         # width of this structure.
-        'balanced_line_margin'  : None,
+        self.balanced_line_margin  = None
         # the branch id, only set for leaves
-        'branch_id'             : None,
+        self.branch_id             = None
         # the model id, if exists, only set for leaves
-        'model_id'              : None,
+        self.model_id              = None
         # whether this is the one and only branch
-        'is_only_branch'        : False,
-    }
-    s['id'] = id(s)
-    while True:
-        relevant = tuple(branch for branch in branches if len(branch) > node_depth)
-        for branch in relevant:
-            if FLAG.CLOSED in tab.stat(branch, KEY.FLAGS):
-                s['has_closed'] = True
-            else:
-                s['has_open'] = True
-            if s['has_open'] and s['has_closed']:
-                break
-        distinct_nodes = DeqSeq()
-        distinct_nodeset = set()
-        for branch in relevant:
-            node = branch[node_depth]
-            if node not in distinct_nodeset:
-                distinct_nodeset.add(node)
-                distinct_nodes.append(node)
-        if len(distinct_nodes) == 1:
-            node: Node = relevant[0][node_depth]
-            step_added = tab.stat(relevant[0], node, KEY.STEP_ADDED)
-            s['nodes'].append(node)
-            if s['step'] is None or step_added < s['step']:
-                s['step'] = step_added
-            node_depth += 1
-            continue
-        break
-    track['distinct_nodes'] += len(s['nodes'])
-    if len(branches) == 1:
-        stat = tab.stat(branch)
-        flags = stat[KEY.FLAGS]
-        branch = branches[0]
-        s['closed'] = FLAG.CLOSED in flags
-        s['open'] = not branch.closed
-        if s['closed']:
-            s['closed_step'] = stat[KEY.STEP_CLOSED]
-            s['has_closed'] = True
-        else:
-            s['has_open'] = True
-        s['width'] = 1
-        s['leaf'] = True
-        s['branch_id'] = branch.id
-        if branch.model is not None:
-            s['model_id'] = branch.model.id
-        if track['depth'] == 0:
-            s['is_only_branch'] = True
-    else:
-        inbetween_widths = 0
-        track['depth'] += 1
-        first_width = 0
-        last_width = 0
-        for i, node in enumerate(distinct_nodes):
+        self.is_only_branch        = False
+        #: The step at which the branch was added.
+        self.branch_step           = None
 
-            child_branches = [
-                branch for branch in branches
-                if branch[node_depth] == node
-            ]
+# def make_tree_structure(tab: Tableau, branches: Sequence[Branch], node_depth=0, track=None):
+#     is_root = track is None
+#     if is_root:
+#         track = {
+#             'pos'            : 0,
+#             'depth'          : 0,
+#             'distinct_nodes' : 0,
+#             'root'           : None,
+#         }
+#     track['pos'] += 1
+#     s = TreeStruct(track)
+#     while True:
+#         relevant = tuple(b for b in branches if len(b) > node_depth)
+#         for b in relevant:
+#             if FLAG.CLOSED in tab.stat(b, KEY.FLAGS):
+#                 s.has_closed = True
+#             else:
+#                 s.has_open = True
+#             if s.has_open and s.has_closed:
+#                 break
+#         distinct_nodes = qset((b[node_depth] for b in relevant), qtype = deque)
+#         if len(distinct_nodes) == 1:
+#             node = relevant[0][node_depth]
+#             step_added = tab.stat(relevant[0], node, KEY.STEP_ADDED)
+#             s.nodes.append(node)
+#             if s.step is None or step_added < s.step:
+#                 s.step = step_added
+#             node_depth += 1
+#             continue
+#         break
+#     track['distinct_nodes'] += len(s.nodes)
+#     if len(branches) == 1:
+#         branch = branches[0]
+#         stat = tab.stat(branch)
+#         flags = stat[KEY.FLAGS]
+#         s.closed = FLAG.CLOSED in flags
+#         s.open = not branch.closed
+#         if s.closed:
+#             s.closed_step = stat[KEY.STEP_CLOSED]
+#             s.has_closed = True
+#         else:
+#             s.has_open = True
+#         s.width = 1
+#         s.leaf = True
+#         s.branch_id = branch.id
+#         if branch.model is not None:
+#             s.model_id = branch.model.id
+#         if track['depth'] == 0:
+#             s.is_only_branch = True
+#     else:
+#         inbetween_widths = 0
+#         track['depth'] += 1
+#         first_width = 0
+#         last_width = 0
+#         for i, node in enumerate(distinct_nodes):
 
-            # recurse
-            child = make_tree_structure(tab, child_branches, node_depth, track)
+#             child_branches = [
+#                 branch for branch in branches
+#                 if branch[node_depth] == node
+#             ]
 
-            s['descendant_node_count'] = len(child['nodes']) + child['descendant_node_count']
-            s['width'] += child['width']
-            s['children'].append(child)
-            if i == 0:
-                s['branch_step'] = child['step']
-                first_width = float(child['width']) / 2
-            elif i == len(distinct_nodes) - 1:
-                last_width = float(child['width']) / 2
-            else:
-                inbetween_widths += child['width']
-            s['branch_step'] = min(s['branch_step'], child['step'])
-        if s['width'] > 0:
-            s['balanced_line_width'] = float(first_width + last_width + inbetween_widths) / s['width']
-            s['balanced_line_margin'] = first_width / s['width']
-        else:
-            s['balanced_line_width'] = 0
-            s['balanced_line_margin'] = 0
-        track['depth'] -= 1
-    s['structure_node_count'] = s['descendant_node_count'] + len(s['nodes'])
-    track['pos'] += 1
-    s['right'] = track['pos']
-    if is_root:
-        s['distinct_nodes'] = track['distinct_nodes']
-    return s
+#             # recurse
+#             child = make_tree_structure(tab, child_branches, node_depth, track)
+
+#             s.descendant_node_count = len(child.nodes) + child.descendant_node_count
+#             s.width += child.width
+#             s.children.append(child)
+#             if i == 0:
+#                 s.branch_step = child.step
+#                 first_width = float(child.width) / 2
+#             elif i == len(distinct_nodes) - 1:
+#                 last_width = float(child.width) / 2
+#             else:
+#                 inbetween_widths += child.width
+#             s.branch_step = min(s.branch_step, child.step)
+#         if s.width > 0:
+#             s.balanced_line_width = float(first_width + last_width + inbetween_widths) / s.width
+#             s.balanced_line_margin = first_width / s.width
+#         else:
+#             s.balanced_line_width = 0
+#             s.balanced_line_margin = 0
+#         track['depth'] -= 1
+#     s.structure_node_count = s.descendant_node_count + len(s.nodes)
+#     track['pos'] += 1
+#     s.right = track['pos']
+#     if is_root:
+#         s.distinct_nodes = track['distinct_nodes']
+#     return s
