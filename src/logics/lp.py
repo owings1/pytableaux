@@ -19,7 +19,7 @@
 # pytableaux - Logic of Paradox
 name = 'LP'
 
-class Meta(object):
+class Meta:
     title = 'Logic of Paradox'
     category = 'Many-valued'
     description = 'Three-valued logic (T, F, B)'
@@ -28,7 +28,6 @@ class Meta(object):
 
 from lexicals import Atomic, Sentence
 from proof.common import Branch, Node
-from proof.rules import ClosureRule
 from . import fde as FDE
 
 class Model(FDE.Model):
@@ -48,13 +47,13 @@ class TableauxSystem(FDE.TableauxSystem):
     employing designation markers, and building the trunk in the same way.
     """
 
-class TabRules(object):
+class TabRules:
     """
     The Tableaux System for LP contains all the rules from :ref:`FDE <FDE>`, as
     well as an additional closure rule.
     """
 
-    class GapClosure(ClosureRule):
+    class GapClosure(FDE.ClosureRule):
         """
         A branch closes when a sentence and its negation both appear as undesignated nodes.
         This rule is **in addition to** the :m:`FDE` ``DesignationClosure`` rule.
@@ -74,7 +73,8 @@ class TabRules(object):
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
-            return self.ntch.cached_target(branch)
+            return self.ntch.get(branch)
+            # return self.ntch.cached_target(branch)
 
         def example_nodes(self):
             s: Atomic = Atomic.first()

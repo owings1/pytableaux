@@ -28,18 +28,25 @@ class Meta:
     tags = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
     category_display_order = 10
 
+from errors import ModelValueError
 from tools.decorators import abstract
-from tools.sets import setf
+from tools.sets import setf, EMPTY_SET
 from tools.hybrids import qsetf
 from models import BaseModel
 from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
     Sentence, Atomic, Predicated, Quantified, Operated, Argument
-from proof.tableaux import Tableau, TableauxSystem as BaseSystem, Rule
-from proof.rules import ClosureRule
+from proof.tableaux import (
+    Tableau,
+    TableauxSystem as BaseSystem,
+    Rule,
+    ClosingRule,
+)
 from proof.common import Branch, Node, NodeFilters, Target
-from proof.helpers import AdzHelper, AppliedNodeConstants, AppliedNodeCount, \
-    AppliedQuitFlag, FilterHelper, MaxConstantsTracker
-from errors import ModelValueError
+from proof.helpers import (
+    AdzHelper, AppliedNodeConstants, AppliedNodeCount,
+    AppliedQuitFlag, FilterHelper, MaxConstantsTracker,
+    NodeTargetCheckHelper,
+)
 from typing import Any
 
 Identity:  Predicate = Predicate.System.Identity
@@ -541,6 +548,11 @@ class TableauxSystem(BaseSystem):
                 last_is_negated = False
         return complexity
 
+class ClosureRule(ClosingRule):
+    __slots__ = EMPTY_SET
+    Helpers = NodeTargetCheckHelper,
+    ntch: NodeTargetCheckHelper
+
 class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
 
     nf: FilterHelper
@@ -678,7 +690,7 @@ class ConjunctionReducingRule(DefaultNodeRule):
         d = self.designation
         return {'adds': ((sd(s, d),),),}
 
-class TabRules(object):
+class TabRules:
     """
     In general, rules for connectives consist of four rules per connective:
     a designated rule, an undesignated rule, a negated designated rule, and a negated
@@ -706,7 +718,8 @@ class TabRules(object):
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
-            return self.ntch.cached_target(branch)
+            return self.ntch.get(branch)
+            # return self.ntch.cached_target(branch)
 
         def example_nodes(self):
             s = Atomic.first()
@@ -715,8 +728,12 @@ class TabRules(object):
         # private util
 
         def _find_closing_node(self, node: Node, branch: Branch):
-            if node.has('sentence', 'designated'):
-                return branch.find(sd(node['sentence'], not node['designated']))
+            s = self.sentence(node)
+            if s is not None:
+                # d = node['designated']
+                return branch.find(sd(s, not node['designated']))
+            # if node.has('sentence', 'designated'):
+            #     return branch.find(sd(node['sentence'], not node['designated']))
             
     class DoubleNegationDesignated(DefaultNodeRule):
         """

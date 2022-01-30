@@ -37,9 +37,13 @@ import examples
 from lexicals import \
     Constant, Variable, RenderSet, Predicate, Predicates, Operator, LexType, LexWriter
 from parsers import create_parser, parse_argument, CharTable
-from proof.tableaux import Tableau, TableauxSystem as TabSys, Rule
+from proof.tableaux import (
+    Tableau,
+    TableauxSystem as TabSys,
+    Rule,
+    ClosingRule,
+)
 from proof.writers import create_tabwriter
-from proof.rules import ClosureRule
 from proof.helpers import EllipsisExampleHelper
 from models import BaseModel
 
@@ -405,7 +409,7 @@ class Helper(object):
     # TODO: shouldn't this check rule groups?
     skip_rules = [
         Rule,
-        ClosureRule,
+        ClosingRule,
     ]
 
     skip_trunks = [
@@ -475,7 +479,7 @@ class Helper(object):
         proof = Tableau(lgc)
         rule = proof.rules.get(rule)
         # TODO: fix for closure rules
-        isclosure = isinstance(rule, ClosureRule)
+        isclosure = isinstance(rule, ClosingRule)
         if not isclosure:
             rule.add_helper(EllipsisExampleHelper)
         pw = self.pwclosure if isclosure else self.pwrule

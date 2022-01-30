@@ -57,7 +57,11 @@ from proof.common import (
     TabEvent,
     Target,
 )
-from proof.tableaux import Rule, Tableau
+from proof.tableaux import (
+    Rule,
+    ClosingRule,
+    Tableau,
+)
 
 from copy import copy
 from functools import partial
@@ -75,11 +79,11 @@ from typing import (
 class AdzHelper:
 
     _attr = 'adz'
-    __slots__ = 'rule', # 'tableau'
+    __slots__ = 'rule', 'closure_rules'
 
-    def __init__(self, rule: Rule, *args, **kw):
-        self.rule: Rule = rule
-        # self.tableau: Tableau = rule.tableau
+    def __init__(self, rule: Rule):
+        self.rule = rule
+        self.closure_rules = rule.tableau.rules.groups.get('closure', EMPTY_SET)
 
     def _apply(self, target: Target):
         branch = target.branch
@@ -95,18 +99,16 @@ class AdzHelper:
         if self.rule.ticking:
             branch.tick(target.node)
 
-    def closure_score(self, target: Target) -> float:
-        try:
-            # TODO: Cache closure rules, error if none.
-            rules = self.rule.tableau.rules.groups.closure
-        except AttributeError:
-            # raise
-            rules = EMPTY_SET
+    def closure_score(self, target: Target):
+        rules = self.closure_rules
+        if not len(rules):
+            return float()
         close_count = 0
+        branch = target.branch
         for nodes in target['adds']:
             nodes = tuple(Node(node) for node in nodes)
             for rule in rules:
-                if rule.nodes_will_close_branch(nodes, target.branch):
+                if rule.nodes_will_close_branch(nodes, branch):
                     close_count += 1
                     break
         return float(close_count / min(1, len(target['adds'])))
@@ -131,7 +133,7 @@ class BranchCache(dmap[Branch, T]):
         if branch.parent:
             self[branch] = copy(self[branch.parent])
         else:
-            self[branch] = self._valuetype()
+            self[branch] = self._empty_value(branch)
 
     def __after_branch_close(self, branch: Branch):
         del(self[branch])
@@ -156,6 +158,10 @@ class BranchCache(dmap[Branch, T]):
             inst.rule = self.rule
         inst.update(self)
         return inst
+
+    def _empty_value(self, branch: Branch) -> T:
+        'Override, for example, if the value type takes arguments.'
+        return self._valuetype()
 
     @classmethod
     def _from_mapping(cls, mapping):
@@ -449,9 +455,6 @@ class FilterHelper(FilterNodeCache):
         for name in self.filters:
             if not self.filters[name](node):
                 return False
-        # for filt in self.__fmap.values():
-        #     if not filt(node):
-        #         return False
         return True
 
     __call__ = filter
@@ -561,7 +564,7 @@ class Delegates(Abc):
 
             __slots__ = EMPTY_SET
 
-            def sentence(self, node: Node) -> Sentence:
+            def sentence(self, node: Node, _ = None, /) -> Sentence:
                 return self.nf.filters['sentence'].get(node)
 
         class ExampleNodes(Rule):
@@ -589,7 +592,7 @@ class Delegates(Abc):
                 setattr(helpercls, name, c)
 
 
-class NodeTargetCheckHelper:
+class NodeTargetCheckHelper(BranchCache[Target]):
     """
     Calls the rule's ``check_for_target(node, branch)`` when a node is added to
     a branch. If a target is returned, it is cached relative to the branch. The
@@ -598,40 +601,53 @@ class NodeTargetCheckHelper:
 
     NB: The rule must implement ``check_for_target(self, node, branch)``.
     """
-    __slots__ = 'rule', 'targets'
-
     _attr = 'ntch'
-    def __init__(self, rule: Rule, *args, **kw):
-        self.rule = rule
-        self.targets = {}
+    _valuetype = Target
 
-    def cached_target(self, branch: Branch):
-        """
-        Return the cached target for the branch, if any.
-        """
-        if branch in self.targets:
-            return self.targets[branch]
+    __slots__ = EMPTY_SET
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.rule.tableau.on(TabEvent.AFTER_NODE_ADD, self)
+    # __slots__ = 'rule', #'targets'
 
-    def get(self, branch: Branch, default = None) -> Target:
-        return self.targets.get(branch, default)
+    # def __init__(self, rule: Rule):
+    #     self.rule = rule
+        # self.targets = {}
 
-    def __contains__(self, branch: Branch):
-        return branch in self.targets
+    # def cached_target(self, branch: Branch) -> Target|None:
+    #     """
+    #     Return the cached target for the branch, if any.
+    #     """
+    #     return self.get(branch)
+        # if branch in self.targets:
+        #     return self.targets[branch]
 
-    def __len__(self):
-        return len(self.targets)
+    # def get(self, branch: Branch, default = None) -> Target:
+    #     return self.targets.get(branch, default)
 
-    def __iter__(self) -> Iterator[Branch]:
-        return iter(self.targets)
+    # def __contains__(self, branch: Branch):
+    #     return branch in self.targets
 
-    def __getitem__(self, branch: Branch) -> Target:
-        return self.targets[branch]
+    # def __len__(self):
+    #     return len(self.targets)
+
+    # def __iter__(self) -> Iterator[Branch]:
+    #     return iter(self.targets)
+
+    # def __getitem__(self, branch: Branch) -> Target:
+    #     return self.targets[branch]
+
+    def _empty_value(self, branch: Branch):
+        'Override _valuetype since we cannot have an empty Target.'
+        return None
+
     # Event Listeners
 
-    def after_node_add(self, node: Node, branch: Branch):
+    # def after_node_add(self, node: Node, branch: Branch):
+    def __call__(self, node: Node, branch: Branch): 
         target = self.rule.check_for_target(node, branch)
         if target:
-            self.targets[branch] = target
+            self[branch] = target
 
 class MaxConstantsTracker:
     """
@@ -946,9 +962,8 @@ class EllipsisExampleHelper:
     def __init__(self, rule, *args, **kw):
         self.rule = rule
         self.applied = set()
-        from .rules import ClosureRule
-        self.isclosure = isinstance(rule, ClosureRule)
-        if self.isclosure:#rule.is_closure:
+        self.isclosure = isinstance(rule, ClosingRule)
+        if self.isclosure:
             self.closenodes = list(
                 dict(n)
                 for n in reversed(rule.example_nodes())

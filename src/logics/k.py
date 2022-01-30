@@ -35,8 +35,11 @@ from lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantifi
     Operator as Oper, Quantifier, Argument, Sentence, Predicates
 from models import BaseModel
 
-from proof.tableaux import TableauxSystem as BaseSystem, Rule, Tableau
-from proof.rules import ClosureRule
+from proof.tableaux import (
+    TableauxSystem as BaseSystem,
+    Rule,
+    Tableau,
+)
 from proof.common import Access, Branch, Node, NodeFilters, Target
 from proof.helpers import AppliedNodesWorlds, AppliedSentenceCounter, \
     MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
@@ -719,7 +722,7 @@ class TabRules(object):
     connectives.
     """
 
-    class ContradictionClosure(ClosureRule):
+    class ContradictionClosure(FDE.ClosureRule):
         """
         A branch closes when a sentence and its negation both appear on a node **with the
         same world** on the branch.
@@ -760,7 +763,7 @@ class TabRules(object):
                     'world'    : node.get('world'),
                 })
 
-    class SelfIdentityClosure(ClosureRule):
+    class SelfIdentityClosure(FDE.ClosureRule):
         """
         A branch closes when a sentence of the form :s:`~a = a` appears on the
         branch *at any world*.
@@ -787,7 +790,8 @@ class TabRules(object):
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
-            return self.ntch.cached_target(branch)
+            return self.ntch.get(branch)
+            # return self.ntch.cached_target(branch)
 
         def example_nodes(self):
             c = Constant.first()
@@ -795,7 +799,7 @@ class TabRules(object):
             w = 0 if self.modal else None
             return ({'sentence': s, 'world': w},)
 
-    class NonExistenceClosure(ClosureRule):
+    class NonExistenceClosure(FDE.ClosureRule):
         """
         A branch closes when a sentence of the form :s:`~!a` appears on the branch
         *at any world*.
@@ -821,7 +825,8 @@ class TabRules(object):
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
-            return self.ntch.cached_target(branch)
+            return self.ntch.get(branch)
+            # return self.ntch.cached_target(branch)
 
         def example_nodes(self):
             s = Predicated.first(Existence).negate()
@@ -1276,9 +1281,9 @@ class TabRules(object):
         apnw: AppliedNodesWorlds
         visw: VisibleWorldsIndex
 
-        Timers = ('get_targets',)
+        Timers = 'get_targets',
 
-        def _get_node_targets(self, node: Node, branch: Branch) -> list[Target]:
+        def _get_node_targets(self, node: Node, branch: Branch):
 
             # Check for max worlds reached
             if self.maxw.max_worlds_exceeded(branch):

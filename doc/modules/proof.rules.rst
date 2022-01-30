@@ -6,10 +6,10 @@ Rules Module
 
 .. automodule:: proof.rules
 
-    .. autoclass:: Rule
+..     autoclass:: Rule
 
-        .. autoattribute:: tableau
+..         autoattribute:: tableau
 
-        .. autoattribute:: name
+..         autoattribute:: name
     
-    .. autoclass:: ClosureRule
+..     autoclass:: ClosingRule

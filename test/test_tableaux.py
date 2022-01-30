@@ -7,8 +7,10 @@ from tools.misc import get_logic
 
 from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
 
-from proof.tableaux import Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG
-from proof.rules import ClosureRule
+from proof.tableaux import (
+    Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG,
+    ClosingRule,
+)
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
 from proof.common import Filters, Branch, Node, NodeFilters, TabEvent
 import examples
@@ -68,7 +70,7 @@ class TestTableau(BaseSuite):
         assert proof.stats['build_duration_ms'] == 0
 
     def test_add_closure_rule_instance_mock(self):
-        class MockRule(ClosureRule):
+        class MockRule(ClosingRule):
             def applies_to_branch(self, branch):
                 return True
             def check_for_target(self, node, branch):
@@ -347,7 +349,7 @@ class TestClosureRule(BaseSuite):
 
     def test_base_not_impl_various(self):
         with raises(TypeError):
-            ClosureRule(Tableau())
+            ClosingRule(Tableau())
 
 class FilterNodeRule(RuleStub):
     Helpers = (FilterHelper,)

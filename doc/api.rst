@@ -13,8 +13,6 @@ Modules
 
     modules/proof.writers
     
-    modules/proof.rules
-
     modules/utils
 
     modules/errors

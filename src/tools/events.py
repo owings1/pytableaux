@@ -9,7 +9,7 @@ from tools.linked import linqset
 from tools.mappings import dmap, ItemsIterator
 
 from enum import Enum
-from itertools import chain
+from itertools import chain, filterfalse, starmap
 from typing import Callable, Mapping, Sequence
 
 EventId = str | int | Enum
@@ -49,7 +49,7 @@ class Listener(Callable, Abc):
     __slots__ = 'cb', 'once', 'event', 'callcount'
 
     def __init__(self, cb: Callable, once: bool = False, event: EventId|None = None):
-        instcheck(cb, Callable)
+        # instcheck(cb, Callable)
         self.cb = cb
         self.once = once
         self.event = event
@@ -105,7 +105,9 @@ class Listeners(linqset[Listener]):
                     count += 1
                 finally:
                     if listener.once:
-                        self.remove(listener)
+                        # Discard since a consumer might manually remove the
+                        # listener when it is called.
+                        self.discard(listener)
         finally:
             self.callcount += count
         return count
@@ -131,9 +133,8 @@ class EventsListeners(dmap[EventId, Listeners]):
         self.create(*names)
 
     def create(self, *events: EventId):
-        for event in events:
-            if event not in self:
-                self[event] = Listeners(event)
+        for event in filterfalse(self.__contains__, events):
+            self[event] = Listeners(event)
 
     def delete(self, event: EventId):
         del(self[event])
@@ -166,8 +167,7 @@ class EventsListeners(dmap[EventId, Listeners]):
 
     @normargs
     def off(self, event: EventId, *cbs: Callable):
-        for _ in map(self[event].discard, cbs):
-            pass
+        for _ in map(self[event].discard, cbs): pass
 
     def emit(self, event: EventId, *args, **kw) -> int:
         ev = self[event]
@@ -193,7 +193,7 @@ class EventsListeners(dmap[EventId, Listeners]):
             it = ItemsIterator(it)
         if len(kw):
             it = chain(it, ItemsIterator(kw))
-        for k, v in it: self[k] = v
+        for _ in starmap(self.__setitem__, it): pass
 
     def __repr__(self):
         from tools.misc import orepr

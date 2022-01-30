@@ -17,8 +17,7 @@ from models import BaseModel
 from parsers import create_parser, parse_argument, Parser
 import examples
 from proof.common import Branch, Node
-from proof.rules import ClosureRule
-from proof.tableaux import Tableau, Rule
+from proof.tableaux import Tableau, Rule, ClosingRule
 
 from inspect import isclass, getmembers
 from itertools import chain, filterfalse
@@ -317,7 +316,7 @@ class BaseSuite:
             tab.finish()
             assert entry.rule == rule
             assert len(tab.history) == 1
-            if isinstance(rule, ClosureRule):
+            if isinstance(rule, ClosingRule):
                 assert len(tab.open) == 0
         return rt
 

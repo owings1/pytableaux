@@ -73,6 +73,7 @@ class Emsg(enum.Enum):
         'Attempt to assign sequence of size {0} to extended slice of size {1}', (_len, _len)
     )
     ValueConflict = ValueError, "Value conflict: '{0}' conflicts with '{1}'", 2
+    BadAttrName = ValueError, "Invalid attribute identifier: '{}'", (str,)
 
     DuplicateValue = DuplicateValueError,
     MissingValue = MissingValueError,

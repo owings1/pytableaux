@@ -26,11 +26,11 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 20
 
+from tools.hybrids import qsetf
 from lexicals import Atomic
 from proof.common import Branch, Node
-from proof.rules import ClosureRule
+
 from . import fde as FDE
-from tools.hybrids import qsetf
 
 class Model(FDE.Model):
     """
@@ -72,27 +72,21 @@ class TableauxSystem(FDE.TableauxSystem):
     """
     pass
         
-class TabRules(object):
+class TabRules:
     """
     The Tableaux System for K3 contains all the rules from :ref:`FDE <fde-rules>`, as well
     as an additional closure rule.
     """
 
-    class GlutClosure(ClosureRule):
+    class GlutClosure(FDE.ClosureRule):
         """
         A branch closes when a sentence and its negation both appear as designated nodes.
         This rule is **in addition to** the :class:`FDE DesignationClosure rule
         <DesignationClosure>`
         """
 
-        # tracker implementation
 
         def check_for_target(self, node: Node, branch: Branch):
-            """
-            Tracker implementation. See :class:`<proof.helpers.NodeTargetCheckHelper>`
-
-            :meta private:
-            """
             nnode = self.__find_closing_node(node, branch)
             if nnode:
                return {'nodes': {node, nnode}}
@@ -100,12 +94,10 @@ class TabRules(object):
         # rule implementation
 
         def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
-            if self.__find_closing_node(node, branch):
-                return True
-            return False
+            return bool(self.__find_closing_node(node, branch))
 
-        def applies_to_branch(self, branch: Branch) -> bool:
-            return self.ntch.cached_target(branch)
+        def applies_to_branch(self, branch: Branch) -> dict|None:
+            return self.ntch.get(branch)
 
         def example_nodes(self):
             a = Atomic.first()
@@ -113,8 +105,6 @@ class TabRules(object):
                 {'sentence': a         , 'designated': True},
                 {'sentence': a.negate(), 'designated': True},
             )
-
-        # private util
 
         def __find_closing_node(self, node: Node, branch: Branch):
             if node.has('sentence', 'designated') and node['designated']:
