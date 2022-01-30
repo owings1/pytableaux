@@ -59,7 +59,7 @@ FlagParam = Flag | Callable[[Flag], Flag]
 
 EMPTY = ()
 NOARG = object()
-SETATTROK = frozenset({
+SETATTROK = setf({
     '__module__', '__name__', '__qualname__',
     '__doc__', '__annotations__',
 })
@@ -168,20 +168,19 @@ class Caller(Callable[P, RT], Copyable):
     def attrs(self):
         return dict(self.attritems())
 
-    def copy(self):
-        cls = self.__class__
-        inst = object.__new__(cls)
+    def copy(self, /, *, _setter=object.__setattr__):
+        inst = object.__new__(type(self))
         for item in self.attrs().items():
-            object.__setattr__(inst, *item)
+            _setter(inst, *item)
         return inst
 
-    def __setattr__(self, attr, val):
+    def __setattr__(self, attr, val, /, _setter=object.__setattr__):
         try: f = self.flag
         except AttributeError: pass
         else:
             if f.Lock in f and attr not in SETATTROK:
                 raise AttributeError(attr, f.Lock)
-        object.__setattr__(self, attr, val)
+        _setter(self, attr, val)
 
     def __delattr__(self, attr):
         raise AttributeError(attr)
@@ -227,7 +226,7 @@ class calls:
             return self.func(*args, **kw)
 
         def __init__(self, func: Callable, *args, **opts):
-            self.func = instcheck(func, Callable)
+            self.func = func# instcheck(func, Callable)
             super().__init__(*args, **opts)
 
         func: Callable
@@ -259,8 +258,9 @@ class gets:
 
     class attr(Caller):
         'Attribute getter.'
-        def _call(self, obj, name: str):
-            return getattr(obj, name)
+        _call = getattr
+        # def _call(self, obj, name: str):
+        #     return getattr(obj, name)
         safe_errs = AttributeError,
         __slots__ = EMPTY_SET
 
@@ -305,8 +305,9 @@ class sets:
     class attr(Caller):
         'Attribute setter.'
     
-        def _call(self, obj, name: str, val):
-            setattr(obj, name, val)
+        _call = setattr
+        # def _call(self, obj, name: str, val):
+        #     setattr(obj, name, val)
 
         def __init__(self, attr, value = Flag.Blank, **kw):
             if value is Flag.Blank:
