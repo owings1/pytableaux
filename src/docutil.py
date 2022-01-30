@@ -178,7 +178,7 @@ class Helper(object):
     ##  Doc Lines   :
     ## ==============
 
-    def lines_rule_example(self, rule, lgc=None, indent=None):
+    def lines_rule_example(self, rule: Rule|type[Rule], lgc=None, indent=None):
         """
         Generate the rule examples. Lines are returned properly indented
         if indent is specified.
@@ -209,7 +209,7 @@ class Helper(object):
         lines.append('<div class="clear"></div>')
         return rawblock(lines, indent = indent)
 
-    def lines_rule_docstring(self, rule, lgc=None, indent=None):
+    def lines_rule_docstring(self, rule:str|type[Rule], lgc=None, indent=None):
         """
         Retrieve docstring lines for replacing //ruledoc//... references.
         Lines are returned properly indented if indent is specified.
@@ -227,7 +227,7 @@ class Helper(object):
         lines = [line.strip() for line in found.__doc__.split('\n')]
         return indent_lines(lines, indent = indent)
 
-    def lines_inherited_ruledoc(self, rule, indent=None):
+    def lines_inherited_ruledoc(self, rule: type[Rule], indent=None):
         """
         Generate entire doc block for an inherited rule.
         """
@@ -467,7 +467,7 @@ class Helper(object):
             pw.write(proof),
         )
 
-    def html_rule_example(self, rule, lgc=None):
+    def html_rule_example(self, rule: Rule|type[Rule], lgc=None):
         """
         Returns rendered tableau HTML for a rule's example application.
         """

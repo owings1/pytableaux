@@ -286,7 +286,7 @@ class BaseSuite:
         'Return one model.'
         return self.acmm(*args, **kw)[1][0]
 
-    def rule_tab(self, rule, bare = False, **kw):
+    def rule_tab(self, rule:str|Rule|type[Rule], bare = False, **kw):
         'Return (rule, tab) pair.'
         manual = False
         t = self.tab()
@@ -295,7 +295,7 @@ class BaseSuite:
         except ValueError:
             if isinstance(rule, str):
                 rule = getattr(t.logic.TabRules, rule)
-            t.rules.add(rule)
+            t.rules.append(rule)
             rule = t.rules.get(rule)
             manual = True
         cls = type(rule)
@@ -303,7 +303,7 @@ class BaseSuite:
         if bare or manual:
             if bare:
                 tab.rules.clear()
-            tab.rules.add(cls)
+            tab.rules.append(cls)
         rule = tab.rules.get(cls)
         return RuleTab(rule, tab)
 

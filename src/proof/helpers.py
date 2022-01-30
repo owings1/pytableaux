@@ -98,8 +98,9 @@ class AdzHelper:
     def closure_score(self, target: Target) -> float:
         try:
             # TODO: Cache closure rules, error if none.
-            rules = self.rule.tableau.rules.closure
+            rules = self.rule.tableau.rules.groups.closure
         except AttributeError:
+            # raise
             rules = EMPTY_SET
         close_count = 0
         for nodes in target['adds']:
@@ -778,10 +779,15 @@ class AppliedNodeConstants:
 
     _attr = 'apcs'
 
-    def __init__(self, rule):
+    def __init__(self, rule: Rule):
         self.rule = rule
         self.node_states = {}
         self.consts = {}
+        # rule.on(RuleEvent.AFTER_APPLY, self.__after_apply)
+        # rule.tableau.on({
+        #     TabEvent.AFTER_BRANCH_ADD: self.__after_branch_add,
+        #     TabEvent.AFTER_NODE_ADD: self.__after_node_add,
+        # })
 
     def get_applied(self, node: Node, branch: Branch):
         """
