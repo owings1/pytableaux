@@ -829,7 +829,7 @@ class TestLP(BaseSuite):
 
             def test_regression_bad_rule_neg_bicond_undes(self):
                 tab = self.tab('NBab', 'NBab', is_build = False)
-                rule = tab.rules['BiconditionalNegatedUndesignated']
+                rule = tab.rules.get('BiconditionalNegatedUndesignated')
                 assert rule.get_target(tab[0])
                 tab.build()
                 assert tab.valid
@@ -1791,7 +1791,7 @@ class TestCPL(BaseSuite):
                     {'sentence': s1, 'world': 0},
                     {'sentence': s2, 'world': 0},
                 ))
-                rule = tab.rules['IdentityIndiscernability']
+                rule = tab.rules.get('IdentityIndiscernability')
                 assert not rule.get_target(b)
 
         class Test_Arguments(BaseSuite):
@@ -2062,8 +2062,9 @@ class TestD(BaseSuite):
         self.rule_eg('Serial')
 
     def test_rule_Serial_not_applies_to_branch_empty(self):
+        from logics import d as D
         tab = self.tab()
-        rule = tab.rules.Serial
+        rule = tab.rules.get(D.TabRules.Serial)
         assert not rule.get_target(tab.branch())
 
     def test_verify_core_bugfix_branch_should_not_have_w1_with_more_than_one_w2(self):

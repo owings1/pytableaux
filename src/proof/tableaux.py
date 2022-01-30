@@ -23,9 +23,7 @@ __all__ = 'Rule', 'TableauxSystem', 'Tableau'
 
 from errors import (
     Emsg,
-    DuplicateKeyError,
     IllegalStateError,
-    MissingValueError,
     TimeoutError,
     instcheck,
     subclscheck,
@@ -37,7 +35,7 @@ from tools.abcs import (
 from tools.callables import preds
 from tools.decorators import (
     abstract, final, overload, static,
-    wraps,
+    raisr, wraps,
 )
 from tools.events import EventEmitter
 from tools.hybrids import qsetf, qset
@@ -50,11 +48,11 @@ from tools.mappings import (
 )
 from tools.misc import get_logic, orepr
 from tools.sequences import (
-    MutableSequenceApi,
+    absindex,
     SequenceApi,
     SequenceCover,
-    deqseq,
     seqf,
+    seqm,
 )
 from tools.sets import EMPTY_SET, setf
 from tools.timing import StopWatch
@@ -75,11 +73,11 @@ from proof.common import (
 
 from collections import deque
 from itertools import chain
+import operator as opr
 from types import ModuleType
 from typing import (
     Any,
     Callable,
-    ClassVar,
     Iterable,
     Iterator,
     Mapping,
@@ -91,9 +89,9 @@ from typing import (
 )
 
 NOARG = object()
+NOGET = object()
 
 LogicRef = ModuleType | str
-
 
 class RuleMeta(AbcMeta):
 
@@ -340,6 +338,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             setattr(self, attr, inst)
         for event, meth in self.HelperRuleEventMethods:
             if hasattr(inst, meth):
+                # raise ValueError(inst, meth)
                 self.on(event, getattr(inst, meth))
         for event, meth in self.HelperTabEventMethods:
             if hasattr(inst, meth):
@@ -412,282 +411,335 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
 RuleT = TypeVar('RuleT', bound = Rule)
 
-class TabRulesSharedData:
+def locking(method: F) -> F:
+    'Decorator for locking TabRules methods after Tableau is started.'
+    def f(self, *args, **kw):
+        try:
+            if self._root._locked:
+                raise IllegalStateError('locked')
+        except AttributeError: pass
+        return method(self, *args, **kw)
+    return wraps(method)(f)
 
-    __slots__ = 'ruleindex', 'groupindex', 'locked', 'tab', 'root'
+# Turn on feature: attr-access for TabRules, etc.
+TRATTR_ON = True
 
-    def lock(self, *_):
-        if self.locked:
-            raise ValueError('already locked')
-        self.ruleindex = MapCover(self.ruleindex)
-        self.groupindex = MapCover(self.groupindex)
-        self.locked = True
+class TabRules(SequenceApi[Rule]):
+    'Grouped and named collection of rules for a tableau.'
 
-    def __init__(self, tableau: Tableau, root: TabRules):
-        self.ruleindex = {}
-        self.groupindex = {}
-        self.locked = False
-        self.tab = tableau
-        self.root = root
-        tableau.once(TabEvent.AFTER_BRANCH_ADD, self.lock)
+    def __init__(self, tab: Tableau, /):
+        self._root = self
+        #: rule class name to rule instance.
+        self._ruleindex: dict[str, Rule] = {}
+        #: named groups
+        self._groupindex: dict[str, RuleGroup] = {}
+        self._tab = tab
+        self._locked: bool = False
+        self.groups = RuleGroups(self)
+        tab.once(TabEvent.AFTER_BRANCH_ADD, self._lock)
 
-    def __delattr__(self, name):
-        raise AttributeError(name)
+    def _lock(self, _):
+        if self._locked:
+            raise IllegalStateError('already locked')
+        self.groups._lock()
+        self._ruleindex = MapCover(self._ruleindex)
+        self._groupindex = MapCover(self._groupindex)
+        self._locked = True
 
-    def __setattr__(self, attr, val):
-        if getattr(self, 'locked', False):
-            raise AttributeError('locked (%s)' % attr)
-        if hasattr(self, 'root') and attr != 'locked':
-            if attr in ('ruleindex', 'groupindex') and (
-                isinstance(val, MapCover) and
-                not isinstance(getattr(self, attr), MapCover)
-            ):
-                pass
-            else:
-                raise AttributeError(attr)
-        super().__setattr__(attr, val)
+    @locking
+    def append(self, rule: type[Rule]):
+        'Add a single Rule to a new (unnamed) group.'
+        self.groups.create(None).append(rule)
 
-class TabRulesBase:
+    @locking
+    def extend(self, rules: Iterable[type[Rule]], /, name: str|None = NOARG):
+        'Create a new group from a collection of Rule classes.'
+        self.groups.append(rules, name = name)
 
-    __slots__ = EMPTY_SET
-
-    @property
-    def locked(self) -> bool:
-        return self._common.locked
-
-    @property
-    def tab(self) -> Tableau:
-        return self._common.tab
-
-    @property
-    def logic(self) -> ModuleType:
-        return self._common.tab.logic
-
-    @property
-    def _ruleindex(self) -> dict:
-        return self._common.ruleindex
-
-    @property
-    def _groupindex(self) -> dict:
-        return self._common.groupindex
-
-    @property
-    def _root(self):
-        return self._common.root
-
-    def __init__(self, common: TabRulesSharedData):
-        self._common = common
-
-    def __delattr__(self, name: str):
-        raise AttributeError(name)
-    
-    def writes(method: F) -> F:
-        @wraps(method)
-        def fcheckstate(self, *args, **kw):
-            if self.locked: raise IllegalStateError('locked')
-            return method(self, *args, **kw)
-        return fcheckstate
-
-class RuleGroup(Sequence[Rule], TabRulesBase):
-
-    def __init__(self, name: str, common: TabRulesSharedData):
-        self.name = name
-        self.rules: list[Rule] = []
-        self._index = {}
-        super().__init__(common)
-
-    @TabRulesBase.writes
-    def append(self, RuleCls: type[Rule]):
-        subclscheck(RuleCls, Rule)
-        clsname = RuleCls.__name__
-        if clsname in self._ruleindex or clsname in self._groupindex:
-            raise DuplicateKeyError(clsname)
-        if hasattr(self._root, clsname):
-            raise AttributeError('Duplicate attribute %s' % clsname)
-        rule = RuleCls(self.tab, **self.tab.opts)
-        self.rules.append(rule)
-        self._ruleindex[clsname] = self._index[rule] = rule
-
-    add = append
-
-    @TabRulesBase.writes
-    def extend(self, rules: Iterable[type[Rule]]):
-        for rule in rules:
-            self.add(rule)
-
-    @TabRulesBase.writes
+    @locking
     def clear(self):
-        for rule in self.rules:
-            del(self._ruleindex[type(rule).__name__])
-        self.rules.clear()
+        'Clear all the rules. Raises IllegalStateError if tableau is started.'
+        if TRATTR_ON:
+            for _ in map(super().__delattr__, self._ruleindex): pass
+        self.groups.clear()
+        self._ruleindex.clear()
+        self._groupindex.clear()
 
-    def __iter__(self) -> Iterator[Rule]:
-        return iter(self.rules)
+    @overload
+    def get(self, cls: type[RuleT], default = None, /) -> RuleT: ...
+
+    @overload
+    def get(self, rule: RuleT, default = None, /) -> RuleT: ...
+
+    @overload
+    def get(self, name: str, default = None, /) -> Rule: ...
+
+    def get(self, ref, default = NOARG, /):
+        'Get a rule instance by name, class, or instance of same type.'
+        return self._ridxget(self._ruleindex, ref, default)
+
+    def names(self):
+        'List all the rule names.'
+        return list(R.__name__ for R in map(type, self))
 
     def __len__(self):
-        return len(self.rules)
+        # The rule index should be one key per value.
+        assert len(self._ruleindex) == sum(map(len, self.groups))
+        return len(self._ruleindex)
 
-    def __contains__(self, key):
-        return key in self._index
+    def __contains__(self, ref):
+        'Check by name, class, or instance of same type.'
+        return self.get(ref, NOGET) is not NOGET
 
-    def __getitem__(self, index) -> Rule:
-        return self.rules[index]
+    def __iter__(self) -> Iterator[Rule]:
+        for group in self.groups: yield from group
 
-    def __getattr__(self, name):
-        if name in self._index:
-            return self._index[name]
-        raise AttributeError(name)
+    def __reversed__(self) -> Iterator[Rule]:
+        for group in reversed(self.groups):
+            yield from reversed(group)
+
+
+    def __len__(self):
+        # The rule index should be one key per value.
+        return sum(map(len, self.groups))
+
+    def __getitem__(self, index: SupportsIndex, /, *,
+        greater = opr.gt, doub = (2).__mul__,
+        select = MapProxy({
+            False : ( (0).__mul__, iter,     opr.add, opr.gt ),
+            True  : ( (1).__mul__, reversed, opr.sub, opr.le ),
+        }).__getitem__,
+    ) -> Rule:
+        return list(self)[index]
+        length = len(self)
+        index = absindex(length, index)
+        istart, iterfunc, adjust, compare = select(greater(doub(index), length))
+        i = istart(length)
+        for group in iterfunc(self.groups):
+            inext = adjust(i, len(group))
+            if compare(inext, index):
+                return group[index - i]
+            i = inext
+
+
+    __delattr__ = raisr(AttributeError)
+    __setattr__ = locking(object.__setattr__)
+
+    @static
+    def _ridxget(
+        idx: Mapping[str, Rule], ref: str|RuleT|type[RuleT], default = NOARG, /
+    ) -> RuleT:
+        '''Retrieve a rule instance from the given index, by name, type,
+        or instance of same type.'''
+        try:
+            if isinstance(ref, str):
+                return idx[ref]
+            if isinstance(ref, type):
+                rule = idx[subclscheck(ref, Rule).__name__]
+                if ref is type(rule): return rule
+                raise KeyError
+            if isinstance(ref, Rule):
+                refcls = type(ref)
+                rule = idx[refcls.__name__]
+                if refcls is type(rule): return rule
+                raise KeyError
+            raise Emsg.InstCheck(ref, (str, type, Rule))
+        except KeyError:
+            if default is not NOARG: return default
+        raise Emsg.MissingValue(ref)
+
+    def _checkname(self, name: str, inst, /):
+        '''Validate a new rule or group name before it is added.'''
+        if TRATTR_ON:
+            if not preds.isattrstr(name) or name[0] == '_':
+                raise AttributeError("Invalid attribute name '%s'" % name)
+            if hasattr(self, name) or hasattr(inst, name):
+                raise AttributeError("Duplicate attribute '%s'" % name)
+        if (name in self._groupindex or name in self._ruleindex):
+            raise AttributeError("Duplicate attribute '%s'" % name)
+
+    def __repr__(self):
+        return orepr(self, logic = self._tab.logic,
+            groups = len(self.groups), rules = len(self),
+        )
+
+    if TRATTR_ON:
+        def __dir__(self):
+            return list(self._ruleindex) + ['groups']
+
+
+class RuleGroup(SequenceApi[Rule]):
+
+    def __init__(self, name: str|None, root: TabRules):
+        self._name = name
+        self._root = root
+        self._seq: list[Rule] = []
+        #: rule class name to rule instance.
+        self._index: dict[str, Rule] = {}
+
+    def _lock(self):
+        self._seq = SequenceCover(self._seq)
+        self._index = MapCover(self._index)
+
+    @property
+    def name(self):
+        'The group name, or None.'
+        return self._name
+
+    @locking
+    def append(self, RuleCls: type[Rule]):
+        root = self._root
+        name = subclscheck(RuleCls, Rule).__name__
+        root._checkname(name, self)
+        rule = RuleCls(root._tab, **root._tab.opts)
+        self._seq.append(rule)
+        root._ruleindex[name] = self._index[name] = rule
+        if TRATTR_ON:
+            setattr(self, name, rule)
+            setattr(root, name, rule)
+
+    @locking
+    def extend(self, Rules: Iterable[type[Rule]]):
+        for _ in map(self.append, Rules): pass
+
+    @locking
+    def clear(self):
+        if TRATTR_ON:
+            for _ in map(super().__delattr__, self._index): pass
+        self._seq.clear()
+        self._index.clear()
+
+    @overload
+    def get(self, cls: type[RuleT], default = None, /) -> RuleT: ...
+
+    @overload
+    def get(self, rule: RuleT, default = None, /) -> RuleT: ...
+
+    @overload
+    def get(self, name: str, default = None, /) -> Rule: ...
+
+    def get(self, ref, default = NOARG, /):
+        return self._root._ridxget(self._index, ref, default)
+
+    names = TabRules.names
+
+    @overload
+    def __getitem__(self, i:SupportsIndex) -> Rule:...
+
+    @overload
+    def __getitem__(self, s:slice) -> SequenceApi[Rule]:...
+
+    def __getitem__(self, index):
+        return self._seq[index]
+
+    def __iter__(self) -> Iterator[Rule]:
+        return iter(self._seq)
+
+    def __len__(self):
+        return len(self._seq)
+
+    def __contains__(self, ref):
+        return self.get(ref, NOGET) is not NOGET
+
+    __delattr__ = raisr(AttributeError)
+    __setattr__ = locking(object.__setattr__)
 
     def __repr__(self):
         return orepr(self, name = self.name, rules = len(self))
 
-class RuleGroups(Sequence[RuleGroup], TabRulesBase):
+    if TRATTR_ON:
+        __dir__ = names
 
-    def __init__(self, common: TabRulesSharedData):
-        self.groups: list[RuleGroup] = []
-        super().__init__(common)
+class RuleGroups(SequenceApi[RuleGroup]):
 
-    @TabRulesBase.writes
+    def __init__(self, root: TabRules):
+        self._root = root
+        self._seq: list[RuleGroup] = []
+
+    def _lock(self):
+        for _ in map(RuleGroup._lock, self): pass
+        self._seq = SequenceCover(self._seq)
+
+    @locking
     def create(self, name: str = None) -> RuleGroup:
-        if name != None:
-            if name in self._groupindex or name in self._ruleindex:
-                raise DuplicateKeyError(name)
-            if hasattr(self._root, name):
-                raise AttributeError('Duplicate attribute %s' % name)
-        group = RuleGroup(name, self._common)
-        self.groups.append(group)
-        if name != None:
-            self._groupindex[name] = group
+        'Create and return a new rule group.'
+        root = self._root
+        if name is not None: root._checkname(name, self)
+        group = RuleGroup(name, root)
+        self._seq.append(group)
+        if name is not None:
+            root._groupindex[name] = group
+            if TRATTR_ON:
+                setattr(self, name, group)
         return group
 
-    @TabRulesBase.writes
-    def append(self, rules: Iterable[type[Rule]], name: str = None):
-        if name == None:
-            name = getattr(rules, 'name', None)
-        self.create(name).extend(rules)
+    @locking
+    def append(self, Rules: Iterable[type[Rule]], /, name: str|None = NOARG):
+        if name is NOARG:
+            if isinstance(Rules, RuleGroup):
+                name = Rules.name
+            else:
+                name = None
+        self.create(name).extend(Rules)
 
-    add = append
-
-    @TabRulesBase.writes
+    @locking
     def extend(self, groups: Iterable[Iterable[type[Rule]]]):
-        for rules in groups:
-            self.add(rules)
+        'Add multiple groups.'
+        for _ in map(self.append, groups): pass
 
-    @TabRulesBase.writes
+    @locking
     def clear(self):
-        self.groups.clear()
-        self._groupindex.clear()
+        if TRATTR_ON:
+            for _ in map(super().__delattr__, self._root._groupindex): pass
+        for _ in map(RuleGroup.clear, self): pass
+        self._seq.clear()
 
-    @property
+    def get(self, name: str, default = NOARG, /) -> RuleGroup:
+        try:
+            return self._root._groupindex[name]
+        except KeyError:
+            if default is NOARG: raise
+            return default
+
     def names(self):
-        return list(filter(bool, (group.name for group in self)))
+        'List the named groups.'
+        return list(filter(
+            preds.instanceof[str], (group.name for group in self)
+        ))
 
     def __iter__(self) -> Iterator[RuleGroup]:
-        return iter(self.groups)
+        return iter(self._seq)
 
     def __len__(self):
-        return len(self.groups)
+        return len(self._seq)
 
-    def __getitem__(self, index: int|slice) -> RuleGroup:
-        return self.groups[index]
+    def __getitem__(self, index: SupportsIndex) -> RuleGroup:
+        return self._seq[instcheck(index, SupportsIndex)]
 
-    def __getattr__(self, name):
-        idx = self._groupindex
-        if name in idx:
-            return idx[name]
-        raise AttributeError(name)
+    def __contains__(self, item: str|RuleGroup):
+        if isinstance(item, str):
+            return item in self._root._groupindex
+        instcheck(item (str, RuleGroup))
+        for check in self:
+            if item is check: return True
+        return False
 
-    def __contains__(self, item):
-        return item in self._groupindex or item in self.groups
+    __delattr__ = raisr(AttributeError)
+    __setattr__ = locking(object.__setattr__)
 
-    def __dir__(self):
-        return self.names
+    if TRATTR_ON:
+        def __dir__(self):
+            return ['groups'] + list(filter(
+                preds.isattrstr, (group.name for group in self))
+            )
 
     def __repr__(self):
         return orepr(self,
-            logic = self.logic,
+            logic = self._root._tab.logic,
             groups = len(self),
+            names = self.names(),
             rules = sum(map(len, self))
         )
-
-class TabRules(Sequence[Rule], TabRulesBase):
-
-    def __init__(self, tableau: Tableau):
-        common = TabRulesSharedData(tableau, self)
-        self.groups = RuleGroups(common)
-        super().__init__(common)
-
-    @TabRulesBase.writes
-    def append(self, rule: type[Rule]):
-        self.groups.create().append(rule)
-
-    add = append
-
-    @TabRulesBase.writes
-    def extend(self, rules: Iterable[type[Rule]]):
-        self.groups.append(rules)
-
-    @TabRulesBase.writes
-    def clear(self):
-        self.groups.clear()
-        self._ruleindex.clear()
-
-    @overload
-    def get(self, cls: type[RuleT], default = None, /) -> RuleT: ...
-    @overload
-    def get(self, rule: RuleT, default = None, /) -> RuleT: ...
-    @overload
-    def get(self, name: str, default = None, /) -> Rule: ...
-    def get(self, ref, default = NOARG, /):
-        try:
-            if isinstance(ref, str):
-                return self._ruleindex[ref]
-            if isinstance(ref, type):
-                subclscheck(ref, Rule)
-                return self._ruleindex[ref.__name__]
-            if isinstance(ref, Rule):
-                return self._ruleindex[type(ref).__name__]
-            raise Emsg.InstCheck(ref, (str, type, Rule))
-        except KeyError:
-            if default is not NOARG:
-                return default
-        raise Emsg.MissingValue(ref)
-
-    def __len__(self):
-        return len(self._ruleindex)
-
-    def __iter__(self) -> Iterator[Rule]:
-        return chain.from_iterable(self.groups)
-
-    def __contains__(self, key):
-        return key in self._ruleindex
-
-    def __getitem__(self, key) -> Rule:
-        if isinstance(key, (int, slice)):
-            return list(self)[key]
-        try:
-            return self.get(key)
-        except MissingValueError:
-            raise KeyError(key) from None
-
-    def __getattr__(self, attr):
-        if attr in self._groupindex:
-            return self._groupindex[attr]
-        if attr in self._ruleindex:
-            return self._ruleindex[attr]
-        raise AttributeError(attr)
-
-    def __dir__(self):
-        return [type(rule).__name__ for rule in self]
-
-    def __repr__(self):
-        return orepr(self,
-            logic  = self.logic,
-            groups = len(self.groups),
-            rules  = len(self),
-        )
-
-del(TabRulesBase.writes)
 
 @static
 class TableauxSystem(Abc):
@@ -1508,3 +1560,7 @@ class TreeStruct(dmapattr):
             self.update(kw)
 
         self.id = id(self)
+
+# ----------------------------------------------
+
+del(abstract, final, overload, static, locking)
