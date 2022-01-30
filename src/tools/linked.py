@@ -11,10 +11,11 @@ from errors import (
     Emsg,
     DuplicateValueError,
     MissingValueError,
-    instcheck as _instcheck,
+    # instcheck,
 )
 from tools.abcs import T, VT
 from tools.decorators import abstract, final, overload
+from tools.sequences import absindex
 
 class bases:
     from tools.abcs import Abc, Copyable
@@ -33,16 +34,6 @@ class LinkRel(enum.IntEnum):
     prev, self, next = -1, 0, 1
 
 del(enum)
-
-def _absindex(seqlen, index: SupportsIndex, strict = True, /) -> int:
-    'Normalize to positive/absolute index.'
-    if not isinstance(index, int):
-        index = int(_instcheck(index, SupportsIndex))
-    if index < 0:
-        index = seqlen + index
-    if strict and (index >= seqlen or index < 0):
-        raise Emsg.IndexOutOfRange(index)
-    return index
 
 class Link(Generic[VT], bases.Copyable):
     'Link value container.'
@@ -217,7 +208,7 @@ class LinkSequenceApi(bases.SequenceApi[VT]):
     def _link_at(self, index: SupportsIndex) -> Link:
         'Get a Link entry by index. Supports negative value. Raises ``IndexError``.'
 
-        index = _absindex(len(self), index)
+        index = absindex(len(self), index)
 
         # Direct access for first/last.
         if index == 0:
@@ -304,7 +295,7 @@ class MutableLinkSequenceSetApi(MutableLinkSequenceApi[VT], bases.MutableSequenc
     def insert(self, index: int, value):
         '''Insert a value before an index. Raises ``DuplicateValueError`` and
         ``MissingValueError``.'''
-        index = _absindex(len(self), index, False)
+        index = absindex(len(self), index, False)
         if len(self) == 0:
             # Seed.
             self.seed(value)

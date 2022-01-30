@@ -30,6 +30,16 @@ from typing import (
 EMPTY = ()
 NOARG = object()
 
+def absindex(seqlen, index: SupportsIndex, strict = True, /) -> int:
+    'Normalize to positive/absolute index.'
+    if not isinstance(index, int):
+        index = int(instcheck(index, SupportsIndex))
+    if index < 0:
+        index = seqlen + index
+    if strict and (index >= seqlen or index < 0):
+        raise Emsg.IndexOutOfRange(index)
+    return index
+
 class SequenceApi(Sequence[VT], Copyable):
     "Extension of collections.abc.Sequence and built-in sequence (tuple)."
 

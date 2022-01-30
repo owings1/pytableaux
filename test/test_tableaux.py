@@ -1,16 +1,21 @@
+from __future__ import annotations
 
-from tools.callables import calls, gets
 from errors import *
+from tools.abcs import MapProxy
+from tools.callables import calls, gets
+from tools.misc import get_logic
+
+from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
+
 from proof.tableaux import Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG
 from proof.rules import ClosureRule
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
 from proof.common import Filters, Branch, Node, NodeFilters, TabEvent
-from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
-from tools.misc import get_logic
 import examples
-from types import ModuleType, MappingProxyType
+
 import time
 from pytest import raises
+
 from .tutils import BaseSuite, using, skip
 
 class TestTableauxSystem(object):
@@ -72,7 +77,7 @@ class TestTableau(BaseSuite):
                 return True
             def example_nodes(self): return tuple()
         tab = Tableau()
-        tab.rules.add(MockRule)
+        tab.rules.append(MockRule)
         tab.branch()
         assert len(tab.open) == 1
         tab.build()
@@ -103,7 +108,7 @@ class TestTableau(BaseSuite):
                 self._checkparent = branch.parent
         b = Branch().add({'test': True})
         tab = Tableau()
-        tab.rules.add(MockRule)
+        tab.rules.append(MockRule)
         tab.add(b)
         # proof
         
@@ -188,26 +193,13 @@ class TestBranch(object):
                 self.shouldnt_be = branch.has({'world1': 6})
 
         proof = Tableau()
-        proof.rules.add(MyRule)
+        proof.rules.append(MyRule)
         rule = proof.rules.get(MyRule)
         proof.branch().add({'world1': 7})
 
         assert rule.should_be
         assert not rule.shouldnt_be
 
-    @skip
-    def test_has_access_1(self):
-        b = Branch().extend((
-            {'world1': 0, 'world2': 1},
-            {'world1': 4, 'world2': 3},
-            {'world1': 4, 'world2': 4},
-        ))
-        with raises(TypeError):
-            b.has_access(0, 1, 4)
-        assert b.has_access(0, 1)
-        assert b.has_access(4, 3)
-        assert b.has_access(4, 4)
-        assert not b.has_access(3, 3)
 
     def test_select_index_non_indexed_prop(self):
         branch = Branch()
@@ -322,7 +314,7 @@ class TestNode(object):
         exp.update({'a':1,'b':2,'c':3})
         for inp in [
             zip(('a', 'b', 'c'), (1, 2, 3)),
-            MappingProxyType(exp),
+            MapProxy(exp),
             exp.items()
         ]:
             n = Node(inp)
@@ -536,6 +528,7 @@ class MtrTestRule(FilterNodeRule):
         *FilterNodeRule.Helpers,
         ('mtr', MaxConstantsTracker),
     )
+    mtr: MaxConstantsTracker
 
 class TestMaxConstantsTracker(BaseSuite):
 
@@ -543,9 +536,9 @@ class TestMaxConstantsTracker(BaseSuite):
 
     def test_argument_trunk_two_qs_returns_3(self):
         proof = self.tab()
-        proof.rules.add(MtrTestRule)
+        proof.rules.append(MtrTestRule)
         proof.argument = self.parg('NLVxNFx', 'LMSxFx')
-        rule = proof.rules.MtrTestRule
+        rule = proof.rules.get(MtrTestRule)
         branch = proof[0]
         assert rule.mtr._compute_max_constants(branch) == 3
 
