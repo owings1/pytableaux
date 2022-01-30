@@ -706,8 +706,10 @@ class TableauxSystem(Abc):
     @classmethod
     def add_rules(cls, logic: ModuleType, rules: TabRules, /):
         Rules = logic.TabRules
-        rules.groups.add(Rules.closure_rules, 'closure')
-        rules.groups.extend(Rules.rule_groups)
+        rules.groups.create('closure').extend(Rules.closure_rules)
+        for classes in Rules.rule_groups:
+            rules.groups.create().extend(classes)
+        # rules.groups.extend(Rules.rule_groups)
 
 class TabTimers(NamedTuple):
 
@@ -1286,9 +1288,9 @@ class Tableau(Sequence[Branch], EventEmitter):
             apply_time_avg  = rule.apply_timer.elapsed_avg,
             timers          = {
                 name : dict(
-                    duration_ms   = timer.elapsed,
-                    duration_avg  = timer.elapsed_avg,
-                    count = timer.count,
+                    duration_ms  = timer.elapsed,
+                    duration_avg = timer.elapsed_avg,
+                    count        = timer.count,
                 )
                 for name, timer in rule.timers.items()
             },
@@ -1302,7 +1304,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             self.timers.build.stop()
             self.__flag |= FLAG.TIMED_OUT
             self.finish()
-            raise TimeoutError('Timeout of {0}ms exceeded.'.format(timeout))
+            raise TimeoutError('Timeout of %dms exceeded.' % timeout)
 
     def __is_max_steps_exceeded(self):
         max_steps = self.opts['max_steps']
@@ -1310,7 +1312,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     def __check_not_started(self):
         if FLAG.TRUNK_BUILT in self.__flag or len(self.history) > 0:
-            raise IllegalStateError("Tableau is already started.")
+            raise IllegalStateError("Tableau already started.")
 
     def __result_word(self):
         if self.valid:
