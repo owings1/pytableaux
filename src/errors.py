@@ -56,8 +56,12 @@ class Emsg(enum.Enum):
         "Unexpected type '{0}', subclass of '{1}'", 2
     )
 
-    ReadOnlyAttr = AttributeError, "Read-only attribute: '{0}'", 1
-
+    ReadOnlyAttr = (AttributeError,
+        "'{1.__name__}' object attribute '{0}' is read-only", (str, type)
+    )
+    # "Read-only attribute: '{0}'", 1
+    
+    
     IndexOutOfRange = IndexError, 'Index out of range'
 
     WrongValue = (ValueError,
@@ -73,6 +77,9 @@ class Emsg(enum.Enum):
         'Attempt to assign sequence of size {0} to extended slice of size {1}', (_len, _len)
     )
     ValueConflict = ValueError, "Value conflict: '{0}' conflicts with '{1}'", 2
+    ValueConflictFor = (ValueError,
+        "Value conflict for '{0}': '{1}' conflicts with existing '{2}'", 3
+    )
     BadAttrName = ValueError, "Invalid attribute identifier: '{}'", (str,)
 
     DuplicateValue = DuplicateValueError,

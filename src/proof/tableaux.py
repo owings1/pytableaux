@@ -29,7 +29,7 @@ from errors import (
     subclscheck,
 )
 from tools.abcs import (
-    Abc, AbcMeta, P, T, F,
+    Abc, AbcMeta, P, T, F, TT, TO, T_co, KT, VT, KT_co, VT_co,
     MapProxy
 )
 from tools.callables import preds
@@ -79,6 +79,7 @@ from types import ModuleType
 from typing import (
     Any,
     Callable,
+    Generic,
     Iterable,
     Iterator,
     Mapping,
@@ -242,7 +243,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     #: Reference to the tableau instance.
     tableau: Tableau
-    helpers: Mapping[type, object]
+    helpers: TypeInstMap
     timers: Mapping[str, StopWatch]
     #: The number of times the rule has applied.
     apply_count: int
@@ -266,7 +267,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         return node.get('sentence', default)
 
     # Scoring
-    def group_score(self, target: Target, /) -> float:
+    def group_score(self, target: Target, /):
         # Called in tableau
         return self.score_candidate(target) / max(1, self.branch_level)
 
@@ -275,8 +276,9 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         return 0
 
     def __init__(self, tableau: Tableau, /, **opts):
-        self.tableau = instcheck(tableau, Tableau)
         super().__init__(*RuleEvent)
+
+        self.tableau = instcheck(tableau, Tableau)
 
         self.search_timer = StopWatch()
         self.apply_timer = StopWatch()
@@ -446,9 +448,10 @@ class ClosingRule(Rule):
     def check_for_target(self, node: Node, branch: Branch):
         raise NotImplementedError
 
+
 def locking(method: F) -> F:
     'Decorator for locking TabRules methods after Tableau is started.'
-    def f(self, *args, **kw):
+    def f(self: TabRules, *args, **kw):
         try:
             if self._root._locked:
                 raise IllegalStateError('locked')
@@ -588,7 +591,6 @@ class TabRules(SequenceApi[Rule]):
     if TRATTR_ON:
         def __dir__(self, /, *, _init = seqm({'groups'})):
             return _init + filter(preds.isattrstr, self.names())
-
 
 class RuleGroup(SequenceApi[Rule]):
     "A rule group for a Tableau's TabRules."
@@ -734,9 +736,9 @@ class RuleGroups(SequenceApi[RuleGroup]):
             if default is NOARG: raise
             return default
 
-    def names(self):
+    def names(self) -> seqm[str]:
         'List the named groups.'
-        return list(filter(
+        return seqm(filter(
             preds.instanceof[str], (group.name for group in self)
         ))
 
@@ -1590,6 +1592,13 @@ class TreeStruct(dmapattr):
             self.update(kw)
 
         self.id = id(self)
+
+# ----------------------------------------------
+
+
+class TypeInstMap(Mapping):
+    @overload
+    def __getitem__(self, key: type[T]) -> T: ...
 
 # ----------------------------------------------
 

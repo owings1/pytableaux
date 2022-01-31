@@ -15,18 +15,22 @@ __all__ = (
 )
 
 from errors import Emsg, instcheck
-from tools.abcs import Abc, Copyable, MapProxy, abcf, F, KT, VT #, T, P, RT
+from tools.abcs import (
+    Abc, Copyable, MapProxy, abcf, F, KT, VT #, T, P, RT
+)
 from tools.callables import preds, gets
 from tools.decorators import (
     abstract, static, final, overload,
-    fixed, membr, wraps,
+    fixed, membr, operd, wraps,
 )
 
 from collections.abc import (
     Collection, Iterator, Mapping, MutableMapping, Set
 )
 from collections import defaultdict, deque
-from itertools import chain, filterfalse
+from itertools import (
+    chain, filterfalse, starmap
+)
 from operator import not_, truth
 from typing import (
     Any, Callable, Iterable, TypeVar,
@@ -35,6 +39,7 @@ from typing import (
 MT = TypeVar('MT', bound = Mapping)
 
 EMPTY = ()
+EMPTY_ITER = iter(EMPTY)
 FCACHE_MAXMISS = 50
 FNOTIMPL = fixed.value(NotImplemented)()
 FTHRU = gets.thru()
@@ -105,7 +110,7 @@ class TypeFuncsCache(dict[str, FuncCache]):
     def __init__(self, obj_type: type[MappingApi]):
         self.obj_type = obj_type
 
-    def __missing__(self, oper_name: str, FuncCache = FuncCache):
+    def __missing__(self, oper_name: str, /, *, FuncCache = FuncCache):
         return self.setdefault(oper_name, FuncCache(self.obj_type, oper_name))
 
 class OperFuncsCache(dict[type[Mapping], TypeFuncsCache]):
@@ -217,20 +222,35 @@ class KeyGetAttr(MappingApi[Any, VT]):
 class MapCover(MappingApi[KT, VT]):
     'Mapping reference.'
 
-    __slots__ = '__m',
-    __m: Mapping[KT, VT]
+    __slots__ = '__len__', '__getitem__', '__iter__', '__reversed__'
 
-    def __init__(self, mapping: Mapping[KT, VT]):
-        self.__m = instcheck(mapping, Mapping)
+    def __init__(self, mapping: Mapping[KT, VT] = None, /, **kwmap):
+        if mapping is None: mapping = kwmap
+        else:
+            instcheck(mapping, Mapping)
+            if len(kwmap):
+                raise TypeError('Expected mapping or kwargs, not both.')
+        self._init_cover(mapping, self)
 
-    def __len__(self):
-        return len(self.__m)
-    def __iter__(self):
-        return iter(self.__m)
-    def __reversed__(self) -> Iterator[KT]:
-        return reversed(self.__m)
-    def __getitem__(self, key):
-        return self.__m[key]
+    @static
+    def _init_cover(src, dest, /, *,
+        names = __slots__, ga = object.__getattribute__, sa = object.__setattr__
+    ):
+        for name in names:
+            sa(dest, name, ga(src, name))
+
+    __slots__ = frozenset(__slots__)
+
+    def __delattr__(self, name, /, *, slots = __slots__):
+        if name in slots:
+            raise Emsg.ReadOnlyAttr(name, self)
+        super().__delattr__(name)
+
+    def __setattr__(self, name, value, /, *, slots = __slots__):
+        if name in slots:
+            raise Emsg.ReadOnlyAttr(name, self)
+        super().__setattr__(name, value)
+
     def __repr__(self):
         return repr(dict(self))
 
@@ -283,19 +303,15 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
         ): pass
         return self
 
-    # @classmethod
-    # def _from_mapping(cls, mapping):
-    #     return
-    #     inst = cls()
-    #     inst.update(mapping)
-    #     return inst
+    def _setitem_update(self, it = EMPTY_ITER, /, **kw):
+        '''Alternate implementation for classes that need more control'''
+        it = ItemsIterator(it)
+        if len(kw): it = chain(it, ItemsIterator(kw))
+        for _ in starmap(self.__setitem__, it): pass
 
     @classmethod
     def _from_iterable(cls, it):
         return cls(it)
-        # inst = cls()
-        # inst.update(it)
-        # return inst
 
 class dmap(dict[KT, VT], MutableMappingApi[KT, VT]):
     'Mutable mapping api from dict.'
@@ -355,8 +371,11 @@ class KeySetAttr(Abc):
         if self._keyattr_ok(name) and name in self:
             super().__delitem__(name)
 
+    update = MutableMappingApi._setitem_update
+
     @classmethod
     def _keyattr_ok(cls, name):
+        'Return whether it is ok to set the attribute name.'
         return not hasattr(cls, name)
 
 class dmapattr(KeySetAttr, dmap[KT, VT]):

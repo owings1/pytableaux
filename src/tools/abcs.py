@@ -178,7 +178,7 @@ class abcm:
                 if mf.after in mf:
                     member(Class)
                 deleter(Class, name)
-        abcm.merge_mroattr(Class, '_lazymap_', {}, transform = MapProxy, rev = False)
+        # abcm.merge_mroattr(Class, '_lazymap_', {}, transform = MapProxy, rev = False)
 
     def isabstract(obj):
         if isinstance(obj, type):
@@ -273,7 +273,6 @@ class AbcMeta(_abc.ABCMeta):
         abcm.clsafter(Class, ns, bases, **kw)
         return Class
 
-
 class EnumDictType(_enum._EnumDict):
     'Stub type for annotation reference.'
     _member_names: list[str]
@@ -281,7 +280,6 @@ class EnumDictType(_enum._EnumDict):
     _ignore      : list[str]
     _auto_called : bool
     _cls_name    : str
-
 
 class EnumEntry(NamedTuple):
     member : AbcEnum
@@ -478,16 +476,19 @@ VT = TypeVar('VT')
 RT = TypeVar('RT')
 Self = TypeVar('Self')
 
-T_co = TypeVar('T_co', covariant = True)
+T_co  = TypeVar('T_co', covariant = True)
+KT_co = TypeVar('KT_co', covariant = True)
+VT_co = TypeVar('VT_co', covariant = True)
 T_contra = TypeVar('T_contra', contravariant = True)
 
-F   = TypeVar('F', bound = Callable[..., Any])
+F   = TypeVar('F',  bound = Callable[..., Any])
 TT  = TypeVar('TT', bound = type)
+TO  = TypeVar('TO', bound = object)
 
 P = ParamSpec('P')
 
 class MapProxy(Mapping[KT, VT]):
-    def __new__(cls, mapping:Mapping[KT, VT]|Iterable[tuple[KT, VT]] = None):
+    def __new__(cls, mapping:Mapping[KT, VT]|Iterable[tuple[KT, VT]] = None) -> _MapProxy[KT, VT]:
         if mapping is None:
             return _EMPTY_MAP
         if isinstance(mapping, _MapProxy):
@@ -500,7 +501,6 @@ _EMPTY_MAP = MapProxy({})
 class Abc(metaclass = AbcMeta):
     'Convenience for using AbcMeta as metaclass.'
     __slots__ = _EMPTY
-    # __getattr__ = abcm.lazy_getattr
 
 class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta):
 
