@@ -17,7 +17,10 @@ from models import BaseModel
 from parsers import create_parser, parse_argument, Parser
 import examples
 from proof.common import Branch, Node
-from proof.tableaux import Tableau, Rule, ClosingRule
+from proof.tableaux import (
+    Tableau, Rule, ClosingRule,
+    RuleT,
+)
 
 from inspect import isclass, getmembers
 from itertools import chain, filterfalse
@@ -285,7 +288,7 @@ class BaseSuite:
         'Return one model.'
         return self.acmm(*args, **kw)[1][0]
 
-    def rule_tab(self, rule:str|Rule|type[Rule], bare = False, **kw):
+    def rule_tab(self, rule:str|RuleT|type[RuleT], bare = False, **kw) -> tuple[RuleT, Tableau]:
         'Return (rule, tab) pair.'
         manual = False
         t = self.tab()

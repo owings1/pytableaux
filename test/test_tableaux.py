@@ -9,36 +9,36 @@ from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
 
 from proof.tableaux import (
     Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG,
-    ClosingRule,
+    ClosingRule, RuleT
 )
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
-from proof.common import Filters, Branch, Node, NodeFilters, TabEvent
+from proof.common import Filters, Branch, Node, TabEvent
 import examples
 
 import time
 from pytest import raises
+from typing import TypeVar
 
 from .tutils import BaseSuite, using, skip
 
-class TestTableauxSystem(object):
-
-    def test_build_trunk_base_not_impl(self):
-        proof = Tableau()
-        with raises(NotImplementedError):
-            TabSys.build_trunk(proof, None)
 
 def mock_sleep_5ms():
     time.sleep(0.005)
 
-def exarg(*args, **kw):
-    return examples.argument(*args, **kw)
-
+exarg = examples.argument
 sen = 'sentence'
 
 class RuleStub(Rule):
     def _apply(self, target): pass
     def _get_targets(self, branch): pass
     def example_nodes(self): return tuple()
+
+class TestTableauxSystem(BaseSuite):
+
+    def test_build_trunk_base_not_impl(self):
+        proof = Tableau()
+        with raises(NotImplementedError):
+            TabSys.build_trunk(proof, None)
 
 @using(logic = 'CPL')
 class TestTableau(BaseSuite):
@@ -47,12 +47,10 @@ class TestTableau(BaseSuite):
         assert Tableau().finish().step() == False
 
     def test_repr_contains_finished(self):
-        tab = self.tab('Addition')
-        assert 'finished' in tab.__repr__()
+        assert 'finished' in self.tab('Addition').__repr__()
 
     def test_build_premature_max_steps(self):
-        tab = self.tab('MMP', max_steps=1)
-        assert tab.premature
+        assert self.tab('MMP', max_steps=1).premature
 
     def test_construct_sets_is_rank_optim_option(self):
         tab = self.tab(is_rank_optim=False)
@@ -66,8 +64,7 @@ class TestTableau(BaseSuite):
             proof.build()
 
     def test_finish_empty_sets_build_duration_ms_0(self):
-        proof = Tableau().finish()
-        assert proof.stats['build_duration_ms'] == 0
+        assert Tableau().finish().stats['build_duration_ms'] == 0
 
     def test_add_closure_rule_instance_mock(self):
         class MockRule(ClosingRule):
@@ -101,36 +98,34 @@ class TestTableau(BaseSuite):
     def test_after_branch_add_with_nodes_no_parent(self):
 
         class MockRule(RuleStub):
+
             def __init__(self, *args, **opts):
                 super().__init__(*args, **opts)
                 self.tableau.on(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
 
-            def __after_branch_add(self, branch):
+            def __after_branch_add(self, branch: Branch):
                 self._checkbranch = branch
                 self._checkparent = branch.parent
+
         b = Branch().add({'test': True})
         tab = Tableau()
         tab.rules.append(MockRule)
         tab.add(b)
-        # proof
-        
-        # proof.add(b)
+
         rule = tab.rules.get(MockRule)
         assert rule._checkbranch is b
         assert rule._checkparent == None
-    #def test_add_rule_group_instance_mock(self):
-    #    class MockRule1():
 
     def test_ticked_step_flag_refactored_from_node(self):
-        sen='sentence'
+        sen = 'sentence'
         tab, b = self.tabb([
             {sen: s} for s in self.pp('NNa', 'Kab', 'Aab')
         ])
         step = tab.step()
         stat = tab.stat(b, step.target.node, KEY.FLAGS)
         assert FLAG.TICKED in stat
-        pass
-class TestBranch(object):
+
+class TestBranch:
 
     def test_next_world_returns_w0(self):
         assert Branch().next_world == 0
@@ -146,9 +141,7 @@ class TestBranch(object):
             sen = Predicated('Identity', (c, c))
             b.add({'sentence': sen})
             i += 1
-        res = b.new_constant()
-        check = Constant(0, 1)
-        assert res == check
+        assert b.new_constant() == Constant(0, 1)
 
     def test_repr_contains_closed(self):
         assert 'closed' in Branch().__repr__()
@@ -190,7 +183,7 @@ class TestBranch(object):
                 super().__init__(*args, **opts)
                 self.tableau.on(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
 
-            def __after_node_add(self, node, branch):
+            def __after_node_add(self, node: Node, branch: Branch):
                 self.should_be = branch.has({'world1': 7})
                 self.shouldnt_be = branch.has({'world1': 6})
 
@@ -296,7 +289,7 @@ class TestBranch(object):
         assert len(self.case2(6)) == 6
 
 
-class TestNode(object):
+class TestNode:
 
     def test_worlds_contains_worlds(self):
         node = Node({'worlds': {0, 1}})
@@ -311,7 +304,6 @@ class TestNode(object):
         assert node.has('is_flag')
 
     def test_create_node_with_various_types(self):
-        # exp = dict(Node.defaults)
         exp = {}
         exp.update({'a':1,'b':2,'c':3})
         for inp in [
@@ -319,17 +311,16 @@ class TestNode(object):
             MapProxy(exp),
             exp.items()
         ]:
-            n = Node(inp)
-            assert dict(n) == exp
+            assert dict(Node(inp)) == exp
 
     def test_or_ror_operators(self):
-        pa = dict(Node.defaults)
-        pb = dict(Node.defaults)
+        pa = dict(world = None, designated = None)
+        pb = pa.copy()
         pa.update({'a': 1, 'b': 3, 'C': 3, 'x': 1})
         pb.update({'A': 1, 'b': 2, 'c': 4, 'y': 3})
         exp1 = pa | pb
         exp2 = pb | pa
-        n1, n2 = (Node(n) for n in (pa, pb))
+        n1, n2 = map(Node, (pa, pb))
         assert n1 | n2 == exp1
         assert n1 | dict(n2) == exp1
         assert dict(n1) | n2 == exp1
@@ -351,8 +342,6 @@ class TestClosureRule(BaseSuite):
         with raises(TypeError):
             ClosingRule(Tableau())
 
-class FilterNodeRule(RuleStub):
-    Helpers = (FilterHelper,)
 
 class TestFilters(BaseSuite):
 
@@ -375,129 +364,9 @@ class TestFilters(BaseSuite):
         assert f(Node({'designated': True}))
         assert not f(Node({'foo': 'bar'}))
 
-class NodeFilterRule(RuleStub):
 
-    ignore_ticked = None
-    designation = None
-    modal = None
-    negated = operator = quantifier = predicate = None
+from logics.k import DefaultNodeRule as DefaultKRule
 
-    Helpers = (
-        ('nf', FilterHelper),
-        ('adz', AdzHelper),
-    )
-
-    class DesignationFilter(Filters.Attr):
-        attrs = (('designation', 'designated'),)
-        rget = gets.key()
-
-    class ModalFilter(Filters.Attr):
-        attrs = (('modal', 'is_modal'),)
-
-    NodeFilters = (
-        ('designation', DesignationFilter),
-        ('modal', ModalFilter),
-        (sen, NodeFilters.Sentence),
-    )
-@skip
-@using(logic = 'CPL')
-class Test_NodeFilter(BaseSuite):
-
-    def nn1(self, n = 2):
-        return tuple(
-            Node({
-                sen: s,
-                'designated': None if i == 0 else bool(i % 2),
-            })
-            for i, s in enumerate(self.sgen(n))
-        )
-
-    def case1(self, cls, n = 2, nn = None):
-        rule, tab = self.rule_tab(cls)
-        nf = rule.nf
-        b = tab.branch()
-        if not any ((n, nn)):
-            return (nf, b)
-        if nn == None:
-            nn = self.nn1(n)
-        b.extend(nn)
-        return (nf, b, nn)
-
-    def test_filters_view(self):
-        nf, b, nn = self.case1(NodeFilterRule, 4)
-        fview = nf.filters
-        assert len(fview) == 3
-        assert sen in fview
-        assert isinstance(fview.sentence, NodeFilters.Sentence)
-        assert fview[sen] == fview.sentence
-        assert fview.sentence in set(fview)
-        with raises(AttributeError):
-            fview.foo
-        with raises(AttributeError):
-            del(fview.sentence)
-        with raises(TypeError):
-            del(fview[sen])
-
-    def test_sentence_no_filters(self):
-        nf, b, nn = self.case1(NodeFilterRule)
-        lhs = nf.rule
-        assert not any((lhs.operator, lhs.quantifier, lhs.predicate))
-        sf = nf.filters[-1]
-        assert sf._Sentence__applies == False
-        assert nf[b] == set(nn)
-        assert nf[b] == set(b)
-
-    def test_sentence_operator(self):
-        class Impl(NodeFilterRule):
-            operator = 'Conjunction'
-        nf, b, nn = self.case1(Impl)
-        assert nf[b] == {nn[0]}
-
-    def test_exclude_ticked_default(self):
-        nf, b, nn = self.case1(NodeFilterRule)
-        b.tick(nn[0])
-        assert nf[b] == {nn[1]}
-
-    def test_ignore_ticked_helper_attr(self):
-        nf, b, nn = self.case1(NodeFilterRule, n=3)
-        nf.ignore_ticked = True
-        b.tick(nn[0], nn[1])
-        assert nf[b] == set(nn)
-
-    def test_ignore_ticked_rule_cls_attr(self):
-        class Impl(NodeFilterRule):
-            ignore_ticked = True
-        nf, b, nn = self.case1(Impl, n=3)
-        b.tick(nn[0], nn[1])
-        assert nf[b] == set(nn)
-
-    def test_ignore_ticked_rule_attr_pre_super(self):
-        class Impl(NodeFilterRule):
-            def __init__(self, *args, **opts):
-                self.ignore_ticked = True
-                super().__init__(*args, **opts)
-        nf, b, nn = self.case1(Impl, n=3)
-        b.tick(nn[0], nn[1])
-        assert nf[b] == set(nn)
-
-    def test_ignore_ticked_rule_attr_post_init(self):
-        class Impl(NodeFilterRule):
-            ignore_ticked = False
-        nf, b = self.case1(Impl, n = None)
-        nn = self.nn1(3)
-        assert nf.ignore_ticked == False
-        nf.rule.ignore_ticked = True
-        b.extend(nn)
-        b.tick(nn[0], nn[1])
-        assert nf[b] == set(nn)
-
-    def test_designation_true(self):
-        class Impl(NodeFilterRule):
-            designation = True
-        nf, b, nn = self.case1(Impl, n=3)
-        assert nf[b] == {nn[1]}
-
-DefaultKRule = get_logic('K').DefaultNodeRule
 @using(logic = 'K')
 class Test_K_DefaultNodeFilterRule(BaseSuite):
 
@@ -505,7 +374,7 @@ class Test_K_DefaultNodeFilterRule(BaseSuite):
         sgen = self.sgen(n)
         wn = 0
         for i in range(n):
-            s = sgen.__next__()
+            s = next(sgen)
             if i == 0:
                 n = {sen:s}
             elif i % 3 == 0:
@@ -525,18 +394,18 @@ class Test_K_DefaultNodeFilterRule(BaseSuite):
     def test_rule_sentence_impl(self):
         rule, tab = self.case1()
 
-class MtrTestRule(FilterNodeRule):
-    Helpers = (
-        *FilterNodeRule.Helpers,
-        ('mtr', MaxConstantsTracker),
-    )
-    mtr: MaxConstantsTracker
-
+@using(logic = 'S5')
 class TestMaxConstantsTracker(BaseSuite):
 
-    logic = get_logic('S5')
-
     def test_argument_trunk_two_qs_returns_3(self):
+        class FilterNodeRule(RuleStub):
+            Helpers = FilterHelper,
+        class MtrTestRule(FilterNodeRule):
+            mtr: MaxConstantsTracker
+            Helpers = (
+                *FilterNodeRule.Helpers,
+                ('mtr', MaxConstantsTracker),
+            )
         proof = self.tab()
         proof.rules.append(MtrTestRule)
         proof.argument = self.parg('NLVxNFx', 'LMSxFx')
@@ -544,6 +413,7 @@ class TestMaxConstantsTracker(BaseSuite):
         branch = proof[0]
         assert rule.mtr._compute_max_constants(branch) == 3
 
+    @skip
     def xtest_compute_for_node_one_q_returns_1(self):
         n = {sen: self.p('VxFx'), 'world': 0}
         node = Node(n)
@@ -554,7 +424,8 @@ class TestMaxConstantsTracker(BaseSuite):
         res = rule.mtr._compute_needed_constants_for_node(node, branch)
         assert res == 1
 
-    def compute_for_branch_two_nodes_one_q_each_returns_3(self):
+    @skip
+    def test_compute_for_branch_two_nodes_one_q_each_returns_3(self):
         s1 = self.p('LxFx')
         s2 = self.p('SxFx')
         n1 = {sen: s1, 'world': 0}
@@ -586,12 +457,8 @@ class TestNewQuantifierRules(BaseSuite):
 
         def test_rule_applies(self):
             rule, tab = self.rule_eg('Existential', bare = True)
-            # r1, t1 = self.rule_eg('ExistentialOld', bare = True)
-            # assert tabeq(tab, t1)
 
     class TestKNewUniversal(BaseSuite):
 
         def test_rule_applies(self):
             rule, tab = self.rule_eg('Universal', bare = True)
-            # r1, t1 = self.rule_eg('UniversalOld', bare = True)
-            # assert tabeq(tab, t1)
