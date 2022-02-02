@@ -1041,7 +1041,7 @@ class Tableau(Sequence[Branch], EventEmitter):
                     self.__flag &= ~FLAG.PREMATURE
             if ruletarget:
                 ruletarget.rule.apply(ruletarget.target)
-                stepentry = StepEntry(*ruletarget, timer.elapsed)
+                stepentry = StepEntry(*ruletarget, timer.elapsed())
                 self.__history.append(stepentry)
             else:
                 self.finish()
@@ -1349,12 +1349,12 @@ class Tableau(Sequence[Branch], EventEmitter):
                 step.duration_ms
                 for step in self.history
             ),
-            build_duration_ms  = timers.build.elapsed,
-            trunk_duration_ms  = timers.trunk.elapsed,
-            tree_duration_ms   = timers.tree.elapsed,
-            models_duration_ms = timers.models.elapsed,
+            build_duration_ms  = timers.build.elapsed(),
+            trunk_duration_ms  = timers.trunk.elapsed(),
+            tree_duration_ms   = timers.tree.elapsed(),
+            models_duration_ms = timers.models.elapsed(),
             rules_time_ms = sum(
-                sum((rule.search_timer.elapsed, rule.apply_timer.elapsed))
+                sum((rule.search_timer.elapsed(), rule.apply_timer.elapsed()))
                 for rule in self.rules
             ),
             rules = tuple(map(self.__compute_rule_stats, self.rules)),
@@ -1365,15 +1365,15 @@ class Tableau(Sequence[Branch], EventEmitter):
         return dict(
             name            = rule.name,
             queries         = rule.search_timer.count,
-            search_time_ms  = rule.search_timer.elapsed,
-            search_time_avg = rule.search_timer.elapsed_avg,
+            search_time_ms  = rule.search_timer.elapsed(),
+            search_time_avg = rule.search_timer.elapsed_avg(),
             apply_count     = rule.apply_count,
-            apply_time_ms   = rule.apply_timer.elapsed,
-            apply_time_avg  = rule.apply_timer.elapsed_avg,
+            apply_time_ms   = rule.apply_timer.elapsed(),
+            apply_time_avg  = rule.apply_timer.elapsed_avg(),
             timers          = {
                 name : dict(
-                    duration_ms  = timer.elapsed,
-                    duration_avg = timer.elapsed_avg,
+                    duration_ms  = timer.elapsed(),
+                    duration_avg = timer.elapsed_avg(),
                     count        = timer.count,
                 )
                 for name, timer in rule.timers.items()
@@ -1384,7 +1384,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         timeout = self.opts['build_timeout']
         if timeout is None or timeout < 0:
             return
-        if self.timers.build.elapsed > timeout:
+        if self.timers.build.elapsed() > timeout:
             self.timers.build.stop()
             self.__flag |= FLAG.TIMED_OUT
             self.finish()

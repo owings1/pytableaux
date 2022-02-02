@@ -43,41 +43,50 @@ class StopWatch:
         if self._running:
             self._start_time = _nowms()
 
-    @property
     def elapsed(self) -> int:
+        'Elapsed milliseconds.'
+        return self.elapsed_ms()
+
+    def elapsed_avg(self) -> float:
+        'Elapsed milliseconds / count.'
+        try:
+            return self.elapsed() / self.count
+        except ZeroDivisionError:
+            return 0
+
+    def elapsed_secs(self):
+        return self.elapsed() // 1000
+
+    def elapsed_ms(self):
         'Elapsed milliseconds.'
         if self._running:
             return self._accum + (_nowms() - self._start_time)
         return self._accum
 
     @property
-    def elapsed_avg(self) -> float:
-        'Elapsed milliseconds / count.'
-        try:
-            return self.elapsed / self.count
-        except ZeroDivisionError:
-            return 0
-
-    def elapsed_secs(self):
-        return self.elapsed // 1000
-
-    @property
     def running(self) -> bool:
         'Whether the StopWatch is running.'
         return self._running
 
+    def summary(self):
+        return dict(
+            elapsed_ms  = self.elapsed_ms(),
+            count       = self.count,
+            elapsed_avg = self.elapsed_avg(),
+        )
+
     def __repr__(self):
         from tools.misc import wraprepr
-        return wraprepr(self, self.elapsed)
+        return wraprepr(self, self.elapsed())
 
     def __float__(self):
-        return float(self.elapsed)
+        return float(self.elapsed())
 
     def __int__(self):
-        return self.elapsed
+        return self.elapsed()
 
     def __str__(self):
-        return str(self.elapsed)
+        return str(self.elapsed())
 
     def __enter__(self) -> StopWatch:
         'Start/stop context entry.'
