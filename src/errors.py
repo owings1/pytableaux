@@ -1,8 +1,9 @@
 # No local package dependencies.
 
-import enum
-import typing
-_T = typing.TypeVar('_T')
+import enum as _enum
+from typing import TypeVar
+_T = TypeVar('_T')
+del(TypeVar)
 
 # Base Errors
 class IllegalStateError(Exception):
@@ -47,7 +48,8 @@ class DenotationError(ModelValueError):
 def _thru(o): return o
 def _len(o): return o if isinstance(o, int) else len(o)
 
-class Emsg(enum.Enum):
+class Emsg(_enum.Enum):
+
     InstCheck = (TypeError,
         "Expected instance of '{1}' but got type '{0}'", (type, _thru)
     )
@@ -62,7 +64,6 @@ class Emsg(enum.Enum):
         "'{1.__name__}' object attribute '{0}' is read-only", (str, type)
     )
     # "Read-only attribute: '{0}'", 1
-    
     
     IndexOutOfRange = IndexError, 'Index out of range'
 
@@ -133,4 +134,4 @@ def errstr(err) -> str:
         return '%s: %s' % (type(err).__name__, err)
     return str(err)
 
-del(enum)
+del(_enum)

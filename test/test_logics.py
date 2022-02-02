@@ -40,13 +40,13 @@ Existence = Predicates.System.Existence
 
 class BoolPropEnum(Enum):
     def __str__(self):
-        return self.name
+        return self._name_
     def __bool__(self):
-        return self.value
+        return self._value_
     def __eq__(self, other):
-        return other is self or other in (self.value, self.name)
+        return other is self or other in (self._value_, self._name_)
     def __hash__(self):
-        return self.value
+        return self._value_
 
 class Designation(BoolPropEnum):
     Designated = True

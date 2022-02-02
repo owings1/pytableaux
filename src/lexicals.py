@@ -416,8 +416,6 @@ class Bases:
 
         # Enum Instance Variables
 
-        #: The member name.
-        name: str
         #: Label with spaces allowed.
         label: str
         #: A number to signify order independent of source or other constraints.
@@ -425,10 +423,10 @@ class Bases:
         #: Name, label, or other strings unique to a member.
         strings: setf[str]
 
-        @DynClsAttr
-        def index(self) -> int:
-            'Index of the member in the enum list, in source order, 0-based.'
-            return self._index
+        # @DynClsAttr
+        # def index(self) -> int:
+        #     'Index of the member in the enum list, in source order, 0-based.'
+        #     return self._index
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Comparison ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -452,7 +450,7 @@ class Bases:
 
         def next(self, loop = False):
             seq = type(self).seq
-            i = self.index + 1
+            i = self._index + 1
             if i == len(seq):
                 if not loop: raise StopIteration
                 i = 0
@@ -462,18 +460,18 @@ class Bases:
 
         def __str__(self):
             'Returns the name.'
-            return self.name
+            return self._name_
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         def __init__(self, order, label, *_):
-            self.spec = self.name,
+            self.spec = self._name_,
             self.order, self.label = order, label
             # Prepended with rank in LexType init
             self.sort_tuple = self.order,
             self.ident = self.identitem(self)
             self.hash = self.hashitem(self)
-            self.strings = setf((self.name, self.label))
+            self.strings = setf((self._name_, self.label))
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -487,7 +485,7 @@ class Bases:
         @classmethod
         def _member_keys(cls, member: Bases.LexicalEnum):
             'Enum init hook. Index keys for Enum members lookups.'
-            return super()._member_keys(member) | {member.label, member.value}
+            return super()._member_keys(member) | {member.label, member._value_}
 
         @classmethod
         def _on_init(cls, subcls: type[Bases.LexicalEnum]):

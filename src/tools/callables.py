@@ -9,6 +9,7 @@ from errors import instcheck, subclscheck
 from tools.abcs import (
     AbcMeta,
     Copyable,
+    FlagEnum,
     MapProxy,
     P, T, KT, RT, F,
 )
@@ -39,8 +40,8 @@ from typing import (
 
 import enum
 
-@enum.unique
-class Flag(enum.Flag):
+# @enum.unique
+class Flag(FlagEnum):
 
     Blank  = 0
     Init   = 1
@@ -119,7 +120,7 @@ class Caller(Callable[..., RT], Copyable):
     def _call(self, *args) -> RT:
         raise NotImplementedError
 
-    def __new__(cls, *args, **kw):
+    def __new__(cls: type[CallT], *args, **kw) -> CallT:
         inst = super().__new__(cls)
         inst.flag = Flag.Blank | cls.cls_flag
         return inst
@@ -335,7 +336,9 @@ class gets:
             return obj
         cls_flag = Flag.Left
 
-    THRU = thru()
+    def Self(self, *_): return self
+
+    Thru = thru()
     Key0 = key(0)
     Key1 = key(1)
 

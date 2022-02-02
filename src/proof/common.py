@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = 'Node', 'Branch', 'Target'
 
 from errors import instcheck as instcheck, Emsg
-from tools.abcs import Abc, MapProxy, T
+from tools.abcs import Abc, AbcEnum, FlagEnum, MapProxy, T
 from tools.callables import Caller, gets, preds, cchain
 from tools.decorators import (
     abstract, overload, static, final,
@@ -54,16 +54,16 @@ from typing import (
     TypeVar,
 )
 
-class BranchEvent(enum.Enum):
+class BranchEvent(AbcEnum):
     AFTER_BRANCH_CLOSE = enum.auto()
     AFTER_NODE_ADD     = enum.auto()
     AFTER_NODE_TICK    = enum.auto()
 
-class RuleEvent(enum.Enum):
+class RuleEvent(AbcEnum):
     BEFORE_APPLY = enum.auto()
     AFTER_APPLY  = enum.auto()
 
-class TabEvent(enum.Enum):
+class TabEvent(AbcEnum):
     AFTER_BRANCH_ADD    = enum.auto()
     AFTER_BRANCH_CLOSE  = enum.auto()
     AFTER_NODE_ADD      = enum.auto()
@@ -71,7 +71,7 @@ class TabEvent(enum.Enum):
     AFTER_TRUNK_BUILD   = enum.auto()
     BEFORE_TRUNK_BUILD  = enum.auto()
 
-class KEY(enum.Enum):
+class KEY(AbcEnum):
     FLAGS       = enum.auto()
     STEP_ADDED  = enum.auto()
     STEP_TICKED = enum.auto()
@@ -80,7 +80,7 @@ class KEY(enum.Enum):
     PARENT      = enum.auto()
     NODES       = enum.auto()
 
-class FLAG(enum.Flag):
+class FLAG(FlagEnum):
     NONE   = 0
     TICKED = 1
     CLOSED = 2
@@ -290,7 +290,7 @@ class Filters:
 
         negated: bool|None
 
-        rget: Callable[[RHS], Sentence] = gets.THRU
+        rget: Callable[[RHS], Sentence] = gets.Thru
 
         def __init__(self, lhs: LHS, negated = None):
             super().__init__(lhs)

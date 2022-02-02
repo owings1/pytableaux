@@ -178,12 +178,12 @@ def _():
         # Build rendered example arguments
         lw = LexWriter(notn, enc='ascii')
         for arg in exargs:
-            example_arguments[arg.title][notn.name] = {
+            example_arguments[arg.title][notn._name_] = {
                 'premises': tuple(lw.write(s) for s in arg.premises),
                 'conclusion': lw.write(arg.conclusion),
             }
-        parser_tables[notn.name] = table = CharTable.fetch(notn)
-        nups[notn.name] = table.chars[LexType.Predicate]
+        parser_tables[notn._name_] = table = CharTable.fetch(notn)
+        nups[notn._name_] = table.chars[LexType.Predicate]
 
     for name in modules['logics']:
         lgc = modules['logics'][name]
@@ -270,7 +270,7 @@ else:
 
 class Metric(enum.Enum):
 
-    value: prom.metrics.MetricWrapperBase
+    _value_: prom.metrics.MetricWrapperBase
 
     app_requests_count = prom.Counter(
         'app_requests_count',
@@ -294,7 +294,7 @@ class Metric(enum.Enum):
     )
 
     def __call__(self, *labels: str) -> prom.metrics.MetricWrapperBase:
-        return self.value.labels(opts['app_name'], *labels)
+        return self._value_.labels(opts['app_name'], *labels)
 
     @staticmethod
     def start_server():
@@ -371,7 +371,7 @@ cp_config = {
 # For notn, only include those common to all, until UI suports
 # notn-specific choice.
 _encs_map = {
-    notn.name: RenderSet.available(notn)
+    notn._name_: RenderSet.available(notn)
     for notn in Notation
 }
 _enc = set(enc for encs in _encs_map.values() for enc in encs)
@@ -384,7 +384,7 @@ del(_enc, _encs_map)
 ## Static LexWriters  ##
 ########################
 lexwriters = {
-    notn.name: {
+    notn._name_: {
         enc: LexWriter(notn, enc=enc)
         for enc in RenderSet.available(notn)
     }

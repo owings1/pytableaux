@@ -41,7 +41,7 @@ EMPTY = ()
 EMPTY_ITER = iter(EMPTY)
 FCACHE_MAXMISS = 50
 FNOTIMPL = fixed.value(NotImplemented)()
-FTHRU = gets.THRU
+FTHRU = gets.Thru
 
 class FuncResolvers(dict[tuple[Callable, Callable], Callable]):
 

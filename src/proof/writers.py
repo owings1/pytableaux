@@ -10,7 +10,7 @@ formats = ('text', 'html')
 default_format = 'text'
 default_format_notn_encs = {
     'text' : {
-        notn.name: notn.default_encoding
+        notn._name_: notn.default_encoding
         for notn in Notation
     },
     'html' : {'polish': 'html', 'standard': 'html'},
@@ -21,7 +21,7 @@ def write_tableau(tableau, *args, **kw):
 
 def create_tabwriter(notn=None, format=None, **opts):
     if not notn:
-        notn = Notation.default.name
+        notn = Notation.default._name_
     if not format:
         format = default_format
     if 'lw' not in opts:

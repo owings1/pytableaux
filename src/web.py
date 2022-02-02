@@ -101,7 +101,6 @@ base_view_data = MapCover({
     'is_feedback'         : opts['feedback_enabled'],
     'is_google_analytics' : bool(opts['google_analytics_id']),
     'issues_href'         : issues_href,
-    # 'lexwriter_notations' : Notation.names,
     'lexwriter_encodings' : lexwriter_encodings,
     'lwstdhtm'            : lexwriters['standard']['html'],
     'logic_categories'    : logic_categories,
@@ -421,7 +420,7 @@ class App(object):
             raise RequestDataError(errors)
 
         return {
-            'type'     : sentence.TYPE.name,
+            'type'     : sentence.TYPE._name_,
             'rendered' : {
                 notn: {
                     fmt: lexwriters[notn][fmt].write(sentence)

@@ -60,11 +60,11 @@ class Link(Generic[VT], bases.Copyable):
 
     def __getitem__(self, rel: int) -> Link[VT] | None:
         'Get previous, self, or next with -1, 0, 1, or ``LinkRel`` enum.'
-        return getattr(self, LinkRel(rel).name)
+        return getattr(self, LinkRel(rel)._name_)
 
     def __setitem__(self, rel: int, link: Link):
         'Set previous or next with -1, 1, or ``LinkRel`` enum.'
-        setattr(self, LinkRel(rel).name, link)
+        setattr(self, LinkRel(rel)._name_, link)
 
     def invert(self):
         'Invert prev and next attributes in place.'

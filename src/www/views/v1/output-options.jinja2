@@ -15,9 +15,9 @@
     <select id="output_notation" name="output_notation">
         {% for notn in Notation -%}
             <option value="{{ notn }}" {{- 
-                helper.select_opt(form_data, 'output_notation', notn.name, form_defaults) 
+                helper.select_opt(form_data, 'output_notation', notn._name_, form_defaults) 
             }}>
-                {{- notn.name|e -}}
+                {{- notn._name_|e -}}
             </option>
         {% endfor %}
     </select>

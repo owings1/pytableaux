@@ -1,7 +1,7 @@
 {# assumes input values are properly ordered for binary operators #}
 {% set arity = operator.arity %}
 <div class="truth-table-wrapper">
-    <table class="truth-table operator-{{ operator.name.lower()|e }}
+    <table class="truth-table operator-{{ operator._name_.lower()|e }}
         {{- ' docutils' if theme == 'sphinx_rtd_theme' }}">
         <thead>
             <tr>

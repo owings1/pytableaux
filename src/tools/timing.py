@@ -1,15 +1,24 @@
 from __future__ import annotations
 
-__all__ = 'StopWatch',
+__all__ = 'StopWatch', 'Counter'
 
 from errors import IllegalStateError
+
 from time import time as _time
+from typing import Iterator, TypeVar
 
 def _nowms() -> int:
     'Current time in milliseconds'
     return int(round(_time() * 1000))
 
-class StopWatch:
+class TimingCommon:
+    @classmethod
+    def gen(cls: type[TimT], n: int, *args, **kw) -> Iterator[TimT]:
+        return (cls(*args, **kw) for _ in range(n))
+
+TimT = TypeVar('TimT', bound = TimingCommon)
+
+class StopWatch(TimingCommon):
     'Millisecond stopwatch.'
 
     __slots__ = '_start_time', '_accum', '_running', 'count'
@@ -96,3 +105,14 @@ class StopWatch:
     def __exit__(self, type, value, traceback):
         if self._running:
             self.stop()
+
+class Counter(TimingCommon):
+    __slots__ = 'value',
+    def __init__(self, value = 0):
+        self.value = value
+    def inc(self, n = 1):
+        self.value += n
+    def __int__(self):
+        return self.value
+    def __repr__(self):
+        return '<%s:%s>' % (type(self).__name__, self.value)
