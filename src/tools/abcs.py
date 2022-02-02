@@ -280,8 +280,6 @@ class abcm:
             return _hookable_decorate(func, names)
         return decorator
 
-
-
 class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
 
@@ -594,8 +592,11 @@ def _buildhookinfo(Class: TT, /, *, _main = {}, _classes = {}):
 
 ABC_HOOKINFO = MapProxy(_buildhookinfo.__kwdefaults__['_main'])
 
-def _buildhookimpl(Class: TT, hooks = None):
-    hooks: dict[type, dict[str, Callable]] = {} if hooks is None else dict(hooks)
+def _buildhookimpl(Class: TT, hooks: dict[type, dict[str, Callable]] = None):
+    if hooks is None:
+        hooks = {}
+    else:
+        hooks = {key: hooks[key].copy() for key in hooks}
     ns = Class.__dict__
     for member in ns.values():
         value: dict = getattr(member, _ABCHOOK_IMPL_ATTR, None)
@@ -620,22 +621,19 @@ def _buildhookimpl(Class: TT, hooks = None):
                 raise TypeError from Emsg.MissingKey(hook)
             for method in clsinfo[hook]:
                 func = getattr(Class, method)
-                if method not in ns:
-                    # Copy the function if subcls did not declare it,
-                    # and, importantly, only once.
-                    func = _copyf(func)
-                    setattr(Class, method, func)
-                kwdefs = func.__kwdefaults__
                 try:
-                    defval = kwdefs[hook]
+                    defval = func.__kwdefaults__[hook]
                 except (KeyError, TypeError):
                     raise TypeError("Cannot get kw default for '%s'" % method)
                 if defval is not None:
                     if defval is member:
                         continue
                     raise TypeError from Emsg.ValueConflictFor(hook, member, defval)
-                kwdefs[hook] = member
-
+                if method not in ns:
+                    # Copy the function if it is not already in the Class dict.
+                    func = _copyf(func)
+                    setattr(Class, method, func)
+                func.__kwdefaults__[hook] = member
 
 def _copyf(f: FunctionType) -> FunctionType:
     func = FunctionType(
