@@ -81,26 +81,19 @@ class SequenceSetApi(SequenceApi[VT], SetApi[VT]):
 class qsetf(SequenceSetApi[VT]):
     'Immutable sequence set implementation setf and seqf bases.'
 
-    # _set_type_ = setf
-    # _seq_type_ = seqf
-
     _set_: SetApi[VT]
     _seq_: SequenceApi[VT]
 
     __slots__ = '_set_', '_seq_'
 
-    # def __init__(self, values: Iterable = None, /):
-        # cls = type(self)
     def __new__(cls, values: Iterable = None, /):
         self = object.__new__(cls)
         if values is None:
-            self._seq_ = EMPTY_SEQ#cls._seq_type_()
-            self._set_ = EMPTY_SET#cls._set_type_()
+            self._seq_ = EMPTY_SEQ
+            self._set_ = EMPTY_SET
         else:
             self._seq_ = seqf(dict.fromkeys(values))
             self._set_ = setf(self._seq_)
-            # self._seq_ = cls._seq_type_(tuple(dict.fromkeys(values)))
-            # self._set_ = cls._set_type_(self._seq_)
         return self
 
     def copy(self):
@@ -164,51 +157,6 @@ class MutableSequenceSetApi(SequenceSetApi[VT], MutableSequenceApi[VT], MutableS
         'Reverse in place.'
         # Must re-implement MutableSequence method.
         raise NotImplementedError
-
-    # @abchook.new_value
-    # def _setslice_prep(self: MutSeqSetT, slice_: slice, values: Iterable) -> tuple[range, MutSeqSetT, MutSeqSetT]:
-    #     range_, olds, values = super()._setslice_prep(slice_, values)
-    #     for v in values:
-    #         if v in self and v not in olds:
-    #             raise DuplicateValueError(v)
-    #     return range_, olds, values
-
-# class SequenceSetHooks(MutableSequenceSetApi[VT]):
-    
-#     __slots__ = EMPTY_SET
-
-#     @abchook.before_add
-#     def _before_add(self, value):
-#         '''Before add hook. Not guaranteed that the value will be added, and
-#         it may already be in the sequence, but not the set.'''
-#         pass
-
-#     @abchook.after_add
-#     def _after_add(self, value):
-#         'After add hook.'
-#         pass
-
-#     @abchook.after_remove
-#     def _after_remove(self, value):
-#         'After remove hook.'
-#         pass
-
-#     @abchook.new_value
-#     def _new_value(self, value):
-#         '''Hook to return the new value before it is attempted to be added.
-#         Must be idempotent. Does not affect deletions.'''
-#         return value
-
-    # @abchook.before_setslice
-    # def _before_setslice_(self: SeqSetHookT, slice_: slice, values: Iterable, /) -> tuple[range, SeqSetHookT, SeqSetHookT]:
-    #     return (
-    #         # The computed range of indexes.
-    #         self._setslice_range(slice_, values),
-    #         # The existing values to replace.
-    #         self[slice_],
-    #         # The replacment values, mapped through _new_value hook.
-    #         self._from_iterable(map(self._new_value, values))
-    #     )
 
 SeqSetT = TypeVar('SeqSetT', bound = SequenceSetApi)
 

@@ -103,12 +103,6 @@ class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
         self.extend(chain.from_iterable(repeat(self, int(other) - 1)))
         return self
 
-    # def _setslice_range(self: MutSeqT, slice_: slice, values: Sized, /) -> range:
-    #     range_ = range(*slice_.indices(len(self)))
-    #     if abs(slice_.step or 1) != 1 and len(range_) != len(values):
-    #         raise Emsg.MismatchExtSliceSize(values, range_)
-    #     return range_
-
 class SequenceCover(SequenceApi[VT]):
 
     __slots__ = '__seq',
@@ -321,38 +315,6 @@ class deqseq(deque[VT], MutableSequenceApi[VT]):
             return cls(it, maxlen = it.maxlen)
         return cls(it)
 
-class SequenceHooks(MutableSequenceApi[VT]):
-
-    __slots__ = EMPTY
-
-# class HookedDeqSeq(deqseq[VT]):
-
-#     __slots__ = EMPTY
-
-#     def __init__(self, values: Iterable = None, /, maxlen: int|None = None):
-#         if values is None:
-#             super().__init__(maxlen = maxlen)
-#         else:
-#             super().__init__(map(self._new_value, values), maxlen)
-
-#     def insert(self, index: int, value):
-#         super().insert(index, self._new_value(value))
-
-#     def append(self, value):
-#         super().append(self._new_value(value))
-
-#     def appendleft(self, value):
-#         super().appendleft(self._new_value(value))
-
-#     def extend(self, values):
-#         super().extend(map(self._new_value, values))
-
-#     def extendleft(self, values):
-#         super().extendleft(map(self._new_value, values))
-
-#     def __setitem__(self, index: SupportsIndex, value):
-#         instcheck(index, SupportsIndex)
-#         super().__setitem__(index, self._new_value(value))
 
 
 EMPTY_SEQ = seqf()
