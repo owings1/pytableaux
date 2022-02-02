@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = 'EventEmitter', 'EventsListeners',
 
 from errors import instcheck
-from tools.abcs import Abc, Copyable, abcf, abchook, F
+from tools.abcs import Abc, Copyable, abcf, F
 from tools.decorators import raisr, wraps
 from tools.linked import linqset
 from tools.mappings import (

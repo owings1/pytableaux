@@ -35,7 +35,7 @@ from errors import (
 )
 import tools.abcs as abcs
 from tools.abcs import (
-    abcm, abcf, abchook,
+    abcm, abcf,
     T
 )
 from tools.decorators import (
@@ -1357,7 +1357,6 @@ class LexType(Bases.Enum):
 ##############################################################
 
 class Predicates(qset[Predicate], Bases.Abc,
-    # qset = dict(hooks = dict(cast = Predicate)),
     hooks = {qset: dict(cast = Predicate)}
 ):
     'Predicate store'
@@ -1379,9 +1378,8 @@ class Predicates(qset[Predicate], Bases.Abc,
             if default is NOARG: raise
             return default
 
-    @qset.hook('done')
     @abcf.temp
-    # @abchook.done
+    @qset.hook('done')
     def after_change(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
         'Implement after change (done) hook. Update lookup index.'
         for pred in leaving or EMPTY_IT:

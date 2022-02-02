@@ -10,11 +10,12 @@ from errors import (
     MissingValueError,
 )
 from tools.abcs import (
-    abcf,
+    # abcf,
     abcm,
-    abchook,
-    MapProxy,
-    T, VT, F
+    # MapProxy,
+    # T,
+    # F,
+    VT,
 )
 from tools.decorators import abstract, overload, final
 from tools.sequences import (
@@ -42,10 +43,10 @@ from itertools import (
     filterfalse
 )
 from typing import (
-    Callable,
+    # Callable,
     Iterable,
     Iterator,
-    Mapping,
+    # Mapping,
     # MutableSequence,
     SupportsIndex,
     TypeVar
@@ -197,10 +198,20 @@ class qset(MutableSequenceSetApi[VT]):
     __reversed__ = qsetf[VT].__reversed__
     __repr__     = qsetf.__repr__
 
+    def reverse(self):
+        'Reverse in place.'
+        self._seq_.reverse()
+
+    def sort(self, /, *, key = None, reverse = False):
+        'Sort the list in place.'
+        self._seq_.sort(key = key, reverse = reverse)
+
+    def clear(self):
+        'Clear the list and set.'
+        self._seq_.clear()
+        self._set_.clear()
+
     @abcm.hookable('cast', 'check', 'done')
-    # @abchook.cast
-    # @abchook.check
-    # @abchook.done
     def insert(self, index: SupportsIndex, value, /, *,
         cast = None, check = None, done = None
     ):
@@ -224,8 +235,6 @@ class qset(MutableSequenceSetApi[VT]):
         done and done(self, (value,), EMPTY_SET)
 
     @abcm.hookable('check', 'done')
-    # @abchook.check
-    # @abchook.done
     def __delitem__(self, key: SupportsIndex|slice, /, *,
         check = None, done = None
     ):
@@ -255,7 +264,6 @@ class qset(MutableSequenceSetApi[VT]):
         done and done(self, EMPTY_SET, (leaving,))
 
     @abcm.hookable('cast')
-    # @abchook.cast
     def __setitem__(self, key: SupportsIndex|slice, value: VT|Collection[VT], /, *,
         cast = None
     ):
@@ -277,8 +285,6 @@ class qset(MutableSequenceSetApi[VT]):
         raise Emsg.InstCheck(key, (slice, SupportsIndex))
 
     @abcm.hookable('check', 'done')
-    # @abchook.check
-    # @abchook.done
     def __setitem_index__(self, index: SupportsIndex, arriving, /, *,
         check = None, done = None,
     ):
@@ -315,8 +321,6 @@ class qset(MutableSequenceSetApi[VT]):
         done and done(self, (arriving,), (leaving,))
 
     @abcm.hookable('check', 'done')
-    # @abchook.check
-    # @abchook.done
     def __setitem_slice__(self, slice_: slice, arriving: Collection[VT], /, *,
         check = None, done = None,
     ):
@@ -334,7 +338,7 @@ class qset(MutableSequenceSetApi[VT]):
         # is a duplicate.
         for v in filterfalse(leaving.__contains__, filter(self.__contains__, arriving)):
             raise DuplicateValueError(v)
-        
+
         # hook.check
         check and check(self, arriving, leaving)
 
@@ -356,98 +360,5 @@ class qset(MutableSequenceSetApi[VT]):
         # hook.done
         done and done(self, arriving, leaving)
 
-    def reverse(self):
-        'Reverse in place.'
-        self._seq_.reverse()
-
-    def sort(self, /, *, key = None, reverse = False):
-        'Sort the list in place.'
-        self._seq_.sort(key = key, reverse = reverse)
-
-    def clear(self):
-        'Clear the list and set.'
-        self._seq_.clear()
-        self._set_.clear()
-
-
-    # ---------- hook config ----------------- #
-
-    # NB: This is an experimental feature, and will be moved to
-    #     AbcMeta once generalized.
-    #
-    # TODO:
-    #
-    #   - Distinguish between declaring a hook for subclass use,
-    #     and a subclass flagging a hook to process. Currently the
-    #     @abchook decorator is used for both.
-    #
-    #   - Find a way to resolve hook name conflicts with different bases.
-    #
-    #   - Improve subclass init performance.
-
-    _abchook_flagmask: abchook
-    # hook name to method names
-    _abc_hookinfo: Mapping[str, setf[str]]
-
-    # @abcf.before
-    @abcf.temp
-    def setup_hooks(ns: dict, bases, **kw):
-        info = {}
-        mask = abchook.blank
-        for flag in abchook:
-            if not flag.value: continue
-            methods = set()
-            for name, member in ns.items():
-                methodflag = abchook.get(member)
-                if not methodflag.value: continue
-                if flag in methodflag:
-                    methods.add(name)
-            if len(methods):
-                info[flag.name] = setf(methods)
-                mask |= flag
-        ns['_abchook_flagmask'] = mask
-        ns['_abc_hookinfo'] = MapProxy(info)
-
-    def __init_subclass__(subcls: type[qset], **kw):
-        'Subclass init. Check for hook config.'
-        cls = __class__
-
-        # Hooks listed in subclass declaration keyword 'qset'
-        # hooks = kw.pop(cls.__name__, {}).get('hooks', {})
-    
-        super().__init_subclass__(**kw)
-        return
-        hookinfo = cls._abc_hookinfo
-        hookmask = cls._abchook_flagmask
-        ns = subcls.__dict__
-
-        for member in ns.values():
-            flag = abchook.get(member) & hookmask
-            if not flag.value: continue
-            for hookname in hookinfo:
-                if abchook[hookname] in flag:
-                    if hookname in hooks:
-                        raise TypeError from Emsg.DuplicateKey(hookname)
-                    hooks[hookname] = member
-            continue
-
-        if 0 and len(hooks):
-            from tools.decorators import _copyf as copyf
-            for hookname, hook in hooks.items():
-                for method in hookinfo[hookname]:
-                    func = getattr(subcls, method)
-                    if method not in subcls.__dict__:
-                        # Copy the function if subcls did not declare it,
-                        # and, importantly, only once.
-                        print('qset copyf', func)
-                        func = copyf(func)
-                        setattr(subcls, method, func)
-                    kwdefs = func.__kwdefaults__
-                    try:
-                        defval = kwdefs[hookname]
-                    except KeyError: raise TypeError
-                    if defval is not None:
-                        raise TypeError from Emsg.ValueConflictFor(hookname, hook, defval)
-                    kwdefs[hookname] = hook
 
 del(abstract, overload, final)
