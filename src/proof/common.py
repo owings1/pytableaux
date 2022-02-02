@@ -3,23 +3,43 @@ from __future__ import annotations
 __all__ = 'Node', 'Branch', 'Target'
 
 from errors import instcheck as instcheck, Emsg
-from tools.abcs import Abc
+from tools.abcs import Abc, MapProxy, T
 from tools.callables import Caller, gets, preds, cchain
 from tools.decorators import (
     abstract, overload, static, final,
-    lazy, raisr
+    lazy, operd, raisr
 )
 from tools.events import EventEmitter
-from tools.linked import linqset
-from tools.mappings import dmap, MapCover, ItemsIterator
-from tools.sequences import SequenceApi
-from tools.sets import EMPTY_SET, setf
-from lexicals import Operator, Constant, Sentence, Predicated, Operated, Quantified
-
+from tools.hybrids import qset
+from tools.mappings import (
+    dmap,
+    dmapattr,
+    ItemsIterator,
+    MappingApi,
+    MapCover
+) 
+from tools.sequences import (
+    SequenceApi,
+    SequenceCover,
+)
+from tools.sets import EMPTY_SET, setf, SetCover
+from lexicals import (
+    Constant,
+    Operated,
+    Operator,
+    Predicated,
+    Quantified,
+    Sentence,
+)
 
 import enum
 from collections.abc import Set
-from itertools import chain
+from functools import partial
+from itertools import (
+    chain,
+    filterfalse,
+    starmap
+)
 import operator as opr
 from typing import (
     Any,
@@ -30,11 +50,9 @@ from typing import (
     Mapping,
     NamedTuple,
     Sequence,
+    SupportsIndex,
     TypeVar,
 )
-
-
-EMPTY = ()
 
 class BranchEvent(enum.Enum):
     AFTER_BRANCH_CLOSE = enum.auto()
@@ -72,28 +90,25 @@ class FLAG(enum.Flag):
     TRUNK_BUILT = 32
 
 
-class Node(MapCover):
+class Node(MappingApi):
     'A tableau node.'
 
-    __slots__ = 'step', 'ticked', 'id', '_is_access', '_is_modal', '_worlds',
-
-    defaults = MapCover({'world': None, 'designated': None})
+    __slots__ = (
+        'step', 'ticked', '_is_access', '_is_modal', '_worlds',
+        '__len__', '_getitem_orig_', '__iter__', '__reversed__',
+    )
 
     def __new__(cls, arg = None, /):
-        if isinstance(arg, cls):
-            return arg
-        return super().__new__(cls)
+        if type(arg) is cls: return arg
+        return object.__new__(cls)
 
-    def __init__(self, props: Mapping = None, /):
-        super().__init__(dmap(props or EMPTY_SET))
-        self.id = id(self)
+    def __init__(self, mapping: Mapping = None, /):
+        if self is mapping:
+            return
+        self.__mapinit(dmap(mapping or EMPTY_SET), self)
 
     def copy(self):
-        cls = type(self)
-        inst = super().__new__(cls)
-        inst.id = id(inst)
-        inst._MapCover__m = self._MapCover__m
-        return inst
+        return self.__mapinit(self, object.__new__(type(self)))
 
     @property
     def is_closure(self) -> bool:
@@ -108,7 +123,7 @@ class Node(MapCover):
         return self.has('world1', 'world2')
 
     @lazy.prop
-    def worlds(self, filtpred = preds.instanceof[int]) -> setf[int]:
+    def worlds(self, /, filtpred = preds.instanceof[int]) -> setf[int]:
         """
         Return the set of worlds referenced in the node properties. This combines
         the properties `world`, `world1`, `world2`, and `worlds`.
@@ -119,9 +134,7 @@ class Node(MapCover):
         ))
 
     def has(self, *names: str):
-        """
-        Whether the node has a non-``None`` property of all the given names.
-        """
+        'Whether the node has a non-``None`` property of all the given names.'
         for name in names:
             if self.get(name) is None:
                 return False
@@ -137,44 +150,51 @@ class Node(MapCover):
         return False
 
     def has_props(self, props: Mapping):
-        """
-        Whether the node properties match all those give in ``props``.
-        """
+        'Whether the node properties match all those give in ``props``.'
         for prop in props:
             if prop not in self or props[prop] != self[prop]:
                 return False
         return True
 
-    def __eq__(self, other):
-        return self is other
+    __bool__    = preds.true
+    __eq__      = operd(opr.is_)
+    __hash__    = operd(id)
+    __delattr__ = raisr(AttributeError)
 
-    def __hash__(self):
-        return hash(self.id)
+    id = property(operd(id)())
 
-    def __bool__(self):
-        return True
+    @static
+    def __mapinit(src: Mapping, dest: Node, /, *, items = tuple(dict(
+        __len__ = '__len__', __iter__ = '__iter__', _getitem_orig_ = '__getitem__',
+        __reversed__ = '__reversed__',).items()), sa = object.__setattr__,
+        ga = object.__getattribute__
+    ):
+        'Copy the Mapping methods from the source.'
+        for name, lookup in items:
+            sa(dest, name, ga(src, lookup))
+        return dest
 
-    def __getitem__(self, key):
+    def __getitem__(self, key, /, *,
+        getdefault = MapCover(world = None, designated = None).__getitem__
+    ):
         try:
-            return super().__getitem__(key)
+            return self._getitem_orig_(key)
         except KeyError:
-            return self.defaults[key]
+            return getdefault(key)
+
+    def __setattr__(self, name, val):
+        if getattr(self, name, val) != val:
+            raise Emsg.ReadOnlyAttr(name, self)
+        super().__setattr__(name, val)
 
     @classmethod
     def _oper_res_type(cls, other_type):
+        'Always produce a plain dict on math operations.'
         return dmap
 
     def __repr__(self):
         from tools.misc import orepr
         return orepr(self, id = self.id, props = dict(self))
-
-    def __setattr__(self, name, val):
-        if getattr(self, name, val) != val:
-            raise AttributeError('Node.%s is readonly' % name)
-        super().__setattr__(name, val)
-
-    def __delattr__(self, name):
-        raise AttributeError('Node is readonly')
 
 class Access(NamedTuple):
 
@@ -216,9 +236,7 @@ class Comparer(Generic[LHS, RHS], Abc):
 
     def __repr__(self):
         from tools.misc import orepr
-        me = type(self).__qualname__
-        them = self._lhsrepr(self.lhs)
-        return orepr(me, lhs = them)
+        return orepr(self, lhs = self._lhsrepr(self.lhs))
 
     def _lhsrepr(self, lhs) -> str:
         try: return type(lhs).__qualname__
@@ -226,6 +244,7 @@ class Comparer(Generic[LHS, RHS], Abc):
 
     @abstract
     def __call__(self, rhs: RHS) -> bool: ...
+
     @abstract
     def example(self) -> RHS: ...
 
@@ -242,6 +261,7 @@ class Filters:
         #: Attribute getters
         lget: Callable[[LHS, str], Any] = gets.attr(flag = Caller.SAFE)
         rget: Callable[[RHS, str], Any] = gets.attr()
+
         #: Comparison
         fcmp: Callable[[Any, Any], bool] = opr.eq
 
@@ -267,9 +287,18 @@ class Filters:
     class Sentence(Comparer[LHS, RHS]):
 
         __slots__ = 'negated', 'applies'
+
         negated: bool|None
 
-        rget: Callable[[RHS], Sentence] = gets.thru()
+        rget: Callable[[RHS], Sentence] = gets.THRU
+
+        def __init__(self, lhs: LHS, negated = None):
+            super().__init__(lhs)
+            if negated is None:
+                self.negated = getattr(lhs, 'negated', None)
+            else:
+                self.negated = negated
+            self.applies = any((lhs.operator, lhs.quantifier, lhs.predicate))
 
         def get(self, rhs: RHS) -> Sentence:
             s = self.rget(rhs)
@@ -290,14 +319,6 @@ class Filters:
                 s = s.negate()
             return s
 
-        def __init__(self, lhs: LHS, negated = None):
-            super().__init__(lhs)
-            if negated is None:
-                self.negated = getattr(lhs, 'negated', None)
-            else:
-                self.negated = negated
-            self.applies = any((lhs.operator, lhs.quantifier, lhs.predicate))
-
         def __call__(self, rhs: RHS) -> bool:
             if not self.applies: return True
             s = self.get(rhs)
@@ -314,14 +335,14 @@ class Filters:
                     return False
             return True
 
-    class ItemValue(Comparer[LHS, RHS]):
+    # class ItemValue(Comparer[LHS, RHS]):
 
-        __slots__ = EMPTY_SET
+    #     __slots__ = EMPTY_SET
 
-        lhs: Callable[[Any], bool]
-        rget: opr.itemgetter(1)
-        def __call__(self, rhs):
-            return bool(self.lhs(self.rget(rhs)))
+    #     lhs: Callable[[Any], bool]
+    #     rget: opr.itemgetter(1)
+    #     def __call__(self, rhs):
+    #         return bool(self.lhs(self.rget(rhs)))
 
 class NodeFilter(Comparer[LHS, RHS]):
 
@@ -369,6 +390,16 @@ class NodeFilters(Filters):
                 n['world'] = 0
             return n
 
+# class ViewsCache:
+#     __slots__ = '_views',
+#     def __init__(self):
+#         self._views = {}
+#     def constants(self, obj: Set[Constant]) -> SetCover[Constant]:
+#         try:
+#             return self._views['constants']
+#         except KeyError:
+#             return self._views.setdefault('constants', SetCover(obj))
+
 class Branch(SequenceApi[Node], EventEmitter):
     'Represents a tableau branch.'
 
@@ -380,10 +411,12 @@ class Branch(SequenceApi[Node], EventEmitter):
 
         # Make sure properties are copied if needed in copy()
 
+        # self._views = ViewsCache()
         self.__closed = False
 
-        self.__nodes   : list[Node] = []
-        self.__nodeset : set[Node] = set()
+        # self.__nodes   : list[Node] = []
+        self.__nodes   : qset[Node] = qset()
+        # self.__nodeset : set[Node] = set()
         self.__ticked  : set[Node] = set()
 
         self.__worlds    : set[int] = set()
@@ -398,10 +431,6 @@ class Branch(SequenceApi[Node], EventEmitter):
             world2     = {},
             w1Rw2      = {},
         )
-
-    @property
-    def id(self) -> int:
-        return id(self)
 
     @property
     def parent(self) -> Branch:
@@ -521,15 +550,16 @@ class Branch(SequenceApi[Node], EventEmitter):
         """
         node = Node(node)
         self.__nodes.append(node)
-        self.__nodeset.add(node)
+        # self.__nodeset.add(node)
         s: Sentence = node.get('sentence')
         if s:
-            if s.constants:
-                if self.__nextconst in s.constants:
+            cons = s.constants
+            if cons:
+                if self.__nextconst in cons:
                     # TODO: new_constant() is still a prettier result, since it
                     #       finds the mimimum available by searching for gaps.
-                    self.__nextconst = max(s.constants).next()
-                self.__constants.update(s.constants)
+                    self.__nextconst = max(cons).next()
+                self.__constants.update(cons)
         if node.worlds:
             maxworld = max(node.worlds)
             if maxworld >= self.__nextworld:
@@ -551,12 +581,10 @@ class Branch(SequenceApi[Node], EventEmitter):
 
     def tick(self, *nodes: Node):
         'Tick a node for the branch.'
-        for node in nodes:
-            if not self.is_ticked(node):
-                self.__ticked.add(node)
-                node.ticked = True
-                self.emit(BranchEvent.AFTER_NODE_TICK, node, self)
-        # return self
+        for node in filterfalse(self.is_ticked, nodes):
+            self.__ticked.add(node)
+            node.ticked = True
+            self.emit(BranchEvent.AFTER_NODE_TICK, node, self)
 
     def close(self):
         'Close the branch. Returns self.'
@@ -575,7 +603,6 @@ class Branch(SequenceApi[Node], EventEmitter):
         Return a copy of the branch. Event listeners are *not* copied.
         Parent is not copied, but can be explicitly set.
         """
-        # branch = self.__class__(parent = parent)
         cls = type(self)
         b = cls.__new__(cls)
         b.__init_parent(parent)
@@ -585,7 +612,7 @@ class Branch(SequenceApi[Node], EventEmitter):
         b.__closed = self.__closed
 
         b.__nodes   = self.__nodes.copy()
-        b.__nodeset = self.__nodeset.copy()
+        # b.__nodeset = self.__nodeset.copy()
         b.__ticked  = self.__ticked.copy()
 
         b.__worlds    = self.__worlds.copy()
@@ -599,21 +626,23 @@ class Branch(SequenceApi[Node], EventEmitter):
             }
             for prop in self.__pidx
         }
-        if hasattr(self, '_Branch__model'):
-            b.__model = self.__model
+        try: b.__model = self.__model
+        except AttributeError: pass
+
         return b
 
-    def constants(self):
-        'Return the set of constants that appear on the branch.'
-        return self.__constants
+    # def constants(self):
+    #     'Return the set of constants that appear on the branch.'
+    #     # return self._views.constants(self.__constants)
+    #     return self.__constants
 
     def new_constant(self):
         'Return a new constant that does not appear on the branch.'
         if not self.__constants:
             return Constant.first()
         maxidx = Constant.TYPE.maxi
-        coordset = set(c.coords for c in self.__constants)
-        index, sub = 0, 0
+        coordset = setf(c.coords for c in self.__constants)
+        index = sub = 0
         while (index, sub) in coordset:
             index += 1
             if index > maxidx:
@@ -677,13 +706,7 @@ class Branch(SequenceApi[Node], EventEmitter):
                 best_index = self
         return best_index
 
-    def __eq__(self, other):
-        return self is other
-
-    def __hash__(self):
-        return hash(self.id)
-
-    def __getitem__(self, key) -> Node:
+    def __getitem__(self, key: SupportsIndex) -> Node:
         return self.__nodes[key]
 
     def __len__(self):
@@ -692,11 +715,15 @@ class Branch(SequenceApi[Node], EventEmitter):
     def __iter__(self) -> Iterator[Node]:
         return iter(self.__nodes)
 
-    def __bool__(self):
-        return True
+    __hash__ = operd(id)
+    __eq__   = operd(opr.is_)
+    __bool__ = preds.true
 
-    def __contains__(self, node: Node):
-        return node in self.__nodeset
+    id = property(operd(id)())
+
+    def __contains__(self, node):
+        return node in self.__nodes
+        # return node in self.__nodeset
 
     def __repr__(self):
         from tools.misc import orepr
@@ -713,14 +740,8 @@ class Branch(SequenceApi[Node], EventEmitter):
         b.extend(nodes)
         return b
 
-class Target(dmap[str, Any]):
+class Target(dmapattr[str, Any]):
 
-    __slots__ = EMPTY_SET
-
-    __attrs =  {
-        'branch', 'rule', 'node', 'nodes', 'world', 'world1', 'world2',
-        'sentence', 'designated', 'flag'
-    }
 
     branch : Branch
     rule   : object
@@ -731,70 +752,58 @@ class Target(dmap[str, Any]):
     world2 : int
     flag   : str
     sentence   : Sentence
+    constant   : Constant
     designated : bool
 
-    # def __new__(cls, obj = None, /, **context):
-    #     if isinstance(obj, cls):
-    #         raise TypeError
-    #         obj.update(context)
-    #         return obj
-    #     return super().__new__(cls)
+    __slots__ = setf({
+        'branch', 'rule', 'node', 'nodes',
+        'world', 'world1', 'world2',
+        'sentence', 'designated', 'constant',
+        'flag',
+    })
 
-    @property
-    def type(self):
-        if 'nodes' in self: return 'Nodes'
-        if 'node' in self: return 'Node'
-        return 'Branch'
-
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
+    def __init__(self, it: Iterable = None, /, **kw):
+        if it is not None:
+            self.update(it)
+        if len(kw):
+            self.update(kw)
         if 'branch' not in self:
             raise Emsg.MissingValue('branch')
 
-    def copy(self):
-        cls = type(self)
-        inst = cls.__new__(cls)
-        # skip checks
-        dict.update(inst, self)
-        return inst
+    @property
+    def type(self):
+        if 'nodes'  in self: return 'Nodes'
+        if 'node'   in self: return 'Node'
+        if 'branch' in self: return 'Branch'
+        raise ValueError
 
-    def __setitem__(self, key: str, val):
-        if not preds.isattrstr(key):
+    # For dmapattr
+    _keyattr_ok = __slots__.__contains__
+
+    def __setitem__(self, key: str, value, /, *, ok = _keyattr_ok):
+        if ok(key):
+            if key in self and self[key] != value:
+                raise Emsg.ValueConflictFor(key, value, self[key])
+        elif not preds.isattrstr(key):
             instcheck(key, str)
-            raise KeyError('Invalid target key: %s' % key)
-        if self.get(key, val) != val:
-            raise Emsg.ValueConflict(val, self[key], key)
-        super().__setitem__(key, val)
+            raise Emsg.BadAttrName(key)
+        super().__setitem__(key, value)
 
     __delitem__ = raisr(TypeError)
     __delattr__ = raisr(AttributeError)
-
-    def __getattr__(self, name):
-        if name in self.__attrs:
-            try: return self[name]
-            except: pass
-        raise AttributeError(name)
-
-    def __setattr__(self, name, val):
-        if name in self.__attrs:
-            self[name] = val
-        else:
-            raise AttributeError(name)
-
-    def __bool__(self):
-        return True
+    __bool__    = preds.true
 
     def __dir__(self):
-        return list(cchain.reduce_filter(self.__attrs, self.get, preds.notnone))
-        # return list(filter(cchain.reducer(self.get, preds.notnone), self.__attrs))
-        # return list(filter(self.__contains__, self.__attrs))
+        return list(self._names())
 
     def __repr__(self):
         from tools.misc import orepr
-        return orepr(self, dict(
-            ItemsIterator(self.__attrs, vget = self.__getitem__,
-                kpred = cchain.reducer(self.get, preds.notnone)
-            )
-        ))
+        return orepr(self, dict(ItemsIterator(self._names(), vget = self.get)))
 
-del(EventEmitter, enum, lazy)
+    def _names(self, /, *, redcr = partial(cchain.reduce_filter, __slots__),
+        pred = preds.notnone
+    ):
+        return redcr(self.get, pred)
+
+
+del(EventEmitter, enum, lazy, operd)

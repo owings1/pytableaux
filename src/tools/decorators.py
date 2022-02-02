@@ -53,6 +53,7 @@ from typing import (
 )
 from types import (
     DynamicClassAttribute,
+    FunctionType,
 )
 EMPTY = ()
 
@@ -97,12 +98,14 @@ def _checkcallable2(obj):
         return _methcaller(obj)
     return _checkcallable(obj)
 
-# def _copyf(f: FunctionType) -> FunctionType:
-#     func = FunctionType(
-#         f.__code__, f.__globals__, f.__name__,
-#         f.__defaults__, f.__closure__,
-#     )
-#     return wraps(f)(func)
+def _copyf(f: FunctionType) -> FunctionType:
+    func = FunctionType(
+        f.__code__, f.__globals__, f.__name__,
+        f.__defaults__, f.__closure__,
+    )
+    func.__kwdefaults__ = dict(f.__kwdefaults__)
+    return func
+    return wraps(f)(func)
 
 class Member(Generic[T]):
 
@@ -302,6 +305,8 @@ class operd:
             return info
 
     class apply(Base):
+        '''Create a function or method from an operator, or other
+        built-in function.'''
 
         __slots__ = EMPTY
 
@@ -316,6 +321,9 @@ class operd:
             else:
                 def fapply(*args): return oper(*args)
             return wraps(info)(fapply)
+
+    def __new__(cls, *args, **kw):
+        return operd.apply(*args, **kw)
 
     class reduce(Base):
         '''Create a reducing method using functools.reduce to apply
@@ -368,8 +376,7 @@ class operd:
 
     class order(Base):
         '''Wrap an ordering func with oper like: ``oper(func(a, b), 0)``. By
-        default, except (AttributeError, TypeError), and return
-        ``NotImplemented``.'''
+        default, except (AttributeError, TypeError), and return ``NotImplemented``.'''
 
         __slots__ = 'errs', 'fcmp'
 
@@ -400,7 +407,7 @@ class operd:
     @staticmethod
     def repeat(oper: Callable, info: F) -> F:
         '''Create a method that accepts an arbitrary number of positional
-        arguments, and repeatedly calls a one argument method with for each
+        arguments, and repeatedly calls a one argument method for each
         argument (or, equivalently, a two-argument function with self as the
         first argument).'''
 
@@ -582,9 +589,11 @@ class NoSetAttr:
 
     efmt_fixed = '%s (readonly)'.__mod__
     efmt_change = '%s (immutable)'.__mod__
+    enabled = True
 
-    def __init__(self, roattr = '_readonly', /):
-        self.__roattr = roattr
+    def __init__(self, /, attr = '_readonly', enabled = True):
+        self.enabled = enabled
+        self.__roattr = attr
 
     def __call__(self, basecls, cls = None, changeonly = False):
         ok = basecls.__setattr__
@@ -599,10 +608,10 @@ class NoSetAttr:
         else:
             fail = self.fixedraiser
         @wraps(ok)
-        def f(self, name, value):
-            if check(self):
-                fail(self, name, value)
-            ok(self, name, value)
+        def f(obj, name, value):
+            if self.enabled and check(obj):
+                fail(obj, name, value)
+            ok(obj, name, value)
         return f
 
     def fixedchecker(self, obj):

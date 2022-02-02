@@ -639,7 +639,8 @@ class QuantifierFatRule(DefaultRule, AdzHelper.Apply):
             }
         # Only apply if there are no constants on the branch, or we have
         # tracked a constant that we haven't applied to.
-        unapplied = self.apcs.get_unapplied(node, branch)
+        # unapplied = self.apcs.get_unapplied(node, branch)
+        unapplied = self.apcs[branch][node]
         if branch.constants_count and not len(unapplied):
             # Do not release the node from filters, since new constants
             # can appear.
@@ -647,7 +648,8 @@ class QuantifierFatRule(DefaultRule, AdzHelper.Apply):
         return self._get_node_targets(node, branch)
 
     def _get_node_targets(self, node: Node, branch: Branch):
-        unapplied = self.apcs.get_unapplied(node, branch)
+        # unapplied = self.apcs.get_unapplied(node, branch)
+        unapplied = self.apcs[branch][node]
         constants = unapplied or {Constant.first()}
         return (
             {'adds': (nodes,), 'constant': c}

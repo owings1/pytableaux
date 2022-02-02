@@ -65,7 +65,7 @@ from proof.tableaux import (
 
 from copy import copy
 from functools import partial
-from itertools import chain
+from itertools import chain, filterfalse
 from typing import (
     Any,
     Callable,
@@ -252,7 +252,6 @@ class AppliedSentenceCounter(BranchCache[dmap[Sentence, int]]):
     """
     _valuetype = dmap
     _attr = 'apsc'
-
     __slots__ = EMPTY_SET
 
     def __init__(self, *args):
@@ -340,18 +339,15 @@ class VisibleWorldsIndex(BranchDictCache[int, setm[int]]):
     """
     Index the visible worlds for each world on the branch.
     """
+    __slots__ = 'nodes',
     _attr = 'visw'
 
     class Nodes(BranchCache[dmap[Access, Node]]):
-
         _valuetype = dmap
-
         __slots__ = EMPTY_SET
 
         def __call__(self, node: Node, branch: Branch):
             self[branch][Access.fornode(node)] = node
-
-    __slots__ = 'nodes',
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -367,18 +363,15 @@ class VisibleWorldsIndex(BranchDictCache[int, setm[int]]):
         return inst
 
     def has(self, branch: Branch, access: Access) -> bool:
-        """
-        Whether w1 sees w2 on the given branch.
+        """Whether w1 sees w2 on the given branch.
 
         :param Branch branch:
-        :param int w1:
-        :param int w2:
+        :param Access access:
         """
         return access[1] in self[branch].get(access[0], EMPTY_SET)
 
     def intransitives(self, branch: Branch, w1: int, w2: int) -> set[int]:
-        """
-        Get all the worlds on the branch that are visible to w2, but are not
+        """Get all the worlds on the branch that are visible to w2, but are not
         visible to w1.
         """
         # TODO: can we make this more efficient? for each world pair,
@@ -397,10 +390,7 @@ class VisibleWorldsIndex(BranchDictCache[int, setm[int]]):
 
 @final
 class PredicatedNodesTracker(FilterNodeCache):
-    """
-    Track all predicated nodes on the branch.
-    """
-
+    'Track all predicated nodes on the branch.'
     _attr = 'pn'
     __slots__ = EMPTY_SET
 
@@ -457,6 +447,8 @@ class FilterHelper(FilterNodeCache):
                 return False
         return True
 
+    @overload
+    def __call__(self, node: Node, branch: Branch) -> bool: ...
     __call__ = filter
 
     def example_node(self):
@@ -513,7 +505,7 @@ class FilterHelper(FilterNodeCache):
         """
         fiter_targets = _targets_from_nodes_iter(fget_node_targets)
         def get_targets_filtered(rule: Rule, branch: Branch):
-            helper: FilterHelper = rule.helpers[cls]
+            helper = rule.helpers[cls]
             helper.gc()
             nodes = helper[branch]
             return tuple(fiter_targets(rule, nodes, branch))
@@ -605,49 +597,21 @@ class NodeTargetCheckHelper(BranchCache[Target]):
     _valuetype = Target
 
     __slots__ = EMPTY_SET
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.rule.tableau.on(TabEvent.AFTER_NODE_ADD, self)
-    # __slots__ = 'rule', #'targets'
 
-    # def __init__(self, rule: Rule):
-    #     self.rule = rule
-        # self.targets = {}
+    rule: ClosingRule
 
-    # def cached_target(self, branch: Branch) -> Target|None:
-    #     """
-    #     Return the cached target for the branch, if any.
-    #     """
-    #     return self.get(branch)
-        # if branch in self.targets:
-        #     return self.targets[branch]
+    def __init__(self, rule: ClosingRule):
+        super().__init__(instcheck(rule, ClosingRule))
+        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self)
 
-    # def get(self, branch: Branch, default = None) -> Target:
-    #     return self.targets.get(branch, default)
-
-    # def __contains__(self, branch: Branch):
-    #     return branch in self.targets
-
-    # def __len__(self):
-    #     return len(self.targets)
-
-    # def __iter__(self) -> Iterator[Branch]:
-    #     return iter(self.targets)
-
-    # def __getitem__(self, branch: Branch) -> Target:
-    #     return self.targets[branch]
-
-    def _empty_value(self, branch: Branch):
-        'Override _valuetype since we cannot have an empty Target.'
-        return None
-
-    # Event Listeners
-
-    # def after_node_add(self, node: Node, branch: Branch):
     def __call__(self, node: Node, branch: Branch): 
         target = self.rule.check_for_target(node, branch)
         if target:
             self[branch] = target
+
+    def _empty_value(self, branch: Branch):
+        'Override _valuetype since we cannot have an empty Target.'
+        return None
 
 class MaxConstantsTracker:
     """
@@ -658,7 +622,7 @@ class MaxConstantsTracker:
 
     _attr = 'maxc'
 
-    def __init__(self, rule: Rule, *args, **kw):
+    def __init__(self, rule: Rule):
         self.rule = rule
         #: Track the maximum number of constants that should be on the branch
         #: (per world) so we can halt on infinite branches. Map from ``branch.id```
@@ -673,10 +637,11 @@ class MaxConstantsTracker:
         """
         Get the projected max number of constants (per world) for the branch.
         """
-        try:
-            return self.branch_max_constants[branch.origin]
-        except KeyError:
-            return 1
+        return self.branch_max_constants.get(branch.origin, 1)
+        # try:
+        #     return self.branch_max_constants[branch.origin]
+        # except KeyError:
+        #     return 1
 
     def get_branch_constants_at_world(self, branch: Branch, world: int) -> set[Constant]:
         """
@@ -783,87 +748,45 @@ class MaxConstantsTracker:
         s: Sentence = node.get('sentence')
         return len(s.quantifiers) if s else 0
 
-class AppliedNodeConstants:
-    """
-    Track the applied and unapplied constants per branch for each potential node.
+class AppliedNodeConstants(BranchDictCache[Node, set[Constant]]):
+    """Track the unapplied constants per branch for each potential node.
     The rule's target should have `branch`, `node` and `constant` properties.
 
     Only nodes that are applicable according to the rule's ``NodeFilter`` helper.
     method are tracked.
     """
-    __slots__ = 'rule', 'node_states', 'consts'
-
+    __slots__ = 'consts', 'filter',
     _attr = 'apcs'
+    _valuetype = dmap
+
+    class Consts(BranchCache[set[Constant]]):
+        _valuetype = set
+        __slots__ = EMPTY_SET
 
     def __init__(self, rule: Rule):
-        self.rule = rule
-        self.node_states = {}
-        self.consts = {}
-        # rule.on(RuleEvent.AFTER_APPLY, self.__after_apply)
-        # rule.tableau.on({
-        #     TabEvent.AFTER_BRANCH_ADD: self.__after_branch_add,
-        #     TabEvent.AFTER_NODE_ADD: self.__after_node_add,
-        # })
+        super().__init__(rule)
+        # fail fast if the rule does not have a filter.
+        self.filter = rule.helpers[FilterHelper]
+        self.consts = self.Consts(rule)
+        rule.on(RuleEvent.AFTER_APPLY, self.__after_apply)
+        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self)
 
-    def get_applied(self, node: Node, branch: Branch):
-        """
-        Return the set of constants that have been applied to the node for the
-        branch.
-        """
-        return self.node_states[branch][node]['applied']
+    def __after_apply(self, target: Target):
+        if target.get('flag'): return
+        self[target.branch][target.node].discard(target.constant)
 
-    def get_unapplied(self, node: Node, branch: Branch):
-        """
-        Return the set of constants that have not been applied to the node for
-        the branch.
-        """
-        return self.node_states[branch][node]['unapplied']
-
-    # helper implementation
-
-    def after_branch_add(self, branch: Branch):
-        parent = branch.parent
-        if parent is not None and parent in self.node_states:
-            self.consts[branch] = set(self.consts[parent])
-            self.node_states[branch] = {
-                node : {
-                    k : set(self.node_states[parent][node][k])
-                    for k in self.node_states[parent][node]
-                }
-                for node in self.node_states[parent]
-            }
-        else:
-            self.node_states[branch] = dict()
-            self.consts[branch] = set()
-
-    def after_node_add(self, node: Node, branch: Branch):
-        if self.__should_track_node(node, branch):
-            if node not in self.node_states[branch]:
+    def __call__(self, node: Node, branch: Branch):
+        if self.filter(node, branch):
+            if node not in self[branch]:
                 # By tracking per node, we are tracking per world, a fortiori.
-                self.node_states[branch][node] = {
-                    'applied'   : set(),
-                    'unapplied' : set(self.consts[branch]),
-                }
-        consts = node['sentence'].constants if node.has('sentence') else EMPTY_SET
-        for c in consts:
-            if c not in self.consts[branch]:
-                for node in self.node_states[branch]:
-                    self.node_states[branch][node]['unapplied'].add(c)
-                self.consts[branch].add(c)
-
-    def after_apply(self, target: Target):
-        if target.get('flag'):
-            return
-        idx = self.node_states[target.branch][target.node]
-        c = target['constant']
-        idx['applied'].add(c)
-        idx['unapplied'].discard(c)
-
-    # private util
-
-    def __should_track_node(self, node, branch):
-        # TODO: remove cross-helper affinity
-        return self.rule.nf(node, branch)
+                self[branch][node] = self.consts[branch].copy()
+        s: Sentence = node.get('sentence')
+        if not s: return
+        consts = s.constants - self.consts[branch]
+        if len(consts):
+            for node in self[branch]:
+                self[branch][node].update(consts)
+            self.consts[branch].update(consts)
 
 class MaxWorldsTracker:
     """
@@ -959,9 +882,9 @@ class EllipsisExampleHelper:
     mynode = {'ellipsis': True}
     closenodes = []
 
-    def __init__(self, rule, *args, **kw):
+    def __init__(self, rule: Rule, *args, **kw):
         self.rule = rule
-        self.applied = set()
+        self.applied: set[Branch] = set()
         self.isclosure = isinstance(rule, ClosingRule)
         if self.isclosure:
             self.closenodes = list(
@@ -976,13 +899,13 @@ class EllipsisExampleHelper:
     def after_trunk_build(self, *_):
         self.istrunk = False
 
-    def after_branch_add(self, branch):
+    def after_branch_add(self, branch: Branch):
         if self.applied:
             return
         if len(self.closenodes) == 1:
             self.__addnode(branch)        
 
-    def after_node_add(self, node, branch):
+    def after_node_add(self, node: Node, branch: Branch):
         if self.applied:
             return
         if node.has_props(self.mynode) or node.is_closure:
@@ -994,7 +917,7 @@ class EllipsisExampleHelper:
             if len(self.closenodes) == 1:
                 self.__addnode(branch)
 
-    def before_apply(self, target):
+    def before_apply(self, target: Target):
         if self.applied:
             return
         if self.isclosure:#self.rule.is_closure:

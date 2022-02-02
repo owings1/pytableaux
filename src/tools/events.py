@@ -3,10 +3,12 @@ from __future__ import annotations
 __all__ = 'EventEmitter', 'EventsListeners',
 
 from errors import instcheck
-from tools.abcs import Abc, Copyable, abcf, F
+from tools.abcs import Abc, Copyable, abcf, abchook, F
 from tools.decorators import raisr, wraps
 from tools.linked import linqset
-from tools.mappings import dmap, ItemsIterator
+from tools.mappings import (
+    dmap, ItemsIterator, MutableMappingApi
+)
 
 from enum import Enum
 from itertools import chain, filterfalse, starmap
@@ -92,8 +94,10 @@ class Listeners(linqset[Listener]):
         self.callcount = 0
         self.emitcount = 0
 
-    def _before_add(self, value):
-        instcheck(value, Listener)
+    @classmethod
+    @abchook.newlink
+    def _new_link(cls, value):
+        return super()._new_link(instcheck(value, Listener))
 
     def emit(self, *args, **kw) -> int:
         self.emitcount += 1
@@ -105,8 +109,8 @@ class Listeners(linqset[Listener]):
                     count += 1
                 finally:
                     if listener.once:
-                        # Discard since a consumer might manually remove the
-                        # listener when it is called.
+                        # Discard instead of remove, since a consumer might
+                        # manually remove the listener when it is called.
                         self.discard(listener)
         finally:
             self.callcount += count
@@ -141,6 +145,18 @@ class EventsListeners(dmap[EventId, Listeners]):
 
     @abcf.temp
     def normargs(method: F) -> F:
+        '''
+        Possible ways to call on/once/off ...
+
+        .on(event_id, func1, func2, ...)
+        
+        .on(dict(
+            event1 = func1,
+            event2 = (func2, func3, ...),
+        ))
+
+        .on(event1 = (func1, func2), event2 = func3, ...)
+        '''
         @wraps(method)
         def f(self, *args, **kw):
             if not (args or kw) or (args and kw):
@@ -187,13 +203,8 @@ class EventsListeners(dmap[EventId, Listeners]):
         # Override for type check
         super().__setitem__(key, instcheck(value, Listeners))
 
-    def update(self, it = None, /, **kw):
-        # Override for type check
-        if it is not None:
-            it = ItemsIterator(it)
-        if len(kw):
-            it = chain(it, ItemsIterator(kw))
-        for _ in starmap(self.__setitem__, it): pass
+    # Alternate update impl uses setitem.
+    update = dmap._setitem_update
 
     def __repr__(self):
         from tools.misc import orepr

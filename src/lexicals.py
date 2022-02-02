@@ -19,7 +19,6 @@
 # pytableaux - lexicals module
 from __future__ import annotations
 
-# __docformat__ = 'reStructuredText'
 
 __all__ = (
     'Operator', 'Quantifier',
@@ -36,7 +35,7 @@ from errors import (
 )
 import tools.abcs as abcs
 from tools.abcs import (
-    abcm, abcf,
+    abcm, abcf, abchook,
     T
 )
 from tools.decorators import (
@@ -44,10 +43,10 @@ from tools.decorators import (
     fixed, lazy, membr,
     raisr, rund, wraps, NoSetAttr
 )
-from tools.hybrids import qsetf, qset
-from tools.mappings import dmap, MapCover
+from tools.hybrids   import qsetf, qset
+from tools.mappings  import dmap, MapCover, MapProxy
 from tools.sequences import SequenceApi, seqf, EMPTY_SEQ
-from tools.sets import setf, setm, EMPTY_SET
+from tools.sets      import setf, setm, EMPTY_SET
 
 import enum as _enum
 from functools import (
@@ -56,17 +55,18 @@ from functools import (
 from itertools import (
     chain,
     repeat,
+    starmap,
 )
 import operator as opr
 from types import (
     DynamicClassAttribute as DynClsAttr,
-    MappingProxyType      as MapProxy,
 )
 from typing import (
     Annotated,
     Any,
     Callable,
     ClassVar,
+    Collection,
     Iterable,
     Iterator,
     Mapping,
@@ -76,9 +76,10 @@ from typing import (
 )
 
 NOARG = object()
+EMPTY_IT = iter(EMPTY_SEQ)
 ITEM_CACHE_SIZE = 10000
 
-nosetattr = NoSetAttr()
+nosetattr = NoSetAttr(enabled = False)
 
 @overload
 def sorttmap(it: Iterable[Bases.Lexical]) -> Iterable[Types.IntTuple]: ...
@@ -87,7 +88,7 @@ sorttmap = partial(map, opr.attrgetter('sort_tuple'))
 @static
 class Types:
 
-    from tools.abcs import EnumDictType
+    from tools.abcs     import EnumDictType
     from tools.mappings import DequeCache as ItemCache
 
     class BiCoords(NamedTuple):
@@ -175,7 +176,7 @@ class Metas:
 
         Cache: ClassVar[Types.ItemCache]
 
-        def __call__(cls: LexItemT, *spec) -> LexItemT:
+        def __call__(cls: LexItT, *spec) -> LexItT:
             if len(spec) == 1:
                 if isinstance(spec[0], cls):
                     # Passthrough
@@ -252,6 +253,7 @@ class Bases:
         __delattr__ = raisr(AttributeError)
         __setattr__ = nosetattr(_enum.Enum, cls = True)
 
+    @abcm.clsafter
     class Lexical:
         'Lexical mixin class for both ``LexicalEnum`` and ``LexicalItem`` classes.'
 
@@ -314,7 +316,7 @@ class Bases:
 
         @abcf.temp
         @membr.defer
-        def ordr(member: membr[type[LexT]]):
+        def ordr(member: membr[type[LexT]]) -> Callable[[LexT, Any], bool]:
             oper = getattr(opr, member.name)
             cls = member.owner
             cmp = cls.orderitems
@@ -343,12 +345,12 @@ class Bases:
 
         @classmethod
         @abstract
-        def first(cls: type[T]) -> T: ...
+        def first(cls: type[LexT]) -> LexT: ...
 
         @abstract
-        def next(self: T, **kw) -> T: ...
+        def next(self: LexT, **kw) -> LexT: ...
 
-        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Copy Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎  Behaviors ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         def __copy__(self):
             'Return self.'
@@ -358,8 +360,6 @@ class Bases:
             'Return self.'
             memo[id(self)] = self
             return self
-
-        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Other Behaviors ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         def __bool__(self):
             'Return True.'
@@ -375,6 +375,22 @@ class Bases:
 
         __delattr__ = raisr(AttributeError)
         __setattr__ = nosetattr(object, cls = Metas.LexicalItem)
+
+        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Subclass Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
+
+        def __init_subclass__(subcls: type[Bases.Lexical], **kw):
+            '''Copy the dict manually to the next class, since our protection
+            is limited without metaclass flexibility.'''
+            super().__init_subclass__(**kw)
+            if __class__ not in subcls.__bases__: return
+            dsup = dmap(__class__.__dict__)
+            for name, value in (
+            (name, mbr) for name, mbr in
+                (dsup - set(subcls.__dict__)).items()
+            if name not in {'__init_subclass__'}
+            and type(mbr) in
+                {classmethod, staticmethod, type(lambda:1)}
+            ) : setattr(subcls, name, value)
 
     Types.Lexical = Lexical
     Metas.LexicalItem.Cache = Types.ItemCache(Lexical, ITEM_CACHE_SIZE)
@@ -474,6 +490,19 @@ class Bases:
     class LexicalItem(Lexical, Abc, metaclass = Metas.LexicalItem):
         'Base Lexical Item class.'
 
+        __slots__ = '_ident', '_hash',
+
+        @lazy.prop
+        def ident(self):
+            return self.identitem(self)
+
+        @lazy.prop
+        def hash(self):
+            return self.hashitem(self)
+
+        @abstract
+        def __init__(self): ...
+
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Behaviors ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         def __str__(self):
@@ -484,23 +513,9 @@ class Bases:
                 except AttributeError as e:
                     return '%s(%s)' % (type(self).__name__, e)
 
-        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
-
-        @abstract
-        def __init__(self): ...
-
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
 
-        @lazy.prop
-        def ident(self):
-            return self.identitem(self)
-
-        @lazy.prop
-        def hash(self):
-            return self.hashitem(self)
-
-        __slots__ = '_ident', '_hash',
         __delattr__ = raisr(AttributeError)
 
         def __setattr__(self, name, value):
@@ -508,7 +523,7 @@ class Bases:
                 if isinstance(getattr(type(self), name, None), property):
                     pass
                 else:
-                    raise Emsg.ReadOnlyAttr(name)
+                    raise Emsg.ReadOnlyAttr(name, self)
             super().__setattr__(name, value)
 
     class CoordsItem(LexicalItem):
@@ -578,6 +593,7 @@ class Bases:
 
         default_fetch_name = 'default'
         _instances: dict[Notation, dict[str, CnT]]
+
         __slots__ = EMPTY_SET
 
         @classmethod
@@ -613,10 +629,10 @@ class Bases:
             notns = set(notns).union(builtin)
             cls._instances = {notn: {} for notn in notns}
 
-CnT = TypeVar('CnT', bound = Bases.CacheNotationData)
+CnT  = TypeVar('CnT',  bound = Bases.CacheNotationData)
 CrdT = TypeVar('CrdT', bound = Bases.CoordsItem)
 LexT = TypeVar('LexT', bound = Bases.Lexical)
-LexItemT = TypeVar('LexItemT', bound = Bases.LexicalItem)
+LexItT = TypeVar('LexItT', bound = Bases.LexicalItem)
 
 ##############################################################
 ##############################################################
@@ -853,7 +869,7 @@ class Sentence(Bases.LexicalItem):
 
     __slots__ = EMPTY_SET
 
-    def substitute(self, pnew: Parameter, pold: Parameter) -> Sentence:
+    def substitute(self: SenT, pnew: Parameter, pold: Parameter) -> SenT:
         """Return the recursive substitution of ``pnew`` for all occurrences
         of ``pold``."""
         return self
@@ -885,6 +901,7 @@ class Sentence(Bases.LexicalItem):
         'Whether the variable occurs anywhere in the sentence (recursive).'
         return v in self.variables
 
+SenT = TypeVar('SenT', bound = Sentence)
 Types.QuantifiedItem = Quantifier | Variable | Sentence
 
 @final
@@ -978,7 +995,7 @@ class Predicated(Sentence, SequenceApi[Parameter]):
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     @classmethod
-    def first(cls, pred: Predicate = None,/) -> Predicated:
+    def first(cls, pred: Predicate = None, /) -> Predicated:
         if pred is None: pred = Predicate.first()
         return cls(pred, tuple(repeat(Constant.first(), pred.arity)))
 
@@ -1031,9 +1048,11 @@ class Quantified(Sentence, SequenceApi[Types.QuantifiedItem]):
         'quantifier', 'variable', 'sentence', 'items',
         '_quantifiers'
     ))
+
     @lazy.prop
     def sort_tuple(self: Quantified) -> Types.IntTuple:
         return self.TYPE.rank, *chain.from_iterable(sorttmap(self))
+
     @property
     def constants(self: Quantified):
         return self.sentence.constants
@@ -1209,7 +1228,8 @@ class Operated(Sentence, SequenceApi[Sentence]):
         self.lhs = self.operands[0]
         self.rhs = self.operands[-1]
         if len(self.operands) != self.operator.arity:
-            raise TypeError(self.operator, len(self.operands), self.operator.arity)
+            raise Emsg.WrongLength(self.operands, self.operator.arity)
+            # raise TypeError(self.operator, len(self.operands), self.operator.arity)
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sequence Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -1222,14 +1242,14 @@ class Operated(Sentence, SequenceApi[Sentence]):
     def __contains__(self, s: Sentence):
         return s in self.operands
 
-    @classmethod
-    def _from_iterable(cls, it):
-        try:
-            oper = it.operator
-        except AttributeError:
-            raise TypeError
-        else:
-            return cls(oper, it)
+    def _from_iterable(self, it):
+        return type(self)(self.operator, it)
+        # try:
+        #     oper = it.operator
+        # except AttributeError:
+        #     raise TypeError
+        # else:
+        #     return cls(oper, it)
 
 ##############################################################
 ##############################################################
@@ -1323,7 +1343,11 @@ class LexType(Bases.Enum):
 ##############################################################
 ##############################################################
 
-class Predicates(qset[Predicate], Bases.Abc):
+class Predicates(qset[Predicate], Bases.Abc,
+    qset = dict(
+        hooks = dict(cast = Predicate)
+    )
+):
     'Predicate store'
 
     _lookup: dmap[Types.PredsItemRef, Predicate]
@@ -1343,34 +1367,27 @@ class Predicates(qset[Predicate], Bases.Abc):
             if default is NOARG: raise
             return default
 
-    # -------------------------------
-    #  qset hooks.
-    # -------------------------------
-    def _new_value(self, value: Types.PredsItemSpec) -> Predicate:
-        'Implement new_value conversion hook. Ensure the value is a Predicate.'
-        return Predicate(value)
-
-    def _before_add(self, pred: Predicate):
-        'Implement before_add hook. Check for arity/value conflicts.'
-        for other in filter(None, map(self._lookup.get, pred.refkeys)):
+    @abcf.temp
+    @abchook.done
+    def after_change(self, arriving:Collection[Predicate], leaving: Collection[Predicate]):
+        'Implement after change (done) hook. Update lookup index.'
+        for pred in leaving or EMPTY_IT:
+            if False: # - check disabled for performance
+                # Is there a key we are removing that unexpectedly matches
+                # a distinct predicate. This would have to be the result of
+                # a failed removal or addition.
+                for other in map(self._lookup.pop, pred.refkeys):
+                    if other != pred:
+                        raise Emsg.ValueConflictFor(pred, pred.coords, other.coords)
+            self._lookup -= pred.refkeys
+        for pred in arriving or EMPTY_IT:
             # Is there a distinct predicate that matches any lookup keys,
             # viz. BiCoords or name, that does not equal pred, e.g. arity
             # mismatch.
-            if other != pred:
-                raise Emsg.ValueConflict(other.coords, pred.coords)
-
-    def _after_add(self, pred: Predicate):
-        'Implement after_add hook. Add keys to lookup index.'
-        self._lookup |= zip(pred.refkeys, repeat(pred))
-
-    def _after_remove(self, pred: Predicate):
-        'Implement after_remove hook. Remove keys from lookup index.'
-        for other in map(self._lookup.pop, pred.refkeys):
-            # Is there a key we are removing that unexpectedly matches
-            # a distinct predicate. This would have to be the result of
-            # a failed removal or addition.
-            if other != pred:
-                raise Emsg.ValueConflict(other.coords, pred.coords)
+            for other in filter(None, map(self._lookup.get, pred.refkeys)):
+                if other != pred:
+                    raise Emsg.ValueConflictFor(pred, pred.coords, other.coords)
+            self._lookup |= zip(pred.refkeys, repeat(pred))
 
     # -------------------------------
     #  Override qset
@@ -2070,6 +2087,7 @@ def _():
 def _():
     for cls in (Bases.Enum, Bases.LexicalItem, Predicates, Argument, Bases.Lexical):
         cls._readonly = True
+    nosetattr.enabled = True
 
 del(
     _,

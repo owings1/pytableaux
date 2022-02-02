@@ -9,6 +9,7 @@ __all__ = (
     'AbcEnumMeta',
     'AbcEnum',
     'abcf',
+    'abchook',
     'abcm',
     'Abc',
     'Copyable',
@@ -75,12 +76,11 @@ _EMPTY = ()
 _EMPTY_SET = frozenset()
 _NOARG = object()
 _NOGET = object()
-_ABCF_ATTR = '_abc_flag'
+_ABCF_ATTR    = '_abc_flag'
+_ABCHOOK_ATTR = '_abc_hook'
 
 
 def _thru(obj: T): return obj
-
-
 
 # Global decorators. Re-exported by decorators module.
 
@@ -128,10 +128,28 @@ def static(cls):
 
     return cls
 
-@_enum.unique
-class abcf(_enum.Flag):
-    'Enum flag for AbcMeta functionality.'
+class flagbase(_enum.Flag):
 
+    _flag_attr: str
+
+    def __call__(self, obj: F) -> F:
+        "Add the flag to obj's meta flag. Return obj."
+        return self.set(obj, self | self.get(obj))
+
+    @classmethod
+    def get(cls: type[FlagEnT], obj, default: FlagEnT|int = 0, /) -> FlagEnT:
+        return getattr(obj, cls._flag_attr, cls(default))
+
+    @classmethod
+    def set(cls, obj: F, value: FlagEnT, /) -> F:
+        setattr(obj, cls._flag_attr, cls(value))
+        return obj
+
+FlagEnT = TypeVar('FlagEnT', bound = flagbase)
+
+@_enum.unique
+class abcf(flagbase):
+    'Enum flag for AbcMeta functionality.'
     blank  = 0
     before = 2
     temp   = 8
@@ -141,18 +159,35 @@ class abcf(_enum.Flag):
     _cleanable = before | temp | after
     # _protectable = immut | protect | locked
 
-    def __call__(self, obj: F) -> F:
-        "Add the flag to obj's meta flag. Return obj."
-        return self.set(obj, self | self.get(obj))
 
-    @classmethod
-    def get(cls, obj, default: abcf|int = blank, /) -> abcf:
-        return getattr(obj, _ABCF_ATTR, cls(default))
+    # def __call__(self, obj: F) -> F:
+    #     "Add the flag to obj's meta flag. Return obj."
+    #     return self.set(obj, self | self.get(obj))
 
-    @classmethod
-    def set(cls, obj: F, value: abcf, /) -> F:
-        setattr(obj, _ABCF_ATTR, cls(value))
-        return obj
+
+    # @classmethod
+    # def set(cls, obj: F, value: abcf, /) -> F:
+    #     setattr(obj, _ABCF_ATTR, cls(value))
+    #     return obj
+
+@_enum.unique
+class abchook(flagbase):
+    'Enum flag for noting class hook methods.'
+    blank  = 0
+    cast   = 2
+    check  = 4
+    done   = 8
+    # before_add   = 32
+    # after_add    = 64
+    # after_remove = 128
+    # before_setslice = 256
+    newlink    = 512
+
+
+    # qset_hooks = cast
+
+abcf._flag_attr = _ABCF_ATTR
+abchook._flag_attr = _ABCHOOK_ATTR
 
 @static
 class abcm:
@@ -170,7 +205,11 @@ class abcm:
         if slots and isinstance(slots, Iterable) and not isinstance(slots, _Set):
             ns['__slots__'] = frozenset(slots)
 
-    def clsafter(Class: type, ns: Mapping, bases, /, deleter = type.__delattr__):
+    def clsafter(Class: TT, ns: Mapping = None, bases = None, /, deleter = type.__delattr__,
+        **kw):
+        # Allow use as standalone class decorator
+        if ns is None: ns = Class.__dict__.copy()
+        if bases is None: bases = Class.__bases__
         abcf.blank(Class)
         for name, member in ns.items():
             mf = abcf.get(member)
@@ -178,6 +217,7 @@ class abcm:
                 if mf.after in mf:
                     member(Class)
                 deleter(Class, name)
+        return Class
         # abcm.merge_mroattr(Class, '_lazymap_', {}, transform = MapProxy, rev = False)
 
     def isabstract(obj):
@@ -253,16 +293,31 @@ class abcm:
             it = islice(it, start)
         return it
 
-    def lazy_getattr(obj, name, /, setter = object.__setattr__):
-        try:
-            getter = type(obj)._lazymap_[name]
-        except AttributeError:
-            raise TypeError
-        except KeyError:
-            raise AttributeError(name) from None
-        value = getter(obj)
-        setter(obj, name, value)
-        return value
+    # def lazy_getattr(obj, name, /, setter = object.__setattr__):
+    #     try:
+    #         getter = type(obj)._lazymap_[name]
+    #     except AttributeError:
+    #         raise TypeError
+    #     except KeyError:
+    #         raise AttributeError(name) from None
+    #     value = getter(obj)
+    #     setter(obj, name, value)
+    #     return value
+
+    # def flag_call(enum, obj):
+    #     "Add the flag to obj's meta flag. Return obj."
+    #     return abcm.flag_set(enum, obj, enum | abcm.flag_get(enum, obj))
+
+    # def flag_get(enum, obj, default: _enum.Flag|int = 0, /) -> abcf:
+    #     enumcls = type(enum)
+    #     attr = enumcls._flag_attr
+    #     return getattr(obj, attr, enumcls(default))
+
+    # def flag_set(enum, obj: F, value: abcf, /) -> F:
+    #     enumcls = type(enum)
+    #     attr = enumcls._flag_attr
+    #     setattr(obj, attr, enumcls(value))
+    #     return obj
 
 class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
@@ -329,7 +384,7 @@ class AbcEnumMeta(_enum.EnumMeta):
 
     @classmethod
     @final
-    def _create_index(cls, Class: type[EnT]) -> Mapping[Any, EnumEntry]:
+    def _create_index(cls, Class: type[EnT]) -> Mapping[Any, tuple[EnT, int, EnT|None]]:
         'Create the member lookup index'
         # Member to key set functions.
         keys_funcs = cls._default_keys, Class._member_keys
@@ -360,7 +415,7 @@ class AbcEnumMeta(_enum.EnumMeta):
     @classmethod
     @final
     def _clear_hooks(cls, Class: type):
-        'Cleanup spent hook methods.'
+        'Cleanup spent hook methods on membered classes, since they are final.'
         for _ in map(
             partial(type(cls).__delattr__, Class),
             cls._hooks & set(Class.__dict__)
@@ -397,6 +452,9 @@ class AbcEnumMeta(_enum.EnumMeta):
         return super().__getitem__(key)
 
     def __getattr__(cls, name):
+
+        #print('AbcEnumMeta.__getattr__', name)
+
         if name == 'index':
             # Allow DynClsAttr for member.index.
             try: return cls.indexof

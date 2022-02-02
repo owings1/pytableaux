@@ -9,7 +9,6 @@ __all__ = (
     'EMPTY_SET',
 )
 
-from errors import instcheck
 from tools.abcs import Copyable, VT
 from tools.decorators import abstract, final, overload, operd
 
@@ -102,35 +101,48 @@ class setf(SetApi[VT], frozenset[VT]):
     'SetApi wrapper around built-in frozenset.'
     __slots__ = EMPTY
     __len__      = frozenset.__len__
-    __contains__ = frozenset.__contains__
     __iter__     = frozenset[VT].__iter__
+    __contains__ = frozenset.__contains__
+
+EMPTY_SET = setf()
 
 class setm(MutableSetApi[VT], set[VT]):
     'MutableSetApi wrapper around built-in set.'
-    __slots__ = EMPTY
+    __slots__ = EMPTY_SET
+
     __len__      = set.__len__
-    __contains__ = set.__contains__
     __iter__     = set[VT].__iter__
+    __contains__ = set.__contains__
+
     clear   = set.clear
     add     = set.add
     discard = set.discard
 
 class SetCover(SetApi[VT]):
     'SetApi cover.'
-    __slots__ = '__contains__', '__iter__', '__len__'
 
-    def __init__(self, set_: Set[VT], /):
-        instcheck(set_, Set)
-        self.__contains__ = set_.__contains__
-        self.__len__      = set_.__len__
-        self.__iter__     = set_.__iter__
+    __slots__ = SetApi.__abstractmethods__
+
+    def __new__(cls, set_: Set[VT], /,):
+
+        if not isinstance(set_, Set):
+            raise TypeError(type(set_))
+
+        inst = object.__new__(cls)
+        inst.__len__      = set_.__len__
+        inst.__iter__     = set_.__iter__
+        inst.__contains__ = set_.__contains__
+
+        return inst
 
     @classmethod
     def _from_iterable(cls, it: Iterable[VT]):
-        return cls(frozenset(it))
+        return cls(setf(it))
+
+
+SetApiT = TypeVar('SetApiT', bound = SetApi)
+
 
 del(opr, operd, Copyable, EMPTY)
 del(abstract, final, overload)
-
-SetApiT = TypeVar('SetApiT', bound = SetApi)
-EMPTY_SET = setf()
+del(TypeVar)

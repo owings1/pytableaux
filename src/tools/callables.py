@@ -12,13 +12,18 @@ from tools.abcs import (
     MapProxy,
     P, T, KT, RT, F,
 )
-from tools.decorators import abstract, final, static
-from tools.misc import orepr
-from tools.sets import EMPTY_SET, setf
-
+from tools.decorators import (
+    abstract, final, static,
+    WRAPPER_ASSIGNMENTS,
+)
+from tools.sets import EMPTY_SET, setf, setm
+from tools.hybrids import qsetf
+# tools.mappings not allowed!
 from functools import partial
 from itertools import (
     filterfalse,
+    starmap,
+    zip_longest,
 )
 import operator as opr
 from typing import (
@@ -29,6 +34,7 @@ from typing import (
     Literal,
     Mapping,
     Sequence,
+    TypeVar,
 )
 
 import enum
@@ -59,10 +65,6 @@ FlagParam = Flag | Callable[[Flag], Flag]
 
 EMPTY = ()
 NOARG = object()
-SETATTROK = setf({
-    '__module__', '__name__', '__qualname__',
-    '__doc__', '__annotations__',
-})
 
 class _objwrap(Callable):
     'Object wrapper to allow __dict__ attributes'
@@ -75,17 +77,27 @@ class _objwrap(Callable):
     def __call__(self, *a, **kw):
         return self.caller(*a, **kw)
 
-class Caller(Callable[P, RT], Copyable):
+class Caller(Callable[..., RT], Copyable):
 
+    #: Alias members for common user flags.
     SAFE: Literal[Flag.Safe] = Flag.Safe
     LEFT: Literal[Flag.Left] = Flag.Left
     STAR: Literal[Flag.Star] = Flag.Star
 
+    #: Class attributes.
     cls_flag     = Flag.Blank
     safe_errs    : ExceptsParam
     safe_default : Any = None
 
-    attrhints: Mapping[str, Flag] = dict(
+    #: Instances do not have all the possible attributes set. The
+    #: The _attrhints says that an instance will most likely have the
+    #: attribute (key) if the hint (value) is in the instance's flag.
+    #:
+    #: Hints for subclasses are automatically merged in the subclass
+    #: hook. If a subclass's instances will always have an attribute,
+    #: then including it in __slots__ is sufficient, which will be
+    #: merged with the hint value of Flag.Blank, meaning 'always present'.
+    _attrhints: Mapping[str, Flag] = dict(
         flag     = Flag.Blank,
         bindargs = Flag.Bound,
         aslice   = Flag.Sliced,
@@ -93,7 +105,9 @@ class Caller(Callable[P, RT], Copyable):
         excepts  = Flag.Safe,
         default  = Flag.Safe,
     )
-    __slots__ = setf(attrhints)
+    __slots__ = setf(_attrhints) | {'__hash'}
+    
+    #: Instance Attributes.
 
     flag     : Flag
     bindargs : tuple
@@ -158,29 +172,27 @@ class Caller(Callable[P, RT], Copyable):
         return args
 
     def attrnames(self):
-        f = self.flag
-        hints = self.attrhints
-        return tuple(a for a in hints if hints[a] in f)
+        return (name for name, hint in self._attrhints.items() if hint in self.flag)
 
     def attritems(self):
-        return tuple((a, getattr(self, a)) for a in self.attrnames())
+        return ((name, getattr(self, name)) for name in self.attrnames())
 
-    def attrs(self):
-        return dict(self.attritems())
-
-    def copy(self, /, *, _setter=object.__setattr__):
+    def copy(self, /, *, sa = object.__setattr__):
         inst = object.__new__(type(self))
-        for item in self.attrs().items():
-            _setter(inst, *item)
+        for name, value in self.attritems():
+            sa(inst, name, value)
         return inst
 
-    def __setattr__(self, attr, val, /, _setter=object.__setattr__):
+    def __setattr__(self, name, value, /, *,
+        sa = object.__setattr__,
+        ok = setf(WRAPPER_ASSIGNMENTS).__contains__
+    ):
         try: f = self.flag
         except AttributeError: pass
         else:
-            if f.Lock in f and attr not in SETATTROK:
-                raise AttributeError(attr, f.Lock)
-        _setter(self, attr, val)
+            if f.Lock in f and not ok(name):
+                raise AttributeError(name, f.Lock)
+        sa(self, name, value)
 
     def __delattr__(self, attr):
         raise AttributeError(attr)
@@ -189,55 +201,82 @@ class Caller(Callable[P, RT], Copyable):
         try: f = self.flag
         except: raise AttributeError(attr)
         if f.Init not in f:
-            cls = type(self)
             if attr == 'safe_errs':
-                raise TypeError("'excepts' required for %s with %s" % (cls, f.Safe))
+                raise TypeError("'excepts' required for %s with %s" % (type(self), f.Safe))
         raise AttributeError(attr)
 
-    def __eq__(self, other):
-        if self is other: return True
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        return self.attritems() == other.attritems()
+    def __eq__(self, other: CallT):
+        if self is other:
+            return True
+        if type(self) is not type(other):
+            if isinstance(other, __class__):
+                return False
+            else:
+                return NotImplemented
+        try:
+            for a, b in zip(
+                self.attritems(),
+                other.attritems(),
+                strict = True
+            ):
+                if a != b: return False
+        except ValueError:
+            return False
+        return True
 
-    def __hash__(self):
-        return hash(type(self)) + hash(self.attritems())
+    def __hash__(self, /, *, sa = object.__setattr__, nf = '_{0.__name__}__hash'.format):
+        locked = Flag.Lock in self.flag
+        if locked:
+            try: return self.__hash
+            except AttributeError: pass
+            sa(self, nf(__class__), self._hash())
+            return self.__hash
+        return id(self)
+    
+    def _hash(self):
+        return hash(type(self)) + hash(tuple(self.attritems()))
 
     def __dir__(self):
         return list(self.attrnames())
 
     def __repr__(self):
-        return orepr(self, self.attrs)
+        from tools.misc import orepr
+        return orepr(self, dict(self.attritems()))
 
-    def __init_subclass__(subcls: type[Caller], **kw):
+    def __init_subclass__(subcls: type[CallT], **kw):
         super().__init_subclass__(**kw)
-        subcls.attrhints = MapProxy(__class__.attrhints | subcls.attrhints)
+        hints = __class__._attrhints | subcls._attrhints
+        subcls._attrhints = MapProxy(hints | {
+            name: Flag.Blank for name in subcls.__slots__.difference(hints)
+        })
 
     def asobj(self):
         return _objwrap(self)
 
+CallT = TypeVar('CallT', bound = Caller)
+
 @static
 class calls:
 
-    class func(Caller):
+    class func(Caller[..., RT]):
         'Function caller. Like functools.partial, but binds to the right.'
 
-        def _call(self, *args, **kw):
-            return self.func(*args, **kw)
+        func: F
+        __slots__ = 'func',
 
-        def __init__(self, func: Callable, *args, **opts):
+        def __init__(self, func: F, *args, **opts):
             self.func = func# instcheck(func, Callable)
             super().__init__(*args, **opts)
 
-        func: Callable
-        attrhints = dict(func = Flag.Blank)
-        __slots__ = tuple(attrhints)
+        def _call(self, *args, **kw) -> RT:
+            return self.func(*args, **kw)
 
     class method(Caller):
         'Method caller.'
 
-        def _call(self, obj, *args, **kw):
-            return getattr(obj, self.method)(*args, **kw)
+        method: str
+        __slots__ = 'method',
+        safe_errs = AttributeError,
 
         def __init__(self, method: str, *args, **opts):
             if not method.isidentifier():
@@ -245,12 +284,11 @@ class calls:
             self.method = method
             super().__init__(*args, **opts)
 
-        method: str
-        safe_errs = AttributeError,
-        attrhints = dict(method = Flag.Blank)
-        __slots__ = setf(attrhints)
+        def _call(self, obj, *args, **kw):
+            return getattr(obj, self.method)(*args, **kw)
 
     def now(func: Callable[P, RT], *args: P.args, **kw: P.kwargs) -> RT:
+        'Call the first argument immediately.'
         return func(*args, **kw)
 
 @static
@@ -259,19 +297,24 @@ class gets:
     class attr(Caller):
         'Attribute getter.'
         _call = getattr
-        # def _call(self, obj, name: str):
-        #     return getattr(obj, name)
-        safe_errs = AttributeError,
         __slots__ = EMPTY_SET
+        safe_errs = AttributeError,
 
     class key(Caller):
         'Subscript getter.'
         def _call(self, obj, key): return obj[key]
-        safe_errs = KeyError, IndexError,
         __slots__ = EMPTY_SET
+        safe_errs = KeyError, IndexError,
 
     class mixed(Caller):
         'Attribute or subscript.'
+
+        __slots__ = EMPTY_SET
+        safe_errs = AttributeError, KeyError, IndexError
+
+        def __init__(self, *args, attrfirst = False, **kw):
+            if attrfirst: self.flag |= Flag.Usr1
+            super().__init__(*args, **kw)
 
         def _call(self, obj, keyattr):
             if Flag.Usr1 in self.flag:
@@ -284,30 +327,24 @@ class gets:
             except AttributeError as e:
                 try: return obj[keyattr]
                 except TypeError: raise e from None
-    
-        def __init__(self, *args, attrfirst = False, **kw):
-            if attrfirst: self.flag |= Flag.Usr1
-            super().__init__(*args, **kw)
-
-        safe_errs = AttributeError, KeyError, IndexError
-        __slots__ = EMPTY_SET
 
     class thru(Caller):
         'Passthrough getter of the first argument.'
+        __slots__ = EMPTY_SET
         def _call(self, obj: T, *_) -> T:
             return obj
         cls_flag = Flag.Left
-        __slots__ = EMPTY_SET
+
+    THRU = thru()
+    Key0 = key(0)
+    Key1 = key(1)
 
 @static
 class sets:
 
     class attr(Caller):
         'Attribute setter.'
-    
-        _call = setattr
-        # def _call(self, obj, name: str, val):
-        #     setattr(obj, name, val)
+        __slots__ = EMPTY_SET
 
         def __init__(self, attr, value = Flag.Blank, **kw):
             if value is Flag.Blank:
@@ -315,36 +352,38 @@ class sets:
                 return
             super().__init__(attr, value, aorder = (2, 0, 1), **kw)
 
+        _call = setattr
+
         safe_errs = AttributeError,
         cls_flag = Flag.Left
-        __slots__ = EMPTY_SET
 
 @static
 class dels:
 
     class attr(Caller):
         'Attribute deleter.'
-        def _call(self, obj, name: str): delattr(obj, name)
-        safe_errs = AttributeError,
         __slots__ = EMPTY_SET
+        _call = delattr
+        # def _call(self, obj, name: str): delattr(obj, name)
+        safe_errs = AttributeError,
 
 class raiser(Caller):
     'Error raiser.'
 
-    def _call(self, *args, **kw):
-        raise self.ErrorType(*self.eargs, *args[0:1])
+    __slots__ = 'ErrorType', 'eargs',
 
     def __init__(self,
         ErrorType: type[Exception],
         eargs: Sequence = EMPTY, /
     ):
         self.ErrorType = subclscheck(ErrorType, Exception)
-        self.eargs = instcheck(eargs, Sequence)
+        self.eargs = tuple(eargs)
+
+    def _call(self, *args, **kw):
+        raise self.ErrorType(*self.eargs, *args[0:1])
 
     ErrorType: type[Exception]
     eargs: Sequence
-    attrhints = dict(ErrorType = Flag.Blank, eargs = Flag.Blank)
-    __slots__ = setf(attrhints)
 
 @static
 class funciter:
@@ -418,7 +457,6 @@ class preds:
     #: Predicate factory dict, e.g. subclassof[Collection]
     subclassof = predcachetype(issubclass)()
 
-
     from keyword import iskeyword
 
     #: Whether an object is a valid attribute identifier.
@@ -440,6 +478,5 @@ class preds:
     def false(_):
         'Always returns False.'
         return False
-
 
 del(abstract, final, static, predcachetype, opr)

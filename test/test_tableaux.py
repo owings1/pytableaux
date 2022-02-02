@@ -241,7 +241,7 @@ class TestBranch:
         b = Branch()
         if not any ((n, nn)):
             return b
-        if nn == None:
+        if nn is None:
             nn = self.nn1(n)
         b.extend(nn)
         return (b, nn)
@@ -254,13 +254,39 @@ class TestBranch:
         assert tuple(dict(n) for n in iter(b)) == npp
         assert tuple(dict(n) for n in b) == npp
 
+    def gcase1(self, *a, **k):
+        b, nn = self.case1(*a, *k)
+        def gen(*subs):
+            for i in subs:
+                if not isinstance(i, int):
+                    i = slice(*i)
+                yield b[i], nn[i]
+        return gen, b, nn
+
     def test_subscript_1(self):
-        b, nn = self.case1(n=5)
-        assert b[0] == nn[0]
-        assert b[-1] == nn[4]
-        assert b[0:1] == list(nn)[0:1]
-        assert b[2:-1] == [nn[2], nn[3]]
-        assert b[3:] == [nn[3], nn[4]]
+        size = 5
+        gen, branch, nodes = self.gcase1(size)
+
+        assert len(branch) == len(nodes)
+        assert len(branch) == size
+
+        # indexes
+        it = gen(
+            0, -1
+        )
+
+        for a, b in it:
+            assert a is b
+            assert branch.index(a) == nodes.index(b)
+
+        # slices
+        it = gen(
+            (0, 1), (2, -1), (3, None)
+        )
+
+        for a, b in it:
+            assert list(a) == list(b)
+
 
     def test_create_list_tuple_set_from_branch(self):
         b, nn = self.case1(5)
@@ -274,13 +300,10 @@ class TestBranch:
     def case2(self, n = 2):
         return Branch().extend(self.nn1(n=n))
 
-    def test_subscript_type_error_non_num(self):
+    def test_subscript_errors(self):
         b = self.case2()
         with raises(TypeError):
             b['0']
-
-    def test_subscript_index_error_1(self):
-        b = self.case2(2)
         with raises(IndexError):
             b[2]
 
@@ -342,7 +365,6 @@ class TestClosureRule(BaseSuite):
         with raises(TypeError):
             ClosingRule(Tableau())
 
-
 class TestFilters(BaseSuite):
 
     def test_AttrFilter_node_is_modal(self):
@@ -398,14 +420,17 @@ class Test_K_DefaultNodeFilterRule(BaseSuite):
 class TestMaxConstantsTracker(BaseSuite):
 
     def test_argument_trunk_two_qs_returns_3(self):
+    
         class FilterNodeRule(RuleStub):
             Helpers = FilterHelper,
+    
         class MtrTestRule(FilterNodeRule):
             mtr: MaxConstantsTracker
             Helpers = (
                 *FilterNodeRule.Helpers,
                 ('mtr', MaxConstantsTracker),
             )
+    
         proof = self.tab()
         proof.rules.append(MtrTestRule)
         proof.argument = self.parg('NLVxNFx', 'LMSxFx')

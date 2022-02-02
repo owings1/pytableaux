@@ -11,19 +11,20 @@ from errors import (
     Emsg,
     DuplicateValueError,
     MissingValueError,
-    # instcheck,
+    instcheck,
 )
 from tools.abcs import T, VT
 from tools.decorators import abstract, final, overload
-from tools.sequences import absindex
+from tools.sequences  import absindex, slicerange
 
 class bases:
     from tools.abcs import Abc, Copyable
     from tools.sequences import SequenceApi, MutableSequenceApi
     from tools.hybrids import MutableSequenceSetApi
 
-from collections.abc import Iterable, Iterator
-from typing import Generic, SupportsIndex
+from collections.abc import Collection, Iterable, Iterator
+from itertools import filterfalse
+from typing import Generic, SupportsIndex, TypeVar
 
 NOARG = object()
 EMPTY = ()
@@ -45,13 +46,17 @@ class Link(Generic[VT], bases.Copyable):
     __slots__ = 'prev', 'next', 'value'
 
     @property
-    def self(self: T) -> T:
+    def self(self: LinkT) -> LinkT:
         return self
-
-    def __init__(self, value, prev: Link = None, nxt: Link = None, /):
+    # def __new__(cls, *a):
+    #     inst = object.__new__(cls)
+    #     inst.prev = inst.next = None
+    #     return inst
+    def __init__(self, value: VT, /, ):#prev: Link = None, nxt: Link = None, /):
         self.value = value
-        self.prev = prev
-        self.next = nxt
+        self.prev = self.next = None
+        # self.prev = prev
+        # self.next = nxt
 
     def __getitem__(self, rel: int) -> Link[VT] | None:
         'Get previous, self, or next with -1, 0, 1, or ``LinkRel`` enum.'
@@ -65,17 +70,25 @@ class Link(Generic[VT], bases.Copyable):
         'Invert prev and next attributes in place.'
         self.prev, self.next = self.next, self.prev
 
-    def copy(self, value = NOARG):
-        cls = type(self)
-        inst = cls.__new__(cls)
-        inst.value = self.value if value is NOARG else value
+    # def copy(self, value = NOARG):
+    def copy(self):
+        inst = type(self)(self.value)
         inst.prev = self.prev
         inst.next = self.next
         return inst
+        # cls = type(self)
+        # inst = cls.__new__(cls)
+        # if value is NOARG:
+        #     inst.value = self.value
+        # else:
+        #     inst.value = value
+        # inst.prev = self.prev
+        # inst.next = self.next
+        # return inst
 
     def __repr__(self):
-        import tools.misc as misc
-        return misc.wraprepr(self, self.value)
+        from tools.misc import wraprepr
+        return wraprepr(self, self.value)
 
 class HashLink(Link[VT]):
 
@@ -84,7 +97,7 @@ class HashLink(Link[VT]):
     def __eq__(self, other):
         if self is other:
             return True
-        if isinstance(other, self.__class__):
+        if isinstance(other, type(self)):
             return self.value == other.value
         return self.value == other
 
@@ -94,17 +107,17 @@ class HashLink(Link[VT]):
 class LinkIter(Iterator[Link[VT]], bases.Abc):
     'Linked sequence iterator.'
 
-    _start: Link
-    _step: int
-    _rel: LinkRel
-    _count: int
-    _cur: Link
+    _start : Link
+    _step  : int
+    _rel   : LinkRel
+    _count : int
+    _cur   : Link
 
     __slots__ = '_start', '_step', '_count', '_cur', '_rel'
 
     def __init__(self, start: Link, step: int = 1, count: int = -1, /):
         self._start = start if count else None
-        self._step = abs(int(step))
+        self._step  = abs(int(step))
         self._count = count
         try:
             self._rel = LinkRel(step / self._step)
@@ -113,11 +126,10 @@ class LinkIter(Iterator[Link[VT]], bases.Abc):
         self._cur = None
 
     @classmethod
-    def from_slice(
-        cls: type[LinkIter[VT]],
+    def from_slice(cls: type[LinkIterT],
         seq: LinkSequenceApi[VT],
         slc: slice,
-    /) -> LinkIter[VT]:
+    /) -> LinkIterT:
         istart, stop, step = slc.indices(len(seq))
         count = (stop - istart) / step
         if count % 1: count += 1 # ceil
@@ -129,15 +141,18 @@ class LinkIter(Iterator[Link[VT]], bases.Abc):
 
     @final
     def advance(self):
+
         if not self._count:
             self._cur = None
         elif self._cur is None:
             self._cur = self._start
+
         else:
             i = 0
             while i < self._step and self._cur is not None:
                 i += 1
                 self._cur = self._cur[self._rel]
+
         if self._cur is None:
             del self._start
             self._count = None
@@ -189,23 +204,29 @@ class LinkSequenceApi(bases.SequenceApi[VT]):
         return LinkValueIter(self._link_last_, -1)
 
     @overload
-    def __getitem__(self, index: SupportsIndex) -> VT:...
-    @overload
-    def __getitem__(self:T, index: slice) -> T: ...
+    def __getitem__(self, index: SupportsIndex, /) -> VT:...
 
-    def __getitem__(self, index):
+    @overload
+    def __getitem__(self: LinkSeqT, slice_: slice, /) -> LinkSeqT: ...
+
+    def __getitem__(self, i):
         '''Get element(s) by index/slice.
 
         Retrieves links using _link_at(index) method. Subclasses should
         avoid overriding this method, and instead override _link_at() for
         any performance enhancements.'''
-        if isinstance(index, slice):
-            return self._from_iterable(
-                LinkValueIter.from_slice(self, index)
-            )
-        return self._link_at(index).value
 
-    def _link_at(self, index: SupportsIndex) -> Link:
+         # ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ Index Implementation ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ #
+
+        if isinstance(i, SupportsIndex): return self._link_at(i).value
+
+         # ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ Slice Implementation ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ #
+
+        return self._from_iterable(
+            LinkValueIter.from_slice(self, instcheck(i, (slice, int)))
+        )
+
+    def _link_at(self, index: SupportsIndex) -> Link[VT]:
         'Get a Link entry by index. Supports negative value. Raises ``IndexError``.'
 
         index = absindex(len(self), index)
@@ -216,7 +237,7 @@ class LinkSequenceApi(bases.SequenceApi[VT]):
         if index == len(self) - 1:
             return self._link_last_
 
-        # TODO: warn performance
+        # TODO: Raise performance warning.
 
         # Choose best iteration direction.
         if index > len(self) / 2:
@@ -231,8 +252,14 @@ class LinkSequenceApi(bases.SequenceApi[VT]):
         return next(it)
 
     def __repr__(self):
-        import tools.misc as misc
-        return misc.wraprepr(self, list(self))
+        from tools.misc import wraprepr
+        return wraprepr(self, list(self))
+
+
+LinkT     = TypeVar('LinkT',     bound = Link)
+LinkIterT = TypeVar('LinkIterT', bound = LinkIter)
+LinkSeqT  = TypeVar('LinkSeqT',  bound = LinkSequenceApi)
+
 
 class MutableLinkSequenceApi(LinkSequenceApi[VT], bases.MutableSequenceApi[VT]):
     'Linked sequence write interface.'
@@ -244,6 +271,7 @@ class MutableLinkSequenceApi(LinkSequenceApi[VT], bases.MutableSequenceApi[VT]):
     #     ...
 
 class linkseq(MutableLinkSequenceApi[VT]):
+    pass
     # TODO
     # __first : Link
     # __last  : Link
@@ -260,7 +288,6 @@ class linkseq(MutableLinkSequenceApi[VT]):
     # @property
     # def _link_last_(self) -> Link:
     #     return self.__last
-
     ...
 
 # ----------- LinkSequenceSet ------------------ #
@@ -268,19 +295,22 @@ class linkseq(MutableLinkSequenceApi[VT]):
 class MutableLinkSequenceSetApi(MutableLinkSequenceApi[VT], bases.MutableSequenceSetApi[VT]):
     'Linked sequence set read/write interface.'
 
+    #: Class or method for creating Link objects.
+    _new_link: type[Link] = HashLink
     __slots__ = EMPTY
 
-    _new_link = HashLink
-
+    # - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+    # ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ Subclass Implementation Methods ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ 
+    # - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
     @abstract
-    def _link_of(self, value) -> Link:
-        'Get a link entry by value. Implementations must raise ``MissingValueError``.'
-        raise NotImplementedError
+    def _link_of(self, value: VT) -> Link[VT]:
+        'Get a link entry by value. Should raise ``MissingValueError``.'
+        raise MissingValueError
 
     @abstract
     def _seed(self, link: Link, /):
         'Add the link as the intial (only) member.'
-        raise NotImplementedError
+        raise TypeError
 
     @abstract
     def _wedge(self, rel: LinkRel, neighbor: Link, link: Link, /):
@@ -291,8 +321,11 @@ class MutableLinkSequenceSetApi(MutableLinkSequenceApi[VT], bases.MutableSequenc
     def _unlink(self, link: Link):
         'Remove a link entry. Implementations must not alter the link attributes.'
         raise NotImplementedError
+    # - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+    # - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
 
-    def insert(self, index: int, value):
+
+    def insert(self, index: SupportsIndex, value: VT):
         '''Insert a value before an index. Raises ``DuplicateValueError`` and
         ``MissingValueError``.'''
         index = absindex(len(self), index, False)
@@ -309,55 +342,80 @@ class MutableLinkSequenceSetApi(MutableLinkSequenceApi[VT], bases.MutableSequenc
             # In-between.
             self.wedge(-1, self._link_at(index).value, value)
 
-    def __setitem__(self, index: SupportsIndex|slice, value):
-        '''Set value by index/slice. Raises ``DuplicateValueError``.
+    def __setitem__(self, index: SupportsIndex|slice, value: VT|Collection[VT]):
+        '''Set value(s) by index/slice. Raises ``DuplicateValueError``.
 
         Retrieves the existing link at index using _link_at(), then calls
         remove() with the value. If the set is empty, seed() is called.
         Otherwise, wedge() is used to place the value after the old link's
         previous link, or, if setting the first value, before the old link's
         next link.
-        
+
+        .. following notes N/A since these hooks are being removed ...
+
         Note that the old value is removed before the attempt to set the new value.
         This is to avoid double-calling the _new_value hook to check for membership.
         If a DuplicateValueError is raised, an attempt is made to re-add the old
-        value using the old link attributes, skipping _new_value, _before_add, and
-        _after_add hooks, by calling the _wedge method.'''
-        if isinstance(index, slice):
-            olds, values = self._setslice_prep(index, value)
-            if len(olds) != len(values):
-                raise Emsg.MismatchSliceSize(value, olds)
-            it = LinkIter.from_slice(self, index)
-            for link, v in zip(it, values):
-                if v in self:
-                    # Skip hooks since we are just re-ordering the value.
-                    link.value = v
-                    continue
-                self.remove(link.value)
-                if len(self) == 0:
-                    self.seed(v)
-                elif link.prev is not None:
-                    self.wedge(1, link.prev.value, v)
+        value using the old link attributes, skipping _new_value and _before_add hooks,
+        by calling the _wedge method.'''
+
+        # ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ Index Implementation ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ #
+
+        if isinstance(index, SupportsIndex):
+
+            link = self._link_at(index)
+            self.remove(link.value)
+            if len(self) == 0:
+                self.seed(value)
+                return
+            try:
+                if link.prev is not None:
+                    self.wedge(1, link.prev.value, value)
                 else:
-                    self.wedge(-1, link.next.value, v)
+                    self.wedge(-1, link.next.value, value)
+            except DuplicateValueError:
+                if link.prev is not None:
+                    self._wedge(1, link.prev, link)
+                else:
+                    self._wedge(-1, link.next, link)
+                raise
             return
 
-        link = self._link_at(index)
-        self.remove(link.value)
-        if len(self) == 0:
-            self.seed(value)
-            return
-        try:
-            if link.prev is not None:
-                self.wedge(1, link.prev.value, value)
+        # ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ Slice Implementation ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ ◀︎▶︎ #
+
+        slice_ = instcheck(index, slice)
+        # check for set? convert to seqset first?
+        values = instcheck(value, Collection)
+        del(index, value)
+
+        range_ = slicerange(len(self), slice_, values)
+
+        # This should fail if subclass does not suppor slice.
+        olds = self[slice_]
+
+        # Any value that is already in our set, and is not in the old values to
+        # remove is a duplicate.
+
+        for v in filterfalse(olds.__contains__, filter(self.__contains__, values)):
+            raise DuplicateValueError(v)
+
+        it = LinkIter.from_slice(self, slice_)
+        for link, v in zip(it, values):
+            if v in self:
+                # Re-ordering the value. This is assuming the
+                # duplicate checks performed above.
+                link.value = v
+                continue
+                        
+            self.remove(link.value)
+
+            if len(self) == 0:
+                self.seed(v)
+            elif link.prev is not None:
+                self.wedge(1, link.prev.value, v)
             else:
-                self.wedge(-1, link.next.value, value)
-        except DuplicateValueError:
-            if link.prev is not None:
-                self._wedge(1, link.prev, link)
-            else:
-                self._wedge(-1, link.next, link)
-            raise
+                self.wedge(-1, link.next.value, v)
+
 
     def __delitem__(self, index: SupportsIndex|slice):
         '''Remove element(s) by index/slice.
@@ -369,58 +427,60 @@ class MutableLinkSequenceSetApi(MutableLinkSequenceApi[VT], bases.MutableSequenc
         calling remove() as it is yielded from the iterator. This avoids loading
         all values into memory, but assumes neither remove() nor _unlink() will
         modify the prev/next attributes of the Link object.'''
-        if isinstance(index, slice):
-            for value in LinkValueIter.from_slice(self, index):
-                self.remove(value)
+        # ◀︎▶︎ Index Implementation ◀︎▶︎ 
+        if isinstance(index, SupportsIndex):
+            self.remove(self._link_at(index).value)
             return
-        self.remove(self._link_at(index).value)
 
-    def remove(self, value):
+        # ◀︎▶︎ Slice Implementation ◀︎▶︎ 
+        slice_ = instcheck(index, slice)
+        for _ in map(self.remove, LinkValueIter.from_slice(self, slice_)):
+            pass
+
+    def remove(self, value: VT):
         '''Remove element by value. Raises ``MissingValueError``.
         
         Retrieves the link using _link_of and delegates to the subclass _unlink
-        implementation. This handles the _after_remove hook.'''
+        implementation.'''
         self._unlink(self._link_of(value))
-        self._after_remove(value)
 
     def seed(self, value):
         '''Add the initial element. Raises ``IndexError`` if non-empty.
-
         This is called by __setitem__ and insert when the set is empty.
-        This calls the _new_value hook and handles the _before_add and
-        _after_add hooks, then delegates to the subclass _seed implementation.'''
+
+        .. old notes ...
+
+        This calls the _new_value hook and handles the _before_add hook,
+        then delegates to the subclass _seed implementation.'''
         if len(self) > 0: raise IndexError
-        value = self._new_value(value)
-        self._before_add(value)
         self._seed(self._new_link(value))
-        self._after_add(value)
+
 
     def wedge(self, rel: int, neighbor, value, /):
         '''Place a new value next to another value. Raises ``DuplicateValueError``
         and ``MissingValueError``.
         
         This is called by __setitem__ and insert when the set is non-empty.
-        This calls the _new_value hook and handles the _before_add and
-        _after_add hooks. The neighbor link is retrieved using _link_of.
-        This handles missing/duplicate errors, and delegates to the subclass
-        _wedge implementation.'''
+        The neighbor link is retrieved using _link_of. This handles missing/duplicate
+        errors, and delegates to the subclass _wedge implementation.'''
         rel = LinkRel(rel)
         if rel is LinkRel.self:
             raise NotImplementedError
         neighbor = self._link_of(neighbor)
-        value = self._new_value(value)
         if value in self:
             raise DuplicateValueError(value)
-        self._before_add(value)
         self._wedge(rel, neighbor, self._new_link(value))
-        self._after_add(value)
 
     def iter_from_value(self, value, /, reverse = False) -> Iterator[VT]:
         'Return an iterator starting from ``value``.'
         return LinkValueIter(self._link_of(value), -1 if reverse else 1)
 
+
 class linqset(MutableLinkSequenceSetApi[VT]):
-    'MutableLinkSequenceSetApi implementation.'
+    '''MutableLinkSequenceSetApi implementation for hashable values, based on
+    a dict index. Inserting and removing is fast (constant) no matter where
+    in the list, *so long as positions are referenced by value*. Accessing
+    by numeric index requires iterating from the front or back.'''
 
     __first : HashLink[VT]
     __last  : HashLink[VT]
@@ -428,7 +488,7 @@ class linqset(MutableLinkSequenceSetApi[VT]):
 
     __slots__ = '__first', '__last', '__links'
 
-    def __init__(self, values: Iterable = None, /):
+    def __init__(self, values: Iterable[VT] = None, /):
         self.__links = {}
         self.__first = None
         self.__last = None
@@ -450,50 +510,73 @@ class linqset(MutableLinkSequenceSetApi[VT]):
         return value in self.__links
 
     def _link_of(self, value: VT) -> HashLink[VT]:
-        if value in self.__links:
-            return self.__links[value]
+        'Get a Link by its value.'
+        try: return self.__links[value]
+        except KeyError: pass
         raise MissingValueError(value)
 
     def _seed(self, link: Link, /):
+        'Store the initial link. Collection is guaranteed to be empty.'
         self.__first = \
         self.__last = \
         self.__links[link.value] = link
 
     def _wedge(self, rel: int, neighbor: Link, link: Link, /):
-        link[rel] = neighbor[rel]
+        'Insert a Link before or after another Link already in the sequence.'
+        # Example:
+        #  
+        #   Let rel == -1 (prev), meaning we must insert {link}
+        #   before {neighbor}. Thus -rel == 1 (next)
+        #
+        # So now {link.next} is {neigbor}
         link[-rel] = neighbor
+        # We need to be after whoever neighbor was after (if anyone).
+        # So now {link.prev} is {neigbor.prev}, (which might be null).
+        link[rel] = neighbor[rel]
+
         if neighbor[rel] is not None:
-            # Point neighbor's old neighbor to new link.
+            # If it is non-null, then {neighbor} has a link behind it.
+            # We point that link's `.next` attribute to our new {link}.
             neighbor[rel][-rel] = link
-        # Point neighbor to new link.
+
+        # Now {neighbor.prev} should point to the new {link}.
         neighbor[rel] = link
+
         if link[rel] is None:
-            # Promote new first/last element.
+            # However, if {neighbor} did not have a link behind, then
+            # our {link} is now the first element (in our case).
             if rel == -1:
                 self.__first = link
+            # But if rel were instead 1, it would be opposite, and our
+            # new {link} would be the last element.
             else:
                 self.__last = link
+        # Add to index.
         self.__links[link.value] = link
 
     def _unlink(self, link: Link):
+        'Remove the Link from the sequence.'
         if link.prev is None:
+            # Removing the first element.
             if link.next is None:
-                # No more elements.
+                # And only element.
                 self.__first = None
                 self.__last = None
             else:
                 # Promote new first element.
                 link.next.prev = None
                 self.__first = link.next
+        elif link.next is None:
+            # Removing the last element (but not the only element).
+            # Promote new last element.
+            link.prev.next = None
+            self.__last = link.prev
         else:
-            if link.next is None:
-                # Promote new last element.
-                link.prev.next = None
-                self.__last = link.prev
-            else:
-                # Patch the gap.
-                link.prev.next = link.next
-                link.next.prev = link.prev
+            # Removing a link the middle.
+            # Sew up the gap.
+            link.prev.next = link.next
+            link.next.prev = link.prev
+        # Remove from index.
         del self.__links[link.value]
 
     def reverse(self):
@@ -505,9 +588,11 @@ class linqset(MutableLinkSequenceSetApi[VT]):
         self.__first, self.__last = self.__last, self.__first
 
     def sort(self, /, *, key = None, reverse = False):
-        'Sort in place.'
-        if len(self) < 2:
-            return
+        '''Sort in place. Creates list of the values in memory using ``sorted()``.
+        Then iterates over those sorted values, retrieving the internal link
+        objects via the value -> link dict index, updating the prev/next
+        attributes.'''
+        if len(self) < 2: return
         values = sorted(self, key = key, reverse = reverse)
         it = iter(values)
         link = None
@@ -530,19 +615,26 @@ class linqset(MutableLinkSequenceSetApi[VT]):
         self.__last = None
 
     def copy(self):
+        'Copy the collection. Copies the index and the internal Link objects.'
+        # ------ build the objects and index
+        index =  type(self.__links)()
+        prev = None
+        for link in map(self._new_link, self):
+            index[link.value] = link
+            link.prev = prev
+            if prev: prev.next = link
+            prev = link
+        # ---- create the instance
         cls = type(self)
         inst = cls.__new__(cls)
-        inst.__links = links = type(self.__links)()
-        it = LinkIter(self.__first)
-        try:
-            link = next(it)
-        except StopIteration:
-            inst.__first = inst.__last = None
+        if index:
+            inst.__first = index[next(iter(index))]
+            inst.__last  = index[next(reversed(index))]
         else:
-            inst.__first = links[link.value] = link.copy()
-            for link in it:
-                links[link.value] = link.copy()
-            inst.__last = link
+            inst.__first = None
+            inst.__last = None
+        inst.__links = index
         return inst
+
 
 del(abstract, final, overload, bases)

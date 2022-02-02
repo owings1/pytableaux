@@ -340,7 +340,7 @@ class TestSentence(BaseSuite):
         def test_errors(self):
             with raises(ValueError):
                 Operated('Misjunction', (A, A))
-            with raises(TypeError):
+            with raises((ValueError, TypeError)):
                 Operated(Operator.Negation, (A, A))
 
         def test_operators(self):

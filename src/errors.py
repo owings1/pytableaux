@@ -43,7 +43,7 @@ class DenotationError(ModelValueError):
     pass
 
 def _thru(o): return o
-def _len(o): return o if isinstance(0, int) else len(o)
+def _len(o): return o if isinstance(o, int) else len(o)
 
 class Emsg(enum.Enum):
     InstCheck = (TypeError,

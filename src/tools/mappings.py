@@ -36,13 +36,12 @@ from typing import (
     Any, Callable, Iterable, TypeVar,
 )
 
-MT = TypeVar('MT', bound = Mapping)
 
 EMPTY = ()
 EMPTY_ITER = iter(EMPTY)
 FCACHE_MAXMISS = 50
 FNOTIMPL = fixed.value(NotImplemented)()
-FTHRU = gets.thru()
+FTHRU = gets.THRU
 
 class FuncResolvers(dict[tuple[Callable, Callable], Callable]):
 
@@ -126,6 +125,26 @@ class MappingApi(Mapping[KT, VT], Copyable):
 
     __slots__ = EMPTY
 
+    @overload
+    def __or__(self:  MapiT, b: Mapping) -> MapiT: ...
+    @overload
+    def __ror__(self: MapiT, b: Mapping) -> MapiT: ...
+    @overload
+    def __ror__(self: MapiT, b: SetT) -> SetT: ...
+
+    @overload
+    def __and__(self:  MapiT, b: SetT) -> MapiT: ...
+    @overload
+    def __sub__(self:  MapiT, b: SetT) -> MapiT: ...
+
+    @overload
+    def __rand__(self: MapiT, b: SetT) -> SetT: ...
+    @overload
+    def __rsub__(self: MapiT, b: SetT) -> SetT: ...
+    @overload
+    def __rxor__(self: MapiT, b: SetT) -> SetT: ...
+
+
     @abcf.temp
     @membr.defer
     def oper(member: membr):
@@ -137,37 +156,39 @@ class MappingApi(Mapping[KT, VT], Copyable):
 
     __or__ = __ror__ = __and__ = __rand__ = __sub__ = __rsub__ = __rxor__ = oper()
 
-    def __or__op__(self, other):
+    def __or__op__(self, other: Mapping):
+        'Mapping | Mapping -> Mapping'
         return chain(ItemsIterator(self), ItemsIterator(other))
 
-    def __ror__op__(self, other):
-        if isinstance(other, Set):
-            return chain(other, self)
+    def __ror__op__(self, other: Mapping|Set):
+        'Set     | Mapping --> Set'
+        if isinstance(other, Set): return chain(other, self)
+        'Mapping | Mapping --> Mapping'
         return chain(ItemsIterator(other), ItemsIterator(self))
 
-    def __and__op__(self, other):
-        if not isinstance(other, Set):
-            return NotImplemented
+    def __and__op__(self, other: Set):
+        if not isinstance(other, Set): return NotImplemented
+        'Mapping & Set    --> Mapping'
         return ItemsIterator(self, kpred = other.__contains__)
 
-    def __rand__op__(self, other):
-        if not isinstance(other, Set):
-            return NotImplemented
+    def __rand__op__(self, other: Set):
+        if not isinstance(other, Set): return NotImplemented
+        'Set    & Mapping --> Set'
         return filter(self.__contains__, other)
 
-    def __sub__op__(self, other):
-        if not isinstance(other, Set):
-            return NotImplemented
+    def __sub__op__(self, other: Set):
+        if not isinstance(other, Set): return NotImplemented
+        'Mapping - Set --> Mapping'
         return ItemsIterator(self, kpred = other.__contains__, koper = not_)
 
-    def __rsub__op__(self, other):
-        if not isinstance(other, Set):
-            return NotImplemented
+    def __rsub__op__(self, other: Set):
+        if not isinstance(other, Set): return NotImplemented
+        'Set    - Mapping --> Set'
         return filterfalse(other, self.__contains__)
 
-    def __rxor__op__(self, other):
-        if not isinstance(other, Set):
-            return NotImplemented
+    def __rxor__op__(self, other: Set):
+        if not isinstance(other, Set): return NotImplemented
+        'Set   ^ Mapping --> Set'
         return chain(
             filterfalse(self.__contains__, other),
             filterfalse(other.__contains__, self),
@@ -177,12 +198,12 @@ class MappingApi(Mapping[KT, VT], Copyable):
         return self._from_mapping(self)
 
     @classmethod
-    def _from_mapping(cls: type[MT], mapping: Mapping) -> MT:
+    def _from_mapping(cls: type[MapiT], mapping: Mapping) -> MapiT:
         'Construct a new instance from a mapping.'
         return cls(mapping)
 
     @classmethod
-    def _from_iterable(cls: type[MT], it: Iterable[tuple[Any, Any]]) -> MT:
+    def _from_iterable(cls: type[MapiT], it: Iterable[tuple[Any, Any]]) -> MapiT:
         'Construct a new instance from an iterable of item tuples.'
         return NotImplemented
 
@@ -519,6 +540,9 @@ class ItemsIterator(Iterator[tuple[KT, VT]]):
 
 RESOLV_CACHE = FuncResolvers()
 FCACHE_OP = OperFuncsCache()
+
+MapiT = TypeVar('MapiT', bound = Mapping)
+SetT  = TypeVar('SetT',  bound = Set)
 
 del(
     abstract, static, final, overload, fixed, membr, wraps,

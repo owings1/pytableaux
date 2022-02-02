@@ -4,18 +4,51 @@ __all__ = 'SequenceSetApi', 'MutableSequenceSetApi', 'qsetf', 'qset'
 
 from errors import (
     instcheck,
-    subclscheck,
+    # subclscheck,
     Emsg,
     DuplicateValueError,
     MissingValueError,
 )
-from tools.abcs import T, VT
-from tools.decorators import abstract, overload
-from tools.sequences import SequenceApi, MutableSequenceApi, seqf
-from tools.sets import SetApi, MutableSetApi, setf, setm, EMPTY_SET
+from tools.abcs import (
+    abcf,
+    abchook,
+    MapProxy,
+    T, VT, F
+)
+from tools.decorators import abstract, overload, final
+from tools.sequences import (
+    slicerange,
+    SequenceApi,
+    MutableSequenceApi,
+    seqf,
+    seqm,
+    EMPTY_SEQ,
+)
+from tools.sets import (
+    SetApi,
+    MutableSetApi,
+    setf,
+    setm,
+    EMPTY_SET,
+)
 
-from copy import copy
-from typing import Iterable, MutableSequence, SupportsIndex
+from collections.abc import (
+    Collection,
+    # Set,
+)
+from itertools import (
+    # chain,
+    filterfalse
+)
+from typing import (
+    Callable,
+    Iterable,
+    Iterator,
+    Mapping,
+    # MutableSequence,
+    SupportsIndex,
+    TypeVar
+)
 
 class SequenceSetApi(SequenceApi[VT], SetApi[VT]):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'
@@ -27,7 +60,7 @@ class SequenceSetApi(SequenceApi[VT], SetApi[VT]):
         return int(value in self)
 
     def index(self, value, start = 0, stop = None, /) -> int:
-        'Get the index of the value in the set.'
+        'Get the index of the value in the sequence.'
         if value not in self:
             raise MissingValueError(value)
         return super().index(value, start, stop)
@@ -45,29 +78,76 @@ class SequenceSetApi(SequenceApi[VT], SetApi[VT]):
         'Set-based `contains` implementation.'
         return False
 
+class qsetf(SequenceSetApi[VT]):
+    'Immutable sequence set implementation setf and seqf bases.'
+
+    # _set_type_ = setf
+    # _seq_type_ = seqf
+
+    _set_: SetApi[VT]
+    _seq_: SequenceApi[VT]
+
+    __slots__ = '_set_', '_seq_'
+
+    # def __init__(self, values: Iterable = None, /):
+        # cls = type(self)
+    def __new__(cls, values: Iterable = None, /):
+        self = object.__new__(cls)
+        if values is None:
+            self._seq_ = EMPTY_SEQ#cls._seq_type_()
+            self._set_ = EMPTY_SET#cls._set_type_()
+        else:
+            self._seq_ = seqf(dict.fromkeys(values))
+            self._set_ = setf(self._seq_)
+            # self._seq_ = cls._seq_type_(tuple(dict.fromkeys(values)))
+            # self._set_ = cls._set_type_(self._seq_)
+        return self
+
+    def copy(self):
+        inst = object.__new__(type(self))
+        # copy reference only
+        inst._seq_ = self._seq_
+        inst._set_ = self._set_
+        return inst
+
+    def __len__(self):
+        return len(self._seq_)
+
+    def __contains__(self, value):
+        return value in self._set_
+
+    @overload
+    def __getitem__(self: SeqSetT, index: slice) -> SeqSetT: ...
+
+    @overload
+    def __getitem__(self, index: SupportsIndex) -> VT: ...
+
+    def __getitem__(self, index):
+        if isinstance(index, SupportsIndex):
+            return self._seq_[index]
+        instcheck(index, slice)
+        return self._from_iterable(self._seq_[index])
+
+    def __iter__(self) -> Iterator[VT]:
+        yield from self._seq_
+
+    def __reversed__(self) -> Iterator[VT]:
+        return reversed(self._seq_)
+
+    def __repr__(self):
+        return '%s({%s})' % (type(self).__name__, list(self._seq_).__repr__()[1:-1])
+
+
 class MutableSequenceSetApi(SequenceSetApi[VT], MutableSequenceApi[VT], MutableSetApi[VT]):
     """Mutable sequence set (ordered set) interface.
     Sequence methods such as ``append`` raise ``DuplicateValueError``."""
 
     __slots__ = EMPTY_SET
 
-    def _before_add(self, value):
-        '''Before add hook. Not guaranteed that the value will be added, and
-        it may already be in the sequence, but not the set.'''
-        pass
-
-    def _after_add(self, value):
-        'After add hook.'
-        pass
-
-    def _after_remove(self, value):
-        'After remove hook.'
-        pass
-
     def add(self, value):
         'Append, catching ``DuplicateValueError``.'
         # Unlike discard() we try/except instead of pre-checking membership,
-        # to make sure the _new_value hook is called.
+        # to allow for hooks to be called.
         try:
             self.append(value)
         except DuplicateValueError:
@@ -85,80 +165,81 @@ class MutableSequenceSetApi(SequenceSetApi[VT], MutableSequenceApi[VT], MutableS
         # Must re-implement MutableSequence method.
         raise NotImplementedError
 
-    def _setslice_prep(self: T, slc: slice, values: Iterable) -> tuple[T, T]:
-        olds, values = super()._setslice_prep(slc, values)
-        for v in values:
-            if v in self and v not in olds:
-                raise DuplicateValueError(v)
-        return olds, values
+    # @abchook.new_value
+    # def _setslice_prep(self: MutSeqSetT, slice_: slice, values: Iterable) -> tuple[range, MutSeqSetT, MutSeqSetT]:
+    #     range_, olds, values = super()._setslice_prep(slice_, values)
+    #     for v in values:
+    #         if v in self and v not in olds:
+    #             raise DuplicateValueError(v)
+    #     return range_, olds, values
 
-class qsetf(SequenceSetApi[VT]):
-    'Immutable sequence set implementation setf and seqf bases.'
+# class SequenceSetHooks(MutableSequenceSetApi[VT]):
+    
+#     __slots__ = EMPTY_SET
 
-    _set_type_ = setf
-    _seq_type_ = seqf
+#     @abchook.before_add
+#     def _before_add(self, value):
+#         '''Before add hook. Not guaranteed that the value will be added, and
+#         it may already be in the sequence, but not the set.'''
+#         pass
 
-    _set_: SetApi[VT]
-    _seq_: SequenceApi[VT]
+#     @abchook.after_add
+#     def _after_add(self, value):
+#         'After add hook.'
+#         pass
 
-    __slots__ = '_set_', '_seq_'
+#     @abchook.after_remove
+#     def _after_remove(self, value):
+#         'After remove hook.'
+#         pass
 
-    def __init__(self, values: Iterable = None, /):
-        cls = type(self)
-        if values is None:
-            self._seq_ = cls._seq_type_()
-            self._set_ = cls._set_type_()
-        else:
-            self._seq_ = cls._seq_type_(tuple(dict.fromkeys(values)))
-            self._set_ = cls._set_type_(self._seq_)
+#     @abchook.new_value
+#     def _new_value(self, value):
+#         '''Hook to return the new value before it is attempted to be added.
+#         Must be idempotent. Does not affect deletions.'''
+#         return value
 
-    def __len__(self):
-        return len(self._seq_)
+    # @abchook.before_setslice
+    # def _before_setslice_(self: SeqSetHookT, slice_: slice, values: Iterable, /) -> tuple[range, SeqSetHookT, SeqSetHookT]:
+    #     return (
+    #         # The computed range of indexes.
+    #         self._setslice_range(slice_, values),
+    #         # The existing values to replace.
+    #         self[slice_],
+    #         # The replacment values, mapped through _new_value hook.
+    #         self._from_iterable(map(self._new_value, values))
+    #     )
 
-    def __contains__(self, value):
-        return value in self._set_
+SeqSetT = TypeVar('SeqSetT', bound = SequenceSetApi)
 
-    @overload
-    def __getitem__(self: T, index: slice) -> T: ...
-    @overload
-    def __getitem__(self, index: SupportsIndex) -> VT: ...
-
-    def __getitem__(self, index):
-        if isinstance(index, SupportsIndex):
-            return self._seq_[index]
-        instcheck(index, slice)
-        return self._from_iterable(self._seq_[index])
-
-    def __iter__(self):
-        return iter(self._seq_)
-
-    def __reversed__(self):
-        return reversed(self._seq_)
-
-    def __repr__(self):
-        return '%s({%s})' % (
-            type(self).__name__,
-            list(self._seq_).__repr__()[1:-1]
-        )
+# SeqSetHookT = TypeVar('SeqSetHookT', bound = SequenceSetHooks)
+MutSeqSetT  = TypeVar('MutSeqSetT',  bound = MutableSequenceSetApi)
 
 class qset(MutableSequenceSetApi[VT]):
     'MutableSequenceSetApi implementation backed by built-in set and list.'
 
-    _set_: MutableSetApi[VT]
-    _seq_: MutableSequenceApi[VT]
+    _set_type_: type[setm] = setm
+    _seq_type_: type[seqm] = seqm
 
-    __slots__ = '_set_', '_seq_'
+    _set_: setm[VT]
+    _seq_: seqm[VT]
 
-    def __init__(self, values: Iterable = None, /, seq: MutableSequenceApi = None):
-        self._set_ = setm()
-        if seq is None:
-            self._seq_ = list()
-        else:
-            self._seq_ = instcheck(seq, MutableSequenceApi)
-            if len(seq) > 0:
-                raise Emsg.WrongLength(seq, 0)
-        if values is not None:
-            self |= values
+    __slots__ = qsetf.__slots__
+
+    def __new__(cls, *args, **kw):
+        inst = object.__new__(cls)
+        inst._set_ = cls._set_type_()
+        inst._seq_ = cls._seq_type_()
+        return inst
+
+    def __init__(self, values: Iterable[VT] = None, /,):
+        if values is not None: self |= values
+
+    def copy(self):
+        inst = object.__new__(type(self))
+        inst._set_ = self._set_.copy()
+        inst._seq_ = self._seq_.copy()
+        return inst
 
     __len__      = qsetf.__len__
     __contains__ = qsetf.__contains__
@@ -167,76 +248,159 @@ class qset(MutableSequenceSetApi[VT]):
     __reversed__ = qsetf[VT].__reversed__
     __repr__     = qsetf.__repr__
 
-    def __delitem__(self, index: SupportsIndex|slice):
-        'Delete by index/slice.'
-        if isinstance(index, SupportsIndex):
-            value = self[index]
-            del self._seq_[index]
-            self._set_.remove(value)
-            self._after_remove(value)
-            return
-
-        instcheck(index, slice)
-        values = self[index]
-        del self._seq_[index]
-        bset = self._set_
-        for value in values:
-            bset.remove(value)
-            self._after_remove(value)
-
-    def __setitem__(self, index: SupportsIndex|slice, value):
-        'Set value by index/slice. Raises ``DuplicateValueError``.'
-
-        if isinstance(index, SupportsIndex):
-            old = self._seq_[index]
-            value = self._new_value(value)
-            if value in self:
-                if value == old:
-                    return
-                raise DuplicateValueError(value)
-            self._set_.remove(old)
-            self._seq_[index] = value
-            try:
-                self._after_remove(old)
-                self._before_add(value)
-            except:
-                self._seq_[index] = old
-                self._set_.add(old)
-                raise
-            self._set_.add(value)
-            self._after_add(value)
-            return
-
-        instcheck(index, slice)
-
-        olds, values = self._setslice_prep(index, value)
-        self._set_ -= olds
-        try:
-            self._seq_[index] = values
-            try:
-                for old in olds:
-                    self._after_remove(old)
-                for value in values:
-                    self._before_add(value)
-            except:
-                self._seq_[index] = olds
-                raise
-        except:
-            self._set_ |= olds
-            raise
-        self._set_ |= values
-        for value in values:
-            self._after_add(value)
-
-    def insert(self, index: SupportsIndex, value):
+    @abchook.cast
+    @abchook.check
+    @abchook.done
+    def insert(self, index: SupportsIndex, value, /, *,
+        cast = None, check = None, done = None
+    ):
         'Insert a value before an index. Raises ``DuplicateValueError``.'
-        value = self._new_value(value)
+
+        # hook.cast
+        if cast: value = cast(value)
+
         if value in self:
             raise DuplicateValueError(value)
-        self._before_add(value)
+
+        # hook.check
+        check and check(self, (value,), EMPTY_SET)
+
+        # --- begin changes -----
         self._seq_.insert(index, value)
         self._set_.add(value)
-        self._after_add(value)
+        # --- end changes -----
+
+        # hook.done
+        done and done(self, (value,), EMPTY_SET)
+
+    @abchook.check
+    @abchook.done
+    def __delitem__(self, key: SupportsIndex|slice, /, *,
+        check = None, done = None
+    ):
+        'Delete by index/slice.'
+
+        if isinstance(key, SupportsIndex):
+            setdelete = self._set_.remove
+
+        elif isinstance(key, slice):
+            setdelete = self._set_.difference_update
+
+        else:
+            raise Emsg.InstCheck(key, (slice, SupportsIndex))
+
+        # Retrieve the departing
+        leaving = self[key]
+
+        # hook.check
+        check and check(self, EMPTY_SET, (leaving,))
+
+        # --- begin changes -----
+        del self._seq_[key]
+        setdelete(leaving)
+        # --- end changes -----
+
+        # hook.done
+        done and done(self, EMPTY_SET, (leaving,))
+
+    @abchook.cast
+    def __setitem__(self, key: SupportsIndex|slice, value: VT|Collection[VT], /, *,
+        cast = None
+    ):
+        'Set value by index/slice. Raises ``DuplicateValueError``.'
+
+        if isinstance(key, SupportsIndex):
+            # hook.cast
+            if cast: value = cast(value)
+            self.__setitem_index__(key, value)
+            return
+
+        if isinstance(key, slice):
+            # hook.cast
+            if cast: value = tuple(map(cast, value))
+            else: instcheck(value, Collection)
+            self.__setitem_slice__(key, value)
+            return
+
+        raise Emsg.InstCheck(key, (slice, SupportsIndex))
+
+    @abchook.check
+    @abchook.done
+    def __setitem_index__(self, index: SupportsIndex, arriving, /, *,
+        check = None, done = None,
+    ):
+        'Index setitem Implementation'
+
+        #  Retrieve the departing
+        leaving = self._seq_[index]
+    
+        #  Check for duplicates
+        if arriving in self and arriving != leaving:
+            raise DuplicateValueError(arriving)
+
+        # hook.check
+        check and check(self, (arriving,), (leaving,))
+
+        # --- begin changes -----
+
+        # Remove from set
+        self._set_.remove(leaving)
+        try:
+            # Assign by index to list.
+            self._seq_[index] = arriving
+        except:
+            # On error, restore the set.
+            self._set_.add(leaving)
+            raise
+        else:
+            #  Add new value to the set
+            self._set_.add(arriving)
+
+        # --- end changes -----
+
+        # hook.done
+        done and done(self, (arriving,), (leaving,))
+
+    @abchook.check
+    @abchook.done
+    def __setitem_slice__(self, slice_: slice, arriving: Collection[VT], /, *,
+        check = None, done = None,
+    ):
+        'Slice setitem Implementation'
+
+        # Check length and compute range. This will fail for some bad input,
+        # and it is fast to compute.
+        range_ = slicerange(len(self), slice_, arriving)
+
+        # Retrieve the departing.
+        leaving = self[slice_]
+
+        # Check for duplicates.
+        # Any value that we already contain, and is not leaving with the others
+        # is a duplicate.
+        for v in filterfalse(leaving.__contains__, filter(self.__contains__, arriving)):
+            raise DuplicateValueError(v)
+        
+        # hook.check
+        check and check(self, arriving, leaving)
+
+        # --- begin changes -----
+        # Remove from set.
+        self._set_ -= leaving
+        try:
+            # Assign by slice to list.
+            self._seq_[slice_] = arriving
+        except:
+            # On error, restore the set.
+            self._set_ |= leaving
+            raise
+        else:
+            # Add new values to set.
+            self._set_ |= arriving
+        # --- end changes -----
+
+        # hook.done
+        done and done(self, arriving, leaving)
 
     def reverse(self):
         'Reverse in place.'
@@ -251,11 +415,83 @@ class qset(MutableSequenceSetApi[VT]):
         self._seq_.clear()
         self._set_.clear()
 
-    def copy(self):
-        cls = type(self)
-        inst = cls.__new__(cls)
-        inst._set_ = self._set_.copy()
-        inst._seq_ = copy(self._seq_)
-        return inst
 
-del(abstract, overload)
+    # ---------- hook config ----------------- #
+
+    # NB: This is an experimental feature, and will be moved to
+    #     AbcMeta once generalized.
+    #
+    # TODO:
+    #
+    #   - Distinguish between declaring a hook for subclass use,
+    #     and a subclass flagging a hook to process. Currently the
+    #     @abchook decorator is used for both.
+    #
+    #   - Find a way to resolve hook name conflicts with different bases.
+    #
+    #   - Improve subclass init performance.
+
+    _abchook_flagmask: abchook
+    # hook name to method names
+    _abc_hookinfo: Mapping[str, setf[str]]
+
+    @abcf.before
+    def setup_hooks(ns: dict, bases, **kw):
+        info = {}
+        mask = abchook.blank
+        for flag in abchook:
+            if not flag.value: continue
+            methods = set()
+            for name, member in ns.items():
+                methodflag = abchook.get(member)
+                if not methodflag.value: continue
+                if flag in methodflag:
+                    methods.add(name)
+            if len(methods):
+                info[flag.name] = setf(methods)
+                mask |= flag
+        ns['_abchook_flagmask'] = mask
+        ns['_abc_hookinfo'] = MapProxy(info)
+
+    def __init_subclass__(subcls: type[qset], **kw):
+        'Subclass init. Check for hook config.'
+        cls = __class__
+
+        # Hooks listed in subclass declaration keyword 'qset'
+        hooks = kw.pop(cls.__name__, {}).get('hooks', {})
+    
+        super().__init_subclass__(**kw)
+
+        hookinfo = cls._abc_hookinfo
+        hookmask = cls._abchook_flagmask
+        ns = subcls.__dict__
+
+        for member in ns.values():
+            flag = abchook.get(member) & hookmask
+            if not flag.value: continue
+            for hookname in hookinfo:
+                if abchook[hookname] in flag:
+                    if hookname in hooks:
+                        raise TypeError from Emsg.DuplicateKey(hookname)
+                    hooks[hookname] = member
+            continue
+
+        if len(hooks):
+            from tools.decorators import _copyf as copyf
+            for hookname, hook in hooks.items():
+                for method in hookinfo[hookname]:
+                    func = getattr(subcls, method)
+                    if method not in ns:
+                        # Copy the function if subcls did not declare it,
+                        # and, importantly, only once.
+                        func = copyf(func)
+                        setattr(subcls, method, func)
+                    kwdefs = func.__kwdefaults__
+                    try:
+                        defval = kwdefs[hookname]
+                    except KeyError: raise TypeError
+                    if defval is not None:
+                        raise TypeError from Emsg.ValueConflictFor(hookname, hook, defval)
+                    kwdefs[hookname] = hook
+
+del(abstract, overload, final)

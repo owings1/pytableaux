@@ -47,7 +47,6 @@ from lexicals import (
 from collections.abc import Set
 from typing import Any, Iterable, Mapping
 
-_getkey0 = gets.key(0)
 
 notations = Notation.seq
 
@@ -69,7 +68,7 @@ class CharTable(MapCover[str, tuple[CType, int|Types.Lexical]], _Bases.CacheNota
         vals = self.values()
 
         # list of types
-        ctypes: qset[CType] = qset(map(_getkey0, vals))
+        ctypes: qset[CType] = qset(map(gets.Key0, vals))
 
         tvals: dmap[CType, qset[int|Types.Lexical]] = dmap()
         for ctype in ctypes:

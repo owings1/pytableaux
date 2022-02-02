@@ -7,14 +7,16 @@ __all__ = (
     'seqf',
     'seqm',
     'deqseq',
-    'HookedDeqSeq',
 )
 
 from errors import (
     Emsg,
     instcheck,
 )
-from tools.abcs import Copyable, abcm, abcf, T, VT
+from tools.abcs import (
+    Copyable, abcm, abcf,
+    T, VT
+)
 from tools.decorators import abstract, final, overload, membr
 
 from collections import deque
@@ -23,6 +25,7 @@ from typing import (
     Iterable,
     MutableSequence,
     Sequence,
+    Sized,
     SupportsIndex,
     TypeVar,
 )
@@ -30,7 +33,7 @@ from typing import (
 EMPTY = ()
 NOARG = object()
 
-def absindex(seqlen, index: SupportsIndex, strict = True, /) -> int:
+def absindex(seqlen: int, index: SupportsIndex, /, strict = True) -> int:
     'Normalize to positive/absolute index.'
     if not isinstance(index, int):
         index = int(instcheck(index, SupportsIndex))
@@ -39,6 +42,16 @@ def absindex(seqlen, index: SupportsIndex, strict = True, /) -> int:
     if strict and (index >= seqlen or index < 0):
         raise Emsg.IndexOutOfRange(index)
     return index
+
+def slicerange(seqlen: int, slice_: slice, values: Sized, /, strict = True) -> range:
+    'Get a range of indexes from a slice and new values, and perform checks.'
+    range_ = range(*slice_.indices(seqlen))
+    if len(range_) != len(values):
+        if strict:
+            raise Emsg.MismatchSliceSize(values, range_)
+        if abs(slice_.step or 1) != 1:
+            raise Emsg.MismatchExtSliceSize(values, range_)
+    return range_
 
 class SequenceApi(Sequence[VT], Copyable):
     "Extension of collections.abc.Sequence and built-in sequence (tuple)."
@@ -75,8 +88,6 @@ class SequenceApi(Sequence[VT], Copyable):
     def _from_iterable(cls, it: Iterable):
         return cls(it)
 
-
-
 class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
     'Fusion interface of collections.abc.MutableSequence and built-in list.'
 
@@ -86,23 +97,17 @@ class MutableSequenceApi(SequenceApi[VT], MutableSequence[VT]):
     def sort(self, /, *, key = None, reverse = False):
         raise NotImplementedError
 
-    def _new_value(self, value):
-        '''Hook to return the new value before it is attempted to be added.
-        Must be idempotent. Does not affect deletions.'''
-        return value
-
-    def _setslice_prep(self: MutSeqApiT, slc: slice, values: Iterable, /) -> tuple[MutSeqApiT, MutSeqApiT]:
-        olds = self[slc]
-        values = self._from_iterable(map(self._new_value, values))
-        if abs(slc.step or 1) != 1 and len(olds) != len(values):
-            raise Emsg.MismatchExtSliceSize(values, olds)
-        return olds, values
-
     def __imul__(self, other):
         if not isinstance(other, SupportsIndex):
             return NotImplemented
         self.extend(chain.from_iterable(repeat(self, int(other) - 1)))
         return self
+
+    # def _setslice_range(self: MutSeqT, slice_: slice, values: Sized, /) -> range:
+    #     range_ = range(*slice_.indices(len(self)))
+    #     if abs(slice_.step or 1) != 1 and len(range_) != len(values):
+    #         raise Emsg.MismatchExtSliceSize(values, range_)
+    #     return range_
 
 class SequenceCover(SequenceApi[VT]):
 
@@ -269,12 +274,9 @@ class seqf(tuple[VT, ...], SequenceApi[VT]):
     def __repr__(self):
         return type(self).__name__ + super().__repr__()
 
-# class seqm(MutableSequenceApi[VT], list[VT]):
 class seqm(list[VT], MutableSequenceApi[VT]):
 
     __slots__ = EMPTY
-
-    # insert = list.insert
 
     __imul__ = MutableSequenceApi.__imul__
     __mul__  = MutableSequenceApi.__mul__
@@ -292,6 +294,7 @@ class seqm(list[VT], MutableSequenceApi[VT]):
 
     def __getitem__(self, i):
         if isinstance(i, slice):
+            # Ensure slice returns this type, not a list.
             return self._from_iterable(super().__getitem__(i))
         return super().__getitem__(i)
 
@@ -318,40 +321,44 @@ class deqseq(deque[VT], MutableSequenceApi[VT]):
             return cls(it, maxlen = it.maxlen)
         return cls(it)
 
-class HookedDeqSeq(deqseq[VT]):
+class SequenceHooks(MutableSequenceApi[VT]):
 
     __slots__ = EMPTY
 
-    def __init__(self, values: Iterable = None, /, maxlen: int|None = None):
-        if values is None:
-            super().__init__(maxlen = maxlen)
-        else:
-            super().__init__(map(self._new_value, values), maxlen)
+# class HookedDeqSeq(deqseq[VT]):
 
-    def insert(self, index: int, value):
-        super().insert(index, self._new_value(value))
+#     __slots__ = EMPTY
 
-    def append(self, value):
-        super().append(self._new_value(value))
+#     def __init__(self, values: Iterable = None, /, maxlen: int|None = None):
+#         if values is None:
+#             super().__init__(maxlen = maxlen)
+#         else:
+#             super().__init__(map(self._new_value, values), maxlen)
 
-    def appendleft(self, value):
-        super().appendleft(self._new_value(value))
+#     def insert(self, index: int, value):
+#         super().insert(index, self._new_value(value))
 
-    def extend(self, values):
-        super().extend(map(self._new_value, values))
+#     def append(self, value):
+#         super().append(self._new_value(value))
 
-    def extendleft(self, values):
-        super().extendleft(map(self._new_value, values))
+#     def appendleft(self, value):
+#         super().appendleft(self._new_value(value))
 
-    def __setitem__(self, index: SupportsIndex, value):
-        instcheck(index, SupportsIndex)
-        super().__setitem__(index, self._new_value(value))
+#     def extend(self, values):
+#         super().extend(map(self._new_value, values))
+
+#     def extendleft(self, values):
+#         super().extendleft(map(self._new_value, values))
+
+#     def __setitem__(self, index: SupportsIndex, value):
+#         instcheck(index, SupportsIndex)
+#         super().__setitem__(index, self._new_value(value))
 
 
 EMPTY_SEQ = seqf()
 
-SeqApiT = TypeVar('SeqApiT', bound = SequenceApi)
-MutSeqApiT = TypeVar('MutSeqApiT', bound = MutableSequenceApi)
+SeqApiT  = TypeVar('SeqApiT',  bound = SequenceApi)
+MutSeqT  = TypeVar('MutSeqT',  bound = MutableSequenceApi)
 
 SequenceApi.register(tuple)
 MutableSequenceApi.register(list)
