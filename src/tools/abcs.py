@@ -21,12 +21,17 @@ __all__ = (
 )
 
 from errors import (
-    instcheck as _instcheck
+    instcheck as _instcheck,
+    Emsg,
 )
 
-from collections.abc import Set as _Set
+from collections import defaultdict
+from collections.abc import (
+    Set as _Set
+)
 from types import (
     DynamicClassAttribute as DynClsAttr,
+    FunctionType as _Function,
     MappingProxyType as _MapProxy,
 )
 from typing import (
@@ -41,6 +46,7 @@ from typing import (
     Hashable,
     Iterable,
     Iterator,
+    Literal,
     Mapping,
     NamedTuple,
     Sequence,
@@ -78,9 +84,12 @@ _NOARG = object()
 _NOGET = object()
 _ABCF_ATTR    = '_abc_flag'
 _ABCHOOK_ATTR = '_abc_hook'
+_ABCHOOK_IMPL_ATTR = '_abc_hook_impl'
+_ABCHOOK_INFO_ATTR = '_abc_hook_info2'
 
 
 def _thru(obj: T): return obj
+
 
 # Global decorators. Re-exported by decorators module.
 
@@ -157,18 +166,6 @@ class abcf(flagbase):
     static = 32
 
     _cleanable = before | temp | after
-    # _protectable = immut | protect | locked
-
-
-    # def __call__(self, obj: F) -> F:
-    #     "Add the flag to obj's meta flag. Return obj."
-    #     return self.set(obj, self | self.get(obj))
-
-
-    # @classmethod
-    # def set(cls, obj: F, value: abcf, /) -> F:
-    #     setattr(obj, _ABCF_ATTR, cls(value))
-    #     return obj
 
 @_enum.unique
 class abchook(flagbase):
@@ -177,16 +174,8 @@ class abchook(flagbase):
     cast   = 2
     check  = 4
     done   = 8
-    # before_add   = 32
-    # after_add    = 64
-    # after_remove = 128
-    # before_setslice = 256
-    newlink    = 512
 
-
-    # qset_hooks = cast
-
-abcf._flag_attr = _ABCF_ATTR
+abcf._flag_attr    = _ABCF_ATTR
 abchook._flag_attr = _ABCHOOK_ATTR
 
 @static
@@ -202,23 +191,28 @@ class abcm:
                 member(ns, bases, **kw)
         # cast slots to a set
         slots = ns.get('__slots__')
-        if slots and isinstance(slots, Iterable) and not isinstance(slots, _Set):
+        if isinstance(slots, Iterable) and not isinstance(slots, _Set):
             ns['__slots__'] = frozenset(slots)
 
-    def clsafter(Class: TT, ns: Mapping = None, bases = None, /, deleter = type.__delattr__,
-        **kw):
+    def clsafter(Class: TT, ns: Mapping = None, bases = None, /,
+        deleter = type.__delattr__, **kw):
         # Allow use as standalone class decorator
         if ns is None: ns = Class.__dict__.copy()
         if bases is None: bases = Class.__bases__
         abcf.blank(Class)
-        for name, member in ns.items():
+        todelete = set()
+        nsitems = ns.items()
+        for name, member in nsitems:
+            # Finish calling the 'after' hooks before anything else, since
+            # they might modify other meta config.
             mf = abcf.get(member)
             if mf is not mf.blank and mf in mf._cleanable:
                 if mf.after in mf:
                     member(Class)
-                deleter(Class, name)
+                todelete.add(name)
+        for name in todelete:
+            deleter(Class, name)
         return Class
-        # abcm.merge_mroattr(Class, '_lazymap_', {}, transform = MapProxy, rev = False)
 
     def isabstract(obj):
         if isinstance(obj, type):
@@ -272,7 +266,7 @@ class abcm:
         **kw
     ) -> T:
         setter = kw.pop('setter', setattr)
-        value = abcm.merged_mroattr(subcls, name, *args, transform= transform, **kw)
+        value = abcm.merged_mroattr(subcls, name, *args, transform = transform, **kw)
         setter(subcls, name, value)
         return value
 
@@ -293,40 +287,42 @@ class abcm:
             it = islice(it, start)
         return it
 
-    # def lazy_getattr(obj, name, /, setter = object.__setattr__):
-    #     try:
-    #         getter = type(obj)._lazymap_[name]
-    #     except AttributeError:
-    #         raise TypeError
-    #     except KeyError:
-    #         raise AttributeError(name) from None
-    #     value = getter(obj)
-    #     setter(obj, name, value)
-    #     return value
+    def hookable(*names: str):
+        def decorator(func: F):
+            _attrdefault(func, _ABCHOOK_INFO_ATTR, set, True).update(names)
+            return func
+        return decorator
 
-    # def flag_call(enum, obj):
-    #     "Add the flag to obj's meta flag. Return obj."
-    #     return abcm.flag_set(enum, obj, enum | abcm.flag_get(enum, obj))
-
-    # def flag_get(enum, obj, default: _enum.Flag|int = 0, /) -> abcf:
-    #     enumcls = type(enum)
-    #     attr = enumcls._flag_attr
-    #     return getattr(obj, attr, enumcls(default))
-
-    # def flag_set(enum, obj: F, value: abcf, /) -> F:
-    #     enumcls = type(enum)
-    #     attr = enumcls._flag_attr
-    #     setattr(obj, attr, enumcls(value))
-    #     return obj
+ABC_HOOKINFO: Mapping[type, Mapping[str, frozenset[str]]]
 
 class AbcMeta(_abc.ABCMeta):
     'Abc Meta class with before/after hooks.'
 
-    def __new__(cls, clsname, bases, ns: dict, /, **kw):
+    def __new__(cls, clsname, bases, ns: dict, /, hooks = None, **kw):
         abcm.nsinit(ns, bases, **kw)
         Class = super().__new__(cls, clsname, bases, ns, **kw)
+        _buildhookimpl(Class, hooks)
         abcm.clsafter(Class, ns, bases, **kw)
+        _buildhookinfo(Class)
         return Class
+
+    def hook(cls, *names: str):
+        'Experimental - Decorator factory for tagging hook implementation.'
+        # hookinfo = getattr(cls, _ABCHOOK_INFO_ATTR)
+        if not names:
+            raise TypeError('Empty args.')
+        avail = ABC_HOOKINFO.get(cls, _EMPTY_SET)
+        for name in names:
+            if name not in avail:
+                raise TypeError('Invalid hook') from Emsg.MissingKey(name)
+        def decorator(func: F):
+            impl = _attrdefault(func, _ABCHOOK_IMPL_ATTR, dict, True).setdefault(cls, {})
+            for name in names:
+                if name in impl:
+                    raise TypeError from Emsg.DuplicateKey(name)
+                impl[name] = func
+            return func
+        return decorator
 
 class EnumDictType(_enum._EnumDict):
     'Stub type for annotation reference.'
@@ -403,7 +399,7 @@ class AbcEnumMeta(_enum.EnumMeta):
             starmap(dict.fromkeys, zip(keys_it, value_it))
         ))
 
-    @staticmethod
+    @static
     @final
     def _default_keys(member: EnT) -> Set[Hashable]:
         'Default member lookup keys'
@@ -524,14 +520,19 @@ class AbcEnumMeta(_enum.EnumMeta):
         except AttributeError:
             raise KeyError(key)
 
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
 
 # Type vars
 T  = TypeVar('T')
 T1 = TypeVar('T1')
 T2 = TypeVar('T2')
+# Key type
 KT = TypeVar('KT')
+# Value type
 VT = TypeVar('VT')
+# Return type
 RT = TypeVar('RT')
+# Self type
 Self = TypeVar('Self')
 
 T_co  = TypeVar('T_co', covariant = True)
@@ -539,9 +540,10 @@ KT_co = TypeVar('KT_co', covariant = True)
 VT_co = TypeVar('VT_co', covariant = True)
 T_contra = TypeVar('T_contra', contravariant = True)
 
+# Function bound, e.g. decorator
 F   = TypeVar('F',  bound = Callable[..., Any])
+# Type bound, e.g. class decorator
 TT  = TypeVar('TT', bound = type)
-TO  = TypeVar('TO', bound = object)
 
 P = ParamSpec('P')
 
@@ -555,6 +557,119 @@ class MapProxy(Mapping[KT, VT]):
             mapping = dict(mapping)
         return _MapProxy(mapping)
 _EMPTY_MAP = MapProxy({})
+
+
+@overload
+def _attrdefault(obj, name: str, default: type[T], call: Literal[True]) -> T: ...
+
+@overload
+def _attrdefault(obj, name: str, default: T, call = False) -> T: ...
+
+def _attrdefault(obj, name, default, call = False):
+    try:
+        value = getattr(obj, name)
+    except AttributeError:
+        value = default() if call else default
+        setattr(obj, name, value)
+    return value
+
+
+def _buildhookinfo(Class: TT, /, *, _main = {}, _classes = {}):   
+    attr = _ABCHOOK_INFO_ATTR
+    ns = Class.__dict__
+    clsinfo: dict[str, set[str]] = {}
+    for name, member in ns.items():
+        hooks = getattr(member, attr, _EMPTY_SET)
+        if not hooks:
+            continue
+        if not isinstance(member, _Function):
+            raise TypeError(
+                "Unsupported hook member type '%s' for class '%s' ('%s')" %
+                (type(member), Class, name)
+            )
+        for hook in hooks:
+            if hook not in clsinfo:
+                clsinfo[hook] = set()
+            clsinfo[hook].add(name)
+    if clsinfo:
+        for hook, names in clsinfo.items():
+            clsinfo[hook] = frozenset(names)
+        _classes[Class] = clsinfo
+        _main[Class] = MapProxy(clsinfo)
+
+ABC_HOOKINFO = MapProxy(_buildhookinfo.__kwdefaults__['_main'])
+
+def _buildhookimpl(Class: TT, hooks = None):
+    hooks: dict[type, dict[str, Callable]] = {} if hooks is None else dict(hooks)
+    ns = Class.__dict__
+    for member in ns.values():
+        value: dict = getattr(member, _ABCHOOK_IMPL_ATTR, None)
+        if not value:
+            continue
+        for cls, impl in value.items():
+            if cls not in hooks:
+                hooks[cls] = {}
+            for hook in impl:
+                if hook in hooks[cls]:
+                    raise TypeError from Emsg.DuplicateKey(hook)
+                hooks[cls][hook] = member
+    if not hooks:
+        return
+    for cls, impl in hooks.items():
+        try:
+            clsinfo = ABC_HOOKINFO[cls]
+        except KeyError:
+            raise TypeError("No hooks defined for class '%s'" % cls)
+        for hook, member in impl.items():
+            if hook not in clsinfo:
+                raise TypeError from Emsg.MissingKey(hook)
+            for method in clsinfo[hook]:
+                func = getattr(Class, method)
+                if method not in ns:
+                    # Copy the function if subcls did not declare it,
+                    # and, importantly, only once.
+                    print('abc copyf', func)
+                    func = _copyf(func)
+                    setattr(Class, method, func)
+                kwdefs = func.__kwdefaults__
+                try:
+                    defval = kwdefs[hook]
+                except (KeyError, TypeError):
+                    raise TypeError("Cannot get kw default for '%s'" % method)
+                if defval is not None:
+                    if defval is member:
+                        continue
+                    raise TypeError from Emsg.ValueConflictFor(hook, member, defval)
+                kwdefs[hook] = member
+                print(cls, hook, method, member)
+                print(kwdefs)
+    # print(hooks)
+
+
+def _copyf(f: _Function) -> _Function:
+    func = _Function(
+        f.__code__, f.__globals__, f.__name__,
+        f.__defaults__, f.__closure__,
+    )
+    if f.__kwdefaults__:
+        func.__kwdefaults__ = dict(f.__kwdefaults__)
+    return func
+
+# @overload
+# def _keydefault(obj, key, default: type[T], call: Literal[True]) -> T:...
+
+# @overload
+# def _keydefault(obj, key, default: T, call = False) -> T:...
+
+# def _keydefault(obj, key, default, call = False):
+#     try:
+#         return obj[key]
+#     except (KeyError, IndexError):
+#         value = default() if call else default
+#         obj[key] = value
+#         return value
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
 
 class Abc(metaclass = AbcMeta):
     'Convenience for using AbcMeta as metaclass.'
@@ -570,8 +685,6 @@ class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta):
     def __deepcopy__(self, memo):
         memo[id(self)] = self
         return self
-
-    #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Meta Class Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     # Propagate class hooks up to metaclass, so they can be implemented
     # in either the meta or concrete classes.

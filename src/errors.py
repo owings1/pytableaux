@@ -25,6 +25,8 @@ class BoundVariableError(ParseError):
 # KeyErrors
 class DuplicateKeyError(KeyError):
     pass
+class MissingKeyError(KeyError):
+    pass
 
 # ValueErrors
 class DuplicateValueError(ValueError):
@@ -84,6 +86,7 @@ class Emsg(enum.Enum):
 
     DuplicateValue = DuplicateValueError,
     MissingValue = MissingValueError,
+    MissingKey = MissingKeyError,
 
     DuplicateKey = DuplicateKeyError,
 

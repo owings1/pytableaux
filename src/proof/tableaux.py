@@ -29,7 +29,7 @@ from errors import (
     subclscheck,
 )
 from tools.abcs import (
-    Abc, AbcMeta, P, T, F, TT, TO, T_co, KT, VT, KT_co, VT_co,
+    Abc, AbcMeta, P, T, F, TT, KT, VT,
     MapProxy
 )
 from tools.callables import preds

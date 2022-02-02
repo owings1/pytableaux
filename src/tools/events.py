@@ -95,7 +95,6 @@ class Listeners(linqset[Listener]):
         self.emitcount = 0
 
     @classmethod
-    @abchook.newlink
     def _new_link(cls, value):
         return super()._new_link(instcheck(value, Listener))
 

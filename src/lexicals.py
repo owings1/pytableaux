@@ -40,8 +40,7 @@ from tools.abcs import (
 )
 from tools.decorators import (
     abstract, final, overload, static,
-    fixed, lazy, membr,
-    raisr, rund, wraps, NoSetAttr
+    fixed, lazy, membr, raisr, rund, wraps, NoSetAttr
 )
 from tools.hybrids   import qsetf, qset
 from tools.mappings  import dmap, MapCover, MapProxy
@@ -55,7 +54,6 @@ from functools import (
 from itertools import (
     chain,
     repeat,
-    starmap,
 )
 import operator as opr
 from types import (
@@ -82,7 +80,7 @@ ITEM_CACHE_SIZE = 10000
 nosetattr = NoSetAttr(enabled = False)
 
 @overload
-def sorttmap(it: Iterable[Bases.Lexical]) -> Iterable[Types.IntTuple]: ...
+def sorttmap(it: Iterable[Bases.Lexical]) -> Iterator[Types.IntTuple]: ...
 sorttmap = partial(map, opr.attrgetter('sort_tuple'))
 
 @static
@@ -382,14 +380,23 @@ class Bases:
             '''Copy the dict manually to the next class, since our protection
             is limited without metaclass flexibility.'''
             super().__init_subclass__(**kw)
-            if __class__ not in subcls.__bases__: return
-            dsup = dmap(__class__.__dict__)
+            cls = __class__
+            if cls not in subcls.__bases__: return
+
+            supns = dmap(cls.__dict__)
+            subns = subcls.__dict__
+            skip = {'__init_subclass__'}
+            ftypes = {classmethod, staticmethod, type(lambda:1)}
             for name, value in (
-            (name, mbr) for name, mbr in
-                (dsup - set(subcls.__dict__)).items()
-            if name not in {'__init_subclass__'}
-            and type(mbr) in
-                {classmethod, staticmethod, type(lambda:1)}
+                (name, mbr)
+                for
+                    name, mbr
+                in
+                    (supns - set(subns)).items()
+                if
+                    name not in skip
+                and
+                    type(mbr) in ftypes
             ) : setattr(subcls, name, value)
 
     Types.Lexical = Lexical
@@ -413,7 +420,7 @@ class Bases:
         name: str
         #: Label with spaces allowed.
         label: str
-        #: A number to signify order independenct of source or other constraints.
+        #: A number to signify order independent of source or other constraints.
         order: int
         #: Name, label, or other strings unique to a member.
         strings: setf[str]
@@ -427,7 +434,8 @@ class Bases:
 
         def __eq__(self, other):
             'Allow equality with the string name.'
-            if self is other: return True
+            if self is other:
+                return True
             if isinstance(other, str):
                 return other in self.strings
             return NotImplemented
@@ -878,12 +886,11 @@ class Sentence(Bases.LexicalItem):
         'Negate this sentence, returning the new sentence.'
         return Operated(Operator.Negation, (self,))
 
+    @overload
     def negative(self) -> Sentence:
         """Either negate this sentence, or, if this is already a negated
         sentence return its negatum, i.e., "un-negate" the sentence."""
-        if type(self) is Operated and self.operator is Operator.Negation:
-            return self.lhs
-        return self.negate()
+    negative = negate
 
     def asserted(self) -> Operated:
         'Apply assertion operator to the sentence.'
@@ -967,7 +974,6 @@ class Predicated(Sentence, SequenceApi[Parameter]):
     @lazy.prop
     def variables(self: Predicated) -> setf[Variable]:
         return setf(p for p in self.paramset if p.is_variable)
-
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sentence Methods ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -1217,6 +1223,13 @@ class Operated(Sentence, SequenceApi[Sentence]):
         operands = (s.substitute(pnew, pold) for s in self)
         return Operated(self.operator, tuple(operands))
 
+    def negative(self) -> Sentence:
+        """Either negate this sentence, or, if this is already a negated
+        sentence return its negatum, i.e., "un-negate" the sentence."""
+        if self.operator is Operator.Negation:
+            return self.lhs
+        return self.negate()
+
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
     def __init__(self, oper: Operator, operands: Iterable[Sentence] | Sentence):
@@ -1331,7 +1344,7 @@ class LexType(Bases.Enum):
         'Build classes list, expand sort_tuple.'
         super()._after_init()
         cls.classes = qsetf((m.cls for m in cls.seq))
-        for inst in chain[Bases.LexicalEnum](Operator, Quantifier):
+        for inst in chain(Operator.seq, Quantifier.seq):
             inst.sort_tuple = inst.TYPE.rank, *inst.sort_tuple
 
     @classmethod
@@ -1344,9 +1357,8 @@ class LexType(Bases.Enum):
 ##############################################################
 
 class Predicates(qset[Predicate], Bases.Abc,
-    qset = dict(
-        hooks = dict(cast = Predicate)
-    )
+    # qset = dict(hooks = dict(cast = Predicate)),
+    hooks = {qset: dict(cast = Predicate)}
 ):
     'Predicate store'
 
@@ -1367,9 +1379,10 @@ class Predicates(qset[Predicate], Bases.Abc,
             if default is NOARG: raise
             return default
 
+    @qset.hook('done')
     @abcf.temp
-    @abchook.done
-    def after_change(self, arriving:Collection[Predicate], leaving: Collection[Predicate]):
+    # @abchook.done
+    def after_change(self, arriving: Iterable[Predicate], leaving: Iterable[Predicate]):
         'Implement after change (done) hook. Update lookup index.'
         for pred in leaving or EMPTY_IT:
             if False: # - check disabled for performance
@@ -1541,6 +1554,8 @@ class Argument(SequenceApi[Sentence], metaclass = Metas.Argument):
 
     @classmethod
     def _from_iterable(cls, it):
+        '''Build an argument from an non-empty iterable using the first element
+        as the conclusion, and the others as the premises.'''
         it = iter(it)
         try:
             return cls(next(it), it)
@@ -1787,7 +1802,7 @@ class StandardLexWriter(BaseLexWriter):
 
     __slots__ = EMPTY_SET
     notation = Notation.standard
-    defaults = {'drop_parens': True}
+    defaults = dict(drop_parens = True)
 
     def write(self, item: Bases.Lexical):
         if self.opts['drop_parens'] and isinstance(item, Operated):
