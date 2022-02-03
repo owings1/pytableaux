@@ -86,7 +86,7 @@ sorttmap = partial(map, opr.attrgetter('sort_tuple'))
 @static
 class Types:
 
-    from tools.abcs     import EnumDictType
+    from tools.patch    import EnumDictType
     from tools.mappings import DequeCache as ItemCache
 
     class BiCoords(NamedTuple):

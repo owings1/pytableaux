@@ -7,11 +7,11 @@ from tools.abcs import Abc, Copyable, abcf, F
 from tools.decorators import raisr, wraps
 from tools.linked import linqset, MutableLinkSequenceSet as MutLinkSeqSet
 from tools.mappings import (
-    dmap, ItemsIterator, MutableMappingApi
+    dmap #, ItemsIterator, MutableMappingApi
 )
 
 from enum import Enum
-from itertools import chain, filterfalse, starmap
+from itertools import filterfalse #, chain, starmap
 from typing import Callable, Mapping, Sequence
 
 EventId = str | int | Enum

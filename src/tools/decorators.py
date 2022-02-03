@@ -98,14 +98,6 @@ def _checkcallable2(obj):
         return _methcaller(obj)
     return _checkcallable(obj)
 
-def _copyf(f: FunctionType) -> FunctionType:
-    func = FunctionType(
-        f.__code__, f.__globals__, f.__name__,
-        f.__defaults__, f.__closure__,
-    )
-    func.__kwdefaults__ = dict(f.__kwdefaults__)
-    return func
-    return wraps(f)(func)
 
 class Member(Generic[T]):
 
@@ -192,6 +184,7 @@ class Twofer(Abc, Generic[F]):
         self._init()
 
 ### ------------------------------ ###
+
 
 def rund(func: Callable[[], T]) -> T:
     'Call the function immediately, and return the value.'
