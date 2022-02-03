@@ -14,7 +14,9 @@ from errors import (
     instcheck,
 )
 from tools.abcs import (
-    abcm, Abc, Copyable, IntEnum, T, VT
+    abcm, abcf, Abc, Copyable, IntEnum,
+    VT,
+    #T, VT_co
 )
 from tools.decorators import abstract, final, overload
 from tools.hybrids import MutableSequenceSetApi
@@ -40,6 +42,13 @@ from typing import (
 )
 
 NOARG = object()
+
+
+# - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+#
+#  Helper Classes
+#
+# - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 class LinkRel(IntEnum):
     'Link directional/subscript enum.'
@@ -92,6 +101,9 @@ class HashLink(Link[VT]):
 
     __slots__ = EMPTY_SET
 
+    prev: HashLink[VT]
+    next: HashLink[VT]
+
     def __eq__(self, other):
         if self is other:
             return True
@@ -102,18 +114,21 @@ class HashLink(Link[VT]):
     def __hash__(self):
         return hash(self.value)
 
-class LinkIter(Iterator[Link[VT]], Abc):
+LinkT     = TypeVar('LinkT',    bound = Link)
+LinkT_co  = TypeVar('LinkT_co', bound = Link, covariant = True)
+
+class LinkIter(Iterator[LinkT_co], Abc):
     'Linked sequence iterator.'
 
-    _start : Link[VT]
+    _start : LinkT_co
     _step  : int
     _rel   : LinkRel
     _count : int
-    _cur   : Link[VT]
+    _cur   : LinkT_co
 
     __slots__ = '_start', '_step', '_count', '_cur', '_rel'
 
-    def __init__(self, start: Link[VT], step: int = 1, count: int = -1, /):
+    def __init__(self, start: LinkT_co, step: int = 1, count: int = -1, /):
         self._start = start if count else None
         self._step  = abs(int(step))
         self._count = count
@@ -124,20 +139,21 @@ class LinkIter(Iterator[Link[VT]], Abc):
         self._cur = None
 
     @classmethod
-    def from_slice(cls: type[LinkIterT], seq: LinkSequence[VT], slice_: slice,
-    /) -> LinkIterT:
+    def from_slice(cls: type[LinkIter[Link[VT]]], seq: LinkSequence[VT], slice_: slice,
+    /) -> LinkIter[Link[VT]]:
+        # TODO: lazy search for the start?
         istart, stop, step = slice_.indices(len(seq))
         count = _ceil((stop - istart) / step)
         if count < 1:
             start = None
         else:
             start = seq._link_at(istart)
-        return cls(start, step, count)
+        inst = cls(start, step, count)
+        return inst
 
     def __iter__(self):
         return self
 
-    @final
     def advance(self):
 
         if not self._count:
@@ -157,21 +173,19 @@ class LinkIter(Iterator[Link[VT]], Abc):
             raise StopIteration
         self._count -= 1
 
-    def __next__(self) -> Link[VT]:
+    # def __next__(self) -> LinkT_co:
+    def __next__(self):
         self.advance()
         return self._cur
 
-class LinkValueIter(LinkIter[VT]):
+class LinkValueIter(LinkIter[Link[VT]]):
     'Linked sequence iterator over values.'
 
     __slots__ = EMPTY_SET
 
     @classmethod
     @overload
-    def from_slice(
-        cls: type[LinkValueIter[VT]],
-        seq: LinkSequence[VT],
-        slc: slice,
+    def from_slice(cls: type[LinkValueIter[VT]], seq: LinkSequence[VT], slice_: slice,
     /) -> LinkValueIter[VT]: ...
     from_slice = LinkIter.from_slice
 
@@ -179,7 +193,11 @@ class LinkValueIter(LinkIter[VT]):
         self.advance()
         return self._cur.value
 
-# ----------- LinkSequence ------------------ #
+# - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+#
+#  Sequence Classes
+#
+# - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
 
 class LinkSequence(SequenceApi[VT]):
     'Linked sequence read interface.'
@@ -252,62 +270,32 @@ class LinkSequence(SequenceApi[VT]):
         it.advance()
         return next(it)
 
+    def _link_of(self, value: VT) -> Link[VT]:
+        'Get a link entry by value. Should raise ``MissingValueError``.'
+        for link in LinkIter(self._link_first()):
+            if link.value == value:
+                return link
+        raise MissingValueError(value)
+        
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__, list(self).__repr__())
 
-LinkT     = TypeVar('LinkT',     bound = Link)
-LinkIterT = TypeVar('LinkIterT', bound = LinkIter)
-LinkSeqT  = TypeVar('LinkSeqT',  bound = LinkSequence)
-
 class MutableLinkSequence(LinkSequence[VT], MutableSequenceApi[VT]):
-    'Linked sequence write interface.'
+    'Linked sequence mutable base methods.'
+
     __slots__  = EMPTY_SET
 
-    _link_type_ = Link
-    # @abstract
-    # def __setitem__(self, index: int|slice, value):
-    #     ...
-
-class linkseq(MutableLinkSequence[VT]):
-    pass
-    # TODO
-    # __first : Link
-    # __last  : Link
-
-    # def __init__(self, values: Iterable = None, /):
-    #     self.__first = None
-    #     self.__last = None
-    #     if values is not None:
-    #         self.extend(values)
-    # @property
-    # def _link_first_(self) -> Link:
-    #     return self.__first
-
-    # @property
-    # def _link_last_(self) -> Link:
-    #     return self.__last
-    ...
-
-# ----------- LinkSequenceSet ------------------ #
-
-class MutableLinkSequenceSet(MutableLinkSequence[VT], MutableSequenceSetApi[VT]):
-    'Linked sequence set read/write interface.'
-
-    #: Class or method for creating Link objects.
-    _link_type_: type[HashLink[VT]] = HashLink
-    __slots__ = EMPTY_SET
+    _link_type_: type[Link[VT]] = Link
 
     # - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
     #                 Abstract Methods
     # - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-    @abstract
-    def _link_of(self, value: VT) -> Link[VT]:
-        'Get a link entry by value. Should raise ``MissingValueError``.'
-        raise MissingValueError
+
+    # _link_first, _link_last, __len__, sort
 
     @abstract
     def _seed(self, link: Link[VT], /):
-        '''Add the link as the intial (only) member. This is called by __setitem__,
+        '''Add the Link as the intial (only) member. This is called by __setitem__,
         insert, append, etc., when the collection is empty.'''
         raise IndexError
 
@@ -315,50 +303,108 @@ class MutableLinkSequenceSet(MutableLinkSequence[VT], MutableSequenceSetApi[VT])
     def _spot(self, rel: Literal[LinkRel.prev]|Literal[LinkRel.next],
         neighbor: Link[VT], link: Link[VT], /):
         'Insert a Link before or after another Link already in the collection.'
-        raise MissingValueError
+        # --------------------------------------------------------------
+        # This provides a partial implementation that adjusts the prev/next
+        # attributes of the links, but does not implement adjusting the
+        # first/last properties of the sequence.
+        #
+        # Instead, the return value can be used to determine if first or
+        # last should be set.
+        #
+        #   - A return value of ``-1`` (LinkRel.prev) means the link
+        #     should be set as the first link.
+        #
+        #   - A return value of ``1`` (LinkRel.next) means the link
+        #     should be set as the last link.
+        #
+        #   - A return value of ``None`` means neither should be set.
+        # --------------------------------------------------------------
+
+        # Example:
+        #  
+        #   Let rel == -1 (prev), meaning we must insert {link}
+        #   before {neighbor}. Thus -rel == 1 (next)
+        #
+        # So now {link.next} is {neigbor}
+        link[-rel] = neighbor
+        # We need to be after whoever neighbor was after (if anyone).
+        # So now {link.prev} is {neigbor.prev}, (which might be null).
+        link[rel] = neighbor[rel]
+
+        if neighbor[rel] is not None:
+            # If it is non-null, then {neighbor} has a link behind it.
+            # We point that link's `.next` attribute to our new {link}.
+            neighbor[rel][-rel] = link
+
+        # Now {neighbor.prev} should point to the new {link}.
+        neighbor[rel] = link
+
+        if link[rel] is None:
+            # However, if {neighbor} did not have a link behind, then
+            # our {link} is now the first element (in our case).
+            #
+            # if rel == -1:
+            #   set first := link
+            #
+            # But if rel were instead 1, it would be opposite, and our
+            # new {link} would be the last element.
+            #
+            # else:
+            #   set last := link
+            #
+            return rel
+        return None
 
     @abstract
     def _unlink(self, link: Link[VT]):
-        'Remove a link entry. Implementations must not alter the link attributes.'
-        raise MissingValueError
+        'Remove a Link entry. Implementations must not alter the link attributes.'
+        # --------------------------------------------------------------
+        # This provides a partial implementation that adjusts the prev/next
+        # attributes of the links, but does not implement adjusting the
+        # first/last properties of the sequence.
+        #
+        # Instead, the return value can be used to determine if first or
+        # last should be set.
+        #
+        #   - A return value of ``None``  means no adjustment to first or last
+        #     should be made.
+        #
+        #   - Otherwise the return value is a tuple (first, last). Either
+        #     or both values could be ``None``, meaning they should be set
+        #     to ``None``, or unset. If only value should change, the other
+        #     is retrieved by _link_first() or _link_last() and returned.
+        if link.prev is None:
+            # Removing the first element.
+            if link.next is None:
+                # And only element.
+                # Unset both first and last (empty)
+                return None, None
+            else:
+                # Promote new first element.
+                link.next.prev = None
+                # Update the first, keep the last
+                return link.next, self._link_last()
+        elif link.next is None:
+            # Removing the last element (but not the only element).
+            # Promote new last element.
+            link.prev.next = None
+            # Keep the first, update the last
+            return self._link_first(), link.prev
+        else:
+            # Removing a link the middle.
+            # Sew up the gap.
+            link.prev.next = link.next
+            link.next.prev = link.prev
+        # No change to first or last
+        return None
+
     # - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-
-
-    @abcm.hookable('cast')
-    def wedge(self, value: VT, neighbor: VT, rel: Literal[-1]|Literal[1], /, *,
-        cast = None
-    ):
-        '''Place a new value next to (before or after) another value. Raises
-        ``DuplicateValueError`` and ``MissingValueError``.
-        
-        This is the most performant way to insert a new value anywhere in the
-        collection, with speed O(1).  Methods that add by index (__setitem__,
-        insert, etc.) will first iterate to find the index, then call this method.
-
-        :param value: The new value to add.
-        :param neighbor: The existing element next to which to place the value.
-        :param int rel: ``-1`` to place before, or ``1`` to place after neighbor.
-
-        :raises errors.DuplicateValueError:
-        :raises errors.MissingValueError:
-        '''
-        rel = LinkRel(rel)
-        if rel is LinkRel.self:
-            raise TypeError
-        neighbor: Link[VT] = self._link_of(neighbor)
-        if cast is not None:
-            value = cast(value)
-        if value in self:
-            raise DuplicateValueError(value)
-        newlink = self._link_type_(value)
-        self._spot(rel, neighbor, newlink)
 
     @abcm.hookable('cast')
     def insert(self, index: SupportsIndex, value: VT, /, *,
         cast = None
     ):
-        '''Insert a value before an index. Raises ``DuplicateValueError`` and
-        ``MissingValueError``.'''
+        '''Insert a value before an index. Raises ``MissingValueError``.'''
         length = len(self)
         index = absindex(length, index, False)
         if cast is not None:
@@ -393,12 +439,10 @@ class MutableLinkSequenceSet(MutableLinkSequence[VT], MutableSequenceSetApi[VT])
         if isinstance(i, slice):
             # Slice Implementation
             #
-            # The Link Iterator will use _link_at() to retrieve the first link
-            # of the slice. Values are removed as they are yielded from the
-            # iterator. This avoids loading all values into memory, but assumes
+            # Values are removed lazily, as they are yielded from the iterator.
+            # This avoids reloading all values into memory, but assumes
             # _unlink() will modify the prev/next attributes of the Link object.
             for _ in map(self._unlink, LinkIter.from_slice(self, i)):
-            # for _ in map(self.remove, LinkValueIter.from_slice(self, i)):
                 pass
             return
 
@@ -407,126 +451,197 @@ class MutableLinkSequenceSet(MutableLinkSequence[VT], MutableSequenceSetApi[VT])
     @abcm.hookable('cast')
     def __setitem__(self, i: SupportsIndex|slice, value: VT|Collection[VT],
         /, *, cast = None):
-        'Set value(s) by index/slice. Raises ``DuplicateValueError`` or ``IndexError.'
-
-        # Retrieves the existing link at index using _link_at(), then calls
-        # remove() with the value. If the set is empty, _seed() is called.
-        # Otherwise, wedge() is used to place the value after the old link's
-        # previous link, or, if setting the first value, before the old link's
-        # next link.
+        'Set value(s) by index/slice. Raises ``IndexError.'
 
         if isinstance(i, SupportsIndex):
+            index = i
+            arrival = value
             if cast is not None:
-                value = cast(value)
-            self.__setitem_index__(i, value)
+                arrival = cast(arrival)
+            departure = self._link_at(index)
+
+            self.__setitem_index__(index, arrival, departure)
             return
 
         if isinstance(i, slice):
+            slice_ = i
+            arrivals = value
             if cast is not None:
-                value = tuple(map(cast, value))
+                arrivals = tuple(map(cast, arrivals))
             else:
-                instcheck(value, Collection)
-            self.__setitem_slice__(i, value)
+                instcheck(arrivals, Collection)
+            range_ = slicerange(len(self), slice_, arrivals)
+            if not len(range_):
+                return
+            self.__setitem_slice__(slice_, arrivals, range_)
             return
 
         raise Emsg.InstCheck(i, (SupportsIndex, slice))
 
-    def __setitem_index__(self, index: SupportsIndex, arriving, /):
+    @abcm.hookable('check')
+    def __setitem_index__(self, index: SupportsIndex, arrival: VT, departure: Link[VT],
+        /, *, check = None):
         'Index setitem Implementation'
+        if check is not None:
+            check(self, (arrival,), (departure.value,))
+        departure.value = arrival
 
-        recycle = True
-
-        link = self._link_at(index)
-        leaving = link.value
-
-        #  Check for duplicates
-        if arriving in self and arriving != leaving:
-            raise DuplicateValueError(arriving)
-
-        if recycle:
-            # Reuse old link, but called _link_type_ for any casting/checks.
-            link.value = arriving
-            return
-        else:
-            newlink = self._link_type_(arriving)
-            self._unlink(link)
-            if len(self) == 0:
-                self._seed(newlink)
-            elif link.prev is not None:
-                self._spot(1, link.prev, newlink)
-            else:
-                self._spot(-1, link.next, newlink)
-
-        # if len(self) == 0:
-        #     self._seed(self._link_type_(arriving))
-        #     return
-        # try:
-        #     if link.prev is not None:
-        #         self.wedge(arriving, link.prev.value, 1)
-        #         # self.wedge(1, link.prev.value, arriving)
-        #     else:
-        #         self.wedge(arriving, link.next.value, -1)
-        #         # self.wedge(-1, link.next.value, arriving)
-        # except DuplicateValueError:
-        #     if link.prev is not None:
-        #         self._spot(1, link.prev, link)
-        #     else:
-        #         self._spot(-1, link.next, link)
-        #     raise
-
-    def __setitem_slice__(self, slice_: slice, arriving: Collection[VT], /,):
+    @abcm.hookable('check')
+    def __setitem_slice__(self: MutLinkSeqT, slice_: slice, arrivals: Collection[VT], 
+        range_: range,/,*, check = None):
         'Slice setitem Implementation'
-
-        recycle = True
-
-        range_ = slicerange(len(self), slice_, arriving)
-
-        leaving = self[slice_]
-
-        # Any value that is already in our set, and is not in the old values to
-        # remove is a duplicate.
-
-        for v in filterfalse(leaving.__contains__, filter(self.__contains__, arriving)):
-            raise DuplicateValueError(v)
-
-
-        first = True
-
+        if check is not None:
+            # TODO: optimize -- get first link only once, so we don't have
+            # to find it twice.
+            departures = self[slice_]
+            check(self, arrivals, departures)
         link_it = LinkIter.from_slice(self, slice_)
-        for link, v in zip(link_it, arriving):
+        for link, arrival in zip(link_it, arrivals):
+            link.value = arrival
 
-            if recycle:
-                link.value = v
-                continue
+class linkseq(MutableLinkSequence[VT]):
+    _link_type_: type[Link[VT]] = Link
+
+    __first : Link[VT]
+    __last  : Link[VT]
+    __len   : int
+
+    __slots__ = '__first', '__last', '__len'
+
+    def __new__(cls, *args, **kw):
+        inst = super().__new__(cls)
+        inst.__len = 0
+        inst.__first = None
+        inst.__last = None
+        return inst
+
+    def __init__(self, values: Iterable[VT] = None, /):
+        if values is not None:
+            self.extend(values)
+
+    def _link_first(self) -> Link[VT]:
+        return self.__first
+
+    def _link_last(self) -> Link[VT]:
+        return self.__last
+
+    def __len__(self):
+        return self.__len
+
+    def _seed(self, link: Link[VT], /):
+        if self.__len != 0:
+            raise IndexError
+        self.__first = self.__last = link
+        self.__len += 1
+
+    def _spot(self, rel: LinkRel, neighbor: Link[VT], link: Link[VT], /):
+        ret = super()._spot(rel, neighbor, link)
+        if ret is not None:
+            if ret == -1:
+                self.__first = link
             else:
-                newlink = self._link_type_(v)
-                self._unlink(link)
-                if first:
-                    first = False
-                    if len(self) == 0:
-                        self._seed(newlink)
-                        continue
-                if link.prev is not None:
-                    self._spot(1, link.prev, newlink)
-                else:
-                    self._spot(-1, link.next, newlink)
-            
-            # if v in self:
-            #     # Re-ordering the value. This is assuming the
-            #     # duplicate checks performed above.
-            #     link.value = v
-            #     continue
+                self.__last = link
+        self.__len += 1
 
-            # self.remove(link.value)
+    def _unlink(self, link: Link[VT]):
+        ret = super()._unlink(link)
+        if ret is not None:
+            self.__first, self.__last = ret
+        self.__len -= 1
 
-            # if len(self) == 0:
-            #     self._seed(self._link_type_(v))
-            # elif link.prev is not None:
-            #     self.wedge(v, link.prev.value, 1)
-            #     # self.wedge(1, link.prev.value, v)
-            # else:
-            #     self.wedge(v, link.next.value, -1)
-            #     # self.wedge(-1, link.next.value, v)
+    # TODO:
+
+    @abstract
+    def sort(self, /, *, key = None, reverse = False):
+        raise NotImplementedError
+
+# ----------- LinkSequenceSet ------------------ #
+
+class MutableLinkSequenceSet(MutableLinkSequence[VT], MutableSequenceSetApi[VT]):
+    'Linked sequence set read/write interface.'
+
+    #: Link object class.
+    _link_type_: type[HashLink[VT]] = HashLink
+    __slots__ = EMPTY_SET
+
+    # - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+    #                 Abstract Methods
+    # - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+
+    @abstract
+    def _link_of(self, value: VT) -> Link[VT]:
+        'Get a link entry by value. Should raise ``MissingValueError``.'
+        # Re-declared abstract for set-based implementation.
+        raise MissingValueError
+
+    # - - -- - - -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+
+    @abcm.hookable('cast')
+    def wedge(self, value: VT, neighbor: VT, rel: Literal[-1]|Literal[1], /, *,
+        cast = None
+    ):
+        '''Place a new value next to (before or after) another value. Raises
+        ``DuplicateValueError`` and ``MissingValueError``.
+        
+        This is the most performant way to insert a new value anywhere in the
+        collection, with speed O(1).  Methods that add by index (__setitem__,
+        insert, etc.) will first iterate to find the index, then call this method.
+
+        :param value: The new value to add.
+        :param neighbor: The existing element next to which to place the value.
+        :param int rel: ``-1`` to place before, or ``1`` to place after neighbor.
+
+        :raises errors.DuplicateValueError:
+        :raises errors.MissingValueError:
+        '''
+        rel = LinkRel(rel)
+        if rel is LinkRel.self:
+            raise TypeError
+        neighbor: Link[VT] = self._link_of(neighbor)
+        if cast is not None:
+            value = cast(value)
+        if value in self:
+            raise DuplicateValueError(value)
+        newlink = self._link_type_(value)
+        self._spot(rel, neighbor, newlink)
+
+
+    @abcf.temp
+    @abcm.hookable('check')
+    @MutableLinkSequence.hook('check')
+    def dupecheck(self, arrivals: Collection[VT], departures: Collection[VT], 
+        /, *, check = None):
+
+        for v in filterfalse(departures.__contains__, filter(self.__contains__, arrivals)):
+            raise DuplicateValueError(v)
+        if check is not None:
+            check(self, arrivals, departures)
+    # def __setitem_index__(self, index: SupportsIndex, arriving, /):
+    #     'Index setitem Implementation'
+
+    #     link = self._link_at(index)
+    #     leaving = link.value
+
+    #     #  Check for duplicates
+    #     if arriving in self and arriving != leaving:
+    #         raise DuplicateValueError(arriving)
+
+    #     link.value = arriving
+
+    # def __setitem_slice__(self, slice_: slice, arriving: Collection[VT], range_: range,/,):
+    #     'Slice setitem Implementation'
+
+    #     # Any value that is already in our set, and is not in the old values to
+    #     # remove is a duplicate.
+    #     leaving = self[slice_]
+
+
+    #     for v in filterfalse(leaving.__contains__, filter(self.__contains__, arriving)):
+    #         raise DuplicateValueError(v)
+
+    #     link_it = LinkIter.from_slice(self, slice_)
+    #     for link, v in zip(link_it, arriving):
+    #         link.value = v
 
     def iter_from_value(self, value: VT, /, *,
         reverse = False, step: int = 1
@@ -534,6 +649,38 @@ class MutableLinkSequenceSet(MutableLinkSequence[VT], MutableSequenceSetApi[VT])
         'Return an iterator starting from ``value``.'
         return LinkValueIter(self._link_of(value), -step if reverse else step)
 
+    __setitem__ = MutableLinkSequence.__setitem__
+    @abcf.before
+    def copyhooks(ns: dict, bases):
+        src = abcm.hookinfo(MutableLinkSequence)
+        # print('src', src)
+        # print(src.attrs())
+        from tools.abcs import HookInfo
+
+        return
+        src = abcm.hookinfo(MutableLinkSequence)
+        for hook, hookmap in src.items():
+            for name, member in hookmap.items():
+                if name not in ns:
+                    ns[name] = member
+                    ...
+        res = {} #..
+        ahooks = set(src.keys())
+        bhooks = set(res.keys())
+        ahooks - bhooks
+
+        return
+        (item for items in (
+            (zip(repeat(hook), hmap.keys()) for hook, hmap in res.items())
+        ) for item in items)
+        (zip(repeat(hook), hmap.keys()) for hook, hmap in src.items())
+        anames = (name for hmap in src.values() for name in hmap.keys())
+        bnames = (name for hmap in res.values() for name in hmap.keys())
+
+        (name for hmap in res.values() for name in hmap.keys())
+        set(chain.from_iterable(hmap.keys() for hmap in src.values())).difference(
+            set(chain.from_iterable(hmap.keys() for hmap in res.values()))
+        )
 class linqset(MutableLinkSequenceSet[VT]):
     '''MutableLinkSequenceSet implementation for hashable values, based on
     a dict index. Inserting and removing is fast (constant) no matter where
@@ -542,16 +689,43 @@ class linqset(MutableLinkSequenceSet[VT]):
 
     __first : HashLink[VT]
     __last  : HashLink[VT]
-    __links : dict[VT, HashLink[VT]]
+    __table : dict[VT, HashLink[VT]]
 
-    __slots__ = '__first', '__last', '__links'
+    __slots__ = '__first', '__last', '__table'
+
+    def __new__(cls, *args, **kw):
+        inst = super().__new__(cls)
+        inst.__table = {}
+        inst.__first = None
+        inst.__last = None
+        return inst
 
     def __init__(self, values: Iterable[VT] = None, /):
-        self.__links = {}
-        self.__first = None
-        self.__last = None
         if values is not None:
             self.update(values)
+
+    def copy(self):
+        'Copy the collection. Copies the index and the internal Link objects.'
+        # ------ build the objects and index
+        index =  type(self.__table)()
+        prev = None
+        for link in map(self._link_type_, self):
+            index[link.value] = link
+            link.prev = prev
+            if prev:
+                prev.next = link
+            prev = link
+        # ---- create the instance
+        cls = type(self)
+        inst = super().__new__(cls)
+        if index:
+            inst.__first = index[next(iter(index))]
+            inst.__last  = index[next(reversed(index))]
+        else:
+            inst.__first = None
+            inst.__last = None
+        inst.__table = index
+        return inst
 
     def _link_first(self) -> HashLink[VT]:
         return self.__first
@@ -560,80 +734,60 @@ class linqset(MutableLinkSequenceSet[VT]):
         return self.__last
 
     def __len__(self):
-        return len(self.__links)
+        return len(self.__table)
 
     def __contains__(self, value: VT):
-        return value in self.__links
+        return value in self.__table
 
     def _link_of(self, value: VT) -> HashLink[VT]:
-        'Get a Link by its value.'
-        try: return self.__links[value]
+        try: return self.__table[value]
         except KeyError: pass
         raise MissingValueError(value) from None
 
     def _seed(self, link: HashLink[VT], /):
-        'Store the initial link. Collection is guaranteed to be empty.'
         self.__first = \
         self.__last = \
-        self.__links[link.value] = link
+        self.__table[link.value] = link
 
-    def _spot(self, rel: int, neighbor: HashLink[VT], link: HashLink[VT], /):
-        'Insert a Link before or after another Link already in the collection.'
-        # Example:
-        #  
-        #   Let rel == -1 (prev), meaning we must insert {link}
-        #   before {neighbor}. Thus -rel == 1 (next)
-        #
-        # So now {link.next} is {neigbor}
-        link[-rel] = neighbor
-        # We need to be after whoever neighbor was after (if anyone).
-        # So now {link.prev} is {neigbor.prev}, (which might be null).
-        link[rel] = neighbor[rel]
-
-        if neighbor[rel] is not None:
-            # If it is non-null, then {neighbor} has a link behind it.
-            # We point that link's `.next` attribute to our new {link}.
-            neighbor[rel][-rel] = link
-
-        # Now {neighbor.prev} should point to the new {link}.
-        neighbor[rel] = link
-
-        if link[rel] is None:
-            # However, if {neighbor} did not have a link behind, then
-            # our {link} is now the first element (in our case).
-            if rel == -1:
+    def _spot(self, rel: LinkRel, neighbor: HashLink[VT], link: HashLink[VT], /):
+        ret = super()._spot(rel, neighbor, link)
+        if ret is not None:
+            if ret == -1:
                 self.__first = link
-            # But if rel were instead 1, it would be opposite, and our
-            # new {link} would be the last element.
             else:
                 self.__last = link
         # Add to index.
-        self.__links[link.value] = link
+        self.__table[link.value] = link
 
     def _unlink(self, link: Link):
-        'Remove the Link from the sequence.'
-        if link.prev is None:
-            # Removing the first element.
-            if link.next is None:
-                # And only element.
-                self.__first = None
-                self.__last = None
-            else:
-                # Promote new first element.
-                link.next.prev = None
-                self.__first = link.next
-        elif link.next is None:
-            # Removing the last element (but not the only element).
-            # Promote new last element.
-            link.prev.next = None
-            self.__last = link.prev
-        else:
-            # Removing a link the middle.
-            # Sew up the gap.
-            link.prev.next = link.next
-            link.next.prev = link.prev
+        ret = super()._unlink(link)
+        if ret is not None:
+            self.__first, self.__last = ret
         # Remove from index.
-        del self.__links[link.value]
+        del self.__table[link.value]
+        # return
+        # if link.prev is None:
+        #     # Removing the first element.
+        #     if link.next is None:
+        #         # And only element.
+        #         self.__first = None
+        #         self.__last = None
+        #     else:
+        #         # Promote new first element.
+        #         link.next.prev = None
+        #         self.__first = link.next
+        # elif link.next is None:
+        #     # Removing the last element (but not the only element).
+        #     # Promote new last element.
+        #     link.prev.next = None
+        #     self.__last = link.prev
+        # else:
+        #     # Removing a link the middle.
+        #     # Sew up the gap.
+        #     link.prev.next = link.next
+        #     link.next.prev = link.prev
+        # # Remove from index.
+        # del self.__table[link.value]
 
     def reverse(self):
         'Reverse in place.'
@@ -666,40 +820,21 @@ class linqset(MutableLinkSequenceSet[VT]):
 
     def clear(self):
         'Clear the collection.'
-        self.__links.clear()
+        self.__table.clear()
         self.__first = None
         self.__last = None
 
-    def copy(self):
-        'Copy the collection. Copies the index and the internal Link objects.'
-        # ------ build the objects and index
-        index =  type(self.__links)()
-        prev = None
-        for link in map(self._link_type_, self):
-            index[link.value] = link
-            link.prev = prev
-            if prev:
-                prev.next = link
-            prev = link
-        # ---- create the instance
-        cls = type(self)
-        inst = cls.__new__(cls)
-        if index:
-            inst.__first = index[next(iter(index))]
-            inst.__last  = index[next(reversed(index))]
-        else:
-            inst.__first = None
-            inst.__last = None
-        inst.__links = index
-        return inst
+
+LinkIterT    = TypeVar('LinkIterT', bound = LinkIter)
+LinkSeqT     = TypeVar('LinkSeqT',  bound = LinkSequence)
+MutLinkSeqT  = TypeVar('MutLinkSeqT', bound = MutableLinkSequence)
 
 def _ceil(n):
-    if n % 1:
-        n += 1
+    if n % 1: n += 1
     return int(n)
 
 del(
     abstract, final, overload,
-    Abc, Copyable, IntEnum,
+    abcm, Abc, Copyable, IntEnum,
     TypeVar,
 )

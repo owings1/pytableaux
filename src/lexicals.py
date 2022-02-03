@@ -755,7 +755,7 @@ class Predicate(Bases.CoordsItem):
     #: The ``refs`` plus the predicate object.
     refkeys: qsetf[Types.PredicateRef | Predicate]
 
-    __slots__ = 'arity', 'is_system', 'name', 'bicoords', '_refs', '_refkeys'
+    __slots__ = 'arity', 'is_system', 'name', 'bicoords', '_refs', '_refkeys', 'value'
 
     @lazy.prop
     def refs(self: Predicate):

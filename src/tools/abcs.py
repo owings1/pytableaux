@@ -23,7 +23,6 @@ from errors import (
     instcheck as _instcheck,
     Emsg,
 )
-
 from collections import defaultdict
 from collections.abc import Set
 from functools import (
@@ -38,14 +37,13 @@ from itertools import (
 )
 import operator as opr
 from types import (
+    DynamicClassAttribute as DynCa,
     FunctionType,
     MappingProxyType as _MapProxy,
 )
 from typing import (
-
     # exportable imports
     final, overload,
-
     # Annotations
     Any,
     Annotated,
@@ -59,8 +57,6 @@ from typing import (
     Sequence,
     Set,
     SupportsIndex,
-
-    # deletable references
     ParamSpec,
     TypeVar,
 )
@@ -69,21 +65,56 @@ from typing import (
 import abc as _abc
 import enum as _enum
 
-ABC_HOOKINFO: Mapping[type, Mapping[str, frozenset[str]]]
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
+
+if True:
+    # Type Vars
+
+    T  = TypeVar('T')
+    T1 = TypeVar('T1')
+    T2 = TypeVar('T2')
+
+    # Key type
+    KT = TypeVar('KT')
+
+    # Value type
+    VT = TypeVar('VT')
+
+    # Return type
+    RT = TypeVar('RT')
+
+    # Self type
+    Self = TypeVar('Self')
+
+    T_co  = TypeVar('T_co', covariant = True)
+    KT_co = TypeVar('KT_co', covariant = True)
+    VT_co = TypeVar('VT_co', covariant = True)
+    T_contra = TypeVar('T_contra', contravariant = True)
+
+    # Callable bound, use for decorator, etc.
+    F   = TypeVar('F',  bound = Callable[..., Any])
+
+    # Type bound, use for class decorator, etc.
+    TT  = TypeVar('TT', bound = type)
+
+    P = ParamSpec('P')
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
 
 _EMPTY = ()
 _EMPTY_SET = frozenset()
 _NOARG = object()
 _NOGET = object()
-_ABCF_ATTR    = '_abc_flag'
-_ABCHOOK_IMPL_ATTR = '_abc_hook_impl'
-_ABCHOOK_INFO_ATTR = '_abc_hook_info'
-_ENUM_RESTRICTNAMES = frozenset(
-    ('names', 'seq', '_lookup', 'index', 'indexof', 'get', 'entryof', '_invert_')
-)
-_ENUM_HOOKMETHODS = frozenset(
-    ('_member_keys', '_on_init', '_after_init')
-)
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
+
+ABC_FLAG_ATTR     = '_abc_flag'
+ABC_HOOKIMPL_ATTR = '_abc_hook_impl'
+ABC_HOOKINFO_ATTR = '_abc_hook_info'
+
+ABC_HOOKINFO: Mapping[type, Mapping[str, frozenset[str]]]
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
 
 def _thru(obj: T): return obj
 
@@ -122,12 +153,33 @@ def static(cls):
 
     return cls
 
+class MapProxy(Mapping[KT, VT]):
+    'Cast to a proxy if not already.'
+
+    EMPTY_MAP = _MapProxy({})
+
+    def __new__(cls,
+        mapping: Mapping[KT, VT] | Iterable[tuple[KT, VT]] = None
+    ) -> _MapProxy[KT, VT]:
+
+        if mapping is None: return cls.EMPTY_MAP
+
+        if isinstance(mapping, _MapProxy):
+            return mapping
+
+        if not isinstance(mapping, Mapping):
+            mapping = dict(mapping)
+
+        return _MapProxy(mapping)
+    
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
 
 @static
 class abcm:
     '''Static meta util functions.'''
 
     def nsinit(ns: dict, bases, /, **kw):
+        'Class namespace prepare routine.'
         # iterate over copy since hooks may modify ns.
         for member in tuple(ns.values()):
             mf = abcf.read(member)
@@ -140,6 +192,7 @@ class abcm:
 
     def clsafter(Class: TT, ns: Mapping = None, bases = None, /,
         deleter = type.__delattr__, **kw):
+        'After class init routine.'
         # Allow use as standalone class decorator
         if ns is None: ns = Class.__dict__.copy()
         if bases is None: bases = Class.__bases__
@@ -165,7 +218,7 @@ class abcm:
 
     def annotated_attrs(obj):
         'Evaluate annotions of type Annotated.'
-        # this is called infrequently
+        # This is called infrequently, so we import lazily.
         from typing import get_type_hints, get_args, get_origin
         annot = get_type_hints(obj, include_extras = True)
         return {
@@ -218,9 +271,7 @@ class abcm:
 
     def mroiter(subcls: type[T], /,
         supcls: type|tuple[type, ...]|None = None,
-        *,
-        rev = True,
-        start: SupportsIndex = 0
+        *, rev = True, start: SupportsIndex = 0
     ) -> Iterable[type[T]]:
         it = subcls.mro()
         if rev:
@@ -233,9 +284,15 @@ class abcm:
             it = islice(it, start)
         return it
 
-    def hookable(*names: str):
+    def hookable(*hooks: str, attr = ABC_HOOKINFO_ATTR):
         'Decorator factory for specifying available hooks.'
-        def decorator(func: F): return HookInfo.funcupdate(func, names)
+        def decorator(func: F):
+            value = getattr(func, attr, None)
+            if value is None:
+                value = set()
+                setattr(func, attr, value)
+            value.update(hooks)
+            return func
         return decorator
 
     def hookinfo(Class: type):
@@ -264,30 +321,45 @@ class AbcMeta(_abc.ABCMeta):
         Class = super().__new__(cls, clsname, bases, ns, **kw)
 
         try:
-            HookInfo.buildimpl(Class, hooks)
+            HookInfo.init_implcls(Class, hooks)
         except NameError:
+            # Not initialized.
             if clsname != 'HookInfo': raise
 
         abcm.clsafter(Class, ns, bases, **kw)
 
         try:
-            HookInfo.buildinfo(Class)
+            HookInfo.init_provider(Class)
         except NameError:
             if clsname != 'HookInfo': raise
 
         return Class
 
-    def hook(cls, *names: str):
+    def hook(cls, *hooks: str, attr = ABC_HOOKIMPL_ATTR):
         'Decorator factory for tagging hook implementation.'
-        if not names:
-            raise TypeError('Empty args.')
-        avail = ABC_HOOKINFO.get(cls, _EMPTY_SET)
-        for name in names:
-            if name not in avail:
-                raise TypeError('Invalid hook') from Emsg.MissingKey(name)
         def decorator(func: F):
-            return HookInfo.addimpl(cls, func, names)
+            value = getattr(func, attr, None)
+            if value is None:
+                value = dict()
+                setattr(func, attr, value)
+            impl = value.setdefault(cls, {})
+            for name in hooks:
+                if name in impl:
+                    raise TypeError from Emsg.DuplicateKey(name)
+                impl[name] = func
+            return func
         return decorator
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
+
+
+ENUM_RESERVE_NAMES = frozenset(
+    ('names', 'seq', '_lookup', 'index', 'indexof',
+    'get', 'entryof', '_invert_')
+)
+ENUM_HOOK_METHODS = frozenset(
+    ('_member_keys', '_on_init', '_after_init')
+)
 
 
 @static
@@ -334,6 +406,12 @@ class enbm:
             member.name = member._name_
             member.value = member._value_
 
+
+class EnumEntry(NamedTuple):
+    member : AbcEnum
+    index  : int
+    nextmember: AbcEnum | None
+
 class AbcEnumMeta(_enum.EnumMeta):
     'General-purpose base Metaclass for all Enum classes.'
 
@@ -349,14 +427,13 @@ class AbcEnumMeta(_enum.EnumMeta):
 
         # Run namespace init hooks.
         try:
+            skipafter = False
             abcm.nsinit(ns, bases, **kw)
         except NameError:
             if clsname != 'abcf': raise
             skipafter = True
-        else:
-            skipafter = False
-            
-        forbid = _ENUM_RESTRICTNAMES.intersection(ns)
+
+        forbid = ENUM_RESERVE_NAMES.intersection(ns)
         if forbid:
             raise TypeError('Restricted names: %s' % ', '.join(forbid))
 
@@ -387,7 +464,7 @@ class AbcEnumMeta(_enum.EnumMeta):
         Class._after_init()
         # Cleanup.
         deleter = type(cls).__delattr__
-        for hname in filter(Class.__dict__.__contains__, _ENUM_HOOKMETHODS):
+        for hname in filter(Class.__dict__.__contains__, ENUM_HOOK_METHODS):
             deleter(Class, hname)
 
         return Class
@@ -413,9 +490,12 @@ class AbcEnumMeta(_enum.EnumMeta):
         return cls.get(key, _NOGET) is not _NOGET
 
     def __getitem__(cls: type[EnT], key) -> EnT:
-        if type(key) is cls: return key
-        try: return cls._lookup[key][0]
-        except (AttributeError, KeyError): pass
+        if type(key) is cls:
+            return key
+        try:
+            return cls._lookup[key][0]
+        except (AttributeError, KeyError):
+            pass
         return super().__getitem__(key)
 
     def __getattr__(cls, name):
@@ -435,11 +515,6 @@ class AbcEnumMeta(_enum.EnumMeta):
 
     def __dir__(cls):
         return list(cls._member_names_)
-
-    @property
-    def __members__(cls: type[EnT]) -> dict[str, EnT]:
-        # Override to not double-proxy
-        return cls._member_map_
 
     # * * * * * * *  Member Methods  * * * * * * * * * #
 
@@ -469,61 +544,17 @@ class AbcEnumMeta(_enum.EnumMeta):
         except AttributeError:
             raise KeyError(key)
 
-# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
+    @property
+    def __members__(cls: type[EnT]) -> dict[str, EnT]:
+        # Override to not double-proxy
+        return cls._member_map_
 
-# Type vars
-
-T  = TypeVar('T')
-T1 = TypeVar('T1')
-T2 = TypeVar('T2')
-# Key type
-KT = TypeVar('KT')
-# Value type
-VT = TypeVar('VT')
-# Return type
-RT = TypeVar('RT')
-# Self type
-Self = TypeVar('Self')
-
-T_co  = TypeVar('T_co', covariant = True)
-KT_co = TypeVar('KT_co', covariant = True)
-VT_co = TypeVar('VT_co', covariant = True)
-T_contra = TypeVar('T_contra', contravariant = True)
-
-# Callable bound, use for decorator, etc.
-F   = TypeVar('F',  bound = Callable[..., Any])
-# Type bound, use for class decorator, etc.
-TT  = TypeVar('TT', bound = type)
-
-P = ParamSpec('P')
 
 # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
-
-# Utils
-
-class MapProxy(Mapping[KT, VT]):
-    def __new__(cls, mapping:Mapping[KT, VT]|Iterable[tuple[KT, VT]] = None) -> _MapProxy[KT, VT]:
-        if mapping is None:
-            return _EMPTY_MAP
-        if isinstance(mapping, _MapProxy):
-            return mapping
-        if not isinstance(mapping, Mapping):
-            mapping = dict(mapping)
-        return _MapProxy(mapping)
-
-_EMPTY_MAP = MapProxy({})
-
-# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
-
-# Enum utils
-
-class EnumEntry(NamedTuple):
-    member : AbcEnum
-    index  : int
-    nextmember: AbcEnum | None
 
 class abcf(_enum.Flag, metaclass = AbcEnumMeta):
     'Enum flag for AbcMeta functionality.'
+
     blank  = 0
     before = 2
     temp   = 8
@@ -533,33 +564,44 @@ class abcf(_enum.Flag, metaclass = AbcEnumMeta):
     _cleanable = before | temp | after
 
     def __call__(self, obj: F) -> F:
-        "Add the flag to obj's meta flag. Return obj."
+        """Add the flag to obj's meta flag with bitwise OR. Return obj for
+        decorator use.."""
         return self.save(obj, self | self.read(obj))
 
     @classmethod
     def read(cls, obj, default: abcf|int = 0,
-    /, *, _attr = _ABCF_ATTR) -> abcf:
-        return getattr(obj, _attr, cls(default))
+        /, *, attr = ABC_FLAG_ATTR
+    ) -> abcf:
+        "Get the flag (or `blank`) for any obj."
+        return getattr(obj, attr, cls(default))
 
     @classmethod
-    def save(cls, obj: F, value: abcf|int, /, *, _attr = _ABCF_ATTR) -> F:
-        setattr(obj, _attr, cls(value))
+    def save(cls, obj: F, value: abcf|int, /, *, attr = ABC_FLAG_ATTR) -> F:
+        """Write/overwrite the value, returns obj for decorator use."""
+        setattr(obj, attr, cls(value))
         return obj
 
-    from tools.patch import _enum_flag_invert as __invert__
+    def __invert__(self):
+        cached = self._invert_
+        value = self._value_
+        if cached is not None:
+            if cached[0] == value:
+                return cached[1]
+            self._invert_ = None
+        result = super().__invert__()
+        self._invert_ = value, result
+        result._invert_ = result._value_, self
+        return result
+    # from tools.patch import _enum_flag_invert as __invert__
 
-
-@final
 class HookInfo(Mapping[str, tuple[str, ...]], metaclass = AbcMeta):
 
-    __slots__ = 'cls', 'mapping'
+    cls: TT
 
-    def __init__(self, Class: type):
-        self.cls = Class
-        try:
-            self.mapping = ABC_HOOKINFO[Class]
-        except KeyError:
-            raise TypeError("No hooks defined for class '%s'" % Class)
+    __slots__ = 'cls', 'mapping', 
+
+    @overload
+    def __new__(cls: type[HookInfo], Class: TT) -> HookInfo:...
 
     def hooks(self):
         'Hook names ( hook, ... ).'
@@ -572,7 +614,7 @@ class HookInfo(Mapping[str, tuple[str, ...]], metaclass = AbcMeta):
         ))
 
     def pairs(self):
-        'Hook, name pairs( (hook, name), ... )'
+        'Hook, name pairs: ``((hook, name), ... )``'
         return tuple(
             item for items in (
                 zip(repeat(hook), names)
@@ -581,37 +623,32 @@ class HookInfo(Mapping[str, tuple[str, ...]], metaclass = AbcMeta):
             for item in items
         )
 
-    @overload
-    def attrs(self) -> dict[str, tuple[tuple[str, FunctionType], ...]]: ...
-
-    @overload
-    def attrs(self, hook: str) -> tuple[tuple[str, FunctionType], ...]: ...
-
-    def attrs(self, hook = None):
+    def attrs(self, hook = None) -> tuple[tuple[str, FunctionType], ...]:
+        '''Get the (name, member) pairs from the class attributes. If a
+        hook argument is passed, returns only those relevant. If no
+        argument is passed, returns a flat, de-duplicated sequence of
+        (name, member) pairs.
         '''
-        With hook argument:
-            ( (name, member), ... )
-        Without argument, all hooks:
-            { hook: ( (name, member), ... ) }'''
         Class = self.cls
-        it = self if hook is None else (hook,) 
-        m = {
-            key: tuple(
-                (name, getattr(Class, name))
+        m = {}
+        upd = m.update
+        for key in (self if hook is None else (hook,)):
+            upd({
+                name: getattr(Class, name)
                 for name in self[key]
-            )
-            for key in it
-        }
-        return m if hook is None else m[hook]
+                if name not in m
+            })
+        return tuple(sorted(m.items()))
 
     def __repr__(self):
-        return 'HookInfo[%s]=%s' % (self.cls.__name__, repr(dict(self)))
+        return '<HookInfo[%s]>(%s)' % (self.cls.__name__, ', '.join(self.hooks()))
+
 
     @abcf.after
     def opers(cls: type[HookInfo], *_):
 
         from collections import defaultdict
-        from functools import wraps
+        from functools   import wraps
         import operator as opr
 
         def compress(items, defaultdict = defaultdict):
@@ -635,10 +672,7 @@ class HookInfo(Mapping[str, tuple[str, ...]], metaclass = AbcMeta):
                     except:
                         return NotImplemented
                 return compress(sorted(
-                    oper(
-                        set(pairs(self)),
-                        set(pairs(other))
-                    )
+                    oper(set(pairs(self)), set(pairs(other)))
                 ))
 
             f.__name__ = f.__qualname__ = opername
@@ -657,79 +691,119 @@ class HookInfo(Mapping[str, tuple[str, ...]], metaclass = AbcMeta):
         return reversed(self.mapping)
 
     @static
-    def addimpl(cls, func: F, names, /, *, attr = _ABCHOOK_IMPL_ATTR):
-        try:
-            value = getattr(func, attr)
-        except AttributeError:
-            value = dict()
-            setattr(func, attr, value)
-        impl = value.setdefault(cls, {})
-        for name in names:
-            if name in impl:
-                raise TypeError from Emsg.DuplicateKey(name)
-            impl[name] = func
-        return func
+    def init_provider(provcls: TT, /, *, attr = ABC_HOOKINFO_ATTR):
+        'Build hook provider info.'
+
+        builder: dict[str, set[str]] = defaultdict(set)
+
+        for name, member in provcls.__dict__.items():
+
+            hooks = getattr(member, attr, None)
+            if not hooks:
+                continue
+            if not isinstance(member, FunctionType):
+                raise Emsg.InstCheck(member, FunctionType)
+            for hook in hooks:
+                builder[hook].add(name)
+
+        if len(builder):
+            return dict(
+                (hook, tuple(sorted(builder[hook])))
+                for hook in sorted(builder)
+            )
 
     @static
-    def buildimpl(Class: TT, hooks: dict[type, dict[str, Callable]] = None,
-        /, *, _attr = _ABCHOOK_IMPL_ATTR):
+    def init_implcls(implcls: TT, initial: dict[type, dict[str, F]] = None,
+        /, *, attr = ABC_HOOKIMPL_ATTR):
+        'Build hook implementer info.'
 
-        if hooks is None:
-            hooks = {}
-        else:
-            hooks = {key: hooks[key].copy() for key in hooks}
+        # provcls -> hook -> implfunc
+        builder: dict[type, dict[str, F]] = defaultdict(dict)
 
-        ns = Class.__dict__
+        impl_ns = implcls.__dict__
 
-        for member in ns.values():
-            value: dict = getattr(member, _attr, None)
+        if initial is not None:
+            # An initial mapping can be passed, which will be merged.
+            builder.update((key, value.copy()) for key, value in initial.items())
+
+        for implfunc in impl_ns.values():
+            # Scan each member in the sub class ns for the attribute.
+            value: dict[type, set[str]] = getattr(implfunc, attr, None)
             if not value:
                 continue
-            for cls, impl in value.items():
-                if cls not in hooks:
-                    hooks[cls] = {}
-                for hook in impl:
-                    if hook in hooks[cls]:
+            for provcls, hooks in value.items():
+                provinfo = HookInfo(provcls)
+                for hook in hooks:
+                    # Check valid hook for provider class
+                    if hook not in provinfo:
+                        raise TypeError from Emsg.MissingKey(hook)
+                    # Check for duplicates. A function can implement several
+                    # hooks, but each hook can be implemented by at most
+                    # one function.
+                    if hook in builder[provcls]:
                         raise TypeError from Emsg.DuplicateKey(hook)
-                    hooks[cls][hook] = member
+                    builder[provcls][hook] = implfunc
 
-        if not hooks:
-            return
+        if len(builder):
+            return dict(builder)
 
-        for cls, impl in hooks.items():
-            clsinfo = HookInfo(cls)
-
-            for hook, member in impl.items():
-                if hook not in clsinfo:
-                    raise TypeError from Emsg.MissingKey(hook)
-
-                for method, func in clsinfo.attrs(hook):
-                    # Check the existing kwdefault value.
-                    defval = func.__kwdefaults__[hook]
-                    if defval is not None:
-                        if defval is member: continue
-                        # Protection until the behavior is defined.
-                        raise TypeError from Emsg.ValueConflictFor(hook, member, defval)
-                    if method not in ns:
-                        # Copy the function if it is not already in the Class dict.
-                        func = abcm.copyfunc(func)
-                        setattr(Class, method, func)
-                    # Write the kwdefaults
-                    func.__kwdefaults__[hook] = member
     @static
-    def funcupdate(func: F, hooks: Iterable[str], /, *, attr = _ABCHOOK_INFO_ATTR):
-        # Add hook names to the function's hookinfo attribute, initializing
-        # with an empty set if necessary.
-        value = getattr(func, attr, None)
-        if value is None:
-            value = set()
-            setattr(func, attr, value)
-        value.update(hooks)
-        return func
+    def _connect_impl(implcls: type, provcls: type, implmap: Mapping[str, F]):
+        'Connect the implementing hooks to a provider class.'
 
-    @overload
+        provinfo = HookInfo(provcls)
+        impl_ns = implcls.__dict__
+
+        check = HookInfo._precopy_check
+        fshouldcopy = HookInfo._should_copy_func
+
+        for hook, implfunc in implmap.items():
+
+            # Find the functions that provide the hook
+            for provname, provfunc in provinfo.attrs(hook):
+
+                check(provfunc, hook, implfunc)
+                # print('')
+                # print('provider - ', provcls)
+                # print('implcls - ', implcls)
+                if fshouldcopy(implcls, provcls, provname, provfunc):
+                    # Copy the function
+                    # print('Copying', provfunc)
+                    compfunc = abcm.copyfunc(provfunc)
+                    setattr(implcls, provname, compfunc)
+                else:
+                    # print('NOT Copying', provfunc)
+                    # Use the impl's copy.
+                    compfunc = impl_ns[provname]
+                # print(compfunc, id(compfunc), id(provfunc), provfunc)
+                # print('   ', compfunc.__kwdefaults__)
+                # Update the kwdefaults.
+                compfunc.__kwdefaults__[hook] = implfunc
+
+                # print('   ', compfunc.__kwdefaults__)
+                # print('\n')
+
     @static
-    def buildinfo(Class: TT):...
+    def _precopy_check(provfunc: F, hook: str, implfunc: F):
+        # Check the existing kwdefault value.
+        kwvalue = provfunc.__kwdefaults__[hook]
+        if kwvalue is not None:
+            if kwvalue is implfunc:
+                return
+            # Protection until the behavior is defined.
+            raise TypeError from Emsg.ValueConflictFor(hook, implfunc, kwvalue)
+
+    @static
+    def _should_copy_func(implcls: type, provcls: type, provname: str, provfunc: F):
+        impl_ns = implcls.__dict__
+        if provname not in impl_ns:
+            return True
+        impl_value = impl_ns[provname]
+        if impl_value == provfunc:
+            return True
+        if impl_value == provcls.__dict__.get(provname):
+            return True
+        return False
 
     @static
     @overload
@@ -738,39 +812,101 @@ class HookInfo(Mapping[str, tuple[str, ...]], metaclass = AbcMeta):
     @abcf.before
     def ini(ns: dict, *_):
 
-        main = {}
-        classes = {}
-        proxy = MapProxy(main)
+        from functools import wraps
 
-        def buildinfo(Class: TT, /, *, attr = _ABCHOOK_INFO_ATTR):
+        providers:     dict[type, dict    [str, tuple[str, ...]]] = {}
+        main     :     dict[type, MapProxy[str, tuple[str, ...]]] = {}
 
-            ns = Class.__dict__
-            if Class in classes:
-                raise TypeError('HookInfo already configured for %s' % Class)
+        init_provider_main = ns['init_provider']
 
-            builder: dict[str, set[str]] = defaultdict(set)
+        @wraps(init_provider_main)
+        def init_provider(provcls: TT):
 
-            for name, member in ns.items():
+            if provcls in providers:
+                raise TypeError('HookInfo already configured for %s' % provcls)
 
-                hooks = getattr(member, attr, None)
-                if not hooks:
-                    continue
-                if not isinstance(member, FunctionType):
-                    raise Emsg.InstCheck(member, FunctionType)
-                for hook in hooks:
-                    builder[hook].add(name)
+            prov_hookinfo = init_provider_main(provcls)
+    
+            if prov_hookinfo:
+                providers[provcls] = prov_hookinfo
+                main[provcls] = MapProxy(prov_hookinfo)
 
-            if builder:
-                hookinfo = dict(
-                    (hook, tuple(sorted(builder[hook])))
-                    for hook in sorted(builder)
-                )
-                classes[Class] = hookinfo
-                main[Class] = MapProxy(hookinfo)
+        # * * * * * * * * * * * * 
+
+        implclasses = {}
+
+        _connect_impl = ns.pop('_connect_impl')
+
+        init_implcls_main = ns['init_implcls']
+
+        @wraps(init_implcls_main)
+        def init_implcls(implcls: TT, initial: dict = None):
+
+            if implcls in implclasses:
+                raise TypeError('Hook impl config already processed for %s' % implcls)
+
+            impl_hookinfo: dict[type, dict[str, F]] = init_implcls_main(implcls, initial)
+
+            if not impl_hookinfo:
+                return
+
+            implclasses[implcls] = MapProxy(impl_hookinfo)
+
+            for provcls, implmap in impl_hookinfo.items():
+                _connect_impl(implcls, provcls, implmap)
+            
+        # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
+
+        from collections import defaultdict
+
+        proxy  : MapProxy[type, MapProxy[str, tuple[str, ...]]] = MapProxy(main)
+
+        instances: dict[type, HookInfo] = {}
+        caches   : dict[type, dict]  = defaultdict(dict)
+
+        @wraps(ns['__new__'])
+        def __new__(cls: type[HookInfo], Class: type):
+            try:
+                return instances[Class]
+            except KeyError:
+                pass
+            try:
+                mapping = proxy[Class]
+            except KeyError:
+                raise TypeError("No hooks defined for class '%s'" % Class)
+            inst = instances[Class] = super().__new__(cls)
+            inst.cls = Class
+            inst.mapping = mapping
+            caches[Class] = {}
+            return inst
+
+        def cachef(func, name):
+
+            @wraps(func)
+            def f(self: HookInfo, *args):
+                cache = caches[self.cls]
+                try:
+                    return cache[name, args]
+                except KeyError:
+                    pass
+                return cache.setdefault((name, args), func(self, *args))
+            return f
+
+        for name in ('hooks', 'names', 'pairs', 'attrs', '__repr__'):
+            ns[name] = cachef(ns[name], name)
+
+        def clearcaches():
+            caches.clear()
+            instances.clear()
+
+        # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
 
         ns.update(
-            buildinfo = static(buildinfo),
-            all = static(lambda: proxy)
+            all           = static(wraps(ns['all'])(lambda: proxy)),
+            init_provider = static(init_provider),
+            init_implcls  = static(init_implcls),
+            _clearcaches  = static(clearcaches),
+            __new__ = __new__,
         )
 
 ABC_HOOKINFO = HookInfo.all()
@@ -817,12 +953,11 @@ class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta):
         try: return '<%s.%s>' % (name, self._name_)
         except AttributeError: return '<%s ?ERR?>' % name
 
-EnT = TypeVar('EnT', bound = AbcEnum)
-
 
 class FlagEnum(_enum.Flag, AbcEnum):
     __slots__ = '_value_', '_invert_', 'name', 'value'
-    from tools.patch import _enum_flag_invert as __invert__
+    # from tools.patch import _enum_flag_invert as __invert__
+
 
 class IntEnum(_enum.IntEnum, AbcEnum):
     __slots__ = _EMPTY
@@ -856,6 +991,14 @@ class Copyable(Abc):
         return abcm.check_mrodict(subcls.mro(), '__copy__', 'copy', '__deepcopy__')
 
 # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
+
+# Type vars
+
+# AbcEnum boud.
+EnT = TypeVar('EnT', bound = AbcEnum)
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
+
 
 del(
     _abc, _enum, TypeVar, ParamSpec,
