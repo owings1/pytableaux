@@ -120,8 +120,9 @@ class qsetf(SequenceSetApi[VT]):
     def __getitem__(self, index):
         if isinstance(index, SupportsIndex):
             return self._seq_[index]
-        instcheck(index, slice)
-        return self._from_iterable(self._seq_[index])
+        if isinstance(index, slice):
+            return self._from_iterable(self._seq_[index])
+        raise Emsg.InstCheck(index, (slice, SupportsIndex))
 
     def __iter__(self) -> Iterator[VT]:
         yield from self._seq_
@@ -218,13 +219,13 @@ class qset(MutableSequenceSetApi[VT]):
         'Insert a value before an index. Raises ``DuplicateValueError``.'
 
         # hook.cast
-        if cast: value = cast(value)
+        if cast is not None: value = cast(value)
 
         if value in self:
             raise DuplicateValueError(value)
 
         # hook.check
-        check and check(self, (value,), EMPTY_SET)
+        check is not None and check(self, (value,), EMPTY_SET)
 
         # --- begin changes -----
         self._seq_.insert(index, value)
@@ -232,7 +233,7 @@ class qset(MutableSequenceSetApi[VT]):
         # --- end changes -----
 
         # hook.done
-        done and done(self, (value,), EMPTY_SET)
+        done is not None and done(self, (value,), EMPTY_SET)
 
     @abcm.hookable('check', 'done')
     def __delitem__(self, key: SupportsIndex|slice, /, *,
@@ -253,7 +254,7 @@ class qset(MutableSequenceSetApi[VT]):
         leaving = self[key]
 
         # hook.check
-        check and check(self, EMPTY_SET, (leaving,))
+        check is not None and check(self, EMPTY_SET, (leaving,))
 
         # --- begin changes -----
         del self._seq_[key]
@@ -261,7 +262,7 @@ class qset(MutableSequenceSetApi[VT]):
         # --- end changes -----
 
         # hook.done
-        done and done(self, EMPTY_SET, (leaving,))
+        done is not None and done(self, EMPTY_SET, (leaving,))
 
     @abcm.hookable('cast')
     def __setitem__(self, key: SupportsIndex|slice, value: VT|Collection[VT], /, *,
@@ -271,14 +272,17 @@ class qset(MutableSequenceSetApi[VT]):
 
         if isinstance(key, SupportsIndex):
             # hook.cast
-            if cast: value = cast(value)
+            if cast is not None:
+                value = cast(value)
             self.__setitem_index__(key, value)
             return
 
         if isinstance(key, slice):
             # hook.cast
-            if cast: value = tuple(map(cast, value))
-            else: instcheck(value, Collection)
+            if cast is not None:
+                value = tuple(map(cast, value))
+            else:
+                instcheck(value, Collection)
             self.__setitem_slice__(key, value)
             return
 
@@ -298,7 +302,7 @@ class qset(MutableSequenceSetApi[VT]):
             raise DuplicateValueError(arriving)
 
         # hook.check
-        check and check(self, (arriving,), (leaving,))
+        check is not None and check(self, (arriving,), (leaving,))
 
         # --- begin changes -----
 
@@ -318,7 +322,7 @@ class qset(MutableSequenceSetApi[VT]):
         # --- end changes -----
 
         # hook.done
-        done and done(self, (arriving,), (leaving,))
+        done is not None and done(self, (arriving,), (leaving,))
 
     @abcm.hookable('check', 'done')
     def __setitem_slice__(self, slice_: slice, arriving: Collection[VT], /, *,
@@ -340,7 +344,7 @@ class qset(MutableSequenceSetApi[VT]):
             raise DuplicateValueError(v)
 
         # hook.check
-        check and check(self, arriving, leaving)
+        check is not None and check(self, arriving, leaving)
 
         # --- begin changes -----
         # Remove from set.
@@ -358,7 +362,10 @@ class qset(MutableSequenceSetApi[VT]):
         # --- end changes -----
 
         # hook.done
-        done and done(self, arriving, leaving)
+        done is not None and done(self, arriving, leaving)
 
 
-del(abstract, overload, final)
+del(
+    abstract, overload, final,
+    abcm,
+)

@@ -200,11 +200,13 @@ class TestLinkSet(BaseSuite):
 
     def test_wedge(self):
         x = linqset('abcdeg')
-        x.wedge(-1, 'g', 'f')
+        x.wedge('f', 'g', -1)
+        # x.wedge(-1, 'g', 'f')
         assert list(x) == list('abcdefg')
 
         x = linqset('abcdeg')
-        x.wedge(1, 'e', 'f')
+        x.wedge('f', 'e', 1)
+        # x.wedge(1, 'e', 'f')
         assert list(x) == list('abcdefg')
 
     def test_view(self):

@@ -95,10 +95,7 @@ def _thru(obj: T): return obj
 
 # Global decorators. Re-exported by decorators module.
 
-@overload
-def abstract(func: F) -> F: ...
-
-abstract = _abc.abstractmethod
+from abc import abstractmethod as abstract
 
 @overload
 def static(cls: TT) -> TT: ...
@@ -115,7 +112,12 @@ def static(cls):
         _instcheck(cls, Callable)
         return staticmethod(cls)
 
-    abcf.static(cls)
+    try:
+        abcf.static(cls)
+    except NameError:
+        if cls is not abcm:
+            raise
+        pass
     ns = cls.__dict__
 
     for name, member in ns.items():
@@ -139,32 +141,7 @@ def static(cls):
 
     return cls
 
-# @_enum.unique
-class abcf(_enum.Flag):
-    'Enum flag for AbcMeta functionality.'
-    blank  = 0
-    before = 2
-    temp   = 8
-    after  = 16
-    static = 32
 
-    _cleanable = before | temp | after
-
-    def __call__(self, obj: F) -> F:
-        "Add the flag to obj's meta flag. Return obj."
-        return self.set(obj, self | self.get(obj))
-
-    @classmethod
-    def get(cls, obj, default: abcf|int = 0,
-    /, *, _attr = _ABCF_ATTR) -> abcf:
-        return getattr(obj, _attr, cls(default))
-
-    @classmethod
-    def set(cls, obj: F, value: abcf|int, /, *, _attr = _ABCF_ATTR) -> F:
-        setattr(obj, _attr, cls(value))
-        return obj
-
-@static
 class abcm:
     '''Util functions. Can also be used by meta classes that
     cannot inherit from AbcMeta, like EnumMeta.'''
@@ -284,7 +261,7 @@ class AbcMeta(_abc.ABCMeta):
     def __new__(cls, clsname, bases, ns: dict, /, hooks = None, **kw):
         abcm.nsinit(ns, bases, **kw)
         Class = super().__new__(cls, clsname, bases, ns, **kw)
-        _buildhookimpl(Class, hooks)
+        _hookimpl_build(Class, hooks)
         abcm.clsafter(Class, ns, bases, **kw)
         _hookinfo_build(Class)
         return Class
@@ -301,6 +278,7 @@ class AbcMeta(_abc.ABCMeta):
             return _hookimpl_decorate(cls, func, names)
         return decorator
 
+static(abcm)
 
 class AbcEnumMeta(_enum.EnumMeta):
     'General-purpose base Metaclass for all Enum classes.'
@@ -313,10 +291,10 @@ class AbcEnumMeta(_enum.EnumMeta):
 
     # * * * * * * *  Class Creation  * * * * * * * * * #
 
-    def __new__(cls, clsname, bases, ns, /, flag = abcf.blank, **kw):
+    def __new__(cls, clsname, bases, ns, /, **kw):
 
         # Run namespace init hooks.
-        abcm.nsinit(ns, bases, flag = flag, **kw)
+        abcm.nsinit(ns, bases, **kw)
         forbid = _ENUM_RESTRICTNAMES.intersection(ns)
         if forbid:
             raise TypeError('Restricted names: %s' % ', '.join(forbid))
@@ -380,13 +358,13 @@ class AbcEnumMeta(_enum.EnumMeta):
     def __getattr__(cls, name):
         raise AttributeError(name)
 
-        print('AbcEnumMeta.__getattr__', name)
+        # print('AbcEnumMeta.__getattr__', name)
 
-        if name == 'index':
-            # Allow DynClsAttr for member.index.
-            try: return cls.indexof
-            except AttributeError: pass
-        return super().__getattr__(name)
+        # if name == 'index':
+        #     # Allow DynClsAttr for member.index.
+        #     try: return cls.indexof
+        #     except AttributeError: pass
+        # return super().__getattr__(name)
 
     def __iter__(cls: type[EnT]) -> Iterator[EnT]:
         return iter(cls.seq)
@@ -535,7 +513,7 @@ def _hookinfo_build(Class: TT, /, *, _main = {}, _classes = {}):
 
 ABC_HOOKINFO = MapProxy(_hookinfo_build.__kwdefaults__['_main'])
 
-def _buildhookimpl(Class: TT, hooks: dict[type, dict[str, Callable]] = None,
+def _hookimpl_build(Class: TT, hooks: dict[type, dict[str, Callable]] = None,
     /, *, _attr = _ABCHOOK_IMPL_ATTR):
     if hooks is None:
         hooks = {}
@@ -623,6 +601,85 @@ def _enum_build_index(Class: type[EnT]) -> Mapping[Any, tuple[EnT, int, EnT|None
         starmap(dict.fromkeys, zip(keys_it, value_it))
     ))
 
+def _enum_flag_invert(self: FlagEnum):
+    # copied and adapted from
+    #   - core enum module, and
+    #   - https://github.com/python/cpython/blob/a668e2a1b863f2d/Lib/enum.py
+    cached = self._invert_
+    value = self._value_
+    if cached is not None:
+        if cached[0] == value:
+            return cached[1]
+        self._invert_ = None
+    cls = type(self)
+    members, uncovered = _enum_flag_decompose(cls, value)
+    inverted = cls(0)
+    for m in cls:
+        if m not in members and not (m._value_ & value):
+            inverted = inverted | m
+    result = cls(inverted)
+    self._invert_ = value, result
+    result._invert_ = result._value_, self
+    return result
+
+def _enum_flag_decompose(flag: type[FlagEnum], value: int):
+    # copied and adapted from
+    #   - core enum module, and
+    #   - https://github.com/python/cpython/blob/a668e2a1b863f2d/Lib/enum.py
+    # _decompose is only called if the value is not named
+    not_covered = value
+    negative = value < 0
+    members: list[FlagEnum] = []
+    for member in flag:
+        member_value = member._value_
+        if member_value and member_value & value == member_value:
+            members.append(member)
+            not_covered &= ~member_value
+    if not negative:
+        tmp = not_covered
+        while tmp:
+            flag_value = 2 ** tmp.bit_length() - 1
+            if flag_value in flag._value2member_map_:
+                members.append(flag._value2member_map_[flag_value])
+                not_covered &= ~flag_value
+            tmp &= ~flag_value
+    if not members and value in flag._value2member_map_:
+        members.append(flag._value2member_map_[value])
+    members.sort(key = lambda m: m._value_, reverse = True)
+    if len(members) > 1 and members[0]._value_ == value:
+        # we have the breakdown, don't need the value member itself
+        members.pop(0)
+    return members, not_covered
+
+# :-)
+_enum._decompose = _enum_flag_decompose
+
+# @_enum.unique
+class abcf(_enum.Flag):
+    'Enum flag for AbcMeta functionality.'
+    blank  = 0
+    before = 2
+    temp   = 8
+    after  = 16
+    static = 32
+
+    _cleanable = before | temp | after
+
+    def __call__(self, obj: F) -> F:
+        "Add the flag to obj's meta flag. Return obj."
+        return self.set(obj, self | self.get(obj))
+
+    @classmethod
+    def get(cls, obj, default: abcf|int = 0,
+    /, *, _attr = _ABCF_ATTR) -> abcf:
+        return getattr(obj, _attr, cls(default))
+
+    @classmethod
+    def set(cls, obj: F, value: abcf|int, /, *, _attr = _ABCF_ATTR) -> F:
+        setattr(obj, _attr, cls(value))
+        return obj
+
+    __invert__ = _enum_flag_invert
 
 # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  #
 
@@ -673,66 +730,12 @@ EnT = TypeVar('EnT', bound = AbcEnum)
 
 class FlagEnum(_enum.Flag, AbcEnum):
     __slots__ = _EMPTY
-    def __invert__(self):
-        cached = self._invert_
-        value = self._value_
-        if cached is not None:
-            if cached[0] == value:
-                # print('__invert__', type(self), 'cache HIT')
-                return cached[1]
-            self._invert_ = None
-        # print('__invert__', type(self), 'cache MISS')
-        cls = type(self)
-        members, uncovered = _decompose(cls, value)
-        inverted = cls(0)
-        for m in cls:
-            if m not in members and not (m._value_ & value):
-                inverted = inverted | m
-        result = cls(inverted)
-        self._invert_ = value, result
-        result._invert_ = result._value_, self
-        return result
+    __invert__ = _enum_flag_invert
+    _invert_: tuple[int, FlagEnum] | None
 
-def _high_bit(value: int):
-    """
-    returns index of highest bit, or -1 if value is zero or negative
-    """
-    return value.bit_length() - 1
-
-def _decompose(flag: type[FlagEnum], value: int):
-    """
-    Extract all members from the value.
-    """
-    # _decompose is only called if the value is not named
-    not_covered = value
-    negative = value < 0
-    members: list[FlagEnum] = []
-    for member in flag:
-        member_value = member._value_
-        if member_value and member_value & value == member_value:
-            members.append(member)
-            not_covered &= ~member_value
-    if not negative:
-        tmp = not_covered
-        while tmp:
-            flag_value = 2 ** _high_bit(tmp)
-            if flag_value in flag._value2member_map_:
-                members.append(flag._value2member_map_[flag_value])
-                not_covered &= ~flag_value
-            tmp &= ~flag_value
-    if not members and value in flag._value2member_map_:
-        members.append(flag._value2member_map_[value])
-    members.sort(key = lambda m: m._value_, reverse = True)
-    if len(members) > 1 and members[0]._value_ == value:
-        # we have the breakdown, don't need the value member itself
-        members.pop(0)
-    return members, not_covered
-# :-)
-_enum._decompose = _decompose
-abcf.__invert__ = FlagEnum.__invert__
+class IntEnum(_enum.IntEnum, AbcEnum):
+    pass
 ######
-
-
 
 class Copyable(Abc):
 

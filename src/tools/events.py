@@ -5,7 +5,7 @@ __all__ = 'EventEmitter', 'EventsListeners',
 from errors import instcheck
 from tools.abcs import Abc, Copyable, abcf, F
 from tools.decorators import raisr, wraps
-from tools.linked import linqset
+from tools.linked import linqset, MutableLinkSequenceSet as MutLinkSeqSet
 from tools.mappings import (
     dmap, ItemsIterator, MutableMappingApi
 )
@@ -94,9 +94,10 @@ class Listeners(linqset[Listener]):
         self.callcount = 0
         self.emitcount = 0
 
-    @classmethod
-    def _new_link(cls, value):
-        return super()._new_link(instcheck(value, Listener))
+    @abcf.temp
+    @MutLinkSeqSet.hook('cast')
+    def cast(value):
+        return instcheck(value, Listener)
 
     def emit(self, *args, **kw) -> int:
         self.emitcount += 1
