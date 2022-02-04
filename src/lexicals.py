@@ -485,11 +485,14 @@ class Bases:
         @classmethod
         def _member_keys(cls, member: Bases.LexicalEnum):
             'Enum init hook. Index keys for Enum members lookups.'
+            print(cls, '_member_keys')
             return super()._member_keys(member) | {member.label, member._value_}
 
         @classmethod
         def _on_init(cls, subcls: type[Bases.LexicalEnum]):
             'Enum init hook. Store the sequence index of each member.'
+            # raise TypeError
+            print(cls, '_on_init')
             super()._on_init(subcls)
             for i, member in enumerate(subcls.seq): member._index = i
 

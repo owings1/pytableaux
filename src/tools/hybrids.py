@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = 'SequenceSetApi', 'MutableSequenceSetApi', 'qsetf', 'qset'
+__all__ = 'SequenceSet', 'MutableSequenceSet', 'qsetf', 'qset'
 
 from errors import (
     instcheck,
@@ -52,7 +52,7 @@ from typing import (
     TypeVar
 )
 
-class SequenceSetApi(SequenceApi[VT], SetApi[VT]):
+class SequenceSet(SequenceApi[VT], SetApi[VT]):
     'Sequence set (ordered set) read interface.  Comparisons follow Set semantics.'
 
     __slots__ = EMPTY_SET
@@ -80,7 +80,7 @@ class SequenceSetApi(SequenceApi[VT], SetApi[VT]):
         'Set-based `contains` implementation.'
         return False
 
-class qsetf(SequenceSetApi[VT]):
+class qsetf(SequenceSet[VT]):
     'Immutable sequence set implementation setf and seqf bases.'
 
     _set_: SetApi[VT]
@@ -134,7 +134,7 @@ class qsetf(SequenceSetApi[VT]):
         return '%s({%s})' % (type(self).__name__, list(self._seq_).__repr__()[1:-1])
 
 
-class MutableSequenceSetApi(SequenceSetApi[VT], MutableSequenceApi[VT], MutableSetApi[VT]):
+class MutableSequenceSet(SequenceSet[VT], MutableSequenceApi[VT], MutableSetApi[VT]):
     """Mutable sequence set (ordered set) interface.
     Sequence methods such as ``append`` raise ``DuplicateValueError``."""
 
@@ -161,13 +161,13 @@ class MutableSequenceSetApi(SequenceSetApi[VT], MutableSequenceApi[VT], MutableS
         # Must re-implement MutableSequence method.
         raise NotImplementedError
 
-SeqSetT = TypeVar('SeqSetT', bound = SequenceSetApi)
+SeqSetT = TypeVar('SeqSetT', bound = SequenceSet)
 
 # SeqSetHookT = TypeVar('SeqSetHookT', bound = SequenceSetHooks)
-MutSeqSetT  = TypeVar('MutSeqSetT',  bound = MutableSequenceSetApi)
+MutSeqSetT  = TypeVar('MutSeqSetT',  bound = MutableSequenceSet)
 
-class qset(MutableSequenceSetApi[VT]):
-    'MutableSequenceSetApi implementation backed by built-in set and list.'
+class qset(MutableSequenceSet[VT]):
+    'MutableSequenceSet implementation backed by built-in set and list.'
 
     _set_type_: type[setm] = setm
     _seq_type_: type[seqm] = seqm

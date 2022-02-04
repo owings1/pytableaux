@@ -19,7 +19,7 @@ from tools.abcs import (
     #T, VT_co
 )
 from tools.decorators import abstract, final, overload
-from tools.hybrids import MutableSequenceSetApi
+from tools.hybrids import MutableSequenceSet
 from tools.sequences  import (
     absindex,
     slicerange,
@@ -557,7 +557,7 @@ class linkseq(MutableLinkSequence[VT]):
 
 # ----------- LinkSequenceSet ------------------ #
 
-class MutableLinkSequenceSet(MutableLinkSequence[VT], MutableSequenceSetApi[VT]):
+class MutableLinkSequenceSet(MutableLinkSequence[VT], MutableSequenceSet[VT]):
     'Linked sequence set read/write interface.'
 
     #: Link object class.
@@ -765,29 +765,6 @@ class linqset(MutableLinkSequenceSet[VT]):
             self.__first, self.__last = ret
         # Remove from index.
         del self.__table[link.value]
-        # return
-        # if link.prev is None:
-        #     # Removing the first element.
-        #     if link.next is None:
-        #         # And only element.
-        #         self.__first = None
-        #         self.__last = None
-        #     else:
-        #         # Promote new first element.
-        #         link.next.prev = None
-        #         self.__first = link.next
-        # elif link.next is None:
-        #     # Removing the last element (but not the only element).
-        #     # Promote new last element.
-        #     link.prev.next = None
-        #     self.__last = link.prev
-        # else:
-        #     # Removing a link the middle.
-        #     # Sew up the gap.
-        #     link.prev.next = link.next
-        #     link.next.prev = link.prev
-        # # Remove from index.
-        # del self.__table[link.value]
 
     def reverse(self):
         'Reverse in place.'
