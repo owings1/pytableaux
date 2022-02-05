@@ -316,7 +316,6 @@ class deqseq(deque[VT], MutableSequenceApi[VT]):
         return cls(it)
 
 
-
 EMPTY_SEQ = seqf()
 
 SeqApiT  = TypeVar('SeqApiT',  bound = SequenceApi)

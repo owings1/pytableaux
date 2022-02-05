@@ -95,7 +95,7 @@ class Listeners(linqset[Listener]):
         self.emitcount = 0
 
     @abcf.temp
-    @MutLinkSeqSet.hook('cast')
+    @linqset.hook('cast')
     def cast(value):
         return instcheck(value, Listener)
 

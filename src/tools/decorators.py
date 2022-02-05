@@ -7,7 +7,7 @@ from __future__ import annotations
 
 __all__ = (
     # alias decorators
-    'overload', 'abstract', 'final', 'static',
+    'overload', 'abstract', 'final', 'static', 'closure',
     # functions
     'rund',
     # class-based decorators
@@ -15,89 +15,94 @@ __all__ = (
     'raisr', 'lazy', 'NoSetAttr',
 )
 
-from errors import (
-    instcheck as _instcheck,
-    subclscheck as _subclscheck
-)
+if True:
+    from errors import (
+        instcheck,
+        subclscheck,
+    )
 
-from tools.abcs import (
-    # alias decorators
-    abstract,
-    final,
-    overload,
-    static,
-    # type vars
-    F, T, P, Self,
-    # utils
-    abcm,
-    # bases
-    Abc,
-)
-from inspect import (
-    signature as _sig,
-)
-from keyword import (
-    iskeyword as _iskeyword
-)
-from functools import (
-    reduce as _ftreduce,
-    partial as _ftpartial,
-    WRAPPER_ASSIGNMENTS,
-)
-import operator as opr
+    from tools.abcs import (
+        # alias decorators
+        abstract,
+        final,
+        overload,
+        static,
+        closure,
+        # type vars
+        F, T, P, Self,
+        # utils
+        abcm,
+        # bases
+        Abc,
+    )
+    from inspect import (
+        Signature,
+    )
+    from keyword import (
+        iskeyword,
+    )
+    from functools import (
+        reduce as _ftreduce,
+        # partial as _ftpartial,
+        WRAPPER_ASSIGNMENTS,
+    )
+    import operator as opr
 
-from typing import (
-    # Annotations
-    Any, Callable, Generic, Mapping,
-    TypeVar,
-)
-from types import (
-    DynamicClassAttribute,
-    FunctionType,
-)
+    from typing import (
+        # Annotations
+        Any, Callable, Generic, Iterable, Iterator, Mapping,
+        TypeVar,
+    )
+    from types import (
+        DynamicClassAttribute,
+    )
+
 EMPTY = ()
 
-@final
-class NonError(Exception): __new__ = None
+if True:
 
-_valfilter = _ftpartial(filter, opr.itemgetter(1))
+    class _noexcept(Exception): __new__ = None
 
-def _getmixed(obj, k, default = None):
-    try: return obj[k]
-    except TypeError:
-        return getattr(obj, k, default)
-    except KeyError:
-        return default
+    # _valfilter = _ftpartial(filter, opr.itemgetter(1))
 
-def _thru(obj, *_):
-    return obj
+    def _valfilter(it: Iterable[T], /, *, getter = opr.itemgetter(1)) -> Iterator[T]:
+        return filter(getter, it)
 
-def _thru2(_x, obj, *_):
-    return obj
+    def _getmixed(obj, k, default = None):
+        try: return obj[k]
+        except TypeError:
+            return getattr(obj, k, default)
+        except KeyError:
+            return default
 
-def _attrstrcheck(name: str):
-    _instcheck(name, str)
-    if _iskeyword(name):
-        raise TypeError('%s is a keyword' % name)
-    if not name.isidentifier():
-        raise TypeError('%s is not an identifier' % name)
-    return name
+    def _thru(obj, *_):
+        return obj
 
-def _methcaller(name: str):
-    name = _attrstrcheck(name)
-    def f(obj, *args, **kw):
-        return getattr(obj, name)(*args, **kw)
-    f.__name__ = name
-    return f
+    def _thru2(_x, obj, *_):
+        return obj
 
-def _checkcallable(obj):
-    return _instcheck(obj, Callable)
+    def _attrstrcheck(name: str):
+        instcheck(name, str)
+        if iskeyword(name):
+            raise TypeError('%s is a keyword' % name)
+        if not name.isidentifier():
+            raise TypeError('%s is not an identifier' % name)
+        return name
 
-def _checkcallable2(obj):
-    if isinstance(obj, str):
-        return _methcaller(obj)
-    return _checkcallable(obj)
+    def _methcaller(name: str):
+        name = _attrstrcheck(name)
+        def f(obj, *args, **kw):
+            return getattr(obj, name)(*args, **kw)
+        f.__name__ = name
+        return f
 
+    def _checkcallable(obj):
+        return instcheck(obj, Callable)
+
+    def _checkcallable2(obj):
+        if isinstance(obj, str):
+            return _methcaller(obj)
+        return _checkcallable(obj)
 
 class Member(Generic[T]):
 
@@ -122,7 +127,7 @@ class Member(Generic[T]):
 
     @owner.setter
     def owner(self, value):
-        self.__owner = _instcheck(value, type)
+        self.__owner = instcheck(value, type)
         try: self._update_qualname()
         except AttributeError: pass
 
@@ -196,7 +201,7 @@ class membr(Member[T]):
 
     owner: T
 
-    def __init__(self, cb: Callable, *args, **kw):
+    def __init__(self, cb: F, *args, **kw):
         self.cbak = cb, args, kw
 
     def sethook(self, owner, name):
@@ -213,6 +218,7 @@ class membr(Member[T]):
                 return fdefer(member, *args, **kw)
             return cls(fd, *args, **kw)
         return f
+
 
 @static
 class fixed:
@@ -306,7 +312,7 @@ class operd:
         def __call__(self, info = None):
             info = self._getinfo(info)
             oper = _checkcallable(self.oper)
-            n = len(_sig(oper).parameters)
+            n = len(Signature.from_callable(oper).parameters)
             if n == 1:
                 def fapply(operand): return oper(operand)
             elif n == 2:
@@ -376,11 +382,11 @@ class operd:
         def __init__(self, oper: Callable, /, *errs, info = None):
             super().__init__(oper, info)
             if errs:
-                if errs == (None,): self.errs = NonError,
+                if errs == (None,): self.errs = _noexcept,
                 else: self.errs = errs
                 for ecls in self.errs:
-                    _instcheck(ecls, type)
-                    _subclscheck(ecls, Exception)
+                    instcheck(ecls, type)
+                    subclscheck(ecls, Exception)
             else:
                 self.errs = AttributeError, TypeError
 
@@ -480,7 +486,7 @@ class raisr(Member):
     __slots__ = 'errtype', 'eargs', 'ekw'
 
     def __init__(self, errtype: type[Exception], *eargs, **ekw):
-        self.errtype = _subclscheck(errtype, Exception)
+        self.errtype = subclscheck(errtype, Exception)
         self.eargs = eargs
         self.ekw = ekw
 
@@ -531,10 +537,10 @@ class lazy:
 
         def _init(self, key = None, method = None, /):
             if key is not None:
-                _instcheck(key, str)
+                instcheck(key, str)
             self.key = key
             if method is not None:
-                _instcheck(method, Callable)
+                instcheck(method, Callable)
             self.method = method
 
         def _blankinit(self):

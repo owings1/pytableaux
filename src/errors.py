@@ -3,6 +3,7 @@
 import enum as _enum
 from typing import TypeVar
 _T = TypeVar('_T')
+_ExT = TypeVar('_ExT', bound = Exception)
 del(TypeVar)
 
 # Base Errors
@@ -23,6 +24,11 @@ class UnboundVariableError(ParseError):
 class BoundVariableError(ParseError):
     pass
 
+# AttributeErrors
+class MissingAttributeError(AttributeError):
+    pass
+class AttributeConflictError(AttributeError):
+    pass
 # KeyErrors
 class DuplicateKeyError(KeyError):
     pass
@@ -85,13 +91,17 @@ class Emsg(_enum.Enum):
     )
     BadAttrName = ValueError, "Invalid attribute identifier: '{}'", (str,)
 
-    DuplicateValue = DuplicateValueError,
-    MissingValue = MissingValueError,
-    MissingKey = MissingKeyError,
+    MissingAttribute = MissingAttributeError,
+    AttributeConflict = AttributeConflictError,
 
+    MissingKey = MissingKeyError,
     DuplicateKey = DuplicateKeyError,
 
-    def __init__(self, cls, msg: str = None, fns = None):
+    DuplicateValue = DuplicateValueError,
+    MissingValue = MissingValueError,
+
+
+    def __init__(self, cls: type[_ExT], msg: str = None, fns = None):
         if isinstance(cls, tuple):
             cls = type(cls[0], cls[1:], {})
         self.cls = cls

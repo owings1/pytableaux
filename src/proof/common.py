@@ -742,7 +742,6 @@ class Branch(SequenceApi[Node], EventEmitter):
 
 class Target(dmapattr[str, Any]):
 
-
     branch : Branch
     rule   : object
     node   : Node
