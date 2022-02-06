@@ -27,7 +27,7 @@ class Meta(object):
     category_display_order = 4
 
 from proof.common import Branch, Node, Target
-from proof.helpers import VisibleWorldsIndex
+from proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from . import k as K, t as T
 from typing import Generator
 
@@ -70,14 +70,13 @@ class TabRules(object):
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
         appear on *b*, then add *wRw''* to *b*.
         """
-        Helpers = (VisibleWorldsIndex,)
-        visw: VisibleWorldsIndex
+        Helpers = WorldIndex,
         access = True
         ticking = False
 
         def _get_node_targets(self, node: Node, branch: Branch) -> Generator:
-            if self.maxw.max_worlds_reached(branch):
-                self.nf.release(node, branch)
+            if self[MaxWorlds].max_worlds_reached(branch):
+                self[FilterHelper].release(node, branch)
                 return
             w1 = node['world1']
             w2 = node['world2']
@@ -87,7 +86,7 @@ class TabRules(object):
                     'world2': w3,
                     'nodes' : {node, branch.find({'world1': w2, 'world2': w3})},
                     'adds': (({'world1': w1, 'world2': w3},),),
-                } for w3 in self.visw.intransitives(branch, w1, w2)
+                } for w3 in self[WorldIndex].intransitives(branch, w1, w2)
             )
 
         def score_candidate(self, target: Target):

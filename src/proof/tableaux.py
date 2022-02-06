@@ -29,23 +29,24 @@ from errors import (
     subclscheck,
 )
 from tools.abcs import (
-    Abc, AbcMeta,
+    Abc,
+    # AbcMeta,
     T, F,
     # P, TT, KT, VT,
     MapProxy,
 )
 from tools.callables import preds
 from tools.decorators import (
-    abstract, final, overload, static,
+    abstract, closure, final, overload, static,
     raisr, wraps,
 )
 from tools.events import EventEmitter
-from tools.hybrids import qsetf, qset
+from tools.hybrids import qset
 from tools.linked import linqset
 from tools.mappings import (
     MapCover,
     MappingApi,
-    dmap,
+    # dmap,
     dmapattr,
 )
 from tools.misc import get_logic, orepr
@@ -56,34 +57,41 @@ from tools.sequences import (
     seqf,
     seqm,
 )
-from tools.sets import EMPTY_SET, setf, setm
+from tools.sets import (
+    EMPTY_SET,
+    setf,
+    # setm,
+)
 from tools.timing import StopWatch
 
 from lexicals import Argument, Sentence
 from models import BaseModel
 
 from proof.common import (
-    TabFlag,
-    # TabFlag as FLAG,
-    TabStatKey,
-    # TabStatKey as KEY,
     Branch,
-    BranchEvent,
     Node,
-    RuleEvent,
-    TabEvent,
     Target,
 )
-
+from proof.types import (
+    BranchEvent,
+    NodeStat,
+    RuleMeta,
+    RuleEvent,
+    TabEvent,
+    TabTimers,
+    TabFlag,
+    TabStatKey,
+    TypeInstMap,
+)
 from collections import deque
-from functools import partial
-from itertools import chain
+# from functools import partial
+# from itertools import chain
 import operator as opr
 from types import ModuleType
 from typing import (
     Any,
-    Callable,
-    Generic,
+    # Callable,
+    # Generic,
     Iterable,
     Iterator,
     Mapping,
@@ -98,67 +106,6 @@ NOARG = object()
 NOGET = object()
 
 LogicRef = ModuleType | str
-
-class RuleMeta(AbcMeta):
-
-    def __new__(cls, clsname, bases, ns: dict, **kw):
-        helpers_attr = 'Helpers'
-        helper_attrs = cls._get_helper_attrs(ns, helpers_attr)
-        Class = super().__new__(cls, clsname, bases, ns, **kw)
-        cls._set_helper_attrs(Class, helper_attrs, helpers_attr)
-        return Class
-
-    @staticmethod
-    def _get_helper_attrs(ns: dict, clsattr: str):
-        taken = dict(ns)
-        attrs = dict[type, str]()
-        raw = ns.get(clsattr, ())
-        instcheck(raw, tuple)
-        for item in raw:
-            if isinstance(item, type):
-                item = None, item
-            instcheck(item, tuple)
-            if len(item) != 2:
-                raise Emsg.WrongLength(item, 2)
-            name, Helper = item
-            instcheck(Helper, type)
-            if name is None:
-                name = getattr(Helper, '_attr', None)
-            else:
-                name = instcheck(name, str)
-                if name in taken:
-                    raise Emsg.ValueConflict(name, taken[name])
-                if not preds.isattrstr(name):
-                    raise Emsg.BadAttrName(name)
-            if Helper in attrs:
-                # Helper class already added
-                if name is not None:
-                    # Check for attr name conflict.
-                    if attrs[Helper] is None:
-                        # Prefer named attr to unnamed.
-                        attrs[Helper] = name
-                        taken[name] = Helper
-                    elif name != attrs[Helper]:
-                        raise Emsg.DuplicateValue(name)
-            else:
-                attrs[Helper] = name
-                if name is not None:
-                    taken[name] = Helper
-        return attrs
-
-    @staticmethod
-    def _set_helper_attrs(Class: type, attrs: dict, clsattr: str):
-        filt = filter(bool, chain(
-            * (
-                c.__dict__.get(clsattr, EMPTY_SET)
-                for c in reversed(Class.mro()[1:])
-            ),
-            (
-                (v, k) for k,v in attrs.items()
-            )
-        ))
-        hlist = qsetf((item for item in filt if item[1] != None))
-        setattr(Class, clsattr, tuple(hlist))
 
 class RuleHelperInfo(NamedTuple):
     #: The helper class.
@@ -182,66 +129,12 @@ class StepEntry(NamedTuple):
     #: The duration in milliseconds of the application.
     duration_ms: int
 
-class NodeStat(dict[TabStatKey, TabFlag|int|None]):
-
-    __slots__ = EMPTY_SET
-
-    _defaults = MapProxy({
-        TabStatKey.FLAGS       : TabFlag.NONE,
-        TabStatKey.STEP_ADDED  : TabFlag.NONE,
-        TabStatKey.STEP_TICKED : None,
-    })
-
-    def __init__(self):
-        super().__init__(self._defaults)
-
-class BranchStat(dict[TabStatKey, TabFlag|int|Branch|dict[Node, NodeStat]|None]):
-
-    __slots__ = EMPTY_SET
-
-    _defaults = MapProxy({
-        TabStatKey.FLAGS       : TabFlag.NONE,
-        TabStatKey.STEP_ADDED  : TabFlag.NONE,
-        TabStatKey.STEP_CLOSED : TabFlag.NONE,
-        TabStatKey.INDEX       : None,
-        TabStatKey.PARENT      : None,
-    })
-
-    def __init__(self, mapping: Mapping = None, /, **kw):
-        super().__init__(self._defaults)
-        self[TabStatKey.NODES] = {}
-        if mapping is not None:
-            self.update(mapping)
-        if len(kw):
-            self.update(kw)
-
-    def node(self, node: Node) -> NodeStat:
-        'Get the stat info for the node, and create if missing.'
-        try:
-            return self[TabStatKey.NODES][node]
-        except KeyError:
-            return self[TabStatKey.NODES].setdefault(node, NodeStat())
-
-    def view(self) -> dict[TabStatKey, TabFlag|int|Branch|None]:
-        return {k: self[k] for k in self._defaults}
-
 class Rule(EventEmitter, metaclass = RuleMeta):
     'Base class for a Tableau rule.'
 
     Helpers: Sequence[tuple[str, type]] = ()
     Timers: Sequence[str] = ()
-    # HelperRuleEventMethods: Sequence[tuple[RuleEvent, str]] = (
-        # (RuleEvent.AFTER_APPLY  , 'after_apply'),
-        # (RuleEvent.BEFORE_APPLY , 'before_apply'),
-    # )
-    # HelperTabEventMethods: Sequence[tuple[TabEvent, str]] = (
-        # (TabEvent.AFTER_BRANCH_ADD   , 'after_branch_add'),
-        # (TabEvent.AFTER_BRANCH_CLOSE , 'after_branch_close'),
-        # (TabEvent.AFTER_NODE_ADD     , 'after_node_add'),
-        # (TabEvent.AFTER_NODE_TICK    , 'after_node_tick'),
-        # (TabEvent.AFTER_TRUNK_BUILD  , 'after_trunk_build'),
-        # (TabEvent.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
-    # )
+
     branch_level: int = 1
     _defaults = dict(is_rank_optim = True)
 
@@ -252,7 +145,10 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     #: The number of times the rule has applied.
     apply_count: int
 
-    __slots__ = 'tableau', 'helpers', 'apply_count', 'timers', 'opts'
+    __slots__ = setf((
+        'tableau', 'helpers', 'apply_count', 'timers', 'opts',
+        'search_timer', 'apply_timer', '__getitem__'
+    ))
 
     @abstract
     def _get_targets(self, branch: Branch, /) -> Sequence[Target]:
@@ -293,6 +189,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         self.opts = self._defaults | opts
 
         self.helpers = {}
+        self.__getitem__ = self.helpers.__getitem__
         self.apply_count = 0
 
         for name, helper in self.Helpers:
@@ -332,18 +229,15 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     @final
     def add_helper(self, cls: type, attr: str = None, **opts) -> RuleHelperInfo:
         'Add a helper.'
+        if cls in self.helpers:
+            raise Emsg.DuplicateKey(cls)
+        if attr is not None and hasattr(self, attr):
+            raise Emsg.AttributeConflict(attr)
         inst = cls(self, **opts)
         info = RuleHelperInfo(cls, inst, attr)
         self.helpers[cls] = inst
-        if attr != None:
+        if attr is not None:
             setattr(self, attr, inst)
-        # for event, meth in self.HelperRuleEventMethods:
-        #     if hasattr(inst, meth):
-        #         # raise ValueError(inst, meth)
-        #         self.on(event, getattr(inst, meth))
-        # for event, meth in self.HelperTabEventMethods:
-        #     if hasattr(inst, meth):
-        #         self.tableau.on(event, getattr(inst, meth))
         return info
 
     def __repr__(self):
@@ -361,6 +255,12 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         if name == 'tableau':
             raise AttributeError(name)
         super().__delattr__(name)
+
+    @overload
+    def __getitem__(self, key: type[T]) -> T: ...
+    del(__getitem__)
+
+    __iter__ = None
 
     def __extend_targets(self, targets: Sequence[Target], /):
         """Augment the targets with the following keys:
@@ -414,10 +314,8 @@ RuleT = TypeVar('RuleT', bound = Rule)
 
 
 class ClosingRule(Rule):
-    """
-    A closing rule has a fixed ``_apply()`` method that marks the branch as
-    closed.
-    """
+    'A closing rule has a fixed ``_apply()`` that marks the branch as closed.'
+    
     _defaults = dict(is_rank_optim = False)
     __slots__ = EMPTY_SET
 
@@ -463,12 +361,14 @@ def locking(method: F) -> F:
         return method(self, *args, **kw)
     return wraps(method)(f)
 
-# Turn on feature: attr-access for TabRules, etc.
-TRATTR_ON = False
-
 class TabRules(SequenceApi[Rule]):
     'Grouped and named collection of rules for a tableau.'
 
+    __slots__ = setf((
+        '_root', '_tab', '_tab', '_ruleindex', '_groupindex',
+        '_locked', 'groups'
+    ))
+ 
     def __init__(self, tab: Tableau, /):
         self._locked: bool = False
         self._root = self
@@ -480,34 +380,24 @@ class TabRules(SequenceApi[Rule]):
         self.groups = RuleGroups(self)
         tab.once(TabEvent.AFTER_BRANCH_ADD, self._lock)
 
-    __slots__ = '_root', '_tab', '_tab', '_ruleindex', '_groupindex', '_locked', 'groups'
-
-    if TRATTR_ON:
-        __slots__ += '__dict__',
-
     @locking
     def _lock(self, _ = None):
         self._tab.off(TabEvent.AFTER_BRANCH_ADD, self._lock)
         self.groups._lock()
-        self._ruleindex = MapCover(self._ruleindex)
+        self._ruleindex  = MapCover(self._ruleindex)
         self._groupindex = MapCover(self._groupindex)
         self._locked = True
 
-    @locking
     def append(self, rule: type[Rule]):
         'Add a single Rule to a new (unnamed) group.'
         self.groups.create(None).append(rule)
 
-    @locking
     def extend(self, rules: Iterable[type[Rule]], /, name: str|None = NOARG):
         'Create a new group from a collection of Rule classes.'
         self.groups.append(rules, name = name)
 
-    @locking
     def clear(self):
         'Clear all the rules. Raises IllegalStateError if tableau is started.'
-        if TRATTR_ON:
-            for _ in map(super().__delattr__, self._ruleindex): pass
         self.groups.clear()
         self._ruleindex.clear()
         self._groupindex.clear()
@@ -533,23 +423,26 @@ class TabRules(SequenceApi[Rule]):
         for group in reversed(self.groups):
             yield from reversed(group)
 
-    def __getitem__(self, index: SupportsIndex, /, *,
-        greater = opr.gt, doub = (2).__mul__,
-        select = MapProxy({
+    @closure
+    def __getitem__():
+
+        select = {
             False : ( (0).__mul__, iter,     opr.add, opr.gt ),
             True  : ( (1).__mul__, reversed, opr.sub, opr.le ),
-        }).__getitem__,
-    ) -> Rule:
-        length = len(self)
-        index = absindex(length, index)
-        istart, iterfunc, adjust, compare = select(greater(doub(index), length))
-        i = istart(length)
-        for group in iterfunc(self.groups):
-            inext = adjust(i, len(group))
-            if compare(inext, index):
-                return group[index - i]
-            i = inext
-        raise TypeError # should never run.
+        }.__getitem__
+
+        def getitem(self: TabRules, index: SupportsIndex, /,) -> Rule:
+            length = len(self)
+            index = absindex(length, index)
+            istart, iterfunc, adjust, compare = select(2 * index > length)
+            i = istart(length)
+            for group in iterfunc(self.groups):
+                inext = adjust(i, len(group))
+                if compare(inext, index):
+                    return group[index - i]
+                i = inext
+            raise TypeError # should never run.
+        return getitem
 
     __delattr__ = raisr(AttributeError)
     __setattr__ = locking(object.__setattr__)
@@ -579,11 +472,6 @@ class TabRules(SequenceApi[Rule]):
 
     def _checkname(self, name: str, inst, /):
         '''Validate a new rule or group name before it is added.'''
-        if TRATTR_ON:
-            if not preds.isattrstr(name) or name[0] == '_':
-                raise AttributeError("Invalid attribute name '%s'" % name)
-            if hasattr(self, name) or hasattr(inst, name):
-                raise AttributeError("Duplicate attribute '%s'" % name)
         if (name in self._groupindex or name in self._ruleindex):
             raise AttributeError("Duplicate attribute '%s'" % name)
 
@@ -592,12 +480,9 @@ class TabRules(SequenceApi[Rule]):
             groups = len(self.groups), rules = len(self),
         )
 
-    if TRATTR_ON:
-        def __dir__(self, /, *, _init = seqm({'groups'})):
-            return _init + filter(preds.isattrstr, self.names())
-
 class RuleGroup(SequenceApi[Rule]):
     "A rule group for a Tableau's TabRules."
+    __slots__ = '_root', '_seq', '_name', '_ruleindex'
 
     def __init__(self, name: str|None, root: TabRules):
         self._name = name
@@ -606,10 +491,6 @@ class RuleGroup(SequenceApi[Rule]):
         #: Rule classname to instance.
         self._ruleindex: dict[str, Rule] = {}
 
-    __slots__ = '_root', '_seq', '_name', '_ruleindex'
-
-    if TRATTR_ON:
-        __slots__ += '__dict__',
 
     def _lock(self):
         self._seq = SequenceCover(self._seq)
@@ -629,11 +510,7 @@ class RuleGroup(SequenceApi[Rule]):
         rule = RuleCls(root._tab, **root._tab.opts)
         self._seq.append(rule)
         root._ruleindex[name] = self._ruleindex[name] = rule
-        if TRATTR_ON:
-            setattr(self, name, rule)
-            setattr(root, name, rule)
 
-    @locking
     def extend(self, Rules: Iterable[type[Rule]]):
         'Append multiple rules. Raise IllegalStateError if locked.'
         for _ in map(self.append, Rules): pass
@@ -641,8 +518,6 @@ class RuleGroup(SequenceApi[Rule]):
     @locking
     def clear(self):
         'Clear the rule group. Raise IllegalStateError if locked.'
-        if TRATTR_ON:
-            for _ in map(super().__delattr__, self._ruleindex): pass
         self._seq.clear()
         self._ruleindex.clear()
 
@@ -676,10 +551,6 @@ class RuleGroup(SequenceApi[Rule]):
     def __repr__(self):
         return orepr(self, name = self.name, rules = len(self))
 
-    if TRATTR_ON:
-        def __dir__(self):
-            return TabRules.__dir__(self, _init = seqm())
-
 class RuleGroups(SequenceApi[RuleGroup]):
 
     def __init__(self, root: TabRules):
@@ -687,9 +558,6 @@ class RuleGroups(SequenceApi[RuleGroup]):
         self._seq: list[RuleGroup] = []
 
     __slots__ = '_root', '_seq',
-
-    if TRATTR_ON:
-        __slots__ += '__dict__',
 
     def _lock(self):
         for _ in map(RuleGroup._lock, self): pass
@@ -705,11 +573,8 @@ class RuleGroups(SequenceApi[RuleGroup]):
         self._seq.append(group)
         if name is not None:
             root._groupindex[name] = group
-            if TRATTR_ON:
-                setattr(self, name, group)
         return group
 
-    @locking
     def append(self, Rules: Iterable[type[Rule]], /, name: str|None = NOARG):
         'Create a new group with the given rules. Raise IllegalStateError if locked.'
         if name is NOARG:
@@ -719,7 +584,6 @@ class RuleGroups(SequenceApi[RuleGroup]):
                 name = None
         self.create(name).extend(Rules)
 
-    @locking
     def extend(self, groups: Iterable[Iterable[type[Rule]]]):
         'Add multiple groups. Raise IllegalStateError if locked.'
         for _ in map(self.append, groups): pass
@@ -727,8 +591,6 @@ class RuleGroups(SequenceApi[RuleGroup]):
     @locking
     def clear(self):
         'Clear the groups. Raise IllegalStateError if locked.'
-        if TRATTR_ON:
-            for _ in map(super().__delattr__, self._root._groupindex): pass
         for _ in map(RuleGroup.clear, self): pass
         self._seq.clear()
 
@@ -774,10 +636,6 @@ class RuleGroups(SequenceApi[RuleGroup]):
             rules = sum(map(len, self))
         )
 
-    if TRATTR_ON:
-        def __dir__(self):
-            return seqm(filter(preds.isattrstr, self.names()))
-
 @static
 class TableauxSystem(Abc):
 
@@ -800,16 +658,6 @@ class TableauxSystem(Abc):
         for classes in Rules.rule_groups:
             rules.groups.create().extend(classes)
 
-class TabTimers(NamedTuple):
-
-    build  : StopWatch
-    trunk  : StopWatch
-    tree   : StopWatch
-    models : StopWatch
-
-    @static
-    def create(it = (False,) * 4):
-        return TabTimers._make(map(StopWatch, it))
 
 class Tableau(Sequence[Branch], EventEmitter):
     'A tableau proof.'
@@ -1052,8 +900,7 @@ class Tableau(Sequence[Branch], EventEmitter):
         return stepentry
 
     def branch(self, /, parent: Branch = None):
-        """
-        Create a new branch on the tableau, as a copy of ``parent``, if given.
+        """Create a new branch on the tableau, as a copy of ``parent``, if given.
 
         :param Branch parent: The parent branch, if any.
         :return: The new branch.
@@ -1231,10 +1078,6 @@ class Tableau(Sequence[Branch], EventEmitter):
             if self.argument else {}
         ))
 
-    ## :===============================:
-    ## :       Private Methods         :
-    ## :===============================:
-
     # :-----------:
     # : Callbacks :
     # :-----------:
@@ -1411,9 +1254,8 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     def _gen_models(self):
         'Build models for the open branches.'
-        Model = self.logic.Model
+        Model: type[BaseModel] = self.logic.Model
         argument = self.argument
-        model: BaseModel
         for branch in self.open:
             self.__check_timeout()
             model = Model()
@@ -1538,6 +1380,37 @@ class Tableau(Sequence[Branch], EventEmitter):
             else:
                 s.balanced_line_width = s.balanced_line_margin = 0
 
+class BranchStat(dict[TabStatKey, TabFlag|int|Branch|dict[Node, NodeStat]|None]):
+
+    __slots__ = EMPTY_SET
+
+    _defaults = MapProxy({
+        TabStatKey.FLAGS       : TabFlag.NONE,
+        TabStatKey.STEP_ADDED  : TabFlag.NONE,
+        TabStatKey.STEP_CLOSED : TabFlag.NONE,
+        TabStatKey.INDEX       : None,
+        TabStatKey.PARENT      : None,
+    })
+
+    def __init__(self, mapping: Mapping = None, /, **kw):
+        super().__init__(self._defaults)
+        self[TabStatKey.NODES] = {}
+        if mapping is not None:
+            self.update(mapping)
+        if len(kw):
+            self.update(kw)
+
+    def node(self, node: Node) -> NodeStat:
+        'Get the stat info for the node, and create if missing.'
+        # Avoid using defaultdict, since it may hide problems.
+        try:
+            return self[TabStatKey.NODES][node]
+        except KeyError:
+            return self[TabStatKey.NODES].setdefault(node, NodeStat())
+
+    def view(self) -> dict[TabStatKey, TabFlag|int|Branch|None]:
+        return {k: self[k] for k in self._defaults}
+
 class TreeStruct(dmapattr):
 
     def __init__(self, values = None, /, **kw):
@@ -1595,12 +1468,6 @@ class TreeStruct(dmapattr):
 
         self.id = id(self)
 
-# ----------------------------------------------
-
-
-class TypeInstMap(Mapping):
-    @overload
-    def __getitem__(self, key: type[T]) -> T: ...
 
 # ----------------------------------------------
 

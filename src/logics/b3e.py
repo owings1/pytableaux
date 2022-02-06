@@ -400,4 +400,3 @@ class TabRules(object):
             UniversalUndesignated,
         ),
     )
-TableauxRules = TabRules

@@ -28,7 +28,7 @@ class Meta(object):
     category_display_order = 5
 
 from proof.common import Access, Branch, Node
-from proof.helpers import VisibleWorldsIndex
+from proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from . import k as K, t as T, s4 as S4
 
 # TODO:
@@ -74,18 +74,17 @@ class TabRules(object):
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
         """
-        Helpers = (VisibleWorldsIndex,)
-        visw: VisibleWorldsIndex
+        Helpers = WorldIndex,
         access = True
         _defaults = {'is_rank_optim': False}
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            if not self.maxw.max_worlds_exceeded(branch):
+            if not self[MaxWorlds].max_worlds_exceeded(branch):
                 access: Access = Access.fornode(node).reverse()
-                if not self.visw.has(branch, access):
+                if not self[WorldIndex].has(branch, access):
                     add = access.todict()
                     return add | {'adds': ((add,),)}
-            self.nf.release(node, branch)
+            self[FilterHelper].release(node, branch)
 
         def example_nodes(self):
             return (Access(0, 1).todict(),)

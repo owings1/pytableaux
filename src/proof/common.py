@@ -3,10 +3,13 @@ from __future__ import annotations
 __all__ = 'Node', 'Branch', 'Target'
 
 from errors import instcheck as instcheck, Emsg
-from tools.abcs import Abc, AbcEnum, FlagEnum, MapProxy, T
+from tools.abcs import Abc, T
 from tools.callables import Caller, gets, preds, cchain
 from tools.decorators import (
-    abstract, overload, static, final,
+    abstract,
+    static,
+    # overload,
+    # final,
     lazy, operd, raisr
 )
 from tools.events import EventEmitter
@@ -20,9 +23,9 @@ from tools.mappings import (
 ) 
 from tools.sequences import (
     SequenceApi,
-    SequenceCover,
+    # SequenceCover,
 )
-from tools.sets import EMPTY_SET, setf, SetCover
+from tools.sets import EMPTY_SET, setf#, SetCover
 from lexicals import (
     Constant,
     Operated,
@@ -32,13 +35,15 @@ from lexicals import (
     Sentence,
 )
 
+from proof.types import BranchEvent
+
 import enum
 from collections.abc import Set
 from functools import partial
 from itertools import (
     chain,
     filterfalse,
-    starmap
+    # starmap,
 )
 import operator as opr
 from typing import (
@@ -49,47 +54,10 @@ from typing import (
     Iterator,
     Mapping,
     NamedTuple,
-    Sequence,
+    # Sequence,
     SupportsIndex,
     TypeVar,
 )
-
-class BranchEvent(AbcEnum):
-    AFTER_BRANCH_CLOSE = enum.auto()
-    AFTER_NODE_ADD     = enum.auto()
-    AFTER_NODE_TICK    = enum.auto()
-
-class RuleEvent(AbcEnum):
-    BEFORE_APPLY = enum.auto()
-    AFTER_APPLY  = enum.auto()
-
-class TabEvent(AbcEnum):
-    AFTER_BRANCH_ADD    = enum.auto()
-    AFTER_BRANCH_CLOSE  = enum.auto()
-    AFTER_NODE_ADD      = enum.auto()
-    AFTER_NODE_TICK     = enum.auto()
-    AFTER_TRUNK_BUILD   = enum.auto()
-    BEFORE_TRUNK_BUILD  = enum.auto()
-
-class TabStatKey(AbcEnum):
-    FLAGS       = enum.auto()
-    STEP_ADDED  = enum.auto()
-    STEP_TICKED = enum.auto()
-    STEP_CLOSED = enum.auto()
-    INDEX       = enum.auto()
-    PARENT      = enum.auto()
-    NODES       = enum.auto()
-
-class TabFlag(FlagEnum):
-    NONE   = 0
-    TICKED = 1
-    CLOSED = 2
-    PREMATURE   = 4
-    FINISHED    = 8
-    TIMED_OUT   = 16
-    TRUNK_BUILT = 32
-# KEY = TabStatKey
-# FLAG = TabFlag
 
 class Node(MappingApi):
     'A tableau node.'
@@ -336,15 +304,6 @@ class Filters:
                     return False
             return True
 
-    # class ItemValue(Comparer[LHS, RHS]):
-
-    #     __slots__ = EMPTY_SET
-
-    #     lhs: Callable[[Any], bool]
-    #     rget: opr.itemgetter(1)
-    #     def __call__(self, rhs):
-    #         return bool(self.lhs(self.rget(rhs)))
-
 class NodeFilter(Comparer[LHS, RHS]):
 
     @abstract
@@ -391,16 +350,6 @@ class NodeFilters(Filters):
                 n['world'] = 0
             return n
 
-# class ViewsCache:
-#     __slots__ = '_views',
-#     def __init__(self):
-#         self._views = {}
-#     def constants(self, obj: Set[Constant]) -> SetCover[Constant]:
-#         try:
-#             return self._views['constants']
-#         except KeyError:
-#             return self._views.setdefault('constants', SetCover(obj))
-
 class Branch(SequenceApi[Node], EventEmitter):
     'Represents a tableau branch.'
 
@@ -412,7 +361,6 @@ class Branch(SequenceApi[Node], EventEmitter):
 
         # Make sure properties are copied if needed in copy()
 
-        # self._views = ViewsCache()
         self.__closed = False
 
         # self.__nodes   : list[Node] = []
@@ -806,4 +754,4 @@ class Target(dmapattr[str, Any]):
         return redcr(self.get, pred)
 
 
-del(EventEmitter, enum, lazy, operd)
+del(EventEmitter, lazy, operd)

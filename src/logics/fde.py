@@ -29,7 +29,7 @@ class Meta:
     category_display_order = 10
 
 from errors import ModelValueError
-from tools.decorators import abstract
+from tools.decorators import abstract, static
 from tools.sets import setf, EMPTY_SET
 from tools.hybrids import qsetf
 from models import BaseModel
@@ -43,9 +43,9 @@ from proof.tableaux import (
 )
 from proof.common import Branch, Node, NodeFilters, Target
 from proof.helpers import (
-    AdzHelper, AppliedNodeConstants, AppliedNodeCount,
-    AppliedQuitFlag, FilterHelper, MaxConstantsTracker,
-    NodeTargetCheckHelper,
+    AdzHelper, NodeConsts, NodeCount,
+    QuitFlag, FilterHelper, MaxConsts,
+    NodeTarget,
 )
 from typing import Any
 
@@ -469,6 +469,7 @@ class Model(BaseModel):
             fmt = self._error_formats[ErrorClass][fmt]
         raise ErrorClass(fmt, *(str(arg) for arg in args))
 
+@static
 class TableauxSystem(BaseSystem):
     """
     Nodes for FDE have a boolean *designation* property, and a branch is closed iff
@@ -525,8 +526,8 @@ class TableauxSystem(BaseSystem):
 
     @classmethod
     def branching_complexity(cls, node: Node):
-        sentence = node.get('sentence')
-        if not sentence:
+        s: Sentence = node.get('sentence')
+        if not s:
             return 0
         designated = node['designated']
         last_is_negated = False
@@ -534,7 +535,7 @@ class TableauxSystem(BaseSystem):
         # operators = list(sentence.operators)
         # while len(operators):
         #     operator = operators.pop(0)
-        for operator in sentence.operators:
+        for operator in s.operators:
             if operator == Oper.Negation:
                 #if last_is_negated:
                 #    last_is_negated = False
@@ -550,12 +551,11 @@ class TableauxSystem(BaseSystem):
 
 class ClosureRule(ClosingRule):
     __slots__ = EMPTY_SET
-    Helpers = NodeTargetCheckHelper,
-    ntch: NodeTargetCheckHelper
+    Helpers = NodeTarget,
 
 class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
+    __slots__ = EMPTY_SET
 
-    nf: FilterHelper
     ignore_ticked = True
 
     NodeFilters = (
@@ -572,8 +572,7 @@ class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
     designation: bool = None
 
 class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
-
-    adz: AdzHelper
+    __slots__ = EMPTY_SET
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
@@ -583,24 +582,19 @@ class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
     def _get_node_targets(self, node: Node, branch: Branch): ...
 
 class QuantifierSkinnyRule(DefaultRule, AdzHelper.Apply):
+    __slots__ = EMPTY_SET
 
-    Helpers = (
-        AppliedQuitFlag,
-        MaxConstantsTracker,
-    )
-    adz:  AdzHelper
-    apqf: AppliedQuitFlag
-    maxc: MaxConstantsTracker
+    Helpers = QuitFlag, MaxConsts,
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
-        if self.maxc.max_constants_exceeded(branch, node.get('world')):
-            self.nf.release(node, branch)
-            if self.apqf.get(branch):
+        if self[MaxConsts].max_constants_exceeded(branch, node.get('world')):
+            self[FilterHelper].release(node, branch)
+            if self[QuitFlag].get(branch):
                 return
             return {
                 'flag': True,
-                'adds': ((self.maxc.quit_flag(branch),),),
+                'adds': ((self[MaxConsts].quit_flag(branch),),),
             }
         return self._get_node_targets(node, branch)
 
@@ -611,36 +605,25 @@ class QuantifierSkinnyRule(DefaultRule, AdzHelper.Apply):
         return -1 * self.tableau.branching_complexity(target.node)
 
 class QuantifierFatRule(DefaultRule, AdzHelper.Apply):
+    __slots__ = EMPTY_SET
 
     ticking = False
 
-    Helpers = (
-        AppliedNodeConstants,
-        AppliedNodeCount,
-        AppliedQuitFlag,
-        MaxConstantsTracker,
-    )
-
-    adz:  AdzHelper
-    apcs: AppliedNodeConstants
-    apnc: AppliedNodeCount
-    apqf: AppliedQuitFlag
-    maxc: MaxConstantsTracker
+    Helpers = NodeConsts, NodeCount, QuitFlag, MaxConsts
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
-        if self.maxc.max_constants_exceeded(branch, node.get('world')):
-            self.nf.release(node, branch)
-            if self.apqf.get(branch):
+        if self[MaxConsts].max_constants_exceeded(branch, node.get('world')):
+            self[FilterHelper].release(node, branch)
+            if self[QuitFlag].get(branch):
                 return
             return {
                 'flag': True,
-                'adds': ((self.maxc.quit_flag(branch),),),
+                'adds': ((self[MaxConsts].quit_flag(branch),),),
             }
         # Only apply if there are no constants on the branch, or we have
         # tracked a constant that we haven't applied to.
-        # unapplied = self.apcs.get_unapplied(node, branch)
-        unapplied = self.apcs[branch][node]
+        unapplied = self[NodeConsts][branch][node]
         if branch.constants_count and not len(unapplied):
             # Do not release the node from filters, since new constants
             # can appear.
@@ -648,8 +631,7 @@ class QuantifierFatRule(DefaultRule, AdzHelper.Apply):
         return self._get_node_targets(node, branch)
 
     def _get_node_targets(self, node: Node, branch: Branch):
-        # unapplied = self.apcs.get_unapplied(node, branch)
-        unapplied = self.apcs[branch][node]
+        unapplied = self[NodeConsts][branch][node]
         constants = unapplied or {Constant.first()}
         return (
             {'adds': (nodes,), 'constant': c}
@@ -670,15 +652,16 @@ class QuantifierFatRule(DefaultRule, AdzHelper.Apply):
     def score_candidate(self, target: Target):
         if target.get('flag'):
             return 1
-        if self.adz.closure_score(target) == 1:
+        if self[AdzHelper].closure_score(target) == 1:
             return 1
-        node_apply_count = self.apnc[target.branch].get(target.node, 0)
+        node_apply_count = self[NodeCount][target.branch].get(target.node, 0)
         return float(1 / (node_apply_count + 1))
 
 def sd(s: Sentence, d: bool) -> dict:
-    return {'sentence': s, 'designated': d}
+    return dict(sentence = s, designated = d)
 
 class ConjunctionReducingRule(DefaultNodeRule):
+    __slots__ = EMPTY_SET
 
     conjunct_op: Oper
     branch_level = 1
@@ -692,6 +675,7 @@ class ConjunctionReducingRule(DefaultNodeRule):
         d = self.designation
         return {'adds': ((sd(s, d),),),}
 
+@static
 class TabRules:
     """
     In general, rules for connectives consist of four rules per connective:
@@ -705,6 +689,7 @@ class TabRules:
         A branch closes when a sentence appears on a node marked *designated*,
         and the same sentence appears on a node marked *undesignated*.
         """
+        __slots__ = EMPTY_SET
 
         # tracker implementation
 
@@ -720,7 +705,7 @@ class TabRules:
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
-            return self.ntch.get(branch)
+            return self[NodeTarget].get(branch)
             # return self.ntch.cached_target(branch)
 
         def example_nodes(self):
@@ -1353,4 +1338,3 @@ class TabRules:
             UniversalUndesignated,
         ),
     )
-TableauxRules = TabRules

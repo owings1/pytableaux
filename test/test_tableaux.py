@@ -8,11 +8,12 @@ from tools.misc import get_logic
 from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
 
 from proof.tableaux import (
-    Rule, TableauxSystem as TabSys, Tableau, TabStatKey, TabFlag,
+    Rule, TableauxSystem as TabSys, Tableau,
     ClosingRule, RuleT
 )
-from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
-from proof.common import Filters, Branch, Node, TabEvent
+from proof.helpers import AdzHelper, FilterHelper, MaxConsts
+from proof.common import Filters, Branch, Node
+from proof.types import TabEvent, TabStatKey, TabFlag
 import examples
 
 import time
@@ -425,10 +426,10 @@ class TestMaxConstantsTracker(BaseSuite):
             Helpers = FilterHelper,
     
         class MtrTestRule(FilterNodeRule):
-            mtr: MaxConstantsTracker
+            mtr: MaxConsts
             Helpers = (
                 *FilterNodeRule.Helpers,
-                ('mtr', MaxConstantsTracker),
+                ('mtr', MaxConsts),
             )
     
         proof = self.tab()

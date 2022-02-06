@@ -26,6 +26,7 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 20
 
+from proof.helpers import NodeTarget
 from tools.hybrids import qsetf
 from lexicals import Atomic
 from proof.common import Branch, Node
@@ -97,7 +98,7 @@ class TabRules:
             return bool(self.__find_closing_node(node, branch))
 
         def applies_to_branch(self, branch: Branch) -> dict|None:
-            return self.ntch.get(branch)
+            return self[NodeTarget].get(branch)
 
         def example_nodes(self):
             a = Atomic.first()

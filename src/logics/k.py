@@ -41,10 +41,11 @@ from proof.tableaux import (
     Tableau,
 )
 from proof.common import Access, Branch, Node, NodeFilters, Target
-from proof.helpers import AppliedNodesWorlds, AppliedSentenceCounter, \
-    MaxWorldsTracker, PredicatedNodesTracker, AppliedQuitFlag, AdzHelper, \
-    FilterHelper, AppliedNodeCount, VisibleWorldsIndex
-
+from proof.helpers import (
+    NodesWorlds, AplSentCount,
+    MaxWorlds, PredNodes, QuitFlag, AdzHelper,
+    FilterHelper, NodeCount, WorldIndex, NodeTarget,
+)
 from errors import DenotationError, ModelValueError
 
 import operator as opr
@@ -681,8 +682,8 @@ class TableauxSystem(BaseSystem):
         return complexity
 
 class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
+    __slots__ = EMPTY_SET
 
-    nf: FilterHelper
     ignore_ticked = True
 
     NodeFilters = (
@@ -700,8 +701,7 @@ class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
     access : bool = None
 
 class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
-
-    adz: AdzHelper
+    __slots__ = EMPTY_SET
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
@@ -711,9 +711,9 @@ class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
         raise NotImplementedError
 
 class ModalNodeRule(DefaultNodeRule):
-    Helpers = (AppliedQuitFlag, MaxWorldsTracker)
-    apqf: AppliedQuitFlag
-    maxw: MaxWorldsTracker
+    __slots__ = EMPTY_SET
+
+    Helpers = QuitFlag, MaxWorlds
 
 class TabRules(object):
     """
@@ -751,7 +751,7 @@ class TabRules(object):
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
-            return self.ntch.get(branch)
+            return self[NodeTarget].get(branch)
 
         # private util
 
@@ -790,7 +790,7 @@ class TabRules(object):
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
-            return self.ntch.get(branch)
+            return self[NodeTarget].get(branch)
             # return self.ntch.cached_target(branch)
 
         def example_nodes(self):
@@ -825,7 +825,7 @@ class TabRules(object):
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
-            return self.ntch.get(branch)
+            return self[NodeTarget].get(branch)
             # return self.ntch.cached_target(branch)
 
         def example_nodes(self):
@@ -1189,19 +1189,18 @@ class TabRules(object):
         operator = Oper.Possibility
         branch_level = 1
 
-        Helpers = (AppliedSentenceCounter,)
-        apsc: AppliedSentenceCounter
+        Helpers = AplSentCount,
 
         def _get_node_targets(self, node: Node, branch: Branch):
 
             # Check for max worlds reached
-            if self.maxw.max_worlds_exceeded(branch):
-                self.nf.release(node, branch)
-                if self.apqf.get(branch):
+            if self[MaxWorlds].max_worlds_exceeded(branch):
+                self[FilterHelper].release(node, branch)
+                if self[QuitFlag].get(branch):
                     return
                 return {
                     'flag': True,
-                    'adds': ((self.maxw.quit_flag(branch),),),
+                    'adds': ((self[MaxWorlds].quit_flag(branch),),),
                 }
 
             s: Operated = self.sentence(node)
@@ -1230,17 +1229,17 @@ class TabRules(object):
             s: Operated = self.sentence(target.node)
             si = s.lhs
             # Don't bother checking for closure since we will always have a new world
-            track_count = self.apsc[branch].get(si, 0)
+            track_count = self[AplSentCount][branch].get(si, 0)
             if track_count == 0:
                 return 1
-            return -1 * self.maxw.modal_complexity(s) * track_count
+            return -1 * self[MaxWorlds].modal_complexity(s) * track_count
 
         def group_score(self, target: Target):
             if target['candidate_score'] > 0:
                 return 1
             s: Operated = self.sentence(target.node)
             si = s.lhs
-            return -1 * self.apsc[target.branch].get(si, 0)
+            return -1 * self[AplSentCount][target.branch].get(si, 0)
 
     class PossibilityNegated(DefaultNodeRule):
         """
@@ -1271,32 +1270,24 @@ class TabRules(object):
         operator = Oper.Necessity
         branch_level = 1
 
-        Helpers = (
-            AppliedNodeCount,
-            AppliedNodesWorlds,
-            VisibleWorldsIndex,
-        )
-
-        apnc: AppliedNodeCount
-        apnw: AppliedNodesWorlds
-        visw: VisibleWorldsIndex
+        Helpers = NodeCount, NodesWorlds, WorldIndex,
 
         Timers = 'get_targets',
 
         def _get_node_targets(self, node: Node, branch: Branch):
 
             # Check for max worlds reached
-            if self.maxw.max_worlds_exceeded(branch):
-                self.nf.release(node, branch)
-                if self.apqf.get(branch):
+            if self[MaxWorlds].max_worlds_exceeded(branch):
+                self[FilterHelper].release(node, branch)
+                if self[QuitFlag].get(branch):
                     return
                 return {
                     'flag': True,
-                    'adds': ((self.maxw.quit_flag(branch),),),
+                    'adds': ((self[MaxWorlds].quit_flag(branch),),),
                 }
 
             # Only count least-applied-to nodes
-            if not self.apnc.isleast(node, branch):
+            if not self[NodeCount].isleast(node, branch):
                 return
 
             with self.timers['get_targets']:
@@ -1307,12 +1298,12 @@ class TabRules(object):
                 si = s.lhs
                 w1 = node['world']
 
-                for w2 in self.visw[branch].get(w1, EMPTY_SET):
-                    if (node, w2) in self.apnw[branch]:
+                for w2 in self[WorldIndex][branch].get(w1, EMPTY_SET):
+                    if (node, w2) in self[NodesWorlds][branch]:
                         continue
                     add = {'sentence': si, 'world': w2}
                     if not branch.has(add):
-                        anode = self.visw.nodes[branch][w1, w2]
+                        anode = self[WorldIndex].nodes[branch][w1, w2]
                         targets.append({
                             'sentence' : si,
                             'world'    : w2,
@@ -1330,11 +1321,11 @@ class TabRules(object):
             # ``_get_node_targets()``
 
             # Check for closure
-            if self.adz.closure_score(target) == 1:
+            if self[AdzHelper].closure_score(target) == 1:
                 return 1
 
             # Not applied to yet
-            apcount = self.apnc[target.branch].get(target.node, 0)
+            apcount = self[NodeCount][target.branch].get(target.node, 0)
             if apcount == 0:
                 return 1
 
@@ -1346,7 +1337,7 @@ class TabRules(object):
             if self.score_candidate(target) > 0:
                 return 1
 
-            return -1 * self.apnc[target.branch].get(target.node, 0)
+            return -1 * self[NodeCount][target.branch].get(target.node, 0)
 
         def example_nodes(self):
             s = Operated.first(self.operator)
@@ -1375,12 +1366,12 @@ class TabRules(object):
         ticking   = False
         predicate = Identity
 
-        Helpers = (PredicatedNodesTracker,)
+        Helpers = PredNodes,
 
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch) -> list[Target]:
-            pnodes = self.pn[branch]
+            pnodes = self[PredNodes][branch]
             pa, pb = node['sentence']
             if pa == pb:
                 # Substituting a param for itself would be silly.

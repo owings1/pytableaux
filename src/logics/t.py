@@ -28,7 +28,7 @@ class Meta(object):
 
 from lexicals import Atomic
 from proof.common import Access, Branch, Node
-from proof.helpers import VisibleWorldsIndex
+from proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from . import k as K
 
 class Model(K.Model):
@@ -65,8 +65,7 @@ class TabRules(object):
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
-        Helpers = (VisibleWorldsIndex,)
-        visw: VisibleWorldsIndex
+        Helpers = WorldIndex,
 
         ignore_ticked = False
         ticking = False
@@ -74,15 +73,15 @@ class TabRules(object):
         _defaults = {'is_rank_optim': False}
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            if not self.maxw.max_worlds_exceeded(branch):
+            if not self[MaxWorlds].max_worlds_exceeded(branch):
                 for w in node.worlds:
                     access = Access(w, w)
-                    if not self.visw.has(branch, access):
+                    if not self[WorldIndex].has(branch, access):
                         return {
                             'world': w,
                             'adds': ((access.todict(),),),
                         }
-            self.nf.release(node, branch)
+            self[FilterHelper].release(node, branch)
 
         def example_nodes(self):
             return ({'sentence': Atomic.first(), 'world': 0},)

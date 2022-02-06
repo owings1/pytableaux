@@ -26,7 +26,7 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 2
 
-from proof.helpers import UnserialWorldsTracker
+from proof.helpers import MaxWorlds, UnserialWorlds
 from proof.common import Access, Branch, Node
 from lexicals import Atomic
 from . import k as K
@@ -77,13 +77,12 @@ class TabRules:
         no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
-        Helpers = (UnserialWorldsTracker,)
-        ust: UnserialWorldsTracker
+        Helpers = UnserialWorlds,
         ignore_ticked = False
         ticking = False
 
         def _get_node_targets(self, node: Node, branch: Branch) -> Generator:
-            unserials = self.ust[branch]
+            unserials = self[UnserialWorlds][branch]
             if not unserials:
                 return
             if not self.__should_apply(branch):
@@ -114,7 +113,7 @@ class TabRules:
                 return False
 
             # As above, this is unnecessary
-            if self.maxw.max_worlds_exceeded(branch):
+            if self[MaxWorlds].max_worlds_exceeded(branch):
                 return False
 
             return True
@@ -185,4 +184,3 @@ class TabRules:
             Serial,
         ),
     )
-TableauxRules = TabRules

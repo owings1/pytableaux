@@ -180,5 +180,3 @@ class TabRules(object):
     )
     for cls in chain(closure_rules, chain.from_iterable(rule_groups)):
         cls.modal = False
-
-TableauxRules = TabRules

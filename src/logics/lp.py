@@ -28,6 +28,7 @@ class Meta:
 
 from lexicals import Atomic, Sentence
 from proof.common import Branch, Node
+from proof.helpers import NodeTarget
 from . import fde as FDE
 
 class Model(FDE.Model):
@@ -73,7 +74,7 @@ class TabRules:
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
-            return self.ntch.get(branch)
+            return self[NodeTarget].get(branch)
             # return self.ntch.cached_target(branch)
 
         def example_nodes(self):
