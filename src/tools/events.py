@@ -5,7 +5,7 @@ __all__ = 'EventEmitter', 'EventsListeners',
 from errors import instcheck
 from tools.abcs import Abc, Copyable, abcf, F
 from tools.decorators import raisr, wraps
-from tools.linked import linqset, MutableLinkSequenceSet as MutLinkSeqSet
+from tools.linked import linqset
 from tools.mappings import (
     dmap #, ItemsIterator, MutableMappingApi
 )
