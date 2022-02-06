@@ -567,7 +567,7 @@ class Branch(SequenceApi[Node], EventEmitter):
                 self.__nextworld = maxworld + 1
             self.__worlds.update(node.worlds)
 
-        # Add to index *before* after_node_add callback
+        # Add to index *before* after_node_add event
         self.__add_to_index(node)
         self.emit(BranchEvent.AFTER_NODE_ADD, node, self)
         return self

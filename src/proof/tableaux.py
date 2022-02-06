@@ -230,18 +230,18 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     Helpers: Sequence[tuple[str, type]] = ()
     Timers: Sequence[str] = ()
-    HelperRuleEventMethods: Sequence[tuple[RuleEvent, str]] = (
-        (RuleEvent.AFTER_APPLY  , 'after_apply'),
-        (RuleEvent.BEFORE_APPLY , 'before_apply'),
-    )
-    HelperTabEventMethods: Sequence[tuple[TabEvent, str]] = (
-        (TabEvent.AFTER_BRANCH_ADD   , 'after_branch_add'),
-        (TabEvent.AFTER_BRANCH_CLOSE , 'after_branch_close'),
-        (TabEvent.AFTER_NODE_ADD     , 'after_node_add'),
-        (TabEvent.AFTER_NODE_TICK    , 'after_node_tick'),
-        (TabEvent.AFTER_TRUNK_BUILD  , 'after_trunk_build'),
-        (TabEvent.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
-    )
+    # HelperRuleEventMethods: Sequence[tuple[RuleEvent, str]] = (
+        # (RuleEvent.AFTER_APPLY  , 'after_apply'),
+        # (RuleEvent.BEFORE_APPLY , 'before_apply'),
+    # )
+    # HelperTabEventMethods: Sequence[tuple[TabEvent, str]] = (
+        # (TabEvent.AFTER_BRANCH_ADD   , 'after_branch_add'),
+        # (TabEvent.AFTER_BRANCH_CLOSE , 'after_branch_close'),
+        # (TabEvent.AFTER_NODE_ADD     , 'after_node_add'),
+        # (TabEvent.AFTER_NODE_TICK    , 'after_node_tick'),
+        # (TabEvent.AFTER_TRUNK_BUILD  , 'after_trunk_build'),
+        # (TabEvent.BEFORE_TRUNK_BUILD , 'before_trunk_build'),
+    # )
     branch_level: int = 1
     _defaults = dict(is_rank_optim = True)
 
@@ -337,13 +337,13 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         self.helpers[cls] = inst
         if attr != None:
             setattr(self, attr, inst)
-        for event, meth in self.HelperRuleEventMethods:
-            if hasattr(inst, meth):
-                # raise ValueError(inst, meth)
-                self.on(event, getattr(inst, meth))
-        for event, meth in self.HelperTabEventMethods:
-            if hasattr(inst, meth):
-                self.tableau.on(event, getattr(inst, meth))
+        # for event, meth in self.HelperRuleEventMethods:
+        #     if hasattr(inst, meth):
+        #         # raise ValueError(inst, meth)
+        #         self.on(event, getattr(inst, meth))
+        # for event, meth in self.HelperTabEventMethods:
+        #     if hasattr(inst, meth):
+        #         self.tableau.on(event, getattr(inst, meth))
         return info
 
     def __repr__(self):
@@ -1054,8 +1054,6 @@ class Tableau(Sequence[Branch], EventEmitter):
     def branch(self, /, parent: Branch = None):
         """
         Create a new branch on the tableau, as a copy of ``parent``, if given.
-        This calls the ``after_branch_add()`` callback on all the rules of the
-        tableau.
 
         :param Branch parent: The parent branch, if any.
         :return: The new branch.

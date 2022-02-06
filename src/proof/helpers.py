@@ -631,6 +631,11 @@ class MaxConstantsTracker:
         #: Track the constants at each world.
         #: :type: dict{int: set(Constant)}
         self.world_constants = {}
+        rule.tableau.on({
+            TabEvent.AFTER_BRANCH_ADD  : self.__after_branch_add,
+            TabEvent.AFTER_TRUNK_BUILD : self.__after_trunk_build,
+            TabEvent.AFTER_NODE_ADD    : self.__after_node_add,
+        })
 
     def get_max_constants(self, branch: Branch) -> int:
         """
@@ -699,9 +704,9 @@ class MaxConstantsTracker:
         info = '{0}:MaxConstants({1})'.format(self.rule.name, str(self.get_max_constants(branch)))
         return {'is_flag': True, 'flag': 'quit', 'info': info}
 
-    # Helper implementation
+    # Events
 
-    def after_trunk_build(self, tableau: Tableau):
+    def __after_trunk_build(self, tableau: Tableau):
         for branch in tableau:
             origin = branch.origin
             # In most cases, we will have only one origin branch.
@@ -709,7 +714,7 @@ class MaxConstantsTracker:
                 return
             self.branch_max_constants[origin] = self._compute_max_constants(branch)
 
-    def after_branch_add(self, branch: Branch):
+    def __after_branch_add(self, branch: Branch):
         parent = branch.parent
         if parent != None and parent in self.world_constants:
             self.world_constants[branch] = {
@@ -719,7 +724,7 @@ class MaxConstantsTracker:
         else:
             self.world_constants[branch] = {}
 
-    def after_node_add(self, node: Node, branch: Branch):
+    def __after_node_add(self, node: Node, branch: Branch):
         s: Sentence = node.get('sentence')
         if s:
             world = node.get('world')
@@ -797,13 +802,14 @@ class MaxWorldsTracker:
 
     modal_operators = setf(BaseModel.modal_operators)
 
-    def __init__(self, rule, *args, **kw):
+    def __init__(self, rule: Rule, *args, **kw):
         self.rule = rule
         # Track the maximum number of worlds that should be on the branch
         # so we can halt on infinite branches.
         self.branch_max_worlds = {}
         # Cache the modal complexities
         self.modal_complexities = {}
+        rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self.__after_trunk_build)
 
     def get_max_worlds(self, branch: Branch):
         """
@@ -848,9 +854,9 @@ class MaxWorldsTracker:
         info = '{0}:MaxWorlds({1})'.format(self.rule.name, str(self.get_max_worlds(branch)))
         return {'is_flag': True, 'flag': 'quit', 'info': info}
 
-    # Helper implementation
+    # Events
 
-    def after_trunk_build(self, tableau: Tableau):
+    def __after_trunk_build(self, tableau: Tableau):
         for branch in tableau:
             origin = branch.origin
             # In most cases, we will have only one origin branch.
@@ -882,7 +888,7 @@ class EllipsisExampleHelper:
     mynode = {'ellipsis': True}
     closenodes = []
 
-    def __init__(self, rule: Rule, *args, **kw):
+    def __init__(self, rule: Rule):
         self.rule = rule
         self.applied: set[Branch] = set()
         self.isclosure = isinstance(rule, ClosingRule)
@@ -892,20 +898,27 @@ class EllipsisExampleHelper:
                 for n in reversed(rule.example_nodes())
             )
         self.istrunk = False
+        rule.tableau.on({
+            TabEvent.BEFORE_TRUNK_BUILD : self.__before_trunk_build,
+            TabEvent.AFTER_TRUNK_BUILD  : self.__after_trunk_build,
+            TabEvent.AFTER_BRANCH_ADD   : self.__after_branch_add,
+            TabEvent.AFTER_NODE_ADD     : self.__after_node_add,
+        })
+        rule.on(RuleEvent.BEFORE_APPLY, self.__before_apply)
 
-    def before_trunk_build(self, *_):
+    def __before_trunk_build(self, *_):
         self.istrunk = True
 
-    def after_trunk_build(self, *_):
+    def __after_trunk_build(self, *_):
         self.istrunk = False
 
-    def after_branch_add(self, branch: Branch):
+    def __after_branch_add(self, branch: Branch):
         if self.applied:
             return
         if len(self.closenodes) == 1:
             self.__addnode(branch)        
 
-    def after_node_add(self, node: Node, branch: Branch):
+    def __after_node_add(self, node: Node, branch: Branch):
         if self.applied:
             return
         if node.has_props(self.mynode) or node.is_closure:
@@ -917,7 +930,7 @@ class EllipsisExampleHelper:
             if len(self.closenodes) == 1:
                 self.__addnode(branch)
 
-    def before_apply(self, target: Target):
+    def __before_apply(self, target: Target):
         if self.applied:
             return
         if self.isclosure:#self.rule.is_closure:
