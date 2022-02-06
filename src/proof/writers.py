@@ -1,6 +1,6 @@
 from lexicals import LexWriter, Notation
 from tools.misc import cat
-from proof.tableaux import KEY, FLAG
+from proof.tableaux import TabStatKey, TabFlag
 from os import path
 from copy import deepcopy
 
@@ -110,8 +110,8 @@ class TemplateWriter(TableauWriter):
             'conclusion' : conclusion,
             'lw'         : self.lw,
             'opts'       : self.opts,
-            'KEY'        : KEY,
-            'FLAG'       : FLAG,
+            'TabStatKey' : TabStatKey,
+            'TabFlag'    : TabFlag,
         }
 
     def _write_tableau(self, tableau):

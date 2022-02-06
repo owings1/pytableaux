@@ -71,7 +71,7 @@ class TabEvent(AbcEnum):
     AFTER_TRUNK_BUILD   = enum.auto()
     BEFORE_TRUNK_BUILD  = enum.auto()
 
-class KEY(AbcEnum):
+class TabStatKey(AbcEnum):
     FLAGS       = enum.auto()
     STEP_ADDED  = enum.auto()
     STEP_TICKED = enum.auto()
@@ -80,7 +80,7 @@ class KEY(AbcEnum):
     PARENT      = enum.auto()
     NODES       = enum.auto()
 
-class FLAG(FlagEnum):
+class TabFlag(FlagEnum):
     NONE   = 0
     TICKED = 1
     CLOSED = 2
@@ -88,7 +88,8 @@ class FLAG(FlagEnum):
     FINISHED    = 8
     TIMED_OUT   = 16
     TRUNK_BUILT = 32
-
+# KEY = TabStatKey
+# FLAG = TabFlag
 
 class Node(MappingApi):
     'A tableau node.'

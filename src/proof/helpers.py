@@ -40,7 +40,12 @@ from errors import (
     instcheck,
     Emsg,
 )
-from tools.abcs import Abc, abcf, T, T1, T2, KT, VT, P, Self
+from tools.abcs import (
+    Abc, abcf, T,
+    # T1, T2,
+    KT, VT, P,
+    # Self,
+)
 from tools.decorators import abstract, final, overload, static
 from tools.mappings import MapAttrCover, dmap
 from tools.sets import EMPTY_SET, setm, setf
@@ -64,8 +69,8 @@ from proof.tableaux import (
 )
 
 from copy import copy
-from functools import partial
-from itertools import chain, filterfalse
+# from functools import partial
+# from itertools import chain, filterfalse
 from typing import (
     Any,
     Callable,
@@ -140,7 +145,7 @@ class BranchCache(dmap[Branch, T]):
 
     # ??
     def __hash__(self):
-        return hash(id(self))
+        return id(self)
 
     def __repr__(self):
         from tools.misc import orepr
@@ -315,9 +320,8 @@ class AppliedNodesWorlds(BranchCache[setm[tuple[Node, int]]]):
 
 @final
 class UnserialWorldsTracker(BranchCache[setm[int]]):
-    """
-    Track the unserial worlds on the branch.
-    """
+    "Track the unserial worlds on the branch."
+
     _valuetype = setm
     _attr = 'ust'
 
@@ -336,9 +340,8 @@ class UnserialWorldsTracker(BranchCache[setm[int]]):
 
 @final
 class VisibleWorldsIndex(BranchDictCache[int, setm[int]]):
-    """
-    Index the visible worlds for each world on the branch.
-    """
+    'Index the visible worlds for each world on the branch.'
+
     __slots__ = 'nodes',
     _attr = 'visw'
 
@@ -363,11 +366,7 @@ class VisibleWorldsIndex(BranchDictCache[int, setm[int]]):
         return inst
 
     def has(self, branch: Branch, access: Access) -> bool:
-        """Whether w1 sees w2 on the given branch.
-
-        :param Branch branch:
-        :param Access access:
-        """
+        'Whether w1 sees w2 on the given branch.'
         return access[1] in self[branch].get(access[0], EMPTY_SET)
 
     def intransitives(self, branch: Branch, w1: int, w2: int) -> set[int]:
@@ -836,9 +835,10 @@ class MaxWorldsTracker:
         modal operators.
         """
         if sentence not in self.modal_complexities:
-            self.modal_complexities[sentence] = len([
-                o for o in sentence.operators if o in self.modal_operators
-            ])
+            self.modal_complexities[sentence] = len(
+                tuple(filter(self.modal_operators.__contains__, sentence.operators))
+                # [o for o in sentence.operators if o in self.modal_operators]
+            )
         return self.modal_complexities[sentence]
 
     def quit_flag(self, branch: Branch):

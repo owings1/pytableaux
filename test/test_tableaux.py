@@ -8,7 +8,7 @@ from tools.misc import get_logic
 from lexicals import Atomic, Constant, Predicated, Quantifier as Quant
 
 from proof.tableaux import (
-    Rule, TableauxSystem as TabSys, Tableau, KEY, FLAG,
+    Rule, TableauxSystem as TabSys, Tableau, TabStatKey, TabFlag,
     ClosingRule, RuleT
 )
 from proof.helpers import AdzHelper, FilterHelper, MaxConstantsTracker
@@ -122,8 +122,8 @@ class TestTableau(BaseSuite):
             {sen: s} for s in self.pp('NNa', 'Kab', 'Aab')
         ])
         step = tab.step()
-        stat = tab.stat(b, step.target.node, KEY.FLAGS)
-        assert FLAG.TICKED in stat
+        stat = tab.stat(b, step.target.node, TabStatKey.FLAGS)
+        assert TabFlag.TICKED in stat
 
 class TestBranch:
 

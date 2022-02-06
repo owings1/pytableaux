@@ -161,10 +161,6 @@ class MutableSequenceSet(SequenceSet[VT], MutableSequenceApi[VT], MutableSetApi[
         # Must re-implement MutableSequence method.
         raise NotImplementedError
 
-SeqSetT = TypeVar('SeqSetT', bound = SequenceSet)
-
-# SeqSetHookT = TypeVar('SeqSetHookT', bound = SequenceSetHooks)
-MutSeqSetT  = TypeVar('MutSeqSetT',  bound = MutableSequenceSet)
 
 class qset(MutableSequenceSet[VT]):
     'MutableSequenceSet implementation backed by built-in set and list.'
@@ -364,6 +360,11 @@ class qset(MutableSequenceSet[VT]):
         # hook.done
         done is not None and done(self, arriving, leaving)
 
+
+SeqSetT = TypeVar('SeqSetT', bound = SequenceSet)
+
+# SeqSetHookT = TypeVar('SeqSetHookT', bound = SequenceSetHooks)
+# MutSeqSetT  = TypeVar('MutSeqSetT',  bound = MutableSequenceSet)
 
 del(
     abstract, overload, final,
