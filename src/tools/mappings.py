@@ -4,7 +4,7 @@ __all__ = (
     'MappingApi',
     'MutableMappingApi',
     'MapCover',
-    'MapAttrCover',
+    'MapProxy',
     'dmap',
     'defaultdmap',
     'dmapattr',
@@ -21,7 +21,7 @@ from tools.abcs import (
 from tools.callables import preds, gets
 from tools.decorators import (
     abstract, static, final, overload,
-    fixed, membr, operd, wraps,
+    fixed, membr, wraps,
 )
 
 from collections.abc import (
@@ -279,10 +279,6 @@ class MapCover(MappingApi[KT, VT]):
     def _from_iterable(cls, it):
         return cls._from_mapping(dict(it))
 
-class MapAttrCover(MapCover[KT, VT], KeyGetAttr[VT]):
-    'MapCover + KeyGetAttr'
-    __slots__ = EMPTY
-    # TODO: this is slow
 
 class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
 

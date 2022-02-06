@@ -5,7 +5,7 @@ from errors import Emsg, instcheck
 from tools.abcs import (
     AbcMeta, AbcEnum, FlagEnum, MapProxy,
     overload, static,
-    T
+    T, T_co,
 )
 from tools.callables import preds
 from tools.hybrids import qsetf
@@ -15,8 +15,10 @@ from tools.timing import StopWatch
 import enum
 from itertools import chain
 from typing import (
+    Generic,
     Mapping,
     NamedTuple,
+    TypeVar,
 )
 
 class BranchEvent(AbcEnum):

@@ -11,8 +11,9 @@ from proof.tableaux import (
     Rule, TableauxSystem as TabSys, Tableau,
     ClosingRule, RuleT
 )
+from proof.filters import Filters
 from proof.helpers import AdzHelper, FilterHelper, MaxConsts
-from proof.common import Filters, Branch, Node
+from proof.common import Branch, Node
 from proof.types import TabEvent, TabStatKey, TabFlag
 import examples
 
@@ -410,7 +411,9 @@ class Test_K_DefaultNodeFilterRule(BaseSuite):
         sgen.close()
 
     def case1(self, n = 10, **kw):
-        rule, tab = self.rule_tab(DefaultKRule, **kw)
+        class Impl(DefaultKRule):
+            def _get_node_targets(self, node, branch): pass
+        rule, tab = self.rule_tab(Impl, **kw)
         tab.branch().extend(self.ngen(n))
         return (rule, tab)
 

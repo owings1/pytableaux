@@ -17,14 +17,15 @@
 # ------------------
 #
 # pytableaux - Web App Configuration
-from tools.abcs import T
-from tools.decorators import static, overload, rund
+from tools.abcs import AbcEnum
+from tools.decorators import closure
 from tools.misc import get_logic
 from parsers import CharTable
 from lexicals import LexType, Notation, LexWriter, RenderSet
 import examples
 
-import enum, importlib, logging, os, os.path
+import importlib, logging, os, os.path
+from os.path import join as pjoin
 import prometheus_client as prom
 from cherrypy._cpdispatch import Dispatcher
 from jinja2 import Environment, FileSystemLoader
@@ -161,7 +162,8 @@ nups = dict()
 
 parser_tables = {}
 example_arguments = {}
-@rund
+
+@closure
 def _():
     
     for package in available:
@@ -217,7 +219,7 @@ logger = init_logger(logging.Logger('APP'))
 
 ## Options
 
-def getoptval(name):
+def _getoptval(name):
     defn = optdefs[name]
     evtype = type(defn['envvar'])
     if evtype == str:
@@ -252,7 +254,7 @@ def getoptval(name):
     return defn['default']
 
 opts = {
-    name: getoptval(name) for name in optdefs.keys()
+    name: _getoptval(name) for name in optdefs.keys()
 }
 
 # Set loglevel from opts
@@ -268,7 +270,7 @@ else:
 
 ## Prometheus Metrics
 
-class Metric(enum.Enum):
+class Metric(AbcEnum):
 
     _value_: prom.metrics.MetricWrapperBase
 
@@ -315,10 +317,11 @@ cp_global_config = {
 
 #  Path info
 
-app_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+
+app_dir = pjoin(os.path.dirname(os.path.abspath(__file__)), '..')
 
 def apath(*args):
-    return os.path.join(app_dir, *args)
+    return pjoin(app_dir, *args)
 
 consts = {
     'favicon_file'   : apath('www/static/img/favicon-60x60.png'),
@@ -390,3 +393,16 @@ lexwriters = {
     }
     for notn in Notation 
 }
+
+del(
+    _,
+    apath,
+    pjoin,
+    _getoptval,
+    AbcEnum,
+    closure,
+
+    Environment,
+    FileSystemLoader,
+
+)

@@ -38,6 +38,7 @@ __all__ = (
 )
 from errors import (
     instcheck,
+    subclscheck,
     Emsg,
 )
 from tools.abcs import (
@@ -46,8 +47,9 @@ from tools.abcs import (
     KT, VT, P,
     # Self,
 )
-from tools.decorators import abstract, final, overload, static
-from tools.mappings import MapAttrCover, dmap
+from tools.callables import cchain
+from tools.decorators import abstract, final, overload, static, wraps
+from tools.mappings import MapProxy, dmap
 from tools.sets import EMPTY_SET, setm, setf
 
 from lexicals import Constant, Sentence, Predicated
@@ -55,11 +57,10 @@ from models import BaseModel
 from proof.common import (
     Access,
     Branch,
-    Comparer,
     Node,
-    NodeFilter,
     Target,
 )
+from proof.filters import NodeFilter, NodeFilters
 from proof.tableaux import (
     Rule,
     ClosingRule,
@@ -80,6 +81,7 @@ from typing import (
     Mapping,
     Sequence,
     TypeVar,
+    ValuesView,
 )
 
 class AdzHelper:
@@ -206,8 +208,8 @@ class FilterNodeCache(BranchCache[set[Node]]):
         super().__init__(rule)
         self.ignore_ticked = getattr(rule, 'ignore_ticked', None)
         rule.tableau.on({
-            TabEvent.AFTER_NODE_ADD: self.__after_node_add,
-            TabEvent.AFTER_NODE_TICK: self.__after_node_tick,
+            TabEvent.AFTER_NODE_ADD  : self.__after_node_add,
+            TabEvent.AFTER_NODE_TICK : self.__after_node_tick,
         })
 
     def __after_node_add(self, node: Node, branch: Branch):
@@ -378,6 +380,7 @@ class PredNodes(FilterNodeCache):
     def __call__(self, node: Node, _):
         return isinstance(node.get('sentence'), Predicated)
 
+
 class FilterHelper(FilterNodeCache):
     """
     Set configurable and chainable filters in ``NodeFilters``
@@ -385,26 +388,25 @@ class FilterHelper(FilterNodeCache):
     """
     clsattr_node = 'NodeFilters'
 
-    __slots__ = 'filters', 'callcount', '__fmap', '__to_discard'
+    __slots__ = 'filters', 'callcount',  '__to_discard', 'predicate',
 
-    filters: MapAttrCover[NodeFilter]
+    filters: NodeFiltersTypeInstMap
     callcount: int
 
-    __fmap: dmap[str, NodeFilter]
     __to_discard: setm[tuple[Branch, Node]]
 
     def __init__(self, rule: Rule):
         super().__init__(rule)
         self.__to_discard = setm()
-        self.__fmap = dmap()
-        self.filters = MapAttrCover(self.__fmap)
+        fmap = dict()
+        self.filters = MapProxy(fmap)
         self.callcount = 0
-        for item in getattr(rule, self.clsattr_node, EMPTY_SET):
-            if isinstance(item, type):
-                self._add_filter(item, None)
-            else:
-                name, cls = item
-                self._add_filter(cls, name)
+        for fclass in getattr(rule, self.clsattr_node, EMPTY_SET):
+            subclscheck(instcheck(fclass, type), NodeFilter)
+            if fclass in fmap:
+                raise  Emsg.DuplicateKey(fclass)
+            fmap[fclass] = fclass(self.rule)
+        self.predicate = cchain.forall_collection(self.filters.values())
 
     def copy(self, *args, **kw):
         inst = super().copy(*args, **kw)
@@ -412,8 +414,8 @@ class FilterHelper(FilterNodeCache):
             inst.__to_discard.update(self.__to_discard)
         except AttributeError:
             inst.__to_discard = self.__to_discard.copy()
-            inst.__fmap = self.__fmap.copy()
-            inst.filters = MapAttrCover(self.__fmap)
+            inst.filters = MapProxy(dict(self.filters))
+            inst.predicate = cchain.forall_collection(inst.filters.values())
         inst.callcount = self.callcount
         return inst
 
@@ -421,10 +423,11 @@ class FilterHelper(FilterNodeCache):
         self.callcount += 1
         if self.ignore_ticked and branch.is_ticked(node):
             return False
-        for name in self.filters:
-            if not self.filters[name](node):
-                return False
-        return True
+        return self.predicate(node)
+        # for filt in self.filters.values():
+        #     if not filt(node):
+        #         return False
+        # return True
 
     @overload
     def __call__(self, node: Node, branch: Branch) -> bool: ...
@@ -432,15 +435,10 @@ class FilterHelper(FilterNodeCache):
 
     def example_node(self):
         node = {}
-        for filt in self.__fmap.values():
-            if callable(getattr(filt, 'example_node', None)):
-                n = filt.example_node()
-                if n:
-                    node.update(n)
-            elif callable(getattr(filt, 'example', None)):
-                ret = filt.example()
-                if isinstance(ret, dict):
-                    node.update(ret)
+        for filt in self.filters.values():
+            n = filt.example_node()
+            if n:
+                node.update(n)
         return node
 
     def release(self, node: Node, branch: Branch):
@@ -454,19 +452,9 @@ class FilterHelper(FilterNodeCache):
                 pass
         self.__to_discard.clear()
 
-    def _add_filter(self, cls: type[Comparer], name: str = None):
-        """
-        Instantiate a filter class from the NodeFilters config.
-        """
-        if name is None:
-            name = cls.__name__.lower()
-        if name in self.__fmap:
-            raise Emsg.DuplicateKey(name)
-        self.__fmap[instcheck(name, str)] = instcheck(cls, type)(self.rule)
-
     def _reprdict(self) -> dict:
         return super()._reprdict() | {
-            'filters': '(%s) %s' % (len(self.filters), self.__fmap),
+            'filters': '(%s) %s' % (len(self.filters), self.filters),
         }
 
     @classmethod
@@ -483,12 +471,24 @@ class FilterHelper(FilterNodeCache):
         Returns a flat list of targets.
         """
         fiter_targets = _targets_from_nodes_iter(fget_node_targets)
+        @wraps(fiter_targets)
         def get_targets_filtered(rule: Rule, branch: Branch):
             helper = rule.helpers[cls]
             helper.gc()
             nodes = helper[branch]
             return tuple(fiter_targets(rule, nodes, branch))
         return get_targets_filtered
+
+# ------
+NodeFiltT = TypeVar('NodeFiltT', bound = NodeFilter)
+class NodeFiltersTypeInstMap(Mapping):
+    @overload
+    def __getitem__(self, key: type[NodeFiltT]) -> NodeFiltT: ...
+    @overload
+    def values(self) -> ValuesView[NodeFiltT]: ...
+    @overload
+    def __iter__(self) -> Iterator[type[NodeFiltT]]: ...
+# ------
 
 @static
 class Delegates(Abc):
@@ -523,28 +523,33 @@ class Delegates(Abc):
 
     @static
     class FilterHelper:
+        pass
 
-        class Sentence(Rule):
-            """
-            Delegates ``sentence()`` to ``FilterHelper.sentence()``.
-            """
-            Helpers = FilterHelper,
+        # class Sentence(Rule):
+        #     """
+        #     Delegates ``sentence()`` to ``FilterHelper.sentence()``.
+        #     """
+        #     Helpers = FilterHelper,
 
-            __slots__ = EMPTY_SET
+        #     __slots__ = '__fget',
 
-            def sentence(self, node: Node, _ = None, /) -> Sentence:
-                return self[FilterHelper].filters['sentence'].get(node)
+        #     def __init__(self, *args, **kw):
+        #         super().__init__(*args, **kw)
+        #         self.__fget = self[FilterHelper].filters[NodeFilters.Sentence].get
 
-        class ExampleNodes(Rule):
-            """
-            Delegates ``example_nodes()`` to ``FilterHelper.example_nodes()``.
-            """
-            Helpers = FilterHelper,
+        #     def sentence(self, node: Node, _ = None, /) -> Sentence:
+        #         return self[FilterHelper].filters[NodeFilters.Sentence].get
 
-            __slots__ = EMPTY_SET
+        # class ExampleNodes(Rule):
+        #     """
+        #     Delegates ``example_nodes()`` to ``FilterHelper.example_nodes()``.
+        #     """
+        #     Helpers = FilterHelper,
 
-            def example_nodes(self):
-                return self[FilterHelper].example_node(),
+        #     __slots__ = EMPTY_SET
+
+        #     def example_nodes(self):
+        #         return self[FilterHelper].example_node(),
 
     @abcf.after
     def populate(cls):
@@ -920,6 +925,7 @@ class EllipsisExampleHelper:
         branch.add(self.mynode)
 
 def _targets_from_nodes_iter(fget_node_targets: Callable[P, Any]) -> Callable[P, Iterator[Target]]:
+    @wraps(fget_node_targets)
     def targets_iter(rule: Rule, nodes: Iterable[Node], branch: Branch):
         for node in nodes:
             results = fget_node_targets(rule, node, branch)

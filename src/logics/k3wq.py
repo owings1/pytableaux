@@ -27,7 +27,7 @@ class Meta(object):
     category_display_order = 40
 
 from proof.common import Branch, Node, Target
-from lexicals import Quantifier, Quantified
+from lexicals import Quantifier, Quantified, Operated
 from . import fde as FDE, k3w as K3W, k3 as K3
 
 class Model(K3W.Model):
@@ -62,16 +62,16 @@ class Model(K3W.Model):
         3: 'N',
     }
 
-    def value_of_operated(self, sentence, **kw):
+    def value_of_operated(self, s: Operated, /, **kw):
         """
         The value of a sentence with a truth-functional operator is determined by
         the values of its operands according to the following tables.
 
         //truth_tables//k3wq//
         """
-        return super().value_of_operated(sentence, **kw)
+        return super().value_of_operated(s, **kw)
 
-    def value_of_universal(self, sentence, **kw):
+    def value_of_universal(self, s: Quantified, /, **kw):
         """
         A universal sentence is interpreted in terms of `generalized conjunction`.
         If we order the values least to greatest as :m:`N`, :m:`F`, :m:`T`, then we
@@ -79,15 +79,15 @@ class Model(K3W.Model):
         the set of values for the substitution of each constant in the model for
         the variable.
         """
-        v = sentence.variable
-        si = sentence.sentence
+        v = s.variable
+        si = s.sentence
         values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
         mc_values = {self.mc_nvals[value] for value in values}
         mc_value = min(mc_values)
         value = self.mc_cvals[mc_value]
         return value
 
-    def value_of_existential(self, sentence, **kw):
+    def value_of_existential(self, s: Quantified, **kw):
         """
         An existential sentence is interpreted in terms of `generalized disjunction`.
         If we order the values least to greatest as :m:`N`, :m:`T`, :m:`F`, then we
@@ -95,8 +95,8 @@ class Model(K3W.Model):
         the set of values for the substitution of each constant in the model for
         the variable.
         """
-        v = sentence.variable
-        si = sentence.sentence
+        v = s.variable
+        si = s.sentence
         values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
         md_values = {self.md_nvals[value] for value in values}
         md_value = max(md_values)

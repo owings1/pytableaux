@@ -473,7 +473,7 @@ class TabRules(SequenceApi[Rule]):
     def _checkname(self, name: str, inst, /):
         '''Validate a new rule or group name before it is added.'''
         if (name in self._groupindex or name in self._ruleindex):
-            raise AttributeError("Duplicate attribute '%s'" % name)
+            raise Emsg.DuplicateKey(name)
 
     def __repr__(self):
         return orepr(self, logic = self._tab.logic,

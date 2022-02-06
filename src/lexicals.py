@@ -39,8 +39,8 @@ from tools.abcs import (
     T
 )
 from tools.decorators import (
-    abstract, final, overload, static,
-    fixed, lazy, membr, raisr, rund, wraps, NoSetAttr
+    abstract, closure, final, overload, static,
+    fixed, lazy, membr, raisr, wraps, NoSetAttr
 )
 from tools.hybrids   import qsetf, qset
 from tools.mappings  import dmap, MapCover, MapProxy
@@ -1894,7 +1894,7 @@ class Parser(Bases.Abc):
             title = title,
         )
 
-@rund
+@closure
 def _():
 
     data = {
@@ -1949,7 +1949,7 @@ def _():
         html    = data[Notation.polish]['ascii'] | dict(
             name = 'polish.html',
             encoding = 'html',
-            formats = {'subscript': '<sub>{0}</sub>'}
+            formats = dict(subscript = '<sub>{0}</sub>')
         ),
     )
 
@@ -1958,8 +1958,8 @@ def _():
         return ''.join(chr(0x2080 + int(d)) for d in str(sub))
 
     data.update({
-        Notation.standard: {
-            'ascii': {
+        Notation.standard: dict(
+            ascii = {
                 'name'     : 'standard.ascii',
                 'notation' : Notation.standard,
                 'encoding' : 'ascii',
@@ -2001,7 +2001,7 @@ def _():
                     },
                 },
             },
-            'unicode': {
+            unicode = {
                 'name'    : 'standard.unicode',
                 'notation': Notation.standard,
                 'encoding': 'utf8',
@@ -2045,14 +2045,14 @@ def _():
                     },
                 },
             },
-            'html': {
-                'name'    : 'standard.html',
-                'notation': Notation.standard,
-                'encoding': 'html',
-                'formats' : {
-                    'subscript': '<sub>{0}</sub>',
-                },
-                'strings': {
+            html = dict(
+                name     = 'standard.html',
+                notation = Notation.standard,
+                encoding = 'html',
+                formats  = dict(
+                    subscript = '<sub>{0}</sub>',
+                ),
+                strings = {
                     LexType.Atomic   : tuple('ABCDE'),
                     LexType.Operator : {
                         # 'Assertion'              : '&deg;'   ,
@@ -2087,15 +2087,15 @@ def _():
                         'nonconseq': '⊬',
                     },
                 },
-            }
-        }
+            )
+        )
     })
     RenderSet._initcache(Notation, data)
 
 
 ##############################################################
 
-@rund
+@closure
 def _():
     for cls in (Bases.Enum, Bases.LexicalItem, Predicates, Argument, Bases.Lexical):
         cls._readonly = True
@@ -2103,8 +2103,8 @@ def _():
 
 del(
     _,
-    abstract, overload, final, static,
-    NoSetAttr, fixed, lazy, membr, raisr, rund, wraps,
+    abstract, closure, overload, final, static,
+    NoSetAttr, fixed, lazy, membr, raisr, wraps,
     nosetattr,
     abcf,
 )

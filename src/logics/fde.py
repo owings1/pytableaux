@@ -41,7 +41,8 @@ from proof.tableaux import (
     Rule,
     ClosingRule,
 )
-from proof.common import Branch, Node, NodeFilters, Target
+from proof.common import Branch, Node, Target
+from proof.filters import NodeFilters
 from proof.helpers import (
     AdzHelper, NodeConsts, NodeCount,
     QuitFlag, FilterHelper, MaxConsts,
@@ -553,8 +554,10 @@ class ClosureRule(ClosingRule):
     __slots__ = EMPTY_SET
     Helpers = NodeTarget,
 
-class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
+class DefaultRule(Rule):
     __slots__ = EMPTY_SET
+
+    Helpers = FilterHelper,
 
     ignore_ticked = True
 
@@ -571,15 +574,39 @@ class DefaultRule(FilterHelper.Sentence, FilterHelper.ExampleNodes, Rule):
     # NodeFilters.Designation
     designation: bool = None
 
-class DefaultNodeRule(DefaultRule, AdzHelper.ClosureScore, AdzHelper.Apply):
+    def example_nodes(self):
+        'Delegates to (FilterHelper.example_node(),)'
+        return self[FilterHelper].example_node(),
+
+    def sentence(self, node: Node, _ = None, /) -> Sentence:
+        'Delegates to NodeFilters.Sentence of FilterHelper.'
+        return self[FilterHelper].filters[NodeFilters.Sentence].get(node)
+
+class DefaultNodeRule(DefaultRule):
     __slots__ = EMPTY_SET
+
+    Helpers = AdzHelper,
+
+    #: (AdzHelper) Whether the target node should be ticked after application.
+    ticking: bool = True
+
+    def _apply(self, target: Target):
+        'Delegates to AdzHelper._apply().'
+        self[AdzHelper]._apply(target)
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
+        '''Wrapped by @FilterHelper.node_targets and delegates to abstract method
+        _get_node_targets(),'''
         return self._get_node_targets(node, branch)
 
     @abstract
-    def _get_node_targets(self, node: Node, branch: Branch): ...
+    def _get_node_targets(self, node: Node, branch: Branch):
+        raise NotImplementedError
+
+    def score_candidate(self, target: Target):
+        'Uses to AdzHelper.closure_score() to score the candidate target.'
+        return self[AdzHelper].closure_score(target)
 
 class QuantifierSkinnyRule(DefaultRule, AdzHelper.Apply):
     __slots__ = EMPTY_SET
@@ -673,7 +700,11 @@ class ConjunctionReducingRule(DefaultNodeRule):
         if self.negated:
             s = s.negate()
         d = self.designation
-        return {'adds': ((sd(s, d),),),}
+        return dict(
+            adds = (
+                ( sd(s, d), ),
+            ),
+        )
 
 @static
 class TabRules:
@@ -706,7 +737,6 @@ class TabRules:
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
             return self[NodeTarget].get(branch)
-            # return self.ntch.cached_target(branch)
 
         def example_nodes(self):
             s = Atomic.first()
@@ -727,6 +757,8 @@ class TabRules:
         From an unticked designated negated negation node *n* on a branch *b*, add a designated
         node to *b* with the double-negatum of *n*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         negated     = True
         operator    = Oper.Negation
@@ -745,6 +777,8 @@ class TabRules:
         From an unticked undesignated negated negation node *n* on a branch *b*, add an
         undesignated node to *b* with the double-negatum of *n*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         negated     = True
 
@@ -753,6 +787,8 @@ class TabRules:
         From an unticked, designated, assertion node *n* on a branch *b*, add a designated
         node to *b* with the operand of *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         operator    = Oper.Assertion
         branch_level = 1
@@ -770,6 +806,8 @@ class TabRules:
         From an unticked, undesignated, assertion node *n* on a branch *b*, add an undesignated
         node to *b* with the operand of *n*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
 
     class AssertionNegatedDesignated(DefaultNodeRule):
@@ -777,6 +815,8 @@ class TabRules:
         From an unticked, designated, negated assertion node *n* on branch *b*, add a designated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         negated     = True
         operator    = Oper.Assertion
@@ -795,6 +835,8 @@ class TabRules:
         From an unticked, undesignated, negated assertion node *n* on branch *b*, add an undesignated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
 
     class ConjunctionDesignated(DefaultNodeRule):
@@ -802,6 +844,8 @@ class TabRules:
         From an unticked designated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add a designated node with *c* to *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         operator    = Oper.Conjunction
         branch_level = 1
@@ -819,6 +863,8 @@ class TabRules:
         *c*, make a new branch *b'* from *b* and add a designated node with the negation of *c* to *b'*,
         then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         negated     = True
         operator    = Oper.Conjunction
@@ -842,6 +888,8 @@ class TabRules:
         *c*, make a new branch *b'* from *b* and add an undesignated node with *c* to *b'*,
         then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         operator    = Oper.Conjunction
         branch_level = 2
@@ -863,6 +911,8 @@ class TabRules:
         From an unticked undesignated negated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add an undesignated node with the negation of *c* to *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         negated     = True
         operator    = Oper.Conjunction
@@ -888,6 +938,8 @@ class TabRules:
         *d*, make a new branch *b'* from *b* and add a designated node with *d* to *b'*,
         then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         operator    = Oper.Disjunction
 
@@ -896,6 +948,8 @@ class TabRules:
         From an unticked designated negated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add a designated node with the negation of *d* to *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         operator    = Oper.Disjunction
 
@@ -904,6 +958,8 @@ class TabRules:
         From an unticked undesignated disjunction node *n* on a branch *b*, for each disjunct
         *d*, add an undesignated node with *d* to *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         operator    = Oper.Disjunction
 
@@ -913,6 +969,8 @@ class TabRules:
         *d*, make a new branch *b'* from *b* and add an undesignated node with the negation of *d* to
         *b'*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         operator    = Oper.Disjunction
 
@@ -923,6 +981,8 @@ class TabRules:
         of the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         operator    = Oper.MaterialConditional
         branch_level = 2
@@ -944,6 +1004,8 @@ class TabRules:
         a designated node with the antecedent, and a designated node with the negation of the
         consequent to *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         negated     = True
         operator    = Oper.MaterialConditional
@@ -968,6 +1030,8 @@ class TabRules:
         an undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         operator    = Oper.MaterialConditional
         branch_level = 1
@@ -992,6 +1056,8 @@ class TabRules:
         *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
         tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         negated     = True
         operator    = Oper.MaterialConditional
@@ -1016,6 +1082,8 @@ class TabRules:
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         operator    = Oper.MaterialBiconditional
         branch_level = 2
@@ -1045,6 +1113,8 @@ class TabRules:
         with the negation of the antecedent and a designated node with the consequent to *b''*,
         then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         negated     = True
         operator    = Oper.MaterialBiconditional
@@ -1075,6 +1145,8 @@ class TabRules:
         undesignated node with the antecedent and an undesignated node with the negation of
         the consequent to *b''*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         negated     = False
 
@@ -1086,6 +1158,8 @@ class TabRules:
         and add an undesignated node with the antecedent and an undesignated node with the
         consequent to *b''*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         negated     = True
 
@@ -1098,6 +1172,8 @@ class TabRules:
         the antecedent to *b'*, add a designated node with the consequent to *b''*,
         then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         operator = Oper.Conditional
 
     class ConditionalNegatedDesignated(MaterialConditionalNegatedDesignated):
@@ -1108,6 +1184,8 @@ class TabRules:
         designated node with the antecedent, and a designated node with the negation of
         the consequent to *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         operator = Oper.Conditional
 
     class ConditionalUndesignated(MaterialConditionalUndesignated):
@@ -1118,6 +1196,8 @@ class TabRules:
         undesignated node with the negation of the antecedent and an undesignated node
         with the consequent to *b*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         operator = Oper.Conditional
 
     class ConditionalNegatedUndesignated(MaterialConditionalNegatedUndesignated):
@@ -1129,6 +1209,8 @@ class TabRules:
         *b'*, and add an undesignated node with the negation of the consequent to *b''*, then
         tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         operator = Oper.Conditional
 
     class BiconditionalDesignated(MaterialBiconditionalDesignated):
@@ -1141,6 +1223,8 @@ class TabRules:
         and add a designated node with the antecedent and a designated node with the
         consequent to *b''*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         operator = Oper.Biconditional
 
     class BiconditionalNegatedDesignated(MaterialBiconditionalNegatedDesignated):
@@ -1153,6 +1237,8 @@ class TabRules:
         with the negation of the antecedent and a designated node with the consequent to *b''*,
         then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         operator = Oper.Biconditional
 
     class BiconditionalUndesignated(MaterialBiconditionalUndesignated):
@@ -1165,6 +1251,8 @@ class TabRules:
         undesignated node with the antecedent and an undesignated node with the negation of
         the consequent to *b''*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         operator = Oper.Biconditional
 
     class BiconditionalNegatedUndesignated(MaterialBiconditionalNegatedUndesignated):
@@ -1177,6 +1265,8 @@ class TabRules:
         and add an undesignated node with the antecedent and an undesignated node with the
         consequent to *b''*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         operator = Oper.Biconditional
 
     class ExistentialDesignated(QuantifierSkinnyRule):
@@ -1185,6 +1275,8 @@ class TabRules:
         variable *v* into sentence *s*, add a designated node to *b* with the substitution
         into *s* of a new constant not yet appearing on *b* for *v*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         quantifier  = Quantifier.Existential
         branch_level = 1
@@ -1204,6 +1296,8 @@ class TabRules:
         that universally quantifies over *v* into the negation of *s* (i.e. change
         :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         negated     = True
         quantifier  = Quantifier.Existential
@@ -1226,6 +1320,8 @@ class TabRules:
         If there are no constants yet on *b*, then instantiate with a new constant. The node
         *n* is never ticked.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         quantifier  = Quantifier.Existential
         branch_level = 1
@@ -1243,6 +1339,8 @@ class TabRules:
         that universally quantifies over *v* into the negation of *s* (e.g. change
         :s:`~XxFx` to :s:`Lx~Fx`), then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
 
     class UniversalDesignated(ExistentialUndesignated):
@@ -1253,6 +1351,8 @@ class TabRules:
         are no constants yet on *b*, then instantiate with a new constant. The node *n* is
         never ticked.
         """
+        __slots__ = EMPTY_SET
+
         designation = True
         quantifier  = Quantifier.Universal
 
@@ -1263,6 +1363,8 @@ class TabRules:
         with the existential quantifier over *v* into the negation of *s* (e.g. change
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         quantifier = Quantifier.Universal
         convert_to = Quantifier.Existential
 
@@ -1272,6 +1374,8 @@ class TabRules:
         into sentence *s*, add an undesignated node to *b* with the result of substituting into
         *s* a constant new to *b* for *v*, then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         quantifier  = Quantifier.Universal
 
@@ -1282,6 +1386,8 @@ class TabRules:
         with the existential quantifier over *v* into the negation of *s* (e.g. change
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
+        __slots__ = EMPTY_SET
+
         designation = False
         quantifier  = Quantifier.Universal
         convert_to  = Quantifier.Existential

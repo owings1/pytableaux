@@ -27,6 +27,7 @@ class Meta(object):
     category_display_order = 130
 
 from lexicals import Operator as Oper
+from proof.common import Branch, Node
 from . import fde as FDE, lp as LP
 
 class Model(LP.Model):
@@ -36,7 +37,7 @@ class Model(LP.Model):
 
     .. _LP model: lp.html#logics.lp.Model
     """
-    def truth_function(self, operator, a, b=None):
+    def truth_function(self, operator: Oper, a, b=None):
         if operator == Oper.Conditional and self.nvals[a] > self.nvals[b]:
             return 'F'
         return super().truth_function(operator, a, b)
@@ -59,7 +60,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
-class TabRules(object):
+class TabRules:
     """
     The closure rules for RM3 are the FDE closure rule, and the LP closure rule.
     Most of the operator rules are the same as :ref:`FDE <FDE>`, except for the conditional
@@ -152,7 +153,7 @@ class TabRules(object):
         designation = True
         branch_level = 3
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             lhs, rhs = self.sentence(node).operands
             return {
                 'adds': [
@@ -186,7 +187,7 @@ class TabRules(object):
         designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             lhs, rhs = self.sentence(node).operands
             return {
                 'adds': [
@@ -216,7 +217,7 @@ class TabRules(object):
         designation = True
         branch_level = 3
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             lhs, rhs = self.sentence(node)
             return {
                 'adds': [
@@ -251,7 +252,7 @@ class TabRules(object):
         designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             lhs, rhs = self.sentence(node)
             cond1 = Oper.Conditional((lhs, rhs))
             cond2 = Oper.Conditional((rhs, lhs))
@@ -278,7 +279,7 @@ class TabRules(object):
         designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, branch: Branch):
             lhs, rhs = self.sentence(node)
             return {
                 'adds': [

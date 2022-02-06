@@ -30,6 +30,7 @@ import operator as opr
 from typing import (
     Any,
     Callable,
+    Collection,
     Iterable,
     Iterator,
     Literal,
@@ -412,12 +413,18 @@ class funciter:
 class cchain:
 
     def forall(*funcs: Callable[P, bool]) -> Callable[P, bool]:
-        'Return a reusable predicate (conjunct).'
+        'Return a reusable predicate (conjuncts).'
         return partial(funciter.consume, funcs, all)
+    def forall_collection(funcs: Collection[Callable[P, bool]]) -> Callable[P, bool]:
+        'Return a reusable predicate (conjuncts) from a single collection.'
+        return partial(funciter.consume, instcheck(funcs, Collection), all)
 
     def forany(*funcs: Callable[P, bool]) -> Callable[P, bool]:
         'Return a reusable predicate (disjuncts).'
         return partial(funciter.consume, funcs, any)
+    def forany(funcs: Collection[Callable[P, bool]]) -> Callable[P, bool]:
+        'Return a reusable predicate (disjuncts) from a single collection.'
+        return partial(funciter.consume, instcheck(funcs, Collection), any)
 
     def reducer(*funcs: F) -> F:
         'Return a reusable reducer.'

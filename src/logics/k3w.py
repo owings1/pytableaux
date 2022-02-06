@@ -35,7 +35,7 @@ class Model(K3.Model):
     some of the connectives.
     """
 
-    def truth_function(self, operator, a, b=None):
+    def truth_function(self, operator: Oper, a, b=None):
         if operator.arity == 2 and (a == 'N' or b == 'N'):
             return 'N'
         return super().truth_function(operator, a, b)
