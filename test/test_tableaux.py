@@ -101,6 +101,7 @@ class TestTableau(BaseSuite):
 
         class MockRule(RuleStub):
 
+            __slots__ = '__dict__',
             def __init__(self, *args, **opts):
                 super().__init__(*args, **opts)
                 self.tableau.on(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
@@ -178,10 +179,11 @@ class TestBranch:
 
         class MyRule(RuleStub):
 
-            should_be = False
-            shouldnt_be = True
+            __slots__ = 'should_be', 'shouldnt_be'
 
             def __init__(self, *args, **opts):
+                self.should_be = False
+                self.shouldnt_be = True
                 super().__init__(*args, **opts)
                 self.tableau.on(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
 
@@ -429,10 +431,9 @@ class TestMaxConstantsTracker(BaseSuite):
             Helpers = FilterHelper,
     
         class MtrTestRule(FilterNodeRule):
-            mtr: MaxConsts
             Helpers = (
                 *FilterNodeRule.Helpers,
-                ('mtr', MaxConsts),
+                MaxConsts,
             )
     
         proof = self.tab()
@@ -440,7 +441,7 @@ class TestMaxConstantsTracker(BaseSuite):
         proof.argument = self.parg('NLVxNFx', 'LMSxFx')
         rule = proof.rules.get(MtrTestRule)
         branch = proof[0]
-        assert rule.mtr._compute_max_constants(branch) == 3
+        assert rule[MaxConsts]._compute_max_constants(branch) == 3
 
     @skip
     def xtest_compute_for_node_one_q_returns_1(self):
@@ -450,7 +451,7 @@ class TestMaxConstantsTracker(BaseSuite):
         rule = Rule(proof)
         branch = proof.branch()
         branch.add(node)
-        res = rule.mtr._compute_needed_constants_for_node(node, branch)
+        res = rule[MaxConsts]._compute_needed_constants_for_node(node, branch)
         assert res == 1
 
     @skip
@@ -463,7 +464,7 @@ class TestMaxConstantsTracker(BaseSuite):
         rule = Rule(proof)
         branch = proof.branch()
         branch.extend([n1, n2])
-        res = rule.mtr._compute_max_constants(branch)
+        res = rule[MaxConsts]._compute_max_constants(branch)
         assert res == 3
 
 @using(logic = 'CPL')

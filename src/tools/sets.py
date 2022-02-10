@@ -9,7 +9,7 @@ __all__ = (
     'EMPTY_SET',
 )
 
-from tools.abcs import Copyable, VT
+from tools.abcs import abcm, Copyable, VT
 from tools.decorators import abstract, final, overload, operd
 
 from collections.abc import Set, MutableSet
@@ -105,6 +105,7 @@ class setf(SetApi[VT], frozenset[VT]):
     __contains__ = frozenset.__contains__
 
 EMPTY_SET = setf()
+abcm._frozenset = setf
 
 class setm(MutableSetApi[VT], set[VT]):
     'MutableSetApi wrapper around built-in set.'

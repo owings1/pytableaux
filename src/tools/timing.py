@@ -51,6 +51,14 @@ class StopWatch(TimingCommon):
         self._accum = 0
         if self._running:
             self._start_time = _nowms()
+        else:
+            self._start_time = None
+        return self
+
+    def clear(self):
+        self.reset()
+        self.count = 0
+        return self
 
     def elapsed(self) -> int:
         'Elapsed milliseconds.'

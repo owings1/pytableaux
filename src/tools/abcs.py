@@ -103,6 +103,8 @@ if 'Types & Type Variables' or True:
     # Type bound, use for class decorator, etc.
     TT  = TypeVar('TT', bound = type)
 
+    FrzsetT = TypeVar('FrzsetT', bound = frozenset)
+
     P = ParamSpec('P')
 
 
@@ -247,6 +249,8 @@ class AbcMeta(_abc.ABCMeta):
 class abcm:
     'Static meta util functions.'
 
+    _frozenset: type[FrzsetT] = frozenset
+
     def nsinit(ns: dict, bases, /, skipflags = False):
         'Class namespace prepare routine.'
         # iterate over copy since hooks may modify ns.
@@ -258,7 +262,7 @@ class abcm:
         # cast slots to a set
         slots = ns.get('__slots__')
         if isinstance(slots, Iterable) and not isinstance(slots, Set):
-            ns['__slots__'] = frozenset(slots)
+            ns['__slots__'] = abcm._frozenset(slots)
 
     def clsafter(Class: TT, ns: Mapping = None, /, skipflags = False,
         deleter = type.__delattr__):
@@ -307,6 +311,17 @@ class abcm:
                     break
         return True
 
+    def merge_mroattr(subcls: type, name: str,
+        *args,
+        setter = setattr,
+        **kw
+    ) -> T:
+        value = abcm.merged_mroattr(
+            subcls, name, *args, **kw
+        )
+        setter(subcls, name, value)
+        return value
+
     def merged_mroattr(subcls: type, name: str, /,
         default: T = _NOARG,
         oper = opr.or_,
@@ -319,26 +334,20 @@ class abcm:
         if default is _NOARG:
             it = (getattr(c, name) for c in it)
         else:
+            it = (getattr(c, name, default) for c in it)
             if initial is _NOARG:
                 initial = default
-            it = (getattr(c, name, default) for c in it)
         if initial is _NOARG:
             value = reduce(oper, it)
         else:
             value = reduce(oper, it, initial)
         return transform(value)
 
-    def merge_mroattr(subcls: type, name: str,
-        *args, transform: Callable[..., T] = _thru, setter = setattr, **kw) -> T:
-        value = abcm.merged_mroattr(
-            subcls, name, *args, transform = transform, **kw
-        )
-        setter(subcls, name, value)
-        return value
-
     def mroiter(subcls: TT, /,
         supcls: type|tuple[type, ...] = None,
-        *, reverse = True, start: SupportsIndex = 0
+        *,
+        reverse = True,
+        start: SupportsIndex = 0
     ) -> Iterable[TT]:
         it = subcls.mro()
         if reverse:

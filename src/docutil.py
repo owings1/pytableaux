@@ -471,21 +471,21 @@ class Helper(object):
             pw.write(proof),
         )
 
-    def html_rule_example(self, rule: Rule|type[Rule], lgc=None):
+    def html_rule_example(self, rule: Rule|type[Rule], logic=None):
         """
         Returns rendered tableau HTML for a rule's example application.
         """
-        lgc = get_logic(lgc or rule)
-        proof = Tableau(lgc)
-        rule = proof.rules.get(rule)
+        logic = get_logic(logic or rule)
+        tab = Tableau(logic)
+        rule = tab.rules.get(rule)
         # TODO: fix for closure rules
         isclosure = isinstance(rule, ClosingRule)
         if not isclosure:
-            rule.add_helper(EllipsisExampleHelper)
+            rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
         pw = self.pwclosure if isclosure else self.pwrule
-        b = proof.branch().extend(rule.example_nodes())
+        b = tab.branch().extend(rule.example_nodes())
         rule.apply(rule.get_target(b))
-        return pw.write(proof.finish())
+        return pw.write(tab.finish())
 
     def html_truth_table(self, lgc, oper, classes=[]):
         """
