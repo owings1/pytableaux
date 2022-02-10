@@ -77,7 +77,7 @@ NOARG = object()
 EMPTY_IT = iter(EMPTY_SEQ)
 ITEM_CACHE_SIZE = 10000
 
-nosetattr = NoSetAttr(enabled = False)
+nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
 
 @overload
 def sorttmap(it: Iterable[Bases.Lexical]) -> Iterator[Types.IntTuple]: ...
@@ -160,14 +160,14 @@ class Metas:
         _readonly : bool
     
         __delattr__ = raisr(AttributeError)
-        __setattr__ = nosetattr(type)
+        __setattr__ = nosetattr(abcs.AbcMeta)
 
     class Enum(abcs.AbcEnumMeta):
 
         _readonly : bool
 
         __delattr__ = raisr(AttributeError)
-        __setattr__ = nosetattr(_enum.EnumMeta)
+        __setattr__ = nosetattr(abcs.AbcEnumMeta)
 
     class LexicalItem(Abc):
         'Metaclass for LexicalItem classes (Constant, Predicate, Sentence, etc.).'
@@ -249,7 +249,7 @@ class Bases:
 
         __slots__   = '_value_', '_name_', '__objclass__'
         __delattr__ = raisr(AttributeError)
-        __setattr__ = nosetattr(_enum.Enum, cls = True)
+        __setattr__ = nosetattr(abcs.AbcEnum, cls = True)
 
     @abcm.clsafter
     class Lexical:
@@ -299,30 +299,42 @@ class Bases:
             return hash((type(item).__name__, item.sort_tuple))
 
         @static
-        def orderitems(item: LexT, other: LexT):
-            '''Pairwise ordering comparison based on type rank and ``sort_tuple``.
-            Raises TypeError.'''
-            if item is other: return 0
-            a, b = map(LexType.foritem, (item, other))
-            cmp = a.rank - b.rank
-            if cmp: return cmp
-            a, b = item.sort_tuple, other.sort_tuple
-            for x, y in zip(a, b):
-                cmp = x - y
-                if cmp: return cmp
-            return len(a) - len(b)
+        @closure
+        def orderitems():
+
+            from itertools import starmap
+
+            def cmpgen(a: LexT, b: LexT, sm = starmap, sub = opr.sub):
+                if a is b:
+                    yield 0 ; return
+                yield a.TYPE.rank - b.TYPE.rank
+                a = a.sort_tuple
+                b = b.sort_tuple
+                yield from sm(sub, zip(a, b))
+                yield len(a) - len(b)
+
+            def orderitems(item: LexT, other: LexT) -> int:
+                '''Pairwise ordering comparison based on type rank and ``sort_tuple``.
+                Raises TypeError.'''
+                try:
+                    for cmp in cmpgen(item, other):
+                        if cmp: return cmp
+                    return cmp
+                except AttributeError:
+                    raise TypeError
+
+            return orderitems
 
         @abcf.temp
         @membr.defer
         def ordr(member: membr[type[LexT]]) -> Callable[[LexT, Any], bool]:
             oper = getattr(opr, member.name)
-            cls = member.owner
-            cmp = cls.orderitems
+            Lexical = member.owner
             @wraps(oper)
-            def f(self, other):
-                if not isinstance(other, cls):
+            def f(self, other, /):
+                if not isinstance(other, Lexical):
                     return NotImplemented
-                return oper(cmp(self, other), 0)
+                return oper(Lexical.orderitems(self, other), 0)
             return f
 
         __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr()
@@ -333,13 +345,28 @@ class Bases:
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         @classmethod
-        def gen(cls: type[LexT], n: int, first: LexT = None, **opts) -> Iterator[LexT]:
+        def gen(cls: type[LexT], stop: SupportsIndex, first: LexT = None, **kw) -> Iterator[LexT]:
             'Generate items.'
-            if first is not None:
-                instcheck(first, cls)
-            for i in range(n):
-                item = item.next(**opts) if i else (first or cls.first())
-                if item: yield item
+            if stop is not None:
+                stop = int(stop)
+                if stop < 1:
+                    return
+                inc = 1
+            else:
+                stop = 1
+                inc = 0
+            if first is None:
+                item = cls.first()
+            else:
+                item = instcheck(first, cls)
+            i = 0
+            try:
+                while i < stop:
+                    yield item
+                    item = item.next(**kw)
+                    i += inc
+            except StopIteration:
+                pass
 
         @classmethod
         @abstract
@@ -383,20 +410,15 @@ class Bases:
             cls = __class__
             if cls not in subcls.__bases__: return
 
+            from types import FunctionType
             supns = dmap(cls.__dict__)
             subns = subcls.__dict__
             skip = {'__init_subclass__'}
-            ftypes = {classmethod, staticmethod, type(lambda:1)}
+            ftypes = {classmethod, staticmethod, FunctionType}
             for name, value in (
                 (name, mbr)
-                for
-                    name, mbr
-                in
-                    (supns - set(subns)).items()
-                if
-                    name not in skip
-                and
-                    type(mbr) in ftypes
+                for name, mbr in (supns - set(subns) - skip).items()
+                if type(mbr) in ftypes
             ) : setattr(subcls, name, value)
 
     Types.Lexical = Lexical
@@ -423,10 +445,10 @@ class Bases:
         #: Name, label, or other strings unique to a member.
         strings: setf[str]
 
-        # @DynClsAttr
-        # def index(self) -> int:
-        #     'Index of the member in the enum list, in source order, 0-based.'
-        #     return self._index
+        __slots__ = (
+            'spec', 'ident', 'sort_tuple', 'hash',
+            'label', '_index', 'order', 'strings',
+        )
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Comparison ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -473,12 +495,6 @@ class Bases:
             self.hash = self.hashitem(self)
             self.strings = setf((self._name_, self.label))
 
-        #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
-
-        __slots__ = (
-            'spec', 'ident', 'sort_tuple', 'hash',
-            'label', '_index', 'order', 'strings',
-        )
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Enum Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -698,6 +714,7 @@ class Constant(Parameter):
         super().__init__(*args)
         self.is_constant = True
         self.is_variable = False
+
 @final
 class Variable(Parameter):
 
@@ -945,12 +962,12 @@ class Predicated(Sentence, SequenceApi[Parameter]):
     #: The set of parameters.
     paramset: setf[Parameter]
 
-    __slots__ = setf({
+    __slots__ = (
         '_spec', '_sort_tuple',
         'predicate', 'params', 'paramset',
         'quantifiers', 'operators', 'atomics',
         '_constants', '_variables', '_predicates',
-    })
+    )
 
     @lazy.prop
     def spec(self):
@@ -1048,11 +1065,11 @@ class Quantified(Sentence, SequenceApi[Types.QuantifiedItem]):
     #: The items sequence: Quantifer, Variable, Sentence.
     items: tuple[Quantifier, Variable, Sentence]
 
-    __slots__ =  setf((
+    __slots__ =  (
         'spec', '_sort_tuple',
         'quantifier', 'variable', 'sentence', 'items',
         '_quantifiers'
-    ))
+    )
 
     @lazy.prop
     def sort_tuple(self: Quantified) -> Types.IntTuple:
@@ -1241,7 +1258,6 @@ class Operated(Sentence, SequenceApi[Sentence]):
         self.rhs = self.operands[-1]
         if len(self.operands) != self.operator.arity:
             raise Emsg.WrongLength(self.operands, self.operator.arity)
-            # raise TypeError(self.operator, len(self.operands), self.operator.arity)
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Sequence Behavior ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -1466,21 +1482,19 @@ class Argument(SequenceApi[Sentence], metaclass = Metas.Argument):
             (Sentence(conclusion),) if premises is None
             else map(Sentence, (conclusion, *premises))
         )
+        self.premises = self.seq[1:]
         if title is not None:
             instcheck(title, str)
         self.title = title
 
-    __slots__ = 'seq', 'title', '_hash'
+    __slots__ = 'seq', 'title', 'premises', '_hash'
 
     sentences: seqf[Sentence]
+    premises: seqf[Sentence]
 
     @property
     def conclusion(self) -> Sentence:
         return self.seq[0]
-
-    @property
-    def premises(self) -> seqf[Sentence]:
-        return self.seq[1:]
 
     @lazy.prop
     def hash(self) -> int:
@@ -1508,34 +1522,38 @@ class Argument(SequenceApi[Sentence], metaclass = Metas.Argument):
 
     @abcf.temp
     @membr.defer
-    def ordr(member: membr[type[Argument]]):
-        oper = getattr(opr, member.name)
-        cls = member.owner
-        cmp = cls.cmp
-        @wraps(oper)
-        def f(self: Argument, other):
-            if not isinstance(other, cls):
-                return NotImplemented
-            return oper(cmp(self, other), 0)
-        return f
+    @closure
 
-    @abcf.temp
-    def cmp(self, other: Argument):
-        if self is other: return 0
-        cmp = bool(self.conclusion) - bool(other.conclusion)
-        if cmp: return cmp
-        cmp = len(self) - len(other)
-        if cmp: return cmp
-        cmp = len(self.premises) - len(other.premises)
-        if cmp: return cmp
-        for a, b in zip(self, other):
-            if a < b: return -1
-            if a > b: return 1
-        return cmp
+    def ordr():
+
+        from itertools import starmap
+
+        def cmpgen(a: Argument, b: Argument, /, *,
+            sm = starmap, sorder = Sentence.orderitems
+        ):
+            if a is b:
+                yield 0 ; return
+            yield bool(a.conclusion) - bool(b.conclusion)
+            yield len(a.seq) - len(b.seq)
+            yield from sm(sorder, zip(a.seq, b.seq))
+
+        def ordr(member: membr[type[Argument]]):
+            oper = getattr(opr, member.name)
+            @wraps(oper)
+            def f(self: Argument, other):
+                if not isinstance(other, Argument):
+                    return NotImplemented
+                for cmp in cmpgen(self, other):
+                    if cmp: break
+                return oper(cmp, 0)
+            return f
+
+        return ordr
 
     __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr()
 
-    def __hash__(self): return self.hash
+    def __hash__(self):
+        return self._hash
 
     def __repr__(self):
         if self.title: desc = repr(self.title)
@@ -2105,6 +2123,6 @@ del(
     _,
     abstract, closure, overload, final, static,
     NoSetAttr, fixed, lazy, membr, raisr, wraps,
-    nosetattr,
+    # nosetattr,
     abcf,
 )

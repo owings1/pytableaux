@@ -1,21 +1,23 @@
-# Allowed local imports:
-#
-#  - errors
-#  - tools.abcs
-#  - tools.misc
+
 from __future__ import annotations
 
-__all__ = (
-    # alias decorators
-    'overload', 'abstract', 'final', 'static', 'closure',
-    # functions
-    'rund',
-    # class-based decorators
-    'membr', 'fixed', 'operd', 'wraps',
-    'raisr', 'lazy', 'NoSetAttr',
-)
+if 'Exports' or True:
+    __all__ = (
+        # alias decorators
+        'overload', 'abstract', 'final', 'static', 'closure',
+        # class-based decorators
+        'membr', 'fixed', 'operd', 'wraps',
+        'raisr', 'lazy', 'NoSetAttr',
+    )
 
-if True:
+if 'Imports' or True:
+
+    # Allowed local imports:
+
+    #  - errors
+    #  - tools.abcs
+    #  - tools.misc
+
     from errors import (
         instcheck,
         subclscheck,
@@ -24,17 +26,21 @@ if True:
     from tools.abcs import (
         # alias decorators
         abstract,
+        closure,
         final,
         overload,
         static,
-        closure,
         # type vars
         F, T, P, Self,
         # utils
+        abcf,
         abcm,
         # bases
         Abc,
+        MapProxy,
     )
+
+    from collections import defaultdict
     from inspect import (
         Signature,
     )
@@ -57,9 +63,9 @@ if True:
         DynamicClassAttribute,
     )
 
-EMPTY = ()
+if 'Utils' or True:
 
-if True:
+    EMPTY = ()
 
     class _noexcept(Exception): __new__ = None
 
@@ -67,6 +73,9 @@ if True:
 
     def _valfilter(it: Iterable[T], /, *, getter = opr.itemgetter(1)) -> Iterator[T]:
         return filter(getter, it)
+
+    def _getitems(obj, *keys):
+        return tuple(map(obj.__getitem__, keys))
 
     def _getmixed(obj, k, default = None):
         try: return obj[k]
@@ -104,96 +113,90 @@ if True:
             return _methcaller(obj)
         return _checkcallable(obj)
 
-class Member(Generic[T]):
+if 'Base Classes' or True:
+    class Member(Abc, Generic[T]):
 
-    __slots__ = '__name__', '__qualname__', '__owner'
+        __slots__ = '__name__', '__qualname__', '__owner'
 
-    def __set_name__(self, owner: T, name):
-        self.owner = owner
-        self.name = name
-        for hook in self._sethooks:
-            hook(self, owner, name)
+        def __set_name__(self, owner: T, name):
+            self.owner = owner
+            self.name = name
+            for hook in self._sethooks:
+                hook(self, owner, name)
 
-    @property
-    def owner(self) -> T:
-        try: return self.__owner
-        except AttributeError: pass
+        @property
+        def owner(self) -> T:
+            try: return self.__owner
+            except AttributeError: pass
 
-    @property
-    def name(self) -> str:
-        try: return self.__name__
-        except AttributeError: pass
-        return type(self).__name__
+        @property
+        def name(self) -> str:
+            try: return self.__name__
+            except AttributeError: pass
+            return type(self).__name__
 
-    @owner.setter
-    def owner(self, value):
-        self.__owner = instcheck(value, type)
-        try: self._update_qualname()
-        except AttributeError: pass
+        @owner.setter
+        def owner(self, value):
+            self.__owner = instcheck(value, type)
+            try: self._update_qualname()
+            except AttributeError: pass
 
-    @name.setter
-    def name(self, value):
-        self.__name__ = _attrstrcheck(value)
-        try: self._update_qualname()
-        except AttributeError: pass
+        @name.setter
+        def name(self, value):
+            self.__name__ = _attrstrcheck(value)
+            try: self._update_qualname()
+            except AttributeError: pass
 
-    def _update_qualname(self):
-        self.__qualname__ = '%s.%s' % (self.owner.__name__, self.name)
+        def _update_qualname(self):
+            self.__qualname__ = '%s.%s' % (self.owner.__name__, self.name)
 
-    def __repr__(self):
-        if not hasattr(self, '__qualname__') or not callable(self):
-            return object.__repr__(self)
-        return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
-    _sethooks = EMPTY
+        def __repr__(self):
+            if not hasattr(self, '__qualname__') or not callable(self):
+                return object.__repr__(self)
+            return '<callable %s at %s>' % (self.__qualname__, hex(id(self)))
+        _sethooks = EMPTY
 
-    def __init_subclass__(subcls, **kw):
-        super().__init_subclass__(**kw)
-        hooks = dict.fromkeys(abcm.merge_mroattr(subcls, '_sethooks',
-            oper = opr.add, supcls = __class__
-        ))
-        hook = getattr(subcls, 'sethook', None)
-        if hook:
-            hooks[hook] = None
-            delattr(subcls, 'sethook')
-        subcls._sethooks = tuple(hooks)
+        def __init_subclass__(subcls, **kw):
+            super().__init_subclass__(**kw)
+            hooks = dict.fromkeys(abcm.merge_mroattr(subcls, '_sethooks',
+                oper = opr.add, supcls = __class__
+            ))
+            hook = getattr(subcls, 'sethook', None)
+            if hook:
+                hooks[hook] = None
+                delattr(subcls, 'sethook')
+            subcls._sethooks = tuple(hooks)
 
-class Twofer(Abc, Generic[F]):
+    class Twofer(Abc, Generic[F]):
 
-    __slots__ = EMPTY
+        __slots__ = EMPTY
 
-    @overload
-    def __new__(cls, func: F) -> F: ...
+        @overload
+        def __new__(cls, func: F) -> F: ...
 
-    @overload
-    def __new__(cls: type[T]) -> T: ...
+        @overload
+        def __new__(cls: type[T]) -> T: ...
 
-    def __new__(cls, arg = None, /, *a, **kw):
-        '''If only argument to constructor is callable, construct and call the
-        instance. Otherwise create normally.'''
-        inst = object.__new__(cls)
-        if len(a) or len(kw) or not isinstance(arg, Callable):
-            inst._init(arg, *a, **kw)
-            return inst
-        if isinstance(inst._blankinit, Callable): 
-            inst._blankinit()
-        return inst(arg)
+        def __new__(cls, arg = None, /, *a, **kw):
+            '''If only argument to constructor is callable, construct and call the
+            instance. Otherwise create normally.'''
+            inst = object.__new__(cls)
+            if len(a) or len(kw) or not isinstance(arg, Callable):
+                inst._init(arg, *a, **kw)
+                return inst
+            if isinstance(inst._blankinit, Callable): 
+                inst._blankinit()
+            return inst(arg)
 
-    @abstract
-    @overload
-    def __call__(self, func: F) -> F: ...
+        @abstract
+        @overload
+        def __call__(self, func: F) -> F: ...
 
-    @abstract
-    def _init(self, arg = None, /, *a, **kw): ...
+        @abstract
+        def _init(self, arg = None, /, *a, **kw): ...
 
-    def _blankinit(self):
-        self._init()
-
-### ------------------------------ ###
-
-
-def rund(func: Callable[[], T]) -> T:
-    'Call the function immediately, and return the value.'
-    return func()
+        def _blankinit(self):
+            self._init()
 
 class membr(Member[T]):
 
@@ -218,7 +221,6 @@ class membr(Member[T]):
                 return fdefer(member, *args, **kw)
             return cls(fd, *args, **kw)
         return f
-
 
 @static
 class fixed:
@@ -429,6 +431,7 @@ class operd:
     repeat = _repeat
     del(_repeat)
 
+operd.repeat
 class wraps(Member):
 
     __slots__ = '_initial', '_adds'
@@ -581,99 +584,119 @@ class lazy:
                 lazy.get.__call__(self, method), doc = method.__doc__
             )
 
-class NoSetAttr:
+class NoSetAttr(Member):
     'Lame thing that does a lame thing.'
 
-    # __slots__ = '__roattr', 'efmt_fixed', 'efmt_change'
 
-    efmt_fixed = '%s (readonly)'.__mod__
-    efmt_change = '%s (immutable)'.__mod__
-    enabled = True
+    _defaults = MapProxy(dict(cls = None, attr = None))
+    efmt = "Attribute '{0}' of '{1.__class__.__name__}' objects is readonly".format
 
-    def __init__(self, /, attr = '_readonly', enabled = True):
+    __slots__ = 'enabled', 'defaults', '_cache', '_isroot'
+
+    enabled: bool
+    defaults: Mapping
+    _cache: dict
+    _isroot: bool
+
+    def __init__(self, /, *, enabled = True, root = False, **defaults):
         self.enabled = enabled
-        self.__roattr = attr
+        self._isroot = root
+        self.defaults = self._defaults | defaults
+        self._cache = defaultdict(dict)
 
-    def __call__(self, basecls, cls = None, changeonly = False):
+    def __call__(self, basecls, **opts):
+        opts = self.defaults | opts
+        attr, cls = _getitems(opts, 'attr', 'cls')
         ok = basecls.__setattr__
-        if cls == True:
-            check = self.clschecker
-        elif cls:
-            check = self.fixedchecker(cls)
+        efmt = self.efmt
+        return self._make(ok, efmt, attr, cls)
+
+    def _make(self, ok, efmt, attr, cls, /):
+        if attr:
+            if cls == True:
+                check = self._clschecker(attr)
+            elif cls:
+                check = self._fixedchecker(attr, cls)
+            else:
+                check = self._selfchecker(attr)
+            def f(obj, name, value):
+                if self.enabled and check(obj):
+                    raise AttributeError(efmt(name, obj))
+                ok(obj, name, value)
         else:
-            check = self.selfchecker
-        if changeonly:
-            fail = self.changeraiser
-        else:
-            fail = self.fixedraiser
-        @wraps(ok)
-        def f(obj, name, value):
-            if self.enabled and check(obj):
-                fail(obj, name, value)
-            ok(obj, name, value)
+            def f(obj, name, value):
+                if self.enabled:
+                    raise AttributeError(efmt(name, obj))
+                ok(obj, name, value)
+        return wraps(ok)(f)
+
+    @abcf.temp
+    def cache(func: F) -> F:
+        @wraps(func)
+        def f(self: NoSetAttr, *args):
+            try:
+                value = self._cache[func][args]
+            except KeyError:
+                value = self._cache[func][args] = func(self, *args)
+            return value
         return f
 
-    def fixedchecker(self, obj):
-        roattr = self.roattr
+    @cache
+    def _fixedchecker(self, attr, obj):
         def check(self):
-            return getattr(obj, roattr, False)
+            return getattr(obj, attr, False)
         return check
 
-    def callchecker(self, fget):
-        roattr = self.roattr
+    @cache
+    def _callchecker(self, attr, fget):
         def check(obj):
-            return getattr(fget(obj), roattr, False)
+            return getattr(fget(obj), attr, False)
         return check
 
-    @lazy.prop
-    def clschecker(self):
-        return self.callchecker(type)
+    @cache
+    def _clschecker(self, attr):
+        return self._callchecker(type, attr)
 
-    @lazy.prop
-    def selfchecker(self):
-        roattr = self.roattr
+    @cache
+    def _selfchecker(self, attr):
         def check(obj):
-            return getattr(obj, roattr, False)
+            return getattr(obj, attr, False)
         return check
 
-    @lazy.prop
-    def fixedraiser(self):
-        efmt = self.efmt_fixed
-        def fail(obj, name, value):
-            raise AttributeError(efmt(name))
-        return fail
+    @static
+    def _true(*_): return True
 
-    @lazy.prop
-    def changeraiser(self):
-        efmt = self.efmt_change
-        def fail(obj, name, value):
-            raise AttributeError(efmt(name))
-        return fail
-
-    @property
-    def roattr(self):
-        return self.__roattr
-
+    def sethook(self, owner, name):
+        if self._isroot:
+            self._isroot = False
+            return
+        basecls = owner.__bases__[0]
+        func = self(basecls)
+        func.__name__ = name
+        func.__qualname__ = '%s.%s' % (owner.__qualname__, name)
+        setattr(owner, name, func)
+        
 del(Abc, TypeVar, EMPTY)
 # ------------------------------
 
-# Stub adapted from typing module with added annotations.
-class _property(property, Generic[Self, T]):
-    fget: Callable[[Self], Any] | None
-    fset: Callable[[Self, Any], None] | None
-    fdel: Callable[[Self], None] | None
-    @overload
-    def __init__(
-        self,
-        fget: Callable[[Self], T] | None = ...,
-        fset: Callable[[Self, Any], None] | None = ...,
-        fdel: Callable[[Self], None] | None = ...,
-        doc: str | None = ...,
-    ) -> None: ...
-    __init__ = NotImplemented
-    def getter(self, __fget: Callable[[Self], T]) -> _property[Self, T]: ...
-    def setter(self, __fset: Callable[[Self, Any], None]) -> _property[Self, T]: ...
-    def deleter(self, __fdel: Callable[[Self], None]) -> _property[Self, T]: ...
-    def __get__(self, __obj: Self, __type: type | None = ...) -> T: ...
-    def __set__(self, __obj: Self, __value: Any) -> None: ...
-    def __delete__(self, __obj: Self) -> None: ...
+if 'Type stub' or True:
+    # Stub adapted from typing module with added annotations.
+    class _property(property, Generic[Self, T]):
+        fget: Callable[[Self], Any] | None
+        fset: Callable[[Self, Any], None] | None
+        fdel: Callable[[Self], None] | None
+        @overload
+        def __init__(
+            self,
+            fget: Callable[[Self], T] | None = ...,
+            fset: Callable[[Self, Any], None] | None = ...,
+            fdel: Callable[[Self], None] | None = ...,
+            doc: str | None = ...,
+        ) -> None: ...
+        __init__ = NotImplemented
+        def getter(self, __fget: Callable[[Self], T]) -> _property[Self, T]: ...
+        def setter(self, __fset: Callable[[Self, Any], None]) -> _property[Self, T]: ...
+        def deleter(self, __fdel: Callable[[Self], None]) -> _property[Self, T]: ...
+        def __get__(self, __obj: Self, __type: type | None = ...) -> T: ...
+        def __set__(self, __obj: Self, __value: Any) -> None: ...
+        def __delete__(self, __obj: Self) -> None: ...

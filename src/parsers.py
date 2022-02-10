@@ -19,7 +19,12 @@
 # pytableaux - parsers module
 from __future__ import annotations
 
-__all__ = 'CharTable', 'BaseParser', 'PolishParser', 'StandardParser'
+__all__ = (
+    'CharTable',
+    'BaseParser',
+    'PolishParser',
+    'StandardParser',
+)
 
 from errors import (
     Emsg,
@@ -28,14 +33,13 @@ from errors import (
     UnboundVariableError,
     IllegalStateError,
 )
-from tools.abcs import MapProxy
 from tools.callables import gets
 from tools.decorators import abstract, raisr
 from tools.hybrids import qset
-from tools.mappings import ItemsIterator, MapCover, dmap
-from tools.misc import cat
+from tools.mappings import ItemsIterator, MapCover, MapProxy, dmap
 from tools.sequences import seqf
 from tools.sets import setf, EMPTY_SET
+
 from lexicals import (
     Bases as _Bases,
     Operator as Oper, Quantifier,
@@ -45,8 +49,11 @@ from lexicals import (
 )
 
 from collections.abc import Set
-from typing import Any, Iterable, Mapping
-
+from typing import (
+    # Any,
+    # Iterable,
+    Mapping,
+)
 
 notations = Notation.seq
 
@@ -161,10 +168,7 @@ def create_parser(notn: Notation = None, vocab: Predicates = None, table: CharTa
 
 class ParseContext:
 
-    __slots__ = (
-        'input', 'type', 'preds',
-        'is_open', 'pos', 'bound_vars',
-    )
+    __slots__ = 'input', 'type', 'preds', 'is_open', 'pos', 'bound_vars'
 
     def __init__(self, input_: str, table: CharTable, preds: Predicates, /):
         self.input = input_
@@ -488,8 +492,8 @@ class StandardParser(BaseParser):
         arity = pred.arity
         if arity < 2:
             raise ParseError(
-                cat("Unexpected {0}-ary predicate symbol at position {1}. ",
-                "Infix notation requires arity > 1.").format(arity, ppos)
+                "Unexpected {0}-ary predicate symbol at position {1}. "
+                "Infix notation requires arity > 1.".format(arity, ppos)
             )
         return Predicated(pred, (lhp, *self._read_params(context, arity - 1)))
 
@@ -535,10 +539,9 @@ class StandardParser(BaseParser):
         context.chomp()
         if context.pos != oper_pos:
             raise ParseError(
-                ''.join([
-                    'Invalid left side expression starting at position {0} and ending at position {1},',
-                    'which proceeds past operator ({2}) at position {3}.'
-                ]).format(
+                'Invalid left side expression starting at position {0} '
+                'and ending at position {1}, which proceeds past operator '
+                '({2}) at position {3}.'.format(
                     lhs_start, context.pos, oper, oper_pos
                 )
             )
