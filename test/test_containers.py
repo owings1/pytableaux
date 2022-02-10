@@ -223,17 +223,6 @@ class TestLinkSet(BaseSuite):
         # x.wedge(1, 'e', 'f')
         assert list(x) == list('abcdefg')
 
-    def test_view(self):
-        from tools.sequences import SequenceProxy
-        x = linqset('abcdef')
-        v = SequenceProxy(x)
-        assert len(v) == 6
-        assert list(v) == list('abcdef')
-        x.append('g')
-        assert len(v) == 7
-        assert v[-1] == 'g'
-        assert list(reversed(v)) == list(reversed('abcdefg'))
-
     def test_sort(self):
         x = linqset('fedcba')
         x.sort()

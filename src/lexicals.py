@@ -36,7 +36,7 @@ from errors import (
 import tools.abcs as abcs
 from tools.abcs import (
     abcm, abcf,
-    T
+    T, NotImplType
 )
 from tools.decorators import (
     abstract, closure, final, overload, static,
@@ -327,11 +327,11 @@ class Bases:
 
         @abcf.temp
         @membr.defer
-        def ordr(member: membr[type[LexT]]) -> Callable[[LexT, Any], bool]:
+        def ordr(member: membr[type[LexT], Callable[[LexT, Any], bool|NotImplType]]):
             oper = getattr(opr, member.name)
             Lexical = member.owner
             @wraps(oper)
-            def f(self, other, /):
+            def f(self: LexT, other: Any, /):
                 if not isinstance(other, Lexical):
                     return NotImplemented
                 return oper(Lexical.orderitems(self, other), 0)
@@ -345,7 +345,7 @@ class Bases:
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Generation ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         @classmethod
-        def gen(cls: type[LexT], stop: SupportsIndex, first: LexT = None, **kw) -> Iterator[LexT]:
+        def gen(cls: type[LexT], stop: SupportsIndex, first: LexT = None, **nextkw) -> Iterator[LexT]:
             'Generate items.'
             if stop is not None:
                 stop = int(stop)
@@ -363,7 +363,7 @@ class Bases:
             try:
                 while i < stop:
                     yield item
-                    item = item.next(**kw)
+                    item = item.next(**nextkw)
                     i += inc
             except StopIteration:
                 pass
@@ -482,18 +482,18 @@ class Bases:
 
         def __str__(self):
             'Returns the name.'
-            return self._name_
+            return self.name
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         def __init__(self, order, label, *_):
-            self.spec = self._name_,
+            self.spec = self.name,
             self.order, self.label = order, label
             # Prepended with rank in LexType init
             self.sort_tuple = self.order,
             self.ident = self.identitem(self)
             self.hash = self.hashitem(self)
-            self.strings = setf((self._name_, self.label))
+            self.strings = setf((self.name, self.label))
 
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Enum Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -537,7 +537,6 @@ class Bases:
                     return '%s(%s)' % (type(self).__name__, e)
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Attribute Access ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
-
 
         __delattr__ = raisr(AttributeError)
 
@@ -1330,7 +1329,8 @@ class LexType(Bases.Enum):
             self is LexType.get(other, None)
         )
 
-    def __hash__(self): return self.hash
+    def __hash__(self):
+        return self.hash
 
     def __init__(self, *value):
         super().__init__()
@@ -1506,12 +1506,12 @@ class Argument(SequenceApi[Sentence], metaclass = Metas.Argument):
         return len(self.seq)
 
     @overload
-    def __getitem__(self, s: slice) -> seqf[Sentence]: ...
+    def __getitem__(self, s: slice, /) -> seqf[Sentence]: ...
 
     @overload
-    def __getitem__(self, i: SupportsIndex) -> Sentence: ...
+    def __getitem__(self, i: SupportsIndex, /) -> Sentence: ...
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: slice|SupportsIndex, /):
         return self.seq[index]
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Equality & Ordering ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -1529,7 +1529,8 @@ class Argument(SequenceApi[Sentence], metaclass = Metas.Argument):
         from itertools import starmap
 
         def cmpgen(a: Argument, b: Argument, /, *,
-            sm = starmap, sorder = Sentence.orderitems
+            sm: Callable[..., Iterator[int]] = starmap,
+            sorder = Sentence.orderitems
         ):
             if a is b:
                 yield 0 ; return
@@ -1537,23 +1538,27 @@ class Argument(SequenceApi[Sentence], metaclass = Metas.Argument):
             yield len(a.seq) - len(b.seq)
             yield from sm(sorder, zip(a.seq, b.seq))
 
-        def ordr(member: membr[type[Argument]]):
-            oper = getattr(opr, member.name)
+        def ordr(
+            member: membr[type[Argument], Callable[[Argument, Any], bool|NotImplType]]
+        ):
+            oper: Callable[[int, int], bool] = getattr(opr, member.name)
             @wraps(oper)
-            def f(self: Argument, other):
+            def f(self: Argument, other: Any):
                 if not isinstance(other, Argument):
                     return NotImplemented
                 for cmp in cmpgen(self, other):
                     if cmp: break
+                else:
+                    cmp = 0
                 return oper(cmp, 0)
             return f
 
         return ordr
 
-    __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr()
+    __lt__ = __le__ = __gt__ = __ge__ = __eq__ = ordr() # type: ignore
 
     def __hash__(self):
-        return self._hash
+        return self.hash
 
     def __repr__(self):
         if self.title: desc = repr(self.title)

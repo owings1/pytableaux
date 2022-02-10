@@ -15,9 +15,9 @@ from errors import (
 )
 from tools.abcs import (
     Copyable, abcm, abcf,
+    abstract, final, overload,
     T, VT
 )
-from tools.decorators import abstract, final, overload, membr
 
 from collections import deque
 from itertools import chain, repeat
@@ -145,82 +145,6 @@ class SequenceCover(SequenceApi[VT]):
             return cls(it)
         return cls(tuple(it))
 
-class SequenceProxy(SequenceApi[VT]):
-    'Sequence view proxy.'
-
-    # Creates a new type for each instance.
-
-    __slots__ = EMPTY
-
-    @abcf.temp
-    @membr.defer
-    def pxfn(member: membr[type[SequenceProxy]]):
-        # Builds a class method that retrieves the source instance method
-        # and overwrites our class method, in effect a lazy loading of methods.
-        name, cls = member.name, member.owner
-        cls._proxy_names_.add(name)
-        method = getattr(SequenceApi, name, None)
-        if callable(method) and not abcm.isabstract(method):
-            default = method
-        else: default = NOARG
-        @classmethod
-        def f(cls: type[SequenceProxy], *args):
-            proxy_pass = cls._get_base_attr(name, default)
-            setattr(cls, name, proxy_pass)
-            return proxy_pass(*args)
-        return f
-
-    _proxy_names_ = set()
-
-    __len__        = pxfn()
-    __getitem__    = pxfn()
-    __contains__   = pxfn()
-    __iter__       = pxfn()
-    __reversed__   = pxfn()
-    count          = pxfn()
-    index          = pxfn()
-    _from_iterable = pxfn()
-
-    @abcf.after
-    def _(cls): cls._proxy_names_ = frozenset(cls._proxy_names_)
-
-    def copy(self):
-        'Immutable copy, returns self.'
-        return self
-
-    def __repr__(self):
-        from tools.misc import wraprepr
-        return wraprepr(self, list(self))
-
-    @classmethod
-    @abstract
-    def _get_base_attr(cls, name): ...
-
-    @final
-    def __init__(self, *_): pass
-
-    def __new__(cls, base: SequenceApi[VT]) -> SequenceProxy[VT]:
-
-        instcheck(base, SequenceApi)
-        names = frozenset(cls._proxy_names_)
-
-        class SeqProxy(SequenceProxy):
-
-            __slots__ = EMPTY
-            __new__ = object.__new__
-
-            @classmethod
-            def _get_base_attr(cls, name, default = NOARG,/):
-                if name in names:
-                    value = getattr(base, name, default)
-                    if value is not NOARG: return value
-                raise AttributeError(name)
-
-        SeqProxy.__qualname__ = '%s.%s' % (
-            type(base).__qualname__, SeqProxy.__name__
-        )
-        return SeqProxy()
-
 class seqf(tuple[VT, ...], SequenceApi[VT]):
     'Frozen sequence, fusion of tuple and SequenceApi.'
 
@@ -326,4 +250,4 @@ MutableSequenceApi.register(list)
 # MutableSequenceApi.register(deque)
 
 
-del(Copyable, abcf, abcm, abstract, final, overload, membr)
+del(Copyable, abcf, abcm, abstract, final, overload)

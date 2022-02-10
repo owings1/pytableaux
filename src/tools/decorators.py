@@ -31,7 +31,7 @@ if 'Imports' or True:
         overload,
         static,
         # type vars
-        F, T, P, Self,
+        F, T, P, Self, RT,
         # utils
         abcf,
         abcm,
@@ -57,6 +57,7 @@ if 'Imports' or True:
     from typing import (
         # Annotations
         Any, Callable, Generic, Iterable, Iterator, Mapping,
+        Concatenate,
         TypeVar,
     )
     from types import (
@@ -198,30 +199,33 @@ if 'Base Classes' or True:
         def _blankinit(self):
             self._init()
 
-class membr(Member[T]):
+class membr(Member[T], Generic[T, RT]):
 
     __slots__ = 'cbak',
 
     owner: T
+    cbak: tuple[Callable[..., RT], tuple, dict]
 
-    def __init__(self, cb: F, *args, **kw):
+    def __init__(self, cb: Callable[..., RT], *args, **kw):
         self.cbak = cb, args, kw
 
-    def sethook(self, owner, name):
-        setattr(owner, name, wraps(self)(self()))
+    def sethook(self, owner: T, name):
+        setattr(owner, name, wraps(self)(self())) # type: ignore
 
     def __call__(self):
         cb, args, kw = self.cbak
         return cb(self, *args, **kw)
 
     @classmethod
-    def defer(cls, fdefer: F) -> Callable[..., F]:
+    # def defer(cls, fdefer: F) -> Callable[..., F]:
+    def defer(cls, fdefer: Callable[Concatenate[membr[T, RT], P], RT]) -> Callable[P, RT]: #Callable[P, membr[T, RT]]:
+        def fd(member, *args, **kw):
+            return fdefer(member, *args, **kw)
         def f(*args, **kw):
-            def fd(member, *args, **kw):
-                return fdefer(member, *args, **kw)
             return cls(fd, *args, **kw)
-        return f
+        return f # type: ignore
 
+MbrT = TypeVar('MbrT', bound = membr)
 @static
 class fixed:
 

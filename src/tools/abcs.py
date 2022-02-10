@@ -56,6 +56,7 @@ if 'Imports' or True:
     from typing import (
         # exportable imports
         final, overload,
+
         # Annotations
         Any,
         Annotated,
@@ -92,7 +93,7 @@ if 'Types & Type Variables' or True:
     # Self type
     Self = TypeVar('Self')
 
-    T_co  = TypeVar('T_co', covariant = True)
+    T_co  = TypeVar('T_co',  covariant = True)
     KT_co = TypeVar('KT_co', covariant = True)
     VT_co = TypeVar('VT_co', covariant = True)
     T_contra = TypeVar('T_contra', contravariant = True)
@@ -101,17 +102,33 @@ if 'Types & Type Variables' or True:
     F   = TypeVar('F',  bound = Callable[..., Any])
 
     # Type bound, use for class decorator, etc.
-    TT  = TypeVar('TT', bound = type)
+    TT    = TypeVar('TT',    bound = type)
+    TT_co = TypeVar('TT_co', bound = type, covariant = True)
 
     FrzsetT = TypeVar('FrzsetT', bound = frozenset)
 
     P = ParamSpec('P')
 
+    NotImplType = type(NotImplemented)
+
+    class MapProxy(Mapping[KT, VT]):
+        'Cast to a proxy if not already.'
+        EMPTY_MAP = _MapProxy({})
+
+        def __new__(cls, mapping: Mapping[KT, VT] = None) -> MapProxy[KT, VT]:
+
+            if mapping is None:
+                return cls.EMPTY_MAP # type: ignore
+            if isinstance(mapping, _MapProxy):
+                return mapping # type: ignore
+            if not isinstance(mapping, Mapping):
+                mapping = dict(mapping)
+            return _MapProxy(mapping) # type: ignore
 
     Func = FunctionType
-    _HookProvidersTable =      dict[type, _MapProxy[str, tuple[str, ...]]]
-    _HookProvidersProxy = _MapProxy[type, _MapProxy[str, tuple[str, ...]]]
-    _HookUsersTable     = dict[type, _MapProxy[type, _MapProxy[str, Callable]]]
+    _HookProvidersTable =     dict[type, MapProxy[str, tuple[str, ...]]]
+    _HookProvidersProxy = MapProxy[type, MapProxy[str, tuple[str, ...]]]
+    _HookUsersTable     = dict[type, MapProxy[type, MapProxy[str, Callable]]]
 
     class HookConn(TypedDict):
         user     : type
@@ -123,34 +140,37 @@ if 'Types & Type Variables' or True:
         is_copied : bool
         user_func : Callable
 
-    _HookConnTable = dict[type, dict[type,  _MapProxy[str, tuple[HookConn, ...]]]]
+    _HookConnTable = dict[type, dict[type,  MapProxy[str, tuple[HookConn, ...]]]]
 
     class EnumEntry(NamedTuple):
         'The value of the enum lookup index.'
-        member : EnT
+        # member : EnT
+        member : AbcEnum
         index  : int
-        nextmember: EnT | None
+        # nextmember: EnT | None
+        nextmember: AbcEnum | None
 
 if 'Decorators & Utils' or True:
 
     _EMPTY = ()
     _EMPTY_SET = frozenset()
+    _EMPTY_MAP = MapProxy[Any, Any]()
     _NOARG = object()
     _NOGET = object()
 
-    def _thru(obj: T): return obj
+    def _thru(obj: T) -> T: return obj
 
     # Global decorators. Re-exported by decorators module.
 
     from abc import abstractmethod as abstract
 
     @overload
-    def static(cls: TT) -> TT: ...
+    def static(cls: TT, /) -> TT: ...
 
     @overload
-    def static(meth: Callable[..., T]) -> staticmethod[T]: ...
+    def static(meth: Callable[..., T], /) -> staticmethod[T]: ...
 
-    def static(cls):
+    def static(cls, /):
         'Static class decorator wrapper around staticmethod'
 
         if not isinstance(cls, type):
@@ -167,7 +187,7 @@ if 'Decorators & Utils' or True:
             setattr(cls, name, staticmethod(member))
 
         if '__new__' not in ns:
-            cls.__new__ = _thru
+            cls.__new__ = _thru # type: ignore
 
         if '__init__' not in ns:
             def finit(self): raise TypeError
@@ -177,21 +197,6 @@ if 'Decorators & Utils' or True:
 
     def closure(func: Callable[..., T]) -> T:
         return func()
-
-    class MapProxy(Mapping[KT, VT]):
-        'Cast to a proxy if not already.'
-        EMPTY_MAP = _MapProxy({})
-
-        def __new__(cls,
-            mapping: Mapping[KT, VT] | Iterable[tuple[KT, VT]] = None
-        ) -> _MapProxy[KT, VT]:
-
-            if mapping is None: return cls.EMPTY_MAP
-            if isinstance(mapping, _MapProxy):
-                return mapping
-            if not isinstance(mapping, Mapping):
-                mapping = dict(mapping)
-            return _MapProxy(mapping)
 
 if 'Constants' or True:
     ABC_FLAG_ATTR     = '_abc_flag'
@@ -232,7 +237,7 @@ class AbcMeta(_abc.ABCMeta):
 
     def hook(cls, *hooks: str, attr = ABC_HOOKUSER_ATTR):
         'Decorator factory for tagging hook implementation (user).'
-        def decorator(func: F):
+        def decorator(func: F) -> F:
             value = getattr(func, attr, None)
             if value is None:
                 value = dict()
@@ -249,8 +254,9 @@ class AbcMeta(_abc.ABCMeta):
 class abcm:
     'Static meta util functions.'
 
-    _frozenset: type[FrzsetT] = frozenset
+    _frozenset: type[frozenset] = frozenset
 
+    @staticmethod
     def nsinit(ns: dict, bases, /, skipflags = False):
         'Class namespace prepare routine.'
         # iterate over copy since hooks may modify ns.
@@ -264,8 +270,9 @@ class abcm:
         if isinstance(slots, Iterable) and not isinstance(slots, Set):
             ns['__slots__'] = abcm._frozenset(slots)
 
+    @staticmethod
     def clsafter(Class: TT, ns: Mapping = None, /, skipflags = False,
-        deleter = type.__delattr__):
+        deleter = type.__delattr__) -> TT:
         'After class init routine.'
         # Allow use as standalone class decorator
         if ns is None:
@@ -284,11 +291,13 @@ class abcm:
             deleter(Class, name)
         return Class
 
+    @staticmethod
     def isabstract(obj):
         if isinstance(obj, type):
             return bool(len(getattr(obj, '__abstractmethods__', _EMPTY)))
         return bool(getattr(obj, '__isabstractmethod__', False))
 
+    @staticmethod
     def annotated_attrs(obj):
         'Evaluate annotions of type Annotated.'
         # This is called infrequently, so we import lazily.
@@ -299,6 +308,7 @@ class abcm:
             if get_origin(v) is Annotated
         }
 
+    @staticmethod
     def check_mrodict(mro: Sequence[type], *names: str):
         'Check whether methods are implemented for dynamic subclassing.'
         if len(names) and not len(mro):
@@ -311,17 +321,13 @@ class abcm:
                     break
         return True
 
-    def merge_mroattr(subcls: type, name: str,
-        *args,
-        setter = setattr,
-        **kw
-    ) -> T:
-        value = abcm.merged_mroattr(
-            subcls, name, *args, **kw
-        )
+    @staticmethod
+    def merge_mroattr(subcls: type, name: str, *args, setter = setattr, **kw):
+        value = abcm.merged_mroattr(subcls, name, *args, **kw)
         setter(subcls, name, value)
         return value
 
+    @staticmethod
     def merged_mroattr(subcls: type, name: str, /,
         default: T = _NOARG,
         oper = opr.or_,
@@ -343,12 +349,11 @@ class abcm:
             value = reduce(oper, it, initial)
         return transform(value)
 
-    def mroiter(subcls: TT, /,
-        supcls: type|tuple[type, ...] = None,
+    @staticmethod
+    def mroiter(subcls: type, /, supcls: type|tuple[type, ...] = None,
         *,
-        reverse = True,
-        start: SupportsIndex = 0
-    ) -> Iterable[TT]:
+        reverse = True, start: SupportsIndex = None, stop: SupportsIndex = None,
+    ) -> Iterable[type]:
         it = subcls.mro()
         if reverse:
             it = reversed(it)
@@ -356,13 +361,14 @@ class abcm:
             it = iter(it)
         if supcls is not None:
             it = filter(lambda c: issubclass(c, supcls), it)
-        if start != 0:
-            it = islice(it, start)
+        if start is not None or stop is not None:
+            it = islice(it, start, stop) # type: ignore
         return it
 
+    @staticmethod
     def hookable(*hooks: str, attr = ABC_HOOKINFO_ATTR):
         'Decorator factory for specifying available hooks (provider).'
-        def decorator(func: F):
+        def decorator(func: F) -> F:
             value = getattr(func, attr, None)
             if value is None:
                 value = set()
@@ -371,6 +377,7 @@ class abcm:
             return func
         return decorator
 
+    @staticmethod
     def hookinfo(Class: type):
         return HookInfo(Class)
 
@@ -385,12 +392,14 @@ class AbcEnumMeta(_enum.EnumMeta):
 
     #******  Class Instance Variables
 
-    seq     : tuple[EnT, ...]
-    _lookup : MapProxy[Any, EnumEntry]
-    _member_names_: tuple[str, ...]
+    seq     : Sequence[AbcEnum]
+    # seq     : tuple[EnT, ...]
+    _lookup : Mapping[Any, EnumEntry]
+    _member_names_: Sequence[str]
+    _member_map_: Mapping[str, AbcEnum]
 
     @property
-    def __members__(cls: type[EnT]) -> dict[str, EnT]:
+    def __members__(cls):
         # Override to not double-proxy
         return cls._member_map_
 
@@ -421,13 +430,14 @@ class AbcEnumMeta(_enum.EnumMeta):
             return Class
 
         # Store the fixed member sequence.
-        Class.seq = tuple(map(Class._member_map_.get, Class._member_names_))
+        Class.seq = tuple(map(Class._member_map_.__getitem__, Class._member_names_))
         # Performance tweaks.
         enbm.fix_name_value(Class)
         # Init hook to process members before index is created.
         Class._on_init(Class)
         # Create index.
-        Class._lookup = enbm.build_index(Class)
+        Class._lookup = enbm.build_index(Class) # ~type: ignore
+                                                # (... tuple[AbcEnum, int, AbcEnum | None] is incompatible with "EnumEntry)
         # After init hook.
         Class._after_init()
         # Cleanup.
@@ -439,11 +449,11 @@ class AbcEnumMeta(_enum.EnumMeta):
 
     #******  Subclass Init Hooks
 
-    def _member_keys(cls, member: EnT) -> Set[Hashable]:
+    def _member_keys(cls, member: AbcEnum) -> Set[Hashable]:
         'Init hook to get the index lookup keys for a member.'
         return _EMPTY_SET
 
-    def _on_init(cls, Class: type[EnT]):
+    def _on_init(cls, Class: type[EnT]|AbcEnumMeta):
         '''Init hook after all members have been initialized, before index
         is created. **NB:** Skips abstract classes.'''
         pass
@@ -457,44 +467,45 @@ class AbcEnumMeta(_enum.EnumMeta):
     def __contains__(cls, key):
         return cls.get(key, _NOGET) is not _NOGET
 
-    def __getitem__(cls: type[EnT], key) -> EnT:
+    def __getitem__(cls: type[EnT]|AbcEnumMeta, key: Any) -> EnT:
         if type(key) is cls:
             return key
         try:
-            return cls._lookup[key][0]
+            return cls._lookup[key].member # type: ignore
         except (AttributeError, KeyError):
             pass
-        return super().__getitem__(key)
+        return super().__getitem__(key) # type: ignore
 
     def __getattr__(cls, name):
         raise AttributeError(name)
 
-    def __iter__(cls: type[EnT]) -> Iterator[EnT]:
-        return iter(cls.seq)
+    def __iter__(cls: type[EnT]|AbcEnumMeta) -> Iterator[EnT]:
+        return iter(cls.seq) # type: ignore
 
-    def __reversed__(cls: type[EnT]) -> Iterator[EnT]:
-        return reversed(cls.seq)
+    def __reversed__(cls: type[EnT]|AbcEnumMeta) -> Iterator[EnT]:
+        return reversed(cls.seq) # type: ignore
 
-    def __call__(cls: type[EnT], value, *args) -> EnT:
+    def __call__(cls: type[EnT]|AbcEnumMeta, value, *args) -> EnT:
         if not args:
-            try: return cls[value]
+            try: return cls[value] # type: ignore
             except KeyError: pass
-        return super().__call__(value, *args)
+        return super().__call__(value, *args) # type: ignore
 
     def __dir__(cls):
         return list(cls._member_names_)
 
     #******  Class Instance Methods
 
-    def get(cls: type[EnT], key, default = _NOARG) -> EnT:
+    # def get(cls: type[EnT]|AbcEnumMeta, key, default = _NOARG) -> EnT:
+    def get(cls, key, default = _NOARG):
         '''Get a member by an indexed reference key. Raises KeyError if not
         found and no default specified.'''
-        try: return cls[key]
+        try: return cls[key] # ~type: ignore
         except KeyError:
             if default is _NOARG: raise
             return default
 
-    def indexof(cls: type[EnT], member: EnT) -> int:
+    def indexof(cls: type[EnT]|AbcEnumMeta, member: EnT) -> int:
         'Get the sequence index of the member. Raises ValueError if not found.'
         try:
             try:
@@ -504,7 +515,7 @@ class AbcEnumMeta(_enum.EnumMeta):
         except KeyError:
             raise ValueError(member)
 
-    def entryof(cls, key) -> EnumEntry:
+    def entryof(cls, key: Any) -> EnumEntry:
         try:
             return cls._lookup[key]
         except KeyError:
@@ -516,12 +527,15 @@ class AbcEnumMeta(_enum.EnumMeta):
 class enbm:
     'Static Enum meta utils.'
 
-    def build_index(Class: type[EnT]) -> Mapping[Any, tuple[EnT, int, EnT|None]]:
+    @staticmethod
+    # def build_index(Class: type[EnT]|AbcEnumMeta) -> Mapping[Any, tuple[EnT, int, EnT|None]]:
+    def build_index(Class: type[EnT]|AbcEnumMeta) -> Mapping[Any, EnumEntry]:
         'Create the Enum member lookup index'
         # Fill in the member entries for all keys and merge the dict.
         # member to key set functions.
         keyfuncs = enbm.default_keys, Class._member_keys
         members = Class.seq
+        keymapgen = (map(keyfunc, members) for keyfunc in keyfuncs)
         return MapProxy(
             reduce(
                 opr.or_,
@@ -534,10 +548,7 @@ class enbm:
                             set,
                             map(
                                 chain.from_iterable,
-                                zip(*(
-                                    map(keyfunc, members)
-                                    for keyfunc in keyfuncs
-                                ))
+                                zip(*keymapgen) # type: ignore
                             )
                         ),
                         # Values -
@@ -554,7 +565,8 @@ class enbm:
                 )
         ))
 
-    def default_keys(member: EnT) -> Set[Hashable]:
+    @staticmethod
+    def default_keys(member: AbcEnum) -> Set[Hashable]:
         'Default member lookup keys'
         return {
             member.name,
@@ -563,30 +575,32 @@ class enbm:
             member.value
         }
 
-    def fix_name_value(Class: type[EnT]):
+    @staticmethod
+    def fix_name_value(Class: type[EnT]|AbcEnumMeta, /, *, flagtypes = _enum.Flag):
 
         # cache attribute for flag enum.
-        Class._invert_ = None
+        if issubclass(Class, flagtypes):
+            Class._invert_ = None # type: ignore
 
         # Clear DynCa from class layout
-        Class.name  = None
-        Class.value = None
+        Class.name  = None # type: ignore
+        Class.value = None # type: ignore
 
         # Assign name & value directly.
         for member in Class.seq:
             member.name = member._name_
             member.value = member._value_
 
-    def cached_flag_invert(self: EnFlagT, /, *, finvert = _enum.Flag.__invert__):
-        cached = self._invert_
-        value = self.value
+    @staticmethod
+    def cached_flag_invert(self_: EnFlagT, /, *, finvert = _enum.Flag.__invert__) -> EnFlagT:
+        cached = self_._invert_
+        value = self_.value
         if cached is not None:
             if cached[0] == value:
-                return cached[1]
-            self._invert_ = None
-        result: EnFlagT = finvert(self)
-        self._invert_ = value, result
-        result._invert_ = result.value, self
+                return cached[1] # type: ignore
+        result: EnFlagT = finvert(self_)
+        self_._invert_ = value, result
+        result._invert_ = result.value, self_
         return result
 
 class abcf(_enum.Flag, metaclass = AbcEnumMeta, skipflags = True):
@@ -601,7 +615,7 @@ class abcf(_enum.Flag, metaclass = AbcEnumMeta, skipflags = True):
 
     _cleanable = before | temp | after
 
-    def __call__(self, obj: F):
+    def __call__(self, obj: F) -> F:
         """Add the flag to obj's meta flag with bitwise OR. Return obj for
         decorator use."""
         return self.save(obj, self | self.read(obj))
@@ -612,12 +626,12 @@ class abcf(_enum.Flag, metaclass = AbcEnumMeta, skipflags = True):
         return getattr(obj, attr, cls(default))
 
     @classmethod
-    def save(cls, obj: F, value: abcf|int, /, *, attr = ABC_FLAG_ATTR):
+    def save(cls, obj: F, value: abcf|int, /, *, attr = ABC_FLAG_ATTR) -> F:
         'Write the value, returns obj for decorator use.'
         setattr(obj, attr, cls(value))
         return obj
 
-    __invert__ = enbm.cached_flag_invert
+    __invert__ = enbm.cached_flag_invert # type: ignore
 
 #=============================================================================
 #_____________________________________________________________________________
@@ -636,9 +650,9 @@ class HookInfo(Mapping[str, tuple[str, ...]], metaclass = AbcMeta, skiphooks = T
     _connections: Mapping[type, Mapping[str, tuple[HookConn, ...]]]
     #***
 
-    provider: TT
+    provider: type
 
-    def __new__(cls, provider: TT):
+    def __new__(cls, provider: type):
         try:
             mapping = cls.Providers[provider]
         except KeyError:
@@ -745,9 +759,9 @@ class HookInfo(Mapping[str, tuple[str, ...]], metaclass = AbcMeta, skiphooks = T
     #******  Operators: |  &  -  ^
 
     @abcf.after
-    def opers(cls: type[HookInfo]):
+    def opers(cls: type[HookInfo]): # type: ignore
 
-        def build(items: tuple[set[str], set[str]]):
+        def build(items: Collection[tuple[str, str]]):
             'Build the output mapping'
             builder: dict[str, list] = defaultdict(list)
             for hookname, attrname in items:
@@ -757,13 +771,13 @@ class HookInfo(Mapping[str, tuple[str, ...]], metaclass = AbcMeta, skiphooks = T
         flatten = cls.hookattrs
         set_opers = dict(__sub__ = cls.excluding, __and__ = cls.only)
 
-        for opername in ('__sub__', '__and__', '__or__', '__xor__'):
+        for opername in ('__or__', '__and__', '__sub__', '__xor__'):
 
             oper = getattr(opr, opername)
 
             @wraps(oper)
 
-            def f(self, other, /, *, oper = oper, set_oper = set_opers.get(opername)):
+            def f(self, other, /, *, oper: Callable[[T, T], T] = oper, set_oper = set_opers.get(opername)):
                 if type(other) is not cls:
                     if set_oper is not None and isinstance(other, Set):
                         return set_oper(self, other)
@@ -779,14 +793,16 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
 
     #******  API
 
+    @staticmethod
     @overload
-    def init_provider(
+    def init_provider( # type: ignore
         provider: TT,
         initial: Mapping[str, Collection[str]]|Literal[abcf.inherit] = None,
     /) -> TT:...
 
+    @staticmethod
     @overload
-    def init_user(
+    def init_user( # type: ignore
         user: TT,
         initial: Mapping[type, Mapping[str, Callable]] = None,
     /) -> TT:...
@@ -795,7 +811,7 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
 
     @abcf.before
 
-    def prepare(ns: dict, bases):
+    def prepare(ns: dict, bases): # type: ignore
 
         providers   : _HookProvidersTable = {}
         users       : _HookUsersTable = {}
@@ -822,7 +838,7 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
                     connections[provider] =  {}
                 return provider
 
-            def build(provider: type, initial: Mapping|abcf|None, /):
+            def build(provider: type, initial: Mapping|Literal[abcf.inherit]|None, /):
 
                 builder: dict[str, set[str]] = defaultdict(set)
 
@@ -883,10 +899,10 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
                     )
                 info = build(user, initial)
                 if len(info):
-                    users[user] = MapProxy(info)
+                    users[user] = value = MapProxy(info)
 
                     for provider, usermap in info.items():
-                        connections[provider][user] = MapProxy({
+                        connections[provider][user] = MapProxy({ # type: ignore
                             hookname: tuple(map(MapProxy, conns))
                             for hookname, conns in
                             # Connect
@@ -894,7 +910,7 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
                         })
                 return user
 
-            def build(user: type, initial: Mapping|None,/):
+            def build(user: type, initial: Mapping|None,/) -> dict[type, MapProxy[str, Callable]]:
 
                 builder: dict[type, dict[str, Callable]] = defaultdict(dict)
 
@@ -905,7 +921,7 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
 
                 for member in user.__dict__.values():
                     # Scan each member in the sub class ns for the attribute.
-                    value: Mapping[type, Collection[str]] = getattr(member, ATTR, None)
+                    value: Mapping[type, Collection[str]] = getattr(member, ATTR, _EMPTY_MAP)
                     if not value:
                         continue
                     for provider, hooknames in value.items():
@@ -1015,23 +1031,23 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
             return tuple(map('__{}__'.format, names))
 
         FATTRS_NEW  = dund('code', 'globals', 'name', 'defaults', 'closure')
-        FATTRS_DICT = dund('kwdefaults', 'annotations', 'dict')
-        FATTRS_ASGN = dund('doc')
-        FATTRS_DEL  = {ABC_HOOKINFO_ATTR}
-        
-        def copyfunc(f: Func, ownerqn: str = None,/):
+        FATTRS_COPY = dund('kwdefaults', 'annotations', 'dict', 'doc')
+        FATTRS_DEL  = ABC_HOOKINFO_ATTR,
+
+        import copy
+        def copyfunc(f: Func, ownerqn: str = None,/, *, fcopy = copy.copy) -> Func:
             
             func = FunctionType(*map(f.__getattribute__, FATTRS_NEW))
 
-            for name in FATTRS_DICT:
-                value = getattr(f, name, None)
-                if value is not None:
-                    setattr(func, name, dict(value))
+            for name in FATTRS_COPY:
+                value = getattr(f, name, _NOGET)
+                if value is not _NOGET:
+                    setattr(func, name, fcopy(value))
 
-            for name in FATTRS_ASGN:
-                value = getattr(f, name, None)
-                if value is not None:
-                    setattr(func, name, value)
+            # for name in FATTRS_ASGN:
+            #     value = getattr(f, name, None)
+            #     if value is not None:
+            #         setattr(func, name, value)
 
             if ownerqn is not None:
                 func.__qualname__ = '%s.%s' % (ownerqn, f.__name__)
@@ -1043,44 +1059,6 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
             return func
 
         return connect
-
-    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
-
-    # @closure
-    @abcf.temp
-    def copy_provider_hooks():
-        pass
-        # def copy(ns: dict, bases: tuple[type, ...]):
-        #     for pinfo in map(HookInfo, filter(HookInfo.Providers.__contains__, bases)):
-        #         print('copy', pinfo.provider)
-        #         for name, base_member in pinfo.attrs():
-        #             if name in ns:
-        #                 verify(ns[name], base_member, name, pinfo)
-        #             else:
-        #                 ns[name] = base_member
-
-        # from inspect import Signature
-
-        # def verify(ns_member: Func, base_member: Func, name: str, pinfo: HookInfo):
-        #     if ns_member is base_member:
-        #         return
-        #     todo = set(pinfo.hooknames(name))
-        #     kwdefs = ns_member.__kwdefaults__
-        #     if kwdefs is not None:
-        #         todo.difference_update(kwdefs)
-        #         if len(todo) == 0:
-        #             return
-        #     params = Signature.from_callable(ns_member).parameters
-        #     if len(params):
-        #         p = params[next(reversed(params))]
-        #         if p.kind is p.VAR_KEYWORD:
-        #             return
-        #     raise TypeError(
-        #         '%s missing kwargs: %s' % (name, ', '.join(todo))
-        #     )
-
-        # return copy
-        return
 
 #=============================================================================
 #_____________________________________________________________________________
@@ -1094,7 +1072,8 @@ class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta):
 
     __slots__ = _EMPTY_SET
 
-    _invert_: tuple[int, EnFlagT] | None
+    _invert_: tuple[int, EnFlagT] | None # type: ignore
+                                         # (Type variable has no meaning in this context)
     name: str
     value: Any
 
@@ -1127,7 +1106,9 @@ class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta):
 
 class FlagEnum(_enum.Flag, AbcEnum):
     __slots__ = '_value_', '_invert_', 'name', 'value'
-    __invert__ = enbm.cached_flag_invert
+    __invert__ = enbm.cached_flag_invert # type: ignore
+    _invert_: tuple[int, EnFlagT] # type: ignore
+                                  # (Type variable has no meaning in this context)
     value: int
 
 class IntEnum(_enum.IntEnum, AbcEnum):
@@ -1162,6 +1143,12 @@ class Copyable(Abc):
 #=============================================================================
 #_____________________________________________________________________________
 
+if 'Type Stubs' or True:
+
+    class TypeInstMap(Mapping):
+        @abstract
+        def __getitem__(self, key: type[T]) -> T: ...
+
 if 'Type Variables (deferred)' or True:
     EnT     = TypeVar('EnT',     bound = AbcEnum)
     EnFlagT = TypeVar('EnFlagT', bound = FlagEnum)
@@ -1172,4 +1159,5 @@ if 'Cleanup' or True:
         _enum,
         TypeVar,
         ParamSpec,
+        wraps,
     )
