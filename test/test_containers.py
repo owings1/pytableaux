@@ -1,5 +1,6 @@
 from .tutils import BaseSuite, get_subclasses, skip
 from itertools import filterfalse
+import operator as opr
 from pytest import raises
 
 from errors import *
@@ -27,6 +28,19 @@ def subclasses(supcls: type[T]) -> qset[type[T]]:
             if not abcm.isabstract(child):
                 classes.append(child)
     return classes
+
+class Test_abcm(BaseSuite):
+    def test_merged_mroattr(self):
+        class A:
+            x = 'A',
+        class B1(A):
+            x = 'B1',
+        class B2(A):
+            x = 'B2',
+        class C(B2, B1):
+            pass
+        res = abcm.merged_mroattr(C, 'x', default = qset(), oper=opr.or_, supcls=A)
+        assert tuple(res) == ('A', 'B1', 'B2')
 
 class Test_seqf(BaseSuite):
     def test_add_radd(self):
