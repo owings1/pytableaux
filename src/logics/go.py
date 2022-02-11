@@ -489,7 +489,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s = self.sentence(node)
+            s: Quantified = self.sentence(node)
             v = s.variable
             si = s.sentence
             si_lem_fail = si.disjoin(si.negate()).negate()

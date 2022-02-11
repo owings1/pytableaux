@@ -28,7 +28,7 @@ class Meta(object):
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 1
 
-# from tools.decorators import abstract
+from tools.decorators import static
 from tools.hybrids import qsetf
 from tools.sets import EMPTY_SET
 
@@ -38,8 +38,15 @@ from models import BaseModel
 
 from proof.tableaux import (
     TableauxSystem as BaseSystem,
-    Rule,
+    # Rule,
     Tableau,
+)
+from proof.baserules import (
+    BaseClosureRule,
+    BaseRule,
+    BaseNodeRule,
+    BaseQuantifierRule,
+    ExtendedQuantifierRule,
 )
 from proof.common import Access, Branch, Node, Target
 from proof.filters import NodeFilters
@@ -467,7 +474,7 @@ class Model(BaseModel):
     def truth_function(self, operator: Oper, a, b=None):
         return self.fde.truth_function(operator, a, b)
 
-class Denotum(object):
+class Denotum:
     __slots__ = EMPTY_SET
     # WIP - Generating "objects" like k-constants for a domain, dentation, and
     #       predicate "property" extensions.
@@ -479,7 +486,7 @@ class Denotum(object):
     #       For now, the purpose of this WIP feature is merely informational.
     pass
 
-class Frame(object):
+class Frame:
     """
     A K-frame comprises the interpretation of sentences and predicates at a world.
     """
@@ -636,6 +643,7 @@ class Frame(object):
     def __ge__(self, other):
         return self.world >= other.world
 
+@static
 class TableauxSystem(BaseSystem):
     """
     Modal tableaux are similar to classical tableaux, with the addition of a
@@ -683,66 +691,79 @@ class TableauxSystem(BaseSystem):
                 complexity += 1
         return complexity
 
-class DefaultRule(Rule):
-    __slots__ = EMPTY_SET
 
-    Helpers = FilterHelper,
-
-    ignore_ticked = True
-
-    NodeFilters = (
-        NodeFilters.Sentence,
-        NodeFilters.Modal,
-    )
-    # NodeFilters.Sentence
-    negated    : bool = None
-    operator   : Oper = None
-    quantifier : Quantifier = None
-    predicate  : Predicate = None
-
+class DefaultRule(BaseRule):
+    NodeFilters =  NodeFilters.Modal,
     # NodeFilters.Modal
     modal  : bool = True
     access : bool = None
-
-    example_nodes = FDE.DefaultRule.example_nodes
-    sentence = FDE.DefaultRule.sentence
-
-class DefaultNodeRule(DefaultRule):
-    __slots__ = EMPTY_SET
-
-    Helpers = AdzHelper,
-
-    #: (AdzHelper) Whether the target node should be ticked after application.
-    ticking: bool = True
-
-    _apply = FDE.DefaultNodeRule._apply
-    score_candidate = FDE.DefaultNodeRule.score_candidate
+class DefaultNodeRule(DefaultRule, BaseNodeRule):
+    pass
+class QuantifierSkinnyRule(DefaultRule, BaseQuantifierRule):
+    pass
+class QuantifierFatRule(DefaultRule, ExtendedQuantifierRule):
+    pass
 
 
-    _get_targets = FDE.DefaultNodeRule._get_targets
-    # abstract
-    _get_node_targets = FDE.DefaultNodeRule._get_node_targets
+# class DefaultRule(Rule):
+
+#     Helpers = FilterHelper,
+
+#     ignore_ticked = True
+
+#     NodeFilters = (
+#         NodeFilters.Sentence,
+#         NodeFilters.Modal,
+#     )
+#     # NodeFilters.Sentence
+#     negated    : bool = None
+#     operator   : Oper = None
+#     quantifier : Quantifier = None
+#     predicate  : Predicate = None
+
+#     # NodeFilters.Modal
+#     modal  : bool = True
+#     access : bool = None
+
+#     example_nodes = FDE.DefaultRule.example_nodes
+#     sentence = FDE.DefaultRule.sentence
+
+# class DefaultNodeRule(DefaultRule):
+
+#     Helpers = AdzHelper,
+
+#     #: (AdzHelper) Whether the target node should be ticked after application.
+#     ticking: bool = True
+
+#     _apply = FDE.DefaultNodeRule._apply
+#     score_candidate = FDE.DefaultNodeRule.score_candidate
+
+
+#     _get_targets = FDE.DefaultNodeRule._get_targets
+#     # abstract
+#     _get_node_targets = FDE.DefaultNodeRule._get_node_targets
 
 
 class ModalNodeRule(DefaultNodeRule):
-    __slots__ = EMPTY_SET
 
     Helpers = QuitFlag, MaxWorlds
 
-class TabRules(object):
+def sw(s: Sentence, w: int|None):
+    return dict(sentence = s, world = w)
+
+@static
+class TabRules:
     """
     Rules for modal operators employ *world* indexes as well access-type
     nodes. The world indexes are transparent for the rules for classical
     connectives.
     """
 
-    class ContradictionClosure(FDE.ClosureRule):
+    class ContradictionClosure(BaseClosureRule):
         """
         A branch closes when a sentence and its negation both appear on a node **with the
         same world** on the branch.
         """
-        __slots__ = EMPTY_SET
-
         modal = True
 
         # tracker implementation
@@ -760,10 +781,7 @@ class TabRules(object):
         def example_nodes(self) -> tuple[dict]:
             s: Atomic = Atomic.first()
             w = 0 if self.modal else None
-            return (
-                {'sentence': s         , 'world': w},
-                {'sentence': s.negate(), 'world': w},
-            )
+            return sw(s, w), sw(s.negate(), w)
 
         def applies_to_branch(self, branch: Branch):
             # Delegate to tracker
@@ -779,13 +797,11 @@ class TabRules(object):
                     'world'    : node.get('world'),
                 })
 
-    class SelfIdentityClosure(FDE.ClosureRule):
+    class SelfIdentityClosure(BaseClosureRule):
         """
         A branch closes when a sentence of the form :s:`~a = a` appears on the
         branch *at any world*.
         """
-        __slots__ = EMPTY_SET
-
         modal = True
 
         # tracker implementation
@@ -814,15 +830,13 @@ class TabRules(object):
             c = Constant.first()
             s = Identity((c, c)).negate()
             w = 0 if self.modal else None
-            return ({'sentence': s, 'world': w},)
+            return sw(s, w),
 
-    class NonExistenceClosure(FDE.ClosureRule):
+    class NonExistenceClosure(BaseClosureRule):
         """
         A branch closes when a sentence of the form :s:`~!a` appears on the branch
         *at any world*.
         """
-        __slots__ = EMPTY_SET
-
         modal = True
 
         # tracker implementation
@@ -856,8 +870,6 @@ class TabRules(object):
         From an unticked double negation node *n* with world *w* on a branch *b*, add a
         node to *b* with *w* and the double-negatum of *n*, then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated  = True
         operator = Oper.Negation
         branch_level = 1
@@ -866,7 +878,7 @@ class TabRules(object):
             s: Operated = self.sentence(node)
             w = node.get('world')
             return {
-                'adds': (({'sentence': s.lhs, 'world': w},),),
+                'adds': ( ({'sentence': s.lhs, 'world': w},), ),
             }
 
     class Assertion(DefaultNodeRule):
@@ -874,8 +886,6 @@ class TabRules(object):
         From an unticked assertion node *n* with world *w* on a branch *b*,
         add a node to *b* with the operand of *n* and world *w*, then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         operator = Oper.Assertion
         branch_level = 1
 
@@ -892,8 +902,6 @@ class TabRules(object):
         add a node to *b* with the negation of the assertion of *n* and world *w*,
         then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated  = True
         operator = Oper.Assertion
         branch_level = 1
@@ -911,8 +919,6 @@ class TabRules(object):
         for each conjunct, add a node with world *w* to *b* with the conjunct,
         then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         operator = Oper.Conjunction
         branch_level = 1
 
@@ -935,8 +941,6 @@ class TabRules(object):
         conjunct, make a new branch *b'* from *b* and add a node with *w* and the negation of
         the conjunct to *b*, then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated  = True
         operator = Oper.Conjunction
         branch_level = 2
@@ -959,8 +963,6 @@ class TabRules(object):
         make a new branch *b'* from *b* and add a node with the disjunct and world *w* to *b'*,
         then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         operator = Oper.Disjunction
         branch_level = 2
 
@@ -978,8 +980,6 @@ class TabRules(object):
         From an unticked negated disjunction node *n* with world *w* on a branch *b*, for each
         disjunct, add a node with *w* and the negation of the disjunct to *b*, then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated  = True
         operator = Oper.Disjunction
         branch_level = 1
@@ -1004,8 +1004,6 @@ class TabRules(object):
         antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
         *n*.
         """
-        __slots__ = EMPTY_SET
-
         operator = Oper.MaterialConditional
         branch_level = 2
 
@@ -1026,8 +1024,6 @@ class TabRules(object):
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
         of the consequent, then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated  = True
         operator = Oper.MaterialConditional
         branch_level = 1
@@ -1053,8 +1049,6 @@ class TabRules(object):
         nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
         tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         operator = Oper.MaterialBiconditional
         branch_level = 2
 
@@ -1083,8 +1077,6 @@ class TabRules(object):
         *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
         then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated  = True
         operator = Oper.MaterialBiconditional
         branch_level = 2
@@ -1116,8 +1108,6 @@ class TabRules(object):
         antecedent to *b'*, and add a node with world *w* and the conequent to *b''*, then tick
         *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated  = False
         operator = Oper.Conditional
 
@@ -1129,8 +1119,6 @@ class TabRules(object):
         add two nodes with *w* to *b*, one with the antecedent and the other with the negation
         of the consequent, then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated  = True
         operator = Oper.Conditional
 
@@ -1144,8 +1132,6 @@ class TabRules(object):
         nodes with world *w* to *b''*, one with the antecedent and one with the consequent, then
         tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated  = False
         operator = Oper.Biconditional
 
@@ -1159,19 +1145,15 @@ class TabRules(object):
         *w* to *b''*, one with the negation of the antecedent and the other with the consequent,
         then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated  = True
         operator = Oper.Biconditional
 
-    class Existential(FDE.QuantifierSkinnyRule):
+    class Existential(QuantifierSkinnyRule):
         """
         From an unticked existential node *n* with world *w* on a branch *b*, quantifying over
         variable *v* into sentence *s*, add a node with world *w* to *b* with the substitution
         into *s* of *v* with a constant new to *b*, then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         quantifier = Quantifier.Existential
         branch_level = 1
 
@@ -1189,8 +1171,6 @@ class TabRules(object):
         quantifying over variable *v* into sentence *s*, add a universally quantified
         node to *b* with world *w* over *v* into the negation of *s*, then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated    = True
         quantifier = Quantifier.Existential
         convert_to = Quantifier.Universal
@@ -1205,19 +1185,17 @@ class TabRules(object):
                 'adds': (({'sentence': sq, 'world': w},),),
             }
 
-    class Universal(FDE.QuantifierFatRule):
+    class Universal(QuantifierFatRule):
         """
         From a universal node with world *w* on a branch *b*, quantifying over variable *v* into
         sentence *s*, result *r* of substituting a constant *c* on *b* (or a new constant if none
         exists) for *v* into *s* does not appear at *w* on *b*, add a node with *w* and *r* to
         *b*. The node *n* is never ticked.
         """
-        __slots__ = EMPTY_SET
-
         quantifier   = Quantifier.Universal
         branch_level = 1
 
-        def _get_constant_nodes(self, node: Node, c: Constant, _):
+        def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             s: Quantified = self.sentence(node)
             r = s.unquantify(c)
             w = node.get('world')
@@ -1230,8 +1208,6 @@ class TabRules(object):
         quantified node to *b* with world *w* over *v* into the negation of *s*,
         then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated    = True
         quantifier = Quantifier.Universal
         convert_to = Quantifier.Existential
@@ -1242,8 +1218,6 @@ class TabRules(object):
         world *w'* new to *b* with the operand of *n*, and add an access-type node with
         world1 *w* and world2 *w'* to *b*, then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         operator = Oper.Possibility
         branch_level = 1
 
@@ -1305,8 +1279,6 @@ class TabRules(object):
         necessity node to *b* with *w*, whose operand is the negation of the negated 
         possibilium of *n*, then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         negated    = True
         operator   = Oper.Possibility
         convert_to = Oper.Necessity
@@ -1326,8 +1298,6 @@ class TabRules(object):
         world *w2* such that an access node with w1,w2 is on *b*, if *b* does not have a node
         with *s* at *w2*, add it to *b*. The node *n* is never ticked.
         """
-        __slots__ = EMPTY_SET
-
         ticking = False
         operator = Oper.Necessity
         branch_level = 1
@@ -1343,10 +1313,10 @@ class TabRules(object):
                 self[FilterHelper].release(node, branch)
                 if self[QuitFlag].get(branch):
                     return
-                return {
-                    'flag': True,
-                    'adds': ((self[MaxWorlds].quit_flag(branch),),),
-                }
+                return dict(
+                    flag = True,
+                    adds = ((self[MaxWorlds].quit_flag(branch),),),
+                )
 
             # Only count least-applied-to nodes
             if not self[NodeCount].isleast(node, branch):
@@ -1415,8 +1385,6 @@ class TabRules(object):
         possibility node whose operand is the negation of the negated necessitatum of *n*,
         then tick *n*.
         """
-        __slots__ = EMPTY_SET
-
         operator   = Oper.Necessity
         convert_to = Oper.Possibility
 
@@ -1427,8 +1395,6 @@ class TabRules(object):
         if the replacement of that constant for the other constant of *s* is a sentence that does
         not appear on *b* at *w*, then add it.
         """
-        __slots__ = EMPTY_SET
-
         ticking   = False
         predicate = Identity
 

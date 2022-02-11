@@ -67,6 +67,7 @@ from proof.tableaux import (
     Tableau,
 )
 from proof.types import (
+    RuleAttr,
     RuleEvent,
     TabEvent,
 )
@@ -81,7 +82,6 @@ from typing import (
     Mapping,
     Sequence,
     TypeVar,
-    ValuesView,
 )
 
 class AdzHelper:
@@ -223,9 +223,10 @@ class FilterNodeCache(BranchCache[set[Node]]):
     @abstract
     def __call__(self, node: Node, branch: Branch): ...
 
-    def copy(self: FncT, *args, **kw) -> FncT:
-        inst: FncT = super().copy(*args, **kw)
-        inst.ignore_ticked = self.ignore_ticked
+    def copy(self, /, *, events = False):
+        inst = super().copy(events = events)
+        if not events:
+            inst.ignore_ticked = self.ignore_ticked
         return inst
 
 # BrcT = TypeVar('BrcT', bound = BranchCache)
@@ -386,48 +387,36 @@ class FilterHelper(FilterNodeCache):
     Set configurable and chainable filters in ``NodeFilters``
     class attribute.
     """
-    clsattr_node = 'NodeFilters'
-
-    __slots__ = 'filters', 'callcount',  '__to_discard', 'predicate',
+    __slots__ = 'filters', '_garbage', 'pred',
 
     filters: NodeFiltersTypeInstMap
-    callcount: int
 
-    __to_discard: setm[tuple[Branch, Node]]
+    _garbage: setm[tuple[Branch, Node]]
 
     def __init__(self, rule: Rule):
         super().__init__(rule)
-        self.__to_discard = setm()
-        fmap = dict()
-        self.filters = MapProxy(fmap)
-        self.callcount = 0
-        for fclass in getattr(rule, self.clsattr_node, EMPTY_SET):
-            subclscheck(instcheck(fclass, type), NodeFilter)
-            if fclass in fmap:
-                raise  Emsg.DuplicateKey(fclass)
-            fmap[fclass] = fclass(self.rule)
-        self.predicate = cchain.forall_collection(self.filters.values())
+        self._garbage = setm()
+        self.filters = MapProxy({
+            Filter: subclscheck(instcheck(Filter, type), NodeFilter)(rule)
+            # Filter: Filter(rule)
+            for Filter in getattr(rule, RuleAttr.NodeFilters, EMPTY_SET)
+        })
+        self.pred = self.create_pred(self.filters)
 
-    def copy(self, *args, **kw):
-        inst = super().copy(*args, **kw)
-        try:
-            inst.__to_discard.update(self.__to_discard)
-        except AttributeError:
-            inst.__to_discard = self.__to_discard.copy()
-            inst.filters = MapProxy(dict(self.filters))
-            inst.predicate = cchain.forall_collection(inst.filters.values())
-        inst.callcount = self.callcount
+    def copy(self, /, *, events = False):
+        inst: FilterHelper = super().copy(events = events)
+        if events:
+            inst._garbage.update(self._garbage)
+        else:
+            inst._garbage = self._garbage.copy()
+            inst.filters = MapProxy(self.filters.copy())
+            inst.pred = self.create_pred(inst.filters)
         return inst
 
     def filter(self, node: Node, branch: Branch):
-        self.callcount += 1
         if self.ignore_ticked and branch.is_ticked(node):
             return False
-        return self.predicate(node)
-        # for filt in self.filters.values():
-        #     if not filt(node):
-        #         return False
-        # return True
+        return self.pred(node)
 
     @overload
     def __call__(self, node: Node, branch: Branch) -> bool: ...
@@ -442,20 +431,32 @@ class FilterHelper(FilterNodeCache):
         return node
 
     def release(self, node: Node, branch: Branch):
-        self.__to_discard.add((branch, node))
+        self._garbage.add((branch, node))
 
     def gc(self):
-        for branch, node in self.__to_discard:
-            try:
-                self[branch].discard(node)
-            except KeyError:
-                pass
-        self.__to_discard.clear()
+        if self._garbage:
+            for branch, node in self._garbage:
+                try:
+                    self[branch].discard(node)
+                except KeyError:
+                    pass
+            self._garbage.clear()
 
     def _reprdict(self) -> dict:
-        return super()._reprdict() | {
-            'filters': '(%s) %s' % (len(self.filters), self.filters),
-        }
+        return super()._reprdict() | dict(
+            filters = '(%s) %s' % (
+                len(self.filters),
+                ','.join(map(str, self.filters.keys()))
+            ),
+        )
+
+    @staticmethod
+    def create_pred(filters: Mapping[Any, NodeFilter]):
+        return cchain.forall_collection(filters.values())
+
+    @classmethod
+    def __init_ruleclass__(cls, rulecls: type[Rule]):
+        pass
 
     @classmethod
     def node_targets(cls,
@@ -481,87 +482,12 @@ class FilterHelper(FilterNodeCache):
 
 # ------
 NodeFiltT = TypeVar('NodeFiltT', bound = NodeFilter)
-class NodeFiltersTypeInstMap(Mapping):
+class NodeFiltersTypeInstMap(Mapping[type[NodeFilter], NodeFilter]):
     @overload
     def __getitem__(self, key: type[NodeFiltT]) -> NodeFiltT: ...
     @overload
-    def values(self) -> ValuesView[NodeFiltT]: ...
-    @overload
-    def __iter__(self) -> Iterator[type[NodeFiltT]]: ...
+    def copy(self) -> NodeFiltersTypeInstMap: ...
 # ------
-
-@static
-class Delegates(Abc):
-    'Mixin Rule classes to delegate to helper methods.'
-
-    @static
-    class AdzHelper:
-
-        class Apply(Rule):
-            'Delegates ``_apply()`` to ``AdzHelper._apply()``.'
-
-            Helpers = AdzHelper,
-
-            __slots__ = EMPTY_SET
-
-            #: Whether the target node should be ticked after application.
-            ticking: bool = True
-
-            def _apply(self, target: Target):
-                self[AdzHelper]._apply(target)
-
-        class ClosureScore(Rule):
-            """
-            Delegates ``score_candidate()`` to ``AdzHelper.closure_score()``.
-            """
-            Helpers = AdzHelper,
-
-            __slots__ = EMPTY_SET
-
-            def score_candidate(self, target: Target):
-                return self[AdzHelper].closure_score(target)
-
-    @static
-    class FilterHelper:
-        pass
-
-        # class Sentence(Rule):
-        #     """
-        #     Delegates ``sentence()`` to ``FilterHelper.sentence()``.
-        #     """
-        #     Helpers = FilterHelper,
-
-        #     __slots__ = '__fget',
-
-        #     def __init__(self, *args, **kw):
-        #         super().__init__(*args, **kw)
-        #         self.__fget = self[FilterHelper].filters[NodeFilters.Sentence].get
-
-        #     def sentence(self, node: Node, _ = None, /) -> Sentence:
-        #         return self[FilterHelper].filters[NodeFilters.Sentence].get
-
-        # class ExampleNodes(Rule):
-        #     """
-        #     Delegates ``example_nodes()`` to ``FilterHelper.example_nodes()``.
-        #     """
-        #     Helpers = FilterHelper,
-
-        #     __slots__ = EMPTY_SET
-
-        #     def example_nodes(self):
-        #         return self[FilterHelper].example_node(),
-
-    @abcf.after
-    def populate(cls):
-        from inspect import getmembers, isclass
-        modclasses = {
-            clsname: c for clsname, c in globals().items()
-            if isclass(c) and c.__module__ == cls.__module__
-        }
-        for helpername, delegates in getmembers(cls, isclass)[0:-1]:
-            helpercls = modclasses[helpername]
-            for name, c in getmembers(delegates, isclass)[0:-1]:
-                setattr(helpercls, name, c)
 
 
 class NodeTarget(BranchCache[Target]):

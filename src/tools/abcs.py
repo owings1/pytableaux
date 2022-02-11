@@ -319,6 +319,8 @@ class abcm:
                     if base.__dict__[name] is None:
                         return NotImplemented
                     break
+            else:
+                return NotImplemented
         return True
 
     @staticmethod
@@ -405,7 +407,7 @@ class AbcEnumMeta(_enum.EnumMeta):
 
     #******  Class Creation
 
-    def __new__(cls, clsname, bases, ns, /, skipflags = False, **kw):
+    def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /, skipflags = False, **kw):
 
         # Run namespace init hooks.
         abcm.nsinit(ns, bases, skipflags = skipflags)
@@ -509,9 +511,9 @@ class AbcEnumMeta(_enum.EnumMeta):
         'Get the sequence index of the member. Raises ValueError if not found.'
         try:
             try:
-                return cls._lookup[member][1]
+                return cls._lookup[member].index
             except KeyError:
-                return cls._lookup[cls[member]][1]
+                return cls._lookup[cls[member]].index
         except KeyError:
             raise ValueError(member)
 
@@ -599,12 +601,71 @@ class enbm:
             if cached[0] == value:
                 return cached[1] # type: ignore
         result: EnFlagT = finvert(self_)
+        # result.value = result._value_
         self_._invert_ = value, result
         result._invert_ = result.value, self_
         return result
 
-class abcf(_enum.Flag, metaclass = AbcEnumMeta, skipflags = True):
+
+#*****  Enum Base Classes
+
+class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta, skipflags = True):
+
+    __slots__ = _EMPTY_SET
+
+    name  : str
+    value : Any
+
+    _invert_: None
+
+    def __copy__(self):
+        return self
+
+    def __deepcopy__(self, memo):
+        memo[id(self)] = self
+        return self
+
+    @classmethod
+    def _on_init(cls: AbcEnumMeta, subcls: type[AbcEnum]):
+        'Propagate hook up to metaclass.'
+        type(cls)._on_init(cls, subcls)
+
+    @classmethod
+    def _member_keys(cls: AbcEnumMeta, member: AbcEnum):
+        'Propagate hook up to metaclass.'
+        return type(cls)._member_keys(cls, member)
+
+    @classmethod
+    def _after_init(cls: AbcEnumMeta):
+        'Propagate hook up to metaclass.'
+        type(cls)._after_init(cls)
+
+    def __repr__(self):
+        name = type(self).__name__
+        try: return '<%s.%s>' % (name, self._name_)
+        except AttributeError: return '<%s ?ERR?>' % name
+
+class FlagEnum(_enum.Flag, AbcEnum, skipflags = True):
+
+    name  : str|None
+    value : int
+
+    _invert_   : tuple[int, FlagEnum]
+    __invert__ = enbm.cached_flag_invert # type: ignore
+
+    @classmethod
+    def _missing_(cls: type[EnFlagT], value: Any):
+        member: EnFlagT = super()._missing_(value)
+        member.value = member._value_
+        member.name = member._name_
+        return member
+
+class abcf(FlagEnum, skipflags = True):
     'Enum flag for AbcMeta functionality.'
+
+    # _invert_   : tuple[int, abcf]
+
+    __slots__ = 'name', 'value', '_value_', '_invert_'
 
     blank  = 0
     before = 2
@@ -631,7 +692,15 @@ class abcf(_enum.Flag, metaclass = AbcEnumMeta, skipflags = True):
         setattr(obj, attr, cls(value))
         return obj
 
-    __invert__ = enbm.cached_flag_invert # type: ignore
+class IntEnum(int, AbcEnum):
+    __slots__ = _EMPTY_SET
+    # NB: "nonempty __slots__ not supported for subtype of 'IntEnum'"
+    pass
+
+class IntFlag(int, FlagEnum):
+    __slots__ = _EMPTY_SET
+    # NB: slots must be empty for int (layout conflict)
+    pass
 
 #=============================================================================
 #_____________________________________________________________________________
@@ -1063,60 +1132,8 @@ class hookutil(metaclass = AbcMeta, skiphooks = True):
 #=============================================================================
 #_____________________________________________________________________________
 #
-#       Base Classes
+#       Abc Base Classes
 #_____________________________________________________________________________
-
-#*****  Enum Base Classes
-
-class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta):
-
-    __slots__ = _EMPTY_SET
-
-    _invert_: tuple[int, EnFlagT] | None # type: ignore
-                                         # (Type variable has no meaning in this context)
-    name: str
-    value: Any
-
-    def __copy__(self):
-        return self
-
-    def __deepcopy__(self, memo):
-        memo[id(self)] = self
-        return self
-
-    @classmethod
-    def _on_init(cls: AbcEnumMeta, subcls: type[AbcEnum]):
-        'Propagate hook up to metaclass.'
-        type(cls)._on_init(cls, subcls)
-
-    @classmethod
-    def _member_keys(cls: AbcEnumMeta, member: AbcEnum):
-        'Propagate hook up to metaclass.'
-        return type(cls)._member_keys(cls, member)
-
-    @classmethod
-    def _after_init(cls: AbcEnumMeta):
-        'Propagate hook up to metaclass.'
-        type(cls)._after_init(cls)
-
-    def __repr__(self):
-        name = type(self).__name__
-        try: return '<%s.%s>' % (name, self._name_)
-        except AttributeError: return '<%s ?ERR?>' % name
-
-class FlagEnum(_enum.Flag, AbcEnum):
-    __slots__ = '_value_', '_invert_', 'name', 'value'
-    __invert__ = enbm.cached_flag_invert # type: ignore
-    _invert_: tuple[int, EnFlagT] # type: ignore
-                                  # (Type variable has no meaning in this context)
-    value: int
-
-class IntEnum(_enum.IntEnum, AbcEnum):
-    __slots__ = _EMPTY_SET
-    # NB: "nonempty __slots__ not supported for subtype of 'IntEnum'"
-    pass
-
-#*****  Abc Base Classes
 
 class Abc(metaclass = AbcMeta):
     'Convenience for using AbcMeta as metaclass.'

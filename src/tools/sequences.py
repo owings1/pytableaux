@@ -205,12 +205,12 @@ class seqm(list[VT], MutableSequenceApi[VT]):
     __copy__ = MutableSequenceApi.__copy__
 
     @overload
-    def __getitem__(self: SeqApiT, s: slice) -> SeqApiT: ...
+    def __getitem__(self: SeqApiT, s: slice, /) -> SeqApiT: ...
 
     @overload
-    def __getitem__(self, i: SupportsIndex) -> VT: ...
+    def __getitem__(self, i: SupportsIndex, /) -> VT: ...
 
-    def __getitem__(self, i):
+    def __getitem__(self, i, /):
         if isinstance(i, slice):
             # Ensure slice returns this type, not a list.
             return self._from_iterable(super().__getitem__(i))

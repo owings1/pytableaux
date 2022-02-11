@@ -25,7 +25,11 @@ from tools.decorators import (
 )
 
 from collections.abc import (
-    Collection, Iterator, Mapping, MutableMapping, Set
+    Collection,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    Set
 )
 from collections import defaultdict, deque
 from itertools import (
@@ -133,6 +137,11 @@ class MappingApi(Mapping[KT, VT], Copyable):
     def __ror__(self: MapiT, b: SetT) -> SetT: ...
 
     @overload
+    def __mod__(self: MapiT, b: Mapping) -> MapiT: ...
+    @overload
+    def __rmod__(self: MapiT, b: Mapping) -> MapiT: ...
+
+    @overload
     def __and__(self:  MapiT, b: SetT) -> MapiT: ...
     @overload
     def __sub__(self:  MapiT, b: SetT) -> MapiT: ...
@@ -144,7 +153,6 @@ class MappingApi(Mapping[KT, VT], Copyable):
     @overload
     def __rxor__(self: MapiT, b: SetT) -> SetT: ...
 
-
     @abcf.temp
     @membr.defer
     def oper(member: membr):
@@ -155,6 +163,7 @@ class MappingApi(Mapping[KT, VT], Copyable):
         return f
 
     __or__ = __ror__ = __and__ = __rand__ = __sub__ = __rsub__ = __rxor__ = oper()
+    __mod__ = __rmod__ = __or__
 
     def __or__op__(self, other: Mapping):
         'Mapping | Mapping -> Mapping'
@@ -165,6 +174,19 @@ class MappingApi(Mapping[KT, VT], Copyable):
         if isinstance(other, Set): return chain(other, self)
         'Mapping | Mapping --> Mapping'
         return chain(ItemsIterator(other), ItemsIterator(self))
+
+    def __mod__op__(self, other: Mapping):
+        'Mapping | Mapping -> Mapping'
+        return chain(ItemsIterator(self), ItemsIterator(other, 
+            kpred = self.__contains__, koper = not_
+        ))
+
+    def __rmod__op__(self, other: Mapping):
+        'Mapping | Mapping -> Mapping'
+        if not isinstance(other, Mapping): return NotImplemented
+        return chain(ItemsIterator(other), ItemsIterator(self,
+            kpred = other.__contains__, koper = not_
+        ))
 
     def __and__op__(self, other: Set):
         if not isinstance(other, Set): return NotImplemented
@@ -302,6 +324,12 @@ class MutableMappingApi(MappingApi[KT, VT], MutableMapping[KT, VT], Copyable):
         if not isinstance(other, Iterable):
             return NotImplemented
         self.update(other)
+        return self
+
+    def __imod__(self, other):
+        if not isinstance(other, Iterable):
+            return NotImplemented
+        self.update(ItemsIterator(other, kpred = self.__contains__, koper = not_))
         return self
 
     def __iand__(self, other):

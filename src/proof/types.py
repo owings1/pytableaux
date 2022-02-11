@@ -1,25 +1,54 @@
 from __future__ import annotations
 
-from errors import Emsg, instcheck
+__all__ = (
+
+)
+
+from errors import (
+    Emsg,
+    instcheck,
+    subclscheck,
+)
 
 from tools.abcs import (
     AbcMeta, AbcEnum, FlagEnum, MapProxy,
-    overload, static,
+    # TypeInstMap,
+    abcm,
+    abstract,
+    # closure,
+    # overload,
+    closure,
+    static,
     T, T_co,
 )
-from tools.callables import preds
-from tools.hybrids import qsetf
-from tools.sets import EMPTY_SET
+# from tools.callables import preds
+from tools.hybrids import qsetf, EMPTY_QSET
+from tools.mappings import dmap
+from tools.sets import setf, EMPTY_SET
 from tools.timing import StopWatch
 
 import enum
-from itertools import chain
+# from itertools import chain
+# import operator as opr
 from typing import (
-    Generic,
+    Any,
+    Callable,
+    # Generic,
     Mapping,
     NamedTuple,
-    TypeVar,
+    # Protocol,
+    # Sequence,
+    # TypeVar,
 )
+_NOGET = object()
+
+class RuleAttr(str, AbcEnum):
+    Helpers     = 'Helpers'
+    Timers      = 'Timers'
+    NodeFilters = 'NodeFilters'
+    DefaultOpts = '_defaults'
+    OptKeys     = '_optkeys'
+    Name        = 'name'
 
 class BranchEvent(AbcEnum):
     AFTER_BRANCH_CLOSE = enum.auto()
@@ -56,66 +85,64 @@ class TabFlag(FlagEnum):
     TIMED_OUT   = 16
     TRUNK_BUILT = 32
 
+class RuleFlag(FlagEnum):
+    NONE = 0
+    INIT  = 1
+    LOCKED = 2
+
 class RuleMeta(AbcMeta):
 
-    def __new__(cls, clsname, bases, ns: dict, **kw):
-        helpers_attr = 'Helpers'
-        helper_attrs = cls._get_helper_attrs(ns, helpers_attr)
+    @classmethod
+    def __prepare__(cls, clsname: str, bases: tuple[type, ...], **kw) -> dict[str, Any]:
+        return dmap(__slots__ = EMPTY_SET)
+
+    def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /, *,
+        helper: Mapping[type[RuleHelperType], Mapping[str, Any]] = {}, **kw
+    ):
+
+        RuleBase = _rule_basecls(cls)
+        if RuleBase is None:
+            _rule_basens_mod(ns)
+
         Class = super().__new__(cls, clsname, bases, ns, **kw)
-        cls._set_helper_attrs(Class, helper_attrs, helpers_attr)
-        return Class
 
-    @staticmethod
-    def _get_helper_attrs(ns: dict, clsattr: str):
-        taken = dict(ns)
-        attrs: dict[type, str] = {}
-        raw = ns.get(clsattr, ())
-        instcheck(raw, tuple)
-        for item in raw:
-            if isinstance(item, type):
-                item = None, item
-            instcheck(item, tuple)
-            if len(item) != 2:
-                raise Emsg.WrongLength(item, 2)
-            name, Helper = item
-            instcheck(Helper, type)
-            if name is None:
-                name = getattr(Helper, '_attr', None)
-            else:
-                name = instcheck(name, str)
-                if name in taken:
-                    raise Emsg.ValueConflict(name, taken[name])
-                if not preds.isattrstr(name):
-                    raise Emsg.BadAttrName(name)
-            if Helper in attrs:
-                # Helper class already added
-                if name is not None:
-                    # Check for attr name conflict.
-                    if attrs[Helper] is None:
-                        # Prefer named attr to unnamed.
-                        attrs[Helper] = name
-                        taken[name] = Helper
-                    elif name != attrs[Helper]:
-                        raise Emsg.DuplicateValue(name)
-            else:
-                attrs[Helper] = name
-                if name is not None:
-                    taken[name] = Helper
-        return attrs
+        if RuleBase is None:
+            RuleBase = _rule_basecls(cls, Class)
 
-    @staticmethod
-    def _set_helper_attrs(Class: type, attrs: dict, clsattr: str):
-        filt = filter(bool, chain(
-            * (
-                c.__dict__.get(clsattr, EMPTY_SET)
-                for c in reversed(Class.mro()[1:])
-            ),
-            (
-                (v, k) for k,v in attrs.items()
+        for name in (RuleAttr.Helpers, RuleAttr.Timers):
+            value = abcm.merge_mroattr(Class, name, supcls = RuleBase,
+                default = EMPTY_QSET,
+                transform = qsetf,
             )
-        ))
-        hlist = qsetf((item for item in filt if item[1] != None))
-        setattr(Class, clsattr, tuple(hlist))
+            if name is RuleAttr.Helpers:
+                for Helper in value:
+                    subclscheck(Helper, RuleHelperType)
+
+        for name in (RuleAttr.NodeFilters,):
+            # Load latest first.
+            if hasattr(Class, name):
+                abcm.merge_mroattr(Class, name, supcls = RuleBase,
+                    reverse = False,
+                    default = EMPTY_QSET,
+                    transform = qsetf,
+                )
+
+        for name in (RuleAttr.DefaultOpts,):
+            abcm.merge_mroattr(Class, name, supcls = RuleBase,
+                default = dmap(),
+                transform = MapProxy,
+            )
+        
+        setattr(Class, RuleAttr.OptKeys, setf(getattr(Class, RuleAttr.DefaultOpts)))
+        setattr(Class, RuleAttr.Name, clsname)
+
+        emptymap = {}
+        for Helper in getattr(Class, RuleAttr.Helpers):
+            if hasattr(Helper, '__init_ruleclass__'):
+                Helper: type[RuleHelperType]
+                Helper.__init_ruleclass__(Class, **helper.get(Helper, emptymap))
+
+        return Class
 
 class NodeStat(dict[TabStatKey, TabFlag|int|None]):
 
@@ -130,8 +157,6 @@ class NodeStat(dict[TabStatKey, TabFlag|int|None]):
     def __init__(self):
         super().__init__(self._defaults)
 
-
-
 class TabTimers(NamedTuple):
 
     build  : StopWatch
@@ -143,6 +168,121 @@ class TabTimers(NamedTuple):
     def create(it = (False,) * 4):
         return TabTimers._make(map(StopWatch, it))
 
-class TypeInstMap(Mapping):
-    @overload
-    def __getitem__(self, key: type[T]) -> T: ...
+class RuleHelperType(metaclass = AbcMeta):
+
+    __slots__ = EMPTY_SET
+
+    rule: Any
+
+    @abstract
+    def __init__(self, rule: Any, /):
+        self.rule = rule
+
+    @classmethod
+    @abstract
+    def __init_ruleclass__(cls, rulecls: type, /):
+        pass
+
+    @classmethod
+    def __subclasshook__(cls, subcls: type, /):
+        if cls is not __class__:
+            return NotImplemented
+        return _check_helper_subclass(subcls)
+
+if 'Util Functions' or True:
+
+    def _rule_basecls(metacls: type, default: type = None, /, *, base = {}):
+        try:
+            return base[metacls]
+        except KeyError:
+            if default is not None:
+                base[metacls] = default
+                _rule_basecls.__kwdefaults__ |= dict(base = MapProxy(base))
+            return default
+
+    def _rule_basens_mod(ns: dmap):
+        toslot = {'__getitem__'}
+        ns -= toslot
+        ns |= dict(__slots__ = setf(ns['__slots__']) | toslot, __iter__ = None)
+
+    @closure
+    def _check_helper_subclass():
+        from inspect import Parameter, Signature
+        import types
+        
+        desctypes = (
+            types.MemberDescriptorType,
+            types.WrapperDescriptorType,
+            types.DynamicClassAttribute,
+            property,
+        )
+        posflag = (
+            Parameter.POSITIONAL_ONLY |
+            Parameter.POSITIONAL_OR_KEYWORD |
+            Parameter.VAR_POSITIONAL
+        )
+        def getparams(value: Callable, /, *,
+            fromcb: Callable[[Callable], Signature] = Signature.from_callable
+        ):
+            return list(fromcb(value).parameters.values())
+
+        def notimplinfo(*args):
+            # print(*args)
+            return NotImplemented
+        names = qsetf((
+            'rule',
+            # '__init_ruleclass__',
+            '__init__',
+        ))
+        def check(subcls: type):
+
+            check = abcm.check_mrodict(subcls.mro(), *names)
+            if check is NotImplemented or check is False:
+                return check
+
+            name = 'rule'
+            if name in names:
+
+                value = getattr(subcls, name)
+                if not isinstance(value, desctypes):
+                    return notimplinfo(subcls, name, value)
+
+            name = '__init_ruleclass__'
+            if name in names:
+
+                value = getattr(subcls, name)
+                if not callable(value):
+                    return notimplinfo(subcls, name, value)
+                params = getparams(value)
+                if len(params) < 2:
+                    return notimplinfo(subcls, name, 'params', params)
+                p = params[1]
+                if p.kind & posflag != p.kind:
+                    return notimplinfo(subcls, name, 'param', p, p.kind)
+        
+            name = '__init__'
+            if name in names:
+
+                value = getattr(subcls, name)
+                if not callable(value):
+                    return notimplinfo(subcls, name, value)
+                params = getparams(value)
+                if len(params) < 2:
+                    name = '__new__'
+                    value = getattr(subcls, name)
+                    if not callable(value):
+                        return notimplinfo(subcls, name, value)
+                    params = getparams(value)
+                    if len(params) < 2:
+                        return notimplinfo(subcls, name, value)
+                p = params[1]
+                if p.kind & posflag != p.kind:
+                    return notimplinfo(subcls, name, 'param', p, p.kind)
+
+            return True
+
+        return check
+
+del(
+    abstract, closure, static
+)

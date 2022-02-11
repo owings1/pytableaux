@@ -23,17 +23,17 @@ __all__ = 'Rule', 'TableauxSystem', 'Tableau', 'ClosingRule'
 
 from errors import (
     Emsg,
-    IllegalStateError,
-    TimeoutError,
     instcheck,
     subclscheck,
 )
 from tools.abcs import (
     Abc,
+    abcm,
     # AbcMeta,
     T, F,
     # P, TT, KT, VT,
     MapProxy,
+    TypeInstMap,
 )
 from tools.callables import preds
 from tools.decorators import (
@@ -41,12 +41,12 @@ from tools.decorators import (
     raisr, wraps,
 )
 from tools.events import EventEmitter
-from tools.hybrids import qset
+from tools.hybrids import qset, qsetf, EMPTY_QSET
 from tools.linked import linqset
 from tools.mappings import (
     MapCover,
     MappingApi,
-    # dmap,
+    dmap,
     dmapattr,
 )
 from tools.misc import get_logic, orepr
@@ -75,13 +75,15 @@ from proof.common import (
 from proof.types import (
     BranchEvent,
     NodeStat,
+    RuleFlag,
+    RuleHelperType,
     RuleMeta,
     RuleEvent,
     TabEvent,
     TabTimers,
     TabFlag,
     TabStatKey,
-    TypeInstMap,
+    # check_helper_subclass,
 )
 from collections import deque
 # from functools import partial
@@ -90,12 +92,13 @@ import operator as opr
 from types import ModuleType
 from typing import (
     Any,
-    # Callable,
+    Callable,
+    ClassVar,
     # Generic,
     Iterable,
     Iterator,
     Mapping,
-    MutableSequence,
+    # MutableSequence,
     NamedTuple,
     Sequence,
     SupportsIndex,
@@ -106,14 +109,6 @@ NOARG = object()
 NOGET = object()
 
 LogicRef = ModuleType | str
-
-class RuleHelperInfo(NamedTuple):
-    #: The helper class.
-    cls  : type
-    #: The helper instance.
-    inst : object
-    #: The rule attribute name.
-    attr : str
 
 class RuleTarget(NamedTuple):
     #: The rule instance that will apply.
@@ -132,39 +127,52 @@ class StepEntry(NamedTuple):
 class Rule(EventEmitter, metaclass = RuleMeta):
     'Base class for a Tableau rule.'
 
-    Helpers: Sequence[tuple[str, type]] = ()
-    Timers: Sequence[str] = ()
+    #: Helper classes.
+    Helpers: qsetf[type[RuleHelper]] = EMPTY_QSET
+
+    #: StopWatch names to create in self.timers mapping.
+    Timers: qsetf[str] = qsetf(('search', 'apply'))
+
+    #: The rule class name.
+    name: ClassVar[str]
 
     branch_level: int = 1
-    _defaults = dict(is_rank_optim = True)
 
-    #: Reference to the tableau instance.
+    _defaults = dict(is_rank_optim = True, nolock = False)
+    _optkeys: ClassVar[setf[str]]
+
+    #: The tableau instance.
     tableau: Tableau
+    #: The options.
+    opts: Mapping[str, bool]
+    #: Helper instances mapped by class.
+    #:
+    #: :type: Mapping[type, object]
     helpers: TypeInstMap
+    #: StopWatch instances mapped by name.
     timers: Mapping[str, StopWatch]
-    #: The number of times the rule has applied.
-    apply_count: int
+    #: The targets applied to.
+    history: SequenceCover[Target]
 
-    __slots__ = setf((
-        'tableau', 'helpers', 'apply_count', 'timers', 'opts',
-        'search_timer', 'apply_timer', '__getitem__'
-    ))
+    flag: RuleFlag
+
+    __slots__ = setf(('tableau', 'helpers', 'timers', 'opts', 'history', 'flag'))
 
     @abstract
-    def _get_targets(self, branch: Branch, /) -> Sequence[Target]:
+    def _get_targets(self, branch: Branch, /) -> Sequence[Target]|None:
         raise NotImplementedError
 
     @abstract
-    def _apply(self, target: Target, /):
+    def _apply(self, target: Target, /) -> None:
         raise NotImplementedError
 
     @abstract
     def example_nodes(self) -> Sequence[Mapping]:
         raise NotImplementedError
 
-    def sentence(self, node: Node, default = None, /) -> Sentence|None:
+    def sentence(self, node: Node, /) -> Sentence|None:
         'Get the sentence for the node, or ``None``.'
-        return node.get('sentence', default)
+        return node.get('sentence', None)
 
     # Scoring
     def group_score(self, target: Target, /):
@@ -173,47 +181,58 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     # Candidate score implementation options ``is_rank_optim``
     def score_candidate(self, target: Target, /) -> float:
-        return 0
+        return 0.0
+
+    def __new__(cls, *args, **kw):
+        inst = super().__new__(cls)
+        object.__setattr__(inst, 'flag', RuleFlag.NONE)
+        return inst
 
     def __init__(self, tableau: Tableau, /, **opts):
-        super().__init__(*RuleEvent)
+
+        EventEmitter.__init__(self, *RuleEvent)
 
         self.tableau = instcheck(tableau, Tableau)
 
-        self.search_timer = StopWatch()
-        self.apply_timer = StopWatch()
-        self.timers = MapCover(dict(
-            (name, StopWatch()) for name in self.Timers
-        ))
+        if opts:
+            opts = dmap(opts)
+            opts &= self._optkeys
+            opts %= self._defaults
+        else:
+            opts = self._defaults
+        self.opts = MapProxy(opts)
 
-        self.opts = self._defaults | opts
+        self.timers = {
+            name: StopWatch() for name in self.Timers
+        }
 
-        self.helpers = {}
-        self.__getitem__ = self.helpers.__getitem__
-        self.apply_count = 0
+        history = deque()
+        self.on(RuleEvent.AFTER_APPLY, history.append)
+        self.history = SequenceCover(history)
 
-        for name, helper in self.Helpers:
-            self.add_helper(helper, name)
+        self.helpers = helpers = {}
+        self.__getitem__ = helpers.__getitem__
+        # Add one at a time, to support helper dependency checks.
+        for Helper in self.Helpers:
+            helpers[Helper] = Helper(self)
 
-    @final
-    @property
-    def name(self) -> str:
-        'The rule type name.'
-        return type(self).__name__
+        if not self.opts['nolock']:
+            tableau.once(TabEvent.AFTER_BRANCH_ADD, self.__lock)
+        self.flag |= RuleFlag.INIT
 
     @final
     def get_target(self, branch: Branch) -> Target:
-        targets = self._get_targets(branch)
-        if targets:
-            self.__extend_targets(targets)
-            return self.__select_best_target(targets)
+        with self.timers['search']:
+            targets = self._get_targets(branch)
+            if targets:
+                self.__extend_targets(targets)
+                return self.__select_best_target(targets)
 
     @final
     def apply(self, target: Target):
-        with self.apply_timer:
+        with self.timers['apply']:
             self.emit(RuleEvent.BEFORE_APPLY, target)
             self._apply(target)
-            self.apply_count += 1
             self.emit(RuleEvent.AFTER_APPLY, target)
 
     @final
@@ -221,46 +240,55 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         """Create a new branch on the tableau. Convenience for
         ``self.tableau.branch()``.
 
-        :param tableaux.Branch parent: The parent branch, if any.
+        :param common.Branch parent: The parent branch, if any.
         :return: The new branch.
         """
         return self.tableau.branch(parent)
 
-    @final
-    def add_helper(self, cls: type, attr: str = None, **opts) -> RuleHelperInfo:
-        'Add a helper.'
-        if cls in self.helpers:
-            raise Emsg.DuplicateKey(cls)
-        if attr is not None and hasattr(self, attr):
-            raise Emsg.AttributeConflict(attr)
-        inst = cls(self, **opts)
-        info = RuleHelperInfo(cls, inst, attr)
-        self.helpers[cls] = inst
-        if attr is not None:
-            setattr(self, attr, inst)
-        return info
+    @overload
+    def __getitem__(self, key: type[T]) -> T: # type: ignore
+        'Get a helper instance by class.'
+        # Removed in meta class, and added to slots.
 
     def __repr__(self):
         return orepr(self,
-            module      = self.__module__,
-            apply_count = self.apply_count,
+            module  = self.__module__,
+            applied = len(self.history),
         )
 
-    def __setattr__(self, name, value):
-        if name == 'tableau' and hasattr(self, name):
-            raise AttributeError(name)
-        super().__setattr__(name, value)
+    @closure
+    def __setattr__(*, slots = __slots__):
+        LockedVal = RuleFlag.LOCKED.value
+        protected: Callable[[str], bool] = slots.__contains__
+        def fset(self: Rule, name, value, /):
+            flagv = self.flag.value
+            if flagv and flagv & LockedVal == flagv and protected(name):
+                raise Emsg.ReadOnlyAttr(name, self)
+            super().__setattr__(name, value)
+        return fset
 
-    def __delattr__(self, name):
-        if name == 'tableau':
-            raise AttributeError(name)
-        super().__delattr__(name)
+    @closure
+    def __delattr__(*, slots = __slots__):
+        protected: Callable[[str], bool] = slots.__contains__
+        def fdel(self: Rule, name,/):
+            if protected(name):
+                raise Emsg.ReadOnlyAttr(name, self)
+            super().__delattr__(name)
+        return fdel
 
-    @overload
-    def __getitem__(self, key: type[T]) -> T: ...
-    del(__getitem__)
-
-    __iter__ = None
+    @closure
+    def __lock():
+        sa = object.__setattr__
+        LockedVal = RuleFlag.LOCKED.value
+        def lock(self: Rule, *_):
+            flagv = self.flag.value
+            newval = flagv | LockedVal
+            if newval == flagv:
+                raise Emsg.IllegalState('Already locked')
+            sa(self, 'helpers', MapProxy(self.helpers))
+            sa(self, 'timers' , MapProxy(self.timers))
+            sa(self, 'flag'   , RuleFlag(newval))
+        return lock
 
     def __extend_targets(self, targets: Sequence[Target], /):
         """Augment the targets with the following keys:
@@ -272,52 +300,41 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         - `min_candidate_score`
         - `max_candidate_score`
 
-        :param Sequence[Target] targets: The list of targets.
+        :param targets: The list of targets.
         """
-        # instcheck(targets, Sequence)
-        isrankoptim = self.opts['is_rank_optim']
-        if isrankoptim:
+        is_rank_optim = self.opts['is_rank_optim']
+        if is_rank_optim:
             scores = tuple(map(self.score_candidate, targets))
+            max_score = max(scores)
+            min_score = min(scores)
         else:
-            scores = 0,
-        max_score = max(scores)
-        min_score = min(scores)
+            scores = None,
+            max_score = min_score = None
         for score, target in zip(scores, targets):
             target.update(
                 rule             = self,
+                is_rank_optim    = is_rank_optim,
                 total_candidates = len(targets),
+                candidate_score  = score,
+                min_candidate_score = min_score,
+                max_candidate_score = max_score,
             )
-            if isrankoptim:
-                target.update(
-                    is_rank_optim       = True,
-                    candidate_score     = score,
-                    min_candidate_score = min_score,
-                    max_candidate_score = max_score,
-                )
-            else:
-                target.update(
-                    is_rank_optim       = False,
-                    candidate_score     = None,
-                    min_candidate_score = None,
-                    max_candidate_score = None,
-                )
 
     def __select_best_target(self, targets: Iterable[Target], /) -> Target:
         'Selects the best target. Assumes targets have been extended.'
+        is_rank_optim = self.opts['is_rank_optim']
         for target in targets:
-            if not self.opts['is_rank_optim']:
+            if not is_rank_optim:
                 return target
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
 
 RuleT = TypeVar('RuleT', bound = Rule)
 
-
 class ClosingRule(Rule):
     'A closing rule has a fixed ``_apply()`` that marks the branch as closed.'
     
     _defaults = dict(is_rank_optim = False)
-    __slots__ = EMPTY_SET
 
     def _get_targets(self, branch: Branch):
         target = self.applies_to_branch(branch)
@@ -327,6 +344,7 @@ class ClosingRule(Rule):
             target['branch'] = branch
             return Target(target),
 
+    @final
     def _apply(self, target: Target):
         target.branch.close()
 
@@ -350,13 +368,25 @@ class ClosingRule(Rule):
     def check_for_target(self, node: Node, branch: Branch):
         raise NotImplementedError
 
+class RuleHelper(RuleHelperType):
+
+    __slots__ = 'rule',
+
+    rule: Rule
+
+    def __init__(self, rule: Rule):
+        self.rule = rule
+
+    @classmethod
+    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
+        super().__init_ruleclass__(rulecls, **kw)
 
 def locking(method: F) -> F:
     'Decorator for locking TabRules methods after Tableau is started.'
     def f(self: TabRules, *args, **kw):
         try:
             if self._root._locked:
-                raise IllegalStateError('locked')
+                raise Emsg.IllegalState('locked')
         except AttributeError: pass
         return method(self, *args, **kw)
     return wraps(method)(f)
@@ -1126,10 +1156,9 @@ class Tableau(Sequence[Branch], EventEmitter):
         :return: A (rule, target) pair, or ``None``.
         """
         is_group_optim = self.opts['is_group_optim']
-        results = deque(maxlen = len(rules) if is_group_optim else 1)
+        results = deque(maxlen = len(rules) if is_group_optim else 0)
         for rule in rules:
-            with rule.search_timer:
-                target = rule.get_target(branch)
+            target = rule.get_target(branch)
             if target:
                 ruletarget = RuleTarget(rule, target)
                 if not is_group_optim:
@@ -1194,13 +1223,17 @@ class Tableau(Sequence[Branch], EventEmitter):
                 step.duration_ms
                 for step in self.history
             ),
-            build_duration_ms  = timers.build.elapsed(),
-            trunk_duration_ms  = timers.trunk.elapsed(),
-            tree_duration_ms   = timers.tree.elapsed(),
-            models_duration_ms = timers.models.elapsed(),
+            build_duration_ms  = timers.build.elapsed_ms(),
+            trunk_duration_ms  = timers.trunk.elapsed_ms(),
+            tree_duration_ms   = timers.tree.elapsed_ms(),
+            models_duration_ms = timers.models.elapsed_ms(),
             rules_time_ms = sum(
-                sum((rule.search_timer.elapsed(), rule.apply_timer.elapsed()))
+                timer.elapsed_ms()
+                # sum((rule.timers['search'].elapsed(), rule.timers['apply'].elapsed()))
                 for rule in self.rules
+                    for timer in (
+                        rule.timers['search'], rule.timers['apply']
+                    )
             ),
             rules = tuple(map(self.__compute_rule_stats, self.rules)),
         )
@@ -1209,15 +1242,10 @@ class Tableau(Sequence[Branch], EventEmitter):
         'Compute the stats for a rule after the tableau is finished.'
         return dict(
             name            = rule.name,
-            queries         = rule.search_timer.count,
-            search_time_ms  = rule.search_timer.elapsed(),
-            search_time_avg = rule.search_timer.elapsed_avg(),
-            apply_count     = rule.apply_count,
-            apply_time_ms   = rule.apply_timer.elapsed(),
-            apply_time_avg  = rule.apply_timer.elapsed_avg(),
+            applied         = len(rule.history),
             timers          = {
                 name : dict(
-                    duration_ms  = timer.elapsed(),
+                    duration_ms  = timer.elapsed_ms(),
                     duration_avg = timer.elapsed_avg(),
                     count        = timer.count,
                 )
@@ -1229,11 +1257,11 @@ class Tableau(Sequence[Branch], EventEmitter):
         timeout = self.opts['build_timeout']
         if timeout is None or timeout < 0:
             return
-        if self.timers.build.elapsed() > timeout:
+        if self.timers.build.elapsed_ms() > timeout:
             self.timers.build.stop()
             self.__flag |= TabFlag.TIMED_OUT
             self.finish()
-            raise TimeoutError('Timeout of %dms exceeded.' % timeout)
+            raise Emsg.Timeout('Timeout of %dms exceeded.' % timeout)
 
     def __is_max_steps_exceeded(self):
         max_steps = self.opts['max_steps']
@@ -1241,7 +1269,7 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     def __check_not_started(self):
         if TabFlag.TRUNK_BUILT in self.__flag or len(self.history) > 0:
-            raise IllegalStateError("Tableau already started.")
+            raise Emsg.IllegalState("Tableau already started.")
 
     def __result_word(self):
         if self.valid:
@@ -1416,9 +1444,9 @@ class TreeStruct(dmapattr):
     def __init__(self, values = None, /, **kw):
         self.root: TreeStruct = None
         #: The nodes on this structure.
-        self.nodes: MutableSequence[Node] = list()
+        self.nodes: list[Node] = list()
         #: This child structures.
-        self.children: MutableSequence[TreeStruct] = list()
+        self.children: list[TreeStruct] = list()
         #: Whether this is a terminal (childless) structure.
         self.leaf: bool = False
         #: Whether this is a terminal structure that is closed.

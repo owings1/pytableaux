@@ -100,6 +100,9 @@ class Emsg(_enum.Enum):
     DuplicateValue = DuplicateValueError,
     MissingValue = MissingValueError,
 
+    IllegalState = IllegalStateError,
+
+    Timeout = TimeoutError,
 
     def __init__(self, cls: type[_ExT], msg: str = None, fns = None):
         if isinstance(cls, tuple):

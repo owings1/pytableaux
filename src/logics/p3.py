@@ -487,7 +487,7 @@ class TabRules(object):
         quantifier  = Quantifier.Existential
         branch_level = 1
 
-        def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch):
+        def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             s: Quantified = self.sentence(node)
             r = s.unquantify(c)
             d = self.designation
@@ -510,7 +510,7 @@ class TabRules(object):
         quantifier  = Quantifier.Existential
         branch_level = 1
 
-        def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch):
+        def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             s: Quantified = self.sentence(node)
             r = s.unquantify(c)
             d = self.designation
@@ -531,7 +531,7 @@ class TabRules(object):
         quantifier  = Quantifier.Universal
         branch_level = 1
 
-        def _get_constant_nodes(self, node: Node, c: Constant, branch: Branch):
+        def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             s: Quantified = self.sentence(node)
             r = s.unquantify(c)
             d = self.designation

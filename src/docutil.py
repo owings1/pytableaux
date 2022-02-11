@@ -451,24 +451,26 @@ class Helper(object):
     ## HTML Subroutines  :
     ## ===================
 
-    def html_trunk_example(self, lgc):
+    def html_trunk_example(self, logic):
         """
         Returns rendered tableau HTML with argument and build_trunk example.
         """
-        lgc = get_logic(lgc)
+        logic = get_logic(logic)
         arg = parse_argument('b', ['a1', 'a2'], notn = 'polish')
         lw = self.lwtrunk
         pw = self.pwtrunk
-        proof = Tableau(lgc)
-        proof.rules.groups[1][0].add_helper(EllipsisExampleHelper)
-        proof.argument = arg
-        proof.finish()
+        tab = Tableau(logic)
+        # pluck a rule
+        rule = tab.rules.groups[1][0]
+        rule.helpers[EllipsisExampleHelper] = EllipsisExampleHelper(rule)
+        tab.argument = arg
+        tab.finish()
         return cat(
             'Argument: <i>',
-            '</i> ... <i>'.join(lw.write(p) for p in arg.premises),
-            '</i> &there4; <i>', lw.write(arg.conclusion), '</i>',
+            '</i> ... <i>'.join(map(lw, arg.premises)),
+            '</i> &there4; <i>', lw(arg.conclusion), '</i>',
             '\n',
-            pw.write(proof),
+            pw(tab),
         )
 
     def html_rule_example(self, rule: Rule|type[Rule], logic=None):

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = 'SequenceSet', 'MutableSequenceSet', 'qsetf', 'qset'
+__all__ = 'SequenceSet', 'MutableSequenceSet', 'qsetf', 'qset', 'EMPTY_QSET',
 
 from errors import (
     instcheck,
@@ -133,6 +133,7 @@ class qsetf(SequenceSet[VT]):
     def __repr__(self):
         return '%s({%s})' % (type(self).__name__, list(self._seq_).__repr__()[1:-1])
 
+EMPTY_QSET = qsetf()
 
 class MutableSequenceSet(SequenceSet[VT], MutableSequenceApi[VT], MutableSetApi[VT]):
     """Mutable sequence set (ordered set) interface.
