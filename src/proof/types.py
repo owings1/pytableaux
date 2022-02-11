@@ -6,13 +6,12 @@ __all__ = (
 
 from errors import (
     Emsg,
-    instcheck,
+    # instcheck,
     subclscheck,
 )
 
 from tools.abcs import (
     AbcMeta, AbcEnum, FlagEnum, MapProxy,
-    # TypeInstMap,
     abcm,
     abstract,
     # closure,
@@ -40,7 +39,7 @@ from typing import (
     # Sequence,
     # TypeVar,
 )
-_NOGET = object()
+# _NOGET = object()
 
 class RuleAttr(str, AbcEnum):
     Helpers     = 'Helpers'
@@ -49,6 +48,9 @@ class RuleAttr(str, AbcEnum):
     DefaultOpts = '_defaults'
     OptKeys     = '_optkeys'
     Name        = 'name'
+
+class HelperAttr(str, AbcEnum):
+    InitRuleCls = '__init_ruleclass__'
 
 class BranchEvent(AbcEnum):
     AFTER_BRANCH_CLOSE = enum.auto()
@@ -86,8 +88,8 @@ class TabFlag(FlagEnum):
     TRUNK_BUILT = 32
 
 class RuleFlag(FlagEnum):
-    NONE = 0
-    INIT  = 1
+    NONE   = 0
+    INIT   = 1
     LOCKED = 2
 
 class RuleMeta(AbcMeta):
@@ -101,8 +103,6 @@ class RuleMeta(AbcMeta):
     ):
 
         RuleBase = _rule_basecls(cls)
-        if RuleBase is None:
-            _rule_basens_mod(ns)
 
         Class = super().__new__(cls, clsname, bases, ns, **kw)
 
@@ -136,11 +136,11 @@ class RuleMeta(AbcMeta):
         setattr(Class, RuleAttr.OptKeys, setf(getattr(Class, RuleAttr.DefaultOpts)))
         setattr(Class, RuleAttr.Name, clsname)
 
-        emptymap = {}
+        emptymap = MapProxy()
         for Helper in getattr(Class, RuleAttr.Helpers):
-            if hasattr(Helper, '__init_ruleclass__'):
-                Helper: type[RuleHelperType]
-                Helper.__init_ruleclass__(Class, **helper.get(Helper, emptymap))
+            finit = getattr(Helper, HelperAttr.InitRuleCls, None)
+            if finit is not None:
+                finit(Class, **helper.get(Helper, emptymap))
 
         return Class
 
@@ -200,22 +200,17 @@ if 'Util Functions' or True:
                 _rule_basecls.__kwdefaults__ |= dict(base = MapProxy(base))
             return default
 
-    def _rule_basens_mod(ns: dmap):
-        toslot = {'__getitem__'}
-        ns -= toslot
-        ns |= dict(__slots__ = setf(ns['__slots__']) | toslot, __iter__ = None)
-
     @closure
     def _check_helper_subclass():
         from inspect import Parameter, Signature
-        import types
-        
-        desctypes = (
-            types.MemberDescriptorType,
-            types.WrapperDescriptorType,
-            types.DynamicClassAttribute,
-            property,
-        )
+
+        def is_descriptor(obj):
+            return (
+                hasattr(obj, '__get__') or
+                hasattr(obj, '__set__') or
+                hasattr(obj, '__delete__')
+            )
+
         posflag = (
             Parameter.POSITIONAL_ONLY |
             Parameter.POSITIONAL_OR_KEYWORD |
@@ -229,11 +224,13 @@ if 'Util Functions' or True:
         def notimplinfo(*args):
             # print(*args)
             return NotImplemented
+
         names = qsetf((
             'rule',
-            # '__init_ruleclass__',
+            # HelperAttr.InitRuleCls,
             '__init__',
         ))
+
         def check(subcls: type):
 
             check = abcm.check_mrodict(subcls.mro(), *names)
@@ -244,10 +241,10 @@ if 'Util Functions' or True:
             if name in names:
 
                 value = getattr(subcls, name)
-                if not isinstance(value, desctypes):
+                if not is_descriptor(value):
                     return notimplinfo(subcls, name, value)
 
-            name = '__init_ruleclass__'
+            name = HelperAttr.InitRuleCls
             if name in names:
 
                 value = getattr(subcls, name)

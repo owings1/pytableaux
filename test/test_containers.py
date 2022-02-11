@@ -19,6 +19,8 @@ from tools.abcs import T
 
 from collections import deque
 
+
+
 def subclasses(supcls: type[T]) -> qset[type[T]]:
     classes = qset()
     todo = [supcls]

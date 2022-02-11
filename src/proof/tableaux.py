@@ -156,7 +156,15 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     flag: RuleFlag
 
-    __slots__ = setf(('tableau', 'helpers', 'timers', 'opts', 'history', 'flag'))
+    __slots__ = setf(
+        ('tableau', 'helpers', 'timers', 'opts', 'history', 'flag', '__getitem__')
+    )
+
+    __iter__ = None
+    @overload
+    def __getitem__(self, key: type[T]) -> T: # type: ignore
+        'Get a helper instance by class.'
+    del(__getitem__)
 
     @abstract
     def _get_targets(self, branch: Branch, /) -> Sequence[Target]|None:
@@ -244,11 +252,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         :return: The new branch.
         """
         return self.tableau.branch(parent)
-
-    @overload
-    def __getitem__(self, key: type[T]) -> T: # type: ignore
-        'Get a helper instance by class.'
-        # Removed in meta class, and added to slots.
 
     def __repr__(self):
         return orepr(self,

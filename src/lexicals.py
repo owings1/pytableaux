@@ -1287,6 +1287,7 @@ class LexType(Bases.Enum):
 
     classes: ClassVar[qsetf[type[Bases.Lexical]]]
 
+    __slots__ = setf({'rank', 'cls', 'generic', 'maxi', 'role', 'hash'})
     rank    : int
     cls     : type[Bases.Lexical]
     generic : type[Bases.Lexical]
@@ -1294,7 +1295,6 @@ class LexType(Bases.Enum):
     maxi    : int | None
     hash    : int
 
-    __slots__ = 'rank', 'cls', 'generic', 'maxi', 'role', 'hash'
 
     Predicate   = (10,  Predicate,  Predicate,     3)
     Constant    = (20,  Constant,   Parameter,     3)
@@ -1332,9 +1332,9 @@ class LexType(Bases.Enum):
     def __hash__(self):
         return self.hash
 
-    def __init__(self, *value):
+    def __init__(self, rank: int, cls: type[Bases.Lexical], generic: type[Bases.Lexical], maxi: int|None):
         super().__init__()
-        self.rank, self.cls, self.generic, self.maxi = value
+        self.rank, self.cls, self.generic, self.maxi = rank, cls, generic, maxi
         self.role = self.generic.__name__
         self.hash = hash(type(self).__name__) + self.rank
         self.cls.TYPE = self
