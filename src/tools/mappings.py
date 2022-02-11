@@ -276,7 +276,7 @@ class MapCover(MappingApi[KT, VT]):
         self._init_cover(mapping, self)
 
     @static
-    def _init_cover(src, dest, /, *,
+    def _init_cover(src: Mapping, dest: Any, /, *,
         names = __slots__, ga = object.__getattribute__, sa = object.__setattr__
     ):
         for name in names:

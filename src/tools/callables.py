@@ -39,9 +39,6 @@ from typing import (
     TypeVar,
 )
 
-import enum
-
-# @enum.unique
 class Flag(FlagEnum):
 
     Blank  = 0
@@ -60,7 +57,6 @@ class Flag(FlagEnum):
 
     Copy   = 512
 
-del(enum)
 
 ExceptsParam = tuple[type[Exception], ...]
 FlagParam = Flag | Callable[[Flag], Flag]

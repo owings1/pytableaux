@@ -45,8 +45,6 @@ if 'Imports' or True:
         islice,
         filterfalse,
         repeat,
-        starmap,
-        zip_longest,
     )
     import operator as opr
     from types import (
@@ -75,7 +73,7 @@ if 'Imports' or True:
         TypeVar,
     )
 
-if 'Types & Type Variables' or True:
+if 'Type Variables' or True:
 
     T  = TypeVar('T')
     T1 = TypeVar('T1')
@@ -109,54 +107,16 @@ if 'Types & Type Variables' or True:
 
     P = ParamSpec('P')
 
-    NotImplType = type(NotImplemented)
-
-    class MapProxy(Mapping[KT, VT]):
-        'Cast to a proxy if not already.'
-        EMPTY_MAP = _MapProxy({})
-
-        def __new__(cls, mapping: Mapping[KT, VT] = None) -> MapProxy[KT, VT]:
-
-            if mapping is None:
-                return cls.EMPTY_MAP # type: ignore
-            if isinstance(mapping, _MapProxy):
-                return mapping # type: ignore
-            if not isinstance(mapping, Mapping):
-                mapping = dict(mapping)
-            return _MapProxy(mapping) # type: ignore
-
     Func = FunctionType
-    _HookProvidersTable =     dict[type, MapProxy[str, tuple[str, ...]]]
-    _HookProvidersProxy = MapProxy[type, MapProxy[str, tuple[str, ...]]]
-    _HookUsersTable     = dict[type, MapProxy[type, MapProxy[str, Callable]]]
-
-    class HookConn(TypedDict):
-        user     : type
-        provider : type
-        hookname : str
-        attrname : str
-        provider_func : Func
-        resolved  : Func
-        is_copied : bool
-        user_func : Callable
-
-    _HookConnTable = dict[type, dict[type,  MapProxy[str, tuple[HookConn, ...]]]]
-
-    class EnumEntry(NamedTuple):
-        'The value of the enum lookup index.'
-        # member : EnT
-        member : AbcEnum
-        index  : int
-        # nextmember: EnT | None
-        nextmember: AbcEnum | None
+    NotImplType = type(NotImplemented)
 
 if 'Decorators & Utils' or True:
 
-    _EMPTY = ()
-    _EMPTY_SET = frozenset()
-    _EMPTY_MAP = MapProxy[Any, Any]()
-    _NOARG = object()
-    _NOGET = object()
+    # _EMPTY = ()
+    # _EMPTY_SET = frozenset()
+    # _EMPTY_MAP = MapProxy[Any, Any]()
+    # _NOARG = object()
+    # _NOGET = object()
 
     def _thru(obj: T) -> T: return obj
 
@@ -198,18 +158,113 @@ if 'Decorators & Utils' or True:
     def closure(func: Callable[..., T]) -> T:
         return func()
 
+if 'Util Classes' or True:
+
+    class MapProxy(Mapping[KT, VT]):
+        'Cast to a proxy if not already.'
+        EMPTY_MAP = _MapProxy({})
+
+        def __new__(cls, mapping: Mapping[KT, VT] = None) -> MapProxy[KT, VT]:
+
+            if mapping is None:
+                return cls.EMPTY_MAP # type: ignore
+            if isinstance(mapping, _MapProxy):
+                return mapping # type: ignore
+            if not isinstance(mapping, Mapping):
+                mapping = dict(mapping)
+            return _MapProxy(mapping) # type: ignore
+
+    _HookProvidersTable =     dict[type, MapProxy[str, tuple[str, ...]]]
+    _HookProvidersProxy = MapProxy[type, MapProxy[str, tuple[str, ...]]]
+    _HookUsersTable     = dict[type, MapProxy[type, MapProxy[str, Callable]]]
+
+    class HookConn(TypedDict):
+        user     : type
+        provider : type
+        hookname : str
+        attrname : str
+        provider_func : Func
+        resolved  : Func
+        is_copied : bool
+        user_func : Callable
+
+    _HookConnTable = dict[type, dict[type,  MapProxy[str, tuple[HookConn, ...]]]]
+
+    class EnumEntry(NamedTuple):
+        'The value of the enum lookup index.'
+        # member : EnT
+        member : AbcEnum
+        index  : int
+        # nextmember: EnT | None
+        nextmember: AbcEnum | None
+
+    class EnumLookup(Mapping[Any, EnumEntry]):
+        'Enum entry lookup index.'
+
+        __slots__ = {'__len__', '__getitem__', '__iter__', '__reversed__', 'add_pseudo'}
+
+        def __init__(self, src: dict[Any, EnumEntry], ecls: AbcEnumMeta|type[AbcEnum], /):
+            ga = object.__getattribute__
+            sa = object.__setattr__
+            for name in self.__slots__ - {'add_pseudo'}:
+                sa(self, name, ga(src, name))
+            def add_pseudo(member):
+                keys, entry = self._check_pseudo(member, ecls)
+                for key in keys:
+                    src[key] = entry
+                return entry.member
+            sa(self, 'add_pseudo', add_pseudo)
+
+        @overload
+        def add_pseudo(self, member: T, /) -> T:...
+        del(add_pseudo)
+
+        def _check_pseudo(self, member: EnT, ecls: type[EnT], /):
+            check = ecls._value2member_map_[member.value]
+            if check is not member:
+                raise TypeError from Emsg.ValueConflict(member, check)
+            if member.name is not None:
+                raise TypeError from Emsg.WrongValue(member.name, None)
+            keys = {member.value, member}
+            for key in keys:
+                if key in self:
+                    entry = self[key]
+                    if entry.member is not member:
+                        raise TypeError from Emsg.ValueConflict(member, entry.member)
+                    keys.remove(key)
+                    break
+            else:
+                entry = EnumEntry(member, None, None)
+            return keys, entry
+
+        def __setattr__(self, name, value, /):
+            raise Emsg.ReadOnlyAttr(name, self)
+        def __delattr__(self, name, /):
+            raise Emsg.ReadOnlyAttr(name, self)
+        def __repr__(self):
+            return repr(dict(self))
+
 if 'Constants' or True:
     ABC_FLAG_ATTR     = '_abc_flag'
     ABC_HOOKUSER_ATTR = '_abc_hook_user'
     ABC_HOOKINFO_ATTR = '_abc_hook_info'
 
     ENUM_RESERVE_NAMES = frozenset(
-        ('names', 'seq', '_lookup', 'index', 'indexof', 'get', 'entryof')
+        (
+            'seq', '_lookup', 'get',
+            # 'index', 'indexof', 'names', 'entryof',
+        )
     )
     ENUM_HOOK_METHODS = frozenset(
         ('_member_keys', '_on_init', '_after_init')
     )
+    ENUM_CLEAN_METHODS = ENUM_HOOK_METHODS
 
+    _EMPTY = ()
+    _EMPTY_SET = frozenset()
+    _EMPTY_MAP = MapProxy[Any, Any]()
+    _NOARG = object()
+    _NOGET = object()
 #=============================================================================
 #_____________________________________________________________________________
 #
@@ -395,21 +450,19 @@ class AbcEnumMeta(_enum.EnumMeta):
     #******  Class Instance Variables
 
     seq     : Sequence[AbcEnum]
-    # seq     : tuple[EnT, ...]
-    _lookup : Mapping[Any, EnumEntry]
-    _member_names_: Sequence[str]
-    _member_map_: Mapping[str, AbcEnum]
+    _lookup : EnumLookup
 
-    @property
-    def __members__(cls):
-        # Override to not double-proxy
-        return cls._member_map_
+    _member_names_ : Sequence[str]
+    _member_map_   : Mapping[str, AbcEnum]
+
 
     #******  Class Creation
 
-    def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /, skipflags = False, **kw):
+    def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /, *,
+        skipflags = False, **kw
+    ):
 
-        # Run namespace init hooks.
+        # Run generic Abc init hooks.
         abcm.nsinit(ns, bases, skipflags = skipflags)
 
         forbid = ENUM_RESERVE_NAMES.intersection(ns)
@@ -419,7 +472,7 @@ class AbcEnumMeta(_enum.EnumMeta):
         # Create class.
         Class = super().__new__(cls, clsname, bases, ns, **kw)
 
-        # Run after hooks.
+        # Run generic Abc after hooks.
         abcm.clsafter(Class, ns, skipflags = skipflags)
 
         # Freeze Enum class attributes.
@@ -438,13 +491,12 @@ class AbcEnumMeta(_enum.EnumMeta):
         # Init hook to process members before index is created.
         Class._on_init(Class)
         # Create index.
-        Class._lookup = enbm.build_index(Class) # ~type: ignore
-                                                # (... tuple[AbcEnum, int, AbcEnum | None] is incompatible with "EnumEntry)
+        Class._lookup = EnumLookup(enbm.build_index(Class), Class)
         # After init hook.
         Class._after_init()
         # Cleanup.
         deleter = type(cls).__delattr__
-        for hname in filter(Class.__dict__.__contains__, ENUM_HOOK_METHODS):
+        for hname in filter(Class.__dict__.__contains__, ENUM_CLEAN_METHODS):
             deleter(Class, hname)
 
         return Class
@@ -464,22 +516,38 @@ class AbcEnumMeta(_enum.EnumMeta):
         'Init hook once the class is initialized. Includes abstract classes.'
         pass
 
-    #******  Container Behavior
+    #******  Class Call
 
-    def __contains__(cls, key):
-        return cls.get(key, _NOGET) is not _NOGET
-
-    def __getitem__(cls: type[EnT]|AbcEnumMeta, key: Any) -> EnT:
-        if type(key) is cls:
-            return key
+    def __call__(cls: type[EnT], value: Any, names = None, **kw) -> EnT:
+        if names is not None:
+            return super().__call__(value, names, **kw)
         try:
-            return cls._lookup[key].member # type: ignore
-        except (AttributeError, KeyError):
+            return cls._lookup[value].member
+        except KeyError:
             pass
-        return super().__getitem__(key) # type: ignore
+        member = cls.__new__(cls, value)
+        return cls._lookup.add_pseudo(member)
 
-    def __getattr__(cls, name):
-        raise AttributeError(name)
+    #******  Mapping(ish) Behavior
+
+    # def get(cls: type[EnT]|AbcEnumMeta, key, default = _NOARG) -> EnT:
+    def get(cls, key: Any, default = _NOARG, /):
+        '''Get a member by an indexed reference key. Raises KeyError if not
+        found and no default specified.'''
+        try:
+            return cls[key] # ~type: ignore
+        except KeyError:
+            if default is _NOARG:
+                raise
+            return default
+
+    def __getitem__(cls: type[EnT]|AbcEnumMeta, key: Any, /) -> EnT:
+        return cls._lookup[key].member
+
+    def __contains__(cls, key: Any, /):
+        return key in cls._lookup
+
+    #******  Sequence(ish) Behavior
 
     def __iter__(cls: type[EnT]|AbcEnumMeta) -> Iterator[EnT]:
         return iter(cls.seq) # type: ignore
@@ -487,43 +555,27 @@ class AbcEnumMeta(_enum.EnumMeta):
     def __reversed__(cls: type[EnT]|AbcEnumMeta) -> Iterator[EnT]:
         return reversed(cls.seq) # type: ignore
 
-    def __call__(cls: type[EnT]|AbcEnumMeta, value, *args) -> EnT:
-        if not args:
-            try: return cls[value] # type: ignore
-            except KeyError: pass
-        return super().__call__(value, *args) # type: ignore
+    #******  Misc
+
+    def __getattr__(cls, name, /):
+        raise AttributeError(name)
 
     def __dir__(cls):
         return list(cls._member_names_)
 
+    @property
+    def __members__(cls):
+        # Override to not double-proxy
+        return cls._member_map_
+
     #******  Class Instance Methods
+    # def indexof(cls: type[EnT]|AbcEnumMeta, member: EnT, /) -> int|None:
+    #     'Get the sequence index of the member. Raises ValueError if not found.'
+    #     try:
+    #         return cls._lookup[member].index
+    #     except KeyError:
+    #         raise ValueError(member)
 
-    # def get(cls: type[EnT]|AbcEnumMeta, key, default = _NOARG) -> EnT:
-    def get(cls, key, default = _NOARG):
-        '''Get a member by an indexed reference key. Raises KeyError if not
-        found and no default specified.'''
-        try: return cls[key] # ~type: ignore
-        except KeyError:
-            if default is _NOARG: raise
-            return default
-
-    def indexof(cls: type[EnT]|AbcEnumMeta, member: EnT) -> int:
-        'Get the sequence index of the member. Raises ValueError if not found.'
-        try:
-            try:
-                return cls._lookup[member].index
-            except KeyError:
-                return cls._lookup[cls[member]].index
-        except KeyError:
-            raise ValueError(member)
-
-    def entryof(cls, key: Any) -> EnumEntry:
-        try:
-            return cls._lookup[key]
-        except KeyError:
-            return cls._lookup[cls[key]]
-        except AttributeError:
-            raise KeyError(key)
 
 @static
 class enbm:
@@ -531,41 +583,27 @@ class enbm:
 
     @staticmethod
     # def build_index(Class: type[EnT]|AbcEnumMeta) -> Mapping[Any, tuple[EnT, int, EnT|None]]:
-    def build_index(Class: type[EnT]|AbcEnumMeta) -> Mapping[Any, EnumEntry]:
+    def build_index(Class: type[EnT]|AbcEnumMeta) -> dict[Any, EnumEntry]:
         'Create the Enum member lookup index'
         # Fill in the member entries for all keys and merge the dict.
         # member to key set functions.
         keyfuncs = enbm.default_keys, Class._member_keys
         members = Class.seq
-        keymapgen = (map(keyfunc, members) for keyfunc in keyfuncs)
-        return MapProxy(
-            reduce(
-                opr.or_,
-                starmap(
-                    dict.fromkeys,
-                    zip(
-                        # Keys -
-                        #  Merges keys per member from all key funcs.
-                        map(
-                            set,
-                            map(
-                                chain.from_iterable,
-                                zip(*keymapgen) # type: ignore
-                            )
-                        ),
-                        # Values -
-                        #    Builds the member cache entry: (member, i, next-member).
-                        starmap(
-                            EnumEntry,
-                            zip_longest(
-                                members,
-                                range(len(members)),
-                                members[1:]
-                            )
-                        ),
-                    )
+
+        return {
+            key : entry
+            for member_keys, entry in zip(
+
+                ({key for func in keyfuncs for key in func(member)}
+                    for member in members
+                ),
+
+                (EnumEntry(member, i, nxt) for (i, member), nxt in zip(
+                    enumerate(members), chain(members[1:], [None]))
                 )
-        ))
+            )
+                for key in member_keys
+        }
 
     @staticmethod
     def default_keys(member: AbcEnum) -> Set[Hashable]:
@@ -574,7 +612,7 @@ class enbm:
             member.name,
             (member.name,),
             member,
-            member.value
+            member.value,
         }
 
     @staticmethod
@@ -593,19 +631,6 @@ class enbm:
             member.name = member._name_
             member.value = member._value_
 
-    @staticmethod
-    def cached_flag_invert(self_: EnFlagT, /, *, finvert = _enum.Flag.__invert__) -> EnFlagT:
-        cached = self_._invert_
-        value = self_.value
-        if cached is not None:
-            if cached[0] == value:
-                return cached[1] # type: ignore
-        result: EnFlagT = finvert(self_)
-        # result.value = result._value_
-        self_._invert_ = value, result
-        result._invert_ = result.value, self_
-        return result
-
 
 #*****  Enum Base Classes
 
@@ -615,8 +640,6 @@ class AbcEnum(_enum.Enum, metaclass = AbcEnumMeta, skipflags = True):
 
     name  : str
     value : Any
-
-    _invert_: None
 
     def __copy__(self):
         return self
@@ -651,14 +674,24 @@ class FlagEnum(_enum.Flag, AbcEnum, skipflags = True):
     value : int
 
     _invert_   : tuple[int, FlagEnum]
-    __invert__ = enbm.cached_flag_invert # type: ignore
+    # __invert__ = enbm.cached_flag_invert # type: ignore
 
     @classmethod
-    def _missing_(cls: type[EnFlagT], value: Any):
-        member: EnFlagT = super()._missing_(value)
+    def _missing_(cls, value: Any):
+        member: FlagEnum = super()._missing_(value)
         member.value = member._value_
         member.name = member._name_
         return member
+
+    def __invert__(self):
+        cached = self._invert_
+        value = self.value
+        if cached is not None and cached[0] == value:
+            return cached[1]
+        other = super().__invert__()
+        self._invert_ = value, other
+        other._invert_ = other.value, self
+        return other
 
 class abcf(FlagEnum, skipflags = True):
     'Enum flag for AbcMeta functionality.'
@@ -1178,3 +1211,5 @@ if 'Cleanup' or True:
         ParamSpec,
         wraps,
     )
+    # fail if deleted
+    final
