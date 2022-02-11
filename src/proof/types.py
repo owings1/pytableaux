@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 __all__ = (
-
+    'BranchEvent',
+    'RuleEvent',
+    'RuleHelper',
+    'TabEvent',
 )
 
 from errors import (
@@ -12,34 +15,40 @@ from errors import (
 
 from tools.abcs import (
     AbcMeta, AbcEnum, FlagEnum, MapProxy,
+    eauto,
     abcm,
     abstract,
-    # closure,
-    # overload,
+    overload,
     closure,
     static,
-    T, T_co,
+    T, VT,
 )
-# from tools.callables import preds
+
 from tools.hybrids import qsetf, EMPTY_QSET
 from tools.mappings import dmap
 from tools.sets import setf, EMPTY_SET
 from tools.timing import StopWatch
 
-import enum
-# from itertools import chain
-# import operator as opr
 from typing import (
     Any,
     Callable,
-    # Generic,
     Mapping,
     NamedTuple,
-    # Protocol,
-    # Sequence,
-    # TypeVar,
 )
-# _NOGET = object()
+
+#******  Branch Enum
+
+class BranchEvent(AbcEnum):
+    AFTER_BRANCH_CLOSE = eauto()
+    AFTER_NODE_ADD     = eauto()
+    AFTER_NODE_TICK    = eauto()
+
+#******  Helper Enum
+
+class HelperAttr(str, AbcEnum):
+    InitRuleCls = '__init_ruleclass__'
+
+#******  Rule Enum
 
 class RuleAttr(str, AbcEnum):
     Helpers     = 'Helpers'
@@ -48,37 +57,39 @@ class RuleAttr(str, AbcEnum):
     DefaultOpts = '_defaults'
     OptKeys     = '_optkeys'
     Name        = 'name'
-
-class HelperAttr(str, AbcEnum):
-    InitRuleCls = '__init_ruleclass__'
-
-class BranchEvent(AbcEnum):
-    AFTER_BRANCH_CLOSE = enum.auto()
-    AFTER_NODE_ADD     = enum.auto()
-    AFTER_NODE_TICK    = enum.auto()
+    IgnoreTicked = 'ignore_ticked'
 
 class RuleEvent(AbcEnum):
-    BEFORE_APPLY = enum.auto()
-    AFTER_APPLY  = enum.auto()
+    BEFORE_APPLY = eauto()
+    AFTER_APPLY  = eauto()
+
+class RuleFlag(FlagEnum):
+    __slots__ = 'value', '_value_'
+    NONE   = 0
+    INIT   = 1
+    LOCKED = 2
+
+#******  Tableau Enum
 
 class TabEvent(AbcEnum):
-    AFTER_BRANCH_ADD    = enum.auto()
-    AFTER_BRANCH_CLOSE  = enum.auto()
-    AFTER_NODE_ADD      = enum.auto()
-    AFTER_NODE_TICK     = enum.auto()
-    AFTER_TRUNK_BUILD   = enum.auto()
-    BEFORE_TRUNK_BUILD  = enum.auto()
+    AFTER_BRANCH_ADD    = eauto()
+    AFTER_BRANCH_CLOSE  = eauto()
+    AFTER_NODE_ADD      = eauto()
+    AFTER_NODE_TICK     = eauto()
+    AFTER_TRUNK_BUILD   = eauto()
+    BEFORE_TRUNK_BUILD  = eauto()
 
 class TabStatKey(AbcEnum):
-    FLAGS       = enum.auto()
-    STEP_ADDED  = enum.auto()
-    STEP_TICKED = enum.auto()
-    STEP_CLOSED = enum.auto()
-    INDEX       = enum.auto()
-    PARENT      = enum.auto()
-    NODES       = enum.auto()
+    FLAGS       = eauto()
+    STEP_ADDED  = eauto()
+    STEP_TICKED = eauto()
+    STEP_CLOSED = eauto()
+    INDEX       = eauto()
+    PARENT      = eauto()
+    NODES       = eauto()
 
 class TabFlag(FlagEnum):
+    __slots__ = 'value', '_value_'
     NONE   = 0
     TICKED = 1
     CLOSED = 2
@@ -87,19 +98,38 @@ class TabFlag(FlagEnum):
     TIMED_OUT   = 16
     TRUNK_BUILT = 32
 
-class RuleFlag(FlagEnum):
-    NONE   = 0
-    INIT   = 1
-    LOCKED = 2
+#******  Rule Helper
+
+class RuleHelper(metaclass = AbcMeta):
+
+    __slots__ = EMPTY_SET
+
+    rule: Any
+
+    @abstract
+    def __init__(self,/): ...
+
+    @classmethod
+    @abstract
+    def __init_ruleclass__(cls, rulecls: type, /):
+        pass
+
+    @classmethod
+    def __subclasshook__(cls, subcls: type, /):
+        if cls is not __class__:
+            return NotImplemented
+        return _check_helper_subclass(subcls)
+
+#******  Rule Meta
 
 class RuleMeta(AbcMeta):
 
     @classmethod
     def __prepare__(cls, clsname: str, bases: tuple[type, ...], **kw) -> dict[str, Any]:
-        return dmap(__slots__ = EMPTY_SET)
+        return dict(__slots__ = EMPTY_SET)
 
     def __new__(cls, clsname: str, bases: tuple[type, ...], ns: dict, /, *,
-        helper: Mapping[type[RuleHelperType], Mapping[str, Any]] = {}, **kw
+        helper: Mapping[type[RuleHelper], Mapping[str, Any]] = {}, **kw
     ):
 
         RuleBase = _rule_basecls(cls)
@@ -109,40 +139,33 @@ class RuleMeta(AbcMeta):
         if RuleBase is None:
             RuleBase = _rule_basecls(cls, Class)
 
-        for name in (RuleAttr.Helpers, RuleAttr.Timers):
-            value = abcm.merge_mroattr(Class, name, supcls = RuleBase,
-                default = EMPTY_QSET,
-                transform = qsetf,
-            )
-            if name is RuleAttr.Helpers:
-                for Helper in value:
-                    subclscheck(Helper, RuleHelperType)
-
-        for name in (RuleAttr.NodeFilters,):
-            # Load latest first.
-            if hasattr(Class, name):
-                abcm.merge_mroattr(Class, name, supcls = RuleBase,
-                    reverse = False,
-                    default = EMPTY_QSET,
-                    transform = qsetf,
-                )
-
-        for name in (RuleAttr.DefaultOpts,):
-            abcm.merge_mroattr(Class, name, supcls = RuleBase,
-                default = dmap(),
-                transform = MapProxy,
-            )
+        abcm.merge_mroattr(Class, RuleAttr.Helpers, supcls = RuleBase,
+            default   = EMPTY_QSET,
+            transform = qsetf,
+        )
+        abcm.merge_mroattr(Class, RuleAttr.Timers, supcls = RuleBase,
+            default   = EMPTY_QSET,
+            transform = qsetf,
+        )
+        abcm.merge_mroattr(Class, RuleAttr.DefaultOpts, supcls = RuleBase,
+            default   = dmap(),
+            transform = MapProxy,
+        )
         
         setattr(Class, RuleAttr.OptKeys, setf(getattr(Class, RuleAttr.DefaultOpts)))
         setattr(Class, RuleAttr.Name, clsname)
 
         emptymap = MapProxy()
+
         for Helper in getattr(Class, RuleAttr.Helpers):
-            finit = getattr(Helper, HelperAttr.InitRuleCls, None)
-            if finit is not None:
-                finit(Class, **helper.get(Helper, emptymap))
+            subclscheck(Helper, RuleHelper)
+            initrulecls = getattr(Helper, HelperAttr.InitRuleCls, None)
+            if initrulecls is not None:
+                initrulecls(Class, **helper.get(Helper, emptymap))
 
         return Class
+
+#******  Auxilliary Classes
 
 class NodeStat(dict[TabStatKey, TabFlag|int|None]):
 
@@ -168,26 +191,23 @@ class TabTimers(NamedTuple):
     def create(it = (False,) * 4):
         return TabTimers._make(map(StopWatch, it))
 
-class RuleHelperType(metaclass = AbcMeta):
 
-    __slots__ = EMPTY_SET
+if 'Stub Types' or True:
 
-    rule: Any
-
-    @abstract
-    def __init__(self, rule: Any, /):
-        self.rule = rule
-
-    @classmethod
-    @abstract
-    def __init_ruleclass__(cls, rulecls: type, /):
-        pass
-
-    @classmethod
-    def __subclasshook__(cls, subcls: type, /):
-        if cls is not __class__:
-            return NotImplemented
-        return _check_helper_subclass(subcls)
+    class TypeInstDict(
+        dict[type[VT], VT],
+        metaclass = type('TidMeta', (type,), dict(__call__ = dict))
+    ):
+        @overload
+        def __getitem__(self, key: type[T]) -> T: ...
+        @overload
+        def get(self, key: type[T], default = None) -> T|None: ...
+        @overload
+        def copy(self: T) -> T: ...
+        @overload
+        def setdefault(self, key: type[T], value: Any) -> T:...
+        @overload
+        def pop(self, key: type[T]) -> T:...
 
 if 'Util Functions' or True:
 
@@ -281,5 +301,6 @@ if 'Util Functions' or True:
         return check
 
 del(
-    abstract, closure, static
+    abstract, closure, overload, static,
+    eauto,
 )

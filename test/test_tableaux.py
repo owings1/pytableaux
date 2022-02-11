@@ -429,6 +429,7 @@ class TestMaxConstantsTracker(BaseSuite):
     
         class FilterNodeRule(RuleStub):
             Helpers = FilterHelper,
+            ignore_ticked = None
     
         class MtrTestRule(FilterNodeRule):
             Helpers = (

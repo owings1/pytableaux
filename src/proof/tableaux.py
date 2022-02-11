@@ -19,110 +19,92 @@
 # pytableaux - tableaux module
 from __future__ import annotations
 
-__all__ = 'Rule', 'TableauxSystem', 'Tableau', 'ClosingRule'
-
-from errors import (
-    Emsg,
-    instcheck,
-    subclscheck,
-)
-from tools.abcs import (
-    Abc,
-    abcm,
-    # AbcMeta,
-    T, F,
-    # P, TT, KT, VT,
-    MapProxy,
-    TypeInstMap,
-)
-from tools.callables import preds
-from tools.decorators import (
-    abstract, closure, final, overload, static,
-    raisr, wraps,
-)
-from tools.events import EventEmitter
-from tools.hybrids import qset, qsetf, EMPTY_QSET
-from tools.linked import linqset
-from tools.mappings import (
-    MapCover,
-    MappingApi,
-    dmap,
-    dmapattr,
-)
-from tools.misc import get_logic, orepr
-from tools.sequences import (
-    absindex,
-    SequenceApi,
-    SequenceCover,
-    seqf,
-    seqm,
-)
-from tools.sets import (
-    EMPTY_SET,
-    setf,
-    # setm,
-)
-from tools.timing import StopWatch
-
-from lexicals import Argument, Sentence
-from models import BaseModel
-
-from proof.common import (
-    Branch,
-    Node,
-    Target,
-)
-from proof.types import (
-    BranchEvent,
-    NodeStat,
-    RuleFlag,
-    RuleHelperType,
-    RuleMeta,
-    RuleEvent,
-    TabEvent,
-    TabTimers,
-    TabFlag,
-    TabStatKey,
-    # check_helper_subclass,
-)
-from collections import deque
-# from functools import partial
-# from itertools import chain
-import operator as opr
-from types import ModuleType
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    # Generic,
-    Iterable,
-    Iterator,
-    Mapping,
-    # MutableSequence,
-    NamedTuple,
-    Sequence,
-    SupportsIndex,
-    TypeVar,
+__all__ = (
+    'ClosingRule',
+    'Rule',
+    'Tableau',
+    'TableauxSystem',
 )
 
-NOARG = object()
-NOGET = object()
+if 'Imports' or True:
+    from errors import Emsg, instcheck, subclscheck
+    from tools.abcs import Abc, T, F
+    from tools.callables import preds
+    from tools.decorators import (
+        abstract, closure, final, overload, static,
+        raisr, wraps,
+    )
+    from tools.events import EventEmitter
+    from tools.hybrids import qset, qsetf, EMPTY_QSET
+    from tools.linked import linqset
+    from tools.mappings import dmap, dmapattr, MapCover, MapProxy
+    from tools.misc import get_logic, orepr
+    from tools.sequences import (
+        absindex,
+        SequenceApi,
+        SequenceCover,
+        seqf,
+        seqm,
+    )
+    from tools.sets import setf, EMPTY_SET
+    from tools.timing import StopWatch
 
-LogicRef = ModuleType | str
+    from lexicals import Argument, Sentence
+    from models import BaseModel
 
-class RuleTarget(NamedTuple):
-    #: The rule instance that will apply.
-    rule   : Rule
-    #: The target produced by the rule.
-    target : Target
+    from proof.common import Branch, Node, Target
+    from proof.types import (
+        BranchEvent,
+        NodeStat,
+        RuleEvent,
+        RuleFlag,
+        RuleHelper,
+        RuleMeta,
+        TabEvent,
+        TabFlag,
+        TabStatKey,
+        TabTimers,
+        TypeInstDict,
+    )
 
-class StepEntry(NamedTuple):
-    #: The rule instance that was applied.
-    rule   : Rule
-    #: The target returned by the rule.
-    target : Target
-    #: The duration in milliseconds of the application.
-    duration_ms: int
+    from collections import deque
+    import operator as opr
+    from types import ModuleType
+    from typing import (
+        Any,
+        Callable,
+        ClassVar,
+        # Generic,
+        Iterable,
+        Iterator,
+        Mapping,
+        # MutableSequence,
+        NamedTuple,
+        Sequence,
+        SupportsIndex,
+        TypeVar,
+    )
+
+if 'Type Vars' or True:
+    LogicRef = ModuleType | str
+    RuleT = TypeVar('RuleT', bound = 'Rule')
+
+if 'Constants' or True:
+    NOARG = object()
+    NOGET = object()
+
+if 'Util Functions' or True:
+    def locking(method: F) -> F:
+        'Decorator for locking TabRules methods after Tableau is started.'
+        def f(self: TabRules, *args, **kw):
+            try:
+                if self._root._locked:
+                    raise Emsg.IllegalState('locked')
+            except AttributeError: pass
+            return method(self, *args, **kw)
+        return wraps(method)(f)
+
+# ----------------------------------------------
 
 class Rule(EventEmitter, metaclass = RuleMeta):
     'Base class for a Tableau rule.'
@@ -136,21 +118,25 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     #: The rule class name.
     name: ClassVar[str]
 
-    branch_level: int = 1
-
     _defaults = dict(is_rank_optim = True, nolock = False)
     _optkeys: ClassVar[setf[str]]
 
+    branch_level: int = 1
+
     #: The tableau instance.
     tableau: Tableau
+
     #: The options.
     opts: Mapping[str, bool]
+
     #: Helper instances mapped by class.
     #:
     #: :type: Mapping[type, object]
-    helpers: TypeInstMap
+    helpers: TypeInstDict[RuleHelper]
+
     #: StopWatch instances mapped by name.
     timers: Mapping[str, StopWatch]
+
     #: The targets applied to.
     history: SequenceCover[Target]
 
@@ -161,14 +147,58 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     )
 
     __iter__ = None
+
     @overload
     def __getitem__(self, key: type[T]) -> T: # type: ignore
         'Get a helper instance by class.'
     del(__getitem__)
 
+    def __new__(cls, *args, **kw):
+        inst = super().__new__(cls)
+        object.__setattr__(inst, 'flag', RuleFlag.NONE)
+        return inst
+
+    def __init__(self, tableau: Tableau, /, **opts):
+
+        # events
+        EventEmitter.__init__(self, *RuleEvent)
+
+        self.tableau = tableau
+
+        # options
+        if opts:
+            opts = dmap(opts)
+            opts &= self._optkeys
+            opts %= self._defaults
+        else:
+            opts = self._defaults
+        self.opts = MapProxy(opts)
+
+        # timers
+        self.timers = {
+            name: StopWatch() for name in self.Timers
+        }
+
+        # history
+        history = deque()
+        self.on(RuleEvent.AFTER_APPLY, history.append)
+        self.history = SequenceCover(history)
+
+        # helpers
+        self.helpers = helpers = {}
+        self.__getitem__ = helpers.__getitem__
+        # Add one at a time, to support helper dependency checks.
+        for Helper in self.Helpers:
+            helpers[Helper] = Helper(self)
+
+        # flag/lock
+        if not self.opts['nolock']:
+            tableau.once(TabEvent.AFTER_BRANCH_ADD, self.__lock)
+        self.flag |= RuleFlag.INIT
+
     @abstract
     def _get_targets(self, branch: Branch, /) -> Sequence[Target]|None:
-        raise NotImplementedError
+        return None
 
     @abstract
     def _apply(self, target: Target, /) -> None:
@@ -180,7 +210,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
 
     def sentence(self, node: Node, /) -> Sentence|None:
         'Get the sentence for the node, or ``None``.'
-        return node.get('sentence', None)
+        return node.get('sentence')
 
     # Scoring
     def group_score(self, target: Target, /):
@@ -190,43 +220,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
     # Candidate score implementation options ``is_rank_optim``
     def score_candidate(self, target: Target, /) -> float:
         return 0.0
-
-    def __new__(cls, *args, **kw):
-        inst = super().__new__(cls)
-        object.__setattr__(inst, 'flag', RuleFlag.NONE)
-        return inst
-
-    def __init__(self, tableau: Tableau, /, **opts):
-
-        EventEmitter.__init__(self, *RuleEvent)
-
-        self.tableau = instcheck(tableau, Tableau)
-
-        if opts:
-            opts = dmap(opts)
-            opts &= self._optkeys
-            opts %= self._defaults
-        else:
-            opts = self._defaults
-        self.opts = MapProxy(opts)
-
-        self.timers = {
-            name: StopWatch() for name in self.Timers
-        }
-
-        history = deque()
-        self.on(RuleEvent.AFTER_APPLY, history.append)
-        self.history = SequenceCover(history)
-
-        self.helpers = helpers = {}
-        self.__getitem__ = helpers.__getitem__
-        # Add one at a time, to support helper dependency checks.
-        for Helper in self.Helpers:
-            helpers[Helper] = Helper(self)
-
-        if not self.opts['nolock']:
-            tableau.once(TabEvent.AFTER_BRANCH_ADD, self.__lock)
-        self.flag |= RuleFlag.INIT
 
     @final
     def get_target(self, branch: Branch) -> Target:
@@ -279,6 +272,7 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             super().__delattr__(name)
         return fdel
 
+    @final
     @closure
     def __lock():
         sa = object.__setattr__
@@ -332,8 +326,6 @@ class Rule(EventEmitter, metaclass = RuleMeta):
             if target['candidate_score'] == target['max_candidate_score']:
                 return target
 
-RuleT = TypeVar('RuleT', bound = Rule)
-
 class ClosingRule(Rule):
     'A closing rule has a fixed ``_apply()`` that marks the branch as closed.'
     
@@ -371,28 +363,7 @@ class ClosingRule(Rule):
     def check_for_target(self, node: Node, branch: Branch):
         raise NotImplementedError
 
-class RuleHelper(RuleHelperType):
-
-    __slots__ = 'rule',
-
-    rule: Rule
-
-    def __init__(self, rule: Rule):
-        self.rule = rule
-
-    @classmethod
-    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
-        super().__init_ruleclass__(rulecls, **kw)
-
-def locking(method: F) -> F:
-    'Decorator for locking TabRules methods after Tableau is started.'
-    def f(self: TabRules, *args, **kw):
-        try:
-            if self._root._locked:
-                raise Emsg.IllegalState('locked')
-        except AttributeError: pass
-        return method(self, *args, **kw)
-    return wraps(method)(f)
+# ----------------------------------------------
 
 class TabRules(SequenceApi[Rule]):
     'Grouped and named collection of rules for a tableau.'
@@ -669,28 +640,7 @@ class RuleGroups(SequenceApi[RuleGroup]):
             rules = sum(map(len, self))
         )
 
-@static
-class TableauxSystem(Abc):
-
-    @classmethod
-    @abstract
-    def build_trunk(cls, tableau: Tableau, argument: Argument, /):
-        raise NotImplementedError
-
-    @classmethod
-    def branching_complexity(cls, node: Node, /) -> int:
-        '''Compute how many new branches would be added if a rule were to be
-        applied to the node.'''
-        return 0
-
-    @classmethod
-    def add_rules(cls, logic: ModuleType, rules: TabRules, /):
-        'Populate rules/groups for a tableau.'
-        Rules = logic.TabRules
-        rules.groups.create('closure').extend(Rules.closure_rules)
-        for classes in Rules.rule_groups:
-            rules.groups.create().extend(classes)
-
+# ----------------------------------------------
 
 class Tableau(Sequence[Branch], EventEmitter):
     'A tableau proof.'
@@ -711,7 +661,7 @@ class Tableau(Sequence[Branch], EventEmitter):
     rules: TabRules
 
     #: The build options.
-    opts: MappingApi[str, bool|int|None]
+    opts: MapCover[str, bool|int|None]
 
     #: The FlagEnum value.
     flag: TabFlag
@@ -750,10 +700,10 @@ class Tableau(Sequence[Branch], EventEmitter):
     current_step: int
 
     #: Ordered view of the open branches.
-    open: SequenceApi[Branch]
+    open: SequenceCover[Branch]
 
     #: The history of rule applications.
-    history: SequenceApi[StepEntry]
+    history: SequenceCover[StepEntry]
 
     #: A tree structure of the tableau. This is generated after the tableau
     #: is finished. If the `build_timeout` was exceeded, the tree is `not`
@@ -1232,7 +1182,6 @@ class Tableau(Sequence[Branch], EventEmitter):
             models_duration_ms = timers.models.elapsed_ms(),
             rules_time_ms = sum(
                 timer.elapsed_ms()
-                # sum((rule.timers['search'].elapsed(), rule.timers['apply'].elapsed()))
                 for rule in self.rules
                     for timer in (
                         rule.timers['search'], rule.timers['apply']
@@ -1411,94 +1360,133 @@ class Tableau(Sequence[Branch], EventEmitter):
             else:
                 s.balanced_line_width = s.balanced_line_margin = 0
 
-class BranchStat(dict[TabStatKey, TabFlag|int|Branch|dict[Node, NodeStat]|None]):
+@static
+class TableauxSystem(Abc):
 
-    __slots__ = EMPTY_SET
+    @classmethod
+    @abstract
+    def build_trunk(cls, tableau: Tableau, argument: Argument, /):
+        raise NotImplementedError
 
-    _defaults = MapProxy({
-        TabStatKey.FLAGS       : TabFlag.NONE,
-        TabStatKey.STEP_ADDED  : TabFlag.NONE,
-        TabStatKey.STEP_CLOSED : TabFlag.NONE,
-        TabStatKey.INDEX       : None,
-        TabStatKey.PARENT      : None,
-    })
+    @classmethod
+    def branching_complexity(cls, node: Node, /) -> int:
+        '''Compute how many new branches would be added if a rule were to be
+        applied to the node.'''
+        return 0
 
-    def __init__(self, mapping: Mapping = None, /, **kw):
-        super().__init__(self._defaults)
-        self[TabStatKey.NODES] = {}
-        if mapping is not None:
-            self.update(mapping)
-        if len(kw):
-            self.update(kw)
+    @classmethod
+    def add_rules(cls, logic: ModuleType, rules: TabRules, /):
+        'Populate rules/groups for a tableau.'
+        Rules = logic.TabRules
+        rules.groups.create('closure').extend(Rules.closure_rules)
+        for classes in Rules.rule_groups:
+            rules.groups.create().extend(classes)
 
-    def node(self, node: Node) -> NodeStat:
-        'Get the stat info for the node, and create if missing.'
-        # Avoid using defaultdict, since it may hide problems.
-        try:
-            return self[TabStatKey.NODES][node]
-        except KeyError:
-            return self[TabStatKey.NODES].setdefault(node, NodeStat())
+# ----------------------------------------------
 
-    def view(self) -> dict[TabStatKey, TabFlag|int|Branch|None]:
-        return {k: self[k] for k in self._defaults}
+if 'Data Classes' or True:
 
-class TreeStruct(dmapattr):
+    class RuleTarget(NamedTuple):
+        #: The rule instance that will apply.
+        rule   : Rule
+        #: The target produced by the rule.
+        target : Target
 
-    def __init__(self, values = None, /, **kw):
-        self.root: TreeStruct = None
-        #: The nodes on this structure.
-        self.nodes: list[Node] = list()
-        #: This child structures.
-        self.children: list[TreeStruct] = list()
-        #: Whether this is a terminal (childless) structure.
-        self.leaf: bool = False
-        #: Whether this is a terminal structure that is closed.
-        self.closed: bool = False
-        #: Whether this is a terminal structure that is open.
-        self.open: bool = False
-        #: The pre-ordered tree left value.
-        self.left: int = None
-        #: The pre-ordered tree right value.
-        self.right: int = None
-        #: The total node count of all descendants.
-        self.descendant_node_count: int = 0
-        #: The node count plus descendant node count.
-        self.structure_node_count: int = 0
-        #: The depth of this structure (ancestor structure count).
-        self.depth: int = None
-        #: Whether this structure or a descendant is open.
-        self.has_open: bool = False
-        #: Whether this structure or a descendant is closed.
-        self.has_closed: bool = False
-        #: If closed, the step number at which it closed.
-        self.closed_step: int|None = None
-        #: The step number at which this structure first appears.
-        self.step: int = None
-        #: The number of descendant terminal structures, or 1.
-        self.width: int = 0
-        #: 0.5x the width of the first child structure, plus 0.5x the
-        #: width of the last child structure (if distinct from the first),
-        #: plus the sum of the widths of the other (distinct) children.
-        self.balanced_line_width: float = None
-        #: 0.5x the width of the first child structure divided by the
-        #: width of this structure.
-        self.balanced_line_margin: float = None
-        #: The branch id, only set for leaves
-        self.branch_id: int|None = None
-        #: The model id, if exists, only set for leaves
-        self.model_id: int|None = None
-        #: Whether this is the one and only branch
-        self.is_only_branch: bool = False
-        #: The step at which the branch was added.
-        self.branch_step: int = None
+    class StepEntry(NamedTuple):
+        #: The rule instance that was applied.
+        rule   : Rule
+        #: The target returned by the rule.
+        target : Target
+        #: The duration in milliseconds of the application.
+        duration_ms: int
 
-        if values is not None:
-            self.update(values)
-        if len(kw):
-            self.update(kw)
+    class BranchStat(dict[TabStatKey, TabFlag|int|Branch|dict[Node, NodeStat]|None]):
 
-        self.id = id(self)
+        __slots__ = EMPTY_SET
 
+        _defaults = MapProxy({
+            TabStatKey.FLAGS       : TabFlag.NONE,
+            TabStatKey.STEP_ADDED  : TabFlag.NONE,
+            TabStatKey.STEP_CLOSED : TabFlag.NONE,
+            TabStatKey.INDEX       : None,
+            TabStatKey.PARENT      : None,
+        })
+
+        def __init__(self, mapping: Mapping = None, /, **kw):
+            super().__init__(self._defaults)
+            self[TabStatKey.NODES] = {}
+            if mapping is not None:
+                self.update(mapping)
+            if len(kw):
+                self.update(kw)
+
+        def node(self, node: Node) -> NodeStat:
+            'Get the stat info for the node, and create if missing.'
+            # Avoid using defaultdict, since it may hide problems.
+            try:
+                return self[TabStatKey.NODES][node]
+            except KeyError:
+                return self[TabStatKey.NODES].setdefault(node, NodeStat())
+
+        def view(self) -> dict[TabStatKey, TabFlag|int|Branch|None]:
+            return {k: self[k] for k in self._defaults}
+
+    class TreeStruct(dmapattr):
+
+        def __init__(self, values = None, /, **kw):
+            self.root: TreeStruct = None
+            #: The nodes on this structure.
+            self.nodes: list[Node] = list()
+            #: This child structures.
+            self.children: list[TreeStruct] = list()
+            #: Whether this is a terminal (childless) structure.
+            self.leaf: bool = False
+            #: Whether this is a terminal structure that is closed.
+            self.closed: bool = False
+            #: Whether this is a terminal structure that is open.
+            self.open: bool = False
+            #: The pre-ordered tree left value.
+            self.left: int = None
+            #: The pre-ordered tree right value.
+            self.right: int = None
+            #: The total node count of all descendants.
+            self.descendant_node_count: int = 0
+            #: The node count plus descendant node count.
+            self.structure_node_count: int = 0
+            #: The depth of this structure (ancestor structure count).
+            self.depth: int = None
+            #: Whether this structure or a descendant is open.
+            self.has_open: bool = False
+            #: Whether this structure or a descendant is closed.
+            self.has_closed: bool = False
+            #: If closed, the step number at which it closed.
+            self.closed_step: int|None = None
+            #: The step number at which this structure first appears.
+            self.step: int = None
+            #: The number of descendant terminal structures, or 1.
+            self.width: int = 0
+            #: 0.5x the width of the first child structure, plus 0.5x the
+            #: width of the last child structure (if distinct from the first),
+            #: plus the sum of the widths of the other (distinct) children.
+            self.balanced_line_width: float = None
+            #: 0.5x the width of the first child structure divided by the
+            #: width of this structure.
+            self.balanced_line_margin: float = None
+            #: The branch id, only set for leaves
+            self.branch_id: int|None = None
+            #: The model id, if exists, only set for leaves
+            self.model_id: int|None = None
+            #: Whether this is the one and only branch
+            self.is_only_branch: bool = False
+            #: The step at which the branch was added.
+            self.branch_step: int = None
+
+            if values is not None:
+                self.update(values)
+            if len(kw):
+                self.update(kw)
+
+            self.id = id(self)
 
 # ----------------------------------------------
 

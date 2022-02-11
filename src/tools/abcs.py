@@ -37,6 +37,8 @@ if 'Imports' or True:
     from collections import defaultdict
     from collections.abc import Set
     import enum as _enum
+    # exportable
+    from enum import auto as eauto
     from functools import (
         reduce,
         wraps,
@@ -1208,13 +1210,6 @@ class Copyable(Abc):
 #=============================================================================
 #_____________________________________________________________________________
 
-if 'Type Stubs' or True:
-
-    class TypeInstMap(Mapping):
-        @abstract
-        def __getitem__(self, key: type[T]) -> T: ...
-
-
 if 'Cleanup' or True:
     del(
         _abc,
@@ -1226,3 +1221,4 @@ if 'Cleanup' or True:
     )
     # fail if deleted
     final
+    eauto
