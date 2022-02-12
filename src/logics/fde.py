@@ -38,23 +38,21 @@ from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
 from proof.tableaux import (
     Tableau,
     TableauxSystem as BaseSystem,
-    # Rule,
-    # ClosingRule,
 )
 from proof.baserules import (
+    BaseClosureRule,
     BaseRule,
     BaseNodeRule,
     BaseQuantifierRule,
     ExtendedQuantifierRule,
-    BaseClosureRule as ClosureRule
 )
 from proof.common import Branch, Node, Target
 from proof.filters import NodeFilters
-from proof.helpers import (
-    # AdzHelper, NodeConsts, NodeCount,
-    # QuitFlag, FilterHelper, MaxConsts,
-    NodeTarget,
-)
+# from proof.helpers import (
+#     # AdzHelper, NodeConsts, NodeCount,
+#     # QuitFlag, FilterHelper, MaxConsts,
+#     # NodeTarget,
+# )
 from typing import Any
 
 Identity:  Predicate = Predicate.System.Identity
@@ -540,15 +538,8 @@ class TableauxSystem(BaseSystem):
         designated = node['designated']
         last_is_negated = False
         complexity = 0
-        # operators = list(sentence.operators)
-        # while len(operators):
-        #     operator = operators.pop(0)
         for operator in s.operators:
-            if operator == Oper.Negation:
-                #if last_is_negated:
-                #    last_is_negated = False
-                #    continue
-                #last_is_negated = True
+            if operator is Oper.Negation:
                 if not last_is_negated:
                     last_is_negated = True
                     continue
@@ -557,16 +548,17 @@ class TableauxSystem(BaseSystem):
                 last_is_negated = False
         return complexity
 
-
-
 class DefaultRule(BaseRule):
-    NodeFilters =  NodeFilters.Designation,
+    NodeFilters = NodeFilters.Designation,
     # NodeFilters.Designation
     designation: bool = None
+
 class DefaultNodeRule(BaseNodeRule, DefaultRule):
     pass
+
 class QuantifierSkinnyRule(BaseQuantifierRule, DefaultRule):
     pass
+
 class QuantifierFatRule(ExtendedQuantifierRule, DefaultRule):
     pass
 
@@ -585,10 +577,9 @@ class ConjunctionReducingRule(DefaultNodeRule):
         s = oper((lhs, rhs)).conjoin(oper((rhs, lhs)))
         if self.negated:
             s = s.negate()
-        d = self.designation
         return dict(
             adds = (
-                ( sd(s, d), ),
+                ( sd(s, self.designation), ),
             ),
         )
 
@@ -601,27 +592,26 @@ class TabRules:
     to double negation only, one designated rule, and one undesignated rule.
     """
 
-    class DesignationClosure(ClosureRule):
+    class DesignationClosure(BaseClosureRule):
         """
         A branch closes when a sentence appears on a node marked *designated*,
         and the same sentence appears on a node marked *undesignated*.
         """
 
-        # tracker implementation
+        # BranchTarget implementation
 
-        def check_for_target(self, node: Node, branch: Branch):
+        def _branch_target_hook(self, node: Node, branch: Branch):
             nnode = self._find_closing_node(node, branch)
             if nnode:
-                return {'nodes': {node, nnode}}
+                return Target(
+                    nodes = qsetf((node, nnode)),
+                    branch = branch,
+                )
 
         # rule implementation
 
         def node_will_close_branch(self, node: Node, branch: Branch):
             return bool(self._find_closing_node(node, branch))
-
-        def applies_to_branch(self, branch: Branch):
-            # Delegate to tracker
-            return self[NodeTarget].get(branch)
 
         def example_nodes(self):
             s = Atomic.first()
@@ -632,10 +622,7 @@ class TabRules:
         def _find_closing_node(self, node: Node, branch: Branch):
             s = self.sentence(node)
             if s is not None:
-                # d = node['designated']
                 return branch.find(sd(s, not node['designated']))
-            # if node.has('sentence', 'designated'):
-            #     return branch.find(sd(node['sentence'], not node['designated']))
             
     class DoubleNegationDesignated(DefaultNodeRule):
         """

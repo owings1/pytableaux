@@ -135,16 +135,24 @@ class TabRules(object):
     :ref:`B3E <B3E>`.
     """
 
-    class GlutClosure(K3.TabRules.GlutClosure): pass
-    class DesignationClosure(FDE.TabRules.DesignationClosure): pass
+    class GlutClosure(K3.TabRules.GlutClosure):
+        pass
+    class DesignationClosure(FDE.TabRules.DesignationClosure):
+        pass
 
-    class DoubleNegationDesignated(FDE.TabRules.DoubleNegationDesignated): pass
-    class DoubleNegationUndesignated(FDE.TabRules.DoubleNegationUndesignated): pass
+    class DoubleNegationDesignated(FDE.TabRules.DoubleNegationDesignated):
+        pass
+    class DoubleNegationUndesignated(FDE.TabRules.DoubleNegationUndesignated):
+        pass
 
-    class AssertionDesignated(FDE.TabRules.AssertionDesignated): pass
-    class AssertionNegatedDesignated(B3E.TabRules.AssertionNegatedDesignated): pass
-    class AssertionUndesignated(B3E.TabRules.AssertionUndesignated): pass
-    class AssertionNegatedUndesignated(B3E.TabRules.AssertionNegatedUndesignated): pass
+    class AssertionDesignated(FDE.TabRules.AssertionDesignated):
+        pass
+    class AssertionNegatedDesignated(B3E.TabRules.AssertionNegatedDesignated):
+        pass
+    class AssertionUndesignated(B3E.TabRules.AssertionUndesignated):
+        pass
+    class AssertionNegatedUndesignated(B3E.TabRules.AssertionNegatedUndesignated):
+        pass
 
     class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
         pass

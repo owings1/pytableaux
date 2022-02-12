@@ -13,7 +13,7 @@ from proof.tableaux import (
 )
 from proof.filters import Filters
 from proof.helpers import AdzHelper, FilterHelper, MaxConsts
-from proof.common import Branch, Node
+from proof.common import Branch, Node, Target
 from proof.types import TabEvent, TabStatKey, TabFlag
 import examples
 
@@ -70,13 +70,12 @@ class TestTableau(BaseSuite):
 
     def test_add_closure_rule_instance_mock(self):
         class MockRule(ClosingRule):
-            def applies_to_branch(self, branch):
-                return True
-            def check_for_target(self, node, branch):
-                return {'node': node}
+            def _get_targets(self, branch: Branch):
+                return Target(branch = branch),
             def node_will_close_branch(self, node, branch):
                 return True
-            def example_nodes(self): return tuple()
+            def example_nodes(self):
+                return {},
         tab = Tableau()
         tab.rules.append(MockRule)
         tab.branch()

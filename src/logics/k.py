@@ -53,7 +53,8 @@ from proof.filters import NodeFilters
 from proof.helpers import (
     NodesWorlds, AplSentCount,
     MaxWorlds, PredNodes, QuitFlag, AdzHelper,
-    FilterHelper, NodeCount, WorldIndex, NodeTarget,
+    FilterHelper, NodeCount, WorldIndex,
+    # NodeTarget,
 )
 from errors import DenotationError, ModelValueError
 
@@ -697,52 +698,15 @@ class DefaultRule(BaseRule):
     # NodeFilters.Modal
     modal  : bool = True
     access : bool = None
+
 class DefaultNodeRule(DefaultRule, BaseNodeRule):
     pass
+
 class QuantifierSkinnyRule(DefaultRule, BaseQuantifierRule):
     pass
+
 class QuantifierFatRule(DefaultRule, ExtendedQuantifierRule):
     pass
-
-
-# class DefaultRule(Rule):
-
-#     Helpers = FilterHelper,
-
-#     ignore_ticked = True
-
-#     NodeFilters = (
-#         NodeFilters.Sentence,
-#         NodeFilters.Modal,
-#     )
-#     # NodeFilters.Sentence
-#     negated    : bool = None
-#     operator   : Oper = None
-#     quantifier : Quantifier = None
-#     predicate  : Predicate = None
-
-#     # NodeFilters.Modal
-#     modal  : bool = True
-#     access : bool = None
-
-#     example_nodes = FDE.DefaultRule.example_nodes
-#     sentence = FDE.DefaultRule.sentence
-
-# class DefaultNodeRule(DefaultRule):
-
-#     Helpers = AdzHelper,
-
-#     #: (AdzHelper) Whether the target node should be ticked after application.
-#     ticking: bool = True
-
-#     _apply = FDE.DefaultNodeRule._apply
-#     score_candidate = FDE.DefaultNodeRule.score_candidate
-
-
-#     _get_targets = FDE.DefaultNodeRule._get_targets
-#     # abstract
-#     _get_node_targets = FDE.DefaultNodeRule._get_node_targets
-
 
 class ModalNodeRule(DefaultNodeRule):
 
@@ -766,12 +730,15 @@ class TabRules:
         """
         modal = True
 
-        # tracker implementation
+        # BranchTarget implementation
 
-        def check_for_target(self, node: Node, branch: Branch):
+        def _branch_target_hook(self, node: Node, branch: Branch):
             nnode = self._find_closing_node(node, branch)
             if nnode:
-                return {'nodes': {node, nnode}}
+                return Target(
+                    nodes = qsetf((node, nnode)),
+                    branch = branch,
+                )
 
         # rule implementation
 
@@ -782,10 +749,6 @@ class TabRules:
             s: Atomic = Atomic.first()
             w = 0 if self.modal else None
             return sw(s, w), sw(s.negate(), w)
-
-        def applies_to_branch(self, branch: Branch):
-            # Delegate to tracker
-            return self[NodeTarget].get(branch)
 
         # private util
 
@@ -804,11 +767,11 @@ class TabRules:
         """
         modal = True
 
-        # tracker implementation
+        # BranchTarget implementation
 
-        def check_for_target(self, node: Node, branch: Branch):
+        def _branch_target_hook(self, node: Node, branch: Branch):
             if self.node_will_close_branch(node, branch):
-                return {'node': node}
+                return Target(node = node, branch = branch)
 
         # rule implementation
 
@@ -821,10 +784,6 @@ class TabRules:
                 s.lhs.predicate == Identity and
                 opr.eq(*s.lhs.params)
             )
-
-        def applies_to_branch(self, branch: Branch):
-            # Delegate to tracker
-            return self[NodeTarget].get(branch)
 
         def example_nodes(self):
             c = Constant.first()
@@ -839,11 +798,11 @@ class TabRules:
         """
         modal = True
 
-        # tracker implementation
+        # BranchTarget implementation
 
-        def check_for_target(self, node: Node, branch: Branch):
+        def _branch_target_hook(self, node: Node, branch: Branch):
             if self.node_will_close_branch(node, branch):
-                return {'node': node}
+                return Target(node = node, branch = branch)
 
         # rule implementation
 
@@ -855,10 +814,6 @@ class TabRules:
                 isinstance(s.lhs, Predicated) and
                 s.lhs.predicate == Existence
             )
-
-        def applies_to_branch(self, branch: Branch):
-            'Delegate to NodeTarget tracker'
-            return self[NodeTarget].get(branch)
 
         def example_nodes(self):
             s = Predicated.first(Existence).negate()

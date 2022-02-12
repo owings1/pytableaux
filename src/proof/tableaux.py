@@ -331,21 +331,21 @@ class ClosingRule(Rule):
     
     _defaults = dict(is_rank_optim = False)
 
-    def _get_targets(self, branch: Branch):
-        target = self.applies_to_branch(branch)
-        if target:
-            if target is True:
-                target = {}
-            target['branch'] = branch
-            return Target(target),
+    # def _get_targets(self, branch: Branch):
+    #     target = self.applies_to_branch(branch)
+    #     if target:
+    #         if target is True:
+    #             target = {}
+    #         target['branch'] = branch
+    #         return Target(target),
 
     @final
     def _apply(self, target: Target):
         target.branch.close()
 
-    @abstract
-    def applies_to_branch(self, branch: Branch):
-        raise NotImplementedError
+    # @abstract
+    # def applies_to_branch(self, branch: Branch):
+    #     raise NotImplementedError
 
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch):
         """For calculating a target's closure score. This default
@@ -359,9 +359,6 @@ class ClosingRule(Rule):
     def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
         raise NotImplementedError
 
-    @abstract
-    def check_for_target(self, node: Node, branch: Branch):
-        raise NotImplementedError
 
 # ----------------------------------------------
 
@@ -731,21 +728,21 @@ class Tableau(Sequence[Branch], EventEmitter):
         })
 
         # Protected attributes
-        self.__flag = TabFlag.PREMATURE
-        self.__branch_list = list()
-        self.__open = linqset()
-        self.__branchstat: dict[Branch, BranchStat] = {}
-        self.__history = list()
+        self.__flag        : TabFlag         = TabFlag.PREMATURE
+        self.__history     : list[StepEntry] = list()
+        self.__branch_list : list[Branch]    = list()
+        self.__open        : linqset[Branch] = linqset()
+        self.__branchstat  : dict[Branch, BranchStat] = {}
 
         # Private
         self.__branching_complexities: dict[Node, int] = {}
 
         # Exposed attributes
         self.history = SequenceCover(self.__history)
-        self.opts = self._defaults | opts
-        self.timers = TabTimers.create()
-        self.rules = TabRules(self)
-        self.open = SequenceCover(self.__open)
+        self.opts    = self._defaults | opts
+        self.timers  = TabTimers.create()
+        self.rules   = TabRules(self)
+        self.open    = SequenceCover(self.__open)
 
         # Init
         if logic is not None:
@@ -923,23 +920,6 @@ class Tableau(Sequence[Branch], EventEmitter):
         branch.on(self.__branch_listeners)
         return self
 
-    def __build_trunk(self):
-        """Build the trunk of the tableau. Delegates to the ``build_trunk()``
-        method of ``TableauxSystem``. This is called automatically when the
-        tableau has non-empty ``argument`` and ``logic`` properties.
-        Returns self.
-
-        :return: self
-        :raises errors.IllegalStateError: if the trunk is already built.
-        """
-        self.__check_not_started()
-        with self.timers.trunk:
-            self.emit(TabEvent.BEFORE_TRUNK_BUILD, self)
-            self.System.build_trunk(self, self.argument)
-            self.__flag |= TabFlag.TRUNK_BUILT
-            self.emit(TabEvent.AFTER_TRUNK_BUILD, self)
-        return self
-
     def finish(self):
         """Mark the tableau as finished, and perform post-build tasks, including
         populating the ``tree``, ``stats``, and ``models`` properties.
@@ -1017,6 +997,8 @@ class Tableau(Sequence[Branch], EventEmitter):
             return stat
         raise ValueError('Too many keys to lookup')
 
+    # *** Behaviors
+
     @overload
     def __getitem__(self, s: slice) -> list[Branch]: ...
 
@@ -1061,9 +1043,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             if self.argument else {}
         ))
 
-    # :-----------:
-    # : Callbacks :
-    # :-----------:
+    # *** Events
 
     def __after_branch_close(self, branch: Branch):
         stat = self.__branchstat[branch]
@@ -1083,15 +1063,13 @@ class Tableau(Sequence[Branch], EventEmitter):
         stat[TabStatKey.FLAGS] |= TabFlag.TICKED
         self.emit(TabEvent.AFTER_NODE_TICK, node, branch)
 
-    # :-----------:
-    # : Util      :
-    # :-----------:
+    # *** Util
 
-    def __get_group_application(self, branch: Branch, rules: Sequence[Rule]) -> RuleTarget:
+    def __get_group_application(self, branch: Branch, group: RuleGroup) -> RuleTarget:
         """Find and return the next available rule application for the given open
-        branch and rule group. The ``rules`` parameter is a list of rules, and
-        is assumed to be either the closure rules, or one of the rule groups of
-        the tableau. This calls the ``rule.get_target(branch)`` on the rules.
+        branch and rule group. 
+        
+        This calls the ``rule.get_target(branch)`` on the rules.
 
         If the `is_group_optim` option is `disabled`, then the first non-empty
         target returned by a rule is selected. The target is updated with the
@@ -1109,8 +1087,8 @@ class Tableau(Sequence[Branch], EventEmitter):
         :return: A (rule, target) pair, or ``None``.
         """
         is_group_optim = self.opts['is_group_optim']
-        results = deque(maxlen = len(rules) if is_group_optim else 0)
-        for rule in rules:
+        results = deque(maxlen = len(group) if is_group_optim else 0)
+        for rule in group:
             target = rule.get_target(branch)
             if target:
                 ruletarget = RuleTarget(rule, target)
@@ -1156,6 +1134,23 @@ class Tableau(Sequence[Branch], EventEmitter):
                     is_group_optim      = True,
                 )
                 return res
+
+    def __build_trunk(self):
+        """Build the trunk of the tableau. Delegates to the ``build_trunk()``
+        method of ``TableauxSystem``. This is called automatically when the
+        tableau has non-empty ``argument`` and ``logic`` properties.
+        Returns self.
+
+        :return: self
+        :raises errors.IllegalStateError: if the trunk is already built.
+        """
+        self.__check_not_started()
+        with self.timers.trunk:
+            self.emit(TabEvent.BEFORE_TRUNK_BUILD, self)
+            self.System.build_trunk(self, self.argument)
+            self.__flag |= TabFlag.TRUNK_BUILT
+            self.emit(TabEvent.AFTER_TRUNK_BUILD, self)
+        return self
 
     def __compute_stats(self):
         'Compute the stats property after the tableau is finished.'

@@ -26,10 +26,11 @@ class Meta(object):
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 20
 
-from proof.helpers import NodeTarget
+# from proof.helpers import NodeTarget
+from proof.baserules import BaseClosureRule
 from tools.hybrids import qsetf
 from lexicals import Atomic
-from proof.common import Branch, Node
+from proof.common import Branch, Node, Target
 
 from . import fde as FDE
 
@@ -79,26 +80,27 @@ class TabRules:
     as an additional closure rule.
     """
 
-    class GlutClosure(FDE.ClosureRule):
+    class GlutClosure(BaseClosureRule):
         """
         A branch closes when a sentence and its negation both appear as designated nodes.
         This rule is **in addition to** the :class:`FDE DesignationClosure rule
         <DesignationClosure>`
         """
 
+        # BranchTarget implementation
 
-        def check_for_target(self, node: Node, branch: Branch):
-            nnode = self.__find_closing_node(node, branch)
+        def _branch_target_hook(self, node: Node, branch: Branch):
+            nnode = self._find_closing_node(node, branch)
             if nnode:
-               return {'nodes': {node, nnode}}
+               return Target(
+                   nodes = qsetf((node, nnode)),
+                   branch = branch,
+                )
 
         # rule implementation
 
         def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
-            return bool(self.__find_closing_node(node, branch))
-
-        def applies_to_branch(self, branch: Branch) -> dict|None:
-            return self[NodeTarget].get(branch)
+            return bool(self._find_closing_node(node, branch))
 
         def example_nodes(self):
             a = Atomic.first()
@@ -107,12 +109,16 @@ class TabRules:
                 {'sentence': a.negate(), 'designated': True},
             )
 
-        def __find_closing_node(self, node: Node, branch: Branch):
-            if node.has('sentence', 'designated') and node['designated']:
-                return branch.find({
-                    'sentence'   : node['sentence'].negative(),
-                    'designated' : True,
-                })
+        # util
+
+        def _find_closing_node(self, node: Node, branch: Branch):
+            if node.get('designated'):
+                s = self.sentence(node)
+                if s is not None:
+                    return branch.find(dict(
+                        sentence = s.negative(),
+                        designated = True,
+                    ))
 
     class DesignationClosure(FDE.TabRules.DesignationClosure):
         pass

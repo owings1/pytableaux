@@ -16,17 +16,28 @@ from proof.common import Branch, Node, Target
 from proof.filters import NodeFilters
 from proof.helpers import (
     AdzHelper,
+    BranchTarget,
     FilterHelper,
     MaxConsts,
     NodeConsts,
     NodeCount,
-    NodeTarget,
     QuitFlag,
 )
 from proof.tableaux import ClosingRule, Rule
 
 class BaseClosureRule(ClosingRule):
-    Helpers = NodeTarget,
+
+    Helpers = BranchTarget,
+
+    def _get_targets(self, branch: Branch):
+        target = self[BranchTarget][branch]
+        if target is not None:
+            return target,
+
+    @abstract
+    def _branch_target_hook(self, node: Node, branch: Branch):
+        'Method for BranchTarget helper.'
+        raise NotImplementedError
 
 class BaseRule(Rule):
 

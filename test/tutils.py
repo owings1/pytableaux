@@ -24,15 +24,14 @@ from proof.tableaux import (
 
 from inspect import isclass, getmembers
 from itertools import chain, filterfalse
-import sys
 from typing import (
     Callable,
     Collection,
     Iterable,
     Iterator,
-    Mapping,
+    # Mapping,
     NamedTuple,
-    Sequence,
+    # Sequence,
 )
 
 def _setattrs(obj, **attrs):

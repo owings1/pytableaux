@@ -30,7 +30,7 @@ __all__ = (
     'PredNodes',
     'FilterHelper',
 
-    'NodeTarget',
+    'BranchTarget',
     'MaxConsts',
     'NodeConsts',
     'MaxWorlds',
@@ -95,7 +95,7 @@ class AdzHelper:
 
     __slots__ = 'rule', 'closure_rules'
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         self.rule = rule
         self.closure_rules = rule.tableau.rules.groups.get('closure', EMPTY_SET)
 
@@ -134,16 +134,25 @@ class BranchCache(dmap[Branch, T], RuleHelper):
     __slots__ = 'rule',
     rule: Rule
 
-    def __new__(cls, rule: Rule):
+    def __new__(cls, rule: Rule,/):
         inst = super().__new__(cls)
         inst.rule = rule
         return inst
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         rule.tableau.on({
             TabEvent.AFTER_BRANCH_ADD  : self.__after_branch_add,
             TabEvent.AFTER_BRANCH_CLOSE: self.__after_branch_close,
         })
+
+    def copy(self, /, *, events = False):
+        cls = type(self)
+        if events:
+            inst = cls(self.rule)
+        else:
+            inst = cls.__new__(cls, self.rule)
+        inst.update(self)
+        return inst
 
     def __after_branch_add(self, branch: Branch):
         if branch.parent:
@@ -165,18 +174,10 @@ class BranchCache(dmap[Branch, T], RuleHelper):
     def _reprdict(self):
         return dict(branches = len(self))
 
-    def copy(self, /, *, events = False):
-        cls = type(self)
-        if events:
-            inst = cls(self.rule)
-        else:
-            inst = cls.__new__(cls, self.rule)
-        inst.update(self)
-        return inst
-
-    def _empty_value(self, branch: Branch) -> T:
+    @classmethod
+    def _empty_value(cls, branch: Branch) -> T:
         'Override, for example, if the value type takes arguments.'
-        return self._valuetype()
+        return cls._valuetype()
 
     @classmethod
     def _from_mapping(cls, mapping):
@@ -193,13 +194,13 @@ class BranchCache(dmap[Branch, T], RuleHelper):
         pass
 
 class BranchDictCache(BranchCache[dmap[KT, VT]]):
-    'Copies each value.'
+    'Copies each K->V item for parent branch via copy(V).'
 
     _valuetype = dmap
 
     __slots__ = EMPTY_SET
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         super().__init__(rule)
         rule.tableau.on(TabEvent.AFTER_BRANCH_ADD, self.__after_branch_add)
 
@@ -207,42 +208,6 @@ class BranchDictCache(BranchCache[dmap[KT, VT]]):
         if branch.parent:
             for key in self[branch]:
                 self[branch][key] = copy(self[branch.parent][key])
-
-class FilterNodeCache(BranchCache[set[Node]]):
-
-    __slots__ = 'ignore_ticked',
-    _valuetype = set
-    
-    ignore_ticked: bool
-
-    def __init__(self, rule: Rule):
-        super().__init__(rule)
-        self.ignore_ticked = bool(getattr(rule, RuleAttr.IgnoreTicked))
-        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
-        if self.ignore_ticked:
-            rule.tableau.on(TabEvent.AFTER_NODE_TICK, self.__after_node_tick)
-
-    def copy(self, /, *, events = False):
-        inst = super().copy(events = events)
-        if not events:
-            inst.ignore_ticked = self.ignore_ticked
-        return inst
-
-    def __after_node_add(self, node: Node, branch: Branch):
-        if self(node, branch):
-            self[branch].add(node)
-
-    def __after_node_tick(self, node: Node, branch: Branch):
-        self[branch].discard(node)
-
-    @abstract
-    def __call__(self, node: Node, branch: Branch): ...
-
-    @classmethod
-    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
-        super().__init_ruleclass__(rulecls, **kw)
-        if not hasattr(rulecls, RuleAttr.IgnoreTicked):
-            raise Emsg.MissingAttribute(RuleAttr.IgnoreTicked.value)
 
 class QuitFlag(BranchCache[bool]):
     """
@@ -252,12 +217,54 @@ class QuitFlag(BranchCache[bool]):
     __slots__ = EMPTY_SET
     _valuetype = bool
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         super().__init__(rule)
         rule.on(RuleEvent.AFTER_APPLY, self)
 
     def __call__(self, target: Target):
         self[target.branch] = bool(target.get('flag'))
+
+class BranchValueHook(BranchCache[VT]):
+    """Check each node as it is added, until a (truthy) value is returned,
+    then cache that value for the branch and stop checking nodes.
+
+    Calls the rule's ``check_for_target(node, branch)`` when a node is added to
+    a branch. Any truthy return value is cached for the branch. Once a value
+    is stored for a branch, no further nodes are check.
+
+    NB: The rule must implement ``check_for_target(self, node, branch)``.
+    """
+    _valuetype = type(None)
+    hook_method_name = '_branch_value_hook'
+
+    __slots__ = 'hook',
+
+    hook: Callable[[Node, Branch], VT|None]
+
+    def __init__(self, rule: Rule,/):
+        super().__init__(rule)
+        self.hook = getattr(rule, self.hook_method_name)
+        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self)
+
+    def __call__(self, node: Node, branch: Branch):
+        if self[branch]:
+            return
+        res = self.hook(node, branch)
+        if res:
+            self[branch] = res
+
+    @classmethod
+    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
+        super().__init_ruleclass__(rulecls, **kw)
+        name = cls.hook_method_name
+        value = getattr(rulecls, name, None)
+        if value is None:
+            raise Emsg.MissingAttribute(name, rulecls)
+        if not callable(value):
+            raise TypeError("Method '%s' for class '%s' not callable" % (name, rulecls))
+
+class BranchTarget(BranchValueHook[Target]):
+    hook_method_name = '_branch_target_hook'
 
 class AplSentCount(BranchCache[dmap[Sentence, int]]):
     """
@@ -268,7 +275,7 @@ class AplSentCount(BranchCache[dmap[Sentence, int]]):
     __slots__ = EMPTY_SET
     _valuetype = dmap
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         super().__init__(rule)
         rule.on(RuleEvent.AFTER_APPLY, self)
 
@@ -284,7 +291,7 @@ class NodeCount(BranchCache[dmap[Node, int]]):
     __slots__ = EMPTY_SET
     _valuetype = dmap
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         super().__init__(rule)
         rule.on(RuleEvent.AFTER_APPLY, self)
 
@@ -313,7 +320,7 @@ class NodesWorlds(BranchCache[setm[tuple[Node, int]]]):
 
     _valuetype = setm
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         super().__init__(rule)
         rule.on(RuleEvent.AFTER_APPLY, self)
 
@@ -328,7 +335,7 @@ class UnserialWorlds(BranchCache[setm[int]]):
 
     _valuetype = setm
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         super().__init__(rule)
         rule.tableau.on(TabEvent.AFTER_NODE_ADD, self)
 
@@ -351,7 +358,7 @@ class WorldIndex(BranchDictCache[int, setm[int]]):
         def __call__(self, node: Node, branch: Branch):
             self[branch][Access.fornode(node)] = node
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         super().__init__(rule)
         self.nodes = self.Nodes(rule)
         rule.tableau.on(TabEvent.AFTER_NODE_ADD, self)
@@ -386,6 +393,48 @@ class WorldIndex(BranchDictCache[int, setm[int]]):
             self[branch][w1].add(w2)
             self.nodes(node, branch)
 
+# * * * * *    FilterNodeCache    * * * * * #
+
+class FilterNodeCache(BranchCache[set[Node]]):
+
+    __slots__ = 'ignore_ticked',
+    _valuetype = set
+
+    #: Copied from Rule.ignore_ticked - whether to discard nodes
+    #: after they are ticked.
+    ignore_ticked: bool
+
+    @abstract
+    def __call__(self, node: Node, branch: Branch):
+        'Whether to add the node to the branch set.'
+        return False
+
+    def __init__(self, rule: Rule,/):
+        super().__init__(rule)
+        self.ignore_ticked = bool(getattr(rule, RuleAttr.IgnoreTicked))
+        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self.__after_node_add)
+        if self.ignore_ticked:
+            rule.tableau.on(TabEvent.AFTER_NODE_TICK, self.__after_node_tick)
+
+    def copy(self, /, *, events = False):
+        inst = super().copy(events = events)
+        if not events:
+            inst.ignore_ticked = self.ignore_ticked
+        return inst
+
+    def __after_node_add(self, node: Node, branch: Branch):
+        if self(node, branch):
+            self[branch].add(node)
+
+    def __after_node_tick(self, node: Node, branch: Branch):
+        self[branch].discard(node)
+
+    @classmethod
+    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
+        super().__init_ruleclass__(rulecls, **kw)
+        if not hasattr(rulecls, RuleAttr.IgnoreTicked):
+            raise Emsg.MissingAttribute(RuleAttr.IgnoreTicked.value)
+
 class PredNodes(FilterNodeCache):
     'Track all predicated nodes on the branch.'
     __slots__ = EMPTY_SET
@@ -404,13 +453,12 @@ class FilterHelper(FilterNodeCache):
 
     _garbage: setm[tuple[Branch, Node]]
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         super().__init__(rule)
         self._garbage = setm()
         self.filters = MapProxy({
-            # Filter: subclscheck(instcheck(Filter, type), NodeFilter)(rule)
-            Filter: Filter(rule)
-            for Filter in getattr(rule, RuleAttr.NodeFilters)
+            Filter: Filter(rule) for Filter in
+            getattr(rule, RuleAttr.NodeFilters)
         })
         self.pred = self.create_pred(self.filters)
 
@@ -501,40 +549,6 @@ class FilterHelper(FilterNodeCache):
         return get_targets_filtered
 
 
-class NodeTarget(BranchCache[Target]):
-    """
-    Calls the rule's ``check_for_target(node, branch)`` when a node is added to
-    a branch. If a target is returned, it is cached relative to the branch. The
-    rule can then call ``cached_target(branch)``  on the helper to retrieve the
-    target. This is used primarily in closure rules for performance.
-
-    NB: The rule must implement ``check_for_target(self, node, branch)``.
-    """
-    _valuetype = Target
-
-    __slots__ = EMPTY_SET
-
-    rule: ClosingRule
-
-    def __init__(self, rule: ClosingRule):
-        super().__init__(rule)
-        rule.tableau.on(TabEvent.AFTER_NODE_ADD, self)
-
-    def __call__(self, node: Node, branch: Branch): 
-        target = self.rule.check_for_target(node, branch)
-        if target:
-            self[branch] = target
-
-    def _empty_value(self, branch: Branch):
-        'Override _valuetype since we cannot have an empty Target.'
-        return None
-
-    @classmethod
-    def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
-        super().__init_ruleclass__(rulecls, **kw)
-        subclscheck(rulecls, ClosingRule)
-
-
 class NodeConsts(BranchDictCache[Node, set[Constant]]):
     """Track the unapplied constants per branch for each potential node.
     The rule's target should have `branch`, `node` and `constant` properties.
@@ -549,7 +563,7 @@ class NodeConsts(BranchDictCache[Node, set[Constant]]):
         _valuetype = set
         __slots__ = EMPTY_SET
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         super().__init__(rule)
         # fail fast if the rule does not have a filter.
         self.filter = rule.helpers[FilterHelper]
@@ -583,7 +597,7 @@ class MaxConsts:
     """
     __slots__ = 'rule', 'branch_max_constants', 'world_constants'
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         self.rule = rule
         #: Track the maximum number of constants that should be on the branch
         #: (per world) so we can halt on infinite branches. Map from ``branch.id```
@@ -724,7 +738,7 @@ class MaxWorlds:
 
     modal_operators = setf(BaseModel.modal_operators)
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         self.rule = rule
         # Track the maximum number of worlds that should be on the branch
         # so we can halt on infinite branches.
@@ -812,7 +826,7 @@ class EllipsisExampleHelper:
     mynode = {'ellipsis': True}
     closenodes = []
 
-    def __init__(self, rule: Rule):
+    def __init__(self, rule: Rule,/):
         self.rule = rule
         self.applied: set[Branch] = set()
         self.isclosure = isinstance(rule, ClosingRule)
