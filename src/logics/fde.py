@@ -566,6 +566,11 @@ class QuantifierFatRule(ExtendedQuantifierRule, DefaultRule):
 def sd(s: Sentence, d: bool) -> dict:
     return dict(sentence = s, designated = d)
 
+def addsn(*nn: dict) -> dict:
+    return dict(adds = ((nn),))
+
+def addsb(**bb: tuple[dict, ...]) -> dict:
+    ...
 class ConjunctionReducingRule(DefaultNodeRule):
 
     conjunct_op: Oper
@@ -577,11 +582,7 @@ class ConjunctionReducingRule(DefaultNodeRule):
         s = oper((lhs, rhs)).conjoin(oper((rhs, lhs)))
         if self.negated:
             s = s.negate()
-        return dict(
-            adds = (
-                ( sd(s, self.designation), ),
-            ),
-        )
+        return addsn(sd(s, self.designation))
 
 @static
 class TabRules:
@@ -637,11 +638,8 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, _):
             s: Operated = self.sentence(node)
-            d = self.designation
-            return {
-                # keep designation neutral for inheritance below
-                'adds': (({'sentence': s.lhs, 'designated': d},),),
-            }
+            # keep designation neutral for inheritance below
+            return addsn(sd(s.lhs, self.designation))
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
         """
@@ -662,11 +660,8 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, _):
             s: Operated = self.sentence(node)
-            d = self.designation
-            return {
-                # keep designation neutral for inheritance below
-                'adds': (({'sentence': s.lhs, 'designated': d},),),
-            }
+            # keep designation neutral for inheritance below
+            return addsn(sd(s.lhs, self.designation))
 
     class AssertionUndesignated(AssertionDesignated):
         """
@@ -687,11 +682,8 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, _):
             s: Operated = self.sentence(node)
-            d = self.designation
-            return {
-                # keep designation neutral for inheritance below
-                'adds': (({'sentence': s.lhs.negate(), 'designated': d},),),
-            }
+            # keep designation neutral for inheritance below
+            return addsn(sd(s.lhs.negate(), self.designation))
 
     class AssertionNegatedUndesignated(AssertionNegatedDesignated):
         """
@@ -712,9 +704,9 @@ class TabRules:
         def _get_node_targets(self, node: Node, _):
             s: Operated = self.sentence(node)
             lhs, rhs = s
-            d = self.designation
             # Keep designation neutral for inheritance below.
-            return {'adds': ((sd(lhs, d), sd(rhs, d)),)}
+            d = self.designation
+            return addsn(sd(lhs, d), sd(rhs, d))
 
     class ConjunctionNegatedDesignated(DefaultNodeRule):
         """
@@ -763,8 +755,9 @@ class TabRules:
 
     class ConjunctionNegatedUndesignated(DefaultNodeRule):
         """
-        From an unticked undesignated negated conjunction node *n* on a branch *b*, for each conjunct
-        *c*, add an undesignated node with the negation of *c* to *b*, then tick *n*.
+        From an unticked undesignated negated conjunction node *n* on a branch
+        *b*, for each conjunct *c*, add an undesignated node with the negation
+        of *c* to *b*, then tick *n*.
         """
         designation = False
         negated     = True
@@ -775,15 +768,7 @@ class TabRules:
             s: Operated = self.sentence(node)
             lhs, rhs = s
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        # keep designation neutral for inheritance below
-                        {'sentence': lhs.negate(), 'designated': d},
-                        {'sentence': rhs.negate(), 'designated': d},
-                    ),
-                ),
-            }
+            return addsn(sd(lhs.negate(), d), sd(rhs.negate(), d))
 
     class DisjunctionDesignated(ConjunctionUndesignated):
         """
@@ -843,9 +828,9 @@ class TabRules:
 
     class MaterialConditionalNegatedDesignated(DefaultNodeRule):
         """
-        From an unticked designated negated material conditional node *n* on a branch *b*, add
-        a designated node with the antecedent, and a designated node with the negation of the
-        consequent to *b*, then tick *n*.
+        From an unticked designated negated material conditional node *n* on a
+        branch *b*, add a designated node with the antecedent, and a designated
+        node with the negation of the consequent to *b*, then tick *n*.
         """
         designation = True
         negated     = True
@@ -856,14 +841,7 @@ class TabRules:
             s: Operated = self.sentence(node)
             lhs, rhs = s
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': lhs          , 'designated': d},
-                        {'sentence': rhs.negate() , 'designated': d},
-                    ),
-                ),
-            }
+            return addsn(sd(lhs, d), sd(rhs.negate(), d))
 
     class MaterialConditionalUndesignated(DefaultNodeRule):
         """
@@ -879,14 +857,7 @@ class TabRules:
             s: Operated = self.sentence(node)
             lhs, rhs = s
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': lhs.negate(), 'designated': d},
-                        {'sentence': rhs         , 'designated': d},
-                    ),
-                ),
-            }
+            return addsn(sd(lhs.negate(), d), sd(rhs, d))
 
     class MaterialConditionalNegatedUndesignated(DefaultNodeRule):
         """
@@ -1116,10 +1087,8 @@ class TabRules:
         def _get_node_targets(self, node: Node, _):
             s: Quantified = self.sentence(node)
             sq = self.convert_to(s.variable, s.sentence.negate())
-            d = self.designation
-            return {
-                'adds': (({'sentence': sq, 'designated': d},),),
-            }
+            return addsn(sd(sq, self.designation))
+
 
     class ExistentialUndesignated(QuantifierFatRule):
         """
@@ -1135,9 +1104,7 @@ class TabRules:
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
             s: Quantified = self.sentence(node)
-            r = s.unquantify(c)
-            d = self.designation
-            return ({'sentence': r, 'designated': d},)
+            return sd(s.unquantify(c), self.designation),
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """

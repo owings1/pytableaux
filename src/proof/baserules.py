@@ -10,7 +10,6 @@ __all__ = (
 )
 
 from tools.decorators import abstract
-from tools.sets import setf
 from lexicals import Constant, Operator, Predicate, Quantifier, Sentence
 from proof.common import Branch, Node, Target
 from proof.filters import NodeFilters
@@ -106,7 +105,7 @@ class BaseQuantifierRule(BaseRule):
     def score_candidate(self, target: Target):
         return -1 * self.tableau.branching_complexity(target.node)
 
-FIRST_CONST_SET = setf({Constant.first()})
+FIRST_CONST_SET = frozenset({Constant.first()})
 
 class ExtendedQuantifierRule(BaseQuantifierRule):
 
@@ -121,13 +120,14 @@ class ExtendedQuantifierRule(BaseQuantifierRule):
             # can appear.
             return
         constants = unapplied or FIRST_CONST_SET
+        getcnodes = self._get_constant_nodes
         return (
             dict(
-                adds = (nodes,),
-                constant = constant
+                adds     = (nodes,) ,
+                constant = constant ,
             )
             for nodes, constant in (
-                (self._get_constant_nodes(node, c, branch), c)
+                (getcnodes(node, c, branch), c)
                 for c in constants
             )
             if len(unapplied) > 0
@@ -145,3 +145,5 @@ class ExtendedQuantifierRule(BaseQuantifierRule):
             return 1.0
         node_apply_count = self[NodeCount][target.branch].get(target.node, 0)
         return 1 / (node_apply_count + 1)
+
+del(abstract)
