@@ -514,9 +514,12 @@ class Bases:
             self.spec = self.name,
             self.order = order
             self.label = label
-            # Prepended with rank in LexType init
+            # Prepended with rank in LexType init.
             self.sort_tuple = self.order,
             self.ident = self.identitem(self)
+            # NB: The value of hashitem changes after LexType modifies
+            # the sort_tuple. To update the hash, we have to rehash the
+            # Enum lookup index at the same time. See LexType below.
             self.hash = self.hashitem(self)
             self.strings = setf((self.name, self.label))
 
@@ -1381,9 +1384,13 @@ class LexType(Bases.Enum):
         'Build classes list, expand sort_tuple.'
         super()._after_init()
         cls.classes = qsetf((m.cls for m in cls.seq))
-        for inst in chain(Operator.seq, Quantifier.seq):
+        for encls in (Operator, Quantifier):
+            for inst in encls.seq:
             inst.sort_tuple = inst.TYPE.rank, *inst.sort_tuple
-            # inst.hash = inst.hashitem(inst)
+                newhash = inst.hashitem(inst)
+                encls._lookup.rehash_member(inst,
+                    lambda: setattr(inst, 'hash', newhash)
+                )
 
     @classmethod
     def _member_keys(cls, member: LexType):

@@ -221,24 +221,34 @@ if 'Util Classes' or True:
     class EnumLookup(Mapping[Any, EnumEntry[EnT]]):
         'Enum entry lookup index.'
 
-        __slots__ = {'__len__', '__getitem__', '__iter__', '__reversed__', 'add_pseudo'}
+        __slots__ = {
+            '__len__', '__getitem__', '__iter__', '__reversed__',
+            'add_pseudo', 'rehash_member',
+        }
 
         def __init__(self, src: dict[Any, EnumEntry[EnT]], ecls: type[EnT], /):
             ga = object.__getattribute__
             sa = object.__setattr__
-            for name in self.__slots__ - {'add_pseudo'}:
+            for name in filter(_isdund, self.__slots__):
                 sa(self, name, ga(src, name))
             def add_pseudo(member):
                 keys, entry = self._check_pseudo(member, ecls)
                 for key in keys:
                     src[key] = entry
                 return entry.member
+            def rehash_member(member, cb: Callable[[], None]):
+                entry = src.pop(member)
+                cb()
+                src[member] = entry
             sa(self, 'add_pseudo', add_pseudo)
+            sa(self, 'rehash_member', rehash_member)
 
         @overload
-        def add_pseudo( # type: ignore
-            self, member: EnT, /) -> EnT:...
-        del(add_pseudo)
+        def rehash_member(self, member, cb: Callable[[], None]) -> None: ...
+        @overload
+        def add_pseudo(self, member: EnT, /) -> EnT:... # type: ignore
+
+        del(add_pseudo, rehash_member)
 
         def _check_pseudo(self, member: EnT, ecls: type[EnT], /):
             check = ecls._value2member_map_[member.value]
