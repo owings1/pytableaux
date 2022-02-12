@@ -69,6 +69,7 @@ from typing import (
     Iterator,
     Mapping,
     NamedTuple,
+    Sequence,
     SupportsIndex,
     TypeVar,
 )
@@ -247,7 +248,9 @@ class Bases:
 
     class Enum(abcs.AbcEnum, metaclass = Metas.Enum):
 
-        __slots__   = '_value_', '_name_', '__objclass__'
+        __slots__   = (
+            'value', '_value_', '_name_', '__objclass__'
+        )
         __delattr__ = raisr(AttributeError)
         __setattr__ = nosetattr(abcs.AbcEnum, cls = True)
 
@@ -257,7 +260,8 @@ class Bases:
 
         __slots__ = EMPTY_SET
 
-        def __init__(self): raise TypeError(self)
+        def __init__(self):
+            raise TypeError(self)
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Class Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -306,7 +310,8 @@ class Bases:
 
             def cmpgen(a: LexT, b: LexT, sm = starmap, sub = opr.sub):
                 if a is b:
-                    yield 0 ; return
+                    yield 0
+                    return
                 yield a.TYPE.rank - b.TYPE.rank
                 a = a.sort_tuple
                 b = b.sort_tuple
@@ -327,11 +332,11 @@ class Bases:
 
         @abcf.temp
         @membr.defer
-        def ordr(member: membr[type[LexT], Callable[[LexT, Any], bool|NotImplType]]):
-            oper = getattr(opr, member.name)
+        def ordr(member: membr[type[Bases.Lexical], Callable[[Bases.Lexical, Any], bool|NotImplType]]):
+            oper: Callable[[int, int], bool] = getattr(opr, member.name)
             Lexical = member.owner
             @wraps(oper)
-            def f(self: LexT, other: Any, /):
+            def f(self: Bases.Lexical, other: Any, /):
                 if not isinstance(other, Lexical):
                     return NotImplemented
                 return oper(Lexical.orderitems(self, other), 0)
@@ -403,28 +408,37 @@ class Bases:
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Subclass Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        def __init_subclass__(subcls: type[Bases.Lexical], **kw):
-            '''Copy the dict manually to the next class, since our protection
-            is limited without metaclass flexibility.'''
+        def __init_subclass__(subcls: type[Bases.Lexical], /, *,
+            lexcopy = False, skipnames = {'__init_subclass__'},
+        **kw):
+            '''With lexcopy = True, copy the class members to the next class,
+            since our protection is limited without metaclass flexibility.
+            Only applies if this class is in the bases of the subcls.'''
             super().__init_subclass__(**kw)
             cls = __class__
-            if cls not in subcls.__bases__: return
-
+            if not lexcopy or cls not in subcls.__bases__:
+                return
             from types import FunctionType
-            supns = dmap(cls.__dict__)
-            subns = subcls.__dict__
-            skip = {'__init_subclass__'}
-            ftypes = {classmethod, staticmethod, FunctionType}
-            for name, value in (
-                (name, mbr)
-                for name, mbr in (supns - set(subns) - skip).items()
-                if type(mbr) in ftypes
-            ) : setattr(subcls, name, value)
+            ftypes = classmethod, staticmethod, FunctionType
+            src = dmap(cls.__dict__)
+            src -= set(subcls.__dict__)
+            src -= set(skipnames)
+
+            cpnames = {'__copy__', '__deepcopy__'}
+            for name in cpnames:
+                if name not in src:
+                    src -= cpnames
+                    break
+
+            for name, value in src.items():
+                if isinstance(value, ftypes):
+                    setattr(subcls, name, value)
+
 
     Types.Lexical = Lexical
     Metas.LexicalItem.Cache = Types.ItemCache(Lexical, ITEM_CACHE_SIZE)
 
-    class LexicalEnum(Lexical, Enum):
+    class LexicalEnum(Lexical, Enum, lexcopy = False):
         'Base Enum implementation of Lexical. For Quantifier and Operator classes.'
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -440,14 +454,16 @@ class Bases:
 
         #: Label with spaces allowed.
         label: str
-        #: A number to signify order independent of source or other constraints.
+        #: A number to signify relative member order (need not be sequence index).
         order: int
+        #: The member index in the member sequence.
+        index: int
         #: Name, label, or other strings unique to a member.
         strings: setf[str]
 
         __slots__ = (
             'spec', 'ident', 'sort_tuple', 'hash',
-            'label', '_index', 'order', 'strings',
+            'label', 'order', 'index', 'strings',
         )
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Item Comparison ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -471,8 +487,8 @@ class Bases:
             return cls.seq[0]
 
         def next(self, loop = False):
-            seq = type(self).seq
-            i = self._index + 1
+            seq: Sequence[Bases.LexicalEnum] = self.seq
+            i = self.index + 1
             if i == len(seq):
                 if not loop: raise StopIteration
                 i = 0
@@ -486,9 +502,10 @@ class Bases:
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
-        def __init__(self, order, label, *_):
+        def __init__(self, order: int, label: str, *_):
             self.spec = self.name,
-            self.order, self.label = order, label
+            self.order = order
+            self.label = label
             # Prepended with rank in LexType init
             self.sort_tuple = self.order,
             self.ident = self.identitem(self)
@@ -501,16 +518,16 @@ class Bases:
         @classmethod
         def _member_keys(cls, member: Bases.LexicalEnum):
             'Enum init hook. Index keys for Enum members lookups.'
-            return super()._member_keys(member) | {member.label, member._value_}
+            return super()._member_keys(member) | {member.label}
 
         @classmethod
         def _on_init(cls, subcls: type[Bases.LexicalEnum]):
             'Enum init hook. Store the sequence index of each member.'
             # raise TypeError
             super()._on_init(subcls)
-            for i, member in enumerate(subcls.seq): member._index = i
+            for i, member in enumerate(subcls.seq): member.index = i
 
-    class LexicalItem(Lexical, Abc, metaclass = Metas.LexicalItem):
+    class LexicalItem(Lexical, Abc, metaclass = Metas.LexicalItem, lexcopy = True):
         'Base Lexical Item class.'
 
         __slots__ = '_ident', '_hash',
@@ -672,6 +689,8 @@ class Quantifier(Bases.LexicalEnum):
 class Operator(Bases.LexicalEnum):
     'Operator Lexical Enum class.'
 
+    __slots__ = 'arity',
+
     Assertion             = (10,  'Assertion',    1)
     Negation              = (20,  'Negation',     1)
     Conjunction           = (30,  'Conjunction',  2)
@@ -693,7 +712,6 @@ class Operator(Bases.LexicalEnum):
         self.arity = value[2]
         super().__init__(*value)
 
-    __slots__ = 'arity',
 
 ##############################################################
 

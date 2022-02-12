@@ -62,6 +62,7 @@ if 'Imports' or True:
         Any,
         Annotated,
         Callable,
+        ClassVar,
         Collection,
         Generic,
         Hashable,
@@ -122,7 +123,11 @@ if 'Type Variables' or True:
 if 'Decorators & Utils' or True:
 
     def _thru(obj: T) -> T: return obj
-
+    def _isdund(name):
+        return (
+            len(name) > 4 and name[:2] == name[-2:] == '__' and
+            name[2] != '_' and name[-3] != '_'
+        )
     # Global decorators. Re-exported by decorators module.
 
     from abc import abstractmethod as abstract
@@ -145,14 +150,18 @@ if 'Decorators & Utils' or True:
         ns = cls.__dict__
 
         for name, member in ns.items():
-            if not isinstance(member, FunctionType):
+            if _isdund(name) or not isinstance(member, FunctionType):
                 continue
             setattr(cls, name, staticmethod(member))
 
+        cname = cls.__name__
+        debug = cname =='opercache'
         if '__new__' not in ns:
+            debug and print(cname, '__new__ not in ns')
             cls.__new__ = _thru # type: ignore
 
         if '__init__' not in ns:
+            debug and print(cname, '__init__ not in ns')
             def finit(self): raise TypeError
             cls.__init__ = finit
 
@@ -519,11 +528,11 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
 
     #******  Subclass Init Hooks
 
-    def _member_keys(cls, member: AbcEnum) -> Set[Hashable]:
+    def _member_keys(cls, member: AbcEnum,/) -> Set[Hashable]:
         'Init hook to get the index lookup keys for a member.'
         return _EMPTY_SET
 
-    def _on_init(cls, Class: type[EnT]|AbcEnumMeta):
+    def _on_init(cls, subcls: type[EnT]|AbcEnumMeta,/):
         '''Init hook after all members have been initialized, before index
         is created. **NB:** Skips abstract classes.'''
         pass

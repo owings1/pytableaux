@@ -9,6 +9,7 @@ __all__ = (
     'EMPTY_SET',
 )
 
+from errors import instcheck
 from tools.abcs import abcm, Copyable, VT
 from tools.decorators import abstract, final, overload, operd
 
@@ -17,6 +18,8 @@ import operator as opr
 from typing import Iterable, TypeVar
 
 EMPTY = ()
+
+SetApiT = TypeVar('SetApiT', bound = 'SetApi')
 
 class SetApi(Set[VT], Copyable):
     'Fusion interface of collections.abc.Set and built-in frozenset.'
@@ -122,12 +125,10 @@ class setm(MutableSetApi[VT], set[VT]):
 class SetCover(SetApi[VT]):
     'SetApi cover.'
 
-    __slots__ = SetApi.__abstractmethods__
+    __slots__ = setf(SetApi.__abstractmethods__)
 
     def __new__(cls, set_: Set[VT], /,):
-
-        if not isinstance(set_, Set):
-            raise TypeError(type(set_))
+        instcheck(set_, Set)
 
         inst = object.__new__(cls)
         inst.__len__      = set_.__len__
@@ -141,9 +142,8 @@ class SetCover(SetApi[VT]):
         return cls(setf(it))
 
 
-SetApiT = TypeVar('SetApiT', bound = SetApi)
-
-
-del(opr, operd, Copyable, EMPTY)
-del(abstract, final, overload)
-del(TypeVar)
+del(
+    abstract, final, overload,
+    opr, operd, Copyable, EMPTY,
+    TypeVar,
+)
