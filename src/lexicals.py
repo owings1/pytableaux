@@ -78,6 +78,13 @@ NOARG = object()
 EMPTY_IT = iter(EMPTY_SEQ)
 ITEM_CACHE_SIZE = 10000
 
+if 'TypeVars' or True:
+    CnT    = TypeVar('CnT',    bound = 'Bases.CacheNotationData')
+    CrdT   = TypeVar('CrdT',   bound = 'Bases.CoordsItem')
+    LexT   = TypeVar('LexT',   bound = 'Bases.Lexical')
+    LexItT = TypeVar('LexItT', bound = 'Bases.LexicalItem')
+    SenT   = TypeVar('SenT',   bound = 'Sentence')
+
 nosetattr = NoSetAttr(attr = '_readonly', enabled = False)
 
 @overload
@@ -300,6 +307,7 @@ class Bases:
         @static
         def hashitem(item: LexT):
             'Compute a hash based on class name and ``sort_tuple``.'
+            # Note, string hashes are not constant across restarts.
             return hash((type(item).__name__, item.sort_tuple))
 
         @static
@@ -409,8 +417,8 @@ class Bases:
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Subclass Init ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
         def __init_subclass__(subcls: type[Bases.Lexical], /, *,
-            lexcopy = False, skipnames = {'__init_subclass__'},
-        **kw):
+            lexcopy = False, skipnames = {'__init_subclass__'}, **kw
+        ):
             '''With lexcopy = True, copy the class members to the next class,
             since our protection is limited without metaclass flexibility.
             Only applies if this class is in the bases of the subcls.'''
@@ -438,7 +446,7 @@ class Bases:
     Types.Lexical = Lexical
     Metas.LexicalItem.Cache = Types.ItemCache(Lexical, ITEM_CACHE_SIZE)
 
-    class LexicalEnum(Lexical, Enum, lexcopy = False):
+    class LexicalEnum(Lexical, Enum, lexcopy = True):
         'Base Enum implementation of Lexical. For Quantifier and Operator classes.'
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
@@ -456,7 +464,7 @@ class Bases:
         label: str
         #: A number to signify relative member order (need not be sequence index).
         order: int
-        #: The member index in the member sequence.
+        #: The member index in the members sequence.
         index: int
         #: Name, label, or other strings unique to a member.
         strings: setf[str]
@@ -668,10 +676,7 @@ class Bases:
             notns = set(notns).union(builtin)
             cls._instances = {notn: {} for notn in notns}
 
-CnT  = TypeVar('CnT',  bound = Bases.CacheNotationData)
-CrdT = TypeVar('CrdT', bound = Bases.CoordsItem)
-LexT = TypeVar('LexT', bound = Bases.Lexical)
-LexItT = TypeVar('LexItT', bound = Bases.LexicalItem)
+
 
 ##############################################################
 ##############################################################
@@ -941,7 +946,6 @@ class Sentence(Bases.LexicalItem):
         'Whether the variable occurs anywhere in the sentence (recursive).'
         return v in self.variables
 
-SenT = TypeVar('SenT', bound = Sentence)
 Types.QuantifiedItem = Quantifier | Variable | Sentence
 
 @final
@@ -1379,6 +1383,7 @@ class LexType(Bases.Enum):
         cls.classes = qsetf((m.cls for m in cls.seq))
         for inst in chain(Operator.seq, Quantifier.seq):
             inst.sort_tuple = inst.TYPE.rank, *inst.sort_tuple
+            # inst.hash = inst.hashitem(inst)
 
     @classmethod
     def _member_keys(cls, member: LexType):
