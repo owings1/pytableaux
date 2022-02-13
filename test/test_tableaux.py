@@ -72,7 +72,7 @@ class TestTableau(BaseSuite):
         class MockRule(ClosingRule):
             def _get_targets(self, branch: Branch):
                 return Target(branch = branch),
-            def node_will_close_branch(self, node, branch):
+            def nodes_will_close_branch(self, nodes, branch):
                 return True
             def example_nodes(self):
                 return {},

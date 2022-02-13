@@ -44,6 +44,7 @@ from proof.tableaux import (
 from proof.baserules import (
     BaseClosureRule,
     BaseNodeRule,
+    GetNodeTargetsRule,
     OperatedSentenceRule,
     QuantifiedSentenceRule,
     NarrowQuantifierRule,
@@ -547,18 +548,18 @@ class TableauxSystem(BaseSystem):
                 last_is_negated = False
         return complexity
 
-class _DefaultNodeRule(BaseNodeRule):
+class DefaultNodeRule(GetNodeTargetsRule):
     NodeFilters = NodeFilters.Designation,
     designation: bool|None = None
 
-class OperSentenceRule(OperatedSentenceRule, _DefaultNodeRule):
+class OperSentenceRule(OperatedSentenceRule, DefaultNodeRule):
     pass
-class QuantSentenceRule(QuantifiedSentenceRule, _DefaultNodeRule):
+class QuantSentenceRule(QuantifiedSentenceRule, DefaultNodeRule):
     pass
 
-class QuantifierSkinnyRule(NarrowQuantifierRule, _DefaultNodeRule):
+class QuantifierSkinnyRule(NarrowQuantifierRule, DefaultNodeRule):
     pass
-class QuantifierFatRule(ExtendedQuantifierRule, _DefaultNodeRule):
+class QuantifierFatRule(ExtendedQuantifierRule, DefaultNodeRule):
     pass
 
 def sdnode(s: Sentence, d: bool):

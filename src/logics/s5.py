@@ -67,16 +67,16 @@ class TabRules:
     relation for worlds.
     """
     
-    class Symmetric(K.ModalNodeRule):
+    class Symmetric(K.DefaultNodeRule):
         """
         .. _symmetric-rule:
 
         For any world *w* appearing on a branch *b*, for each world *w'* on *b*,
         if *wRw'* appears on *b*, but *w'Rw* does not appear on *b*, then add *w'Rw* to *b*.
         """
-        Helpers = WorldIndex,
+        Helpers = MaxWorlds, WorldIndex,
         access = True
-        _defaults = {'is_rank_optim': False}
+        _defaults = dict(is_rank_optim = False)
 
         def _get_node_targets(self, node: Node, branch: Branch):
             if not self[MaxWorlds].max_worlds_exceeded(branch):
@@ -87,7 +87,7 @@ class TabRules:
             self[FilterHelper].release(node, branch)
 
         def example_nodes(self):
-            return (Access(0, 1).todict(),)
+            return Access(0, 1).todict(),
 
     closure_rules = K.TabRules.closure_rules
 

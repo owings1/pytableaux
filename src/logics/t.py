@@ -54,7 +54,7 @@ class TabRules:
     Reflexive rule, which operates on the accessibility relation for worlds.
     """
 
-    class Reflexive(K.ModalNodeRule):
+    class Reflexive(K.DefaultNodeRule):
         """
         .. _reflexive-rule:
 
@@ -65,12 +65,12 @@ class TabRules:
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
-        Helpers = WorldIndex,
+        Helpers = MaxWorlds, WorldIndex, # QuitFlag
 
         ignore_ticked = False
         ticking = False
 
-        _defaults = {'is_rank_optim': False}
+        _defaults = dict(is_rank_optim = False)
 
         def _get_node_targets(self, node: Node, branch: Branch):
             if not self[MaxWorlds].max_worlds_exceeded(branch):

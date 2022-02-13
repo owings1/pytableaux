@@ -62,7 +62,7 @@ class TabRules:
     Serial rule, which operates on the accessibility relation for worlds.
     """
 
-    class Serial(K.ModalNodeRule):
+    class Serial(K.DefaultNodeRule):
         """
         .. _serial-rule:
 
@@ -77,9 +77,11 @@ class TabRules:
         no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
-        Helpers = UnserialWorlds,
+        Helpers =  MaxWorlds, UnserialWorlds, #QuitFlag
         ignore_ticked = False
         ticking = False
+
+        #: TODO: This need not iterate over each node...
 
         def _get_node_targets(self, node: Node, branch: Branch,/) -> Generator[dict, None, None]:
             unserials = self[UnserialWorlds][branch]

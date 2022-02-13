@@ -62,7 +62,7 @@ class TabRules:
     Transitive rule, which operates on the accessibility relation for worlds.
     """
 
-    class Transitive(K.ModalNodeRule):
+    class Transitive(K.DefaultNodeRule):
         """
         .. _transitive-rule:
 
@@ -70,7 +70,7 @@ class TabRules:
         world *w''* on *b*, if *wRw'* and *wRw''* appear on *b*, but *wRw''* does not
         appear on *b*, then add *wRw''* to *b*.
         """
-        Helpers = WorldIndex,
+        Helpers = MaxWorlds, WorldIndex,
         access = True
         ticking = False
 

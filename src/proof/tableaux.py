@@ -246,6 +246,27 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         """
         return self.tableau.branch(parent)
 
+    @classmethod
+    def test(cls, /, *, noassert = False):
+        tab = Tableau()
+        tab.rules.append(cls)
+        rule = tab.rules.get(cls)
+        branch = tab.branch()
+        nodes = rule.example_nodes()
+        branch.extend(nodes)
+        result = tab.build()
+        if not noassert:
+            assert len(rule.history) > 0
+        from types import SimpleNamespace
+        return SimpleNamespace(
+            cls     = cls,
+            rule    = rule,
+            tableau = tab,
+            branch  = branch,
+            nodes   = nodes,
+            result  = result,
+        )
+
     def __repr__(self):
         return orepr(self,
             module  = self.__module__,
@@ -331,32 +352,14 @@ class ClosingRule(Rule):
     
     _defaults = dict(is_rank_optim = False)
 
-    # def _get_targets(self, branch: Branch):
-    #     target = self.applies_to_branch(branch)
-    #     if target:
-    #         if target is True:
-    #             target = {}
-    #         target['branch'] = branch
-    #         return Target(target),
-
     @final
     def _apply(self, target: Target):
         target.branch.close()
 
-    # @abstract
-    # def applies_to_branch(self, branch: Branch):
-    #     raise NotImplementedError
-
+    @abstract
     def nodes_will_close_branch(self, nodes: Iterable[Node], branch: Branch):
         """For calculating a target's closure score. This default
         implementation delegates to the abstract ``node_will_close_branch()``."""
-        for node in nodes:
-            if self.node_will_close_branch(node, branch):
-                return True
-        return False
-
-    @abstract
-    def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
         raise NotImplementedError
 
 

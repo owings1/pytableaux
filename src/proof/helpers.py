@@ -432,8 +432,9 @@ class FilterNodeCache(BranchCache[set[Node]]):
     @classmethod
     def __init_ruleclass__(cls, rulecls: type[Rule], **kw):
         super().__init_ruleclass__(rulecls, **kw)
-        if not hasattr(rulecls, RuleAttr.IgnoreTicked):
-            raise Emsg.MissingAttribute(RuleAttr.IgnoreTicked.value)
+        if not abcm.isabstract(rulecls):
+            if not hasattr(rulecls, RuleAttr.IgnoreTicked):
+                raise Emsg.MissingAttribute(RuleAttr.IgnoreTicked.value)
 
 class PredNodes(FilterNodeCache):
     'Track all predicated nodes on the branch.'
