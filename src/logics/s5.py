@@ -20,7 +20,7 @@
 # pytableaux - S5 Normal Modal Logic
 name = 'S5'
 
-class Meta(object):
+class Meta:
     title = 'S5 Normal Modal Logic'
     description = 'Normal modal logic with a reflexive, symmetric, and transitive access relation'
     tags = ['bivalent', 'modal', 'first-order']
@@ -60,7 +60,7 @@ class TableauxSystem(K.TableauxSystem):
     """
     pass
 
-class TabRules(object):
+class TabRules:
     """
     The Tableaux Rules for S5 contain the rules for :ref:`S4 <S4>`, as well
     as an additional Symmetric rule, which operates on the accessibility
@@ -142,4 +142,3 @@ class TabRules(object):
             Symmetric,
         ),
     )
-TableauxRules = TabRules

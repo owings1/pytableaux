@@ -32,6 +32,7 @@ from tools.timing import StopWatch
 from typing import (
     Any,
     Callable,
+    Iterable,
     Mapping,
     NamedTuple,
 )
@@ -210,6 +211,19 @@ if 'Stub Types' or True:
         def pop(self, key: type[T]) -> T:...
 
 if 'Util Functions' or True:
+
+    def demodalize_rules(Rules: Iterable[type]):
+        'Remove Modal filter from NodeFilters, and clear modal attribute.'
+        from proof.filters import NodeFilters
+        filtersattr = RuleAttr.NodeFilters
+        rmfilters = {NodeFilters.Modal}
+        for rulecls in Rules:
+            value = getattr(rulecls, filtersattr, None)
+            if value is not None and len(value & rmfilters):
+                value -= rmfilters
+                setattr(rulecls, filtersattr, value)
+            if getattr(rulecls, 'modal', None) is not None:
+                rulecls.modal = None
 
     def _rule_basecls(metacls: type, default: type = None, /, *, base = {}):
         try:

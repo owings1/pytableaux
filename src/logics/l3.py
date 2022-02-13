@@ -20,7 +20,7 @@
 # pytableaux - Lukasiewicz 3-valued Logic
 name = 'L3'
 
-class Meta(object):
+class Meta:
     title    = u'Łukasiewicz 3-valued Logic'
     category = 'Many-valued'
     description = 'Three-valued logic (True, False, Neither) with a primitive Conditional operator'
@@ -58,7 +58,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
-class TabRules(object):
+class TabRules:
     """
     The closure rules for :m:`L3` are the FDE closure rule, and the :m:`K3` closure rule.
     The operator rules for :m:`L3` are mostly the rules for :ref:`FDE <FDE>`, with
@@ -96,7 +96,7 @@ class TabRules(object):
     class MaterialBiconditionalUndesignated(FDE.TabRules.MaterialBiconditionalUndesignated): pass
     class MaterialBiconditionalNegatedUndesignated(FDE.TabRules.MaterialBiconditionalNegatedUndesignated): pass
 
-    class ConditionalDesignated(FDE.DefaultNodeRule):
+    class ConditionalDesignated(FDE.OperSentenceRule):
         """
         From an unticked designated conditional node *n* on a branch *b*, make two
         new branches *b'* and *b''* from *b*. To *b'* add a designated disjunction
@@ -130,7 +130,7 @@ class TabRules(object):
     class ConditionalNegatedDesignated(FDE.TabRules.ConditionalNegatedDesignated):
         pass
 
-    class ConditionalUndesignated(FDE.DefaultNodeRule):
+    class ConditionalUndesignated(FDE.OperSentenceRule):
         """
         From an unticked undesignated conditional node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*. On *b'* add a designated node
@@ -161,7 +161,7 @@ class TabRules(object):
     class ConditionalNegatedUndesignated(FDE.TabRules.ConditionalNegatedUndesignated):
         pass
         
-    class BiconditionalDesignated(FDE.DefaultNodeRule):
+    class BiconditionalDesignated(FDE.OperSentenceRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, add
         two branches *b'* and *b''* to *b*. On *b'* add a designated material
@@ -193,7 +193,7 @@ class TabRules(object):
     class BiconditionalNegatedDesignated(FDE.TabRules.BiconditionalNegatedDesignated):
         pass
 
-    class BiconditionalUndesignated(FDE.DefaultNodeRule):
+    class BiconditionalUndesignated(FDE.OperSentenceRule):
         """
         From an unticked undesignated biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add an undesignated conditional
@@ -219,7 +219,7 @@ class TabRules(object):
                 ],
             }
 
-    class BiconditionalNegatedUndesignated(FDE.DefaultNodeRule):
+    class BiconditionalNegatedUndesignated(FDE.OperSentenceRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, add
         two branches *b'* and *b''* to *b*. On *b'* add an undesignated negated material
@@ -314,4 +314,4 @@ class TabRules(object):
             UniversalUndesignated,
         ),
     )
-TableauxRules = TabRules
+

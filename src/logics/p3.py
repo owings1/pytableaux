@@ -118,7 +118,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
-class TabRules(object):
+class TabRules:
     """
     The Tableaux System for :m:`P3` contains the FDE closure rule, and the
     :m:`K3` closure rule. Some of the operator rules are the same as :ref:`FDE <FDE>`,
@@ -133,7 +133,7 @@ class TabRules(object):
     class DesignationClosure(FDE.TabRules.DesignationClosure):
         pass
 
-    class DoubleNegationDesignated(FDE.DefaultNodeRule):
+    class DoubleNegationDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, double-negation node `n` on a branch `b`,
         add two undesignated nodes to `b`, one with the double-negatum, and one
@@ -145,7 +145,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             si = s.lhs
             d = self.designation
             return {
@@ -157,7 +157,7 @@ class TabRules(object):
                 ),
             }
 
-    class DoubleNegationUndesignated(FDE.DefaultNodeRule):
+    class DoubleNegationUndesignated(FDE.OperSentenceRule):
         """
         From an unticked, undesignated, double-negation node `n` on a branch `b`,
         make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -170,7 +170,7 @@ class TabRules(object):
         branch_level = 2
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             si = s.lhs
             d = self.designation
             return {
@@ -192,7 +192,7 @@ class TabRules(object):
     class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated):
         pass
 
-    class ConjunctionDesignated(FDE.DefaultNodeRule):
+    class ConjunctionDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated conjunction node `n` on a branch `b`, add
         four undesignated nodes to `b`, one for each conjunct, and one for the
@@ -203,7 +203,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             d = self.designation
             return {
@@ -217,7 +217,7 @@ class TabRules(object):
                 ),
             }
 
-    class ConjunctionNegatedDesignated(FDE.DefaultNodeRule):
+    class ConjunctionNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, negated conjunction node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -232,7 +232,7 @@ class TabRules(object):
         branch_level = 2
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             d = self.designation
             return {
@@ -248,7 +248,7 @@ class TabRules(object):
                 ),
             }
 
-    class ConjunctionUndesignated(FDE.DefaultNodeRule):
+    class ConjunctionUndesignated(FDE.OperSentenceRule):
         """
         From an unticked, undesignated conjunction node `n` on a branch `b`, make
         four branches `b'`, `b''`, `b'''`, and `b''''` from `b`. On `b'`, add a
@@ -262,7 +262,7 @@ class TabRules(object):
         branch_level = 4
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             d = self.designation
             return {
@@ -274,7 +274,7 @@ class TabRules(object):
                 ),
             }
 
-    class ConjunctionNegatedUndesignated(FDE.DefaultNodeRule):
+    class ConjunctionNegatedUndesignated(FDE.OperSentenceRule):
         """
         From an unticked, undesignated, negated conjunction node `n` on a branch
         `b`, make three branches `b'`, `b''`, and `b'''` from `b`. On `b'`, add
@@ -289,7 +289,7 @@ class TabRules(object):
         branch_level = 3
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             d = self.designation
             return {
@@ -317,7 +317,7 @@ class TabRules(object):
     class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
         pass
 
-    class MaterialConditionalDesignated(FDE.DefaultNodeRule):
+    class MaterialConditionalDesignated(FDE.OperSentenceRule):
         """
         This rule reduces to a disjunction.
         """
@@ -326,7 +326,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             disj = lhs.negate().disjoin(rhs)
             d = self.designation
@@ -334,7 +334,7 @@ class TabRules(object):
                 'adds': (({'sentence': disj, 'designated': d},),),
             }
             
-    class MaterialConditionalNegatedDesignated(FDE.DefaultNodeRule):
+    class MaterialConditionalNegatedDesignated(FDE.OperSentenceRule):
         """
         This rule reduces to a disjunction.
         """
@@ -344,14 +344,14 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             disj = s.lhs.negate().disjoin(s.rhs)
             d = self.designation
             return {
                 'adds': (({'sentence': disj.negate(), 'designated': d},),),
             }
 
-    class MaterialConditionalUndesignated(FDE.DefaultNodeRule):
+    class MaterialConditionalUndesignated(FDE.OperSentenceRule):
         """
         This rule reduces to a disjunction.
         """
@@ -360,14 +360,14 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             disj = s.lhs.negate().disjoin(s.rhs)
             d = self.designation
             return {
                 'adds': (({'sentence': disj, 'designated': d},),),
             }
 
-    class MaterialConditionalNegatedUndesignated(FDE.DefaultNodeRule):
+    class MaterialConditionalNegatedUndesignated(FDE.OperSentenceRule):
         """
         This rule reduces to a disjunction.
         """
@@ -377,7 +377,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             disj = s.lhs.negate().disjoin(s.rhs)
             d = self.designation
             return {
@@ -488,7 +488,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
-            s: Quantified = self.sentence(node)
+            s = self.sentence(node)
             r = s.unquantify(c)
             d = self.designation
             return ({'sentence': r.negate(), 'designated': d},)
@@ -511,7 +511,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
-            s: Quantified = self.sentence(node)
+            s = self.sentence(node)
             r = s.unquantify(c)
             d = self.designation
             return ({'sentence': r.negate(), 'designated': not d},)
@@ -532,7 +532,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
-            s: Quantified = self.sentence(node)
+            s = self.sentence(node)
             r = s.unquantify(c)
             d = self.designation
             return (
@@ -552,7 +552,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Quantified = self.sentence(node)
+            s = self.sentence(node)
             r = s.unquantify(branch.new_constant())
             d = self.designation
             return {
@@ -583,7 +583,7 @@ class TabRules(object):
         branch_level = 2
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Quantified = self.sentence(node)
+            s = self.sentence(node)
             r = s.unquantify(branch.new_constant())
             d = self.designation
             return {

@@ -111,9 +111,6 @@ class TableauxSystem(FDE.TableauxSystem):
     .. _FDE system: fde.html#logics.fde.TableauxSystem
     """
 
-class DefaultNodeRule(FDE.DefaultNodeRule):
-    pass
-
 class TabRules(object):
     """
     The Tableaux System for K3WQ contains the `FDE closure rule`_, and the

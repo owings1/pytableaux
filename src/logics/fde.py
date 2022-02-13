@@ -43,9 +43,10 @@ from proof.tableaux import (
 )
 from proof.baserules import (
     BaseClosureRule,
-    BaseRule,
     BaseNodeRule,
-    BaseQuantifierRule,
+    OperatedSentenceRule,
+    QuantifiedSentenceRule,
+    NarrowQuantifierRule,
     ExtendedQuantifierRule,
 )
 from proof.common import Branch, Node, Target
@@ -518,64 +519,58 @@ class TableauxSystem(BaseSystem):
     }
 
     @classmethod
-    def build_trunk(cls, tableau: Tableau, argument: Argument, /):
+    def build_trunk(cls, tab: Tableau, arg: Argument, /):
         """
         To build the trunk for an argument, add a designated node for each premise, and
         an undesignated node for the conclusion.
         """
-        branch = tableau.branch()
-        for premise in argument.premises:
-            branch.add({'sentence': premise, 'designated': True, 'world': None})
-        branch.add({'sentence' : argument.conclusion, 'designated': False, 'world': None})
+        add = tab.branch().append
+        for premise in arg.premises:
+            add(sdnode(premise, True))
+        add(sdnode(arg.conclusion, False))
 
     @classmethod
     def branching_complexity(cls, node: Node, /):
         s: Sentence = node.get('sentence')
         if s is None:
             return 0
-        designated = node['designated']
+        d: bool = node['designated']
         last_is_negated = False
         complexity = 0
-        for operator in s.operators:
-            if operator is Oper.Negation:
+        for oper in s.operators:
+            if oper is Oper.Negation:
                 if not last_is_negated:
                     last_is_negated = True
                     continue
-            if operator in cls.branchables:
-                complexity += cls.branchables[operator][last_is_negated][designated]
+            if oper in cls.branchables:
+                complexity += cls.branchables[oper][last_is_negated][d]
                 last_is_negated = False
         return complexity
 
-class DefaultRule(BaseRule):
+class _DefaultNodeRule(BaseNodeRule):
     NodeFilters = NodeFilters.Designation,
-    designation: bool = None
+    designation: bool|None = None
 
-class DefaultNodeRule(BaseNodeRule, DefaultRule):
+class OperSentenceRule(OperatedSentenceRule, _DefaultNodeRule):
+    pass
+class QuantSentenceRule(QuantifiedSentenceRule, _DefaultNodeRule):
     pass
 
-class QuantifierSkinnyRule(BaseQuantifierRule, DefaultRule):
+class QuantifierSkinnyRule(NarrowQuantifierRule, _DefaultNodeRule):
+    pass
+class QuantifierFatRule(ExtendedQuantifierRule, _DefaultNodeRule):
     pass
 
-class QuantifierFatRule(ExtendedQuantifierRule, DefaultRule):
-    pass
-
-def sd(s: Sentence, d: bool):
-    return dict(sentence = s, designated = d)
 def sdnode(s: Sentence, d: bool):
     return dict(sentence = s, designated = d)
-def br(*items: T) -> tuple[T, ...]:
-    return items
 
 def group(*items: T) -> tuple[T, ...]:
     return items
 
-def addsn(*nn: dict):
-    return dict(adds = br(nn))
+def adds(*groups: tuple[dict, ...]):
+    return dict(adds = groups)
 
-def adds(*bb: tuple[dict, ...]):
-    return dict(adds = bb)
-
-class ConjunctionReducingRule(DefaultNodeRule):
+class ConjunctionReducingRule(OperSentenceRule):
 
     conjunct_op: Oper
     branch_level = 1
@@ -583,9 +578,9 @@ class ConjunctionReducingRule(DefaultNodeRule):
     def _get_node_targets(self, node: Node, _):
         oper = self.conjunct_op
         lhs, rhs = self.sentence(node)
-        s = oper((lhs, rhs)).conjoin(oper((rhs, lhs)))
+        s = oper((lhs, rhs)) & oper((rhs, lhs))
         if self.negated:
-            s = s.negate()
+            s = ~s
         return adds(group(sdnode(s, self.designation)))
 
 @static
@@ -603,15 +598,15 @@ class TabRules:
         and the same sentence appears on a node marked *undesignated*.
         """
 
-        def _branch_target_hook(self, node: Node, branch: Branch):
+        def _branch_target_hook(self, node: Node, branch: Branch, /):
             nnode = self._find_closing_node(node, branch)
-            if nnode:
+            if nnode is not None:
                 return Target(
                     nodes = qsetf((node, nnode)),
                     branch = branch,
                 )
 
-        def node_will_close_branch(self, node: Node, branch: Branch):
+        def node_will_close_branch(self, node: Node, branch: Branch, /):
             return bool(self._find_closing_node(node, branch))
 
         def example_nodes(self):
@@ -620,15 +615,15 @@ class TabRules:
 
         # private util
 
-        def _find_closing_node(self, node: Node, branch: Branch):
+        def _find_closing_node(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
             if s is not None:
-                return branch.find(sd(s, not node['designated']))
+                return branch.find(sdnode(s, not node['designated']))
             
-    class DoubleNegationDesignated(DefaultNodeRule):
+    class DoubleNegationDesignated(OperSentenceRule):
         """
-        From an unticked designated negated negation node *n* on a branch *b*, add a designated
-        node to *b* with the double-negatum of *n*, then tick *n*.
+        From an unticked designated negated negation node *n* on a branch *b*,
+        add a designated node to *b* with the double-negatum of *n*, then tick *n*.
         """
 
         designation = True
@@ -637,9 +632,9 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            # Neutral designation for inheritance.
-            return adds(group(sdnode(s.lhs, self.designation)))
+            return adds(
+                group(sdnode(self.sentence(node).lhs, self.designation))
+            )
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
         """
@@ -649,7 +644,7 @@ class TabRules:
         designation = False
         negated     = True
 
-    class AssertionDesignated(DefaultNodeRule):
+    class AssertionDesignated(OperSentenceRule):
         """
         From an unticked, designated, assertion node *n* on a branch *b*, add a designated
         node to *b* with the operand of *b*, then tick *n*.
@@ -659,9 +654,9 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            # Neutral designation for inheritance.
-            return adds(group(sdnode(s.lhs, self.designation)))
+            return adds(
+                group(sdnode(self.sentence(node).lhs, self.designation))
+            )
 
     class AssertionUndesignated(AssertionDesignated):
         """
@@ -670,7 +665,7 @@ class TabRules:
         """
         designation = False
 
-    class AssertionNegatedDesignated(DefaultNodeRule):
+    class AssertionNegatedDesignated(OperSentenceRule):
         """
         From an unticked, designated, negated assertion node *n* on branch *b*, add a designated
         node to *b* with the negation of the assertion's operand to *b*, then tick *n*.
@@ -681,9 +676,9 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            # Neutral designation for inheritance.
-            return adds(group(sdnode(s.lhs.negate(), self.designation)))
+            return adds(
+                group(sdnode(~self.sentence(node).lhs, self.designation))
+            )
 
     class AssertionNegatedUndesignated(AssertionNegatedDesignated):
         """
@@ -692,7 +687,7 @@ class TabRules:
         """
         designation = False
 
-    class ConjunctionDesignated(DefaultNodeRule):
+    class ConjunctionDesignated(OperSentenceRule):
         """
         From an unticked designated conjunction node *n* on a branch *b*, for each conjunct
         *c*, add a designated node with *c* to *b*, then tick *n*.
@@ -702,12 +697,13 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            # Neutral designation for inheritance.
+            s = self.sentence(node)
             d = self.designation
-            return adds(group(sdnode(s.lhs, d), sdnode(s.rhs, d)))
+            return adds(
+                group(sdnode(s.lhs, d), sdnode(s.rhs, d))
+            )
 
-    class ConjunctionNegatedDesignated(DefaultNodeRule):
+    class ConjunctionNegatedDesignated(OperSentenceRule):
         """
         From an unticked designated negated conjunction node *n* on a branch *b*,
         for each conjunct *c*, make a new branch *b'* from *b* and add a designated
@@ -719,15 +715,14 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            # Neutral designation for inheritance.
+            s = self.sentence(node)
             d = self.designation
             return adds(
-                group(sdnode(s.lhs.negate(), d)),
-                group(sdnode(s.rhs.negate(), d)),
+                group(sdnode(~s.lhs, d)),
+                group(sdnode(~s.rhs, d)),
             )
 
-    class ConjunctionUndesignated(DefaultNodeRule):
+    class ConjunctionUndesignated(OperSentenceRule):
         """
         From an unticked undesignated conjunction node *n* on a branch *b*,
         for each conjunct *c*, make a new branch *b'* from *b* and add an
@@ -738,15 +733,14 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            # Neutral designation for inheritance.
+            s = self.sentence(node)
             d = self.designation
             return adds(
                 group(sdnode(s.lhs, d)),
                 group(sdnode(s.rhs, d)),
             )
 
-    class ConjunctionNegatedUndesignated(DefaultNodeRule):
+    class ConjunctionNegatedUndesignated(OperSentenceRule):
         """
         From an unticked undesignated negated conjunction node *n* on a branch
         *b*, for each conjunct *c*, add an undesignated node with the negation
@@ -758,11 +752,10 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
             return adds(
-                group(sdnode(s.lhs.negate(), d), sdnode(s.rhs.negate(), d))
+                group(sdnode(~s.lhs, d), sdnode(~s.rhs, d))
             )
 
     class DisjunctionDesignated(ConjunctionUndesignated):
@@ -799,7 +792,7 @@ class TabRules:
         designation = False
         operator    = Oper.Disjunction
 
-    class MaterialConditionalDesignated(DefaultNodeRule):
+    class MaterialConditionalDesignated(OperSentenceRule):
         """
         From an unticked designated material conditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add a designated node with the negation
@@ -811,17 +804,14 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
-            return {
-                'adds': (
-                    ({'sentence': lhs.negate(), 'designated': d},),
-                    ({'sentence': rhs         , 'designated': d},),
-                ),
-            }
+            return adds(
+                group(sdnode(~s.lhs, d)),
+                group(sdnode( s.rhs, d)),
+            )
 
-    class MaterialConditionalNegatedDesignated(DefaultNodeRule):
+    class MaterialConditionalNegatedDesignated(OperSentenceRule):
         """
         From an unticked designated negated material conditional node *n* on a
         branch *b*, add a designated node with the antecedent, and a designated
@@ -833,12 +823,13 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
-            return addsn(sd(lhs, d), sd(rhs.negate(), d))
+            return adds(
+                group(sdnode(s.lhs, d), sdnode(~s.rhs, d))
+            )
 
-    class MaterialConditionalUndesignated(DefaultNodeRule):
+    class MaterialConditionalUndesignated(OperSentenceRule):
         """
         From an unticked undesignated material conditional node *n* on a branch *b*, add
         an undesignated node with the negation of the antecedent and an undesignated node
@@ -849,12 +840,13 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
-            return adds(br(sd(lhs.negate(), d), sd(rhs, d)))
+            return adds(
+                group(sdnode(~s.lhs, d), sdnode(s.rhs, d))
+            )
 
-    class MaterialConditionalNegatedUndesignated(DefaultNodeRule):
+    class MaterialConditionalNegatedUndesignated(OperSentenceRule):
         """
         From an unticked undesignated negated material conditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add an undesignated node with the antecedent to
@@ -867,17 +859,14 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
-            return {
-                'adds': (
-                    ({'sentence': lhs         , 'designated': d},),
-                    ({'sentence': rhs.negate(), 'designated': d},),
-                ),
-            }
+            return adds(
+                group(sdnode( s.lhs, d)),
+                group(sdnode(~s.rhs, d)),
+            )
 
-    class MaterialBiconditionalDesignated(DefaultNodeRule):
+    class MaterialBiconditionalDesignated(OperSentenceRule):
         """
         From an unticked designated material biconditional node *n* on a branch *b*, make
         two new branches *b'* and *b''* from *b*, add a designated node with the negation
@@ -890,23 +879,14 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': lhs.negate(), 'designated': d},
-                        {'sentence': rhs.negate(), 'designated': d},
-                    ),
-                    (
-                        {'sentence': rhs, 'designated': d},
-                        {'sentence': lhs, 'designated': d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode(~s.lhs, d), sdnode(~s.rhs, d)),
+                group(sdnode( s.rhs, d), sdnode( s.lhs, d)),
+            )
 
-    class MaterialBiconditionalNegatedDesignated(DefaultNodeRule):
+    class MaterialBiconditionalNegatedDesignated(OperSentenceRule):
         """
         From an unticked designated negated material biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*, add a designated node with the antecedent and a
@@ -920,21 +900,12 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': lhs         , 'designated': d},
-                        {'sentence': rhs.negate(), 'designated': d},
-                    ),
-                    (
-                        {'sentence': lhs.negate(), 'designated': d},
-                        {'sentence': rhs         , 'designated': d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode( s.lhs, d), sdnode(~s.rhs, d)),
+                group(sdnode(~s.lhs, d), sdnode( s.rhs, d)),
+            )
 
     class MaterialBiconditionalUndesignated(MaterialBiconditionalNegatedDesignated):
         """
@@ -1059,15 +1030,13 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Quantified = self.sentence(node)
-            r = s.unquantify(branch.new_constant())
-            # d = self.designation
-            return adds(br(sd(r, self.designation)))
-            # return {
-            #     'adds': (({'sentence': r, 'designated': d},),),
-            # }
+            s = self.sentence(node)
+            c = branch.new_constant()
+            return adds(
+                group(sdnode(s.unquantify(c), self.designation))
+            )
 
-    class ExistentialNegatedDesignated(DefaultNodeRule):
+    class ExistentialNegatedDesignated(QuantSentenceRule):
         """
         From an unticked designated negated existential node *n* on a branch *b*,
         quantifying over variable *v* into sentence *s*, add a designated node to *b*
@@ -1077,13 +1046,15 @@ class TabRules:
         designation = True
         negated     = True
         quantifier  = Quantifier.Existential
-        convert_to  = Quantifier.Universal
+        convert     = Quantifier.Universal
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Quantified = self.sentence(node)
-            sq = self.convert_to(s.variable, s.sentence.negate())
-            return addsn(sd(sq, self.designation))
+            s = self.sentence(node)
+            sq = self.convert(s.variable, ~s.sentence)
+            return adds(
+                group(sdnode(sq, self.designation))
+            )
 
     class ExistentialUndesignated(QuantifierFatRule):
         """
@@ -1098,8 +1069,8 @@ class TabRules:
         branch_level = 1
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
-            s: Quantified = self.sentence(node)
-            return sd(s.unquantify(c), self.designation),
+            s = self.sentence(node)
+            return sdnode(s.unquantify(c), self.designation),
 
     class ExistentialNegatedUndesignated(ExistentialNegatedDesignated):
         """
@@ -1129,7 +1100,7 @@ class TabRules:
         :s:`~LxFx` to :s:`Xx~Fx`), then tick *n*.
         """
         quantifier = Quantifier.Universal
-        convert_to = Quantifier.Existential
+        convert    = Quantifier.Existential
 
     class UniversalUndesignated(ExistentialDesignated):
         """
@@ -1149,7 +1120,7 @@ class TabRules:
         """
         designation = False
         quantifier  = Quantifier.Universal
-        convert_to  = Quantifier.Existential
+        convert     = Quantifier.Existential
 
     closure_rules = (DesignationClosure,)
 

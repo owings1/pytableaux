@@ -19,14 +19,13 @@
 # pytableaux - Strong Kleene Logic
 name = 'K3'
 
-class Meta(object):
+class Meta:
     title    = 'Strong Kleene 3-valued logic'
     category = 'Many-valued'
     description = 'Three-valued logic (T, F, N)'
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 20
 
-# from proof.helpers import NodeTarget
 from proof.baserules import BaseClosureRule
 from tools.hybrids import qsetf
 from lexicals import Atomic
@@ -91,7 +90,7 @@ class TabRules:
 
         def _branch_target_hook(self, node: Node, branch: Branch):
             nnode = self._find_closing_node(node, branch)
-            if nnode:
+            if nnode is not None:
                return Target(
                    nodes = qsetf((node, nnode)),
                    branch = branch,
@@ -292,4 +291,3 @@ class TabRules:
             UniversalUndesignated,
         ),
     )
-TableauxRules = TabRules

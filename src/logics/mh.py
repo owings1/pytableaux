@@ -32,7 +32,7 @@ class Meta(object):
 from lexicals import Operator as Oper, Sentence, Quantified, Operated
 from proof.common import Node
 from . import fde as FDE, k3 as K3
-from .fde import sd
+from .fde import sdnode, adds, group
 
 class Model(K3.Model):
 
@@ -94,7 +94,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
-class TabRules(object):
+class TabRules:
     """
     The closure rules for MH are the `FDE closure rule`_, and the `K3 closure rule`_.
     ...
@@ -123,7 +123,7 @@ class TabRules(object):
     class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
         pass
 
-    class DisjunctionNegatedDesignated(FDE.DefaultNodeRule):
+    class DisjunctionNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, negated, designated disjunction node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'* add four undesignated
@@ -136,7 +136,7 @@ class TabRules(object):
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             nlhs, nrhs = lhs.negate(), rhs.negate()
             d = self.designation
@@ -158,7 +158,7 @@ class TabRules(object):
     class DisjunctionUndesignated(FDE.TabRules.DisjunctionUndesignated):
         pass
 
-    class DisjunctionNegatedUndesignated(FDE.DefaultNodeRule):
+    class DisjunctionNegatedUndesignated(FDE.OperSentenceRule):
         """
         From an unticked, negated, undesignated disjunction node *n* on a branch
         *b*, make four branches from *b*: *b'*, *b''*, *b'''*, and *b''''*. On *b'*,
@@ -185,7 +185,7 @@ class TabRules(object):
         branch_level = 4
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             nlhs, nrhs = lhs.negate(), rhs.negate()
             d = self.designation
@@ -206,7 +206,7 @@ class TabRules(object):
                 ),
             }
 
-    class MaterialConditionalDesignated(FDE.DefaultNodeRule):
+    class MaterialConditionalDesignated(FDE.OperSentenceRule):
         """
         This rule reduces to a disjunction.
         """
@@ -215,7 +215,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             disj = lhs.negate().disjoin(rhs)
             d = self.designation
@@ -223,7 +223,7 @@ class TabRules(object):
                 'adds': (({'sentence': disj, 'designated': d},),),
             }
 
-    class MaterialConditionalNegatedDesignated(FDE.DefaultNodeRule):
+    class MaterialConditionalNegatedDesignated(FDE.OperSentenceRule):
         """
         This rule reduces to a negated disjunction.
         """
@@ -233,7 +233,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             disj = lhs.negate().disjoin(rhs)
             d = self.designation
@@ -282,7 +282,7 @@ class TabRules(object):
         """
         designation = False
 
-    class ConditionalDesignated(FDE.DefaultNodeRule):
+    class ConditionalDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add an undesignated node
@@ -294,7 +294,7 @@ class TabRules(object):
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             return {
                 # Keep designation fixed for inheritance below.
@@ -304,7 +304,7 @@ class TabRules(object):
                 ),
             }
 
-    class ConditionalNegatedDesignated(FDE.DefaultNodeRule):
+    class ConditionalNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, negated, desigated conditional node *n* on a branch *b*,
         add two nodes to *b*:
@@ -320,7 +320,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             return {
                 # Keep designation fixed for inheritance below.
@@ -432,4 +432,4 @@ class TabRules(object):
             DisjunctionNegatedUndesignated,
         ),
     )
-TableauxRules = TabRules
+

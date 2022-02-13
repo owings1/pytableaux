@@ -19,14 +19,14 @@
 # pytableaux - Bochvar 3 External logic
 name = 'B3E'
 
-class Meta(object):
+class Meta:
     title    = 'Bochvar 3 External Logic'
     category = 'Many-valued'
     description = 'Three-valued logic (True, False, Neither) with assertion operator'
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 50
 
-from lexicals import Operator as Oper, Operated
+from lexicals import Operator as Oper
 from proof.common import Branch, Node
 from . import k3 as K3, k3w as K3W, fde as FDE
 
@@ -75,7 +75,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
-class TabRules(object):
+class TabRules:
     """
     The closure rules for :m:`B3E` are the FDE closure rule, and the K3 closure rule.
     The operator rules are mostly a mix of :ref:`FDE <FDE>` and :ref:`K3W <K3W>`
@@ -98,7 +98,7 @@ class TabRules(object):
     class AssertionDesignated(FDE.TabRules.AssertionDesignated):
         pass
 
-    class AssertionNegatedDesignated(FDE.DefaultNodeRule):
+    class AssertionNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, negated assertion node *n* on a branch *b*,
         add an undesignated node to *b* with the assertion of *n*, then tick *n*.
@@ -109,7 +109,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             return {
                 # Keep designation fixed to False for inheritance below
                 'adds': (({'sentence': s.lhs, 'designated': False},),),
@@ -132,7 +132,7 @@ class TabRules(object):
         negated     = True
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             d = self.designation
             return {
                 'adds': (({'sentence': s.lhs, 'designated': not d},),),
@@ -186,7 +186,7 @@ class TabRules(object):
     class MaterialBiconditionalNegatedUndesignated(K3W.TabRules.MaterialBiconditionalNegatedUndesignated):
         pass
 
-    class ConditionalDesignated(FDE.DefaultNodeRule):
+    class ConditionalDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*,
         add a designated node to *b* with a disjunction, where the
@@ -198,7 +198,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhsa, rhsa = (operand.asserted() for operand in s)
             sn = lhsa.negate().disjoin(rhsa)
             # keep negated neutral for inheritance below
@@ -210,7 +210,7 @@ class TabRules(object):
                 'adds': (({'sentence': sn, 'designated': d},),),
             }
 
-    class ConditionalNegatedDesignated(FDE.DefaultNodeRule):
+    class ConditionalNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated negated conditional node *n* on a branch *b*,
         add a designated node with the antecedent, and an undesigntated node
@@ -222,7 +222,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhs, rhs = s
             return {
                 # Keep designation fixed for inheritance below.
@@ -252,7 +252,7 @@ class TabRules(object):
         designation = False
         negated     = True
 
-    class BiconditionalDesignated(FDE.DefaultNodeRule):
+    class BiconditionalDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add
         two designated nodes to *b*, one with a disjunction, where the first
@@ -265,7 +265,7 @@ class TabRules(object):
         branch_level = 2
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             lhsa, rhsa = (operand.asserted() for operand in s)
             sn1 = lhsa.negate().disjoin(rhsa)
             sn2 = rhsa.negate().disjoin(lhsa)

@@ -26,11 +26,12 @@ class Meta(object):
     tags = ['bivalent', 'non-modal']
     category_display_order = 1
 
+from typing import Iterable
+from tools.abcs import Abc, abcf
 from lexicals import Sentence, Quantified, Operated, Argument
 from proof.common import Branch, Node
-from proof.tableaux import Tableau
+from proof.tableaux import Rule, Tableau
 from . import k as K
-from itertools import chain
 
 class Model(K.Model):
     """
@@ -55,22 +56,25 @@ class Model(K.Model):
         return data
 
     def add_access(self, *_):
-        raise NotImplementedError
+        raise TypeError("Non-modal model: '%s'" % type(self))
 
 class TableauxSystem(K.TableauxSystem):
 
+    modal = False
+
     @classmethod
-    def build_trunk(cls, tableau: Tableau, argument: Argument):
+    def build_trunk(cls, tab: Tableau, arg: Argument, /):
         """
         To build the trunk for an argument, add a node for each premise, and
         a node with the negation of the conclusion.        
         """
-        branch = tableau.branch()
-        for premise in argument.premises:
-            branch.add({'sentence': premise})
-        branch.add({'sentence': argument.conclusion.negate()})
+        add = tab.branch().append
+        for premise in arg.premises:
+            add(dict(sentence = premise))
+        add(dict(sentence = ~arg.conclusion))
 
-class TabRules:
+
+class TabRules(Abc):
     """
     In general, rules for connectives consist of two rules per connective:
     a "plain" rule, and a negated rule. The special case of negation has only
@@ -78,16 +82,22 @@ class TabRules:
     predicate.
     """
 
+    @abcf.after
+    def clearmodal(cls):
+        'Remove Modal filter from NodeFilters, and clear modal attribute.'
+        from proof.types import demodalize_rules
+        from itertools import chain
+        it = chain(cls.closure_rules, chain.from_iterable(cls.rule_groups))
+        demodalize_rules(it)
+
     class ContradictionClosure(K.TabRules.ContradictionClosure):
         """
         A branch is closed if a sentence and its negation appear on the branch.
         """
-        def _find_closing_node(self, node: Node, branch: Branch):
+        def _find_closing_node(self, node: Node, branch: Branch, /):
             s = self.sentence(node)
-            if s:
-                return branch.find({
-                    'sentence' : s.negative()
-                })
+            if s is not None:
+                return branch.find(dict(sentence = s.negative()))
 
     class SelfIdentityClosure(K.TabRules.SelfIdentityClosure):
         """
@@ -256,6 +266,3 @@ class TabRules:
             BiconditionalNegated,
         ),
     )
-    for cls in chain(closure_rules, chain.from_iterable(rule_groups)):
-        cls.modal = False
-    del(cls)

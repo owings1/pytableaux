@@ -19,7 +19,7 @@
 # pytableaux - S4 Normal Modal Logic
 name = 'S4'
 
-class Meta(object):
+class Meta:
     title    = 'S4 Normal Modal Logic'
     category = 'Bivalent Modal'
     description = 'Normal modal logic with a reflexive and transitive access relation'
@@ -56,7 +56,7 @@ class TableauxSystem(K.TableauxSystem):
     """
     pass
 
-class TabRules(object):
+class TabRules:
     """
     The Tableaux Rules for S4 contain the rules for :ref:`T <T>`, as well as an additional
     Transitive rule, which operates on the accessibility relation for worlds.
@@ -74,7 +74,7 @@ class TabRules(object):
         access = True
         ticking = False
 
-        def _get_node_targets(self, node: Node, branch: Branch) -> Generator:
+        def _get_node_targets(self, node: Node, branch: Branch) -> Generator[dict, None, None]:
             if self[MaxWorlds].max_worlds_reached(branch):
                 self[FilterHelper].release(node, branch)
                 return
@@ -156,4 +156,3 @@ class TabRules(object):
             K.TabRules.Universal,
         ),
     )
-TableauxRules = TabRules

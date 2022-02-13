@@ -17,9 +17,13 @@
 # ------------------
 #
 # pytableaux - Classical First-Order Logic
+from __future__ import annotations
+
+from tools.abcs import Abc, abcf
+
 name = 'CFOL'
 
-class Meta(object):
+class Meta:
     title    = 'Classical First Order Logic'
     category = 'Bivalent'
     description = 'Standard bivalent logic with full first-order quantification'
@@ -48,11 +52,19 @@ class TableauxSystem(CPL.TableauxSystem):
     CFOL's Tableaux System inherits directly from :ref:`CPL <CPL>`'s.
     """
 
-class TabRules(object):
+class TabRules(Abc):
     """
     The Tableaux System for CFOL contains all the rules from :ref:`CPL <CPL>`,
     including the CPL closure rules, and adds additional rules for the quantifiers.
     """
+
+    @abcf.after
+    def clearmodal(cls):
+        'Remove Modal filter from NodeFilters, and clear modal attribute.'
+        from proof.types import demodalize_rules
+        from itertools import chain
+        it = chain(cls.closure_rules, chain.from_iterable(cls.rule_groups))
+        demodalize_rules(it)
 
     class ContradictionClosure(CPL.TabRules.ContradictionClosure):
         pass
@@ -178,5 +190,4 @@ class TabRules(object):
             Universal,
         ),
     )
-    for cls in chain(closure_rules, chain.from_iterable(rule_groups)):
-        cls.modal = False
+

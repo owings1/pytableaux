@@ -19,7 +19,7 @@
 # pytableaux - Reflexive Normal Modal Logic
 name = 'T'
 
-class Meta(object):
+class Meta:
     title    = 'Reflexive Normal Modal Logic'
     category = 'Bivalent Modal'
     description = 'Normal modal logic with a reflexive access relation'
@@ -48,7 +48,7 @@ class TableauxSystem(K.TableauxSystem):
     """
     pass
 
-class TabRules(object):
+class TabRules:
     """
     The Tableaux Rules for T contain the rules for :ref:`K <K>`, as well as an additional
     Reflexive rule, which operates on the accessibility relation for worlds.
@@ -128,4 +128,3 @@ class TabRules(object):
             K.TabRules.Universal,
         ),
     )
-TableauxRules = TabRules

@@ -19,7 +19,7 @@
 # pytableaux - R-mingle 3 logic
 name = 'RM3'
 
-class Meta(object):
+class Meta:
     title = 'R-mingle 3'
     category = 'Many-valued'
     description = 'Three-valued logic (True, False, Both) with a primitive Conditional operator'
@@ -140,7 +140,7 @@ class TabRules:
     class MaterialBiconditionalNegatedUndesignated(FDE.TabRules.MaterialBiconditionalNegatedUndesignated):
         pass
 
-    class ConditionalDesignated(FDE.DefaultNodeRule):
+    class ConditionalDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add an undesignated
@@ -175,7 +175,7 @@ class TabRules:
     class ConditionalNegatedDesignated(FDE.TabRules.ConditionalNegatedDesignated):
         pass
 
-    class ConditionalUndesignated(FDE.DefaultNodeRule):
+    class ConditionalUndesignated(FDE.OperSentenceRule):
         """
         From an unticked, undesignated, conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'*, add a designated node
@@ -205,7 +205,7 @@ class TabRules:
     class ConditionalNegatedUndesignated(FDE.TabRules.ConditionalNegatedUndesignated):
         pass
 
-    class BiconditionalDesignated(FDE.DefaultNodeRule):
+    class BiconditionalDesignated(FDE.OperSentenceRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, make
         three branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated
@@ -241,7 +241,7 @@ class TabRules:
     class BiconditionalNegatedDesignated(FDE.TabRules.BiconditionalNegatedDesignated):
         pass
 
-    class BiconditionalUndesignated(FDE.DefaultNodeRule):
+    class BiconditionalUndesignated(FDE.OperSentenceRule):
         """
         From an unticked undesignated biconditional node *n* on a branch *b*, add a
         conjunction undesignated node to *b*, with first conjunct being a conditional
@@ -267,7 +267,7 @@ class TabRules:
                 ],
             }
 
-    class BiconditionalNegatedUndesignated(FDE.DefaultNodeRule):
+    class BiconditionalNegatedUndesignated(FDE.OperSentenceRule):
         """
         From an unticked undesignated negated biconditional node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'* add an undesignated node
@@ -376,4 +376,3 @@ class TabRules:
             UniversalUndesignated,
         ],
     ]
-TableauxRules = TabRules

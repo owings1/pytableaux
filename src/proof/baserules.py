@@ -2,15 +2,29 @@ from __future__ import annotations
 
 __all__ = (
     'Rule',
+
     'BaseClosureRule',
-    'BaseRule',
     'BaseNodeRule',
-    'BaseQuantifierRule',
+
+    'PredicatedSentenceRule',
+    'QuantifiedSentenceRule',
+    'OperatedSentenceRule',
+
+    'NarrowQuantifierRule',
     'ExtendedQuantifierRule',
 )
 
-from tools.decorators import abstract
-from lexicals import Constant, Operator, Predicate, Quantifier, Sentence
+from tools.decorators import abstract, overload, abcf
+from lexicals import (
+    Constant,
+    Operated,
+    Operator,
+    Predicate,
+    Predicated,
+    Quantified,
+    Quantifier,
+    Sentence,
+)
 from proof.common import Branch, Node, Target
 from proof.filters import NodeFilters
 from proof.helpers import (
@@ -20,9 +34,16 @@ from proof.helpers import (
     MaxConsts,
     NodeConsts,
     NodeCount,
+    PredNodes,
     QuitFlag,
 )
 from proof.tableaux import ClosingRule, Rule
+FIRST_CONST_SET = frozenset({Constant.first()})
+
+
+# class BaseRule(Rule):
+
+#     pass
 
 class BaseClosureRule(ClosingRule):
 
@@ -38,39 +59,34 @@ class BaseClosureRule(ClosingRule):
         'Method for BranchTarget helper.'
         raise NotImplementedError
 
-class BaseRule(Rule):
+    def group_score(self, target: Target, /):
+        # Called in tableau
+        return 1.0 #??
+        # return self.score_candidate(target) / max(1, self.branch_level)
 
-    Helpers = AdzHelper, FilterHelper,
+    def score_candidate(self, target: Target, /) -> float:
+        # Closure rules have is_rank_optim = False by default.
+        return 0.0
 
+class BaseNodeRule(Rule):
+
+    Helpers = AdzHelper,
     #: (AdzHelper) Whether the target node should be ticked after application.
     ticking: bool = True
-    #: (FilterHelper) Whether to ignore all ticked nodes.
-    ignore_ticked = True
-
-    NodeFilters = NodeFilters.Sentence,
-    # NodeFilters.Sentence
-    negated    : bool = None
-    operator   : Operator = None
-    quantifier : Quantifier = None
-    predicate  : Predicate = None
 
     def _apply(self, target: Target):
         'Delegates to AdzHelper._apply().'
         self[AdzHelper]._apply(target)
 
-    def example_nodes(self):
-        'Delegates to (FilterHelper.example_node(),)'
-        return self[FilterHelper].example_node(),
-
-    def sentence(self, node: Node, /) -> Sentence:
-        'Delegates to NodeFilters.Sentence of FilterHelper.'
-        return self[FilterHelper].filters[NodeFilters.Sentence].get(node)
-
     def score_candidate(self, target: Target):
         'Uses to AdzHelper.closure_score() to score the candidate target.'
         return self[AdzHelper].closure_score(target)
 
-class BaseNodeRule(BaseRule):
+    # * * * * * 
+
+    Helpers += FilterHelper,
+    #: (FilterHelper) Whether to ignore all ticked nodes.
+    ignore_ticked = True
 
     @FilterHelper.node_targets
     def _get_targets(self, node: Node, branch: Branch):
@@ -82,7 +98,43 @@ class BaseNodeRule(BaseRule):
     def _get_node_targets(self, node: Node, branch: Branch):
         raise NotImplementedError
 
-class BaseQuantifierRule(BaseRule):
+    def example_nodes(self):
+        'Delegates to (FilterHelper.example_node(),)'
+        return self[FilterHelper].example_node(),
+
+class BaseSentenceRule(BaseNodeRule):
+
+    NodeFilters = NodeFilters.Sentence,
+
+    negated    : bool      |None = None
+    operator   : Operator  |None = None
+    quantifier : Quantifier|None = None
+    predicate  : Predicate |None = None
+
+    def sentence(self, node: Node, /) -> Sentence:
+        'Delegates to NodeFilters.Sentence of FilterHelper.'
+        return self[FilterHelper].filters[NodeFilters.Sentence].get(node)
+
+class PredicatedSentenceRule(BaseSentenceRule):
+
+    Helpers = PredNodes,
+    @abcf.temp
+    @overload
+    def sentence(self, node: Node, /) -> Predicated:...
+
+class QuantifiedSentenceRule(BaseSentenceRule):
+
+    @abcf.temp
+    @overload
+    def sentence(self, node: Node, /) -> Quantified:...
+
+class OperatedSentenceRule(BaseSentenceRule):
+
+    @abcf.temp
+    @overload
+    def sentence(self, node: Node, /) -> Operated:...
+
+class NarrowQuantifierRule(QuantifiedSentenceRule):
 
     Helpers = QuitFlag, MaxConsts,
 
@@ -98,16 +150,19 @@ class BaseQuantifierRule(BaseRule):
             )
         return self._get_node_targets(node, branch)
 
-    @abstract
-    def _get_node_targets(self, node: Node, branch: Branch):
-        raise NotImplementedError
+    # @abstract
+    # def _get_node_targets(self, node: Node, branch: Branch):
+    #     raise NotImplementedError
 
     def score_candidate(self, target: Target):
         return -1 * self.tableau.branching_complexity(target.node)
 
-FIRST_CONST_SET = frozenset({Constant.first()})
+    # @abcf.temp
+    # @overload
+    # def sentence(self, node: Node, /) -> Quantified:...
 
-class ExtendedQuantifierRule(BaseQuantifierRule):
+
+class ExtendedQuantifierRule(NarrowQuantifierRule):
 
     ticking = False
 
@@ -146,4 +201,6 @@ class ExtendedQuantifierRule(BaseQuantifierRule):
         node_apply_count = self[NodeCount][target.branch].get(target.node, 0)
         return 1 / (node_apply_count + 1)
 
-del(abstract)
+del(
+    abstract, overload, abcf
+)

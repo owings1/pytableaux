@@ -1366,11 +1366,9 @@ class Test_K(BaseSuite):
             def test_modal_transformation(self):
                 self.valid_tab('Modal Transformation 2')
 
-            @skip
             def test_invalid_nested_diamond_within_box1(self):
                 self.invalid_tab('KMNbc', ('LCaMNb', 'Ma'))
 
-            @skip
             def test_Arguments_2(self):
                 self.valid_tab('Necessity Distribution 1')
                 self.invalid_tab('S4 Conditional Inference 2')
@@ -1843,7 +1841,7 @@ class TestCPL(BaseSuite):
             
         def test_add_access_not_impl(self):
             model = self.m()
-            with raises(NotImplementedError):
+            with raises(TypeError):
                 model.add_access(0, 0)
 
         def test_value_of_operated_opaque(self):
@@ -1957,7 +1955,7 @@ class TestCFOL(BaseSuite):
 
     def test_model_add_access_not_impl(self):
         m = self.m()
-        with raises(NotImplementedError):
+        with raises(TypeError):
             m.add_access(0, 0)
 
     def test_model_read_branch_with_negated_opaque_then_faithful(self):
@@ -2090,8 +2088,6 @@ class TestD(BaseSuite):
 
 @using(logic = 'T')
 class TestT(BaseSuite):
-
-    logic = get_logic('T')
 
     def test_valid_np_collapse_1(self):
         self.valid_tab('NP Collapse 1')

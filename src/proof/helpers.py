@@ -523,8 +523,18 @@ class FilterHelper(FilterNodeCache):
             default = EMPTY_QSET,
             transform = qsetf,
         )
-        for Filter in values:
-            subclscheck(instcheck(Filter, type), NodeFilter)
+        if values:
+            for Filter in values:
+                subclscheck(instcheck(Filter, type), NodeFilter)
+        else:
+            if not abcm.isabstract(rulecls):
+                import warnings
+                warnings.warn(
+                    "EMPTY '%s' attribute for class '%s'. "
+                    "All nodes will be cached." % (
+                        RuleAttr.NodeFilters.value, rulecls
+                    )
+                )
 
     @classmethod
     def node_targets(cls,
@@ -744,7 +754,7 @@ class MaxWorlds:
         # so we can halt on infinite branches.
         self.branch_max_worlds = {}
         # Cache the modal complexities
-        self.modal_complexities = {}
+        self.modal_complexities: dict[Sentence, int] = {}
         rule.tableau.on(TabEvent.AFTER_TRUNK_BUILD, self.__after_trunk_build)
 
     def get_max_worlds(self, branch: Branch):

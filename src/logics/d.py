@@ -19,7 +19,7 @@
 # pytableaux - Deonitic Normal Modal Logic
 name = 'D'
 
-class Meta(object):
+class Meta:
     title    = 'Deontic Normal Modal Logic'
     category = 'Bivalent Modal'
     description = 'Normal modal logic with a serial access relation'
@@ -81,7 +81,7 @@ class TabRules:
         ignore_ticked = False
         ticking = False
 
-        def _get_node_targets(self, node: Node, branch: Branch) -> Generator:
+        def _get_node_targets(self, node: Node, branch: Branch,/) -> Generator[dict, None, None]:
             unserials = self[UnserialWorlds][branch]
             if not unserials:
                 return

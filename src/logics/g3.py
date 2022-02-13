@@ -18,9 +18,11 @@
 # ------------------
 #
 # pytableaux - Gödel 3-valued logic
+from __future__ import annotations
+
 name = 'G3'
 
-class Meta(object):
+class Meta:
     title    = 'Gödel 3-valued logic'
     category = 'Many-valued'
     description = 'Three-valued logic (T, F, N) with alternate negation and conditional'
@@ -61,7 +63,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
-class TabRules(object):
+class TabRules:
     """
     The closure rules for :m:`G3` are the FDE closure rule, and the :m:`K3` closure rule.
     The operator rules for :m:`G3` are mostly the rules for :ref:`FDE <FDE>`, with the exception
@@ -75,7 +77,7 @@ class TabRules(object):
     class DesignationClosure(FDE.TabRules.DesignationClosure):
         pass
 
-    class DoubleNegationDesignated(FDE.DefaultNodeRule):
+    class DoubleNegationDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated double-negation node `n` on a branch `b`,
         add an undesignated node with the negatum of `n`. Then tick `n`.
@@ -162,7 +164,7 @@ class TabRules(object):
     class ConditionalDesignated(L3.TabRules.ConditionalDesignated):
         pass
 
-    class ConditionalNegatedDesignated(FDE.DefaultNodeRule):
+    class ConditionalNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, negated conditional node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add two designated
@@ -198,7 +200,7 @@ class TabRules(object):
     class ConditionalUndesignated(L3.TabRules.ConditionalUndesignated):
         pass
     
-    class ConditionalNegatedUndesignated(FDE.DefaultNodeRule):
+    class ConditionalNegatedUndesignated(FDE.OperSentenceRule):
         """
         From an unticked, undesignated, negated conditional node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -339,4 +341,3 @@ class TabRules(object):
             UniversalUndesignated,
         ),
     )
-TableauxRules = TabRules

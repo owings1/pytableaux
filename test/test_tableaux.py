@@ -11,7 +11,7 @@ from proof.tableaux import (
     Rule, TableauxSystem as TabSys, Tableau,
     ClosingRule, RuleT
 )
-from proof.filters import Filters
+from proof.filters import Filters, NodeFilters
 from proof.helpers import AdzHelper, FilterHelper, MaxConsts
 from proof.common import Branch, Node, Target
 from proof.types import TabEvent, TabStatKey, TabFlag
@@ -429,6 +429,8 @@ class TestMaxConstantsTracker(BaseSuite):
         class FilterNodeRule(RuleStub):
             Helpers = FilterHelper,
             ignore_ticked = None
+            NodeFilters = NodeFilters.Modal,
+            modal = None
     
         class MtrTestRule(FilterNodeRule):
             Helpers = (

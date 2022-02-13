@@ -17,9 +17,10 @@
 # ------------------
 #
 # pytableaux - Gappy Object 3-valued Logic
+from __future__ import annotations
 name = 'GO'
 
-class Meta(object):
+class Meta:
     title    = 'Gappy Object 3-valued Logic'
     category = 'Many-valued'
     description = 'Three-valued logic (True, False, Neither) with classical-like binary operators'
@@ -127,7 +128,7 @@ class TableauxSystem(FDE.TableauxSystem):
         },
     }
 
-class TabRules(object):
+class TabRules:
     """
     The closure rules for GO are the FDE closure rule, and the K3 closure rule.
     Most of the operators rules are unique to GO, with a few rules that are
@@ -157,7 +158,7 @@ class TabRules(object):
     class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
         pass
 
-    class ConjunctionNegatedDesignated(FDE.DefaultNodeRule):
+    class ConjunctionNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, negated conjunction node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add an undesignated node to
@@ -180,7 +181,7 @@ class TabRules(object):
                 )
             }
             
-    class ConjunctionUndesignated(FDE.DefaultNodeRule):
+    class ConjunctionUndesignated(FDE.OperSentenceRule):
         """
         From an unticked, undesignated conjunction node *n* on a branch *b*, add a
         designated node to *b* with the negation of the conjunction, then tick *n*.
@@ -196,7 +197,7 @@ class TabRules(object):
                 'adds': (({'sentence': s.negate(), 'designated': not d},),),
             }
 
-    class ConjunctionNegatedUndesignated(FDE.DefaultNodeRule):
+    class ConjunctionNegatedUndesignated(FDE.OperSentenceRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*,
         add a designated node to *b* with the (un-negated) conjuction, then tick *n*.
@@ -216,7 +217,7 @@ class TabRules(object):
     class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
         pass
         
-    class DisjunctionNegatedDesignated(FDE.DefaultNodeRule):
+    class DisjunctionNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, negated disjunction node *n* on a branch *b*,
         add an undesignated node to *b* for each disjunct, then tick *n*.
@@ -256,7 +257,7 @@ class TabRules(object):
     class MaterialConditionalDesignated(FDE.TabRules.MaterialConditionalDesignated):
         pass
         
-    class MaterialConditionalNegatedDesignated(FDE.DefaultNodeRule):
+    class MaterialConditionalNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, negated material conditional node *n* on a branch
         *b*, add an undesignated node with the negation of the antecedent, and an
@@ -297,7 +298,7 @@ class TabRules(object):
     class MaterialBiconditionalDesignated(FDE.TabRules.MaterialBiconditionalDesignated):
         pass
         
-    class MaterialBiconditionalNegatedDesignated(FDE.DefaultNodeRule):
+    class MaterialBiconditionalNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, negated, material biconditional node *n* on a branch
         *b*, make two branches *b'* and *b''* from *b*. On *b'* add undesignated nodes for
@@ -340,7 +341,7 @@ class TabRules(object):
         """
         operator = Oper.MaterialBiconditional
 
-    class ConditionalDesignated(FDE.DefaultNodeRule):
+    class ConditionalDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, conditional node *n* on a branch *b*, make two branches
         *b'* and *b''* from *b*. On *b'* add a designated node with a disjunction of the
@@ -368,7 +369,7 @@ class TabRules(object):
                 ),
             }
 
-    class ConditionalNegatedDesignated(FDE.DefaultNodeRule):
+    class ConditionalNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, negated conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add a designated node with the
@@ -416,7 +417,7 @@ class TabRules(object):
         negated     = True
         operator    = Oper.Conditional
 
-    class BiconditionalDesignated(FDE.DefaultNodeRule):
+    class BiconditionalDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add two
         designated conditional nodes to *b*, one with the operands of the biconditional,
@@ -440,7 +441,7 @@ class TabRules(object):
                 ),
             }
 
-    class BiconditionalNegatedDesignated(FDE.DefaultNodeRule):
+    class BiconditionalNegatedDesignated(FDE.OperSentenceRule):
         """
         From an unticked, designated, negated biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add a designated negated conditional
@@ -481,7 +482,7 @@ class TabRules(object):
     class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
         pass
         
-    class ExistentialNegatedDesignated(FDE.DefaultNodeRule):
+    class ExistentialNegatedDesignated(FDE.QuantSentenceRule):
         """
         From an unticked, designated negated existential node *n* on a branch *b*,
         add a designated node *n'* to *b* with a universal sentence consisting of
@@ -497,7 +498,7 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Quantified = self.sentence(node)
+            s = self.sentence(node)
             v = s.variable
             si = s.sentence
             si_lem_fail = si.disjoin(si.negate()).negate()
@@ -638,4 +639,3 @@ class TabRules(object):
             UniversalNegatedDesignated,
         ),
     )
-TableauxRules = TabRules

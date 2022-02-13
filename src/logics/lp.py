@@ -239,4 +239,3 @@ class TabRules:
             UniversalUndesignated,
         ),
     )
-TableauxRules = TabRules

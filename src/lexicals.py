@@ -150,7 +150,8 @@ class Types:
     AtomicSpec     = BiCoords
     PredicatedSpec = tuple[TriCoords, tuple[ParameterIdent, ...]]
     QuantifiedSpec = tuple[str, BiCoords, Ident]
-    OperatedSpec   = tuple[str, tuple[Ident, ...]]
+    OperandsSpec   = tuple[Ident, ...]
+    OperatedSpec   = tuple[str, OperandsSpec]
 
     # Deferred
 
@@ -710,6 +711,17 @@ class Operator(Bases.LexicalEnum):
     arity   : int
     libname : str|None
 
+    # xor      ^
+    # mul      * -- assertion?
+    # matmul   @
+    # truediv  /
+    # floordiv //
+    # mod      %
+    # pow      **
+    # lshift   << -- biconditional/materialbiconditional?
+    # rshift   >> -- conditional/materialconditional?
+    # neg      -
+    # pos      + -- assertion?
     Assertion             = 10,  'Assertion',              1, None
     Negation              = 20,  'Negation',               1, '__invert__'
     Conjunction           = 30,  'Conjunction',            2, '__and__'
@@ -721,9 +733,15 @@ class Operator(Bases.LexicalEnum):
     Possibility           = 90,  'Possibility',            1, None
     Necessity             = 100, 'Necessity',              1, None
 
-    def __call__(self, *spec: Types.OperatedSpec) -> Operated:
+    @overload
+    def __call__(self, operands: Iterable[Sentence] | Sentence | Types.OperandsSpec) -> Operated:...
+    @overload
+    def __call__(self, *operands: Sentence) -> Operated:...
+    def __call__(self, *args) -> Operated:
         'Apply the operator to make a new sentence.'
-        return Operated(self, *spec)
+        if len(args) > 1:
+            return Operated(self, args)
+        return Operated(self, *args)
 
     def __init__(self, order: int, label: str, arity: int, libname: str|None, /):
         super().__init__(order, label)
@@ -962,25 +980,27 @@ class Sentence(Bases.LexicalItem):
 
     @abcf.temp
     @membr.defer
-    def libopers(member: membr[type[Sentence], Callable[..., Operated|NotImplType]]):
-        oper = Operator[member.name]
-        if oper.arity == 1:
-            def f(self: Sentence, /):
-                return Operated(oper, (self,))
-        else:
-            def f(self: Sentence, other, /):
-                if not isinstance(other, Sentence):
-                    return NotImplemented
-                return Operated(oper, (self, other))
-        return wraps(oper)(f)
+    def libopers(member: membr):
+        oper = Operator(member.name)
+        @wraps(oper)
+        def f(self: Sentence, other: Sentence, /) -> Operated:
+            if not isinstance(other, Sentence):
+                return NotImplemented
+            return Operated(oper, (self, other))
+        return f
 
-    __and__ = __or__ = __invert__ = libopers()
+    __and__ = __or__ = libopers()
+
+    def __invert__(self):
+        return Operated(Operator.Negation, (self,))
 
     @staticmethod
     def first():
         return Atomic.first()
 
 Types.QuantifiedItem = Quantifier | Variable | Sentence
+
+
 
 @final
 class Atomic(Bases.CoordsItem, Sentence):
@@ -1305,11 +1325,11 @@ class Operated(Sentence, Sequence[Sentence]):
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init
 
     def __init__(self, oper: Operator, operands: Iterable[Sentence] | Sentence, /):
+        self.operator = oper = Operator(oper)
         if isinstance(operands, Sentence):
             self.operands = operands,
         else:
             self.operands = tuple(map(Sentence, operands))
-        self.operator = oper = Operator(oper)
         self.lhs = self.operands[0]
         self.rhs = self.operands[-1]
         if len(self.operands) != oper.arity:
