@@ -219,8 +219,8 @@ class GetNodeTargetsRule(BaseNodeRule):
 def group(*items: T) -> tuple[T, ...]:
     return items
 
-def adds(*groups: tuple[dict, ...]):
-    return dict(adds = groups)
+def adds(*groups: tuple[dict, ...], **kw):
+    return dict(adds = groups, **kw)
 
 del(
     abstract, overload, abcf

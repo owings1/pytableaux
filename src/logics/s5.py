@@ -27,6 +27,7 @@ class Meta:
     category = 'Bivalent Modal'
     category_display_order = 5
 
+from proof.baserules import adds, group
 from proof.common import Access, Branch, Node
 from proof.helpers import FilterHelper, MaxWorlds, WorldIndex
 from . import k as K, t as T, s4 as S4
@@ -80,13 +81,14 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, branch: Branch):
             if not self[MaxWorlds].max_worlds_exceeded(branch):
-                access: Access = Access.fornode(node).reverse()
+                access = Access.fornode(node).reverse()
                 if not self[WorldIndex].has(branch, access):
-                    add = access.todict()
-                    return add | {'adds': ((add,),)}
+                    anode = access.todict()
+                    return adds(group(anode), **anode)
             self[FilterHelper].release(node, branch)
 
-        def example_nodes(self):
+        @staticmethod
+        def example_nodes():
             return Access(0, 1).todict(),
 
     closure_rules = K.TabRules.closure_rules

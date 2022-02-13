@@ -27,9 +27,11 @@ class Meta:
     category_display_order = 3
 
 from lexicals import Atomic
+from proof.baserules import adds, group
 from proof.common import Access, Branch, Node
 from proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from . import k as K
+from logics import k as K
+from logics.k import swnode
 
 class Model(K.Model):
     """
@@ -65,26 +67,24 @@ class TabRules:
         no node such that world1 and world2 is *w*, add a node to *b* where world1 and world2
         is *w*.
         """
-        Helpers = MaxWorlds, WorldIndex, # QuitFlag
+        Helpers = MaxWorlds, WorldIndex,
 
         ignore_ticked = False
         ticking = False
 
         _defaults = dict(is_rank_optim = False)
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch,/):
             if not self[MaxWorlds].max_worlds_exceeded(branch):
                 for w in node.worlds:
                     access = Access(w, w)
                     if not self[WorldIndex].has(branch, access):
-                        return {
-                            'world': w,
-                            'adds': ((access.todict(),),),
-                        }
+                        return adds(group(access.todict()), world = w)
             self[FilterHelper].release(node, branch)
 
-        def example_nodes(self):
-            return ({'sentence': Atomic.first(), 'world': 0},)
+        @staticmethod
+        def example_nodes():
+            return swnode(Atomic.first(), 0),
 
     closure_rules = K.TabRules.closure_rules
 

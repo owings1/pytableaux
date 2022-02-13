@@ -36,6 +36,7 @@ from lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantifi
     Operator as Oper, Quantifier, Argument, Sentence, Predicates
 from models import BaseModel
 
+from proof.common import Access
 from proof.tableaux import (
     TableauxSystem as BaseSystem,
     Tableau,
@@ -721,6 +722,9 @@ def swnode(s: Sentence, w: int|None):
         return dict(sentence = s)
     return dict(sentence = s, world = w)
 
+def anode(w1: int, w2: int):
+    'Make an Access node dict.'
+    return Access(w1, w2).todict()
 @static
 class TabRules:
     """

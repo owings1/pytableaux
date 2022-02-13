@@ -26,9 +26,10 @@ class Meta:
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 4
 
-from proof.common import Branch, Node, Target
+from proof.common import Access, Branch, Node, Target
 from proof.helpers import FilterHelper, MaxWorlds, WorldIndex
-from . import k as K, t as T
+from logics import k as K, t as T
+from logics.k import anode, adds, group
 from typing import Generator
 
 class Model(T.Model):
@@ -74,37 +75,40 @@ class TabRules:
         access = True
         ticking = False
 
-        def _get_node_targets(self, node: Node, branch: Branch) -> Generator[dict, None, None]:
+        def _get_node_targets(
+            self, node: Node, branch: Branch,/
+        ) -> Generator[dict, None, None]:
             if self[MaxWorlds].max_worlds_reached(branch):
                 self[FilterHelper].release(node, branch)
                 return
-            w1 = node['world1']
-            w2 = node['world2']
+            w1, w2 = Access.fornode(node)
+            # w1 = node['world1']
+            # w2 = node['world2']
             return (
-                {
-                    'world1': w1,
-                    'world2': w3,
-                    'nodes' : {node, branch.find({'world1': w2, 'world2': w3})},
-                    'adds': (({'world1': w1, 'world2': w3},),),
-                } for w3 in self[WorldIndex].intransitives(branch, w1, w2)
+                adds(
+                    group(anode(w1, w3)),
+                    ** anode(w1, w3),
+                    nodes = {
+                        node, branch.find(anode(w2, w3))
+                    },
+                )
+                for w3 in self[WorldIndex].intransitives(branch, w1, w2)
+                # {
+                #     'world1': w1,
+                #     'world2': w3,
+                #     'nodes' : {node, branch.find({'world1': w2, 'world2': w3})},
+                #     'adds': (({'world1': w1, 'world2': w3},),),
+                # } for w3 in self[WorldIndex].intransitives(branch, w1, w2)
             )
 
         def score_candidate(self, target: Target):
-            """
-            :overrides: AdzHelper.ClosureScore
-            """
             # Rank the highest world
-            return target['world2']
+            return float(target.world2)
 
-        def example_nodes(self):
-            """
-            :overrides: K.DefaultRule
-            """
+        @staticmethod
+        def example_nodes():
             w1, w2, w3 = range(3)
-            return (
-                {'world1': w1, 'world2': w2},
-                {'world1': w2, 'world2': w3},
-            )
+            return anode(w1, w2), anode(w2, w3)
 
     closure_rules = tuple(K.TabRules.closure_rules)
 

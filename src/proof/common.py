@@ -168,29 +168,29 @@ class Node(MappingApi):
 
 class Access(NamedTuple):
 
-    w1: int
-    w2: int
+    world1: int
+    world2: int
 
     @property
-    def world1(self) -> int:
-        return self.w1
+    def w1(self) -> int:
+        return self.world1
 
     @property
-    def world2(self) -> int:
-        return self.w2
+    def w2(self) -> int:
+        return self.world2
 
     @classmethod
-    def fornode(cls, node: Mapping) -> tuple[int, int]:
-        return cls(node['world1'], node['world2'])
+    def fornode(cls, node: Mapping) -> Access:
+        return cls._make(map(node.__getitem__, cls._fields))
 
     def todict(self) -> dict[str, int]:
-        return dict(world1 = self[0], world2 = self[1])
+        return self._asdict()
 
     def tonode(self) -> Node:
-        return Node(Access.todict(self))
+        return Node(self.todict())
 
-    def reverse(self) -> tuple[int, int]:
-        return Access(self[1], self[0])
+    def reverse(self) -> Access:
+        return self._make(reversed(self))
 
 class Branch(SequenceApi[Node], EventEmitter):
     'A tableau branch.'

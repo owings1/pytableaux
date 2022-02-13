@@ -26,10 +26,12 @@ class Meta:
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 2
 
-from proof.helpers import MaxWorlds, UnserialWorlds
+from proof.baserules import adds, group
 from proof.common import Access, Branch, Node
+from proof.helpers import MaxWorlds, UnserialWorlds
 from lexicals import Atomic
-from . import k as K
+from logics import k as K
+from logics.k import anode, swnode
 from typing import Generator
 
 class Model(K.Model):
@@ -77,7 +79,7 @@ class TabRules:
         no world *w'* on *b* such that *w* accesses *w'*, add a node to *b* with *w* as world1,
         and *w1* as world2, where *w1* does not yet appear on *b*.
         """
-        Helpers =  MaxWorlds, UnserialWorlds, #QuitFlag
+        Helpers =  MaxWorlds, UnserialWorlds,
         ignore_ticked = False
         ticking = False
 
@@ -90,17 +92,20 @@ class TabRules:
             if not self.__should_apply(branch):
                 return
             return (
-                {
-                    'world': w,
-                    'adds': (
-                        (Access(w, branch.next_world).todict(),),
-                    )
-                }
+                adds(group(anode(w, branch.next_world)), world = w)
+                # {
+                #     'world': w,
+                #     'adds': (
+                #         (Access(w, branch.next_world).todict(),),
+                #     )
+                # }
                 for w in unserials
             )
 
-        def example_nodes(self):
-            return ({'sentence': Atomic.first(), 'world': 0},)
+        @staticmethod
+        def example_nodes():
+            return swnode(Atomic.first(), 0),
+            # return ({'sentence': Atomic.first(), 'world': 0},)
 
         # util
 
