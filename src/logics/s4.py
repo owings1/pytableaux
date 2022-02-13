@@ -75,15 +75,14 @@ class TabRules:
         access = True
         ticking = False
 
-        def _get_node_targets(
-            self, node: Node, branch: Branch,/
-        ) -> Generator[dict, None, None]:
+        def _get_node_targets(self, node: Node, branch: Branch,/) -> Generator[dict, None, None]:
+
             if self[MaxWorlds].max_worlds_reached(branch):
                 self[FilterHelper].release(node, branch)
                 return
+
             w1, w2 = Access.fornode(node)
-            # w1 = node['world1']
-            # w2 = node['world2']
+
             return (
                 adds(
                     group(anode(w1, w3)),
@@ -93,12 +92,6 @@ class TabRules:
                     },
                 )
                 for w3 in self[WorldIndex].intransitives(branch, w1, w2)
-                # {
-                #     'world1': w1,
-                #     'world2': w3,
-                #     'nodes' : {node, branch.find({'world1': w2, 'world2': w3})},
-                #     'adds': (({'world1': w1, 'world2': w3},),),
-                # } for w3 in self[WorldIndex].intransitives(branch, w1, w2)
             )
 
         def score_candidate(self, target: Target):

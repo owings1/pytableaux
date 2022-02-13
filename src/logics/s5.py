@@ -79,13 +79,17 @@ class TabRules:
         access = True
         _defaults = dict(is_rank_optim = False)
 
-        def _get_node_targets(self, node: Node, branch: Branch):
-            if not self[MaxWorlds].max_worlds_exceeded(branch):
-                access = Access.fornode(node).reverse()
-                if not self[WorldIndex].has(branch, access):
-                    anode = access.todict()
-                    return adds(group(anode), **anode)
-            self[FilterHelper].release(node, branch)
+        def _get_node_targets(self, node: Node, branch: Branch,/):
+
+            if self[MaxWorlds].max_worlds_exceeded(branch):
+                self[FilterHelper].release(node, branch)
+                return
+
+            access = Access.fornode(node).reverse()
+
+            if not self[WorldIndex].has(branch, access):
+                anode = access.todict()
+                return adds(group(anode), **anode)
 
         @staticmethod
         def example_nodes():

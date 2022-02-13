@@ -26,12 +26,12 @@ class Meta:
     tags = ['bivalent', 'modal', 'first-order']
     category_display_order = 2
 
-from proof.baserules import adds, group
-from proof.common import Access, Branch, Node
+from proof.baserules import BaseSimpleRule
+from proof.common import Access, Branch, Node, Target
 from proof.helpers import MaxWorlds, UnserialWorlds
 from lexicals import Atomic
 from logics import k as K
-from logics.k import anode, swnode
+from logics.k import adds, anode, group, swnode
 from typing import Generator
 
 class Model(K.Model):
@@ -64,7 +64,7 @@ class TabRules:
     Serial rule, which operates on the accessibility relation for worlds.
     """
 
-    class Serial(K.DefaultNodeRule):
+    class Serial(BaseSimpleRule):
         """
         .. _serial-rule:
 
@@ -83,34 +83,26 @@ class TabRules:
         ignore_ticked = False
         ticking = False
 
-        #: TODO: This need not iterate over each node...
-
-        def _get_node_targets(self, node: Node, branch: Branch,/) -> Generator[dict, None, None]:
+        def _get_targets(self, branch: Branch,/) -> tuple[Target, ...]:
             unserials = self[UnserialWorlds][branch]
             if not unserials:
                 return
-            if not self.__should_apply(branch):
+            if not self._should_apply(branch):
                 return
-            return (
-                adds(group(anode(w, branch.next_world)), world = w)
-                # {
-                #     'world': w,
-                #     'adds': (
-                #         (Access(w, branch.next_world).todict(),),
-                #     )
-                # }
+            return tuple(
+                Target(adds(
+                    group(anode(w, branch.next_world)),
+                    world = w,
+                    branch = branch,
+                ))
                 for w in unserials
             )
 
         @staticmethod
         def example_nodes():
             return swnode(Atomic.first(), 0),
-            # return ({'sentence': Atomic.first(), 'world': 0},)
 
-        # util
-
-        def __should_apply(self, branch: Branch):
-
+        def _should_apply(self, branch: Branch,/):
             # TODO: Shouldn't this check the history only relative to the branch?
             #       Waiting to come up with a test case before fixing it.
 

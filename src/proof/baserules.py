@@ -80,7 +80,7 @@ class BaseClosureRule(ClosingRule):
         # Closure rules have is_rank_optim = False by default.
         return 0.0
 
-class BaseNodeRule(Rule):
+class BaseSimpleRule(Rule):
 
     Helpers = AdzHelper,
     #: (AdzHelper) Whether the target node should be ticked after application.
@@ -94,9 +94,10 @@ class BaseNodeRule(Rule):
         'Uses to AdzHelper.closure_score() to score the candidate target.'
         return self[AdzHelper].closure_score(target)
 
+class BaseNodeRule(BaseSimpleRule):
     # * * * * * 
 
-    Helpers += FilterHelper,
+    Helpers = FilterHelper,
     #: (FilterHelper) Whether to ignore all ticked nodes.
     ignore_ticked = True
 
