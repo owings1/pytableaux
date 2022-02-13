@@ -519,15 +519,13 @@ class Bases:
             self.spec = self.name,
             self.order = order
             self.label = label
-            # Prepended with rank in LexType init.
-            self.sort_tuple = self.order,
             self.ident = self.identitem(self)
-            # NB: The value of hashitem changes after LexType modifies
-            # the sort_tuple. To update the hash, we have to rehash the
-            # Enum lookup index at the same time. See LexType below.
-            self.hash = self.hashitem(self)
             self.strings = setf((self.name, self.label))
-
+            # NB: The value of hashitem would change after LexType modifies
+            #     the sort_tuple. To workaround, we delay enum lookup index
+            #     build until LexType init.
+            # self.sort_tuple = <self.TYPE.rank>, self.order
+            # self.hash = self.hashitem(self)
 
         #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Enum Meta Hooks ◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎#
 
@@ -539,7 +537,6 @@ class Bases:
         @classmethod
         def _on_init(cls, subcls: type[Bases.LexicalEnum]):
             'Enum init hook. Store the sequence index of each member.'
-            # raise TypeError
             super()._on_init(subcls)
             for i, member in enumerate(subcls.seq):
                 member.index = i
@@ -688,12 +685,10 @@ class Bases:
             cls._instances = {notn: {} for notn in notns}
 
 
-
-
 ##############################################################
 ##############################################################
 
-class Quantifier(Bases.LexicalEnum):
+class Quantifier(Bases.LexicalEnum, noidxbuild = True):
     'Quantifier Lexical Enum class.'
 
     Existential = 0, 'Existential'
@@ -703,7 +698,7 @@ class Quantifier(Bases.LexicalEnum):
         'Quantify a variable over a sentence.'
         return Quantified(self, *spec)
 
-class Operator(Bases.LexicalEnum):
+class Operator(Bases.LexicalEnum, noidxbuild = True):
     'Operator Lexical Enum class.'
 
     __slots__ = 'arity', 'libname'
@@ -734,7 +729,9 @@ class Operator(Bases.LexicalEnum):
     Necessity             = 100, 'Necessity',              1, None
 
     @overload
-    def __call__(self, operands: Iterable[Sentence] | Sentence | Types.OperandsSpec) -> Operated:...
+    def __call__(self,
+        operands: Iterable[Sentence] | Sentence | Types.OperandsSpec, /
+    ) -> Operated:...
     @overload
     def __call__(self, *operands: Sentence) -> Operated:...
     def __call__(self, *args) -> Operated:
@@ -981,7 +978,13 @@ class Sentence(Bases.LexicalItem):
     @abcf.temp
     @membr.defer
     def libopers(member: membr):
-        oper = Operator(member.name)
+        for oper in Operator.seq:
+            # Find operator manually since index is not yet built.
+            if oper.libname == member.name:
+                break
+        else:
+            raise ValueError(member.name)
+        # oper = Operator(member.name)
         @wraps(oper)
         def f(self: Sentence, other: Sentence, /) -> Operated:
             if not isinstance(other, Sentence):
@@ -999,7 +1002,6 @@ class Sentence(Bases.LexicalItem):
         return Atomic.first()
 
 Types.QuantifiedItem = Quantifier | Variable | Sentence
-
 
 
 @final
@@ -1431,22 +1433,19 @@ class LexType(Bases.Enum):
 
     @classmethod
     def _after_init(cls):
-        'Build classes list, expand sort_tuple. Rehash member lookup.'
+        'Build classes list, write sort_tuple and hash. Build defered enum lookup.'
         super()._after_init()
         cls.classes = qsetf((m.cls for m in cls.seq))
         for encls in (Operator, Quantifier):
-            for inst in encls.seq:
-                inst.sort_tuple = inst.TYPE.rank, *inst.sort_tuple
-                newhash = inst.hashitem(inst)
-                encls._lookup.rehash_member(inst,
-                    lambda: setattr(inst, 'hash', newhash)
-                )
+            for member in encls.seq:
+                member.sort_tuple = member.TYPE.rank, member.order
+                member.hash = encls.hashitem(member)
+            encls._lookup.build()
 
     @classmethod
     def _member_keys(cls, member: LexType):
         'Enum lookup index init hook.'
         return super()._member_keys(member) | {member.cls}
-
 
 ##############################################################
 ##############################################################

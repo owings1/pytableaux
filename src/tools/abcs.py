@@ -116,7 +116,7 @@ if 'Type Variables' or True:
     EnT2    = TypeVar('EnT2',     bound = 'AbcEnum')
     # EnT_co     = TypeVar('EnT_co', bound = 'AbcEnum', covariant = True)
     EnFlagT = TypeVar('EnFlagT', bound = 'FlagEnum')
-
+    EnKeyFunc = Callable[['AbcEnum'], Set[Hashable]]
     Func = FunctionType
     NotImplType = type(NotImplemented)
 
@@ -204,76 +204,16 @@ if 'Util Classes' or True:
 
     class _EnumEntry(NamedTuple):
         'The value of the enum lookup index.'
-        # member : EnT
         member : AbcEnum
         index  : int | None
-        # nextmember: EnT | None
         nextmember: AbcEnum | None
 
     class EnumEntry(_EnumEntry, Generic[EnT]):
         'The value of the enum lookup index.'
-        # member : EnT
+        __slots__ = ()
         member : EnT
         index  : int | None
-        # nextmember: EnT | None
         nextmember: EnT | None
-
-    class EnumLookup(Mapping[Any, EnumEntry[EnT]]):
-        'Enum entry lookup index.'
-
-        __slots__ = {
-            '__len__', '__getitem__', '__iter__', '__reversed__',
-            'add_pseudo', 'rehash_member',
-        }
-
-        def __init__(self, src: dict[Any, EnumEntry[EnT]], ecls: type[EnT], /):
-            ga = object.__getattribute__
-            sa = object.__setattr__
-            for name in filter(_isdund, self.__slots__):
-                sa(self, name, ga(src, name))
-            def add_pseudo(member):
-                keys, entry = self._check_pseudo(member, ecls)
-                for key in keys:
-                    src[key] = entry
-                return entry.member
-            def rehash_member(member, cb: Callable[[], None]):
-                entry = src.pop(member)
-                cb()
-                src[member] = entry
-            sa(self, 'add_pseudo', add_pseudo)
-            sa(self, 'rehash_member', rehash_member)
-
-        @overload
-        def rehash_member(self, member, cb: Callable[[], None]) -> None: ...
-        @overload
-        def add_pseudo(self, member: EnT, /) -> EnT:... # type: ignore
-
-        del(add_pseudo, rehash_member)
-
-        def _check_pseudo(self, member: EnT, ecls: type[EnT], /):
-            check = ecls._value2member_map_[member.value]
-            if check is not member:
-                raise TypeError from Emsg.ValueConflict(member, check)
-            if member.name is not None:
-                raise TypeError from Emsg.WrongValue(member.name, None)
-            keys: set[Any] = {member.value, member}
-            for key in keys:
-                if key in self:
-                    entry = self[key]
-                    if entry.member is not member:
-                        raise TypeError from Emsg.ValueConflict(member, entry.member)
-                    keys.remove(key)
-                    break
-            else:
-                entry: EnumEntry[EnT] = EnumEntry(member, None, None)
-            return keys, entry
-
-        def __setattr__(self, name, value, /):
-            raise Emsg.ReadOnlyAttr(name, self)
-        def __delattr__(self, name, /):
-            raise Emsg.ReadOnlyAttr(name, self)
-        def __repr__(self):
-            return repr(dict(self))
 
 if 'Constants' or True:
 
@@ -494,7 +434,7 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
         return ns
 
     def __new__(cls, clsname: str, bases: tuple[type, ...], ns: EnumDictType, /, *,
-        skipflags = False, **kw
+        skipflags = False, noidxbuild = False, **kw
     ):
 
         # Run generic Abc init hooks.
@@ -526,7 +466,9 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
         # Init hook to process members before index is created.
         Class._on_init(Class)
         # Create index.
-        Class._lookup = EnumLookup(enbm.build_index(Class), Class) # type: ignore
+        Class._lookup = EnumLookup(Class) # type: ignore
+        if not noidxbuild:
+            Class._lookup.build()
         # After init hook.
         Class._after_init()
         # Cleanup.
@@ -561,7 +503,7 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
         except KeyError:
             pass
         member = cls.__new__(cls, value) # type: ignore
-        return cls._lookup.add_pseudo(member)
+        return cls._lookup.pseudo(member)
 
     #******  Mapping(ish) Behavior
 
@@ -607,39 +549,115 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
     def seq(self: type[EnT]) -> Sequence[EnT]: ...
     del(seq)
 
-@static
-class enbm:
-    'Static Enum meta utils.'
+class EnumLookup(Mapping[Any, EnumEntry[EnT]],
+    metaclass = AbcMeta, skiphooks = True, skipflags = True
+):
+    'Enum entry lookup index.'
 
-    @staticmethod
-    def build_index(Class: type[EnT]|AbcEnumMeta[EnT2], /) -> dict[Any, EnumEntry[EnT|EnT2]]:
-        'Create the Enum member lookup index'
-        # Fill in the member entries for all keys and merge the dict.
-        # member to key set functions.
-        keyfuncs = enbm.default_keys, Class._member_keys
-        members = Class.seq
+    __slots__ = (
+        '__len__', '__getitem__', '__iter__', '__reversed__', 'build', 'pseudo'
+    )
 
+    def __init__(self, Owner: type[EnT], /):
+
+        if hasattr(self, 'build'):
+            raise TypeError
+
+        keyfuncs = (self._default_keys, Owner._member_keys)
+        source = {}
+
+        ga = object.__getattribute__
+        sa = object.__setattr__
+
+        for name in filter(_isdund, self.__slots__):
+            sa(self, name, ga(source, name))
+
+        def pseudo(member):
+            keys, entry = self._check_pseudo(member, Owner)
+            for key in keys:
+                source[key] = entry
+            return entry.member
+
+        def build():
+            builder = self._makemap(Owner, keyfuncs)
+            source.clear()
+            source.update(builder)
+            return self
+
+        sa(self, 'build',  build)
+        sa(self, 'pseudo', pseudo)
+
+    @overload
+    def build(self):...# type: ignore
+
+    @overload
+    def pseudo(self, member: EnT, /) -> EnT:...# type: ignore
+
+    @classmethod
+    def _makemap(cls, Owner: type[AbcEnum], keyfuncs: Collection[EnKeyFunc], /):
+        members = Owner.seq
+        pseudos = set(Owner._value2member_map_.values()) - set(members)
+        builder = cls._seqmap(members, keyfuncs)
+        if len(pseudos):
+            builder |= cls._pseudomap(pseudos)
+        return builder
+
+    @classmethod
+    def _seqmap(cls, members: Collection[AbcEnum], keyfuncs: Collection[EnKeyFunc], /):
         return {
             key : entry
             for member_keys, entry in zip(
-
                 ({key for func in keyfuncs for key in func(member)}
                     for member in members
                 ),
-
                 (EnumEntry(member, i, nxt) for (i, member), nxt in zip(
                     enumerate(members), chain(members[1:], [None]))
                 )
-            )
-                for key in member_keys
+            ) for key in member_keys
         }
 
-    @staticmethod
-    def default_keys(member: AbcEnum, /) -> Set[Hashable]:
-        'Default member lookup keys'
-        return {
-            member.name, (member.name,), member, member.value,
+    @classmethod
+    def _pseudomap(cls, pseudos: Collection[AbcEnum], /):
+        return {key: entry
+            for pseudo_keys, entry in (
+                (cls._pseudo_keys(pseudo), EnumEntry(pseudo, None, None))
+                for pseudo in pseudos
+            ) for key in pseudo_keys
         }
+
+    @classmethod
+    def _check_pseudo(cls, pseudo: AbcEnum, ecls: type[AbcEnum], /):
+        check = ecls._value2member_map_[pseudo.value]
+        if check is not pseudo:
+            raise TypeError from Emsg.ValueConflict(pseudo, check)
+        if pseudo.name is not None:
+            raise TypeError from Emsg.WrongValue(pseudo.name, None)
+        return cls._pseudo_keys(pseudo), EnumEntry(pseudo, None, None)
+
+    @classmethod
+    def _pseudo_keys(cls, pseudo: AbcEnum, /) -> set[Hashable]:
+        'Pseudo member lookup keys'
+        return {pseudo, pseudo.value}
+
+    @staticmethod
+    def _default_keys(member: AbcEnum, /) -> set[Hashable]:
+        'Default member lookup keys'
+        return {member.name, (member.name,), member, member.value}
+
+    def __setattr__(self, name, value, /):
+        raise Emsg.ReadOnlyAttr(name, self)
+
+    def __delattr__(self, name, /):
+        raise Emsg.ReadOnlyAttr(name, self)
+
+    def __repr__(self):
+        return repr(dict(self))
+
+    del(build, pseudo)
+
+@static
+class enbm:
+    'Static Enum meta utils.'
 
     @staticmethod
     def fix_name_value(Class: type[EnT]|AbcEnumMeta[EnT2], /):
@@ -708,7 +726,7 @@ class FlagEnum(_enum.Flag, AbcEnum, skipflags = True):
     def _missing_(cls, value: Any):
         member: FlagEnum = super()._missing_(value)
         member.value = member._value_
-        member.name = member._name_
+        member.name  = member._name_
         return member
 
     def __invert__(self):
@@ -752,18 +770,6 @@ class abcf(FlagEnum, skipflags = True):
         'Write the value, returns obj for decorator use.'
         setattr(obj, attr, cls(value))
         return obj
-
-if None in abcf:
-
-    val1 = abcf(8)
-    val1.read
-    for val2 in abcf:
-        val2.read
-    val3 = abcf[8].save
-    val4 = abcf.get(4, abcf.blank).save
-
-    for val5 in abcf.seq:
-        val5.read
 
 class IntEnum(int, AbcEnum):
     __slots__ = _EMPTY_SET
