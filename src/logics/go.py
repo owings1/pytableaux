@@ -27,9 +27,10 @@ class Meta:
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 60
 
-from lexicals import Operated, Quantified, Operator as Oper, Quantifier
+from lexicals import Quantified, Operator as Oper, Quantifier
 from proof.common import Branch, Node
 from . import fde as FDE, k3 as K3, b3e as B3E
+from logics.fde import adds, group, sdnode
 
 def gap(v):
     return min(v, 1 - v)
@@ -171,15 +172,12 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
-            return {
-                'adds': (
-                    ({'sentence': lhs, 'designated': not d},),
-                    ({'sentence': rhs, 'designated': not d},),
-                )
-            }
+            return adds(
+                group(sdnode(s.lhs, not d)),
+                group(sdnode(s.rhs, not d)),
+            )
             
     class ConjunctionUndesignated(FDE.OperatorNodeRule):
         """
@@ -191,11 +189,9 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            d = self.designation
-            return {
-                'adds': (({'sentence': s.negate(), 'designated': not d},),),
-            }
+            return adds(
+                group(sdnode(~self.sentence(node), not self.designation))
+            )
 
     class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -208,11 +204,9 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            d = self.designation
-            return {
-                'adds': (({'sentence': s, 'designated': not d},),),
-            }
+            return adds(
+                group(sdnode(self.sentence(node), not self.designation))
+            )
 
     class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
         pass
@@ -228,17 +222,11 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': lhs, 'designated': not d},
-                        {'sentence': rhs, 'designated': not d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode(s.lhs, not d), sdnode(s.rhs, not d))
+            )
 
     class DisjunctionUndesignated(ConjunctionUndesignated):
         """
@@ -269,17 +257,11 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': lhs.negate(), 'designated': not d},
-                        {'sentence': rhs         , 'designated': not d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode(~s.lhs, not d), sdnode(s.rhs, not d))
+            )
 
     class MaterialConditionalUndesignated(ConjunctionUndesignated):
         """
@@ -311,21 +293,12 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            s = self.sentence(node)
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': lhs.negate(), 'designated': not d},
-                        {'sentence': rhs         , 'designated': not d},
-                    ),
-                    (
-                        {'sentence': lhs         , 'designated': not d},
-                        {'sentence': rhs.negate(), 'designated': not d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode(~s.lhs, not d), sdnode( s.rhs, not d)),
+                group(sdnode( s.lhs, not d), sdnode(~s.rhs, not d)),
+            )
 
     class MaterialBiconditionalUndesignated(ConjunctionUndesignated):
         """
@@ -353,21 +326,19 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
-            disj = lhs.negate().disjoin(rhs)
+            lhs, rhs = self.sentence(node)
             d = self.designation
-            return {
-                'adds': (
-                    ({'sentence': disj, 'designated': d},),
-                    (
-                        {'sentence': lhs         , 'designated': not d},
-                        {'sentence': rhs         , 'designated': not d},
-                        {'sentence': lhs.negate(), 'designated': not d},
-                        {'sentence': rhs.negate(), 'designated': not d},
-                    ),
+            return adds(
+                group(
+                    sdnode(~lhs | rhs, d)
                 ),
-            }
+                group(
+                    sdnode( lhs, not d),
+                    sdnode( rhs, not d),
+                    sdnode(~lhs, not d),
+                    sdnode(~rhs, not d),
+                )
+            )
 
     class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -383,21 +354,12 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, _):
-            s: Operated = self.sentence(node)
-            lhs, rhs = s
+            lhs, rhs = self.sentence(node)
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': lhs, 'designated': d},
-                        {'sentence': rhs, 'designated': not d},
-                    ),
-                    (
-                        {'sentence': lhs.negate(), 'designated': not d},
-                        {'sentence': rhs.negate(), 'designated': d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode( lhs,     d), sdnode( rhs, not d)),
+                group(sdnode(~lhs, not d), sdnode(~rhs,     d)),
+            )
 
     class ConditionalUndesignated(ConjunctionUndesignated):
         """
@@ -429,17 +391,11 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
-            cond1 = Oper.Conditional((lhs, rhs))
-            cond2 = Oper.Conditional((rhs, lhs))
+            Cond = Oper.Conditional
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': cond1, 'designated': d},
-                        {'sentence': cond2, 'designated': d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode(Cond(lhs, rhs), d), sdnode(Cond(rhs, lhs), d))
+            )
 
     class BiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
@@ -455,15 +411,12 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, _):
             lhs, rhs = self.sentence(node)
-            cond1 = Oper.Conditional((lhs, rhs))
-            cond2 = Oper.Conditional((rhs, lhs))
+            Cond = Oper.Conditional
             d = self.designation
-            return {
-                'adds': (
-                    ({'sentence': cond1.negate(), 'designated': d},),
-                    ({'sentence': cond2.negate(), 'designated': d},),
-                ),
-            }
+            return adds(
+                group(sdnode(~Cond(lhs, rhs), d)),
+                group(sdnode(~Cond(rhs, lhs), d)),
+            )
 
     class BiconditionalUndesignated(ConjunctionUndesignated):
         """
@@ -494,23 +447,14 @@ class TabRules:
         designation = True
         negated     = True
         quantifier  = Quantifier.Existential
-        convert_to  = Quantifier.Universal
+        convert     = Quantifier.Universal
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s = self.sentence(node)
-            v = s.variable
-            si = s.sentence
-            si_lem_fail = si.disjoin(si.negate()).negate()
-            si_disj = si.negate().disjoin(si_lem_fail)
-            sq = Quantified(self.convert_to, v, si_disj)
-            return {
-                'adds': [
-                    [
-                        {'sentence': sq, 'designated': self.designation},
-                    ],
-                ],
-            }
+            v, si = self.sentence(node)[1:]
+            return adds(
+                group(sdnode(self.convert(v, ~si | ~(si | ~si)), self.designation))
+            )
 
     class ExistentialUndesignated(ConjunctionUndesignated):
         """
@@ -549,25 +493,18 @@ class TabRules:
         designation = True
         negated     = True
         quantifier  = Quantifier.Universal
-        convert_to  = Quantifier.Existential
+        convert     = Quantifier.Existential
         branch_level = 2
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Quantified = self.sentence(node)
-            r = s.unquantify(branch.new_constant())
-            sq = self.convert_to(s.variable, s.sentence.negate())
+            s = self.sentence(node)
+            v, si = s[1:]
+            r = branch.new_constant() >> s
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': sq, 'designated': d},
-                    ),
-                    (
-                        {'sentence': r         , 'designated': not d},
-                        {'sentence': r.negate(), 'designated': not d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode(self.convert(v, ~si), d)),
+                group(sdnode(r, not d), sdnode(~r, not d)),
+            )
             
     class UniversalUndesignated(ExistentialUndesignated):
         """
