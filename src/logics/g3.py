@@ -30,7 +30,7 @@ class Meta:
     category_display_order = 90
 
 
-from lexicals import Operator as Oper, Operated
+from lexicals import Operator as Oper
 from proof.common import Branch, Node
 from logics import fde as FDE, l3 as L3, k3 as K3
 from logics.fde import adds, group, sdnode
@@ -41,10 +41,10 @@ class Model(L3.Model):
     for some of the operators.
     """
 
-    def truth_function(self, operator: Oper, a, b = None):
+    def truth_function(self, operator: Oper, a, b = None, /):
         if operator == Oper.Negation:
             if a == 'N':
-                return 'F'
+                return self.Value.F
         return super().truth_function(operator, a, b)
 
 class TableauxSystem(FDE.TableauxSystem):
@@ -88,12 +88,10 @@ class TabRules:
         operator    = Oper.Negation
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch):
-            s = self.sentence(node)
-            d = self.designation
-            return {
-                'adds': (({'sentence': s, 'designated': not d},),),
-            }
+        def _get_node_targets(self, node: Node, _,/):
+            return adds(
+                group(sdnode(self.sentence(node), not self.designation))
+            )
 
     class DoubleNegationUndesignated(DoubleNegationDesignated):
         """
@@ -181,8 +179,6 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, _: Branch):
             lhs, rhs = self.sentence(node)
-            # lhs = s.lhs
-            # nlhs, nrhs = (x.negate() for x in s)
             d = self.designation
             return adds(
                 group(
@@ -195,19 +191,6 @@ class TabRules:
                     sdnode(~rhs, d),
                 ),
             )
-            # return {
-            #     'adds': (
-            #         (
-            #             {'sentence': lhs , 'designated': d},
-            #             {'sentence': nrhs, 'designated': d},
-            #         ),
-            #         (
-            #             {'sentence': lhs , 'designated': not d},
-            #             {'sentence': nlhs, 'designated': not d},
-            #             {'sentence': nrhs, 'designated': d},
-            #         ),
-            #     ),
-            # }
     
     class ConditionalUndesignated(L3.TabRules.ConditionalUndesignated):
         pass
@@ -224,16 +207,13 @@ class TabRules:
         operator    = Oper.Conditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
-            nlhs, nrhs = (x.negate() for x in s)
             d = self.designation
-            return {
-                'adds': (
-                    ({'sentence': nlhs, 'designated': not d},),
-                    ({'sentence': nrhs, 'designated': d},),
-                ),
-            }
+            return adds(
+                group(sdnode(~s.lhs, not d)),
+                group(sdnode(~s.rhs, d)),
+            )
 
     class BiconditionalDesignated(FDE.ConjunctionReducingRule):
         """

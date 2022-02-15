@@ -59,7 +59,7 @@ from proof.helpers import (
     MaxWorlds, PredNodes, QuitFlag, AdzHelper,
     FilterHelper, NodeCount, WorldIndex,
 )
-from errors import DenotationError, ModelValueError
+from errors import DenotationError, ModelValueError, instcheck
 
 import operator as opr
 
@@ -78,25 +78,11 @@ class Model(BaseModel):
     """
 
     class Value(Mval):
+        'The admissible values for sentences.'
         F = 'False', 0.0
         T = 'True', 1.0
-    #: The set of admissible values for sentences in a model.
-    #:
-    #: :type: set
-    #: :value: {T, F}
-    #: :meta hide-value:
-    truth_values = qsetf(('F', 'T'))#frozenset(truth_values_list)
 
-    unassigned_value = Value.F#'F'
-
-    nvals = {
-        'F': 0,
-        'T': 1,
-    }
-    cvals = {
-        1: 'T',
-        0: 'F',
-    }
+    unassigned_value = Value.F
 
     def __init__(self):
 
@@ -569,7 +555,7 @@ class Frame:
                             'input'  : sentence,
                             'output' : self.atomics[sentence]
                         }
-                        for sentence in sorted(list(self.atomics.keys()))
+                        for sentence in sorted(self.atomics)
                     ]
                 },
                 'Opaques' : {
@@ -585,7 +571,7 @@ class Frame:
                             'input'  : sentence,
                             'output' : self.opaques[sentence],
                         }
-                        for sentence in sorted(list(self.opaques.keys()))
+                        for sentence in sorted(self.opaques)
                     ]
                 },
                 # TODO: include (instead?) domain and property class data
@@ -608,13 +594,14 @@ class Frame:
                                 }
                             ]
                         }
-                        for pred in sorted(list(self.extensions.keys()))
+                        for pred in sorted(self.extensions)
                     ]
                 }
             }
         }
 
     def is_equivalent_to(self, other) -> bool:
+        other = instcheck(other, Frame)
         # check for informational equivalence, ignoring world
         # check atomic keys
         akeys_a = set(self.atomics.keys())
@@ -648,21 +635,33 @@ class Frame:
         return True
 
     def __eq__(self, other):
-        return other != None and self.__dict__ == other.__dict__
+        if not isinstance(other, Frame):
+            return NotImplemented
+        return self.__dict__ == other.__dict__
 
     def __ne__(self, other):
+        if not isinstance(other, Frame):
+            return NotImplemented
         return other == None or self.__dict__ != other.__dict__
 
     def __lt__(self, other):
+        if not isinstance(other, Frame):
+            return NotImplemented
         return self.world < other.world
 
     def __le__(self, other):
+        if not isinstance(other, Frame):
+            return NotImplemented
         return self.world <= other.world
 
     def __gt__(self, other):
+        if not isinstance(other, Frame):
+            return NotImplemented
         return self.world > other.world
 
     def __ge__(self, other):
+        if not isinstance(other, Frame):
+            return NotImplemented
         return self.world >= other.world
 
 @static

@@ -23,12 +23,13 @@ class Meta:
     title = 'R-mingle 3'
     category = 'Many-valued'
     description = 'Three-valued logic (True, False, Both) with a primitive Conditional operator'
-    tags = ['many-valued', 'glutty', 'non-modal', 'first-order']
+    tags = 'many-valued', 'glutty', 'non-modal', 'first-order'
     category_display_order = 130
 
 from lexicals import Operator as Oper
-from proof.common import Branch, Node
-from . import fde as FDE, lp as LP
+from proof.common import Node
+from logics import fde as FDE, lp as LP
+from logics.fde import adds, group, sdnode
 
 class Model(LP.Model):
     """
@@ -37,11 +38,11 @@ class Model(LP.Model):
 
     .. _LP model: lp.html#logics.lp.Model
     """
-    def truth_function(self, operator: Oper, a, b=None):
+    def truth_function(self, oper: Oper, a, b=None, /):
         Value = self.Value
-        if operator == Oper.Conditional and Value[a] > Value[b]:
+        if oper == Oper.Conditional and Value[a] > Value[b]:
             return Value.F
-        return super().truth_function(operator, a, b)
+        return super().truth_function(oper, a, b)
 
 class TableauxSystem(FDE.TableauxSystem):
     """
@@ -154,24 +155,18 @@ class TabRules:
         designation = True
         branch_level = 3
 
-        def _get_node_targets(self, node: Node, branch: Branch):
-            lhs, rhs = self.sentence(node).operands
-            return {
-                'adds': [
-                    [
-                        {'sentence':        lhs , 'designated': False},
-                    ],
-                    [
-                        {'sentence': rhs.negate(), 'designated': False},
-                    ],
-                    [
-                        {'sentence':        lhs , 'designated': True},
-                        {'sentence': lhs.negate(), 'designated': True},
-                        {'sentence':        rhs , 'designated': True},
-                        {'sentence': rhs.negate(), 'designated': True},
-                    ],
-                ],
-            }
+        def _get_node_targets(self, node: Node, _,/):
+            lhs, rhs = self.sentence(node)
+            return adds(
+                group(sdnode( lhs, False)),
+                group(sdnode(~rhs, False)),
+                group(
+                    sdnode( lhs, True),
+                    sdnode(~lhs, True),
+                    sdnode( rhs, True),
+                    sdnode(~rhs, True),
+                )
+            )
 
     class ConditionalNegatedDesignated(FDE.TabRules.ConditionalNegatedDesignated):
         pass
@@ -188,20 +183,12 @@ class TabRules:
         designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, branch: Branch):
-            lhs, rhs = self.sentence(node).operands
-            return {
-                'adds': [
-                    [
-                        {'sentence': lhs, 'designated': True},
-                        {'sentence': rhs, 'designated': False},
-                    ],
-                    [
-                        {'sentence': lhs.negate(), 'designated': False},
-                        {'sentence': rhs.negate(), 'designated': True},
-                    ],
-                ],
-            }
+        def _get_node_targets(self, node: Node, _,/):
+            lhs, rhs = self.sentence(node)
+            return adds(
+                group(sdnode( lhs, True),  sdnode( rhs, False)),
+                group(sdnode(~lhs, False), sdnode(~rhs, True)),
+            )
 
     class ConditionalNegatedUndesignated(FDE.TabRules.ConditionalNegatedUndesignated):
         pass
@@ -218,26 +205,18 @@ class TabRules:
         designation = True
         branch_level = 3
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
-            return {
-                'adds': [
-                    [
-                        {'sentence': lhs, 'designated': False},
-                        {'sentence': rhs, 'designated': False},
-                    ],
-                    [
-                        {'sentence': lhs.negate(), 'designated': False},
-                        {'sentence': rhs.negate(), 'designated': False},
-                    ],
-                    [
-                        {'sentence':        lhs , 'designated': True},
-                        {'sentence': lhs.negate(), 'designated': True},
-                        {'sentence':        rhs , 'designated': True},
-                        {'sentence': rhs.negate(), 'designated': True},
-                    ],
-                ],
-            }
+            return adds(
+                group(sdnode( lhs, False), sdnode( rhs, False)),
+                group(sdnode(~lhs, False), sdnode(~rhs, False)),
+                group(
+                    sdnode( lhs, True),
+                    sdnode(~lhs, True),
+                    sdnode( rhs, True),
+                    sdnode(~rhs, True),
+                )
+            )
 
     class BiconditionalNegatedDesignated(FDE.TabRules.BiconditionalNegatedDesignated):
         pass
@@ -253,20 +232,13 @@ class TabRules:
         designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
-            cond1 = Oper.Conditional((lhs, rhs))
-            cond2 = Oper.Conditional((rhs, lhs))
-            return {
-                'adds': [
-                    [
-                        {'sentence': cond1, 'designated': False},
-                    ],
-                    [
-                        {'sentence': cond2, 'designated': False},
-                    ],
-                ],
-            }
+            Cond = Oper.Conditional
+            return adds(
+                group(sdnode(Cond(lhs, rhs), False)),
+                group(sdnode(Cond(rhs, lhs), False)),
+            )
 
     class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -280,20 +252,12 @@ class TabRules:
         designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
-            return {
-                'adds': [
-                    [
-                        {'sentence': lhs, 'designated': False},
-                        {'sentence': rhs, 'designated': False},
-                    ],
-                    [
-                        {'sentence': lhs.negate(), 'designated': False},
-                        {'sentence': rhs.negate(), 'designated': False},
-                    ],
-                ],
-            }
+            return adds(
+                group(sdnode( lhs, False), sdnode( rhs, False)),
+                group(sdnode(~lhs, False), sdnode(~rhs, False)),
+            )
 
     class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
         pass
@@ -319,13 +283,13 @@ class TabRules:
     class UniversalNegatedUndesignated(FDE.TabRules.UniversalNegatedUndesignated):
         pass
 
-    closure_rules = [
+    closure_rules = (
         GapClosure,
         DesignationClosure,
-    ]
+    )
 
-    rule_groups = [
-        [
+    rule_groups = (
+        (
             # non-branching rules
             AssertionDesignated,
             AssertionUndesignated,
@@ -345,8 +309,8 @@ class TabRules:
             UniversalNegatedUndesignated,
             DoubleNegationDesignated,
             DoubleNegationUndesignated,
-        ],
-        [
+        ),
+        (
             # 2 branching rules
             ConjunctionNegatedDesignated,
             ConjunctionUndesignated,
@@ -362,18 +326,18 @@ class TabRules:
             BiconditionalNegatedDesignated,
             BiconditionalUndesignated,
             BiconditionalNegatedUndesignated,
-        ],
-        [
+        ),
+        (
             # 3 branching rules
             ConditionalDesignated,
             BiconditionalDesignated,
-        ],
-        [
+        ),
+        (
             ExistentialDesignated,
             ExistentialUndesignated,
-        ],
-        [
+        ),
+        (
             UniversalDesignated,
             UniversalUndesignated,
-        ],
-    ]
+        ),
+    )

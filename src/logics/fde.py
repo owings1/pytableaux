@@ -20,41 +20,58 @@
 # pytableaux - First Degree Entailment Logic
 from __future__ import annotations
 
-from tools.abcs import T
 name = 'FDE'
 
 class Meta:
     title    = 'First Degree Entailment'
     category = 'Many-valued'
     description = 'Four-valued logic (True, False, Neither, Both)'
-    tags = ['many-valued', 'gappy', 'glutty', 'non-modal', 'first-order']
+    tags = 'many-valued', 'gappy', 'glutty', 'non-modal', 'first-order'
     category_display_order = 10
 
 from errors import ModelValueError
-from tools.decorators import abstract, static
-from tools.sets import setf, EMPTY_SET
+from tools.abcs import T
+from tools.decorators import static
+from tools.sets import setf
 from tools.hybrids import qsetf
+from lexicals import (
+    Argument,
+    Atomic,
+    Constant,
+    Predicate,
+    Predicated,
+    Quantified,
+    Quantifier,
+    Operated,
+    Operator as Oper,
+    Sentence,
+)
 from models import BaseModel, Mval
-from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
-    Sentence, Atomic, Predicated, Quantified, Operated, Argument
+from proof.common import Branch, Node, Target
+from proof.baserules import (
+    BaseClosureRule,
+    ExtendedQuantifierRule,
+    GetNodeTargetsRule,
+    NarrowQuantifierRule,
+    OperatedSentenceRule,
+    QuantifiedSentenceRule,
+)
+from proof.filters import NodeFilters
 from proof.tableaux import (
     Tableau,
     TableauxSystem as BaseSystem,
 )
-from proof.baserules import (
-    BaseClosureRule,
-    BaseNodeRule,
-    GetNodeTargetsRule,
-    OperatedSentenceRule,
-    QuantifiedSentenceRule,
-    NarrowQuantifierRule,
-    ExtendedQuantifierRule,
-)
-from proof.common import Branch, Node, Target
-from proof.filters import NodeFilters
 
 from typing import Any
 
+def sdnode(s: Sentence, d: bool):
+    return dict(sentence = s, designated = d)
+
+def group(*items: T) -> tuple[T, ...]:
+    return items
+
+def adds(*groups: tuple[dict, ...]):
+    return dict(adds = groups)
 
 class Model(BaseModel):
     'An FDE Model.'
@@ -127,9 +144,15 @@ class Model(BaseModel):
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: :m:`F`, :m:`N`, :m:`B`, :m:`T`.
         """
-        return max(
-            self.value_of(c >> s, **kw) for c in self.constants
-        )
+        maxval = max(self.Value)
+        value = min(self.Value)
+        for c in self.constants:
+            v = self.value_of(c >> s, **kw)
+            if v > value:
+                value = v
+                if value is maxval:
+                    break
+        return value
 
     def value_of_universal(self, s: Quantified, /, **kw):
         """
@@ -137,9 +160,15 @@ class Model(BaseModel):
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: :m:`F`, :m:`N`, :m:`B`, :m:`T`.
         """
-        return min(
-            self.value_of(c >> s, **kw) for c in self.constants
-        )
+        minval = min(self.Value)
+        value = max(self.Value)
+        for c in self.constants:
+            v = self.value_of(c >> s, **kw)
+            if v < value:
+                value = v
+                if value is minval:
+                    break
+        return value
 
     def is_sentence_opaque(self, s: Sentence, /) -> bool:
         """
@@ -149,7 +178,7 @@ class Model(BaseModel):
         return (
             type(s) is Operated and
             s.operator in self.modal_operators
-         ) or super().is_sentence_opaque(s)
+        ) or super().is_sentence_opaque(s)
 
     def is_countermodel_to(self, argument: Argument, /) -> bool:
         """
@@ -162,83 +191,81 @@ class Model(BaseModel):
                 return False
         return self.value_of(argument.conclusion) not in self.designated_values
 
-    def get_data(self) -> dict[str, dict]:
-        data: dict[str, dict] = {}
-        data.update({
-            'Atomics' : {
-                'description'     : 'atomic values',
-                'datatype'        : 'function',
-                'typehint'        : 'truth_function',
-                'input_datatype'  : 'sentence',
-                'output_datatype' : 'string',
-                'output_typehint' : 'truth_value',
-                'symbol'          : 'v',
-                'values'          : [
-                    {
-                        'input'  : s,
-                        'output' : self.atomics[s]
-                    }
+    def get_data(self):
+        return dict(
+            Atomics = dict(
+                description     = 'atomic values',
+                datatype        = 'function',
+                typehint        = 'truth_function',
+                input_datatype  = 'sentence',
+                output_datatype = 'string',
+                output_typehint = 'truth_value',
+                symbol          = 'v',
+                values          = [
+                    dict(
+                        input  = s,
+                        output = self.atomics[s]
+                    )
                     for s in sorted(self.atomics)
                 ]
-            },
-            'Opaques' : {
-                'description'     : 'opaque values',
-                'datatype'        : 'function',
-                'typehint'        : 'truth_function',
-                'input_datatype'  : 'sentence',
-                'output_datatype' : 'string',
-                'output_typehint' : 'truth_value',
-                'symbol'          : 'v',
-                'values'          : [
-                    {
-                        'input'  : s,
-                        'output' : self.opaques[s]
-                    }
+            ),
+            Opaques = dict(
+                description     = 'opaque values',
+                datatype        = 'function',
+                typehint        = 'truth_function',
+                input_datatype  = 'sentence',
+                output_datatype = 'string',
+                output_typehint = 'truth_value',
+                symbol          = 'v',
+                values          = [
+                    dict(
+                        input  = s,
+                        output = self.opaques[s]
+                    )
                     for s in sorted(self.opaques)
                 ]
-            },
-            'Predicates' : {
-                'description' : 'predicate extensions/anti-extensions',
-                'in_summary'  : True,
-                'datatype'    : 'list',
-                'values'      : list()
-            }
-        })
-        for predicate in sorted(list(self.predicates)):
-            pdata = [
-                {
-                    'description'     : 'predicate extension',
-                    'datatype'        : 'function',
-                    'typehint'        : 'extension',
-                    'input_datatype'  : 'predicate',
-                    'output_datatype' : 'set',
-                    'output_typehint' : 'extension',
-                    'symbol'          : 'P+',
-                    'values'          : [
-                        {
-                            'input'  : predicate,
-                            'output' : self.get_extension(predicate),
-                        }
+            ),
+            Predicates = dict(
+                description = 'predicate extensions/anti-extensions',
+                in_summary  = True,
+                datatype    = 'list',
+                values      = [
+                    [
+                        dict(
+                            description     = 'predicate extension',
+                            datatype        = 'function',
+                            typehint        = 'extension',
+                            input_datatype  = 'predicate',
+                            output_datatype = 'set',
+                            output_typehint = 'extension',
+                            symbol          = 'P+',
+                            values          = [
+                                dict(
+                                    input  = predicate,
+                                    output = self.get_extension(predicate),
+                                )
+                            ]
+                        ),
+                        dict(
+                            description     = 'predicate anti-extension',
+                            datatype        = 'function',
+                            typehint        = 'extension',
+                            input_datatype  = 'predicate',
+                            output_datatype = 'set',
+                            output_typehint = 'extension',
+                            symbol          = 'P-',
+                            values          = [
+                                dict(
+                                    input  = predicate,
+                                    output = self.get_anti_extension(predicate),
+                                )
+                            ]
+                        )
                     ]
-                },
-                {
-                    'description'     : 'predicate anti-extension',
-                    'datatype'        : 'function',
-                    'typehint'        : 'extension',
-                    'input_datatype'  : 'predicate',
-                    'output_datatype' : 'set',
-                    'output_typehint' : 'extension',
-                    'symbol'          : 'P-',
-                    'values'          : [
-                        {
-                            'input'  : predicate,
-                            'output' : self.get_anti_extension(predicate),
-                        }
-                    ]
-                }
-            ]
-            data['Predicates']['values'].extend(pdata)
-        return data
+                    for predicate in sorted(self.predicates)
+                ]
+            )
+        )
 
     def read_branch(self, branch: Branch, /):
         for node in branch:
@@ -253,7 +280,7 @@ class Model(BaseModel):
                     # If the sentence is negated, set the value of the negatum
                     s = s.lhs
                     if node['designated']:
-                        if branch.has({'sentence': s, 'designated': True}):
+                        if branch.has(sdnode(s, True)):
                             # If the node is designated, and the negatum is
                             # also designated on b, the value is B
                             value = self.Value.B
@@ -262,7 +289,7 @@ class Model(BaseModel):
                             # not also designated on b, the value is F
                             value = self.Value.F
                     else:
-                        if branch.has({'sentence': s, 'designated': False}):
+                        if branch.has(sdnode(s, False)):
                             # If the node is undesignated, and the negatum is
                             # also undesignated on b, the value is N
                             value = self.Value.N
@@ -273,7 +300,7 @@ class Model(BaseModel):
                 else:
                     # If the sentence is unnegated, set the value of the sentence
                     if node['designated']:
-                        if branch.has({'sentence': s.negate(), 'designated': True}):
+                        if branch.has(sdnode(~s, True)):
                             # If the node is designated, and its negation is
                             # also designated on b, the value is B
                             value = self.Value.B
@@ -282,7 +309,7 @@ class Model(BaseModel):
                             # not also designated on b, the value is T
                             value = self.Value.T
                     else:
-                        if branch.has({'sentence': s.negate(), 'designated': False}):
+                        if branch.has(sdnode(~s, False)):
                             # If the node is undesignated, and its negation is
                             # also undesignated on b, the value is N
                             value = self.Value.N
@@ -545,7 +572,6 @@ class TableauxSystem(BaseSystem):
                 last_is_negated = False
         return complexity
 
-
 class DefaultNodeRule(GetNodeTargetsRule):
     """Default FDE node rule with:
     
@@ -559,7 +585,7 @@ class DefaultNodeRule(GetNodeTargetsRule):
     designation: bool|None = None
 
 class OperatorNodeRule(OperatedSentenceRule, DefaultNodeRule):
-    'Convenience mixin class for most common rules.'
+    'Mixin class for typical operator rules.'
     pass
 
 class QuantifierSkinnyRule(NarrowQuantifierRule, DefaultNodeRule):
@@ -567,15 +593,6 @@ class QuantifierSkinnyRule(NarrowQuantifierRule, DefaultNodeRule):
 
 class QuantifierFatRule(ExtendedQuantifierRule, DefaultNodeRule):
     pass
-
-def sdnode(s: Sentence, d: bool):
-    return dict(sentence = s, designated = d)
-
-def group(*items: T) -> tuple[T, ...]:
-    return items
-
-def adds(*groups: tuple[dict, ...]):
-    return dict(adds = groups)
 
 class ConjunctionReducingRule(OperatorNodeRule):
 
@@ -585,7 +602,7 @@ class ConjunctionReducingRule(OperatorNodeRule):
     def _get_node_targets(self, node: Node, _):
         oper = self.conjunct_op
         lhs, rhs = self.sentence(node)
-        s = oper((lhs, rhs)) & oper((rhs, lhs))
+        s = oper(lhs, rhs) & oper(rhs, lhs)
         if self.negated:
             s = ~s
         return adds(group(sdnode(s, self.designation)))

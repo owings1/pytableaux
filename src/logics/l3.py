@@ -24,10 +24,11 @@ class Meta:
     title    = u'Łukasiewicz 3-valued Logic'
     category = 'Many-valued'
     description = 'Three-valued logic (True, False, Neither) with a primitive Conditional operator'
-    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
+    tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
     category_display_order = 80
 
-from lexicals import Operated, Operator as Oper
+from lexicals import Operator as Oper
+from proof.common import Node
 from . import fde as FDE, k3 as K3
 from logics.fde import adds, group, sdnode
 
@@ -66,36 +67,60 @@ class TabRules:
     the exception of the rules for the conditional and biconditional operators.
     """
 
-    class GlutClosure(K3.TabRules.GlutClosure): pass
-    class DesignationClosure(FDE.TabRules.DesignationClosure): pass
+    class GlutClosure(K3.TabRules.GlutClosure):
+        pass
+    class DesignationClosure(FDE.TabRules.DesignationClosure):
+        pass
 
-    class DoubleNegationDesignated(FDE.TabRules.DoubleNegationDesignated): pass
-    class DoubleNegationUndesignated(FDE.TabRules.DoubleNegationUndesignated): pass
+    class DoubleNegationDesignated(FDE.TabRules.DoubleNegationDesignated):
+        pass
+    class DoubleNegationUndesignated(FDE.TabRules.DoubleNegationUndesignated):
+        pass
 
-    class AssertionDesignated(FDE.TabRules.AssertionDesignated): pass
-    class AssertionNegatedDesignated(FDE.TabRules.AssertionNegatedDesignated): pass
-    class AssertionUndesignated(FDE.TabRules.AssertionUndesignated): pass
-    class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated): pass
+    class AssertionDesignated(FDE.TabRules.AssertionDesignated):
+        pass
+    class AssertionNegatedDesignated(FDE.TabRules.AssertionNegatedDesignated):
+        pass
+    class AssertionUndesignated(FDE.TabRules.AssertionUndesignated):
+        pass
+    class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated):
+        pass
 
-    class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated): pass
-    class ConjunctionNegatedDesignated(FDE.TabRules.ConjunctionNegatedDesignated): pass
-    class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated): pass
-    class ConjunctionNegatedUndesignated(FDE.TabRules.ConjunctionNegatedUndesignated): pass
+    class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
+        pass
+    class ConjunctionNegatedDesignated(FDE.TabRules.ConjunctionNegatedDesignated):
+        pass
+    class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated):
+        pass
+    class ConjunctionNegatedUndesignated(FDE.TabRules.ConjunctionNegatedUndesignated):
+        pass
 
-    class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated): pass
-    class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated): pass
-    class DisjunctionUndesignated(FDE.TabRules.DisjunctionUndesignated): pass
-    class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated): pass
+    class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
+        pass
+    class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated):
+        pass
+    class DisjunctionUndesignated(FDE.TabRules.DisjunctionUndesignated):
+        pass
+    class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
+        pass
 
-    class MaterialConditionalDesignated(FDE.TabRules.MaterialConditionalDesignated): pass
-    class MaterialConditionalNegatedDesignated(FDE.TabRules.MaterialConditionalNegatedDesignated): pass
-    class MaterialConditionalUndesignated(FDE.TabRules.MaterialConditionalUndesignated): pass
-    class MaterialConditionalNegatedUndesignated(FDE.TabRules.MaterialConditionalNegatedUndesignated): pass
+    class MaterialConditionalDesignated(FDE.TabRules.MaterialConditionalDesignated):
+        pass
+    class MaterialConditionalNegatedDesignated(FDE.TabRules.MaterialConditionalNegatedDesignated):
+        pass
+    class MaterialConditionalUndesignated(FDE.TabRules.MaterialConditionalUndesignated):
+        pass
+    class MaterialConditionalNegatedUndesignated(FDE.TabRules.MaterialConditionalNegatedUndesignated):
+        pass
 
-    class MaterialBiconditionalDesignated(FDE.TabRules.MaterialBiconditionalDesignated): pass
-    class MaterialBiconditionalNegatedDesignated(FDE.TabRules.MaterialBiconditionalNegatedDesignated): pass
-    class MaterialBiconditionalUndesignated(FDE.TabRules.MaterialBiconditionalUndesignated): pass
-    class MaterialBiconditionalNegatedUndesignated(FDE.TabRules.MaterialBiconditionalNegatedUndesignated): pass
+    class MaterialBiconditionalDesignated(FDE.TabRules.MaterialBiconditionalDesignated):
+        pass
+    class MaterialBiconditionalNegatedDesignated(FDE.TabRules.MaterialBiconditionalNegatedDesignated):
+        pass
+    class MaterialBiconditionalUndesignated(FDE.TabRules.MaterialBiconditionalUndesignated):
+        pass
+    class MaterialBiconditionalNegatedUndesignated(FDE.TabRules.MaterialBiconditionalNegatedUndesignated):
+        pass
 
     class ConditionalDesignated(FDE.OperatorNodeRule):
         """
@@ -111,22 +136,17 @@ class TabRules:
         designation = True
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
-            disj = lhs.negate().disjoin(rhs)
-            return {
-                'adds': [
-                    [
-                        {'sentence': disj, 'designated': True},
-                    ],
-                    [
-                        {'sentence': lhs         , 'designated': False},
-                        {'sentence': lhs.negate(), 'designated': False},
-                        {'sentence': rhs         , 'designated': False},
-                        {'sentence': rhs.negate(), 'designated': False},
-                    ],
-                ],
-            }
+            return adds(
+                group(sdnode(~lhs | rhs, True)),
+                group(
+                    sdnode( lhs, False),
+                    sdnode(~lhs, False),
+                    sdnode( rhs, False),
+                    sdnode(~rhs, False),
+                )
+            )
 
     class ConditionalNegatedDesignated(FDE.TabRules.ConditionalNegatedDesignated):
         pass
@@ -143,21 +163,19 @@ class TabRules:
         designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
-            s = self.sentence(node)
-            return {
-                'adds': [
-                    [
-                        {'sentence': s.lhs, 'designated': True},
-                        {'sentence': s.rhs, 'designated': False},
-                    ],
-                    [
-                        {'sentence': s.lhs         , 'designated': False},
-                        {'sentence': s.lhs.negate(), 'designated': False},
-                        {'sentence': s.rhs.negate(), 'designated': True},
-                    ],
-                ],
-            }
+        def _get_node_targets(self, node: Node, _,/):
+            lhs, rhs = self.sentence(node)
+            return adds(
+                group(
+                    sdnode(lhs, True),
+                    sdnode(rhs, False),
+                ),
+                group(
+                    sdnode( lhs, False),
+                    sdnode(~lhs, False),
+                    sdnode(~rhs, True),
+                ),
+            )
 
     class ConditionalNegatedUndesignated(FDE.TabRules.ConditionalNegatedUndesignated):
         pass
@@ -174,22 +192,17 @@ class TabRules:
         designation = True
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
-            bicond = Oper.MaterialBiconditional((lhs, rhs))
-            return {
-                'adds': [
-                    [
-                        {'sentence': bicond, 'designated': True},
-                    ],
-                    [
-                        {'sentence': lhs         , 'designated': False},
-                        {'sentence': lhs.negate(), 'designated': False},
-                        {'sentence': rhs         , 'designated': False},
-                        {'sentence': rhs.negate(), 'designated': False},
-                    ],
-                ],
-            }
+            return adds(
+                group(sdnode(Oper.MaterialBiconditional(lhs, rhs), True)),
+                group(
+                    sdnode( lhs, False),
+                    sdnode(~lhs, False),
+                    sdnode( rhs, False),
+                    sdnode(~rhs, False),
+                )
+            )
 
     class BiconditionalNegatedDesignated(FDE.TabRules.BiconditionalNegatedDesignated):
         pass
@@ -205,20 +218,13 @@ class TabRules:
         designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
-            cond1 = Oper.Conditional((lhs, rhs))
-            cond2 = Oper.Conditional((rhs, lhs))
-            return {
-                'adds': [
-                    [
-                        {'sentence': cond1, 'designated': False},
-                    ],
-                    [
-                        {'sentence': cond2, 'designated': False},
-                    ],
-                ],
-            }
+            Cond = Oper.Conditional
+            return adds(
+                group(sdnode(Cond(lhs, rhs), False)),
+                group(sdnode(Cond(rhs, lhs), False)),
+            )
 
     class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
@@ -233,32 +239,35 @@ class TabRules:
         designation = False
         branch_level = 2
 
-        def _get_node_targets(self, node, branch):
+        def _get_node_targets(self, node: Node, _,/):
             lhs, rhs = self.sentence(node)
-            bicond = Operated(Oper.MaterialBiconditional, (lhs, rhs))
-            return {
-                'adds': [
-                    [
-                        {'sentence': bicond.negate(), 'designated': False},
-                    ],
-                    [
-                        {'sentence': lhs         , 'designated': False},
-                        {'sentence': lhs.negate(), 'designated': False},
-                        {'sentence': rhs         , 'designated': False},
-                        {'sentence': rhs.negate(), 'designated': False},
-                    ],
-                ],
-            }
+            return adds(
+                group(sdnode(~Oper.MaterialBiconditional(lhs, rhs), False)),
+                group(
+                    sdnode( lhs, False),
+                    sdnode(~lhs, False),
+                    sdnode( rhs, False),
+                    sdnode(~rhs, False),
+                )
+            )
 
-    class ExistentialDesignated(FDE.TabRules.ExistentialDesignated): pass
-    class ExistentialNegatedDesignated(FDE.TabRules.ExistentialNegatedDesignated): pass
-    class ExistentialUndesignated(FDE.TabRules.ExistentialUndesignated): pass
-    class ExistentialNegatedUndesignated(FDE.TabRules.ExistentialNegatedUndesignated): pass
+    class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
+        pass
+    class ExistentialNegatedDesignated(FDE.TabRules.ExistentialNegatedDesignated):
+        pass
+    class ExistentialUndesignated(FDE.TabRules.ExistentialUndesignated):
+        pass
+    class ExistentialNegatedUndesignated(FDE.TabRules.ExistentialNegatedUndesignated):
+        pass
 
-    class UniversalDesignated(FDE.TabRules.UniversalDesignated): pass
-    class UniversalNegatedDesignated(FDE.TabRules.UniversalNegatedDesignated): pass
-    class UniversalUndesignated(FDE.TabRules.UniversalUndesignated): pass
-    class UniversalNegatedUndesignated(FDE.TabRules.UniversalNegatedUndesignated): pass
+    class UniversalDesignated(FDE.TabRules.UniversalDesignated):
+        pass
+    class UniversalNegatedDesignated(FDE.TabRules.UniversalNegatedDesignated):
+        pass
+    class UniversalUndesignated(FDE.TabRules.UniversalUndesignated):
+        pass
+    class UniversalNegatedUndesignated(FDE.TabRules.UniversalNegatedUndesignated):
+        pass
 
     closure_rules = (
         GlutClosure,
@@ -315,4 +324,3 @@ class TabRules:
             UniversalUndesignated,
         ),
     )
-

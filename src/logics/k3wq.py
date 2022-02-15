@@ -23,12 +23,13 @@ class Meta(object):
     title    = 'Weak Kleene 3-valued alternate-quantifier logic'
     category = 'Many-valued'
     description = 'Three-valued logic with values T, F, and N, with alternate quantification'
-    tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
+    tags = 'many-valued', 'gappy', 'non-modal', 'first-order'
     category_display_order = 40
 
-from proof.common import Branch, Node, Target
+from proof.common import Branch, Node
 from lexicals import Quantifier, Quantified, Operated
 from . import fde as FDE, k3w as K3W, k3 as K3
+from logics.fde import adds, group, sdnode
 
 class Model(K3W.Model):
     """
@@ -230,22 +231,19 @@ class TabRules(object):
         designation = True
         negated     = False
         quantifier  = Quantifier.Existential
+        convert     = Quantifier.Universal
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Quantified = self.sentence(node)
-            disji = s.sentence.disjoin(s.sentence.negate())
-            sq = Quantifier.Universal(s.variable, disji)
-            r = s.unquantify(branch.new_constant())
+            s = self.sentence(node)
+            v, si = s[1:]
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': sq, 'designated': d},
-                        {'sentence': r , 'designated': d},
-                    ),
-                ),
-            }
+            return adds(
+                group(
+                    sdnode(self.convert(v, si | ~si), d),
+                    sdnode(branch.new_constant() >> s, d),
+                )
+            )
 
     class ExistentialNegatedDesignated(FDE.TabRules.ExistentialNegatedDesignated):
         pass
@@ -262,24 +260,18 @@ class TabRules(object):
         designation = False
         negated     = False
         quantifier  = Quantifier.Existential
+        convert     = Quantifier.Universal
         branch_level = 2
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Quantified = self.sentence(node)
-            r = s.unquantify(branch.new_constant())
-            sq = Quantifier.Universal(s.variable, s.sentence.negate())
+            s = self.sentence(node)
+            v, si = s[1:]
+            r = branch.new_constant() >> s
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': r         , 'designated': d},
-                        {'sentence': r.negate(), 'designated': d},
-                    ),
-                    (
-                        {'sentence': sq, 'designated': not d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode(r, d), sdnode(~r, d)),
+                group(sdnode(self.convert(v, ~si), not d)),
+            )
 
     class ExistentialNegatedUndesignated(FDE.QuantifierSkinnyRule):
         """"
@@ -294,12 +286,10 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Quantified = self.sentence(node)
-            r = s.unquantify(branch.new_constant())
-            d = self.designation
-            return {
-                'adds': (({'sentence': r.negate(), 'designated': d},),),
-            }
+            s = self.sentence(node)
+            return adds(
+                group(sdnode(~(branch.new_constant() >> s), self.designation))
+            )
 
     class UniversalDesignated(FDE.TabRules.UniversalDesignated):
         pass
@@ -318,19 +308,15 @@ class TabRules(object):
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Quantified = self.sentence(node)
-            r = s.unquantify(branch.new_constant())
-            disj = s.sentence.disjoin(s.sentence.negate())
-            sq = self.quantifier(s.variable, disj)
+            s = self.sentence(node)
+            v, si = s[1:]
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': sq        , 'designated': d},
-                        {'sentence': r.negate(), 'designated': d},
-                    ),
-                ),
-            }
+            return adds(
+                group(
+                    sdnode(self.quantifier(v, si | ~si), d),
+                    sdnode(~(branch.new_constant() >> s), d)
+                )
+            )
 
     class UniversalUndesignated(FDE.TabRules.UniversalUndesignated):
         pass
@@ -349,21 +335,14 @@ class TabRules(object):
         branch_level = 2
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Quantified = self.sentence(node)
-            r = s.unquantify(branch.new_constant())
-            sq = self.quantifier(s.variable, s.sentence)
+            s = self.sentence(node)
+            v, si = s[1:]
+            r = branch.new_constant() >> s
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': r         , 'designated': d},
-                        {'sentence': r.negate(), 'designated': d},
-                    ),
-                    (
-                        {'sentence': sq, 'designated': not d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode(r, d), sdnode(~r, d)),
+                group(sdnode(self.quantifier(v, si), not d)),
+            )
 
     closure_rules = (
         GlutClosure,
@@ -428,4 +407,3 @@ class TabRules(object):
             UniversalUndesignated,
         ),
     )
-TableauxRules = TabRules

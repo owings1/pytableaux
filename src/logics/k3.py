@@ -41,37 +41,20 @@ class Model(FDE.Model):
     A K3 model is like an :ref:`FDE model <fde-model>` without the :m:`B` value.
     """
 
-    #: The set of admissible values for sentences in a model.
-    #:
-    #: :type: set
-    #: :value: {T, N, F}
-    #: :meta hide-value:
     class Value(Mval):
-        F = 'False', 0.0
+        'The admissible values for sentences.'
+        F = 'False',   0.0
         N = 'Neither', 0.5
-        T = 'True', 1.0
-    truth_values = qsetf('F' 'N' 'T')
+        T = 'True',    1.0
 
     #: The (singleton) set of designated values in model.
     #:
     #: :type: set
     #: :value: {T}
     #: :meta hide-value:
-    designated_values = setf({Value.T})#setf('T')
+    designated_values = setf({Value.T})
 
-    unassigned_value = Value.N#'N'
-
-    #tmp
-    nvals = {
-        'F': 0   ,
-        'N': 0.5 ,
-        'T': 1   ,
-    }
-    cvals = {
-        0   : 'F',
-        0.5 : 'N',
-        1   : 'T',
-    }
+    unassigned_value = Value.N
 
 class TableauxSystem(FDE.TableauxSystem):
     """
@@ -93,8 +76,6 @@ class TabRules:
         <DesignationClosure>`
         """
 
-        # BranchTarget implementation
-
         def _branch_target_hook(self, node: Node, branch: Branch):
             nnode = self._find_closing_node(node, branch)
             if nnode is not None:
@@ -102,8 +83,6 @@ class TabRules:
                    nodes = qsetf((node, nnode)),
                    branch = branch,
                 )
-
-        # rule implementation
 
         def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
             return bool(self._find_closing_node(node, branch))

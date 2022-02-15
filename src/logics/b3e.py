@@ -43,18 +43,19 @@ class Model(K3W.Model):
     some of the connectives.
     """
 
-    def truth_function(self, operator, a, b = None):
-        if operator == Oper.Assertion:
+    def truth_function(self, oper: Oper, a, b = None, /):
+        oper = Oper(oper)
+        if oper is Oper.Assertion:
             return self.Value[crunch(self.Value[a].num)]
-        elif operator == Oper.Conditional:
+        elif oper is Oper.Conditional:
             return self.truth_function(
                 Oper.Disjunction,
                 self.truth_function(Oper.Negation, self.truth_function(Oper.Assertion, a)),
                 self.truth_function(Oper.Assertion, b)
             )
-        elif operator == Oper.Biconditional:
-            return FDE.Model.truth_function(self, operator, a, b)
-        return super().truth_function(operator, a, b)
+        elif oper is Oper.Biconditional:
+            return FDE.Model.truth_function(self, oper, a, b)
+        return super().truth_function(oper, a, b)
 
 class TableauxSystem(FDE.TableauxSystem):
     """

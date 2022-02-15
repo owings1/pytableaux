@@ -45,13 +45,14 @@ class Model(K3.Model):
     """
 
     def truth_function(self, oper: Oper, a, b=None):
-        if oper == Oper.Assertion:
+        oper = Oper(oper)
+        if oper is Oper.Assertion:
             return self.Value[crunch(self.Value[a].num)]
-        elif oper == Oper.Disjunction:
+        elif oper is Oper.Disjunction:
             return self.Value[max(crunch(self.Value[a].num), crunch(self.Value[b].num))]
-        elif oper == Oper.Conjunction:
+        elif oper is Oper.Conjunction:
             return self.Value[min(crunch(self.Value[a].num), crunch(self.Value[b].num))]
-        elif oper == Oper.Conditional:
+        elif oper is Oper.Conditional:
             return self.Value[
                 crunch(
                     max(

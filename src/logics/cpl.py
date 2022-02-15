@@ -37,7 +37,7 @@ class Model(K.Model):
     A CPL Model is just a :ref:`K model <k-model>` with a single :ref:`frame <k-frame>`.
     """
 
-    def is_sentence_opaque(self, s: Sentence):
+    def is_sentence_opaque(self, s: Sentence, /):
         """
         A sentence is opaque if it is a quantified sentence, or its operator is
         either Necessity or Possibility.
@@ -86,8 +86,10 @@ class TabRules(Abc):
         'Remove Modal filter from NodeFilters, and clear modal attribute.'
         from proof.types import demodalize_rules
         from itertools import chain
-        it = chain(cls.closure_rules, chain.from_iterable(cls.rule_groups))
-        demodalize_rules(it)
+        demodalize_rules(chain(
+            cls.closure_rules,
+            chain.from_iterable(cls.rule_groups)
+        ))
 
     class ContradictionClosure(K.TabRules.ContradictionClosure):
         """

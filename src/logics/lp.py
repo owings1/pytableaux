@@ -30,10 +30,9 @@ from lexicals import Atomic
 from models import Mval
 from proof.baserules import BaseClosureRule
 from proof.common import Branch, Node, Target
-# from proof.helpers import NodeTarget
 from tools.hybrids import qsetf
 from . import fde as FDE
-from logics.fde import sdnode, group
+from logics.fde import sdnode
 
 class Model(FDE.Model):
     """
@@ -44,11 +43,8 @@ class Model(FDE.Model):
         F = 'False', 0.0
         B = 'Both', 0.5
         T = 'True', 1.0
-    #: The admissible values
-    truth_values = FDE.Model.truth_values - {'N'}
-    unassigned_value = Value.F#'F'
-    nvals = {k: v for k,v in FDE.Model.nvals.items() if k != 'N'}
-    cvals = {k: v for k,v in FDE.Model.cvals.items() if v != 'N'}
+
+    unassigned_value = Value.F
 
 class TableauxSystem(FDE.TableauxSystem):
     """
