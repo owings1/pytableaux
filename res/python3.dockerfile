@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM python:3.10.2-alpine
 
 WORKDIR /app
 EXPOSE 8080 8181
