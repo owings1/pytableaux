@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-__all__ = 'BaseModel', 
+__all__ = 'BaseModel', 'Mval'
 
 from errors import instcheck, Emsg
-from tools.abcs import Abc
+from tools.abcs import Abc, AbcEnum
 from tools.decorators import abstract
 from tools.hybrids import qsetf
 from tools.sets import setf
@@ -19,12 +19,59 @@ from itertools import (
     # starmap,
 )
 from typing import (
-    Any, Mapping
+    Any, ClassVar, Mapping
 )
 
-ModelValue = Any
+
+class Mval(AbcEnum):
+
+    __slots__ = 'name', 'label', 'num',
+
+    label: str
+    num: float
+
+    def __init__(self, label: str, num: float):
+        self.label = label
+        self.num = num
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if isinstance(other, float):
+            return other == self.num
+        if isinstance(other, str):
+            return other == self.name or other == self.label
+        if isinstance(other, int):
+            return float(other) == self.num
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(self.num)
+
+    def __le__(self, other):
+        return self.num <= other
+    def __lt__(self, other):
+        return self.num < other
+    def __ge__(self, other):
+        return self.num >= other
+    def __gt__(self, other):
+        return self.num > other
+
+    def __float__(self):
+        return self.num
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def _member_keys(cls, member: Mval):
+        return super()._member_keys(member) | {member.label, member.num}
+
+MvalT = Mval | str | float
 
 class BaseModel(Abc):
+
+    Value: ClassVar[type[Mval]]
 
     truth_values = qsetf()
     # Default set
@@ -54,7 +101,7 @@ class BaseModel(Abc):
     @abstract
     def read_branch(self, branch): ...
 
-    def value_of(self, s: Sentence, /, **kw) -> ModelValue:
+    def value_of(self, s: Sentence, /, **kw) -> MvalT:
         if self.is_sentence_opaque(s):
             return self.value_of_opaque(s, **kw)
         stype = type(s)
@@ -70,7 +117,7 @@ class BaseModel(Abc):
         raise NotImplementedError
 
     @abstract
-    def truth_function(self, oper: Operator, *values) -> ModelValue:
+    def truth_function(self, oper: Operator, *values) -> MvalT:
         # TODO: accept single iterable
         if oper not in self.truth_functional_operators:
             raise TypeError(oper)
@@ -80,7 +127,7 @@ class BaseModel(Abc):
 
     def truth_table_inputs(self, arity: int):
         return tuple(product(
-            *repeat(self.truth_values, arity)
+            *repeat(self.Value.seq, arity)
         ))
 
     def is_sentence_opaque(self, s: Sentence, /, **kw):
@@ -97,26 +144,26 @@ class BaseModel(Abc):
         )
 
     @abstract
-    def value_of_opaque(self, s: Sentence, /, **kw) -> ModelValue:
+    def value_of_opaque(self, s: Sentence, /, **kw) -> MvalT:
         instcheck(s, Sentence)
         raise NotImplementedError
 
     @abstract
-    def value_of_atomic(self, s: Atomic, /, **kw) -> ModelValue:
+    def value_of_atomic(self, s: Atomic, /, **kw) -> MvalT:
         instcheck(s, Atomic)
         raise NotImplementedError
 
     @abstract
-    def value_of_predicated(self, s: Predicated, /, **kw) -> ModelValue:
+    def value_of_predicated(self, s: Predicated, /, **kw) -> MvalT:
         instcheck(s, Predicated)
         raise NotImplementedError
 
     @abstract
-    def value_of_quantified(self, s: Quantified, /, **kw) -> ModelValue:
+    def value_of_quantified(self, s: Quantified, /, **kw) -> MvalT:
         instcheck(s, Quantified)
         raise NotImplementedError
 
-    def value_of_operated(self, s: Operated, /, **kw) -> ModelValue:
+    def value_of_operated(self, s: Operated, /, **kw) -> MvalT:
         return self.truth_function(
             s.operator,
             *(

@@ -39,8 +39,8 @@ class Model(K3.Model):
 
     def truth_function(self, operator, a, b = None):
         if operator == Oper.Conditional:
-            if a == 'N' and b == 'N':
-                return 'T'
+            if a == self.Value.N and b == self.Value.N:
+                return self.Value.T
         return super().truth_function(operator, a, b)
 
 class TableauxSystem(FDE.TableauxSystem):

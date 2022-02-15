@@ -138,7 +138,7 @@ def parse_argument(conclusion, premises = None, title: str = None, **opts) -> Ar
     """
     return create_parser(**opts).argument(conclusion, premises, title = title)
 
-def create_parser(notn: Notation = None, vocab: Predicates = None, table: CharTable = None, **opts) -> Parser:
+def create_parser(notn: Notation = None, vocab: Predicates = None, table: CharTable = None, **opts) -> BaseParser:
     """
     Create a sentence parser with the given spec. This is
     useful if you parsing many sentences with the same notation

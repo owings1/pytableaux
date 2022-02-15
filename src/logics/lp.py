@@ -27,6 +27,7 @@ class Meta:
     category_display_order = 100
 
 from lexicals import Atomic
+from models import Mval
 from proof.baserules import BaseClosureRule
 from proof.common import Branch, Node, Target
 # from proof.helpers import NodeTarget
@@ -39,9 +40,13 @@ class Model(FDE.Model):
     An LP model is like an :ref:`FDE model <fde-model>` without the :m:`N` value,
     which yields an exhaustion restraint an predicate's extension/anti-extension.
     """
+    class Value(Mval):
+        F = 'False', 0.0
+        B = 'Both', 0.5
+        T = 'True', 1.0
     #: The admissible values
     truth_values = FDE.Model.truth_values - {'N'}
-    unassigned_value = 'F'
+    unassigned_value = Value.F#'F'
     nvals = {k: v for k,v in FDE.Model.nvals.items() if k != 'N'}
     cvals = {k: v for k,v in FDE.Model.cvals.items() if v != 'N'}
 

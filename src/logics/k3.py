@@ -26,6 +26,7 @@ class Meta:
     tags = ['many-valued', 'gappy', 'non-modal', 'first-order']
     category_display_order = 20
 
+from models import Mval
 from proof.baserules import BaseClosureRule
 from tools.hybrids import qsetf
 from lexicals import Atomic
@@ -45,6 +46,10 @@ class Model(FDE.Model):
     #: :type: set
     #: :value: {T, N, F}
     #: :meta hide-value:
+    class Value(Mval):
+        F = 'False', 0.0
+        N = 'Neither', 0.5
+        T = 'True', 1.0
     truth_values = qsetf('F' 'N' 'T')
 
     #: The (singleton) set of designated values in model.
@@ -52,9 +57,9 @@ class Model(FDE.Model):
     #: :type: set
     #: :value: {T}
     #: :meta hide-value:
-    designated_values = setf('T')
+    designated_values = setf({Value.T})#setf('T')
 
-    unassigned_value = 'N'
+    unassigned_value = Value.N#'N'
 
     #tmp
     nvals = {
@@ -107,10 +112,6 @@ class TabRules:
         def example_nodes():
             a = Atomic.first()
             return sdnode(a, True), sdnode(~a, True)
-            return (
-                {'sentence': a         , 'designated': True},
-                {'sentence': a.negate(), 'designated': True},
-            )
 
         # util
 

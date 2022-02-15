@@ -1440,10 +1440,10 @@ class LexType(Bases.Enum):
         self.hash = hash(type(self).__name__) + self.rank
         self.cls.TYPE = self
 
-    def __repr__(self, /, *, fmt: Callable[..., str] = '<%s.%s>'.__mod__):
+    def __repr__(self, /):
         name = __class__.__name__
         try:
-            return fmt(name, self.cls)
+            return '<%s.%s>' % (name, self.cls)
         except AttributeError:
             return '<%s ?ERR?>' % name
 

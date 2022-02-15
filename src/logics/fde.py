@@ -34,7 +34,7 @@ from errors import ModelValueError
 from tools.decorators import abstract, static
 from tools.sets import setf, EMPTY_SET
 from tools.hybrids import qsetf
-from models import BaseModel
+from models import BaseModel, Mval
 from lexicals import Constant, Predicate, Operator as Oper, Quantifier, \
     Sentence, Atomic, Predicated, Quantified, Operated, Argument
 from proof.tableaux import (
@@ -55,41 +55,25 @@ from proof.filters import NodeFilters
 
 from typing import Any
 
-Identity:  Predicate = Predicate.System.Identity
-Existence: Predicate = Predicate.System.Existence
 
 class Model(BaseModel):
     'An FDE Model.'
 
-    #: The set of admissible values for sentences.
-    #:
-    #: :type: set
-    #: :value: {T, B, N, F}
-    #: :meta hide-value:
-    truth_values = qsetf(('F', 'N', 'B', 'T'))
+    class Value(Mval):
+        'The admissible values for sentences.'
+        F = 'False',   0.0
+        N = 'Neither', 0.25
+        B = 'Both',    0.75
+        T = 'True',    1.0
 
     #: The set of designated values.
     #:
     #: :type: set
     #: :value: {T, B}
     #: :meta hide-value:
-    designated_values = setf({'B', 'T'})
+    designated_values = setf({Value.B, Value.T})
 
-    unassigned_value = 'N'
-
-    nvals = {
-        'F': 0    ,
-        'N': 0.25 ,
-        'B': 0.75 ,
-        'T': 1    ,
-    }
-
-    cvals = {
-        0    : 'F',
-        0.25 : 'N',
-        0.75 : 'B',
-        1    : 'T',
-    }
+    unassigned_value = Value.N
 
     def __init__(self):
 
@@ -124,17 +108,18 @@ class Model(BaseModel):
         self.predicates: set[Predicate] = set()
 
     def value_of_predicated(self, s: Predicated, /, **kw):
+        Value = self.Value
         params = s.params
         pred = s.predicate
         extension = self.get_extension(pred)
         anti_extension = self.get_anti_extension(pred)
         if params in extension:
             if params in anti_extension:
-                return 'B'
-            return 'T'
+                return Value.B
+            return Value.T
         if params in anti_extension:
-            return 'F'
-        return 'N'
+            return Value.F
+        return Value.N
 
     def value_of_existential(self, s: Quantified, /, **kw):
         """
@@ -142,8 +127,9 @@ class Model(BaseModel):
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: :m:`F`, :m:`N`, :m:`B`, :m:`T`.
         """
-        values = {self.value_of(s.unquantify(c), **kw) for c in self.constants}
-        return self.cvals[max({self.nvals[value] for value in values})]
+        return max(
+            self.value_of(c >> s, **kw) for c in self.constants
+        )
 
     def value_of_universal(self, s: Quantified, /, **kw):
         """
@@ -151,10 +137,11 @@ class Model(BaseModel):
         result from replacing each constant for the quantified variable. The ordering of
         the values from least to greatest is: :m:`F`, :m:`N`, :m:`B`, :m:`T`.
         """
-        values = {self.value_of(s.unquantify(c), **kw) for c in self.constants}
-        return self.cvals[min({self.nvals[value] for value in values})]
+        return min(
+            self.value_of(c >> s, **kw) for c in self.constants
+        )
 
-    def is_sentence_opaque(self, s: Sentence) -> bool:
+    def is_sentence_opaque(self, s: Sentence, /) -> bool:
         """
         A sentence is opaque if its operator is Necessity or Possibility, or if it is
         a negated sentence whose negatum has the operator Necessity or Possibility.
@@ -164,7 +151,7 @@ class Model(BaseModel):
             s.operator in self.modal_operators
          ) or super().is_sentence_opaque(s)
 
-    def is_countermodel_to(self, argument: Argument) -> bool:
+    def is_countermodel_to(self, argument: Argument, /) -> bool:
         """
         A model is a countermodel to an argument iff the value of every premise
         is in the set of designated values, and the value of the conclusion
@@ -253,7 +240,7 @@ class Model(BaseModel):
             data['Predicates']['values'].extend(pdata)
         return data
 
-    def read_branch(self, branch: Branch):
+    def read_branch(self, branch: Branch, /):
         for node in branch:
             s: Sentence = node.get('sentence')
             if not s:
@@ -269,47 +256,47 @@ class Model(BaseModel):
                         if branch.has({'sentence': s, 'designated': True}):
                             # If the node is designated, and the negatum is
                             # also designated on b, the value is B
-                            value = 'B'
+                            value = self.Value.B
                         else:
                             # If the node is designated, but the negatum is
                             # not also designated on b, the value is F
-                            value = 'F'
+                            value = self.Value.F
                     else:
                         if branch.has({'sentence': s, 'designated': False}):
                             # If the node is undesignated, and the negatum is
                             # also undesignated on b, the value is N
-                            value = 'N'
+                            value = self.Value.N
                         else:
                             # If the node is undesignated, but the negatum is
                             # not also undesignated on b, the value is T
-                            value = 'T'
+                            value = self.Value.T
                 else:
                     # If the sentence is unnegated, set the value of the sentence
                     if node['designated']:
                         if branch.has({'sentence': s.negate(), 'designated': True}):
                             # If the node is designated, and its negation is
                             # also designated on b, the value is B
-                            value = 'B'
+                            value = self.Value.B
                         else:
                             # If the node is designated, but the negation is
                             # not also designated on b, the value is T
-                            value = 'T'
+                            value = self.Value.T
                     else:
                         if branch.has({'sentence': s.negate(), 'designated': False}):
                             # If the node is undesignated, and its negation is
                             # also undesignated on b, the value is N
-                            value = 'N'
+                            value = self.Value.N
                         else:
                             # If the node is undesginated, but the negation is
                             # not also undesignated on b, the value is F
-                            value = 'F'
+                            value = self.Value.F
                 if is_opaque:
                     self.set_opaque_value(s, value)
                 else:
                     self.set_literal_value(s, value)
         self.finish()
 
-    def _collect_node(self, node: Node):
+    def _collect_node(self, node: Node, /):
         s: Sentence = node.get('sentence')
         if s is not None:
             self.predicates.update(s.predicates)
@@ -323,8 +310,10 @@ class Model(BaseModel):
             if s not in self.atomics:
                 self.set_literal_value(s, self.unassigned_value)
 
-    def set_literal_value(self, s: Sentence, value):
-        if value not in self.truth_values:
+    def set_literal_value(self, s: Sentence, value, /):
+        try:
+            value = self.Value[value]
+        except KeyError:
             self._raise_value('UnknownForSentence', value, s)
         cls = s.TYPE.cls
         if self.is_sentence_opaque(s):
@@ -341,10 +330,12 @@ class Model(BaseModel):
         else:
             raise NotImplementedError()
 
-    def set_opaque_value(self, s: Sentence, value):
-        if value not in self.truth_values:
+    def set_opaque_value(self, s: Sentence, value, /):
+        try:
+            value = self.Value[value]
+        except KeyError:
             self._raise_value('UnknownForSentence', value, s)
-        if s in self.opaques and self.opaques[s] != value:
+        if s in self.opaques and self.opaques[s] is not value:
             self._raise_value('ConflictForSentence', value, s)
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants, as well
@@ -354,15 +345,20 @@ class Model(BaseModel):
         self.constants.update(s.constants)
         self.opaques[s] = value
         
-    def set_atomic_value(self, s: Atomic, value):
-        if value not in self.truth_values:
+    def set_atomic_value(self, s: Atomic, value, /):
+        try:
+            value = self.Value[value]
+        except KeyError:
             self._raise_value('UnknownForSentence', value, s)
-        if s in self.atomics and self.atomics[s] != value:
+        if s in self.atomics and self.atomics[s] is not value:
             self._raise_value('ConflictForSentence', value, s)
         self.atomics[s] = value
 
-    def set_predicated_value(self, s: Predicated, value):
-        if value not in self.truth_values:
+    def set_predicated_value(self, s: Predicated, value, /):
+        Value = self.Value
+        try:
+            value = Value[value]
+        except KeyError:
             self._raise_value('UnknownForSentence', value, s)
         predicate = s.predicate
         params = s.params
@@ -371,83 +367,84 @@ class Model(BaseModel):
                 self.constants.add(param)
         extension = self.get_extension(predicate)
         anti_extension = self.get_anti_extension(predicate)
-        if value == 'N':
+        if value is Value.N:
             if params in extension:
                 self._raise_value('ConflictForExtension', value, params)
             if params in anti_extension:
                 self._raise_value('ConflictForAntiExtension', value, params)
-        elif value == 'T':
+        elif value is Value.T:
             if params in anti_extension:
                 self._raise_value('ConflictForAntiExtension', value, params)
             extension.add(params)
-        elif value == 'F':
+        elif value is Value.F:
             if params in extension:
                 self._raise_value('ConflictForExtension', value, params)
             anti_extension.add(params)
-        elif value == 'B':
+        elif value is Value.B:
             extension.add(params)
             anti_extension.add(params)
         self.predicates.add(predicate)
 
-    def get_extension(self, pred: Predicate) -> set[tuple[Constant, ...]]:
+    def get_extension(self, pred: Predicate, /) -> set[tuple[Constant, ...]]:
         if pred not in self.extensions:
             self.extensions[pred] = set()
             self.predicates.add(pred)
         return self.extensions[pred]
 
-    def get_anti_extension(self, pred: Predicate) -> set[tuple[Constant, ...]]:
+    def get_anti_extension(self, pred: Predicate, /) -> set[tuple[Constant, ...]]:
         if pred not in self.anti_extensions:
             self.anti_extensions[pred] = set()
             self.predicates.add(pred)
         return self.anti_extensions[pred]
 
-    def value_of_atomic(self, s: Sentence, **kw):
+    def value_of_atomic(self, s: Sentence, /, **kw):
         return self.atomics.get(s, self.unassigned_value)
 
-    def value_of_opaque(self, s: Sentence, **kw):
+    def value_of_opaque(self, s: Sentence, /, **kw):
         return self.opaques.get(s, self.unassigned_value)
 
-    def value_of_quantified(self, s: Quantified, **kw):
+    def value_of_quantified(self, s: Quantified, /, **kw):
         try:
             q = s.quantifier
         except AttributeError:
             raise TypeError
-        if q == Quantifier.Existential:
+        if q is Quantifier.Existential:
             return self.value_of_existential(s, **kw)
-        elif q == Quantifier.Universal:
+        elif q is Quantifier.Universal:
             return self.value_of_universal(s, **kw)
         return super().value_of_quantified(s, **kw)
 
-    def truth_function(self, operator: Oper, a, b = None):
-
+    def truth_function(self, oper: Oper, a, b = None, /):
+        oper = Oper(oper)
         # Define as generically as possible for reuse.
-        if operator == Oper.Assertion:
-            return a
-        if operator == Oper.Negation:
-            if a == 'F':
-                return 'T'
-            if a == 'T':
-                return 'F'
-            return a
-        elif operator == Oper.Conjunction:
-            return self.cvals[min(self.nvals[a], self.nvals[b])]
-        elif operator == Oper.Disjunction:
-            return self.cvals[max(self.nvals[a], self.nvals[b])]
-        elif operator == Oper.MaterialConditional:
+        if oper is Oper.Assertion:
+            return self.Value[a]
+        if oper is Oper.Negation:
+            Value = self.Value
+            if a == Value.F:
+                return Value.T
+            if a == Value.T:
+                return Value.F
+            return Value[a]
+        elif oper is Oper.Conjunction:
+            return min(self.Value[a], self.Value[b])
+        elif oper is Oper.Disjunction:
+            return max(self.Value[a], self.Value[b])
+        elif oper is Oper.MaterialConditional:
             return self.truth_function(
                 Oper.Disjunction,
                 self.truth_function(Oper.Negation, a),
                 b
             )
-        elif operator == Oper.MaterialBiconditional:
+        elif oper is Oper.MaterialBiconditional:
             return self.truth_function(
                 Oper.Conjunction,
                 self.truth_function(Oper.MaterialConditional, a, b),
                 self.truth_function(Oper.MaterialConditional, b, a)
             )
-        elif operator == Oper.Conditional:
+        elif oper is Oper.Conditional:
             return self.truth_function(Oper.MaterialConditional, a, b)
-        elif operator == Oper.Biconditional:
+        elif oper is Oper.Biconditional:
             return self.truth_function(
                 Oper.Conjunction,
                 self.truth_function(Oper.Conditional, a, b),
@@ -564,13 +561,10 @@ class DefaultNodeRule(GetNodeTargetsRule):
 class OperatorNodeRule(OperatedSentenceRule, DefaultNodeRule):
     'Convenience mixin class for most common rules.'
     pass
-# class OperatorNodeRule(OperatedSentenceRule, DefaultNodeRule):
-#     pass
-# class QuantSentenceRule(QuantifiedSentenceRule, DefaultNodeRule):
-#     pass
 
 class QuantifierSkinnyRule(NarrowQuantifierRule, DefaultNodeRule):
     pass
+
 class QuantifierFatRule(ExtendedQuantifierRule, DefaultNodeRule):
     pass
 
@@ -645,7 +639,7 @@ class TabRules:
         operator    = Oper.Negation
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             return adds(
                 group(sdnode(self.sentence(node).lhs, self.designation))
             )
@@ -667,7 +661,7 @@ class TabRules:
         operator    = Oper.Assertion
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             return adds(
                 group(sdnode(self.sentence(node).lhs, self.designation))
             )
@@ -689,7 +683,7 @@ class TabRules:
         operator    = Oper.Assertion
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             return adds(
                 group(sdnode(~self.sentence(node).lhs, self.designation))
             )
@@ -728,7 +722,7 @@ class TabRules:
         operator    = Oper.Conjunction
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -746,7 +740,7 @@ class TabRules:
         operator    = Oper.Conjunction
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -765,7 +759,7 @@ class TabRules:
         operator    = Oper.Conjunction
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -817,7 +811,7 @@ class TabRules:
         operator    = Oper.MaterialConditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -836,7 +830,7 @@ class TabRules:
         operator    = Oper.MaterialConditional
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -853,7 +847,7 @@ class TabRules:
         operator    = Oper.MaterialConditional
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -872,7 +866,7 @@ class TabRules:
         operator    = Oper.MaterialConditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -892,7 +886,7 @@ class TabRules:
         operator    = Oper.MaterialBiconditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -913,7 +907,7 @@ class TabRules:
         operator    = Oper.MaterialBiconditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, _):
+        def _get_node_targets(self, node: Node, _,/):
             s = self.sentence(node)
             d = self.designation
             return adds(
@@ -1043,7 +1037,7 @@ class TabRules:
         quantifier  = Quantifier.Existential
         branch_level = 1
 
-        def _get_node_targets(self, node: Node, branch: Branch):
+        def _get_node_targets(self, node: Node, branch: Branch,/):
             s = self.sentence(node)
             return adds(
                 group(sdnode(branch.new_constant() >> s, self.designation))
@@ -1133,7 +1127,7 @@ class TabRules:
         quantifier  = Quantifier.Universal
         convert     = Quantifier.Existential
 
-    closure_rules = (DesignationClosure,)
+    closure_rules = DesignationClosure,
 
     rule_groups = (
         (

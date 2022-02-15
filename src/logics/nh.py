@@ -40,12 +40,12 @@ class Model(LP.Model):
 
     def truth_function(self, oper: Oper, a, b = None):
         if oper == Oper.Conjunction:
-            if a == 'B' and b == 'B':
-                return 'T'
+            if a == self.Value.B and b == self.Value.B:
+                return self.Value.T
         elif oper == Oper.Conditional:
-            if a != 'F' and b == 'F':
-                return 'F'
-            return 'T'
+            if a != self.Value.F and b == self.Value.F:
+                return self.Value.F
+            return self.Value.T
         return super().truth_function(oper, a, b)
 
 class TableauxSystem(FDE.TableauxSystem):

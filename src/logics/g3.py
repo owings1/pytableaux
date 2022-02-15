@@ -30,9 +30,10 @@ class Meta:
     category_display_order = 90
 
 
-from lexicals import Operator as Oper, Sentence, Operated
+from lexicals import Operator as Oper, Operated
 from proof.common import Branch, Node
-from . import fde as FDE, l3 as L3, k3 as K3
+from logics import fde as FDE, l3 as L3, k3 as K3
+from logics.fde import adds, group, sdnode
 
 class Model(L3.Model):
     """
@@ -88,7 +89,7 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             d = self.designation
             return {
                 'adds': (({'sentence': s, 'designated': not d},),),
@@ -178,24 +179,35 @@ class TabRules:
         operator    = Oper.Conditional
         branch_level = 2
 
-        def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
-            lhs = s.lhs
-            nlhs, nrhs = (x.negate() for x in s)
+        def _get_node_targets(self, node: Node, _: Branch):
+            lhs, rhs = self.sentence(node)
+            # lhs = s.lhs
+            # nlhs, nrhs = (x.negate() for x in s)
             d = self.designation
-            return {
-                'adds': (
-                    (
-                        {'sentence': lhs , 'designated': d},
-                        {'sentence': nrhs, 'designated': d},
-                    ),
-                    (
-                        {'sentence': lhs , 'designated': not d},
-                        {'sentence': nlhs, 'designated': not d},
-                        {'sentence': nrhs, 'designated': d},
-                    ),
+            return adds(
+                group(
+                    sdnode( lhs, d),
+                    sdnode(~rhs, d),
                 ),
-            }
+                group(
+                    sdnode( lhs, not d),
+                    sdnode(~lhs, not d),
+                    sdnode(~rhs, d),
+                ),
+            )
+            # return {
+            #     'adds': (
+            #         (
+            #             {'sentence': lhs , 'designated': d},
+            #             {'sentence': nrhs, 'designated': d},
+            #         ),
+            #         (
+            #             {'sentence': lhs , 'designated': not d},
+            #             {'sentence': nlhs, 'designated': not d},
+            #             {'sentence': nrhs, 'designated': d},
+            #         ),
+            #     ),
+            # }
     
     class ConditionalUndesignated(L3.TabRules.ConditionalUndesignated):
         pass
@@ -213,7 +225,7 @@ class TabRules:
         branch_level = 2
 
         def _get_node_targets(self, node: Node, branch: Branch):
-            s: Operated = self.sentence(node)
+            s = self.sentence(node)
             nlhs, nrhs = (x.negate() for x in s)
             d = self.designation
             return {

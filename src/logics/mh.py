@@ -41,12 +41,12 @@ class Model(K3.Model):
 
     def truth_function(self, oper: Oper, a, b = None):
         if oper == Oper.Disjunction:
-            if a == 'N' and b == 'N':
-                return 'F'
+            if a == self.Value.N and b == self.Value.N:
+                return self.Value.F
         elif oper == Oper.Conditional:
-            if a == 'T' and b != 'T':
-                return 'F'
-            return 'T'
+            if a == self.Value.T and b != self.Value.T:
+                return self.Value.F
+            return self.Value.T
         return super().truth_function(oper, a, b)
 
 class TableauxSystem(FDE.TableauxSystem):

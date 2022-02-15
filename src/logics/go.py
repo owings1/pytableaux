@@ -46,13 +46,21 @@ class Model(K3.Model):
 
     def truth_function(self, oper: Oper, a, b=None):
         if oper == Oper.Assertion:
-            return self.cvals[crunch(self.nvals[a])]
+            return self.Value[crunch(self.Value[a].num)]
         elif oper == Oper.Disjunction:
-            return self.cvals[max(crunch(self.nvals[a]), crunch(self.nvals[b]))]
+            return self.Value[max(crunch(self.Value[a].num), crunch(self.Value[b].num))]
         elif oper == Oper.Conjunction:
-            return self.cvals[min(crunch(self.nvals[a]), crunch(self.nvals[b]))]
+            return self.Value[min(crunch(self.Value[a].num), crunch(self.Value[b].num))]
         elif oper == Oper.Conditional:
-            return self.cvals[crunch(max(1 - self.nvals[a], self.nvals[b], gap(self.nvals[a]) + gap(self.nvals[b])))]
+            return self.Value[
+                crunch(
+                    max(
+                        1 - self.Value[a].num,
+                        self.Value[b].num,
+                        gap(self.Value[a].num) + gap(self.Value[b].num)
+                    )
+                )
+            ]
         return super().truth_function(oper, a, b)
 
     def value_of_existential(self, sentence: Quantified, **kw):
@@ -69,8 +77,8 @@ class Model(K3.Model):
         si = sentence.sentence
         v = sentence.variable
         values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
-        crunched = {crunch(self.nvals[val]) for val in values}
-        return self.cvals[max(crunched)]
+        crunched = {crunch(self.Value[val].num) for val in values}
+        return self.Value[max(crunched)]
 
     def value_of_universal(self, sentence: Quantified, **kw):
         """
@@ -86,8 +94,8 @@ class Model(K3.Model):
         si = sentence.sentence
         v = sentence.variable
         values = {self.value_of(si.substitute(c, v), **kw) for c in self.constants}
-        crunched = {crunch(self.nvals[val]) for val in values}
-        return self.cvals[min(crunched)]
+        crunched = {crunch(self.Value[val].num) for val in values}
+        return self.Value[min(crunched)]
 
 class TableauxSystem(FDE.TableauxSystem):
     """

@@ -1,5 +1,5 @@
 
-.. autoattribute:: truth_values
+.. automember:: Value
 
 .. autoattribute:: constants
 

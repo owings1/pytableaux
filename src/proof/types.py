@@ -23,6 +23,7 @@ from tools.abcs import (
     static,
     T, VT,
 )
+from tools.decorators import membr
 
 from tools.hybrids import qsetf, EMPTY_QSET
 from tools.mappings import dmap
@@ -111,7 +112,6 @@ class RuleHelper(metaclass = AbcMeta):
     def __init__(self,/): ...
 
     @classmethod
-    @abstract
     def __init_ruleclass__(cls, rulecls: type, /):
         pass
 
@@ -166,21 +166,6 @@ class RuleMeta(AbcMeta):
 
         return Class
 
-#******  Model Truth Values
-NotImp = NotImplemented
-class Mval(AbcEnum):
-    __slots__ = EMPTY_SET
-class MvalStd(Mval):
-    F = 'False'   , 0.00 , 0      , 0      , 0
-    N = 'Neither' , 0.25 , 0.5    , NotImp , NotImp
-    B = 'Both'    , 0.75 , NotImp , 0.5    , NotImp
-    T = 'True'    , 1.00 , 1      , 1      , 1
-
-    __slots__ = 'name', 'label', 'numrow',
-
-    def __init__(self, label: str, *row):
-        self.label = label
-        self.numrow = row
 #******  Auxilliary Classes
 
 class NodeStat(dict[TabStatKey, TabFlag|int|None]):
@@ -270,10 +255,6 @@ if 'Util Functions' or True:
         ):
             return list(fromcb(value).parameters.values())
 
-        def notimplinfo(*args):
-            # print(*args)
-            return NotImplemented
-
         names = qsetf((
             'rule',
             # HelperAttr.InitRuleCls,
@@ -291,39 +272,39 @@ if 'Util Functions' or True:
 
                 value = getattr(subcls, name)
                 if not is_descriptor(value):
-                    return notimplinfo(subcls, name, value)
+                    return NotImplemented
 
             name = HelperAttr.InitRuleCls
             if name in names:
 
                 value = getattr(subcls, name)
                 if not callable(value):
-                    return notimplinfo(subcls, name, value)
+                    return NotImplemented
                 params = getparams(value)
                 if len(params) < 2:
-                    return notimplinfo(subcls, name, 'params', params)
+                    return NotImplemented
                 p = params[1]
                 if p.kind & posflag != p.kind:
-                    return notimplinfo(subcls, name, 'param', p, p.kind)
+                    return NotImplemented
         
             name = '__init__'
             if name in names:
 
                 value = getattr(subcls, name)
                 if not callable(value):
-                    return notimplinfo(subcls, name, value)
+                    return NotImplemented
                 params = getparams(value)
                 if len(params) < 2:
                     name = '__new__'
                     value = getattr(subcls, name)
                     if not callable(value):
-                        return notimplinfo(subcls, name, value)
+                        return NotImplemented
                     params = getparams(value)
                     if len(params) < 2:
-                        return notimplinfo(subcls, name, value)
+                        return NotImplemented
                 p = params[1]
                 if p.kind & posflag != p.kind:
-                    return notimplinfo(subcls, name, 'param', p, p.kind)
+                    return NotImplemented
 
             return True
 
@@ -331,5 +312,5 @@ if 'Util Functions' or True:
 
 del(
     abstract, closure, overload, static,
-    eauto,
+    eauto, membr,
 )

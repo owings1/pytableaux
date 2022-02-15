@@ -38,28 +38,29 @@ class Model(K3W.Model):
     .. _K3W model: k3w.html#logics.k3w.Model
     """
 
+    Value = K3W.Model.Value
     # generalized conjunction
     mc_nvals = {
-        'F': 2,
-        'N': 1,
-        'T': 3,
+        Value.F: 2,
+        Value.N: 1,
+        Value.T: 3,
     }
     mc_cvals = {
-        1: 'N',
-        2: 'F',
-        3: 'T',
+        1: Value.N,
+        2: Value.F,
+        3: Value.T,
     }
 
     # generalized disjunction
     md_nvals = {
-        'F': 1,
-        'N': 3,
-        'T': 2,
+        Value.F: 1,
+        Value.N: 3,
+        Value.T: 2,
     }
     md_cvals = {
-        1: 'F',
-        2: 'T',
-        3: 'N',
+        1: Value.F,
+        2: Value.T,
+        3: Value.N,
     }
 
     def value_of_operated(self, s: Operated, /, **kw):

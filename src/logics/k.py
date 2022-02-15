@@ -34,7 +34,7 @@ from tools.sets import EMPTY_SET
 
 from lexicals import Predicate, Atomic, Constant, Operated, Predicated, Quantified, \
     Operator as Oper, Quantifier, Argument, Sentence, Predicates
-from models import BaseModel
+from models import BaseModel, Mval
 
 from proof.common import Access
 from proof.tableaux import (
@@ -77,6 +77,9 @@ class Model(BaseModel):
     relation, and a set of constants (the domain).
     """
 
+    class Value(Mval):
+        F = 'False', 0.0
+        T = 'True', 1.0
     #: The set of admissible values for sentences in a model.
     #:
     #: :type: set
@@ -84,7 +87,7 @@ class Model(BaseModel):
     #: :meta hide-value:
     truth_values = qsetf(('F', 'T'))#frozenset(truth_values_list)
 
-    unassigned_value = 'F'
+    unassigned_value = Value.F#'F'
 
     nvals = {
         'F': 0,
@@ -116,6 +119,7 @@ class Model(BaseModel):
 
         self.predicates: set[Predicate] = {Identity, Existence}
         self.fde = FDEModel()
+        self.fde.Value = self.Value
 
         # ensure there is a w0
         self.world_frame(0)
@@ -139,58 +143,68 @@ class Model(BaseModel):
                     'Parameter {0} is not in the constants'.format(param)
                 )
         if params in self.get_extension(s.predicate, **kw):
-            return 'T'
-        return 'F'
+            return self.Value.T
+        return self.Value.F
 
     def value_of_existential(self, s: Quantified, **kw):
         """
         An existential sentence is true at :m:`w`, just when the sentence resulting in the
         subsitution of some constant in the domain for the variable is true at :m:`w`.
         """
+        Value = self.Value
+        Tru = Value.T
         for c in self.constants:
-            if self.value_of(s.unquantify(c), **kw) == 'T':
-                return 'T'
-        return 'F'
+            if self.value_of(c >> s, **kw) is Tru:
+                return Tru
+        return Value.F
 
     def value_of_universal(self, s: Quantified, **kw):
         """
         A universal sentence is true at :m:`w`, just when the sentence resulting in the
         subsitution of each constant in the domain for the variable is true at :m:`w`.
         """
+        Value = self.Value
+        Fals = Value.F
         for c in self.constants:
-            if self.value_of(s.unquantify(c), **kw) == 'F':
-                return 'F'
-        return 'T'
+            if self.value_of(c >> s, **kw) is Fals:
+                return Fals
+        return Value.T
 
     def value_of_possibility(self, s: Operated, world=0, **kw):
         """
         A possibility sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         some :m:`w'` such that :m:`<w, w'>` in the access relation.
         """
+        Value = self.Value
+        Tru = Value.T
         for w2 in self.visibles(world):
-            if self.value_of(s.lhs, world=w2, **kw) == 'T':
-                return 'T'
-        return 'F'
+            if self.value_of(s.lhs, world=w2, **kw) is Tru:
+                return Tru
+        return Value.F
 
     def value_of_necessity(self, s: Operated, world=0, **kw):
         """
         A necessity sentence is true at :m:`w` iff its operand is true at :m:`w'` for
         each :m:`w'` such that :m:`<w, w'>` is in the access relation.
         """
+        Value = self.Value
+        Fals = Value.F
         for w2 in self.visibles(world):
-            if self.value_of(s.lhs, world=w2, **kw) == 'F':
-                return 'F'
-        return 'T'
+            if self.value_of(s.lhs, world=w2, **kw) is Fals:
+                return Fals
+        return Value.T
 
     def is_countermodel_to(self, argument: Argument):
         """
         A model is a countermodel for an argument iff the value of each premise
         is :m:`T` at `w0` and the value of the conclusion is :m:`F` at :m:`w0`.
         """
+        Value = self.Value
+        Tru = Value.T
         for premise in argument.premises:
-            if self.value_of(premise, world=0) != 'T':
+            if self.value_of(premise, world=0) is not Tru:
                 return False
-        return self.value_of(argument.conclusion, world=0) == 'F'
+        return self.value_of(argument.conclusion, world=0) is Value.F
 
     def get_data(self) -> dict:
         return {
@@ -236,9 +250,9 @@ class Model(BaseModel):
             if w == None:
                 w = 0
             if self.is_sentence_opaque(s):
-                self.set_opaque_value(s, 'T', world = w)
+                self.set_opaque_value(s, self.Value.T, world = w)
             elif self.is_sentence_literal(s):
-                self.set_literal_value(s, 'T', world = w)
+                self.set_literal_value(s, self.Value.T, world = w)
             self.predicates.update(s.predicates)
         elif node.is_access:
             self.add_access(node['world1'], node['world2'])
@@ -347,8 +361,9 @@ class Model(BaseModel):
             raise NotImplementedError
 
     def set_opaque_value(self, s: Sentence, value, world = 0, **kw):
+        value = self.Value[value]
         frame = self.world_frame(world)
-        if frame.opaques.get(s, value) != value:
+        if frame.opaques.get(s, value) is not value:
             raise ModelValueError('Inconsistent value for sentence {0}'.format(s))
         # We might have a quantified opaque sentence, in which case we will need
         # to still check every subsitution, so we want the constants.
@@ -359,12 +374,15 @@ class Model(BaseModel):
         frame.opaques[s] = value
 
     def set_atomic_value(self, s: Atomic, value, world = 0, **kw):
+        value = self.Value[value]
         frame = self.world_frame(world)
-        if s in frame.atomics and frame.atomics[s] != value:
+        if s in frame.atomics and frame.atomics[s] is not value:
             raise ModelValueError('Inconsistent value for sentence {0}'.format(s))
         frame.atomics[s] = value
 
     def set_predicated_value(self, s: Predicated, value, **kw):
+        Value = self.Value
+        value = Value[value]
         pred = s.predicate
         params = s.params
         if pred not in self.predicates:
@@ -374,7 +392,7 @@ class Model(BaseModel):
                 self.constants.add(param)
         extension = self.get_extension(pred, **kw)
         anti_extension = self.get_anti_extension(pred, **kw)
-        if value == 'F':
+        if value is Value.F:
             if params in extension:
                 raise ModelValueError(
                     'Cannot set value {0} for tuple {1} already in extension'.format(
@@ -382,7 +400,7 @@ class Model(BaseModel):
                     )
                 )
             anti_extension.add(params)
-        if value == 'T':
+        if value is Value.T:
             if params in anti_extension:
                 raise ModelValueError(
                     'Cannot set value {0} for tuple {1} already in anti-extension'.format(

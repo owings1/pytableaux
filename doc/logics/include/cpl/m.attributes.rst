@@ -1,4 +1,4 @@
-.. autoattribute:: truth_values
+.. automember:: Value
 
 .. attribute:: atomics
 

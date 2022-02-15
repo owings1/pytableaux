@@ -31,7 +31,7 @@ class Meta:
     category_display_order = 2
 
 from lexicals import Sentence, Quantified
-from . import k as K, cpl as CPL
+from logics import k as K, cpl as CPL
 
 class Model(CPL.Model):
     """

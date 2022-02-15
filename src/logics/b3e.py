@@ -45,7 +45,7 @@ class Model(K3W.Model):
 
     def truth_function(self, operator, a, b = None):
         if operator == Oper.Assertion:
-            return self.cvals[crunch(self.nvals[a])]
+            return self.Value[crunch(self.Value[a].num)]
         elif operator == Oper.Conditional:
             return self.truth_function(
                 Oper.Disjunction,

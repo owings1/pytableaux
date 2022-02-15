@@ -37,8 +37,8 @@ class Model(K3.Model):
     """
 
     def truth_function(self, operator: Oper, a, b=None):
-        if operator.arity == 2 and (a == 'N' or b == 'N'):
-            return 'N'
+        if operator.arity == 2 and (a == self.Value.N or b == self.Value.N):
+            return self.Value.N
         return super().truth_function(operator, a, b)
 
 class TableauxSystem(FDE.TableauxSystem):

@@ -38,8 +38,9 @@ class Model(LP.Model):
     .. _LP model: lp.html#logics.lp.Model
     """
     def truth_function(self, operator: Oper, a, b=None):
-        if operator == Oper.Conditional and self.nvals[a] > self.nvals[b]:
-            return 'F'
+        Value = self.Value
+        if operator == Oper.Conditional and Value[a] > Value[b]:
+            return Value.F
         return super().truth_function(operator, a, b)
 
 class TableauxSystem(FDE.TableauxSystem):

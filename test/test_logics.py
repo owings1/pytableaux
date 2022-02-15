@@ -311,12 +311,6 @@ class Test_FDE(BaseSuite):
             res = model.get_data()
             assert 'Atomics' in res
 
-        def test_model_not_impl_various(self):
-            s1 = self.p('Aab')
-            model = self.m()
-            with raises(NotImplementedError):
-                model.truth_function('Foomunction', 'F')
-
         def test_model_value_of_atomic_unassigned(self):
             s = self.p('a')
             model = self.m()
@@ -357,6 +351,9 @@ class Test_FDE(BaseSuite):
             model.set_predicated_value(s3, 'F')
             with raises(ModelValueError):
                 model.set_predicated_value(s3, 'N')
+            model = self.m()
+            with raises(ValueError):
+                model.truth_function('Foomunction', 'F')
 
         def test_error_various(self):
             s = self.p('Aab')
@@ -646,7 +643,7 @@ class TestK3WQ(BaseSuite):
         s1, s2, s3 = self.pp('SxFx', 'Fm', 'Fn')
         arg = self.parg(s1, s2)
         m, = self.tab(arg, is_build_models = True).models
-        assert m.value_of(s1) in {'F', 'N'}
+        assert str(m.value_of(s1)) in {'F', 'N'}
         assert m.value_of(s2) == 'T'
         assert m.value_of(s3) == 'N'
         assert m.is_countermodel_to(arg)

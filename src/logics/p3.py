@@ -37,7 +37,7 @@ class Model(K3.Model):
     for some of the connectives.
     """
 
-    def value_of_universal(self, sentence, **kw):
+    def value_of_universal(self, sentence: Quantified, **kw):
         """
         Take the set of values of the sentence resulting
         from the substitution of the variable with each constant. Then apply
@@ -57,7 +57,7 @@ class Model(K3.Model):
         }
         return self.truth_function(Oper.Negation, max(values))
 
-    def truth_function(self, operator, a, b=None):
+    def truth_function(self, operator: Oper, a, b=None):
         if operator == Oper.Negation:
             return self.back_cycle(a)
         if operator == Oper.Conjunction:
@@ -71,8 +71,9 @@ class Model(K3.Model):
         return super().truth_function(operator, a, b)
         
     def back_cycle(self, value):
-        i = self.truth_values.index(value)
-        return self.truth_values[i - 1]
+        seq = self.Value.seq
+        i = seq.index(value)
+        return seq[i - 1]
 
 class TableauxSystem(FDE.TableauxSystem):
     """
