@@ -98,7 +98,7 @@ def setup(app):
         'html_theme': html_theme,
     })
 
-def foo():
+def ____():
     pass
     # -------------------------------------------------------------------
     # The encoding of source files.

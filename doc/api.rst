@@ -12,7 +12,5 @@ Modules
     modules/proof.tableaux
 
     modules/proof.writers
-    
-    modules/utils
 
     modules/errors
