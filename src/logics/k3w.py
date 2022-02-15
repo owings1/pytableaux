@@ -164,7 +164,7 @@ class TabRules:
     class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
         pass
 
-    class ConjunctionNegatedDesignated(FDE.OperSentenceRule):
+    class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated conjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
@@ -200,7 +200,7 @@ class TabRules:
     class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated):
         pass
 
-    class ConjunctionNegatedUndesignated(FDE.OperSentenceRule):
+    class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add undesignated nodes
@@ -232,7 +232,7 @@ class TabRules:
                 ],
             }
 
-    class DisjunctionDesignated(FDE.OperSentenceRule):
+    class DisjunctionDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, disjunction node *n* on a branch *b*, make
         three new branches *b'*, *b''*, and *b'''* from *b*. On *b'* add a designated
@@ -267,7 +267,7 @@ class TabRules:
     class DisjunctionNegatedDesignated(FDE.TabRules.DisjunctionNegatedDesignated):
         pass
 
-    class DisjunctionUndesignated(FDE.OperSentenceRule):
+    class DisjunctionUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated disjunction node *n* on a branch *b*, make three
         new branches *b'*, *b''*, and *b'''* from b. On *b'* add undesignated nodes for
@@ -298,7 +298,7 @@ class TabRules:
                 ],
             }
 
-    class DisjunctionNegatedUndesignated(FDE.OperSentenceRule):
+    class DisjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
         Either the disjunction is designated, or at least one of the disjuncts
         has the value :m:`N`. So, from an unticked, undesignated, negated
@@ -331,7 +331,7 @@ class TabRules:
                 ],
             }
 
-    class MaterialConditionalDesignated(FDE.OperSentenceRule):
+    class MaterialConditionalDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -350,7 +350,7 @@ class TabRules:
                 ],
             }
 
-    class MaterialConditionalNegatedDesignated(FDE.OperSentenceRule):
+    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a negated disjunction.
         """
@@ -384,7 +384,7 @@ class TabRules:
         negated     = True
         designation = False
 
-    class MaterialBiconditionalDesignated(FDE.OperSentenceRule):
+    class MaterialBiconditionalDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -406,7 +406,7 @@ class TabRules:
                 ],
             }
 
-    class MaterialBiconditionalNegatedDesignated(FDE.OperSentenceRule):
+    class MaterialBiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """

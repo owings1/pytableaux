@@ -133,7 +133,7 @@ class TabRules:
     class DesignationClosure(FDE.TabRules.DesignationClosure):
         pass
 
-    class DoubleNegationDesignated(FDE.OperSentenceRule):
+    class DoubleNegationDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, double-negation node `n` on a branch `b`,
         add two undesignated nodes to `b`, one with the double-negatum, and one
@@ -157,7 +157,7 @@ class TabRules:
                 ),
             }
 
-    class DoubleNegationUndesignated(FDE.OperSentenceRule):
+    class DoubleNegationUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated, double-negation node `n` on a branch `b`,
         make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -192,7 +192,7 @@ class TabRules:
     class AssertionNegatedUndesignated(FDE.TabRules.AssertionNegatedUndesignated):
         pass
 
-    class ConjunctionDesignated(FDE.OperSentenceRule):
+    class ConjunctionDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated conjunction node `n` on a branch `b`, add
         four undesignated nodes to `b`, one for each conjunct, and one for the
@@ -217,7 +217,7 @@ class TabRules:
                 ),
             }
 
-    class ConjunctionNegatedDesignated(FDE.OperSentenceRule):
+    class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated conjunction node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
@@ -248,7 +248,7 @@ class TabRules:
                 ),
             }
 
-    class ConjunctionUndesignated(FDE.OperSentenceRule):
+    class ConjunctionUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated conjunction node `n` on a branch `b`, make
         four branches `b'`, `b''`, `b'''`, and `b''''` from `b`. On `b'`, add a
@@ -274,7 +274,7 @@ class TabRules:
                 ),
             }
 
-    class ConjunctionNegatedUndesignated(FDE.OperSentenceRule):
+    class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated, negated conjunction node `n` on a branch
         `b`, make three branches `b'`, `b''`, and `b'''` from `b`. On `b'`, add
@@ -317,7 +317,7 @@ class TabRules:
     class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
         pass
 
-    class MaterialConditionalDesignated(FDE.OperSentenceRule):
+    class MaterialConditionalDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -334,7 +334,7 @@ class TabRules:
                 'adds': (({'sentence': disj, 'designated': d},),),
             }
             
-    class MaterialConditionalNegatedDesignated(FDE.OperSentenceRule):
+    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -351,7 +351,7 @@ class TabRules:
                 'adds': (({'sentence': disj.negate(), 'designated': d},),),
             }
 
-    class MaterialConditionalUndesignated(FDE.OperSentenceRule):
+    class MaterialConditionalUndesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -367,7 +367,7 @@ class TabRules:
                 'adds': (({'sentence': disj, 'designated': d},),),
             }
 
-    class MaterialConditionalNegatedUndesignated(FDE.OperSentenceRule):
+    class MaterialConditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a disjunction.
         """

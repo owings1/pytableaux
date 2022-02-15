@@ -28,7 +28,8 @@ class Meta:
 
 from lexicals import Operator as Oper
 from proof.common import Branch, Node
-from . import k3 as K3, k3w as K3W, fde as FDE
+from logics import k3 as K3, k3w as K3W, fde as FDE
+from logics.fde import adds, group, sdnode
 
 def gap(v):
     return min(v, 1 - v)
@@ -98,7 +99,7 @@ class TabRules:
     class AssertionDesignated(FDE.TabRules.AssertionDesignated):
         pass
 
-    class AssertionNegatedDesignated(FDE.OperSentenceRule):
+    class AssertionNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated assertion node *n* on a branch *b*,
         add an undesignated node to *b* with the assertion of *n*, then tick *n*.
@@ -110,10 +111,8 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
-            return {
-                # Keep designation fixed to False for inheritance below
-                'adds': (({'sentence': s.lhs, 'designated': False},),),
-            }
+            # Keep designation fixed to False for inheritance below
+            return adds(group(sdnode(s.lhs, False)))
 
     class AssertionUndesignated(AssertionNegatedDesignated):
         """
@@ -133,10 +132,7 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
-            d = self.designation
-            return {
-                'adds': (({'sentence': s.lhs, 'designated': not d},),),
-            }
+            return adds(group(sdnode(s.lhs, not self.designation)))
 
     class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
         pass
@@ -186,7 +182,7 @@ class TabRules:
     class MaterialBiconditionalNegatedUndesignated(K3W.TabRules.MaterialBiconditionalNegatedUndesignated):
         pass
 
-    class ConditionalDesignated(FDE.OperSentenceRule):
+    class ConditionalDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*,
         add a designated node to *b* with a disjunction, where the
@@ -200,17 +196,14 @@ class TabRules:
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
             lhsa, rhsa = (operand.asserted() for operand in s)
-            sn = lhsa.negate().disjoin(rhsa)
+            sn = ~lhsa | rhsa
             # keep negated neutral for inheritance below
             if self.negated:
-                sn = sn.negate()
-            d = self.designation
-            return {
-                # keep designation neutral for inheritance below
-                'adds': (({'sentence': sn, 'designated': d},),),
-            }
+                sn = ~sn
+            # keep designation neutral for inheritance below
+            return adds(group(sdnode(sn, self.designation)))
 
-    class ConditionalNegatedDesignated(FDE.OperSentenceRule):
+    class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated negated conditional node *n* on a branch *b*,
         add a designated node with the antecedent, and an undesigntated node
@@ -223,16 +216,10 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
-            lhs, rhs = s
-            return {
-                # Keep designation fixed for inheritance below.
-                'adds': (
-                    (
-                        {'sentence': lhs, 'designated': True},
-                        {'sentence': rhs, 'designated': False},
-                    ),
-                ),
-            }
+            # Keep designation fixed for inheritance below.
+            return adds(
+                group(sdnode(s.lhs, True), sdnode(s.rhs, False))
+            )
 
     class ConditionalUndesignated(ConditionalNegatedDesignated):
         """
@@ -252,7 +239,7 @@ class TabRules:
         designation = False
         negated     = True
 
-    class BiconditionalDesignated(FDE.OperSentenceRule):
+    class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add
         two designated nodes to *b*, one with a disjunction, where the first
@@ -267,22 +254,17 @@ class TabRules:
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
             lhsa, rhsa = (operand.asserted() for operand in s)
-            sn1 = lhsa.negate().disjoin(rhsa)
-            sn2 = rhsa.negate().disjoin(lhsa)
+            sn1 = ~lhsa | rhsa
+            sn2 = ~rhsa | lhsa
             # Keep negated neutral for inheritance below.
             if self.negated:
-                sn1 = sn1.negate()
-                sn2 = sn2.negate()
+                sn1 = ~sn1
+                sn2 = ~sn2
+            # Keep designation neutral for inheritance below.
             d = self.designation
-            return {
-                # Keep designation neutral for inheritance below.
-                'adds': (
-                    (
-                        {'sentence': sn1, 'designated': d},
-                        {'sentence': sn2, 'designated': d},
-                    ),
-                ),
-            }
+            return adds(
+                group(sdnode(sn1, d), sdnode(sn2, d))
+            )
 
     class BiconditionalNegatedDesignated(BiconditionalDesignated):
         """

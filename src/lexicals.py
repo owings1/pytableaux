@@ -706,6 +706,10 @@ class Operator(Bases.LexicalEnum, noidxbuild = True):
     arity   : int
     libname : str|None
 
+    #
+    #  s.unquantify(c)?
+    #  quantifier or modal operator convert?
+    #
     # xor      ^
     # mul      * -- assertion?
     # matmul   @
@@ -766,6 +770,12 @@ class Constant(Parameter):
         super().__init__(*args)
         self.is_constant = True
         self.is_variable = False
+
+    def __rshift__(self, other):
+        'Same as other.unquantify(self).'
+        if not isinstance(other, Quantified):
+            return NotImplemented
+        return other.unquantify(self)
 
 @final
 class Variable(Parameter):
@@ -1003,7 +1013,6 @@ class Sentence(Bases.LexicalItem):
 
 Types.QuantifiedItem = Quantifier | Variable | Sentence
 
-
 @final
 class Atomic(Bases.CoordsItem, Sentence):
 
@@ -1147,7 +1156,13 @@ class Quantified(Sentence, Sequence[Types.QuantifiedItem]):
 
     @lazy.prop
     def sort_tuple(self: Quantified) -> Types.IntTuple:
-        return self.TYPE.rank, *chain.from_iterable(sorttmap(self.items))
+        return tuple(chain(
+            (self.TYPE.rank,),
+            self.quantifier.sort_tuple,
+            self.variable.sort_tuple,
+            self.sentence.sort_tuple
+        ))
+        # return self.TYPE.rank, *chain.from_iterable(sorttmap(self.items))
         # TODO ^ replace sorttmap with literal attrs for performance
 
     @property
@@ -1326,7 +1341,18 @@ class Operated(Sentence, Sequence[Sentence]):
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init
 
-    def __init__(self, oper: Operator, operands: Iterable[Sentence] | Sentence, /):
+    @overload
+    def __init__(self, oper: Operator, operands: Iterable[Sentence], /):...
+
+    @overload
+    def __init__(self, oper: Operator, spec: Types.OperandsSpec, /):...
+
+    @overload
+    def __init__(self, oper: Operator, *operands: Sentence):...
+
+    def __init__(self, oper: Operator, *operands):
+        if len(operands) == 1:
+            operands, = operands
         self.operator = oper = Operator(oper)
         if isinstance(operands, Sentence):
             self.operands = operands,

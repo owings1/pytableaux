@@ -725,6 +725,7 @@ def swnode(s: Sentence, w: int|None):
 def anode(w1: int, w2: int):
     'Make an Access node dict.'
     return Access(w1, w2).todict()
+
 @static
 class TabRules:
     """
@@ -784,14 +785,6 @@ class TabRules:
                 if len(self.sentence(node).paramset) == 1:
                     return True
                 return False
-            # return len(self.sentence(node).paramset) == 1
-            # return (
-            #     type(s) is Operated and
-            #     s.operator is Oper.Negation and
-            #     type(s.lhs) is Predicated and
-            #     s.lhs.predicate is self.predicate and
-            #     opr.eq(*s.lhs.params)
-            # )
 
         def example_nodes(self):
             w = 0 if self.modal else None
@@ -1068,10 +1061,8 @@ class TabRules:
 
         def _get_node_targets(self, node: Node, branch: Branch):
             s = self.sentence(node)
-            c = branch.new_constant()
-            w = node.get('world')
             return adds(
-                group(swnode(s.unquantify(c), w))
+                group(swnode(branch.new_constant() >> s, node.get('world')))
             )
 
     class ExistentialNegated(QuantifiedSentenceRule, DefaultNodeRule):
@@ -1086,11 +1077,10 @@ class TabRules:
         branch_level = 1
 
         def _get_node_targets(self, node: Node, _):
-            s = self.sentence(node)
+            v, si = self.sentence(node)[1:]
             # Keep conversion neutral for inheritance below.
-            w = node.get('world')
             return adds(
-                group(swnode(self.convert(s.variable, ~s.sentence), w))
+                group(swnode(self.convert(v, ~si), node.get('world')))
             )
 
     class Universal(ExtendedQuantifierRule, DefaultNodeRule):
@@ -1104,8 +1094,7 @@ class TabRules:
         branch_level = 1
 
         def _get_constant_nodes(self, node: Node, c: Constant, _, /):
-            s = self.sentence(node)
-            return group(swnode(s.unquantify(c), node.get('world')))
+            return group(swnode(c >> self.sentence(node), node.get('world')))
 
     class UniversalNegated(ExistentialNegated):
         """

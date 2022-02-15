@@ -26,11 +26,10 @@ class Meta(object):
     tags = ['bivalent', 'non-modal']
     category_display_order = 1
 
-from typing import Iterable
 from tools.abcs import Abc, abcf
 from lexicals import Sentence, Quantified, Operated, Argument
 from proof.common import Branch, Node
-from proof.tableaux import Rule, Tableau
+from proof.tableaux import Tableau
 from . import k as K
 
 class Model(K.Model):

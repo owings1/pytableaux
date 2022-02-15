@@ -254,7 +254,8 @@ class Rule(EventEmitter, metaclass = RuleMeta):
         branch = tab.branch()
         nodes = rule.example_nodes()
         branch.extend(nodes)
-        result = tab.build()
+        result = tab.step()
+        tab.build()
         if not noassert:
             assert len(rule.history) > 0
         from types import SimpleNamespace

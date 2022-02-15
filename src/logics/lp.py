@@ -26,12 +26,13 @@ class Meta:
     tags = ('many-valued', 'glutty', 'non-modal', 'first-order')
     category_display_order = 100
 
-from lexicals import Atomic, Sentence
+from lexicals import Atomic
 from proof.baserules import BaseClosureRule
 from proof.common import Branch, Node, Target
 # from proof.helpers import NodeTarget
 from tools.hybrids import qsetf
 from . import fde as FDE
+from logics.fde import sdnode, group
 
 class Model(FDE.Model):
     """
@@ -62,8 +63,6 @@ class TabRules:
         This rule is **in addition to** the :m:`FDE` ``DesignationClosure`` rule.
         """
 
-        # BranchTarget implementation
-
         def _branch_target_hook(self, node: Node, branch: Branch):
             nnode = self._find_closing_node(node, branch)
             if nnode:
@@ -72,17 +71,13 @@ class TabRules:
                     branch = branch,
                 )
 
-        # rule implementation
-
         def node_will_close_branch(self, node: Node, branch: Branch):
             return bool(self._find_closing_node(node, branch))
 
-        def example_nodes(self):
-            s: Atomic = Atomic.first()
-            return (
-                {'sentence': s         , 'designated': False},
-                {'sentence': s.negate(), 'designated': False},
-            )
+        @staticmethod
+        def example_nodes():
+            s = Atomic.first()
+            return sdnode(s, False), sdnode(~s, False)
 
         # private util
 

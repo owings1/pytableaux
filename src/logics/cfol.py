@@ -32,7 +32,6 @@ class Meta:
 
 from lexicals import Sentence, Quantified
 from . import k as K, cpl as CPL
-from itertools import chain
 
 class Model(CPL.Model):
     """

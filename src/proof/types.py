@@ -166,6 +166,21 @@ class RuleMeta(AbcMeta):
 
         return Class
 
+#******  Model Truth Values
+NotImp = NotImplemented
+class Mval(AbcEnum):
+    __slots__ = EMPTY_SET
+class MvalStd(Mval):
+    F = 'False'   , 0.00 , 0      , 0      , 0
+    N = 'Neither' , 0.25 , 0.5    , NotImp , NotImp
+    B = 'Both'    , 0.75 , NotImp , 0.5    , NotImp
+    T = 'True'    , 1.00 , 1      , 1      , 1
+
+    __slots__ = 'name', 'label', 'numrow',
+
+    def __init__(self, label: str, *row):
+        self.label = label
+        self.numrow = row
 #******  Auxilliary Classes
 
 class NodeStat(dict[TabStatKey, TabFlag|int|None]):

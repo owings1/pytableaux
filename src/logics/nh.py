@@ -109,7 +109,7 @@ class TabRules:
     class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
         pass
 
-    class ConjunctionNegatedDesignated(FDE.OperSentenceRule):
+    class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, negated, designated conjunction node *n* on a branch *b*,
         make four new branches from *b*: *b'*, *b''*, *b'''*, *b''''*. On *b'*, add
@@ -161,7 +161,7 @@ class TabRules:
     class ConjunctionUndesignated(FDE.TabRules.ConjunctionUndesignated):
         pass
 
-    class ConjunctionNegatedUndesignated(FDE.OperSentenceRule):
+    class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, negated, undesignated conjunction node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'*, add two undesignated nodes,
@@ -202,7 +202,7 @@ class TabRules:
     class DisjunctionNegatedUndesignated(FDE.TabRules.DisjunctionNegatedUndesignated):
         pass
 
-    class MaterialConditionalDesignated(FDE.OperSentenceRule):
+    class MaterialConditionalDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -221,7 +221,7 @@ class TabRules:
                 ],
             }
 
-    class MaterialConditionalNegatedDesignated(FDE.OperSentenceRule):
+    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a negated disjunction.
         """
@@ -255,7 +255,7 @@ class TabRules:
         negated     = True
         designation = False
 
-    class MaterialBiconditionalDesignated(FDE.OperSentenceRule):
+    class MaterialBiconditionalDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a conjunction of material conditionals.
         """
@@ -276,7 +276,7 @@ class TabRules:
                 ],
             }
 
-    class MaterialBiconditionalNegatedDesignated(FDE.OperSentenceRule):
+    class MaterialBiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a negated conjunction of material conditionals.
         """
@@ -322,7 +322,7 @@ class TabRules:
     class ConditionalNegatedUndesignated(MH.TabRules.ConditionalNegatedUndesignated):
         pass
 
-    class BiconditionalDesignated(FDE.OperSentenceRule):
+    class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a conjunction of conditionals.
         """
@@ -343,7 +343,7 @@ class TabRules:
                 ],
             }
 
-    class BiconditionalNegatedDesignated(FDE.OperSentenceRule):
+    class BiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a negated conjunction of conditionals.
         """

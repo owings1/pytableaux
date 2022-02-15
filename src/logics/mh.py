@@ -123,7 +123,7 @@ class TabRules:
     class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
         pass
 
-    class DisjunctionNegatedDesignated(FDE.OperSentenceRule):
+    class DisjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, negated, designated disjunction node *n* on a branch *b*,
         make two branches *b'* and *b''* from *b*. On *b'* add four undesignated
@@ -158,7 +158,7 @@ class TabRules:
     class DisjunctionUndesignated(FDE.TabRules.DisjunctionUndesignated):
         pass
 
-    class DisjunctionNegatedUndesignated(FDE.OperSentenceRule):
+    class DisjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, negated, undesignated disjunction node *n* on a branch
         *b*, make four branches from *b*: *b'*, *b''*, *b'''*, and *b''''*. On *b'*,
@@ -206,7 +206,7 @@ class TabRules:
                 ),
             }
 
-    class MaterialConditionalDesignated(FDE.OperSentenceRule):
+    class MaterialConditionalDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a disjunction.
         """
@@ -223,7 +223,7 @@ class TabRules:
                 'adds': (({'sentence': disj, 'designated': d},),),
             }
 
-    class MaterialConditionalNegatedDesignated(FDE.OperSentenceRule):
+    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         This rule reduces to a negated disjunction.
         """
@@ -282,7 +282,7 @@ class TabRules:
         """
         designation = False
 
-    class ConditionalDesignated(FDE.OperSentenceRule):
+    class ConditionalDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add an undesignated node
@@ -304,7 +304,7 @@ class TabRules:
                 ),
             }
 
-    class ConditionalNegatedDesignated(FDE.OperSentenceRule):
+    class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, negated, desigated conditional node *n* on a branch *b*,
         add two nodes to *b*:

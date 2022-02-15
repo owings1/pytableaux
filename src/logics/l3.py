@@ -29,6 +29,7 @@ class Meta:
 
 from lexicals import Operated, Operator as Oper
 from . import fde as FDE, k3 as K3
+from logics.fde import adds, group, sdnode
 
 class Model(K3.Model):
     """
@@ -96,7 +97,7 @@ class TabRules:
     class MaterialBiconditionalUndesignated(FDE.TabRules.MaterialBiconditionalUndesignated): pass
     class MaterialBiconditionalNegatedUndesignated(FDE.TabRules.MaterialBiconditionalNegatedUndesignated): pass
 
-    class ConditionalDesignated(FDE.OperSentenceRule):
+    class ConditionalDesignated(FDE.OperatorNodeRule):
         """
         From an unticked designated conditional node *n* on a branch *b*, make two
         new branches *b'* and *b''* from *b*. To *b'* add a designated disjunction
@@ -130,7 +131,7 @@ class TabRules:
     class ConditionalNegatedDesignated(FDE.TabRules.ConditionalNegatedDesignated):
         pass
 
-    class ConditionalUndesignated(FDE.OperSentenceRule):
+    class ConditionalUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked undesignated conditional node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*. On *b'* add a designated node
@@ -161,7 +162,7 @@ class TabRules:
     class ConditionalNegatedUndesignated(FDE.TabRules.ConditionalNegatedUndesignated):
         pass
         
-    class BiconditionalDesignated(FDE.OperSentenceRule):
+    class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, add
         two branches *b'* and *b''* to *b*. On *b'* add a designated material
@@ -193,7 +194,7 @@ class TabRules:
     class BiconditionalNegatedDesignated(FDE.TabRules.BiconditionalNegatedDesignated):
         pass
 
-    class BiconditionalUndesignated(FDE.OperSentenceRule):
+    class BiconditionalUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked undesignated biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add an undesignated conditional
@@ -219,7 +220,7 @@ class TabRules:
                 ],
             }
 
-    class BiconditionalNegatedUndesignated(FDE.OperSentenceRule):
+    class BiconditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked designated biconditional node *n* on a branch *b*, add
         two branches *b'* and *b''* to *b*. On *b'* add an undesignated negated material

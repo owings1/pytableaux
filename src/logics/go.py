@@ -158,7 +158,7 @@ class TabRules:
     class ConjunctionDesignated(FDE.TabRules.ConjunctionDesignated):
         pass
 
-    class ConjunctionNegatedDesignated(FDE.OperSentenceRule):
+    class ConjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated conjunction node *n* on a branch *b*,
         make two new branches *b'* and *b''* from *b*, add an undesignated node to
@@ -181,7 +181,7 @@ class TabRules:
                 )
             }
             
-    class ConjunctionUndesignated(FDE.OperSentenceRule):
+    class ConjunctionUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated conjunction node *n* on a branch *b*, add a
         designated node to *b* with the negation of the conjunction, then tick *n*.
@@ -197,7 +197,7 @@ class TabRules:
                 'adds': (({'sentence': s.negate(), 'designated': not d},),),
             }
 
-    class ConjunctionNegatedUndesignated(FDE.OperSentenceRule):
+    class ConjunctionNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated, negated conjunction node *n* on a branch *b*,
         add a designated node to *b* with the (un-negated) conjuction, then tick *n*.
@@ -217,7 +217,7 @@ class TabRules:
     class DisjunctionDesignated(FDE.TabRules.DisjunctionDesignated):
         pass
         
-    class DisjunctionNegatedDesignated(FDE.OperSentenceRule):
+    class DisjunctionNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated disjunction node *n* on a branch *b*,
         add an undesignated node to *b* for each disjunct, then tick *n*.
@@ -257,7 +257,7 @@ class TabRules:
     class MaterialConditionalDesignated(FDE.TabRules.MaterialConditionalDesignated):
         pass
         
-    class MaterialConditionalNegatedDesignated(FDE.OperSentenceRule):
+    class MaterialConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated material conditional node *n* on a branch
         *b*, add an undesignated node with the negation of the antecedent, and an
@@ -298,7 +298,7 @@ class TabRules:
     class MaterialBiconditionalDesignated(FDE.TabRules.MaterialBiconditionalDesignated):
         pass
         
-    class MaterialBiconditionalNegatedDesignated(FDE.OperSentenceRule):
+    class MaterialBiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated, material biconditional node *n* on a branch
         *b*, make two branches *b'* and *b''* from *b*. On *b'* add undesignated nodes for
@@ -341,7 +341,7 @@ class TabRules:
         """
         operator = Oper.MaterialBiconditional
 
-    class ConditionalDesignated(FDE.OperSentenceRule):
+    class ConditionalDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, conditional node *n* on a branch *b*, make two branches
         *b'* and *b''* from *b*. On *b'* add a designated node with a disjunction of the
@@ -369,7 +369,7 @@ class TabRules:
                 ),
             }
 
-    class ConditionalNegatedDesignated(FDE.OperSentenceRule):
+    class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated conditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add a designated node with the
@@ -417,7 +417,7 @@ class TabRules:
         negated     = True
         operator    = Oper.Conditional
 
-    class BiconditionalDesignated(FDE.OperSentenceRule):
+    class BiconditionalDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated biconditional node *n* on a branch *b*, add two
         designated conditional nodes to *b*, one with the operands of the biconditional,
@@ -441,7 +441,7 @@ class TabRules:
                 ),
             }
 
-    class BiconditionalNegatedDesignated(FDE.OperSentenceRule):
+    class BiconditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated biconditional node *n* on a branch *b*, make
         two branches *b'* and *b''* from *b*. On *b'* add a designated negated conditional
@@ -482,7 +482,7 @@ class TabRules:
     class ExistentialDesignated(FDE.TabRules.ExistentialDesignated):
         pass
         
-    class ExistentialNegatedDesignated(FDE.QuantSentenceRule):
+    class ExistentialNegatedDesignated(FDE.QuantifiedSentenceRule, FDE.DefaultNodeRule):
         """
         From an unticked, designated negated existential node *n* on a branch *b*,
         add a designated node *n'* to *b* with a universal sentence consisting of

@@ -30,8 +30,10 @@ from proof.baserules import BaseClosureRule
 from tools.hybrids import qsetf
 from lexicals import Atomic
 from proof.common import Branch, Node, Target
+from tools.sets import setf
 
 from . import fde as FDE
+from logics.fde import sdnode
 
 class Model(FDE.Model):
     """
@@ -43,14 +45,14 @@ class Model(FDE.Model):
     #: :type: set
     #: :value: {T, N, F}
     #: :meta hide-value:
-    truth_values = qsetf(('F', 'N', 'T'))
+    truth_values = qsetf('F' 'N' 'T')
 
     #: The (singleton) set of designated values in model.
     #:
     #: :type: set
     #: :value: {T}
     #: :meta hide-value:
-    designated_values = frozenset(('T',))
+    designated_values = setf('T')
 
     unassigned_value = 'N'
 
@@ -101,8 +103,10 @@ class TabRules:
         def node_will_close_branch(self, node: Node, branch: Branch) -> bool:
             return bool(self._find_closing_node(node, branch))
 
-        def example_nodes(self):
+        @staticmethod
+        def example_nodes():
             a = Atomic.first()
+            return sdnode(a, True), sdnode(~a, True)
             return (
                 {'sentence': a         , 'designated': True},
                 {'sentence': a.negate(), 'designated': True},

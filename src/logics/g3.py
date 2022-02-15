@@ -77,7 +77,7 @@ class TabRules:
     class DesignationClosure(FDE.TabRules.DesignationClosure):
         pass
 
-    class DoubleNegationDesignated(FDE.OperSentenceRule):
+    class DoubleNegationDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated double-negation node `n` on a branch `b`,
         add an undesignated node with the negatum of `n`. Then tick `n`.
@@ -164,7 +164,7 @@ class TabRules:
     class ConditionalDesignated(L3.TabRules.ConditionalDesignated):
         pass
 
-    class ConditionalNegatedDesignated(FDE.OperSentenceRule):
+    class ConditionalNegatedDesignated(FDE.OperatorNodeRule):
         """
         From an unticked, designated, negated conditional node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add two designated
@@ -200,7 +200,7 @@ class TabRules:
     class ConditionalUndesignated(L3.TabRules.ConditionalUndesignated):
         pass
     
-    class ConditionalNegatedUndesignated(FDE.OperSentenceRule):
+    class ConditionalNegatedUndesignated(FDE.OperatorNodeRule):
         """
         From an unticked, undesignated, negated conditional node `n` on a branch
         `b`, make two branches `b'` and `b''` from `b`. On `b'` add a designated
