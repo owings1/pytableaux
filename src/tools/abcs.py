@@ -537,7 +537,7 @@ class AbcEnumMeta(_enum.EnumMeta, type[EnT2]):
         raise AttributeError(name)
 
     def __dir__(cls):
-        return list(cls._member_names_)
+        return cls._member_names_
 
     @property
     def __members__(cls):

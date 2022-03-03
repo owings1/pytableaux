@@ -1,10 +1,10 @@
 # No local package dependencies.
 
 import enum as _enum
-from typing import TypeVar
+from typing import Any, TypeVar
+
 _T = TypeVar('_T')
 _ExT = TypeVar('_ExT', bound = Exception)
-del(TypeVar)
 
 # Base Errors
 class IllegalStateError(Exception):
@@ -109,20 +109,22 @@ class Emsg(_enum.Enum):
             cls = type(cls[0], cls[1:], {})
         self.cls = cls
         self.msg = msg
-        if fns is None: fns = ()
-        elif isinstance(fns, int): fns = (_thru,) * fns
+        if fns is None:
+            fns = ()
+        elif isinstance(fns, int):
+            fns = (_thru,) * fns
         self.fns = fns
+
     def __call__(self, *args):
         return self._makeas(self.cls, args)
-    def throw(self, *args):
-        raise self._makeas(self.cls, args)
-    def throwas(self, cls, *args):
-        raise self._makeas(cls, args)
-    def _makeas(self, cls, args):
+
+    def _makeas(self, cls: type[_ExT], args: tuple) -> _ExT:
         return cls(*self._getargs(args))
-    def _getargs(self, args):
+
+    def _getargs(self, args: tuple):
         alen = len(self.fns)
-        if alen == 0 or len(args) < alen: return args
+        if alen == 0 or len(args) < alen:
+            return args
         return self.msg.format(
             *(f(a) for f,a in zip(self.fns, args))
         ), *args[alen:]
@@ -137,14 +139,14 @@ def subclscheck(cls: type, typeinfo: _T) -> _T:
         raise Emsg.SubclsCheck(cls, typeinfo)
     return cls
 
-def notsubclscheck(cls: type, typeinfo):
+def notsubclscheck(cls: type[_T], typeinfo: type) -> type[_T]:
     if issubclass(cls, typeinfo):
         raise Emsg.NotSubclsCheck(cls, typeinfo)
     return cls
 
-def errstr(err) -> str:
+def errstr(err: Any) -> str:
     if isinstance(err, Exception):
         return '%s: %s' % (type(err).__name__, err)
     return str(err)
 
-del(_enum)
+del(_enum, TypeVar)

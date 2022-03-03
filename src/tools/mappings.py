@@ -615,7 +615,7 @@ if 'Operators Cache' or True:
             def __dir__(funcs = [get, resolve, copy, clear, limit, resolvers]):
                 for f in funcs: f.__qualname__ = f.__name__
                 names = [f.__name__ for f in funcs]
-                return lambda: list(names)
+                return lambda: names
 
             def __new__(cls): return inst
             def __init__(self): pass

@@ -672,7 +672,7 @@ class MaxConsts:
             world = 0
         max_constants = self.get_max_constants(branch)
         world_constants = self.get_branch_constants_at_world(branch, world)
-        if max_constants != None and len(world_constants) > max_constants:
+        if max_constants is not None and len(world_constants) > max_constants:
             return True
 
     def quit_flag(self, branch: Branch) -> dict:
@@ -703,7 +703,7 @@ class MaxConsts:
 
     def __after_branch_add(self, branch: Branch):
         parent = branch.parent
-        if parent != None and parent in self.world_constants:
+        if parent is not None and parent in self.world_constants:
             self.world_constants[branch] = {
                 world : copy(self.world_constants[parent][world])
                 for world in self.world_constants[parent]
@@ -772,7 +772,7 @@ class MaxWorlds:
         projected for the branch (origin).
         """
         max_worlds = self.get_max_worlds(branch)
-        return max_worlds != None and branch.world_count >= max_worlds
+        return max_worlds is not None and branch.world_count >= max_worlds
 
     def max_worlds_exceeded(self, branch: Branch):
         """
@@ -780,7 +780,7 @@ class MaxWorlds:
         branch (origin).
         """
         max_worlds = self.get_max_worlds(branch)
-        return max_worlds != None and branch.world_count > max_worlds
+        return max_worlds is not None and branch.world_count > max_worlds
 
     def modal_complexity(self, sentence: Sentence):
         """
