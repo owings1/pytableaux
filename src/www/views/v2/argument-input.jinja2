@@ -36,7 +36,7 @@
             {% endfor %}
         </select>
     </div>
-    <div class="premises">
+    <div id="premises_inputs" class="premises">
         {%- if 'premises[]' in form_data -%}
             {%- for premise in form_data['premises[]'] -%}
                 {%- set error_label = 'Premise ' ~ loop.index -%}

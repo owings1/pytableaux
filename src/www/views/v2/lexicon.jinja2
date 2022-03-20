@@ -58,7 +58,7 @@
         {% endfor %}
         <div class="lexicon predicates">
             <span class="label">Predicates</span>
-            <table class="predicates operator-symbols predicate-symbols">
+            <table id="predicates_input_table" class="predicates operator-symbols predicate-symbols">
                 {%- set PredSys = lexicals.Predicate.System -%}
                 {% for pred in PredSys -%}
                     <tr class="system-predicate">

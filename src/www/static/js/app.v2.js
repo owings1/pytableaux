@@ -27,13 +27,50 @@
         step     : 4,
         models   : 5,
     }
+         
+    const Cls = {
+        app          : 'pt-app',
+        arity        : 'arity',
+        bad          : 'bad',
+        colorOpen    : 'color-open',
+        good         : 'good',
+        hidden       : 'hidden',
+        logicDetails : 'logic-details',
+        options      : 'options',
+        predAdd      : 'add-predicate',
+        predSymbol   : 'predicate-symbol',
+        predUser     : 'user-predicate',
+        premise      : 'premise',
+        sentence     : 'sentence',
+        shortkey     : 'shortkey',
+        tableau      : 'tableau',
+        withControls : 'with-controls',
+        withModels   : 'with-models',
+    }
+
+    const Atr = {
+        dataHash     : 'data-hash',
+        dataShortKey : 'data-shortcut-key',
+    }
 
     const Sel = {
         appForm          : '#tableau_input_form',
         appJson          : '#pt_app_data',
         appTabs          : '#proove-tabs',
+        checkColorOpen   : '#options_color_open',
+        checkGroupOptim  : '#options_group_optimizations',
+        checkRankOptim   : '#options_rank_optimizations',
+        checkShowControls: '#options_show_controls',
+        checksOption     : ['input:checkbox', Cls.options].join('.'),
         clearArgExample  : '#clear_argument',
         inputConclusion  : '#conclusion',
+        inputMaxSteps    : '#options_max_steps',
+        inputsPredArity  : ['input', Cls.arity].join('.'),
+        inputsPredSymbol : ['input', Cls.predSymbol].join('.'),
+        inputsPremise    : ['input', Cls.premise].join('.'),
+        inputsSentence   : ['input', Cls.sentence].join('.'),
+        rowsPredUser     : ['tr', Cls.predUser].join('.'),
+        rowsPremise      : ['.input', Cls.premise].join('.'),
         selectArgExample : '#example_argument',
         selectLogic      : '#selected_logic',
         selectOutputFmt  : '#format',
@@ -41,8 +78,11 @@
         selectParseNotn  : '#input_notation',
         selectSymbolEnc  : '#symbol_enc',
         submitJson       : '#tableau_form_api_json',
+        tableaux         : '.' + Cls.tableau,
         templatePrem     : '#premiseTemplate',
-        templatePred     : '#predicateRowTemplate',   
+        templatePred     : '#predicateRowTemplate',
+        wrapPredicates   : '#predicates_input_table',
+        wrapPremises     : '#premises_inputs',
     }
 
     const API_PARSE_URI = '/api/parse'
@@ -52,13 +92,13 @@
 
         const AppData = $.parseJSON($(Sel.appJson).html())
         const IS_DEBUG = Boolean(AppData.is_debug)
-        const IS_PROOF  = Boolean(AppData.is_proof)
+        const IS_PROOF = Boolean(AppData.is_proof)
         const Templates = {
             premise    : $(Sel.templatePrem).html(),
             predicate  : $(Sel.templatePred).html(),
         }
 
-        const $Frm = $(Sel.appForm)
+        const $AppForm = $(Sel.appForm)
 
         /**
          * Main initialization routine.
@@ -66,24 +106,15 @@
          * @return {void}
          */
         function init() {
+            // TODO: hardcoded values
+            // ----------------------
             //
-            // attributes   :   data-shortcut-key
-            //                  title
-            //
-            // classes  :      add-predicate
-            //                 arity
-            //                 button
+            // classes  :      button
             //                 controls
-            //                 premise
-            //                 pt-app
-            //                 sentence
-            //                 shortkey
-            //                 tableau
             //                 tableau-controls
             //                 tooltip
 
-            $Frm.on('keyup focus', ['input.premise', Sel.inputConclusion].join(), ensureEmptyPremise)
-                // .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
+            $AppForm.on('keyup focus', [Sel.inputsPremise, Sel.inputConclusion].join(), ensureEmptyPremise)
                 .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
                     if ($target.is(Sel.selectArgExample)) {
@@ -92,21 +123,15 @@
                     } else if ($target.is(Sel.selectParseNotn)) {
                         refreshNotation()
                         refreshStatuses()
-                    } else if ($target.is('input.sentence')) {
+                    } else if ($target.is(Sel.inputsSentence)) {
                         refreshStatuses()
-                    } else if ($target.hasClass('arity')) {
+                    } else if ($target.hasClass(Cls.arity)) {
                         refreshStatuses(true)
-                    }/* else if ($target.hasClass('predicateName')) {
-                        refreshStatuses(true)
-                    } */else if ($target.is(Sel.selectLogic)) {
+                    } else if ($target.is(Sel.selectLogic)) {
                         refreshLogic()
                     }
-                    // if ($target.closest('.fieldset.output').length) {
-                    //     refreshArgumentHeader()
-                    // }
                 })
                 .on('submit', function(e) {
-                    //e.preventDefault()
                     submitForm()
                 })
                 .on('click', function(e) {
@@ -116,19 +141,18 @@
                         clearExampleArgument()
                         ensureEmptyPremise()
                         refreshStatuses()
-                        // refreshArgumentHeader()
-                    } else if ($target.hasClass('add-predicate')) {
+                    } else if ($target.hasClass(Cls.predAdd)) {
                         addEmptyPredicate().find(':input').focus()
                     }
                 })
                 
 
-            $('select', $Frm).selectmenu({
+            $('select', $AppForm).selectmenu({
                 classes: {
-                    'ui-selectmenu-menu': 'pt-app'
+                    'ui-selectmenu-menu': Cls.app
                 }
             })
-            $('input[type="submit"]', $Frm).button()
+            $('input:submit', $AppForm).button()
 
             
             var selectedTab = TabIndexes[AppData.selected_tab]
@@ -147,27 +171,25 @@
             $('.tableau-controls a[title]').each(function() {
                 const $me = $(this)
                 var html = '<span class="tooltip controls">' + $me.attr('title')
-                var shortkey = $me.attr('data-shortcut-key')
+                var shortkey = $me.attr(Atr.dataShortKey)
                 if (shortkey) {
-                    html += '<hr>Shorcut key: <code class="shortkey">' + shortkey + '</code>'
+                    html += '<hr>Shorcut key: <code class="' + Cls.shortkey + '">' + shortkey + '</code>'
                 }
                 html += '</span>'
                 $me.tooltip({content: html, show: {delay: 2000}})
             })
-            $('.tooltip', $Frm).tooltip({show: {delay: 1000}})
+            $('.tooltip', $AppForm).tooltip({show: {delay: 1000}})
 
-            $('.tableau').tableau({
+            $(Sel.tableaux).tableau({
                 // autoWidth: true,
                 scrollContainer: $(document)
             })
 
             setTimeout(function() {
                 if (IS_PROOF) {
-                    $('.tableau').tableau()
-                    // var tableau = $('.tableau').tableau('instance')
+                    $(Sel.tableaux).tableau()
                 }
                 ensureEmptyPremise()
-                // ensureEmptyPredicate()
                 refreshNotation()
                 refreshLogic()
                 if (IS_PROOF) {
@@ -182,10 +204,10 @@
          * @return {void}
          */
         function submitForm() {
-            $('input:submit', $Frm).prop('disabled', true)
+            $('input:submit', $AppForm).prop('disabled', true)
             const data = getApiData()
             const json = JSON.stringify(data)
-            debug('submitForm', data)
+            // debug('submitForm', data)
             $(Sel.submitJson).val(json)
         }
 
@@ -214,12 +236,8 @@
          * @return {void}
          */
         function addPremise(value, status, message) {
-            //
-            // classes  :       premise
-            //                  premises
-            //
-            var premiseNum = $('input.premise', $Frm).length + 1
-            $('.premises', $Frm).append(render(Templates.premise, {
+            const premiseNum = $(Sel.inputsPremise, $AppForm).length + 1
+            $(Sel.wrapPremises).append(render(Templates.premise, {
                 n       : premiseNum,
                 value   : value   || '',
                 status  : status  || '',
@@ -228,61 +246,12 @@
         }
 
         /**
-         * Get the input notation value.
-         *
-         * @return {string} String name of the notation, e.g. 'standard'
-         */
-        function currentNotation() {
-            return $(Sel.selectParseNotn).val()
-        }
-
-        // /**
-        //  * Get the output format value.
-        //  *
-        //  * @return String name of the foramat, e.g. 'html'
-        //  */
-        // function currentOutputFormat() {
-        //     return $('#format', $Frm).val()
-        // }
-
-        // /**
-        //  * Get the output notation value.
-        //  *
-        //  * @return String name of the notation, e.g. 'standard'
-        //  */
-        // function currentOutputNotation() {
-        //     return $('#output_notation', $Frm).val()
-        // }
-
-        // /**
-        //  * Get the output symbol set value.
-        //  *
-        //  * @return String name of the symbol set, e.g. 'default'
-        //  */
-        // function currentOutputSymbolEnc() {
-        //     return $('#symbol_enc', $Frm).val()
-        // }
-
-        /**
-         * Add an empty premise input row.
-         *
-         * @return {void}
-         */
-        function addEmptyPremise() {
-            addPremise()
-        }
-
-        /**
          * Remove all premise input rows.
          *
          * @return {void}
          */
         function clearPremises() {
-            //
-            // classes  :       input
-            //                  premise
-            //
-            $('.input.premise', $Frm).remove()
+            $(Sel.rowsPremise, $AppForm).remove()
         }
 
         /**
@@ -312,7 +281,6 @@
          */
         function clearExampleArgument() {
             $(Sel.selectArgExample).val('').selectmenu('refresh')
-            // $('#example_argument', $Frm).selectmenu('refresh')
         }
 
         /**
@@ -325,33 +293,30 @@
          * @return {object} The jquery element of the created tr.
          */
         function addPredicate(index, subscript, arity) {
+            // TODO: hardcoded values
+            // ----------------------
             //
-            // classes  :      hidden
-            //                 notation-*
-            //                 predicate-symbol
-            //                 predicates
+            // classes  :      notation-*
             //
-            const thisNotation = currentNotation()
+            const thisNotation = $(Sel.selectParseNotn).val()
             var html = ''
             $.each(AppData.nups, function(notation, symbols) {
-                var classes = ['predicate-symbol', 'notation-' + esc(notation)]
+                var classes = [Cls.predSymbol, 'notation-' + esc(notation)]
                 if (notation !== thisNotation)
-                    classes.push('hidden')
+                    classes.push(Cls.hidden)
                 html += '<span class="' + classes.join(' ') + '">'
                 html += $('<div/>').text(symbols[index]).html()
                 if (subscript > 0)
                     html += '<sub>' + esc(subscript) + '</sub>'
                 html += '</span>'
             })
-            // debug(html)
             const $el = $(render(Templates.predicate, { 
                 index       : index,
                 subscript   : subscript,
-                // name        : '',//name || ('Predicate ' + ($('input.predicate-symbol', $Frm).length + 1)),
                 arity       : arity || '',
                 symbol_html : html
             }))
-            $('table.predicates', $Frm).append($el)
+            $(Sel.wrapPredicates).append($el)
             return $el
         }
 
@@ -362,10 +327,7 @@
          * @return {object} The jQuery element of the created tr.
          */
         function addEmptyPredicate() {
-            //
-            // classes: predicate-symbol
-            //
-            const $symbols   = $('input.predicate-symbol', $Frm)
+            const $symbols   = $(Sel.inputsPredSymbol, $AppForm)
             const numSymbols = $symbols.length
             var index      = 0
             var subscript  = 0
@@ -387,10 +349,7 @@
          * @return {void}
          */
         function clearPredicates() {
-            //
-            // classes  :       user-predicate
-            //
-            $('tr.user-predicate', $Frm).remove()
+            $(Sel.rowsPredUser, $AppForm).remove()
         }
 
         /**
@@ -400,37 +359,16 @@
          * @return {boolean}
          */
         function hasEmptyPremise() {
-            //
-            // classes  :       premise
-            //
             var hasEmpty = false
-            $('input.premise', $Frm).each(function(i){
+            $(Sel.inputsPremise, $AppForm).each(function(i){
                 if (!$(this).val()) {
                     hasEmpty = true
-                    // stop iteration
+                    // Stop iteration (break).
                     return false
                 }
             })
             return hasEmpty
         }
-
-        // /**
-        //  * Check whether there is already an empty predicate input row available
-        //  * for input.
-        //  *
-        //  * @return boolean
-        //  */
-        // function hasEmptyPredicate() {
-        //     var hasEmpty = false
-        //     $('input.arity', $Frm).each(function(i) {
-        //         if (!$(this).val()){
-        //             hasEmpty = true
-        //             // stop iteration
-        //             return false
-        //         }
-        //     })
-        //     return hasEmpty
-        // }
 
         /**
          * Ensure that there is an empty premise input row available for input.
@@ -439,20 +377,9 @@
          */
         function ensureEmptyPremise() {
             if (!hasEmptyPremise()) {
-                addEmptyPremise()
+                addPremise()
             }
         }
-
-        // /**
-        //  * Ensure that there is an empty predicate input row available for input.
-        //  *
-        //  * @return {void}
-        //  */
-        // function ensureEmptyPredicate() {
-        //     if (!hasEmptyPredicate()) {
-        //         addEmptyPredicate()
-        //     }   
-        // }
 
         /**
          * Logic select change handler. Show appropriate logic information.
@@ -460,13 +387,11 @@
          * @return {void}
          */
         function refreshLogic() {
-            //
-            // classes  :       logic-details
-            //                  logic-details-*
-            //
             const logicName = $(Sel.selectLogic).val()
-            $('.logic-details', $Frm).hide()
-            $('.logic-details.' + logicName, $Frm).show()
+            $('.' + Cls.logicDetails, $AppForm)
+                .hide()
+                .filter('.' + logicName)
+                .show()
         }
 
         /**
@@ -476,25 +401,26 @@
          * @return {void}
          */
         function refreshNotation() {
+            // TODO: hardcoded values
+            // ----------------------
             //            
-            // classes   :     hidden
-            //                 lexicons
+            // classes   :     lexicons
             //                 lexicon
             //                 notation-*
-            //                 predicate-symbol
-            //                 predicates
-            //                 sentence
+            //                 predicates [TODO: remove if possible]
             //
-            const notation = currentNotation()
-            $('.lexicons .lexicon:not(.predicates)', $Frm).hide()
-            $('.lexicon.notation-' + notation, $Frm).show()
-            $('.predicate-symbol', $Frm).addClass('hidden')
-            $('.predicate-symbol.notation-' + notation, $Frm).removeClass('hidden')
+            const notation = $(Sel.selectParseNotn).val()
+            $('.lexicons .lexicon:not(.predicates)', $AppForm).hide()
+            $('.lexicon.notation-' + notation, $AppForm).show()
+            $('.' + Cls.predSymbol, $AppForm)
+                .addClass(Cls.hidden)
+                .filter('.notation-' + notation)
+                .removeClass(Cls.hidden)
             if ($(Sel.selectArgExample).val()) {
                 refreshExampleArgument()
             } else {
-                // translate good sentences
-                $('input.sentence', $Frm).each(function() {
+                // Translate good sentences.
+                $(Sel.inputsSentence, $AppForm).each(function() {
                     const value = $(this).val()
                     if (value && SentenceRenders[value]) {
                         if (SentenceRenders[value][notation]) {
@@ -511,30 +437,28 @@
          * @return {void}
          */
         function refreshExampleArgument() {
-            debug('refreshExampleArgument', 1)
+            // debug('refreshExampleArgument', 1)
             clearPredicates()
             clearArgument()
             const argName = $(Sel.selectArgExample).val()
 
-            debug('refreshExampleArgument', 5)
+            // debug('refreshExampleArgument', 5)
             if (!argName) {
                 ensureEmptyPremise()
-                // ensureEmptyPredicate()
                 return
             }
-            debug('refreshExampleArgument', 8)
-            const notation = currentNotation()
+            // debug('refreshExampleArgument', 8)
+            const notation = $(Sel.selectParseNotn).val()
             const arg = AppData.example_arguments[argName][notation]
             $.each(arg.premises, function(i, value) {
                 addPremise(value)
             })
-            debug('refreshExampleArgument', 15)
+            // debug('refreshExampleArgument', 15)
             $(Sel.inputConclusion).val(arg.conclusion)
             $.each(AppData.example_predicates, function(i, pred) {
                 addPredicate(pred[0], pred[1], pred[2])
-                // addPredicate(pred[1], pred[2], pred[0], pred[3])
             })
-            debug('refreshExampleArgument', 35)
+            // debug('refreshExampleArgument', 35)
         }
 
         /**
@@ -544,21 +468,21 @@
          * @return {void}
          */
         function refreshStatuses(isForce) {
+            // TODO: hardcoded values
+            // ----------------------
             //
-            // attributes: data-hash, title
+            // classes   : input, status
             //
-            // classes   : bad, good, input, status
-            //
-            $('input.sentence', $Frm).each(function(sentenceIndex) {
+            $(Sel.inputsSentence, $AppForm).each(function(sentenceIndex) {
                 const $status = $(this).closest('div.input').find('.status')
-                const notation = currentNotation()
+                const notation = $(Sel.selectParseNotn).val()
                 const input = $(this).val()
                 if (input) {
                     const hash = hashString([input, notation].join('.'))
-                    if (!isForce && +$status.attr('data-hash') === hash) {
+                    if (!isForce && +$status.attr(Atr.dataHash) === hash) {
                         return
                     }
-                    $status.attr('data-hash', hash)
+                    $status.attr(Atr.dataHash, hash)
                     var apiData = getApiData()
                     $.ajax({
                         url         : API_PARSE_URI,
@@ -571,14 +495,15 @@
                             predicates : apiData.argument.predicates
                         }),
                         success: function(res) {
-                            $status.removeClass('bad').addClass('good')
-                            $status.attr('title', res.result.type).tooltip()
+                            $status
+                                .removeClass(Cls.bad)
+                                .addClass(Cls.good)
+                                .attr('title', res.result.type)
+                                .tooltip()
                             SentenceRenders[input] = res.result.rendered
-                            // debug({SentenceRenders})
-                            // refreshArgumentHeader()
                         },
                         error: function(xhr, textStatus, errorThrown) {
-                            $status.removeClass('good').addClass('bad')
+                            $status.removeClass(Cls.good).addClass(Cls.bad)
                             var title
                             if (xhr.status == 400) {
                                 const res = xhr.responseJSON
@@ -600,48 +525,12 @@
                         }
                     })
                 } else {
-                    $status.removeClass('bad good')
+                    $status.removeClass([Cls.good, Cls.bad])
                     $status.attr('title', '')
-                    $status.attr('data-hash', '')
+                    $status.attr(Atr.dataHash, '')
                 }
             })
         }
-
-        // /**
-        //  * Update the argument display in the header bar of the argument fieldset.
-        //  *
-        //  * @return {void}
-        //  */
-        // function refreshArgumentHeader() {
-        //     const notation = currentOutputNotation()
-        //     const enc = currentOutputSymbolEnc()
-        //     const premises = []
-        //     var conclusion
-        //     $('input.sentence', $Frm).each(function(sentenceIndex) {
-        //         const $status = $(this).closest('div.input').find('.status')
-        //         const input = $(this).val()
-        //         const isConclusion = $(this).hasClass('conclusion')
-        //         const isGood = $status.hasClass('good')
-        //         if (input || isConclusion) {
-        //             var sentence
-        //             if (isGood && SentenceRenders[input]) {
-        //                 // debug({notation, enc})
-        //                 sentence = SentenceRenders[input][notation][enc]
-        //                 if (enc != 'html') {
-        //                     sentence = h(sentence)
-        //                 }
-        //             } else {
-        //                 sentence = '?'
-        //             }
-        //             if (isConclusion) {
-        //                 conclusion = sentence
-        //             } else {
-        //                 premises.push(sentence)
-        //             }
-        //         }
-        //     })
-        //     $('#argument-heading-rendered').html(premises.join(', ') + ' &there4; ' + conclusion)
-        // }
 
         /**
          * Generate an integer hash for a string.
@@ -672,31 +561,21 @@
          * @return {object}
          */
          function getApiData() {
-            //
-            // ids     : options_max_steps
-            //           options_rank_optimizations
-            //           options_group_optimizations
-            //           options_show_controls
-            //           options_color_open
-            //
-            // classes : arity, color-open, predicate-symbol, premise, user-predicate,
-            //          with-controls, with-models
-            //
             const data = {
                 logic: $(Sel.selectLogic).val(),
                 argument : {
-                    conclusion: $(Sel.inputConclusion).val(),
-                    premises  : [],
-                    predicates: [],
-                    notation: currentNotation(),
+                    conclusion : $(Sel.inputConclusion).val(),
+                    premises   : [],
+                    predicates : [],
+                    notation   : $(Sel.selectParseNotn).val(),
                 },
                 output: {
-                    format   : $(Sel.selectOutputFmt).val(),
-                    notation : $(Sel.selectOutputNotn).val(),
+                    format     : $(Sel.selectOutputFmt).val(),
+                    notation   : $(Sel.selectOutputNotn).val(),
                     symbol_enc : $(Sel.selectSymbolEnc).val(),
-                    options : {
-                        classes: [],
-                        models: undefined,
+                    options    : {
+                        classes : [],
+                        models  : undefined,
                     }
                 },
                 build_models        : undefined,
@@ -705,19 +584,19 @@
                 group_optimizations : undefined,
                 show_controls       : undefined,
             }
-            $('input.premise', $Frm).each(function() {
+            $(Sel.inputsPremise, $AppForm).each(function() {
                 const val = $(this).val()
                 if (val) {
                     data.argument.premises.push(val)
                 }
             })
-            $('.user-predicate', $Frm).each(function() {
+            $(Sel.rowsPredUser, $AppForm).each(function() {
                 const $tr = $(this)
-                const arity = $('input.arity', $tr).val()
+                const arity = $(Sel.inputsPredArity, $tr).val()
                 if (arity.length > 0) {
-                    const coords = $('input.predicate-symbol', $tr).val().split('.')
+                    const coords = $(Sel.inputsPredSymbol, $tr).val().split('.')
                     const arityNumVal = +arity
-                    // let invalid arity propagate
+                    // Let invalid arity value propagate.
                     var arityVal
                     if (isNaN(arityNumVal)) {
                         arityVal = arity
@@ -725,29 +604,27 @@
                         arityVal = arityNumVal
                     }
                     data.argument.predicates.push({
-                        // name      : $('input.predicateName', $tr).val(),
                         index     : +coords[0],
                         subscript : +coords[1],
                         arity     : arityVal
                     })
                 }
             })
-            $('input:checkbox.options', $Frm).each(function() {
+            $(Sel.checksOption, $AppForm).each(function() {
                 const $me = $(this)
-                const name = $me.attr('name')
-                const opt = name.split('.')[1]
+                const opt = $me.attr('name').split('.')[1]
                 const value = $me.is(':checked')
                 data.output.options[opt] = value
             })
             if (data.output.options.models) {
-                data.output.options.classes.push('with-models')
+                data.output.options.classes.push(Cls.withModels)
                 data.build_models = true
             }
-            const maxStepsVal = $('#options_max_steps', $Frm).val()
+            const maxStepsVal = $(Sel.inputMaxSteps, $AppForm).val()
             if (maxStepsVal.length) {
                 const maxStepsIntVal = parseInt(maxStepsVal)
                 if (isNaN(maxStepsIntVal)) {
-                    // let invalid values propagate
+                    // Let invalid max_steps value propagate.
                     data.max_steps = maxStepsVal
                 } else {
                     data.max_steps = maxStepsIntVal
@@ -755,43 +632,29 @@
             } else {
                 data.max_steps = undefined
             }
-            const $rankOptim = $('#options_rank_optimizations', $Frm)
+            const $rankOptim = $(Sel.checkRankOptim, $AppForm)
             if ($rankOptim.length) {
                 data.rank_optimizations = $rankOptim.is(':checked')
             }
-            const $groupOptim = $('#options_group_optimizations', $Frm)
+            const $groupOptim = $(Sel.checkGroupOptim, $AppForm)
             if ($groupOptim.length) {
                 data.group_optimizations = $groupOptim.is(':checked')
             }
-            const $showControls = $('#options_show_controls', $Frm)
+            const $showControls = $(Sel.checkShowControls, $AppForm)
             if ($showControls.length) {
-                if ($showControls.attr('type') == 'checkbox') {
-                    data.show_controls = $showControls.is(':checked')
-                } else {
-                    data.show_controls = Boolean($showControls.val())
-                }
+                data.show_controls = $showControls.is(':checked')
             } else {
                 data.show_controls = true
             }
             if (data.show_controls) {
-                data.output.options.classes.push('with-controls')
+                data.output.options.classes.push(Cls.withControls)
             }
-            const $colorOpen = $('#options_color_open', $Frm)
+            const $colorOpen = $(Sel.checkColorOpen, $AppForm)
             if (!$colorOpen.length || $colorOpen.is(':checked')) {
-                data.output.options.classes.push('color-open')
+                data.output.options.classes.push(Cls.colorOpen)
             }
             return data
         }
-
-        // /**
-        //  * Escape HTML open braces.
-        //  *
-        //  * @param {string} str The input string.
-        //  * @return {string} Escaped output.
-        //  */
-        // function h(str) {
-        //     return str.replace(/</g, '&lt;')
-        // }
 
         /**
          * Escape using encodeURIComponent.
@@ -812,5 +675,53 @@
         init()
 
         // debug({AppData})
+
+        // /**
+        //  * Escape HTML open braces.
+        //  *
+        //  * @param {string} str The input string.
+        //  * @return {string} Escaped output.
+        //  */
+        // function h(str) {
+        //     return str.replace(/</g, '&lt;')
+        // }
+
+        // /**
+        //  * Get the output format value.
+        //  *
+        //  * @return String name of the foramat, e.g. 'html'
+        //  */
+        // function currentOutputFormat() {
+        //     return $('#format', $AppForm).val()
+        // }
+
+        // /**
+        //  * Get the output notation value.
+        //  *
+        //  * @return String name of the notation, e.g. 'standard'
+        //  */
+        // function currentOutputNotation() {
+        //     return $('#output_notation', $AppForm).val()
+        // }
+
+        // /**
+        //  * Get the output symbol set value.
+        //  *
+        //  * @return String name of the symbol set, e.g. 'default'
+        //  */
+        // function currentOutputSymbolEnc() {
+        //     return $('#symbol_enc', $AppForm).val()
+        // }
+
+        // /**
+        //  * Ensure that there is an empty predicate input row available for input.
+        //  *
+        //  * @return {void}
+        //  */
+        // function ensureEmptyPredicate() {
+        //     if (!hasEmptyPredicate()) {
+        //         addEmptyPredicate()
+        //     }   
+        // }
     })
 })(jQuery);
