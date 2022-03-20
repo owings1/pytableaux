@@ -1269,8 +1269,6 @@ class Tableau(Sequence[Branch], EventEmitter):
                     s.has_closed = True
                 else:
                     s.has_open = True
-                if s.has_open and s.has_closed:
-                    break
 
             if len(relnodes) != 1:
                 break
