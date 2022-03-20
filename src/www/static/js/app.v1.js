@@ -462,7 +462,7 @@
             })
             $('#conclusion').val(arg.conclusion)
             $.each(AppData.example_predicates, function(i, pred) {
-                addPredicate(pred[1], pred[2], pred[0], pred[3])
+                addPredicate(pred[0], pred[1], pred[3], pred[2])
             })
         }
 
