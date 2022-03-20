@@ -10,7 +10,7 @@
         {{ helper.premise('{n}', '{value}', '{status}', '{messsage}') }}
     </script>
     <script type="text/template" id="predicateRowTemplate">
-        {% call helper.predicate_row('{index}', '{subscript}', '{name}', '{arity}') %}
+        {% call helper.predicate_row('{index}', '{subscript}', '{arity}') %}
             {symbol_html}
         {% endcall %}
     </script>
@@ -37,8 +37,8 @@
                     {% endif %}
                 {% endif %}
             </ul>
-            <form class="argument" action="/" method="post">
-                <input type="hidden" name="api-json"/>
+            <form id="tableau_input_form" class="argument" action="/" method="post">
+                <input type="hidden" id="tableau_form_api_json" name="api-json"/>
                 <div id="tab-argument" class="fieldset argument {{- ' hidden' if is_proof and selected_tab != 'argument'}}">
                     <div class="fieldset-contents">
                         <div class="left" id="argument-input-panel">

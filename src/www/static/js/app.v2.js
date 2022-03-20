@@ -28,35 +28,68 @@
         models   : 5,
     }
 
+    const Sel = {
+        appForm          : '#tableau_input_form',
+        appJson          : '#pt_app_data',
+        appTabs          : '#proove-tabs',
+        clearArgExample  : '#clear_argument',
+        inputConclusion  : '#conclusion',
+        selectArgExample : '#example_argument',
+        selectLogic      : '#selected_logic',
+        selectOutputFmt  : '#format',
+        selectOutputNotn : '#output_notation',
+        selectParseNotn  : '#input_notation',
+        selectSymbolEnc  : '#symbol_enc',
+        submitJson       : '#tableau_form_api_json',
+        templatePrem     : '#premiseTemplate',
+        templatePred     : '#predicateRowTemplate',   
+    }
+
+    const API_PARSE_URI = '/api/parse'
+    var SentenceRenders = Object.create(null)
+
     $(document).ready(function() {
 
-        const AppData = $.parseJSON($('script.app').html())
-        const {is_debug} = AppData
-        const is_proof  = Boolean(AppData.is_proof)
+        const AppData = $.parseJSON($(Sel.appJson).html())
+        const IS_DEBUG = Boolean(AppData.is_debug)
+        const IS_PROOF  = Boolean(AppData.is_proof)
         const Templates = {
-            premise    : $('#premiseTemplate').html(),
-            predicate  : $('#predicateRowTemplate').html()
+            premise    : $(Sel.templatePrem).html(),
+            predicate  : $(Sel.templatePred).html(),
         }
 
-        var SentenceRenders = {}
-
-        const $Ctx = $('form.argument')
-        const $Frm = $Ctx
+        const $Frm = $(Sel.appForm)
 
         /**
          * Main initialization routine.
          *
-         * @return void
+         * @return {void}
          */
         function init() {
-            $Frm.on('keyup focus', 'input.premise, #conclusion', ensureEmptyPremise)
+            //
+            // attributes   :   data-shortcut-key
+            //                  title
+            //
+            // classes  :      add-predicate
+            //                 arity
+            //                 button
+            //                 controls
+            //                 premise
+            //                 pt-app
+            //                 sentence
+            //                 shortkey
+            //                 tableau
+            //                 tableau-controls
+            //                 tooltip
+
+            $Frm.on('keyup focus', ['input.premise', Sel.inputConclusion].join(), ensureEmptyPremise)
                 // .on('keyup', 'input.predicateName, input.arity', ensureEmptyPredicate)
                 .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
-                    if ($target.is('#example_argument')) {
+                    if ($target.is(Sel.selectArgExample)) {
                         refreshExampleArgument()
                         refreshStatuses()
-                    } else if ($target.is('#input_notation')) {
+                    } else if ($target.is(Sel.selectParseNotn)) {
                         refreshNotation()
                         refreshStatuses()
                     } else if ($target.is('input.sentence')) {
@@ -65,7 +98,7 @@
                         refreshStatuses(true)
                     }/* else if ($target.hasClass('predicateName')) {
                         refreshStatuses(true)
-                    } */else if ($target.is('#selected_logic')) {
+                    } */else if ($target.is(Sel.selectLogic)) {
                         refreshLogic()
                     }
                     // if ($target.closest('.fieldset.output').length) {
@@ -76,10 +109,9 @@
                     //e.preventDefault()
                     submitForm()
                 })
-
-                $Ctx.on('click', function(e) {
+                .on('click', function(e) {
                     const $target = $(e.target)
-                    if ($target.is('#clear_argument')) {
+                    if ($target.is(Sel.clearArgExample)) {
                         clearArgument()
                         clearExampleArgument()
                         ensureEmptyPremise()
@@ -105,9 +137,9 @@
             }
             const tabOpts = {
                 active      : selectedTab,
-                collapsible : is_proof,
+                collapsible : IS_PROOF,
             }
-            $('#proove-tabs').tabs(tabOpts)
+            $(Sel.appTabs).tabs(tabOpts)
             $('a.button').button()
             $('.ui-controlgroup').controlgroup({
                 button: 'a',
@@ -130,14 +162,15 @@
             })
 
             setTimeout(function() {
-                if (is_proof) {
-                    var tableau = $('.tableau').tableau('instance')
+                if (IS_PROOF) {
+                    $('.tableau').tableau()
+                    // var tableau = $('.tableau').tableau('instance')
                 }
                 ensureEmptyPremise()
                 // ensureEmptyPredicate()
                 refreshNotation()
                 refreshLogic()
-                if (is_proof) {
+                if (IS_PROOF) {
                     refreshStatuses()
                 }
             })
@@ -146,22 +179,22 @@
         /**
          * Form submit handler.
          *
-         * @return void
+         * @return {void}
          */
         function submitForm() {
             $('input:submit', $Frm).prop('disabled', true)
             const data = getApiData()
             const json = JSON.stringify(data)
             debug('submitForm', data)
-            $('input[name="api-json"]', $Frm).val(json)
+            $(Sel.submitJson).val(json)
         }
 
         /**
          * Interpolate variable strings like {varname}.
          *
-         * @param html The template html.
-         * @param vars The variables object.
-         * @return string The rendered content.
+         * @param {string} html The template html.
+         * @param {object} vars The variables object.
+         * @return {string} The rendered content.
          */
         function render(html, vars) {
             if (vars) {
@@ -175,15 +208,19 @@
         /**
          * Add a premise input row. All parameters are optional.
          *
-         * @param value The string value of the sentence.
-         * @param status The status class name, 'good' or 'bad'.
-         * @param message The status message.
-         * @return void
+         * @param {string} value The string value of the sentence.
+         * @param {string} status The status class name, 'good' or 'bad'.
+         * @param {string} message The status message.
+         * @return {void}
          */
         function addPremise(value, status, message) {
-            var premiseNum = $('input.premise', $Ctx).length + 1
-            $('.premises', $Ctx).append(render(Templates.premise, {
-                n       : premiseNum++,
+            //
+            // classes  :       premise
+            //                  premises
+            //
+            var premiseNum = $('input.premise', $Frm).length + 1
+            $('.premises', $Frm).append(render(Templates.premise, {
+                n       : premiseNum,
                 value   : value   || '',
                 status  : status  || '',
                 message : message || '',
@@ -193,10 +230,10 @@
         /**
          * Get the input notation value.
          *
-         * @return String name of the notation, e.g. 'standard'
+         * @return {string} String name of the notation, e.g. 'standard'
          */
         function currentNotation() {
-            return $('#input_notation', $Ctx).val()
+            return $(Sel.selectParseNotn).val()
         }
 
         // /**
@@ -205,7 +242,7 @@
         //  * @return String name of the foramat, e.g. 'html'
         //  */
         // function currentOutputFormat() {
-        //     return $('#format', $Ctx).val()
+        //     return $('#format', $Frm).val()
         // }
 
         // /**
@@ -214,7 +251,7 @@
         //  * @return String name of the notation, e.g. 'standard'
         //  */
         // function currentOutputNotation() {
-        //     return $('#output_notation', $Ctx).val()
+        //     return $('#output_notation', $Frm).val()
         // }
 
         // /**
@@ -223,13 +260,13 @@
         //  * @return String name of the symbol set, e.g. 'default'
         //  */
         // function currentOutputSymbolEnc() {
-        //     return $('#symbol_enc', $Ctx).val()
+        //     return $('#symbol_enc', $Frm).val()
         // }
 
         /**
          * Add an empty premise input row.
          *
-         * @return void
+         * @return {void}
          */
         function addEmptyPremise() {
             addPremise()
@@ -238,74 +275,83 @@
         /**
          * Remove all premise input rows.
          *
-         * @return void
+         * @return {void}
          */
         function clearPremises() {
-            $('.input.premise', $Ctx).remove()
+            //
+            // classes  :       input
+            //                  premise
+            //
+            $('.input.premise', $Frm).remove()
         }
 
         /**
          * Clear the value of the conclusion input.
          *
-         * @return void
+         * @return {void}
          */
         function clearConclusion() {
-            $('#conclusion', $Ctx).val('')
+            $(Sel.inputConclusion).val('')
         }
 
         /**
          * Clear all premises and conclusion inputs.
          *
-         * @return void
+         * @return {void}
          */
         function clearArgument() {
             clearPremises()
             clearConclusion()
-            SentenceRenders = {}
+            SentenceRenders = Object.create(null)
         }
 
         /**
          * Clear the example argument select menu.
          *
-         * @return void
+         * @return {void}
          */
         function clearExampleArgument() {
-            $('#example_argument', $Ctx).val('')
-            $('#example_argument', $Ctx).selectmenu('refresh')
+            $(Sel.selectArgExample).val('').selectmenu('refresh')
+            // $('#example_argument', $Frm).selectmenu('refresh')
         }
 
         /**
          * Add a user-defined predicate row. The first two parameters, index
          * and subscript, are required.
          *
-         * @param index The integer index of the predicate.
-         * @param subscript The integer subscript of the predicate.
-         * @param name The name of the predicate (optional).
-         * @param arity The integer arity of the predicate (optional).
-         * @return The jquery element of the created tr.
+         * @param {integer} index The integer index of the predicate.
+         * @param {integer} subscript The integer subscript of the predicate.
+         * @param {integer} arity The integer arity of the predicate (optional).
+         * @return {object} The jquery element of the created tr.
          */
-        function addPredicate(index, subscript, name, arity) {
+        function addPredicate(index, subscript, arity) {
+            //
+            // classes  :      hidden
+            //                 notation-*
+            //                 predicate-symbol
+            //                 predicates
+            //
             const thisNotation = currentNotation()
             var html = ''
             $.each(AppData.nups, function(notation, symbols) {
-                var classes = ['predicate-symbol', 'notation-' + notation]
-                if (notation != thisNotation)
+                var classes = ['predicate-symbol', 'notation-' + esc(notation)]
+                if (notation !== thisNotation)
                     classes.push('hidden')
                 html += '<span class="' + classes.join(' ') + '">'
                 html += $('<div/>').text(symbols[index]).html()
                 if (subscript > 0)
-                    html += '<sub>' + subscript + '</sub>'
+                    html += '<sub>' + esc(subscript) + '</sub>'
                 html += '</span>'
             })
             // debug(html)
             const $el = $(render(Templates.predicate, { 
                 index       : index,
                 subscript   : subscript,
-                name        : name || ('Predicate ' + ($('input.predicate-symbol', $Ctx).length + 1)),
+                // name        : '',//name || ('Predicate ' + ($('input.predicate-symbol', $Frm).length + 1)),
                 arity       : arity || '',
                 symbol_html : html
             }))
-            $('table.predicates', $Ctx).append($el)
+            $('table.predicates', $Frm).append($el)
             return $el
         }
 
@@ -313,10 +359,13 @@
          * Add an empty input for a user-defined predicate. Calculates the next
          * index and subscript.
          *
-         * @return The jquery element of the created tr.
+         * @return {object} The jQuery element of the created tr.
          */
         function addEmptyPredicate() {
-            const $symbols   = $('input.predicate-symbol', $Ctx)
+            //
+            // classes: predicate-symbol
+            //
+            const $symbols   = $('input.predicate-symbol', $Frm)
             const numSymbols = $symbols.length
             var index      = 0
             var subscript  = 0
@@ -335,21 +384,27 @@
         /**
          * Clear all the user-defined predicate input rows.
          *
-         * @return void
+         * @return {void}
          */
         function clearPredicates() {
-            $('tr.user-predicate', $Ctx).remove()
+            //
+            // classes  :       user-predicate
+            //
+            $('tr.user-predicate', $Frm).remove()
         }
 
         /**
          * Check whether there is already an empty premise input row available
          * for input.
          *
-         * @return boolean
+         * @return {boolean}
          */
         function hasEmptyPremise() {
+            //
+            // classes  :       premise
+            //
             var hasEmpty = false
-            $('input.premise', $Ctx).each(function(i){
+            $('input.premise', $Frm).each(function(i){
                 if (!$(this).val()) {
                     hasEmpty = true
                     // stop iteration
@@ -359,28 +414,28 @@
             return hasEmpty
         }
 
-        /**
-         * Check whether there is already an empty predicate input row available
-         * for input.
-         *
-         * @return boolean
-         */
-        function hasEmptyPredicate() {
-            var hasEmpty = false
-            $('input.arity', $Ctx).each(function(i) {
-                if (!$(this).val()){
-                    hasEmpty = true
-                    // stop iteration
-                    return false
-                }
-            })
-            return hasEmpty
-        }
+        // /**
+        //  * Check whether there is already an empty predicate input row available
+        //  * for input.
+        //  *
+        //  * @return boolean
+        //  */
+        // function hasEmptyPredicate() {
+        //     var hasEmpty = false
+        //     $('input.arity', $Frm).each(function(i) {
+        //         if (!$(this).val()){
+        //             hasEmpty = true
+        //             // stop iteration
+        //             return false
+        //         }
+        //     })
+        //     return hasEmpty
+        // }
 
         /**
          * Ensure that there is an empty premise input row available for input.
          *
-         * @return void
+         * @return {void}
          */
         function ensureEmptyPremise() {
             if (!hasEmptyPremise()) {
@@ -388,45 +443,58 @@
             }
         }
 
-        /**
-         * Ensure that there is an empty predicate input row available for input.
-         *
-         * @return void
-         */
-        function ensureEmptyPredicate() {
-            if (!hasEmptyPredicate()) {
-                addEmptyPredicate()
-            }   
-        }
+        // /**
+        //  * Ensure that there is an empty predicate input row available for input.
+        //  *
+        //  * @return {void}
+        //  */
+        // function ensureEmptyPredicate() {
+        //     if (!hasEmptyPredicate()) {
+        //         addEmptyPredicate()
+        //     }   
+        // }
 
         /**
          * Logic select change handler. Show appropriate logic information.
          *
-         * @return void
+         * @return {void}
          */
         function refreshLogic() {
-            const logicName = $('#selected_logic').val()
-            $('.logic-details', $Ctx).hide()
-            $('.logic-details.' + logicName, $Ctx).show()
+            //
+            // classes  :       logic-details
+            //                  logic-details-*
+            //
+            const logicName = $(Sel.selectLogic).val()
+            $('.logic-details', $Frm).hide()
+            $('.logic-details.' + logicName, $Frm).show()
         }
 
         /**
          * Input notation change handler. Show appropriate lexicon, and update
          * the example argument, if any.
          *
-         * @return void
+         * @return {void}
          */
         function refreshNotation() {
+            //            
+            // classes   :     hidden
+            //                 lexicons
+            //                 lexicon
+            //                 notation-*
+            //                 predicate-symbol
+            //                 predicates
+            //                 sentence
+            //
             const notation = currentNotation()
-            $('.lexicons .lexicon:not(.predicates)', $Ctx).hide()
-            $('.lexicon.notation-' + notation, $Ctx).show()
-            $('.predicate-symbol', $Ctx).addClass('hidden')
-            $('.predicate-symbol.notation-' + notation, $Ctx).removeClass('hidden')
-            if ($('#example_argument', $Ctx).val()) {
+            $('.lexicons .lexicon:not(.predicates)', $Frm).hide()
+            $('.lexicon.notation-' + notation, $Frm).show()
+            $('.predicate-symbol', $Frm).addClass('hidden')
+            $('.predicate-symbol.notation-' + notation, $Frm).removeClass('hidden')
+            if ($(Sel.selectArgExample).val()) {
                 refreshExampleArgument()
             } else {
                 // translate good sentences
-                $('input.sentence', $Ctx).each(function() {
+                $('input.sentence', $Frm).each(function() {
                     const value = $(this).val()
                     if (value && SentenceRenders[value]) {
                         if (SentenceRenders[value][notation]) {
@@ -440,14 +508,13 @@
         /**
          * Example argument change handler.
          *
-         * @return void
+         * @return {void}
          */
         function refreshExampleArgument() {
             debug('refreshExampleArgument', 1)
             clearPredicates()
             clearArgument()
-            const $me = $('#example_argument')
-            const argName = $me.val()
+            const argName = $(Sel.selectArgExample).val()
 
             debug('refreshExampleArgument', 5)
             if (!argName) {
@@ -462,9 +529,10 @@
                 addPremise(value)
             })
             debug('refreshExampleArgument', 15)
-            $('#conclusion').val(arg.conclusion)
+            $(Sel.inputConclusion).val(arg.conclusion)
             $.each(AppData.example_predicates, function(i, pred) {
-                addPredicate(pred[1], pred[2], pred[0], pred[3])
+                addPredicate(pred[0], pred[1], pred[2])
+                // addPredicate(pred[1], pred[2], pred[0], pred[3])
             })
             debug('refreshExampleArgument', 35)
         }
@@ -472,10 +540,16 @@
         /**
          * Make AJAX requests to parse the premises & conclusion.
          *
-         * @return void
+         * @param {bool} isForce Force refresh.
+         * @return {void}
          */
         function refreshStatuses(isForce) {
-            $('input.sentence', $Ctx).each(function(sentenceIndex) {
+            //
+            // attributes: data-hash, title
+            //
+            // classes   : bad, good, input, status
+            //
+            $('input.sentence', $Frm).each(function(sentenceIndex) {
                 const $status = $(this).closest('div.input').find('.status')
                 const notation = currentNotation()
                 const input = $(this).val()
@@ -487,7 +561,7 @@
                     $status.attr('data-hash', hash)
                     var apiData = getApiData()
                     $.ajax({
-                        url         : '/api/parse',
+                        url         : API_PARSE_URI,
                         method      : 'POST',
                         contentType : 'application/json',
                         dataType    : 'json',
@@ -536,14 +610,14 @@
         // /**
         //  * Update the argument display in the header bar of the argument fieldset.
         //  *
-        //  * @return void
+        //  * @return {void}
         //  */
         // function refreshArgumentHeader() {
         //     const notation = currentOutputNotation()
         //     const enc = currentOutputSymbolEnc()
         //     const premises = []
         //     var conclusion
-        //     $('input.sentence', $Ctx).each(function(sentenceIndex) {
+        //     $('input.sentence', $Frm).each(function(sentenceIndex) {
         //         const $status = $(this).closest('div.input').find('.status')
         //         const input = $(this).val()
         //         const isConclusion = $(this).hasClass('conclusion')
@@ -574,8 +648,8 @@
          *
          * From: http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
          *
-         * @param str The input string.
-         * @return int The hash.
+         * @param {string} str The input string.
+         * @return {integer} The hash.
          */
         function hashString(str) {
             var hash = 0
@@ -595,31 +669,41 @@
          * Read the form inputs into an object suitable for posting to
          * the prove api.
          *
-         * @return object
+         * @return {object}
          */
          function getApiData() {
+            //
+            // ids     : options_max_steps
+            //           options_rank_optimizations
+            //           options_group_optimizations
+            //           options_show_controls
+            //           options_color_open
+            //
+            // classes : arity, color-open, predicate-symbol, premise, user-predicate,
+            //          with-controls, with-models
+            //
             const data = {
-                logic: $('select[name="logic"]', $Frm).val(),
+                logic: $(Sel.selectLogic).val(),
                 argument : {
-                    conclusion: $('#conclusion', $Frm).val(),
+                    conclusion: $(Sel.inputConclusion).val(),
                     premises  : [],
                     predicates: [],
                     notation: currentNotation(),
                 },
                 output: {
-                    format   : $('#format', $Frm).val(),
-                    notation : $('#output_notation', $Frm).val(),
-                    symbol_enc : $('#symbol_enc', $Frm).val(),
+                    format   : $(Sel.selectOutputFmt).val(),
+                    notation : $(Sel.selectOutputNotn).val(),
+                    symbol_enc : $(Sel.selectSymbolEnc).val(),
                     options : {
                         classes: [],
                         models: undefined,
                     }
                 },
-                build_models: undefined,
-                max_steps: undefined,
-                rank_optimizations: undefined,
-                group_optimizations: undefined,
-                show_controls: undefined,
+                build_models        : undefined,
+                max_steps           : undefined,
+                rank_optimizations  : undefined,
+                group_optimizations : undefined,
+                show_controls       : undefined,
             }
             $('input.premise', $Frm).each(function() {
                 const val = $(this).val()
@@ -699,18 +783,28 @@
             return data
         }
 
+        // /**
+        //  * Escape HTML open braces.
+        //  *
+        //  * @param {string} str The input string.
+        //  * @return {string} Escaped output.
+        //  */
+        // function h(str) {
+        //     return str.replace(/</g, '&lt;')
+        // }
+
         /**
-         * Escape HTML
-         *
-         * @param str The input string.
-         * @return string output.
+         * Escape using encodeURIComponent.
+         * 
+         * @param {string} str The input string.
+         * @return {string} Escaped output.
          */
-        function h(str) {
-            return str.replace(/</g, '&lt;')
+        function esc(str) {
+            return encodeURIComponent(str)
         }
 
         function debug(...args) {
-            if (is_debug) {
+            if (IS_DEBUG) {
                 console.log(...args)
             }
         }

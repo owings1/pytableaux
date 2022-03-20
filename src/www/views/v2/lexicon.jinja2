@@ -78,7 +78,7 @@
                 {% for label in form_data['user_predicate_symbols[]'] %}
                     {%- set index, subscript = label.split('.')|map('int') -%}
                     {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
-                    {%- call helper.predicate_row(index, subscript, name, arity) %}
+                    {%- call helper.predicate_row(index, subscript, arity) %}
                         {% for notn, table in parser_tables.items() -%}
                             {{- helper.predicate_symbol(notn, table.char(LexType.Predicate, index), subscript) }}
                         {% endfor -%}
