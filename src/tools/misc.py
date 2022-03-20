@@ -16,19 +16,17 @@
 #
 # ------------------
 #
-# pytableaux - misc utils module
+# pytableaux - tools.misc module
 from __future__ import annotations
 
 __all__ = 'get_logic',
 
-# Only local import allowed is errors
-# from errors import DuplicateKeyError, instcheck
+# No local imports
 
 from builtins import ModuleNotFoundError
 from importlib import import_module
 from itertools import islice
 from types import ModuleType
-# from typing import Iterable, Mapping
 
 def get_module(ref, package: str = None) -> ModuleType:
 

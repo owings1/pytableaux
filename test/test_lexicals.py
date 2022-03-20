@@ -21,7 +21,8 @@
 
 from errors import *
 from lexicals import *
-from lexicals import Types
+# from lexicals import Types
+from lexicals import Lexical
 from parsers import parse
 from tools.sets import EMPTY_SET
 
@@ -358,7 +359,7 @@ class TestGenericApi(BaseSuite):
             inst = cls.first()
             for x in range(2):
                 assert isinstance(inst, cls)
-                assert isinstance(inst, Types.Lexical)
+                assert isinstance(inst, Lexical)
                 inst = inst.next()
                 st = inst.sort_tuple
                 assert isinstance(st, tuple)

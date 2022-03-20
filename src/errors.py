@@ -1,12 +1,31 @@
-# No local package dependencies.
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+# pytableaux - errors module
+from __future__ import annotations
 
-import enum as _enum
-from typing import Any, TypeVar
+# Allowed local imports: tools.abcs
+from tools.abcs import AbcEnum, ExT, T
 
-_T = TypeVar('_T')
-_ExT = TypeVar('_ExT', bound = Exception)
+from typing import Any
 
 # Base Errors
+
 class IllegalStateError(Exception):
     pass
 
@@ -25,17 +44,23 @@ class BoundVariableError(ParseError):
     pass
 
 # AttributeErrors
+
 class MissingAttributeError(AttributeError):
     pass
+
 class AttributeConflictError(AttributeError):
     pass
+
 # KeyErrors
+
 class DuplicateKeyError(KeyError):
     pass
+
 class MissingKeyError(KeyError):
     pass
 
 # ValueErrors
+
 class DuplicateValueError(ValueError):
     pass
 
@@ -54,7 +79,7 @@ class DenotationError(ModelValueError):
 def _thru(o): return o
 def _len(o): return o if isinstance(o, int) else len(o)
 
-class Emsg(_enum.Enum):
+class Emsg(AbcEnum):
 
     InstCheck = (TypeError,
         "Expected instance of '{1}' but got type '{0}'", (type, _thru)
@@ -104,7 +129,7 @@ class Emsg(_enum.Enum):
 
     Timeout = TimeoutError,
 
-    def __init__(self, cls: type[_ExT], msg: str = None, fns = None):
+    def __init__(self, cls: type[ExT], msg: str = None, fns = None):
         if isinstance(cls, tuple):
             cls = type(cls[0], cls[1:], {})
         self.cls = cls
@@ -118,7 +143,7 @@ class Emsg(_enum.Enum):
     def __call__(self, *args):
         return self._makeas(self.cls, args)
 
-    def _makeas(self, cls: type[_ExT], args: tuple) -> _ExT:
+    def _makeas(self, cls: type[ExT], args: tuple) -> ExT:
         return cls(*self._getargs(args))
 
     def _getargs(self, args: tuple):
@@ -129,17 +154,17 @@ class Emsg(_enum.Enum):
             *(f(a) for f,a in zip(self.fns, args))
         ), *args[alen:]
 
-def instcheck(obj, classinfo: type[_T]) -> _T:
+def instcheck(obj, classinfo: type[T]) -> T:
     if not isinstance(obj, classinfo):
         raise Emsg.InstCheck(obj, classinfo)
     return obj
 
-def subclscheck(cls: type, typeinfo: _T) -> _T:
+def subclscheck(cls: type, typeinfo: T) -> T:
     if not issubclass(cls, typeinfo):
         raise Emsg.SubclsCheck(cls, typeinfo)
     return cls
 
-def notsubclscheck(cls: type[_T], typeinfo: type) -> type[_T]:
+def notsubclscheck(cls: type[T], typeinfo: type) -> type[T]:
     if issubclass(cls, typeinfo):
         raise Emsg.NotSubclsCheck(cls, typeinfo)
     return cls
@@ -149,4 +174,4 @@ def errstr(err: Any) -> str:
         return '%s: %s' % (type(err).__name__, err)
     return str(err)
 
-del(_enum, TypeVar)
+del(AbcEnum, _len, _thru)

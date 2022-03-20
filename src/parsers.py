@@ -42,10 +42,12 @@ from tools.sets import setf, EMPTY_SET
 
 from lexicals import (
     Bases as _Bases,
+    Lexical,
+    BiCoords,
     Operator as Oper, Quantifier,
     Predicate, Parameter, Constant, Variable,
     Sentence, Atomic, Predicated, Quantified, Operated,
-    LexType, Predicates, Argument, Marking, Notation, Parser, Types
+    LexType, Predicates, Argument, Marking, Notation, Parser,
 )
 
 from collections.abc import Set
@@ -59,16 +61,16 @@ notations = Notation.seq
 
 CType = LexType|Marking|type[Predicate.System]
 
-class CharTable(MapCover[str, tuple[CType, int|Types.Lexical]], _Bases.CacheNotationData):
+class CharTable(MapCover[str, tuple[CType, int|Lexical]], _Bases.CacheNotationData):
 
     default_fetch_name = 'default'
 
     __slots__ = 'reversed', 'chars'
 
-    reversed: Mapping[tuple[CType, int|Types.Lexical], str]
+    reversed: Mapping[tuple[CType, int|Lexical], str]
     chars: Mapping[CType, seqf[str]]
 
-    def __init__(self, data: Mapping[str, tuple[CType, int|Types.Lexical]]):
+    def __init__(self, data: Mapping[str, tuple[CType, int|Lexical]]):
 
         super().__init__(MapProxy(data))
 
@@ -77,7 +79,7 @@ class CharTable(MapCover[str, tuple[CType, int|Types.Lexical]], _Bases.CacheNota
         # list of types
         ctypes: qset[CType] = qset(map(gets.Key0, vals))
 
-        tvals: dmap[CType, qset[int|Types.Lexical]] = dmap()
+        tvals: dmap[CType, qset[int|Lexical]] = dmap()
         for ctype in ctypes:
             tvals[ctype] = qset()
         for ctype, value in vals:
@@ -414,7 +416,7 @@ class BaseParser(Parser):
         system predicates, because they have string keys in the symbols set."""
         index = self.table.value(context.current())
         context.advance()
-        return Types.BiCoords(index, self._read_subscript(context))
+        return BiCoords(index, self._read_subscript(context))
 
     def __setattr__(self, name, value):
         if name in self.__slots__ and hasattr(self, name):

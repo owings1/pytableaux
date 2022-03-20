@@ -1,3 +1,22 @@
+# -*- coding: utf-8 -*-
+# pytableaux, a multi-logic proof generator.
+# Copyright (C) 2014-2022 Doug Owings.
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ------------------
+# pytableaux - tools.abcs module
 from __future__ import annotations
 
 if 'Exports' or True:
@@ -25,30 +44,15 @@ if 'Exports' or True:
 
 if 'Imports' or True:
 
-    # Allowed local imports: errors, tools.misc, tools.patch
-    # ----
-    from errors import (
-        instcheck,
-        Emsg,
-    )
-    from tools.patch import EnumDictType
-    # ----
+    # No local imports
+
     import abc as _abc
-    from collections import defaultdict
     from collections.abc import Set
     import enum as _enum
     # exportable
     from enum import auto as eauto
-    from functools import (
-        reduce,
-        wraps,
-    )
-    from itertools import (
-        chain,
-        islice,
-        filterfalse,
-        repeat,
-    )
+    from functools import reduce
+    from itertools import chain, islice
     import operator as opr
     from types import (
         FunctionType,
@@ -62,19 +66,16 @@ if 'Imports' or True:
         Any,
         Annotated,
         Callable,
-        ClassVar,
         Collection,
         Generic,
         Hashable,
         Iterable,
         Iterator,
-        Literal,
         Mapping,
         NamedTuple,
         Sequence,
         SupportsIndex,
         ParamSpec,
-        TypedDict,
         TypeVar,
     )
 
@@ -104,20 +105,22 @@ if 'Type Variables' or True:
     # Callable bound, use for decorator, etc.
     F   = TypeVar('F',  bound = Callable[..., Any])
 
+    # Exception bound
+    ExT = TypeVar('ExT', bound = Exception)
+
     # Type bound, use for class decorator, etc.
     TT    = TypeVar('TT',    bound = type)
     TT_co = TypeVar('TT_co', bound = type, covariant = True)
 
-    # FrzsetT = TypeVar('FrzsetT', bound = frozenset)
-
     P = ParamSpec('P')
 
-    EnT     = TypeVar('EnT',      bound = 'AbcEnum')
-    EnT2    = TypeVar('EnT2',     bound = 'AbcEnum')
+    EnT  = TypeVar('EnT',  bound = 'AbcEnum')
+    EnT2 = TypeVar('EnT2', bound = 'AbcEnum')
     # EnT_co     = TypeVar('EnT_co', bound = 'AbcEnum', covariant = True)
     EnFlagT = TypeVar('EnFlagT', bound = 'FlagEnum')
     EnKeyFunc = Callable[['AbcEnum'], Set[Hashable]]
-    Func = FunctionType
+
+    IndexType = SupportsIndex | slice
     NotImplType = type(NotImplemented)
 
 if 'Decorators & Utils' or True:
@@ -144,7 +147,7 @@ if 'Decorators & Utils' or True:
         if not isinstance(cls, type):
             if isinstance(cls, (classmethod, staticmethod)):
                 return cls
-            instcheck(cls, Callable)
+            # instcheck(cls, Callable)
             return staticmethod(cls)
 
         ns = cls.__dict__
@@ -186,22 +189,6 @@ if 'Util Classes' or True:
                 mapping = dict(mapping)
             return _MapProxy(mapping) # type: ignore
 
-    _HookProvidersTable =     dict[type, MapProxy[str, tuple[str, ...]]]
-    _HookProvidersProxy = MapProxy[type, MapProxy[str, tuple[str, ...]]]
-    _HookUsersTable     = dict[type, MapProxy[type, MapProxy[str, Callable]]]
-
-    class HookConn(TypedDict):
-        user     : type
-        provider : type
-        hookname : str
-        attrname : str
-        provider_func : Func
-        resolved  : Func
-        is_copied : bool
-        user_func : Callable
-
-    _HookConnTable = dict[type, dict[type,  MapProxy[str, tuple[HookConn, ...]]]]
-
     class _EnumEntry(NamedTuple):
         'The value of the enum lookup index.'
         member : AbcEnum
@@ -214,6 +201,14 @@ if 'Util Classes' or True:
         member : EnT
         index  : int | None
         nextmember: EnT | None
+
+    class EnumDictType(_enum._EnumDict):
+        'Stub type for annotation reference.'
+        _member_names: list[str]
+        _last_values : list[object]
+        _ignore      : list[str]
+        _auto_called : bool
+        _cls_name    : str
 
 if 'Constants' or True:
 
@@ -231,9 +226,9 @@ if 'Constants' or True:
 
     _EMPTY = ()
     _EMPTY_SET = frozenset()
-    _EMPTY_MAP = MapProxy[Any, Any]()
+    # _EMPTY_MAP = MapProxy[Any, Any]()
     _NOARG = object()
-    _NOGET = object()
+    # _NOGET = object()
 
 #=============================================================================
 #_____________________________________________________________________________
@@ -254,6 +249,7 @@ class AbcMeta(_abc.ABCMeta):
         abcm.nsinit(ns, bases, skipflags = skipflags)
         Class = super().__new__(cls, clsname, bases, ns, **kw)
         if not skiphooks:
+            from tools.hooks import hookutil
             hookutil.init_user(Class, hooks)
         abcm.clsafter(Class, ns, skipflags = skipflags)
         if not skiphooks:
@@ -270,6 +266,7 @@ class AbcMeta(_abc.ABCMeta):
             impl = value.setdefault(cls, {})
             for name in hooks:
                 if name in impl:
+                    from errors import Emsg
                     raise TypeError from Emsg.DuplicateKey(name)
                 impl[name] = func
             return func
@@ -406,7 +403,9 @@ class abcm:
 
     @staticmethod
     def hookinfo(Class: type):
-        return HookInfo(Class)
+        from tools.hooks import hookutil
+        return hookutil.provider_info(Class)
+        # return HookInfo(Class)
 
 #=============================================================================
 #_____________________________________________________________________________
@@ -629,8 +628,10 @@ class EnumLookup(Mapping[Any, EnumEntry[EnT]],
     def _check_pseudo(cls, pseudo: AbcEnum, ecls: type[AbcEnum], /):
         check = ecls._value2member_map_[pseudo.value]
         if check is not pseudo:
+            from errors import Emsg
             raise TypeError from Emsg.ValueConflict(pseudo, check)
         if pseudo.name is not None:
+            from errors import Emsg
             raise TypeError from Emsg.WrongValue(pseudo.name, None)
         return cls._pseudo_keys(pseudo), EnumEntry(pseudo, None, None)
 
@@ -645,9 +646,11 @@ class EnumLookup(Mapping[Any, EnumEntry[EnT]],
         return {member.name, (member.name,), member, member.value}
 
     def __setattr__(self, name, value, /):
+        from errors import Emsg
         raise Emsg.ReadOnlyAttr(name, self)
 
     def __delattr__(self, name, /):
+        from errors import Emsg
         raise Emsg.ReadOnlyAttr(name, self)
 
     def __repr__(self):
@@ -784,438 +787,15 @@ class IntFlag(int, FlagEnum):
 #=============================================================================
 #_____________________________________________________________________________
 #
-#       Hook Framework
-#_____________________________________________________________________________
-
-class HookInfo(Mapping[str, tuple[str, ...]], metaclass = AbcMeta, skiphooks = True):
-    'Query hook provider & connected classes.'
-
-    __slots__ = 'provider', 'mapping',
-
-    # *** Populated after hookutil init.
-    Providers: _HookProvidersProxy
-    Users: _HookUsersTable
-    _connections: Mapping[type, Mapping[str, tuple[HookConn, ...]]]
-    # ***
-
-    provider: type
-
-    def __new__(cls, provider: type):
-        try:
-            mapping = cls.Providers[provider]
-        except KeyError:
-            raise Emsg.MissingValue(provider)
-        inst = super().__new__(cls)
-        inst.provider = provider
-        inst.mapping = mapping
-        return inst
-
-    def hooknames(self, attrname: str = None, /):
-        'Hook names.'
-        if attrname is None:
-            return list(self)
-        return sorted(set(hookname
-            for hookname, attrnames in self.items()
-            if attrname in attrnames
-        ))
-
-    def attrnames(self, hookname: str = None, /):
-        'Flat sequence of class attr names'
-        if hookname is not None:
-            return list(self[hookname])
-        return sorted(set(attrname
-            for attrnames in self.values()
-                for attrname in attrnames
-        ))
-
-    def hookattrs(self):
-        'Hookname, attrname pairs'
-        return list(item
-            for items in (
-                zip(repeat(hookname), attrnames)
-                    for hookname, attrnames in self.items()
-                )
-                for item in items
-        )
-
-    def attrs(self, hookname: str = None, /) -> list[tuple[str, Func]]:
-        'The (name, member) pairs from the class attributes.'
-        p = self.provider
-        return list((attrname, getattr(p, attrname))
-            for attrname in self.attrnames(hookname)
-        )
-
-    def users(self):
-        'List the user classes.'
-        return list(self._connections.keys())
-
-    def connections(self,
-        user: type = None, *, hookname: str = None, attrname: str = None,
-        sortkey: Callable[[HookConn], Any] = opr.itemgetter('attrname'),
-        reverse = False):
-        'List user connection details.'
-        it = (
-            conn
-                for usermap in (
-                        self._connections.values()
-                    if user is None else
-                        (self._connections[user],)
-                )
-                    for conns in usermap.values()
-                        for conn in conns
-        )
-        if hookname is not None:
-            it = filter(lambda c, eq = hookname.__eq__: eq(c['hookname']), it)
-        if attrname is not None:
-            it = filter(lambda c, eq = attrname.__eq__: eq(c['attrname']), it)
-        return sorted(it, key = sortkey, reverse = reverse)
-
-
-    def excluding(self, hooknames: Set[str],/):
-        'Return the mapping excluding the specified hooknames (__sub__).'
-        instcheck(hooknames, Set)
-        return {key: self[key]
-            for key in filterfalse(hooknames.__contains__, self)
-        }
-
-    def only(self, hooknames: Collection[str],/):
-        'Return the mapping with only specified hooknames (__and__).'
-        return dict((key, self[key]) for key in hooknames)
-
-    def __repr__(self):
-        return '<%s[%s]>(%s):%d' % (
-            type(self).__name__,
-            self.provider.__name__,
-            '|'.join(self.hooknames()),
-            len(self._connections),
-        )
-
-    #******  Mapping Behavior
-
-    def __len__(self):
-        return len(self.mapping)
-
-    def __getitem__(self, key) -> tuple[str, ...]:
-        return self.mapping[key]
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.mapping)
-
-    def __reversed__(self) -> Iterator[str]:
-        return reversed(self.mapping)
-
-    #******  Operators: |  &  -  ^
-
-    @abcf.after
-    def opers(cls: type[HookInfo]): # type: ignore
-
-        def build(items: Collection[tuple[str, str]]):
-            'Build the output mapping'
-            builder: dict[str, list] = defaultdict(list)
-            for hookname, attrname in items:
-                builder[hookname].append(attrname)
-            return {key: tuple(values) for key, values in builder.items()}
-
-        flatten = cls.hookattrs
-        set_opers = dict(__sub__ = cls.excluding, __and__ = cls.only)
-
-        for opername in ('__or__', '__and__', '__sub__', '__xor__'):
-
-            oper = getattr(opr, opername)
-
-            @wraps(oper)
-
-            def f(self, other, /, *, oper: Callable[[T, T], T] = oper, set_oper = set_opers.get(opername)):
-                if type(other) is not cls:
-                    if set_oper is not None and isinstance(other, Set):
-                        return set_oper(self, other)
-                    return NotImplemented
-                return build(sorted(
-                    oper(set(flatten(self)), set(flatten(other)))
-                ))
-    
-            setattr(cls, opername, f)
-
-@static
-class hookutil(metaclass = AbcMeta, skiphooks = True):
-
-    #******  API
-
-    @staticmethod
-    @overload
-    def init_provider( # type: ignore
-        provider: TT,
-        initial: Mapping[str, Collection[str]]|Literal[abcf.inherit] = None,
-    /) -> TT:...
-
-    @staticmethod
-    @overload
-    def init_user( # type: ignore
-        user: TT,
-        initial: Mapping[type, Mapping[str, Callable]] = None,
-    /) -> TT:...
-
-    #******  API Closure
-
-    @abcf.before
-
-    def prepare(ns: dict, bases): # type: ignore
-
-        providers   : _HookProvidersTable = {}
-        users       : _HookUsersTable = {}
-        connections : _HookConnTable = {}
-
-        #******  Closure for init_provider()
-
-        @closure
-
-        def provider():
-
-            ATTR = ABC_HOOKINFO_ATTR
-
-            @wraps(ns.pop('init_provider'))
-
-            def init(provider: type, initial: Mapping = None,/):
-                if provider in providers:
-                    raise TypeError(
-                        'Hook provider config already processed for %s' % provider
-                    )
-                info = build(provider, initial)
-                if len(info):
-                    providers[provider] = MapProxy(info)
-                    connections[provider] =  {}
-                return provider
-
-            def build(provider: type, initial: Mapping|Literal[abcf.inherit]|None, /):
-
-                builder: dict[str, set[str]] = defaultdict(set)
-
-                if initial is not None:
-                    if initial is abcf.inherit:
-                        builder.update(inherit(provider.__bases__))
-                    else:
-                        builder.update((key, set(value))
-                            for key, value in initial.items()
-                        )
-
-                for attrname, member in provider.__dict__.items():
-                    if not isinstance(member, FunctionType):
-                        continue
-                    kwdefs = member.__kwdefaults__
-                    hooknames = getattr(member, ATTR, None)
-                    if hooknames:
-                        if kwdefs is None:
-                            raise TypeError from Emsg.MissingValue('__kwdefaults__')
-                        for hookname in hooknames:
-                            if hookname not in kwdefs:
-                                raise TypeError from Emsg.MissingKey(hookname)
-                            builder[hookname].add(attrname)
-                        # Clean attribute.
-                        delattr(member, ATTR)
-
-                return {
-                    hookname: tuple(sorted(builder[hookname]))
-                    for hookname in sorted(builder)
-                }
-
-            def inherit(bases: tuple[type, ...]):
-                builder: dict[str, set[str]] = defaultdict(set)
-                for base in bases:
-                    if base in providers:
-                        for hookname, attrnames in providers[base].items():
-                            builder[hookname].update(attrnames)
-                return dict(builder)
-
-            return init
-
-        #******  Closure for init_user()
-
-        @closure
-
-        def user():
-
-            ATTR = ABC_HOOKUSER_ATTR
-
-            connect : Callable[..., dict[str, list[HookConn]]] = ns.pop('connect')
-
-            @wraps(ns.pop('init_user'))
-
-            def init(user: type, initial: Mapping = None,/):
-                if user in users:
-                    raise TypeError(
-                        'Hook user config already processed for %s' % user
-                    )
-                info = build(user, initial)
-                if len(info):
-                    users[user] = MapProxy(info)
-                    for provider, usermap in info.items():
-                        connections[provider][user] = MapProxy({ # type: ignore
-                            hookname: tuple(map(MapProxy, conns))
-                            for hookname, conns in
-                            # Connect
-                            connect(user, provider, usermap).items()
-                        })
-                return user
-
-            def build(user: type, initial: Mapping|None,/) -> dict[type, MapProxy[str, Callable]]:
-
-                builder: dict[type, dict[str, Callable]] = defaultdict(dict)
-
-                if initial is not None:
-                    builder.update((key, dict(value))
-                        for key, value in initial.items()
-                    )
-
-                for member in user.__dict__.values():
-                    # Scan each member in the sub class ns for the attribute.
-                    value: Mapping[type, Collection[str]] = getattr(member, ATTR, _EMPTY_MAP)
-                    if not value:
-                        continue
-                    for provider, hooknames in value.items():
-                        pinfo = HookInfo(provider)
-                        for hookname in hooknames:
-                            if hookname not in pinfo:
-                                raise TypeError from Emsg.MissingKey(hookname)
-                            if hookname in builder[provider]:
-                                raise TypeError from Emsg.DuplicateKey(hookname)
-                            builder[provider][hookname] = member
-                    # Clean attribute.
-                    delattr(member, ATTR)
-
-                return {
-                    provider: MapProxy(usermap)
-                    for (provider, usermap) in builder.items()
-                }
-
-            return init
-
-        #******  Update Namespace
-
-        ns.update(
-            init_provider = static(provider),
-            init_user     = static(user),
-        )
-
-        #******  Populate HookInfo attributes
-
-        @property
-        def _connections(self: HookInfo):
-            return MapProxy(connections[self.provider])
-
-        for key, value in dict(
-
-            Providers    = MapProxy(providers),
-            Users        = MapProxy(users),
-            _connections = _connections,
-
-        ).items(): setattr(HookInfo, key, value)
-
-    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
-
-    #******  Closure for internal connect method.
-
-    @abcf.temp
-    @closure
-
-    def connect():
-
-        def connect(user: type, provider: type, usermap: Mapping[str, Callable], /):
-            'Connect the implementing hooks to a provider class.'
-
-            conns: dict[str, list[HookConn]] = defaultdict(list)
-            pinfo = HookInfo(provider)
-            userns = user.__dict__
-
-            for hookname, user_func in usermap.items():
-
-                for attrname, provider_func in pinfo.attrs(hookname):
-
-                    check(provider_func, hookname, user_func)
-
-                    if should_copy(userns, provider, attrname, provider_func):
-                        resolved = copyfunc(provider_func, user.__qualname__)
-                        setattr(user, attrname, resolved)
-                        is_copied = True
-                    else:
-                        resolved = userns[attrname]
-                        is_copied = False
-
-                    resolved.__kwdefaults__[hookname] = user_func
-
-                    conns[hookname].append(HookConn(
-                        provider = provider,
-                        user     = user,
-                        hookname = hookname,
-                        attrname = attrname,
-                        resolved  = resolved,
-                        provider_func = provider_func,
-                        is_copied = is_copied,
-                        user_func = user_func,
-                    ))
-
-            return dict(conns)
-
-        def check(provider_func: Func, hookname, user_func):
-            # Check the existing kwdefault value.
-            value = provider_func.__kwdefaults__[hookname]
-            if value is not None:
-                if value is user_func:
-                    return
-                # Protection until the behavior is defined.
-                raise TypeError from Emsg.ValueConflictFor(hookname, user_func, value)
-
-        def should_copy(userns, provider: type, attrname, provider_func: Func):
-            if attrname not in userns:
-                return True
-            userns_value = userns[attrname]
-            if userns_value == provider_func:
-                return True
-            if userns_value == provider.__dict__.get(attrname):
-                return True
-            return False
-
-        def dund(*names:str):
-            return tuple(map('__{}__'.format, names))
-
-        FATTRS_NEW  = dund('code', 'globals', 'name', 'defaults', 'closure')
-        FATTRS_COPY = dund('kwdefaults', 'annotations', 'dict', 'doc')
-        FATTRS_DEL  = ABC_HOOKINFO_ATTR,
-
-        import copy
-        def copyfunc(f: Func, ownerqn: str = None, /, *,
-            fcopy: Callable[[T], T] = copy.copy
-        ) -> Func:
-            
-            func = FunctionType(*map(f.__getattribute__, FATTRS_NEW))
-
-            for name in FATTRS_COPY:
-                value = getattr(f, name, _NOGET)
-                if value is not _NOGET:
-                    setattr(func, name, fcopy(value))
-
-            if ownerqn is not None:
-                func.__qualname__ = '%s.%s' % (ownerqn, f.__name__)
-
-            for name in FATTRS_DEL:
-                if hasattr(func, name):
-                    delattr(func, name)
-
-            return func
-
-        return connect
-
-#=============================================================================
-#_____________________________________________________________________________
-#
 #       Abc Base Classes
 #_____________________________________________________________________________
 
-class Abc(metaclass = AbcMeta):
+class Abc(metaclass = AbcMeta, skiphooks = True):
     'Convenience for using AbcMeta as metaclass.'
 
     __slots__ = _EMPTY_SET
 
-class Copyable(Abc):
+class Copyable(Abc, skiphooks = True):
 
     __slots__ = _EMPTY_SET
 
@@ -1242,7 +822,6 @@ if 'Cleanup' or True:
         _EnumEntry,
         TypeVar,
         ParamSpec,
-        wraps,
     )
     # fail if deleted
     final
