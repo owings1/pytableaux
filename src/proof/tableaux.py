@@ -1336,38 +1336,38 @@ class Tableau(Sequence[Branch], EventEmitter):
         node_depth: int,
         track: dict, /
     ):
-            'Build child structures for each distinct node.'
-            w_first = w_last = w_mid = 0
+        'Build child structures for each distinct node.'
+        w_first = w_last = w_mid = 0
 
-            for i, node in enumerate(depth_nodes):
+        for i, node in enumerate(depth_nodes):
 
-                # recurse
-                child = self._build_tree(seqf(
-                    b for b in branches if b[node_depth] == node
-                ), node_depth, track)
+            # recurse
+            child = self._build_tree(seqf(
+                b for b in branches if b[node_depth] == node
+            ), node_depth, track)
 
-                s.descendant_node_count = len(child.nodes) + child.descendant_node_count
-                s.width += child.width
+            s.descendant_node_count = len(child.nodes) + child.descendant_node_count
+            s.width += child.width
 
-                s.children.append(child)
+            s.children.append(child)
 
-                if i == 0:
-                    # first node
-                    s.branch_step = child.step
-                    w_first = child.width / 2
-                elif i == len(depth_nodes) - 1:
-                    # last node
-                    w_last = child.width / 2
-                else:
-                    w_mid += child.width
-
-                s.branch_step = min(s.branch_step, child.step)
-
-            if s.width > 0:
-                s.balanced_line_width = (w_first + w_last + w_mid) / s.width
-                s.balanced_line_margin = w_first / s.width
+            if i == 0:
+                # first node
+                s.branch_step = child.step
+                w_first = child.width / 2
+            elif i == len(depth_nodes) - 1:
+                # last node
+                w_last = child.width / 2
             else:
-                s.balanced_line_width = s.balanced_line_margin = 0
+                w_mid += child.width
+
+            s.branch_step = min(s.branch_step, child.step)
+
+        if s.width > 0:
+            s.balanced_line_width = (w_first + w_last + w_mid) / s.width
+            s.balanced_line_margin = w_first / s.width
+        else:
+            s.balanced_line_width = s.balanced_line_margin = 0
 
 @static
 class TableauxSystem(Abc):
