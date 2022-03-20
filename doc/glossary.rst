@@ -1,10 +1,10 @@
 .. _glossary:
 
+.. include:: /include/note-doc-stub.rst
+
 ********
 Glossary
 ********
-
-This glossary is under construction.
 
 .. glossary::
 

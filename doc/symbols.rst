@@ -1,9 +1,10 @@
+.. include:: /include/note-doc-stub.rst
+
 *********************
 Lexical Symbol Tables
 *********************
 
 .. contents:: :local:
-
 
 .. _operators-table:
 

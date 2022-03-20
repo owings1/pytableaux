@@ -1,3 +1,5 @@
+.. include:: /include/attn-doc-freewheel.rst
+
 ***************
 Parsers Module
 ***************

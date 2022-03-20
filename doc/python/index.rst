@@ -1,3 +1,5 @@
+.. include:: /include/attn-doc-freewheel.rst
+
 **********
 Python API
 **********
@@ -5,7 +7,7 @@ Python API
 This document contains information for scripting in Python. The web interface
 is `available here <https://logic.dougowings.net>`_.
 
-.. .. contents:: :local:
+.. contents:: :local:
 
 Installation
 ============
