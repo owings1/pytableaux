@@ -11,7 +11,7 @@ sys.path.insert(1, '../src')
 
 import docutil, fixed
 
-copyright = '2014-2021, Doug Owings. Released under the GNU Affero General Public License v3 or later'
+copyright = '2014-2022, Doug Owings. Released under the GNU Affero General Public License v3 or later'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom

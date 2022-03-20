@@ -18,6 +18,10 @@ as :ref:`FDE <FDE>` without the :m:`B` value.
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.k3::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+
         .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

@@ -23,6 +23,10 @@ known as Bochvar Internal (:m:`B3`). A common interpretation of these values is:
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.k3w::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+
         .. include:: include/fde/m.attributes.rst
         
         .. method:: truth_function(operator, a, b)

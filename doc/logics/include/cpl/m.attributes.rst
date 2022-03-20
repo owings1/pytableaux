@@ -1,5 +1,3 @@
-.. automember:: Value
-
 .. attribute:: atomics
 
     An assignment of each atomic sentence to a truth value.

@@ -19,7 +19,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
    
-   language
+   design
 
 .. toctree::
    :maxdepth: 3
@@ -29,9 +29,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   quickstart
-
-   api
+   python
 
 Indices and tables
 ==================

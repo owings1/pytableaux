@@ -31,6 +31,10 @@ a world *w'* such that *w* accesses *w'*.
 
     .. class:: Model
 
+        .. autoclass:: logics.d::Model.Value()
+            :members: F, T
+            :undoc-members:
+
         .. include:: include/k/m.attributes.rst
 
     Seriality

@@ -19,6 +19,11 @@ respectively.
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.cpl::Model.Value()
+            :members: F, T
+            :undoc-members:
+            :noindex:
+
         .. include:: include/cpl/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

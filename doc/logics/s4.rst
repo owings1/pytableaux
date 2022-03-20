@@ -31,6 +31,10 @@ Normal modal logic with reflexive and transitive access relation.
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.s4::Model.Value()
+            :members: F, T
+            :undoc-members:
+
         .. include:: include/k/m.attributes.rst
 
     Reflexivity & Transitivity

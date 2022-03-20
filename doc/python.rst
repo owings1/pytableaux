@@ -1,9 +1,45 @@
-************
+**********
 Python API
-************
+**********
 
-Pytableaux consists of a web interface, `available here <https://logic.dougowings.net>`_,
-as well as a Python package for scripting. 
+This document contains information for scripting in Python. The web interface
+is `available here <https://logic.dougowings.net>`_.
+
+.. contents:: :local:
+
+Installation
+============
+
+Docker
+------
+
+To run the Docker image from Docker Hub:
+
+    1. Run the command::
+
+        docker run -p 8080:8080 owings1/pytableaux:latest
+
+    2. Access the web interface at http://localhost:8080
+
+Git
+---
+
+To install from git source, follow these steps. Note that Python 3.10.1
+or later is required.
+
+    1. Download the source, for example::
+
+        git clone https://github.com/owings1/pytableaux
+    
+    2. Install dependencies::
+
+        pip install future jinja2 cherrypy prometheus_client
+
+    3. Launch the web interface, for example::
+
+        python src/web.py
+
+    4. Then access http://localhost:8080
 
 Quick Start
 ===========
@@ -31,51 +67,23 @@ The following is an example for building a proof in {@CPL} for Modus Ponens::
 This parses with the default notation (Polish), builds the proof, and outputs
 a tableau in the default format (text).
 
-Installation
-============
+API Reference
+==============
 
-To run the Docker image from Docker Hub:
+The full API docs are available :doc:`modules/index`.
 
-    1. Run the command::
-
-        docker run -p 8080:8080 owings1/pytableaux:latest
-
-    2. Access the web interface at http://localhost:8080
-
-To install natively:
-
-    1. Download the source, for example::
-
-        git clone https://github.com/owings1/pytableaux
-    
-    2. Install dependencies::
-
-        pip install future jinja2 cherrypy prometheus_client
-
-    3. Launch the web interface, for example::
-
-        python src/web.py
-
-    4. Then access http://localhost:8080
-
-API Docs
-=========
-
-If you are interseted in building your own proofs, scripting, and
+If you are interested in building your own proofs, scripting, and
 customizing the output, I recommend looking at the following modules:
 
 * parsers
-* proof.writers
 * lexicals
+* proof.writers
 
 If you are interested in customize rules, building your own logic, or
 curious about how the internals, you could take a look at these modules:
 
-* tableaux
-* proof.rules
+* proof.tableaux
 * logics.fde
-
-The full API docs are available :ref:`here <api-index>`
 
 Development
 ===========

@@ -15,6 +15,11 @@ Gödel 3-valued logic (:m:`T`, :m:`F`, and :m:`N`) with classical-like negation.
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.g3::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+            :noindex:
+
         .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

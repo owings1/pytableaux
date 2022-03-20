@@ -16,6 +16,10 @@ It is similar to :ref:`LP`, with a different conditional operator.
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.rm3::Model.Value()
+            :members: F, B, T
+            :undoc-members:
+
         .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

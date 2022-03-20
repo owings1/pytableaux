@@ -16,6 +16,10 @@ disjunction and conjunction, as well as different behavior of the quantifiers.
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.go::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+
         .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

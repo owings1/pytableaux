@@ -19,6 +19,11 @@ value (:m:`T` or :m:`F`).
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.b3e::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+            :noindex:
+
         .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

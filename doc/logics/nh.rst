@@ -13,6 +13,12 @@ NH - Paraconsistent Hybrid Logic
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.nh::Model.Value()
+            :members: F, B, T
+            :undoc-members:
+
+        .. include:: include/fde/m.attributes.rst
+
         .. method:: truth_function(operator, a, b)
 
             The value of a sentence with a truth-functional operator is determined by

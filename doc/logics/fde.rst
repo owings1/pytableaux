@@ -23,6 +23,10 @@ values is:
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.fde::Model.Value()
+            :members: F, N, B, T
+            :undoc-members:
+
         .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

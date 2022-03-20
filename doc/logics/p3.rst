@@ -19,6 +19,10 @@ from classical logic, as well as more well-known many-valued systems.
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.p3::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+
         .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

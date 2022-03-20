@@ -1,5 +1,3 @@
-.. automember:: Value
-
 .. autoattribute:: designated_values
 
 .. autoattribute:: extensions

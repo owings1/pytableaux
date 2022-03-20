@@ -1,14 +1,18 @@
-########
-Language
-########
+######
+Design
+######
 
-This document gives a high-level overview of the shared language structure used
-across all the difference logics, and some assumptions that are made.
+.. Attention::
+   This document is in **freewheeling overhaul state**, as part of an ongoing v2 rollout.
+   As such it is likely to be incomplete and not so easy to follow.
+
+This document contains an overview of the internal language structure, some assumptions,
+and other design aspects.
 
 .. contents:: :local:
 
-Components
-**********
+Language
+********
 
 Atomic Sentences
 ----------------
@@ -147,7 +151,6 @@ Proof output
 ============
 
 Currently the output formats are plain text, and HTML. More to come...
-
 
 History
 =======

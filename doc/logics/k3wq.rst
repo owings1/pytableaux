@@ -20,6 +20,10 @@ rules for the quantifiers, given the behavior of those operators in
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.k3wq::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+
         .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

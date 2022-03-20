@@ -16,6 +16,11 @@ Universal (:s:`L`) and Existential (:s:`X`).
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.cfol::Model.Value()
+            :members: F, T
+            :undoc-members:
+            :noindex:
+
         .. include:: include/cpl/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

@@ -17,6 +17,10 @@ operator that respects the Law of Conditional Identity (:s:`A $ A`).
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.l3::Model.Value()
+            :members: F, N, T
+            :undoc-members:
+
         .. include:: include/fde/m.attributes.rst
 
         .. method:: truth_function(operator, a, b)

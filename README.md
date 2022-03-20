@@ -52,11 +52,13 @@ Bivalent Modal
 
 ## Dependencies
 
-See [res/python3.dockerfile][dockerfile].
+Python **3.10.1** or later is required.
 
 ```bash
 pip3 install future jinja2 cherrypy prometheus_client
 ```
+
+For system-level dependencies, refer to [res/python3.dockerfile][dockerfile].
 
 ## Development
 
@@ -96,7 +98,7 @@ You can file any issues on [github][issues], or contact me directly at [doug@dou
 
 ## Copyright & License
 
-Copyright (C) 2014-2021 Doug Owings. Released under the [GNU Affero General Public License 3.0][license] or later.
+Copyright (C) 2014-2022 Doug Owings. Released under the [GNU Affero General Public License 3.0][license] or later.
 
 [site]: http://logic.dougowings.net
 [doc]: http://logic.dougowings.net/doc/

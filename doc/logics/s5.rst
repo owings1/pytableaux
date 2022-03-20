@@ -29,6 +29,10 @@ Normal modal logic with reflexive, symmetric, and transitive access relation.
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.s5::Model.Value()
+            :members: F, T
+            :undoc-members:
+
         .. include:: include/k/m.attributes.rst
 
     Universal Access

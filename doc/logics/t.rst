@@ -30,6 +30,10 @@ which states that for every world *w*, *w* accesses *w* (itself).
 
     .. autoclass:: Model
 
+        .. autoclass:: logics.t::Model.Value()
+            :members: F, T
+            :undoc-members:
+
         .. include:: include/k/m.attributes.rst
 
     Reflexivity
