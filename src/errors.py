@@ -29,6 +29,10 @@ from typing import Any
 class IllegalStateError(Exception):
     pass
 
+class RequestDataError(Exception):
+    def __init__(self, errors: dict):
+        self.errors = errors
+
 class TimeoutError(Exception):
     pass
 

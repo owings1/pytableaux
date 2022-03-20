@@ -17,41 +17,61 @@
 # ------------------
 #
 # pytableaux - Web Application
+from __future__ import annotations
 
-from errors import TimeoutError, errstr
-from tools.decorators import static
-from tools.mappings import MapCover, dmap
+__all__ = ()
+
+from errors import RequestDataError, TimeoutError, errstr
+from tools.abcs import KT, VT
+from tools.mappings import MapCover, MapProxy, dmap
 from tools.misc import get_logic
 from tools.timing import StopWatch
 
 import examples, fixed
 from fixed import issues_href, source_href, version
 import lexicals
-from lexicals import Argument, Predicate, Predicates, \
-    Operator, Quantifier, Notation, LexType
+from lexicals import (
+    Argument,
+    LexType,
+    LexWriter,
+    Notation,
+    Operator,
+    Predicate,
+    Predicates,
+    Quantifier,
+)
 from parsers import create_parser
 from proof.tableaux import Tableau
 from proof.writers import create_tabwriter, formats as tabwriter_formats
 
 from www.mailroom import Mailroom
 from www.conf import (
-    available, cp_global_config, cp_config, jenv,
-    logger, logic_categories, Metric, modules, example_arguments,
-    nups, parser_tables, lexwriter_encodings, lexwriters,
-    opts, re_email,
+    available,
+    cp_config,
+    cp_global_config,
+    example_arguments,
+    jenv,
+    lexwriter_encodings,
+    lexwriters,
+    logger,
+    logic_categories,
+    Metric,
+    modules,
+    nups,
+    opts,
+    parser_tables,
+    re_email,
 )
 
-import cherrypy as server
+import cherrypy as chpy
+from cherrypy._cprequest import Request, Response
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from jinja2 import Template
-from functools import partial
-import json, re, time, traceback
-import operator as opr
+import json, re, traceback
 import prometheus_client as prom
-from types import MappingProxyType as MapProxy
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 
 EMPTY_MAP = MapCover(MapProxy({}))
@@ -59,8 +79,12 @@ EMPTY_MAP = MapCover(MapProxy({}))
 mailroom = Mailroom(opts)
 
 #####################
-## Form Defaults   ##
+## Input Defaults  ##
 #####################
+api_defaults = MapCover(dict(
+    input_notation  = 'polish',
+    output_notation = 'polish',
+))
 form_defaults = MapCover({
     'input_notation'  : 'standard',
     'format'          : 'html',
@@ -124,14 +148,14 @@ base_view_data = MapCover({
 
 template_cache: dict[str, Template] = dict()
 
-def get_template(view):
+def get_template(view: str) -> Template:
     if '.' not in view:
         view = '.'.join((view, 'jinja2'))
     if opts['is_debug'] or (view not in template_cache):
         template_cache[view] = jenv.get_template(view)
     return template_cache[view]
 
-def render(view, data = {}):
+def render(view: str, data: dict = {}) -> str:
     return get_template(view).render(data)
 
 
@@ -141,10 +165,10 @@ def render(view, data = {}):
 
 class App(object):
 
-    @server.expose
+    @chpy.expose
     def index(self, *args, **req_data):
 
-        req = server.request
+        req: Request = chpy.request
 
         errors = dict()
         warns  = dict()
@@ -178,7 +202,7 @@ class App(object):
                     raise RequestDataError({'api-data': errstr(err)})
                 try:
                     # arg, vocab = self.parse_argument_data(api_data['argument'])
-                    self.parse_argument_data(api_data['argument'])
+                    self._parse_argument(api_data['argument'])
                 except RequestDataError as err:
                     errors.update(err.errors)
                 resp_data, tableau, lw = self.api_prove(api_data)
@@ -219,7 +243,7 @@ class App(object):
                 ('api_data', api_data),
                 ('req_data', req_data),
                 ('form_data', form_data),
-                ('resp_data', debug_result(resp_data)),
+                ('resp_data', resp_data and debug_resp_data(resp_data)),
                 ('browser_data', browser_data),
             ])
             data['debugs'] = debugs
@@ -254,7 +278,7 @@ class App(object):
             'form_data' : form_data,
         })
 
-        req = server.request
+        req: Request = chpy.request
 
         if req.method == 'POST':
 
@@ -307,13 +331,13 @@ class App(object):
 
     feedback.exposed = opts['feedback_enabled'] and bool(opts['smtp_host'])
 
-    @server.expose
-    @server.tools.json_in()
-    @server.tools.json_out()
+    @chpy.expose
+    @chpy.tools.json_in()
+    @chpy.tools.json_out()
     def api(self, action=None):
 
-        req = server.request
-        res = server.response
+        req: Request = chpy.request
+        res: Response = chpy.response
 
         if req.method == 'POST':
             try:
@@ -333,14 +357,14 @@ class App(object):
                 return {
                     'status'  : 408,
                     'message' : errstr(err),
-                    'error'   : err.__class__.__name__,
+                    'error'   : type(err).__name__,
                 }
             except RequestDataError as err:
                 res.status = 400
                 return {
                     'status'  : 400,
                     'message' : 'Request data errors',
-                    'error'   : err.__class__.__name__,
+                    'error'   : type(err).__name__,
                     'errors'  : err.errors,
                 }
             except Exception as err: # pragma: no cover
@@ -348,13 +372,13 @@ class App(object):
                 return {
                     'status'  : 500,
                     'message' : errstr(err),
-                    'error'   : err.__class__.__name__,
+                    'error'   : type(err).__name__,
                 }
                 #traceback.print_exc()
         res.status = 404
         return {'message': 'Not found', 'status': 404}
 
-    def api_parse(self, body):
+    def api_parse(self, body: Mapping):
         """
         Example request body::
 
@@ -392,45 +416,47 @@ class App(object):
 
         # defaults
         if 'notation' not in body:
-            body['notation'] = 'polish'
+            body['notation'] = api_defaults['input_notation']
         if 'predicates' not in body:
             body['predicates'] = list()
         if 'input' not in body:
             body['input'] = ''
 
         errors = dict()
-        if body['notation'] not in Notation:
-            errors['Notation'] = 'Invalid notation'
 
         try:
-            preds = self.parse_predicates_data(body['predicates'])
+            preds = self._parse_preds(body['predicates'])
         except RequestDataError as err:
             errors.update(err.errors)
             preds = None
-            # preds = Predicates()
 
-        if len(errors) == 0:
+        elabel = 'Notation'
+        if body['notation'] not in Notation:
+            errors[elabel] = "Invalid notation: '%s'" % body['notation']
+
+        if not errors:
             parser = create_parser(body['notation'], preds)
+            elabel = 'Input'
             try:
                 sentence = parser(body['input'])
             except Exception as err:
-                errors['Sentence'] = errstr(err)
+                errors[elabel] = errstr(err)
 
-        if len(errors) > 0:
+        if errors:
             raise RequestDataError(errors)
 
         return {
-            'type'     : sentence.TYPE._name_,
+            'type'     : sentence.TYPE.name,
             'rendered' : {
                 notn: {
-                    fmt: lexwriters[notn][fmt].write(sentence)
+                    fmt: lexwriters[notn][fmt](sentence)
                     for fmt in lexwriters[notn]
                 }
                 for notn in lexwriters
             },
         }
 
-    def api_prove(self, body: Mapping):
+    def api_prove(self, body: Mapping) -> tuple[dict, Tableau, LexWriter]:
         """
         Example request body::
 
@@ -496,10 +522,11 @@ class App(object):
             rank_optimizations = True,
             group_optimizations = True,
         ) | body
+
         odata: dmap
         odata = body['output'] = dmap(
             options = {},
-            notation = 'standard',
+            notation = api_defaults['output_notation'],#'standard',
             format = 'html',
         ) | body['output']
         odata.setdefault('symbol_enc',
@@ -507,13 +534,16 @@ class App(object):
             else 'ascii'
         )
         odata['options']['debug'] = opts['is_debug']
+
         if body['max_steps'] is not None:
+            elabel = 'Max steps'
             try:
                 body['max_steps'] = int(body['max_steps'])
             except Exception as err:
-                errors['Max steps'] = errstr(err)
+                errors[elabel] = errstr(err)
                 body['max_steps'] = None
-        proof_opts = dmap(
+
+        proof_opts = dict(
             is_rank_optim   = bool(body['rank_optimizations']),
             is_group_optim  = bool(body['group_optimizations']),
             is_build_models = bool(body['build_models']),
@@ -522,59 +552,72 @@ class App(object):
         )
 
         try:
-            logic = get_logic(body['logic'])
-        except Exception as err:
-            errors['Logic'] = errstr(err)
-        try:
-            arg, _ = self.parse_argument_data(body['argument'])
+            arg = self._parse_argument(body['argument'])
         except RequestDataError as err:
             errors.update(err.errors)
+
+        elabel = 'Logic'
+        try:
+            logic = get_logic(body['logic'])
+        except Exception as err:
+            errors[elabel] = errstr(err)
+
+        elabel = 'Output notation'
         try:
             lwmap = lexwriters[odata['notation']]
+        except KeyError:
+            errors[elabel] = "Invalid notation: '%s'" % odata['notation']
+        except Exception as err:
+            errors[elabel] = errstr(err)
+            if opts['is_debug']:
+                traceback.print_exc()
+
+        else:
+            elabel = 'Symbol encoding'
             try:
                 lw = lwmap[odata['symbol_enc']]
-            except KeyError as err:
-                errors['Symbol Encoding'] = 'Unsupported encoding: %s' % odata['symbol_enc']
+            except KeyError:
+                errors[elabel] = "Unsupported encoding: '%s'" % odata['symbol_enc']
             except Exception as err:
                 if opts['is_debug']:
                     traceback.print_exc()
-                errors['Symbol Encoding'] = errstr(err)
-        except Exception as err:
-            errors['Output notation'] = errstr(err)
-            if opts['is_debug']:
-                traceback.print_exc()
-        try:
-            tabwriter = create_tabwriter(
-                notn=odata['notation'],
-                format=odata['format'],
-                lw=lw,
-                enc=odata['symbol_enc'],
-                **odata['options'],
-            )
-        except Exception as err:
-            errors['Output format'] = errstr(err)
+                errors[elabel] = errstr(err)
+
+            else:
+                elabel = 'Output format'
+                try:
+                    tabwriter = create_tabwriter(
+                        notn   = odata['notation'],
+                        format = odata['format'],
+                        lw  = lw,
+                        enc = odata['symbol_enc'],
+                        **odata['options'],
+                    )
+                except Exception as err:
+                    errors[elabel] = errstr(err)
+                    if opts['is_debug']:
+                        traceback.print_exc()
 
         if errors:
             raise RequestDataError(errors)
 
+        logicname: str = logic.name
         with StopWatch() as timer:
-            # proof_start_time = time.time()
-            Metric.proofs_inprogress_count(logic.name).inc()
+            Metric.proofs_inprogress_count(logicname).inc()
             proof = Tableau(logic, arg, **proof_opts)
 
             try:
                 proof.build()
-                Metric.proofs_completed_count(logic.name, proof.stats['result'])
+                Metric.proofs_completed_count(logicname, proof.stats['result'])
             finally:
-                # proof_time = time.time() - proof_start_time
-                Metric.proofs_inprogress_count(logic.name).dec()
-                Metric.proofs_execution_time(logic.name).observe(timer.elapsed_secs())
+                Metric.proofs_inprogress_count(logicname).dec()
+                Metric.proofs_execution_time(logicname).observe(timer.elapsed_secs())
 
         # actually we return a tuple (resp, tableau, lw) because the
         # web ui needs the tableau object to write the controls.
         return ({
             'tableau': {
-                'logic' : logic.name,
+                'logic' : logicname,
                 'argument': {
                     'premises'   : tuple(map(lw, arg.premises)),
                     'conclusion' : lw(arg.conclusion),
@@ -595,68 +638,73 @@ class App(object):
             }
         }, proof, lw)
 
-    def parse_argument_data(self, adata) -> tuple[Argument, Predicates]:
+    @classmethod
+    def _parse_argument(cls, adata: Mapping[str, Any]) -> Argument:
 
         adata = dict(adata)
 
         # defaults
         if 'notation' not in adata:
-            adata['notation'] = 'polish'
+            adata['notation'] = api_defaults['input_notation']
         if 'predicates' not in adata:
             adata['predicates'] = list()
         if 'premises' not in adata:
             adata['premises'] = list()
 
-        preds = None
-
         errors = dict()
 
+        elabel = 'Notation'
         try:
             if adata['notation'] not in Notation:
                 raise ValueError('Invalid parser notation')
         except Exception as e:
-            errors['Notation'] = str(e)
+            errors[elabel] = str(e)
 
         if not errors:
             try:
-                preds = self.parse_predicates_data(adata['predicates'])
+                preds = cls._parse_preds(adata['predicates'])
             except RequestDataError as err:
                 errors.update(err.errors)
+                preds = None
             parser = create_parser(adata['notation'], preds)
-            i = 1
             premises = []
-            for premise in adata['premises']:
+            for i, premise in enumerate(adata['premises'], start = 1):
+                elabel = 'Premise %d' % i
                 try:
                     premises.append(parser.parse(premise))
                 except Exception as e:
                     premises.append(None)
-                    errors['Premise {0}'.format(str(i))] = errstr(e)
-                i += 1
+                    errors[elabel] = errstr(e)
+            elabel = 'Conclusion'
             try:
                 conclusion = parser.parse(adata['conclusion'])
             except Exception as e:
-                errors['Conclusion'] = errstr(e)
+                errors[elabel] = errstr(e)
 
         if errors:
             raise RequestDataError(errors)
 
-        return (Argument(conclusion, premises), preds)
+        return Argument(conclusion, premises)
 
-    def parse_predicates_data(self, predicates) -> Predicates:
+    @staticmethod
+    def _parse_preds(pspecs: Sequence[Mapping|Sequence]) -> Predicates|None:
+        if not len(pspecs):
+            return None
         preds = Predicates()
         errors = dict()
         Coords = Predicate.Coords
         fields = Coords._fields
-        for i, pdata in enumerate(predicates, start = 1):
+        for i, specdata in enumerate(pspecs, start = 1):
+            elabel = 'Predicate %d' % i
             try:
-                if isinstance(pdata, dict):
+                if isinstance(specdata, dict):
                     keys = fields
                 else:
                     keys = range(len(fields))
-                coords = Coords(*map(pdata.__getitem__, keys))
+                coords = Coords(*map(specdata.__getitem__, keys))
                 preds.add(coords)
             except Exception as e:
-                errors['Predicate {0}'.format(str(i))] = errstr(e)
+                errors[elabel] = errstr(e)
         if errors:
             raise RequestDataError(errors)
         return preds
@@ -666,7 +714,7 @@ class App(object):
 ## Miscellaneous   ##
 #####################
 
-def fix_form_data(form_data: Mapping[str, Any]):
+def fix_form_data(form_data: dict[str, VT]) -> dict[str, VT]:
     form_data = dict(form_data)
     if len(form_data):
         for param in form_data:
@@ -675,10 +723,8 @@ def fix_form_data(form_data: Mapping[str, Any]):
                     form_data[param] = [form_data[param]]
     return form_data
 
-def debug_result(result):
-    if result is None:
-        return None
-    result = dict(result)
+def debug_resp_data(resp_data: dict[KT, VT]) -> dict[KT, VT]:
+    result = dict(resp_data)
     if 'tableau' in result and 'body' in result['tableau']:
         if len(result['tableau']['body']) > 255:
             result['tableau'] = dict(result['tableau'])
@@ -687,10 +733,10 @@ def debug_result(result):
             )
     return result
 
-def is_valid_email(value):
-    return re.fullmatch(re_email, value)
+def is_valid_email(value: str) -> bool:
+    return re.fullmatch(re_email, value) is not None
 
-def validate_feedback_form(form_data):
+def validate_feedback_form(form_data: dict[str, str]) -> None:
     errors = dict()
     if not is_valid_email(form_data['email']):
         errors['Email'] = 'Invalid email address'
@@ -701,26 +747,21 @@ def validate_feedback_form(form_data):
     if errors:
         raise RequestDataError(errors)
 
-def get_remote_ip(req):
+def get_remote_ip(req: Request) -> str:
     # TODO: use proxy forward header
     return req.remote.ip
 
-class RequestDataError(Exception):
-    def __init__(self, errors):
-        self.errors = errors
 
 #############
 ## Main    ##
 #############
 
 def main(): # pragma: no cover
-    logger.info(
-        'Staring metrics on port {0}'.format(str(opts['metrics_port']))
-    )
+    logger.info('Staring metrics on port %d' % opts['metrics_port'])
     mailroom.start()
     prom.start_http_server(opts['metrics_port'])
-    server.config.update(cp_global_config)
-    server.quickstart(App(), '/', cp_config)
+    chpy.config.update(cp_global_config)
+    chpy.quickstart(App(), '/', cp_config)
 
 if  __name__ == '__main__': # pragma: no cover
     main()

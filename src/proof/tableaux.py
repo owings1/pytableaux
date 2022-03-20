@@ -1169,7 +1169,7 @@ class Tableau(Sequence[Branch], EventEmitter):
             branches        = len(self),
             open_branches   = len(self.open),
             closed_branches = len(self) - len(self.open),
-            rules_applied   = len(self.history),
+            steps           = len(self.history),
             distinct_nodes  = distinct_nodes,
             rules_duration_ms = sum(
                 step.duration_ms
