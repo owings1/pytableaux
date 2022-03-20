@@ -27,7 +27,7 @@
         step     : 4,
         models   : 5,
     }
-         
+
     const Cls = {
         app          : 'pt-app',
         arity        : 'arity',
@@ -437,28 +437,23 @@
          * @return {void}
          */
         function refreshExampleArgument() {
-            // debug('refreshExampleArgument', 1)
             clearPredicates()
             clearArgument()
             const argName = $(Sel.selectArgExample).val()
 
-            // debug('refreshExampleArgument', 5)
             if (!argName) {
                 ensureEmptyPremise()
                 return
             }
-            // debug('refreshExampleArgument', 8)
             const notation = $(Sel.selectParseNotn).val()
             const arg = AppData.example_arguments[argName][notation]
             $.each(arg.premises, function(i, value) {
                 addPremise(value)
             })
-            // debug('refreshExampleArgument', 15)
             $(Sel.inputConclusion).val(arg.conclusion)
             $.each(AppData.example_predicates, function(i, pred) {
                 addPredicate(pred[0], pred[1], pred[2])
             })
-            // debug('refreshExampleArgument', 35)
         }
 
         /**
@@ -674,54 +669,6 @@
 
         init()
 
-        // debug({AppData})
-
-        // /**
-        //  * Escape HTML open braces.
-        //  *
-        //  * @param {string} str The input string.
-        //  * @return {string} Escaped output.
-        //  */
-        // function h(str) {
-        //     return str.replace(/</g, '&lt;')
-        // }
-
-        // /**
-        //  * Get the output format value.
-        //  *
-        //  * @return String name of the foramat, e.g. 'html'
-        //  */
-        // function currentOutputFormat() {
-        //     return $('#format', $AppForm).val()
-        // }
-
-        // /**
-        //  * Get the output notation value.
-        //  *
-        //  * @return String name of the notation, e.g. 'standard'
-        //  */
-        // function currentOutputNotation() {
-        //     return $('#output_notation', $AppForm).val()
-        // }
-
-        // /**
-        //  * Get the output symbol set value.
-        //  *
-        //  * @return String name of the symbol set, e.g. 'default'
-        //  */
-        // function currentOutputSymbolEnc() {
-        //     return $('#symbol_enc', $AppForm).val()
-        // }
-
-        // /**
-        //  * Ensure that there is an empty predicate input row available for input.
-        //  *
-        //  * @return {void}
-        //  */
-        // function ensureEmptyPredicate() {
-        //     if (!hasEmptyPredicate()) {
-        //         addEmptyPredicate()
-        //     }   
-        // }
     })
+
 })(jQuery);
