@@ -74,6 +74,7 @@ if 'Imports' or True:
         Any,
         Callable,
         ClassVar,
+        Collection,
         # Generic,
         Iterable,
         Iterator,
@@ -81,6 +82,7 @@ if 'Imports' or True:
         # MutableSequence,
         NamedTuple,
         Sequence,
+        Set,
         SupportsIndex,
         TypeVar,
     )
@@ -1258,24 +1260,30 @@ class Tableau(Sequence[Branch], EventEmitter):
             left  = track['pos'],
         )
 
+        branchstat = self.__branchstat
+
         while True:
+            # Branches with a node at node_depth.
+            relbranches = tuple(b for b in branches if len(b) > node_depth)
+            # Each branch's node at node_depth.
+            depth_nodes = qset()
 
-            relevant = tuple(b for b in branches if len(b) > node_depth)
-            relnodes = qset()
-
-            for b in relevant:
-                relnodes.add(b[node_depth])
-                if TabFlag.CLOSED in self.stat(b, TabStatKey.FLAGS):
+            for b in relbranches:
+                depth_nodes.add(b[node_depth])
+                if TabFlag.CLOSED in branchstat[b][TabStatKey.FLAGS]:
                     s.has_closed = True
                 else:
                     s.has_open = True
 
-            if len(relnodes) != 1:
+            if len(depth_nodes) != 1:
+                # There is *not* a singular node shared by all branches at node_depth.
                 break
-
-            node = relevant[0][node_depth]
-            step_added = self.stat(relevant[0], node, TabStatKey.STEP_ADDED)
+    
+            # There is one node shared by all branches at node_depth, thus the
+            # branches are equivalent up to this depth.
+            node = depth_nodes[0]
             s.nodes.append(node)
+            step_added = branchstat[relbranches[0]][TabStatKey.NODES][node][TabStatKey.STEP_ADDED]
             if s.step is None or step_added < s.step:
                 s.step = step_added
             node_depth += 1
@@ -1283,10 +1291,12 @@ class Tableau(Sequence[Branch], EventEmitter):
         track['distinct_nodes'] += len(s.nodes)
 
         if len(branches) == 1:
+            # Finalize leaf attributes.
             self._build_tree_leaf(s, branches[0], track)
         else:
+            # Build child structures for each distinct node at node_depth.
             track['depth'] += 1
-            self._build_tree_branches(s, branches, relnodes, node_depth, track)
+            self._build_tree_branches(s, branches, depth_nodes, node_depth, track)
             track['depth'] -= 1
 
         s.structure_node_count = s.descendant_node_count + len(s.nodes)
@@ -1300,11 +1310,12 @@ class Tableau(Sequence[Branch], EventEmitter):
         return s
 
     def _build_tree_leaf(self, s: TreeStruct, branch: Branch, track: dict, /):
-        stat = self.stat(branch)
+        'Finalize attributes for leaf structure.'
+        stat = self.__branchstat[branch]
         s.closed = TabFlag.CLOSED in stat[TabStatKey.FLAGS]
-        # TODO: remove reference branch.closed
+        # s.open = not branch.closed
         # assert s.closed == branch.closed
-        s.open = not branch.closed
+        s.open = not s.closed
         if s.closed:
             s.closed_step = stat[TabStatKey.STEP_CLOSED]
             s.has_closed = True
@@ -1320,14 +1331,15 @@ class Tableau(Sequence[Branch], EventEmitter):
 
     def _build_tree_branches(self,
         s: TreeStruct,
-        branches: Sequence[Branch],
-        relnodes: Sequence[Node],
+        branches: Collection[Branch],
+        depth_nodes: Set[Node],
         node_depth: int,
         track: dict, /
     ):
+            'Build child structures for each distinct node.'
             w_first = w_last = w_mid = 0
 
-            for i, node in enumerate(relnodes):
+            for i, node in enumerate(depth_nodes):
 
                 # recurse
                 child = self._build_tree(seqf(
@@ -1343,14 +1355,14 @@ class Tableau(Sequence[Branch], EventEmitter):
                     # first node
                     s.branch_step = child.step
                     w_first = child.width / 2
-                elif i == len(relnodes) - 1:
+                elif i == len(depth_nodes) - 1:
                     # last node
                     w_last = child.width / 2
                 else:
                     w_mid += child.width
 
                 s.branch_step = min(s.branch_step, child.step)
-            
+
             if s.width > 0:
                 s.balanced_line_width = (w_first + w_last + w_mid) / s.width
                 s.balanced_line_margin = w_first / s.width
