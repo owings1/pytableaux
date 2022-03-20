@@ -147,7 +147,7 @@ class Helper:
         truth_tables_rev = True,
         write_notation   = Notation.standard,
         parse_notation   = Notation.standard,
-        vocabulary       = examples.preds,
+        preds            = examples.preds,
     ))
 
     def __init__(self, opts: dict = {}):
@@ -156,7 +156,7 @@ class Helper:
 
         self.parser = create_parser(
             notn = self.opts['parse_notation'],
-            vocab = self.opts['vocabulary'],
+            vocab = self.opts['preds'],
         )
 
         wrnotn = self.opts['write_notation']
@@ -499,7 +499,6 @@ class Helper:
         Returns rendered truth table HTML for a single operator.
         """
         model : BaseModel = get_logic(logic).Model()
-        oper: Operator = Operator[oper]
         table = model.truth_table(oper, reverse = self.opts['truth_tables_rev'])
         return self.TT_TEMPL.render(dict(
             num_values = len(model.Value),
@@ -550,7 +549,7 @@ class Helper:
                 elif ctype is LexType.Predicate:
                     what = 'predicate'
                     _, idx = table[char]
-                    item = self.opts['vocabulary'].get((idx, sub))
+                    item = self.opts['preds'].get((idx, sub))
                     classes.append('user_predicate')
                 elif ctype is Predicate.System:
                     what = 'predicate'
@@ -859,7 +858,7 @@ class UnknownLexTypeError(Exception):
 # class ParseRenderDirective(Directive):
 #     sp = create_parser(
 #         notation = 'standard',
-#         vocabulary = examples.vocabulary,
+#         preds = examples.preds,
 #     )
 #     sw = create_swriter(
 #         notation = 'standard',

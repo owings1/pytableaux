@@ -136,7 +136,7 @@ args = MapProxy({
 })
 
 titles = qsetf(sorted(args.keys()))
-preds = vocab = vocabulary = Predicates(Predicate.gen(3))
+preds = vocab = Predicates(Predicate.gen(3))
 parser = create_parser(notn='polish', vocab = preds)
 
 aliases = MapProxy({

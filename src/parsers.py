@@ -144,7 +144,7 @@ def create_parser(notn: Notation = None, vocab: Predicates = None, table: CharTa
     """
     Create a sentence parser with the given spec. This is
     useful if you parsing many sentences with the same notation
-    and vocabulary.
+    and predicates.
 
     :param notn: The parser notation. Uses the default notation if not passed.
     :param vocab: The predicates store for parsing user-defined predicates.
