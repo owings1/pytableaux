@@ -73,7 +73,6 @@ class BaseModel(Abc):
 
     Value: ClassVar[type[Mval]]
 
-    truth_values = qsetf()
     # Default set
     truth_functional_operators = setf({
         Operator.Assertion             ,
