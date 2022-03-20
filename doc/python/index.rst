@@ -5,7 +5,7 @@ Python API
 This document contains information for scripting in Python. The web interface
 is `available here <https://logic.dougowings.net>`_.
 
-.. contents:: :local:
+.. .. contents:: :local:
 
 Installation
 ============
@@ -67,10 +67,11 @@ The following is an example for building a proof in {@CPL} for Modus Ponens::
 This parses with the default notation (Polish), builds the proof, and outputs
 a tableau in the default format (text).
 
+
 API Reference
 ==============
 
-The full API docs are available :doc:`modules/index`.
+The full API docs are available :doc:`here <modules/index>`.
 
 If you are interested in building your own proofs, scripting, and
 customizing the output, I recommend looking at the following modules:
@@ -84,6 +85,11 @@ curious about how the internals, you could take a look at these modules:
 
 * proof.tableaux
 * logics.fde
+
+.. toctree::
+   :maxdepth: 2
+
+   modules/index
 
 Development
 ===========

@@ -29,7 +29,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   python
+   python/index
 
 Indices and tables
 ==================
