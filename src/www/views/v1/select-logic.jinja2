@@ -14,7 +14,7 @@
         </select>
         <input type="submit" value="Go"/>
     </div>
-    {% for module in logic_modules -%}
+    {% for module in logics -%}
         <div class="hidden logic-details {{ module|e }}">
             <span class="hidden logic-name {{ module|e }}">{{ logics[module].name|e }}</span>
             <ul class="details">

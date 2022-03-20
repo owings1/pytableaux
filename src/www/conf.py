@@ -19,12 +19,13 @@
 # pytableaux - Web App Configuration
 from tools.abcs import AbcEnum
 from tools.decorators import closure
+from tools.mappings import MapCover
 from tools.misc import get_logic
 from parsers import CharTable
 from lexicals import LexType, Notation, LexWriter, RenderSet
 import examples
 
-import importlib, logging, os, os.path
+import logging, os, os.path
 from os.path import join as pjoin
 import prometheus_client as prom
 from cherrypy._cpdispatch import Dispatcher
@@ -147,57 +148,51 @@ optdefs = {
     },
 }
 
-## Available modules
+logic_modnames = (
+    'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
+    'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
+)
+logic_categories: dict[str, list[str]] = dict()
 
-available = {
-    'logics'    : [
-        'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
-        'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
-    ],
-}
-modules = dict()
-logic_categories = dict()
-# nups: "notation-user-predicate-symbols"
-nups = dict()
+modules = dict(
+    logics = {k: get_logic(k) for k in logic_modnames}
+)
 
+# 'nups' means "notation-user-predicate-symbols"
+parser_nups = {}
 parser_tables = {}
 example_arguments = {}
 
 @closure
 def _():
     
-    for package in available:
-        modules[package] = {}
-        for name in available[package]:
-            modules[package][name] = importlib.import_module(
-                '.'.join((package, name))
-            )
-
     exargs = examples.arguments()
     for arg in exargs:
         example_arguments[arg.title] = {}
     for notn in Notation:
         # Build rendered example arguments
-        lw = LexWriter(notn, enc='ascii')
+        lw = LexWriter(notn, enc = 'ascii')
         for arg in exargs:
-            example_arguments[arg.title][notn._name_] = {
-                'premises': tuple(lw.write(s) for s in arg.premises),
-                'conclusion': lw.write(arg.conclusion),
-            }
-        parser_tables[notn._name_] = table = CharTable.fetch(notn)
-        nups[notn._name_] = table.chars[LexType.Predicate]
+            example_arguments[arg.title][notn.name] = dict(
+                premises = tuple(map(lw, arg.premises)),
+                conclusion = lw(arg.conclusion),
+            )
+        parser_tables[notn.name] = table = CharTable.fetch(notn)
+        parser_nups[notn.name] = table.chars[LexType.Predicate]
 
-    for name in modules['logics']:
-        lgc = modules['logics'][name]
-        if lgc.Meta.category not in logic_categories:
-            logic_categories[lgc.Meta.category] = list()
-        logic_categories[lgc.Meta.category].append(name)
+    for modname, logic in modules['logics'].items():
+        # lgc = modules['logics'][name]
+        category = logic.Meta.category
+        if category not in logic_categories:
+            logic_categories[category] = list()
+        logic_categories[category].append(modname)
 
-    def get_category_order(name):
-        return get_logic(name).Meta.category_display_order
+    def get_category_order(modname: str) -> int:
+        return modules['logics'][modname].Meta.category_display_order
+        # return get_logic(name).Meta.category_display_order
 
-    for category in logic_categories.keys():
-        logic_categories[category].sort(key = get_category_order)
+    for group in logic_categories.values():
+        group.sort(key = get_category_order)
 
 
 ## Logging
@@ -217,7 +212,7 @@ def init_logger(logger: logging.Logger):
 
 logger = init_logger(logging.Logger('APP'))
 
-## Options
+## App Config
 
 def _getoptval(name):
     defn = optdefs[name]
@@ -253,26 +248,26 @@ def _getoptval(name):
             return v
     return defn['default']
 
-opts = {
+appconf = opts = {
     name: _getoptval(name) for name in optdefs.keys()
 }
 
-# Set loglevel from opts
-if opts['is_debug']:
+# Set loglevel from appconf
+if appconf['is_debug']:
     logger.setLevel(10)
     logger.info('Setting debug loglevel {0}'.format(str(logger.getEffectiveLevel())))
-elif hasattr(logging, opts['loglevel'].upper()):
-    logger.setLevel(getattr(logging, opts['loglevel'].upper()))
+elif hasattr(logging, appconf['loglevel'].upper()):
+    logger.setLevel(getattr(logging, appconf['loglevel'].upper()))
 else:
     logger.setLevel(getattr(logging, optdefs['loglevel']['default'].upper()))
-    logger.warn('Ingoring invalid loglevel: {0}'.format(opts['loglevel']))
-    opts['loglevel'] = optdefs['loglevel']['default'].upper()
+    logger.warn('Ingoring invalid loglevel: {0}'.format(appconf['loglevel']))
+    appconf['loglevel'] = optdefs['loglevel']['default'].upper()
 
 ## Prometheus Metrics
 
 class Metric(AbcEnum):
 
-    _value_: prom.metrics.MetricWrapperBase
+    value: prom.metrics.MetricWrapperBase
 
     app_requests_count = prom.Counter(
         'app_requests_count',
@@ -296,11 +291,11 @@ class Metric(AbcEnum):
     )
 
     def __call__(self, *labels: str) -> prom.metrics.MetricWrapperBase:
-        return self._value_.labels(opts['app_name'], *labels)
+        return self.value.labels(appconf['app_name'], *labels)
 
     @staticmethod
     def start_server():
-        prom.start_http_server(opts['metrics_port'])
+        prom.start_http_server(appconf['metrics_port'])
 
 # Util
 
@@ -309,9 +304,9 @@ re_email = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 ## cherrypy global config
 cp_global_config = {
     'global': {
-        'server.socket_host'   : opts['host'],
-        'server.socket_port'   : opts['port'],
-        'engine.autoreload.on' : opts['is_debug'],
+        'server.socket_host'   : appconf['host'],
+        'server.socket_port'   : appconf['port'],
+        'engine.autoreload.on' : appconf['is_debug'],
     },
 }
 
@@ -320,17 +315,17 @@ cp_global_config = {
 
 app_dir = pjoin(os.path.dirname(os.path.abspath(__file__)), '..')
 
-def apath(*args):
+def _apath(*args):
     return pjoin(app_dir, *args)
 
-consts = {
-    'favicon_file'   : apath('www/static/img/favicon-60x60.png'),
-    'index_filename' : 'index.html',
-    'robotstxt_file' : apath('www/static/robots.txt'),
-    'static_dir'     : apath('www/static'),
-    'static_dir_doc' : apath('..', 'doc/_build/html'),
-    'view_path'      : apath('www/views'),
-}
+consts = dict(
+    favicon_file   = _apath('www/static/img/favicon-60x60.png'),
+    index_filename = 'index.html',
+    robotstxt_file = _apath('www/static/robots.txt'),
+    static_dir     = _apath('www/static'),
+    static_dir_doc = _apath('..', 'doc/_build/html'),
+    view_path      = _apath('www/views'),
+)
 
 # Jinja2
 
@@ -341,7 +336,7 @@ jenv = Environment(loader = FileSystemLoader(consts['view_path']))
 ##############################
 
 class AppDispatcher(Dispatcher):
-    def __call__(self, path_info):
+    def __call__(self, path_info: str):
         Metric.app_requests_count(path_info).inc()
         return super().__call__(path_info.split('?')[0])
 
@@ -373,36 +368,60 @@ cp_config = {
 #####################
 # For notn, only include those common to all, until UI suports
 # notn-specific choice.
-_encs_map = {
-    notn._name_: RenderSet.available(notn)
-    for notn in Notation
-}
-_enc = set(enc for encs in _encs_map.values() for enc in encs)
-for notn in Notation:
-    _enc = _enc.intersection(RenderSet.available(notn))
-lexwriter_encodings = sorted(_enc)
-del(_enc, _encs_map)
+def _():
+    encs_map = {
+        notn.name: RenderSet.available(notn)
+        for notn in Notation
+    }
+    enc = set(enc for encs in encs_map.values() for enc in encs)
+    for notn in Notation:
+        enc = enc.intersection(RenderSet.available(notn))
+    return sorted(enc)
+
+lexwriter_encodings = _()
 
 ########################
 ## Static LexWriters  ##
 ########################
 lexwriters = {
-    notn._name_: {
+    notn.name: {
         enc: LexWriter(notn, enc=enc)
         for enc in RenderSet.available(notn)
     }
     for notn in Notation 
 }
 
+#####################
+## Input Defaults  ##
+#####################
+api_defaults = MapCover(dict(
+    input_notation  = 'polish',
+    output_notation = 'polish',
+))
+form_defaults = MapCover({
+    'input_notation'  : 'standard',
+    'format'          : 'html',
+    'output_notation' : 'standard',
+    'symbol_enc'      : 'html',
+    'show_controls'   : True,
+
+    # 'options.controls': True,
+    'options.group_optimizations': True,
+    'options.models': True,
+    'options.rank_optimizations': True,
+})
+
 del(
     _,
-    apath,
+    _apath,
     pjoin,
     _getoptval,
-    AbcEnum,
+    get_logic,
     closure,
 
+    AbcEnum,
     Environment,
     FileSystemLoader,
-
+    Notation,
+    RenderSet,
 )

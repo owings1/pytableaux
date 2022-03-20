@@ -46,10 +46,14 @@ from proof.writers import create_tabwriter, formats as tabwriter_formats
 
 from www.mailroom import Mailroom
 from www.conf import (
-    available,
+    api_defaults,
+    appconf,
     cp_config,
     cp_global_config,
     example_arguments,
+
+    form_defaults,
+
     jenv,
     lexwriter_encodings,
     lexwriters,
@@ -57,8 +61,7 @@ from www.conf import (
     logic_categories,
     Metric,
     modules,
-    nups,
-    opts,
+    parser_nups,
     parser_tables,
     re_email,
 )
@@ -76,82 +79,59 @@ from typing import Any, Mapping, Sequence
 
 EMPTY_MAP = MapCover(MapProxy({}))
 
-mailroom = Mailroom(opts)
-
-#####################
-## Input Defaults  ##
-#####################
-api_defaults = MapCover(dict(
-    input_notation  = 'polish',
-    output_notation = 'polish',
-))
-form_defaults = MapCover({
-    'input_notation'  : 'standard',
-    'format'          : 'html',
-    'output_notation' : 'standard',
-    'symbol_enc'      : 'html',
-    'show_controls'   : True,
-
-    # 'options.controls': True,
-    'options.group_optimizations': True,
-    'options.models': True,
-    'options.rank_optimizations': True,
-
-})
+mailroom = Mailroom(appconf)
 
 ###############
 ## JS Data   ##
 ###############
-base_browser_data = MapCover({
-    'example_predicates'    : tuple(p.spec for p in examples.preds),
-    # nups: "notation-user-predicate-symbols"
-    'nups'                  : nups,
-    'num_predicate_symbols' : Predicate.TYPE.maxi + 1,
-    'example_arguments'     : example_arguments,
-    'is_debug'              : opts['is_debug'],
-})
+base_browser_data = MapCover(dict(
+    example_predicates    = tuple(p.spec for p in examples.preds),
+    nups                  = parser_nups,
+    num_predicate_symbols = Predicate.TYPE.maxi + 1,
+    example_arguments     = example_arguments,
+    is_debug              = appconf['is_debug'],
+))
 
 #################
 ## View Data   ##
 #################
-base_view_data = MapCover({
-    'app_name'            : opts['app_name'],
-    'copyright'           : fixed.copyright,
-    'example_args_list'   : examples.titles,
-    'feedback_to_address' : opts['feedback_to_address'],
-    'form_defaults'       : form_defaults,
-    'google_analytics_id' : opts['google_analytics_id'],
-    'is_debug'            : opts['is_debug'],
-    'is_feedback'         : opts['feedback_enabled'],
-    'is_google_analytics' : bool(opts['google_analytics_id']),
-    'issues_href'         : issues_href,
-    'lexwriter_encodings' : lexwriter_encodings,
-    'lwstdhtm'            : lexwriters['standard']['html'],
-    'logic_categories'    : logic_categories,
-    'logic_modules'       : available['logics'],
-    'logics'              : modules['logics'],
-    'parser_tables'       : parser_tables,
-    'operators_list'      : Operator.seq,
-    'quantifiers'         : Quantifier.seq,
-    'lexicals'            : lexicals,
-    'LexType'             : LexType,
-    'Notation'            : Notation,
-    'source_href'         : source_href,
-    'tabwriter_formats'   : tabwriter_formats,
-    'version'             : version,
-    'view_version'        : 'v2',
-})
+base_view_data = MapCover(dict(
+    app_name            = appconf['app_name'],
+    copyright           = fixed.copyright,
+    example_args_list   = examples.titles,
+    feedback_to_address = appconf['feedback_to_address'],
+    form_defaults       = form_defaults,
+    google_analytics_id = appconf['google_analytics_id'],
+    is_debug            = appconf['is_debug'],
+    is_feedback         = appconf['feedback_enabled'],
+    is_google_analytics = bool(appconf['google_analytics_id']),
+    issues_href         = issues_href,
+    lexicals            = lexicals,
+    LexType             = LexType,
+    lexwriter_encodings = lexwriter_encodings,
+    lwstdhtm            = lexwriters['standard']['html'],
+    logic_categories    = logic_categories,
+    logics              = modules['logics'],
+    Notation            = Notation,
+    operators_list      = Operator.seq,
+    parser_tables       = parser_tables,
+    quantifiers         = Quantifier.seq,
+    source_href         = source_href,
+    tabwriter_formats   = tabwriter_formats,
+    version             = version,
+    view_version        = 'v2',
+))
 
 ###################
 ## Templates     ##
 ###################
 
-template_cache: dict[str, Template] = dict()
+template_cache: dict[str, Template] = {}
 
 def get_template(view: str) -> Template:
     if '.' not in view:
         view = '.'.join((view, 'jinja2'))
-    if opts['is_debug'] or (view not in template_cache):
+    if appconf['is_debug'] or (view not in template_cache):
         template_cache[view] = jenv.get_template(view)
     return template_cache[view]
 
@@ -163,16 +143,18 @@ def render(view: str, data: dict = {}) -> str:
 ## Webapp        ##
 ###################
 
-class App(object):
+class App:
+
+    config = appconf
 
     @chpy.expose
     def index(self, *args, **req_data):
 
         req: Request = chpy.request
 
-        errors = dict()
-        warns  = dict()
-        debugs = list()
+        errors = {}
+        warns  = {}
+        debugs = []
 
         data = dict(base_view_data)
         browser_data = dict(base_browser_data)
@@ -186,7 +168,7 @@ class App(object):
         if req_data.get('debug') == 'false':
             is_debug = False
         else:
-            is_debug = opts['is_debug']
+            is_debug = appconf['is_debug']
 
         form_data = fix_form_data(req_data)
         api_data = resp_data = None
@@ -222,51 +204,51 @@ class App(object):
                     selected_tab = 'view'
                 else:
                     selected_tab = 'stats'
-                data.update({
-                    'tableau' : tableau,
-                    'lw'      : lw,
-                })
+                data.update(
+                    tableau = tableau,
+                    lw      = lw,
+                )
 
         if errors:
             data['errors'] = errors
 
-        browser_data.update({
-            'is_debug'     : is_debug,
-            'is_proof'     : is_proof,
-            'is_controls'  : is_controls,
-            'is_models'    : is_models,
-            'selected_tab' : selected_tab,
-        })
+        browser_data.update(
+            is_debug     = is_debug,
+            is_proof     = is_proof,
+            is_controls  = is_controls,
+            is_models    = is_models,
+            selected_tab = selected_tab,
+        )
 
         if is_debug:
-            debugs.extend([
-                ('api_data', api_data),
-                ('req_data', req_data),
-                ('form_data', form_data),
-                ('resp_data', resp_data and debug_resp_data(resp_data)),
-                ('browser_data', browser_data),
-            ])
+            debugs.extend(dict(
+                api_data = api_data,
+                req_data = req_data,
+                form_data = form_data,
+                resp_data = resp_data and debug_resp_data(resp_data),
+                browser_data = browser_data,
+            ).items())
             data['debugs'] = debugs
 
-        data.update({
-            'browser_json' : json.dumps(browser_data, indent = 2),
-            'is_proof'     : is_proof,
-            'is_controls'  : is_controls,
-            'is_models'    : is_models,
-            'selected_tab' : selected_tab,
-            'view_version' : view_version,
-            'form_data'    : form_data,
-            'resp_data'    : resp_data,
-            'warns'        : warns,
-        })
+        data.update(
+            browser_json = json.dumps(browser_data, indent = 2),
+            is_proof     = is_proof,
+            is_controls  = is_controls,
+            is_models    = is_models,
+            selected_tab = selected_tab,
+            view_version = view_version,
+            form_data    = form_data,
+            resp_data    = resp_data,
+            warns        = warns,
+        )
 
         return render(view, data)
 
     def feedback(self, **form_data):
 
-        errors = dict()
-        warns  = dict()
-        debugs = list()
+        errors = {}
+        warns  = {}
+        debugs = []
 
         data = dict(base_view_data)
 
@@ -274,9 +256,9 @@ class App(object):
 
         view = 'feedback'
         
-        data.update({
-            'form_data' : form_data,
-        })
+        data.update(
+            form_data = form_data,
+        )
 
         req: Request = chpy.request
 
@@ -289,25 +271,25 @@ class App(object):
 
             if len(errors) == 0:
                 date = datetime.now()
-                data.update({
-                    'date'    : str(date),
-                    'ip'      : get_remote_ip(req),
-                    'headers' : req.headers,
-                })
+                data.update(
+                    date    = str(date),
+                    ip      = get_remote_ip(req),
+                    headers = req.headers,
+                )
                 msg = MIMEMultipart('alternative')
                 msg['From'] = '{0} Feedback <{1}>'.format(
-                    opts['app_name'],
-                    opts['feedback_from_address'],
+                    appconf['app_name'],
+                    appconf['feedback_from_address'],
                 )
-                msg['To'] = opts['feedback_to_address']
+                msg['To'] = appconf['feedback_to_address']
                 msg['Subject'] = 'Feedback from {0}'.format(form_data['name'])
                 msg_txt = render('feedback-email.txt', data)
                 msg_html = render('feedback-email', data)
                 msg.attach(MIMEText(msg_txt, 'plain'))
                 msg.attach(MIMEText(msg_html, 'html'))
                 mailroom.enqueue(
-                    opts['feedback_from_address'],
-                    (opts['feedback_to_address'],),
+                    appconf['feedback_from_address'],
+                    (appconf['feedback_to_address'],),
                     msg.as_string(),
                 )
                 is_submitted = True
@@ -319,22 +301,22 @@ class App(object):
                     'You might want to send an email instead.',
                 ))
 
-        debugs.extend([
-            ('form_data', form_data),
-        ])
-        data.update({
-            'errors'       : errors,
-            'warns'        : warns,
-            'is_submitted' : is_submitted,
-        })
+        debugs.extend(dict(
+            form_data = form_data,
+        ).items())
+        data.update(
+            errors       = errors,
+            warns        = warns,
+            is_submitted = is_submitted,
+        )
         return render(view, data)
 
-    feedback.exposed = opts['feedback_enabled'] and bool(opts['smtp_host'])
+    feedback.exposed = appconf['feedback_enabled'] and bool(appconf['smtp_host'])
 
     @chpy.expose
     @chpy.tools.json_in()
     @chpy.tools.json_out()
-    def api(self, action=None):
+    def api(self, action: str = None) -> dict[str, Any]:
 
         req: Request = chpy.request
         res: Response = chpy.response
@@ -347,36 +329,36 @@ class App(object):
                 elif action == 'prove':
                     result, *_ = self.api_prove(req.json)
                 if result:
-                    return {
-                        'status'  : 200,
-                        'message' : 'OK',
-                        'result'  : result,
-                    }
+                    return dict(
+                        status  = 200,
+                        message = 'OK',
+                        result  = result,
+                    )
             except TimeoutError as err: # pragma: no cover
                 res.status = 408
-                return {
-                    'status'  : 408,
-                    'message' : errstr(err),
-                    'error'   : type(err).__name__,
-                }
+                return dict(
+                    status  = 408,
+                    message = errstr(err),
+                    error   = type(err).__name__,
+                )
             except RequestDataError as err:
                 res.status = 400
-                return {
-                    'status'  : 400,
-                    'message' : 'Request data errors',
-                    'error'   : type(err).__name__,
-                    'errors'  : err.errors,
-                }
+                return dict(
+                    status  = 400,
+                    message = 'Request data errors',
+                    error   = type(err).__name__,
+                    errors  = err.errors,
+                )
             except Exception as err: # pragma: no cover
                 res.status = 500
-                return {
-                    'status'  : 500,
-                    'message' : errstr(err),
-                    'error'   : type(err).__name__,
-                }
+                return dict(
+                    status  = 500,
+                    message = errstr(err),
+                    error   = type(err).__name__,
+                )
                 #traceback.print_exc()
         res.status = 404
-        return {'message': 'Not found', 'status': 404}
+        return dict(message = 'Not found', status = 404)
 
     def api_parse(self, body: Mapping):
         """
@@ -411,6 +393,7 @@ class App(object):
                 }
             }
         """
+        errors = {}
 
         body = dict(body)
 
@@ -418,11 +401,9 @@ class App(object):
         if 'notation' not in body:
             body['notation'] = api_defaults['input_notation']
         if 'predicates' not in body:
-            body['predicates'] = list()
+            body['predicates'] = []
         if 'input' not in body:
             body['input'] = ''
-
-        errors = dict()
 
         try:
             preds = self._parse_preds(body['predicates'])
@@ -445,16 +426,16 @@ class App(object):
         if errors:
             raise RequestDataError(errors)
 
-        return {
-            'type'     : sentence.TYPE.name,
-            'rendered' : {
+        return dict(
+            type     = sentence.TYPE.name,
+            rendered = {
                 notn: {
                     fmt: lexwriters[notn][fmt](sentence)
                     for fmt in lexwriters[notn]
                 }
                 for notn in lexwriters
             },
-        }
+        )
 
     def api_prove(self, body: Mapping) -> tuple[dict, Tableau, LexWriter]:
         """
@@ -512,7 +493,8 @@ class App(object):
                 },
             }
         """
-        errors = dict()
+        is_debug = appconf['is_debug']
+        errors = {}
 
         body = dmap(
             output = {},
@@ -533,7 +515,7 @@ class App(object):
             'html' if odata['format'] == 'html'
             else 'ascii'
         )
-        odata['options']['debug'] = opts['is_debug']
+        odata['options']['debug'] = is_debug
 
         if body['max_steps'] is not None:
             elabel = 'Max steps'
@@ -548,7 +530,7 @@ class App(object):
             is_group_optim  = bool(body['group_optimizations']),
             is_build_models = bool(body['build_models']),
             max_steps       = body['max_steps'],
-            build_timeout   = opts['maxtimeout'],
+            build_timeout   = appconf['maxtimeout'],
         )
 
         try:
@@ -569,7 +551,7 @@ class App(object):
             errors[elabel] = "Invalid notation: '%s'" % odata['notation']
         except Exception as err:
             errors[elabel] = errstr(err)
-            if opts['is_debug']:
+            if is_debug:
                 traceback.print_exc()
 
         else:
@@ -579,7 +561,7 @@ class App(object):
             except KeyError:
                 errors[elabel] = "Unsupported encoding: '%s'" % odata['symbol_enc']
             except Exception as err:
-                if opts['is_debug']:
+                if is_debug:
                     traceback.print_exc()
                 errors[elabel] = errstr(err)
 
@@ -595,7 +577,7 @@ class App(object):
                     )
                 except Exception as err:
                     errors[elabel] = errstr(err)
-                    if opts['is_debug']:
+                    if is_debug:
                         traceback.print_exc()
 
         if errors:
@@ -613,45 +595,44 @@ class App(object):
                 Metric.proofs_inprogress_count(logicname).dec()
                 Metric.proofs_execution_time(logicname).observe(timer.elapsed_secs())
 
-        # actually we return a tuple (resp, tableau, lw) because the
-        # web ui needs the tableau object to write the controls.
-        return ({
-            'tableau': {
-                'logic' : logicname,
-                'argument': {
-                    'premises'   : tuple(map(lw, arg.premises)),
-                    'conclusion' : lw(arg.conclusion),
-                },
-                'valid'  : proof.valid,
-                'header' : tabwriter.document_header(),
-                'footer' : tabwriter.document_footer(),
-                'body'   : tabwriter.write(proof),
-                'stats'  : proof.stats,
-                'result' : proof.stats['result'],
-            },
-            'attachments' : tabwriter.attachments(proof),
-            'writer' : {
-                'name'       : tabwriter.name,
-                'format'     : odata['format'],
-                'symbol_enc' : odata['symbol_enc'],
-                'options'    : tabwriter.opts,
-            }
-        }, proof, lw)
+        # Return a tuple (resp, tableau, lw) because the web ui needs the
+        # tableau object to write the controls.
+        return (dict(
+            tableau = dict(
+                logic = logicname,
+                argument = dict(
+                    premises   = tuple(map(lw, arg.premises)),
+                    conclusion = lw(arg.conclusion),
+                ),
+                valid  = proof.valid,
+                header = tabwriter.document_header(),
+                footer = tabwriter.document_footer(),
+                body   = tabwriter.write(proof),
+                stats  = proof.stats,
+                result = proof.stats['result'],
+            ),
+            attachments = tabwriter.attachments(proof),
+            writer = dict(
+                name       = tabwriter.name,
+                format     = odata['format'],
+                symbol_enc = odata['symbol_enc'],
+                options    = tabwriter.opts,
+            )
+        ), proof, lw)
 
     @classmethod
     def _parse_argument(cls, adata: Mapping[str, Any]) -> Argument:
 
+        errors = {}
         adata = dict(adata)
 
         # defaults
         if 'notation' not in adata:
             adata['notation'] = api_defaults['input_notation']
         if 'predicates' not in adata:
-            adata['predicates'] = list()
+            adata['predicates'] = []
         if 'premises' not in adata:
-            adata['premises'] = list()
-
-        errors = dict()
+            adata['premises'] = []
 
         elabel = 'Notation'
         try:
@@ -690,8 +671,8 @@ class App(object):
     def _parse_preds(pspecs: Sequence[Mapping|Sequence]) -> Predicates|None:
         if not len(pspecs):
             return None
+        errors = {}
         preds = Predicates()
-        errors = dict()
         Coords = Predicate.Coords
         fields = Coords._fields
         for i, specdata in enumerate(pspecs, start = 1):
@@ -737,7 +718,7 @@ def is_valid_email(value: str) -> bool:
     return re.fullmatch(re_email, value) is not None
 
 def validate_feedback_form(form_data: dict[str, str]) -> None:
-    errors = dict()
+    errors = {}
     if not is_valid_email(form_data['email']):
         errors['Email'] = 'Invalid email address'
     if not len(form_data['name']):
@@ -757,9 +738,9 @@ def get_remote_ip(req: Request) -> str:
 #############
 
 def main(): # pragma: no cover
-    logger.info('Staring metrics on port %d' % opts['metrics_port'])
+    logger.info('Staring metrics on port %d' % appconf['metrics_port'])
     mailroom.start()
-    prom.start_http_server(opts['metrics_port'])
+    prom.start_http_server(appconf['metrics_port'])
     chpy.config.update(cp_global_config)
     chpy.quickstart(App(), '/', cp_config)
 
