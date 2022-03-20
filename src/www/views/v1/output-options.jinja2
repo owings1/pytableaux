@@ -2,7 +2,7 @@
     <label for="format">Format</label>
     <select id="format" name="format">
         {% for format in tabwriter_formats -%}
-            <option value="{{ format }}" {{- 
+            <option value="{{ format|e }}" {{- 
                 helper.select_opt(form_data, 'format', format, form_defaults) 
             }}>
                 {{- format|e -}}
@@ -14,10 +14,10 @@
     <label for="output_notation">Notation</label>
     <select id="output_notation" name="output_notation">
         {% for notn in Notation -%}
-            <option value="{{ notn }}" {{- 
-                helper.select_opt(form_data, 'output_notation', notn._name_, form_defaults) 
+            <option value="{{ notn.name|e }}" {{- 
+                helper.select_opt(form_data, 'output_notation', notn.name, form_defaults) 
             }}>
-                {{- notn._name_|e -}}
+                {{- notn.name|e -}}
             </option>
         {% endfor %}
     </select>
@@ -26,7 +26,7 @@
     <label for="symbol_enc">Symbol Encoding</label>
     <select id="symbol_enc" name="symbol_enc">
         {% for enc in lexwriter_encodings -%}
-            <option value="{{ enc }}" {{- 
+            <option value="{{ enc|e }}" {{- 
                 helper.select_opt(form_data, 'symbol_enc', enc, form_defaults) 
             }}>
                 {{- enc|e -}}
