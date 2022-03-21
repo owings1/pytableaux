@@ -1,35 +1,91 @@
 # Third-Party Notices
 
-| Component                                    | License          |
-|:-------------------------------------------- | -----------------|
-| [jquery](#8fb8) @ [3.6.0][8fb8-ver]          | [MIT][8fb8-lic]  |
-| [jquery-ui](#4e0f) @ [1.12.1][4e0f-ver]      | [MIT][4e0f-lic]  |
-| [json-viewer](#2cdb) @ [2cdbde04][2cdb-tre]  | [MIT][2cdb-lic]  |
 
+<!--
+-------------------------------------------------------------------------------
+
+<a name="#"></a>
+
+### ... (MIT)
+
+  <details><summary>Details</summary>
+
+  #### Origin
+
+  - **Project**   - [            ][-git]
+  - **Author**    - [            ][-who]
+  - **License**   - [MIT License ][-lic]
+  - **Version**   - [            ][-tre]
+  - **Published** - 
+  - **Language**  - `JavaScript`
+
+  #### Usage
+
+  - **Added** - 
+  - **Purpose** - Library
+  - **Linkage** - Repackaged (partial, minified)
+
+  #### Paths
+
+  - [/src/]()
+
+  </details>
+
+  <details><summary>License</summary>
+
+  ```
+
+  ```
+  </details>
+
+[-git]: https://github.com/
+[-who]: https://github.com/
+[-tre]: https://github.com/
+[-lic]: https://github.com/
+
+-------------------------------------------------------------------------------
+-->
+
+| Component             | Version                | License          |
+|:----------------------|----------------------- | -----------------|
+| [jquery      ](#8fb8) | [ 3.6.0    ][8fb8-tre] | [MIT][8fb8-lic]  |
+| [jquery-ui   ](#4e0f) | [ 1.12.1   ][4e0f-tre] | [MIT][4e0f-lic]  |
+| [json-viewer ](#2cdb) | [ 2cdbde04 ][2cdb-tre] | [MIT][2cdb-lic]  |
+<!--
+| [ ](#)  | [  ][-tre] | [MIT][-lic]  |
+| [ ](#)  | [  ][-tre] | [MIT][-lic]  |
+| [ ](#)  | [  ][-tre] | [MIT][-lic]  |
+-->
 -------------------------------------------------------------------------------
 
 <a name="8fb8"></a>
 
 ### jquery 3.6.0 (MIT)
 
-- **Project** - [jQuery JavaScript Library][8fb8-git]
-- **Author**  - [OpenJS Foundation and others][8fb8-who]
-- **License** - [MIT License][8fb8-lic]
-- **Version** - [v3.6.0][8fb8-tre] (2021-03-02)
-- **Language** - `JavaScript`
+  <details><summary>Details</summary>
 
-  <details><summary><strong>Usage</strong></summary>
+  #### Origin
 
-  - Added: 2021-09-25
-  - Purpose: Library
-  - Linkage: Repackaged (partial, minified)
-  - Paths:
-  
-    - [/src/www/static/js/jquery-3.6.0.min.js](/src/www/static/js/jquery-3.6.0.min.js)
+  - **Project**   - [jQuery JavaScript Library   ][8fb8-git]
+  - **Author**    - [OpenJS Foundation and others][8fb8-who]
+  - **License**   - [MIT License                 ][8fb8-lic]
+  - **Version**   - [v3.6.0                      ][8fb8-tre]
+  - **Published** - 2021-03-02
+  - **Language**  - `JavaScript`
+
+  #### Usage
+
+  - **Added**   - 2021-09-25
+  - **Purpose** - Library
+  - **Linkage** - Repackaged (partial, minified)
+
+  #### Paths
+
+  - [/src/www/static/js/jquery-3.6.0.min.js](/src/www/static/js/jquery-3.6.0.min.js)
 
   </details>
 
-  <details><summary><strong>License</strong></summary>
+  <details><summary>License</summary>
 
   ```
   Copyright OpenJS Foundation and other contributors, https://openjsf.org/
@@ -66,26 +122,32 @@
 
 ### jquery-ui 1.12.1 (MIT)
 
-- **Project** - [jQuery UI][4e0f-git]
-- **Author**  - [jQuery Foundation and others][4e0f-who]
-- **License** - [MIT License][4e0f-lic]
-- **Version** - [v1.12.1][4e0f-tre] (2016-09-14)
-- **Language** - `JavaScript` `CSS`
+  <details><summary>Details</summary>
 
-  <details><summary><strong>Usage</strong></summary>
+  #### Origin
 
-  - Added: 2020-05-13
-  - Purpose: Library
-  - Linkage: Repackaged (partial, minified)
-  - Paths:
-  
-    - [/src/www/static/js/jquery-ui.min.js](/src/www/static/js/jquery-ui.min.js)
-    - [/src/www/static/ui-base](/src/www/static/ui-base)
-    - [/src/www/static/ui-controls](/src/www/static/ui-controls)
+  - **Project**   - [jQuery UI                   ][4e0f-git]
+  - **Author**    - [jQuery Foundation and others][4e0f-who]
+  - **License**   - [MIT License                 ][4e0f-lic]
+  - **Version**   - [v1.12.1                     ][4e0f-tre]
+  - **Published** - 2016-09-14
+  - **Language**  - `JavaScript` `CSS`
+
+  #### Usage
+
+  - **Added**   - 2020-05-13
+  - **Purpose** - Library
+  - **Linkage** - Repackaged (partial, minified)
+
+  #### Paths
+
+  - [/src/www/static/js/jquery-ui.min.js](/src/www/static/js/jquery-ui.min.js)
+  - [/src/www/static/ui-base](/src/www/static/ui-base)
+  - [/src/www/static/ui-controls](/src/www/static/ui-controls)
 
   </details>
 
-  <details><summary><strong>License</strong></summary>
+  <details><summary>License</summary>
 
   ```
   Copyright jQuery Foundation and other contributors, https://jquery.org/
@@ -122,29 +184,35 @@
 
 ### json-viewer (MIT)
 
-- **Project** - [jQuery json-viewer][2cdb-git]
-- **Author**  - [Alexandre Bodelot][2cdb-who]
-- **License** - [MIT License][2cdb-lic]
-- **Version** - [#2cdbde04][2cdb-tre] (2021-07-16)
-- **Language** - `JavaScript` `CSS`
+  <details><summary>Details</summary>
 
-  <details><summary><strong>Usage</strong></summary>
+  #### Origin
 
-  - Added: 2022-03-21
-  - Purpose: Development Tool
-  - Linkage: Repackaged (partial)
-  - Paths:
-  
-    - [/src/www/static/json-viewer](/src/www/static/json-viewer)
+  - **Project**   - [jQuery json-viewer][2cdb-git]
+  - **Author**    - [Alexandre Bodelot ][2cdb-who]
+  - **License**   - [MIT License       ][2cdb-lic]
+  - **Version**   - [#2cdbde04         ][2cdb-tre]
+  - **Published** - 2021-07-16
+  - **Language**  - `JavaScript` `CSS`
 
-  - Modifications:
-  
-    - [5d52567d][5d52567d] 2022-03-21
-    - [8975c62b][8975c62b] 2022-03-21
+  #### Usage
+
+  - **Added** - 2022-03-21
+  - **Purpose** - Development Tool
+  - **Linkage** - Repackaged (partial)
+
+  #### Paths
+
+  - [/src/www/static/json-viewer](/src/www/static/json-viewer)
+
+  #### Modifications
+
+  - [5d52567d][5d52567d] 2022-03-21
+  - [8975c62b][8975c62b] 2022-03-21
 
   </details>
 
-  <details><summary><strong>License</strong></summary>
+  <details><summary>License</summary>
 
   ```
   The MIT License (MIT)
