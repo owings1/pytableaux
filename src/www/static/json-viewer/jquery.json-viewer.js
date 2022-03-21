@@ -64,9 +64,9 @@
       return false;
     }
     for (var _ in arg) {
-      return false;
+      return true;
     }
-    return true;
+    return false;
   }
 
   /**
@@ -139,8 +139,7 @@
       var keyCount = keys.length;
       if (keyCount > 0) {
         html += '<span class="json-obrace">{</span><ul class="json-dict">';
-        for (var i = 0; i < keys.length; ++i) {
-          var key = keys[i];
+        for (var key in json) {
           if (hasOwnKey(json, key)) {
             html += '<li>';
             $build = $('<span class="json-key"/>');
