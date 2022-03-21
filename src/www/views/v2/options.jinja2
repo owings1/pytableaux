@@ -1,9 +1,11 @@
 <div class="input select">
     <label for="input_notation">Input Notation</label>
     <select id="input_notation" name="input_notation">
-        {% for notn in parser_tables -%}
-            <option value="{{ notn|e }}" {{ helper.select_opt(form_data, 'input_notation', notn, form_defaults) }}>
-                {{- notn|e -}}
+        {% for notn in Notation -%}
+            <option value="{{ notn.name|e }}" {{-
+                helper.select_opt(form_data, 'input_notation', notn.name, form_defaults)
+            }}>
+                {{- notn.name|e -}}
             </option>
         {% endfor %}
     </select>
@@ -33,13 +35,13 @@
     </select>
 </div>
 <div class="input select">
-    <label for="symbol_enc">Output Symbols</label>
-    <select id="symbol_enc" name="symbol_enc">
-        {% for enc in lexwriter_encodings -%}
-            <option value="{{ enc|e }}" {{- 
-                helper.select_opt(form_data, 'symbol_enc', enc, form_defaults) 
+    <label for="symbol_charset">Output Symbols</label>
+    <select id="symbol_charset" name="symbol_charset">
+        {% for charset in lexwriter_charsets -%}
+            <option value="{{ charset|e }}" {{- 
+                helper.select_opt(form_data, 'symbol_charset', charset, form_defaults) 
             }}>
-                {{- enc|e -}}
+                {{- charset|e -}}
             </option>
         {% endfor %}
     </select>

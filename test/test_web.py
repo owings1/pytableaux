@@ -161,7 +161,7 @@ class AppTest(helper.CPWebCase):
             app.api_prove({'logic': 'bunky'})
             assert 'Logic' in exc_info.value.errors
         with pytest.raises(web.RequestDataError) as exc_info:
-            app.api_prove({'output': {'symbol_enc': 'bunky'}})
+            app.api_prove({'output': {'symbol_charset': 'bunky'}})
             assert 'Symbol Set' in exc_info.value.errors
         with pytest.raises(web.RequestDataError) as exc_info:
             app.api_prove({'output': {'notation': 'bunky'}})
@@ -222,5 +222,5 @@ class AppTest(helper.CPWebCase):
         form_data = {
             'test[]': 'a'
         }
-        res = web.fix_form_data(form_data)
+        res = web.fix_uri_req_data(form_data)
         assert isinstance(res['test[]'], list)

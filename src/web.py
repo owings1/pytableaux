@@ -45,14 +45,14 @@ from www.mailroom import Mailroom
 from www.conf import (
     APP_ENVCONF,
     APP_JENV,
+    APP_LOGICS,
 
     api_defaults,
-    app_modules,
     cp_config,
     cp_global_config,
     example_arguments,
     form_defaults,
-    lexwriter_encodings,
+    lexwriter_charsets,
     lexwriters,
     logger,
     logic_categories,
@@ -75,6 +75,14 @@ import traceback
 from typing import Any, Mapping, Sequence
 
 
+_LW_CACHE = {
+    notn: {
+        charset: LexWriter(notn, charset)
+        for charset in notn.charsets
+    }
+    for notn in Notation 
+}
+
 mailroom = Mailroom(APP_ENVCONF)
 
 ###############
@@ -84,7 +92,6 @@ base_browser_data = MapCover(dict(
     example_arguments     = example_arguments,
     example_predicates    = tuple(p.spec for p in examples.preds),
     nups                  = parser_nups,
-    num_predicate_symbols = Predicate.TYPE.maxi + 1,
 ))
 
 #################
@@ -92,15 +99,17 @@ base_browser_data = MapCover(dict(
 #################
 base_view_data = MapCover(dict(
 
-    example_args_list   = examples.titles,
-    form_defaults       = form_defaults,
+    logics              = APP_LOGICS,
+
     lexicals            = lexicals,
     LexType             = LexType,
-    lexwriter_encodings = lexwriter_encodings,
-    lwstdhtm            = lexwriters['standard']['html'],
-    logic_categories    = logic_categories,
-    logics              = app_modules['logics'],
     Notation            = Notation,
+
+    example_args_list   = examples.titles,
+    form_defaults       = form_defaults,
+    lexwriter_charsets  = lexwriter_charsets,
+    lwstdhtm            = _LW_CACHE[Notation.standard]['html'],#lexwriters['standard']['html'],
+    logic_categories    = logic_categories,
     parser_tables       = parser_tables,
     tabwriter_formats   = TabWriter.Registry.keys(),
     view_version        = 'v2',
@@ -110,6 +119,9 @@ base_view_data = MapCover(dict(
 ###################
 ## Webapp        ##
 ###################
+
+# TODO: serve separate cached
+_STATIC_JSON = json.dumps(dict(base_browser_data), indent = 2)
 
 _EMPTY_MAP = MapProxy()
 _TEMPLATE_CACHE: dict[str, Template] = {}
@@ -135,42 +147,41 @@ class App:
         view_data = dict(base_view_data)
         browser_data = dict(base_browser_data)
 
+        config = self.config
+
+        req_params = req.params
+        req_data = fix_uri_req_data(req_data)
+
         if req_data.get('v') in ('v1', 'v2'):
             view_version = req_data['v']
         else:
             view_version = 'v2'
         view = '/'.join((view_version, 'main'))
 
-        if req_data.get('debug') == 'false':
-            is_debug = False
+        if 'debug' in req_data and config['is_debug']:
+            is_debug = req_data['debug'] not in ('', '0', 'false')
         else:
-            is_debug = self.config['is_debug']
+            is_debug = config['is_debug']
 
-        form_data = fix_form_data(req_data)
-        api_data = resp_data = None
+        form_data = api_data = resp_data = None
         is_proof = is_controls = is_models = False
         selected_tab = 'argument'
 
+        form_data = req_data
         if req.method == 'POST':
-            
+
+
             try:
                 try:
                     api_data = json.loads(form_data['api-json'])
                 except Exception as err:
                     raise RequestDataError({'api-data': errstr(err)})
-                try:
-                    self._parse_argument(api_data['argument'])
-                    # test:
-                    # raise RequestDataError({'test': 'error'})
-                except RequestDataError as err:
-                    errors.update(err.errors)
                 resp_data, tableau, lw = self.api_prove(api_data)
             except RequestDataError as err:
                 errors.update(err.errors)
             except TimeoutError as err: # pragma: no cover
                 errors['Tableau'] = errstr(err)
-
-            if not errors:
+            else:
                 is_proof = True
                 if resp_data['writer']['format'] == 'html':
                     is_controls = bool(form_data.get('show_controls'))
@@ -199,10 +210,11 @@ class App:
 
         if is_debug:
             debugs.extend(dict(
-                api_data = api_data,
-                req_data = req_data,
-                form_data = form_data,
-                resp_data = resp_data and debug_resp_data(resp_data),
+                method     = req.method,
+                req_params = req_params,
+                req_data   = req_data,
+                api_data   = api_data,
+                resp_data  = resp_data and debug_resp_data(resp_data),
                 browser_data = browser_data,
             ).items())
             view_data['debugs'] = debugs
@@ -415,29 +427,22 @@ class App:
             },
         )
 
-    def api_prove(self, body: Mapping) -> tuple[dict, Tableau, LexWriter]:
+    def api_prove(self, body: Mapping[str, Any]) -> tuple[dict, Tableau, LexWriter]:
         """
         Example request body::
 
             {
-                "argument": {
-                    "premises": ["KFmFn"],
-                    "conclusion": "Fm",
-                    "notation": "polish",
-                    "predicates": [
-                        {
-                            "name": "is F",
-                            "index": 0,
-                            "subscript": 0,
-                            "arity": 1
-                        }
-                    ]
-                },
                 "logic": "FDE",
+                "argument": {
+                    "conclusion": "Fm",
+                    "premises": ["KFmFn"],
+                    "notation": "polish",
+                    "predicates": [ [0, 0, 1] ]
+                },
                 "output": {
-                    "notation": "standard",
                     "format": "html",
-                    "symbol_enc": "default",
+                    "notation": "standard",
+                    "charset": "html",
                     "options": {
                         
                     }
@@ -466,16 +471,16 @@ class App:
                 "writer": {
                     "name": "HTML",
                     "format": "html,
-                    "symbol_enc": "html",
+                    "charset": "html",
                     "options": {}
                 },
             }
         """
-        is_debug = self.config['is_debug']
+        config = self.config
         errors = {}
 
         body = dmap(
-            output       = {},
+            logic        = None,
             argument     = _EMPTY_MAP,
             build_models = False,
             max_steps    = None,
@@ -483,35 +488,28 @@ class App:
             group_optimizations = True,
         ) | body
 
-        odata: dmap
-        odata = body['output'] = dmap(
-            options = {},
+        odata = dmap(
             notation = api_defaults['output_notation'],
             format   = api_defaults['output_format'],
-        ) | body['output']
+            charset  = None,
+            options  = {},
+        ) | body.get('output', _EMPTY_MAP)
 
-        if 'symbol_enc' not in odata:
-            if odata['format'] == 'html':
-                odata['symbol_enc'] = 'html'
-            else:
-                odata['symbol_enc'] = 'ascii'
-
-        odata['options']['debug'] = is_debug
+        odata['options']['debug'] = config['is_debug']
 
         if body['max_steps'] is not None:
             elabel = 'Max steps'
             try:
                 body['max_steps'] = int(body['max_steps'])
-            except Exception as err:
-                errors[elabel] = errstr(err)
-                body['max_steps'] = None
+            except ValueError as err:
+                errors[elabel] = "Invalid int value: %s" % err
 
-        proof_opts = dict(
+        tableau_opts = dict(
             is_rank_optim   = bool(body['rank_optimizations']),
             is_group_optim  = bool(body['group_optimizations']),
             is_build_models = bool(body['build_models']),
             max_steps       = body['max_steps'],
-            build_timeout   = self.config['maxtimeout'],
+            build_timeout   = config['maxtimeout'],
         )
 
         try:
@@ -524,80 +522,72 @@ class App:
             logic = get_logic(body['logic'])
         except Exception as err:
             errors[elabel] = errstr(err)
-
-        elabel = 'Output notation'
-        try:
-            lwmap = lexwriters[odata['notation']]
-        except KeyError:
-            errors[elabel] = "Invalid notation: '%s'" % odata['notation']
-        except Exception as err:
-            errors[elabel] = errstr(err)
-            if is_debug:
-                traceback.print_exc()
-
         else:
-            elabel = 'Symbol encoding'
-            try:
-                lw = lwmap[odata['symbol_enc']]
-            except KeyError:
-                errors[elabel] = "Unsupported encoding: '%s'" % odata['symbol_enc']
-            except Exception as err:
-                if is_debug:
-                    traceback.print_exc()
-                errors[elabel] = errstr(err)
+            logicname: str = logic.name
 
+        elabel = 'Output Format'
+        try:
+            WriterClass = TabWriter.Registry[odata['format']]
+        except KeyError:
+            errors[elabel] = "Invalid writer: '%s'" % odata['format']
+        else:
+
+            elabel = 'Output Notation'
+            try:
+                onotn = Notation[odata['notation']]
+            except KeyError as err:
+                errors[elabel] = "Invalid notation: '%s'" % err
             else:
-                elabel = 'Output format'
+
+                elabel = 'Output Charset'
                 try:
-                    tabwriter = TabWriter(odata['format'],
-                        lw  = lw,
-                        enc = odata['symbol_enc'],
-                        **odata['options'],
-                    )
-                except Exception as err:
-                    errors[elabel] = errstr(err)
-                    if is_debug:
-                        traceback.print_exc()
+                    lw = _LW_CACHE[onotn][
+                        odata['charset'] or WriterClass.default_charsets[onotn]
+                    ]
+                except KeyError as err:
+                    errors[elabel] = "Unsupported charset: '%s'" % err
+                else:
+                    tw = WriterClass(lw = lw, **odata['options'])
 
         if errors:
             raise RequestDataError(errors)
 
-        logicname: str = logic.name
         with StopWatch() as timer:
             Metric.proofs_inprogress_count(logicname).inc()
-            proof = Tableau(logic, arg, **proof_opts)
+            tableau = Tableau(logic, arg, **tableau_opts)
 
             try:
-                proof.build()
-                Metric.proofs_completed_count(logicname, proof.stats['result'])
+                tableau.build()
+                Metric.proofs_completed_count(logicname, tableau.stats['result'])
             finally:
                 Metric.proofs_inprogress_count(logicname).dec()
                 Metric.proofs_execution_time(logicname).observe(timer.elapsed_secs())
 
-        # Return a tuple (resp, tableau, lw) because the web ui needs the
-        # tableau object to write the controls.
-        return (dict(
+        resp_data = dict(
             tableau = dict(
                 logic = logicname,
                 argument = dict(
                     premises   = tuple(map(lw, arg.premises)),
                     conclusion = lw(arg.conclusion),
                 ),
-                valid  = proof.valid,
-                header = tabwriter.document_header(),
-                footer = tabwriter.document_footer(),
-                body   = tabwriter.write(proof),
-                stats  = proof.stats,
-                result = proof.stats['result'],
+                valid  = tableau.valid,
+                header = tw.document_header(),
+                footer = tw.document_footer(),
+                body   = tw(tableau),
+                stats  = tableau.stats,
+                result = tableau.stats['result'],
             ),
-            attachments = tabwriter.attachments(proof),
+            attachments = tw.attachments(tableau),
             writer = dict(
-                name       = tabwriter.name,
-                format     = odata['format'],
-                symbol_enc = odata['symbol_enc'],
-                options    = tabwriter.opts,
+                name    = tw.name,
+                format  = tw.format,
+                charset = lw.charset,
+                options = tw.opts,
             )
-        ), proof, lw)
+        )
+        # Return a tuple (resp, tableau, lw) because the web ui needs the
+        # tableau object to write the controls.
+        return resp_data, tableau, lw
 
     @classmethod
     def _parse_argument(cls, adata: Mapping[str, Any]) -> Argument:
@@ -615,29 +605,27 @@ class App:
 
         elabel = 'Notation'
         try:
-            if adata['notation'] not in Notation:
-                raise ValueError('Invalid parser notation')
-        except Exception as e:
-            errors[elabel] = str(e)
-
-        if not errors:
+            notn = Notation[adata['notation']]
+        except KeyError as err:
+            errors[elabel] = "Invalid parser notation: '%s'" % err
+        else:
             try:
                 preds = cls._parse_preds(adata['predicates'])
             except RequestDataError as err:
                 errors.update(err.errors)
                 preds = None
-            parser = create_parser(adata['notation'], preds)
+            parser = notn.Parser(preds)
             premises = []
             for i, premise in enumerate(adata['premises'], start = 1):
                 elabel = 'Premise %d' % i
                 try:
-                    premises.append(parser.parse(premise))
+                    premises.append(parser(premise))
                 except Exception as e:
                     premises.append(None)
                     errors[elabel] = errstr(e)
             elabel = 'Conclusion'
             try:
-                conclusion = parser.parse(adata['conclusion'])
+                conclusion = parser(adata['conclusion'])
             except Exception as e:
                 errors[elabel] = errstr(e)
 
@@ -683,13 +671,12 @@ class App:
 ## Miscellaneous   ##
 #####################
 
-def fix_form_data(form_data: dict[str, VT]) -> dict[str, VT]:
+def fix_uri_req_data(form_data: dict[str, VT]) -> dict[str, VT]:
     form_data = dict(form_data)
-    if len(form_data):
-        for param in form_data:
-            if param.endswith('[]'):
-                if isinstance(form_data[param], str):
-                    form_data[param] = [form_data[param]]
+    for param in form_data:
+        if param.endswith('[]'):
+            if isinstance(form_data[param], str):
+                form_data[param] = [form_data[param]]
     return form_data
 
 def debug_resp_data(resp_data: dict[KT, VT]) -> dict[KT, VT]:

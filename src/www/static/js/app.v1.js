@@ -22,6 +22,7 @@
     $(document).ready(function() {
 
         const AppData = $.parseJSON($('script.app').html())
+        const PRED_SYMCOUNT = Object.values(AppData.nups)[0].length
         const {is_debug} = AppData
         const Templates = {
             premise    : $('#premiseTemplate').html(),
@@ -222,7 +223,7 @@
          * @return String name of the symbol set, e.g. 'default'
          */
         function currentOutputSymbolEnc() {
-            return $('#symbol_enc', $Ctx).val()
+            return $('#symbol_charset', $Ctx).val()
         }
 
         /**
@@ -321,7 +322,7 @@
                 var last = $symbols.last().val().split('.')
                 index = +last[0] + 1
                 subscript = +last[1]
-                if (index == AppData.num_predicate_symbols) {
+                if (index === PRED_SYMCOUNT) {
                     index = 0
                     subscript += 1
                 }
@@ -648,7 +649,7 @@
             })
             data.output.notation = $('#output_notation', $Frm).val()
             data.output.format = $('#format', $Frm).val()
-            data.output.symbol_enc = $('#symbol_enc', $Frm).val()
+            data.output.symbol_charset = $('#symbol_charset', $Frm).val()
             data.output.options = {classes: []}
             $('input:checkbox.options', $Frm).each(function() {
                 const $me = $(this)

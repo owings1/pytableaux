@@ -31,28 +31,28 @@ class TabWriter(metaclass = TabWriterMeta):
 
     format: ClassVar[str]
     name: ClassVar[str]
-    default_encs: ClassVar[Mapping[Notation, str]]
+    default_charsets: ClassVar[Mapping[Notation, str]]
     defaults: Mapping[str, Any] = MapProxy()
 
     lw: LexWriter
     opts: dict[str, Any]
 
-    def __init__(self, notn: Notation|str = None, enc: str = None, *, lw: LexWriter = None, **opts):
+    def __init__(self, notn: Notation|str = None, charset: str = None, *, lw: LexWriter = None, **opts):
         if lw is None:
             if notn is None:
                 notn = Notation.default
             else:
                 notn = Notation(notn)
-            if enc is None:
-                enc = self.default_encs[notn]
-            lw = LexWriter(notn, enc, **opts)
+            if charset is None:
+                charset = self.default_charsets[notn]
+            lw = LexWriter(notn, charset, **opts)
         else:
             if notn is not None:
                 if Notation(notn) != lw.notation:
                     raise Emsg.ValueConflict(notn, lw.notation)
-            if enc is not None:
-                if enc != lw.encoding:
-                    raise Emsg.ValueConflict(enc, lw.encoding)
+            if charset is not None:
+                if charset != lw.charset:
+                    raise Emsg.ValueConflict(charset, lw.charset)
             instcheck(lw, LexWriter)
         self.lw = lw
         self.opts = dict(self.defaults) | opts
@@ -157,7 +157,7 @@ class HtmlTabWriter(TemplateWriter):
 
     format = 'html'
     name = 'HTML'
-    default_encs = {notn: 'html' for notn in Notation}
+    default_charsets = {notn: 'html' for notn in Notation}
     defaults = dict(
         classes      = (),
         wrap_classes = (),
@@ -196,7 +196,7 @@ class TextTabWriter(TemplateWriter):
 
     format = 'text'
     name = 'Text'
-    default_encs = {notn: notn.default_encoding for notn in Notation}
+    default_charsets = {notn: notn.default_charset for notn in Notation}
     defaults = dict(
         summary  = True,
         argument = True,

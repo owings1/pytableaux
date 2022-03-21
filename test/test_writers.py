@@ -29,9 +29,9 @@ import examples
 # Sentence Writers
 
 std = LexWriter('standard')
-stdasc = LexWriter('standard', enc='ascii')
-stduni = LexWriter('standard', enc='unicode')
-stdhtm = LexWriter('standard', enc='html')
+stdasc = LexWriter('standard', charset = 'ascii')
+stduni = LexWriter('standard', charset = 'unicode')
+stdhtm = LexWriter('standard', charset = 'html')
 
 pol = LexWriter('polish')
 pstd = create_parser('standard')

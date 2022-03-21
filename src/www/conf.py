@@ -22,13 +22,13 @@ from __future__ import annotations
 __all__ = (
     'APP_ENVCONF',
     'APP_JENV',
+    'APP_LOGICS',
     'api_defaults',
-    'app_modules',
     'cp_config',
     'cp_global_config',
     'example_arguments',
     'form_defaults',
-    'lexwriter_encodings',
+    'lexwriter_charsets',
     'lexwriters',
     'logger',
     'logic_categories',
@@ -190,11 +190,9 @@ _OPTDEFS = {
 }
 
 
-logic_categories: dict[str, list[str]] = dict()
+logic_categories: dict[str, list[str]] = {}
 
-app_modules = dict(
-    logics = {k: get_logic(k) for k in _LOGICS}
-)
+APP_LOGICS = {k: get_logic(k) for k in _LOGICS}
 
 # 'nups' means "notation-user-predicate-symbols"
 parser_nups = {}
@@ -209,7 +207,7 @@ def _():
         example_arguments[arg.title] = {}
     for notn in Notation:
         # Build rendered example arguments
-        lw = LexWriter(notn, enc = 'ascii')
+        lw = LexWriter(notn, charset = 'ascii')
         for arg in exargs:
             example_arguments[arg.title][notn.name] = dict(
                 premises = tuple(map(lw, arg.premises)),
@@ -218,18 +216,17 @@ def _():
         parser_tables[notn.name] = table = CharTable.fetch(notn)
         parser_nups[notn.name] = table.chars[LexType.Predicate]
 
-    for modname, logic in app_modules['logics'].items():
+    for modname, logic in APP_LOGICS.items():
         category = logic.Meta.category
         if category not in logic_categories:
             logic_categories[category] = []
         logic_categories[category].append(modname)
 
     def get_category_order(modname: str) -> int:
-        return app_modules['logics'][modname].Meta.category_display_order
+        return APP_LOGICS[modname].Meta.category_display_order
 
     for group in logic_categories.values():
         group.sort(key = get_category_order)
-
 
 ## Logging
 
@@ -393,14 +390,14 @@ def _():
         enc = enc.intersection(RenderSet.available(notn))
     return sorted(enc)
 
-lexwriter_encodings = _()
+lexwriter_charsets = _()
 
 ########################
 ## Static LexWriters  ##
 ########################
 lexwriters = {
     notn.name: {
-        enc: LexWriter(notn, enc=enc)
+        enc: LexWriter(notn, charset = enc)
         for enc in RenderSet.available(notn)
     }
     for notn in Notation 
@@ -418,7 +415,7 @@ form_defaults = MapCover({
     'input_notation'  : 'standard',
     'format'          : 'html',
     'output_notation' : 'standard',
-    'symbol_enc'      : 'html',
+    'symbol_charset'      : 'html',
     'show_controls'   : True,
 
     # 'options.controls': True,

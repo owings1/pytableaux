@@ -1,6 +1,6 @@
-<div class="tableau-controls ui-controls"
-    data-tableau-id="tableau_{{ tableau.id }}"
-    id="view_{{ tableau.id }}">
+<div class="tableau-controls ui-controls"{#
+    #} data-tableau-id="tableau_{{ tableau.id|e }}"{#
+    #} id="view_{{ tableau.id|e }}">
     {% set tree = tableau.tree %}
     <ul class="details">
         <li>

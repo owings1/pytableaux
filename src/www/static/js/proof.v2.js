@@ -19,7 +19,7 @@
  */
  ;(function() {
 
-    if (typeof(jQuery) != 'function') {
+    if (typeof(jQuery) !== 'function') {
         console.error(new Error('jQuery not loaded. Cannot load tableau plugin.'))
         return
     }
@@ -62,6 +62,10 @@
     // class names
     const Cls = {
 
+        // page components
+        UiControls      : 'tableau-controls'     ,
+        ModelsArea      : 'tableau-models'       ,
+        
         // tableau classes
         Root            : 'root'                 ,
         Structure       : 'structure'            ,
@@ -132,6 +136,8 @@
 
     // Attributes
     const Attrib = {
+        // Global attributes
+        TableauId      : 'data-tableau-id'        ,
         // Tableau attributes
         NumSteps       : 'data-num-steps'         ,
         Step           : 'data-step'              ,
@@ -321,9 +327,9 @@
 
     Plugin.defaults = $.extend(Object.create(null), {
         controls: function($tableau) {
-            var $controls = $('.tableau-controls')
+            var $controls = $(Dcls.UiControls)
             if ($controls.length > 1) {
-                var $specific = $controls.filter(getAttrSelector('data-tableau-id', this.id))
+                var $specific = $controls.filter(getAttrSelector(Attrib.TableauId, this.id))
                 if ($specific.length) {
                     return $specific
                 }
@@ -331,9 +337,9 @@
             return $controls
         },
         models: function($tableau) {
-            var $models = $('.tableau-models')
+            var $models = $(Dcls.ModelsArea)
             if ($models.length > 1) {
-                var $specific = $models.filter(getAttrSelector('data-tableau-id', this.id))
+                var $specific = $models.filter(getAttrSelector(Attrib.TableauId, this.id))
                 if ($specific.length) {
                     return $specific
                 }
@@ -468,8 +474,8 @@
      * controls element with active class.
      * 
      * @private
-     * @param value {boolean} The value to set.
-     * @return void
+     * @param {boolean} value The value to set.
+     * @return {void}
      */
      function setAutoWidth(value) {
         this._isAutoWidth = Boolean(value)
@@ -483,8 +489,8 @@
      * controls element with active class.
      * 
      * @private
-     * @param value {boolean} The value to set.
-     * @return void
+     * @param {boolean} value The value to set.
+     * @return {void}
      */
     function setAutoScroll(value) {
         this._isAutoScroll = Boolean(value)
@@ -622,9 +628,9 @@
      * Show only the lineage of the given structure.
      *
      * @private
-     * @param st The st cache object.
-     * @param next The next function.
-     * @return void
+     * @param {object} st The st cache object.
+     * @param {function} next The next function.
+     * @return {void}
      */
     function zoom(st, next) {
 
@@ -667,8 +673,8 @@
      * Set the branch being inspected.
      *
      * @private
-     * @param $structure The singleton jQuery .structure element.
-     * @return void
+     * @param {object} $structure The singleton jQuery .structure element.
+     * @return {void}
      */
     function setInspectedBranch($structure) {
 
@@ -699,9 +705,9 @@
      * Move the proof state to the given step.
      *
      * @private
-     * @param n The step number.
-     * @param next The next function.
-     * @return void
+     * @param {integer} n The step number.
+     * @param {function} next The next function.
+     * @return {void}
      */
     function step(n, next) {
 
@@ -853,9 +859,9 @@
      * Filter branches of a tableau according to their status.
      *
      * @private
-     * @param type The branch status to show, either 'open', 'closed', or 'all'.
-     * @param next The next function.
-     * @return void
+     * @param {string} type The branch status to show, either 'open', 'closed', or 'all'.
+     * @param {function} next The next function.
+     * @return {void}
      */
     function filterBranches(type, next) {
 
@@ -970,9 +976,9 @@
      *                    Default is 'after'.
      *
      * @private
-     * @param opts The options.
-     * @param next The next function.
-     * @return void
+     * @param {object} opts The options.
+     * @param {function} next The next function.
+     * @return {void}
      */
     function doFilter(opts, next) {
 
@@ -1050,13 +1056,13 @@
      * leaves can only have nodes, so their width is 1.
      *
      * @private
-     * @param $leaves The jQuery element with the leaves, or deepest
+     * @param {object} $leaves The jQuery element with the leaves, or deepest
      *   affected structures.
-     * @param isAnimate Whether to animate the width transitions. Default
+     * @param {boolean} isAnimate Whether to animate the width transitions. Default
      *   is to animate all horizontal lines changes, and to animate width
      *   changes if the adjusted width is known to be an increase.
-     * @param next The next function.
-     * @return void
+     * @param {function} next The next function.
+     * @return {void}
      */
     function adjustWidths($leaves, isAnimate, next) {
 
@@ -1181,7 +1187,7 @@
      * 
      * @private
      * @param step (optional) The step number. Default is current step.
-     * @return void
+     * @return {void}
      */
     function highlightStepResult(step) {
         const $tableau = this.$tableau
@@ -1202,8 +1208,8 @@
      * Highlight the target nodes of the given step, or current step.
      * 
      * @private
-     * @param step (optional) The step number. Default is current step.
-     * @return void
+     * @param {integer} step (optional) The step number. Default is current step.
+     * @return {void}
      */
     function highlightStepTarget(step) {
         const $tableau = this.$tableau
@@ -1240,7 +1246,7 @@
      * Unhighlight any rule step result/target nodes.
      * 
      * @private
-     * @return void
+     * @return {void}
      */
     function highlightStepOff() {
         const $tableau = this.$tableau
@@ -1254,9 +1260,9 @@
      * Make various incremental UI adjustments.
      *
      * @private
-     * @param what What thing to adjust (font, width, step).
-     * @param howMuch How much to adjust it, or 'reset'.
-     * @return void
+     * @param {string} what What thing to adjust (font, width, step).
+     * @param {string|number} howMuch How much to adjust it, or 'reset'.
+     * @return {void}
      */
     function adjust(what, howMuch) {
 
@@ -1311,7 +1317,7 @@
      * Scroll the tableau to the center
      * 
      * @private
-     * @return void
+     * @return {void}
      */
     function scrollToCenter(opts) {
         const $cont = this.$scrollContainer
@@ -1330,8 +1336,8 @@
      * Scroll to the given jQuery object
      * 
      * @private
-     * @param $what The jQuery object to scroll to.
-     * @return void
+     * @param {object} $what The jQuery object to scroll to.
+     * @return {void}
      */
     function scrollTo($what, opts) {
         opts = $.extend({}, FuncDefaults.ScrollTo, opts)
@@ -1351,8 +1357,8 @@
      * Execute give callback and return to previous scroll position.
      * 
      * @private
-     * @param cb The callback.
-     * @return void
+     * @param {function} cb The callback.
+     * @return {void}
      */
     function returnScroll(cb) {
         const $cont = this.$scrollContainer
@@ -1369,8 +1375,8 @@
      * Stretch or shrink the width so nodes do not wrap.
      * 
      * @private
-     * @param $leaves (optional) The leaves to examine to determine the width.
-     * @return void
+     * @param {object} $leaves (optional) The leaves to examine to determine the width.
+     * @return {void}
      */
     function stretchWidth($leaves) {
         const $tableau = this.$tableau
@@ -1395,7 +1401,7 @@
      * Guess the width needed so that nodes do not wrap.
      * 
      * @private
-     * @return integer How much to multiple the current width by, e.g.
+     * @return {integer} How much to multiple the current width by, e.g.
      *   a value of 1 means no change.
      */
     function guessNoWrapWidth($leaves) {
@@ -1468,8 +1474,8 @@
      * Handle a click event on a tableau.
      *
      * @private
-     * @param $target The target jQuery element.
-     * @return void
+     * @param {object} $target The target jQuery element.
+     * @return {void}
      */
     function handleTableauClick($target) {
 
@@ -1496,8 +1502,8 @@
      * Handle a click event on a controls panel element.
      *
      * @private
-     * @param $target The event target jQuery element.
-     * @return void
+     * @param {object} $target The event target jQuery element.
+     * @return {void}
      */
     function handleControlsClick($target) {
 
@@ -1576,8 +1582,8 @@
      * Handle a change event on a controls panel.
      *
      * @private
-     * @param $target The event target jQuery element.
-     * @return void
+     * @param {object} $target The event target jQuery element.
+     * @return {void}
      */
     function handleControlsChange($target) {
 
@@ -1605,8 +1611,8 @@
      * Handle a click event on a models panel.
      *
      * @private
-     * @param $target The event target jQuery element.
-     * @return void
+     * @param {object} $target The event target jQuery element.
+     * @return {void}
      */
     function handleModelsClick($target) {
 
@@ -1616,8 +1622,8 @@
      * Handle an action key on the proof.
      *
      * @private
-     * @param key The action key character.
-     * @return void
+     * @param {string} key The action key character.
+     * @return {void}
      */
     function handleActionKey(key) {
 
@@ -1729,7 +1735,7 @@
      * Get the left/right values of the given structure, as well a reference
      * to the structure's jQuery element.
      *
-     * @param $structure The singleton jQuery .structure element.
+     * @param {object} $structure The singleton jQuery .structure element.
      * @return A plain object with left/right/$structure keys.
      */
      function getPos($structure) {
@@ -1768,7 +1774,7 @@
      *
      * @param trackObj The object store to check and modify.
      * @param pos The position object to potentially add.
-     * @return void
+     * @return {void}
      */
     function trackHighests(trackObj, pos) {
         consolidateRelated(Rel.Descendant, Rel.Ancestor, trackObj, pos)
@@ -1782,7 +1788,7 @@
      *
      * @param trackObj The object store to check and modify.
      * @param pos The position object to potentially add.
-     * @return void
+     * @return {void}
      */
     function trackLowests(trackObj, pos) {
         consolidateRelated(Rel.Ancestor, Rel.Descendant, trackObj, pos)
@@ -1796,7 +1802,7 @@
      * @param replaceIf The relation to replace, either ancestor or descendant.
      * @param trackObj The object store to check and modify.
      * @param The position object to potentially add.
-     * @return void
+     * @return {void}
      */
     function consolidateRelated(dropIf, replaceIf, trackObj, pos) {
         const replaces = []
@@ -1841,7 +1847,7 @@
     /**
      * Compute the right offset from the left position.
      *
-     * @param $el The jQuery element.
+     * @param {object} $el The jQuery element.
      * @return float The right offset value.
      */
     function getRightOffset($el) {
@@ -1852,7 +1858,7 @@
      * Compute the absolute right offset value to simulate a right float inside
      * the parent element,
      *
-     * @param $el The jQuery element.
+     * @param {object} $el The jQuery element.
      * @return float The right offset value.
      */
     function computeRightZeroOffset($el) {

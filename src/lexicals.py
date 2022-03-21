@@ -1714,17 +1714,21 @@ class Notation(Bases.Enum):
 
     encodings        : setm[str]
     default_encoding : str
+    charsets         : setm[str]
+    default_charset  : str
     writers          : setm[type[LexWriter]]
     default_writer   : type[LexWriter]
     rendersets       : setm[RenderSet]
     Parser           : type[Parser]
 
-    polish   = eauto(), 'ascii'
-    standard = eauto(), 'unicode'
+    polish   = eauto(), 'ascii'   , 'ascii'
+    standard = eauto(), 'unicode' , 'utf8'
 
-    def __init__(self, num, default_encoding):
+    def __init__(self, num, default_charset, default_encoding):
         self.encodings = setm((default_encoding,))
         self.default_encoding = default_encoding
+        self.charsets = setm((default_charset,))
+        self.default_charset = default_charset
         self.writers = setm()
         self.default_writer = None
         self.rendersets = setm()
@@ -1732,6 +1736,7 @@ class Notation(Bases.Enum):
     __slots__ = (
         'encodings', 'default_encoding', 'writers',
         'default_writer', 'rendersets', 'Parser',
+        'charsets', 'default_charset',
     )
 
     def __setattr__(self, name, value, /, *, sa2 = _enum.Enum.__setattr__):
@@ -1756,6 +1761,7 @@ class LexWriter(metaclass = LexWriterMeta):
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables
 
     encoding: str
+    charset: str
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Exteneral API
 
@@ -1766,7 +1772,7 @@ class LexWriter(metaclass = LexWriterMeta):
     __call__ = write
 
     @classmethod
-    def canwrite(cls, item) -> bool:
+    def canwrite(cls, item: Any) -> bool:
         try: return item.TYPE in cls._methodmap
         except AttributeError: return False
 
@@ -1825,20 +1831,22 @@ class RenderSet(Bases.CacheNotationData):
 
     def __init__(self, data: Mapping):
         self.name: str = data['name']
-        self.notation = Notation(data['notation'])
+        self.notation = notn = Notation(data['notation'])
+        self.charset: str = data['charset']
         self.encoding: str = data['encoding']
         self.renders: Mapping[Any, Callable[..., str]] = data.get('renders', {})
-        self.formats: Mapping[Any, str] = data.get('formats', {})
+        # self.formats: Mapping[Any, str] = data.get('formats', {})
         self.strings: Mapping[Any, str] = data.get('strings', {})
         self.data = data
-        self.notation.encodings.add(self.encoding)
-        self.notation.rendersets.add(self)
+        notn.charsets.add(self.charset)
+        notn.encodings.add(self.encoding)
+        notn.rendersets.add(self)
 
     def strfor(self, ctype, value):
         if ctype in self.renders:
             return self.renders[ctype](value)
-        if ctype in self.formats:
-            return self.formats[ctype].format(value)
+        # if ctype in self.formats:
+        #     return self.formats[ctype].format(value)
         return self.strings[ctype][value]
 
 class BaseLexWriter(LexWriter):
@@ -1869,16 +1877,20 @@ class BaseLexWriter(LexWriter):
     def encoding(self) -> str:
         return self.renderset.encoding
 
+    @property
+    def charset(self) -> str:
+        return self.renderset.charset
+
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Init
 
-    def __init__(self, enc: str = None, renderset: RenderSet = None, **opts):
+    def __init__(self, charset: str = None, renderset: RenderSet = None, **opts):
         notation = self.notation
         if renderset is None:
-            if enc is None:
-                enc = notation.default_encoding
-            renderset = RenderSet.fetch(notation, enc)
-        elif enc is not None and enc != renderset.encoding:
-            raise Emsg.WrongValue(enc, renderset.encoding)
+            if charset is None:
+                charset = notation.default_charset
+            renderset = RenderSet.fetch(notation, charset)
+        elif charset is not None and charset != renderset.charset:
+            raise Emsg.WrongValue(charset, renderset.charset)
         self.opts = self.defaults | opts
         self.renderset = renderset
 
@@ -1913,7 +1925,7 @@ class BaseLexWriter(LexWriter):
 
     def _write_subscript(self, s: int):
         if s == 0: return ''
-        return self._strfor('subscript', s)
+        return self._strfor(Marking.subscript, s)
 
 @LexWriter.register
 class PolishLexWriter(BaseLexWriter):
@@ -1996,6 +2008,8 @@ class Parser(metaclass = AbcBaseMeta):
 
     __slots__ = EMPTY_SET
 
+    notation: ClassVar[Notation]
+
     @abstract
     def parse(self, input: str) -> Sentence:
         """Parse a sentence from an input string.
@@ -2007,7 +2021,7 @@ class Parser(metaclass = AbcBaseMeta):
         """
         raise NotImplementedError
 
-    def __call__(self, input: str):
+    def __call__(self, input: str) -> Sentence:
         return self.parse(input)
 
     def argument(self, conclusion: str, premises: Iterable[str] = None, title: str = None) -> Argument:
@@ -2028,75 +2042,90 @@ class Parser(metaclass = AbcBaseMeta):
 @closure
 def _():
 
-    data = {
-        Notation.polish: dict(
-            ascii = dict(
-                name     = 'polish.ascii',
-                notation = Notation.polish,
-                encoding = 'ascii',
-                formats  = dict(
-                    subscript = '{0}',
-                ),
-                strings = {
-                    LexType.Atomic   : tuple('abcde'),
-                    LexType.Operator : {
-                        Operator.Assertion              : 'T',
-                        Operator.Negation               : 'N',
-                        Operator.Conjunction            : 'K',
-                        Operator.Disjunction            : 'A',
-                        Operator.MaterialConditional    : 'C',
-                        Operator.MaterialBiconditional  : 'E',
-                        Operator.Conditional            : 'U',
-                        Operator.Biconditional          : 'B',
-                        Operator.Possibility            : 'M',
-                        Operator.Necessity              : 'L',
-                    },
-                    LexType.Variable   : tuple('xyzv'),
-                    LexType.Constant   : tuple('mnos'),
-                    LexType.Quantifier : {
-                        Quantifier.Universal   : 'V',
-                        Quantifier.Existential : 'S',
-                    },
-                    (LexType.Predicate, True) : {
-                        Predicate.System.Identity.index  : 'I',
-                        Predicate.System.Existence.index : 'J',
-                        (Operator.Negation, Predicate.System.Identity): NotImplemented,
-                    },
-                    (LexType.Predicate, False) : tuple('FGHO'),
-                    Marking.paren_open  : (NotImplemented,),
-                    Marking.paren_close : (NotImplemented,),
-                    Marking.whitespace  : (' ',),
-                    Marking.meta: {
-                        'conseq': '|-',
-                        'non-conseq': '|/-',
-                    },
-                },
-            )
-        )
-    }
-
-    data[Notation.polish] |= dict(
-        unicode = data[Notation.polish]['ascii'],
-        html    = data[Notation.polish]['ascii'] | dict(
-            name     = 'polish.html',
-            encoding = 'html',
-            formats  = dict(subscript = '<sub>{0}</sub>')
-        ),
-    )
-
     def unisub(sub):
         # ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'],
         return ''.join(chr(0x2080 + int(d)) for d in str(sub))
 
-    data.update({
+    htmsub = '<sub>%d</sub>'.__mod__
+
+
+    polasc = dict(
+        name     = 'polish.ascii',
+        notation = Notation.polish,
+        charset  = 'ascii',
+        encoding = 'ascii',
+        renders  = {Marking.subscript: str},
+        # renders  = dict(subscript = str),
+        strings = {
+            LexType.Atomic   : tuple('abcde'),
+            LexType.Operator : {
+                Operator.Assertion              : 'T',
+                Operator.Negation               : 'N',
+                Operator.Conjunction            : 'K',
+                Operator.Disjunction            : 'A',
+                Operator.MaterialConditional    : 'C',
+                Operator.MaterialBiconditional  : 'E',
+                Operator.Conditional            : 'U',
+                Operator.Biconditional          : 'B',
+                Operator.Possibility            : 'M',
+                Operator.Necessity              : 'L',
+            },
+            LexType.Variable   : tuple('xyzv'),
+            LexType.Constant   : tuple('mnos'),
+            LexType.Quantifier : {
+                Quantifier.Universal   : 'V',
+                Quantifier.Existential : 'S',
+            },
+            (LexType.Predicate, True) : {
+                Predicate.System.Identity.index  : 'I',
+                Predicate.System.Existence.index : 'J',
+                (Operator.Negation, Predicate.System.Identity): NotImplemented,
+            },
+            (LexType.Predicate, False) : tuple('FGHO'),
+            Marking.paren_open  : (NotImplemented,),
+            Marking.paren_close : (NotImplemented,),
+            Marking.whitespace  : (' ',),
+            Marking.meta: dict(
+                conseq     = '|-',
+                nonconseq = '|/-',
+            ),
+        },
+    )
+    data = {
+        Notation.polish: dict(
+            ascii   = polasc,
+            unicode = polasc | dict(
+                name     = 'polish.unicode',
+                charset  = 'unicode',
+                encoding = 'utf8',
+                renders  = {Marking.subscript: unisub},
+                strings  = polasc['strings'] | {
+                    Marking.meta: dict(
+                        conseq    = '⊢',
+                        nonconseq = '⊬',
+                    ),
+                },
+            ),
+            html = polasc | dict(
+                name     = 'polish.html',
+                charset  = 'html',
+                encoding = 'utf8',
+                renders  = {Marking.subscript: htmsub},
+                strings  = polasc['strings'] | {
+                    Marking.meta: dict(
+                        conseq    = '&vdash;',
+                        nonconseq = '&nvdash;',
+                    ),
+                },
+            ),
+        ),
         Notation.standard: dict(
             ascii = dict(
                 name     = 'standard.ascii',
                 notation = Notation.standard,
+                charset  = 'ascii',
                 encoding = 'ascii',
-                formats  = dict(
-                    subscript = '{0}',
-                ),
+                renders  = {Marking.subscript: str},
                 strings = {
                     LexType.Atomic : tuple('ABCDE'),
                     LexType.Operator : {
@@ -2126,19 +2155,19 @@ def _():
                     Marking.paren_open      : ('(',),
                     Marking.paren_close     : (')',),
                     Marking.whitespace      : (' ',),
-                    Marking.meta: {
-                        'conseq': '|-',
-                        'non-conseq': '|/-'
-                    },
+                    Marking.meta: dict(
+                        conseq    = '⊢',
+                        nonconseq = '⊬',
+                    ),
                 },
             ),
             unicode = dict(
                 name     = 'standard.unicode',
                 notation = Notation.standard,
+                charset  = 'unicode',
                 encoding = 'utf8',
-                renders  = dict(
-                    subscript = unisub
-                ),
+                renders  = {Marking.subscript: unisub},
+                # renders  = dict(subscript = unisub),
                 strings = {
                     LexType.Atomic   : tuple('ABCDE'),
                     LexType.Operator : {
@@ -2169,20 +2198,20 @@ def _():
                     Marking.paren_open  : ('(',),
                     Marking.paren_close : (')',),
                     Marking.whitespace  : (' ',),
-                    Marking.meta: {
-                        'conseq': '⊢',
-                        'nonconseq': '⊬',
-                        # 'weak-assertion' : '»',
-                    },
+                    Marking.meta: dict(
+                        conseq    = '⊢',
+                        nonconseq = '⊬',
+                    ),
                 },
             ),
             html = dict(
                 name     = 'standard.html',
                 notation = Notation.standard,
-                encoding = 'html',
-                formats  = dict(
-                    subscript = '<sub>{0}</sub>',
-                ),
+                charset  = 'html',
+                encoding = 'utf8',
+                # encoding = 'html',
+                renders  = {Marking.subscript: htmsub},
+                # renders  = dict(subscript = htmsub),
                 strings = {
                     LexType.Atomic   : tuple('ABCDE'),
                     LexType.Operator : {
@@ -2213,14 +2242,14 @@ def _():
                     Marking.paren_open   : ('(',),
                     Marking.paren_close  : (')',),
                     Marking.whitespace   : (' ',),
-                    Marking.meta: {
-                        'conseq': '⊢',
-                        'nonconseq': '⊬',
-                    },
+                    Marking.meta: dict(
+                        conseq    = '&vdash;',
+                        nonconseq = '&nvdash;',
+                    ),
                 },
             )
         )
-    })
+    }
     RenderSet._initcache(Notation, data)
 
 

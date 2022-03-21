@@ -140,7 +140,7 @@
         {{- '' -}}
         <div class="values">
             {%- for param in params -%}
-                {{ lw.write(param) if lw.encoding == 'html' else lw.write(param)|e -}}
+                {{ lw.write(param) if lw.charset == 'html' else lw.write(param)|e -}}
                 {{ ', ' if not loop.last -}}
             {%- endfor -%}
         </div>
@@ -170,7 +170,7 @@
     {%- elif typehint == 'extension' -%}
         {{ write_set(lw, item, 'tuple', typehint=typehint) -}}
     {%- elif datatype == 'predicate' or datatype == 'sentence' -%}
-        {{ lw.write(item) if lw.encoding == 'html' else lw.write(item)|e -}}
+        {{ lw.write(item) if lw.charset == 'html' else lw.write(item)|e -}}
     {%- else -%}
         {{ item|e -}}
     {%- endif -%}

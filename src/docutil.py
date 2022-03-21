@@ -161,7 +161,7 @@ class Helper:
 
         wrnotn = self.opts['write_notation']
 
-        self.lw: BaseLexWriter = LexWriter(wrnotn, enc = 'html')
+        self.lw: BaseLexWriter = LexWriter(wrnotn, charset = 'html')
         self.pwrule = TabWriter('html',
             # notn = wrnotn,
             # format = 'html',
@@ -279,7 +279,7 @@ class Helper:
                 RenderSet.fetch(Notation.standard, 'unicode')
             )
         )
-        # lwhtm = LexWriter('standard', enc='unicode')
+        # lwhtm = LexWriter('standard', charset = 'unicode')
         # symhtml = {
         #     # o: htmlun(lwhtm.write(o)) for o in oplist
         #     o: lwhtm.write(o) for o in oplist

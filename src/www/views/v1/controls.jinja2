@@ -22,16 +22,16 @@
                             <span class="prop">Argument</span>
                             <div class="value">
                                 {% for premise in tableau.argument.premises -%}
-                                    {% if lw.encoding == 'html' -%}
-                                        {{ lw.write(premise) }}
+                                    {% if lw.charset == 'html' -%}
+                                        {{ lw(premise) }}
                                     {% else -%}
-                                        {{ lw.write(premise)|e }}
+                                        {{ lw(premise)|e }}
                                     {% endif -%}
                                     <br>
                                     {{ '----------<br>' if loop.last -}}
                                 {% endfor -%}
                                 &there4;
-                                {% if lw.encoding == 'html' -%}
+                                {% if lw.charset == 'html' -%}
                                     {{ lw.write(tableau.argument.conclusion) }}
                                 {% else -%}
                                     {{ lw.write(tableau.argument.conclusion)|e }}

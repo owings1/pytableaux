@@ -166,7 +166,7 @@ def create_parser(notn: Notation = None, vocab: Predicates = None, table: CharTa
         table = CharTable.default_fetch_name
     if isinstance(table, str):
         table = CharTable.fetch(notn, table)
-    return notn.Parser(table, vocab, **opts)
+    return notn.Parser(vocab, table, **opts)
 
 class ParseContext:
 
@@ -279,7 +279,11 @@ class BaseParser(Parser):
 
     __slots__ = 'table', 'preds', 'opts'
 
-    def __init__(self, table: CharTable, preds: Predicates = Predicate.System, /, **opts):
+    def __init__(self, preds: Predicates = Predicate.System, table: CharTable|str = None, /, **opts):
+        if table is None:
+            table = CharTable.default_fetch_name
+        if isinstance(table, str):
+            table = CharTable.fetch(self.notation, table)
         self.table = table
         self.preds = preds
         self.opts = opts
@@ -427,6 +431,8 @@ class BaseParser(Parser):
 
 class PolishParser(BaseParser):
 
+    notation = Notation.polish
+
     __slots__ = EMPTY_SET
 
     def _read(self, context: ParseContext):
@@ -445,6 +451,8 @@ class PolishParser(BaseParser):
 Notation.polish.Parser = PolishParser
 
 class StandardParser(BaseParser):
+
+    notation = Notation.standard
 
     __slots__ = EMPTY_SET
 

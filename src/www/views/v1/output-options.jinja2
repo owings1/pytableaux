@@ -23,13 +23,13 @@
     </select>
 </div>
 <div class="input select">
-    <label for="symbol_enc">Symbol Encoding</label>
-    <select id="symbol_enc" name="symbol_enc">
-        {% for enc in lexwriter_encodings -%}
-            <option value="{{ enc|e }}" {{- 
-                helper.select_opt(form_data, 'symbol_enc', enc, form_defaults) 
+    <label for="symbol_charset">Symbol Charset</label>
+    <select id="symbol_charset" name="symbol_charset">
+        {% for charset in lexwriter_charsets -%}
+            <option value="{{ charset|e }}" {{- 
+                helper.select_opt(form_data, 'symbol_charset', charset, form_defaults) 
             }}>
-                {{- enc|e -}}
+                {{- charset|e -}}
             </option>
         {% endfor %}
     </select>

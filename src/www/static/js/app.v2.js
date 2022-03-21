@@ -32,9 +32,16 @@
         app          : 'pt-app',
         arity        : 'arity',
         bad          : 'bad',
+        button       : 'button',
+        buttonGroup  : 'ui-controlgroup',
         colorOpen    : 'color-open',
+        controls     : 'controls',
+        debug        : 'debug',
+        debugContent : 'debug-content',
+        debugHead    : 'debug-heading',
         good         : 'good',
         hidden       : 'hidden',
+        jsonDump     : 'json-dump',
         logicDetails : 'logic-details',
         options      : 'options',
         predAdd      : 'add-predicate',
@@ -44,6 +51,7 @@
         sentence     : 'sentence',
         shortkey     : 'shortkey',
         tableau      : 'tableau',
+        tooltip      : 'tooltip',
         withControls : 'with-controls',
         withModels   : 'with-models',
     }
@@ -54,6 +62,7 @@
     }
 
     const Sel = {
+        appBody           : 'body.' + Cls.app,
         appForm           : '#tableau_input_form',
         appJson           : '#pt_app_data',
         appTabs           : '#proove-tabs',
@@ -63,12 +72,15 @@
         checkShowControls : '#options_show_controls',
         checksOption      : ['input:checkbox', Cls.options].join('.'),
         clearArgExample   : '#clear_argument',
+        headDebugs        : '#pt_debugs_heading',
         inputConclusion   : '#conclusion',
         inputMaxSteps     : '#options_max_steps',
         inputsPredArity   : ['input', Cls.arity].join('.'),
         inputsPredSymbol  : ['input', Cls.predSymbol].join('.'),
         inputsPremise     : ['input', Cls.premise].join('.'),
         inputsSentence    : ['input', Cls.sentence].join('.'),
+        linksButton       : ['a', Cls.button].join('.'),
+        rowsDebug         : '.' + Cls.debug,
         rowsPredUser      : ['tr', Cls.predUser].join('.'),
         rowsPremise       : ['.input', Cls.premise].join('.'),
         selectArgExample  : '#example_argument',
@@ -76,11 +88,12 @@
         selectOutputFmt   : '#format',
         selectOutputNotn  : '#output_notation',
         selectParseNotn   : '#input_notation',
-        selectSymbolEnc   : '#symbol_enc',
+        selectSymbolEnc   : '#symbol_charset',
         submitJson        : '#tableau_form_api_json',
         tableaux          : '.' + Cls.tableau,
         templatePrem      : '#premiseTemplate',
         templatePred      : '#predicateRowTemplate',
+        wrapDebugs        : '#pt_debugs_wrapper',
         wrapPredicates    : '#predicates_input_table',
         wrapPremises      : '#premises_inputs',
     }
@@ -93,11 +106,13 @@
         const AppData = $.parseJSON($(Sel.appJson).html())
         const IS_DEBUG = Boolean(AppData.is_debug)
         const IS_PROOF = Boolean(AppData.is_proof)
+        const PRED_SYMCOUNT = Object.values(AppData.nups)[0].length
         const Templates = {
             premise    : $(Sel.templatePrem).html(),
             predicate  : $(Sel.templatePred).html(),
         }
 
+        const $AppBody = $(Sel.appBody)
         const $AppForm = $(Sel.appForm)
 
         /**
@@ -109,9 +124,7 @@
             // TODO: hardcoded values
             // ----------------------
             //
-            // classes  :      button
-            //                 controls
-            //                 tableau-controls
+            // classes  :      tableau-controls
             //                 tooltip
 
             $AppForm.on('keyup focus', [Sel.inputsPremise, Sel.inputConclusion].join(), ensureEmptyPremise)
@@ -147,14 +160,14 @@
                 })
                 
 
+            // UI Selectmenu
             $('select', $AppForm).selectmenu({
                 classes: {
                     'ui-selectmenu-menu': Cls.app
                 }
             })
-            $('input:submit', $AppForm).button()
 
-            
+            // UI Tabs
             var selectedTab = TabIndexes[AppData.selected_tab]
             if (!Number.isInteger(selectedTab)) {
                 selectedTab = 0
@@ -164,22 +177,28 @@
                 collapsible : IS_PROOF,
             }
             $(Sel.appTabs).tabs(tabOpts)
-            $('a.button').button()
-            $('.ui-controlgroup').controlgroup({
-                button: 'a',
-            })
-            $('.tableau-controls a[title]').each(function() {
+
+            // UI Button
+            $('input:submit', $AppForm).button()
+            $(Sel.linksButton, $AppBody).button()
+            $('.' + Cls.buttonGroup, $AppBody).controlgroup({button: 'a'})
+
+            // UI Tooltip - form help
+            $('.' + Cls.tooltip, $AppForm).tooltip({show: {delay: 1000}})
+            // UI Tooltip - controls help
+            $('.tableau-controls a[title]', $AppBody).each(function() {
                 const $me = $(this)
-                var html = '<span class="tooltip controls">' + $me.attr('title')
-                var shortkey = $me.attr(Atr.dataShortKey)
+                const classNames = [Cls.tooltip, Cls.controls]
+                const shortkey = $me.attr(Atr.dataShortKey)
+                var html = '<span class="' + classNames.join(' ') + '">' + $me.attr('title')
                 if (shortkey) {
                     html += '<hr>Shorcut key: <code class="' + Cls.shortkey + '">' + shortkey + '</code>'
                 }
                 html += '</span>'
                 $me.tooltip({content: html, show: {delay: 2000}})
             })
-            $('.tooltip', $AppForm).tooltip({show: {delay: 1000}})
 
+            // Init Tableau Plugin
             $(Sel.tableaux).tableau({
                 // autoWidth: true,
                 scrollContainer: $(document)
@@ -196,6 +215,31 @@
                     refreshStatuses()
                 }
             })
+
+            // Debug Init
+            if (IS_DEBUG) {
+                const $debugs = $(Sel.wrapDebugs, $AppBody)
+                // Debug click show/hide.
+                $debugs.on('click', [Sel.rowsDebug, Sel.headDebugs].join(), function(e) {
+                    const $target = $(e.target)
+                    if ($target.is(Sel.headDebugs)) {
+                        
+                    }
+                    if ($target.hasClass(Cls.debugHead)) {
+                        $target.next('.' + Cls.debugContent).toggle()
+                    }
+                })
+                $('.' + Cls.jsonDump, $debugs).each(function() {
+                    const $me = $(this)
+                    const json = $me.text()
+                    const data = $.parseJSON(json)
+                    // $me.empty()
+                    $me.jsonViewer(data, {
+                        withLinks: false,
+                    })
+                })
+
+            }
         }
 
         /**
@@ -335,7 +379,7 @@
                 var last = $symbols.last().val().split('.')
                 index = +last[0] + 1
                 subscript = +last[1]
-                if (index == AppData.num_predicate_symbols) {
+                if (index === PRED_SYMCOUNT) {
                     index = 0
                     subscript += 1
                 }
@@ -567,7 +611,7 @@
                 output: {
                     format     : $(Sel.selectOutputFmt).val(),
                     notation   : $(Sel.selectOutputNotn).val(),
-                    symbol_enc : $(Sel.selectSymbolEnc).val(),
+                    symbol_charset : $(Sel.selectSymbolEnc).val(),
                     options    : {
                         classes : [],
                         models  : undefined,

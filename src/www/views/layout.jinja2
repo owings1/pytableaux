@@ -16,6 +16,10 @@
     {% if config.google_analytics_id -%}
         {% include 'analytics.jinja2' %}
     {% endif -%}
+    {%- if is_debug %}
+        <script src="/static/json-viewer/jquery.json-viewer.js"></script>
+        <link rel="stylesheet" type="text/css" href="/static/json-viewer/jquery.json-viewer.css"/>
+    {%- endif %}
     <style>
         {% block inline_css %}{% endblock %}
     </style>
