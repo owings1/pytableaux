@@ -2,32 +2,44 @@
 <html lang="en">
 <head>
     <title>{{ config.app_name|e }}</title>
+    {# IE Polyfill #}
     <!--[if IE]>
     <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
     <![endif]-->
+    {# Responsiveness #}
+    <meta name="viewport" content="width=device-width"/>
+    {# jQuery Libraries #}
     <script src="/static/js/jquery-3.6.0.min.js"></script>
     <script src="/static/js/jquery-ui.min.js"></script>
+    {# Core App script and styles  #}
     <script src="/static/js/app.{{ view_version|e }}.js"></script>
-    <script src="/static/js/proof.{{ view_version|e }}.js"></script>
-    <link rel="stylesheet" type="text/css" href="/static/ui-base/jquery-ui.min.css"/>
-    {%- if is_controls %}
-    <link rel="stylesheet" type="text/css" href="/static/ui-controls/jquery-ui.min.css"/>
-    {%- endif %}
     <link rel="stylesheet" type="text/css" href="/static/css/app.{{ view_version|e }}.css"/>
-    <link rel="stylesheet" type="text/css" href="/static/css/proof.{{ view_version|e }}.css"/>
-    <meta name="viewport" content="width=device-width"/>
-    {% if config.google_analytics_id -%}
-        {% include 'analytics.jinja2' %}
-    {% endif -%}
+    <link rel="stylesheet" type="text/css" href="/static/ui-base/jquery-ui.min.css"/>
     {%- if is_debug %}
+        {# Debug scripts and styles #}
         <script src="/static/json-viewer/jquery.json-viewer.js"></script>
         <link rel="stylesheet" type="text/css" href="/static/json-viewer/jquery.json-viewer.css"/>
     {%- endif %}
-    <style>
-        {% block inline_css %}{% endblock %}
-    </style>
+    {%- if is_proof %}
+        {# Proof output script and styles #}
+        <script src="/static/js/proof.{{ view_version|e }}.js"></script>
+        <link rel="stylesheet" type="text/css" href="/static/css/proof.{{ view_version|e }}.css"/>
+        {# UI Controls styles #}
+        {%- if is_controls %}
+            <link rel="stylesheet" type="text/css" href="/static/ui-controls/jquery-ui.min.css"/>
+        {%- endif %}
+        {# Inline CSS from TabWriter #}
+        <style>
+            {% block inline_css %}{% endblock %}
+        </style>
+    {%- endif %}
+    {# Google Analyitics #}
+    {% if config.google_analytics_id -%}
+        {% include 'analytics.jinja2' %}
+    {% endif -%}
 </head>
 <body class="pt-app {{- ' has-proof' if is_proof else ' no-proof' }}">
+    {# Header #}
     <div class="header-wrapper">
         <div class="header">
             <a href="/">{{ config.app_name|e }} {{ config.version|e }}</a>
@@ -44,17 +56,18 @@
             </span>
         </div>
     </div>
+    {# Main content block #}
     <div class="pt-content">
         {%- block content -%}{%- endblock -%}
         {%- if is_debug %}
             {%- include 'debug.jinja2' -%}
         {%- endif %}
     </div>
+    {# Footer #}
     <div class="footer-wrapper">
-        <div class="footer">
-            Copyright &copy; {{ config.copyright|e }}.
-        </div>
+        <div class="footer">Copyright &copy; {{ config.copyright|e }}.</div>
     </div>
+    {# Javascript application data #}
     <script type="text/json" id="pt_app_data" class="app">{{ browser_json }}</script>
 </body>
 </html>

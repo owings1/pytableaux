@@ -53,6 +53,7 @@
         sentence     : 'sentence',
         shortkey     : 'shortkey',
         tableau      : 'tableau',
+        tableauControls : 'tableau-controls',
         tooltip      : 'tooltip',
         withControls : 'with-controls',
         withModels   : 'with-models',
@@ -123,17 +124,13 @@
          * @return {void}
          */
         function init() {
-            // TODO: hardcoded values
-            // ----------------------
-            //
-            // classes  :      tableau-controls
-            //
+            // Input form events.
             $AppForm
                 .on('keyup focus', [Sel.inputsPremise, Sel.inputConclusion].join(), ensureEmptyPremise)
                 .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
                     if ($target.is(Sel.selectArgExample)) {
-                        refreshExampleArgument()
+                        refreshArgExample()
                         refreshStatuses()
                     } else if ($target.is(Sel.selectParseNotn)) {
                         refreshNotation()
@@ -170,12 +167,12 @@
             })
 
             // UI Tabs
-            var selectedTab = TabIndexes[AppData.selected_tab]
-            if (!Number.isInteger(selectedTab)) {
-                selectedTab = 0
+            var tabIndex = TabIndexes[AppData.selected_tab]
+            if (!Number.isInteger(tabIndex)) {
+                tabIndex = 0
             }
             const tabOpts = {
-                active      : selectedTab,
+                active      : tabIndex,
                 collapsible : IS_PROOF,
             }
             $(Sel.appTabs).tabs(tabOpts)
@@ -188,7 +185,7 @@
             // UI Tooltip - form help
             $('.' + Cls.tooltip, $AppForm).tooltip({show: {delay: 1000}})
             // UI Tooltip - controls help
-            $('.tableau-controls a[title]', $AppBody).each(function() {
+            $('.' + Cls.tableauControls + ' a[title]', $AppBody).each(function() {
                 const $me = $(this)
                 const classNames = [Cls.tooltip, Cls.controls]
                 const shortkey = $me.attr(Atr.dataShortKey)
@@ -488,7 +485,7 @@
                 .filter('.notation-' + notation)
                 .removeClass(Cls.hidden)
             if ($(Sel.selectArgExample).val()) {
-                refreshExampleArgument()
+                refreshArgExample()
             } else {
                 // Translate good sentences.
                 $(Sel.inputsSentence, $AppForm).each(function() {
@@ -507,7 +504,7 @@
          *
          * @return {void}
          */
-        function refreshExampleArgument() {
+        function refreshArgExample() {
             clearPredicates()
             clearArgument()
             const argName = $(Sel.selectArgExample).val()

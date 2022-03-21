@@ -176,8 +176,6 @@ class App:
 
         form_data = req_data
         if req.method == 'POST':
-
-
             try:
                 try:
                     api_data = json.loads(form_data['api-json'])
@@ -217,7 +215,6 @@ class App:
 
         if is_debug:
             debugs.extend(dict(
-                method     = req.method,
                 req_params = req_params,
                 req_data   = req_data,
                 api_data   = api_data,
