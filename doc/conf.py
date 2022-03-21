@@ -11,7 +11,7 @@ sys.path.insert(1, '../src')
 
 import docutil, fixed
 
-copyright = '2014-2022, Doug Owings. Released under the GNU Affero General Public License v3 or later'
+copyright = fixed.copyright#'2014-2022, Doug Owings. Released under the GNU Affero General Public License v3 or later'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -50,9 +50,9 @@ html_theme_options = {}
 
 # https://github.com/readthedocs/sphinx_rtd_theme
 if html_theme == 'sphinx_rtd_theme':
-    html_theme_options.update({
-        'style_external_links': True,
-    })
+    html_theme_options.update(
+        style_external_links = True,
+    )
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
@@ -65,7 +65,11 @@ html_show_sphinx = False
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
-html_static_path = ['../src/www/static', 'res', '../src/proof/templates/html/static']
+html_static_path = [
+    'res',
+    '../src/www/static',
+    '../src/proof/templates/html/static',
+]
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'pytableauxdoc'
@@ -73,8 +77,14 @@ htmlhelp_basename = 'pytableauxdoc'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = [
-    '_build', '*.jinja2', '**/include/*', 'css/fonts/**', '**/*.js', 'css/proof.*.css',
-    'jquery-ui', 'css/app.*.css',
+    '_build',
+    '*.jinja2',
+    '**/include/*',
+    'css/fonts/**',
+    '**/*.js',
+    'css/proof.*.css',
+    'jquery-ui',
+    'css/app.*.css',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -94,9 +104,9 @@ def sphinxcontrib_autodoc_filterparams(fun, param):
     raise NotImplementedError
 
 def setup(app):
-    docutil.init_sphinx(app, {
-        'html_theme': html_theme,
-    })
+    docutil.init_sphinx(app, dict(
+        html_theme = html_theme,
+    ))
 
 def ____():
     pass

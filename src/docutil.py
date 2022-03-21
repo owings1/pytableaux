@@ -499,6 +499,7 @@ class Helper:
         Returns rendered truth table HTML for a single operator.
         """
         model : BaseModel = get_logic(logic).Model()
+        oper = Operator[oper]
         table = model.truth_table(oper, reverse = self.opts['truth_tables_rev'])
         return self.TT_TEMPL.render(dict(
             num_values = len(model.Value),
