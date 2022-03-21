@@ -659,3 +659,20 @@ rtd-theme:
 .pt-app .json-dump ol.json-array {
   padding-left: 1.5em;
 }
+
+
+/* curly brace */
+.pt-app .json-dump .json-obrace {
+  color: orange;
+}
+/* angle brace */
+.pt-app .json-dump .json-abrace {
+  color: rgb(51, 255, 0);
+}
+/* 
+.json-comma
+.json-literal.json-number
+.json-literal.json-boolean
+.json-literal.json-null
+.json-key
+ */

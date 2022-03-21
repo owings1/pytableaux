@@ -21,7 +21,7 @@
   - Added: 2022-03-21
   - Purpose: Development Tool
   - Linkage: Repackaged (partial)
-  - Modifications: None
+  - Modifications: [8975c62b][8975c62b]
   - Paths: [/src/www/static/json-viewer](/src/www/static/json-viewer)
 
   </details>
@@ -57,7 +57,7 @@
 [2cdb-tre]: https://github.com/abodelot/jquery.json-viewer/tree/2cdbde044104075b1ece6fcf6d395f327fe2f01f
 [2cdb-zip]: https://github.com/abodelot/jquery.json-viewer/archive/2cdbde04.zip
 [2cdb-lic]: https://github.com/abodelot/jquery.json-viewer/raw/2cdbde04/LICENSE
-
+[8975c62b]: https://github.com/owings1/pytableaux/commit/8975c62bde1d8ff976a393550c898801baf47169
   </details>
 
 <hr>

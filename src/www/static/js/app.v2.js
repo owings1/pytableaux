@@ -43,6 +43,7 @@
         good         : 'good',
         hidden       : 'hidden',
         jsonDump     : 'json-dump',
+        jsonViewDoc  : 'json-document', // used by jsonViewer plugiin
         logicDetails : 'logic-details',
         options      : 'options',
         predAdd      : 'add-predicate',
@@ -104,7 +105,7 @@
 
     $(document).ready(function() {
 
-        const AppData = $.parseJSON($(Sel.appJson).html())
+        const AppData = JSON.parse($(Sel.appJson).html())
         const IS_DEBUG = Boolean(AppData.is_debug)
         const IS_PROOF = Boolean(AppData.is_proof)
         const PRED_SYMCOUNT = Object.values(AppData.nups)[0].length
@@ -217,47 +218,54 @@
                 }
             })
 
-            // Debug Init
+            // Debugs data contents init.
+
             if (IS_DEBUG) {
                 const $debugs = $(Sel.wrapDebugs, $AppBody)
                 // Debug click show/hide.
                 $debugs.on('click', [Sel.rowsDebug, Sel.headDebugs].join(), function(e) {
                     const $target = $(e.target)
+
+                    // Main Debug Header - toggle all and return.
                     if ($target.is(Sel.headDebugs)) {
                         $target.next('.' + Cls.debugs).toggle()
                         return
                     }
+
+                    // Single debug content - toggle and lazy-init jsonViewer.
                     var $content
                     if ($target.hasClass(Cls.debugHead)) {
+                        // For header click, toggle debug content.
                         $content = $target.next('.' + Cls.debugContent)
                         const isHiding = $content.is(':visible')
                         $content.toggle()
+                        // If we are hiding it, no need to init jsonViewer.
                         if (isHiding) {
                             return
                         }
                     } else if ($target.hasClass(Cls.debugContent)) {
+                        // For content click, check whether to init jsonViewer.
                         $content = $target
                     } else {
+                        // No behavior defined.
                         return
                     }
-                    if ($content.hasClass(Cls.jsonDump) && !$content.hasClass('json-document')) {
+
+                    // Init jsonViewer if this is a json dump and does not have
+                    // class from plugin.
+                    const shouldInit = (
+                        $content.hasClass(Cls.jsonDump) &&
+                        !$content.hasClass(Cls.jsonViewDoc)
+                    )
+                    if (shouldInit) {
                         const json = $content.text()
-                        const data = $.parseJSON(json)
+                        const data = JSON.parse(json)
                         $content.jsonViewer(data, {
-                            withLinks: false,
+                            withLinks: true,
+                            withQuotes: true,
                         })
                     }
                 })
-                // $('.' + Cls.jsonDump, $debugs).each(function() {
-                //     const $me = $(this)
-                //     const json = $me.text()
-                //     const data = $.parseJSON(json)
-                //     // $me.empty()
-                //     $me.jsonViewer(data, {
-                //         withLinks: false,
-                //     })
-                // })
-                // $debugs.
             }
         }
 
@@ -270,7 +278,6 @@
             $('input:submit', $AppForm).prop('disabled', true)
             const data = getApiData()
             const json = JSON.stringify(data)
-            // debug('submitForm', data)
             $(Sel.submitJson).val(json)
         }
 

@@ -21,7 +21,7 @@
 
     $(document).ready(function() {
 
-        const AppData = $.parseJSON($('script.app').html())
+        const AppData = JSON.parse($('script.app').html())
         const PRED_SYMCOUNT = Object.values(AppData.nups)[0].length
         const {is_debug} = AppData
         const Templates = {

@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
     <title>{{ config.app_name|e }}</title>
+    <!--[if IE]>
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+    <![endif]-->
     <script src="/static/js/jquery-3.6.0.min.js"></script>
     <script src="/static/js/jquery-ui.min.js"></script>
     <script src="/static/js/app.{{ view_version|e }}.js"></script>
