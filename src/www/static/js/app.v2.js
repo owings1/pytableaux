@@ -37,6 +37,7 @@
         colorOpen    : 'color-open',
         controls     : 'controls',
         debug        : 'debug',
+        debugs       : 'debugs',
         debugContent : 'debug-content',
         debugHead    : 'debug-heading',
         good         : 'good',
@@ -223,22 +224,40 @@
                 $debugs.on('click', [Sel.rowsDebug, Sel.headDebugs].join(), function(e) {
                     const $target = $(e.target)
                     if ($target.is(Sel.headDebugs)) {
-                        
+                        $target.next('.' + Cls.debugs).toggle()
+                        return
                     }
+                    var $content
                     if ($target.hasClass(Cls.debugHead)) {
-                        $target.next('.' + Cls.debugContent).toggle()
+                        $content = $target.next('.' + Cls.debugContent)
+                        const isHiding = $content.is(':visible')
+                        $content.toggle()
+                        if (isHiding) {
+                            return
+                        }
+                    } else if ($target.hasClass(Cls.debugContent)) {
+                        $content = $target
+                    } else {
+                        return
+                    }
+                    if ($content.hasClass(Cls.jsonDump) && !$content.hasClass('json-document')) {
+                        const json = $content.text()
+                        const data = $.parseJSON(json)
+                        $content.jsonViewer(data, {
+                            withLinks: false,
+                        })
                     }
                 })
-                $('.' + Cls.jsonDump, $debugs).each(function() {
-                    const $me = $(this)
-                    const json = $me.text()
-                    const data = $.parseJSON(json)
-                    // $me.empty()
-                    $me.jsonViewer(data, {
-                        withLinks: false,
-                    })
-                })
-
+                // $('.' + Cls.jsonDump, $debugs).each(function() {
+                //     const $me = $(this)
+                //     const json = $me.text()
+                //     const data = $.parseJSON(json)
+                //     // $me.empty()
+                //     $me.jsonViewer(data, {
+                //         withLinks: false,
+                //     })
+                // })
+                // $debugs.
             }
         }
 
