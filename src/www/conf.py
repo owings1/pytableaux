@@ -19,10 +19,14 @@
 # pytableaux - Web App Configuration
 from __future__ import annotations
 
+from tools.sequences import seqf
+
 __all__ = (
     'APP_ENVCONF',
     'APP_JENV',
     'APP_LOGICS',
+    'REGEX_EMAIL',
+
     'api_defaults',
     'cp_config',
     'cp_global_config',
@@ -33,8 +37,6 @@ __all__ = (
     'logic_categories',
     'Metric',
     'parser_nups',
-    'parser_tables',
-    're_email',
 )
 
 from tools.abcs import AbcEnum
@@ -92,6 +94,9 @@ APP_LOGICS = {
 }
 # Web Template path.
 APP_JENV = Environment(loader = FileSystemLoader(_PATHS['view_path']))
+
+# Email validation
+REGEX_EMAIL = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 
 ## Option definitions
 
@@ -212,11 +217,8 @@ _OPTDEFS = {
 
 
 logic_categories: dict[str, list[str]] = {}
-
-
-parser_nups = {}
-parser_tables = {}
-example_args = {}
+parser_nups: dict[str, seqf[str]] = {}
+example_args: dict[str, dict[str, dict]] = {}
 
 @closure
 def _():
@@ -232,8 +234,7 @@ def _():
                 premises = tuple(map(lw, arg.premises)),
                 conclusion = lw(arg.conclusion),
             )
-        parser_tables[notn.name] = table = CharTable.fetch(notn)
-        parser_nups[notn.name] = table.chars[LexType.Predicate]
+        parser_nups[notn.name] = CharTable.fetch(notn).chars[LexType.Predicate]
 
     for modname, logic in APP_LOGICS.items():
         category = logic.Meta.category
@@ -343,10 +344,6 @@ class Metric(AbcEnum):
     def __call__(self, *labels: str) -> prom.metrics.MetricWrapperBase:
         return self.value.labels(APP_ENVCONF['app_name'], *labels)
 
-# Util
-
-re_email = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-
 ## cherrypy global config
 cp_global_config = {
     'global': {
@@ -416,13 +413,13 @@ api_defaults = MapCover(dict(
     output_notation = 'polish',
     output_format   = 'html',
 ))
-form_defaults = MapCover({
-    'input_notation'  : 'standard',
-    'format'          : 'html',
-    'output_notation' : 'standard',
-    'output_charset'  : 'html',
-    'show_controls'   : True,
-
+form_defaults = MapCover(dict(
+    input_notation  = 'standard',
+    format          = 'html',
+    output_notation = 'standard',
+    output_charset  = 'html',
+    show_controls   = True,
+) | {
     # 'options.controls': True,
     'options.group_optimizations': True,
     'options.models': True,

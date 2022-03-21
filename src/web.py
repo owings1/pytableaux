@@ -46,19 +46,20 @@ from www.conf import (
     APP_ENVCONF,
     APP_JENV,
     APP_LOGICS,
+    REGEX_EMAIL,
 
-    api_defaults,
+    logger,
+    Metric,
     cp_config,
     cp_global_config,
-    example_args,
+
+    api_defaults,
     form_defaults,
+
+    example_args,
     output_charsets,
-    logger,
     logic_categories,
-    Metric,
     parser_nups,
-    parser_tables,
-    re_email,
 )
 
 import cherrypy as chpy
@@ -108,11 +109,11 @@ base_view_data = MapCover(dict(
 
     example_args        = example_args,
     form_defaults       = form_defaults,
-    output_formats   = TabWriter.Registry.keys(),
-    output_charsets  = output_charsets,
-    lwstdhtm            = _LW_CACHE[Notation.standard]['html'],
+    output_formats      = TabWriter.Registry.keys(),
+    output_charsets     = output_charsets,
     logic_categories    = logic_categories,
-    parser_tables       = parser_tables,
+
+    lwstdhtm            = _LW_CACHE[Notation.standard]['html'],
     view_version        = 'v2',
 ))
 
@@ -700,7 +701,7 @@ def debug_resp_data(resp_data: dict[KT, VT]) -> dict[KT, VT]:
     return result
 
 def is_valid_email(value: str) -> bool:
-    return re.fullmatch(re_email, value) is not None
+    return re.fullmatch(REGEX_EMAIL, value) is not None
 
 def validate_feedback_form(form_data: dict[str, str]) -> None:
     errors = {}

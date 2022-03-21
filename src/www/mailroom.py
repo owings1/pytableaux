@@ -19,11 +19,11 @@
 # pytableaux - Web App SMTP Mailroom
 import re, smtplib, ssl, threading, time, traceback
 from collections import deque
-from www.conf import logger, re_email
+from www.conf import logger, REGEX_EMAIL
 from errors import ConfigError, IllegalStateError
 
 def is_valid_email(value):
-    return re.fullmatch(re_email, value)
+    return re.fullmatch(REGEX_EMAIL, value)
 
 class Mailroom(object):
 
