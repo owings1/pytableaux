@@ -6,7 +6,7 @@
                 {%- set topic, data = debug %}
                 <div class="debug">
                     <h4 class="debug-heading">{{ topic|e }}</h4>
-                    <div class="debug-content json-dump">{{ data|tojson(2)|e }}</div>
+                    <div class="debug-content json-dump">{{ Json.dumps(data, indent = 2)|e }}</div>
                 </div>
             {% endfor %}
         </div>

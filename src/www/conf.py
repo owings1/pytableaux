@@ -26,10 +26,9 @@ __all__ = (
     'api_defaults',
     'cp_config',
     'cp_global_config',
-    'example_arguments',
+    'example_args',
     'form_defaults',
-    'lexwriter_charsets',
-    'lexwriters',
+    'output_charsets',
     'logger',
     'logic_categories',
     'Metric',
@@ -43,34 +42,56 @@ from tools.decorators import closure
 from tools.mappings import MapCover
 from tools.misc import get_logic
 from parsers import CharTable
-from lexicals import LexType, Notation, LexWriter, RenderSet
+from lexicals import LexType, Notation, LexWriter
 import examples
 
-import logging, os, os.path
-import prometheus_client as prom
 from cherrypy._cpdispatch import Dispatcher
 from jinja2 import Environment, FileSystemLoader
+import logging, os, os.path
+import prometheus_client as prom
 
-# Enabled logics.
-_LOGICS = (
-    'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
-    'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
-)
-
-#  Path info
+#  Base app dir.
 _APP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 
-def _apath(*args):
+def _app_path(*args):
     return os.path.join(_APP_DIR, *args)
 
 _PATHS = dict(
-    favicon_file   = _apath('www/static/img/favicon-60x60.png'),
+    favicon_file   = _app_path('www/static/img/favicon-60x60.png'),
     index_filename = 'index.html',
-    robotstxt_file = _apath('www/static/robots.txt'),
-    static_dir     = _apath('www/static'),
-    static_dir_doc = _apath('..', 'doc/_build/html'),
-    view_path      = _apath('www/views'),
+    robotstxt_file = _app_path('www/static/robots.txt'),
+    static_dir     = _app_path('www/static'),
+    static_dir_doc = _app_path('..', 'doc/_build/html'),
+    view_path      = _app_path('www/views'),
 )
+
+# Enabled logics.
+APP_LOGICS = {
+    k: get_logic(k) for k in (
+        'cpl',
+        'cfol',
+        'fde',
+        'k3',
+        'k3w',
+        'k3wq',
+        'b3e',
+        'go',
+        'mh',
+        'l3',
+        'g3',
+        'p3',
+        'lp',
+        'nh',
+        'rm3',
+        'k',
+        'd',
+        't',
+        's4',
+        's5',
+    )
+}
+# Web Template path.
+APP_JENV = Environment(loader = FileSystemLoader(_PATHS['view_path']))
 
 ## Option definitions
 
@@ -192,24 +213,22 @@ _OPTDEFS = {
 
 logic_categories: dict[str, list[str]] = {}
 
-APP_LOGICS = {k: get_logic(k) for k in _LOGICS}
 
-# 'nups' means "notation-user-predicate-symbols"
 parser_nups = {}
 parser_tables = {}
-example_arguments = {}
+example_args = {}
 
 @closure
 def _():
     
     exargs = examples.arguments()
     for arg in exargs:
-        example_arguments[arg.title] = {}
+        example_args[arg.title] = {}
     for notn in Notation:
         # Build rendered example arguments
         lw = LexWriter(notn, charset = 'ascii')
         for arg in exargs:
-            example_arguments[arg.title][notn.name] = dict(
+            example_args[arg.title][notn.name] = dict(
                 premises = tuple(map(lw, arg.premises)),
                 conclusion = lw(arg.conclusion),
             )
@@ -337,11 +356,8 @@ cp_global_config = {
     },
 }
 
-
-
 # Jinja2
 
-APP_JENV = Environment(loader = FileSystemLoader(_PATHS['view_path']))
 
 ##############################
 ## Cherrypy Server Config   ##
@@ -380,28 +396,17 @@ cp_config = {
 #####################
 # For notn, only include those common to all, until UI suports
 # notn-specific choice.
-def _():
-    encs_map = {
-        notn.name: RenderSet.available(notn)
+def _get_common_charsets():
+    charsets = set(
+        charset
         for notn in Notation
-    }
-    enc = set(enc for encs in encs_map.values() for enc in encs)
+            for charset in notn.charsets
+    )
     for notn in Notation:
-        enc = enc.intersection(RenderSet.available(notn))
-    return sorted(enc)
+        charsets = charsets.intersection(notn.charsets)
+    return sorted(charsets)
 
-lexwriter_charsets = _()
-
-########################
-## Static LexWriters  ##
-########################
-lexwriters = {
-    notn.name: {
-        enc: LexWriter(notn, charset = enc)
-        for enc in RenderSet.available(notn)
-    }
-    for notn in Notation 
-}
+output_charsets = _get_common_charsets()
 
 #####################
 ## Input Defaults  ##
@@ -415,7 +420,7 @@ form_defaults = MapCover({
     'input_notation'  : 'standard',
     'format'          : 'html',
     'output_notation' : 'standard',
-    'symbol_charset'      : 'html',
+    'output_charset'  : 'html',
     'show_controls'   : True,
 
     # 'options.controls': True,
@@ -426,13 +431,13 @@ form_defaults = MapCover({
 
 del(
     _APP_DIR,
-    _LOGICS,
     _OPTDEFS,
     _PATHS,
     _,
-    _apath,
+    _app_path,
     _init_logger,
     _getoptval,
+    _get_common_charsets,
     get_logic,
     closure,
 
@@ -442,5 +447,4 @@ del(
     Environment,
     FileSystemLoader,
     Notation,
-    RenderSet,
 )

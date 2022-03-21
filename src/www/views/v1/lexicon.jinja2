@@ -6,16 +6,17 @@
     <div class="input select">
         <label for="input_notation">Notation</label>
         <select id="input_notation" name="input_notation">
-            {% for notn in parser_tables -%}
-                <option value="{{ notn|e }}" {{ helper.select_opt(form_data, 'input_notation', notn, form_defaults) }}>
-                    {{- notn -}}
+            {% for notn in Notation -%}
+                <option value="{{ notn.name|e }}" {{ helper.select_opt(form_data, 'input_notation', notn.name, form_defaults) }}>
+                    {{- notn.name|e -}}
                 </option>
             {% endfor %}
         </select>
     </div>
     <div class="lexicon-panel">
-        {%- for notn, table in parser_tables.items() -%}
-            <div class="lexicon hidden notation-{{ notn|e }}">
+        {%- for notn in Notation -%}
+            {%- set table = CharTable.fetch(notn) -%}
+            <div class="lexicon hidden notation-{{ notn.name|e }}">
                 <span class="label">Atomics</span>
                 <ul class="item-symbols">
                     {% for char in table.chars[LexType.Atomic] -%}
@@ -41,8 +42,9 @@
         {% endfor %}
     </div>
     <div class="lexicon-panel last">
-        {%- for notn, table in parser_tables.items() -%}
-            <div class="lexicon hidden notation-{{ notn|e }}">
+        {%- for notn in Notation -%}
+            {%- set table = CharTable.fetch(notn) -%}
+            <div class="lexicon hidden notation-{{ notn.name|e }}">
                 <span class="label">Constants</span>
                 <ul class="item-symbols">
                     {% for char in table.chars[LexType.Constant] -%}
@@ -73,10 +75,10 @@
                     {% for pred in PredSys -%}
                         <tr class="systemPredicate">
                             <td>
-                                {% for notn, table in parser_tables.items() %}
-                                    {%- set symbol = table.char(PredSys, pred) -%}
+                                {% for notn in Notation %}
+                                    {%- set symbol = notn.Parser.default_table.char(PredSys, pred) -%}
                                     {%- set subscript = pred.subscript -%}
-                                    <span class="predicateSymbol notation-{{ notn|e }} hidden">
+                                    <span class="predicateSymbol notation-{{ notn.name|e }} hidden">
                                         {{- symbol|e }}{% if subscript > 0 %}<span class="subscript">{{ subscript|e }}</span>{% endif -%}
                                     </span>
                                 {% endfor %}
@@ -90,8 +92,9 @@
                         {%- set name = form_data['user_predicate_names[]'][loop.index0] -%}
                         {%- set arity = form_data['user_predicate_arities[]'][loop.index0] -%}
                         {%- call helper.predicate_row(index, subscript, name, arity) %}
-                            {% for notn, table in parser_tables.items() -%}
-                                {{- helper.predicate_symbol(notn, table.char(LexType.Predicate, index), subscript) }}
+                            {% for notn in Notation -%}
+                                {%- set table = CharTable.fetch(notn) -%}
+                                {{- helper.predicate_symbol(notn.name, table.char(LexType.Predicate, index), subscript) }}
                             {% endfor -%}
                         {%- endcall -%}
                     {%- endfor %}

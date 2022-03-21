@@ -31,8 +31,8 @@
     <div class="input select example-argument">
         <select id="example_argument">
             <option value="">Load example argument ...</option>
-            {% for argument_name in example_args_list -%}
-                <option value="{{ argument_name|e }}">{{ argument_name|e }}</option>
+            {% for title in example_args -%}
+                <option value="{{ title|e }}">{{ title|e }}</option>
             {% endfor %}
         </select>
     </div>
@@ -52,7 +52,7 @@
     <div class="sentence input conclusion">
         <label for="conclusion">Conclusion</label>
         <input id="conclusion" class="sentence conclusion" type="text"
-            name="conclusion" value="{{ form_data['conclusion'] }}" required="required"/>
+            name="conclusion" value="{{ form_data.conclusion|e }}" required="required"/>
         {%- set status = '' -%}
         {%- set message = '' -%}
         {%- if errors and 'Conclusion' in errors -%}

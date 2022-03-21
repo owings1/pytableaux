@@ -672,6 +672,13 @@ class Bases:
             cls._builtin = builtin = MapCover(dict(builtin))
             notns = set(notns).union(builtin)
             cls._instances = {notn: {} for notn in notns}
+            # Prefetch
+            for notn in notns:
+                # Default for notation.
+                cls.fetch(notn)
+                # All available.
+                for name in cls.available(notn):
+                    cls.fetch(notn, name)
 
 ##############################################################
 ##############################################################
@@ -1712,8 +1719,6 @@ class Notation(Bases.Enum):
     @abcf.after
     def _(cls): cls.default = cls.polish
 
-    encodings        : setm[str]
-    default_encoding : str
     charsets         : setm[str]
     default_charset  : str
     writers          : setm[type[LexWriter]]
@@ -1721,12 +1726,10 @@ class Notation(Bases.Enum):
     rendersets       : setm[RenderSet]
     Parser           : type[Parser]
 
-    polish   = eauto(), 'ascii'   , 'ascii'
-    standard = eauto(), 'unicode' , 'utf8'
+    polish   = eauto(), 'ascii'
+    standard = eauto(), 'unicode'
 
-    def __init__(self, num, default_charset, default_encoding):
-        self.encodings = setm((default_encoding,))
-        self.default_encoding = default_encoding
+    def __init__(self, num, default_charset, /):
         self.charsets = setm((default_charset,))
         self.default_charset = default_charset
         self.writers = setm()
@@ -1734,9 +1737,9 @@ class Notation(Bases.Enum):
         self.rendersets = setm()
 
     __slots__ = (
-        'encodings', 'default_encoding', 'writers',
-        'default_writer', 'rendersets', 'Parser',
-        'charsets', 'default_charset',
+        'Parser',
+        'writers', 'default_writer',
+        'rendersets', 'charsets', 'default_charset',
     )
 
     def __setattr__(self, name, value, /, *, sa2 = _enum.Enum.__setattr__):
@@ -1760,7 +1763,7 @@ class LexWriter(metaclass = LexWriterMeta):
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Instance Variables
 
-    encoding: str
+    # encoding: str
     charset: str
 
     #◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎◀︎▶︎ Exteneral API
@@ -1833,20 +1836,15 @@ class RenderSet(Bases.CacheNotationData):
         self.name: str = data['name']
         self.notation = notn = Notation(data['notation'])
         self.charset: str = data['charset']
-        self.encoding: str = data['encoding']
         self.renders: Mapping[Any, Callable[..., str]] = data.get('renders', {})
-        # self.formats: Mapping[Any, str] = data.get('formats', {})
         self.strings: Mapping[Any, str] = data.get('strings', {})
         self.data = data
         notn.charsets.add(self.charset)
-        notn.encodings.add(self.encoding)
         notn.rendersets.add(self)
 
     def strfor(self, ctype, value):
         if ctype in self.renders:
             return self.renders[ctype](value)
-        # if ctype in self.formats:
-        #     return self.formats[ctype].format(value)
         return self.strings[ctype][value]
 
 class BaseLexWriter(LexWriter):
@@ -1873,9 +1871,9 @@ class BaseLexWriter(LexWriter):
     opts: dict
     renderset: RenderSet
 
-    @property
-    def encoding(self) -> str:
-        return self.renderset.encoding
+    # @property
+    # def encoding(self) -> str:
+    #     return self.renderset.encoding
 
     @property
     def charset(self) -> str:
@@ -2009,6 +2007,7 @@ class Parser(metaclass = AbcBaseMeta):
     __slots__ = EMPTY_SET
 
     notation: ClassVar[Notation]
+    default_table : ClassVar[Mapping[str, Any]]
 
     @abstract
     def parse(self, input: str) -> Sentence:
@@ -2048,12 +2047,11 @@ def _():
 
     htmsub = '<sub>%d</sub>'.__mod__
 
-
     polasc = dict(
         name     = 'polish.ascii',
         notation = Notation.polish,
         charset  = 'ascii',
-        encoding = 'ascii',
+        # encoding = 'ascii',
         renders  = {Marking.subscript: str},
         # renders  = dict(subscript = str),
         strings = {
@@ -2097,7 +2095,7 @@ def _():
             unicode = polasc | dict(
                 name     = 'polish.unicode',
                 charset  = 'unicode',
-                encoding = 'utf8',
+                # encoding = 'utf8',
                 renders  = {Marking.subscript: unisub},
                 strings  = polasc['strings'] | {
                     Marking.meta: dict(
@@ -2109,7 +2107,7 @@ def _():
             html = polasc | dict(
                 name     = 'polish.html',
                 charset  = 'html',
-                encoding = 'utf8',
+                # encoding = 'utf8',
                 renders  = {Marking.subscript: htmsub},
                 strings  = polasc['strings'] | {
                     Marking.meta: dict(
@@ -2124,7 +2122,7 @@ def _():
                 name     = 'standard.ascii',
                 notation = Notation.standard,
                 charset  = 'ascii',
-                encoding = 'ascii',
+                # encoding = 'ascii',
                 renders  = {Marking.subscript: str},
                 strings = {
                     LexType.Atomic : tuple('ABCDE'),
@@ -2165,13 +2163,11 @@ def _():
                 name     = 'standard.unicode',
                 notation = Notation.standard,
                 charset  = 'unicode',
-                encoding = 'utf8',
+                # encoding = 'utf8',
                 renders  = {Marking.subscript: unisub},
-                # renders  = dict(subscript = unisub),
                 strings = {
                     LexType.Atomic   : tuple('ABCDE'),
                     LexType.Operator : {
-                        # 'Assertion'              : '°',
                         Operator.Assertion              : '○',
                         Operator.Negation               : '¬',
                         Operator.Conjunction            : '∧',
@@ -2208,14 +2204,11 @@ def _():
                 name     = 'standard.html',
                 notation = Notation.standard,
                 charset  = 'html',
-                encoding = 'utf8',
-                # encoding = 'html',
+                # encoding = 'utf8',
                 renders  = {Marking.subscript: htmsub},
-                # renders  = dict(subscript = htmsub),
                 strings = {
                     LexType.Atomic   : tuple('ABCDE'),
                     LexType.Operator : {
-                        # 'Assertion'              : '&deg;'   ,
                         Operator.Assertion             : '&#9675;' ,
                         Operator.Negation              : '&not;'   ,
                         Operator.Conjunction           : '&and;'   ,

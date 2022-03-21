@@ -206,7 +206,7 @@ def argument(key: str|Argument) -> Argument:
 def arguments(*keys):
     if not len(keys):
         keys = titles
-    return tuple(sorted(map(argument, keys)))
+    return tuple(map(argument, keys))
 
 def tabiter(*logics, **opts):
     from proof.tableaux import Tableau

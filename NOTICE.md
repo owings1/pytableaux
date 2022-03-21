@@ -3,7 +3,6 @@
 | Component                                    | License          |
 |:-------------------------------------------- | -----------------|
 | [json-viewer](#2cdb) @ [2cdbde04][2cdb-tre]  | [MIT][2cdb-lic]  |
-
 <hr>
 
 <a name="2cdb"></a>
@@ -21,8 +20,11 @@
   - Added: 2022-03-21
   - Purpose: Development Tool
   - Linkage: Repackaged (partial)
-  - Modifications: [8975c62b][8975c62b]
   - Paths: [/src/www/static/json-viewer](/src/www/static/json-viewer)
+  - Modifications:
+  
+    - [5d52567d][5d52567d] 2022-03-21
+    - [8975c62b][8975c62b] 2022-03-21
 
   </details>
 
@@ -58,6 +60,7 @@
 [2cdb-zip]: https://github.com/abodelot/jquery.json-viewer/archive/2cdbde04.zip
 [2cdb-lic]: https://github.com/abodelot/jquery.json-viewer/raw/2cdbde04/LICENSE
 [8975c62b]: https://github.com/owings1/pytableaux/commit/8975c62bde1d8ff976a393550c898801baf47169
+[5d52567d]: https://github.com/owings1/pytableaux/commit/5d52567da020cd49185017c7440a78f4f1bf83a4
   </details>
 
 <hr>

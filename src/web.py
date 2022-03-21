@@ -37,7 +37,7 @@ from lexicals import (
     Predicate,
     Predicates,
 )
-from parsers import create_parser
+from parsers import CharTable
 from proof.tableaux import Tableau
 from proof.writers import TabWriter
 
@@ -50,10 +50,9 @@ from www.conf import (
     api_defaults,
     cp_config,
     cp_global_config,
-    example_arguments,
+    example_args,
     form_defaults,
-    lexwriter_charsets,
-    lexwriters,
+    output_charsets,
     logger,
     logic_categories,
     Metric,
@@ -89,9 +88,9 @@ mailroom = Mailroom(APP_ENVCONF)
 ## JS Data   ##
 ###############
 base_browser_data = MapCover(dict(
-    example_arguments     = example_arguments,
-    example_predicates    = tuple(p.spec for p in examples.preds),
-    nups                  = parser_nups,
+    example_args   = example_args,
+    example_preds  = tuple(p.spec for p in examples.preds),
+    nups           = parser_nups,
 ))
 
 #################
@@ -104,14 +103,16 @@ base_view_data = MapCover(dict(
     lexicals            = lexicals,
     LexType             = LexType,
     Notation            = Notation,
+    CharTable           = CharTable,
+    Json                = json,
 
-    example_args_list   = examples.titles,
+    example_args        = example_args,
     form_defaults       = form_defaults,
-    lexwriter_charsets  = lexwriter_charsets,
+    output_formats   = TabWriter.Registry.keys(),
+    output_charsets  = output_charsets,
     lwstdhtm            = _LW_CACHE[Notation.standard]['html'],
     logic_categories    = logic_categories,
     parser_tables       = parser_tables,
-    tabwriter_formats   = TabWriter.Registry.keys(),
     view_version        = 'v2',
 ))
 
@@ -121,8 +122,13 @@ base_view_data = MapCover(dict(
 ###################
 
 # TODO: serve separate cached
-_STATIC_JSON = json.dumps(dict(base_browser_data), indent = 2, cls = JSONEncoderForHTML)
+_STATIC_JSON = json.dumps(
+    dict(base_browser_data),
+    indent = 2 * APP_ENVCONF['is_debug'],
+    cls = JSONEncoderForHTML
+)
 
+_EMPTY = ()
 _EMPTY_MAP = MapProxy()
 _TEMPLATE_CACHE: dict[str, Template] = {}
 
@@ -220,7 +226,11 @@ class App:
             view_data['debugs'] = debugs
 
         view_data.update(
-            browser_json = json.dumps(browser_data, indent = 2, cls = JSONEncoderForHTML),
+            browser_json = json.dumps(
+                browser_data,
+                indent = 2 * is_debug,
+                cls = JSONEncoderForHTML
+            ),
             config       = self.config,
             is_debug     = is_debug,
             is_proof     = is_proof,
@@ -359,7 +369,6 @@ class App:
                "input": "Fm",
                "predicates" : [
                   {
-                     "name": "is F",
                      "index": 0,
                      "subscript": 0,
                      "arity": 1
@@ -373,11 +382,13 @@ class App:
                "type": "Predicated",
                "rendered": {
                     "standard": {
-                        "default": "Fa",
+                        "ascii": "Fa",
+                        "unicode": "Fa",
                         "html": "Fa"
                     },
                     "polish": {
-                        "default": "Fm",
+                        "ascii": "Fm",
+                        "unicode": "Fm",
                         "html": "Fm"
                     }
                 }
@@ -385,15 +396,12 @@ class App:
         """
         errors = {}
 
-        body = dict(body)
-
         # defaults
-        if 'notation' not in body:
-            body['notation'] = api_defaults['input_notation']
-        if 'predicates' not in body:
-            body['predicates'] = []
-        if 'input' not in body:
-            body['input'] = ''
+        body = dict(
+            notation   = api_defaults['input_notation'],
+            predicates = _EMPTY,
+            input      = '',
+        ) | body
 
         try:
             preds = self._parse_preds(body['predicates'])
@@ -402,11 +410,13 @@ class App:
             preds = None
 
         elabel = 'Notation'
-        if body['notation'] not in Notation:
-            errors[elabel] = "Invalid notation: '%s'" % body['notation']
+        try:
+            notn = Notation[body['notation']]
+        except KeyError as err:
+            errors[elabel] = "Invalid notation: '%s'" % err
 
         if not errors:
-            parser = create_parser(body['notation'], preds)
+            parser = notn.Parser(preds)
             elabel = 'Input'
             try:
                 sentence = parser(body['input'])
@@ -419,11 +429,11 @@ class App:
         return dict(
             type     = sentence.TYPE.name,
             rendered = {
-                notn: {
-                    fmt: lexwriters[notn][fmt](sentence)
-                    for fmt in lexwriters[notn]
+                notn.name: {
+                    charset: lw(sentence)
+                    for charset, lw in lwmap.items()
                 }
-                for notn in lexwriters
+                for notn, lwmap in _LW_CACHE.items()
             },
         )
 

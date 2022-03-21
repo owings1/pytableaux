@@ -90,7 +90,7 @@
         selectOutputFmt   : '#format',
         selectOutputNotn  : '#output_notation',
         selectParseNotn   : '#input_notation',
-        selectSymbolEnc   : '#symbol_charset',
+        selectOutputChrs  : '#output_charset',
         submitJson        : '#tableau_form_api_json',
         tableaux          : '.' + Cls.tableau,
         templatePrem      : '#premiseTemplate',
@@ -127,9 +127,9 @@
             // ----------------------
             //
             // classes  :      tableau-controls
-            //                 tooltip
-
-            $AppForm.on('keyup focus', [Sel.inputsPremise, Sel.inputConclusion].join(), ensureEmptyPremise)
+            //
+            $AppForm
+                .on('keyup focus', [Sel.inputsPremise, Sel.inputConclusion].join(), ensureEmptyPremise)
                 .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
                     if ($target.is(Sel.selectArgExample)) {
@@ -380,12 +380,13 @@
                     html += '<sub>' + esc(subscript) + '</sub>'
                 html += '</span>'
             })
-            const $el = $(render(Templates.predicate, { 
+            const vars = { 
                 index       : index,
                 subscript   : subscript,
                 arity       : arity || '',
-                symbol_html : html
-            }))
+                symbol_html : html,
+            }
+            const $el = $(render(Templates.predicate, vars))
             $(Sel.wrapPredicates).append($el)
             return $el
         }
@@ -516,13 +517,13 @@
                 return
             }
             const notation = $(Sel.selectParseNotn).val()
-            const arg = AppData.example_arguments[argName][notation]
+            const arg = AppData.example_args[argName][notation]
             $.each(arg.premises, function(i, value) {
                 addPremise(value)
             })
             $(Sel.inputConclusion).val(arg.conclusion)
-            $.each(AppData.example_predicates, function(i, pred) {
-                addPredicate(pred[0], pred[1], pred[2])
+            $.each(AppData.example_preds, function(i, pred) {
+                addPredicate(pred.index, pred.subscript, pred.arity)
             })
         }
 
@@ -543,10 +544,15 @@
                 const notation = $(Sel.selectParseNotn).val()
                 const input = $(this).val()
                 if (input) {
-                    const hash = hashString([input, notation].join('.'))
-                    if (!isForce && +$status.attr(Atr.dataHash) === hash) {
+                    // const hash = hashString([input, notation].join('.'))
+                    // const stored = +$status.attr(Atr.dataHash)
+                    const hash = [input, notation].join('.')
+                    const stored = $status.attr(Atr.dataHash)
+                    if (!isForce && stored === hash) {
+                        debug('nochange', hash)
                         return
                     }
+                    debug('CHANGE', hash)
                     $status.attr(Atr.dataHash, hash)
                     var apiData = getApiData()
                     $.ajax({
@@ -598,28 +604,6 @@
         }
 
         /**
-         * Generate an integer hash for a string.
-         *
-         * From: http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
-         *
-         * @param {string} str The input string.
-         * @return {integer} The hash.
-         */
-        function hashString(str) {
-            var hash = 0
-            if (str.length === 0) {
-                return hash
-            }
-            var chr
-            for (var i = 0; i < str.length; i++) {
-                chr   = str.charCodeAt(i)
-                hash  = ((hash << 5) - hash) + chr
-                hash |= 0; // Convert to 32bit integer
-            }
-            return hash
-        }
-
-        /**
          * Read the form inputs into an object suitable for posting to
          * the prove api.
          *
@@ -635,10 +619,10 @@
                     notation   : $(Sel.selectParseNotn).val(),
                 },
                 output: {
-                    format     : $(Sel.selectOutputFmt).val(),
-                    notation   : $(Sel.selectOutputNotn).val(),
-                    symbol_charset : $(Sel.selectSymbolEnc).val(),
-                    options    : {
+                    format   : $(Sel.selectOutputFmt).val(),
+                    notation : $(Sel.selectOutputNotn).val(),
+                    charset  : $(Sel.selectOutputChrs).val(),
+                    options  : {
                         classes : [],
                         models  : undefined,
                     }

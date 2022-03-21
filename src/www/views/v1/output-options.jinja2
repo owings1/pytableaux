@@ -1,7 +1,7 @@
 <div class="input select">
     <label for="format">Format</label>
     <select id="format" name="format">
-        {% for format in tabwriter_formats -%}
+        {% for format in output_formats -%}
             <option value="{{ format|e }}" {{- 
                 helper.select_opt(form_data, 'format', format, form_defaults) 
             }}>
@@ -23,11 +23,11 @@
     </select>
 </div>
 <div class="input select">
-    <label for="symbol_charset">Symbol Charset</label>
-    <select id="symbol_charset" name="symbol_charset">
-        {% for charset in lexwriter_charsets -%}
+    <label for="output_charset">Symbol Charset</label>
+    <select id="output_charset" name="output_charset">
+        {% for charset in output_charsets -%}
             <option value="{{ charset|e }}" {{- 
-                helper.select_opt(form_data, 'symbol_charset', charset, form_defaults) 
+                helper.select_opt(form_data, 'output_charset', charset, form_defaults) 
             }}>
                 {{- charset|e -}}
             </option>

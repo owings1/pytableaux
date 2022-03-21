@@ -218,12 +218,12 @@
         }
 
         /**
-         * Get the output symbol set value.
+         * Get the output charset value.
          *
          * @return String name of the symbol set, e.g. 'default'
          */
         function currentOutputSymbolEnc() {
-            return $('#symbol_charset', $Ctx).val()
+            return $('#output_charset', $Ctx).val()
         }
 
         /**
@@ -457,13 +457,13 @@
                 return
             }
             const notation = currentNotation()
-            const arg = AppData.example_arguments[argName][notation]
+            const arg = AppData.example_args[argName][notation]
             $.each(arg.premises, function(i, value) {
                 addPremise(value)
             })
             $('#conclusion').val(arg.conclusion)
-            $.each(AppData.example_predicates, function(i, pred) {
-                addPredicate(pred[0], pred[1], pred[3], pred[2])
+            $.each(AppData.example_preds, function(i, pred) {
+                addPredicate(pred.index, pred.subscript, pred.name, pred.arity)
             })
         }
 
@@ -538,7 +538,7 @@
          */
         function refreshArgumentHeader() {
             const notation = currentOutputNotation()
-            const enc = currentOutputSymbolEnc()
+            const charset = currentOutputSymbolEnc()
             const premises = []
             var conclusion
             $('input.sentence', $Ctx).each(function(sentenceIndex) {
@@ -549,9 +549,9 @@
                 if (input || isConclusion) {
                     var sentence
                     if (isGood && SentenceRenders[input]) {
-                        // debug({notation, enc})
-                        sentence = SentenceRenders[input][notation][enc]
-                        if (enc != 'html') {
+                        // debug({notation, charset})
+                        sentence = SentenceRenders[input][notation][charset]
+                        if (charset != 'html') {
                             sentence = h(sentence)
                         }
                     } else {
@@ -649,7 +649,7 @@
             })
             data.output.notation = $('#output_notation', $Frm).val()
             data.output.format = $('#format', $Frm).val()
-            data.output.symbol_charset = $('#symbol_charset', $Frm).val()
+            data.output.charset = $('#output_charset', $Frm).val()
             data.output.options = {classes: []}
             $('input:checkbox.options', $Frm).each(function() {
                 const $me = $(this)

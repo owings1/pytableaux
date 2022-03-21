@@ -54,6 +54,7 @@ from collections.abc import Set
 from typing import (
     # Any,
     # Iterable,
+    ClassVar,
     Mapping,
 )
 
@@ -276,6 +277,8 @@ _BASE_CTYPES = _PRED_CTYPES | {LexType.Quantifier, LexType.Atomic}
 _PARAM_CTYPES = setf({LexType.Constant, LexType.Variable})
 
 class BaseParser(Parser):
+
+    default_table = ClassVar[CharTable]
 
     __slots__ = 'table', 'preds', 'opts'
 
@@ -664,3 +667,8 @@ CharTable._initcache(Notation, {
         },
     }
 })
+
+
+for _notn in Notation:
+    _notn.Parser.default_table = CharTable.fetch(_notn)
+del(_notn)
