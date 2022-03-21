@@ -56,7 +56,7 @@
 </div>
 <div class="input">
     <label for="options_max_steps">Max steps</label>
-    <input type="text" id="options_max_steps" size="5" name="max_steps" value="{{ form_data['max_steps']|e }}"/>
+    <input type="text" id="options_max_steps" size="5" name="max_steps" value="{{ form_data.max_steps|e }}"/>
 </div>
 {% if is_debug -%}
 <div class="input">

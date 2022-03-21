@@ -28,39 +28,35 @@ from tools.misc import get_logic
 from tools.timing import StopWatch
 
 import examples, fixed
-from fixed import issues_href, source_href, version
 import lexicals
 from lexicals import (
     Argument,
     LexType,
     LexWriter,
     Notation,
-    Operator,
     Predicate,
     Predicates,
-    Quantifier,
 )
 from parsers import create_parser
 from proof.tableaux import Tableau
-from proof.writers import create_tabwriter, formats as tabwriter_formats
+from proof.writers import TabWriter
 
 from www.mailroom import Mailroom
 from www.conf import (
+    APP_ENVCONF,
+    APP_JENV,
+
     api_defaults,
-    appconf,
+    app_modules,
     cp_config,
     cp_global_config,
     example_arguments,
-
     form_defaults,
-
-    jenv,
     lexwriter_encodings,
     lexwriters,
     logger,
     logic_categories,
     Metric,
-    modules,
     parser_nups,
     parser_tables,
     re_email,
@@ -72,83 +68,63 @@ from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from jinja2 import Template
-import json, re, traceback
+import json
 import prometheus_client as prom
+import re
+import traceback
 from typing import Any, Mapping, Sequence
 
 
-EMPTY_MAP = MapCover(MapProxy({}))
-
-mailroom = Mailroom(appconf)
+mailroom = Mailroom(APP_ENVCONF)
 
 ###############
 ## JS Data   ##
 ###############
 base_browser_data = MapCover(dict(
+    example_arguments     = example_arguments,
     example_predicates    = tuple(p.spec for p in examples.preds),
     nups                  = parser_nups,
     num_predicate_symbols = Predicate.TYPE.maxi + 1,
-    example_arguments     = example_arguments,
-    is_debug              = appconf['is_debug'],
 ))
 
 #################
 ## View Data   ##
 #################
 base_view_data = MapCover(dict(
-    app_name            = appconf['app_name'],
-    copyright           = fixed.copyright,
+
     example_args_list   = examples.titles,
-    feedback_to_address = appconf['feedback_to_address'],
     form_defaults       = form_defaults,
-    google_analytics_id = appconf['google_analytics_id'],
-    is_debug            = appconf['is_debug'],
-    is_feedback         = appconf['feedback_enabled'],
-    is_google_analytics = bool(appconf['google_analytics_id']),
-    issues_href         = issues_href,
     lexicals            = lexicals,
     LexType             = LexType,
     lexwriter_encodings = lexwriter_encodings,
     lwstdhtm            = lexwriters['standard']['html'],
     logic_categories    = logic_categories,
-    logics              = modules['logics'],
+    logics              = app_modules['logics'],
     Notation            = Notation,
-    operators_list      = Operator.seq,
     parser_tables       = parser_tables,
-    quantifiers         = Quantifier.seq,
-    source_href         = source_href,
-    tabwriter_formats   = tabwriter_formats,
-    version             = version,
+    tabwriter_formats   = TabWriter.Registry.keys(),
     view_version        = 'v2',
 ))
-
-###################
-## Templates     ##
-###################
-
-template_cache: dict[str, Template] = {}
-
-def get_template(view: str) -> Template:
-    if '.' not in view:
-        view = '.'.join((view, 'jinja2'))
-    if appconf['is_debug'] or (view not in template_cache):
-        template_cache[view] = jenv.get_template(view)
-    return template_cache[view]
-
-def render(view: str, data: dict = {}) -> str:
-    return get_template(view).render(data)
 
 
 ###################
 ## Webapp        ##
 ###################
 
+_EMPTY_MAP = MapProxy()
+_TEMPLATE_CACHE: dict[str, Template] = {}
+
 class App:
 
-    config = appconf
+    config = dict(APP_ENVCONF,
+        copyright   = fixed.copyright,
+        issues_href = fixed.issues_href,
+        source_href = fixed.source_href,
+        version     = fixed.version,
+    )
 
     @chpy.expose
-    def index(self, *args, **req_data):
+    def index(self, **req_data):
 
         req: Request = chpy.request
 
@@ -156,7 +132,7 @@ class App:
         warns  = {}
         debugs = []
 
-        data = dict(base_view_data)
+        view_data = dict(base_view_data)
         browser_data = dict(base_browser_data)
 
         if req_data.get('v') in ('v1', 'v2'):
@@ -168,7 +144,7 @@ class App:
         if req_data.get('debug') == 'false':
             is_debug = False
         else:
-            is_debug = appconf['is_debug']
+            is_debug = self.config['is_debug']
 
         form_data = fix_form_data(req_data)
         api_data = resp_data = None
@@ -183,8 +159,9 @@ class App:
                 except Exception as err:
                     raise RequestDataError({'api-data': errstr(err)})
                 try:
-                    # arg, vocab = self.parse_argument_data(api_data['argument'])
                     self._parse_argument(api_data['argument'])
+                    # test:
+                    # raise RequestDataError({'test': 'error'})
                 except RequestDataError as err:
                     errors.update(err.errors)
                 resp_data, tableau, lw = self.api_prove(api_data)
@@ -195,7 +172,7 @@ class App:
 
             if not errors:
                 is_proof = True
-                if form_data.get('format') == 'html':
+                if resp_data['writer']['format'] == 'html':
                     is_controls = bool(form_data.get('show_controls'))
                     is_models = bool(
                         form_data.get('options.models') and
@@ -204,13 +181,13 @@ class App:
                     selected_tab = 'view'
                 else:
                     selected_tab = 'stats'
-                data.update(
+                view_data.update(
                     tableau = tableau,
                     lw      = lw,
                 )
 
         if errors:
-            data['errors'] = errors
+            view_data['errors'] = errors
 
         browser_data.update(
             is_debug     = is_debug,
@@ -228,10 +205,12 @@ class App:
                 resp_data = resp_data and debug_resp_data(resp_data),
                 browser_data = browser_data,
             ).items())
-            data['debugs'] = debugs
+            view_data['debugs'] = debugs
 
-        data.update(
+        view_data.update(
             browser_json = json.dumps(browser_data, indent = 2),
+            config       = self.config,
+            is_debug     = is_debug,
             is_proof     = is_proof,
             is_controls  = is_controls,
             is_models    = is_models,
@@ -242,25 +221,24 @@ class App:
             warns        = warns,
         )
 
-        return render(view, data)
+        return self._render(view, view_data)
 
-    def feedback(self, **form_data):
+    def feedback(self, **form_data) -> str:
+
+        req: Request = chpy.request
 
         errors = {}
         warns  = {}
         debugs = []
 
-        data = dict(base_view_data)
-
-        is_submitted = False
-
         view = 'feedback'
-        
-        data.update(
-            form_data = form_data,
+        view_data = dict(base_view_data,
+            form_data = form_data
         )
 
-        req: Request = chpy.request
+        config = self.config
+        is_submitted = False
+        is_debug = config['is_debug']
 
         if req.method == 'POST':
 
@@ -268,50 +246,50 @@ class App:
                 validate_feedback_form(form_data)
             except RequestDataError as err:
                 errors.update(err.errors)
-
-            if len(errors) == 0:
+            else:
                 date = datetime.now()
-                data.update(
+                view_data.update(
                     date    = str(date),
                     ip      = get_remote_ip(req),
                     headers = req.headers,
                 )
+                fromaddr = config['feedback_from_address']
+                toaddr = config['feedback_to_address']
                 msg = MIMEMultipart('alternative')
-                msg['From'] = '{0} Feedback <{1}>'.format(
-                    appconf['app_name'],
-                    appconf['feedback_from_address'],
-                )
-                msg['To'] = appconf['feedback_to_address']
-                msg['Subject'] = 'Feedback from {0}'.format(form_data['name'])
-                msg_txt = render('feedback-email.txt', data)
-                msg_html = render('feedback-email', data)
+                msg['To'] = toaddr
+                msg['From'] = '%s Feedback <%s>' % (config['app_name'], fromaddr)
+                msg['Subject'] = 'Feedback from %s' % form_data['name']
+                msg_txt = self._render('feedback-email.txt', view_data)
+                msg_html = self._render('feedback-email', view_data)
                 msg.attach(MIMEText(msg_txt, 'plain'))
                 msg.attach(MIMEText(msg_html, 'html'))
-                mailroom.enqueue(
-                    appconf['feedback_from_address'],
-                    (appconf['feedback_to_address'],),
-                    msg.as_string(),
-                )
+                mailroom.enqueue(fromaddr, (toaddr,), msg.as_string())
                 is_submitted = True
 
         else:
             if not mailroom.last_was_success:
-                warns['Mailroom'] = ' '.join((
-                    'The most recent email was unsuccessful.',
-                    'You might want to send an email instead.',
-                ))
+                warns['Mailroom'] = (
+                    'The most recent email was unsuccessful. '
+                    'You might want to send an email instead.'
+                )
 
-        debugs.extend(dict(
-            form_data = form_data,
-        ).items())
-        data.update(
+        if is_debug:
+            debugs.extend(dict(
+                form_data = form_data,
+            ).items())
+            view_data['debugs'] = debugs
+
+        view_data.update(
+            config       = self.config,
             errors       = errors,
             warns        = warns,
+            is_debug     = is_debug,
             is_submitted = is_submitted,
         )
-        return render(view, data)
 
-    feedback.exposed = appconf['feedback_enabled'] and bool(appconf['smtp_host'])
+        return self._render(view, view_data)
+
+    feedback.exposed = APP_ENVCONF['feedback_enabled'] and bool(APP_ENVCONF['smtp_host'])
 
     @chpy.expose
     @chpy.tools.json_in()
@@ -360,7 +338,7 @@ class App:
         res.status = 404
         return dict(message = 'Not found', status = 404)
 
-    def api_parse(self, body: Mapping):
+    def api_parse(self, body: Mapping) -> dict[str, Any]:
         """
         Example request body::
 
@@ -493,28 +471,31 @@ class App:
                 },
             }
         """
-        is_debug = appconf['is_debug']
+        is_debug = self.config['is_debug']
         errors = {}
 
         body = dmap(
-            output = {},
-            argument = EMPTY_MAP,
+            output       = {},
+            argument     = _EMPTY_MAP,
             build_models = False,
-            max_steps = None,
-            rank_optimizations = True,
+            max_steps    = None,
+            rank_optimizations  = True,
             group_optimizations = True,
         ) | body
 
         odata: dmap
         odata = body['output'] = dmap(
             options = {},
-            notation = api_defaults['output_notation'],#'standard',
-            format = 'html',
+            notation = api_defaults['output_notation'],
+            format   = api_defaults['output_format'],
         ) | body['output']
-        odata.setdefault('symbol_enc',
-            'html' if odata['format'] == 'html'
-            else 'ascii'
-        )
+
+        if 'symbol_enc' not in odata:
+            if odata['format'] == 'html':
+                odata['symbol_enc'] = 'html'
+            else:
+                odata['symbol_enc'] = 'ascii'
+
         odata['options']['debug'] = is_debug
 
         if body['max_steps'] is not None:
@@ -530,7 +511,7 @@ class App:
             is_group_optim  = bool(body['group_optimizations']),
             is_build_models = bool(body['build_models']),
             max_steps       = body['max_steps'],
-            build_timeout   = appconf['maxtimeout'],
+            build_timeout   = self.config['maxtimeout'],
         )
 
         try:
@@ -568,9 +549,7 @@ class App:
             else:
                 elabel = 'Output format'
                 try:
-                    tabwriter = create_tabwriter(
-                        notn   = odata['notation'],
-                        format = odata['format'],
+                    tabwriter = TabWriter(odata['format'],
                         lw  = lw,
                         enc = odata['symbol_enc'],
                         **odata['options'],
@@ -690,6 +669,15 @@ class App:
             raise RequestDataError(errors)
         return preds
 
+    def _get_template(self, view: str) -> Template:
+        if '.' not in view:
+            view = '.'.join((view, 'jinja2'))
+        if self.config['is_debug'] or (view not in _TEMPLATE_CACHE):
+            _TEMPLATE_CACHE[view] = APP_JENV.get_template(view)
+        return _TEMPLATE_CACHE[view]
+
+    def _render(self, view: str, data: dict = {}) -> str:
+        return self._get_template(view).render(data)
 
 #####################
 ## Miscellaneous   ##
@@ -738,11 +726,12 @@ def get_remote_ip(req: Request) -> str:
 #############
 
 def main(): # pragma: no cover
-    logger.info('Staring metrics on port %d' % appconf['metrics_port'])
+    app = App()
+    logger.info('Staring metrics on port %d' % APP_ENVCONF['metrics_port'])
     mailroom.start()
-    prom.start_http_server(appconf['metrics_port'])
+    prom.start_http_server(APP_ENVCONF['metrics_port'])
     chpy.config.update(cp_global_config)
-    chpy.quickstart(App(), '/', cp_config)
+    chpy.quickstart(app, '/', cp_config)
 
 if  __name__ == '__main__': # pragma: no cover
     main()

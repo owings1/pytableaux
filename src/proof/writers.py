@@ -1,54 +1,61 @@
-from lexicals import LexWriter, Notation
+from __future__ import annotations
+
+__all__ = (
+    'TabWriter',
+)
+
+from errors import Emsg, instcheck
+from tools.abcs import abstract, overload, abcf, abcm, AbcMeta, MapProxy, TT
 from tools.misc import cat
-from proof.tableaux import TabStatKey, TabFlag
+from lexicals import Argument, LexWriter, Notation
+from proof.tableaux import TabStatKey, TabFlag, Tableau
+
+from jinja2 import Environment, FileSystemLoader, Template
 from os import path
-from copy import deepcopy
+from typing import Any, ClassVar, Mapping
 
-from jinja2 import Environment, FileSystemLoader
-
-formats = ('text', 'html')
-default_format = 'text'
-default_format_notn_encs = {
-    'text' : {
-        notn.name: notn.default_encoding
-        for notn in Notation
-    },
-    'html' : {'polish': 'html', 'standard': 'html'},
-}
-
-def write_tableau(tableau, *args, **kw):
-    return create_tabwriter(*args, **kw).write(tableau)
-
-def create_tabwriter(notn=None, format=None, **opts):
-    if not notn:
-        notn = Notation.default.name
-    if not format:
-        format = default_format
-    if 'lw' not in opts:
-        lwopts = {}
-        if 'enc' not in opts:
-            defencs = default_format_notn_encs.get(format)
-            if defencs and notn in defencs:
-                lwopts['enc'] = defencs[notn]
+class TabWriterMeta(AbcMeta):
+    def __call__(cls, *args, **kw):
+        if cls is TabWriter:
+            if args:
+                fmt, *args = args
             else:
-                lwopts['enc'] = Notation(notn).default_encoding
-        opts['lw'] = LexWriter(notn=notn, **lwopts, **opts)
-    if format == 'html':
-        return HtmlTableauWriter(**opts)
-    elif format == 'text':
-        return TextTableauWriter(**opts)
-    raise ValueError('Unknown output format: {0}'.format(str(format)))
+                fmt = TabWriter.DefaultFormat
+            return TabWriter.Registry[fmt](*args, **kw)
+        return super().__call__(*args, **kw)
 
-class TableauWriter(object):
+class TabWriter(metaclass = TabWriterMeta):
 
-    defaults = {}
+    Registry: ClassVar[Mapping[str, type[TabWriter]]]
+    DefaultFormat = 'text'
 
-    def __init__(self, lw, **opts):
-        if not callable(getattr(lw, 'write', None)):
-            raise TypeError('lw has no write method')
-        self.opts = deepcopy(self.defaults)
-        self.opts.update(opts)
+    format: ClassVar[str]
+    name: ClassVar[str]
+    default_encs: ClassVar[Mapping[Notation, str]]
+    defaults: Mapping[str, Any] = MapProxy()
+
+    lw: LexWriter
+    opts: dict[str, Any]
+
+    def __init__(self, notn: Notation|str = None, enc: str = None, *, lw: LexWriter = None, **opts):
+        if lw is None:
+            if notn is None:
+                notn = Notation.default
+            else:
+                notn = Notation(notn)
+            if enc is None:
+                enc = self.default_encs[notn]
+            lw = LexWriter(notn, enc, **opts)
+        else:
+            if notn is not None:
+                if Notation(notn) != lw.notation:
+                    raise Emsg.ValueConflict(notn, lw.notation)
+            if enc is not None:
+                if enc != lw.encoding:
+                    raise Emsg.ValueConflict(enc, lw.encoding)
+            instcheck(lw, LexWriter)
         self.lw = lw
+        self.opts = dict(self.defaults) | opts
 
     def document_header(self):
         return ''
@@ -56,88 +63,117 @@ class TableauWriter(object):
     def document_footer(self):
         return ''
 
-    def attachments(self, tableau):
+    def attachments(self, tableau: Tableau, /) -> Mapping[str, Any]:
         return {}
 
-    def write(self, tableau):
+    def write(self, tableau: Tableau, /):
         return self._write_tableau(tableau)
 
     __call__ = write
 
-    def _write_tableau(self, tableau):
+    @abstract
+    def _write_tableau(self, tableau: Tableau, /):
         raise NotImplementedError
 
-templates_basedir = path.join(path.dirname(path.abspath(__file__)), 'templates')
+    @classmethod
+    @overload
+    def register(cls, subcls: TT) -> TT: ...
 
-class TemplateWriter(TableauWriter):
+    @abcf.before
+    def prepare(ns: dict, bases):
+
+        _registry: dict[str, type[TabWriter]] = {}
+
+        def register(cls: type[TabWriter], subcls: type[TabWriter]):
+            'Update available writers.'
+            if not issubclass(subcls, __class__):
+                raise TypeError(subcls, __class__)
+            if abcm.isabstract(subcls):
+                raise TypeError('Cannot register abstract class: %s' % subcls)
+            fmt = subcls.format
+            if fmt in _registry:
+                raise TypeError(
+                    "%s format '%s' already registered" % (__class__.__name__, fmt)
+                )
+            _registry[fmt] = subcls
+            type(cls).register(cls, subcls)
+            return subcls
+
+        ns.update(
+            Registry = MapProxy(_registry),
+            register = classmethod(register),
+        )
+
+class TemplateWriter(TabWriter):
 
     base_dir = path.join(path.dirname(path.abspath(__file__)), 'templates')
     path_prefix = ''
     proof_template = 'proof.jinja2'
     jinja_opts = {}
+    template_dir: str
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         dir = path.join(self.base_dir, self.path_prefix)
-        if not getattr(self, 'template_dir', None):
+        if getattr(self, 'template_dir', None) is None:
             self.template_dir = dir
         jopts = dict(self.jinja_opts)
         if 'loader' not in jopts:
             jopts['loader'] = FileSystemLoader(dir)
         self.jenv = Environment(**jopts)
 
-    def get_template(self, template):
+    def get_template(self, template: str) -> Template:
         return self.jenv.get_template(template)
 
-    def render(self, template, context={}):
+    def render(self, template: str, context: dict = {}) -> str:
         return self.get_template(template).render(context)
 
-    def get_argstrs(self, argument):
-        if not argument:
+    def get_argstrs(self, arg: Argument, /) -> tuple[tuple[str, ...], str]:
+        if not arg:
             return (None, None)
         lw = self.lw
-        return (
-            [lw.write(premise) for premise in argument.premises],
-            lw.write(argument.conclusion)
+        return tuple(map(lw, arg.premises)), lw(arg.conclusion)
+
+    def get_context(self, tableau: Tableau, /):
+        premises, conclusion = self.get_argstrs(tableau.argument)
+        return dict(
+            tableau    = tableau,
+            stats      = tableau.stats,
+            logic      = tableau.logic,
+            argument   = tableau.argument,
+            premises   = premises,
+            conclusion = conclusion,
+            lw         = self.lw,
+            opts       = self.opts,
+            TabStatKey = TabStatKey,
+            TabFlag    = TabFlag,
         )
 
-    def get_context(self, tableau):
-        premises, conclusion = self.get_argstrs(tableau.argument)
-        return {
-            'tableau'    : tableau,
-            'stats'      : tableau.stats,
-            'logic'      : tableau.logic,
-            'argument'   : tableau.argument,
-            'premises'   : premises,
-            'conclusion' : conclusion,
-            'lw'         : self.lw,
-            'opts'       : self.opts,
-            'TabStatKey' : TabStatKey,
-            'TabFlag'    : TabFlag,
-        }
-
-    def _write_tableau(self, tableau):
+    def _write_tableau(self, tableau: Tableau, /):
         return self.render(self.proof_template, self.get_context(tableau))
 
-class HtmlTableauWriter(TemplateWriter):
+@TabWriter.register
+class HtmlTabWriter(TemplateWriter):
 
-    name = 'HTML'
     format = 'html'
-    defaults = {
-        'classes'      : [],
-        'wrap_classes' : [],
-        'inline_css'   : False,
-    }
+    name = 'HTML'
+    default_encs = {notn: 'html' for notn in Notation}
+    defaults = dict(
+        classes      = (),
+        wrap_classes = (),
+        inline_css   = False,
+    )
 
     path_prefix = 'html'
-    jinja_opts = {
-        'trim_blocks'   : True,
-        'lstrip_blocks' : True,
-    }
+    jinja_opts = dict(
+        trim_blocks   = True,
+        lstrip_blocks = True,
+    )
 
-    def attachments(self, *_a, **_k):
+    def attachments(self, tableau: Tableau, /):
         with open(path.join(self.template_dir, 'static/tableau.css'), 'r') as f:
-            return {'css': f.read()}
+            return dict(css = f.read())
+
     # classes:
     #   wrapper : tableau-wrapper
     #      tableau : tableau
@@ -154,23 +190,26 @@ class HtmlTableauWriter(TemplateWriter):
     #   misc : clear
     #
     #
-class TextTableauWriter(TemplateWriter):
 
-    name = 'Text'
+@TabWriter.register
+class TextTabWriter(TemplateWriter):
+
     format = 'text'
-    defaults = {
-        'summary'  : True,
-        'argument' : True,
-        'heading'  : True,
-    }
+    name = 'Text'
+    default_encs = {notn: notn.default_encoding for notn in Notation}
+    defaults = dict(
+        summary  = True,
+        argument = True,
+        heading  = True,
+    )
 
     path_prefix = 'text'
-    jinja_opts = {
-        'trim_blocks'   : True,
-        'lstrip_blocks' : True,
-    }
+    jinja_opts = dict(
+        trim_blocks   = True,
+        lstrip_blocks = True,
+    )
 
-    def _write_tableau(self, tableau):
+    def _write_tableau(self, tableau: Tableau, /):
         strs = []
         opts = self.opts
         context = self.get_context(tableau)
@@ -181,11 +220,11 @@ class TextTableauWriter(TemplateWriter):
         strs.append(self._write_structure(tableau.tree))
         return '\n'.join(strs)
 
-    def _write_structure(self, structure, prefix = ''):
-        nodestr = self.render('nodes.jinja2', {
-            'structure' : structure,
-            'lw'        : self.lw
-        })
+    def _write_structure(self, structure, prefix: str = ''):
+        nodestr = self.render('nodes.jinja2', dict(
+            structure = structure,
+            lw        = self.lw
+        ))
         lines = [cat(prefix, nodestr)]
         children = structure['children']
         prefix += (' ' * (len(nodestr) - 1))

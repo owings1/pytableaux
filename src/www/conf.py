@@ -17,6 +17,27 @@
 # ------------------
 #
 # pytableaux - Web App Configuration
+from __future__ import annotations
+
+__all__ = (
+    'APP_ENVCONF',
+    'APP_JENV',
+    'api_defaults',
+    'app_modules',
+    'cp_config',
+    'cp_global_config',
+    'example_arguments',
+    'form_defaults',
+    'lexwriter_encodings',
+    'lexwriters',
+    'logger',
+    'logic_categories',
+    'Metric',
+    'parser_nups',
+    'parser_tables',
+    're_email',
+)
+
 from tools.abcs import AbcEnum
 from tools.decorators import closure
 from tools.mappings import MapCover
@@ -26,14 +47,34 @@ from lexicals import LexType, Notation, LexWriter, RenderSet
 import examples
 
 import logging, os, os.path
-from os.path import join as pjoin
 import prometheus_client as prom
 from cherrypy._cpdispatch import Dispatcher
 from jinja2 import Environment, FileSystemLoader
 
+# Enabled logics.
+_LOGICS = (
+    'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
+    'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
+)
+
+#  Path info
+_APP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+
+def _apath(*args):
+    return os.path.join(_APP_DIR, *args)
+
+_PATHS = dict(
+    favicon_file   = _apath('www/static/img/favicon-60x60.png'),
+    index_filename = 'index.html',
+    robotstxt_file = _apath('www/static/robots.txt'),
+    static_dir     = _apath('www/static'),
+    static_dir_doc = _apath('..', 'doc/_build/html'),
+    view_path      = _apath('www/views'),
+)
+
 ## Option definitions
 
-optdefs = {
+_OPTDEFS = {
     'app_name' : {
         'default' : 'pytableaux',
         'envvar'  : 'PT_APPNAME',
@@ -148,14 +189,11 @@ optdefs = {
     },
 }
 
-logic_modnames = (
-    'cpl', 'cfol', 'fde', 'k3', 'k3w', 'k3wq', 'b3e', 'go', 'mh',
-    'l3', 'g3', 'p3', 'lp', 'nh', 'rm3', 'k', 'd', 't', 's4', 's5'
-)
+
 logic_categories: dict[str, list[str]] = dict()
 
-modules = dict(
-    logics = {k: get_logic(k) for k in logic_modnames}
+app_modules = dict(
+    logics = {k: get_logic(k) for k in _LOGICS}
 )
 
 # 'nups' means "notation-user-predicate-symbols"
@@ -180,16 +218,14 @@ def _():
         parser_tables[notn.name] = table = CharTable.fetch(notn)
         parser_nups[notn.name] = table.chars[LexType.Predicate]
 
-    for modname, logic in modules['logics'].items():
-        # lgc = modules['logics'][name]
+    for modname, logic in app_modules['logics'].items():
         category = logic.Meta.category
         if category not in logic_categories:
-            logic_categories[category] = list()
+            logic_categories[category] = []
         logic_categories[category].append(modname)
 
     def get_category_order(modname: str) -> int:
-        return modules['logics'][modname].Meta.category_display_order
-        # return get_logic(name).Meta.category_display_order
+        return app_modules['logics'][modname].Meta.category_display_order
 
     for group in logic_categories.values():
         group.sort(key = get_category_order)
@@ -197,9 +233,7 @@ def _():
 
 ## Logging
 
-# logger = logging.Logger('APP')
-
-def init_logger(logger: logging.Logger):
+def _init_logger(logger: logging.Logger):
     ch = logging.StreamHandler()
     formatter = logging.Formatter(
         # Similar to cherrypy's format for consistency.
@@ -210,12 +244,12 @@ def init_logger(logger: logging.Logger):
     logger.addHandler(ch)
     return logger
 
-logger = init_logger(logging.Logger('APP'))
+logger = _init_logger(logging.Logger('APP'))
 
-## App Config
+## Env Config
 
 def _getoptval(name):
-    defn = optdefs[name]
+    defn = _OPTDEFS[name]
     evtype = type(defn['envvar'])
     if evtype == str:
         envvars = (defn['envvar'],)
@@ -248,20 +282,20 @@ def _getoptval(name):
             return v
     return defn['default']
 
-appconf = opts = {
-    name: _getoptval(name) for name in optdefs.keys()
+APP_ENVCONF = {
+    name: _getoptval(name) for name in _OPTDEFS.keys()
 }
 
-# Set loglevel from appconf
-if appconf['is_debug']:
+# Set loglevel from APP_ENVCONF
+if APP_ENVCONF['is_debug']:
     logger.setLevel(10)
     logger.info('Setting debug loglevel {0}'.format(str(logger.getEffectiveLevel())))
-elif hasattr(logging, appconf['loglevel'].upper()):
-    logger.setLevel(getattr(logging, appconf['loglevel'].upper()))
+elif hasattr(logging, APP_ENVCONF['loglevel'].upper()):
+    logger.setLevel(getattr(logging, APP_ENVCONF['loglevel'].upper()))
 else:
-    logger.setLevel(getattr(logging, optdefs['loglevel']['default'].upper()))
-    logger.warn('Ingoring invalid loglevel: {0}'.format(appconf['loglevel']))
-    appconf['loglevel'] = optdefs['loglevel']['default'].upper()
+    logger.setLevel(getattr(logging, _OPTDEFS['loglevel']['default'].upper()))
+    logger.warn('Ingoring invalid loglevel: {0}'.format(APP_ENVCONF['loglevel']))
+    APP_ENVCONF['loglevel'] = _OPTDEFS['loglevel']['default'].upper()
 
 ## Prometheus Metrics
 
@@ -291,11 +325,7 @@ class Metric(AbcEnum):
     )
 
     def __call__(self, *labels: str) -> prom.metrics.MetricWrapperBase:
-        return self.value.labels(appconf['app_name'], *labels)
-
-    @staticmethod
-    def start_server():
-        prom.start_http_server(appconf['metrics_port'])
+        return self.value.labels(APP_ENVCONF['app_name'], *labels)
 
 # Util
 
@@ -304,62 +334,47 @@ re_email = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 ## cherrypy global config
 cp_global_config = {
     'global': {
-        'server.socket_host'   : appconf['host'],
-        'server.socket_port'   : appconf['port'],
-        'engine.autoreload.on' : appconf['is_debug'],
+        'server.socket_host'   : APP_ENVCONF['host'],
+        'server.socket_port'   : APP_ENVCONF['port'],
+        'engine.autoreload.on' : APP_ENVCONF['is_debug'],
     },
 }
 
-#  Path info
 
-
-app_dir = pjoin(os.path.dirname(os.path.abspath(__file__)), '..')
-
-def _apath(*args):
-    return pjoin(app_dir, *args)
-
-consts = dict(
-    favicon_file   = _apath('www/static/img/favicon-60x60.png'),
-    index_filename = 'index.html',
-    robotstxt_file = _apath('www/static/robots.txt'),
-    static_dir     = _apath('www/static'),
-    static_dir_doc = _apath('..', 'doc/_build/html'),
-    view_path      = _apath('www/views'),
-)
 
 # Jinja2
 
-jenv = Environment(loader = FileSystemLoader(consts['view_path']))
+APP_JENV = Environment(loader = FileSystemLoader(_PATHS['view_path']))
 
 ##############################
 ## Cherrypy Server Config   ##
 ##############################
 
-class AppDispatcher(Dispatcher):
+class _AppDispatcher(Dispatcher):
     def __call__(self, path_info: str):
         Metric.app_requests_count(path_info).inc()
         return super().__call__(path_info.split('?')[0])
 
 cp_config = {
     '/' : {
-        'request.dispatch': AppDispatcher(),
+        'request.dispatch': _AppDispatcher(),
     },
     '/static' : {
         'tools.staticdir.on'  : True,
-        'tools.staticdir.dir' : consts['static_dir'],
+        'tools.staticdir.dir' : _PATHS['static_dir'],
     },
     '/doc': {
         'tools.staticdir.on'    : True,
-        'tools.staticdir.dir'   : consts['static_dir_doc'],
-        'tools.staticdir.index' : consts['index_filename'],
+        'tools.staticdir.dir'   : _PATHS['static_dir_doc'],
+        'tools.staticdir.index' : _PATHS['index_filename'],
     },
     '/favicon.ico': {
         'tools.staticfile.on': True,
-        'tools.staticfile.filename': consts['favicon_file'],
+        'tools.staticfile.filename': _PATHS['favicon_file'],
     },
     '/robots.txt': {
         'tools.staticfile.on': True,
-        'tools.staticfile.filename': consts['robotstxt_file'],
+        'tools.staticfile.filename': _PATHS['robotstxt_file'],
     },
 }
 
@@ -397,6 +412,7 @@ lexwriters = {
 api_defaults = MapCover(dict(
     input_notation  = 'polish',
     output_notation = 'polish',
+    output_format   = 'html',
 ))
 form_defaults = MapCover({
     'input_notation'  : 'standard',
@@ -412,14 +428,20 @@ form_defaults = MapCover({
 })
 
 del(
+    _APP_DIR,
+    _LOGICS,
+    _OPTDEFS,
+    _PATHS,
     _,
     _apath,
-    pjoin,
+    _init_logger,
     _getoptval,
     get_logic,
     closure,
 
+    _AppDispatcher,
     AbcEnum,
+    Dispatcher,
     Environment,
     FileSystemLoader,
     Notation,

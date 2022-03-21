@@ -57,7 +57,7 @@ from proof.tableaux import (
     Rule,
     ClosingRule,
 )
-from proof.writers import create_tabwriter
+from proof.writers import TabWriter
 from proof.helpers import EllipsisExampleHelper
 from models import BaseModel
 
@@ -161,16 +161,16 @@ class Helper:
 
         wrnotn = self.opts['write_notation']
 
-        self.lw: BaseLexWriter = LexWriter(notn = wrnotn, enc = 'html')
-        self.pwrule = create_tabwriter(
-            notn = wrnotn,
-            format = 'html',
+        self.lw: BaseLexWriter = LexWriter(wrnotn, enc = 'html')
+        self.pwrule = TabWriter('html',
+            # notn = wrnotn,
+            # format = 'html',
             lw = self.lw,
             classes = ['example', 'rule'],
         )
-        self.pwclosure = create_tabwriter(
-            notn = wrnotn,
-            format = 'html',
+        self.pwclosure = TabWriter('html',
+            # notn = wrnotn,
+            # format = 'html',
             lw = self.lw,
             classes = ['example', 'rule', 'closure'],
         )
@@ -182,10 +182,10 @@ class Helper:
             '<sub>{0}</sub>'.format('n' if sub == 2 else sub)
         )
         rset = RenderSet(rsdata)
-        self.lwtrunk = LexWriter(notn = wrnotn, renderset = rset)
-        self.pwtrunk = create_tabwriter(
-            notn = wrnotn,
-            format = 'html',
+        self.lwtrunk = LexWriter(wrnotn, renderset = rset)
+        self.pwtrunk = TabWriter('html',
+            # notn = wrnotn,
+            # format = 'html',
             lw = self.lwtrunk,
             classes = ['example', 'build-trunk'],
         )

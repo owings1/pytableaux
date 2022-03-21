@@ -19,22 +19,21 @@
 # pytableaux - writers test cases
 import pytest
 
-from lexicals import Atomic, Operated, BaseLexWriter, Predicates, \
-    LexWriter
+from lexicals import Atomic, Operated, Predicates, LexWriter
 from parsers import parse, create_parser
 from errors import *
 from proof.tableaux import Tableau
-from proof.writers import create_tabwriter
+from proof.writers import TabWriter
 import examples
 
 # Sentence Writers
 
-std = LexWriter(notn='standard')
-stdasc = LexWriter(notn='standard', enc='ascii')
-stduni = LexWriter(notn='standard', enc='unicode')
-stdhtm = LexWriter(notn='standard', enc='html')
+std = LexWriter('standard')
+stdasc = LexWriter('standard', enc='ascii')
+stduni = LexWriter('standard', enc='unicode')
+stdhtm = LexWriter('standard', enc='html')
 
-pol = LexWriter(notn='polish')
+pol = LexWriter('polish')
 pstd = create_parser('standard')
 
 class TestBase(object):
@@ -139,7 +138,7 @@ class TestPolish(object):
 # Proof writers
 
 # asc = ascii.Writer()
-htm = create_tabwriter(notn='standard', format='html')
+htm = TabWriter('html', 'standard')
 # asv = asciiv.Writer()
 
 def example_proof(logic, name, is_build=True):

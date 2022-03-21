@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>pytableaux</title>
+    <title>{{ config.app_name|e }}</title>
     <script src="/static/js/jquery-3.6.0.min.js"></script>
     <script src="/static/js/jquery-ui.min.js"></script>
-    <script src="/static/js/app.{{ view_version }}.js"></script>
-    <script src="/static/js/proof.{{ view_version }}.js"></script>
+    <script src="/static/js/app.{{ view_version|e }}.js"></script>
+    <script src="/static/js/proof.{{ view_version|e }}.js"></script>
     <link rel="stylesheet" type="text/css" href="/static/ui-base/jquery-ui.min.css"/>
     {%- if is_controls %}
     <link rel="stylesheet" type="text/css" href="/static/ui-controls/jquery-ui.min.css"/>
     {%- endif %}
-    <link rel="stylesheet" type="text/css" href="/static/css/app.{{ view_version }}.css"/>
-    <link rel="stylesheet" type="text/css" href="/static/css/proof.{{ view_version }}.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/css/app.{{ view_version|e }}.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/css/proof.{{ view_version|e }}.css"/>
     <meta name="viewport" content="width=device-width"/>
-    {% if is_google_analytics -%}
+    {% if config.google_analytics_id -%}
         {% include 'analytics.jinja2' %}
     {% endif -%}
     <style>
@@ -23,15 +23,15 @@
 <body class="pt-app {{- ' has-proof' if is_proof else ' no-proof' }}">
     <div class="header-wrapper">
         <div class="header">
-            <a href="/">pytableaux {{ version }}</a>
+            <a href="/">{{ config.app_name|e }} {{ config.version|e }}</a>
             {% if is_debug %}
             {% set altver = 'v1' if view_version == 'v2' else 'v2' %}
-                | view_version: {{ view_version }} | <a href="/?v={{ altver }}">(change)</a>
+                | view_version: {{ view_version|e }} | <a href="/?v={{ altver }}">(change)</a>
             {% endif %}
             <span class="right">
                 <a href="/doc" target="_blank">documentation</a> | 
-                <a href="{{ source_href }}" target="_blank">source</a>
-                {%- if is_feedback %}
+                <a href="{{ config.source_href }}" target="_blank">source</a>
+                {%- if config.feedback_enabled %}
                     | <a href="/feedback">feedback</a>
                 {%- endif -%}
             </span>
@@ -45,7 +45,7 @@
     </div>
     <div class="footer-wrapper">
         <div class="footer">
-            Copyright &copy; {{ copyright }}.
+            Copyright &copy; {{ config.copyright|e }}.
         </div>
     </div>
     <script type="text/json" id="pt_app_data" class="app">{{ browser_json }}</script>

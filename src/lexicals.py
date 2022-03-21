@@ -219,11 +219,17 @@ if 'Metas' or True:
     class LexWriterMeta(AbcBaseMeta):
         'LexWriter Metaclass.'
 
-        def __call__(cls, notn: Notation = None, *args, **kw):
+        def __call__(cls, *args, **kw):
             if cls is LexWriter:
-                return Notation(
-                    notn or Notation.default
-                ).default_writer(*args, **kw)
+                if args:
+                    notn = Notation(args[0])
+                    args = args[1:]
+                else:
+                    notn = Notation.default
+                return notn.default_writer(*args, **kw)
+                # return Notation(
+                #     notn or Notation.default
+                # ).default_writer(*args, **kw)
             return super().__call__(*args, **kw)
 
         @lazy.dynca

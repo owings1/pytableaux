@@ -11,7 +11,7 @@
                     will soon be delivered. If you expect a response and don't hear back within a few
                     days, you might want to send an email directly to:
                 </p>
-                <p><i>{{ feedback_to_address|e }}</i></p>
+                <p><i>{{ config.feedback_to_address|e }}</i></p>
                 <p>
                     <a href="/">Return to home</a>.
                 </p>
@@ -26,13 +26,13 @@
                     questions, general suggestions, and so forth.
                 </p>
                 <p>
-                    For bug reports, you can also <a href="{{ issues_href }}" target="_blank">submit an issue
+                    For bug reports, you can also <a href="{{ config.issues_href }}" target="_blank">submit an issue
                     on GitHub</a>.
                 </p>
                 <p>
                     If you prefer to email directly, you can send an email to:
                 </p>
-                <p><i>{{ feedback_to_address|e }}</i></p>
+                <p><i>{{ config.feedback_to_address|e }}</i></p>
             </div>
             {% if warns %}
                 {% include 'warns.jinja2' %}
@@ -40,15 +40,15 @@
             <form method="POST" class="feedback">
                 <div class="input">
                     <label for="name">Your name</label>
-                    <input class="" id="input_name" type="text" name="name" required="required" value="{{ form_data['name']|e }}"/>
+                    <input class="" id="input_name" type="text" name="name" required="required" value="{{ form_data.name|e }}"/>
                 </div>
                 <div class="input">
                     <label for="name">Your email</label>
-                    <input class="" id="input_email" type="email" name="email" required="required" value="{{ form_data['email']|e }}"/>
+                    <input class="" id="input_email" type="email" name="email" required="required" value="{{ form_data.email|e }}"/>
                 </div>
                 <div class="input">
                     <label for="feedback_content">Feedback</label>
-                    <textarea id="input_feedback_content" name="message" required="required">{{ form_data['message']|e }}</textarea>
+                    <textarea id="input_feedback_content" name="message" required="required">{{ form_data.message|e }}</textarea>
                 </div>
                 <div class="input submit">
                     <input id="input_submit" type="submit" value="Submit"/>
