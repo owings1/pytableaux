@@ -35,7 +35,7 @@ or later is required.
     
     2. Install dependencies::
 
-        pip install future jinja2 cherrypy prometheus_client
+        pip install future jinja2 cherrypy prometheus_client simplejson
 
     3. Launch the web interface, for example::
 

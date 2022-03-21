@@ -55,7 +55,7 @@ Bivalent Modal
 Python **3.10.1** or later is required.
 
 ```bash
-pip3 install future jinja2 cherrypy prometheus_client
+pip3 install future jinja2 cherrypy prometheus_client simplejson
 ```
 
 For system-level dependencies, refer to [res/python3.dockerfile][dockerfile].

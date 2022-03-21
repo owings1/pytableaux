@@ -21,7 +21,7 @@ import pytest
 
 import web
 import cherrypy
-import json
+import simplejson as json
 from cherrypy.test import helper
 from urllib.parse import urlencode
 def test_instantiate():

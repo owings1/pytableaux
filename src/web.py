@@ -68,12 +68,12 @@ from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from jinja2 import Template
-import json
 import prometheus_client as prom
 import re
-import traceback
+import simplejson as json
+from simplejson import JSONEncoderForHTML
+# import traceback
 from typing import Any, Mapping, Sequence
-
 
 _LW_CACHE = {
     notn: {
@@ -108,7 +108,7 @@ base_view_data = MapCover(dict(
     example_args_list   = examples.titles,
     form_defaults       = form_defaults,
     lexwriter_charsets  = lexwriter_charsets,
-    lwstdhtm            = _LW_CACHE[Notation.standard]['html'],#lexwriters['standard']['html'],
+    lwstdhtm            = _LW_CACHE[Notation.standard]['html'],
     logic_categories    = logic_categories,
     parser_tables       = parser_tables,
     tabwriter_formats   = TabWriter.Registry.keys(),
@@ -121,7 +121,7 @@ base_view_data = MapCover(dict(
 ###################
 
 # TODO: serve separate cached
-_STATIC_JSON = json.dumps(dict(base_browser_data), indent = 2)
+_STATIC_JSON = json.dumps(dict(base_browser_data), indent = 2, cls = JSONEncoderForHTML)
 
 _EMPTY_MAP = MapProxy()
 _TEMPLATE_CACHE: dict[str, Template] = {}
@@ -220,7 +220,7 @@ class App:
             view_data['debugs'] = debugs
 
         view_data.update(
-            browser_json = json.dumps(browser_data, indent = 2),
+            browser_json = json.dumps(browser_data, indent = 2, cls = JSONEncoderForHTML),
             config       = self.config,
             is_debug     = is_debug,
             is_proof     = is_proof,
