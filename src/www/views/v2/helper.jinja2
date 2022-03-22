@@ -15,7 +15,7 @@
 {%- endmacro -%}
 
 {% macro predicate_symbol(notn, symbol, subscript) -%}
-    <span class="predicate-symbol notation-{{notn|e}} hidden">
+    <span class="predicate-symbol lexicon notation-{{notn|e}} hidden">
         {{- symbol|e }}{% if subscript > 0 %}<sub>{{ subscript|e }}</sub>{% endif -%}
     </span>
 {%- endmacro %}

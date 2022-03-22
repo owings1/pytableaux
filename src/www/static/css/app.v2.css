@@ -451,6 +451,10 @@ rtd-theme:
 .pt-app table.argument td a.del-premise {
   position: relative;
   padding-left: 1em;
+  display: none;
+}
+.pt-app table.argument td:hover a.del-premise {
+  display: inline;
 }
 .pt-app table.argument td a.del-premise::before,
 .pt-app table.argument td a.del-premise::after {
@@ -460,7 +464,7 @@ rtd-theme:
   top: 25%;
   transform: translateY(-50%);
 
-  color: #f3217cf5;
+  color: #e91e63ba;
   content: '\2297';
 }
 
@@ -543,31 +547,15 @@ rtd-theme:
   margin: 0 0 7px 0;
   background-color: #edf0f261;
 }
-.pt-app .lexicon dl {
-  margin: 0 0 0 3px;
-}
-.pt-app .lexicon dd {
-  padding: 2px 0;
-  margin: 0px 0 4px 24px;
-}
-.pt-app .lexicon dt {
-  float: left;
-  background-color: #eee;
-  padding: 2px 3px;
-  clear: both;
-  min-width: 12px;
-  border: 1px solid #cccccc;
-  text-align: center;
-}
-.pt-app #lexicons-content div.predicates {
-  max-width: 300px;
-}
 .pt-app #lexicons-content .predicate-symbol {
   min-width: 10px;
 }
 .pt-app #lexicons-content input.arity {
   width: 10px;
   padding: 2px;
+}
+.pt-app #lexicons-content table.predicates {
+  margin: 0;
 }
 .pt-app #lexicons-content table.predicates th {
   font-weight: normal;
@@ -607,6 +595,7 @@ rtd-theme:
 .pt-app #lexicons-content .predicate-symbol.hidden {
   display: none;
 }
+.pt-app #lexicons-content table.predicates td,
 .pt-app #lexicons-content .operator-symbols td {
   padding: 3px;
 }

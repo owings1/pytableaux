@@ -98,6 +98,7 @@
         inputPremise      : '.' + Cls.input + '.' + Cls.premise,
         inputSentence     : '.' + Cls.input + '.' + Cls.sentence,
         linksButton       : ['a', Cls.button].join('.'),
+        predicates        : '.' + Cls.predicates,
         premises          : '.' + Cls.premises,
         rowsDebug         : '.' + Cls.debug,
         rowsPredUser      : ['tr', Cls.predUser].join('.'),
@@ -114,7 +115,6 @@
         templatePred      : '#predicateRowTemplate',
         wrapDebugs        : '#pt_debugs_wrapper',
         wrapPredicates    : '#predicates_input_table',
-        wrapPremises      : '#premises_inputs',
     }
 
     const API_PARSE_URI = '/api/parse'
@@ -160,7 +160,6 @@
             }
 
             setTimeout(function() {
-                // ensureEmptyPremise()
                 refreshNotation()
                 refreshLogic()
                 if (IS_PROOF) {
@@ -203,11 +202,16 @@
                         addPremise()
                     } else if ($target.hasClass(Cls.predAdd)) {
                         // Add predicate.
-                        addEmptyPredicate().find(':input').focus()
+                        const coords = getNextPredCoords()
+                        const arity = 1
+                        addPredicate(coords[0], coords[1], arity)
+                            .find(':input')
+                            .focus() 
                     } else if ($target.hasClass(Cls.premiseDel)) {
                         // Delete premise.
                         const $prem = $target.closest(Sel.inputPremise)
                         $prem.nextAll(Sel.inputPremise).each(function() {
+                            // renumber later ones.
                             const $me = $(this)
                             const num = +$me.attr(Atr.dataPremNum) - 1
                             $me.attr(Atr.dataPremNum, num)
@@ -219,18 +223,16 @@
                         // Delete predicate.
                         $target.closest(Sel.rowsPredUser).remove()
                         refreshStatuses()
-                    }else if ($target.is(Sel.clearArg)) {
+                    } else if ($target.is(Sel.clearArg)) {
                         // Clear the argument.
                         clearArgument()
                         clearArgExample()
-                        // ensureEmptyPremise()
                         refreshStatuses()
                     }
                 })
                 .on('submit', function(e) {
                     submitForm()
                 })
-                // .on('keyup focus', [Sel.fieldsPremise, Sel.fieldConclusion].join(), ensureEmptyPremise)
         }
 
         function initPlugins() {
@@ -303,30 +305,20 @@
         }
 
         /**
-         * Check whether there is already an empty premise input row available
-         * for input.
-         * @return {boolean}
-         */
-        function hasEmptyPremise() {
-            var hasEmpty = false
-            $(Sel.fieldsPremise, $AppForm).each(function(i){
-                if (!$(this).val()) {
-                    hasEmpty = true
-                    // Stop iteration (break).
-                    return false
-                }
-            })
-            return hasEmpty
-        }
-
-        /**
-         * Ensure that there is an empty premise input row available for input.
+         * Cleanup tooltip and remove a premise from the DOM.
+         * @param {object} $prem The singelton premise row jQuery element.
          * @return {void}
          */
-        function ensureEmptyPremise() {
-            if (!hasEmptyPremise()) {
-                addPremise()
-            }
+        function _removePrem($prem) {
+            // Destroy tooltips.
+            $('.' + Cls.status, $prem).add('.' + Cls.tooltip).each(function() {
+                const tooltip = $(this).tooltip('instance')
+                if (tooltip) {
+                    tooltip.destroy()
+                }
+            })
+            // TODO: Prune ParseCache?
+            $prem.remove()
         }
 
         /**
@@ -344,6 +336,7 @@
             $.each(AppData.nups, function(notation, symbols) {
                 const classes = [
                     Cls.predSymbol,
+                    Cls.lexicon,
                     [Cls.notation, esc(notation)].join('-')
                 ]
                 if (notation !== thisNotation)
@@ -360,17 +353,16 @@
                 arity       : arity || '',
                 symbol_html : html,
             }
-            const $el = $(render(Templates.predicate, vars))
-            $(Sel.wrapPredicates).append($el)
-            return $el
+            return $(render(Templates.predicate, vars)).appendTo(
+                $(Sel.predicates, $AppForm)
+            )
         }
 
         /**
-         * Add a new predicate. Calculates the next available index and
-         * subscript. Assigns arity 1.
-         * @return {object} The jQuery element of the created tr.
+         * Get the next available index, subscript.
+         * @return {array}
          */
-        function addEmptyPredicate() {
+        function getNextPredCoords() {
             const $symbols   = $(Sel.fieldsPredSymbol, $AppForm)
             const numSymbols = $symbols.length
             var index      = 0
@@ -384,7 +376,15 @@
                     subscript += 1
                 }
             }
-            return addPredicate(index, subscript, 1)
+            return [index, subscript]
+        }
+
+        /**
+         * Clear all user predicates.
+         * @return {void}
+         */
+        function clearPredicates() {
+            $(Sel.rowsPredUser, $AppForm).remove()
         }
 
         /**
@@ -403,34 +403,11 @@
         }
 
         /**
-         * Cleanup tooltip and remove a premise from the DOM.
-         * @param {object} $prem The singelton premise row jQuery element.
-         * @return {void}
-         */
-        function _removePrem($prem) {
-            // Destroy status tooltip
-            var tooltip = $('.' + Cls.status, $prem).tooltip('instance')
-            if (tooltip) {
-                tooltip.destroy()
-            }
-            // TODO: Prune ParseCache?
-            $prem.remove()
-        }
-
-        /**
          * Clear the example argument select menu.
          * @return {void}
          */
         function clearArgExample() {
             $(Sel.selectArgExample).val('').selectmenu('refresh')
-        }
-
-        /**
-         * Clear all user predicates.
-         * @return {void}
-         */
-        function clearPredicates() {
-            $(Sel.rowsPredUser, $AppForm).remove()
         }
 
         /**
@@ -453,15 +430,17 @@
         function refreshNotation() {
 
             const notation = $(Sel.selectParseNotn).val()
-            const notnClassSel = '.' + [Cls.notation, notation].join('-')
+            const notnClass = [Cls.notation, notation].join('-')
 
-            // Show/hide lexicons (TODO: make selectors)
-            $('.' + Cls.lexicons + ' .' + Cls.lexicon + ':not(.' + Cls.predicates + ')', $AppForm).hide()
-            $('.' + Cls.lexicon + notnClassSel, $AppForm).show()
-            $('.' + Cls.predSymbol, $AppForm)
-                .addClass(Cls.hidden)
-                .filter(notnClassSel)
-                .removeClass(Cls.hidden)
+            // Show/hide lexicons
+            $('.' + Cls.lexicon, $AppForm).each(function() {
+                const $me = $(this)
+                if ($me.hasClass(notnClass)) {
+                    $me.removeClass(Cls.hidden).show()
+                } else {
+                    $me.addClass(Cls.hidden).hide()
+                }
+            })
 
             // Use built-in input strings for example arguments.
             if ($(Sel.selectArgExample).val()) {
@@ -552,7 +531,6 @@
                     preds = getPredsData()
                 }
                 // Send api-parse request.
-                // const apiData = getApiData()
                 $.ajax({
                     url         : API_PARSE_URI,
                     method      : 'POST',

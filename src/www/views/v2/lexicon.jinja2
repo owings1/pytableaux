@@ -58,7 +58,7 @@
                 <div class="clear"></div>
             </div>
         {% endfor %}
-        <div class="lexicon predicates">
+        <div class="">
             <span class="label">Predicates</span>
             <table id="predicates_input_table" class="predicates operator-symbols predicate-symbols">
                 {%- set PredSys = lexicals.Predicate.System -%}
@@ -68,7 +68,7 @@
                             {%- for notn in Notation -%}
                                 {%- set symbol = CharTable.fetch(notn).char(PredSys, pred) -%}
                                 {%- set subscript = pred.subscript -%}
-                                <span class="predicate-symbol notation-{{ notn.name|e }} hidden">
+                                <span class="lexicon predicate-symbol notation-{{ notn.name|e }} hidden">
                                     {{- symbol|e }}{% if pred.subscript > 0 %}<sub>{{ pred.subscript|e }}</sub>{% endif -%}
                                 </span>
                             {% endfor %}
