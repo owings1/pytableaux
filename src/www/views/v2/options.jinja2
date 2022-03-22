@@ -11,11 +11,11 @@
     </select>
 </div>
 <div class="input select">
-    <label for="format">Output Format</label>
-    <select id="format" name="format">
+    <label for="output_format">Output Format</label>
+    <select id="output_format" name="output_format">
         {% for format in output_formats -%}
             <option value="{{ format|e }}" {{- 
-                helper.select_opt(form_data, 'format', format) 
+                helper.select_opt(form_data, 'output_format', format) 
             }}>
                 {{- format|e -}}
             </option>
@@ -72,4 +72,10 @@
     <input type="checkbox" id="options_group_optimizations" name="group_optimizations"
         value="1" {{- helper.checkbox_default(form_data, 'group_optimizations') }}/>
 </div>
+<div class="input">
+    <label for="options_debug_off">Disable Debug</label>
+    <input type="checkbox" id="options_debug_off" name="debug" value="0"/>
+</div>
+{% else -%}
+<input type="hidden" name="debug" value="0"/>
 {% endif -%}

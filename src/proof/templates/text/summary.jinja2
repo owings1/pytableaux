@@ -17,7 +17,7 @@
 
 {% if argument %}
 {% set col1len = 3 %}
-{% set col2len = ((premises + [conclusion])|map('length')|list + [8])|max %}
+{% set col2len = ((premises + (conclusion,))|map('length')|list + [8])|max %}
 {% set f = "%-" + ((col2len)|string) + 's' %}
 {% set rowlen = col1len + col2len + 3 %}
 {% set rowline = '-' * rowlen %}

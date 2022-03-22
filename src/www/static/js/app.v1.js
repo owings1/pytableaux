@@ -205,7 +205,7 @@
          * @return String name of the foramat, e.g. 'html'
          */
         function currentOutputFormat() {
-            return $('#format', $Ctx).val()
+            return $('#output_format', $Ctx).val()
         }
 
         /**
@@ -629,7 +629,7 @@
                 }
             })
             data.output.notation = $('#output_notation', $Frm).val()
-            data.output.format = $('#format', $Frm).val()
+            data.output.format = $('#output_format', $Frm).val()
             data.output.charset = $('#output_charset', $Frm).val()
             data.output.options = {classes: []}
             $('input:checkbox.options', $Frm).each(function() {

@@ -78,17 +78,12 @@
         <div class="clear"></div>
     </div>
     {% if is_proof -%}
-    {# <div class="evaluation"> #}
         {% if resp_data.writer.format == 'html' %}
             {{ resp_data.tableau.body }}
         {% else %}
-            <pre>{{ resp_data.tableau.body|e }}</pre>
-        {% endif %}
-    {# </div> #}
-        {# <div class="evaluation">
-            <div class="proof-output">
-
+            <div class="tableau-wrapper plaintext">
+                <pre>{{ resp_data.tableau.body|e }}</pre>
             </div>
-        </div> #}
+        {% endif %}
     {% endif %}
 {%- endblock -%}

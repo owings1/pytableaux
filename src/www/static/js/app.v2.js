@@ -59,8 +59,8 @@
         shortkey     : 'shortkey',
         status       : 'status',
         tableau      : 'tableau',
-        tableauControls : 'tableau-controls',
         tooltip      : 'tooltip',
+        uiControls   : 'ui-conrols',
         withControls : 'with-controls',
         withModels   : 'with-models',
     }
@@ -95,7 +95,7 @@
         rowsPremise       : ['.input', Cls.premise].join('.'),
         selectArgExample  : '#example_argument',
         selectLogic       : '#selected_logic',
-        selectOutputFmt   : '#format',
+        selectOutputFmt   : '#output_format',
         selectOutputNotn  : '#output_notation',
         selectParseNotn   : '#input_notation',
         selectOutputChrs  : '#output_charset',
@@ -199,8 +199,8 @@
 
             // UI Tooltip - form help
             $('.' + Cls.tooltip, $AppForm).tooltip({show: {delay: 1000}})
-            // UI Tooltip - controls help
-            $('.' + Cls.tableauControls + ' a[title]', $AppBody).each(function() {
+            // UI Tooltip - ui controls help
+            $('.' + Cls.uiControls + ' a[title]', $AppBody).each(function() {
                 const $me = $(this)
                 const classNames = [Cls.tooltip, Cls.controls]
                 const shortkey = $me.attr(Atr.dataShortKey)
@@ -290,10 +290,6 @@
             $('input:submit', $AppForm).prop('disabled', true)
             const data = getApiData()
             const json = JSON.stringify(data)
-            // var $test = $(':checkbox[name="testbox"]')
-            // if (!$test.is(':checked')) {
-            //     // $test.val('').prop('checked', true)
-            // }
             $(Sel.submitJson).val(json)
         }
 

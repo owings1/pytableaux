@@ -157,6 +157,9 @@ rtd-theme:
 .pt-app .tableau-wrapper {
   margin-top: 170px;
 }
+.pt-app .tableau-wrapper.plaintext > pre {
+  padding: 20px;
+}
 .pt-app .header-wrapper {
   /* background-color: #2980b9; */
   background-color: #343131;
@@ -663,7 +666,7 @@ rtd-theme:
 
 /* curly brace */
 .pt-app .json-dump .json-obrace {
-  color: orange;
+  color: #dddddd;
 }
 /* angle brace */
 .pt-app .json-dump .json-abrace {

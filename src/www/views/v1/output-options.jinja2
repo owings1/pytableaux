@@ -1,9 +1,9 @@
 <div class="input select">
-    <label for="format">Format</label>
-    <select id="format" name="format">
+    <label for="output_format">Format</label>
+    <select id="output_format" name="output_format">
         {% for format in output_formats -%}
             <option value="{{ format|e }}" {{- 
-                helper.select_opt(form_data, 'format', format) 
+                helper.select_opt(form_data, 'output_format', format) 
             }}>
                 {{- format|e -}}
             </option>

@@ -92,7 +92,7 @@ api_defaults = MapCover(dict(
 ))
 form_defaults = MapCover(dict(
     input_notation  = 'standard',
-    format          = 'html',
+    output_format   = 'html',
     output_notation = 'standard',
     output_charset  = 'html',
     show_controls   = True,
