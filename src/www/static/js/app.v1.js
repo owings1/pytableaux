@@ -118,7 +118,7 @@
             $('input:submit', $Frm).prop('disabled', true)
             const data = getApiData()
             const json = JSON.stringify(data)
-            debug('submitForm', data)
+            // debug('submitForm', data)
             $('input[name="api-json"]', $Frm).val(json)
         }
 
@@ -478,12 +478,15 @@
                 const notation = currentNotation()
                 const input = $(this).val()
                 if (input) {
-                    const hash = hashString([input, notation].join('.'))
-                    if (!isForce && +$status.attr('data-hash') === hash) {
+                    // Check for change against stored value.
+                    const hash = [input, notation].join('.')
+                    const stored = $status.attr('data-hash')
+                    if (!isForce && stored === hash) {
                         return
                     }
                     $status.attr('data-hash', hash)
-                    apiData = getApiData()
+
+                    var apiData = getApiData()
                     $.ajax({
                         url         : '/api/parse',
                         method      : 'POST',
@@ -579,28 +582,6 @@
                     currentOutputNotation()
                 ].join(' | ')
             )
-        }
-
-        /**
-         * Generate an integer hash for a string.
-         *
-         * From: http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
-         *
-         * @param str The input string.
-         * @return int The hash.
-         */
-        function hashString(str) {
-            var hash = 0
-            if (str.length === 0) {
-                return hash
-            }
-            var chr
-            for (var i = 0; i < str.length; i++) {
-                chr   = str.charCodeAt(i)
-                hash  = ((hash << 5) - hash) + chr
-                hash |= 0; // Convert to 32bit integer
-            }
-            return hash
         }
 
         /**
@@ -721,6 +702,6 @@
 
         init()
 
-        debug({AppData})
+        // debug({AppData})
     })
 })(jQuery);

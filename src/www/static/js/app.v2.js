@@ -42,16 +42,22 @@
         debugHead    : 'debug-heading',
         good         : 'good',
         hidden       : 'hidden',
+        input        : 'input',
         jsonDump     : 'json-dump',
-        jsonViewDoc  : 'json-document', // used by jsonViewer plugiin
+        jsonViewDoc  : 'json-document', // used by jsonViewer plugin
+        lexicon      : 'lexicon',
+        lexicons     : 'lexicons',
         logicDetails : 'logic-details',
+        notation     : 'notation',      // used as prefix
         options      : 'options',
         predAdd      : 'add-predicate',
+        predicates   : 'predicates',
         predSymbol   : 'predicate-symbol',
         predUser     : 'user-predicate',
         premise      : 'premise',
         sentence     : 'sentence',
         shortkey     : 'shortkey',
+        status       : 'status',
         tableau      : 'tableau',
         tableauControls : 'tableau-controls',
         tooltip      : 'tooltip',
@@ -102,7 +108,7 @@
     }
 
     const API_PARSE_URI = '/api/parse'
-    var SentenceRenders = Object.create(null)
+
 
     $(document).ready(function() {
 
@@ -117,6 +123,14 @@
 
         const $AppBody = $(Sel.appBody)
         const $AppForm = $(Sel.appForm)
+
+        const ParseCache = Object.create(null)
+        if (IS_DEBUG) {
+            window.AppDebug = {
+                AppData,
+                ParseCache,
+            }
+        }
 
         /**
          * Main initialization routine.
@@ -150,7 +164,7 @@
                     const $target = $(e.target)
                     if ($target.is(Sel.clearArgExample)) {
                         clearArgument()
-                        clearExampleArgument()
+                        clearArgExample()
                         ensureEmptyPremise()
                         refreshStatuses()
                     } else if ($target.hasClass(Cls.predAdd)) {
@@ -196,17 +210,8 @@
                 html += '</span>'
                 $me.tooltip({content: html, show: {delay: 2000}})
             })
-
-            // Init Tableau Plugin
-            $(Sel.tableaux).tableau({
-                // autoWidth: true,
-                scrollContainer: $(document)
-            })
-
+            
             setTimeout(function() {
-                if (IS_PROOF) {
-                    $(Sel.tableaux).tableau()
-                }
                 ensureEmptyPremise()
                 refreshNotation()
                 refreshLogic()
@@ -214,6 +219,15 @@
                     refreshStatuses()
                 }
             })
+
+            // Init Tableau Plugin
+            if (IS_PROOF) {
+                $(Sel.tableaux).tableau({
+                    // autoWidth: true,
+                    scrollContainer: $(document)
+                })
+            }
+
 
             // Debugs data contents init.
 
@@ -281,17 +295,17 @@
         /**
          * Interpolate variable strings like {varname}.
          *
-         * @param {string} html The template html.
+         * @param {string} str The template string.
          * @param {object} vars The variables object.
-         * @return {string} The rendered content.
+         * @return {string} The rendered string.
          */
-        function render(html, vars) {
+        function render(str, vars) {
             if (vars) {
                 $.each(vars, function(name, val) {
-                    html = html.replace(new RegExp('{' + name + '}', 'g'), val)
+                    str = str.replace(new RegExp('{' + name + '}', 'g'), val)
                 })
             }
-            return html
+            return str
         }
 
         /**
@@ -304,30 +318,13 @@
          */
         function addPremise(value, status, message) {
             const premiseNum = $(Sel.inputsPremise, $AppForm).length + 1
-            $(Sel.wrapPremises).append(render(Templates.premise, {
+            const vars = {
                 n       : premiseNum,
                 value   : value   || '',
                 status  : status  || '',
                 message : message || '',
-            }))
-        }
-
-        /**
-         * Remove all premise input rows.
-         *
-         * @return {void}
-         */
-        function clearPremises() {
-            $(Sel.rowsPremise, $AppForm).remove()
-        }
-
-        /**
-         * Clear the value of the conclusion input.
-         *
-         * @return {void}
-         */
-        function clearConclusion() {
-            $(Sel.inputConclusion).val('')
+            }
+            $(Sel.wrapPremises).append(render(Templates.premise, vars))
         }
 
         /**
@@ -336,9 +333,12 @@
          * @return {void}
          */
         function clearArgument() {
-            clearPremises()
-            clearConclusion()
-            SentenceRenders = Object.create(null)
+            $(Sel.rowsPremise, $AppForm).remove()
+            $(Sel.inputConclusion).val('')
+            for (var key in ParseCache) {
+                delete ParseCache[key]
+            }
+            // ParseCache = Object.create(null)
         }
 
         /**
@@ -346,7 +346,7 @@
          *
          * @return {void}
          */
-        function clearExampleArgument() {
+        function clearArgExample() {
             $(Sel.selectArgExample).val('').selectmenu('refresh')
         }
 
@@ -360,15 +360,13 @@
          * @return {object} The jquery element of the created tr.
          */
         function addPredicate(index, subscript, arity) {
-            // TODO: hardcoded values
-            // ----------------------
-            //
-            // classes  :      notation-*
-            //
             const thisNotation = $(Sel.selectParseNotn).val()
             var html = ''
             $.each(AppData.nups, function(notation, symbols) {
-                var classes = [Cls.predSymbol, 'notation-' + esc(notation)]
+                const classes = [
+                    Cls.predSymbol,
+                    [Cls.notation, esc(notation)].join('-')
+                ]
                 if (notation !== thisNotation)
                     classes.push(Cls.hidden)
                 html += '<span class="' + classes.join(' ') + '">'
@@ -469,34 +467,33 @@
          * @return {void}
          */
         function refreshNotation() {
-            // TODO: hardcoded values
-            // ----------------------
-            //            
-            // classes   :     lexicons
-            //                 lexicon
-            //                 notation-*
-            //                 predicates [TODO: remove if possible]
-            //
+
             const notation = $(Sel.selectParseNotn).val()
-            $('.lexicons .lexicon:not(.predicates)', $AppForm).hide()
-            $('.lexicon.notation-' + notation, $AppForm).show()
+            const notnClassSel = '.' + [Cls.notation, notation].join('-')
+
+            // Show/hide lexicons (TODO: make selectors)
+            $('.' + Cls.lexicons + ' .' + Cls.lexicon + ':not(.' + Cls.predicates + ')', $AppForm).hide()
+            $('.' + Cls.lexicon + notnClassSel, $AppForm).show()
             $('.' + Cls.predSymbol, $AppForm)
                 .addClass(Cls.hidden)
-                .filter('.notation-' + notation)
+                .filter(notnClassSel)
                 .removeClass(Cls.hidden)
+
+            // Use built-in input strings for example arguments.
             if ($(Sel.selectArgExample).val()) {
                 refreshArgExample()
-            } else {
-                // Translate good sentences.
-                $(Sel.inputsSentence, $AppForm).each(function() {
-                    const value = $(this).val()
-                    if (value && SentenceRenders[value]) {
-                        if (SentenceRenders[value][notation]) {
-                            $(this).val(SentenceRenders[value][notation].default)
-                        }
-                    }
-                })
+                return
             }
+
+            // Otherwise get translations from cached succesful api-parse responses.
+            $(Sel.inputsSentence, $AppForm).each(function() {
+                const value = $(this).val()
+                if (value && ParseCache[value]) {
+                    if (ParseCache[value][notation]) {
+                        $(this).val(ParseCache[value][notation].default)
+                    }
+                }
+            })
         }
 
         /**
@@ -531,72 +528,70 @@
          * @return {void}
          */
         function refreshStatuses(isForce) {
-            // TODO: hardcoded values
-            // ----------------------
-            //
-            // classes   : input, status
-            //
-            $(Sel.inputsSentence, $AppForm).each(function(sentenceIndex) {
-                const $status = $(this).closest('div.input').find('.status')
+            $(Sel.inputsSentence, $AppForm).each(function() {
+
+                const $status = $(this).closest('div.' + Cls.input).find('.' + Cls.status)
                 const notation = $(Sel.selectParseNotn).val()
                 const input = $(this).val()
-                if (input) {
-                    // const hash = hashString([input, notation].join('.'))
-                    // const stored = +$status.attr(Atr.dataHash)
-                    const hash = [input, notation].join('.')
-                    const stored = $status.attr(Atr.dataHash)
-                    if (!isForce && stored === hash) {
-                        debug('nochange', hash)
-                        return
-                    }
-                    debug('CHANGE', hash)
-                    $status.attr(Atr.dataHash, hash)
-                    var apiData = getApiData()
-                    $.ajax({
-                        url         : API_PARSE_URI,
-                        method      : 'POST',
-                        contentType : 'application/json',
-                        dataType    : 'json',
-                        data        : JSON.stringify({
-                            input      : input,
-                            notation   : notation,
-                            predicates : apiData.argument.predicates
-                        }),
-                        success: function(res) {
-                            $status
-                                .removeClass(Cls.bad)
-                                .addClass(Cls.good)
-                                .attr('title', res.result.type)
-                                .tooltip()
-                            SentenceRenders[input] = res.result.rendered
-                        },
-                        error: function(xhr, textStatus, errorThrown) {
-                            $status.removeClass(Cls.good).addClass(Cls.bad)
-                            var title
-                            if (xhr.status == 400) {
-                                const res = xhr.responseJSON
-                                if (res.errors) {
-                                    if (res.errors.Sentence) {
-                                        title = res.errors.Sentence
-                                    } else {
-                                        var errKey = Object.keys(res.errors)[0]
-                                        title = [errKey, res.errors[errKey]].join(': ')
-                                    }
+
+                if (!input) {
+                    // Clear status.
+                    $status
+                        .removeClass([Cls.good, Cls.bad])
+                        .attr('title', '')
+                        .attr(Atr.dataHash, '')
+                    return
+                }
+
+                // Check for change against stored value.
+                const hash = [input, notation].join('.')
+                const stored = $status.attr(Atr.dataHash)
+                if (!isForce && stored === hash) {
+                    return
+                }
+                $status.attr(Atr.dataHash, hash)
+
+                // Send api-parse request.
+                const apiData = getApiData()
+                $.ajax({
+                    url         : API_PARSE_URI,
+                    method      : 'POST',
+                    contentType : 'application/json',
+                    dataType    : 'json',
+                    data        : JSON.stringify({
+                        input      : input,
+                        notation   : notation,
+                        predicates : apiData.argument.predicates
+                    }),
+                    success: function(res) {
+                        $status
+                            .removeClass(Cls.bad)
+                            .addClass(Cls.good)
+                            .attr('title', res.result.type)
+                            .tooltip()
+                        ParseCache[input] = res.result.rendered
+                    },
+                    error: function(xhr, textStatus, errorThrown) {
+                        $status.removeClass(Cls.good).addClass(Cls.bad)
+                        var title
+                        if (xhr.status === 400) {
+                            const res = xhr.responseJSON
+                            if (res.errors) {
+                                if (res.errors.Sentence) {
+                                    title = res.errors.Sentence
                                 } else {
-                                    title = [res.error, res.message].join(': ')
+                                    var errKey = Object.keys(res.errors)[0]
+                                    title = [errKey, res.errors[errKey]].join(': ')
                                 }
                             } else {
-                                title = [textStatus, errorThrown].join(': ')
+                                title = [res.error, res.message].join(': ')
                             }
-                            $status.attr('title', title).tooltip()
-                            // delete SentenceRenders[input]
+                        } else {
+                            title = [textStatus, errorThrown].join(': ')
                         }
-                    })
-                } else {
-                    $status.removeClass([Cls.good, Cls.bad])
-                    $status.attr('title', '')
-                    $status.attr(Atr.dataHash, '')
-                }
+                        $status.attr('title', title).tooltip()
+                    }
+                })
             })
         }
 
