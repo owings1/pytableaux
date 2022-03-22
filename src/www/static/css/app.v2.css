@@ -199,6 +199,7 @@ rtd-theme:
 .pt-app.has-proof .ui-tabs-anchor {
   padding: .2em 0.5em;
 }
+
 /*
  * Tabs
  */
@@ -378,27 +379,28 @@ rtd-theme:
  * Argument Form
  * ===========================
  */
-/* .pt-app #argument-input-panel {
-  width: 380px;
-  margin-right: 10px;
-  margin-bottom: 10px;
-} */
+.pt-app #argument-input-panel {
+  width: 351px;
+}
 .pt-app #clear_argument_wrapper {
   float: right;
-  display:inline;
+  display: inline;
   margin-right: 28px;
   margin-top: 8px;
 }
 
-/* Sentence input */
+/* Sentence input table */
 .pt-app .input.sentence input {
   width: 215px;
 }
-/* Sentence status */
 .pt-app .input.sentence .status {
-  padding: 8px;
   background-color: #cccccc;
+}
+.pt-app .input.sentence .status,
+.pt-app table.argument tr.sentence td:last-child {
+  padding: 8px;
   text-align: center;
+  width: 20px;
 }
 .pt-app .input.sentence .status.good,
 .pt-app .input.sentence .status.bad {
@@ -409,38 +411,75 @@ rtd-theme:
 }
 .pt-app .input.sentence.conclusion .status.bad {
   background-color: #bc1a1ad4;
-  /* rgb(255, 100, 85); */
 }
 .pt-app .input.sentence.premise .status.good {
   background-color: #2196f3;
-  /* #9245d7; */
 }
 .pt-app .input.sentence.premise .status.bad {
   background-color: #f3217cf5;
-  /* rgb(250, 156, 148); */
 }
-/* Sentence table */
-.pt-app table.argument tbody.spacer td {
-  color: inherit;
-  /* background-color: #bcd9ecbd; */
+
+.pt-app table.argument td a {
+  /* display: block; */
+  text-decoration: none;
 }
+
+.pt-app table.argument td/*:hover*/ a.del-premise {
+  text-decoration: none;
+}
+
+/* * * * * * * * * * * * * * * **
+ * Example of character as icon 
+ * * * * * * * * * * * * * * * * * 
+.icon {
+  position: relative;
+  padding-left: 1em;
+}
+.icon::before,
+.icon::after {
+  position: absolute;
+  font-size: 3.25em;
+  left: 0;
+  top: 25%;
+  transform: translateY(-50%);
+
+  color: #f3217cf5;
+  content: '\2297';
+}
+/* * * * * * * * * * * * * * * */
+
+.pt-app table.argument td a.del-premise {
+  position: relative;
+  padding-left: 1em;
+}
+.pt-app table.argument td a.del-premise::before,
+.pt-app table.argument td a.del-premise::after {
+  position: absolute;
+  font-size: 3.25em;
+  left: 0;
+  top: 25%;
+  transform: translateY(-50%);
+
+  color: #f3217cf5;
+  content: '\2297';
+}
+
+/* .pt-app table.argument td a.del-premise:hover {
+  color: red;
+  background-color: #cccccc;
+} */
+
+
 .pt-app table.argument tbody.spacer td a {
-  /* border: 1px solid #bcd9ec; */
   display: block;
   padding: 7px;
 }
-.pt-app table.argument tbody.spacer td a.add-premise:hover {
+.pt-app table.argument td a.add-premise:hover {
   background-color: #2980b9;
 }
-.pt-app table.argument tr.sentence td:last-child {
-  padding: 8px;
-}
-.pt-app table.argument td a.del-premise {
-  display: block;
-}
-.pt-app table.argument td a.del-premise:hover {
-  background-color: red;
-}
+
+
+
 
 /* Logic */
 .pt-app .select-logic,
@@ -453,10 +492,11 @@ rtd-theme:
 .pt-app .argument .select-logic {
   margin-bottom: 7px;
 }
+
 /* Example argument */
-.pt-app select#example_argument {
+/* .pt-app select#example_argument {
   margin: 5px 0 10px 1px;
-}
+} */
 .pt-app .argument .example-argument {
   margin: 0 0 15px 0;
 }
@@ -580,7 +620,6 @@ rtd-theme:
 .pt-app a.add-predicate {
   /* background-color: #6ab0de69; */
   padding: 3px 8px;
-
   text-decoration: none;
   display: inline-block;
 }
