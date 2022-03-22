@@ -118,6 +118,7 @@
     }
 
     const API_PARSE_URI = '/api/parse'
+    const TTIP_OPTS = {show: {delay: 1000}}
 
     $(document).ready(function() {
 
@@ -260,7 +261,7 @@
             $('.' + Cls.buttonGroup, $AppBody).controlgroup({button: 'a'})
 
             // UI Tooltip - form help
-            $('.' + Cls.tooltip, $AppForm).tooltip({show: {delay: 1000}})
+            $('.' + Cls.tooltip, $AppForm).tooltip(TTIP_OPTS)
 
             // UI Tooltip - ui controls help
             $('.' + Cls.uiControls + ' a[title]', $AppBody).each(function() {
@@ -301,7 +302,8 @@
                 message : message || '',
             }
             const html = render(Templates.premise, vars)
-            $(Sel.premises, $AppForm).append(html)
+            const $prem = $(html).appendTo($(Sel.premises, $AppForm))
+            $('.' + Cls.tooltip, $prem).tooltip(TTIP_OPTS)
         }
 
         /**
