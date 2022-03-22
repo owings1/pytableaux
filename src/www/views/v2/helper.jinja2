@@ -1,16 +1,21 @@
 {#
     v2
 #}
-{%- macro premise(id, value='', status='', message='') %}
-    <div class="sentence input premise">
-        <label for="premise{{id}}">Premise {{id}}</label>
-        <input class="sentence premise" id="premise{{id}}" type="text" name="premises[]" value="{{value|e}}"/>
-        <span class="status {{ status }}" title="{{ message|e }}"></span>
-    </div>
+{%- macro premise(num, value='', status='', message='') %}
+    {% set marker = 'P' ~ num|e -%}
+    <tr class="input sentence premise" data-premise-num="{{ num|e }}">
+        <td class="status {{ status|e }}" title="{{ message|e }}">
+            <span class="premise-marker">{{marker}}</span>
+        </td>
+        <td>
+            <input class="sentence premise" type="text" name="premises[]" value="{{ value|e }}"/>
+        </td>
+        <td><a class="del-premise" href="javascript:">X</a></td>
+    </tr>
 {%- endmacro -%}
 
 {% macro predicate_symbol(notn, symbol, subscript) -%}
-    <span class="predicate-symbol notation-{{notn}} hidden">
+    <span class="predicate-symbol notation-{{notn|e}} hidden">
         {{- symbol|e }}{% if subscript > 0 %}<sub>{{ subscript }}</sub>{% endif -%}
     </span>
 {%- endmacro %}
@@ -19,13 +24,12 @@
     <tr class="user-predicate">
         <td>
             {{- caller() -}}
-            <input type="hidden" class="predicate-symbol" name="user_predicate_symbols[]" value="{{ index }}.{{ subscript }}" />
+            <input type="hidden" class="predicate-symbol" name="user_predicate_symbols[]" value="{{ index|e }}.{{ subscript|e }}"/>
         </td>
         <td colspan="2">
-            <input type="text" class="arity" name="user_predicate_arities[]" value="{{ arity }}"/>
+            <input type="text" class="arity" name="user_predicate_arities[]" value="{{ arity|e }}"/>
             <span class="arity-label">arity</span>
-
-            <a href="javascript:" class="right del-predicate">X</a>
+            <a href="javascript:" class="right del-predicate" title="Delete predicate">X</a>
         </td>
     </tr>
 {%- endmacro -%}

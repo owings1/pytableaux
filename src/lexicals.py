@@ -2051,9 +2051,7 @@ def _():
         name     = 'polish.ascii',
         notation = Notation.polish,
         charset  = 'ascii',
-        # encoding = 'ascii',
         renders  = {Marking.subscript: str},
-        # renders  = dict(subscript = str),
         strings = {
             LexType.Atomic   : tuple('abcde'),
             LexType.Operator : {
@@ -2095,7 +2093,6 @@ def _():
             unicode = polasc | dict(
                 name     = 'polish.unicode',
                 charset  = 'unicode',
-                # encoding = 'utf8',
                 renders  = {Marking.subscript: unisub},
                 strings  = polasc['strings'] | {
                     Marking.meta: dict(
@@ -2107,7 +2104,6 @@ def _():
             html = polasc | dict(
                 name     = 'polish.html',
                 charset  = 'html',
-                # encoding = 'utf8',
                 renders  = {Marking.subscript: htmsub},
                 strings  = polasc['strings'] | {
                     Marking.meta: dict(
@@ -2122,7 +2118,6 @@ def _():
                 name     = 'standard.ascii',
                 notation = Notation.standard,
                 charset  = 'ascii',
-                # encoding = 'ascii',
                 renders  = {Marking.subscript: str},
                 strings = {
                     LexType.Atomic : tuple('ABCDE'),
@@ -2163,7 +2158,6 @@ def _():
                 name     = 'standard.unicode',
                 notation = Notation.standard,
                 charset  = 'unicode',
-                # encoding = 'utf8',
                 renders  = {Marking.subscript: unisub},
                 strings = {
                     LexType.Atomic   : tuple('ABCDE'),
@@ -2204,7 +2198,6 @@ def _():
                 name     = 'standard.html',
                 notation = Notation.standard,
                 charset  = 'html',
-                # encoding = 'utf8',
                 renders  = {Marking.subscript: htmsub},
                 strings = {
                     LexType.Atomic   : tuple('ABCDE'),

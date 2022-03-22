@@ -56,6 +56,10 @@
         predSymbol   : 'predicate-symbol',
         predUser     : 'user-predicate',
         premise      : 'premise',
+        premiseAdd   : 'add-premise',
+        premiseDel   : 'del-premise',
+        premiseMark  : 'premise-marker',
+        premises     : 'premises',
         sentence     : 'sentence',
         shortkey     : 'shortkey',
         status       : 'status',
@@ -68,6 +72,7 @@
 
     const Atr = {
         dataHash     : 'data-hash',
+        dataPremNum  : 'data-premise-num',
         dataShortKey : 'data-shortcut-key',
     }
 
@@ -82,15 +87,18 @@
         checkRankOptim    : '#options_rank_optimizations',
         checkShowControls : '#options_show_controls',
         checksOption      : ['input:checkbox', Cls.options].join('.'),
-        clearArgExample   : '#clear_argument',
+        clearArg          : '#clear_argument',
+        fieldConclusion   : '#input_conclusion',
+        fieldMaxSteps     : '#options_max_steps',
+        fieldsArity       : ['input', Cls.arity].join('.'),
+        fieldsPredSymbol  : ['input', Cls.predSymbol].join('.'),
+        fieldsPremise     : ['input', Cls.premise].join('.'),
+        fieldsSentence    : ['input', Cls.sentence].join('.'),
         headDebugs        : '#pt_debugs_heading',
-        inputConclusion   : '#conclusion',
-        inputMaxSteps     : '#options_max_steps',
-        inputsPredArity   : ['input', Cls.arity].join('.'),
-        inputsPredSymbol  : ['input', Cls.predSymbol].join('.'),
-        inputsPremise     : ['input', Cls.premise].join('.'),
-        inputsSentence    : ['input', Cls.sentence].join('.'),
+        inputPremise      : '.' + Cls.input + '.' + Cls.premise,
+        inputSentence     : '.' + Cls.input + '.' + Cls.sentence,
         linksButton       : ['a', Cls.button].join('.'),
+        premises          : '.' + Cls.premises,
         rowsDebug         : '.' + Cls.debug,
         rowsPredUser      : ['tr', Cls.predUser].join('.'),
         rowsPremise       : ['.input', Cls.premise].join('.'),
@@ -111,7 +119,6 @@
 
     const API_PARSE_URI = '/api/parse'
 
-
     $(document).ready(function() {
 
         const AppData = JSON.parse($(Sel.appJson).html())
@@ -127,6 +134,7 @@
         const $AppForm = $(Sel.appForm)
 
         const ParseCache = Object.create(null)
+
         if (IS_DEBUG) {
             window.AppDebug = {
                 AppData,
@@ -136,48 +144,96 @@
 
         /**
          * Main initialization routine.
-         *
          * @return {void}
          */
         function init() {
+
+            // Load event listeners.
+            initHandlers()
+
+            // Init UI plugins and config.
+            initPlugins()
+
+            // Debugs data contents init.
+            if (IS_DEBUG) {
+                initDebug()
+            }
+
+            setTimeout(function() {
+                ensureEmptyPremise()
+                refreshNotation()
+                refreshLogic()
+                if (IS_PROOF) {
+                    refreshStatuses()
+                }
+            })
+        }
+
+        function initHandlers() {
             // Input form events.
             $AppForm
-                .on('keyup focus', [Sel.inputsPremise, Sel.inputConclusion].join(), ensureEmptyPremise)
+                .on('keyup focus', [Sel.fieldsPremise, Sel.fieldConclusion].join(), ensureEmptyPremise)
                 .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
                     if ($target.is(Sel.selectArgExample)) {
+                        // Change to selected exampleArg.
+                        if (!$target.val()) {
+                            return
+                        }
                         refreshArgExample()
                         refreshStatuses()
                     } else if ($target.is(Sel.selectParseNotn)) {
+                        // Change to selected parsing notation.
                         refreshNotation()
                         refreshStatuses()
-                    } else if ($target.is(Sel.inputsSentence)) {
+                    } else if ($target.is(Sel.fieldsSentence)) {
+                        // Change to a sentence input field.
                         refreshStatuses()
                     } else if ($target.hasClass(Cls.arity)) {
+                        // Change to a predicate arity field.
                         refreshStatuses(true)
                     } else if ($target.is(Sel.selectLogic)) {
+                        // Change to the selected logic.
                         refreshLogic()
+                    }
+                })
+                .on('click', function(e) {
+                    const $target = $(e.target)
+                    if ($target.hasClass(Cls.premiseAdd)) {
+                        // Add premise.
+                        addPremise()
+                    } else if ($target.hasClass(Cls.predAdd)) {
+                        // Add predicate.
+                        addEmptyPredicate().find(':input').focus()
+                    } else if ($target.hasClass(Cls.premiseDel)) {
+                        // Delete premise.
+                        const $prem = $target.closest(Sel.inputPremise)
+                        $prem.nextAll(Sel.inputPremise).each(function() {
+                            const $me = $(this)
+                            const num = +$me.attr(Atr.dataPremNum) - 1
+                            $me.attr(Atr.dataPremNum, num)
+                            $('.' + Cls.premiseMark, $me).text('P' + num)
+                        })
+                        _removePrem($prem)
+                        refreshStatuses()
+                    } else if ($target.hasClass(Cls.predDel)) {
+                        // Delete predicate.
+                        $target.closest(Sel.rowsPredUser).remove()
+                        refreshStatuses()
+                    }else if ($target.is(Sel.clearArg)) {
+                        // Clear the argument.
+                        clearArgument()
+                        clearArgExample()
+                        ensureEmptyPremise()
+                        refreshStatuses()
                     }
                 })
                 .on('submit', function(e) {
                     submitForm()
                 })
-                .on('click', function(e) {
-                    const $target = $(e.target)
-                    if ($target.is(Sel.clearArgExample)) {
-                        clearArgument()
-                        clearArgExample()
-                        ensureEmptyPremise()
-                        refreshStatuses()
-                    } else if ($target.hasClass(Cls.predAdd)) {
-                        addEmptyPredicate().find(':input').focus()
-                    } else if ($target.hasClass(Cls.predDel)) {
-                        $target.closest(Sel.rowsPredUser).remove()
-                        refreshStatuses()
-                    }
-                })
-                
+        }
 
+        function initPlugins() {
             // UI Selectmenu
             $('select', $AppForm).selectmenu({
                 classes: {
@@ -203,6 +259,7 @@
 
             // UI Tooltip - form help
             $('.' + Cls.tooltip, $AppForm).tooltip({show: {delay: 1000}})
+
             // UI Tooltip - ui controls help
             $('.' + Cls.uiControls + ' a[title]', $AppBody).each(function() {
                 const $me = $(this)
@@ -215,15 +272,6 @@
                 html += '</span>'
                 $me.tooltip({content: html, show: {delay: 2000}})
             })
-            
-            setTimeout(function() {
-                ensureEmptyPremise()
-                refreshNotation()
-                refreshLogic()
-                if (IS_PROOF) {
-                    refreshStatuses()
-                }
-            })
 
             // Init Tableau Plugin
             if (IS_PROOF) {
@@ -232,85 +280,6 @@
                     scrollContainer: $(document)
                 })
             }
-
-
-            // Debugs data contents init.
-
-            if (IS_DEBUG) {
-                const $debugs = $(Sel.wrapDebugs, $AppBody)
-                // Debug click show/hide.
-                $debugs.on('click', [Sel.rowsDebug, Sel.headDebugs].join(), function(e) {
-                    const $target = $(e.target)
-
-                    // Main Debug Header - toggle all and return.
-                    if ($target.is(Sel.headDebugs)) {
-                        $target.next('.' + Cls.debugs).toggle()
-                        return
-                    }
-
-                    // Single debug content - toggle and lazy-init jsonViewer.
-                    var $content
-                    if ($target.hasClass(Cls.debugHead)) {
-                        // For header click, toggle debug content.
-                        $content = $target.next('.' + Cls.debugContent)
-                        const isHiding = $content.is(':visible')
-                        $content.toggle()
-                        // If we are hiding it, no need to init jsonViewer.
-                        if (isHiding) {
-                            return
-                        }
-                    } else if ($target.hasClass(Cls.debugContent)) {
-                        // For content click, check whether to init jsonViewer.
-                        $content = $target
-                    } else {
-                        // No behavior defined.
-                        return
-                    }
-
-                    // Init jsonViewer if this is a json dump and does not have
-                    // class from plugin.
-                    const shouldInit = (
-                        $content.hasClass(Cls.jsonDump) &&
-                        !$content.hasClass(Cls.jsonViewDoc)
-                    )
-                    if (shouldInit) {
-                        const json = $content.text()
-                        const data = JSON.parse(json)
-                        $content.jsonViewer(data, {
-                            withLinks: true,
-                            withQuotes: true,
-                        })
-                    }
-                })
-            }
-        }
-
-        /**
-         * Form submit handler.
-         *
-         * @return {void}
-         */
-        function submitForm() {
-            $('input:submit', $AppForm).prop('disabled', true)
-            const data = getApiData()
-            const json = JSON.stringify(data)
-            $(Sel.submitJson).val(json)
-        }
-
-        /**
-         * Interpolate variable strings like {varname}.
-         *
-         * @param {string} str The template string.
-         * @param {object} vars The variables object.
-         * @return {string} The rendered string.
-         */
-        function render(str, vars) {
-            if (vars) {
-                $.each(vars, function(name, val) {
-                    str = str.replace(new RegExp('{' + name + '}', 'g'), val)
-                })
-            }
-            return str
         }
 
         /**
@@ -321,37 +290,43 @@
          * @param {string} message The status message.
          * @return {void}
          */
-        function addPremise(value, status, message) {
-            const premiseNum = $(Sel.inputsPremise, $AppForm).length + 1
+         function addPremise(value, status, message) {
+            const premiseNum = $(Sel.fieldsPremise, $AppForm).length + 1
             const vars = {
                 n       : premiseNum,
                 value   : value   || '',
                 status  : status  || '',
                 message : message || '',
             }
-            $(Sel.wrapPremises).append(render(Templates.premise, vars))
+            const html = render(Templates.premise, vars)
+            $(Sel.premises, $AppForm).append(html)
         }
 
         /**
-         * Clear all premises and conclusion inputs.
-         *
+         * Check whether there is already an empty premise input row available
+         * for input.
+         * @return {boolean}
+         */
+        function hasEmptyPremise() {
+            var hasEmpty = false
+            $(Sel.fieldsPremise, $AppForm).each(function(i){
+                if (!$(this).val()) {
+                    hasEmpty = true
+                    // Stop iteration (break).
+                    return false
+                }
+            })
+            return hasEmpty
+        }
+
+        /**
+         * Ensure that there is an empty premise input row available for input.
          * @return {void}
          */
-        function clearArgument() {
-            $(Sel.rowsPremise, $AppForm).remove()
-            $(Sel.inputConclusion).val('')
-            for (var key in ParseCache) {
-                delete ParseCache[key]
+        function ensureEmptyPremise() {
+            if (!hasEmptyPremise()) {
+                addPremise()
             }
-        }
-
-        /**
-         * Clear the example argument select menu.
-         *
-         * @return {void}
-         */
-        function clearArgExample() {
-            $(Sel.selectArgExample).val('').selectmenu('refresh')
         }
 
         /**
@@ -392,12 +367,11 @@
 
         /**
          * Add a new predicate. Calculates the next available index and
-         * subscript. Assigns arity 1/
-         *
+         * subscript. Assigns arity 1.
          * @return {object} The jQuery element of the created tr.
          */
         function addEmptyPredicate() {
-            const $symbols   = $(Sel.inputsPredSymbol, $AppForm)
+            const $symbols   = $(Sel.fieldsPredSymbol, $AppForm)
             const numSymbols = $symbols.length
             var index      = 0
             var subscript  = 0
@@ -414,37 +388,53 @@
         }
 
         /**
-         * Check whether there is already an empty premise input row available
-         * for input.
-         *
-         * @return {boolean}
-         */
-        function hasEmptyPremise() {
-            var hasEmpty = false
-            $(Sel.inputsPremise, $AppForm).each(function(i){
-                if (!$(this).val()) {
-                    hasEmpty = true
-                    // Stop iteration (break).
-                    return false
-                }
-            })
-            return hasEmpty
-        }
-
-        /**
-         * Ensure that there is an empty premise input row available for input.
-         *
+         * Clear all premises and conclusion inputs.
          * @return {void}
          */
-        function ensureEmptyPremise() {
-            if (!hasEmptyPremise()) {
-                addPremise()
+        function clearArgument() {
+            $(Sel.inputPremise, $AppForm).each(function() {
+                _removePrem($(this))
+            })
+            // $(Sel.rowsPremise, $AppForm).remove()
+            $(Sel.fieldConclusion).val('')
+            for (var key in ParseCache) {
+                delete ParseCache[key]
             }
         }
 
         /**
+         * Cleanup tooltip and remove a premise from the DOM.
+         * @param {object} $prem The singelton premise row jQuery element.
+         * @return {void}
+         */
+        function _removePrem($prem) {
+            // Destroy status tooltip
+            var tooltip = $('.' + Cls.status, $prem).tooltip('instance')
+            if (tooltip) {
+                tooltip.destroy()
+            }
+            // TODO: Prune ParseCache?
+            $prem.remove()
+        }
+
+        /**
+         * Clear the example argument select menu.
+         * @return {void}
+         */
+        function clearArgExample() {
+            $(Sel.selectArgExample).val('').selectmenu('refresh')
+        }
+
+        /**
+         * Clear all user predicates.
+         * @return {void}
+         */
+        function clearPredicates() {
+            $(Sel.rowsPredUser, $AppForm).remove()
+        }
+
+        /**
          * Logic select change handler. Show appropriate logic information.
-         *
          * @return {void}
          */
         function refreshLogic() {
@@ -458,7 +448,6 @@
         /**
          * Input notation change handler. Show appropriate lexicon, and update
          * the example argument, if any.
-         *
          * @return {void}
          */
         function refreshNotation() {
@@ -481,7 +470,7 @@
             }
 
             // Otherwise get translations from cached succesful api-parse responses.
-            $(Sel.inputsSentence, $AppForm).each(function() {
+            $(Sel.fieldsSentence, $AppForm).each(function() {
                 const value = $(this).val()
                 if (value && ParseCache[value]) {
                     if (ParseCache[value][notation]) {
@@ -492,25 +481,30 @@
         }
 
         /**
-         * Example argument change handler.
-         *
+         * Change handler for exampleArg select. If not argument selected,
+         * does nothing.
          * @return {void}
          */
         function refreshArgExample() {
-            $(Sel.rowsPredUser, $AppForm).remove()
-            clearArgument()
-            const argName = $(Sel.selectArgExample).val()
 
+            const argName = $(Sel.selectArgExample).val()
             if (!argName) {
                 ensureEmptyPremise()
                 return
             }
+
+            clearPredicates()
+            clearArgument()
+
             const notation = $(Sel.selectParseNotn).val()
             const arg = AppData.example_args[argName][notation]
+
             $.each(arg.premises, function(i, value) {
                 addPremise(value)
             })
-            $(Sel.inputConclusion).val(arg.conclusion)
+
+            $(Sel.fieldConclusion).val(arg.conclusion)
+
             $.each(AppData.example_preds, function(i, pred) {
                 addPredicate(pred.index, pred.subscript, pred.arity)
             })
@@ -527,12 +521,12 @@
             const notation = $(Sel.selectParseNotn).val()
             var preds // lazy fetch
 
-            $(Sel.inputsSentence, $AppForm).each(function() {
+            $(Sel.fieldsSentence, $AppForm).each(function() {
 
                 const $me = $(this)
 
                 const $status = $me
-                    .closest('div.' + Cls.input)
+                    .closest(Sel.inputSentence)
                     .find('.' + Cls.status)
                 
                 const text = $(this).val()
@@ -546,7 +540,7 @@
                     return
                 }
 
-                // Check for change against stored value.
+                // Check for change since last request.against stored value.
                 const hash = [text, notation].join('.')
                 const stored = $status.attr(Atr.dataHash)
                 if (!isForce && stored === hash) {
@@ -660,7 +654,7 @@
             }
 
             // Max steps.
-            const maxStepsVal = $(Sel.inputMaxSteps, $AppForm).val()
+            const maxStepsVal = $(Sel.fieldMaxSteps, $AppForm).val()
             if (maxStepsVal.length) {
                 const maxStepsIntVal = parseInt(maxStepsVal)
                 if (isNaN(maxStepsIntVal)) {
@@ -687,7 +681,7 @@
          */
         function getArgData() {
             const premises = []
-            $(Sel.inputsPremise, $AppForm).each(function() {
+            $(Sel.fieldsPremise, $AppForm).each(function() {
                 const val = $(this).val()
                 if (val) {
                     premises.push(val)
@@ -695,7 +689,7 @@
             })
             return {
                 notation   : $(Sel.selectParseNotn).val(),
-                conclusion : $(Sel.inputConclusion).val(),
+                conclusion : $(Sel.fieldConclusion).val(),
                 premises   : premises,
                 predicates : getPredsData(),
             }
@@ -713,7 +707,7 @@
             const preds = []
             $(Sel.rowsPredUser, $AppForm).each(function() {
                 const $row = $(this)
-                const arity = $(Sel.inputsPredArity, $row).val()
+                const arity = $(Sel.fieldsArity, $row).val()
                 if (!arity.length) {
                     // Skip blank values.
                     return
@@ -726,7 +720,7 @@
                 } else {
                     arityVal = arityNumVal
                 }
-                const coords = $(Sel.inputsPredSymbol, $row).val().split('.')
+                const coords = $(Sel.fieldsPredSymbol, $row).val().split('.')
                 preds.push({
                     index     : +coords[0],
                     subscript : +coords[1],
@@ -734,6 +728,34 @@
                 })
             })
             return preds
+        }
+
+        /**
+         * Form submit handler.
+         *
+         * @return {void}
+         */
+         function submitForm() {
+            $('input:submit', $AppForm).prop('disabled', true)
+            const data = getApiData()
+            const json = JSON.stringify(data)
+            $(Sel.submitJson).val(json)
+        }
+
+        /**
+         * Interpolate variable strings like {varname}.
+         *
+         * @param {string} str The template string.
+         * @param {object} vars The variables object.
+         * @return {string} The rendered string.
+         */
+         function render(str, vars) {
+            if (vars) {
+                $.each(vars, function(name, val) {
+                    str = str.replace(new RegExp('{' + name + '}', 'g'), val)
+                })
+            }
+            return str
         }
 
         /**
@@ -750,6 +772,54 @@
             if (IS_DEBUG) {
                 console.log(...args)
             }
+        }
+
+        function initDebug() {
+            const $debugs = $(Sel.wrapDebugs, $AppBody)
+            // Debug click show/hide.
+            $debugs.on('click', [Sel.rowsDebug, Sel.headDebugs].join(), function(e) {
+                const $target = $(e.target)
+
+                // Main Debug Header - toggle all and return.
+                if ($target.is(Sel.headDebugs)) {
+                    $target.next('.' + Cls.debugs).toggle()
+                    return
+                }
+
+                // Single debug content - toggle and lazy-init jsonViewer.
+                var $content
+                if ($target.hasClass(Cls.debugHead)) {
+                    // For header click, toggle debug content.
+                    $content = $target.next('.' + Cls.debugContent)
+                    const isHiding = $content.is(':visible')
+                    $content.toggle()
+                    // If we are hiding it, no need to init jsonViewer.
+                    if (isHiding) {
+                        return
+                    }
+                } else if ($target.hasClass(Cls.debugContent)) {
+                    // For content click, check whether to init jsonViewer.
+                    $content = $target
+                } else {
+                    // No behavior defined.
+                    return
+                }
+
+                // Init jsonViewer if this is a json dump and does not have
+                // class from plugin.
+                const shouldInit = (
+                    $content.hasClass(Cls.jsonDump) &&
+                    !$content.hasClass(Cls.jsonViewDoc)
+                )
+                if (shouldInit) {
+                    const json = $content.text()
+                    const data = JSON.parse(json)
+                    $content.jsonViewer(data, {
+                        withLinks: true,
+                        withQuotes: true,
+                    })
+                }
+            })
         }
 
         init()

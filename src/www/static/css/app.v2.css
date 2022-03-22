@@ -346,7 +346,7 @@ rtd-theme:
 }
 .pt-app .input label {
   border: 1px solid #cccccc;
-  min-width: 100px;
+  /* min-width: 100px; */
   text-align: right;
   display: inline-block;
   background-color: #eee;
@@ -383,33 +383,62 @@ rtd-theme:
   margin-right: 10px;
   margin-bottom: 10px;
 } */
-/* Example argument */
-.pt-app select#example_argument {
-  margin: 5px 0 10px 1px;
-}
-/* Sentence input */
-.pt-app .input.sentence input {
-  width: 215px;
-}
-.pt-app .input.sentence .status {
-  width: 16px;
-  height: 16px;
-  display: inline-block;
-}
-.pt-app .input.sentence .status.good {
-  background: url(/static/img/check-green.svg);
-  background-size: 16px 16px;
-}
-.pt-app .input.sentence .status.bad {
-  background: url(/static/img/error-red.svg);
-  background-size: 16px 16px;
-}
 .pt-app #clear_argument_wrapper {
   float: right;
   display:inline;
   margin-right: 28px;
   margin-top: 8px;
 }
+
+/* Sentence input */
+.pt-app .input.sentence input {
+  width: 215px;
+}
+/* Sentence status */
+.pt-app .input.sentence .status {
+  padding: 8px;
+  background-color: #cccccc;
+  text-align: center;
+}
+.pt-app .input.sentence .status.good,
+.pt-app .input.sentence .status.bad {
+  color: #ffffff;
+}
+.pt-app .input.sentence.conclusion .status.good {
+  background-color: #1abc9c;
+}
+.pt-app .input.sentence.conclusion .status.bad {
+  background-color: rgb(255, 100, 85);
+}
+.pt-app .input.sentence.premise .status.good {
+  background-color: #52bba6;
+}
+.pt-app .input.sentence.premise .status.bad {
+  background-color: rgb(250, 156, 148);
+}
+/* Sentence table */
+.pt-app table.argument tbody.spacer td {
+  color: inherit;
+  /* background-color: #bcd9ecbd; */
+}
+.pt-app table.argument tbody.spacer td a {
+  /* border: 1px solid #bcd9ec; */
+  display: block;
+  padding: 7px;
+}
+.pt-app table.argument tbody.spacer td a.add-premise:hover {
+  background-color: #2980b9;
+}
+.pt-app table.argument tr.sentence td:last-child {
+  padding: 8px;
+}
+.pt-app table.argument td a.del-premise {
+  display: block;
+}
+.pt-app table.argument td a.del-premise:hover {
+  background-color: red;
+}
+
 /* Logic */
 .pt-app .select-logic,
 .pt-app .input-argument,
@@ -418,13 +447,17 @@ rtd-theme:
   border: 1px solid #cccccc;
   padding: 10px 20px;
 }
-
-.pt-app .argument .example-argument {
-  margin: 0 0 15px 0;
-}
 .pt-app .argument .select-logic {
   margin-bottom: 7px;
 }
+/* Example argument */
+.pt-app select#example_argument {
+  margin: 5px 0 10px 1px;
+}
+.pt-app .argument .example-argument {
+  margin: 0 0 15px 0;
+}
+
 .pt-app label.heading {
   display: block;
   text-align: left;

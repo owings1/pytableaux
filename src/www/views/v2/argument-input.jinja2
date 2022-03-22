@@ -36,33 +36,50 @@
             {% endfor %}
         </select>
     </div>
-    <div id="premises_inputs" class="premises">
-        {%- if 'premises[]' in form_data -%}
-            {%- for premise in form_data['premises[]'] -%}
-                {%- set error_label = 'Premise ' ~ loop.index -%}
-                {%- if errors and error_label in errors -%}
-                    {{ helper.premise(loop.index, premise, 'bad', errors[error_label].message) }}
-                {%- elif premise -%}
-                    {{ helper.premise(loop.index, premise, 'good') }}
-                {%- endif -%}
-            {%- endfor -%}
-        {% endif %}
-    </div>
-    {# Conclusion #}
-    <div class="sentence input conclusion">
-        <label for="conclusion">Conclusion</label>
-        <input id="conclusion" class="sentence conclusion" type="text"
-            name="conclusion" value="{{ form_data.conclusion|e }}" required="required"/>
-        {%- set status = '' -%}
-        {%- set message = '' -%}
-        {%- if errors and 'Conclusion' in errors -%}
-            {%- set status = 'bad' -%}
-            {%- set message = errors['Conclusion'].message -%}
-        {%- elif 'conclusion' in form_data -%}
-            {%- set status = 'good' -%}
-        {%- endif %}
-        <span class="status {{ status }}" title="{{ message|e }}"></span>
-    </div>
+    <table class="argument">
+        {# Premises #}
+        <tbody class="premises">
+            {%- if 'premises[]' in form_data -%}
+                {%- for premise in form_data['premises[]'] -%}
+                    {%- set error_label = 'Premise ' ~ loop.index -%}
+                    {%- if errors and error_label in errors -%}
+                        {{ helper.premise(loop.index, premise, 'bad', errors[error_label].message) }}
+                    {%- elif premise -%}
+                        {{ helper.premise(loop.index, premise, 'good') }}
+                    {%- endif -%}
+                {%- endfor -%}
+            {% endif %}
+        </tbody>
+        {# Spacer #}
+        <tbody class="spacer">
+            <tr>
+                <td><a class="" href="javascript:"></a></td>
+                <td><a class="add-premise" href="javascript:"></a></td>
+            </tr>
+        </tbody>
+        {# Conclusion #}
+        <tbody class="conclusion">
+            <tr class="input sentence conclusion">
+                {%- set status = '' -%}
+                {%- set message = '' -%}
+                {%- if errors and 'Conclusion' in errors -%}
+                    {%- set status = 'bad' -%}
+                    {%- set message = errors.Conclusion.message -%}
+                {%- elif 'conclusion' in form_data -%}
+                    {%- set status = 'good' -%}
+                {%- endif %}
+                <td class="status {{ status }}" title="{{ message|e }}">
+                    <span class="conclusion-marker">C</span>
+                </td>
+                <td>
+                    <input id="input_conclusion" class="sentence conclusion" type="text"{#
+                    #} name="conclusion" value="{{ form_data.conclusion|e }}" required="required"{#
+                    #} placeholder="enter conclusion or load example"/>
+                </td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
 </div>
 {# Submit #}    
 <div class="input submit">
