@@ -160,7 +160,7 @@
             }
 
             setTimeout(function() {
-                ensureEmptyPremise()
+                // ensureEmptyPremise()
                 refreshNotation()
                 refreshLogic()
                 if (IS_PROOF) {
@@ -172,7 +172,6 @@
         function initHandlers() {
             // Input form events.
             $AppForm
-                .on('keyup focus', [Sel.fieldsPremise, Sel.fieldConclusion].join(), ensureEmptyPremise)
                 .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
                     if ($target.is(Sel.selectArgExample)) {
@@ -224,13 +223,14 @@
                         // Clear the argument.
                         clearArgument()
                         clearArgExample()
-                        ensureEmptyPremise()
+                        // ensureEmptyPremise()
                         refreshStatuses()
                     }
                 })
                 .on('submit', function(e) {
                     submitForm()
                 })
+                // .on('keyup focus', [Sel.fieldsPremise, Sel.fieldConclusion].join(), ensureEmptyPremise)
         }
 
         function initPlugins() {
@@ -489,7 +489,7 @@
 
             const argName = $(Sel.selectArgExample).val()
             if (!argName) {
-                ensureEmptyPremise()
+                // ensureEmptyPremise()
                 return
             }
 

@@ -408,13 +408,16 @@ rtd-theme:
   background-color: #1abc9c;
 }
 .pt-app .input.sentence.conclusion .status.bad {
-  background-color: rgb(255, 100, 85);
+  background-color: #bc1a1ad4;
+  /* rgb(255, 100, 85); */
 }
 .pt-app .input.sentence.premise .status.good {
-  background-color: #52bba6;
+  background-color: #2196f3;
+  /* #9245d7; */
 }
 .pt-app .input.sentence.premise .status.bad {
-  background-color: rgb(250, 156, 148);
+  background-color: #f3217cf5;
+  /* rgb(250, 156, 148); */
 }
 /* Sentence table */
 .pt-app table.argument tbody.spacer td {
