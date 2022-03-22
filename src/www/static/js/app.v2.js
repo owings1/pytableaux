@@ -75,6 +75,7 @@
         appForm           : '#tableau_input_form',
         appJson           : '#pt_app_data',
         appTabs           : '#proove-tabs',
+        checkBuildModels  : '#options_build_models',
         checkColorOpen    : '#options_color_open',
         checkGroupOptim   : '#options_group_optimizations',
         checkRankOptim    : '#options_rank_optimizations',
@@ -289,6 +290,10 @@
             $('input:submit', $AppForm).prop('disabled', true)
             const data = getApiData()
             const json = JSON.stringify(data)
+            // var $test = $(':checkbox[name="testbox"]')
+            // if (!$test.is(':checked')) {
+            //     // $test.val('').prop('checked', true)
+            // }
             $(Sel.submitJson).val(json)
         }
 
@@ -605,10 +610,10 @@
             const data = {
                 logic: $(Sel.selectLogic).val(),
                 argument : {
+                    notation   : $(Sel.selectParseNotn).val(),
                     conclusion : $(Sel.inputConclusion).val(),
                     premises   : [],
                     predicates : [],
-                    notation   : $(Sel.selectParseNotn).val(),
                 },
                 output: {
                     format   : $(Sel.selectOutputFmt).val(),
@@ -616,14 +621,14 @@
                     charset  : $(Sel.selectOutputChrs).val(),
                     options  : {
                         classes : [],
-                        models  : undefined,
                     }
                 },
+                show_controls       : undefined,
                 build_models        : undefined,
                 max_steps           : undefined,
-                rank_optimizations  : undefined,
-                group_optimizations : undefined,
-                show_controls       : undefined,
+                // debug/advanced options.
+                rank_optimizations  : true,
+                group_optimizations : true,
             }
             $(Sel.inputsPremise, $AppForm).each(function() {
                 const val = $(this).val()
@@ -632,35 +637,60 @@
                 }
             })
             $(Sel.rowsPredUser, $AppForm).each(function() {
-                const $tr = $(this)
-                const arity = $(Sel.inputsPredArity, $tr).val()
-                if (arity.length > 0) {
-                    const coords = $(Sel.inputsPredSymbol, $tr).val().split('.')
-                    const arityNumVal = +arity
-                    // Let invalid arity value propagate.
-                    var arityVal
-                    if (isNaN(arityNumVal)) {
-                        arityVal = arity
-                    } else {
-                        arityVal = arityNumVal
-                    }
-                    data.argument.predicates.push({
-                        index     : +coords[0],
-                        subscript : +coords[1],
-                        arity     : arityVal
-                    })
+                const $row = $(this)
+                const arity = $(Sel.inputsPredArity, $row).val()
+                if (!arity.length) {
+                    // Skip blank values.
+                    return
                 }
+                const arityNumVal = +arity
+                // Let invalid arity value propagate.
+                var arityVal
+                if (isNaN(arityNumVal)) {
+                    arityVal = arity
+                } else {
+                    arityVal = arityNumVal
+                }
+                const coords = $(Sel.inputsPredSymbol, $row).val().split('.')
+                data.argument.predicates.push({
+                    index     : +coords[0],
+                    subscript : +coords[1],
+                    arity     : arityVal
+                })
             })
-            $(Sel.checksOption, $AppForm).each(function() {
-                const $me = $(this)
-                const opt = $me.attr('name').split('.')[1]
-                const value = $me.is(':checked')
-                data.output.options[opt] = value
-            })
-            if (data.output.options.models) {
-                data.output.options.classes.push(Cls.withModels)
-                data.build_models = true
+
+            // Fixed optname -> checkbox mappings. 
+            const checkSels = {
+                show_controls       : Sel.checkShowControls,
+                build_models        : Sel.checkBuildModels,
+                rank_optimizations  : Sel.checkRankOptim,
+                group_optimizations : Sel.checkGroupOptim,
             }
+            const optClasses = {
+                build_models  : Cls.withModels,
+                show_controls : Cls.withControls,
+            }
+
+            for (var key in checkSels) {
+                var $check = $(checkSels[key], $AppForm)
+                if ($check.length) {
+                    data[key] = $check.is(':checked')
+                }
+            }
+
+            // TabWriter classes option.
+            const clsarr = data.output.options.classes
+            for (var key in optClasses) {
+                if (data[key]) {
+                    clsarr.push(optClasses[key])
+                }
+            }
+            const $colorOpen = $(Sel.checkColorOpen, $AppForm)
+            if (!$colorOpen.length || $colorOpen.is(':checked')) {
+                clsarr.push(Cls.colorOpen)
+            }
+
+            // Max steps.
             const maxStepsVal = $(Sel.inputMaxSteps, $AppForm).val()
             if (maxStepsVal.length) {
                 const maxStepsIntVal = parseInt(maxStepsVal)
@@ -673,27 +703,8 @@
             } else {
                 data.max_steps = undefined
             }
-            const $rankOptim = $(Sel.checkRankOptim, $AppForm)
-            if ($rankOptim.length) {
-                data.rank_optimizations = $rankOptim.is(':checked')
-            }
-            const $groupOptim = $(Sel.checkGroupOptim, $AppForm)
-            if ($groupOptim.length) {
-                data.group_optimizations = $groupOptim.is(':checked')
-            }
-            const $showControls = $(Sel.checkShowControls, $AppForm)
-            if ($showControls.length) {
-                data.show_controls = $showControls.is(':checked')
-            } else {
-                data.show_controls = true
-            }
-            if (data.show_controls) {
-                data.output.options.classes.push(Cls.withControls)
-            }
-            const $colorOpen = $(Sel.checkColorOpen, $AppForm)
-            if (!$colorOpen.length || $colorOpen.is(':checked')) {
-                data.output.options.classes.push(Cls.colorOpen)
-            }
+
+
             return data
         }
 

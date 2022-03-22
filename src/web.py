@@ -53,9 +53,6 @@ from www.conf import (
     cp_config,
     cp_global_config,
 
-    api_defaults,
-    form_defaults,
-
     example_args,
     output_charsets,
     logic_categories,
@@ -84,6 +81,25 @@ _LW_CACHE = {
 }
 
 mailroom = Mailroom(APP_ENVCONF)
+
+#####################
+## Input Defaults  ##
+#####################
+api_defaults = MapCover(dict(
+    input_notation  = 'polish',
+    output_notation = 'polish',
+    output_format   = 'html',
+))
+form_defaults = MapCover(dict(
+    input_notation  = 'standard',
+    format          = 'html',
+    output_notation = 'standard',
+    output_charset  = 'html',
+    show_controls   = True,
+    build_models    = True,
+    rank_optimizations  = True,
+    group_optimizations = True,
+))
 
 ###############
 ## JS Data   ##
@@ -156,25 +172,23 @@ class App:
 
         config = self.config
 
-        req_params = req.params
-        req_data = fix_uri_req_data(req_data)
+        form_data = fix_uri_req_data(req_data)
 
-        if req_data.get('v') in ('v1', 'v2'):
-            view_version = req_data['v']
+        if form_data.get('v') in ('v1', 'v2'):
+            view_version = form_data['v']
         else:
             view_version = 'v2'
         view = '/'.join((view_version, 'main'))
 
-        if 'debug' in req_data and config['is_debug']:
-            is_debug = req_data['debug'] not in ('', '0', 'false')
+        if 'debug' in form_data and config['is_debug']:
+            is_debug = form_data['debug'] not in ('', '0', 'false')
         else:
             is_debug = config['is_debug']
 
-        form_data = api_data = resp_data = None
+        api_data = resp_data = None
         is_proof = is_controls = is_models = False
         selected_tab = 'argument'
 
-        form_data = req_data
         if req.method == 'POST':
             try:
                 try:
@@ -191,7 +205,7 @@ class App:
                 if resp_data['writer']['format'] == 'html':
                     is_controls = bool(form_data.get('show_controls'))
                     is_models = bool(
-                        form_data.get('options.models') and
+                        form_data.get('build_models') and
                         tableau.invalid
                     )
                     selected_tab = 'view'
@@ -201,6 +215,8 @@ class App:
                     tableau = tableau,
                     lw      = lw,
                 )
+        else:
+            form_data = dict(form_defaults)
 
         if errors:
             view_data['errors'] = errors
@@ -215,8 +231,8 @@ class App:
 
         if is_debug:
             debugs.extend(dict(
-                req_params = req_params,
                 req_data   = req_data,
+                form_data  = form_data,
                 api_data   = api_data,
                 resp_data  = resp_data and debug_resp_data(resp_data),
                 browser_data = browser_data,

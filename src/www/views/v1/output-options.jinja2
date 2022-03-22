@@ -3,7 +3,7 @@
     <select id="format" name="format">
         {% for format in output_formats -%}
             <option value="{{ format|e }}" {{- 
-                helper.select_opt(form_data, 'format', format, form_defaults) 
+                helper.select_opt(form_data, 'format', format) 
             }}>
                 {{- format|e -}}
             </option>
@@ -15,7 +15,7 @@
     <select id="output_notation" name="output_notation">
         {% for notn in Notation -%}
             <option value="{{ notn.name|e }}" {{- 
-                helper.select_opt(form_data, 'output_notation', notn.name, form_defaults) 
+                helper.select_opt(form_data, 'output_notation', notn.name) 
             }}>
                 {{- notn.name|e -}}
             </option>
@@ -27,7 +27,7 @@
     <select id="output_charset" name="output_charset">
         {% for charset in output_charsets -%}
             <option value="{{ charset|e }}" {{- 
-                helper.select_opt(form_data, 'output_charset', charset, form_defaults) 
+                helper.select_opt(form_data, 'output_charset', charset) 
             }}>
                 {{- charset|e -}}
             </option>
@@ -36,28 +36,29 @@
 </div>
 <div class="input">
     <label for="options_models">Build models</label>
-    <input type="checkbox" id="options_models" name="options.models" class="options" value="true" 
-        {{- helper.checkbox_default(form_data, 'options.models', form_defaults) }}/>
+    <input type="checkbox" id="options_models" name="build_models" class="options"
+        value="1" {{- helper.checkbox_default(form_data, 'build_models') }}/>
 </div>
 <div class="input">
     <label for="options_max_steps">Max steps</label>
-    <input type="text" id="options_max_steps" size="5" name="max_steps" value="{{ form_data['max_steps']|e }}"/>
+    <input type="text" id="options_max_steps" size="5" name="max_steps"
+        value="{{ form_data['max_steps']|e }}"/>
 </div>
 {% if is_debug -%}
 <div class="input">
     <label for="options_rank_optimizations">Rank Optimizations</label>
-    <input type="checkbox" id="options_rank_optimizations" name="options.rank_optimizations"
-        value="true" {{- helper.checkbox_default(form_data, 'options.rank_optimizations', form_defaults) }}/>
+    <input type="checkbox" id="options_rank_optimizations" name="rank_optimizations"
+        value="1" {{- helper.checkbox_default(form_data, 'rank_optimizations') }}/>
 </div>
 <div class="input">
     <label for="options_group_optimizations">Group Optimizations</label>
-    <input type="checkbox" id="options_group_optimizations" name="options.group_optimizations"
-        value="true" {{- helper.checkbox_default(form_data, 'options.group_optimizations', form_defaults) }}/>
+    <input type="checkbox" id="options_group_optimizations" name="group_optimizations"
+        value="1" {{- helper.checkbox_default(form_data, 'group_optimizations') }}/>
 </div>
 <div class="input">
     <label for="options_show_controls">Controls</label>
     <input type="checkbox" id="options_show_controls" name="show_controls"
-        value="true" {{- helper.checkbox_default(form_data, 'show_controls', form_defaults) }}/>
+        value="1" {{- helper.checkbox_default(form_data, 'show_controls') }}/>
 </div>
 {% endif -%}
 <div class="input submit">

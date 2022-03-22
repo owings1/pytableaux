@@ -27,11 +27,9 @@ __all__ = (
     'APP_LOGICS',
     'REGEX_EMAIL',
 
-    'api_defaults',
     'cp_config',
     'cp_global_config',
     'example_args',
-    'form_defaults',
     'output_charsets',
     'logger',
     'logic_categories',
@@ -41,7 +39,6 @@ __all__ = (
 
 from tools.abcs import AbcEnum
 from tools.decorators import closure
-from tools.mappings import MapCover
 from tools.misc import get_logic
 from parsers import CharTable
 from lexicals import LexType, Notation, LexWriter
@@ -404,27 +401,6 @@ def _get_common_charsets():
     return sorted(charsets)
 
 output_charsets = _get_common_charsets()
-
-#####################
-## Input Defaults  ##
-#####################
-api_defaults = MapCover(dict(
-    input_notation  = 'polish',
-    output_notation = 'polish',
-    output_format   = 'html',
-))
-form_defaults = MapCover(dict(
-    input_notation  = 'standard',
-    format          = 'html',
-    output_notation = 'standard',
-    output_charset  = 'html',
-    show_controls   = True,
-) | {
-    # 'options.controls': True,
-    'options.group_optimizations': True,
-    'options.models': True,
-    'options.rank_optimizations': True,
-})
 
 del(
     _APP_DIR,

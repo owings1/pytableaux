@@ -7,7 +7,7 @@
         <label for="input_notation">Notation</label>
         <select id="input_notation" name="input_notation">
             {% for notn in Notation -%}
-                <option value="{{ notn.name|e }}" {{ helper.select_opt(form_data, 'input_notation', notn.name, form_defaults) }}>
+                <option value="{{ notn.name|e }}" {{ helper.select_opt(form_data, 'input_notation', notn.name) }}>
                     {{- notn.name|e -}}
                 </option>
             {% endfor %}
