@@ -22,7 +22,10 @@
             <input type="hidden" class="predicate-symbol" name="user_predicate_symbols[]" value="{{ index }}.{{ subscript }}" />
         </td>
         <td colspan="2">
-            <input type="text" class="arity" name="user_predicate_arities[]" value="{{ arity }}"/> arity
+            <input type="text" class="arity" name="user_predicate_arities[]" value="{{ arity }}"/>
+            <span class="arity-label">arity</span>
+
+            <a href="javascript:" class="right del-predicate">X</a>
         </td>
     </tr>
 {%- endmacro -%}

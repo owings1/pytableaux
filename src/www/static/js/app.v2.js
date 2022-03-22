@@ -48,9 +48,10 @@
         lexicon      : 'lexicon',
         lexicons     : 'lexicons',
         logicDetails : 'logic-details',
-        notation     : 'notation',      // used as prefix
+        notation     : 'notation',      // used as prefix, e.g. notation-polish
         options      : 'options',
         predAdd      : 'add-predicate',
+        predDel      : 'del-predicate',
         predicates   : 'predicates',
         predSymbol   : 'predicate-symbol',
         predUser     : 'user-predicate',
@@ -170,6 +171,9 @@
                         refreshStatuses()
                     } else if ($target.hasClass(Cls.predAdd)) {
                         addEmptyPredicate().find(':input').focus()
+                    } else if ($target.hasClass(Cls.predDel)) {
+                        $target.closest(Sel.rowsPredUser).remove()
+                        refreshStatuses()
                     }
                 })
                 
@@ -339,7 +343,6 @@
             for (var key in ParseCache) {
                 delete ParseCache[key]
             }
-            // ParseCache = Object.create(null)
         }
 
         /**
@@ -388,8 +391,8 @@
         }
 
         /**
-         * Add an empty input for a user-defined predicate. Calculates the next
-         * index and subscript.
+         * Add a new predicate. Calculates the next available index and
+         * subscript. Assigns arity 1/
          *
          * @return {object} The jQuery element of the created tr.
          */
@@ -407,16 +410,7 @@
                     subscript += 1
                 }
             }
-            return addPredicate(index, subscript)
-        }
-
-        /**
-         * Clear all the user-defined predicate input rows.
-         *
-         * @return {void}
-         */
-        function clearPredicates() {
-            $(Sel.rowsPredUser, $AppForm).remove()
+            return addPredicate(index, subscript, 1)
         }
 
         /**
@@ -503,7 +497,7 @@
          * @return {void}
          */
         function refreshArgExample() {
-            clearPredicates()
+            $(Sel.rowsPredUser, $AppForm).remove()
             clearArgument()
             const argName = $(Sel.selectArgExample).val()
 
@@ -529,13 +523,21 @@
          * @return {void}
          */
         function refreshStatuses(isForce) {
+
+            const notation = $(Sel.selectParseNotn).val()
+            var preds // lazy fetch
+
             $(Sel.inputsSentence, $AppForm).each(function() {
 
-                const $status = $(this).closest('div.' + Cls.input).find('.' + Cls.status)
-                const notation = $(Sel.selectParseNotn).val()
-                const input = $(this).val()
+                const $me = $(this)
 
-                if (!input) {
+                const $status = $me
+                    .closest('div.' + Cls.input)
+                    .find('.' + Cls.status)
+                
+                const text = $(this).val()
+
+                if (!text) {
                     // Clear status.
                     $status
                         .removeClass([Cls.good, Cls.bad])
@@ -545,24 +547,27 @@
                 }
 
                 // Check for change against stored value.
-                const hash = [input, notation].join('.')
+                const hash = [text, notation].join('.')
                 const stored = $status.attr(Atr.dataHash)
                 if (!isForce && stored === hash) {
                     return
                 }
                 $status.attr(Atr.dataHash, hash)
 
+                if (!preds) {
+                    preds = getPredsData()
+                }
                 // Send api-parse request.
-                const apiData = getApiData()
+                // const apiData = getApiData()
                 $.ajax({
                     url         : API_PARSE_URI,
                     method      : 'POST',
                     contentType : 'application/json',
                     dataType    : 'json',
                     data        : JSON.stringify({
-                        input      : input,
+                        input      : text,
                         notation   : notation,
-                        predicates : apiData.argument.predicates
+                        predicates : preds,
                     }),
                     success: function(res) {
                         $status
@@ -570,7 +575,7 @@
                             .addClass(Cls.good)
                             .attr('title', res.result.type)
                             .tooltip()
-                        ParseCache[input] = res.result.rendered
+                        ParseCache[text] = res.result.rendered
                     },
                     error: function(xhr, textStatus, errorThrown) {
                         $status.removeClass(Cls.good).addClass(Cls.bad)
@@ -604,13 +609,8 @@
          */
          function getApiData() {
             const data = {
-                logic: $(Sel.selectLogic).val(),
-                argument : {
-                    notation   : $(Sel.selectParseNotn).val(),
-                    conclusion : $(Sel.inputConclusion).val(),
-                    premises   : [],
-                    predicates : [],
-                },
+                logic    : $(Sel.selectLogic).val(),
+                argument : getArgData(),
                 output: {
                     format   : $(Sel.selectOutputFmt).val(),
                     notation : $(Sel.selectOutputNotn).val(),
@@ -626,34 +626,7 @@
                 rank_optimizations  : true,
                 group_optimizations : true,
             }
-            $(Sel.inputsPremise, $AppForm).each(function() {
-                const val = $(this).val()
-                if (val) {
-                    data.argument.premises.push(val)
-                }
-            })
-            $(Sel.rowsPredUser, $AppForm).each(function() {
-                const $row = $(this)
-                const arity = $(Sel.inputsPredArity, $row).val()
-                if (!arity.length) {
-                    // Skip blank values.
-                    return
-                }
-                const arityNumVal = +arity
-                // Let invalid arity value propagate.
-                var arityVal
-                if (isNaN(arityNumVal)) {
-                    arityVal = arity
-                } else {
-                    arityVal = arityNumVal
-                }
-                const coords = $(Sel.inputsPredSymbol, $row).val().split('.')
-                data.argument.predicates.push({
-                    index     : +coords[0],
-                    subscript : +coords[1],
-                    arity     : arityVal
-                })
-            })
+
 
             // Fixed optname -> checkbox mappings. 
             const checkSels = {
@@ -702,6 +675,65 @@
 
 
             return data
+        }
+
+        /**
+         * Returns an object with the conclusion and premises
+         * inputs, Empty premises are skipped. No other validation
+         * on the sentences. Includes predicates data from `getPredsData()`
+         * and the selected notation.
+         * 
+         * @return {object}
+         */
+        function getArgData() {
+            const premises = []
+            $(Sel.inputsPremise, $AppForm).each(function() {
+                const val = $(this).val()
+                if (val) {
+                    premises.push(val)
+                }
+            })
+            return {
+                notation   : $(Sel.selectParseNotn).val(),
+                conclusion : $(Sel.inputConclusion).val(),
+                premises   : premises,
+                predicates : getPredsData(),
+            }
+        }
+
+        /**
+         * Returns array of {index, subscript, arity} objects from
+         * the form. Rows with no value of `arity` are skipped. Attempts
+         * to cast `arity` to a number, but if it false with NaN, the
+         * original input string is returned.
+         * 
+         * @return {array}
+         */
+        function getPredsData() {
+            const preds = []
+            $(Sel.rowsPredUser, $AppForm).each(function() {
+                const $row = $(this)
+                const arity = $(Sel.inputsPredArity, $row).val()
+                if (!arity.length) {
+                    // Skip blank values.
+                    return
+                }
+                const arityNumVal = +arity
+                // Let invalid arity value propagate.
+                var arityVal
+                if (isNaN(arityNumVal)) {
+                    arityVal = arity
+                } else {
+                    arityVal = arityNumVal
+                }
+                const coords = $(Sel.inputsPredSymbol, $row).val().split('.')
+                preds.push({
+                    index     : +coords[0],
+                    subscript : +coords[1],
+                    arity     : arityVal
+                })
+            })
+            return preds
         }
 
         /**

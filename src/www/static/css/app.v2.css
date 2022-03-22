@@ -509,6 +509,15 @@ rtd-theme:
 .pt-app #lexicons-content table.operator-symbols.predicate-symbols {
   margin: 0;
 }
+.pt-app #lexicons-content #predicates_input_table tr td:last-child {
+  width: 76%;
+}
+.pt-app #lexicons-content #predicates_input_table a.del-predicate {
+  display: none;
+}
+.pt-app #lexicons-content #predicates_input_table td:hover a.del-predicate {
+  display: inline;
+}
 .pt-app #lexicons-content ul.item-symbols li,
 .pt-app #lexicons-content .predicate-symbol,
 .pt-app #lexicons-content .operator-symbol {
