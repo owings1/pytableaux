@@ -1,7 +1,7 @@
 {%- set lwh = lwstdhtm -%}
 <div id="lexicons-content" class="lexicons input">
     <label class="heading">Symbols</label>
-    <div class="lexicon-panel">
+    <div class="panel">
         {%- for notn in Notation -%}
             {%- set table = CharTable.fetch(notn) -%}
             <div class="lexicon hidden notation-{{ notn.name|e }}">
@@ -13,11 +13,11 @@
                 </ul>
                 <span class="label">Operators</span>
                 <table class="operator-symbols">
-                    {% for operator in lexicals.Operator -%}
+                    {% for oper in lexicals.Operator -%}
                         <tr>
-                            <td><span class="operator-symbol">{{ table.char(LexType.Operator, operator)|e }}</span></td>
-                            <td class="html-ref-symbol">{{ lwh(operator) }}</td>
-                            <td>{{ operator|e }}</td>
+                            <td><span class="operator-symbol">{{ table.char(LexType.Operator, oper)|e }}</span></td>
+                            <td class="html-ref-symbol">{{ lwh(oper) }}</td>
+                            <td>{{ oper.label|e }}</td>
                         </tr>
                     {% endfor %}
                 </table>
@@ -25,7 +25,7 @@
             </div>
         {% endfor %}
     </div>
-    <div class="lexicon-panel">
+    <div class="panel">
         {%- for notn in Notation -%}
             {%- set table = CharTable.fetch(notn) -%}
             <div class="lexicon hidden notation-{{ notn.name|e }}">
@@ -51,7 +51,7 @@
                                 </span>
                             </td>
                             <td class="html-ref-symbol">{{ lwh(quantifier) }}</td>
-                            <td>{{ quantifier|e }}</td>
+                            <td>{{ quantifier.name|e }}</td>
                         </tr>
                     {% endfor %}
                 </table>
@@ -60,7 +60,7 @@
         {% endfor %}
         <div class="">
             <span class="label">Predicates</span>
-            <table id="predicates_input_table" class="predicates operator-symbols predicate-symbols">
+            <table id="predicates_input_table" class="predicates predicate-symbols">
                 {%- set PredSys = lexicals.Predicate.System -%}
                 {% for pred in PredSys -%}
                     <tr class="system-predicate">
@@ -88,13 +88,14 @@
                     {%- endcall -%}
                 {%- endfor %}
             </table>{# ⊕ #}
-            <div>
+            <div><a href="javascript:" class="add-predicate tooltip" title="Add a predicate"></a></div>
+            {# <div>
                 <a href="javascript:" class="add-predicate tooltip" title="Add a predicate">
                     <span class="add-predicate dashes">–  –  –  –  –  –  </span>
                     <span class="add-predicate circ">◯</span><span class="plus">+</span>
                     <span class="add-predicate dashes">  –  –  –  –  –  –</span>
                 </a>
-            </div>
+            </div> #}
             <div class="clear"></div>
         </div>
     </div>
