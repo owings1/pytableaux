@@ -81,19 +81,14 @@
   font-display: block;
 }
 
-body.pt-app {
-  font-size: 0.9em;
-  margin: 0;
-  padding: 0;
-}
+/* ---- font ---- */
+
 body.pt-app,
 .pt-app .ui-widget {
-  /* font-family: 'lucida grande',verdana,helvetica,arial,sans-serif; */
   font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;
-  /* font-family: FontAwesome;
-  font: normal normal normal 14px/1 FontAwesome; */
 }
 .pt-app code,
+.pt-app .json-dump,
 .pt-app .errors dd,
 .pt-app .warns dd,
 .pt-app .input .logic-title,
@@ -102,199 +97,194 @@ body.pt-app,
 .pt-app #lexicons-content .operator-symbol {
   font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
 }
-
+.pt-app .warns h3::before,
+.pt-app .errors h3::before,
+.pt-app a.external:after,
+.pt-app table.argument td a.del-premise::before,
+.pt-app table.argument td a.del-premise::after,
+.pt-app a.add-predicate::after {
+  font-family: FontAwesome;
+}
+.pt-app .footer {
+  font-size: 0.8em;
+}
+body.pt-app {
+  font-size: 0.9em;
+}
 .pt-app.no-proof label.heading,
 .pt-app.no-proof #lexicons-content ul.item-symbols li,
 .pt-app.no-proof #lexicons-content .predicate-symbol,
 .pt-app.no-proof #lexicons-content .operator-symbol {
   font-size: 1.2em;
 }
-
-.pt-app.no-proof a.add-predicate {
-  font-size: 1.0em;
+.pt-app table.argument td a.del-premise::before,
+.pt-app table.argument td a.del-premise::after,
+.pt-app a.add-predicate::after {
+  font-size: 1.5em;
+}
+.pt-app #lexicons-content table.predicates th {
+  font-weight: normal;
+}
+.pt-app .errors dt,
+.pt-app .warns dt,
+.pt-app label.heading,
+.pt-app .select-logic .logic-title,
+.pt-app .proof-result-admon {
+  font-weight: bold;
+}
+.pt-app .proof-result-admon {
+  letter-spacing: 0.05em;
 }
 
-.pt-app .footer {
-  font-size: 0.8em;
-}
+/* ---- text ---- */
 
-.pt-app a.external,
-.pt-app a.add-predicate {
-  color: #2980b9;
+.pt-app .select-logic,
+.pt-app .input-argument,
+.pt-app #tableau_input_form label.heading,
+.pt-app #lexicons-content,
+.pt-app #lexicons-content table.predicates th {
+  text-align: left;
 }
-/* 
-rtd-theme:
-    fonts:
-        Lato,proxima-nova,Helvetica Neue,Arial,sans-serif
-    backgrounds:
-        #6ab0de (note, blue)
-        #dbfaf4 (important, light green)
-        rgb(26, 188, 156) (important, dark green)
-        #2980b9 (title bar, blue)
- */
-/* Header/footer */
-.pt-app .header-wrapper,
-.pt-app .footer-wrapper {
-  width: 100%;
-  z-index: 101;
+.pt-app .footer,
+.pt-app .input.sentence .status,
+.pt-app table.argument tr.sentence td:last-child,
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  text-align: center;
 }
-.pt-app .header-wrapper,
-.pt-app.no-proof .footer-wrapper {
-  color: white;
-}
-.pt-app.has-proof .footer-wrapper {
-  display: none;
-  color: #888888;
-}
-.pt-app .header-wrapper,
-.pt-app .footer-wrapper {
-  position: fixed;
-}
-.pt-app .footer-wrapper {
-  bottom: 0px;
-}
-
-.pt-app .tableau-wrapper {
-  margin-top: 170px;
-}
-.pt-app .tableau-wrapper.plaintext > pre {
-  padding: 20px;
-}
-.pt-app .header-wrapper {
-  /* background-color: #2980b9; */
-  background-color: #343131;
-}
-.pt-app.no-proof .footer-wrapper {
-  /* background-color: #343131; */
-  /* background-color: #2980b9; */
-  background-color: #6ab0de;
+.pt-app .errors dt,
+.pt-app .warns dt,
+.pt-app .input label {
+  text-align: right;
 }
 .pt-app .header a,
-.pt-app .footer a {
-  color: white;
+.pt-app .footer a,
+.pt-app a.external,
+.pt-app table.argument td a,
+.pt-app a.add-predicate {
   text-decoration: none;
-}
-.pt-app .header-wrapper {
-  top: 0px;
-}
-.pt-app .header,
-.pt-app .footer {
-  padding: 10px;
 }
 .pt-app .header a:hover,
 .pt-app .footer a:hover {
   text-decoration: underline;
 }
-.pt-app .footer {
-  text-align: center;
+.pt-app .proof-result-admon {
+  text-transform: uppercase;
+}
+.pt-app .input label {
+  vertical-align: top;
+}
+.pt-app .json-dump {
+  white-space: pre;
 }
 
-.pt-app.no-proof .pt-content {
-  margin: 30px 0;
-  padding: 20px;
-}
-.pt-app #proove-tabs-wrapper {
-  margin-bottom: 20px
-}
-.pt-app.has-proof .ui-tabs-anchor {
-  padding: .2em 0.5em;
-}
+/* ---- display ---- */
 
-/*
- * Tabs
- */
- .pt-app.has-proof #proove-tabs-wrapper {
-  /* position: -webkit-sticky; */
-  /* position: sticky; */
-  position: fixed;
-  max-height: 80%;
-  overflow-y: auto;
-  top: 35px;
-  left: 20px;
-  width: 95%;
-}
- .ui-tabs #tab-view.ui-tabs-panel,
- .ui-tabs #tab-step.ui-tabs-panel,
- .ui-tabs #tab-stats.ui-tabs-panel,
- .ui-tabs #tab-models.ui-tabs-panel {
-     padding: 0.4em 0.4em 0 0.4em;
- }
-/*
- * Generic
-*/
-
-.hidden {
+.hidden,
+.pt-app.has-proof .footer-wrapper,
+.pt-app table.argument td a.del-premise,
+.pt-app #lexicons-content #predicates_input_table a.del-predicate,
+.pt-app #lexicons-content .predicate-symbol.hidden {
   display: none;
 }
-.clear {
-  clear: both;
+.pt-app #clear_argument_wrapper,
+.pt-app table.argument td:hover a.del-premise,
+.pt-app #lexicons-content #predicates_input_table td:hover a.del-predicate {
+  display: inline;
 }
-.left {
-  float: left;
+.pt-app .input label,
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  display: inline-block;
 }
-.right {
-  float: right;
+.pt-app ul.details li {
+  display: inline-table;
 }
-/*
- * Buttons
- */
-.pt-app a.button {
-  padding: 5px 10px;
+.pt-app label.heading,
+.pt-app .lexicons .label,
+.pt-app .select-logic .logic-title,
+.pt-app table.argument tbody.spacer td a,
+.pt-app .debugs-wrapper::before {
+  display: block;
 }
-.pt-app a.button.disabled {
-    background-color: #dddddd;
-    color: #999999;
+.pt-app #lexicons-content ul.item-symbols {
+  list-style-type: none;
 }
-/*
- * Links
- */
-.pt-app a.external {
-  text-decoration: none;
-  cursor: pointer;
+
+/* ---- color ---- */
+.pt-app .proof-result-admon,
+.pt-app .header-wrapper,
+.pt-app.no-proof .footer-wrapper,
+.pt-app .header a,
+.pt-app .footer a,
+.pt-app .errors h3,
+.pt-app .warns h3,
+.pt-app .input.sentence .status.good,
+.pt-app .input.sentence .status.bad,
+.pt-app .debugs-wrapper > .debugs-heading {
+  color: #ffffff;
+}
+.pt-app a.external,
+.pt-app a.add-predicate,
+.pt-app a.add-predicate::after,
+.pt-app .json-dump .json-abrace {
+  color: #2980b9;
+}
+.pt-app.has-proof .footer-wrapper {
+  color: #888888;
+}
+.pt-app a.button.disabled,
+.pt-app .json-dump .json-obrace {
+  color: #999999;
 }
 .pt-app a.external:after {
-  /* From rtd theme */
   color: #b3b3b3;
-  margin: 0 0.2em;
-  font-family: FontAwesome;
-  content: "\f08e";
 }
-/* 
- * Admonitions
- */
-.pt-app .errors,
-.pt-app .warns {
-  padding-bottom: 15px;
-  margin-bottom: 10px;
+.pt-app code {
+  color: #e74c3c;
 }
-.pt-app .errors h3,
-.pt-app .warns h3 {
-  margin: 0;
-  padding: 6px 12px;
-  color: white;
+.pt-app table.argument td a.del-premise::before,
+.pt-app table.argument td a.del-premise::after {
+  color: #e91e63ba;
 }
-.pt-app .errors dt,
-.pt-app .warns dt {
-  float: left;
-  min-width: 100px;
-  text-align: right;
-  padding: 10px;
-  clear: both;
-  font-weight: bold;
+.pt-app .json-dump .json-string {
+  color: #ba2121;
 }
-.pt-app .errors dd,
-.pt-app .warns dd {
-  margin: 0;
-  padding: 10px;
-  float: left;
+.pt-app .debugs .debug-heading {
+  color: #0f100f;
+}
+
+/* ---- background-color ---- */
+.pt-app #tableau_input_form label.heading, /* TODO: change to non-label element (h*, div) */
+.pt-app .debugs-wrapper {
+  background-color: inherit;
+}
+.pt-app .header-wrapper {
+  background-color: #343131;
+}
+.pt-app.no-proof .footer-wrapper {
+  background-color: #6ab0de;
+}
+.pt-app a.button.disabled {
+  background-color: #dddddd;
 }
 .pt-app .errors {
   background-color: #fdf3f2;
-  border: 1px solid #f29f97;
 }
 .pt-app .warns {
   background-color: #ffedcc;
-  border: 1px solid #f0b37e;
+}
+.pt-app .input label,
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol,
+.pt-app #lexicons-content table.predicates th {
+  background-color: #eee;
+}
+.pt-app .lexicons .label {
+  background-color: #edf0f261;
 }
 .pt-app .errors h3 {
   background-color: #f29f97;
@@ -302,110 +292,10 @@ rtd-theme:
 .pt-app .warns h3 {
   background-color: #f0b37e;
 }
-.pt-app .warns h3::before,
-.pt-app .errors h3::before {
-  font-family: FontAwesome;
-  margin-right: 8px;
-  content: "";
-}
-
-
-/*
- * Lists
- */
-.pt-app ul.details {
-  padding: 0;
-}
-.pt-app ul.details li {
-  display: inline-table;
-  padding: 0 8px 0 5px;
-  margin-top: 22px;
-  border-left: 2px solid #cccccc;
-}
-.pt-app ul.details .value {
-  padding: 2px;
-  margin-top: 9px;
-}
-
-
- /* Code */
- .pt-app code {
-  border: 1px solid #e1e4e5;
-  background: #ffffff;
-  color: #e74c3c;
-  overflow-x: auto;
-  max-width: 100%;
-  padding: 3px 5px;
-  white-space: normal;
- }
-
-/**
- * Forms
- */
-.pt-app div.input {
-  margin: 2px 0;
-}
-.pt-app .input label {
-  border: 1px solid #cccccc;
-  /* min-width: 100px; */
-  text-align: right;
-  display: inline-block;
-  background-color: #eee;
-  padding: 10px;
-  vertical-align: top;
-}
-.pt-app .fieldset {
-  clear: both;
-  /* border: 1px solid #93c3cd; */
-  border: 1px solid #c3c3c3;
-  margin: 0 0 10px 0;
-  padding: 0;
-}
-.pt-app .fieldset-contents {
-  padding: 10px;
-}
-.pt-app .input input[type="text"],
-.pt-app .input input[type="email"] {
-  padding: 7px 4px;
-}
-.pt-app .input.submit input[type="submit"] {
-  margin: 10px 0 20px 127px;
-}
-.pt-app.ui-selectmenu-menu .ui-menu {
-  max-height: 300px;
-}
-
-/*
- * Argument Form
- * ===========================
- */
-.pt-app #argument-input-panel {
-  width: 351px;
-}
-.pt-app #clear_argument_wrapper {
-  float: right;
-  display: inline;
-  margin-right: 28px;
-  margin-top: 8px;
-}
-
-/* Sentence input table */
-.pt-app .input.sentence input {
-  width: 215px;
-}
 .pt-app .input.sentence .status {
   background-color: #cccccc;
 }
-.pt-app .input.sentence .status,
-.pt-app table.argument tr.sentence td:last-child {
-  padding: 8px;
-  text-align: center;
-  width: 20px;
-}
-.pt-app .input.sentence .status.good,
-.pt-app .input.sentence .status.bad {
-  color: #ffffff;
-}
+.pt-app .proof-result-admon.valid,
 .pt-app .input.sentence.conclusion .status.good {
   background-color: #1abc9c;
 }
@@ -418,15 +308,485 @@ rtd-theme:
 .pt-app .input.sentence.premise .status.bad {
   background-color: #f3217cf5;
 }
-
-.pt-app table.argument td a {
-  /* display: block; */
-  text-decoration: none;
+.pt-app table.argument td a.add-premise:hover {
+  background-color: #2980b9;
+}
+.pt-app .select-logic .logic-title {
+  background-color: #f0f0f0;
+}
+.pt-app .proof-result-admon.invalid {
+  background-color: rgb(255, 100, 85);
+}
+.pt-app .proof-result-admon.unfinished {
+  background-color: rgb(205, 129, 63);
+}
+.pt-app .debugs-wrapper > .debugs-heading {
+  background-color: #2996dd;
+}
+.pt-app .debugs .debug-heading {
+  background-color: #f0b37e;
+}
+.pt-app .debugs {
+  background-color: #e7f2fa;
+}
+.pt-app .debugs .debug-content {
+  background-color: #eeeeee;
 }
 
-.pt-app table.argument td/*:hover*/ a.del-premise {
-  text-decoration: none;
+/* ---- border ---- */
+
+.pt-app .input label,
+.pt-app .select-logic,
+.pt-app .input-argument,
+.pt-app .debugs,
+.pt-app #lexicons-content,
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  border: 1px solid #cccccc;
 }
+.pt-app .proof-result-admon.invalid,
+.pt-app .proof-result-admon.unfinished {
+  border: 1px solid #aaa;
+}
+.pt-app .debugs .debug-heading,
+.pt-app .debugs .debug-content {
+  border: 1px solid #888888;
+}
+.pt-app .fieldset {
+  border: 1px solid #c3c3c3;
+}
+.pt-app .lexicons .label {
+  border: 1px solid #ccccccab;
+}
+.pt-app .proof-result-admon.valid {
+  border: 1px solid #666;
+}
+.pt-app .errors {
+  border: 1px solid #f29f97;
+}
+.pt-app .warns {
+  border: 1px solid #f0b37e;
+}
+.pt-app code {
+  border: 1px solid #e1e4e5;
+}
+.pt-app #input_feedback_content {
+  border: 3px solid #cccccc;
+}
+.pt-app ul.details li {
+  border-left: 2px solid #cccccc;
+}
+.pt-app .select-logic .logic-title {
+  border: none;
+  border-left: 3px solid #cccccc;
+}
+.pt-app label.heading {
+  border-width: 0 0 1px 0;
+  border-color: #cccccc;
+  border-style: solid;
+}
+.pt-app .debugs-wrapper::before {
+  border-bottom: 2px dashed #9e9e9e;
+}
+.pt-app .debugs-wrapper > .debugs-heading {
+  border-bottom: 1px solid #cccccc;
+}
+
+/* ---- float ---- */
+
+.left,
+.pt-app .errors dt,
+.pt-app .errors dd,
+.pt-app .warns dt,
+.pt-app .warns dd,
+.pt-app #lexicons-wrapper,
+.pt-app .lexicons .panel {
+  float: left;
+}
+.right,
+.pt-app #clear_argument_wrapper {
+  float: right;
+}
+.clear,
+.pt-app .errors dt,
+.pt-app .warns dt,
+.pt-app .fieldset {
+  clear: both;
+}
+
+/* ---- margin ---- */
+
+body.pt-app,
+.pt-app .errors h3,
+.pt-app .warns h3,
+.pt-app .errors dd,
+.pt-app .warns dd,
+.pt-app #lexicons-content table.predicates,
+.pt-app #lexicons-content table.operator-symbols.predicate-symbols {
+  margin: 0;
+}
+.pt-app.no-proof .pt-content {
+  margin: 30px 0;
+}
+.pt-app a.external:after {
+  margin: 0 0.2em;
+}
+.pt-app div.input {
+  margin: 2px 0;
+}
+.pt-app .fieldset {
+  margin: 0 0 10px 0;
+}
+.pt-app .input.submit input[type="submit"] {
+  margin: 10px 0 20px 127px;
+}
+.pt-app .argument .example-argument {
+  margin: 0 0 15px 0;
+}
+.pt-app .select-logic .logic-details {
+  margin: 20px 0;
+}
+.pt-app .select-logic .logic-title {
+  margin: 6px 0;
+}
+.pt-app .lexicons .label {
+  margin: 0 0 7px 0;
+}
+.pt-app #lexicons-content ul.item-symbols,
+.pt-app #lexicons-content table.operator-symbols {
+  margin: 0 0 16px 0;
+}
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  margin: 0 3px;
+}
+.pt-app .tableau-wrapper {
+  margin-top: 170px;
+}
+.pt-app ul.details li {
+  margin-top: 22px;
+}
+.pt-app ul.details .value {
+  margin-top: 9px;
+}
+.pt-app .debugs .debug-heading {
+  margin-top: 10px;
+}
+.pt-app .warns h3::before,
+.pt-app .errors h3::before {
+  margin-right: 8px;
+}
+.pt-app .lexicons .panel {
+  margin-right: 10px;
+}
+.pt-app .errors,
+.pt-app .warns {
+  margin-bottom: 10px;
+}
+.pt-app #proove-tabs-wrapper {
+  margin-bottom: 20px;
+}
+.pt-app .argument .select-logic {
+  margin-bottom: 7px;
+}
+.pt-app label.heading {
+  margin-bottom: 12px;
+}
+.pt-app #clear_argument_wrapper {
+  margin-right: 28px;
+  margin-top: 8px;
+}
+.pt-app .select-logic .logic-title {
+  margin: 6px 0;
+  margin-bottom: 6px;
+}
+.pt-app #lexicons-wrapper {
+  margin-left: 5px;
+}
+.pt-app .debugs-wrapper::before {
+  margin-top: 100px;
+  margin-bottom: 20px;
+}
+.pt-app .debugs-wrapper > .debugs-heading,
+.pt-app .debugs .debug-heading {
+  margin-block-start: 0;
+  margin-block-end: 0;
+}
+
+/* ---- padding ---- */
+
+body.pt-app,
+.pt-app ul.details,
+.pt-app .fieldset,
+.pt-app #lexicons-content ul.item-symbols {
+  padding: 0;
+}
+.pt-app ul.details .value,
+.pt-app #lexicons-content input.arity {
+  padding: 0.125em;
+}
+.pt-app #lexicons-content table.predicates td,
+.pt-app #lexicons-content .operator-symbols td {
+  padding: 0.1875em;
+}
+.pt-app .select-logic .logic-title,
+.pt-app .lexicons .label,
+.pt-app #input_feedback_content {
+  padding: 0.375em;
+}
+.pt-app .proof-result-admon {
+  padding: 0.4em;
+}
+.pt-app .input.sentence .status,
+.pt-app table.argument tr.sentence td:last-child,
+.pt-app table.argument tbody.spacer td a {
+  padding: 0.5em;
+}
+.pt-app .header,
+.pt-app .footer,
+.pt-app .errors dt,
+.pt-app .warns dt,
+.pt-app .errors dd,
+.pt-app .warns dd,
+.pt-app .input label,
+.pt-app .fieldset-contents,
+.pt-app .debugs .debug-heading,
+.pt-app .debugs-wrapper > .debugs-heading {
+  padding: 0.625em;
+}
+.pt-app.no-proof .pt-content,
+.pt-app .tableau-wrapper.plaintext > pre,
+.pt-app .debugs .debug-content {
+  padding: 1.25em;
+}
+.pt-app #lexicons-content ul.item-symbols li,
+.pt-app #lexicons-content .predicate-symbol,
+.pt-app #lexicons-content .operator-symbol {
+  padding: 0.125em 0.25em;
+}
+.pt-app code {
+  padding: 0.1875em 0.3125em;
+}
+.pt-app .json-dump .json-dict li {
+  padding: 0.2em 0;
+}
+.pt-app.has-proof .ui-tabs-anchor {
+  padding: 0.2em 0.5em;
+}
+.pt-app a.button {
+  padding: 0.3125em 0.625em;
+}
+.pt-app .errors h3,
+.pt-app .warns h3 {
+  padding: 0.375em 0.75em;
+}
+.ui-tabs #tab-view.ui-tabs-panel,
+.ui-tabs #tab-step.ui-tabs-panel,
+.ui-tabs #tab-stats.ui-tabs-panel,
+.ui-tabs #tab-models.ui-tabs-panel {
+  padding: 0.4em 0.4em 0 0.4em;
+}
+.pt-app .input input[type="text"],
+.pt-app .input input[type="email"] {
+  padding: 0.4375em 0.25em;
+}
+.pt-app .select-logic,
+.pt-app .input-argument,
+.pt-app #lexicons-content {
+  padding: 0.625em 1.25em;
+}
+.pt-app ul.details li {
+  padding: 0 0.5em 0 0.3125em;
+}
+.pt-app .lexicons .panel {
+  padding: 0 0.3125em 0 0;
+}
+.pt-app .debugs .debug {
+  padding: 0.625em 0.625em 0 0.625em;
+}
+.pt-app .errors,
+.pt-app .warns {
+  padding-bottom: 0.9375em;
+}
+.pt-app .debugs {
+  padding-bottom: 1.25em;
+}
+.pt-app label.heading {
+  padding-left: 0;
+}
+.pt-app table.argument td a.del-premise,
+.pt-app a.add-predicate {
+  padding-left: 1em;
+}
+.pt-app .json-dump ul.json-dict,
+.pt-app .json-dump ol.json-array {
+  padding-left: 1.5em;
+}
+
+/* ---- width ---- */
+
+.pt-app.has-proof #proove-tabs-wrapper {
+  width: 95%;
+}
+.pt-app .header-wrapper,
+.pt-app .footer-wrapper {
+  width: 100%;
+}
+.pt-app #lexicons-content input.arity {
+  width: 10px;
+}
+.pt-app .input.sentence .status,
+.pt-app table.argument tr.sentence td:last-child {
+  width: 20px;
+}
+.pt-app #lexicons-content #predicates_input_table tr td:last-child {
+  width: 76%;
+}
+.pt-app .fieldset.options .input label {
+  width: 160px;
+}
+.pt-app #argument-input-panel {
+  width: 351px;
+}
+.pt-app .input.sentence input {
+  width: 215px;
+}
+.pt-app #input_feedback_content {
+  width: 600px;
+}
+.pt-app #lexicons-content .predicate-symbol {
+  min-width: 10px;
+}
+.pt-app .errors dt,
+.pt-app .warns dt {
+  min-width: 100px;
+}
+.pt-app code {
+  max-width: 100%;
+}
+.pt-app .feedback_view {
+  max-width: 800px;
+}
+
+/* ---- height ---- */
+
+.pt-app #input_feedback_content {
+  height: 120px;
+}
+.pt-app.has-proof #proove-tabs-wrapper {
+  max-height: 80%;
+}
+.pt-app.ui-selectmenu-menu .ui-menu {
+  max-height: 300px;
+}
+
+/* ---- position ---- */
+
+.pt-app .header-wrapper,
+.pt-app .footer-wrapper,
+.pt-app.has-proof #proove-tabs-wrapper {
+  position: fixed;
+}
+.pt-app table.argument td a.del-premise {
+  position: relative;
+}
+.pt-app table.argument td a.del-premise::before,
+.pt-app table.argument td a.del-premise::after {
+  position: absolute;
+}
+.pt-app .header-wrapper {
+  top: 0;
+}
+.pt-app .footer-wrapper {
+  bottom: 0;
+}
+.pt-app table.argument td a.del-premise::before,
+.pt-app table.argument td a.del-premise::after {
+  left: 0;
+}
+.pt-app table.argument td a.del-premise::before,
+.pt-app table.argument td a.del-premise::after {
+  top: 50%;
+  transform: translateY(-50%);
+}
+.pt-app.has-proof #proove-tabs-wrapper {
+  top: 35px;
+  left: 20px;
+}
+.pt-app .header-wrapper,
+.pt-app .footer-wrapper {
+  z-index: 101;
+}
+
+/* ---- overflow ---- */
+
+.pt-app code {
+  overflow-x: auto;
+}
+.pt-app .json-dump {
+  overflow-x: scroll;
+}
+.pt-app.has-proof #proove-tabs-wrapper {
+  overflow-y: auto;
+}
+
+/* ---- cursor ---- */
+
+.tableau.with-controls,
+.pt-app .debugs-wrapper > .debugs-heading,
+.pt-app .debugs .debug-heading {
+  cursor: pointer;
+}
+
+/* ---- content ---- */
+
+.pt-app .debugs-wrapper::before {
+  content: "";
+}
+.pt-app table.argument td a.del-premise::before,
+.pt-app table.argument td a.del-premise::after {
+  content: '\f057';
+}
+.pt-app a.external:after {
+  content: "\f08e";
+}
+.pt-app .warns h3::before,
+.pt-app .errors h3::before {
+  content: "";
+}
+.pt-app a.add-predicate::after {
+  content: '\F055';
+}
+
+/* .pt-app.has-proof #proove-tabs-wrapper {
+  position: -webkit-sticky;
+  position: sticky;
+} */
+/* .pt-app td.add-predicate {
+  text-align: left;
+}
+.pt-app a.add-predicate {
+  padding: 3px 8px;
+  text-decoration: none;
+  display: inline-block;
+}
+.pt-app a.add-predicate .plus {
+  margin-left: -0.78em;
+}
+.pt-app a.add-predicate .dashes {
+  white-space: pre;
+} */
+
+/* .pt-app table.argument td a.del-premise:hover {
+  color: red;
+  background-color: #cccccc;
+} */
+
+/* .pt-app select#example_argument {
+  margin: 5px 0 10px 1px;
+} */
 
 /* * * * * * * * * * * * * * * **
  * Example of character as icon 
@@ -447,304 +807,16 @@ rtd-theme:
   content: '\2297';
 }
 /* * * * * * * * * * * * * * * */
-
-.pt-app table.argument td a.del-premise {
-  position: relative;
-  padding-left: 1em;
-  display: none;
-}
-.pt-app table.argument td:hover a.del-premise {
-  display: inline;
-}
-.pt-app table.argument td a.del-premise::before,
-.pt-app table.argument td a.del-premise::after {
-  position: absolute;
-  font-size: 3.25em;
-  left: 0;
-  top: 25%;
-  transform: translateY(-50%);
-
-  color: #e91e63ba;
-  content: '\2297';
-}
-
-/* .pt-app table.argument td a.del-premise:hover {
-  color: red;
-  background-color: #cccccc;
-} */
-
-
-.pt-app table.argument tbody.spacer td a {
-  display: block;
-  padding: 7px;
-}
-.pt-app table.argument td a.add-premise:hover {
-  background-color: #2980b9;
-}
-
-
-
-
-/* Logic */
-.pt-app .select-logic,
-.pt-app .input-argument,
-.pt-app #lexicons-content {
-  text-align: left;
-  border: 1px solid #cccccc;
-  padding: 10px 20px;
-}
-.pt-app .argument .select-logic {
-  margin-bottom: 7px;
-}
-
-/* Example argument */
-/* .pt-app select#example_argument {
-  margin: 5px 0 10px 1px;
-} */
-.pt-app .argument .example-argument {
-  margin: 0 0 15px 0;
-}
-
-.pt-app label.heading {
-  display: block;
-  text-align: left;
-  border-width: 0 0 1px 0;
-  border-color: #cccccc;
-  border-style: solid;
-  font-weight: bold;
-  margin-bottom: 12px;
-  padding-left: 0;
-  background-color: inherit;
-}
-.pt-app .select-logic .logic-details {
-  margin: 20px 0;
-}
-.pt-app .select-logic .logic-title {
-  margin-bottom: 6px;
-  border: none;
-  border-left: 3px solid #ccc;
-  background: #f0f0f0;
-  color: #555;
-  margin: 6px 0;
-  padding: 6px;
-  display: block;
-  font-weight: bold;
-}
-/* Lexicon */
-.pt-app #lexicons-wrapper {
-  float: left;
-  margin-left: 5px;
-}
-.pt-app .lexicons .lexicon-panel {
-  margin-right: 10px;
-  padding: 0 5px 0 0;
-  float: left;
-}
-.pt-app .lexicons .label {
-  border: 1px solid #ccccccab;
-  display: block;
-  padding: 6px;
-  margin: 0 0 7px 0;
-  background-color: #edf0f261;
-}
-.pt-app #lexicons-content .predicate-symbol {
-  min-width: 10px;
-}
-.pt-app #lexicons-content input.arity {
-  width: 10px;
-  padding: 2px;
-}
-.pt-app #lexicons-content table.predicates {
-  margin: 0;
-}
-.pt-app #lexicons-content table.predicates th {
-  font-weight: normal;
-  text-align: left;
-  background-color: #eee;
-}
-.pt-app #lexicons-content ul.item-symbols {
-  list-style-type: none;
-  padding: 0;
-}
-.pt-app #lexicons-content ul.item-symbols,
-.pt-app #lexicons-content table.operator-symbols {
-  margin: 0 0 16px 0;
-}
-.pt-app #lexicons-content table.operator-symbols.predicate-symbols {
-  margin: 0;
-}
-.pt-app #lexicons-content #predicates_input_table tr td:last-child {
-  width: 76%;
-}
-.pt-app #lexicons-content #predicates_input_table a.del-predicate {
-  display: none;
-}
-.pt-app #lexicons-content #predicates_input_table td:hover a.del-predicate {
-  display: inline;
-}
-.pt-app #lexicons-content ul.item-symbols li,
-.pt-app #lexicons-content .predicate-symbol,
-.pt-app #lexicons-content .operator-symbol {
-  display: inline-block;
-  padding: 2px 4px;
-  background-color: #eee;
-  margin: 0 3px;
-  border: 1px solid #cccccc;
-  text-align: center;
-}
-.pt-app #lexicons-content .predicate-symbol.hidden {
-  display: none;
-}
-.pt-app #lexicons-content table.predicates td,
-.pt-app #lexicons-content .operator-symbols td {
-  padding: 3px;
-}
-/* Argument form -- options */
-.pt-app .fieldset.options .input label {
-  width: 160px;
-}
-.pt-app td.add-predicate {
-  text-align: left;
-}
-.pt-app a.add-predicate {
-  /* background-color: #6ab0de69; */
-  padding: 3px 8px;
-  text-decoration: none;
-  display: inline-block;
-}
-.pt-app a.add-predicate .plus {
-  margin-left: -0.78em;
-}
-.pt-app a.add-predicate .dashes {
-  white-space: pre;
-}
-/*
- * Result
+/* 
+rtd-theme:
+    fonts:
+        Lato,proxima-nova,Helvetica Neue,Arial,sans-serif
+    backgrounds:
+        #6ab0de (note, blue)
+        #dbfaf4 (important, light green)
+        rgb(26, 188, 156) (important, dark green)
+        #2980b9 (title bar, blue)
  */
-.evaluation pre {
-  overflow-x: scroll;
-}
-.evaluation {
-  /* border: 1px solid black; */
-  margin-bottom: 10px;
-}
-
-.tableau.with-controls {
-  cursor: pointer;
-}
-
-.proof-result-admon {
-  text-transform: uppercase;
-  font-weight: bold;
-  color: white;
-  padding: 0.4em;
-  letter-spacing: 0.05em;
-}
-.proof-result-admon.valid {
-  background-color: rgb(26, 188, 156);
-  border: 1px solid #666;
-}
-.proof-result-admon.invalid {
-  background-color: rgb(255, 100, 85);
-  border: 1px solid #aaa;
-}
-.proof-result-admon.unfinished {
-  background-color: rgb(205, 129, 63);
-  border: 1px solid #aaa;
-}
-
-
-/*
- * Feedback form
- */
-.pt-app .feedback_view {
-  max-width: 800px;
-}
-.pt-app #input_feedback_content {
-  width: 600px;
-  height: 120px;
-  border: 3px solid #cccccc;
-  padding: 5px;
-}
-
-/*
- * Debug
- */
-
-.pt-app .debugs-wrapper::before {
-  content: "";
-  display: block;
-  margin-top: 100px;
-  margin-bottom: 20px;
-  border-bottom: 2px dashed #9e9e9e;
-}
-.pt-app .debugs-wrapper {
-  background-color: inherit;
-}
-
-.pt-app .debugs-wrapper > .debugs-heading,
-.pt-app .debugs .debug-heading {
-  cursor: pointer;
-  margin-block-start: 0;
-  margin-block-end: 0;
-}
-.pt-app .debugs .debug-heading,
-.pt-app .debugs .debug-content {
-  border: 1px solid #888888;
-
-}
-.pt-app .debugs-wrapper > .debugs-heading {
-  background-color: #2996dd;
-  color: #ffffff;
-  padding: 10px;
-  border-bottom: 1px solid #cccccc;
-}
-.pt-app .debugs {
-  border: 1px solid #cccccc;
-  background-color: #e7f2fa;
-  padding-bottom: 20px;
-}
-.pt-app .debugs .debug {
-  padding: 10px 10px 0 10px;
-}
-.pt-app .debugs .debug-heading {
-  background-color: #f0b37e;
-  margin-top: 10px;
-  padding: 10px;
-  color: #0f100f;
-}
-.pt-app .debugs .debug-content {
-  padding: 20px;
-  background-color: #eeeeee;
-}
-.pt-app .json-dump {
-  font-size: 1.2em;
-  white-space: pre;
-  font-family: monospace;
-  overflow-x: scroll;
-}
-/* json-viewer */
-.pt-app .json-dump .json-dict li {
-  padding-bottom: 0.2em;
-  padding-top: 0.2em;
-}
-.pt-app .json-dump .json-string {
-  color: #BA2121;
-}
-.pt-app .json-dump ul.json-dict,
-.pt-app .json-dump ol.json-array {
-  padding-left: 1.5em;
-}
-
-
-/* curly brace */
-.pt-app .json-dump .json-obrace {
-  color: #dddddd;
-}
-/* angle brace */
-.pt-app .json-dump .json-abrace {
-  color: rgb(51, 255, 0);
-}
 /* 
 .json-comma
 .json-literal.json-number
