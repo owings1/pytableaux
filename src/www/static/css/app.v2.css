@@ -82,7 +82,6 @@
 }
 
 /* ---- font ---- */
-
 body.pt-app,
 .pt-app .ui-widget {
   font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;
@@ -119,7 +118,8 @@ body.pt-app {
 .pt-app #argument_form .heading,
 .pt-app.no-proof #lexicons-content ul.item-symbols li,
 .pt-app.no-proof #lexicons-content .predicate-symbol,
-.pt-app.no-proof #lexicons-content .operator-symbol {
+.pt-app.no-proof #lexicons-content .operator-symbol,
+.pt-app #argument_form input[type="submit"] {
   font-size: 1.2em;
 }
 .pt-app .headicon::before {
@@ -148,7 +148,6 @@ body.pt-app {
 }
 
 /* ---- text ---- */
-
 .pt-app #argument_form .panebox,
 .pt-app #argument_form .heading,
 .pt-app #lexicons-content table.predicates th {
@@ -179,7 +178,8 @@ body.pt-app {
 .pt-app .footer a:hover {
   text-decoration: underline;
 }
-.pt-app .proof-result-admon {
+.pt-app .proof-result-admon,
+.pt-app #argument_form input[type="submit"] {
   text-transform: uppercase;
 }
 .pt-app .input label,
@@ -191,7 +191,6 @@ body.pt-app {
 }
 
 /* ---- display ---- */
-
 .hidden,
 .pt-app.has-proof .footer-wrapper,
 .pt-app #lexicons-content .predicate-symbol.hidden {
@@ -339,7 +338,6 @@ body.pt-app {
 }
 
 /* ---- border ---- */
-
 .pt-app .input label,
 .pt-app .debugs,
 .pt-app #argument_form .panebox,
@@ -397,7 +395,6 @@ body.pt-app {
 }
 
 /* ---- float ---- */
-
 .left,
 .pt-app .errors dt,
 .pt-app .errors dd,
@@ -421,7 +418,6 @@ body.pt-app {
 }
 
 /* ---- margin ---- */
-
 body.pt-app,
 .pt-app .errors h3,
 .pt-app .warns h3,
@@ -518,7 +514,6 @@ body.pt-app,
 }
 
 /* ---- padding ---- */
-
 body.pt-app,
 .pt-app ul.details,
 .pt-app #lexicons-content ul.item-symbols {
@@ -556,6 +551,9 @@ body.pt-app,
 .pt-app .debugs .debug-heading,
 .pt-app .debugs-wrapper > .debugs-heading {
   padding: 0.625em;
+}
+.pt-app #argument_form input[type="submit"] {
+  padding: 0.975em;
 }
 .pt-app.no-proof .pt-content,
 .pt-app .tableau-wrapper.plaintext > pre,
@@ -683,7 +681,6 @@ body.pt-app,
 }
 
 /* ---- height ---- */
-
 .pt-app #input_feedback_content {
   height: 120px;
 }
@@ -695,7 +692,6 @@ body.pt-app,
 }
 
 /* ---- position ---- */
-
 .pt-app .header-wrapper,
 .pt-app .footer-wrapper,
 .pt-app.has-proof #uitabs_main_wrapper {
@@ -744,7 +740,6 @@ body.pt-app,
 }
 
 /* ---- overflow ---- */
-
 .pt-app code {
   overflow-x: auto;
 }
@@ -756,7 +751,6 @@ body.pt-app,
 }
 
 /* ---- cursor ---- */
-
 .tableau.with-controls,
 .pt-app .debugs-wrapper > .debugs-heading,
 .pt-app .debugs .debug-heading {
@@ -764,7 +758,6 @@ body.pt-app,
 }
 
 /* ---- content ---- */
-
 .pt-app .debugs-wrapper::before {
   content: "";
 }
@@ -772,7 +765,6 @@ body.pt-app,
 .pt-app a.del-premise::before,
 .pt-app a.del-premise::after {
   content: '\f147';
-  /* content: '\f056'; */
 }
 .pt-app a.external:after {
   content: "\f08e";
@@ -785,7 +777,6 @@ body.pt-app,
 .pt-app a.add-premise::before,
 .pt-app a.add-premise::after {
   content: '\F196';
-  /* content: '\F055'; */
 }
 .pt-app a.headicon.doc::before {
   content: '\F059';
