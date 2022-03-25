@@ -38,7 +38,12 @@
 .tableau .hidden {
     display: none;
 }
-
+.tableau.drag-scroll {
+    -webkit-user-select: none;
+    -moz-user-select: moz-none;
+    -ms-user-select: none;
+    user-select: none;
+}
 /* Controls */
 .tableau .node.highlight > .node-props, 
 .tableau .structure.closed.highlight-closed > .node-segment > .node:last-child::after {

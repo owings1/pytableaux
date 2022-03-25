@@ -309,6 +309,7 @@
             if (IS_PROOF) {
                 $(Sel.tableaux).tableau({
                     // autoWidth: true,
+                    // dragScroll: true,
                     scrollContainer: $(document)
                 })
             }

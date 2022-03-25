@@ -106,6 +106,7 @@
         ColorOpen       : 'color-open'           ,
         AutoWidth       : 'auto-width'           ,
         AutoScroll      : 'auto-scroll'          ,
+        DragScroll      : 'drag-scroll'          ,
 
         // stateful classes
         Hidden          : 'hidden'               ,
@@ -354,6 +355,7 @@
         autoScroll: null,
         stretch: true,
         center: true,
+        dragScroll: true,
     })
 
     Api.fn.init = function init(opts) {
@@ -385,8 +387,14 @@
                 Api.instances[id] = that
             })
         }
-        this.$tableau.on('click', onTableauClick)
-        this.$controls.on('click', onControlsClick).on('change', onControlsChange)
+        this.$tableau
+            .on('click', onTableauClick)
+            .on('mousedown', onMouseDown)
+            .on('mouseup', onMouseUp)
+            .on('mousemove', onMouseMove)
+        this.$controls
+            .on('click', onControlsClick)
+            .on('change', onControlsChange)
         this.$models.on('click', onModelsClick)
         if (opts.autoWidth == null) {
             if ($(Dcls.AutoWidth + Dcls.MarkActive, this.$controls).length) {
@@ -401,6 +409,9 @@
             }
         } else {
             setAutoScroll.call(this, opts.autoScroll)
+        }
+        if (opts.dragScroll) {
+            this.$tableau.addClass(Cls.DragScroll)
         }
         if (!this._isAutoWidth && opts.stretch) {
             stretchWidth.call(this)
@@ -418,7 +429,9 @@
 
     Api.fn.destroy = function destroy() {
         if (this.$controls) {
-            this.$controls.off('click', onControlsClick).off('change', onControlsChange)
+            this.$controls
+                .off('click', onControlsClick)
+                .off('change', onControlsChange)
             this.$controls.each(function() {
                 delete App.instances[$(this).attr('id')]
             })
@@ -429,7 +442,11 @@
                 delete App.instances[$(this).attr('id')]
             })
         }
-        this.$tableau.off('click', onTableauClick)
+        this.$tableau
+            .off('click', onTableauClick)
+            .off('mousedown', onMouseDown)
+            .off('mouseup', onMouseUp)
+            .off('mousemove', onMouseMove)
         delete Api.instances[this.id]
         if (Api.activeInstance === this) {
             Api.activeInstance = null
@@ -477,7 +494,7 @@
      * @param {boolean} value The value to set.
      * @return {void}
      */
-     function setAutoWidth(value) {
+    function setAutoWidth(value) {
         this._isAutoWidth = Boolean(value)
         $(Dcls.AutoWidth, this.$controls).toggleClass(Cls.MarkActive, this._isAutoWidth)
         if (this._isAutoWidth) {
@@ -522,6 +539,32 @@
         const api = Api.getInstance(this)
         Api.activeInstance = api
         handleModelsClick.call(api, $(e.target))
+    }
+
+    // cursor state
+    const CurState = {
+        down : false,
+        xpos : 0,
+        ypos : 0,
+    }
+
+    function onMouseDown(m) {
+        CurState.ypos = m.pageY
+        CurState.xpos = m.pageX
+        CurState.down = true
+    }
+
+    function onMouseUp() {
+        CurState.down = false
+    }
+
+    function onMouseMove(m){
+        if (CurState.down) {
+            const api = Api.getInstance(this)
+            if (api.opts.dragScroll) {
+                window.scrollBy(CurState.xpos - m.pageX, CurState.ypos - m.pageY)
+            }
+        }
     }
 
     // Keypress handlers
