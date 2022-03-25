@@ -98,6 +98,7 @@ form_defaults = MapCover(dict(
     output_charset  = 'html',
     show_controls   = True,
     build_models    = True,
+    color_open      = True,
     rank_optimizations  = True,
     group_optimizations = True,
 ))
@@ -122,7 +123,7 @@ base_view_data = MapCover(dict(
     output_charsets     = output_charsets,
     logic_categories    = logic_categories,
 
-    lwstdhtm            = _LW_CACHE[Notation.standard]['html'],
+    lwh                 = _LW_CACHE[Notation.standard]['html'],
     view_version        = 'v2',
 ))
 
@@ -199,8 +200,8 @@ class App:
             is_debug = config['is_debug']
 
         api_data = resp_data = None
-        is_proof = is_controls = is_models = False
-        selected_tab = 'argument'
+        is_proof = is_controls = is_models = is_color = False
+        selected_tab = 'input'
 
         if req.method == 'POST':
             try:
@@ -221,6 +222,7 @@ class App:
                         form_data.get('build_models') and
                         tableau.invalid
                     )
+                    is_color = bool(form_data.get('color_open'))
                     selected_tab = 'view'
                 else:
                     selected_tab = 'stats'
@@ -239,6 +241,7 @@ class App:
             is_proof     = is_proof,
             is_controls  = is_controls,
             is_models    = is_models,
+            is_color     = is_color,
             selected_tab = selected_tab,
         )
 
@@ -267,7 +270,12 @@ class App:
 
         return self._render(view, view_data)
 
+    @chpy.expose
     def feedback(self, **form_data) -> str:
+
+        config = self.config
+        if not (config['feedback_enabled'] and config['smtp_host']):
+            raise chpy.NotFound()
 
         req: Request = chpy.request
 
@@ -280,7 +288,6 @@ class App:
             form_data = form_data
         )
 
-        config = self.config
         is_submitted = False
         is_debug = config['is_debug']
 
@@ -317,23 +324,29 @@ class App:
                     'You might want to send an email instead.'
                 )
 
+        page_data = dict(
+            is_debug     = is_debug,
+            is_submitted = is_submitted,
+        )
+
         if is_debug:
             debugs.extend(dict(
                 form_data = form_data,
             ).items())
             view_data['debugs'] = debugs
 
-        view_data.update(
+        view_data.update(page_data,
+            page_json = json.dumps(
+                page_data,
+                indent = 2 * is_debug,
+                cls = JSONEncoderForHTML
+            ),
             config       = self.config,
             errors       = errors,
             warns        = warns,
-            is_debug     = is_debug,
-            is_submitted = is_submitted,
         )
 
         return self._render(view, view_data)
-
-    feedback.exposed = APP_ENVCONF['feedback_enabled'] and bool(APP_ENVCONF['smtp_host'])
 
     @chpy.expose
     @chpy.tools.json_in()

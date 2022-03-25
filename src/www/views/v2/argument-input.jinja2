@@ -1,5 +1,5 @@
 <div class="input select select-logic">
-    <label class="heading" for="selected_logic">Logic</label>
+    <div class="heading" for="selected_logic">Logic</div>
     <select name="logic" id="selected_logic">
         {% for category in logic_categories -%}
             <optgroup label="{{ category|e }}">
@@ -23,7 +23,7 @@
 </div>
 <div class="input input-argument">
     <div id="clear_argument_wrapper"><a href="javascript:" id="clear_argument">Clear</a></div>
-    <label class="heading">Argument</label>
+    <div class="heading">Argument</div>
     <div class="input select example-argument">
         <select id="example_argument">
             <option value="">Load example argument ...</option>

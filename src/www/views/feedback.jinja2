@@ -39,15 +39,15 @@
             {% endif %}
             <form method="POST" class="feedback">
                 <div class="input">
-                    <label for="name">Your name</label>
+                    <label for="input_name">Your name</label>
                     <input class="" id="input_name" type="text" name="name" required="required" value="{{ form_data.name|e }}"/>
                 </div>
                 <div class="input">
-                    <label for="name">Your email</label>
+                    <label for="input_email">Your email</label>
                     <input class="" id="input_email" type="email" name="email" required="required" value="{{ form_data.email|e }}"/>
                 </div>
                 <div class="input">
-                    <label for="feedback_content">Feedback</label>
+                    <label for="input_feedback_content">Feedback</label>
                     <textarea id="input_feedback_content" name="message" required="required">{{ form_data.message|e }}</textarea>
                 </div>
                 <div class="input submit">

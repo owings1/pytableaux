@@ -22,8 +22,8 @@
     </span>
 {%- endmacro %}
 
-{%- macro predicate_row(index, subscript, arity='') %}
-    <tr class="user-predicate">
+{%- macro predicate(index, subscript, arity='') %}
+    <tr class="input predicate">
         <td>
             {{- caller() -}}
             <input type="hidden" class="predicate-symbol" name="user_predicate_symbols[]" value="{{ index|e }}.{{ subscript|e }}"/>

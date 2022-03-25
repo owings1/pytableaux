@@ -111,7 +111,7 @@ body.pt-app,
 body.pt-app {
   font-size: 0.9em;
 }
-.pt-app.no-proof label.heading,
+.pt-app.no-proof #argument_form .heading,
 .pt-app.no-proof #lexicons-content ul.item-symbols li,
 .pt-app.no-proof #lexicons-content .predicate-symbol,
 .pt-app.no-proof #lexicons-content .operator-symbol {
@@ -127,7 +127,7 @@ body.pt-app {
 }
 .pt-app .errors dt,
 .pt-app .warns dt,
-.pt-app label.heading,
+.pt-app #argument_form .heading,
 .pt-app .select-logic .logic-title,
 .pt-app .proof-result-admon {
   font-weight: bold;
@@ -140,7 +140,7 @@ body.pt-app {
 
 .pt-app .select-logic,
 .pt-app .input-argument,
-.pt-app #tableau_input_form label.heading,
+.pt-app #argument_form .heading,
 .pt-app #lexicons-content,
 .pt-app #lexicons-content table.predicates th {
   text-align: left;
@@ -172,7 +172,8 @@ body.pt-app {
 .pt-app .proof-result-admon {
   text-transform: uppercase;
 }
-.pt-app .input label {
+.pt-app .input label,
+.pt-app #argument_form .heading {
   vertical-align: top;
 }
 .pt-app .json-dump {
@@ -202,7 +203,7 @@ body.pt-app {
 .pt-app ul.details li {
   display: inline-table;
 }
-.pt-app label.heading,
+.pt-app #argument_form .heading,
 .pt-app .lexicons .label,
 .pt-app .select-logic .logic-title,
 .pt-app table.argument tbody.spacer td a,
@@ -257,7 +258,7 @@ body.pt-app {
 }
 
 /* ---- background-color ---- */
-.pt-app #tableau_input_form label.heading, /* TODO: change to non-label element (h*, div) */
+.pt-app #argument_form .heading,
 .pt-app .debugs-wrapper {
   background-color: inherit;
 }
@@ -353,9 +354,6 @@ body.pt-app {
 .pt-app .debugs .debug-content {
   border: 1px solid #888888;
 }
-.pt-app .fieldset {
-  border: 1px solid #c3c3c3;
-}
 .pt-app .lexicons .label {
   border: 1px solid #ccccccab;
 }
@@ -381,7 +379,7 @@ body.pt-app {
   border: none;
   border-left: 3px solid #cccccc;
 }
-.pt-app label.heading {
+.pt-app #argument_form .heading {
   border-width: 0 0 1px 0;
   border-color: #cccccc;
   border-style: solid;
@@ -411,7 +409,7 @@ body.pt-app {
 .clear,
 .pt-app .errors dt,
 .pt-app .warns dt,
-.pt-app .fieldset {
+.pt-app .ui-tabs-panel {
   clear: both;
 }
 
@@ -435,13 +433,7 @@ body.pt-app,
 .pt-app div.input {
   margin: 2px 0;
 }
-.pt-app .fieldset {
-  margin: 0 0 10px 0;
-}
-.pt-app .input.submit input[type="submit"] {
-  margin: 10px 0 20px 127px;
-}
-.pt-app .argument .example-argument {
+.pt-app .input .example-argument {
   margin: 0 0 15px 0;
 }
 .pt-app .select-logic .logic-details {
@@ -485,13 +477,13 @@ body.pt-app,
 .pt-app .warns {
   margin-bottom: 10px;
 }
-.pt-app #proove-tabs-wrapper {
+.pt-app #uitabs_main_wrapper {
   margin-bottom: 20px;
 }
 .pt-app .argument .select-logic {
   margin-bottom: 7px;
 }
-.pt-app label.heading {
+.pt-app #argument_form .heading {
   margin-bottom: 12px;
 }
 .pt-app #clear_argument_wrapper {
@@ -519,7 +511,6 @@ body.pt-app,
 
 body.pt-app,
 .pt-app ul.details,
-.pt-app .fieldset,
 .pt-app #lexicons-content ul.item-symbols {
   padding: 0;
 }
@@ -551,7 +542,8 @@ body.pt-app,
 .pt-app .errors dd,
 .pt-app .warns dd,
 .pt-app .input label,
-.pt-app .fieldset-contents,
+.pt-app #argument_form .heading,
+.pt-app #uitabs_main .ui-tabs-panel,
 .pt-app .debugs .debug-heading,
 .pt-app .debugs-wrapper > .debugs-heading {
   padding: 0.625em;
@@ -613,7 +605,7 @@ body.pt-app,
 .pt-app .debugs {
   padding-bottom: 1.25em;
 }
-.pt-app label.heading {
+.pt-app #argument_form .heading {
   padding-left: 0;
 }
 .pt-app table.argument td a.del-premise,
@@ -627,11 +619,12 @@ body.pt-app,
 
 /* ---- width ---- */
 
-.pt-app.has-proof #proove-tabs-wrapper {
+.pt-app.has-proof #uitabs_main_wrapper {
   width: 95%;
 }
 .pt-app .header-wrapper,
-.pt-app .footer-wrapper {
+.pt-app .footer-wrapper,
+.pt-app #argument_form input[type="submit"] {
   width: 100%;
 }
 .pt-app #lexicons-content input.arity {
@@ -675,7 +668,7 @@ body.pt-app,
 .pt-app #input_feedback_content {
   height: 120px;
 }
-.pt-app.has-proof #proove-tabs-wrapper {
+.pt-app.has-proof #uitabs_main_wrapper {
   max-height: 80%;
 }
 .pt-app.ui-selectmenu-menu .ui-menu {
@@ -686,7 +679,7 @@ body.pt-app,
 
 .pt-app .header-wrapper,
 .pt-app .footer-wrapper,
-.pt-app.has-proof #proove-tabs-wrapper {
+.pt-app.has-proof #uitabs_main_wrapper {
   position: fixed;
 }
 .pt-app table.argument td a.del-premise {
@@ -711,7 +704,7 @@ body.pt-app,
   top: 50%;
   transform: translateY(-50%);
 }
-.pt-app.has-proof #proove-tabs-wrapper {
+.pt-app.has-proof #uitabs_main_wrapper {
   top: 35px;
   left: 20px;
 }
@@ -728,7 +721,7 @@ body.pt-app,
 .pt-app .json-dump {
   overflow-x: scroll;
 }
-.pt-app.has-proof #proove-tabs-wrapper {
+.pt-app.has-proof #uitabs_main_wrapper {
   overflow-y: auto;
 }
 
@@ -760,7 +753,7 @@ body.pt-app,
   content: '\F055';
 }
 
-/* .pt-app.has-proof #proove-tabs-wrapper {
+/* .pt-app.has-proof #uitabs_main_wrapper {
   position: -webkit-sticky;
   position: sticky;
 } */

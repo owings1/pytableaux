@@ -6,11 +6,11 @@
     {% endif %}
 {%- endblock %}
 {%- block content -%}
-    <script type="text/template" id="premiseTemplate">
+    <script type="text/template" id="template_premise">
         {{ helper.premise('{n}', '{value}', '{status}', '{message}') }}
     </script>
-    <script type="text/template" id="predicateRowTemplate">
-        {% call helper.predicate_row('{index}', '{subscript}', '{arity}') %}
+    <script type="text/template" id="template_predicate">
+        {% call helper.predicate('{index}', '{subscript}', '{arity}') %}
             {symbol_html}
         {% endcall %}
     </script>
@@ -20,26 +20,26 @@
     {%- if warns %}
         {% include 'warns.jinja2' %}
     {%- endif %}
-    <div id="proove-tabs-wrapper">
-        <div id="proove-tabs" class="">
+    <div id="uitabs_main_wrapper">
+        <div id="uitabs_main" class="">
             {# NB: Changes to tab order must be updated in app js #}
             <ul>
-                <li><a href="#tab-argument">Input</a></li>
-                <li><a href="#tab-options" >Options</a></li>
+                <li><a href="#uitab_input">Input</a></li>
+                <li><a href="#uitab_options" >Options</a></li>
                 {% if is_proof %}
-                    <li><a href="#tab-stats" >Stats</a></li>
+                    <li><a href="#uitab_stats" >Stats</a></li>
                     {% if is_controls -%}
-                        <li><a href="#tab-view">View</a></li>
-                        <li><a href="#tab-step">Step</a></li>
+                        <li><a href="#uitab_view">View</a></li>
+                        <li><a href="#uitab_step">Step</a></li>
                     {% endif %}
                     {% if is_models -%}
-                        <li><a href="#tab-models" >Models</a></li>
+                        <li><a href="#uitab_models" >Models</a></li>
                     {% endif %}
                 {% endif %}
             </ul>
-            <form id="tableau_input_form" class="argument" action="/" method="post">
-                <input type="hidden" id="tableau_form_api_json" name="api-json"/>
-                <div id="tab-argument" class="fieldset argument {{- ' hidden' if is_proof and selected_tab != 'argument'}}">
+            <form id="argument_form" class="" action="/" method="post">
+                <input id="api_json" type="hidden" name="api-json"/>
+                <div id="uitab_input" class="fieldset argument {{- ' hidden' if is_proof and selected_tab != 'input'}}">
                     <div class="fieldset-contents">
                         <div class="left" id="argument-input-panel">
                             {% include 'v2/argument-input.jinja2' %}
@@ -50,26 +50,26 @@
                         <div class="clear"></div>
                     </div>
                 </div>  
-                <div id="tab-options" class="fieldset options hidden">
+                <div id="uitab_options" class="fieldset options hidden">
                     <div class="fieldset-contents">
                         {% include 'v2/options.jinja2' %}
                     </div>
                 </div>
             </form>
             {% if is_proof -%}
-                <div id="tab-stats" class="{{ 'hidden' if selected_tab != 'stats' }}">
+                <div id="uitab_stats" class="{{ 'hidden' if selected_tab != 'stats' }}">
                     {% include 'v2/stats.jinja2' %}
                 </div>
                 {% if is_controls -%}
-                    <div id="tab-view" class="{{ 'hidden' if selected_tab != 'view' }}">
+                    <div id="uitab_view" class="{{ 'hidden' if selected_tab != 'view' }}">
                         {% include 'v2/view.jinja2' %}
                     </div>
-                    <div id="tab-step" class="{{ 'hidden' if selected_tab != 'step' }}">
+                    <div id="uitab_step" class="{{ 'hidden' if selected_tab != 'step' }}">
                         {% include 'v2/step.jinja2' %}
                     </div>
                 {% endif %}
                 {% if is_models -%}
-                    <div id="tab-models" class="{{ 'hidden' if selected_tab != 'models' }}">
+                    <div id="uitab_models" class="{{ 'hidden' if selected_tab != 'models' }}">
                         {% include 'v2/models.jinja2' %}
                     </div>
                 {% endif %}

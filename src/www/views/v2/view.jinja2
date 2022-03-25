@@ -64,7 +64,7 @@
         <li>
             <div class="prop">Color</div>
             <div class="value">
-                <input type="checkbox" class="color-open" checked="checked" {{- ' disabled' if not tree.has_open }}/>
+                <input type="checkbox" class="color-open" {{- ' checked' if is_color -}} {{- ' disabled' if not tree.has_open }}/>
             </div>
         </li>
     </ul>

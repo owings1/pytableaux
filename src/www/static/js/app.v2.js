@@ -52,9 +52,9 @@
         options      : 'options',
         predAdd      : 'add-predicate',
         predDel      : 'del-predicate',
+        predicate    : 'predicate',
         predicates   : 'predicates',
         predSymbol   : 'predicate-symbol',
-        predUser     : 'user-predicate',
         premise      : 'premise',
         premiseAdd   : 'add-premise',
         premiseDel   : 'del-premise',
@@ -78,9 +78,9 @@
 
     const Sel = {
         appBody           : 'body.' + Cls.app,
-        appForm           : '#tableau_input_form',
+        appForm           : '#argument_form',
         pageJson          : '#pt_page_data',
-        appUiTabs         : '#proove-tabs',
+        appUiTabs         : '#uitabs_main',
 
         clearArg          : '#clear_argument',
 
@@ -89,15 +89,15 @@
         checkGroupOptim   : '#options_group_optimizations',
         checkRankOptim    : '#options_rank_optimizations',
         checkShowControls : '#options_show_controls',
-        fieldApiJson       : '#tableau_form_api_json',
+        fieldApiJson       : '#api_json',
         fieldArgExample    : '#example_argument',
         fieldConclusion    : '#input_conclusion',
+        fieldInputNotn     : '#input_notation',
         fieldLogic         : '#selected_logic',
         fieldMaxSteps      : '#options_max_steps',
         fieldOutputCharset : '#output_charset',
         fieldOutputFmt     : '#output_format',
         fieldOutputNotn    : '#output_notation',
-        fieldInputNotn     : '#input_notation',
 
         fieldsArity       : ['input', Cls.arity].join('.'),
         fieldsPredSymbol  : ['input', Cls.predSymbol].join('.'),
@@ -107,6 +107,7 @@
         headerDebugs      : '#pt_debugs_heading',
         wrapDebugs        : '#pt_debugs_wrapper',
 
+        inputPredicate    : '.' + Cls.input + '.' + Cls.predicate,
         inputPremise      : '.' + Cls.input + '.' + Cls.premise,
         inputSentence     : '.' + Cls.input + '.' + Cls.sentence,
         linksButton       : ['a', Cls.button].join('.'),
@@ -114,16 +115,16 @@
         debugs            : '.' + Cls.debug,
         predicates        : '.' + Cls.predicates,
         premises          : '.' + Cls.premises,
-
-        rowsPredUser      : ['tr', Cls.predUser].join('.'),
         tableaux          : '.' + Cls.tableau,
-        templatePrem      : '#premiseTemplate',
-        templatePred      : '#predicateRowTemplate',
+
+        templatePrem      : '#template_premise',
+        templatePred      : '#template_predicate',
     }
 
     // Fixed optname -> checkbox mappings.
     const CheckSels = {
         show_controls       : Sel.checkShowControls,
+        color_open          : Sel.checkColorOpen,
         build_models        : Sel.checkBuildModels,
         rank_optimizations  : Sel.checkRankOptim,
         group_optimizations : Sel.checkGroupOptim,
@@ -131,6 +132,7 @@
     const OptClasses = {
         build_models  : Cls.withModels,
         show_controls : Cls.withControls,
+        color_open    : Cls.colorOpen,
     }
 
     const API_PARSE_URI = '/api/parse'
@@ -242,7 +244,7 @@
                         refreshStatuses()
                     } else if ($target.hasClass(Cls.predDel)) {
                         // Delete predicate.
-                        $target.closest(Sel.rowsPredUser).remove()
+                        $target.closest(Sel.inputPredicate).remove()
                         refreshStatuses()
                     } else if ($target.is(Sel.clearArg)) {
                         // Clear the argument.
@@ -406,7 +408,7 @@
          * @return {void}
          */
         function clearPredicates() {
-            $(Sel.rowsPredUser, $AppForm).remove()
+            $(Sel.inputPredicate, $AppForm).remove()
         }
 
         /**
@@ -603,9 +605,6 @@
                         classes : [],
                     }
                 },
-                show_controls       : undefined,
-                build_models        : undefined,
-                max_steps           : undefined,
                 // debug/advanced options.
                 rank_optimizations  : true,
                 group_optimizations : true,
@@ -624,10 +623,6 @@
                 if (data[key]) {
                     clsarr.push(OptClasses[key])
                 }
-            }
-            const $colorOpen = $(Sel.checkColorOpen, $AppForm)
-            if (!$colorOpen.length || $colorOpen.is(':checked')) {
-                clsarr.push(Cls.colorOpen)
             }
 
             // Max steps.
@@ -682,7 +677,7 @@
          */
         function getPredsData() {
             const preds = []
-            $(Sel.rowsPredUser, $AppForm).each(function() {
+            $(Sel.inputPredicate, $AppForm).each(function() {
                 const $row = $(this)
                 const arity = $(Sel.fieldsArity, $row).val()
                 if (!arity.length) {
