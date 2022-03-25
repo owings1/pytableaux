@@ -20,10 +20,14 @@
 ;(function($) {
 
     $(document).ready(function() {
+        const AppData = window.AppData
+        delete window.AppData
 
-        const AppData = JSON.parse($('script.app').html())
+        const PageData = JSON.parse($('#pt_page_data').html())
+
         const PRED_SYMCOUNT = Object.values(AppData.nups)[0].length
-        const {is_debug} = AppData
+
+        const {is_debug} = PageData
         const Templates = {
             premise    : $('#premiseTemplate').html(),
             predicate  : $('#predicateRowTemplate').html()

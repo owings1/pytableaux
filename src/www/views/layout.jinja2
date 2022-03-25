@@ -12,6 +12,7 @@
     <script src="/static/js/jquery-3.6.0.min.js"></script>
     <script src="/static/js/jquery-ui.min.js"></script>
     {# Core App script and styles  #}
+    <script src="/static/js/appdata.js"></script>
     <script src="/static/js/app.{{ view_version|e }}.js"></script>
     <link rel="stylesheet" type="text/css" href="/static/css/app.{{ view_version|e }}.css"/>
     <link rel="stylesheet" type="text/css" href="/static/ui-base/jquery-ui.min.css"/>
@@ -33,19 +34,19 @@
             {% block inline_css %}{% endblock %}
         </style>
     {%- endif %}
-    {# Google Analyitics #}
+    {# Google Analytics #}
     {% if config.google_analytics_id -%}
         {% include 'analytics.jinja2' %}
     {% endif -%}
 </head>
 <body class="pt-app {{- ' has-proof' if is_proof else ' no-proof' }}">
-    {# Header #}
     <div class="header-wrapper">
         <div class="header">
             <a href="/">{{ config.app_name|e }} {{ config.version|e }}</a>
             {% if is_debug %}
             {% set altver = 'v1' if view_version == 'v2' else 'v2' %}
-                | view_version: {{ view_version|e }} | <a href="/?v={{ altver }}">(change)</a>
+                | view: <a href="/?v={{ altver }}">{{ view_version|e }}</a>
+                | <a href="/?v={{ view_version|e }}&debug=0">debug</a>
             {% endif %}
             <span class="right">
                 <a href="/doc" target="_blank">documentation</a> | 
@@ -56,18 +57,16 @@
             </span>
         </div>
     </div>
-    {# Main content block #}
     <div class="pt-content">
         {%- block content -%}{%- endblock -%}
         {%- if is_debug %}
             {%- include 'debug.jinja2' -%}
         {%- endif %}
     </div>
-    {# Footer #}
     <div class="footer-wrapper">
         <div class="footer">Copyright &copy; {{ config.copyright|e }}.</div>
     </div>
-    {# Javascript application data #}
-    <script type="text/json" id="pt_app_data" class="app">{{ browser_json }}</script>
+    {# <script type="text/json" id="pt_app_data" class="app">{{ browser_json }}</script> #}
+    <script type="text/json" id="pt_page_data">{{ page_json }}</script>
 </body>
 </html>

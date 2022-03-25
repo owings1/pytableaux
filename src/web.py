@@ -65,6 +65,7 @@ from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from jinja2 import Template
+import mimetypes
 import prometheus_client as prom
 import re
 import simplejson as json
@@ -101,14 +102,6 @@ form_defaults = MapCover(dict(
     group_optimizations = True,
 ))
 
-###############
-## JS Data   ##
-###############
-base_browser_data = MapCover(dict(
-    example_args   = example_args,
-    example_preds  = tuple(p.spec for p in examples.preds),
-    nups           = parser_nups,
-))
 
 #################
 ## View Data   ##
@@ -137,13 +130,20 @@ base_view_data = MapCover(dict(
 ###################
 ## Webapp        ##
 ###################
-
-# TODO: serve separate cached
-_STATIC_JSON = json.dumps(
-    dict(base_browser_data),
+_APP_DATA = MapCover(dict(
+    example_args   = example_args,
+    example_preds  = tuple(p.spec for p in examples.preds),
+    nups           = parser_nups,
+))
+_APP_JSON = json.dumps(
+    dict(_APP_DATA),
     indent = 2 * APP_ENVCONF['is_debug'],
     cls = JSONEncoderForHTML
 )
+_STATIC = {
+    'js/appdata.json': _APP_JSON.encode('utf-8'),
+    'js/appdata.js': (';window.AppData = ' + _APP_JSON + ';').encode('utf-8')
+}
 
 _EMPTY = ()
 _EMPTY_MAP = MapProxy()
@@ -159,6 +159,20 @@ class App:
     )
 
     @chpy.expose
+    def static(self, *respath, **req_data):
+        req: Request = chpy.request
+        res: Response = chpy.response
+        resource = '/'.join(respath)
+        try:
+            content = _STATIC[resource]
+        except KeyError:
+            raise chpy.NotFound()
+        if req.method != 'GET':
+            raise chpy.HTTPError(405)
+        res.headers['Content-Type'] = mimetypes.guess_type(resource)[0]
+        return content
+
+    @chpy.expose
     def index(self, **req_data):
 
         req: Request = chpy.request
@@ -168,7 +182,6 @@ class App:
         debugs = []
 
         view_data = dict(base_view_data)
-        browser_data = dict(base_browser_data)
 
         config = self.config
 
@@ -221,7 +234,7 @@ class App:
         if errors:
             view_data['errors'] = errors
 
-        browser_data.update(
+        page_data = dict(
             is_debug     = is_debug,
             is_proof     = is_proof,
             is_controls  = is_controls,
@@ -231,26 +244,21 @@ class App:
 
         if is_debug:
             debugs.extend(dict(
-                req_data   = req_data,
-                form_data  = form_data,
-                api_data   = api_data,
-                resp_data  = resp_data and debug_resp_data(resp_data),
-                browser_data = browser_data,
+                req_data  = req_data,
+                form_data = form_data,
+                api_data  = api_data,
+                resp_data = resp_data and debug_resp_data(resp_data),
+                page_data = page_data,
             ).items())
             view_data['debugs'] = debugs
 
-        view_data.update(
-            browser_json = json.dumps(
-                browser_data,
+        view_data.update(page_data,
+            page_json = json.dumps(
+                page_data,
                 indent = 2 * is_debug,
                 cls = JSONEncoderForHTML
             ),
             config       = self.config,
-            is_debug     = is_debug,
-            is_proof     = is_proof,
-            is_controls  = is_controls,
-            is_models    = is_models,
-            selected_tab = selected_tab,
             view_version = view_version,
             form_data    = form_data,
             resp_data    = resp_data,

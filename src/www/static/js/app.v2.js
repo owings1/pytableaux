@@ -79,42 +79,58 @@
     const Sel = {
         appBody           : 'body.' + Cls.app,
         appForm           : '#tableau_input_form',
-        appJson           : '#pt_app_data',
-        appTabs           : '#proove-tabs',
+        pageJson          : '#pt_page_data',
+        appUiTabs         : '#proove-tabs',
+
+        clearArg          : '#clear_argument',
+
         checkBuildModels  : '#options_build_models',
         checkColorOpen    : '#options_color_open',
         checkGroupOptim   : '#options_group_optimizations',
         checkRankOptim    : '#options_rank_optimizations',
         checkShowControls : '#options_show_controls',
-        checksOption      : ['input:checkbox', Cls.options].join('.'),
-        clearArg          : '#clear_argument',
-        fieldConclusion   : '#input_conclusion',
-        fieldMaxSteps     : '#options_max_steps',
+        fieldApiJson       : '#tableau_form_api_json',
+        fieldArgExample    : '#example_argument',
+        fieldConclusion    : '#input_conclusion',
+        fieldLogic         : '#selected_logic',
+        fieldMaxSteps      : '#options_max_steps',
+        fieldOutputCharset : '#output_charset',
+        fieldOutputFmt     : '#output_format',
+        fieldOutputNotn    : '#output_notation',
+        fieldInputNotn     : '#input_notation',
+
         fieldsArity       : ['input', Cls.arity].join('.'),
         fieldsPredSymbol  : ['input', Cls.predSymbol].join('.'),
         fieldsPremise     : ['input', Cls.premise].join('.'),
         fieldsSentence    : ['input', Cls.sentence].join('.'),
-        headDebugs        : '#pt_debugs_heading',
+
+        headerDebugs      : '#pt_debugs_heading',
+        wrapDebugs        : '#pt_debugs_wrapper',
+
         inputPremise      : '.' + Cls.input + '.' + Cls.premise,
         inputSentence     : '.' + Cls.input + '.' + Cls.sentence,
         linksButton       : ['a', Cls.button].join('.'),
+
+        debugs            : '.' + Cls.debug,
         predicates        : '.' + Cls.predicates,
         premises          : '.' + Cls.premises,
-        rowsDebug         : '.' + Cls.debug,
+
         rowsPredUser      : ['tr', Cls.predUser].join('.'),
-        rowsPremise       : ['.input', Cls.premise].join('.'),
-        selectArgExample  : '#example_argument',
-        selectLogic       : '#selected_logic',
-        selectOutputFmt   : '#output_format',
-        selectOutputNotn  : '#output_notation',
-        selectParseNotn   : '#input_notation',
-        selectOutputChrs  : '#output_charset',
-        submitJson        : '#tableau_form_api_json',
         tableaux          : '.' + Cls.tableau,
         templatePrem      : '#premiseTemplate',
         templatePred      : '#predicateRowTemplate',
-        wrapDebugs        : '#pt_debugs_wrapper',
-        wrapPredicates    : '#predicates_input_table',
+    }
+
+    // Fixed optname -> checkbox mappings.
+    const CheckSels = {
+        show_controls       : Sel.checkShowControls,
+        build_models        : Sel.checkBuildModels,
+        rank_optimizations  : Sel.checkRankOptim,
+        group_optimizations : Sel.checkGroupOptim,
+    }
+    const OptClasses = {
+        build_models  : Cls.withModels,
+        show_controls : Cls.withControls,
     }
 
     const API_PARSE_URI = '/api/parse'
@@ -122,9 +138,12 @@
 
     $(document).ready(function() {
 
-        const AppData = JSON.parse($(Sel.appJson).html())
-        const IS_DEBUG = Boolean(AppData.is_debug)
-        const IS_PROOF = Boolean(AppData.is_proof)
+        const AppData = window.AppData
+        delete window.AppData
+
+        const PageData = JSON.parse($(Sel.pageJson).html())
+        const IS_DEBUG = Boolean(PageData.is_debug)
+        const IS_PROOF = Boolean(PageData.is_proof)
         const PRED_SYMCOUNT = Object.values(AppData.nups)[0].length
         const Templates = {
             premise    : $(Sel.templatePrem).html(),
@@ -139,6 +158,7 @@
         if (IS_DEBUG) {
             window.AppDebug = {
                 AppData,
+                PageData,
                 ParseCache,
             }
         }
@@ -174,14 +194,14 @@
             $AppForm
                 .on('change selectmenuchange', function(e) {
                     const $target = $(e.target)
-                    if ($target.is(Sel.selectArgExample)) {
+                    if ($target.is(Sel.fieldArgExample)) {
                         // Change to selected exampleArg.
                         if (!$target.val()) {
                             return
                         }
                         refreshArgExample()
                         refreshStatuses()
-                    } else if ($target.is(Sel.selectParseNotn)) {
+                    } else if ($target.is(Sel.fieldInputNotn)) {
                         // Change to selected parsing notation.
                         refreshNotation()
                         refreshStatuses()
@@ -191,7 +211,7 @@
                     } else if ($target.hasClass(Cls.arity)) {
                         // Change to a predicate arity field.
                         refreshStatuses(true)
-                    } else if ($target.is(Sel.selectLogic)) {
+                    } else if ($target.is(Sel.fieldLogic)) {
                         // Change to the selected logic.
                         refreshLogic()
                     }
@@ -227,7 +247,7 @@
                     } else if ($target.is(Sel.clearArg)) {
                         // Clear the argument.
                         clearArgument()
-                        clearArgExample()
+                        $(Sel.fieldArgExample).val('').selectmenu('refresh')
                         refreshStatuses()
                     }
                 })
@@ -245,7 +265,7 @@
             })
 
             // UI Tabs
-            var tabIndex = TabIndexes[AppData.selected_tab]
+            var tabIndex = TabIndexes[PageData.selected_tab]
             if (!Number.isInteger(tabIndex)) {
                 tabIndex = 0
             }
@@ -253,7 +273,7 @@
                 active      : tabIndex,
                 collapsible : IS_PROOF,
             }
-            $(Sel.appTabs).tabs(tabOpts)
+            $(Sel.appUiTabs).tabs(tabOpts)
 
             // UI Button
             $('input:submit', $AppForm).button()
@@ -333,15 +353,15 @@
          * @return {object} The jquery element of the created tr.
          */
         function addPredicate(index, subscript, arity) {
-            const thisNotation = $(Sel.selectParseNotn).val()
+            const notation = $(Sel.fieldInputNotn).val()
             var html = ''
-            $.each(AppData.nups, function(notation, symbols) {
+            $.each(AppData.nups, function(notn, symbols) {
                 const classes = [
                     Cls.predSymbol,
                     Cls.lexicon,
-                    [Cls.notation, esc(notation)].join('-')
+                    [Cls.notation, esc(notn)].join('-')
                 ]
-                if (notation !== thisNotation)
+                if (notn !== notation)
                     classes.push(Cls.hidden)
                 html += '<span class="' + classes.join(' ') + '">'
                 html += $('<div/>').text(symbols[index]).html()
@@ -397,7 +417,6 @@
             $(Sel.inputPremise, $AppForm).each(function() {
                 _removePrem($(this))
             })
-            // $(Sel.rowsPremise, $AppForm).remove()
             $(Sel.fieldConclusion).val('')
             for (var key in ParseCache) {
                 delete ParseCache[key]
@@ -405,19 +424,11 @@
         }
 
         /**
-         * Clear the example argument select menu.
-         * @return {void}
-         */
-        function clearArgExample() {
-            $(Sel.selectArgExample).val('').selectmenu('refresh')
-        }
-
-        /**
          * Logic select change handler. Show appropriate logic information.
          * @return {void}
          */
         function refreshLogic() {
-            const logicName = $(Sel.selectLogic).val()
+            const logicName = $(Sel.fieldLogic).val()
             $('.' + Cls.logicDetails, $AppForm)
                 .hide()
                 .filter('.' + logicName)
@@ -431,7 +442,7 @@
          */
         function refreshNotation() {
 
-            const notation = $(Sel.selectParseNotn).val()
+            const notation = $(Sel.fieldInputNotn).val()
             const notnClass = [Cls.notation, notation].join('-')
 
             // Show/hide lexicons
@@ -445,7 +456,7 @@
             })
 
             // Use built-in input strings for example arguments.
-            if ($(Sel.selectArgExample).val()) {
+            if ($(Sel.fieldArgExample).val()) {
                 refreshArgExample()
                 return
             }
@@ -468,16 +479,15 @@
          */
         function refreshArgExample() {
 
-            const argName = $(Sel.selectArgExample).val()
+            const argName = $(Sel.fieldArgExample).val()
             if (!argName) {
-                // ensureEmptyPremise()
                 return
             }
 
             clearPredicates()
             clearArgument()
 
-            const notation = $(Sel.selectParseNotn).val()
+            const notation = $(Sel.fieldInputNotn).val()
             const arg = AppData.example_args[argName][notation]
 
             $.each(arg.premises, function(i, value) {
@@ -499,7 +509,7 @@
          */
         function refreshStatuses(isForce) {
 
-            const notation = $(Sel.selectParseNotn).val()
+            const notation = $(Sel.fieldInputNotn).val()
             var preds // lazy fetch
 
             $(Sel.fieldsSentence, $AppForm).each(function() {
@@ -521,7 +531,7 @@
                     return
                 }
 
-                // Check for change since last request.against stored value.
+                // Check for change since last request against stored value.
                 const hash = [text, notation].join('.')
                 const stored = $status.attr(Atr.dataHash)
                 if (!isForce && stored === hash) {
@@ -583,12 +593,12 @@
          */
          function getApiData() {
             const data = {
-                logic    : $(Sel.selectLogic).val(),
+                logic    : $(Sel.fieldLogic).val(),
                 argument : getArgData(),
                 output: {
-                    format   : $(Sel.selectOutputFmt).val(),
-                    notation : $(Sel.selectOutputNotn).val(),
-                    charset  : $(Sel.selectOutputChrs).val(),
+                    format   : $(Sel.fieldOutputFmt).val(),
+                    notation : $(Sel.fieldOutputNotn).val(),
+                    charset  : $(Sel.fieldOutputCharset).val(),
                     options  : {
                         classes : [],
                     }
@@ -601,21 +611,8 @@
                 group_optimizations : true,
             }
 
-
-            // Fixed optname -> checkbox mappings. 
-            const checkSels = {
-                show_controls       : Sel.checkShowControls,
-                build_models        : Sel.checkBuildModels,
-                rank_optimizations  : Sel.checkRankOptim,
-                group_optimizations : Sel.checkGroupOptim,
-            }
-            const optClasses = {
-                build_models  : Cls.withModels,
-                show_controls : Cls.withControls,
-            }
-
-            for (var key in checkSels) {
-                var $check = $(checkSels[key], $AppForm)
+            for (var key in CheckSels) {
+                var $check = $(CheckSels[key], $AppForm)
                 if ($check.length) {
                     data[key] = $check.is(':checked')
                 }
@@ -623,9 +620,9 @@
 
             // TabWriter classes option.
             const clsarr = data.output.options.classes
-            for (var key in optClasses) {
+            for (var key in OptClasses) {
                 if (data[key]) {
-                    clsarr.push(optClasses[key])
+                    clsarr.push(OptClasses[key])
                 }
             }
             const $colorOpen = $(Sel.checkColorOpen, $AppForm)
@@ -668,7 +665,7 @@
                 }
             })
             return {
-                notation   : $(Sel.selectParseNotn).val(),
+                notation   : $(Sel.fieldInputNotn).val(),
                 conclusion : $(Sel.fieldConclusion).val(),
                 premises   : premises,
                 predicates : getPredsData(),
@@ -719,7 +716,7 @@
             $('input:submit', $AppForm).prop('disabled', true)
             const data = getApiData()
             const json = JSON.stringify(data)
-            $(Sel.submitJson).val(json)
+            $(Sel.fieldApiJson).val(json)
         }
 
         /**
@@ -757,11 +754,11 @@
         function initDebug() {
             const $debugs = $(Sel.wrapDebugs, $AppBody)
             // Debug click show/hide.
-            $debugs.on('click', [Sel.rowsDebug, Sel.headDebugs].join(), function(e) {
+            $debugs.on('click', [Sel.debugs, Sel.headerDebugs].join(), function(e) {
                 const $target = $(e.target)
 
                 // Main Debug Header - toggle all and return.
-                if ($target.is(Sel.headDebugs)) {
+                if ($target.is(Sel.headerDebugs)) {
                     $target.next('.' + Cls.debugs).toggle()
                     return
                 }
