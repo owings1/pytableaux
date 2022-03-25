@@ -1,6 +1,6 @@
 /**
  * pytableaux, a multi-logic proof generator.
- * Copyright (C) 2014-2021 Doug Owings.
+ * Copyright (C) 2014-2022 Doug Owings.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -101,12 +101,10 @@ body.pt-app,
 .pt-app .warns h3::before,
 .pt-app .errors h3::before,
 .pt-app a.external:after,
-.pt-app a.del-predicate::after,
-.pt-app a.del-premise::before,
-.pt-app a.del-premise::after,
 .pt-app a.add-predicate::after,
-.pt-app a.add-premise::before,
-.pt-app a.add-premise::after {
+.pt-app a.del-predicate::after,
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after {
   font-family: FontAwesome;
 }
 .pt-app .footer {
@@ -125,10 +123,8 @@ body.pt-app {
 .pt-app .headicon::before {
   font-size: 1.3125em;
 }
-.pt-app a.add-premise::before,
-.pt-app a.add-premise::after,
-.pt-app a.del-premise::before,
-.pt-app a.del-premise::after,
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after,
 .pt-app a.add-predicate::after,
 .pt-app a.del-predicate::after {
   font-size: 1.5em;
@@ -263,12 +259,10 @@ body.pt-app {
 .pt-app .debugs .debug-heading {
   color: #0f100f;
 }
-.pt-app a.add-premise::before,
-.pt-app a.add-premise::after,
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after,
 .pt-app a.add-predicate::after,
-.pt-app a.del-predicate::after,
-.pt-app td a.del-premise::before,
-.pt-app td a.del-premise::after {
+.pt-app a.del-predicate::after {
   color: #cccccc;
 }
 
@@ -484,7 +478,7 @@ body.pt-app,
   margin-right: 10px;
 }
 .pt-app #clear_argument_wrapper {
-  margin-right: 28px
+  margin-right: 28px;
 }
 .pt-app .select-logic .logic-title {
   margin-bottom: 6px;
@@ -697,15 +691,12 @@ body.pt-app,
 .pt-app.has-proof #uitabs_main_wrapper {
   position: fixed;
 }
-.pt-app a.del-premise,
-.pt-app a.add-premise,
+.pt-app a.bgicon,
 .pt-app .uitab-insert {
   position: relative;
 }
-.pt-app a.del-premise::before,
-.pt-app a.del-premise::after,
-.pt-app a.add-premise::before,
-.pt-app a.add-premise::after {
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after {
   position: absolute;
 }
 .pt-app .header-wrapper {
@@ -717,16 +708,12 @@ body.pt-app,
 .pt-app .footer-wrapper {
   bottom: 0;
 }
-.pt-app a.del-premise::before,
-.pt-app a.del-premise::after,
-.pt-app a.add-premise::before,
-.pt-app a.add-premise::after {
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after {
   left: 0;
 }
-.pt-app a.del-premise::before,
-.pt-app a.del-premise::after,
-.pt-app a.add-premise::before,
-.pt-app a.add-premise::after {
+.pt-app a.bgicon::before,
+.pt-app a.bgicon::after {
   top: 50%;
   transform: translateY(-50%);
 }

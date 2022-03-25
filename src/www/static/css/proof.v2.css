@@ -1,6 +1,6 @@
 /**
  * pytableaux, a multi-logic proof generator.
- * Copyright (C) 2014-2021 Doug Owings.
+ * Copyright (C) 2014-2022 Doug Owings.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -27,10 +27,6 @@
     font-weight: bold;
     src: url("fonts/charmonman/Charmonman-Bold.ttf") format("truetype");
 }
-/* .tableau-wrapper {
-    overflow-x: scroll;
-    overflow-y: scroll;
-} */
 .tableau {
     font-family: 'lucida grande',verdana,helvetica,arial,sans-serif;
     margin: auto;
@@ -55,7 +51,8 @@
     padding: 2px;
     color: #dddddd;
 }
-/* Branch coloring */
+.tableau-controls .invalid,
+.tableau-models .model .is-countermodel.no,
 .tableau.color-open .structure.has-open > .node-segment {
     color: red;
 }
@@ -70,21 +67,10 @@
     background-image: url(/static/img/inspected-black.svg);
     content: "";
 }
-
-.tableau-controls .valid {
+.tableau-controls .valid,
+.tableau-models .model .is-countermodel.yes {
     color: green;
 }
-.tableau-controls .invalid {
-    color: red;
-}
-
-/* .tableau-controls .button.width-reset {
-    padding-top: 5px;
-    padding-bottom: 6px;
-}
-.tableau-controls .button.auto-scroll {
-    font-size: 0.7em;
-} */
 .tableau-controls .branch-filter.active:not(.disabled),
 .tableau-controls .auto-opts .button.active {
     background-color: #1abc9c;
@@ -95,7 +81,6 @@
     text-decoration: none;
     cursor: pointer;
 }
-
 .tableau-controls > ul.details,
 .proof-stats > ul.details,
 .tableau-models ul.details {
@@ -119,7 +104,6 @@
     padding-bottom: 3px;
     border-bottom: 1px solid #cccccc;
 }
-
 .proof-stats .argument-output .premise:last-child {
     border-bottom: 1px solid #000000;
     padding-bottom: 3px;
@@ -131,26 +115,16 @@
 .tableau-models .model > ul > li.in-summary {
     display: block;
 }
-/* .tableau-models {
-    max-width: 300px;
-} */
-/* .tableau-models .message {
-    padding: 10px;
-} */
-
-
 .tableau-models .model ul.details li .prop {
     font-weight: bold;
 }
 .tableau-models .model ul.details li .value {
     font-weight: normal;
 }
-.tableau-models .model {
-    display: none;
-}
 .tableau-models.single-branch .model {
     display: block;
 }
+.tableau-models .model,
 .tableau-models.inspected .select-a-branch {
     display: none;
 }
@@ -199,7 +173,6 @@
 .tableau-models .model .set.non-empty > .values::after {
     content: "}";
 }
-
 .tableau-models .model .set.empty > .values::after,
 .tableau-models .model .function.empty::after {
     content: "\2205";
@@ -252,6 +225,20 @@
 .tableau-models .model .function > ul.values > li > .input::after {
     content: ') = ';
 }
+
+/* .tableau-controls .button.width-reset {
+    padding-top: 5px;
+    padding-bottom: 6px;
+}
+.tableau-controls .button.auto-scroll {
+    font-size: 0.7em;
+} */
+/* .tableau-models {
+    max-width: 300px;
+} */
+/* .tableau-models .message {
+    padding: 10px;
+} */
 /* .tableau-models .model .function.extension > ul.values > li > .symbol {
     font-size: 18px;
     font-weight: bold;
@@ -271,25 +258,6 @@
 /* .tableau-models .model .list.frames > ul.values > li {
     margin-bottom: 10px;
 } */
-.tableau-models .model .is-countermodel.yes {
-    color: green;
-}
-.tableau-models .model .is-countermodel.no {
-    color: red;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* Models */
 /* .tableau-models .collapser-wrapper.positioned-left .collapser-heading.collapsed::before,
 .tableau-models .collapser-wrapper.positioned-right .collapser-heading.collapsed::after {
