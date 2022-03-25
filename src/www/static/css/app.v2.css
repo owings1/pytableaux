@@ -213,6 +213,8 @@ body.pt-app {
 .pt-app #argument_form .heading,
 .pt-app .lexicons .label,
 .pt-app .select-logic .logic-title,
+.pt-app #selected_logic-button,
+.pt-app #example_argument-button,
 .pt-app table.argument tbody.spacer td a,
 .pt-app .debugs-wrapper::before {
   display: block;
@@ -627,7 +629,10 @@ body.pt-app,
 }
 
 /* ---- width ---- */
-
+.pt-app #selected_logic-button,
+.pt-app #example_argument-button {
+  width: inherit;
+}
 .pt-app.has-proof #uitabs_main_wrapper {
   width: 95%;
 }
@@ -765,7 +770,8 @@ body.pt-app,
 }
 .pt-app a.add-predicate::after,
 .pt-app a.add-premise::after {
-  content: '\F055';
+  content: '\F196';
+  /* content: '\F055'; */
 }
 .pt-app a.headicon.doc::before {
   content: '\F059';
