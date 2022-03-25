@@ -97,120 +97,120 @@ REGEX_EMAIL = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 
 ## Option definitions
 
-_OPTDEFS = {
-    'app_name' : {
-        'default' : 'pytableaux',
-        'envvar'  : 'PT_APPNAME',
-        'type'    : 'string',
-    },
-    'host' : {
-        'default' : '127.0.0.1',
-        'envvar'  : 'PT_HOST',
-        'type'    : 'string'
-    },
-    'port' : {
-        'default' : 8080,
-        'envvar'  : 'PT_PORT',
-        'type'    : 'int',
-    },
-    'metrics_port' : {
-        'default' : 8181,
-        'envvar'  : 'PT_METRICS_PORT',
-        'type'    : 'int',
-    },
-    'is_debug' : {
-        'default' : False,
-        'envvar'  : ('PT_DEBUG', 'DEBUG'),
-        'type'    : 'boolean',
-    },
-    'loglevel': {
-        'default' : 'info',
-        'envvar'  : ('PT_LOGLEVEL', 'LOGLEVEL'),
-        'type'    : 'string',
-    },
-    'maxtimeout' : {
-        'default' : 30000,
-        'envvar'  : 'PT_MAXTIMEOUT',
-        'type'    : 'int',
-    },
-    'google_analytics_id' : {
-        'default' : None,
-        'envvar'  : 'PT_GOOGLE_ANALYTICS_ID',
-        'type'    : 'string',
-    },
-    'feedback_enabled': {
-        'default' : False,
-        'envvar'  : 'PT_FEEDBACK',
-        'type'    : 'boolean',
-    },
-    'feedback_to_address': {
-        'default' : None,
-        'envvar'  : 'PT_FEEDBACK_TOADDRESS',
-        'type'    : 'string',
-    },
-    'feedback_from_address': {
-        'default'  : None,
-        'envvar'  : 'PT_FEEDBACK_FROMADDRESS',
-        'type'    : 'string',
-    },
-    'smtp_host': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_HOST', 'SMTP_HOST'),
-        'type'    : 'string',
-    },
-    'smtp_port': {
-        'default' : 587,
-        'envvar'  : ('PT_SMTP_PORT', 'SMTP_PORT'),
-        'type'    : 'int',
-    },
-    'smtp_helo': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_HELO', 'SMTP_HELO'),
-        'type'    : 'string',
-    },
-    'smtp_starttls': {
-        'default' : True,
-        'envvar'  : ('PT_SMTP_STARTTLS', 'SMTP_STARTTLS'),
-        'type'    : 'boolean',
-    },
-    'smtp_tlscertfile': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_TLSCERTFILE', 'SMTP_TLSCERTFILE'),
-        'type'    : 'string',
-    },
-    'smtp_tlskeyfile': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_TLSKEYFILE', 'SMTP_TLSKEYFILE'),
-        'type'    : 'string',
-    },
-    'smtp_tlskeypass': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_TLSKEYPASS', 'SMTP_TLSKEYPASS'),
-        'type'    : 'string',
-    },
-    'smtp_username': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_USERNAME', 'SMTP_USERNAME'),
-        'type'    : 'string',
-    },
-    'smtp_password': {
-        'default' : None,
-        'envvar'  : ('PT_SMTP_PASSWORD', 'SMTP_PASSWORD'),
-        'type'    : 'string',
-    },
-    'mailroom_interval': {
-        'default' : 5,
-        'envvar'  : 'PT_MAILROOM_INTERVAL',
-        'type'    : 'int',
-        'min'     : 1,
-    },
-    'mailroom_requeue_interval': {
-        'default' : 3600,
-        'envvar'  : 'PT_MAILROOM_REQUEUEINTERVAL',
-        'type'    : 'int',
-        'min'     : 60,
-    },
-}
+_OPTDEFS = dict(
+    app_name = dict(
+        default = 'pytableaux',
+        envvar  = 'PT_APPNAME',
+        type    = 'string',
+    ),
+    host = dict(
+        default = '127.0.0.1',
+        envvar  = 'PT_HOST',
+        type    = 'string'
+    ),
+    port = dict(
+        default = 8080,
+        envvar  = 'PT_PORT',
+        type    = 'int',
+    ),
+    metrics_port = dict(
+        default = 8181,
+        envvar  = 'PT_METRICS_PORT',
+        type    = 'int',
+    ),
+    is_debug = dict(
+        default = False,
+        envvar  = ('PT_DEBUG', 'DEBUG'),
+        type    = 'boolean',
+    ),
+    loglevel = dict(
+        default = 'info',
+        envvar  = ('PT_LOGLEVEL', 'LOGLEVEL'),
+        type    = 'string',
+    ),
+    maxtimeout = dict(
+        default = 30000,
+        envvar  = 'PT_MAXTIMEOUT',
+        type    = 'int',
+    ),
+    google_analytics_id = dict(
+        default = None,
+        envvar  = 'PT_GOOGLE_ANALYTICS_ID',
+        type    = 'string',
+    ),
+    feedback_enabled = dict(
+        default = False,
+        envvar  = 'PT_FEEDBACK',
+        type    = 'boolean',
+    ),
+    feedback_to_address = dict(
+        default = None,
+        envvar  = 'PT_FEEDBACK_TOADDRESS',
+        type    = 'string',
+    ),
+    feedback_from_address = dict(
+        default = None,
+        envvar  = 'PT_FEEDBACK_FROMADDRESS',
+        type    = 'string',
+    ),
+    smtp_host = dict(
+        default = None,
+        envvar  = ('PT_SMTP_HOST', 'SMTP_HOST'),
+        type    = 'string',
+    ),
+    smtp_port = dict(
+        default = 587,
+        envvar  = ('PT_SMTP_PORT', 'SMTP_PORT'),
+        type    = 'int',
+    ),
+    smtp_helo = dict(
+        default = None,
+        envvar  = ('PT_SMTP_HELO', 'SMTP_HELO'),
+        type    = 'string',
+    ),
+    smtp_starttls = dict(
+        default = True,
+        envvar  = ('PT_SMTP_STARTTLS', 'SMTP_STARTTLS'),
+        type    = 'boolean',
+    ),
+    smtp_tlscertfile = dict(
+        default = None,
+        envvar  = ('PT_SMTP_TLSCERTFILE', 'SMTP_TLSCERTFILE'),
+        type    = 'string',
+    ),
+    smtp_tlskeyfile = dict(
+        default = None,
+        envvar  = ('PT_SMTP_TLSKEYFILE', 'SMTP_TLSKEYFILE'),
+        type    = 'string',
+    ),
+    smtp_tlskeypass = dict(
+        default = None,
+        envvar  = ('PT_SMTP_TLSKEYPASS', 'SMTP_TLSKEYPASS'),
+        type    = 'string',
+    ),
+    smtp_username = dict(
+        default = None,
+        envvar  = ('PT_SMTP_USERNAME', 'SMTP_USERNAME'),
+        type    = 'string',
+    ),
+    smtp_password = dict(
+        default = None,
+        envvar  = ('PT_SMTP_PASSWORD', 'SMTP_PASSWORD'),
+        type    = 'string',
+    ),
+    mailroom_interval = dict(
+        default = 5,
+        envvar  = 'PT_MAILROOM_INTERVAL',
+        type    = 'int',
+        min     = 1,
+    ),
+    mailroom_requeue_interval = dict(
+        default = 3600,
+        envvar  = 'PT_MAILROOM_REQUEUEINTERVAL',
+        type    = 'int',
+        min     = 60,
+    ),
+)
 
 
 logic_categories: dict[str, list[str]] = {}
