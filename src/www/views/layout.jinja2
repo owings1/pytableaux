@@ -41,21 +41,7 @@
 </head>
 <body class="pt-app {{- ' has-proof' if is_proof else ' no-proof' }}">
     <div class="header-wrapper">
-        <div class="header">
-            <a href="/">{{ config.app_name|e }} {{ config.version|e }}</a>
-            {% if is_debug %}
-            {% set altver = 'v1' if view_version == 'v2' else 'v2' %}
-                | view: <a href="/?v={{ altver }}">{{ view_version|e }}</a>
-                | <a href="/?v={{ view_version|e }}&debug=0">debug</a>
-            {% endif %}
-            <span class="right">
-                <a href="/doc" target="_blank">documentation</a> | 
-                <a href="{{ config.source_href }}" target="_blank">source</a>
-                {%- if config.feedback_enabled %}
-                    | <a href="/feedback">feedback</a>
-                {%- endif -%}
-            </span>
-        </div>
+        {% include 'header.jinja2' %}
     </div>
     <div class="pt-content">
         {%- block content -%}{%- endblock -%}

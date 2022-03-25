@@ -65,7 +65,7 @@
         status       : 'status',
         tableau      : 'tableau',
         tooltip      : 'tooltip',
-        uiControls   : 'ui-conrols',
+        uiControls   : 'ui-controls',
         withControls : 'with-controls',
         withModels   : 'with-models',
     }
@@ -742,7 +742,7 @@
 
         function debug(...args) {
             if (IS_DEBUG) {
-                console.log(...args)
+                console.debug(...args)
             }
         }
 

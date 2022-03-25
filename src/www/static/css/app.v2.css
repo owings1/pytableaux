@@ -97,9 +97,11 @@ body.pt-app,
 .pt-app #lexicons-content .operator-symbol {
   font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
 }
+.pt-app .headicon::before,
 .pt-app .warns h3::before,
 .pt-app .errors h3::before,
 .pt-app a.external:after,
+.pt-app a.del-predicate::after,
 .pt-app table.argument td a.del-premise::before,
 .pt-app table.argument td a.del-premise::after,
 .pt-app a.add-predicate::after,
@@ -118,10 +120,14 @@ body.pt-app {
 .pt-app.no-proof #lexicons-content .operator-symbol {
   font-size: 1.2em;
 }
+.pt-app .headicon::before {
+  font-size: 1.3125em;
+}
 .pt-app table.argument td a.add-premise,
 .pt-app table.argument td a.del-premise::before,
 .pt-app table.argument td a.del-premise::after,
-.pt-app a.add-predicate::after {
+.pt-app a.add-predicate::after,
+.pt-app a.del-predicate::after {
   font-size: 1.5em;
 }
 .pt-app #lexicons-content table.predicates th {
@@ -163,7 +169,8 @@ body.pt-app {
 .pt-app .footer a,
 .pt-app a.external,
 .pt-app table.argument td a,
-.pt-app a.add-predicate {
+.pt-app a.add-predicate,
+.pt-app a.del-predicate {
   text-decoration: none;
 }
 .pt-app .header a:hover,
@@ -185,15 +192,12 @@ body.pt-app {
 
 .hidden,
 .pt-app.has-proof .footer-wrapper,
-/* .pt-app table.argument td a.del-premise, */
-.pt-app #lexicons-content #predicates_input_table a.del-predicate,
+/* .pt-app #lexicons-content a.del-predicate, */
 .pt-app #lexicons-content .predicate-symbol.hidden {
   display: none;
 }
-.pt-app #clear_argument_wrapper,
-.pt-app table.argument td a.del-premise,
-/* .pt-app table.argument td:hover a.del-premise, */
-.pt-app #lexicons-content #predicates_input_table td:hover a.del-predicate {
+/* .pt-app #lexicons-content td:hover a.del-predicate, */
+.pt-app #clear_argument_wrapper {
   display: inline;
 }
 .pt-app .input label,
@@ -245,12 +249,11 @@ body.pt-app {
 .pt-app a.external:after {
   color: #b3b3b3;
 }
-.pt-app code {
-  color: #e74c3c;
-}
+.pt-app code,
+.pt-app a.del-predicate:hover::after,
 .pt-app table.argument td:hover a.del-premise::before,
 .pt-app table.argument td:hover a.del-premise::after {
-  color: #e91e63ba;
+  color: #e74c3c;
 }
 .pt-app .json-dump .json-string {
   color: #ba2121;
@@ -260,6 +263,7 @@ body.pt-app {
 }
 .pt-app a.add-premise::after,
 .pt-app a.add-predicate::after,
+.pt-app a.del-predicate::after,
 .pt-app table.argument td a.del-premise::before,
 .pt-app table.argument td a.del-premise::after {
   color: #cccccc;
@@ -313,15 +317,13 @@ body.pt-app {
 .pt-app .input.sentence.conclusion .status.bad {
   background-color: #bc1a1ad4;
 }
-.pt-app .input.sentence.premise .status.good {
+.pt-app .input.sentence.premise .status.good,
+.pt-app .debugs-wrapper > .debugs-heading {
   background-color: #2196f3;
 }
 .pt-app .input.sentence.premise .status.bad {
   background-color: #f3217cf5;
 }
-/* .pt-app table.argument td a.add-premise:hover {
-  background-color: #2980b9;
-} */
 .pt-app .select-logic .logic-title {
   background-color: #f0f0f0;
 }
@@ -330,12 +332,6 @@ body.pt-app {
 }
 .pt-app .proof-result-admon.unfinished {
   background-color: #cd813f;
-}
-.pt-app .debugs-wrapper > .debugs-heading {
-  background-color: #2996dd;
-}
-.pt-app .debugs {
-  background-color: #e7f2fa;
 }
 
 /* ---- border ---- */
@@ -463,7 +459,8 @@ body.pt-app,
 .pt-app ul.details .value {
   margin-top: 9px;
 }
-.pt-app .debugs .debug-heading {
+.pt-app .debugs .debug-heading,
+.pt-app #argument_form input[type="submit"] {
   margin-top: 10px;
 }
 .pt-app ul.details li {
@@ -556,6 +553,9 @@ body.pt-app,
 .pt-app .debugs .debug-content {
   padding: 1.25em;
 }
+.pt-app .headicon::before {
+  padding: 0 0.25em;
+}
 .pt-app #lexicons-content ul.item-symbols li,
 .pt-app #lexicons-content .predicate-symbol,
 .pt-app #lexicons-content .operator-symbol {
@@ -638,7 +638,7 @@ body.pt-app,
 }
 .pt-app table.argument td.status,
 .pt-app table.argument tr.sentence td:last-child {
-  width: 20px;
+  width: 1.25em;
 }
 .pt-app #lexicons-content #predicates_input_table tr td:last-child {
   width: 76%;
@@ -744,9 +744,10 @@ body.pt-app,
 .pt-app .debugs-wrapper::before {
   content: "";
 }
+.pt-app a.del-predicate::after,
 .pt-app table.argument td a.del-premise::before,
 .pt-app table.argument td a.del-premise::after {
-  content: '\f057';
+  content: '\f056';
 }
 .pt-app a.external:after {
   content: "\f08e";
@@ -759,38 +760,42 @@ body.pt-app,
 .pt-app a.add-premise::after {
   content: '\F055';
 }
-
+.pt-app a.headicon.doc::before {
+  content: '\F059';
+}
+.pt-app a.headicon.source::before {
+  content: '\F09B';
+}
+.pt-app a.headicon.feedback::before {
+  content: '\F003';
+}
+/*
+https://fontdrop.info/
+FontAwesome:
+  remove_sign: '\f057'
+  trash: '\f014'
+  resize_vertical: '\f07d'
+  resize_horizontal: '\f07e'
+  caret_up: f0d7
+  caret_down: f0d8
+  caret_left: f0d9
+  caret_right: f0da
+  bullseye: F140
+  dot_circlt: F192
+  compass: F14E
+  circle_blank: F10C, F1DB
+  github: F09B, F113
+  git: F1DA, F1D3
+  question_sign: F059, F29C
+  info_sign: F05A
+  envelope: F003
+*/
 /* .pt-app.has-proof #uitabs_main_wrapper {
   position: -webkit-sticky;
   position: sticky;
 } */
-/* .pt-app td.add-predicate {
-  text-align: left;
-}
-.pt-app a.add-predicate {
-  padding: 3px 8px;
-  text-decoration: none;
-  display: inline-block;
-}
-.pt-app a.add-predicate .plus {
-  margin-left: -0.78em;
-}
-.pt-app a.add-predicate .dashes {
-  white-space: pre;
-} */
-
-/* .pt-app table.argument td a.del-premise:hover {
-  color: red;
-  background-color: #cccccc;
-} */
-
-/* .pt-app select#example_argument {
-  margin: 5px 0 10px 1px;
-} */
-
-/* * * * * * * * * * * * * * * **
- * Example of character as icon 
- * * * * * * * * * * * * * * * * * 
+/* Example of character as icon */
+/*
 .icon {
   position: relative;
   padding-left: 1em;
@@ -802,15 +807,12 @@ body.pt-app,
   left: 0;
   top: 25%;
   transform: translateY(-50%);
-
   color: #f3217cf5;
   content: '\2297';
 }
-/* * * * * * * * * * * * * * * */
+*/
 /* 
 rtd-theme:
-    fonts:
-        Lato,proxima-nova,Helvetica Neue,Arial,sans-serif
     backgrounds:
         #6ab0de (note, blue)
         #dbfaf4 (important, light green)
