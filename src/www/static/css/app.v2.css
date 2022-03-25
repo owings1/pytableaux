@@ -102,7 +102,8 @@ body.pt-app,
 .pt-app a.external:after,
 .pt-app table.argument td a.del-premise::before,
 .pt-app table.argument td a.del-premise::after,
-.pt-app a.add-predicate::after {
+.pt-app a.add-predicate::after,
+.pt-app a.add-premise::after {
   font-family: FontAwesome;
 }
 .pt-app .footer {
@@ -117,6 +118,7 @@ body.pt-app {
 .pt-app.no-proof #lexicons-content .operator-symbol {
   font-size: 1.2em;
 }
+.pt-app table.argument td a.add-premise,
 .pt-app table.argument td a.del-premise::before,
 .pt-app table.argument td a.del-premise::after,
 .pt-app a.add-predicate::after {
@@ -146,6 +148,7 @@ body.pt-app {
 .pt-app .footer,
 .pt-app .input.sentence .status,
 .pt-app table.argument tr.sentence td:last-child,
+.pt-app table.argument td a.add-premise,
 .pt-app #lexicons-content ul.item-symbols li,
 .pt-app #lexicons-content .predicate-symbol,
 .pt-app #lexicons-content .operator-symbol {
@@ -182,13 +185,14 @@ body.pt-app {
 
 .hidden,
 .pt-app.has-proof .footer-wrapper,
-.pt-app table.argument td a.del-premise,
+/* .pt-app table.argument td a.del-premise, */
 .pt-app #lexicons-content #predicates_input_table a.del-predicate,
 .pt-app #lexicons-content .predicate-symbol.hidden {
   display: none;
 }
 .pt-app #clear_argument_wrapper,
-.pt-app table.argument td:hover a.del-premise,
+.pt-app table.argument td a.del-premise,
+/* .pt-app table.argument td:hover a.del-premise, */
 .pt-app #lexicons-content #predicates_input_table td:hover a.del-predicate {
   display: inline;
 }
@@ -226,8 +230,8 @@ body.pt-app {
   color: #ffffff;
 }
 .pt-app a.external,
-.pt-app a.add-predicate,
-.pt-app a.add-predicate::after,
+.pt-app a.add-predicate:hover::after,
+.pt-app table.argument td a.add-premise:hover::after,
 .pt-app .json-dump .json-abrace {
   color: #2980b9;
 }
@@ -244,8 +248,8 @@ body.pt-app {
 .pt-app code {
   color: #e74c3c;
 }
-.pt-app table.argument td a.del-premise::before,
-.pt-app table.argument td a.del-premise::after {
+.pt-app table.argument td:hover a.del-premise::before,
+.pt-app table.argument td:hover a.del-premise::after {
   color: #e91e63ba;
 }
 .pt-app .json-dump .json-string {
@@ -253,6 +257,12 @@ body.pt-app {
 }
 .pt-app .debugs .debug-heading {
   color: #0f100f;
+}
+.pt-app a.add-premise::after,
+.pt-app a.add-predicate::after,
+.pt-app table.argument td a.del-premise::before,
+.pt-app table.argument td a.del-premise::after {
+  color: #cccccc;
 }
 
 /* ---- background-color ---- */
@@ -309,9 +319,9 @@ body.pt-app {
 .pt-app .input.sentence.premise .status.bad {
   background-color: #f3217cf5;
 }
-.pt-app table.argument td a.add-premise:hover {
+/* .pt-app table.argument td a.add-premise:hover {
   background-color: #2980b9;
-}
+} */
 .pt-app .select-logic .logic-title {
   background-color: #f0f0f0;
 }
@@ -525,8 +535,7 @@ body.pt-app,
   padding: 0.4em;
 }
 .pt-app .input.sentence .status,
-.pt-app table.argument tr.sentence td:last-child,
-.pt-app table.argument tbody.spacer td a {
+.pt-app table.argument tr.sentence td:last-child {
   padding: 0.5em;
 }
 .pt-app .header,
@@ -603,8 +612,10 @@ body.pt-app,
 .pt-app #argument_form .heading {
   padding-left: 0;
 }
-.pt-app table.argument td a.del-premise,
 .pt-app a.add-predicate {
+  padding-left: 0.65em;
+}
+.pt-app table.argument td a.del-premise {
   padding-left: 1em;
 }
 .pt-app .json-dump ul.json-dict,
@@ -744,7 +755,8 @@ body.pt-app,
 .pt-app .errors h3::before {
   content: "\f06a";
 }
-.pt-app a.add-predicate::after {
+.pt-app a.add-predicate::after,
+.pt-app a.add-premise::after {
   content: '\F055';
 }
 

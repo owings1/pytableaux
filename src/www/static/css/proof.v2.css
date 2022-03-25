@@ -73,13 +73,13 @@
     color: red;
 }
 
-.tableau-controls .button.width-reset {
+/* .tableau-controls .button.width-reset {
     padding-top: 5px;
     padding-bottom: 6px;
 }
 .tableau-controls .button.auto-scroll {
     font-size: 0.7em;
-}
+} */
 .tableau-controls .branch-filter.active:not(.disabled),
 .tableau-controls .auto-opts .button.active {
     background-color: #1abc9c;
