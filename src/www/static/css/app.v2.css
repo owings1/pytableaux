@@ -635,9 +635,9 @@ body.pt-app,
   width: 100%;
 }
 .pt-app #lexicons-content input.arity {
-  width: 10px;
+  width: 0.8em;
 }
-.pt-app .input.sentence .status,
+.pt-app table.argument td.status,
 .pt-app table.argument tr.sentence td:last-child {
   width: 20px;
 }

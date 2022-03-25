@@ -1,4 +1,3 @@
-{# Select Logic #}
 <div class="input select select-logic">
     <label class="heading" for="selected_logic">Logic</label>
     <select name="logic" id="selected_logic">
@@ -13,7 +12,6 @@
         {% endfor %}
     </select>
     {% for key, logic in logics.items() -%}
-        {# updated from javascript on select change #}
         <div class="hidden logic-details {{ key|e }}">
             <span class="value logic-title {{ key|e }}">
                 <a class="external" href="/doc/logics/{{ key|e }}.html" target="_blank" rel="noreferrer noopener">
@@ -23,11 +21,9 @@
         </div>
     {% endfor %}
 </div>
-{# Premises #}
 <div class="input input-argument">
     <div id="clear_argument_wrapper"><a href="javascript:" id="clear_argument">Clear</a></div>
     <label class="heading">Argument</label>
-    {# Examples #}
     <div class="input select example-argument">
         <select id="example_argument">
             <option value="">Load example argument ...</option>
@@ -37,7 +33,6 @@
         </select>
     </div>
     <table class="argument">
-        {# Premises #}
         <tbody class="premises">
             {%- if 'premises[]' in form_data -%}
                 {%- for premise in form_data['premises[]'] -%}
@@ -48,16 +43,14 @@
                         {{ helper.premise(loop.index, premise, 'good') }}
                     {%- endif -%}
                 {%- endfor -%}
-            {% endif %}
+            {%- endif -%}
         </tbody>
-        {# Spacer #}
         <tbody class="spacer">
             <tr>
                 <td><a class="" href="javascript:"></a></td>
                 <td><a class="add-premise" href="javascript:"></a></td>
             </tr>
         </tbody>
-        {# Conclusion #}
         <tbody class="conclusion">
             <tr class="input sentence conclusion">
                 {%- set status = '' -%}
@@ -67,7 +60,7 @@
                     {%- set message = errors.Conclusion.message -%}
                 {%- elif 'conclusion' in form_data -%}
                     {%- set status = 'good' -%}
-                {%- endif %}
+                {%- endif -%}
                 <td class="status {{ status }}" title="{{ message|e }}">
                     <span class="conclusion-marker">C</span>
                 </td>
@@ -81,7 +74,6 @@
         </tbody>
     </table>
 </div>
-{# Submit #}    
 <div class="input submit">
     <input type="submit" value="Go"/>
 </div>
