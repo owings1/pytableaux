@@ -1,4 +1,4 @@
-<div id="lexicons-content" class="lexicons input">
+<div id="lexicons-content" class="lexicons panebox">
     <div class="heading">Symbols</div>
     <div class="panel">
         {%- for notn in Notation -%}
@@ -86,15 +86,8 @@
                         {% endfor -%}
                     {%- endcall -%}
                 {%- endfor %}
-            </table>{# ⊕ #}
+            </table>
             <div><a href="javascript:" class="add-predicate tooltip" title="Add a predicate"></a></div>
-            {# <div>
-                <a href="javascript:" class="add-predicate tooltip" title="Add a predicate">
-                    <span class="add-predicate dashes">–  –  –  –  –  –  </span>
-                    <span class="add-predicate circ">◯</span><span class="plus">+</span>
-                    <span class="add-predicate dashes">  –  –  –  –  –  –</span>
-                </a>
-            </div> #}
             <div class="clear"></div>
         </div>
     </div>

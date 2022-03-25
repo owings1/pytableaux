@@ -91,7 +91,7 @@ body.pt-app,
 .pt-app .json-dump,
 .pt-app .errors dd,
 .pt-app .warns dd,
-.pt-app .input .logic-title,
+.pt-app .logic-title,
 .pt-app #lexicons-content ul.item-symbols li,
 .pt-app #lexicons-content .predicate-symbol,
 .pt-app #lexicons-content .operator-symbol {
@@ -138,10 +138,8 @@ body.pt-app {
 
 /* ---- text ---- */
 
-.pt-app .select-logic,
-.pt-app .input-argument,
+.pt-app #argument_form .panebox,
 .pt-app #argument_form .heading,
-.pt-app #lexicons-content,
 .pt-app #lexicons-content table.predicates th {
   text-align: left;
 }
@@ -281,8 +279,9 @@ body.pt-app {
 .pt-app #lexicons-content ul.item-symbols li,
 .pt-app #lexicons-content .predicate-symbol,
 .pt-app #lexicons-content .operator-symbol,
-.pt-app #lexicons-content table.predicates th {
-  background-color: #eee;
+.pt-app #lexicons-content table.predicates th,
+.pt-app .debugs .debug-content {
+  background-color: #eeeeee;
 }
 .pt-app .lexicons .label {
   background-color: #edf0f261;
@@ -290,7 +289,8 @@ body.pt-app {
 .pt-app .errors h3 {
   background-color: #f29f97;
 }
-.pt-app .warns h3 {
+.pt-app .warns h3,
+.pt-app .debugs .debug-heading {
   background-color: #f0b37e;
 }
 .pt-app .input.sentence .status {
@@ -316,31 +316,23 @@ body.pt-app {
   background-color: #f0f0f0;
 }
 .pt-app .proof-result-admon.invalid {
-  background-color: rgb(255, 100, 85);
+  background-color: #ff6455;
 }
 .pt-app .proof-result-admon.unfinished {
-  background-color: rgb(205, 129, 63);
+  background-color: #cd813f;
 }
 .pt-app .debugs-wrapper > .debugs-heading {
   background-color: #2996dd;
 }
-.pt-app .debugs .debug-heading {
-  background-color: #f0b37e;
-}
 .pt-app .debugs {
   background-color: #e7f2fa;
-}
-.pt-app .debugs .debug-content {
-  background-color: #eeeeee;
 }
 
 /* ---- border ---- */
 
 .pt-app .input label,
-.pt-app .select-logic,
-.pt-app .input-argument,
 .pt-app .debugs,
-.pt-app #lexicons-content,
+.pt-app #argument_form .panebox,
 .pt-app #lexicons-content ul.item-symbols li,
 .pt-app #lexicons-content .predicate-symbol,
 .pt-app #lexicons-content .operator-symbol {
@@ -348,7 +340,7 @@ body.pt-app {
 }
 .pt-app .proof-result-admon.invalid,
 .pt-app .proof-result-admon.unfinished {
-  border: 1px solid #aaa;
+  border: 1px solid #aaaaaa;
 }
 .pt-app .debugs .debug-heading,
 .pt-app .debugs .debug-content {
@@ -358,7 +350,7 @@ body.pt-app {
   border: 1px solid #ccccccab;
 }
 .pt-app .proof-result-admon.valid {
-  border: 1px solid #666;
+  border: 1px solid #666666;
 }
 .pt-app .errors {
   border: 1px solid #f29f97;
@@ -379,7 +371,8 @@ body.pt-app {
   border: none;
   border-left: 3px solid #cccccc;
 }
-.pt-app #argument_form .heading {
+.pt-app #argument_form .heading,
+.pt-app .input.example-argument {
   border-width: 0 0 1px 0;
   border-color: #cccccc;
   border-style: solid;
@@ -398,7 +391,8 @@ body.pt-app {
 .pt-app .errors dd,
 .pt-app .warns dt,
 .pt-app .warns dd,
-.pt-app #lexicons-wrapper,
+.pt-app #uitab_input .col1,
+.pt-app #uitab_input .col2,
 .pt-app .lexicons .panel {
   float: left;
 }
@@ -420,51 +414,56 @@ body.pt-app,
 .pt-app .warns h3,
 .pt-app .errors dd,
 .pt-app .warns dd,
-.pt-app #lexicons-content table.predicates,
-.pt-app #lexicons-content table.operator-symbols.predicate-symbols {
+.pt-app #lexicons-content table.predicates {
   margin: 0;
-}
-.pt-app.no-proof .pt-content {
-  margin: 30px 0;
 }
 .pt-app a.external:after {
   margin: 0 0.2em;
-}
-.pt-app div.input {
-  margin: 2px 0;
-}
-.pt-app .input .example-argument {
-  margin: 0 0 15px 0;
-}
-.pt-app .select-logic .logic-details {
-  margin: 20px 0;
-}
-.pt-app .select-logic .logic-title {
-  margin: 6px 0;
-}
-.pt-app .lexicons .label {
-  margin: 0 0 7px 0;
-}
-.pt-app #lexicons-content ul.item-symbols,
-.pt-app #lexicons-content table.operator-symbols {
-  margin: 0 0 16px 0;
 }
 .pt-app #lexicons-content ul.item-symbols li,
 .pt-app #lexicons-content .predicate-symbol,
 .pt-app #lexicons-content .operator-symbol {
   margin: 0 3px;
 }
-.pt-app .tableau-wrapper {
-  margin-top: 170px;
+.pt-app div.input {
+  margin: 2px 0;
 }
-.pt-app ul.details li {
-  margin-top: 22px;
+.pt-app .select-logic .logic-title {
+  margin: 6px 0;
+}
+.pt-app .select-logic .logic-details {
+  margin: 20px 0;
+}
+.pt-app.no-proof .pt-content {
+  margin: 30px 0;
+}
+.pt-app .lexicons .label {
+  margin: 0 0 7px 0;
+}
+.pt-app .input .example-argument {
+  margin: 0 0 15px 0;
+}
+.pt-app #lexicons-content ul.item-symbols,
+.pt-app #lexicons-content table.operator-symbols {
+  margin: 0 0 16px 0;
+}
+.pt-app #clear_argument_wrapper {
+  margin-top: 8px;
 }
 .pt-app ul.details .value {
   margin-top: 9px;
 }
 .pt-app .debugs .debug-heading {
   margin-top: 10px;
+}
+.pt-app ul.details li {
+  margin-top: 22px;
+}
+.pt-app .debugs-wrapper::before {
+  margin-top: 100px;
+}
+.pt-app .tableau-wrapper {
+  margin-top: 170px;
 }
 .pt-app .warns h3::before,
 .pt-app .errors h3::before {
@@ -473,33 +472,28 @@ body.pt-app,
 .pt-app .lexicons .panel {
   margin-right: 10px;
 }
+.pt-app #clear_argument_wrapper {
+  margin-right: 28px
+}
+.pt-app .select-logic .logic-title {
+  margin-bottom: 6px;
+}
+.pt-app .select-logic {
+  margin-bottom: 7px;
+}
 .pt-app .errors,
 .pt-app .warns {
   margin-bottom: 10px;
 }
-.pt-app #uitabs_main_wrapper {
-  margin-bottom: 20px;
-}
-.pt-app .argument .select-logic {
-  margin-bottom: 7px;
-}
 .pt-app #argument_form .heading {
   margin-bottom: 12px;
 }
-.pt-app #clear_argument_wrapper {
-  margin-right: 28px;
-  margin-top: 8px;
-}
-.pt-app .select-logic .logic-title {
-  margin: 6px 0;
-  margin-bottom: 6px;
-}
-.pt-app #lexicons-wrapper {
-  margin-left: 5px;
-}
+.pt-app #uitabs_main_wrapper,
 .pt-app .debugs-wrapper::before {
-  margin-top: 100px;
   margin-bottom: 20px;
+}
+.pt-app #uitab_input .col2 {
+  margin-left: 5px;
 }
 .pt-app .debugs-wrapper > .debugs-heading,
 .pt-app .debugs .debug-heading {
@@ -584,9 +578,7 @@ body.pt-app,
 .pt-app .input input[type="email"] {
   padding: 0.4375em 0.25em;
 }
-.pt-app .select-logic,
-.pt-app .input-argument,
-.pt-app #lexicons-content {
+.pt-app #argument_form .panebox {
   padding: 0.625em 1.25em;
 }
 .pt-app ul.details li {
@@ -604,6 +596,9 @@ body.pt-app,
 }
 .pt-app .debugs {
   padding-bottom: 1.25em;
+}
+.pt-app .input.example-argument {
+  padding-bottom: 12px;
 }
 .pt-app #argument_form .heading {
   padding-left: 0;
@@ -640,7 +635,7 @@ body.pt-app,
 .pt-app .fieldset.options .input label {
   width: 160px;
 }
-.pt-app #argument-input-panel {
+.pt-app #uitab_input .col1 {
   width: 351px;
 }
 .pt-app .input.sentence input {
@@ -747,7 +742,7 @@ body.pt-app,
 }
 .pt-app .warns h3::before,
 .pt-app .errors h3::before {
-  content: "";
+  content: "\f06a";
 }
 .pt-app a.add-predicate::after {
   content: '\F055';
