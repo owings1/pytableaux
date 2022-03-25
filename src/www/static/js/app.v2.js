@@ -66,6 +66,7 @@
         tableau      : 'tableau',
         tooltip      : 'tooltip',
         uiControls   : 'ui-controls',
+        uitabInsert  : 'uitab-insert',
         withControls : 'with-controls',
         withModels   : 'with-models',
     }
@@ -106,6 +107,7 @@
 
         headerDebugs      : '#pt_debugs_heading',
         wrapDebugs        : '#pt_debugs_wrapper',
+        uitabStatsLink    : '#uitab_stats_link',
 
         inputPredicate    : '.' + Cls.input + '.' + Cls.predicate,
         inputPremise      : '.' + Cls.input + '.' + Cls.premise,
@@ -117,6 +119,7 @@
         premises          : '.' + Cls.premises,
         tableaux          : '.' + Cls.tableau,
 
+        resultAdmon       : '.proof-result-admon',
         templatePrem      : '#template_premise',
         templatePred      : '#template_predicate',
     }
@@ -186,6 +189,10 @@
                 refreshNotation()
                 refreshLogic()
                 if (IS_PROOF) {
+                    var $tabins = $('<div/>').addClass(Cls.uitabInsert).html(
+                        $(Sel.resultAdmon, $AppBody).get(0).outerHTML
+                    )
+                    $tabins.insertBefore($(Sel.uitabStatsLink).parent())
                     refreshStatuses()
                 }
             })
@@ -283,7 +290,7 @@
             $('.' + Cls.buttonGroup, $AppBody).controlgroup({button: 'a'})
 
             // UI Tooltip - form help
-            $('.' + Cls.tooltip, $AppForm).tooltip(TTIP_OPTS)
+            $('.' + Cls.tooltip, $AppBody).tooltip(TTIP_OPTS)
 
             // UI Tooltip - ui controls help
             $('.' + Cls.uiControls + ' a[title]', $AppBody).each(function() {

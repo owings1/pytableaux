@@ -97,6 +97,7 @@ body.pt-app,
 .pt-app #lexicons-content .operator-symbol {
   font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
 }
+.pt-app .uitab_link::before,
 .pt-app .headicon::before,
 .pt-app .warns h3::before,
 .pt-app .errors h3::before,
@@ -397,6 +398,7 @@ body.pt-app {
 .pt-app .errors dd,
 .pt-app .warns dt,
 .pt-app .warns dd,
+.pt-app .uitab-insert,
 .pt-app #uitab_input .col1,
 .pt-app #uitab_input .col2,
 .pt-app .lexicons .panel {
@@ -423,7 +425,8 @@ body.pt-app,
 .pt-app #lexicons-content table.predicates {
   margin: 0;
 }
-.pt-app a.external:after {
+.pt-app a.external:after,
+.pt-app .uitab-insert {
   margin: 0 0.2em;
 }
 .pt-app #lexicons-content ul.item-symbols li,
@@ -688,7 +691,8 @@ body.pt-app,
 .pt-app.has-proof #uitabs_main_wrapper {
   position: fixed;
 }
-.pt-app table.argument td a.del-premise {
+.pt-app table.argument td a.del-premise,
+.pt-app .uitab-insert {
   position: relative;
 }
 .pt-app table.argument td a.del-premise::before,
@@ -697,6 +701,9 @@ body.pt-app,
 }
 .pt-app .header-wrapper {
   top: 0;
+}
+.pt-app .uitab-insert {
+  top: 0.2em;
 }
 .pt-app .footer-wrapper {
   bottom: 0;
@@ -767,13 +774,31 @@ body.pt-app,
   content: '\F09B';
 }
 .pt-app a.headicon.feedback::before {
-  content: '\F003';
+  content: '\F2B6';
+}
+.pt-app #uitab_input_link::before {
+  content: '\F044';
+}
+.pt-app #uitab_options_link::before {
+  content: '\F1DE';
+}
+.pt-app #uitab_stats_link::before {
+  content: '\F080';
+}
+.pt-app #uitab_view_link::before {
+  content: '\F1E5';
+}
+.pt-app #uitab_step_link::before {
+  content: '\F04B';
+}
+.pt-app #uitab_models_link::before {
+  content: '\F20E';
 }
 /*
 https://fontdrop.info/
 FontAwesome:
   remove_sign: '\f057'
-  trash: '\f014'
+  trash: '\f014', F1F8
   resize_vertical: '\f07d'
   resize_horizontal: '\f07e'
   caret_up: f0d7
@@ -786,9 +811,17 @@ FontAwesome:
   circle_blank: F10C, F1DB
   github: F09B, F113
   git: F1DA, F1D3
-  question_sign: F059, F29C
+  question_sign: F059, F29C, F128
   info_sign: F05A
-  envelope: F003
+  envelope: F003, F2B6, F2B7
+  play: F04B, F144, F152, F01D
+  ol: F0CB
+  cog: F013
+  cogs: F085
+  bar_chart: F080
+  edit: F044
+  sliders/options?: F1DE
+  binoculars: F1E5
 */
 /* .pt-app.has-proof #uitabs_main_wrapper {
   position: -webkit-sticky;

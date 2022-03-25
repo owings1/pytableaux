@@ -24,16 +24,16 @@
         <div id="uitabs_main" class="">
             {# NB: Changes to tab order must be updated in app js #}
             <ul>
-                <li><a href="#uitab_input">Input</a></li>
-                <li><a href="#uitab_options" >Options</a></li>
+                <li><a href="#uitab_input" id="uitab_input_link" class="uitab_link tooltip" title="Argument"></a></li>
+                <li><a href="#uitab_options" id="uitab_options_link" class="uitab_link tooltip" title="Options"></a></li>
                 {% if is_proof %}
-                    <li><a href="#uitab_stats" >Stats</a></li>
+                    <li><a href="#uitab_stats" id="uitab_stats_link" class="uitab_link tooltip" title="Stats"></a></li>
                     {% if is_controls -%}
-                        <li><a href="#uitab_view">View</a></li>
-                        <li><a href="#uitab_step">Step</a></li>
+                        <li><a href="#uitab_view" id="uitab_view_link" class="uitab_link tooltip" title="View"></a></li>
+                        <li><a href="#uitab_step" id="uitab_step_link" class="uitab_link tooltip" title="Step"></a></li>
                     {% endif %}
                     {% if is_models -%}
-                        <li><a href="#uitab_models" >Models</a></li>
+                        <li><a href="#uitab_models" id="uitab_models_link" class="uitab_link tooltip" title="Models"></a></li>
                     {% endif %}
                 {% endif %}
             </ul>
