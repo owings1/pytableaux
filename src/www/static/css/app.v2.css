@@ -103,9 +103,10 @@ body.pt-app,
 .pt-app .errors h3::before,
 .pt-app a.external:after,
 .pt-app a.del-predicate::after,
-.pt-app table.argument td a.del-premise::before,
-.pt-app table.argument td a.del-premise::after,
+.pt-app a.del-premise::before,
+.pt-app a.del-premise::after,
 .pt-app a.add-predicate::after,
+.pt-app a.add-premise::before,
 .pt-app a.add-premise::after {
   font-family: FontAwesome;
 }
@@ -115,7 +116,7 @@ body.pt-app,
 body.pt-app {
   font-size: 0.9em;
 }
-.pt-app.no-proof #argument_form .heading,
+.pt-app #argument_form .heading,
 .pt-app.no-proof #lexicons-content ul.item-symbols li,
 .pt-app.no-proof #lexicons-content .predicate-symbol,
 .pt-app.no-proof #lexicons-content .operator-symbol {
@@ -124,9 +125,10 @@ body.pt-app {
 .pt-app .headicon::before {
   font-size: 1.3125em;
 }
-.pt-app table.argument td a.add-premise,
-.pt-app table.argument td a.del-premise::before,
-.pt-app table.argument td a.del-premise::after,
+.pt-app a.add-premise::before,
+.pt-app a.add-premise::after,
+.pt-app a.del-premise::before,
+.pt-app a.del-premise::after,
 .pt-app a.add-predicate::after,
 .pt-app a.del-predicate::after {
   font-size: 1.5em;
@@ -155,7 +157,6 @@ body.pt-app {
 .pt-app .footer,
 .pt-app .input.sentence .status,
 .pt-app table.argument tr.sentence td:last-child,
-.pt-app table.argument td a.add-premise,
 .pt-app #lexicons-content ul.item-symbols li,
 .pt-app #lexicons-content .predicate-symbol,
 .pt-app #lexicons-content .operator-symbol {
@@ -193,11 +194,9 @@ body.pt-app {
 
 .hidden,
 .pt-app.has-proof .footer-wrapper,
-/* .pt-app #lexicons-content a.del-predicate, */
 .pt-app #lexicons-content .predicate-symbol.hidden {
   display: none;
 }
-/* .pt-app #lexicons-content td:hover a.del-predicate, */
 .pt-app #clear_argument_wrapper {
   display: inline;
 }
@@ -238,7 +237,8 @@ body.pt-app {
 }
 .pt-app a.external,
 .pt-app a.add-predicate:hover::after,
-.pt-app table.argument td a.add-premise:hover::after,
+.pt-app td:hover a.add-premise::before,
+.pt-app td:hover a.add-premise::after,
 .pt-app .json-dump .json-abrace {
   color: #2980b9;
 }
@@ -254,8 +254,8 @@ body.pt-app {
 }
 .pt-app code,
 .pt-app a.del-predicate:hover::after,
-.pt-app table.argument td:hover a.del-premise::before,
-.pt-app table.argument td:hover a.del-premise::after {
+.pt-app td:hover a.del-premise::before,
+.pt-app td:hover a.del-premise::after {
   color: #e74c3c;
 }
 .pt-app .json-dump .json-string {
@@ -264,11 +264,12 @@ body.pt-app {
 .pt-app .debugs .debug-heading {
   color: #0f100f;
 }
+.pt-app a.add-premise::before,
 .pt-app a.add-premise::after,
 .pt-app a.add-predicate::after,
 .pt-app a.del-predicate::after,
-.pt-app table.argument td a.del-premise::before,
-.pt-app table.argument td a.del-premise::after {
+.pt-app td a.del-premise::before,
+.pt-app td a.del-premise::after {
   color: #cccccc;
 }
 
@@ -373,6 +374,9 @@ body.pt-app {
 .pt-app #input_feedback_content {
   border: 3px solid #cccccc;
 }
+.pt-app .input.example-argument {
+  border-top: 1px solid #cccccc;
+}
 .pt-app ul.details li {
   border-left: 2px solid #cccccc;
 }
@@ -380,8 +384,7 @@ body.pt-app {
   border: none;
   border-left: 3px solid #cccccc;
 }
-.pt-app #argument_form .heading,
-.pt-app .input.example-argument {
+.pt-app #argument_form .heading {
   border-width: 0 0 1px 0;
   border-color: #cccccc;
   border-style: solid;
@@ -490,13 +493,14 @@ body.pt-app,
 .pt-app .select-logic .logic-title {
   margin-bottom: 6px;
 }
-.pt-app .select-logic {
+.pt-app .panebox {
   margin-bottom: 7px;
 }
 .pt-app .errors,
 .pt-app .warns {
   margin-bottom: 10px;
 }
+.pt-app table.argument,
 .pt-app #argument_form .heading {
   margin-bottom: 12px;
 }
@@ -612,7 +616,7 @@ body.pt-app,
   padding-bottom: 1.25em;
 }
 .pt-app .input.example-argument {
-  padding-bottom: 12px;
+  padding-top: 12px;
 }
 .pt-app #argument_form .heading {
   padding-left: 0;
@@ -620,7 +624,8 @@ body.pt-app,
 .pt-app a.add-predicate {
   padding-left: 0.65em;
 }
-.pt-app table.argument td a.del-premise {
+.pt-app a.del-premise,
+.pt-app a.add-premise {
   padding-left: 1em;
 }
 .pt-app .json-dump ul.json-dict,
@@ -648,7 +653,7 @@ body.pt-app,
 .pt-app table.argument tr.sentence td:last-child {
   width: 1.25em;
 }
-.pt-app #lexicons-content #predicates_input_table tr td:last-child {
+.pt-app #predicates_input_table tr td:last-child {
   width: 76%;
 }
 .pt-app .fieldset.options .input label {
@@ -658,7 +663,7 @@ body.pt-app,
   width: 351px;
 }
 .pt-app .input.sentence input {
-  width: 215px;
+  width: 16.4em;
 }
 .pt-app #input_feedback_content {
   width: 600px;
@@ -696,12 +701,15 @@ body.pt-app,
 .pt-app.has-proof #uitabs_main_wrapper {
   position: fixed;
 }
-.pt-app table.argument td a.del-premise,
+.pt-app a.del-premise,
+.pt-app a.add-premise,
 .pt-app .uitab-insert {
   position: relative;
 }
-.pt-app table.argument td a.del-premise::before,
-.pt-app table.argument td a.del-premise::after {
+.pt-app a.del-premise::before,
+.pt-app a.del-premise::after,
+.pt-app a.add-premise::before,
+.pt-app a.add-premise::after {
   position: absolute;
 }
 .pt-app .header-wrapper {
@@ -713,12 +721,16 @@ body.pt-app,
 .pt-app .footer-wrapper {
   bottom: 0;
 }
-.pt-app table.argument td a.del-premise::before,
-.pt-app table.argument td a.del-premise::after {
+.pt-app a.del-premise::before,
+.pt-app a.del-premise::after,
+.pt-app a.add-premise::before,
+.pt-app a.add-premise::after {
   left: 0;
 }
-.pt-app table.argument td a.del-premise::before,
-.pt-app table.argument td a.del-premise::after {
+.pt-app a.del-premise::before,
+.pt-app a.del-premise::after,
+.pt-app a.add-premise::before,
+.pt-app a.add-premise::after {
   top: 50%;
   transform: translateY(-50%);
 }
@@ -757,9 +769,10 @@ body.pt-app,
   content: "";
 }
 .pt-app a.del-predicate::after,
-.pt-app table.argument td a.del-premise::before,
-.pt-app table.argument td a.del-premise::after {
-  content: '\f056';
+.pt-app a.del-premise::before,
+.pt-app a.del-premise::after {
+  content: '\f147';
+  /* content: '\f056'; */
 }
 .pt-app a.external:after {
   content: "\f08e";
@@ -769,6 +782,7 @@ body.pt-app,
   content: "\f06a";
 }
 .pt-app a.add-predicate::after,
+.pt-app a.add-premise::before,
 .pt-app a.add-premise::after {
   content: '\F196';
   /* content: '\F055'; */
@@ -780,7 +794,7 @@ body.pt-app,
   content: '\F09B';
 }
 .pt-app a.headicon.feedback::before {
-  content: '\F2B6';
+  content: '\F199';
 }
 .pt-app #uitab_input_link::before {
   content: '\F044';
@@ -819,7 +833,7 @@ FontAwesome:
   git: F1DA, F1D3
   question_sign: F059, F29C, F128
   info_sign: F05A
-  envelope: F003, F2B6, F2B7
+  envelope: F003, F2B6, F2B7, F199
   play: F04B, F144, F152, F01D
   ol: F0CB
   cog: F013

@@ -11,7 +11,7 @@
             <input class="sentence premise" type="text" name="premises[]" value="{{ value|e }}"/>
         </td>
         <td>
-            <a class="del-premise tooltip" href="javascript:" title="Delete"></a>
+            <a class="del-premise tooltip" href="javascript:" title="Delete premise"></a>
         </td>
     </tr>
 {%- endmacro -%}
@@ -31,7 +31,7 @@
         <td colspan="2">
             <input type="text" class="arity" name="user_predicate_arities[]" value="{{ arity|e }}"/>
             <span class="arity-label">arity</span>
-            <a href="javascript:" class="right del-predicate" title="Delete"></a>
+            <a href="javascript:" class="right del-predicate" title="Delete predicate"></a>
         </td>
     </tr>
 {%- endmacro -%}
