@@ -1947,6 +1947,8 @@ class StandardLexWriter(BaseLexWriter):
             return self._write_operated(item, drop_parens = True)
         return super().write(item)
 
+    __call__ = write
+
     def _write_predicated(self, item: Predicated):
         if len(item) < 2:
             return super()._write_predicated(item)
