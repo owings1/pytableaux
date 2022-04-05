@@ -55,12 +55,14 @@ _APP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 def _app_path(*args):
     return os.path.join(_APP_DIR, *args)
 
+def _static_path(*args):
+    return _app_path('www/static', *args)
+
 _PATHS = dict(
-    favicon_file   = _app_path('www/static/img/favicon-60x60.png'),
-    index_filename = 'index.html',
-    robotstxt_file = _app_path('www/static/robots.txt'),
-    static_dir     = _app_path('www/static'),
-    static_dir_doc = _app_path('..', 'doc/_build/html'),
+    favicon_file   = _static_path('img/favicon-60x60.png'),
+    robotstxt_file = _static_path('robots.txt'),
+    static_dir     = _static_path(),
+    doc_static_dir = _app_path('..', 'doc/_build/html'),
     view_path      = _app_path('www/views'),
 )
 
@@ -89,6 +91,7 @@ APP_LOGICS = {
         's5',
     )
 }
+
 # Web Template path.
 APP_JENV = Environment(loader = FileSystemLoader(_PATHS['view_path']))
 
@@ -212,39 +215,6 @@ _OPTDEFS = dict(
     ),
 )
 
-
-logic_categories: dict[str, list[str]] = {}
-parser_nups: dict[str, seqf[str]] = {}
-example_args: dict[str, dict[str, dict]] = {}
-
-@closure
-def _():
-    
-    exargs = examples.arguments()
-    for arg in exargs:
-        example_args[arg.title] = {}
-    for notn in Notation:
-        # Build rendered example arguments
-        lw = LexWriter(notn, charset = 'ascii')
-        for arg in exargs:
-            example_args[arg.title][notn.name] = dict(
-                premises = tuple(map(lw, arg.premises)),
-                conclusion = lw(arg.conclusion),
-            )
-        parser_nups[notn.name] = CharTable.fetch(notn).chars[LexType.Predicate]
-
-    for modname, logic in APP_LOGICS.items():
-        category = logic.Meta.category
-        if category not in logic_categories:
-            logic_categories[category] = []
-        logic_categories[category].append(modname)
-
-    def get_category_order(modname: str) -> int:
-        return APP_LOGICS[modname].Meta.category_display_order
-
-    for group in logic_categories.values():
-        group.sort(key = get_category_order)
-
 ## Logging
 
 def _init_logger(logger: logging.Logger):
@@ -252,7 +222,7 @@ def _init_logger(logger: logging.Logger):
     formatter = logging.Formatter(
         # Similar to cherrypy's format for consistency.
         '[%(asctime)s] %(name)s.%(levelname)s %(message)s',
-        datefmt='%d/%b/%Y:%H:%M:%S',
+        datefmt = '%d/%b/%Y:%H:%M:%S',
     )
     ch.setFormatter(formatter)
     logger.addHandler(ch)
@@ -262,54 +232,65 @@ logger = _init_logger(logging.Logger('APP'))
 
 ## Env Config
 
-def _getoptval(name):
-    defn = _OPTDEFS[name]
-    evtype = type(defn['envvar'])
-    if evtype == str:
-        envvars = (defn['envvar'],)
-    else:
-        envvars = defn['envvar']
+def _getoptval(name: str, defn: dict):
+    envvars = defn['envvar']
+    if type(envvars) is str:
+        envvars = envvars,
     for varname in envvars:
         if varname in os.environ:
             v = os.environ[varname]
-            if defn['type'] == 'int':
-                v = int(v)
-                if 'min' in defn and v < defn['min']:
-                    logger.warn(
-                        'Using min value of {0} for option {1}'.format(
-                            str(defn['min']), name
-                        )
-                    )
-                    v = defn['min']
-                if 'max' in defn and v > defn['max']:
-                    logger.warn(
-                        'Using max value of {0} for option {1}'.format(
-                            str(defn['max']), name
-                        )
-                    )
-                        
-            elif defn['type'] == 'boolean':
-                v = str(v).lower() in ('true', 'yes', '1')
-            else:
-                # string
-                v = str(v)
-            return v
-    return defn['default']
+            break
+    else:
+        return defn['default']
+
+    defntype = defn.get('type', 'string')
+
+    if defntype == 'int':
+        v = int(v)
+    elif defntype == 'boolean':
+        v = str(v).lower() in ('true', 'yes', '1')
+    elif defntype == 'string':
+        v = str(v)
+    else:
+        raise NotImplementedError(defntype)
+
+    if 'min' in defn and v < defn['min']:
+        v = defn['min']
+        logger.warn(
+            'Using min value of %s for option %s' % (v, name)
+        )
+    if 'max' in defn and v > defn['max']:
+        v = defn['max']
+        logger.warn(
+            'Using max value of %s for option %s' % (v, name)
+        )
+
+    return v
 
 APP_ENVCONF = {
-    name: _getoptval(name) for name in _OPTDEFS.keys()
+    name: _getoptval(name, defn)
+    for name, defn in _OPTDEFS.items()
 }
 
-# Set loglevel from APP_ENVCONF
-if APP_ENVCONF['is_debug']:
-    logger.setLevel(10)
-    logger.info('Setting debug loglevel {0}'.format(str(logger.getEffectiveLevel())))
-elif hasattr(logging, APP_ENVCONF['loglevel'].upper()):
-    logger.setLevel(getattr(logging, APP_ENVCONF['loglevel'].upper()))
-else:
-    logger.setLevel(getattr(logging, _OPTDEFS['loglevel']['default'].upper()))
-    logger.warn('Ingoring invalid loglevel: {0}'.format(APP_ENVCONF['loglevel']))
-    APP_ENVCONF['loglevel'] = _OPTDEFS['loglevel']['default'].upper()
+@closure
+def _():
+
+    # Set loglevel from APP_ENVCONF
+
+    if APP_ENVCONF['is_debug']:
+        logger.setLevel(10)
+        logger.info('Setting debug loglevel %d' % logger.getEffectiveLevel())
+        return
+
+    leveluc = APP_ENVCONF['loglevel'].upper()
+
+    if not hasattr(logging, leveluc):
+        logger.warn("Ignoring invalid loglevel '%s'" % leveluc)
+        APP_ENVCONF['loglevel'] = _OPTDEFS['loglevel']['default']
+        leveluc = APP_ENVCONF['loglevel'].upper()
+
+    levelnum = getattr(logging, leveluc)
+    logger.setLevel(levelnum)
 
 ## Prometheus Metrics
 
@@ -341,7 +322,8 @@ class Metric(AbcEnum):
     def __call__(self, *labels: str) -> prom.metrics.MetricWrapperBase:
         return self.value.labels(APP_ENVCONF['app_name'], *labels)
 
-## cherrypy global config
+## Cherrypy config
+
 cp_global_config = {
     'global': {
         'server.socket_host'   : APP_ENVCONF['host'],
@@ -350,48 +332,73 @@ cp_global_config = {
     },
 }
 
-# Jinja2
-
-
-##############################
-## Cherrypy Server Config   ##
-##############################
-
 class _AppDispatcher(Dispatcher):
     def __call__(self, path_info: str):
         Metric.app_requests_count(path_info).inc()
         return super().__call__(path_info.split('?')[0])
 
 cp_config = {
-    '/' : {
+    '/': {
         'request.dispatch': _AppDispatcher(),
     },
-    '/static' : {
+    '/static': {
         'tools.staticdir.on'  : True,
         'tools.staticdir.dir' : _PATHS['static_dir'],
     },
     '/doc': {
         'tools.staticdir.on'    : True,
-        'tools.staticdir.dir'   : _PATHS['static_dir_doc'],
-        'tools.staticdir.index' : _PATHS['index_filename'],
+        'tools.staticdir.dir'   : _PATHS['doc_static_dir'],
+        'tools.staticdir.index' : 'index.html',
     },
     '/favicon.ico': {
-        'tools.staticfile.on': True,
-        'tools.staticfile.filename': _PATHS['favicon_file'],
+        'tools.staticfile.on'       : True,
+        'tools.staticfile.filename' : _PATHS['favicon_file'],
     },
     '/robots.txt': {
-        'tools.staticfile.on': True,
-        'tools.staticfile.filename': _PATHS['robotstxt_file'],
+        'tools.staticfile.on'       : True,
+        'tools.staticfile.filename' : _PATHS['robotstxt_file'],
     },
 }
 
-#####################
-## Static Data     ##
-#####################
+## Static Data
+
+logic_categories: dict[str, list[str]] = {}
+parser_nups: dict[str, seqf[str]] = {}
+example_args: dict[str, dict[str, dict]] = {}
+
+@closure
+def _():
+
+    exargs = examples.arguments()
+    for arg in exargs:
+        example_args[arg.title] = {}
+    for notn in Notation:
+        # Build rendered example arguments
+        lw = LexWriter(notn, charset = 'ascii')
+        for arg in exargs:
+            example_args[arg.title][notn.name] = dict(
+                premises = tuple(map(lw, arg.premises)),
+                conclusion = lw(arg.conclusion),
+            )
+        parser_nups[notn.name] = CharTable.fetch(notn).chars[LexType.Predicate]
+
+    for modname, logic in APP_LOGICS.items():
+        category = logic.Meta.category
+        if category not in logic_categories:
+            logic_categories[category] = []
+        logic_categories[category].append(modname)
+
+    def get_category_order(modname: str) -> int:
+        return APP_LOGICS[modname].Meta.category_display_order
+
+    for group in logic_categories.values():
+        group.sort(key = get_category_order)
+
 # For notn, only include those common to all, until UI suports
 # notn-specific choice.
+
 def _get_common_charsets():
-    charsets = set(
+    charsets: set[str] = set(
         charset
         for notn in Notation
             for charset in notn.charsets
@@ -402,6 +409,8 @@ def _get_common_charsets():
 
 output_charsets = _get_common_charsets()
 
+## Cleanup
+
 del(
     _APP_DIR,
     _OPTDEFS,
@@ -411,6 +420,7 @@ del(
     _init_logger,
     _getoptval,
     _get_common_charsets,
+    _static_path,
     get_logic,
     closure,
 
@@ -420,4 +430,6 @@ del(
     Environment,
     FileSystemLoader,
     Notation,
+
+    logging,
 )
